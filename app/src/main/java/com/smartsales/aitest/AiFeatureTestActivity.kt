@@ -1,5 +1,6 @@
 package com.smartsales.aitest
 
+import android.Manifest
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
@@ -30,7 +31,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Pause
@@ -40,7 +40,6 @@ import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,7 +51,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -66,12 +64,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.ImageLoader
@@ -93,8 +90,6 @@ import com.smartsales.feature.connectivity.ConnectivityError
 import com.smartsales.feature.media.MediaClip
 import com.smartsales.feature.media.MediaSyncCoordinator
 import com.smartsales.feature.media.MediaSyncState
-import com.smartsales.tingwutest.PipelineLogEntry
-import com.smartsales.tingwutest.PipelineLogLevel
 import com.smartsales.tingwutest.TingwuTestUiState
 import com.smartsales.tingwutest.TingwuTestViewModel
 import com.smartsales.tingwutest.cacheAudioFromUri
@@ -103,10 +98,9 @@ import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.launch
 
-// 文件：app/src/main/java/com/smartsales/aitest/AiFeatureTestActivity.kt
-// 模块：:app
-// 说明：快速验证特性模块的 Compose 壳
-// 作者：更新于 2025-11-19
+// 文件路径: aiFeatureTestApp/src/main/java/com/smartsales/aitest/AiFeatureTestActivity.kt
+// 文件作用: 快速验证特性模块的Compose壳
+// 最近修改: 2025-11-14
 @AndroidEntryPoint
 class AiFeatureTestActivity : ComponentActivity() {
     @Inject lateinit var chatController: ChatController
@@ -244,6 +238,22 @@ private fun AiFeatureTestApp(
     var lastInjectedTranscript by remember { mutableStateOf<String?>(null) }
     val showSnackbar: (String) -> Unit = { message ->
         scope.launch { snackbarHostState.showSnackbar(message) }
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        if (results.values.any { granted -> !granted }) {
+            showSnackbar("缺少 BLE 或定位权限，无法扫描 BT311。")
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        val missingPermissions = REQUIRED_BLE_PERMISSIONS.filter {
+            ContextCompat.checkSelfPermission(context, it) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+        if (missingPermissions.isNotEmpty()) {
+            permissionLauncher.launch(missingPermissions.toTypedArray())
+        }
     }
     val tingwuAudioPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -641,47 +651,29 @@ private fun LocalAudioTranscriptionPanel(
             }
             when {
                 !transcriptMarkdown.isNullOrBlank() -> {
-                    Divider()
                     Text(text = "转写结果", style = MaterialTheme.typography.titleSmall)
-                    Surface(
-                        tonalElevation = 1.dp,
-                        shape = MaterialTheme.shapes.small,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = transcriptMarkdown,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            maxLines = 20,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                    Text(
+                        text = transcriptMarkdown,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 12,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
                 !errorMessage.isNullOrBlank() -> {
-                    Divider()
                     Text(
                         text = "转写失败：$errorMessage",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
                 else -> {
-                    Divider()
                     Text(
-                        text = "暂无可用的转写结果。",
+                        text = "尚未生成转写结果，选择音频即可开始调试。",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 4.dp)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
-            DiagnosticLoggerView(
-                entries = state.diagnosticLogs,
-                rawLogLines = state.logLines
-            )
         }
     }
 }
@@ -690,123 +682,6 @@ private data class ClipUploadContext(
     val objectKey: String,
     val presignedUrl: String?
 )
-
-@Composable
-private fun DiagnosticLoggerView(
-    entries: List<PipelineLogEntry>,
-    rawLogLines: List<String>
-) {
-    val clipboard = LocalClipboardManager.current
-    val logSnapshot = remember(entries, rawLogLines) {
-        val structured = entries.joinToString(separator = "\n") {
-            "[${it.timestamp}] (${it.stage.name}) ${it.message}"
-        }
-        val raw = rawLogLines.joinToString(separator = "\n")
-        listOf(structured, raw)
-            .filter { it.isNotBlank() }
-            .joinToString(separator = "\n")
-    }
-    val hasLogs = entries.isNotEmpty() || rawLogLines.isNotEmpty()
-    Card {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(text = "调试日志", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        text = "展示最新任务流程、签名或错误提示，便于即时排查。",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-                Button(
-                    onClick = {
-                        val content = logSnapshot.ifBlank { "暂无日志" }
-                        clipboard.setText(AnnotatedString(content))
-                    },
-                    enabled = hasLogs
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCopy,
-                        contentDescription = "复制日志"
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "复制日志")
-                }
-            }
-            if (!hasLogs) {
-                Text(
-                    text = "暂无日志，触发上传/提交后会展示 OSS、Tingwu 关键节点。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                val scrollState = rememberScrollState()
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 220.dp)
-                        .verticalScroll(scrollState),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    entries.forEach { entry ->
-                        DiagnosticLogRow(entry = entry)
-                    }
-                    if (entries.isNotEmpty() && rawLogLines.isNotEmpty()) {
-                        Divider()
-                    }
-                    rawLogLines.forEach { line ->
-                        Text(
-                            text = line,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DiagnosticLogRow(entry: PipelineLogEntry) {
-    val badgeColor = when (entry.level) {
-        PipelineLogLevel.ERROR -> MaterialTheme.colorScheme.error
-        PipelineLogLevel.WARNING -> MaterialTheme.colorScheme.tertiary
-        PipelineLogLevel.SUCCESS -> MaterialTheme.colorScheme.primary
-        PipelineLogLevel.INFO -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "[${entry.timestamp}] ${entry.stage.name}",
-                style = MaterialTheme.typography.labelMedium
-            )
-            Text(
-                text = entry.level.name,
-                color = badgeColor,
-                style = MaterialTheme.typography.labelSmall
-            )
-        }
-        Text(
-            text = entry.message,
-            style = MaterialTheme.typography.bodySmall
-        )
-    }
-}
 
 @Composable
 fun MediaServerPanel(
@@ -1023,3 +898,9 @@ private fun formatSize(bytes: Long): String {
     }
     return String.format("%.1f%s", value, units[index])
 }
+
+private val REQUIRED_BLE_PERMISSIONS = listOf(
+    Manifest.permission.BLUETOOTH_SCAN,
+    Manifest.permission.BLUETOOTH_CONNECT,
+    Manifest.permission.ACCESS_FINE_LOCATION
+)

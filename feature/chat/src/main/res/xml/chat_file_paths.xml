@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 文件：feature/chat/src/main/res/xml/chat_file_paths.xml -->
+<!-- 说明：限定 FileProvider 可共享的缓存目录 -->
+<paths>
+    <cache-path name="chat_exports" path="chat/exports/" />
+</paths>

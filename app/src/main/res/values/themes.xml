@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 文件：aiFeatureTestApp/src/main/res/values/themes.xml -->
+<!-- 说明：定义特性测试应用的基础主题 -->
+<resources>
+    <style name="Theme.AiFeatureTest" parent="Theme.Material3.DayNight.NoActionBar" />
+</resources>

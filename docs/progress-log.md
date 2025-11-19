@@ -688,3 +688,37 @@ Risks / TODO:
 - 实时任务的 `operation=stop` 仍未串联，后续接入实时模式时需扩展参数与测试。
 
 ---
+
+## 2025-11-20 – 恢复 WiFi/BLE 测试页到稳定备份
+
+Layer: T1  
+Modules: :app (AiFeatureTestActivity)
+
+Summary:
+- 直接从 `/home/cslh-frank/smart-sales/smart-sales-app/connectivity` 备份复制 `AiFeatureTestActivity`，撤销自定义诊断 UI，确保 WiFi/BLE 扫描、配网与 HTTP 编辑器卡片回到已验证版本。
+- 全量对比 `:feature:connectivity` 源码与备份仓库，确认状态机、Provisioner、Gateway 均未漂移，无需额外改动。
+
+TDD Status:
+- [ ] Tests written first
+- [ ] Tests added after implementation
+- [x] Manual testing only
+
+Risks / TODO:
+- 需在真机重新走一遍扫描→Wi-Fi 下发→HTTP 面板交互，确认回滚后功能完好，若要保留诊断视图需在备份上重新实现并补充测试。
+
+## 2025-11-20 – AiFeatureTestActivity 恢复 BLE 权限申请
+
+Layer: T1  
+Modules: :app (AiFeatureTestActivity)
+
+Summary:
+- 在 `AiFeatureTestActivity` 里新增 BLE/定位运行时权限请求流程，首次进入即检测 `BLUETOOTH_SCAN/CONNECT` 与 `ACCESS_FINE_LOCATION`，缺失时调用 `ActivityResultContracts.RequestMultiplePermissions`。
+- 权限被拒绝时弹出 Snackbar 提示“缺少 BLE 或定位权限”，便于用户知悉扫描失败的原因，恢复 `AndroidBleScanner` 能够拿到 BT311 广播。
+
+TDD Status:
+- [ ] Tests written first
+- [ ] Tests added after implementation
+- [x] Manual testing only
+
+Risks / TODO:
+- Android 13+ 若需要 `NEARBY_WIFI_DEVICES` 读取 Wi-Fi SSID，后续需在 Manifest 与此处一并补齐，并提示用户前往设置授予权限。

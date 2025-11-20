@@ -1,5 +1,10 @@
 package com.smartsales.aitest
 
+// 文件：app/src/main/java/com/smartsales/aitest/AiFeatureTestActivity.kt
+// 模块：:app
+// 说明：AI 功能、媒体与配网测试壳 Activity
+// 作者：创建于 2025-11-20
+
 import android.Manifest
 import android.content.Context
 import android.net.Uri
@@ -76,14 +81,16 @@ import coil.compose.AsyncImage
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
+import com.smartsales.aitest.devicemanager.DeviceManagerRoute
+import com.smartsales.aitest.setup.DeviceSetupRoute
 import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.OssUploadClient
 import com.smartsales.data.aicore.OssUploadRequest
 import com.smartsales.data.aicore.OssUploadResult
 import com.smartsales.data.aicore.TingwuRequest
 import com.smartsales.feature.chat.ChatController
-import com.smartsales.feature.chat.ChatState
 import com.smartsales.feature.chat.ChatExportState
+import com.smartsales.feature.chat.ChatState
 import com.smartsales.feature.chat.ui.ChatPanel
 import com.smartsales.feature.connectivity.ConnectionState
 import com.smartsales.feature.connectivity.ConnectivityError
@@ -98,9 +105,6 @@ import java.io.File
 import javax.inject.Inject
 import kotlinx.coroutines.launch
 
-// 文件路径: aiFeatureTestApp/src/main/java/com/smartsales/aitest/AiFeatureTestActivity.kt
-// 文件作用: 快速验证特性模块的Compose壳
-// 最近修改: 2025-11-14
 @AndroidEntryPoint
 class AiFeatureTestActivity : ComponentActivity() {
     @Inject lateinit var chatController: ChatController
@@ -410,6 +414,13 @@ private fun AiFeatureTestApp(
                             mediaServerClient = mediaServerClient,
                             onShowMessage = showSnackbar
                         )
+                        TestHomePage.DeviceManager -> DeviceManagerRoute(
+                            modifier = Modifier.weight(1f)
+                        )
+                        TestHomePage.DeviceSetup -> DeviceSetupRoute(
+                            modifier = Modifier.weight(1f),
+                            onCompleted = { currentPage = TestHomePage.AiFeatures }
+                        )
                     }
                 }
             }
@@ -430,10 +441,20 @@ private fun PageSelector(currentPage: TestHomePage, onPageSelected: (TestHomePag
             onClick = { onPageSelected(TestHomePage.WifiBleTester) },
             label = { Text("WiFi & BLE Tester") }
         )
+        FilterChip(
+            selected = currentPage == TestHomePage.DeviceManager,
+            onClick = { onPageSelected(TestHomePage.DeviceManager) },
+            label = { Text("设备文件") }
+        )
+        FilterChip(
+            selected = currentPage == TestHomePage.DeviceSetup,
+            onClick = { onPageSelected(TestHomePage.DeviceSetup) },
+            label = { Text("设备配网") }
+        )
     }
 }
 
-enum class TestHomePage { AiFeatures, WifiBleTester }
+enum class TestHomePage { AiFeatures, WifiBleTester, DeviceManager, DeviceSetup }
 
 @Composable
 private fun AiFeatureColumn(

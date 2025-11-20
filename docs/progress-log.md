@@ -12,7 +12,10 @@ Use the template below every time any module or plan changes.
 ## <YYYY-MM-DD> – <short title>
 
 Layer: T0 | T1 | T2 | T3  
-Modules: <e.g. :feature:connectivity, :data:ai-core>
+Modules: <e.g. :feature:connectivity, :data:ai-core>  
+Docs / Files: <optional file paths>  
+Role Hook: <Orchestrator / Operator / Codex / All / None>  
+Next Integration Step: <optional 1-line bookmark>
 
 Summary:
 - Bullet list of work completed.
@@ -722,3 +725,20 @@ TDD Status:
 
 Risks / TODO:
 - Android 13+ 若需要 `NEARBY_WIFI_DEVICES` 读取 Wi-Fi SSID，后续需在 Manifest 与此处一并补齐，并提示用户前往设置授予权限。
+
+## 2025-11-20 – 前端集成规格沉淀
+
+Layer: T1  
+Modules: docs
+
+Summary:
+- 汇总 DashScope、Tingwu、OSS、Gadget HTTP、BLE/Wi-Fi 状态机与 Markdown 导出真实接口，整理前端依赖的请求/响应细节及约束。
+- 将执行计划、API 规格、事件映射与数据模型写入 `frontend_inte_plan.md`，统一后续前端联调参照物。
+
+TDD Status:
+- [ ] Tests written first
+- [ ] Tests added after implementation
+- [x] Manual testing only
+
+Risks / TODO:
+- 若未来发现尚未落地的 API，需要在 `placeholder.md` 新增占位条目并回填本计划。

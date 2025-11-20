@@ -72,6 +72,8 @@ fun DeviceManagerRoute(modifier: Modifier = Modifier) {
         onDeleteFile = viewModel::onDeleteFile,
         onRequestUpload = { uploadLauncher.launch(arrayOf("image/*", "video/*")) },
         onBaseUrlChange = viewModel::onBaseUrlChanged,
+        onEnableManualBaseUrl = viewModel::onEnableManualBaseUrl,
+        onUseAutoBaseUrl = viewModel::onUseAutoBaseUrl,
         onClearError = viewModel::onClearError,
         modifier = modifier
     )
@@ -87,6 +89,8 @@ fun DeviceManagerScreen(
     onDeleteFile: (String) -> Unit,
     onRequestUpload: () -> Unit,
     onBaseUrlChange: (String) -> Unit,
+    onEnableManualBaseUrl: () -> Unit,
+    onUseAutoBaseUrl: () -> Unit,
     onClearError: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -102,21 +106,21 @@ fun DeviceManagerScreen(
                 text = "连接状态：${describeConnection(state.connectionState)}",
                 style = MaterialTheme.typography.titleMedium
             )
+            BaseUrlSection(
+                state = state,
+                onBaseUrlChange = onBaseUrlChange,
+                onEnableManualBaseUrl = onEnableManualBaseUrl,
+                onUseAutoBaseUrl = onUseAutoBaseUrl
+            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedTextField(
-                    value = state.baseUrl,
-                    onValueChange = onBaseUrlChange,
-                    label = { Text("服务地址") },
-                    modifier = Modifier.weight(1f)
-                )
                 IconButton(onClick = onRefresh, enabled = !state.isRefreshing) {
                     Icon(Icons.Default.Refresh, contentDescription = "刷新")
                 }
-                Button(onClick = onRequestUpload, enabled = !state.isUploading) {
+                Button(onClick = onRequestUpload, enabled = !state.isUploading, modifier = Modifier.weight(1f)) {
                     Icon(Icons.Default.CloudUpload, contentDescription = null)
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(text = if (state.isUploading) "上传中..." else "上传")
@@ -171,6 +175,56 @@ private fun TabRow(activeTab: DeviceMediaTab, onSelectTab: (DeviceMediaTab) -> U
                     )
                 }
             )
+        }
+    }
+}
+
+@Composable
+private fun BaseUrlSection(
+    state: DeviceManagerUiState,
+    onBaseUrlChange: (String) -> Unit,
+    onEnableManualBaseUrl: () -> Unit,
+    onUseAutoBaseUrl: () -> Unit
+) {
+    if (state.isBaseUrlManual) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = state.baseUrl,
+                onValueChange = onBaseUrlChange,
+                label = { Text("服务地址（手动输入）") },
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(
+                onClick = onUseAutoBaseUrl,
+                enabled = state.autoDetectedBaseUrl != null
+            ) {
+                Text(text = "恢复自动")
+            }
+        }
+    } else {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(text = "服务地址（自动检测）", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    text = state.autoDetectedBaseUrl ?: "等待设备网络...",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                TextButton(onClick = onEnableManualBaseUrl) {
+                    Text(text = "手动输入")
+                }
+            }
         }
     }
 }

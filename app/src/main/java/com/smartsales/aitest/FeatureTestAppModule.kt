@@ -1,9 +1,11 @@
 package com.smartsales.aitest
 
+import android.content.Context
 import com.smartsales.core.util.DispatcherProvider
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -22,4 +24,10 @@ object FeatureTestAppModule {
     fun provideAppScope(dispatcherProvider: DispatcherProvider): CoroutineScope {
         return CoroutineScope(SupervisorJob()) + dispatcherProvider.default
     }
+
+    @Provides
+    @Singleton
+    fun provideMediaServerClient(
+        @ApplicationContext context: Context
+    ): MediaServerClient = MediaServerClient(context)
 }

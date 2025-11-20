@@ -30,6 +30,7 @@ kotlin {
 dependencies {
     implementation(projects.core.util)
     implementation(projects.feature.connectivity)
+    implementation(libs.androidx.lifecycle.runtime)
     implementation(libs.coroutines.core)
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)

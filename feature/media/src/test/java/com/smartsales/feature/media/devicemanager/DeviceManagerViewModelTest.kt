@@ -149,13 +149,89 @@ class DeviceManagerViewModelTest {
         assertEquals(false, state.isUploading)
     }
 
+    @Test
+    fun `auto detected base url populates state and refreshes`() = runTest(dispatcher) {
+        val session = createSession("session-auto")
+        connectionManager.networkResult = Result.Success(
+            DeviceNetworkStatus("192.168.4.2", "Device", "Phone", "raw")
+        )
+        connectionManager.emitState(
+            ConnectionState.WifiProvisioned(session, ProvisioningStatus("WiFi", "h", "hash"))
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("http://192.168.4.2:8000", state.baseUrl)
+        assertEquals("http://192.168.4.2:8000", state.autoDetectedBaseUrl)
+        assertEquals(false, state.isBaseUrlManual)
+        assertEquals(1, gateway.fetchCalls)
+    }
+
+    @Test
+    fun `manual override holds even when new auto base arrives`() = runTest(dispatcher) {
+        val firstSession = createSession("session-auto-1")
+        connectionManager.networkResult = Result.Success(
+            DeviceNetworkStatus("192.168.4.5", "Device", "Phone", "raw")
+        )
+        connectionManager.emitState(
+            ConnectionState.WifiProvisioned(firstSession, ProvisioningStatus("WiFi", "h", "hash"))
+        )
+        advanceUntilIdle()
+
+        viewModel.onBaseUrlChanged("http://custom.local")
+        val nextSession = createSession("session-auto-2")
+        connectionManager.networkResult = Result.Success(
+            DeviceNetworkStatus("192.168.4.7", "Device", "Phone", "raw")
+        )
+        connectionManager.emitState(
+            ConnectionState.WifiProvisioned(nextSession, ProvisioningStatus("WiFi", "h2", "hash2"))
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("http://custom.local", state.baseUrl)
+        assertTrue(state.isBaseUrlManual)
+        assertEquals("http://192.168.4.7:8000", state.autoDetectedBaseUrl)
+    }
+
+    @Test
+    fun `manual override can revert to auto detected base`() = runTest(dispatcher) {
+        val session = createSession("session-auto-3")
+        connectionManager.networkResult = Result.Success(
+            DeviceNetworkStatus("192.168.8.8", "Device", "Phone", "raw")
+        )
+        connectionManager.emitState(
+            ConnectionState.WifiProvisioned(session, ProvisioningStatus("WiFi", "h", "hash"))
+        )
+        advanceUntilIdle()
+        viewModel.onBaseUrlChanged("http://custom.local")
+
+        viewModel.onUseAutoBaseUrl()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("http://192.168.8.8:8000", state.baseUrl)
+        assertEquals(false, state.isBaseUrlManual)
+    }
+
+    private fun createSession(id: String) = BleSession(
+        peripheralId = id,
+        peripheralName = "BT311-$id",
+        signalStrengthDbm = -50,
+        profileId = "bt311",
+        secureToken = "token-$id",
+        establishedAtMillis = System.currentTimeMillis()
+    )
+
     private class FakeDeviceMediaGateway : DeviceMediaGateway {
         var files: List<DeviceMediaFile> = emptyList()
         var fetchResult: Result<List<DeviceMediaFile>>? = null
         var uploadCalls = 0
+        var fetchCalls = 0
         val appliedNames = mutableSetOf<String>()
 
         override suspend fun fetchFiles(baseUrl: String): Result<List<DeviceMediaFile>> {
+            fetchCalls += 1
             return fetchResult ?: Result.Success(files)
         }
 
@@ -178,20 +254,28 @@ class DeviceManagerViewModelTest {
     private class FakeDeviceConnectionManager : DeviceConnectionManager {
         private val _state = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
         override val state: StateFlow<ConnectionState> = _state
+        var networkResult: Result<DeviceNetworkStatus> =
+            Result.Error(IllegalStateException("no network"))
 
         fun emitReady() {
-            _state.value = ConnectionState.Syncing(
-                session = BleSession(
-                    peripheralId = "p1",
-                    peripheralName = "BT311",
-                    signalStrengthDbm = -50,
-                    profileId = "bt311",
-                    secureToken = "token",
-                    establishedAtMillis = System.currentTimeMillis()
-                ),
-                status = ProvisioningStatus("WiFi", "handshake", "hash"),
-                lastHeartbeatAtMillis = System.currentTimeMillis()
+            emitState(
+                ConnectionState.Syncing(
+                    session = BleSession(
+                        peripheralId = "p1",
+                        peripheralName = "BT311",
+                        signalStrengthDbm = -50,
+                        profileId = "bt311",
+                        secureToken = "token",
+                        establishedAtMillis = System.currentTimeMillis()
+                    ),
+                    status = ProvisioningStatus("WiFi", "handshake", "hash"),
+                    lastHeartbeatAtMillis = System.currentTimeMillis()
+                )
             )
+        }
+
+        fun emitState(state: ConnectionState) {
+            _state.value = state
         }
 
         override fun selectPeripheral(peripheral: BlePeripheral) = Unit
@@ -205,7 +289,6 @@ class DeviceManagerViewModelTest {
         override suspend fun requestHotspotCredentials(): Result<WifiCredentials> =
             Result.Error(IllegalStateException())
 
-        override suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus> =
-            Result.Error(IllegalStateException())
+        override suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus> = networkResult
     }
 }

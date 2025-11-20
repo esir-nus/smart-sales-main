@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 private const val DEFAULT_MEDIA_SERVER_BASE_URL = "http://10.0.2.2:8000"
+private const val DEFAULT_DEVICE_HTTP_PORT = 8000
 
 @HiltViewModel
 class DeviceManagerViewModel @Inject constructor(
@@ -37,6 +38,7 @@ class DeviceManagerViewModel @Inject constructor(
     val uiState: StateFlow<DeviceManagerUiState> = _uiState.asStateFlow()
 
     private var cachedFiles: List<DeviceFileUi> = emptyList()
+    private var lastQueriedSessionId: String? = null
 
     init {
         observeConnection()
@@ -145,7 +147,25 @@ class DeviceManagerViewModel @Inject constructor(
     }
 
     fun onBaseUrlChanged(value: String) {
-        _uiState.update { it.copy(baseUrl = value.trim()) }
+        _uiState.update {
+            it.copy(
+                baseUrl = value.trim(),
+                isBaseUrlManual = true
+            )
+        }
+    }
+
+    fun onEnableManualBaseUrl() {
+        _uiState.update { it.copy(isBaseUrlManual = true) }
+    }
+
+    fun onUseAutoBaseUrl() {
+        val autoUrl = _uiState.value.autoDetectedBaseUrl ?: DEFAULT_MEDIA_SERVER_BASE_URL
+        val previous = _uiState.value.baseUrl
+        _uiState.update { it.copy(isBaseUrlManual = false, baseUrl = autoUrl) }
+        if (previous != autoUrl && _uiState.value.connectionState.isReadyForFiles()) {
+            viewModelScope.launch(dispatcherProvider.io) { fetchFilesInternal(autoUrl) }
+        }
     }
 
     fun onClearError() {
@@ -202,8 +222,65 @@ class DeviceManagerViewModel @Inject constructor(
         viewModelScope.launch(dispatcherProvider.default) {
             connectionManager.state.collectLatest { connection ->
                 _uiState.update { it.copy(connectionState = connection) }
+                maybeRequestNetworkStatus(connection)
             }
         }
+    }
+
+    private fun maybeRequestNetworkStatus(connection: ConnectionState) {
+        val sessionId = when (connection) {
+            is ConnectionState.WifiProvisioned -> connection.session.peripheralId
+            is ConnectionState.Syncing -> connection.session.peripheralId
+            else -> null
+        } ?: return
+        val autoKnown = _uiState.value.autoDetectedBaseUrl
+        if (autoKnown != null && lastQueriedSessionId == sessionId) return
+        lastQueriedSessionId = sessionId
+        viewModelScope.launch(dispatcherProvider.io) {
+            when (val status = connectionManager.queryNetworkStatus()) {
+                is Result.Success -> handleAutoDetectedBase(status.data.ipAddress)
+                is Result.Error -> Unit
+            }
+        }
+    }
+
+    private fun handleAutoDetectedBase(ipAddress: String) {
+        val sanitized = ipAddress.trim()
+        if (sanitized.isEmpty()) return
+        val port = extractPort(_uiState.value.autoDetectedBaseUrl ?: _uiState.value.baseUrl)
+        val autoUrl = "http://$sanitized:$port"
+        val state = _uiState.value
+        val shouldUpdateBase = !state.isBaseUrlManual &&
+            (state.baseUrl.isBlank() ||
+                state.baseUrl == DEFAULT_MEDIA_SERVER_BASE_URL ||
+                state.baseUrl == state.autoDetectedBaseUrl ||
+                state.baseUrl == autoUrl)
+
+        val previousBase = state.baseUrl
+        _uiState.update {
+            it.copy(
+                autoDetectedBaseUrl = autoUrl,
+                baseUrl = if (shouldUpdateBase) autoUrl else it.baseUrl,
+                isBaseUrlManual = if (shouldUpdateBase) false else it.isBaseUrlManual
+            )
+        }
+        val changed = shouldUpdateBase && previousBase != autoUrl
+        if (changed && _uiState.value.connectionState.isReadyForFiles()) {
+            viewModelScope.launch(dispatcherProvider.io) {
+                fetchFilesInternal(autoUrl)
+            }
+        }
+    }
+
+    private fun extractPort(source: String): Int {
+        return runCatching {
+            val uri = android.net.Uri.parse(source)
+            when {
+                uri.port != -1 -> uri.port
+                source.contains(":") -> source.substringAfterLast(":").toInt()
+                else -> DEFAULT_DEVICE_HTTP_PORT
+            }
+        }.getOrDefault(DEFAULT_DEVICE_HTTP_PORT)
     }
 
     private fun ConnectionState.isReadyForFiles(): Boolean =
@@ -213,6 +290,8 @@ class DeviceManagerViewModel @Inject constructor(
 data class DeviceManagerUiState(
     val connectionState: ConnectionState = ConnectionState.Disconnected,
     val baseUrl: String = DEFAULT_MEDIA_SERVER_BASE_URL,
+    val autoDetectedBaseUrl: String? = null,
+    val isBaseUrlManual: Boolean = false,
     val files: List<DeviceFileUi> = emptyList(),
     val visibleFiles: List<DeviceFileUi> = emptyList(),
     val activeTab: DeviceMediaTab = DeviceMediaTab.Images,

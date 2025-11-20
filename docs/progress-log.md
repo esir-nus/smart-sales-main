@@ -742,3 +742,124 @@ TDD Status:
 
 Risks / TODO:
 - 若未来发现尚未落地的 API，需要在 `placeholder.md` 新增占位条目并回填本计划。
+
+## 2025-11-20 – QuickSkills catalog & Home streaming flow
+
+Layer: T1  
+Modules: :feature:chat  
+Docs / Files: feature/chat/core/QuickSkills.kt, feature/chat/home/HomeScreenViewModel.kt, feature/chat/home/HomeScreen.kt  
+Role Hook: Codex  
+Next Integration Step: Compose quick-skill chips already live; next add UI tests once Home screen stabilises.
+
+Summary:
+- Added a reusable QuickSkill catalog (enum + definitions + catalog interface) plus default sales-focused prompts.
+- Updated HomeScreenViewModel to populate UiState.quickSkills from the catalog and route both typed and quick actions through the shared streaming pipeline (ChatRequest.quickSkillId).
+- Introduced a dedicated HomeScreen composable showing chips (disabled while sending) and wiring clicks to onSelectQuickSkill, alongside the existing chat input.
+- Added HomeScreenViewModelTest to verify initial quick-skill population, typed sends, and quick-skill sends emit the correct ChatRequest metadata.
+
+TDD Status:
+- [ ] Tests written first
+- [x] Tests added after implementation
+- [ ] Manual testing only
+
+Risks / TODO:
+- Need Compose UI tests for Home to ensure chips remain accessible when layout changes.
+- Future Tingwu audio context still TODO; quickSkillId currently passes only the enum name.
+
+---
+
+## 2025-11-20 – DeviceSetup ViewModel & tests
+
+Layer: T1  
+Modules: :feature:connectivity  
+Docs / Files: feature/connectivity/src/main/java/com/smartsales/feature/connectivity/setup/DeviceSetupViewModel.kt, feature/connectivity/src/test/java/com/smartsales/feature/connectivity/setup/DeviceSetupViewModelTest.kt  
+Role Hook: Codex  
+Next Integration Step: Compose UI consumes this ViewModel (done in next entry) and later hook to real nav graph.
+
+Summary:
+- Implemented DeviceSetupViewModel covering scan → select device → enter Wi-Fi → provisioning → verifying → completed/failed, backed by DeviceConnectionManager + BleScanner streams.
+- Tracks UiState (step enum, peripherals, fields, loading flags, network result) and exposes events for scanning, selection, Wi-Fi entry, submit, retry.
+- Added coroutine-based DeviceSetupViewModelTest with fake scanner/connection manager covering scan population, selection, happy path, and failure + retry.
+
+TDD Status:
+- [ ] Tests written first
+- [x] Tests added after implementation
+- [ ] Manual testing only
+
+Risks / TODO:
+- Real hardware validation still pending; need end-to-end test once BLE gateway is available.
+- ViewModel currently assumes DeviceConnectionManager emits states promptly; may need timeout UX in later iteration.
+
+---
+
+## 2025-11-20 – DeviceSetup Compose screen & shell entry
+
+Layer: T1  
+Modules: :app, :feature:connectivity  
+Docs / Files: app/src/main/java/com/smartsales/aitest/setup/DeviceSetupScreen.kt, app/src/main/java/com/smartsales/aitest/AiFeatureTestActivity.kt  
+Role Hook: Codex  
+Next Integration Step: Move DeviceSetupRoute into the real navigation graph once we split the playground app.
+
+Summary:
+- Built DeviceSetupRoute/HomeScreen-style Compose UI that renders state-specific sections (scan list, Wi-Fi form, provisioning progress, success/failure cards) and wires callbacks to DeviceSetupViewModel events.
+- Added a temporary “设备配网” tab inside AiFeatureTestActivity so testers can drive the new flow without leaving the playground shell.
+- Propagated completion callback to return users to the main AI page after successful provisioning.
+
+TDD Status:
+- [ ] Tests written first
+- [ ] Tests added after implementation
+- [x] Manual testing only
+
+Risks / TODO:
+- Need instrumentation or screenshot tests to prevent regressions; for now QA relies on manual verification.
+- When real navigation is introduced, ensure DeviceSetupRoute honours back stack rather than the temporary tab.
+
+---
+
+## 2025-11-20 – DeviceSetup shell build fix
+
+Layer: T1  
+Modules: :app, docs  
+Docs / Files: app/src/main/java/com/smartsales/aitest/AiFeatureTestActivity.kt, app/src/main/java/com/smartsales/aitest/setup/DeviceSetupScreen.kt, docs/progress-log.md  
+Role Hook: Codex  
+Next Integration Step: Rerun `./gradlew :app:assembleDebug` to verify the DeviceSetup tab compiles cleanly.
+
+Summary:
+- 给 `AiFeatureTestActivity` 增加统一文件头，并在 `DeviceSetupRoute` 调用中显式传入 `onCompleted` 回调，防止 Kotlin 把尾随 lambda 解析为 ViewModel 参数导致编译失败。
+- 在 `DeviceSetupScreen` 顶部补齐中文文件头与 `Icon` import，解决 “Unresolved reference: Icon” 报错并与项目头部规范保持一致。
+- 更新进度日志记录本次修复，提示集成后需要完整构建验证。
+
+TDD Status:
+- [ ] Tests written first
+- [ ] Tests added after implementation
+- [x] Manual testing only
+
+Risks / TODO:
+- 尚未重新运行 `./gradlew :app:assembleDebug`，需在本地拉取后执行一次以确保编译链恢复。
+- DeviceSetup UI 仍缺失 Compose/仪表测试覆盖，后续应补充截图或交互测试避免回归。
+
+---
+
+## 2025-11-20 – DeviceManager ViewModel + 设备文件 UI
+
+Layer: T1  
+Modules: :feature:media, :app  
+Docs / Files: feature/media/src/main/java/com/smartsales/feature/media/devicemanager/DeviceManagerViewModel.kt, feature/media/src/test/java/com/smartsales/feature/media/devicemanager/DeviceManagerViewModelTest.kt, app/src/main/java/com/smartsales/aitest/devicemanager/DeviceManagerScreen.kt, app/src/main/java/com/smartsales/aitest/devicemanager/DeviceMediaGatewayImpl.kt, app/src/main/java/com/smartsales/aitest/AiFeatureTestActivity.kt  
+Role Hook: Codex  
+Next Integration Step: Expand DeviceManager to stream real apply/delete statuses once Gadget API exposes them.
+
+Summary:
+- 新增 `DeviceManagerViewModel` 与 `DeviceManagerUiState`，收敛连接状态、Tab 筛选、所选文件、刷新/上传/应用等事件，并通过 `DeviceMediaGateway` 访问 Gadget 媒体 HTTP 接口。
+- 实现 `DeviceManagerViewModelTest` 覆盖列表刷新失败、Tab 筛选、上传、应用、删除等关键路径，保障状态机不会回归。
+- 在 `:app` 提供 `DeviceMediaGatewayImpl`（复用 `MediaServerClient`）和 Compose `DeviceManagerRoute/DeviceManagerScreen`：支持设备文件 Tab、错误提示、上传按钮与 Apply/Delete 操作，且把新页面接入 `AiFeatureTestActivity` Tab 切换。
+
+TDD Status:
+- [ ] Tests written first
+- [x] Tests added after implementation
+- [ ] Manual testing only
+
+Risks / TODO:
+- `DeviceManagerViewModel` 仍依赖手动输入 `baseUrl`，后续应与 Connectivity 面板的自动 IP 同步逻辑打通。
+- 未实际跑通 `./gradlew :feature:media:testDebugUnitTest`，需在具备 Gradle 缓存写入权限的环境执行，确保单测与构建一起通过。
+
+---

@@ -31,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -40,11 +41,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.smartsales.feature.connectivity.ConnectionState
+import com.smartsales.feature.media.devicemanager.DeviceConnectionUiState
 import com.smartsales.feature.media.devicemanager.DeviceFileUi
 import com.smartsales.feature.media.devicemanager.DeviceManagerUiState
 import com.smartsales.feature.media.devicemanager.DeviceManagerViewModel
@@ -91,6 +93,7 @@ fun DeviceManagerScreen(
     modifier: Modifier = Modifier
 ) {
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
+        val isConnected = state.connectionStatus.isReadyForFiles()
         Column(
             modifier = Modifier
                 .padding(innerPadding)
@@ -98,57 +101,64 @@ fun DeviceManagerScreen(
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = "连接状态：${describeConnection(state.connectionState)}",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            DeviceConnectionBanner(status = state.connectionStatus)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedTextField(
                     value = state.baseUrl,
                     onValueChange = onBaseUrlChange,
                     label = { Text("服务地址") },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isLoading
                 )
-                IconButton(onClick = onRefresh, enabled = !state.isRefreshing) {
-                    Icon(Icons.Default.Refresh, contentDescription = "刷新")
-                }
-                Button(onClick = onRequestUpload, enabled = !state.isUploading) {
-                    Icon(Icons.Default.CloudUpload, contentDescription = null)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = if (state.isUploading) "上传中..." else "上传")
-                }
+                Text(
+                    text = state.autoDetectStatus,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            if (state.isRefreshing) {
+            ActionButtons(
+                isConnected = isConnected,
+                isLoading = state.isLoading,
+                isUploading = state.isUploading,
+                onRefresh = onRefresh,
+                onUpload = onRequestUpload
+            )
+            if (state.isLoading) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
             state.errorMessage?.let {
-                ErrorBanner(message = it, onDismiss = onClearError)
+                ErrorBanner(
+                    message = it,
+                    onDismiss = onClearError,
+                    modifier = Modifier.testTag(DeviceManagerTestTags.ERROR_BANNER)
+                )
             }
-            TabRow(state.activeTab, onSelectTab)
-            if (state.visibleFiles.isEmpty()) {
-                EmptyState()
+            if (!isConnected) {
+                DisconnectedHint()
             } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f, fill = false),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(state.visibleFiles, key = { it.id }) { file ->
-                        DeviceFileCard(
-                            file = file,
-                            isSelected = state.selectedFile?.id == file.id,
-                            onSelect = { onSelectFile(file.id) },
-                            onApply = { onApplyFile(file.id) },
-                            onDelete = { onDeleteFile(file.id) }
-                        )
+                TabRow(state.activeTab, onSelectTab)
+                val hasFiles = state.visibleFiles.isNotEmpty()
+                if (!hasFiles && !state.isLoading) {
+                    DeviceManagerEmptyState()
+                } else if (hasFiles) {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f, fill = false),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(state.visibleFiles, key = { it.id }) { file ->
+                            DeviceFileCard(
+                                file = file,
+                                isSelected = state.selectedFile?.id == file.id,
+                                onSelect = { onSelectFile(file.id) },
+                                onApply = { onApplyFile(file.id) },
+                                onDelete = { onDeleteFile(file.id) }
+                            )
+                        }
                     }
                 }
-            }
-            state.selectedFile?.let {
-                SelectedFileCard(file = it)
+                state.selectedFile?.let {
+                    SelectedFileCard(file = it)
+                }
             }
         }
     }
@@ -171,6 +181,64 @@ private fun TabRow(activeTab: DeviceMediaTab, onSelectTab: (DeviceMediaTab) -> U
                     )
                 }
             )
+        }
+    }
+}
+
+@Composable
+private fun DeviceConnectionBanner(status: DeviceConnectionUiState) {
+    val (title, subtitle) = when (status) {
+        is DeviceConnectionUiState.Disconnected -> "未连接设备" to (status.reason ?: "请开启设备并保持 Wi-Fi/BLE 可用。")
+        is DeviceConnectionUiState.Connecting -> "正在连接设备" to (status.detail ?: "请稍候...")
+        is DeviceConnectionUiState.Connected -> ("已连接 ${status.deviceName ?: ""}").trim() to "可以浏览、刷新与上传文件。"
+    }
+    Card {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(text = title, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun ActionButtons(
+    isConnected: Boolean,
+    isLoading: Boolean,
+    isUploading: Boolean,
+    onRefresh: () -> Unit,
+    onUpload: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Button(
+            onClick = onRefresh,
+            enabled = isConnected && !isLoading,
+            modifier = Modifier.testTag(DeviceManagerTestTags.REFRESH_BUTTON)
+        ) {
+            Icon(Icons.Default.Refresh, contentDescription = null)
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(text = if (isLoading) "刷新中..." else "刷新")
+        }
+        OutlinedButton(
+            onClick = onUpload,
+            enabled = isConnected && !isUploading,
+            modifier = Modifier.testTag(DeviceManagerTestTags.UPLOAD_BUTTON)
+        ) {
+            Icon(Icons.Default.CloudUpload, contentDescription = null)
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(text = if (isUploading) "上传中..." else "上传文件")
         }
     }
 }
@@ -244,9 +312,11 @@ private fun SelectedFileCard(file: DeviceFileUi) {
 }
 
 @Composable
-private fun EmptyState() {
+private fun DeviceManagerEmptyState() {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(DeviceManagerTestTags.EMPTY_STATE),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
@@ -263,13 +333,36 @@ private fun EmptyState() {
 }
 
 @Composable
-private fun ErrorBanner(message: String, onDismiss: () -> Unit) {
+private fun DisconnectedHint() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(text = "设备未连接", style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = "连接 SmartSales 录音设备后即可浏览和刷新文件。",
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+@Composable
+private fun ErrorBanner(
+    message: String,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     LaunchedEffect(message) {
         delay(2800)
         onDismiss()
     }
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.errorContainer)
             .padding(12.dp),
@@ -283,11 +376,9 @@ private fun ErrorBanner(message: String, onDismiss: () -> Unit) {
     }
 }
 
-private fun describeConnection(state: ConnectionState): String = when (state) {
-    ConnectionState.Disconnected -> "未连接"
-    is ConnectionState.Connected -> "已连接 ${state.session.peripheralName}"
-    is ConnectionState.Pairing -> "配对中 ${state.deviceName}"
-    is ConnectionState.WifiProvisioned -> "Wi-Fi 已同步"
-    is ConnectionState.Syncing -> "同步中"
-    is ConnectionState.Error -> "错误：${state.error.javaClass.simpleName}"
+private object DeviceManagerTestTags {
+    const val REFRESH_BUTTON = "device_manager_refresh_button"
+    const val UPLOAD_BUTTON = "device_manager_upload_button"
+    const val EMPTY_STATE = "device_manager_empty_state"
+    const val ERROR_BANNER = "device_manager_error_banner"
 }

@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
+import com.smartsales.feature.connectivity.ConnectivityError
 import com.smartsales.feature.connectivity.ConnectionState
 import com.smartsales.feature.connectivity.DeviceConnectionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -48,8 +49,7 @@ class DeviceManagerViewModel @Inject constructor(
     }
 
     fun onRefreshFiles() {
-        val connection = _uiState.value.connectionState
-        if (!connection.isReadyForFiles()) {
+        if (!_uiState.value.connectionStatus.isReadyForFiles()) {
             _uiState.update {
                 it.copy(errorMessage = "设备未连接，无法刷新文件。")
             }
@@ -81,7 +81,7 @@ class DeviceManagerViewModel @Inject constructor(
 
     fun onUploadFile(source: DeviceUploadSource) {
         if (_uiState.value.isUploading) return
-        if (!_uiState.value.connectionState.isReadyForFiles()) {
+        if (!_uiState.value.connectionStatus.isReadyForFiles()) {
             _uiState.update { it.copy(errorMessage = "设备未连接，无法上传。") }
             return
         }
@@ -173,7 +173,7 @@ class DeviceManagerViewModel @Inject constructor(
     }
 
     private suspend fun fetchFilesInternal(baseUrl: String) {
-        _uiState.update { it.copy(isRefreshing = true, errorMessage = null) }
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         when (val result = mediaGateway.fetchFiles(baseUrl)) {
             is Result.Success -> {
                 cachedFiles = result.data.map { it.toUi() }
@@ -185,7 +185,7 @@ class DeviceManagerViewModel @Inject constructor(
                         selectedFile = state.selectedFile?.let { selected ->
                             filtered.firstOrNull { it.id == selected.id }
                         },
-                        isRefreshing = false
+                        isLoading = false
                     )
                 }
             }
@@ -193,7 +193,7 @@ class DeviceManagerViewModel @Inject constructor(
             is Result.Error -> {
                 _uiState.update {
                     it.copy(
-                        isRefreshing = false,
+                        isLoading = false,
                         errorMessage = result.throwable.message ?: "获取文件失败"
                     )
                 }
@@ -221,11 +221,13 @@ class DeviceManagerViewModel @Inject constructor(
     private fun observeConnection() {
         viewModelScope.launch(dispatcherProvider.default) {
             var lastReadyForNetwork = false
+            var lastReadyForFiles = false
             connectionManager.state.collectLatest { connection ->
                 val readyForNetwork = connection.canQueryNetwork()
+                val readyForFiles = connection.isReadyForFiles()
                 _uiState.update { state ->
                     state.copy(
-                        connectionState = connection,
+                        connectionStatus = connection.toUiState(),
                         autoDetectStatus = if (readyForNetwork) {
                             state.autoDetectStatus
                         } else {
@@ -244,7 +246,16 @@ class DeviceManagerViewModel @Inject constructor(
                 if (readyForNetwork && (!lastReadyForNetwork || _uiState.value.autoDetectedBaseUrl == null)) {
                     triggerAutoDetect()
                 }
+                if (readyForFiles && !lastReadyForFiles) {
+                    viewModelScope.launch(dispatcherProvider.io) {
+                        fetchFilesInternal(_uiState.value.baseUrl)
+                    }
+                }
+                if (!readyForFiles) {
+                    _uiState.update { it.copy(isLoading = false) }
+                }
                 lastReadyForNetwork = readyForNetwork
+                lastReadyForFiles = readyForFiles
             }
         }
     }
@@ -285,11 +296,29 @@ class DeviceManagerViewModel @Inject constructor(
         }
     }
 
-    private fun ConnectionState.isReadyForFiles(): Boolean =
-        this is ConnectionState.WifiProvisioned || this is ConnectionState.Syncing
+private fun ConnectionState.isReadyForFiles(): Boolean =
+    this is ConnectionState.WifiProvisioned || this is ConnectionState.Syncing
 
-    private fun ConnectionState.canQueryNetwork(): Boolean =
-        this is ConnectionState.Connected || isReadyForFiles()
+private fun ConnectionState.canQueryNetwork(): Boolean =
+    this is ConnectionState.Connected || isReadyForFiles()
+
+private fun ConnectionState.toUiState(): DeviceConnectionUiState = when (this) {
+    ConnectionState.Disconnected -> DeviceConnectionUiState.Disconnected()
+    is ConnectionState.Pairing -> DeviceConnectionUiState.Connecting(deviceName)
+    is ConnectionState.Connected -> DeviceConnectionUiState.Connecting(session.peripheralName)
+    is ConnectionState.WifiProvisioned -> DeviceConnectionUiState.Connected(session.peripheralName)
+    is ConnectionState.Syncing -> DeviceConnectionUiState.Connected(session.peripheralName)
+    is ConnectionState.Error -> DeviceConnectionUiState.Disconnected(error.toReadableMessage())
+}
+
+private fun ConnectivityError.toReadableMessage(): String = when (this) {
+    is ConnectivityError.PairingInProgress -> "设备 $deviceName 正在配对"
+    is ConnectivityError.ProvisioningFailed -> reason.ifBlank { "配网失败" }
+    is ConnectivityError.PermissionDenied -> "缺少权限：${permissions.joinToString()}"
+    is ConnectivityError.Timeout -> "操作超时（${timeoutMillis}ms）"
+    is ConnectivityError.Transport -> reason.ifBlank { "传输异常" }
+    ConnectivityError.MissingSession -> "未找到连接会话"
+}
 
     private fun buildBaseUrl(host: String, fallback: String): String {
         val sanitizedHost = host
@@ -312,7 +341,7 @@ class DeviceManagerViewModel @Inject constructor(
 }
 
 data class DeviceManagerUiState(
-    val connectionState: ConnectionState = ConnectionState.Disconnected,
+    val connectionStatus: DeviceConnectionUiState = DeviceConnectionUiState.Disconnected(),
     val baseUrl: String = DEFAULT_MEDIA_SERVER_BASE_URL,
     val autoDetectedBaseUrl: String? = null,
     val isAutoDetectingBaseUrl: Boolean = false,
@@ -322,7 +351,7 @@ data class DeviceManagerUiState(
     val visibleFiles: List<DeviceFileUi> = emptyList(),
     val activeTab: DeviceMediaTab = DeviceMediaTab.Images,
     val selectedFile: DeviceFileUi? = null,
-    val isRefreshing: Boolean = false,
+    val isLoading: Boolean = false,
     val isUploading: Boolean = false,
     val errorMessage: String? = null
 )
@@ -372,6 +401,14 @@ interface DeviceMediaGateway {
     suspend fun uploadFile(baseUrl: String, source: DeviceUploadSource): Result<Unit>
     suspend fun applyFile(baseUrl: String, fileName: String): Result<Unit>
     suspend fun deleteFile(baseUrl: String, fileName: String): Result<Unit>
+}
+
+sealed class DeviceConnectionUiState {
+    data class Disconnected(val reason: String? = null) : DeviceConnectionUiState()
+    data class Connecting(val detail: String? = null) : DeviceConnectionUiState()
+    data class Connected(val deviceName: String? = null) : DeviceConnectionUiState()
+
+    fun isReadyForFiles(): Boolean = this is Connected
 }
 
 private fun DeviceMediaFile.toUi(): DeviceFileUi {

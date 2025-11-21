@@ -84,7 +84,7 @@ class DeviceManagerViewModelTest {
 
         val state = viewModel.uiState.value
         assertEquals("offline", state.errorMessage)
-        assertEquals(false, state.isRefreshing)
+        assertEquals(false, state.isLoading)
     }
 
     @Test

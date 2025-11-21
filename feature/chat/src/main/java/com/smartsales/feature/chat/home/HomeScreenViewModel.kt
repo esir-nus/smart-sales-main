@@ -262,6 +262,11 @@ class HomeScreenViewModel @Inject constructor(
         _uiState.update { it.copy(quickSkills = skills) }
     }
 
+    fun clearSelectedSkill() {
+        pendingSkillId = null
+        _uiState.update { it.copy(selectedSkill = null) }
+    }
+
     private fun observeDeviceConnection() {
         // 监听连接模块输出，只读映射为 Home 的 snapshot 提示
         applyDeviceSnapshot(deviceConnectionManager.state.value)

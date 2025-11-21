@@ -20,6 +20,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
@@ -52,6 +54,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.smartsales.feature.chat.core.QuickSkillId
 import kotlinx.coroutines.flow.collect
 
@@ -101,6 +104,7 @@ fun HomeScreenRoute(
         onInputChanged = viewModel::onInputChanged,
         onSendClicked = viewModel::onSendMessage,
         onQuickSkillSelected = viewModel::onSelectQuickSkill,
+        onClearSelectedSkill = viewModel::clearSelectedSkill,
         onDeviceBannerClicked = viewModel::onTapDeviceBanner,
         onAudioSummaryClicked = viewModel::onTapAudioSummary,
         onRefreshDeviceAndAudio = viewModel::onRefreshDeviceAndAudio,
@@ -118,6 +122,7 @@ fun HomeScreen(
     onInputChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
     onQuickSkillSelected: (QuickSkillId) -> Unit,
+    onClearSelectedSkill: () -> Unit,
     onDeviceBannerClicked: () -> Unit,
     onAudioSummaryClicked: () -> Unit,
     onRefreshDeviceAndAudio: () -> Unit,
@@ -159,11 +164,13 @@ fun HomeScreen(
         bottomBar = {
             HomeInputArea(
                 quickSkills = state.quickSkills,
+                selectedSkill = state.selectedSkill,
                 enabled = !state.isSending && !state.isStreaming,
                 inputValue = state.inputText,
                 onInputChanged = onInputChanged,
                 onSendClicked = onSendClicked,
-                onQuickSkillSelected = onQuickSkillSelected
+                onQuickSkillSelected = onQuickSkillSelected,
+                onClearSelectedSkill = onClearSelectedSkill
             )
         }
     ) { innerPadding ->
@@ -233,6 +240,7 @@ object HomeScreenTestTags {
     const val DEVICE_BANNER = "home_device_banner"
     const val AUDIO_CARD = "home_audio_card"
     const val PROFILE_BUTTON = "home_profile_button"
+    const val ACTIVE_SKILL_CHIP = "home_active_skill_chip"
 }
 
 @Composable
@@ -399,11 +407,13 @@ private fun EmptyChatHint(
 @Composable
 private fun HomeInputArea(
     quickSkills: List<QuickSkillUi>,
+    selectedSkill: QuickSkillUi?,
     enabled: Boolean,
     inputValue: String,
     onInputChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
-    onQuickSkillSelected: (QuickSkillId) -> Unit
+    onQuickSkillSelected: (QuickSkillId) -> Unit,
+    onClearSelectedSkill: () -> Unit
 ) {
     Surface(
         tonalElevation = 4.dp
@@ -420,6 +430,13 @@ private fun HomeInputArea(
                 enabled = enabled,
                 onQuickSkillSelected = onQuickSkillSelected
             )
+            selectedSkill?.let {
+                ActiveSkillChip(
+                    label = it.label,
+                    onClear = onClearSelectedSkill,
+                    modifier = Modifier.testTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP)
+                )
+            }
             OutlinedTextField(
                 value = inputValue,
                 onValueChange = onInputChanged,
@@ -439,6 +456,52 @@ private fun HomeInputArea(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(text = "发送")
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActiveSkillChip(
+    label: String,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = Icons.Filled.Lightbulb,
+    onClear: () -> Unit
+) {
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        shape = MaterialTheme.shapes.large
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                icon?.let {
+                    Icon(
+                        imageVector = it,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+            IconButton(onClick = onClear) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "清除快捷技能"
+                )
             }
         }
     }

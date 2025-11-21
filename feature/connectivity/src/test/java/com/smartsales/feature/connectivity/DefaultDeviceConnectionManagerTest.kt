@@ -23,6 +23,18 @@ class DefaultDeviceConnectionManagerTest {
     private val credentials = WifiCredentials(ssid = "SalesWiFi", password = "password123")
 
     @Test
+    fun `selectPeripheral exposes connected state`() = runTest {
+        val manager = createManager(QueueProvisioner(mutableListOf()))
+
+        manager.selectPeripheral(peripheral)
+
+        val state = manager.state.value
+        assertTrue(state is ConnectionState.Connected)
+        val session = (state as ConnectionState.Connected).session
+        assertEquals(peripheral.name, session.peripheralName)
+    }
+
+    @Test
     fun `startPairing emits provisioning and syncing states`() = runTest {
         val provisionStatus = ProvisioningStatus("SalesWiFi", "handshake-1", "hash")
         val provisioner = QueueProvisioner(
@@ -140,6 +152,30 @@ class DefaultDeviceConnectionManagerTest {
 
         assertTrue(result is Result.Success)
         assertEquals(networkStatus, (result as Result.Success).data)
+        val state = manager.state.value
+        assertTrue(state is ConnectionState.WifiProvisioned || state is ConnectionState.Syncing)
+    }
+
+    @Test
+    fun `queryNetworkStatus after manual connect marks ready`() = runTest {
+        val networkStatus = DeviceNetworkStatus(
+            ipAddress = "192.168.1.30",
+            deviceWifiName = "SalesWiFi",
+            phoneWifiName = "DemoPhone",
+            rawResponse = "wifi#address#192.168.1.30#SalesWiFi#DemoPhone"
+        )
+        val provisioner = QueueProvisioner(
+            mutableListOf(),
+            networkResult = Result.Success(networkStatus)
+        )
+        val manager = createManager(provisioner)
+
+        manager.selectPeripheral(peripheral)
+        val result = manager.queryNetworkStatus()
+
+        assertTrue(result is Result.Success)
+        val state = manager.state.value
+        assertTrue(state is ConnectionState.WifiProvisioned || state is ConnectionState.Syncing)
     }
 
     private class QueueProvisioner(

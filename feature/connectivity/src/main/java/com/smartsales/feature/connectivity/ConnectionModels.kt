@@ -65,6 +65,7 @@ sealed interface ConnectivityError {
 
 sealed interface ConnectionState {
     data object Disconnected : ConnectionState
+    data class Connected(val session: BleSession) : ConnectionState
     data class Pairing(
         val deviceName: String,
         val progressPercent: Int,

@@ -50,8 +50,9 @@ class DefaultDeviceConnectionManager @Inject constructor(
     private var autoRetryAttempts = 0
 
     override fun selectPeripheral(peripheral: BlePeripheral) {
-        currentSession = BleSession.fromPeripheral(peripheral)
-        _state.value = ConnectionState.Disconnected
+        val session = BleSession.fromPeripheral(peripheral)
+        currentSession = session
+        _state.value = ConnectionState.Connected(session)
         ConnectivityLogger.d(
             "Select peripheral id=${peripheral.id} name=${peripheral.name} profile=${peripheral.profileId ?: "dynamic"}"
         )
@@ -123,7 +124,14 @@ class DefaultDeviceConnectionManager @Inject constructor(
             if (session == null) {
                 Result.Error(IllegalStateException("No active session"))
             } else {
-                provisioner.queryNetworkStatus(session)
+                when (val result = provisioner.queryNetworkStatus(session)) {
+                    is Result.Success -> {
+                        handleNetworkStatusSuccess(session, result.data)
+                        result
+                    }
+
+                    is Result.Error -> result
+                }
             }
         }
 
@@ -146,16 +154,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
             "Provision success device=${session.peripheralName} profile=${session.profileId ?: "dynamic"}"
         )
         _state.value = ConnectionState.WifiProvisioned(session, status)
-        heartbeatJob = scope.launch(dispatchers.default) {
-            while (isActive) {
-                delay(HEARTBEAT_INTERVAL_MS)
-                _state.value = ConnectionState.Syncing(
-                    session = session,
-                    status = status,
-                    lastHeartbeatAtMillis = System.currentTimeMillis()
-                )
-            }
-        }
+        startHeartbeat(session, status)
     }
 
     private fun handleProvisioningFailure(session: BleSession, throwable: Throwable) {
@@ -200,6 +199,34 @@ class DefaultDeviceConnectionManager @Inject constructor(
     private fun cancelAutoRetry() {
         autoRetryJob?.cancel()
         autoRetryJob = null
+    }
+
+    private fun startHeartbeat(session: BleSession, status: ProvisioningStatus) {
+        heartbeatJob?.cancel()
+        heartbeatJob = scope.launch(dispatchers.default) {
+            while (isActive) {
+                delay(HEARTBEAT_INTERVAL_MS)
+                _state.value = ConnectionState.Syncing(
+                    session = session,
+                    status = status,
+                    lastHeartbeatAtMillis = System.currentTimeMillis()
+                )
+            }
+        }
+    }
+
+    private fun handleNetworkStatusSuccess(session: BleSession, status: DeviceNetworkStatus) {
+        val wifiName = status.deviceWifiName.ifBlank { "BT311" }
+        val syntheticStatus = ProvisioningStatus(
+            wifiSsid = wifiName,
+            handshakeId = "network-${status.rawResponse.hashCode()}",
+            credentialsHash = "${wifiName}-${status.ipAddress}".hashCode().toString()
+        )
+        ConnectivityLogger.d(
+            "Network status ok device=${session.peripheralName} ip=${status.ipAddress}"
+        )
+        _state.value = ConnectionState.WifiProvisioned(session, syntheticStatus)
+        startHeartbeat(session, syntheticStatus)
     }
 
     private companion object {

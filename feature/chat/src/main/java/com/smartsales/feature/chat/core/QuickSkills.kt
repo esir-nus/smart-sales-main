@@ -1,9 +1,8 @@
-package com.smartsales.feature.chat.core
-
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/core/QuickSkills.kt
 // 模块：:feature:chat
 // 说明：定义 Home 可复用的快捷技能目录
-// 作者：创建于 2025-11-20
+// 作者：创建于 2025-11-21
+package com.smartsales.feature.chat.core
 
 /** 快捷技能枚举，覆盖常用销售场景。 */
 enum class QuickSkillId {

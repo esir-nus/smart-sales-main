@@ -44,7 +44,6 @@ class DeviceManagerViewModelTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         gateway = FakeDeviceMediaGateway()
         connectionManager = FakeDeviceConnectionManager()
-        connectionManager.emitReady()
         viewModel = DeviceManagerViewModel(
             gateway,
             connectionManager,
@@ -59,6 +58,8 @@ class DeviceManagerViewModelTest {
 
     @Test
     fun `refresh success populates files`() = runTest(dispatcher) {
+        connectionManager.emitReady()
+        advanceUntilIdle()
         gateway.files = listOf(
             DeviceMediaFile("image-1.jpg", 1024, "image/jpeg", 1_000L, "media/1", "dl/1"),
             DeviceMediaFile("clip.mp4", 2048, "video/mp4", 2_000L, "media/2", "dl/2")
@@ -74,6 +75,8 @@ class DeviceManagerViewModelTest {
 
     @Test
     fun `refresh failure surfaces error`() = runTest(dispatcher) {
+        connectionManager.emitReady()
+        advanceUntilIdle()
         gateway.fetchResult = Result.Error(IllegalStateException("offline"))
 
         viewModel.onRefreshFiles()
@@ -86,6 +89,8 @@ class DeviceManagerViewModelTest {
 
     @Test
     fun `switch tab filters files`() = runTest(dispatcher) {
+        connectionManager.emitReady()
+        advanceUntilIdle()
         gateway.files = listOf(
             DeviceMediaFile("image-1.jpg", 1024, "image/jpeg", 1_000L, "media/1", "dl/1"),
             DeviceMediaFile("clip.mp4", 2048, "video/mp4", 2_000L, "media/2", "dl/2")
@@ -101,6 +106,8 @@ class DeviceManagerViewModelTest {
 
     @Test
     fun `apply file marks ui`() = runTest(dispatcher) {
+        connectionManager.emitReady()
+        advanceUntilIdle()
         gateway.files = listOf(
             DeviceMediaFile("clip.mp4", 2048, "video/mp4", 2_000L, "media/2", "dl/2")
         )
@@ -117,6 +124,8 @@ class DeviceManagerViewModelTest {
 
     @Test
     fun `delete file removes entry`() = runTest(dispatcher) {
+        connectionManager.emitReady()
+        advanceUntilIdle()
         gateway.files = listOf(
             DeviceMediaFile("clip.mp4", 2048, "video/mp4", 2_000L, "media/2", "dl/2")
         )
@@ -132,6 +141,8 @@ class DeviceManagerViewModelTest {
 
     @Test
     fun `upload triggers fetch`() = runTest(dispatcher) {
+        connectionManager.emitReady()
+        advanceUntilIdle()
         gateway.files = emptyList()
         viewModel.onRefreshFiles()
         advanceUntilIdle()
@@ -147,6 +158,71 @@ class DeviceManagerViewModelTest {
         assertEquals(1, gateway.uploadCalls)
         assertEquals(1, state.files.size)
         assertEquals(false, state.isUploading)
+    }
+
+    @Test
+    fun `auto detection updates base url when ready`() = runTest(dispatcher) {
+        connectionManager.networkStatusResult = Result.Success(
+            DeviceNetworkStatus(
+                ipAddress = "192.168.50.10",
+                deviceWifiName = "RetailWiFi",
+                phoneWifiName = "Demo",
+                rawResponse = "wifi#address#192.168.50.10#RetailWiFi#Demo"
+            )
+        )
+
+        connectionManager.emitReady()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("http://192.168.50.10:8000", state.baseUrl)
+        assertEquals("http://192.168.50.10:8000", state.autoDetectedBaseUrl)
+        assertEquals(false, state.baseUrlWasManual)
+        assertEquals(false, state.isAutoDetectingBaseUrl)
+    }
+
+    @Test
+    fun `manual base url wins over auto detection`() = runTest(dispatcher) {
+        connectionManager.networkStatusResult = Result.Success(
+            DeviceNetworkStatus(
+                ipAddress = "192.168.60.6",
+                deviceWifiName = "Office",
+                phoneWifiName = "Office",
+                rawResponse = "wifi#address#192.168.60.6#Office#Office"
+            )
+        )
+
+        viewModel.onBaseUrlChanged("http://manual:9000")
+        connectionManager.emitReady()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("http://manual:9000", state.baseUrl)
+        assertEquals("http://192.168.60.6:8000", state.autoDetectedBaseUrl)
+        assertEquals(true, state.baseUrlWasManual)
+
+        viewModel.onUseAutoBaseUrl()
+        val updated = viewModel.uiState.value
+        assertEquals("http://192.168.60.6:8000", updated.baseUrl)
+        assertEquals(false, updated.baseUrlWasManual)
+    }
+
+    @Test
+    fun `ble connected state still triggers auto detection`() = runTest(dispatcher) {
+        connectionManager.networkStatusResult = Result.Success(
+            DeviceNetworkStatus(
+                ipAddress = "192.168.70.7",
+                deviceWifiName = "Store",
+                phoneWifiName = "Store",
+                rawResponse = "wifi#address#192.168.70.7#Store#Store"
+            )
+        )
+
+        connectionManager.emitBleConnected()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("http://192.168.70.7:8000", state.autoDetectedBaseUrl)
     }
 
     private class FakeDeviceMediaGateway : DeviceMediaGateway {
@@ -178,6 +254,7 @@ class DeviceManagerViewModelTest {
     private class FakeDeviceConnectionManager : DeviceConnectionManager {
         private val _state = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
         override val state: StateFlow<ConnectionState> = _state
+        var networkStatusResult: Result<DeviceNetworkStatus> = Result.Error(IllegalStateException("未配置网络"))
 
         fun emitReady() {
             _state.value = ConnectionState.Syncing(
@@ -194,6 +271,19 @@ class DeviceManagerViewModelTest {
             )
         }
 
+        fun emitBleConnected() {
+            _state.value = ConnectionState.Connected(
+                session = BleSession(
+                    peripheralId = "p1",
+                    peripheralName = "BT311",
+                    signalStrengthDbm = -50,
+                    profileId = "bt311",
+                    secureToken = "token",
+                    establishedAtMillis = System.currentTimeMillis()
+                )
+            )
+        }
+
         override fun selectPeripheral(peripheral: BlePeripheral) = Unit
         override suspend fun startPairing(
             peripheral: BlePeripheral,
@@ -205,7 +295,6 @@ class DeviceManagerViewModelTest {
         override suspend fun requestHotspotCredentials(): Result<WifiCredentials> =
             Result.Error(IllegalStateException())
 
-        override suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus> =
-            Result.Error(IllegalStateException())
+        override suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus> = networkStatusResult
     }
 }

@@ -17,6 +17,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +25,10 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-private const val DEFAULT_MEDIA_SERVER_BASE_URL = "http://10.0.2.2:8000"
+private const val DEFAULT_MEDIA_SERVER_PORT = 8000
+private const val DEFAULT_MEDIA_SERVER_BASE_URL = "http://10.0.2.2:$DEFAULT_MEDIA_SERVER_PORT"
+private const val AUTO_DETECT_WAITING_MESSAGE = "等待设备联网..."
+private const val AUTO_DETECT_LOADING_MESSAGE = "正在检测设备网络..."
 
 @HiltViewModel
 class DeviceManagerViewModel @Inject constructor(
@@ -37,6 +41,7 @@ class DeviceManagerViewModel @Inject constructor(
     val uiState: StateFlow<DeviceManagerUiState> = _uiState.asStateFlow()
 
     private var cachedFiles: List<DeviceFileUi> = emptyList()
+    private var autoDetectJob: Job? = null
 
     init {
         observeConnection()
@@ -145,7 +150,22 @@ class DeviceManagerViewModel @Inject constructor(
     }
 
     fun onBaseUrlChanged(value: String) {
-        _uiState.update { it.copy(baseUrl = value.trim()) }
+        _uiState.update {
+            it.copy(
+                baseUrl = value.trim(),
+                baseUrlWasManual = true
+            )
+        }
+    }
+
+    fun onUseAutoBaseUrl() {
+        val autoBase = _uiState.value.autoDetectedBaseUrl ?: return
+        _uiState.update {
+            it.copy(
+                baseUrl = autoBase,
+                baseUrlWasManual = false
+            )
+        }
     }
 
     fun onClearError() {
@@ -200,19 +220,104 @@ class DeviceManagerViewModel @Inject constructor(
 
     private fun observeConnection() {
         viewModelScope.launch(dispatcherProvider.default) {
+            var lastReadyForNetwork = false
             connectionManager.state.collectLatest { connection ->
-                _uiState.update { it.copy(connectionState = connection) }
+                val readyForNetwork = connection.canQueryNetwork()
+                _uiState.update { state ->
+                    state.copy(
+                        connectionState = connection,
+                        autoDetectStatus = if (readyForNetwork) {
+                            state.autoDetectStatus
+                        } else {
+                            AUTO_DETECT_WAITING_MESSAGE
+                        },
+                        isAutoDetectingBaseUrl = if (readyForNetwork) {
+                            state.isAutoDetectingBaseUrl
+                        } else {
+                            false
+                        }
+                    )
+                }
+                if (!readyForNetwork) {
+                    autoDetectJob?.cancel()
+                }
+                if (readyForNetwork && (!lastReadyForNetwork || _uiState.value.autoDetectedBaseUrl == null)) {
+                    triggerAutoDetect()
+                }
+                lastReadyForNetwork = readyForNetwork
+            }
+        }
+    }
+
+    private fun triggerAutoDetect() {
+        if (autoDetectJob?.isActive == true) return
+        autoDetectJob = viewModelScope.launch(dispatcherProvider.io) {
+            _uiState.update {
+                it.copy(
+                    isAutoDetectingBaseUrl = true,
+                    autoDetectStatus = AUTO_DETECT_LOADING_MESSAGE
+                )
+            }
+            when (val result = connectionManager.queryNetworkStatus()) {
+                is Result.Success -> {
+                    val detectedBase = buildBaseUrl(result.data.ipAddress, _uiState.value.baseUrl)
+                    _uiState.update { state ->
+                        val shouldOverride = !state.baseUrlWasManual
+                        state.copy(
+                            autoDetectedBaseUrl = detectedBase,
+                            baseUrl = if (shouldOverride) detectedBase else state.baseUrl,
+                            isAutoDetectingBaseUrl = false,
+                            baseUrlWasManual = if (shouldOverride) false else state.baseUrlWasManual,
+                            autoDetectStatus = "已检测到 ${result.data.ipAddress}"
+                        )
+                    }
+                }
+
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isAutoDetectingBaseUrl = false,
+                            autoDetectStatus = result.throwable.message ?: "无法获取设备网络"
+                        )
+                    }
+                }
             }
         }
     }
 
     private fun ConnectionState.isReadyForFiles(): Boolean =
         this is ConnectionState.WifiProvisioned || this is ConnectionState.Syncing
+
+    private fun ConnectionState.canQueryNetwork(): Boolean =
+        this is ConnectionState.Connected || isReadyForFiles()
+
+    private fun buildBaseUrl(host: String, fallback: String): String {
+        val sanitizedHost = host
+            .removePrefix("http://")
+            .removePrefix("https://")
+            .substringBefore("/")
+            .ifBlank { host }
+        val fallbackUri = runCatching { Uri.parse(fallback) }.getOrNull()
+        val scheme = fallbackUri?.scheme ?: "http"
+        val port = guessPort(fallbackUri)
+        return "$scheme://$sanitizedHost:$port"
+    }
+
+    private fun guessPort(uri: Uri?): Int {
+        if (uri == null) return DEFAULT_MEDIA_SERVER_PORT
+        val parsedPort = uri.port
+        if (parsedPort != -1) return parsedPort
+        return DEFAULT_MEDIA_SERVER_PORT
+    }
 }
 
 data class DeviceManagerUiState(
     val connectionState: ConnectionState = ConnectionState.Disconnected,
     val baseUrl: String = DEFAULT_MEDIA_SERVER_BASE_URL,
+    val autoDetectedBaseUrl: String? = null,
+    val isAutoDetectingBaseUrl: Boolean = false,
+    val autoDetectStatus: String = AUTO_DETECT_WAITING_MESSAGE,
+    val baseUrlWasManual: Boolean = false,
     val files: List<DeviceFileUi> = emptyList(),
     val visibleFiles: List<DeviceFileUi> = emptyList(),
     val activeTab: DeviceMediaTab = DeviceMediaTab.Images,

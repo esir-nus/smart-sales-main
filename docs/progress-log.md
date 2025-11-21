@@ -863,3 +863,28 @@ Risks / TODO:
 - 未实际跑通 `./gradlew :feature:media:testDebugUnitTest`，需在具备 Gradle 缓存写入权限的环境执行，确保单测与构建一起通过。
 
 ---
+
+## 2025-11-20 – Home 导航壳切换与 Hilt ViewModel 修复
+
+Layer: T1  
+Modules: :app, :feature:chat  
+Docs / Files: app/src/main/java/com/smartsales/aitest/AiFeatureTestActivity.kt, feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreenViewModel.kt, feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreenBindings.kt  
+Role Hook: Codex  
+Next Integration Step: Replace Audio/UserCenter placeholders with real screens and add Compose UI tests once navigation stabilises.
+
+Summary:
+- 将 `AiFeatureTestActivity` 的默认标签由 “AI & 媒体” 升级为真正的 `HomeScreenRoute`，保留 WiFi & BLE、设备文件、设备配网等现有页面，并新增“音频库”“用户中心”占位便于 Home 页跳转。
+- 给 `HomeScreenViewModel` 标注 `@HiltViewModel` 并通过 `HomeScreenBindings` 提供所需依赖（聊天服务适配器、快捷技能目录、历史仓库），解决启动时 `NoSuchMethodException` 奔溃。
+- 重新运行 `./gradlew :app:assembleDebug`（在修复 Gradle wrapper 权限后）并在真机上验证应用可以稳定加载 Home 页。
+
+TDD Status:
+- [ ] Tests written first
+- [ ] Tests added after implementation
+- [x] Manual testing only
+
+Risks / TODO:
+- Home 页的音频库与用户中心仅为占位，需尽快接入真实界面或导航。
+- Home 层聊天仍依赖 data 层 Fake/DashScope 适配器，后续需要统一 streaming 行为与历史加载实现。
+- 尚无 Compose/UI 自动化覆盖导航壳，未来改动需补充测试防止回归。
+
+---

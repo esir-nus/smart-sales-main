@@ -285,6 +285,7 @@ private fun ErrorBanner(message: String, onDismiss: () -> Unit) {
 
 private fun describeConnection(state: ConnectionState): String = when (state) {
     ConnectionState.Disconnected -> "未连接"
+    is ConnectionState.Connected -> "已连接 ${state.session.peripheralName}"
     is ConnectionState.Pairing -> "配对中 ${state.deviceName}"
     is ConnectionState.WifiProvisioned -> "Wi-Fi 已同步"
     is ConnectionState.Syncing -> "同步中"

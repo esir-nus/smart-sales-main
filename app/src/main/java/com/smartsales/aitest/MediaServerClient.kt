@@ -1,3 +1,7 @@
+// 文件：app/src/main/java/com/smartsales/aitest/MediaServerClient.kt
+// 模块：:app
+// 说明：与硬件媒体HTTP服务交互的轻量客户端
+// 作者：创建于 2025-11-21
 package com.smartsales.aitest
 
 import android.content.ContentResolver
@@ -12,19 +16,15 @@ import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
-import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import javax.inject.Inject
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-
-// 文件：aiFeatureTestApp/src/main/java/com/smartsales/aitest/MediaServerClient.kt
-// 模块：:aiFeatureTestApp
-// 说明：与硬件媒体HTTP服务交互的轻量客户端
-// 作者：创建于 2025-11-16
 data class MediaServerFile(
     val name: String,
     val sizeBytes: Long,
@@ -37,10 +37,10 @@ data class MediaServerFile(
     val isImage: Boolean = mimeType.startsWith("image")
 }
 
-class MediaServerClient(
-    private val context: Context,
-    private val resolver: ContentResolver = context.contentResolver
+class MediaServerClient @Inject constructor(
+    @ApplicationContext private val context: Context,
 ) {
+    private val resolver: ContentResolver = context.contentResolver
 
     suspend fun fetchFiles(baseUrl: String): Result<List<MediaServerFile>> = withContext(Dispatchers.IO) {
         val normalized = normalizeBaseUrl(baseUrl) ?: return@withContext Result.Error(IllegalArgumentException("无效地址"))
@@ -126,7 +126,7 @@ class MediaServerClient(
     }
 
     suspend fun downloadFile(baseUrl: String, file: MediaServerFile): Result<File> = withContext(Dispatchers.IO) {
-        val normalized = normalizeBaseUrl(baseUrl) ?: return@withContext Result.Error(IllegalArgumentException("无效地址"))
+        normalizeBaseUrl(baseUrl) ?: return@withContext Result.Error(IllegalArgumentException("无效地址"))
         val targetDir = File(context.getExternalFilesDir(null) ?: context.filesDir, "device-media").apply {
             if (!exists()) mkdirs()
         }

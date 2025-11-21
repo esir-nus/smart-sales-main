@@ -367,6 +367,7 @@ class ConnectivityControlViewModel @Inject constructor(
 
     private fun ConnectionState.describe(): String = when (this) {
         ConnectionState.Disconnected -> "未连接"
+        is ConnectionState.Connected -> "已连接 ${session.peripheralName}"
         is ConnectionState.Pairing -> "配对 ${deviceName} · 进度 ${progressPercent}%"
         is ConnectionState.WifiProvisioned -> "已同步 Wi-Fi：${status.wifiSsid}"
         is ConnectionState.Syncing -> "同步中 · 心跳 ${lastHeartbeatAtMillis}"

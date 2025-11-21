@@ -161,6 +161,7 @@ class FakeMediaSyncCoordinator @Inject constructor(
 
     private fun ConnectionState.blockedReason(): String = when (this) {
         ConnectionState.Disconnected -> "设备未连接，无法同步媒体。"
+        is ConnectionState.Connected -> "BLE 已连接，等待设备加入 Wi-Fi 网络。"
         is ConnectionState.Pairing -> "正在配对 ${deviceName}，请稍后再试。"
         is ConnectionState.Error -> when (val err = error) {
             is ConnectivityError.PairingInProgress -> "配对冲突：${err.deviceName} 已在使用。"

@@ -18,8 +18,10 @@ enum class ChatRole { USER, ASSISTANT }
 
 /** 可选音频上下文，后续整合 Tingwu/录音摘要时使用。 */
 data class AudioContextSummary(
-    val clipCount: Int,
-    val hasTranscripts: Boolean
+    val readyClipCount: Int,
+    val pendingClipCount: Int,
+    val hasTranscripts: Boolean,
+    val note: String? = null
 )
 
 /** Chat 请求模型，封装 session、用户输入、技能标签与历史。 */

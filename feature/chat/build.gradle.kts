@@ -52,7 +52,10 @@ kapt {
 dependencies {
     implementation(projects.data.aiCore)
     implementation(projects.core.util)
+    implementation(projects.feature.connectivity)
+    implementation(projects.feature.media)
     implementation(platform(libs.compose.bom))
+    implementation("androidx.compose.material:material")
     implementation(libs.bundles.compose.ui)
     implementation(libs.compose.material3)
     implementation(libs.compose.material.icons.extended)
@@ -60,8 +63,9 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.coroutines.core)
     implementation(libs.hilt.android)
-    implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
+    implementation(libs.hilt.navigation.compose)
+    api(libs.room.runtime)
+    api(libs.room.ktx)
     kapt(libs.hilt.compiler)
     kapt(libs.room.compiler)
 

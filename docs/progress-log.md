@@ -964,3 +964,27 @@ Risks / TODO:
 - 用户中心仍为本地 stub，后续需要接入真实存储/Avatar 上传与完备错误提示。
 
 ---
+
+## 2025-11-21 – 顶层导航 Compose UI 冒烟测试
+
+Layer: T1  
+Modules: :app, :feature:chat, :feature:media, :feature:usercenter  
+Docs / Files: app/src/androidTest/java/com/smartsales/aitest/NavigationSmokeTest.kt, app/src/main/java/com/smartsales/aitest/AiFeatureTestActivity.kt, feature/chat/home/HomeScreen.kt, feature/media/src/main/java/com/smartsales/feature/media/audio/AudioFilesScreen.kt, feature/usercenter/src/main/java/com/smartsales/feature/usercenter/UserCenterScreen.kt, app/src/main/java/com/smartsales/aitest/devicemanager/DeviceManagerScreen.kt, app/src/main/java/com/smartsales/aitest/setup/DeviceSetupRoute.kt  
+Role Hook: Codex  
+Next Integration Step: Run `./gradlew :app:connectedDebugAndroidTest` on device/emulator to verify navigation tags.
+
+Summary:
+- 为 Home/DeviceSetup/DeviceManager/AudioFiles/UserCenter 添加根级 testTag，AiFeatureTestActivity 加入 BackHandler 返回 Home。
+- 新增 `NavigationSmokeTest` 覆盖默认落在 Home、从 shell 跳转到设备配网/设备文件/音频库/用户中心，以及返回 Home、快速切 tab 不崩溃。
+- 保持现有 CHIP testTag 导航，复用 createAndroidComposeRule 启动 AiFeatureTestActivity。
+
+TDD Status:
+- [ ] Tests written first
+- [x] Tests added after implementation
+- [ ] Manual testing only
+
+Risks / TODO:
+- 未在本地跑设备上的 connected 测试；依赖真实/模拟器环境执行。
+- BackHandler 仅将非 Home 页返回到 Home，若未来引入更复杂返回栈需调整逻辑。
+
+---

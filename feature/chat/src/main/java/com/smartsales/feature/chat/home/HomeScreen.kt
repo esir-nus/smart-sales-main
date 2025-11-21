@@ -194,7 +194,7 @@ fun HomeScreen(
     Scaffold(
         modifier = modifier
             .fillMaxSize()
-            .testTag(HomeScreenTestTags.PAGE),
+            .testTag(HomeScreenTestTags.ROOT),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = { HomeTopBar(onProfileClick = onProfileClicked) },
         bottomBar = {
@@ -302,7 +302,9 @@ fun HomeScreen(
 }
 
 object HomeScreenTestTags {
-    const val PAGE = "home_screen_page"
+    const val ROOT = "home_screen_root"
+    // 兼容旧测试
+    const val PAGE = ROOT
     const val DEVICE_BANNER = "home_device_banner"
     const val AUDIO_CARD = "home_audio_card"
     const val PROFILE_BUTTON = "home_profile_button"

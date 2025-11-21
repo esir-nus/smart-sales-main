@@ -75,7 +75,7 @@ fun DeviceManagerRoute(modifier: Modifier = Modifier) {
         onRequestUpload = { uploadLauncher.launch(arrayOf("image/*", "video/*")) },
         onBaseUrlChange = viewModel::onBaseUrlChanged,
         onClearError = viewModel::onClearError,
-        modifier = modifier
+        modifier = modifier.testTag(DeviceManagerRouteTestTags.ROOT)
     )
 }
 
@@ -381,4 +381,8 @@ private object DeviceManagerTestTags {
     const val UPLOAD_BUTTON = "device_manager_upload_button"
     const val EMPTY_STATE = "device_manager_empty_state"
     const val ERROR_BANNER = "device_manager_error_banner"
+}
+
+object DeviceManagerRouteTestTags {
+    const val ROOT = "device_manager_screen_root"
 }

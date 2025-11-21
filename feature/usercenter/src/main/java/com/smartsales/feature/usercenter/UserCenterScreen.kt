@@ -38,6 +38,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -56,7 +57,9 @@ fun UserCenterScreen(
     modifier: Modifier = Modifier
 ) {
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .testTag(UserCenterTestTags.ROOT),
         topBar = {
             TopAppBar(
                 title = { Text(text = "用户中心") },
@@ -146,6 +149,10 @@ fun UserCenterScreen(
             }
         }
     }
+}
+
+object UserCenterTestTags {
+    const val ROOT = "user_center_screen_root"
 }
 
 @Composable

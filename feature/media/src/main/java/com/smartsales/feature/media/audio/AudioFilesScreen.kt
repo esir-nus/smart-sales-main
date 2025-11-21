@@ -41,6 +41,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
@@ -58,7 +59,9 @@ fun AudioFilesScreen(
     modifier: Modifier = Modifier
 ) {
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .testTag(AudioFilesTestTags.ROOT),
         topBar = {
             TopAppBar(
                 title = { Text(text = "音频库") },
@@ -119,6 +122,10 @@ fun AudioFilesScreen(
             }
         }
     }
+}
+
+object AudioFilesTestTags {
+    const val ROOT = "audio_files_screen_root"
 }
 
 @Composable

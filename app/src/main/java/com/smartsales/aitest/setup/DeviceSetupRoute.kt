@@ -33,7 +33,7 @@ fun DeviceSetupRoute(
 }
 
 object DeviceSetupRouteTestTags {
-    const val PAGE = "device_setup_page"
+    const val PAGE = "device_setup_screen_root"
     // 兼容旧测试：指向主按钮
     const val COMPLETE_BUTTON = "device_setup_primary_button"
 }

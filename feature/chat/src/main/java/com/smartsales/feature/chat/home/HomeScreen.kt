@@ -199,13 +199,14 @@ fun HomeScreen(
                 .padding(innerPadding)
                 .pullRefresh(pullRefreshState)
         ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                state = listState,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp)
+            Column(
+                modifier = Modifier.fillMaxSize()
             ) {
-                item("banner") {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                ) {
                     DeviceAudioBanner(
                         deviceSnapshot = state.deviceSnapshot,
                         audioSummary = state.audioSummary,
@@ -213,35 +214,49 @@ fun HomeScreen(
                         onAudioClick = onAudioSummaryClicked
                     )
                 }
-                if (state.isLoadingHistory) {
-                    item("history-loading") {
-                        Text(
-                            text = "加载历史记录...",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                        )
-                    }
-                }
-                if (state.chatMessages.isEmpty()) {
-                    item("empty") {
-                        EmptyChatHint(
-                            quickSkills = state.quickSkills,
-                            enabled = !state.isSending && !state.isStreaming,
-                            onQuickSkillSelected = onQuickSkillSelected
-                        )
-                    }
-                } else {
-                    items(state.chatMessages, key = { it.id }) { message ->
-                        MessageBubble(
-                            message = message,
-                            alignEnd = message.role == ChatMessageRole.USER
-                        )
-                    }
-                    item("chat-bottom-pad") {
-                        Spacer(modifier = Modifier.height(72.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                ) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        state = listState,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp)
+                    ) {
+                        if (state.isLoadingHistory) {
+                            item("history-loading") {
+                                Text(
+                                    text = "加载历史记录...",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp)
+                                )
+                            }
+                        }
+                        if (state.chatMessages.isEmpty()) {
+                            item("empty") {
+                                EmptyChatHint(
+                                    quickSkills = state.quickSkills,
+                                    enabled = !state.isSending && !state.isStreaming,
+                                    onQuickSkillSelected = onQuickSkillSelected
+                                )
+                            }
+                        } else {
+                            items(state.chatMessages, key = { it.id }) { message ->
+                                MessageBubble(
+                                    message = message,
+                                    alignEnd = message.role == ChatMessageRole.USER
+                                )
+                            }
+                            item("chat-bottom-pad") {
+                                Spacer(modifier = Modifier.height(72.dp))
+                            }
+                        }
                     }
                 }
             }

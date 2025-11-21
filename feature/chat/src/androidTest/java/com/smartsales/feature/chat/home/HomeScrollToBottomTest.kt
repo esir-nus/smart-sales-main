@@ -2,11 +2,12 @@ package com.smartsales.feature.chat.home
 
 // 文件：feature/chat/src/androidTest/java/com/smartsales/feature/chat/home/HomeScrollToBottomTest.kt
 // 模块：:feature:chat
-// 说明：验证 Home 层“回到底部”按钮的显示与交互逻辑
+// 说明：验证 Home 层“回到底部”按钮与设备横幅的显示逻辑
 // 作者：创建于 2025-11-21
 // 覆盖点：
 // - 底部时按钮隐藏，上滑后出现，点击后滚动并再次隐藏
-// - 消息数量不足以滚动时按钮不会渲染，确保无崩溃
+// - 横幅在长列表滚动时仍可见
+// - 消息不足或为空时按钮不出现，横幅依旧显示
 // 测试数据假设：构造 2~35 条消息，内容简单但能触发 LazyColumn 滚动和 Semantics 滚动动作
 
 import androidx.compose.material3.MaterialTheme
@@ -55,6 +56,17 @@ class HomeScrollToBottomTest {
     }
 
     @Test
+    fun deviceBanner_staysVisibleWhileScrollingLongList() {
+        setHomeContent(messageCount = 30)
+        scrollToText("消息 29")
+
+        scrollToText("消息 5")
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_BANNER).assertIsDisplayed()
+        composeRule.onNodeWithTag(HomeScreenTestTags.SCROLL_TO_LATEST).assertIsDisplayed()
+    }
+
+    @Test
     fun scrollButton_clickReturnsToBottomAndHides() {
         setHomeContent(messageCount = 35)
         scrollToText("消息 34")
@@ -73,6 +85,15 @@ class HomeScrollToBottomTest {
     fun scrollButton_neverAppearsForShortList() {
         setHomeContent(messageCount = 2)
 
+        composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_BANNER).assertIsDisplayed()
+        composeRule.onNodeWithTag(HomeScreenTestTags.SCROLL_TO_LATEST).assertDoesNotExist()
+    }
+
+    @Test
+    fun deviceBanner_visibleWhenListEmpty() {
+        setHomeContent(messageCount = 0)
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_BANNER).assertIsDisplayed()
         composeRule.onNodeWithTag(HomeScreenTestTags.SCROLL_TO_LATEST).assertDoesNotExist()
     }
 

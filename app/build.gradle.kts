@@ -95,4 +95,10 @@ dependencies {
     kapt(libs.hilt.compiler)
 
     testImplementation(libs.junit)
+
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.ext)
+    androidTestImplementation(libs.androidx.test.espresso)
+    debugImplementation(libs.compose.ui.test.manifest)
 }

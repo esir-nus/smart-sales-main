@@ -47,6 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -150,7 +151,9 @@ fun HomeScreen(
     }
 
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .testTag(HomeScreenTestTags.PAGE),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = { HomeTopBar(onProfileClick = onProfileClicked) },
         bottomBar = {
@@ -225,6 +228,13 @@ fun HomeScreen(
     }
 }
 
+object HomeScreenTestTags {
+    const val PAGE = "home_screen_page"
+    const val DEVICE_BANNER = "home_device_banner"
+    const val AUDIO_CARD = "home_audio_card"
+    const val PROFILE_BUTTON = "home_profile_button"
+}
+
 @Composable
 private fun HomeTopBar(onProfileClick: () -> Unit) {
     Row(
@@ -238,7 +248,10 @@ private fun HomeTopBar(onProfileClick: () -> Unit) {
             text = "AI 助手",
             style = MaterialTheme.typography.titleLarge
         )
-        IconButton(onClick = onProfileClick) {
+        IconButton(
+            onClick = onProfileClick,
+            modifier = Modifier.testTag(HomeScreenTestTags.PROFILE_BUTTON)
+        ) {
             Icon(Icons.Filled.Person, contentDescription = "个人中心")
         }
     }
@@ -260,6 +273,7 @@ private fun DeviceAudioBanner(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .testTag(HomeScreenTestTags.DEVICE_BANNER)
                     .clickable(onClick = onDeviceClick)
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -294,6 +308,7 @@ private fun DeviceAudioBanner(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .testTag(HomeScreenTestTags.AUDIO_CARD)
                     .clickable(onClick = onAudioClick)
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,

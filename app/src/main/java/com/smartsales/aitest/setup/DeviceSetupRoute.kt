@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -54,9 +55,16 @@ fun DeviceSetupRoute(
                     )
                 }
             }
-            Button(onClick = onCompleted) {
+            Button(
+                onClick = onCompleted,
+                modifier = Modifier.testTag(DeviceSetupTestTags.COMPLETE_BUTTON)
+            ) {
                 Text(text = "返回主页")
             }
         }
     }
+}
+
+object DeviceSetupTestTags {
+    const val COMPLETE_BUTTON = "device_setup_complete"
 }

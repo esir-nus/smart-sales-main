@@ -61,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -129,7 +130,10 @@ private fun AiFeatureTestApp() {
                         .fillMaxSize()
                         .padding(16.dp)
                 ) {
-                    PageSelector(currentPage = currentPage, onPageSelected = { currentPage = it })
+                    PageSelector(
+                        currentPage = currentPage,
+                        onPageSelected = { currentPage = it }
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
                     Box(
                         modifier = Modifier
@@ -140,7 +144,9 @@ private fun AiFeatureTestApp() {
                             TestHomePage.Home -> {
                                 // Home 页：加载聊天 HomeScreen 并把回调映射到对应 Tab。
                                 HomeScreenRoute(
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .testTag(AiFeatureTestTags.PAGE_HOME),
                                     onNavigateToDeviceManager = { currentPage = TestHomePage.DeviceManager },
                                     onNavigateToDeviceSetup = { currentPage = TestHomePage.DeviceSetup },
                                     onNavigateToAudioFiles = { currentPage = TestHomePage.AudioFiles },
@@ -150,7 +156,9 @@ private fun AiFeatureTestApp() {
 
                             TestHomePage.WifiBleTester -> {
                                 WifiBleTesterRoute(
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .testTag(AiFeatureTestTags.PAGE_WIFI),
                                     mediaServerClient = mediaServerClient,
                                     onShowMessage = showSnackbar
                                 )
@@ -158,25 +166,37 @@ private fun AiFeatureTestApp() {
 
                             TestHomePage.DeviceManager -> {
                                 DeviceManagerRoute(
-                                    modifier = Modifier.fillMaxSize()
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
                                 )
                             }
 
                             TestHomePage.DeviceSetup -> {
                                 DeviceSetupRoute(
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .testTag(AiFeatureTestTags.PAGE_DEVICE_SETUP),
                                     onCompleted = { currentPage = TestHomePage.Home }
                                 )
                             }
 
                             TestHomePage.AudioFiles -> {
                                 // 占位：串联 Home 音频入口到独立页面。
-                                AudioFilesPlaceholder(modifier = Modifier.fillMaxSize())
+                                AudioFilesPlaceholder(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES)
+                                )
                             }
 
                             TestHomePage.UserCenter -> {
                                 // 占位：Home 右上角“用户中心”跳转目标。
-                                UserCenterPlaceholder(modifier = Modifier.fillMaxSize())
+                                UserCenterPlaceholder(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .testTag(AiFeatureTestTags.PAGE_USER_CENTER)
+                                )
                             }
                         }
                     }
@@ -192,32 +212,38 @@ private fun PageSelector(currentPage: TestHomePage, onPageSelected: (TestHomePag
         FilterChip(
             selected = currentPage == TestHomePage.Home,
             onClick = { onPageSelected(TestHomePage.Home) },
-            label = { Text("Home") }
+            label = { Text("Home") },
+            modifier = Modifier.testTag(AiFeatureTestTags.CHIP_HOME)
         )
         FilterChip(
             selected = currentPage == TestHomePage.WifiBleTester,
             onClick = { onPageSelected(TestHomePage.WifiBleTester) },
-            label = { Text("WiFi & BLE Tester") }
+            label = { Text("WiFi & BLE Tester") },
+            modifier = Modifier.testTag(AiFeatureTestTags.CHIP_WIFI)
         )
         FilterChip(
             selected = currentPage == TestHomePage.DeviceManager,
             onClick = { onPageSelected(TestHomePage.DeviceManager) },
-            label = { Text("设备文件") }
+            label = { Text("设备文件") },
+            modifier = Modifier.testTag(AiFeatureTestTags.CHIP_DEVICE_MANAGER)
         )
         FilterChip(
             selected = currentPage == TestHomePage.DeviceSetup,
             onClick = { onPageSelected(TestHomePage.DeviceSetup) },
-            label = { Text("设备配网") }
+            label = { Text("设备配网") },
+            modifier = Modifier.testTag(AiFeatureTestTags.CHIP_DEVICE_SETUP)
         )
         FilterChip(
             selected = currentPage == TestHomePage.AudioFiles,
             onClick = { onPageSelected(TestHomePage.AudioFiles) },
-            label = { Text("音频库") }
+            label = { Text("音频库") },
+            modifier = Modifier.testTag(AiFeatureTestTags.CHIP_AUDIO_FILES)
         )
         FilterChip(
             selected = currentPage == TestHomePage.UserCenter,
             onClick = { onPageSelected(TestHomePage.UserCenter) },
-            label = { Text("用户中心") }
+            label = { Text("用户中心") },
+            modifier = Modifier.testTag(AiFeatureTestTags.CHIP_USER_CENTER)
         )
     }
 }
@@ -566,3 +592,18 @@ private val REQUIRED_BLE_PERMISSIONS = listOf(
     Manifest.permission.BLUETOOTH_CONNECT,
     Manifest.permission.ACCESS_FINE_LOCATION
 )
+
+object AiFeatureTestTags {
+    const val PAGE_HOME = "page_home"
+    const val PAGE_WIFI = "page_wifi_ble"
+    const val PAGE_DEVICE_MANAGER = "page_device_manager"
+    const val PAGE_DEVICE_SETUP = "page_device_setup"
+    const val PAGE_AUDIO_FILES = "page_audio_files"
+    const val PAGE_USER_CENTER = "page_user_center"
+    const val CHIP_HOME = "chip_home"
+    const val CHIP_WIFI = "chip_wifi_ble"
+    const val CHIP_DEVICE_MANAGER = "chip_device_manager"
+    const val CHIP_DEVICE_SETUP = "chip_device_setup"
+    const val CHIP_AUDIO_FILES = "chip_audio_files"
+    const val CHIP_USER_CENTER = "chip_user_center"
+}

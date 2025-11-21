@@ -22,6 +22,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,7 +36,7 @@ import kotlinx.coroutines.launch
 
 /** UI 模型：代表 Home 页里的一条聊天气泡。 */
 data class ChatMessageUi(
-    val id: String,
+    val id: String = UUID.randomUUID().toString(),
     val role: ChatMessageRole,
     val content: String,
     val timestampMillis: Long,
@@ -404,14 +405,14 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     private fun createUserMessage(content: String): ChatMessageUi = ChatMessageUi(
-        id = generateId(),
+        id = nextMessageId(),
         role = ChatMessageRole.USER,
         content = content,
         timestampMillis = System.currentTimeMillis()
     )
 
     private fun createAssistantPlaceholder(): ChatMessageUi = ChatMessageUi(
-        id = generateId(),
+        id = nextMessageId(),
         role = ChatMessageRole.ASSISTANT,
         content = "",
         timestampMillis = System.currentTimeMillis(),
@@ -541,7 +542,7 @@ class HomeScreenViewModel @Inject constructor(
         isRecommended = isRecommended
     )
 
-    private fun generateId(): String = "msg-${'$'}{System.currentTimeMillis()}"
+    private fun nextMessageId(): String = "msg-${UUID.randomUUID()}"
 
     private fun <T> MutableStateFlow<T>.update(transform: (T) -> T) {
         value = transform(value)

@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -77,76 +76,80 @@ fun AudioFilesScreen(
 ) {
     val endpointAvailable = !state.baseUrl.isNullOrBlank()
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .padding(innerPadding)
                 .padding(16.dp)
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = state.baseUrl?.let { "设备地址：$it" } ?: "设备未连接，等待 Wi-Fi & BLE 同步",
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (endpointAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(AudioFilesTestTags.DEVICE_STATUS)
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(
-                    onClick = onSyncClicked,
-                    enabled = endpointAvailable,
-                    modifier = Modifier.testTag(AudioFilesTestTags.SYNC_BUTTON)
-                ) {
-                    Text("同步并转写")
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = state.baseUrl?.let { "设备地址：$it" } ?: "设备未连接，等待 Wi-Fi & BLE 同步",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (endpointAvailable) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(AudioFilesTestTags.DEVICE_STATUS)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = onSyncClicked,
+                            enabled = endpointAvailable,
+                            modifier = Modifier.testTag(AudioFilesTestTags.SYNC_BUTTON)
+                        ) {
+                            Text("同步并转写")
+                        }
+                        OutlinedButton(
+                            onClick = onRefresh,
+                            enabled = endpointAvailable
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("刷新列表")
+                        }
+                    }
+                    if (state.isSyncing) {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    }
                 }
-                OutlinedButton(
-                    onClick = onRefresh,
-                    enabled = endpointAvailable
-                ) {
-                    Icon(Icons.Default.Refresh, contentDescription = null)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("刷新列表")
-                }
-            }
-            if (state.isSyncing) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
             state.errorMessage?.let {
-                ErrorBanner(
-                    message = it,
-                    onDismiss = onDismissError,
-                    modifier = Modifier.testTag(AudioFilesTestTags.ERROR_BANNER)
-                )
+                item {
+                    ErrorBanner(
+                        message = it,
+                        onDismiss = onDismissError,
+                        modifier = Modifier.testTag(AudioFilesTestTags.ERROR_BANNER)
+                    )
+                }
             }
             if (state.recordings.isEmpty()) {
-                AudioEmptyState(
-                    isDeviceConnected = endpointAvailable,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f, fill = true)
-                        .testTag(AudioFilesTestTags.EMPTY_STATE)
-                )
+                item {
+                    AudioEmptyState(
+                        isDeviceConnected = endpointAvailable,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(AudioFilesTestTags.EMPTY_STATE)
+                    )
+                }
             } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(state.recordings, key = { it.id }) { recording ->
-                        AudioRecordingCard(
-                            recording = recording,
-                            onPlayPause = onPlayPause,
-                            onApply = onApply,
-                            onDelete = onDelete,
-                            modifier = Modifier.testTag(AudioFilesTestTags.item(recording.id))
-                        )
-                    }
+                items(state.recordings, key = { it.id }) { recording ->
+                    AudioRecordingCard(
+                        recording = recording,
+                        onPlayPause = onPlayPause,
+                        onApply = onApply,
+                        onDelete = onDelete,
+                        modifier = Modifier.testTag(AudioFilesTestTags.item(recording.id))
+                    )
                 }
             }
         }

@@ -1,0 +1,187 @@
+package com.smartsales.aitest.audio
+
+// 文件：app/src/test/java/com/smartsales/aitest/audio/DeviceHttpEndpointProviderImplTest.kt
+// 模块：:app
+// 说明：覆盖设备 HTTP 地址发现的重试、退避与状态切换逻辑
+// 作者：创建于 2025-11-21
+
+import com.smartsales.core.test.FakeDispatcherProvider
+import com.smartsales.core.util.Result
+import com.smartsales.feature.connectivity.BlePeripheral
+import com.smartsales.feature.connectivity.BleSession
+import com.smartsales.feature.connectivity.ConnectionState
+import com.smartsales.feature.connectivity.DeviceConnectionManager
+import com.smartsales.feature.connectivity.DeviceNetworkStatus
+import com.smartsales.feature.connectivity.ProvisioningStatus
+import com.smartsales.feature.connectivity.WifiCredentials
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+class DeviceHttpEndpointProviderImplTest {
+
+    @Test
+    fun startDiscoveryWhenReadyAndCacheBaseUrl() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val fakeConnection = FakeDeviceConnectionManager()
+        fakeConnection.enqueueResult(Result.Success(deviceNetworkStatus("10.0.0.2")))
+        val provider = DeviceHttpEndpointProviderImpl(
+            connectionManager = fakeConnection,
+            dispatchers = FakeDispatcherProvider(dispatcher)
+        )
+        val results = mutableListOf<String?>()
+        val collectJob = collectBaseUrl(provider, results)
+
+        fakeConnection.updateState(readyState())
+        advanceUntilIdle()
+
+        assertEquals(1, fakeConnection.queryCount)
+        assertEquals("http://10.0.0.2:8000", results.last())
+
+        collectJob.cancel()
+        provider.cancelForTest()
+    }
+
+    @Test
+    fun retryWithBackoffAndEmitOnSuccess() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val fakeConnection = FakeDeviceConnectionManager()
+        fakeConnection.enqueueResult(Result.Error(IllegalStateException("fail-1")))
+        fakeConnection.enqueueResult(Result.Error(IllegalStateException("fail-2")))
+        fakeConnection.enqueueResult(Result.Success(deviceNetworkStatus("10.0.0.8")))
+        val provider = DeviceHttpEndpointProviderImpl(
+            connectionManager = fakeConnection,
+            dispatchers = FakeDispatcherProvider(dispatcher)
+        )
+        val results = mutableListOf<String?>()
+        val collectJob = collectBaseUrl(provider, results)
+
+        fakeConnection.updateState(readyState())
+
+        advanceUntilIdle()
+        assertEquals(1, fakeConnection.queryCount)
+
+        advanceTimeBy(1_000)
+        advanceUntilIdle()
+        assertEquals(2, fakeConnection.queryCount)
+
+        advanceTimeBy(2_000)
+        advanceUntilIdle()
+        assertEquals(3, fakeConnection.queryCount)
+        assertEquals("http://10.0.0.8:8000", results.last())
+
+        collectJob.cancel()
+        provider.cancelForTest()
+    }
+
+    @Test
+    fun cancelRetriesWhenConnectionDrops() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val fakeConnection = FakeDeviceConnectionManager()
+        fakeConnection.enqueueResult(Result.Error(IllegalStateException("fail")))
+        fakeConnection.enqueueResult(Result.Success(deviceNetworkStatus("10.0.0.3")))
+        val provider = DeviceHttpEndpointProviderImpl(
+            connectionManager = fakeConnection,
+            dispatchers = FakeDispatcherProvider(dispatcher)
+        )
+        val results = mutableListOf<String?>()
+        val collectJob = collectBaseUrl(provider, results)
+
+        fakeConnection.updateState(readyState())
+        advanceUntilIdle()
+        assertEquals(1, fakeConnection.queryCount)
+
+        fakeConnection.updateState(ConnectionState.Disconnected)
+        advanceUntilIdle()
+        advanceTimeBy(3_000)
+        advanceUntilIdle()
+
+        assertEquals(1, fakeConnection.queryCount)
+        assertNull(results.last())
+
+        collectJob.cancel()
+        provider.cancelForTest()
+    }
+
+    private fun collectBaseUrl(
+        provider: DeviceHttpEndpointProviderImpl,
+        results: MutableList<String?>
+    ): Job = backgroundScope.launch {
+        provider.deviceBaseUrl.collect { results.add(it) }
+    }
+
+    private fun readyState(): ConnectionState.WifiProvisioned {
+        val session = BleSession.fromPeripheral(
+            BlePeripheral(
+                id = "id-1",
+                name = "BT311",
+                signalStrengthDbm = -40
+            ),
+            timestamp = 1L
+        )
+        val status = ProvisioningStatus(
+            wifiSsid = "wifi",
+            handshakeId = "handshake",
+            credentialsHash = "hash"
+        )
+        return ConnectionState.WifiProvisioned(session, status)
+    }
+
+    private fun deviceNetworkStatus(ip: String): DeviceNetworkStatus =
+        DeviceNetworkStatus(
+            ipAddress = ip,
+            deviceWifiName = "wifi",
+            phoneWifiName = "phone",
+            rawResponse = "ok"
+        )
+
+    private class FakeDeviceConnectionManager(
+        initialState: ConnectionState = ConnectionState.Disconnected
+    ) : DeviceConnectionManager {
+
+        private val stateFlow = MutableStateFlow(initialState)
+        private val responses = ArrayDeque<Result<DeviceNetworkStatus>>()
+        var queryCount: Int = 0
+            private set
+
+        override val state: StateFlow<ConnectionState> = stateFlow
+
+        fun enqueueResult(result: Result<DeviceNetworkStatus>) {
+            responses.add(result)
+        }
+
+        fun updateState(state: ConnectionState) {
+            stateFlow.value = state
+        }
+
+        override fun selectPeripheral(peripheral: BlePeripheral) = Unit
+
+        override suspend fun startPairing(
+            peripheral: BlePeripheral,
+            credentials: WifiCredentials
+        ): Result<Unit> = Result.Error(UnsupportedOperationException("not used"))
+
+        override suspend fun retry(): Result<Unit> =
+            Result.Error(UnsupportedOperationException("not used"))
+
+        override fun forgetDevice() = Unit
+
+        override suspend fun requestHotspotCredentials(): Result<WifiCredentials> =
+            Result.Error(UnsupportedOperationException("not used"))
+
+        override suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus> {
+            queryCount += 1
+            return responses.removeFirstOrNull() ?: Result.Error(
+                IllegalStateException("missing queued response")
+            )
+        }
+    }
+}

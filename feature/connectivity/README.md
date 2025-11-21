@@ -41,9 +41,10 @@
 - 缺少错误记录与 Telemetry，排查困难。
 
 ## 下一步动作
-- 接入真实 BLE/Wi-Fi SDK，参考 `reference-source` 补充协议说明。
+- 接入真实 BLE/Wi-Fi SDK，参考 `reference-source` 补充协议说明，并在 WiFi/BLE Tester 中跑真机验证。
 - 在 `:core:test` 添加更丰富的 Fake（延迟、掉线、权限拒绝），并扩展单测覆盖所有负路径。
-- 将 `ConnectionState` 注入到 `:feature:media` / `:app` UI，提供配网流程与错误提示。
+- 将 `queryNetworkStatus` 输出直接推送给 DeviceManager/AudioFiles ViewModel，实现 baseUrl 自动同步。
+- 为 `AndroidBleScanner`/`GattBleGateway` 增加日志与指标，方便排查信号弱/权限拒绝。
 
 ## 调试与验证
 - 单测：`./gradlew :feature:connectivity:test`。

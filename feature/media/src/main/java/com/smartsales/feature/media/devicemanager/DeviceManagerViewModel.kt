@@ -18,6 +18,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
+import java.io.File
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -401,6 +402,7 @@ interface DeviceMediaGateway {
     suspend fun uploadFile(baseUrl: String, source: DeviceUploadSource): Result<Unit>
     suspend fun applyFile(baseUrl: String, fileName: String): Result<Unit>
     suspend fun deleteFile(baseUrl: String, fileName: String): Result<Unit>
+    suspend fun downloadFile(baseUrl: String, file: DeviceMediaFile): Result<File>
 }
 
 sealed class DeviceConnectionUiState {

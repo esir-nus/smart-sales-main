@@ -72,6 +72,7 @@ import coil.compose.AsyncImage
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
+import com.smartsales.aitest.audio.AudioFilesRoute
 import com.smartsales.aitest.devicemanager.DeviceManagerRoute
 import com.smartsales.aitest.setup.DeviceSetupRoute
 import com.smartsales.core.util.Result
@@ -182,8 +183,7 @@ private fun AiFeatureTestApp() {
                             }
 
                             TestHomePage.AudioFiles -> {
-                                // 占位：串联 Home 音频入口到独立页面。
-                                AudioFilesPlaceholder(
+                                AudioFilesRoute(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES)
@@ -258,18 +258,6 @@ private enum class TestHomePage {
 }
 
 @Composable
-private fun AudioFilesPlaceholder(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "音频库页面 TODO：待接入媒体列表。",
-            style = MaterialTheme.typography.bodyLarge
-        )
-    }
-}
-
 @Composable
 private fun UserCenterPlaceholder(modifier: Modifier = Modifier) {
     Box(

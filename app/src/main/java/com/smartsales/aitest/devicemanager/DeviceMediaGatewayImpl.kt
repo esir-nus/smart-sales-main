@@ -40,10 +40,25 @@ class DeviceMediaGatewayImpl @Inject constructor(
 
     override suspend fun deleteFile(baseUrl: String, fileName: String): Result<Unit> =
         mediaServerClient.deleteFile(baseUrl, fileName)
+
+    override suspend fun downloadFile(
+        baseUrl: String,
+        file: DeviceMediaFile
+    ): Result<java.io.File> = mediaServerClient.downloadFile(baseUrl, file.toMediaServerFile())
 }
 
 private fun MediaServerFile.toDeviceMediaFile(): DeviceMediaFile =
     DeviceMediaFile(
+        name = name,
+        sizeBytes = sizeBytes,
+        mimeType = mimeType,
+        modifiedAtMillis = modifiedAtMillis,
+        mediaUrl = mediaUrl,
+        downloadUrl = downloadUrl
+    )
+
+private fun DeviceMediaFile.toMediaServerFile(): MediaServerFile =
+    MediaServerFile(
         name = name,
         sizeBytes = sizeBytes,
         mimeType = mimeType,

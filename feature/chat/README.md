@@ -24,10 +24,11 @@
 3. Tingwu 流程：`startTranscriptJob` → 调用 `TingwuCoordinator.submit` → `observeJob()` Flow 注入转写消息。
 4. 导出流程：调用 `ExportManager`，根据结果更新 `ChatExportState` 并提示 UI 复制/分享。
 
-## 当前状态（T0→T1）
-- 默认注入 `DashscopeAiChatService`（需配置 `DASHSCOPE_API_KEY`），也可在测试代码中显式传入 `FakeAiChatService` 以离线运行；无论真实/假实现都会把助手 display 文本写入 Markdown，确保 `copyMarkdown` 行为与 UI 提示一致。
-- 剪贴板复制与导出分享通过 `AndroidChatShareHandler` 直接落地到系统 Clipboard + Share Sheet，并已由 `DefaultChatControllerTest.copyMarkdown_pushesToClipboardHandler` 验证。
-- `./gradlew :feature:chat:test` 需要确保 Hilt/Room KAPT 依赖可从 Aliyun 获取（或镜像）。
+## 当前状态（T1-）
+- ViewModel/Controller：默认注入 `DashscopeAiChatService`（配置 `DASHSCOPE_API_KEY` 后可直连真实 Qwen），也可显式传入 `FakeAiChatService` 做离线演示；所有实现都会把助手 display 文本写入 Markdown，确保剪贴板/导出一致。
+- Home 层：`HomeScreenViewModel` 将 Device/Audiosummary、滚动到底部按钮、Room 历史、快捷技能统一在 `HomeUiState` 中；新增 Compose instrumentation (`HomeScrollToBottomTest`) 验证滚动按钮显隐逻辑。
+- 导出/剪贴板：`AndroidChatShareHandler` 负责系统剪贴板与分享提示；`DefaultChatControllerTest` 已覆盖 `copyMarkdown`、导出状态同步。
+- Tingwu 注入：`startTranscriptJob/importTranscript` 支持将 Tingwu Markdown 写入聊天记录，但 AudioFiles 的新转写流程尚未自动回写。
 
 ## 风险与限制
 - 没有真实 SDK，无法验证 streaming SSE、长文 Markdown、导出体积等问题。

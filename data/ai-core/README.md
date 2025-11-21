@@ -83,9 +83,10 @@ fun provideAiCoreConfig(): AiCoreConfig = AiCoreConfig(
 
 ## 下一步动作
 - 扩展 DashScope 调用：基于现有 `DashscopeClient.stream` 接口补齐 SSE streaming Telemetry，并补充指标上报，保障大批量生成不会阻塞 UI。
-- Tingwu：把官方 SDK/签名逻辑补充到 `TingwuAuthInterceptor`，并支持任务恢复（APP 重新打开后继续轮询）；同时补充断线重试与 metrics。
+- Tingwu：把官方 SDK/签名逻辑补充到 `TingwuAuthInterceptor`，并支持任务恢复（App 重启后可继续轮询）；同步 AudioFiles 场景所需的状态映射/错误提示。
+- OSS：为 `OssUploadClient` 提供上传进度、重试策略与分片能力，避免 AudioFiles 大文件长时间卡住。
 - Export：将 `ExportResult.localPath` 接入分享/上传链路，并记录导出结果（成功/失败）供业务观测。
-- 使用 `:core:test` Fake/fixture 补充单测：验证 DashScope 请求构造、Tingwu 状态机与 Markdown/PDF/CSV 输出。
+- 使用 `:core:test` Fake/fixture 补充单测：验证 DashScope 请求构造、Tingwu 状态机、OSS 上传与 Markdown/PDF/CSV 输出。
 
 ## 调试与验证
 - 单测：`./gradlew :data:ai-core:test` 覆盖 DashScope/Tingwu/Export 纯逻辑（含 CSV/PDF 编码）。

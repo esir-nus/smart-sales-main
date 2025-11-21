@@ -15,6 +15,7 @@ import com.smartsales.feature.connectivity.DeviceConnectionManager
 import com.smartsales.feature.connectivity.DeviceNetworkStatus
 import com.smartsales.feature.connectivity.ProvisioningStatus
 import com.smartsales.feature.connectivity.WifiCredentials
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -248,6 +249,10 @@ class DeviceManagerViewModelTest {
         override suspend fun deleteFile(baseUrl: String, fileName: String): Result<Unit> {
             files = files.filterNot { it.name == fileName }
             return Result.Success(Unit)
+        }
+
+        override suspend fun downloadFile(baseUrl: String, file: DeviceMediaFile): Result<File> {
+            return Result.Success(File.createTempFile("fake", ".tmp"))
         }
     }
 

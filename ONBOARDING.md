@@ -44,12 +44,18 @@ cat AGENTS.md
 
 **关键目录说明**：
 - `app/` - 主应用入口（Compose shell）
-- `feature/` - 功能模块（chat, media, connectivity）
+- `feature/` - 功能模块（chat, media, connectivity, usercenter）
 - `data/ai-core/` - AI 核心服务（DashScope, Tingwu, OSS）
 - `core/` - 共享工具（util, test）
 - `docs/` - **重要！** 项目文档
 - `plans/` - 开发计划
 - `workflows/` - 工作流程
+
+**主要功能模块**：
+- `feature/chat` - 聊天功能（Home 屏幕、ChatHistory、快速技能）
+- `feature/media` - 媒体功能（AudioFiles、DeviceManager、播放控制）
+- `feature/connectivity` - 设备连接（BLE/WiFi 配网、DeviceSetup 步骤化界面）
+- `feature/usercenter` - 用户中心（用户资料、设置）
 
 ---
 
@@ -139,6 +145,7 @@ OSS_ENDPOINT=https://oss-cn-beijing.aliyuncs.com
 2. **`README.md`** ⭐⭐⭐
    - 项目概述和模块说明
    - 构建命令
+   - Tingwu base URL 配置说明
 
 3. **`docs/current-state.md`** ⭐⭐⭐
    - 当前系统状态
@@ -167,6 +174,8 @@ OSS_ENDPOINT=https://oss-cn-beijing.aliyuncs.com
   ├── :feature:media (媒体功能)
   │     └── :data:ai-core
   ├── :feature:connectivity (设备连接)
+  │     └── :core:util
+  ├── :feature:usercenter (用户中心)
   │     └── :core:util
   └── :core:util (共享工具)
 ```
@@ -216,9 +225,14 @@ adb shell am start com.smartsales.aitest/.AiFeatureTestActivity
 
 # 运行特定模块的测试
 ./gradlew :feature:connectivity:testDebugUnitTest
+./gradlew :feature:chat:testDebugUnitTest
+./gradlew :feature:media:testDebugUnitTest
 
 # Android UI 测试（需要设备）
 ./gradlew :app:connectedDebugAndroidTest
+
+# 导航 Compose UI 冒烟测试
+./gradlew :app:assembleDebug :app:connectedDebugAndroidTest
 ```
 
 ### 5.3 查看日志
@@ -247,8 +261,9 @@ adb logcat tag:SmartSalesChat:* *:S
 **建议从以下开始**：
 
 1. **修复一个小 bug** 或
-2. **添加一个简单的 UI 测试** 或
-3. **完善某个模块的文档**
+2. **添加一个简单的 UI 测试**（参考 `NavigationSmokeTest.kt`）或
+3. **完善某个模块的文档** 或
+4. **为现有功能添加单元测试**（当前测试覆盖率约 21.5%，目标是 60-80%）
 
 ### 6.3 提交代码前检查清单
 
@@ -258,19 +273,26 @@ adb logcat tag:SmartSalesChat:* *:S
 - [ ] 相关测试通过
 - [ ] 提交信息符合规范（见下方）
 
-**提交信息格式**：
+**提交信息格式**（中文）：
 ```
-feat(scope): brief description
+功能(模块)：简要描述
 
-Optional detailed explanation.
+可选的详细说明。
+
+Test: 测试命令或说明
 ```
 
 示例：
 ```
-feat(chat): add scroll-to-latest button
+功能(聊天)：在 Home 聊天中添加滚动到最新消息按钮
 
-Implements scroll button in Home chat screen with smooth animation.
-Test: Add UI tests for scroll button behavior.
+在 Home 聊天屏幕中实现滚动按钮，带有流畅动画。
+Test: ./gradlew :app:connectedDebugAndroidTest
+
+功能：添加 ChatHistory 屏幕，集成数据库和导航 shell
+
+实现聊天历史屏幕，支持查看历史会话。
+Test: ./gradlew :feature:chat:testDebugUnitTest
 ```
 
 ---
@@ -305,6 +327,15 @@ export JAVA_HOME=/path/to/jdk-17
 2. 查看相关模块的 README（如 `feature/chat/README.md`）
 3. 阅读代码中的注释和文件头
 4. 查看测试代码了解预期行为
+5. 查看 `docs/progress-log.md` 了解最近的变更
+
+### Q6: 新增了哪些主要功能？
+根据最新更新，项目已包含：
+- **ChatHistory 屏幕** - 聊天历史记录查看
+- **AudioFiles 屏幕** - 音频文件管理（已迁移到 `feature/media`）
+- **DeviceSetup 步骤化界面** - 设备连接配网流程
+- **UserCenter 模块** - 用户中心和用户资料
+- **导航 Compose UI 冒烟测试** - 验证主要导航路径
 
 ---
 
@@ -335,11 +366,13 @@ find . -name "*Test.kt"
 
 - [ ] 成功构建项目 (`./gradlew :app:assembleDebug`)
 - [ ] 应用在设备/模拟器上运行
-- [ ] 单元测试通过
+- [ ] 单元测试通过 (`./gradlew testDebugUnitTest`)
+- [ ] UI 测试通过（如可能，`./gradlew :app:connectedDebugAndroidTest`）
 - [ ] 阅读了 `docs/role-contract.md`
 - [ ] 阅读了 `docs/current-state.md`
-- [ ] 理解了模块结构
+- [ ] 理解了模块结构（chat, media, connectivity, usercenter）
 - [ ] 配置了 `local.properties`（或了解如何配置）
+- [ ] 了解了项目当前成熟度（T0-T1 阶段）
 
 ---
 

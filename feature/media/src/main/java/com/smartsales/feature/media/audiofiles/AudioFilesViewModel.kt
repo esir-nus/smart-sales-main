@@ -20,12 +20,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
-private const val DEFAULT_MEDIA_SERVER_BASE_URL = "http://10.0.2.2:8000"
 private const val DEFAULT_TINGWU_LANGUAGE = "zh-CN"
 
 @HiltViewModel
@@ -33,6 +34,7 @@ class AudioFilesViewModel @Inject constructor(
     private val mediaGateway: DeviceMediaGateway,
     private val transcriptionCoordinator: AudioTranscriptionCoordinator,
     private val playbackController: AudioPlaybackController,
+    private val endpointProvider: DeviceHttpEndpointProvider,
     private val dispatcherProvider: DispatcherProvider
 ) : ViewModel() {
 
@@ -43,8 +45,8 @@ class AudioFilesViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(AudioFilesUiState())
     val uiState: StateFlow<AudioFilesUiState> = _uiState.asStateFlow()
 
-    fun onBaseUrlChanged(value: String) {
-        _uiState.update { it.copy(baseUrl = value.trim()) }
+    init {
+        observeEndpoint()
     }
 
     fun onDismissError() {
@@ -65,13 +67,13 @@ class AudioFilesViewModel @Inject constructor(
 
     fun onPlayPause(recordingId: String) {
         viewModelScope.launch(dispatcherProvider.io) {
+            val baseUrl = uiState.value.baseUrl ?: return@launch
             val current = uiState.value.currentlyPlayingId
             if (current == recordingId) {
                 playbackController.pause()
                 _uiState.update { it.copy(currentlyPlayingId = null) }
                 return@launch
             }
-            val baseUrl = uiState.value.baseUrl
             val file = recordingsMutex.withLock {
                 recordings[recordingId]
             } ?: return@launch
@@ -92,7 +94,7 @@ class AudioFilesViewModel @Inject constructor(
 
     fun onApply(recordingId: String) {
         viewModelScope.launch(dispatcherProvider.io) {
-            val baseUrl = uiState.value.baseUrl
+            val baseUrl = uiState.value.baseUrl ?: return@launch
             val fileName = recordingsMutex.withLock { recordings[recordingId]?.file?.name } ?: return@launch
             when (val result = mediaGateway.applyFile(baseUrl, fileName)) {
                 is Result.Success -> _uiState.update { it.copy(errorMessage = null) }
@@ -103,7 +105,7 @@ class AudioFilesViewModel @Inject constructor(
 
     fun onDelete(recordingId: String) {
         viewModelScope.launch(dispatcherProvider.io) {
-            val baseUrl = uiState.value.baseUrl
+            val baseUrl = uiState.value.baseUrl ?: return@launch
             val fileName = recordingsMutex.withLock { recordings[recordingId]?.file?.name } ?: return@launch
             when (val result = mediaGateway.deleteFile(baseUrl, fileName)) {
                 is Result.Success -> {
@@ -122,9 +124,9 @@ class AudioFilesViewModel @Inject constructor(
     }
 
     private suspend fun performSync(triggerTranscription: Boolean) {
+        val baseUrl = uiState.value.baseUrl ?: return
         _uiState.update { it.copy(errorMessage = null) }
         setSyncing(true)
-        val baseUrl = uiState.value.baseUrl
         when (val result = mediaGateway.fetchFiles(baseUrl)) {
             is Result.Success -> {
                 mergeFiles(result.data)
@@ -298,6 +300,39 @@ class AudioFilesViewModel @Inject constructor(
         _uiState.update { it.copy(errorMessage = message ?: "操作失败") }
     }
 
+    private suspend fun resetForDisconnectedEndpoint() {
+        recordingsMutex.withLock { recordings.clear() }
+        publishRecordings()
+        playbackController.pause()
+        _uiState.update {
+            it.copy(
+                baseUrl = null,
+                currentlyPlayingId = null,
+                isSyncing = false,
+                errorMessage = null
+            )
+        }
+    }
+
+    private fun observeEndpoint() {
+        viewModelScope.launch(dispatcherProvider.default) {
+            endpointProvider.deviceBaseUrl.collectLatest { candidate ->
+                val normalized = candidate?.trim()?.takeIf { it.isNotBlank() }
+                val current = uiState.value.baseUrl
+                if (normalized == null) {
+                    if (current != null) {
+                        resetForDisconnectedEndpoint()
+                    }
+                } else if (normalized != current) {
+                    _uiState.update { it.copy(baseUrl = normalized) }
+                    withContext(dispatcherProvider.io) {
+                        performSync(triggerTranscription = false)
+                    }
+                }
+            }
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         jobObservers.values.forEach { it.cancel() }
@@ -306,7 +341,7 @@ class AudioFilesViewModel @Inject constructor(
 }
 
 data class AudioFilesUiState(
-    val baseUrl: String = DEFAULT_MEDIA_SERVER_BASE_URL,
+    val baseUrl: String? = null,
     val recordings: List<AudioRecordingUi> = emptyList(),
     val isSyncing: Boolean = false,
     val currentlyPlayingId: String? = null,

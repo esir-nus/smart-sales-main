@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -29,7 +29,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -55,7 +54,6 @@ fun AudioFilesRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     AudioFilesScreen(
         state = state,
-        onBaseUrlChanged = viewModel::onBaseUrlChanged,
         onRefresh = viewModel::onRefresh,
         onSyncClicked = viewModel::onSyncClicked,
         onPlayPause = viewModel::onPlayPause,
@@ -69,7 +67,6 @@ fun AudioFilesRoute(
 @Composable
 fun AudioFilesScreen(
     state: AudioFilesUiState,
-    onBaseUrlChanged: (String) -> Unit,
     onRefresh: () -> Unit,
     onSyncClicked: () -> Unit,
     onPlayPause: (String) -> Unit,
@@ -78,6 +75,7 @@ fun AudioFilesScreen(
     onDismissError: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val endpointAvailable = !state.baseUrl.isNullOrBlank()
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
         Column(
             modifier = Modifier
@@ -86,12 +84,13 @@ fun AudioFilesScreen(
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            OutlinedTextField(
-                value = state.baseUrl,
-                onValueChange = onBaseUrlChanged,
-                label = { Text("媒体服务器地址") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+            Text(
+                text = state.baseUrl?.let { "设备地址：$it" } ?: "设备未连接，等待 Wi-Fi & BLE 同步",
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (endpointAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(AudioFilesTestTags.DEVICE_STATUS)
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -100,11 +99,15 @@ fun AudioFilesScreen(
             ) {
                 Button(
                     onClick = onSyncClicked,
+                    enabled = endpointAvailable,
                     modifier = Modifier.testTag(AudioFilesTestTags.SYNC_BUTTON)
                 ) {
                     Text("同步并转写")
                 }
-                OutlinedButton(onClick = onRefresh) {
+                OutlinedButton(
+                    onClick = onRefresh,
+                    enabled = endpointAvailable
+                ) {
                     Icon(Icons.Default.Refresh, contentDescription = null)
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("刷新列表")
@@ -122,13 +125,17 @@ fun AudioFilesScreen(
             }
             if (state.recordings.isEmpty()) {
                 AudioEmptyState(
+                    isDeviceConnected = endpointAvailable,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .weight(1f, fill = true)
                         .testTag(AudioFilesTestTags.EMPTY_STATE)
                 )
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(state.recordings, key = { it.id }) { recording ->
@@ -209,7 +216,10 @@ private fun AudioRecordingCard(
 }
 
 @Composable
-private fun AudioEmptyState(modifier: Modifier = Modifier) {
+private fun AudioEmptyState(
+    isDeviceConnected: Boolean,
+    modifier: Modifier = Modifier
+) {
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -218,11 +228,19 @@ private fun AudioEmptyState(modifier: Modifier = Modifier) {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(text = "暂无录音", style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = "点击上方按钮同步设备录音，或刷新以重新拉取列表。",
-                style = MaterialTheme.typography.bodySmall
-            )
+            if (isDeviceConnected) {
+                Text(text = "暂无录音", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = "点击上方按钮同步设备录音，或刷新以重新拉取列表。",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            } else {
+                Text(text = "设备未连接", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = "请在 Wi-Fi & BLE 页面连接设备后自动拉取录音列表。",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
     }
 }
@@ -263,5 +281,6 @@ object AudioFilesTestTags {
     const val SYNC_BUTTON = "audio_files_sync_button"
     const val EMPTY_STATE = "audio_files_empty_state"
     const val ERROR_BANNER = "audio_files_error_banner"
+    const val DEVICE_STATUS = "audio_files_device_status"
     fun item(id: String) = "audio_files_item_$id"
 }

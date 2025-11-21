@@ -34,6 +34,7 @@ class AudioFilesViewModelTest {
     private lateinit var gateway: FakeDeviceMediaGateway
     private lateinit var transcription: FakeAudioTranscriptionCoordinator
     private lateinit var playbackController: FakeAudioPlaybackController
+    private lateinit var endpointProvider: FakeDeviceHttpEndpointProvider
     private lateinit var viewModel: AudioFilesViewModel
 
     @Before
@@ -42,10 +43,12 @@ class AudioFilesViewModelTest {
         gateway = FakeDeviceMediaGateway()
         transcription = FakeAudioTranscriptionCoordinator()
         playbackController = FakeAudioPlaybackController()
+        endpointProvider = FakeDeviceHttpEndpointProvider()
         viewModel = AudioFilesViewModel(
             mediaGateway = gateway,
             transcriptionCoordinator = transcription,
             playbackController = playbackController,
+            endpointProvider = endpointProvider,
             dispatcherProvider = FakeDispatcherProvider(dispatcher)
         )
     }
@@ -56,18 +59,15 @@ class AudioFilesViewModelTest {
     }
 
     @Test
-    fun `refresh loads recordings and toggles syncing`() = runTest(dispatcher) {
+    fun `auto refresh populates recordings when endpoint available`() = runTest(dispatcher) {
         gateway.files = listOf(
             DeviceMediaFile("audio-1.wav", 1024, "audio/wav", 1_000L, "media/1", "dl/1")
         )
 
-        viewModel.onRefresh()
-
-        assertTrue(viewModel.uiState.value.isSyncing)
+        endpointProvider.emit("http://192.168.0.10:8000")
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals(false, state.isSyncing)
         assertEquals(1, state.recordings.size)
         assertEquals("audio-1.wav", state.recordings.first().fileName)
     }
@@ -77,7 +77,7 @@ class AudioFilesViewModelTest {
         gateway.files = listOf(
             DeviceMediaFile("audio-2.wav", 512, "audio/wav", 2_000L, "media/2", "dl/2")
         )
-        viewModel.onRefresh()
+        endpointProvider.emit("http://192.168.0.20:8000")
         advanceUntilIdle()
 
         viewModel.onDelete("audio-2.wav")
@@ -91,7 +91,7 @@ class AudioFilesViewModelTest {
     fun `error surfaces message`() = runTest(dispatcher) {
         gateway.fetchResult = Result.Error(IllegalStateException("网络异常"))
 
-        viewModel.onRefresh()
+        endpointProvider.emit("http://192.168.0.30:8000")
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -103,6 +103,9 @@ class AudioFilesViewModelTest {
         gateway.files = listOf(
             DeviceMediaFile("audio-3.wav", 2048, "audio/wav", 3_000L, "media/3", "dl/3")
         )
+
+        endpointProvider.emit("http://192.168.0.40:8000")
+        advanceUntilIdle()
 
         viewModel.onSyncClicked()
         advanceUntilIdle()
@@ -119,6 +122,23 @@ class AudioFilesViewModelTest {
 
         val state = viewModel.uiState.value
         assertEquals(AudioRecordingStatus.Transcribed, state.recordings.first().status)
+    }
+
+    @Test
+    fun `recordings cleared when endpoint lost`() = runTest(dispatcher) {
+        gateway.files = listOf(
+            DeviceMediaFile("audio-4.wav", 1024, "audio/wav", 4_000L, "media/4", "dl/4")
+        )
+        endpointProvider.emit("http://192.168.0.50:8000")
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.recordings.size)
+
+        endpointProvider.emit(null)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.recordings.isEmpty())
+        assertEquals(null, state.baseUrl)
     }
 
     private class FakeDeviceMediaGateway : DeviceMediaGateway {
@@ -185,5 +205,15 @@ class AudioFilesViewModelTest {
         }
 
         override suspend fun pause(): Result<Unit> = Result.Success(Unit)
+    }
+
+    private class FakeDeviceHttpEndpointProvider(
+        initialUrl: String? = null
+    ) : DeviceHttpEndpointProvider {
+        private val flow = MutableStateFlow(initialUrl)
+        override val deviceBaseUrl: Flow<String?> = flow
+        fun emit(value: String?) {
+            flow.value = value
+        }
     }
 }

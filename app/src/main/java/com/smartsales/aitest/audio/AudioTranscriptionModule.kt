@@ -6,6 +6,7 @@ package com.smartsales.aitest.audio
 // 作者：创建于 2025-11-21
 
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
+import com.smartsales.feature.media.audiofiles.DeviceHttpEndpointProvider
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -18,4 +19,9 @@ interface AudioTranscriptionModule {
     fun bindAudioTranscriptionCoordinator(
         impl: DefaultAudioTranscriptionCoordinator,
     ): AudioTranscriptionCoordinator
+
+    @Binds
+    fun bindDeviceHttpEndpointProvider(
+        impl: DeviceHttpEndpointProviderImpl,
+    ): DeviceHttpEndpointProvider
 }

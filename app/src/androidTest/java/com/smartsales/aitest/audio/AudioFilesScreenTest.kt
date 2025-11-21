@@ -17,6 +17,7 @@ import androidx.compose.ui.semantics.SemanticsMatcher
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNode
 import androidx.compose.ui.test.onNodeWithTag
@@ -42,7 +43,6 @@ class AudioFilesScreenTest {
             MaterialTheme {
                 AudioFilesScreen(
                     state = AudioFilesUiState(recordings = emptyList()),
-                    onBaseUrlChanged = {},
                     onRefresh = {},
                     onSyncClicked = {},
                     onPlayPause = {},
@@ -65,14 +65,14 @@ class AudioFilesScreenTest {
                     AudioFilesUiState(
                         recordings = listOf(
                             sampleRecording("audio-1")
-                        )
+                        ),
+                        baseUrl = "http://192.168.0.5:8000"
                     )
                 )
             }
             MaterialTheme {
                 AudioFilesScreen(
                     state = uiState,
-                    onBaseUrlChanged = {},
                     onRefresh = {},
                     onSyncClicked = { uiState = uiState.copy(isSyncing = true) },
                     onPlayPause = {},
@@ -102,7 +102,6 @@ class AudioFilesScreenTest {
             MaterialTheme {
                 AudioFilesScreen(
                     state = uiState,
-                    onBaseUrlChanged = {},
                     onRefresh = {},
                     onSyncClicked = {},
                     onPlayPause = {},
@@ -117,6 +116,47 @@ class AudioFilesScreenTest {
         composeRule.onNodeWithTag(AudioFilesTestTags.ERROR_BANNER).assertIsDisplayed()
         composeRule.onNodeWithText("知道了").performClick()
         composeRule.onNodeWithTag(AudioFilesTestTags.ERROR_BANNER).assertDoesNotExist()
+    }
+
+    @Test
+    fun deviceStatus_showsDisconnectedWhenNoEndpoint() {
+        composeRule.setContent {
+            MaterialTheme {
+                AudioFilesScreen(
+                    state = AudioFilesUiState(baseUrl = null, recordings = emptyList()),
+                    onRefresh = {},
+                    onSyncClicked = {},
+                    onPlayPause = {},
+                    onApply = {},
+                    onDelete = {},
+                    onDismissError = {},
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(AudioFilesTestTags.DEVICE_STATUS).assertIsDisplayed()
+        composeRule.onNodeWithText("媒体服务器地址").assertDoesNotExist()
+    }
+
+    @Test
+    fun syncButton_disabledWithoutEndpoint() {
+        composeRule.setContent {
+            MaterialTheme {
+                AudioFilesScreen(
+                    state = AudioFilesUiState(baseUrl = null),
+                    onRefresh = {},
+                    onSyncClicked = {},
+                    onPlayPause = {},
+                    onApply = {},
+                    onDelete = {},
+                    onDismissError = {},
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(AudioFilesTestTags.SYNC_BUTTON).assertIsNotEnabled()
     }
 
     private fun sampleRecording(id: String): AudioRecordingUi =

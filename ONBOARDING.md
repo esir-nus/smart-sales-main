@@ -12,7 +12,53 @@
 
 ### 操作系统支持
 
-本指南主要针对 **Linux/macOS**，但 **Windows** 用户也可以使用。
+本指南支持 **Linux**、**macOS** 和 **Windows** 操作系统。
+
+#### macOS 用户特别说明
+
+**命令行工具**：
+- macOS 默认使用 **Terminal**（bash/zsh）
+- 推荐使用 **Homebrew** 管理软件包（JDK、Git 等）
+- 本指南中的命令在 macOS Terminal 中可直接运行
+
+**macOS 路径配置**：
+```bash
+# 在 ~/.zshrc 或 ~/.bash_profile 中添加环境变量（永久）
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+export PATH="$ANDROID_HOME/platform-tools:$PATH"
+
+# 使配置生效
+source ~/.zshrc  # 如果使用 zsh
+# 或
+source ~/.bash_profile  # 如果使用 bash
+```
+
+**macOS 安装 JDK 17**：
+```bash
+# 使用 Homebrew 安装
+brew install openjdk@17
+
+# 链接到系统路径
+sudo ln -sfn /opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk-17.jdk
+
+# 验证安装
+java -version
+```
+
+**macOS 安装 Android SDK**：
+- 通过 **Android Studio** 安装（推荐）
+- 路径通常为：`~/Library/Android/sdk`
+- 确保在 Android Studio 中安装了 Android SDK Platform-Tools
+
+**macOS 权限设置**：
+- 首次运行 `adb` 可能需要授予终端完全磁盘访问权限
+- 系统设置 → 隐私与安全性 → 完全磁盘访问权限 → 添加 Terminal
+
+**macOS 特定注意事项**：
+- 如果遇到 "Permission denied" 错误，可能需要：`chmod +x gradlew`
+- M1/M2 Mac 用户：确保使用 ARM64 版本的 JDK 和 Android SDK
+- 如果使用 Rosetta 2，某些工具可能需要额外配置
 
 #### Windows 用户特别说明
 
@@ -139,7 +185,20 @@ org.gradle.java.home=C:/Program Files/Java/jdk-17
 ```
 
 **找到 JDK 路径的方法**：
-- **Linux/macOS**: `which java` 然后找到 JDK 目录（通常是 `/usr/lib/jvm/java-17-openjdk` 或 `/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home`）
+- **Linux**: `which java` 然后找到 JDK 目录（通常是 `/usr/lib/jvm/java-17-openjdk`）
+- **macOS**: 
+  ```bash
+  # 使用 java_home 工具查找
+  /usr/libexec/java_home -v 17
+  
+  # 或查看已安装的 JDK
+  /usr/libexec/java_home -V
+  
+  # Homebrew 安装的 JDK 通常在
+  /opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+  # 或
+  /usr/local/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+  ```
 - **Windows**: JDK 通常安装在 `C:\Program Files\Java\jdk-17` 或通过 Android Studio 安装的位置
 
 ### 2.2 创建 local.properties 文件
@@ -177,8 +236,13 @@ sdk.dir=C:\\Users\\YourName\\AppData\\Local\\Android\\Sdk
 - **Android Studio**: File → Settings → Appearance & Behavior → System Settings → Android SDK → Android SDK Location
 - **默认位置**：
   - **Linux**: `~/Android/Sdk`
-  - **macOS**: `~/Library/Android/sdk`
+  - **macOS**: `~/Library/Android/sdk`（通过 Android Studio 安装）
   - **Windows**: `C:\Users\<Username>\AppData\Local\Android\Sdk`
+
+**macOS 特定配置**：
+- 如果使用 Homebrew 安装的 Android SDK，路径可能不同
+- 推荐通过 Android Studio 安装，路径更标准
+- 在 Android Studio 中：Preferences → Appearance & Behavior → System Settings → Android SDK
 
 # DashScope API Key（AI 聊天功能）
 DASHSCOPE_API_KEY=your_dashscope_key_here
@@ -464,12 +528,30 @@ Test: ./gradlew :feature:chat:testDebugUnitTest
 ```
 
 ### Q2: 构建失败 - JDK 版本错误
-**Linux/macOS/Git Bash**:
+**Linux**:
 ```bash
 # 检查并设置正确的 JDK
 export JAVA_HOME=/path/to/jdk-17
 # 或修改 gradle.properties 中的 org.gradle.java.home
 ```
+
+**macOS**:
+```bash
+# 使用 java_home 工具设置（推荐）
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+
+# 或手动设置路径
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home
+# 或 Homebrew 安装的路径
+export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+
+# 或修改 gradle.properties 中的 org.gradle.java.home
+```
+
+**macOS 常见问题**：
+- 如果安装了多个 JDK 版本，使用 `java_home` 工具自动选择
+- M1/M2 Mac 用户确保使用 ARM64 版本的 JDK
+- 验证：`java -version` 应该显示 17.x.x
 
 **Windows (PowerShell)**:
 ```powershell
@@ -490,6 +572,11 @@ export JAVA_HOME="/c/Program Files/Java/jdk-17"
 - 如果仍慢，检查网络连接
 - 本地镜像在 `third_party/maven-repo/`，大部分依赖已缓存
 
+**macOS 特定问题**：
+- 如果使用代理，确保在 `~/.gradle/gradle.properties` 中配置代理设置
+- 某些企业网络可能需要配置代理才能访问 Maven 仓库
+- 如果遇到 SSL 证书问题，可能需要更新 Java 的 CA 证书
+
 ### Q4: API keys 缺失怎么办？
 - 应用仍可运行，但使用 Fake 实现
 - AI 聊天会返回模拟响应
@@ -501,6 +588,31 @@ export JAVA_HOME="/c/Program Files/Java/jdk-17"
 3. 阅读代码中的注释和文件头
 4. 查看测试代码了解预期行为
 5. 查看 `docs/progress-log.md` 了解最近的变更
+
+### Q7: macOS 上 adb 命令找不到
+**解决方案**：
+```bash
+# 确保 Android SDK platform-tools 在 PATH 中
+export PATH="$HOME/Library/Android/sdk/platform-tools:$PATH"
+
+# 添加到 ~/.zshrc 或 ~/.bash_profile 使其永久生效
+echo 'export PATH="$HOME/Library/Android/sdk/platform-tools:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+
+# 验证
+adb version
+```
+
+### Q8: macOS 上 gradlew 权限错误
+**解决方案**：
+```bash
+# 添加执行权限
+chmod +x gradlew
+
+# 如果仍然有问题，检查文件权限
+ls -l gradlew
+# 应该显示 -rwxr-xr-x
+```
 
 ### Q6: 新增了哪些主要功能？
 根据最新更新，项目已包含：

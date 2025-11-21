@@ -12,6 +12,9 @@ import com.smartsales.feature.chat.core.ChatStreamEvent
 import com.smartsales.feature.chat.core.QuickSkillCatalog
 import com.smartsales.feature.chat.core.QuickSkillDefinition
 import com.smartsales.feature.chat.core.QuickSkillId
+import com.smartsales.feature.chat.history.ChatHistoryRepository
+import com.smartsales.feature.chat.history.toEntity
+import com.smartsales.feature.chat.history.toUiModel
 import com.smartsales.feature.connectivity.ConnectionState
 import com.smartsales.feature.connectivity.ConnectivityError
 import com.smartsales.feature.connectivity.DeviceConnectionManager
@@ -114,7 +117,8 @@ class HomeScreenViewModel @Inject constructor(
     private val aiSessionRepository: AiSessionRepository,
     private val deviceConnectionManager: DeviceConnectionManager,
     private val mediaSyncCoordinator: MediaSyncCoordinator,
-    private val quickSkillCatalog: QuickSkillCatalog
+    private val quickSkillCatalog: QuickSkillCatalog,
+    private val chatHistoryRepository: ChatHistoryRepository
 ) : ViewModel() {
 
     private val quickSkillDefinitions = quickSkillCatalog.homeQuickSkills()
@@ -129,6 +133,7 @@ class HomeScreenViewModel @Inject constructor(
         // 从 catalog 加载快捷技能到状态
         val skills = quickSkillDefinitions.map { it.toUiModel() }
         _uiState.update { it.copy(quickSkills = skills) }
+        restoreChatHistory()
         observeDeviceConnection()
         observeMediaSync()
     }
@@ -163,6 +168,7 @@ class HomeScreenViewModel @Inject constructor(
                 chatMessages = state.chatMessages + confirmationMessage
             )
         }
+        persistMessagesAsync()
     }
 
     fun onLoadMoreHistory() {
@@ -178,6 +184,7 @@ class HomeScreenViewModel @Inject constructor(
                             isLoadingHistory = false
                         )
                     }
+                    persistMessagesAsync()
                 }
                 .onFailure { error ->
                     _uiState.update {
@@ -314,6 +321,22 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
+    private fun restoreChatHistory() {
+        viewModelScope.launch {
+            val saved = chatHistoryRepository.loadLatestSession(sessionId)
+            if (saved.isNotEmpty()) {
+                _uiState.update { it.copy(chatMessages = saved.map { it.toUiModel() }) }
+            }
+        }
+    }
+
+    private fun persistMessagesAsync() {
+        val snapshot = _uiState.value.chatMessages.map { it.toEntity(sessionId) }
+        viewModelScope.launch {
+            chatHistoryRepository.saveMessages(sessionId, snapshot)
+        }
+    }
+
     // 共享的发送 helper：输入框和快捷技能都走这里
     private fun sendMessageInternal(
         messageText: String,
@@ -353,6 +376,7 @@ class HomeScreenViewModel @Inject constructor(
             snackbarMessage = null
         )
         _uiState.value = newState
+        persistMessagesAsync()
         val request = buildChatRequest(content, quickSkillId, newState.chatMessages, audioContext)
         startStreamingResponse(request, assistantPlaceholder.id)
     }
@@ -370,14 +394,14 @@ class HomeScreenViewModel @Inject constructor(
                     }
                     is ChatStreamEvent.Completed -> {
                         // 完成：关闭 streaming，写入完整文本
-                        updateAssistantMessage(assistantId) { msg ->
+                        updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
                             msg.copy(content = event.fullText, isStreaming = false)
                         }
                         _uiState.update { it.copy(isSending = false, isStreaming = false) }
                     }
                     is ChatStreamEvent.Error -> {
                         // 错误：标记消息失败并弹出提示
-                        updateAssistantMessage(assistantId) { msg ->
+                        updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
                             msg.copy(hasError = true, isStreaming = false)
                         }
                         _uiState.update {
@@ -395,6 +419,7 @@ class HomeScreenViewModel @Inject constructor(
 
     private fun updateAssistantMessage(
         assistantId: String,
+        persistAfterUpdate: Boolean = false,
         transformer: (ChatMessageUi) -> ChatMessageUi
     ) {
         _uiState.update { state ->
@@ -402,6 +427,9 @@ class HomeScreenViewModel @Inject constructor(
                 if (msg.id == assistantId) transformer(msg) else msg
             }
             state.copy(chatMessages = updated)
+        }
+        if (persistAfterUpdate) {
+            persistMessagesAsync()
         }
     }
 

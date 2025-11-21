@@ -2,6 +2,11 @@ package com.smartsales.feature.chat
 
 import android.content.Context
 import androidx.room.Room
+import com.smartsales.core.util.DispatcherProvider
+import com.smartsales.feature.chat.history.ChatHistoryDao
+import com.smartsales.feature.chat.history.ChatHistoryDatabase
+import com.smartsales.feature.chat.history.ChatHistoryRepository
+import com.smartsales.feature.chat.history.RoomChatHistoryRepository
 import com.smartsales.feature.chat.persistence.AiSessionDao
 import com.smartsales.feature.chat.persistence.AiSessionDatabase
 import com.smartsales.feature.chat.persistence.RoomAiSessionRepository
@@ -45,7 +50,7 @@ object ChatProvidesModule {
     @Singleton
     fun provideAiSessionRepository(
         dao: AiSessionDao,
-        dispatchers: com.smartsales.core.util.DispatcherProvider
+        dispatchers: DispatcherProvider
     ): AiSessionRepository = RoomAiSessionRepository(dao, dispatchers)
 
     @Provides
@@ -53,4 +58,27 @@ object ChatProvidesModule {
     fun provideChatShareHandler(
         @ApplicationContext context: Context
     ): ChatShareHandler = AndroidChatShareHandler(context)
+
+    @Provides
+    @Singleton
+    fun provideChatHistoryDatabase(
+        @ApplicationContext context: Context
+    ): ChatHistoryDatabase = Room.databaseBuilder(
+        context,
+        ChatHistoryDatabase::class.java,
+        "home_chat_history.db"
+    ).fallbackToDestructiveMigration().build()
+
+    @Provides
+    @Singleton
+    fun provideChatHistoryDao(
+        database: ChatHistoryDatabase
+    ): ChatHistoryDao = database.chatHistoryDao()
+
+    @Provides
+    @Singleton
+    fun provideChatHistoryRepository(
+        dao: ChatHistoryDao,
+        dispatchers: DispatcherProvider
+    ): ChatHistoryRepository = RoomChatHistoryRepository(dao, dispatchers)
 }

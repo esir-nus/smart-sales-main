@@ -17,10 +17,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
@@ -39,6 +41,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -46,6 +49,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,10 +58,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.smartsales.feature.chat.core.QuickSkillId
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreen.kt
 // 模块：:feature:chat
@@ -134,6 +139,7 @@ fun HomeScreen(
     LaunchedEffect(state.deviceSnapshot, state.audioSummary) {
         refreshingState.value = false
     }
+    val coroutineScope = rememberCoroutineScope()
     val pullRefreshState = rememberPullRefreshState(
         refreshing = refreshingState.value,
         onRefresh = {
@@ -145,6 +151,7 @@ fun HomeScreen(
     )
 
     val listState = rememberLazyListState()
+    val showScrollToLatest = remember { mutableStateOf(false) }
     LaunchedEffect(listState, state.chatMessages.size, state.isLoadingHistory) {
         snapshotFlow {
             listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
@@ -153,6 +160,18 @@ fun HomeScreen(
                 onLoadMoreHistory()
             }
         }
+    }
+    LaunchedEffect(listState, state.chatMessages.size) {
+        snapshotFlow { listState.layoutInfo }
+            .collect { layoutInfo ->
+                val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index
+                val lastMessageIndex = state.chatMessages.lastIndex.takeIf { it >= 0 }
+                showScrollToLatest.value = when {
+                    lastMessageIndex == null -> false
+                    lastVisibleIndex == null -> false
+                    else -> lastVisibleIndex < lastMessageIndex
+                }
+            }
     }
 
     Scaffold(
@@ -231,6 +250,21 @@ fun HomeScreen(
                 state = pullRefreshState,
                 modifier = Modifier.align(Alignment.TopCenter)
             )
+            if (showScrollToLatest.value) {
+                ScrollToLatestButton(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp),
+                    onClick = {
+                        val lastIndex = state.chatMessages.lastIndex
+                        if (lastIndex >= 0) {
+                            coroutineScope.launch {
+                                listState.animateScrollToItem(lastIndex)
+                            }
+                        }
+                    }
+                )
+            }
         }
     }
 }
@@ -246,6 +280,7 @@ object HomeScreenTestTags {
     const val ASSISTANT_MESSAGE = "home_assistant_message"
     const val INPUT_FIELD = "home_input_field"
     const val SEND_BUTTON = "home_send_button"
+    const val SCROLL_TO_LATEST = "home_scroll_to_latest_button"
 }
 
 @Composable
@@ -553,6 +588,27 @@ private fun QuickSkillRow(
                         MaterialTheme.colorScheme.onSurface
                     }
                 )
+            )
+        }
+    }
+}
+
+@Composable
+private fun ScrollToLatestButton(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier.testTag(HomeScreenTestTags.SCROLL_TO_LATEST),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        tonalElevation = 6.dp
+    ) {
+        IconButton(onClick = onClick) {
+            Icon(
+                imageVector = Icons.Filled.KeyboardArrowDown,
+                contentDescription = "回到底部",
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
     }

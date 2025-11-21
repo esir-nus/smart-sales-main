@@ -76,6 +76,7 @@ dependencies {
     implementation(projects.feature.chat)
     implementation(projects.feature.media)
     implementation(projects.feature.connectivity)
+    implementation(projects.feature.usercenter)
     implementation(projects.core.util)
 
     implementation(platform(libs.compose.bom))

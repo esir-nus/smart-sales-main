@@ -939,3 +939,28 @@ Risks / TODO:
 - 尚无 Compose/UI 自动化覆盖导航壳，未来改动需补充测试防止回归。
 
 ---
+
+## 2025-11-21 – 用户中心功能壳上线
+
+Layer: T1  
+Modules: :feature:usercenter, :app  
+Docs / Files: feature/usercenter/*, app/src/main/java/com/smartsales/aitest/usercenter/UserCenterRoute.kt, app/src/main/java/com/smartsales/aitest/AiFeatureTestActivity.kt  
+Role Hook: Codex  
+Next Integration Step: Run `./gradlew :app:assembleDebug` and reconcile pending media tests.
+
+Summary:
+- 新增 `:feature:usercenter` 模块：定义 `UserCenterUiState`、内存版 `UserProfileRepository`、Hilt 绑定与 `UserCenterViewModel`（加载/编辑/保存/登出一站式状态流）。
+- 实现 `UserCenterScreen` Compose 界面（头像占位、用户名/邮箱输入、Tokens 展示、功能开关、保存/退出按钮和错误横幅），并通过 `UserCenterRoute` 暴露事件。
+- `AiFeatureTestActivity` 用真实 UserCenterRoute 替换占位页，登出后自动返回 Home；App 依赖与 settings.gradle.kts 增加新模块。
+- 补充 `UserCenterViewModelTest` 覆盖加载、字段编辑、开关切换、保存状态、登出事件；单测通过 `./gradlew :feature:usercenter:testDebugUnitTest`。
+
+TDD Status:
+- [ ] Tests written first
+- [x] Tests added after implementation
+- [ ] Manual testing only
+
+Risks / TODO:
+- Media/DeviceManager 旧单测仍存在失败，尚未在本次修复；需后续环境中统一跑通。
+- 用户中心仍为本地 stub，后续需要接入真实存储/Avatar 上传与完备错误提示。
+
+---

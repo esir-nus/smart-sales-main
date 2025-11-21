@@ -75,6 +75,7 @@ import coil.request.ImageRequest
 import com.smartsales.aitest.audio.AudioFilesRoute
 import com.smartsales.aitest.devicemanager.DeviceManagerRoute
 import com.smartsales.aitest.setup.DeviceSetupRoute
+import com.smartsales.aitest.usercenter.UserCenterRoute
 import com.smartsales.core.util.Result
 import com.smartsales.feature.chat.home.HomeScreenRoute
 import com.smartsales.feature.chat.home.TranscriptionChatRequest
@@ -211,11 +212,11 @@ private fun AiFeatureTestApp() {
                             }
 
                             TestHomePage.UserCenter -> {
-                                // 占位：Home 右上角“用户中心”跳转目标。
-                                UserCenterPlaceholder(
+                                UserCenterRoute(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .testTag(AiFeatureTestTags.PAGE_USER_CENTER)
+                                        .testTag(AiFeatureTestTags.PAGE_USER_CENTER),
+                                    onLogout = { currentPage = TestHomePage.Home }
                                 )
                             }
                         }
@@ -282,19 +283,6 @@ private enum class TestHomePage {
     ChatHistory,
     AudioFiles,
     UserCenter
-}
-
-@Composable
-private fun UserCenterPlaceholder(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "用户中心 TODO：等待上层提供设计方案。",
-            style = MaterialTheme.typography.bodyLarge
-        )
-    }
 }
 
 @Composable

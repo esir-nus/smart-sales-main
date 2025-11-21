@@ -84,7 +84,7 @@ No implementation code is allowed until Operator explicitly unlocks it.
 
 6. **Operator unlocks code**  
    - Sends:  
-     `Codex: Please continue with the implementation for this task.`
+     `Codex: Please continue with the implementation for this task + <one adivce from the orchestrator if helpful>`
 
 7. **Codex implements code**
 

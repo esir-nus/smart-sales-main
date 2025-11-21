@@ -186,7 +186,7 @@ private fun AiFeatureTestApp() {
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .testTag(AiFeatureTestTags.PAGE_DEVICE_SETUP),
-                                    onCompleted = { currentPage = TestHomePage.Home }
+                                    onCompleted = { currentPage = TestHomePage.DeviceManager }
                                 )
                             }
 
@@ -258,7 +258,7 @@ private fun PageSelector(currentPage: TestHomePage, onPageSelected: (TestHomePag
         FilterChip(
             selected = currentPage == TestHomePage.DeviceSetup,
             onClick = { onPageSelected(TestHomePage.DeviceSetup) },
-            label = { Text("设备配网") },
+            label = { Text("设备连接") },
             modifier = Modifier.testTag(AiFeatureTestTags.CHIP_DEVICE_SETUP)
         )
         FilterChip(

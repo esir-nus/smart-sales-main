@@ -31,6 +31,14 @@ android {
     }
 
     buildFeatures {
+        compose = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.15"
+    }
+
+    buildFeatures {
         buildConfig = true
     }
 
@@ -76,9 +84,21 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.coroutines.core)
     implementation(libs.hilt.android)
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.material3)
+    implementation(libs.compose.foundation)
+    implementation(libs.compose.ui)
+
     kapt(libs.hilt.compiler)
 
     testImplementation(projects.core.test)
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
+
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.compose.ui.test)
+    androidTestImplementation(libs.androidx.test.ext)
+    androidTestImplementation(libs.androidx.test.espresso)
+    debugImplementation(libs.compose.ui.test.manifest)
 }

@@ -16,7 +16,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.smartsales.aitest.setup.DeviceSetupTestTags
+import com.smartsales.aitest.setup.DeviceSetupRouteTestTags
 import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.connectivity.BlePeripheral
@@ -157,7 +157,7 @@ class AiFeatureTestActivityTest {
         selectTab(AiFeatureTestTags.CHIP_DEVICE_SETUP)
         waitForPage(AiFeatureTestTags.PAGE_DEVICE_SETUP)
 
-        composeRule.onNodeWithTag(DeviceSetupTestTags.COMPLETE_BUTTON).performClick()
+        composeRule.onNodeWithTag(DeviceSetupRouteTestTags.COMPLETE_BUTTON).performClick()
         waitForPage(AiFeatureTestTags.PAGE_HOME)
     }
 

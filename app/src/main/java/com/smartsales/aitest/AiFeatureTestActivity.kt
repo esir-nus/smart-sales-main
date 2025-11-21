@@ -258,7 +258,6 @@ private enum class TestHomePage {
 }
 
 @Composable
-@Composable
 private fun UserCenterPlaceholder(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier,

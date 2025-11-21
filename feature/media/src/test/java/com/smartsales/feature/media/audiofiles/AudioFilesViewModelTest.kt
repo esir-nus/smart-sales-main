@@ -7,20 +7,14 @@ package com.smartsales.feature.media.audiofiles
 
 import com.smartsales.core.test.FakeDispatcherProvider
 import com.smartsales.core.util.Result
-import com.smartsales.data.aicore.OssUploadClient
-import com.smartsales.data.aicore.OssUploadRequest
-import com.smartsales.data.aicore.OssUploadResult
-import com.smartsales.data.aicore.TingwuCoordinator
-import com.smartsales.data.aicore.TingwuJobState
-import com.smartsales.data.aicore.TingwuRequest
 import com.smartsales.feature.media.devicemanager.DeviceMediaFile
 import com.smartsales.feature.media.devicemanager.DeviceMediaGateway
 import com.smartsales.feature.media.devicemanager.DeviceUploadSource
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -38,8 +32,7 @@ class AudioFilesViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private lateinit var gateway: FakeDeviceMediaGateway
-    private lateinit var tingwu: FakeTingwuCoordinator
-    private lateinit var ossClient: FakeOssUploadClient
+    private lateinit var transcription: FakeAudioTranscriptionCoordinator
     private lateinit var playbackController: FakeAudioPlaybackController
     private lateinit var viewModel: AudioFilesViewModel
 
@@ -47,13 +40,11 @@ class AudioFilesViewModelTest {
     fun setup() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         gateway = FakeDeviceMediaGateway()
-        tingwu = FakeTingwuCoordinator()
-        ossClient = FakeOssUploadClient()
+        transcription = FakeAudioTranscriptionCoordinator()
         playbackController = FakeAudioPlaybackController()
         viewModel = AudioFilesViewModel(
             mediaGateway = gateway,
-            tingwuCoordinator = tingwu,
-            ossUploadClient = ossClient,
+            transcriptionCoordinator = transcription,
             playbackController = playbackController,
             dispatcherProvider = FakeDispatcherProvider(dispatcher)
         )
@@ -116,10 +107,10 @@ class AudioFilesViewModelTest {
         viewModel.onSyncClicked()
         advanceUntilIdle()
 
-        val jobId = tingwu.lastJobId!!
-        tingwu.emit(
+        val jobId = transcription.lastJobId!!
+        transcription.emit(
             jobId,
-            TingwuJobState.Completed(
+            AudioTranscriptionJobState.Completed(
                 jobId = jobId,
                 transcriptMarkdown = "## 完整转写"
             )
@@ -154,32 +145,34 @@ class AudioFilesViewModelTest {
         }
     }
 
-    private class FakeOssUploadClient : OssUploadClient {
-        override suspend fun uploadAudio(request: OssUploadRequest): Result<OssUploadResult> {
+    private class FakeAudioTranscriptionCoordinator : AudioTranscriptionCoordinator {
+        private val states = mutableMapOf<String, MutableStateFlow<AudioTranscriptionJobState>>()
+        var lastJobId: String? = null
+
+        override suspend fun uploadAudio(file: File): Result<AudioUploadPayload> {
             return Result.Success(
-                OssUploadResult(
-                    objectKey = "oss/${request.file.name}",
-                    presignedUrl = "https://oss.example/${request.file.name}"
+                AudioUploadPayload(
+                    objectKey = "oss/${file.name}",
+                    presignedUrl = "https://oss.example/${file.name}"
                 )
             )
         }
-    }
 
-    private class FakeTingwuCoordinator : TingwuCoordinator {
-        private val states = mutableMapOf<String, MutableStateFlow<TingwuJobState>>()
-        var lastJobId: String? = null
-
-        override suspend fun submit(request: TingwuRequest): Result<String> {
+        override suspend fun submitTranscription(
+            audioAssetName: String,
+            language: String,
+            uploadPayload: AudioUploadPayload,
+        ): Result<String> {
             val id = "job-${states.size + 1}"
             lastJobId = id
-            states[id] = MutableStateFlow(TingwuJobState.InProgress(id, 10))
+            states[id] = MutableStateFlow(AudioTranscriptionJobState.InProgress(id, 10))
             return Result.Success(id)
         }
 
-        override fun observeJob(jobId: String): StateFlow<TingwuJobState> =
-            states.getOrPut(jobId) { MutableStateFlow(TingwuJobState.Idle) }
+        override fun observeJob(jobId: String): Flow<AudioTranscriptionJobState> =
+            states.getOrPut(jobId) { MutableStateFlow(AudioTranscriptionJobState.Idle) }
 
-        fun emit(jobId: String, state: TingwuJobState) {
+        fun emit(jobId: String, state: AudioTranscriptionJobState) {
             states[jobId]?.value = state
         }
     }

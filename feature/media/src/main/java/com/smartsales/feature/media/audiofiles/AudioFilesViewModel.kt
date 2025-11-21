@@ -9,11 +9,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
-import com.smartsales.data.aicore.OssUploadClient
-import com.smartsales.data.aicore.OssUploadRequest
-import com.smartsales.data.aicore.TingwuCoordinator
-import com.smartsales.data.aicore.TingwuJobState
-import com.smartsales.data.aicore.TingwuRequest
 import com.smartsales.feature.media.devicemanager.DeviceMediaFile
 import com.smartsales.feature.media.devicemanager.DeviceMediaGateway
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -36,8 +31,7 @@ private const val DEFAULT_TINGWU_LANGUAGE = "zh-CN"
 @HiltViewModel
 class AudioFilesViewModel @Inject constructor(
     private val mediaGateway: DeviceMediaGateway,
-    private val tingwuCoordinator: TingwuCoordinator,
-    private val ossUploadClient: OssUploadClient,
+    private val transcriptionCoordinator: AudioTranscriptionCoordinator,
     private val playbackController: AudioPlaybackController,
     private val dispatcherProvider: DispatcherProvider
 ) : ViewModel() {
@@ -169,7 +163,7 @@ class AudioFilesViewModel @Inject constructor(
                     return@forEach
                 }
             }
-            val ossResult = ossUploadClient.uploadAudio(OssUploadRequest(file = localFile))
+            val ossResult = transcriptionCoordinator.uploadAudio(localFile)
             val uploadPayload = when (ossResult) {
                 is Result.Success -> ossResult.data
                 is Result.Error -> {
@@ -184,13 +178,10 @@ class AudioFilesViewModel @Inject constructor(
                     return@forEach
                 }
             }
-            val submitResult = tingwuCoordinator.submit(
-                TingwuRequest(
-                    audioAssetName = file.name,
-                    language = DEFAULT_TINGWU_LANGUAGE,
-                    ossObjectKey = uploadPayload.objectKey,
-                    fileUrl = uploadPayload.presignedUrl
-                )
+            val submitResult = transcriptionCoordinator.submitTranscription(
+                audioAssetName = file.name,
+                language = DEFAULT_TINGWU_LANGUAGE,
+                uploadPayload = uploadPayload
             )
             when (submitResult) {
                 is Result.Success -> {
@@ -222,10 +213,10 @@ class AudioFilesViewModel @Inject constructor(
     private fun observeTingwuJob(recordingId: String, jobId: String) {
         jobObservers[jobId]?.cancel()
         val job = viewModelScope.launch(dispatcherProvider.default) {
-            tingwuCoordinator.observeJob(jobId).collect { state ->
+            transcriptionCoordinator.observeJob(jobId).collect { state ->
                 when (state) {
-                    is TingwuJobState.Idle -> Unit
-                    is TingwuJobState.InProgress -> {
+                    is AudioTranscriptionJobState.Idle -> Unit
+                    is AudioTranscriptionJobState.InProgress -> {
                         updateRecording(recordingId) {
                             it.copy(
                                 status = AudioRecordingStatus.Transcribing,
@@ -233,7 +224,7 @@ class AudioFilesViewModel @Inject constructor(
                             )
                         }
                     }
-                    is TingwuJobState.Completed -> {
+                    is AudioTranscriptionJobState.Completed -> {
                         updateRecording(recordingId) {
                             it.copy(
                                 status = AudioRecordingStatus.Transcribed,
@@ -241,7 +232,7 @@ class AudioFilesViewModel @Inject constructor(
                             )
                         }
                     }
-                    is TingwuJobState.Failed -> {
+                    is AudioTranscriptionJobState.Failed -> {
                         updateRecording(recordingId) {
                             it.copy(
                                 status = AudioRecordingStatus.Error,

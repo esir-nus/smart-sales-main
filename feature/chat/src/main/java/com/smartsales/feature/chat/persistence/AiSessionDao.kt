@@ -17,4 +17,10 @@ interface AiSessionDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entity: AiSessionEntity)
+
+    @Query("DELETE FROM ai_session WHERE session_id = :sessionId")
+    suspend fun deleteById(sessionId: String)
+
+    @Query("SELECT * FROM ai_session WHERE session_id = :sessionId LIMIT 1")
+    suspend fun findById(sessionId: String): AiSessionEntity?
 }

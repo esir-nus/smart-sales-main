@@ -26,6 +26,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class DeviceHttpEndpointProviderImplTest {
 
     @Test
@@ -38,7 +39,7 @@ class DeviceHttpEndpointProviderImplTest {
             dispatchers = FakeDispatcherProvider(dispatcher)
         )
         val results = mutableListOf<String?>()
-        val collectJob = collectBaseUrl(provider, results)
+        val collectJob = collectBaseUrl(provider, results, this)
 
         fakeConnection.updateState(readyState())
         advanceUntilIdle()
@@ -62,7 +63,7 @@ class DeviceHttpEndpointProviderImplTest {
             dispatchers = FakeDispatcherProvider(dispatcher)
         )
         val results = mutableListOf<String?>()
-        val collectJob = collectBaseUrl(provider, results)
+        val collectJob = collectBaseUrl(provider, results, this)
 
         fakeConnection.updateState(readyState())
 
@@ -93,7 +94,7 @@ class DeviceHttpEndpointProviderImplTest {
             dispatchers = FakeDispatcherProvider(dispatcher)
         )
         val results = mutableListOf<String?>()
-        val collectJob = collectBaseUrl(provider, results)
+        val collectJob = collectBaseUrl(provider, results, this)
 
         fakeConnection.updateState(readyState())
         advanceUntilIdle()
@@ -113,10 +114,9 @@ class DeviceHttpEndpointProviderImplTest {
 
     private fun collectBaseUrl(
         provider: DeviceHttpEndpointProviderImpl,
-        results: MutableList<String?>
-    ): Job = backgroundScope.launch {
-        provider.deviceBaseUrl.collect { results.add(it) }
-    }
+        results: MutableList<String?>,
+        scope: kotlinx.coroutines.CoroutineScope
+    ): Job = scope.launch { provider.deviceBaseUrl.collect { results.add(it) } }
 
     private fun readyState(): ConnectionState.WifiProvisioned {
         val session = BleSession.fromPeripheral(

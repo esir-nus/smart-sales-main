@@ -13,17 +13,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
-import androidx.compose.ui.semantics.SemanticsMatcher
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.assertDoesNotExist
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNode
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.smartsales.feature.media.audiofiles.AudioOrigin
 import com.smartsales.feature.media.audiofiles.AudioFilesUiState
 import com.smartsales.feature.media.audiofiles.AudioRecordingStatus
 import com.smartsales.feature.media.audiofiles.AudioRecordingUi
@@ -47,9 +50,9 @@ class AudioFilesScreenTest {
                     onRefresh = {},
                     onSyncClicked = {},
                     onPlayPause = {},
-                    onApply = {},
                     onDelete = {},
                     onTranscribe = {},
+                    onUploadClick = {},
                     onDismissError = {},
                     modifier = Modifier.fillMaxSize()
                 )
@@ -78,9 +81,9 @@ class AudioFilesScreenTest {
                     onRefresh = {},
                     onSyncClicked = { uiState = uiState.copy(isSyncing = true) },
                     onPlayPause = {},
-                    onApply = {},
                     onDelete = {},
                     onTranscribe = {},
+                    onUploadClick = {},
                     onDismissError = {},
                     modifier = Modifier.fillMaxSize()
                 )
@@ -108,18 +111,18 @@ class AudioFilesScreenTest {
                     onRefresh = {},
                     onSyncClicked = {},
                     onPlayPause = {},
-                    onApply = {},
                     onDelete = {},
                     onTranscribe = {},
+                    onUploadClick = {},
                     onDismissError = { uiState = uiState.copy(errorMessage = null) },
                     modifier = Modifier.fillMaxSize()
                 )
             }
         }
 
-        composeRule.onNodeWithTag(AudioFilesTestTags.ERROR_BANNER).assertIsDisplayed()
+        composeRule.onAllNodesWithTag(AudioFilesTestTags.ERROR_BANNER).assertCountEquals(1)
         composeRule.onNodeWithText("知道了").performClick()
-        composeRule.onNodeWithTag(AudioFilesTestTags.ERROR_BANNER).assertDoesNotExist()
+        composeRule.onAllNodesWithTag(AudioFilesTestTags.ERROR_BANNER).assertCountEquals(0)
     }
 
     @Test
@@ -131,9 +134,9 @@ class AudioFilesScreenTest {
                     onRefresh = {},
                     onSyncClicked = {},
                     onPlayPause = {},
-                    onApply = {},
                     onDelete = {},
                     onTranscribe = {},
+                    onUploadClick = {},
                     onDismissError = {},
                     modifier = Modifier.fillMaxSize()
                 )
@@ -141,7 +144,7 @@ class AudioFilesScreenTest {
         }
 
         composeRule.onNodeWithTag(AudioFilesTestTags.DEVICE_STATUS).assertIsDisplayed()
-        composeRule.onNodeWithText("媒体服务器地址").assertDoesNotExist()
+        composeRule.onAllNodesWithText("媒体服务器地址").assertCountEquals(0)
     }
 
     @Test
@@ -153,9 +156,9 @@ class AudioFilesScreenTest {
                     onRefresh = {},
                     onSyncClicked = {},
                     onPlayPause = {},
-                    onApply = {},
                     onDelete = {},
                     onTranscribe = {},
+                    onUploadClick = {},
                     onDismissError = {},
                     modifier = Modifier.fillMaxSize()
                 )
@@ -180,16 +183,16 @@ class AudioFilesScreenTest {
                     onRefresh = {},
                     onSyncClicked = {},
                     onPlayPause = {},
-                    onApply = {},
                     onDelete = {},
                     onTranscribe = {},
+                    onUploadClick = {},
                     onDismissError = {},
                     modifier = Modifier.fillMaxSize()
                 )
             }
         }
 
-        composeRule.onNodeWithText("photo-1.jpg").assertDoesNotExist()
+        composeRule.onAllNodesWithText("photo-1.jpg").assertCountEquals(0)
         composeRule.onNodeWithText("voice-1.wav").assertIsDisplayed()
     }
 
@@ -206,9 +209,9 @@ class AudioFilesScreenTest {
                     onRefresh = {},
                     onSyncClicked = {},
                     onPlayPause = {},
-                    onApply = {},
                     onDelete = {},
                     onTranscribe = { transcribedId = it },
+                    onUploadClick = {},
                     onDismissError = {},
                     modifier = Modifier.fillMaxSize()
                 )
@@ -225,8 +228,51 @@ class AudioFilesScreenTest {
             fileName = "$id.wav",
             sizeText = "1.0MB",
             modifiedAtText = "2025-11-21 10:00",
-            status = AudioRecordingStatus.Idle
+            status = AudioRecordingStatus.Idle,
+            origin = AudioOrigin.DEVICE
         )
+
+    @Test
+    fun originLabels_renderForDeviceAndPhone() {
+        composeRule.setContent {
+            MaterialTheme {
+                AudioFilesScreen(
+                    state = AudioFilesUiState(
+                        recordings = listOf(
+                            AudioRecordingUi(
+                                id = "d1",
+                                fileName = "dev.wav",
+                                sizeText = "1MB",
+                                modifiedAtText = "2025-11-21",
+                                status = AudioRecordingStatus.Idle,
+                                origin = AudioOrigin.DEVICE
+                            ),
+                            AudioRecordingUi(
+                                id = "p1",
+                                fileName = "phone.wav",
+                                sizeText = "1MB",
+                                modifiedAtText = "2025-11-21",
+                                status = AudioRecordingStatus.Idle,
+                                origin = AudioOrigin.PHONE
+                            )
+                        ),
+                        baseUrl = "http://192.168.0.8:8000"
+                    ),
+                    onRefresh = {},
+                    onSyncClicked = {},
+                    onPlayPause = {},
+                    onDelete = {},
+                    onTranscribe = {},
+                    onUploadClick = {},
+                    onDismissError = {},
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("来源：设备").assertIsDisplayed()
+        composeRule.onNodeWithText("来源：手机").assertIsDisplayed()
+    }
 
     private fun progressMatcher(): SemanticsMatcher =
         SemanticsMatcher.expectValue(

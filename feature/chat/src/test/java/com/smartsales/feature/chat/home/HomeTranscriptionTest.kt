@@ -12,7 +12,7 @@ import com.smartsales.feature.chat.core.ChatStreamEvent
 import com.smartsales.feature.chat.core.QuickSkillCatalog
 import com.smartsales.feature.chat.core.QuickSkillDefinition
 import com.smartsales.feature.chat.core.QuickSkillId
-import com.smartsales.feature.chat.history.ChatHistoryEntity
+import com.smartsales.feature.chat.history.ChatMessageEntity
 import com.smartsales.feature.chat.history.ChatHistoryRepository
 import com.smartsales.feature.connectivity.BlePeripheral
 import com.smartsales.feature.connectivity.ConnectionState
@@ -133,11 +133,15 @@ class HomeTranscriptionTest {
     }
 
     private class FakeChatHistoryRepository : ChatHistoryRepository {
-        private var stored: List<ChatHistoryEntity> = emptyList()
-        override suspend fun loadLatestSession(sessionId: String): List<ChatHistoryEntity> = stored
+        private var stored: List<ChatMessageEntity> = emptyList()
+        override suspend fun loadLatestSession(sessionId: String): List<ChatMessageEntity> = stored
 
-        override suspend fun saveMessages(sessionId: String, messages: List<ChatHistoryEntity>) {
+        override suspend fun saveMessages(sessionId: String, messages: List<ChatMessageEntity>) {
             stored = messages
+        }
+
+        override suspend fun deleteSession(sessionId: String) {
+            stored = emptyList()
         }
     }
 

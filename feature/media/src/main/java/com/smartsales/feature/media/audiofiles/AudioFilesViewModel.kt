@@ -11,6 +11,9 @@ import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
 import com.smartsales.feature.media.devicemanager.DeviceMediaFile
 import com.smartsales.feature.media.devicemanager.DeviceMediaGateway
+import com.smartsales.feature.media.audiofiles.AudioOrigin
+import com.smartsales.feature.media.audiofiles.AudioStorageRepository
+import com.smartsales.feature.media.audiofiles.StoredAudio
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlin.math.max
@@ -37,6 +40,7 @@ class AudioFilesViewModel @Inject constructor(
     private val transcriptionCoordinator: AudioTranscriptionCoordinator,
     private val playbackController: AudioPlaybackController,
     private val endpointProvider: DeviceHttpEndpointProvider,
+    private val audioStorageRepository: AudioStorageRepository,
     private val dispatcherProvider: DispatcherProvider
 ) : ViewModel() {
 
@@ -50,6 +54,7 @@ class AudioFilesViewModel @Inject constructor(
     val events: SharedFlow<AudioFilesNavigation> = _events
 
     init {
+        observeStorage()
         observeEndpoint()
     }
 
@@ -71,7 +76,6 @@ class AudioFilesViewModel @Inject constructor(
 
     fun onPlayPause(recordingId: String) {
         viewModelScope.launch(dispatcherProvider.io) {
-            val baseUrl = uiState.value.baseUrl ?: return@launch
             val current = uiState.value.currentlyPlayingId
             if (current == recordingId) {
                 playbackController.pause()
@@ -81,15 +85,9 @@ class AudioFilesViewModel @Inject constructor(
             val file = recordingsMutex.withLock {
                 recordings[recordingId]
             } ?: return@launch
-            val localFile = file.localFile ?: when (val result = mediaGateway.downloadFile(baseUrl, file.file)) {
-                is Result.Success -> result.data
-                is Result.Error -> {
-                    emitError(result.throwable.message)
-                    return@launch
-                }
-            }
-            updateRecording(recordingId) { it.copy(localFile = localFile) }
-            when (val playResult = playbackController.play(localFile)) {
+            val localFile = file.localFile ?: file.storedAudio?.localUri?.path?.let { java.io.File(it) } ?: return@launch
+            updateRecording(recordingId) { it.copy(localFile = java.io.File(localFile.path)) }
+            when (val playResult = playbackController.play(java.io.File(localFile.path))) {
                 is Result.Success -> _uiState.update { it.copy(currentlyPlayingId = recordingId) }
                 is Result.Error -> emitError(playResult.throwable.message)
             }
@@ -98,24 +96,16 @@ class AudioFilesViewModel @Inject constructor(
 
     fun onTranscribe(recordingId: String) {
         viewModelScope.launch(dispatcherProvider.io) {
-            val baseUrl = uiState.value.baseUrl ?: return@launch
-            val file = recordingsMutex.withLock { recordings[recordingId]?.file } ?: return@launch
             val current = recordingsMutex.withLock { recordings[recordingId] }
             if (current?.status == AudioRecordingStatus.Transcribing) return@launch
+            val audio = current?.storedAudio ?: return@launch
             updateRecording(recordingId) { it.copy(status = AudioRecordingStatus.Syncing, error = null, tingwuJobId = null) }
 
-            val localFile = current?.localFile ?: when (val download = mediaGateway.downloadFile(baseUrl, file)) {
-                is Result.Success -> download.data
-                is Result.Error -> {
-                    updateRecording(recordingId) {
-                        it.copy(
-                            status = AudioRecordingStatus.Error,
-                            error = download.throwable.message
-                        )
-                    }
-                    emitError(download.throwable.message)
-                    return@launch
-                }
+            val localFile = current.localFile ?: audio.localUri.path?.let { java.io.File(it) }
+            if (localFile == null) {
+                emitError("找不到本地音频文件")
+                updateRecording(recordingId) { it.copy(status = AudioRecordingStatus.Error) }
+                return@launch
             }
             val uploadPayload = when (val upload = transcriptionCoordinator.uploadAudio(localFile)) {
                 is Result.Success -> upload.data
@@ -132,7 +122,7 @@ class AudioFilesViewModel @Inject constructor(
                 }
             }
             when (val submit = transcriptionCoordinator.submitTranscription(
-                audioAssetName = file.name,
+                audioAssetName = audio.displayName,
                 language = DEFAULT_TINGWU_LANGUAGE,
                 uploadPayload = uploadPayload
             )) {
@@ -149,7 +139,7 @@ class AudioFilesViewModel @Inject constructor(
                     _events.emit(
                         AudioFilesNavigation.TranscribeToChat(
                             recordingId = recordingId,
-                            fileName = file.name,
+                            fileName = audio.displayName,
                             jobId = jobId
                         )
                     )
@@ -169,34 +159,17 @@ class AudioFilesViewModel @Inject constructor(
         }
     }
 
-    fun onApply(recordingId: String) {
+    fun onDelete(recordingId: String) {
         viewModelScope.launch(dispatcherProvider.io) {
-            val baseUrl = uiState.value.baseUrl ?: return@launch
-            val fileName = recordingsMutex.withLock { recordings[recordingId]?.file?.name } ?: return@launch
-            when (val result = mediaGateway.applyFile(baseUrl, fileName)) {
-                is Result.Success -> _uiState.update { it.copy(errorMessage = null) }
-                is Result.Error -> emitError(result.throwable.message)
-            }
+            runCatching { audioStorageRepository.delete(recordingId) }
+                .onFailure { emitError(it.message) }
         }
     }
 
-    fun onDelete(recordingId: String) {
+    fun onImportFromPhone(uri: android.net.Uri) {
         viewModelScope.launch(dispatcherProvider.io) {
-            val baseUrl = uiState.value.baseUrl ?: return@launch
-            val fileName = recordingsMutex.withLock { recordings[recordingId]?.file?.name } ?: return@launch
-            when (val result = mediaGateway.deleteFile(baseUrl, fileName)) {
-                is Result.Success -> {
-                    recordingsMutex.withLock {
-                        recordings.remove(recordingId)
-                    }
-                    if (uiState.value.currentlyPlayingId == recordingId) {
-                        playbackController.pause()
-                        _uiState.update { it.copy(currentlyPlayingId = null) }
-                    }
-                    publishRecordings()
-                }
-                is Result.Error -> emitError(result.throwable.message)
-            }
+            runCatching { audioStorageRepository.importFromPhone(uri) }
+                .onFailure { emitError(it.message) }
         }
     }
 
@@ -206,7 +179,7 @@ class AudioFilesViewModel @Inject constructor(
         setSyncing(true)
         when (val result = mediaGateway.fetchFiles(baseUrl)) {
             is Result.Success -> {
-                mergeFiles(result.data)
+                importMissingFromDevice(baseUrl, result.data)
                 setSyncing(false)
             }
 
@@ -215,6 +188,16 @@ class AudioFilesViewModel @Inject constructor(
                 setSyncing(false)
             }
         }
+    }
+
+    private suspend fun importMissingFromDevice(baseUrl: String, files: List<DeviceMediaFile>) {
+        val existing = recordingsMutex.withLock { recordings.keys.toSet() }
+        files.filter { it.isAudioFile() }
+            .filter { it.name !in existing }
+            .forEach { file ->
+                runCatching { audioStorageRepository.importFromDevice(baseUrl, file) }
+                    .onFailure { emitError(it.message) }
+            }
     }
 
     private fun observeTingwuJob(recordingId: String, jobId: String) {
@@ -254,23 +237,11 @@ class AudioFilesViewModel @Inject constructor(
         jobObservers[jobId] = job
     }
 
-    private suspend fun mergeFiles(files: List<DeviceMediaFile>) {
+    private suspend fun mergeStorage(files: List<StoredAudio>) {
         recordingsMutex.withLock {
-            val currentNames = files.map { it.name }.toSet()
-            val iterator = recordings.iterator()
-            while (iterator.hasNext()) {
-                val entry = iterator.next()
-                if (entry.key !in currentNames) {
-                    iterator.remove()
-                }
-            }
-            files.forEach { file ->
-                val existing = recordings[file.name]
-                if (existing == null) {
-                    recordings[file.name] = RecordingState(file = file)
-                } else {
-                    recordings[file.name] = existing.copy(file = file)
-                }
+            recordings.clear()
+            files.forEach { audio ->
+                recordings[audio.id] = RecordingState(storedAudio = audio)
             }
         }
         publishRecordings()
@@ -291,8 +262,8 @@ class AudioFilesViewModel @Inject constructor(
         val playingId = uiState.value.currentlyPlayingId
         val items = recordingsMutex.withLock {
             recordings.values
-                .sortedByDescending { it.file.modifiedAtMillis }
-                .map { it.toUi(playingId) }
+                .sortedByDescending { it.storedAudio?.timestampMillis ?: 0L }
+                .mapNotNull { it.toUi(playingId) }
         }
         _uiState.update { it.copy(recordings = items) }
     }
@@ -345,6 +316,12 @@ class AudioFilesViewModel @Inject constructor(
         }
     }
 
+    private fun observeStorage() {
+        viewModelScope.launch(dispatcherProvider.default) {
+            audioStorageRepository.audios.collectLatest { mergeStorage(it) }
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         jobObservers.values.forEach { it.cancel() }
@@ -369,7 +346,8 @@ data class AudioRecordingUi(
     val transcriptSummary: String? = null,
     val tingwuJobId: String? = null,
     val progressPercent: Int = 0,
-    val isPlaying: Boolean = false
+    val isPlaying: Boolean = false,
+    val origin: AudioOrigin = AudioOrigin.DEVICE
 )
 
 enum class AudioRecordingStatus {
@@ -389,7 +367,7 @@ sealed class AudioFilesNavigation {
 }
 
 private data class RecordingState(
-    val file: DeviceMediaFile,
+    val storedAudio: StoredAudio? = null,
     val status: AudioRecordingStatus = AudioRecordingStatus.Idle,
     val tingwuJobId: String? = null,
     val transcript: String? = null,
@@ -397,18 +375,20 @@ private data class RecordingState(
     val error: String? = null,
     val localFile: java.io.File? = null
 ) {
-    fun toUi(currentPlayingId: String?): AudioRecordingUi {
+    fun toUi(currentPlayingId: String?): AudioRecordingUi? {
+        val audio = storedAudio ?: return null
         val summary = transcript?.lineSequence()?.firstOrNull()?.takeIf { it.isNotBlank() }
         return AudioRecordingUi(
-            id = file.name,
-            fileName = file.name,
-            sizeText = formatSize(file.sizeBytes),
-            modifiedAtText = formatTimestamp(file.modifiedAtMillis),
+            id = audio.id,
+            fileName = audio.displayName,
+            sizeText = formatSize(audio.sizeBytes),
+            modifiedAtText = formatTimestamp(audio.timestampMillis),
             status = status,
             transcriptSummary = summary,
             tingwuJobId = tingwuJobId,
             progressPercent = progress,
-            isPlaying = currentPlayingId == file.name
+            isPlaying = currentPlayingId == audio.id,
+            origin = audio.origin
         )
     }
 }

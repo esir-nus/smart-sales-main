@@ -7,6 +7,10 @@ package com.smartsales.aitest.audio
 
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
 import com.smartsales.feature.media.audiofiles.DeviceHttpEndpointProvider
+import com.smartsales.feature.media.audiofiles.AudioStorageRepository
+import com.smartsales.aitest.MediaServerClient
+import com.smartsales.aitest.audio.DeviceMediaDownloader
+import com.smartsales.aitest.audio.LocalAudioStorageRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -24,4 +28,14 @@ interface AudioTranscriptionModule {
     fun bindDeviceHttpEndpointProvider(
         impl: DeviceHttpEndpointProviderImpl,
     ): DeviceHttpEndpointProvider
+
+    @Binds
+    fun bindAudioStorageRepository(
+        impl: LocalAudioStorageRepository,
+    ): AudioStorageRepository
+
+    @Binds
+    fun bindDeviceMediaDownloader(
+        impl: MediaServerClient,
+    ): DeviceMediaDownloader
 }

@@ -58,5 +58,12 @@ class RoomAiSessionRepositoryTest {
         override suspend fun upsert(entity: AiSessionEntity) {
             flow.value = flow.value.filterNot { it.id == entity.id } + entity
         }
+
+        override suspend fun deleteById(sessionId: String) {
+            flow.value = flow.value.filterNot { it.id == sessionId }
+        }
+
+        override suspend fun findById(sessionId: String): AiSessionEntity? =
+            flow.value.firstOrNull { it.id == sessionId }
     }
 }

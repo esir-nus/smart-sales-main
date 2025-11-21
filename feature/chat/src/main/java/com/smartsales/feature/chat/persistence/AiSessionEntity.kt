@@ -18,5 +18,7 @@ data class AiSessionEntity(
     @ColumnInfo(name = "preview")
     val preview: String,
     @ColumnInfo(name = "updated_at")
-    val updatedAtMillis: Long
+    val updatedAtMillis: Long,
+    @ColumnInfo(name = "pinned", defaultValue = "0")
+    val pinned: Boolean = false
 )

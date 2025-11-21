@@ -16,12 +16,15 @@ data class AiSessionSummary(
     val id: String,
     val title: String,
     val lastMessagePreview: String,
-    val updatedAtMillis: Long
+    val updatedAtMillis: Long,
+    val pinned: Boolean = false
 )
 
 interface AiSessionRepository {
     val summaries: Flow<List<AiSessionSummary>>
     suspend fun upsert(summary: AiSessionSummary)
+    suspend fun delete(id: String)
+    suspend fun findById(id: String): AiSessionSummary?
 }
 
 @Singleton
@@ -34,8 +37,21 @@ class InMemoryAiSessionRepository @Inject constructor() : AiSessionRepository {
         mutex.withLock {
             internal.update { existing ->
                 val withoutCurrent = existing.filterNot { it.id == summary.id }
-                (withoutCurrent + summary).sortedByDescending { it.updatedAtMillis }
+                (withoutCurrent + summary).sortedWith(
+                    compareByDescending<AiSessionSummary> { it.pinned }
+                        .thenByDescending { it.updatedAtMillis }
+                )
             }
         }
+    }
+
+    override suspend fun delete(id: String) {
+        mutex.withLock {
+            internal.update { existing -> existing.filterNot { it.id == id } }
+        }
+    }
+
+    override suspend fun findById(id: String): AiSessionSummary? = internal.value.firstOrNull {
+        it.id == id
     }
 }

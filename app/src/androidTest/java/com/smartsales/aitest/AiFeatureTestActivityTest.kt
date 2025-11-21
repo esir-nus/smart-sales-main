@@ -108,6 +108,9 @@ class AiFeatureTestActivityTest {
         selectTab(AiFeatureTestTags.CHIP_AUDIO_FILES)
         waitForPage(AiFeatureTestTags.PAGE_AUDIO_FILES)
 
+        selectTab(AiFeatureTestTags.CHIP_CHAT_HISTORY)
+        waitForPage(AiFeatureTestTags.PAGE_CHAT_HISTORY)
+
         selectTab(AiFeatureTestTags.CHIP_USER_CENTER)
         waitForPage(AiFeatureTestTags.PAGE_USER_CENTER)
 

@@ -60,6 +60,7 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.compose.material.icons.extended)
     implementation(libs.compose.foundation)
+    implementation(libs.compose.lifecycle.runtime)
     implementation(libs.androidx.core.ktx)
     implementation(libs.coroutines.core)
     implementation(libs.hilt.android)
@@ -75,6 +76,7 @@ dependencies {
 
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.compose.ui.test)
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(libs.androidx.test.espresso)
     debugImplementation(libs.compose.ui.test.manifest)

@@ -11,6 +11,7 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
 import com.smartsales.core.util.Result
+import com.smartsales.feature.media.devicemanager.DeviceMediaFile
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.File
@@ -25,6 +26,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import com.smartsales.aitest.audio.DeviceMediaDownloader
 data class MediaServerFile(
     val name: String,
     val sizeBytes: Long,
@@ -39,7 +41,7 @@ data class MediaServerFile(
 
 class MediaServerClient @Inject constructor(
     @ApplicationContext private val context: Context,
-) {
+) : DeviceMediaDownloader {
     private val resolver: ContentResolver = context.contentResolver
 
     suspend fun fetchFiles(baseUrl: String): Result<List<MediaServerFile>> = withContext(Dispatchers.IO) {
@@ -124,6 +126,16 @@ class MediaServerClient @Inject constructor(
             onFailure = { Result.Error(it) }
         )
     }
+
+    override suspend fun download(baseUrl: String, file: DeviceMediaFile): Result<File> =
+        downloadFile(baseUrl, MediaServerFile(
+            name = file.name,
+            sizeBytes = file.sizeBytes,
+            mimeType = file.mimeType,
+            modifiedAtMillis = file.modifiedAtMillis,
+            mediaUrl = file.mediaUrl,
+            downloadUrl = file.downloadUrl
+        ))
 
     suspend fun downloadFile(baseUrl: String, file: MediaServerFile): Result<File> = withContext(Dispatchers.IO) {
         normalizeBaseUrl(baseUrl) ?: return@withContext Result.Error(IllegalArgumentException("无效地址"))

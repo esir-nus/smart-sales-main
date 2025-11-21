@@ -130,7 +130,7 @@ class HomeScreenViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState
     private var latestMediaSyncState: MediaSyncState? = null
-    private val sessionId: String = "home-session"
+    private var sessionId: String = DEFAULT_SESSION_ID
     private var pendingSkillId: QuickSkillId? = null
     private var transcriptionJob: Job? = null
 
@@ -138,7 +138,7 @@ class HomeScreenViewModel @Inject constructor(
         // 从 catalog 加载快捷技能到状态
         val skills = quickSkillDefinitions.map { it.toUiModel() }
         _uiState.update { it.copy(quickSkills = skills) }
-        restoreChatHistory()
+        loadSession(DEFAULT_SESSION_ID)
         observeDeviceConnection()
         observeMediaSync()
     }
@@ -319,6 +319,12 @@ class HomeScreenViewModel @Inject constructor(
         _uiState.update { it.copy(navigationRequest = null) }
     }
 
+    fun setSession(sessionId: String) {
+        if (sessionId == this.sessionId) return
+        this.sessionId = sessionId
+        loadSession(sessionId)
+    }
+
     fun setQuickSkills(skills: List<QuickSkillUi>) {
         _uiState.update { it.copy(quickSkills = skills) }
     }
@@ -375,11 +381,19 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
-    private fun restoreChatHistory() {
+    private fun loadSession(targetSessionId: String) {
+        _uiState.update { it.copy(isLoadingHistory = true, chatMessages = emptyList()) }
         viewModelScope.launch {
-            val saved = chatHistoryRepository.loadLatestSession(sessionId)
+            val saved = chatHistoryRepository.loadLatestSession(targetSessionId)
             if (saved.isNotEmpty()) {
-                _uiState.update { it.copy(chatMessages = saved.map { it.toUiModel() }) }
+                _uiState.update {
+                    it.copy(
+                        chatMessages = saved.map { item -> item.toUiModel() },
+                        isLoadingHistory = false
+                    )
+                }
+            } else {
+                _uiState.update { it.copy(isLoadingHistory = false) }
             }
         }
     }
@@ -677,5 +691,9 @@ class HomeScreenViewModel @Inject constructor(
 
     private fun <T> MutableStateFlow<T>.update(transform: (T) -> T) {
         value = transform(value)
+    }
+
+    companion object {
+        private const val DEFAULT_SESSION_ID = "home-session"
     }
 }

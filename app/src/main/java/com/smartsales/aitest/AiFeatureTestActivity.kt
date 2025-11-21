@@ -78,6 +78,7 @@ import com.smartsales.aitest.setup.DeviceSetupRoute
 import com.smartsales.core.util.Result
 import com.smartsales.feature.chat.home.HomeScreenRoute
 import com.smartsales.feature.chat.home.TranscriptionChatRequest
+import com.smartsales.feature.chat.history.ChatHistoryRoute
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
 import kotlinx.coroutines.launch
@@ -98,6 +99,7 @@ private fun AiFeatureTestApp() {
     val scope = rememberCoroutineScope()
     var currentPage by rememberSaveable { mutableStateOf(TestHomePage.Home) }
     var pendingTranscription by remember { mutableStateOf<TranscriptionChatRequest?>(null) }
+    var pendingSessionId by remember { mutableStateOf<String?>(null) }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
@@ -152,6 +154,8 @@ private fun AiFeatureTestApp() {
                                         .testTag(AiFeatureTestTags.PAGE_HOME),
                                     transcriptionRequest = pendingTranscription,
                                     onTranscriptionRequestConsumed = { pendingTranscription = null },
+                                    selectedSessionId = pendingSessionId,
+                                    onSessionSelectionConsumed = { pendingSessionId = null },
                                     onNavigateToDeviceManager = { currentPage = TestHomePage.DeviceManager },
                                     onNavigateToDeviceSetup = { currentPage = TestHomePage.DeviceSetup },
                                     onNavigateToAudioFiles = { currentPage = TestHomePage.AudioFiles },
@@ -197,6 +201,18 @@ private fun AiFeatureTestApp() {
                                             fileName = nav.fileName,
                                             recordingId = nav.recordingId
                                         )
+                                        currentPage = TestHomePage.Home
+                                    }
+                                )
+                            }
+
+                            TestHomePage.ChatHistory -> {
+                                ChatHistoryRoute(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .testTag(AiFeatureTestTags.PAGE_CHAT_HISTORY),
+                                    onSessionSelected = { sessionId ->
+                                        pendingSessionId = sessionId
                                         currentPage = TestHomePage.Home
                                     }
                                 )
@@ -252,6 +268,12 @@ private fun PageSelector(currentPage: TestHomePage, onPageSelected: (TestHomePag
             modifier = Modifier.testTag(AiFeatureTestTags.CHIP_AUDIO_FILES)
         )
         FilterChip(
+            selected = currentPage == TestHomePage.ChatHistory,
+            onClick = { onPageSelected(TestHomePage.ChatHistory) },
+            label = { Text("会话历史") },
+            modifier = Modifier.testTag(AiFeatureTestTags.CHIP_CHAT_HISTORY)
+        )
+        FilterChip(
             selected = currentPage == TestHomePage.UserCenter,
             onClick = { onPageSelected(TestHomePage.UserCenter) },
             label = { Text("用户中心") },
@@ -265,6 +287,7 @@ private enum class TestHomePage {
     WifiBleTester,
     DeviceManager,
     DeviceSetup,
+    ChatHistory,
     AudioFiles,
     UserCenter
 }
@@ -599,10 +622,12 @@ object AiFeatureTestTags {
     const val PAGE_DEVICE_SETUP = "page_device_setup"
     const val PAGE_AUDIO_FILES = "page_audio_files"
     const val PAGE_USER_CENTER = "page_user_center"
+    const val PAGE_CHAT_HISTORY = "page_chat_history"
     const val CHIP_HOME = "chip_home"
     const val CHIP_WIFI = "chip_wifi_ble"
     const val CHIP_DEVICE_MANAGER = "chip_device_manager"
     const val CHIP_DEVICE_SETUP = "chip_device_setup"
     const val CHIP_AUDIO_FILES = "chip_audio_files"
+    const val CHIP_CHAT_HISTORY = "chip_chat_history"
     const val CHIP_USER_CENTER = "chip_user_center"
 }

@@ -75,6 +75,8 @@ fun HomeScreenRoute(
     viewModel: HomeScreenViewModel = hiltViewModel(),
     transcriptionRequest: TranscriptionChatRequest? = null,
     onTranscriptionRequestConsumed: () -> Unit = {},
+    selectedSessionId: String? = null,
+    onSessionSelectionConsumed: () -> Unit = {},
     onNavigateToDeviceManager: () -> Unit = {},
     onNavigateToDeviceSetup: () -> Unit = {},
     onNavigateToAudioFiles: () -> Unit = {},
@@ -109,6 +111,12 @@ fun HomeScreenRoute(
         transcriptionRequest?.let {
             viewModel.onTranscriptionRequested(it)
             onTranscriptionRequestConsumed()
+        }
+    }
+    LaunchedEffect(selectedSessionId) {
+        selectedSessionId?.let {
+            viewModel.setSession(it)
+            onSessionSelectionConsumed()
         }
     }
 

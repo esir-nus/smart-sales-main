@@ -9,7 +9,7 @@ import androidx.room.RoomDatabase
 // 作者：创建于 2025-11-16
 @Database(
     entities = [AiSessionEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AiSessionDatabase : RoomDatabase() {

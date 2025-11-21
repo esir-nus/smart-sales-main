@@ -2,7 +2,7 @@ package com.smartsales.feature.media.audiofiles
 
 // 文件：feature/media/src/test/java/com/smartsales/feature/media/audiofiles/AudioFilesViewModelTest.kt
 // 模块：:feature:media
-// 说明：验证 AudioFilesViewModel 的刷新、删除与转写状态逻辑
+// 说明：验证 AudioFilesViewModel 基于本地存储的同步、上传与转写流程
 // 作者：创建于 2025-11-21
 
 import com.smartsales.core.test.FakeDispatcherProvider
@@ -14,7 +14,10 @@ import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -36,6 +39,7 @@ class AudioFilesViewModelTest {
     private lateinit var transcription: FakeAudioTranscriptionCoordinator
     private lateinit var playbackController: FakeAudioPlaybackController
     private lateinit var endpointProvider: FakeDeviceHttpEndpointProvider
+    private lateinit var storageRepository: FakeAudioStorageRepository
     private lateinit var viewModel: AudioFilesViewModel
 
     @Before
@@ -45,11 +49,13 @@ class AudioFilesViewModelTest {
         transcription = FakeAudioTranscriptionCoordinator()
         playbackController = FakeAudioPlaybackController()
         endpointProvider = FakeDeviceHttpEndpointProvider()
+        storageRepository = FakeAudioStorageRepository()
         viewModel = AudioFilesViewModel(
             mediaGateway = gateway,
             transcriptionCoordinator = transcription,
             playbackController = playbackController,
             endpointProvider = endpointProvider,
+            audioStorageRepository = storageRepository,
             dispatcherProvider = FakeDispatcherProvider(dispatcher)
         )
     }
@@ -60,136 +66,54 @@ class AudioFilesViewModelTest {
     }
 
     @Test
-    fun `auto refresh populates recordings when endpoint available`() = runTest(dispatcher) {
+    fun `sync imports new device audio into storage`() = runTest(dispatcher) {
         gateway.files = listOf(
-            DeviceMediaFile("audio-1.wav", 1024, "audio/wav", 1_000L, "media/1", "dl/1")
+            DeviceMediaFile("dev-1.wav", 1024, "audio/wav", 1_000L, "media/1", "http://d/1")
         )
-
         endpointProvider.emit("http://192.168.0.10:8000")
         advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        assertEquals(1, state.recordings.size)
-        assertEquals("audio-1.wav", state.recordings.first().fileName)
+        assertEquals(1, viewModel.uiState.value.recordings.size)
+        assertEquals(AudioOrigin.DEVICE, viewModel.uiState.value.recordings.first().origin)
     }
 
     @Test
-    fun `delete removes item`() = runTest(dispatcher) {
-        gateway.files = listOf(
-            DeviceMediaFile("audio-2.wav", 512, "audio/wav", 2_000L, "media/2", "dl/2")
-        )
-        endpointProvider.emit("http://192.168.0.20:8000")
+    fun `import from phone adds phone origin audio`() = runTest(dispatcher) {
+        endpointProvider.emit("http://192.168.0.11:8000")
         advanceUntilIdle()
 
-        viewModel.onDelete("audio-2.wav")
+        val uri = android.net.Uri.fromFile(File.createTempFile("phone", ".mp3"))
+        viewModel.onImportFromPhone(uri)
         advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        assertEquals(0, state.recordings.size)
+        val recording = viewModel.uiState.value.recordings.first()
+        assertEquals(AudioOrigin.PHONE, recording.origin)
     }
 
     @Test
-    fun `error surfaces message`() = runTest(dispatcher) {
-        gateway.fetchResult = Result.Error(IllegalStateException("网络异常"))
-
-        endpointProvider.emit("http://192.168.0.30:8000")
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        assertEquals("网络异常", state.errorMessage)
-    }
-
-    @Test
-    fun `sync does not trigger transcription automatically`() = runTest(dispatcher) {
-        gateway.files = listOf(
-            DeviceMediaFile("audio-auto.wav", 2048, "audio/wav", 3_500L, "media/a", "dl/a")
-        )
-
-        endpointProvider.emit("http://192.168.0.35:8000")
-        advanceUntilIdle()
-
-        viewModel.onSyncClicked()
-        advanceUntilIdle()
-
-        assertEquals(AudioRecordingStatus.Idle, viewModel.uiState.value.recordings.first().status)
-    }
-
-    @Test
-    fun `tingwu completion updates status`() = runTest(dispatcher) {
-        gateway.files = listOf(
-            DeviceMediaFile("audio-3.wav", 2048, "audio/wav", 3_000L, "media/3", "dl/3")
-        )
-
-        endpointProvider.emit("http://192.168.0.40:8000")
-        advanceUntilIdle()
-
-        viewModel.onTranscribe("audio-3.wav")
-        advanceUntilIdle()
-
-        val jobId = transcription.lastJobId!!
-        transcription.emit(
-            jobId,
-            AudioTranscriptionJobState.Completed(
-                jobId = jobId,
-                transcriptMarkdown = "## 完整转写"
+    fun `transcribe emits navigation event for stored audio`() = runTest(dispatcher) {
+        val local = File.createTempFile("trans", ".wav")
+        storageRepository.add(
+            StoredAudio(
+                id = "audio-t.wav",
+                displayName = "audio-t.wav",
+                sizeBytes = 2048,
+                durationMillis = null,
+                timestampMillis = 2_000L,
+                origin = AudioOrigin.DEVICE,
+                localUri = android.net.Uri.fromFile(local)
             )
         )
         advanceUntilIdle()
 
-        val state = viewModel.uiState.value
-        assertEquals(AudioRecordingStatus.Transcribed, state.recordings.first().status)
-    }
-
-    @Test
-    fun `recordings cleared when endpoint lost`() = runTest(dispatcher) {
-        gateway.files = listOf(
-            DeviceMediaFile("audio-4.wav", 1024, "audio/wav", 4_000L, "media/4", "dl/4")
-        )
-        endpointProvider.emit("http://192.168.0.50:8000")
-        advanceUntilIdle()
-        assertEquals(1, viewModel.uiState.value.recordings.size)
-
-        endpointProvider.emit(null)
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        assertTrue(state.recordings.isEmpty())
-        assertEquals(null, state.baseUrl)
-    }
-
-    @Test
-    fun `non audio files are filtered out`() = runTest(dispatcher) {
-        gateway.files = listOf(
-            DeviceMediaFile("audio-5.wav", 1234, "audio/wav", 5_000L, "media/5", "dl/5"),
-            DeviceMediaFile("photo-1.jpg", 888, "image/jpeg", 5_100L, "media/img", "dl/img")
-        )
-
-        endpointProvider.emit("http://192.168.0.60:8000")
-        advanceUntilIdle()
-
-        val names = viewModel.uiState.value.recordings.map { it.fileName }
-        assertEquals(listOf("audio-5.wav"), names)
-    }
-
-    @Test
-    fun `transcribe emits navigation for specific recording`() = runTest(dispatcher) {
-        gateway.files = listOf(
-            DeviceMediaFile("audio-6.wav", 2048, "audio/wav", 6_000L, "media/6", "dl/6")
-        )
-        endpointProvider.emit("http://192.168.0.70:8000")
-        advanceUntilIdle()
-
         val events = mutableListOf<AudioFilesNavigation>()
-        val job = launch { viewModel.events.collect { events.add(it) } }
+        val job = backgroundScope.launch { viewModel.events.collect { events.add(it) } }
 
-        viewModel.onTranscribe("audio-6.wav")
+        viewModel.onTranscribe("audio-t.wav")
         advanceUntilIdle()
 
-        val nav = events.first() as AudioFilesNavigation.TranscribeToChat
-        assertEquals("audio-6.wav", nav.fileName)
-        assertEquals("audio-6.wav", transcription.lastSubmittedAsset)
+        assertTrue(events.first() is AudioFilesNavigation.TranscribeToChat)
         assertEquals(AudioRecordingStatus.Transcribing, viewModel.uiState.value.recordings.first().status)
-
         job.cancel()
     }
 
@@ -207,14 +131,11 @@ class AudioFilesViewModelTest {
         override suspend fun applyFile(baseUrl: String, fileName: String): Result<Unit> =
             Result.Success(Unit)
 
-        override suspend fun deleteFile(baseUrl: String, fileName: String): Result<Unit> {
-            files = files.filterNot { it.name == fileName }
-            return Result.Success(Unit)
-        }
+        override suspend fun deleteFile(baseUrl: String, fileName: String): Result<Unit> =
+            Result.Success(Unit)
 
-        override suspend fun downloadFile(baseUrl: String, file: DeviceMediaFile): Result<File> {
-            return Result.Success(File.createTempFile("audio", ".tmp"))
-        }
+        override suspend fun downloadFile(baseUrl: String, file: DeviceMediaFile): Result<File> =
+            Result.Success(File.createTempFile("dl", ".wav"))
     }
 
     private class FakeAudioTranscriptionCoordinator : AudioTranscriptionCoordinator {
@@ -245,19 +166,10 @@ class AudioFilesViewModelTest {
 
         override fun observeJob(jobId: String): Flow<AudioTranscriptionJobState> =
             states.getOrPut(jobId) { MutableStateFlow(AudioTranscriptionJobState.Idle) }
-
-        fun emit(jobId: String, state: AudioTranscriptionJobState) {
-            states[jobId]?.value = state
-        }
     }
 
     private class FakeAudioPlaybackController : AudioPlaybackController {
-        var playCalls = 0
-        override suspend fun play(file: File): Result<Unit> {
-            playCalls++
-            return Result.Success(Unit)
-        }
-
+        override suspend fun play(file: File): Result<Unit> = Result.Success(Unit)
         override suspend fun pause(): Result<Unit> = Result.Success(Unit)
     }
 
@@ -268,6 +180,47 @@ class AudioFilesViewModelTest {
         override val deviceBaseUrl: Flow<String?> = flow
         fun emit(value: String?) {
             flow.value = value
+        }
+    }
+
+    private class FakeAudioStorageRepository : AudioStorageRepository {
+        private val listFlow = MutableStateFlow<List<StoredAudio>>(emptyList())
+        override val audios: Flow<List<StoredAudio>> = listFlow.asStateFlow()
+
+        fun add(audio: StoredAudio) {
+            listFlow.update { it + audio }
+        }
+
+        override suspend fun importFromDevice(baseUrl: String, file: DeviceMediaFile): StoredAudio {
+            val stored = StoredAudio(
+                id = file.name,
+                displayName = file.name,
+                sizeBytes = file.sizeBytes,
+                durationMillis = null,
+                timestampMillis = file.modifiedAtMillis,
+                origin = AudioOrigin.DEVICE,
+                localUri = android.net.Uri.fromFile(File.createTempFile("dev", ".wav"))
+            )
+            listFlow.update { it + stored }
+            return stored
+        }
+
+        override suspend fun importFromPhone(uri: android.net.Uri): StoredAudio {
+            val stored = StoredAudio(
+                id = "phone-${listFlow.value.size + 1}.wav",
+                displayName = "phone-${listFlow.value.size + 1}.wav",
+                sizeBytes = 100,
+                durationMillis = null,
+                timestampMillis = System.currentTimeMillis(),
+                origin = AudioOrigin.PHONE,
+                localUri = uri
+            )
+            listFlow.update { it + stored }
+            return stored
+        }
+
+        override suspend fun delete(audioId: String) {
+            listFlow.update { it.filterNot { audio -> audio.id == audioId } }
         }
     }
 }

@@ -20,7 +20,10 @@ class RoomAiSessionRepository(
             .map { entities ->
                 entities
                     .map { it.toSummary() }
-                    .sortedByDescending { it.updatedAtMillis }
+                    .sortedWith(
+                        compareByDescending<AiSessionSummary> { it.pinned }
+                            .thenByDescending { it.updatedAtMillis }
+                    )
             }
 
     override suspend fun upsert(summary: AiSessionSummary) {
@@ -29,17 +32,29 @@ class RoomAiSessionRepository(
         }
     }
 
+    override suspend fun delete(id: String) {
+        withContext(dispatchers.io) {
+            dao.deleteById(id)
+        }
+    }
+
+    override suspend fun findById(id: String): AiSessionSummary? = withContext(dispatchers.io) {
+        dao.findById(id)?.toSummary()
+    }
+
     private fun AiSessionEntity.toSummary(): AiSessionSummary = AiSessionSummary(
         id = id,
         title = title,
         lastMessagePreview = preview,
-        updatedAtMillis = updatedAtMillis
+        updatedAtMillis = updatedAtMillis,
+        pinned = pinned
     )
 
     private fun AiSessionSummary.toEntity(): AiSessionEntity = AiSessionEntity(
         id = id,
         title = title,
         preview = lastMessagePreview,
-        updatedAtMillis = updatedAtMillis
+        updatedAtMillis = updatedAtMillis,
+        pinned = pinned
     )
 }

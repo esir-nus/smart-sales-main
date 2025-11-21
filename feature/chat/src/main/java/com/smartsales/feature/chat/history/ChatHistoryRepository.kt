@@ -18,6 +18,7 @@ interface ChatHistoryRepository {
         sessionId: String = DEFAULT_SESSION_ID,
         messages: List<ChatMessageEntity>
     )
+    suspend fun deleteSession(sessionId: String)
 
     companion object {
         const val DEFAULT_SESSION_ID = "default"
@@ -45,6 +46,13 @@ class RoomChatHistoryRepository @Inject constructor(
                     dao.insertMessages(messages)
                 }
             }.onFailure { Log.w(TAG, "保存聊天记录失败", it) }
+        }
+    }
+
+    override suspend fun deleteSession(sessionId: String) {
+        withContext(dispatchers.io) {
+            runCatching { dao.deleteBySession(sessionId) }
+                .onFailure { Log.w(TAG, "删除聊天记录失败", it) }
         }
     }
 

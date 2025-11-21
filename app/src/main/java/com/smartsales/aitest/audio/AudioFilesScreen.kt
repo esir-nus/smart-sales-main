@@ -5,6 +5,8 @@ package com.smartsales.aitest.audio
 // 说明：音频库页面的 Route 与 Compose UI，串联媒体服务器、OSS、Tingwu 状态
 // 作者：创建于 2025-11-21
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -55,6 +57,20 @@ fun AudioFilesRoute(
     onTranscriptionRequested: (AudioFilesNavigation.TranscribeToChat) -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val pickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) viewModel.onImportFromPhone(uri)
+    }
+    val audioMimeTypes = arrayOf(
+        "audio/*",
+        "audio/mpeg",
+        "audio/mp3",
+        "audio/wav",
+        "audio/x-wav",
+        "audio/aac",
+        "audio/x-m4a"
+    )
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
@@ -67,9 +83,9 @@ fun AudioFilesRoute(
         onRefresh = viewModel::onRefresh,
         onSyncClicked = viewModel::onSyncClicked,
         onPlayPause = viewModel::onPlayPause,
-        onApply = viewModel::onApply,
         onDelete = viewModel::onDelete,
         onTranscribe = viewModel::onTranscribe,
+        onUploadClick = { pickerLauncher.launch(audioMimeTypes) },
         onDismissError = viewModel::onDismissError,
         modifier = modifier
     )
@@ -81,9 +97,9 @@ fun AudioFilesScreen(
     onRefresh: () -> Unit,
     onSyncClicked: () -> Unit,
     onPlayPause: (String) -> Unit,
-    onApply: (String) -> Unit,
     onDelete: (String) -> Unit,
     onTranscribe: (String) -> Unit,
+    onUploadClick: () -> Unit,
     onDismissError: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -131,6 +147,11 @@ fun AudioFilesScreen(
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("刷新列表")
                         }
+                        OutlinedButton(
+                            onClick = onUploadClick,
+                        ) {
+                            Text("上传音频")
+                        }
                     }
                     if (state.isSyncing) {
                         LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -160,7 +181,6 @@ fun AudioFilesScreen(
                     AudioRecordingCard(
                         recording = recording,
                         onPlayPause = onPlayPause,
-                        onApply = onApply,
                         onDelete = onDelete,
                         onTranscribe = onTranscribe,
                         modifier = Modifier.testTag(AudioFilesTestTags.item(recording.id))
@@ -175,7 +195,6 @@ fun AudioFilesScreen(
 private fun AudioRecordingCard(
     recording: AudioRecordingUi,
     onPlayPause: (String) -> Unit,
-    onApply: (String) -> Unit,
     onDelete: (String) -> Unit,
     onTranscribe: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -196,6 +215,7 @@ private fun AudioRecordingCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            OriginRow(recording.origin)
             Text(
                 text = statusLabel(recording),
                 style = MaterialTheme.typography.bodySmall,
@@ -228,9 +248,6 @@ private fun AudioRecordingCard(
                     ) {
                         Text("转写")
                     }
-                    TextButton(onClick = { onApply(recording.id) }) {
-                        Text("应用")
-                    }
                     IconButton(onClick = { onDelete(recording.id) }) {
                         Icon(Icons.Default.Delete, contentDescription = "删除")
                     }
@@ -238,6 +255,19 @@ private fun AudioRecordingCard(
             }
         }
     }
+}
+
+@Composable
+private fun OriginRow(origin: com.smartsales.feature.media.audiofiles.AudioOrigin) {
+    val label = when (origin) {
+        com.smartsales.feature.media.audiofiles.AudioOrigin.DEVICE -> "来源：设备"
+        com.smartsales.feature.media.audiofiles.AudioOrigin.PHONE -> "来源：手机"
+    }
+    Text(
+        text = label,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
 
 @Composable

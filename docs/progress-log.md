@@ -840,6 +840,57 @@ Risks / TODO:
 
 ---
 
+## <YYYY-MM-DD> – DeviceSetup UX clarified
+
+Layer: T1  
+Modules: :feature:connectivity, :app  
+Docs / Files: feature/connectivity/src/main/java/com/smartsales/feature/connectivity/setup/*, feature/connectivity/build.gradle.kts, app/src/main/java/com/smartsales/aitest/setup/DeviceSetupRoute.kt, app/src/main/java/com/smartsales/aitest/AiFeatureTestActivity.kt  
+Role Hook: Codex  
+Next Integration Step: 接入真实扫描/配网调用并解锁 Gradle 构建后跑完整测试
+
+Summary:
+- 新增 DeviceSetupUiState/Step 与 ViewModel，串联扫描→配对→配网→等待上线→就绪，封装错误提示、重试与跳转事件。
+- 实装步骤化 DeviceSetupScreen（中文文案、Wi‑Fi 表单、错误横幅、Ready 按钮）并为 connectivity 模块启用 Compose。
+- App 的“设备连接”入口切换到新界面，Ready 时跳转设备文件/音频页；修正测试标签以兼容现有导航用例。
+- 补充 ViewModel 单测、Compose UI 测试覆盖 Ready/错误态；Gradle 构建因 wrapper 锁未实际运行。
+
+TDD Status:
+- [ ] Tests written first
+- [x] Tests added after implementation
+- [ ] Manual testing only
+
+Risks / TODO:
+- Gradle wrapper 缓存锁 (`~/.gradle/wrapper/dists/.../gradle-8.13-bin.zip.lck`) 阻塞所有 `./gradlew` 命令，需先解锁后再验证。
+- 扫描/配网调用仍为简化流程，需接入真实扫描器与凭据下发；网络就绪检测仅 3 次 queryNetworkStatus 重试，错误细分有限。
+- 未支持多设备选择/更细致提示，实际硬件验证与权限流仍待补充。
+
+---
+
+## <YYYY-MM-DD> – DeviceSetup ready 状态稳定
+
+Layer: T1  
+Modules: :feature:connectivity  
+Docs / Files: feature/connectivity/src/main/java/com/smartsales/feature/connectivity/setup/DeviceSetupModels.kt, feature/connectivity/src/main/java/com/smartsales/feature/connectivity/setup/DeviceSetupViewModel.kt, feature/connectivity/src/main/java/com/smartsales/feature/connectivity/setup/DeviceSetupScreen.kt, feature/connectivity/src/test/java/com/smartsales/feature/connectivity/setup/DeviceSetupViewModelTest.kt  
+Role Hook: Codex  
+Next Integration Step: 解锁 Gradle 后跑通 connectivity/app 测试并在真机验证 Waiting→Ready 不再回跳
+
+Summary:
+- 为 DeviceSetup UiState 增加 isScanning/isSubmittingWifi/online 标记和设备 IP，Ready 状态变为粘性，网络查询成功后停止轮询并记录 IP。
+- ViewModel 调整网络检测流：Wi-Fi 提交后启动一次检查，成功即停，后续相同事件不再将 Ready 掉回 Waiting；错误时停止扫描与提交标记。
+- UI 按钮启用条件适配新状态，防止扫描/提交期间重复触发。
+- 扩充单测覆盖扫描→配对→Ready 和 Ready 后收到错误仍保持 Ready 的场景。
+
+TDD Status:
+- [ ] Tests written first
+- [x] Tests added after implementation
+- [ ] Manual testing only
+
+Risks / TODO:
+- Gradle wrapper 锁仍在，未能运行 `./gradlew` 验证；需解锁后执行单测/仪表测试。
+- Ready 粘性策略未在真实设备上回归，需真机验证网络抖动场景；如要处理“上线后再次掉线”需后续定义单独错误态。
+
+---
+
 ## 2025-11-20 – DeviceManager ViewModel + 设备文件 UI
 
 Layer: T1  

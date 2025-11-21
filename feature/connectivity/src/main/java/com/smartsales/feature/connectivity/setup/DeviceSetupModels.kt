@@ -21,5 +21,9 @@ data class DeviceSetupUiState(
     val errorMessage: String? = null,
     val isActionInProgress: Boolean = false,
     val deviceName: String? = null,
-    val wifiSsid: String? = null
+    val wifiSsid: String? = null,
+    val isScanning: Boolean = false,
+    val isSubmittingWifi: Boolean = false,
+    val deviceIp: String? = null,
+    val isDeviceOnline: Boolean = false
 )

@@ -194,15 +194,7 @@ private fun AiFeatureTestApp() {
                                 AudioFilesRoute(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES),
-                                    onTranscriptionRequested = { nav ->
-                                        pendingTranscription = TranscriptionChatRequest(
-                                            jobId = nav.jobId,
-                                            fileName = nav.fileName,
-                                            recordingId = nav.recordingId
-                                        )
-                                        currentPage = TestHomePage.Home
-                                    }
+                                        .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES)
                                 )
                             }
 

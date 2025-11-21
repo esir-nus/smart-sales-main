@@ -185,6 +185,11 @@ class GattBleGateway @Inject constructor(
                 callback.awaitConnection()
             }
             gatt
+        } catch (ex: IllegalStateException) {
+            ConnectivityLogger.w("BLE 连接失败：${ex.message}")
+            gatt.disconnect()
+            gatt.close()
+            null
         } catch (ex: TimeoutCancellationException) {
             gatt.disconnect()
             gatt.close()

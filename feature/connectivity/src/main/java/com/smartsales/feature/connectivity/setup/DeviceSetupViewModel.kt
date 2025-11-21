@@ -5,10 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.smartsales.core.util.LogTags
 import com.smartsales.core.util.Result
 import com.smartsales.feature.connectivity.BlePeripheral
+import com.smartsales.feature.connectivity.BleProfileConfig
 import com.smartsales.feature.connectivity.ConnectionState
 import com.smartsales.feature.connectivity.ConnectivityError
 import com.smartsales.feature.connectivity.DeviceConnectionManager
 import com.smartsales.feature.connectivity.WifiCredentials
+import com.smartsales.feature.connectivity.scan.BleScanner
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -25,7 +27,9 @@ import kotlinx.coroutines.launch
 // 作者：创建于 2025-11-21
 @HiltViewModel
 class DeviceSetupViewModel @Inject constructor(
-    private val connectionManager: DeviceConnectionManager
+    private val connectionManager: DeviceConnectionManager,
+    private val bleScanner: BleScanner,
+    private val bleProfiles: List<BleProfileConfig>
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DeviceSetupUiState())
@@ -35,19 +39,33 @@ class DeviceSetupViewModel @Inject constructor(
     val events: MutableSharedFlow<DeviceSetupEvent> = _events
 
     private var networkCheckJob: Job? = null
+    private var scanTimeoutJob: Job? = null
 
     init {
         observeConnection()
+        observeScanner()
     }
 
     fun onStartScan() {
+        if (_uiState.value.isScanning) return
+        bleScanner.start()
+        val target = bleProfiles.joinToString { it.displayName }.ifBlank { "目标设备" }
         _uiState.update {
             it.copy(
                 step = DeviceSetupStep.Scanning,
-                progressMessage = "正在扫描设备…",
+                progressMessage = "正在扫描设备（$target）…",
                 errorMessage = null,
-                isActionInProgress = true
+                isActionInProgress = true,
+                isScanning = true
             )
+        }
+        scanTimeoutJob?.cancel()
+        scanTimeoutJob = viewModelScope.launch {
+            delay(SCAN_TIMEOUT_MS)
+            if (_uiState.value.isScanning && _uiState.value.step == DeviceSetupStep.Scanning) {
+                bleScanner.stop()
+                setError("未找到设备，请确认设备已开启并靠近手机")
+            }
         }
     }
 
@@ -80,7 +98,8 @@ class DeviceSetupViewModel @Inject constructor(
                 progressMessage = "正在为 $device 配置 Wi-Fi…",
                 wifiSsid = ssid,
                 errorMessage = null,
-                isActionInProgress = true
+                isActionInProgress = true,
+                isSubmittingWifi = true
             )
         }
         val current = connectionManager.state.value
@@ -107,6 +126,9 @@ class DeviceSetupViewModel @Inject constructor(
             )
             if (result is Result.Error) {
                 setError("Wi-Fi 配置失败，请检查网络和密码后重试")
+            } else {
+                _uiState.update { it.copy(isSubmittingWifi = true, step = DeviceSetupStep.WifiProvisioning) }
+                triggerNetworkCheck(force = true)
             }
         }
     }
@@ -117,10 +139,14 @@ class DeviceSetupViewModel @Inject constructor(
                 step = DeviceSetupStep.Scanning,
                 progressMessage = "正在重新扫描设备…",
                 errorMessage = null,
-                isActionInProgress = true
+                isActionInProgress = true,
+                isScanning = false,
+                isSubmittingWifi = false
             )
         }
+        bleScanner.stop()
         viewModelScope.launch { connectionManager.retry() }
+        onStartScan()
     }
 
     fun onOpenDeviceManager() {
@@ -139,7 +165,11 @@ class DeviceSetupViewModel @Inject constructor(
                         it.copy(
                             step = DeviceSetupStep.Idle,
                             progressMessage = "未连接，点击开始扫描",
-                            isActionInProgress = false
+                            isActionInProgress = false,
+                            isScanning = false,
+                            isSubmittingWifi = false,
+                            isDeviceOnline = false,
+                            deviceIp = null
                         )
                     }
 
@@ -148,7 +178,8 @@ class DeviceSetupViewModel @Inject constructor(
                             step = DeviceSetupStep.Pairing,
                             progressMessage = "正在配对 ${state.deviceName} (${state.progressPercent}%)",
                             deviceName = state.deviceName,
-                            isActionInProgress = true
+                            isActionInProgress = true,
+                            isScanning = false
                         )
                     }
 
@@ -157,17 +188,19 @@ class DeviceSetupViewModel @Inject constructor(
                             step = DeviceSetupStep.Pairing,
                             progressMessage = "已连接 ${state.session.peripheralName}，请配置 Wi-Fi",
                             deviceName = state.session.peripheralName,
-                            isActionInProgress = false
+                            isActionInProgress = false,
+                            isScanning = false
                         )
                     }
 
                     is ConnectionState.WifiProvisioned,
                     is ConnectionState.Syncing -> {
-                        _uiState.update {
-                            it.copy(
+                        _uiState.update { current ->
+                            if (current.step == DeviceSetupStep.Ready) current else current.copy(
                                 step = DeviceSetupStep.WaitingForDeviceOnline,
                                 progressMessage = "已发送 Wi-Fi，等待设备上线…",
-                                isActionInProgress = true
+                                isActionInProgress = true,
+                                isSubmittingWifi = true
                             )
                         }
                         triggerNetworkCheck()
@@ -190,19 +223,37 @@ class DeviceSetupViewModel @Inject constructor(
         }
     }
 
-    private fun triggerNetworkCheck() {
+    private fun observeScanner() {
+        viewModelScope.launch {
+            bleScanner.devices.collectLatest { devices ->
+                if (devices.isEmpty()) return@collectLatest
+                val currentConnection = connectionManager.state.value
+                if (currentConnection !is ConnectionState.Disconnected) {
+                    _uiState.update { it.copy(isScanning = false, isActionInProgress = false) }
+                    return@collectLatest
+                }
+                scanTimeoutJob?.cancel()
+                _uiState.update { it.copy(isScanning = false, isActionInProgress = false) }
+                val first = devices.first()
+                connectionManager.selectPeripheral(first)
+            }
+        }
+        viewModelScope.launch {
+            bleScanner.isScanning.collectLatest { scanning ->
+                _uiState.update { it.copy(isScanning = scanning) }
+            }
+        }
+    }
+
+    private fun triggerNetworkCheck(force: Boolean = false) {
         networkCheckJob?.cancel()
+        // 若已在线且有 IP，保持 Ready 不再重复轮询，除非显式 force
+        if (!force && _uiState.value.isDeviceOnline && _uiState.value.deviceIp != null) return
         networkCheckJob = viewModelScope.launch {
             repeat(NETWORK_CHECK_ATTEMPTS) {
                 when (val result = connectionManager.queryNetworkStatus()) {
                     is Result.Success -> {
-                        _uiState.update {
-                            it.copy(
-                                step = DeviceSetupStep.Ready,
-                                progressMessage = "设备已上线，地址 ${result.data.ipAddress}",
-                                isActionInProgress = false
-                            )
-                        }
+                        setReady(result.data.ipAddress)
                         return@launch
                     }
 
@@ -216,12 +267,36 @@ class DeviceSetupViewModel @Inject constructor(
         }
     }
 
+    private fun setReady(ip: String?) {
+        val sanitizedIp = ip?.takeIf { it.isNotBlank() }
+        _uiState.update { current ->
+            if (current.step == DeviceSetupStep.Ready && current.deviceIp != null) {
+                current
+            } else {
+                current.copy(
+                    step = DeviceSetupStep.Ready,
+                    progressMessage = if (sanitizedIp != null) "设备已上线，地址 $sanitizedIp" else "设备已上线",
+                    isActionInProgress = false,
+                    isSubmittingWifi = false,
+                    isScanning = false,
+                    isDeviceOnline = true,
+                    deviceIp = sanitizedIp ?: current.deviceIp
+                )
+            }
+        }
+        networkCheckJob?.cancel()
+        networkCheckJob = null
+    }
+
     private fun setError(message: String) {
+        bleScanner.stop()
         _uiState.update {
             it.copy(
                 step = DeviceSetupStep.Error,
                 errorMessage = message,
-                isActionInProgress = false
+                isActionInProgress = false,
+                isScanning = false,
+                isSubmittingWifi = false
             )
         }
     }
@@ -230,11 +305,14 @@ class DeviceSetupViewModel @Inject constructor(
         super.onCleared()
         networkCheckJob?.cancel()
         _events.resetReplayCache()
+        bleScanner.stop()
+        scanTimeoutJob?.cancel()
     }
 
     companion object {
         private const val NETWORK_CHECK_INTERVAL_MS = 1_500L
         private const val NETWORK_CHECK_ATTEMPTS = 3
+        private const val SCAN_TIMEOUT_MS = 12_000L
         private const val TAG = "${LogTags.CONNECTIVITY}/DeviceSetup"
     }
 }

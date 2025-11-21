@@ -221,8 +221,9 @@ private fun PrimaryActions(
         enabled = when (state.step) {
             DeviceSetupStep.WifiProvisioning,
             DeviceSetupStep.WaitingForDeviceOnline -> false
-            DeviceSetupStep.Pairing -> ssid.isNotBlank() && !state.isActionInProgress
+            DeviceSetupStep.Pairing -> ssid.isNotBlank() && !state.isActionInProgress && !state.isSubmittingWifi
             DeviceSetupStep.Ready -> true
+            DeviceSetupStep.Scanning -> !state.isScanning
             else -> !state.isActionInProgress
         },
         modifier = Modifier

@@ -16,7 +16,9 @@ import javax.inject.Inject
 import kotlin.math.max
 import java.util.Locale
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
@@ -44,6 +46,8 @@ class AudioFilesViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(AudioFilesUiState())
     val uiState: StateFlow<AudioFilesUiState> = _uiState.asStateFlow()
+    private val _events = MutableSharedFlow<AudioFilesNavigation>()
+    val events: SharedFlow<AudioFilesNavigation> = _events
 
     init {
         observeEndpoint()
@@ -55,13 +59,13 @@ class AudioFilesViewModel @Inject constructor(
 
     fun onRefresh() {
         viewModelScope.launch(dispatcherProvider.io) {
-            performSync(triggerTranscription = false)
+            performSync()
         }
     }
 
     fun onSyncClicked() {
         viewModelScope.launch(dispatcherProvider.io) {
-            performSync(triggerTranscription = true)
+            performSync()
         }
     }
 
@@ -88,6 +92,79 @@ class AudioFilesViewModel @Inject constructor(
             when (val playResult = playbackController.play(localFile)) {
                 is Result.Success -> _uiState.update { it.copy(currentlyPlayingId = recordingId) }
                 is Result.Error -> emitError(playResult.throwable.message)
+            }
+        }
+    }
+
+    fun onTranscribe(recordingId: String) {
+        viewModelScope.launch(dispatcherProvider.io) {
+            val baseUrl = uiState.value.baseUrl ?: return@launch
+            val file = recordingsMutex.withLock { recordings[recordingId]?.file } ?: return@launch
+            val current = recordingsMutex.withLock { recordings[recordingId] }
+            if (current?.status == AudioRecordingStatus.Transcribing) return@launch
+            updateRecording(recordingId) { it.copy(status = AudioRecordingStatus.Syncing, error = null, tingwuJobId = null) }
+
+            val localFile = current?.localFile ?: when (val download = mediaGateway.downloadFile(baseUrl, file)) {
+                is Result.Success -> download.data
+                is Result.Error -> {
+                    updateRecording(recordingId) {
+                        it.copy(
+                            status = AudioRecordingStatus.Error,
+                            error = download.throwable.message
+                        )
+                    }
+                    emitError(download.throwable.message)
+                    return@launch
+                }
+            }
+            val uploadPayload = when (val upload = transcriptionCoordinator.uploadAudio(localFile)) {
+                is Result.Success -> upload.data
+                is Result.Error -> {
+                    updateRecording(recordingId) {
+                        it.copy(
+                            status = AudioRecordingStatus.Error,
+                            error = upload.throwable.message,
+                            localFile = localFile
+                        )
+                    }
+                    emitError(upload.throwable.message)
+                    return@launch
+                }
+            }
+            when (val submit = transcriptionCoordinator.submitTranscription(
+                audioAssetName = file.name,
+                language = DEFAULT_TINGWU_LANGUAGE,
+                uploadPayload = uploadPayload
+            )) {
+                is Result.Success -> {
+                    val jobId = submit.data
+                    updateRecording(recordingId) {
+                        it.copy(
+                            status = AudioRecordingStatus.Transcribing,
+                            tingwuJobId = jobId,
+                            localFile = localFile
+                        )
+                    }
+                    observeTingwuJob(recordingId, jobId)
+                    _events.emit(
+                        AudioFilesNavigation.TranscribeToChat(
+                            recordingId = recordingId,
+                            fileName = file.name,
+                            jobId = jobId
+                        )
+                    )
+                }
+
+                is Result.Error -> {
+                    updateRecording(recordingId) {
+                        it.copy(
+                            status = AudioRecordingStatus.Error,
+                            error = submit.throwable.message,
+                            localFile = localFile
+                        )
+                    }
+                    emitError(submit.throwable.message)
+                }
             }
         }
     }
@@ -123,91 +200,19 @@ class AudioFilesViewModel @Inject constructor(
         }
     }
 
-    private suspend fun performSync(triggerTranscription: Boolean) {
+    private suspend fun performSync() {
         val baseUrl = uiState.value.baseUrl ?: return
         _uiState.update { it.copy(errorMessage = null) }
         setSyncing(true)
         when (val result = mediaGateway.fetchFiles(baseUrl)) {
             is Result.Success -> {
                 mergeFiles(result.data)
-                if (triggerTranscription) {
-                    processTranscriptions(baseUrl, result.data)
-                }
                 setSyncing(false)
             }
 
             is Result.Error -> {
                 emitError(result.throwable.message)
                 setSyncing(false)
-            }
-        }
-    }
-
-    private suspend fun processTranscriptions(baseUrl: String, files: List<DeviceMediaFile>) {
-        files.forEach { file ->
-            val recordingId = file.name
-            val current = recordingsMutex.withLock { recordings[recordingId] }
-            if (current == null || current.status == AudioRecordingStatus.Transcribed || current.status == AudioRecordingStatus.Transcribing) {
-                return@forEach
-            }
-            updateRecording(recordingId) { it.copy(status = AudioRecordingStatus.Syncing, error = null) }
-            val download = mediaGateway.downloadFile(baseUrl, file)
-            val localFile = when (download) {
-                is Result.Success -> download.data
-                is Result.Error -> {
-                    updateRecording(recordingId) {
-                        it.copy(
-                            status = AudioRecordingStatus.Error,
-                            error = download.throwable.message
-                        )
-                    }
-                    emitError(download.throwable.message)
-                    return@forEach
-                }
-            }
-            val ossResult = transcriptionCoordinator.uploadAudio(localFile)
-            val uploadPayload = when (ossResult) {
-                is Result.Success -> ossResult.data
-                is Result.Error -> {
-                    updateRecording(recordingId) {
-                        it.copy(
-                            status = AudioRecordingStatus.Error,
-                            error = ossResult.throwable.message,
-                            localFile = localFile
-                        )
-                    }
-                    emitError(ossResult.throwable.message)
-                    return@forEach
-                }
-            }
-            val submitResult = transcriptionCoordinator.submitTranscription(
-                audioAssetName = file.name,
-                language = DEFAULT_TINGWU_LANGUAGE,
-                uploadPayload = uploadPayload
-            )
-            when (submitResult) {
-                is Result.Success -> {
-                    val jobId = submitResult.data
-                    updateRecording(recordingId) {
-                        it.copy(
-                            status = AudioRecordingStatus.Transcribing,
-                            tingwuJobId = jobId,
-                            localFile = localFile
-                        )
-                    }
-                    observeTingwuJob(recordingId, jobId)
-                }
-
-                is Result.Error -> {
-                    updateRecording(recordingId) {
-                        it.copy(
-                            status = AudioRecordingStatus.Error,
-                            error = submitResult.throwable.message,
-                            localFile = localFile
-                        )
-                    }
-                    emitError(submitResult.throwable.message)
-                }
             }
         }
     }
@@ -292,6 +297,13 @@ class AudioFilesViewModel @Inject constructor(
         _uiState.update { it.copy(recordings = items) }
     }
 
+    private fun DeviceMediaFile.isAudioFile(): Boolean {
+        val mime = mimeType.lowercase(Locale.ROOT)
+        if (mime.startsWith("audio/")) return true
+        val name = name.lowercase(Locale.ROOT)
+        return AUDIO_EXTENSIONS.any { name.endsWith(it) }
+    }
+
     private fun setSyncing(running: Boolean) {
         _uiState.update { it.copy(isSyncing = running) }
     }
@@ -326,7 +338,7 @@ class AudioFilesViewModel @Inject constructor(
                 } else if (normalized != current) {
                     _uiState.update { it.copy(baseUrl = normalized) }
                     withContext(dispatcherProvider.io) {
-                        performSync(triggerTranscription = false)
+                        performSync()
                     }
                 }
             }
@@ -366,6 +378,14 @@ enum class AudioRecordingStatus {
     Transcribing,
     Transcribed,
     Error
+}
+
+sealed class AudioFilesNavigation {
+    data class TranscribeToChat(
+        val recordingId: String,
+        val fileName: String,
+        val jobId: String
+    ) : AudioFilesNavigation()
 }
 
 private data class RecordingState(
@@ -410,3 +430,12 @@ private fun formatTimestamp(timestamp: Long): String {
     val formatter = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.CHINA)
     return formatter.format(java.util.Date(timestamp))
 }
+
+private val AUDIO_EXTENSIONS = setOf(
+    ".mp3",
+    ".wav",
+    ".m4a",
+    ".aac",
+    ".flac",
+    ".ogg"
+)

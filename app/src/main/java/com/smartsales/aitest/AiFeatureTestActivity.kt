@@ -77,6 +77,7 @@ import com.smartsales.aitest.devicemanager.DeviceManagerRoute
 import com.smartsales.aitest.setup.DeviceSetupRoute
 import com.smartsales.core.util.Result
 import com.smartsales.feature.chat.home.HomeScreenRoute
+import com.smartsales.feature.chat.home.TranscriptionChatRequest
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
 import kotlinx.coroutines.launch
@@ -96,6 +97,7 @@ private fun AiFeatureTestApp() {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var currentPage by rememberSaveable { mutableStateOf(TestHomePage.Home) }
+    var pendingTranscription by remember { mutableStateOf<TranscriptionChatRequest?>(null) }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
@@ -148,6 +150,8 @@ private fun AiFeatureTestApp() {
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .testTag(AiFeatureTestTags.PAGE_HOME),
+                                    transcriptionRequest = pendingTranscription,
+                                    onTranscriptionRequestConsumed = { pendingTranscription = null },
                                     onNavigateToDeviceManager = { currentPage = TestHomePage.DeviceManager },
                                     onNavigateToDeviceSetup = { currentPage = TestHomePage.DeviceSetup },
                                     onNavigateToAudioFiles = { currentPage = TestHomePage.AudioFiles },
@@ -186,7 +190,15 @@ private fun AiFeatureTestApp() {
                                 AudioFilesRoute(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES)
+                                        .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES),
+                                    onTranscriptionRequested = { nav ->
+                                        pendingTranscription = TranscriptionChatRequest(
+                                            jobId = nav.jobId,
+                                            fileName = nav.fileName,
+                                            recordingId = nav.recordingId
+                                        )
+                                        currentPage = TestHomePage.Home
+                                    }
                                 )
                             }
 

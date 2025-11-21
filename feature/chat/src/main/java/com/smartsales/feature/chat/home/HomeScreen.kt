@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.smartsales.feature.chat.core.QuickSkillId
+import com.smartsales.feature.chat.home.TranscriptionChatRequest
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
@@ -72,6 +73,8 @@ import kotlinx.coroutines.launch
 fun HomeScreenRoute(
     modifier: Modifier = Modifier,
     viewModel: HomeScreenViewModel = hiltViewModel(),
+    transcriptionRequest: TranscriptionChatRequest? = null,
+    onTranscriptionRequestConsumed: () -> Unit = {},
     onNavigateToDeviceManager: () -> Unit = {},
     onNavigateToDeviceSetup: () -> Unit = {},
     onNavigateToAudioFiles: () -> Unit = {},
@@ -100,6 +103,12 @@ fun HomeScreenRoute(
         }
         if (state.navigationRequest != null) {
             viewModel.onNavigationConsumed()
+        }
+    }
+    LaunchedEffect(transcriptionRequest) {
+        transcriptionRequest?.let {
+            viewModel.onTranscriptionRequested(it)
+            onTranscriptionRequestConsumed()
         }
     }
 

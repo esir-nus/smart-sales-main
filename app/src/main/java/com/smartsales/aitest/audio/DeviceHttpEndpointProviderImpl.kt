@@ -23,10 +23,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onSubscription
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.coroutines.coroutineContext
 
 @Singleton
 class DeviceHttpEndpointProviderImpl @Inject constructor(
@@ -90,7 +92,7 @@ class DeviceHttpEndpointProviderImpl @Inject constructor(
 
     private suspend fun runDiscoveryWithRetry() {
         var attempt = 0
-        while (attempt < MAX_ATTEMPTS && isActive) {
+        while (attempt < MAX_ATTEMPTS && coroutineContext.isActive) {
             attempt += 1
             val success = queryEndpointOnce()
             if (success) {

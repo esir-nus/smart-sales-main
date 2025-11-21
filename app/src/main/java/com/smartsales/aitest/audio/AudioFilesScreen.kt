@@ -32,6 +32,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,17 +41,27 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.smartsales.feature.media.audiofiles.AudioFilesNavigation
 import com.smartsales.feature.media.audiofiles.AudioFilesUiState
 import com.smartsales.feature.media.audiofiles.AudioFilesViewModel
 import com.smartsales.feature.media.audiofiles.AudioRecordingStatus
 import com.smartsales.feature.media.audiofiles.AudioRecordingUi
+import kotlinx.coroutines.flow.collect
 
 @Composable
 fun AudioFilesRoute(
     modifier: Modifier = Modifier,
-    viewModel: AudioFilesViewModel = hiltViewModel()
+    viewModel: AudioFilesViewModel = hiltViewModel(),
+    onTranscriptionRequested: (AudioFilesNavigation.TranscribeToChat) -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is AudioFilesNavigation.TranscribeToChat -> onTranscriptionRequested(event)
+            }
+        }
+    }
     AudioFilesScreen(
         state = state,
         onRefresh = viewModel::onRefresh,
@@ -58,6 +69,7 @@ fun AudioFilesRoute(
         onPlayPause = viewModel::onPlayPause,
         onApply = viewModel::onApply,
         onDelete = viewModel::onDelete,
+        onTranscribe = viewModel::onTranscribe,
         onDismissError = viewModel::onDismissError,
         modifier = modifier
     )
@@ -71,10 +83,12 @@ fun AudioFilesScreen(
     onPlayPause: (String) -> Unit,
     onApply: (String) -> Unit,
     onDelete: (String) -> Unit,
+    onTranscribe: (String) -> Unit,
     onDismissError: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val endpointAvailable = !state.baseUrl.isNullOrBlank()
+    val audioRecordings = state.recordings.filter { it.fileName.isAudioFileName() }
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
         LazyColumn(
             modifier = Modifier
@@ -107,7 +121,7 @@ fun AudioFilesScreen(
                             enabled = endpointAvailable,
                             modifier = Modifier.testTag(AudioFilesTestTags.SYNC_BUTTON)
                         ) {
-                            Text("同步并转写")
+                            Text("同步音频")
                         }
                         OutlinedButton(
                             onClick = onRefresh,
@@ -132,7 +146,7 @@ fun AudioFilesScreen(
                     )
                 }
             }
-            if (state.recordings.isEmpty()) {
+            if (audioRecordings.isEmpty()) {
                 item {
                     AudioEmptyState(
                         isDeviceConnected = endpointAvailable,
@@ -142,12 +156,13 @@ fun AudioFilesScreen(
                     )
                 }
             } else {
-                items(state.recordings, key = { it.id }) { recording ->
+                items(audioRecordings, key = { it.id }) { recording ->
                     AudioRecordingCard(
                         recording = recording,
                         onPlayPause = onPlayPause,
                         onApply = onApply,
                         onDelete = onDelete,
+                        onTranscribe = onTranscribe,
                         modifier = Modifier.testTag(AudioFilesTestTags.item(recording.id))
                     )
                 }
@@ -162,6 +177,7 @@ private fun AudioRecordingCard(
     onPlayPause: (String) -> Unit,
     onApply: (String) -> Unit,
     onDelete: (String) -> Unit,
+    onTranscribe: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -206,6 +222,12 @@ private fun AudioRecordingCard(
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(
+                        onClick = { onTranscribe(recording.id) },
+                        modifier = Modifier.testTag(AudioFilesTestTags.transcribe(recording.id))
+                    ) {
+                        Text("转写")
+                    }
                     TextButton(onClick = { onApply(recording.id) }) {
                         Text("应用")
                     }
@@ -280,10 +302,21 @@ private fun statusLabel(recording: AudioRecordingUi): String = when (recording.s
     AudioRecordingStatus.Error -> "出错"
 }
 
+private fun String.isAudioFileName(): Boolean {
+    val lower = lowercase()
+    return lower.endsWith(".mp3") ||
+        lower.endsWith(".wav") ||
+        lower.endsWith(".m4a") ||
+        lower.endsWith(".aac") ||
+        lower.endsWith(".flac") ||
+        lower.endsWith(".ogg")
+}
+
 object AudioFilesTestTags {
     const val SYNC_BUTTON = "audio_files_sync_button"
     const val EMPTY_STATE = "audio_files_empty_state"
     const val ERROR_BANNER = "audio_files_error_banner"
     const val DEVICE_STATUS = "audio_files_device_status"
     fun item(id: String) = "audio_files_item_$id"
+    fun transcribe(id: String) = "audio_files_transcribe_$id"
 }

@@ -27,6 +27,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.smartsales.feature.media.audiofiles.AudioFilesUiState
 import com.smartsales.feature.media.audiofiles.AudioRecordingStatus
 import com.smartsales.feature.media.audiofiles.AudioRecordingUi
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -48,6 +49,7 @@ class AudioFilesScreenTest {
                     onPlayPause = {},
                     onApply = {},
                     onDelete = {},
+                    onTranscribe = {},
                     onDismissError = {},
                     modifier = Modifier.fillMaxSize()
                 )
@@ -78,6 +80,7 @@ class AudioFilesScreenTest {
                     onPlayPause = {},
                     onApply = {},
                     onDelete = {},
+                    onTranscribe = {},
                     onDismissError = {},
                     modifier = Modifier.fillMaxSize()
                 )
@@ -107,6 +110,7 @@ class AudioFilesScreenTest {
                     onPlayPause = {},
                     onApply = {},
                     onDelete = {},
+                    onTranscribe = {},
                     onDismissError = { uiState = uiState.copy(errorMessage = null) },
                     modifier = Modifier.fillMaxSize()
                 )
@@ -129,6 +133,7 @@ class AudioFilesScreenTest {
                     onPlayPause = {},
                     onApply = {},
                     onDelete = {},
+                    onTranscribe = {},
                     onDismissError = {},
                     modifier = Modifier.fillMaxSize()
                 )
@@ -150,6 +155,7 @@ class AudioFilesScreenTest {
                     onPlayPause = {},
                     onApply = {},
                     onDelete = {},
+                    onTranscribe = {},
                     onDismissError = {},
                     modifier = Modifier.fillMaxSize()
                 )
@@ -157,6 +163,60 @@ class AudioFilesScreenTest {
         }
 
         composeRule.onNodeWithTag(AudioFilesTestTags.SYNC_BUTTON).assertIsNotEnabled()
+    }
+
+    @Test
+    fun nonAudioRecordings_notShown() {
+        composeRule.setContent {
+            MaterialTheme {
+                AudioFilesScreen(
+                    state = AudioFilesUiState(
+                        recordings = listOf(
+                            sampleRecording("voice-1"),
+                            sampleRecording("photo-1").copy(fileName = "photo-1.jpg")
+                        ),
+                        baseUrl = "http://192.168.0.6:8000"
+                    ),
+                    onRefresh = {},
+                    onSyncClicked = {},
+                    onPlayPause = {},
+                    onApply = {},
+                    onDelete = {},
+                    onTranscribe = {},
+                    onDismissError = {},
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("photo-1.jpg").assertDoesNotExist()
+        composeRule.onNodeWithText("voice-1.wav").assertIsDisplayed()
+    }
+
+    @Test
+    fun transcribeButton_invokesCallback() {
+        var transcribedId: String? = null
+        composeRule.setContent {
+            MaterialTheme {
+                AudioFilesScreen(
+                    state = AudioFilesUiState(
+                        recordings = listOf(sampleRecording("voice-2")),
+                        baseUrl = "http://192.168.0.7:8000"
+                    ),
+                    onRefresh = {},
+                    onSyncClicked = {},
+                    onPlayPause = {},
+                    onApply = {},
+                    onDelete = {},
+                    onTranscribe = { transcribedId = it },
+                    onDismissError = {},
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(AudioFilesTestTags.transcribe("voice-2")).performClick()
+        assertEquals("voice-2", transcribedId)
     }
 
     private fun sampleRecording(id: String): AudioRecordingUi =

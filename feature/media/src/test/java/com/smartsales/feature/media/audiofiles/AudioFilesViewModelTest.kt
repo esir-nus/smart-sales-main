@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -99,6 +100,21 @@ class AudioFilesViewModelTest {
     }
 
     @Test
+    fun `sync does not trigger transcription automatically`() = runTest(dispatcher) {
+        gateway.files = listOf(
+            DeviceMediaFile("audio-auto.wav", 2048, "audio/wav", 3_500L, "media/a", "dl/a")
+        )
+
+        endpointProvider.emit("http://192.168.0.35:8000")
+        advanceUntilIdle()
+
+        viewModel.onSyncClicked()
+        advanceUntilIdle()
+
+        assertEquals(AudioRecordingStatus.Idle, viewModel.uiState.value.recordings.first().status)
+    }
+
+    @Test
     fun `tingwu completion updates status`() = runTest(dispatcher) {
         gateway.files = listOf(
             DeviceMediaFile("audio-3.wav", 2048, "audio/wav", 3_000L, "media/3", "dl/3")
@@ -107,7 +123,7 @@ class AudioFilesViewModelTest {
         endpointProvider.emit("http://192.168.0.40:8000")
         advanceUntilIdle()
 
-        viewModel.onSyncClicked()
+        viewModel.onTranscribe("audio-3.wav")
         advanceUntilIdle()
 
         val jobId = transcription.lastJobId!!
@@ -141,6 +157,42 @@ class AudioFilesViewModelTest {
         assertEquals(null, state.baseUrl)
     }
 
+    @Test
+    fun `non audio files are filtered out`() = runTest(dispatcher) {
+        gateway.files = listOf(
+            DeviceMediaFile("audio-5.wav", 1234, "audio/wav", 5_000L, "media/5", "dl/5"),
+            DeviceMediaFile("photo-1.jpg", 888, "image/jpeg", 5_100L, "media/img", "dl/img")
+        )
+
+        endpointProvider.emit("http://192.168.0.60:8000")
+        advanceUntilIdle()
+
+        val names = viewModel.uiState.value.recordings.map { it.fileName }
+        assertEquals(listOf("audio-5.wav"), names)
+    }
+
+    @Test
+    fun `transcribe emits navigation for specific recording`() = runTest(dispatcher) {
+        gateway.files = listOf(
+            DeviceMediaFile("audio-6.wav", 2048, "audio/wav", 6_000L, "media/6", "dl/6")
+        )
+        endpointProvider.emit("http://192.168.0.70:8000")
+        advanceUntilIdle()
+
+        val events = mutableListOf<AudioFilesNavigation>()
+        val job = launch { viewModel.events.collect { events.add(it) } }
+
+        viewModel.onTranscribe("audio-6.wav")
+        advanceUntilIdle()
+
+        val nav = events.first() as AudioFilesNavigation.TranscribeToChat
+        assertEquals("audio-6.wav", nav.fileName)
+        assertEquals("audio-6.wav", transcription.lastSubmittedAsset)
+        assertEquals(AudioRecordingStatus.Transcribing, viewModel.uiState.value.recordings.first().status)
+
+        job.cancel()
+    }
+
     private class FakeDeviceMediaGateway : DeviceMediaGateway {
         var files: List<DeviceMediaFile> = emptyList()
         var fetchResult: Result<List<DeviceMediaFile>>? = null
@@ -168,6 +220,7 @@ class AudioFilesViewModelTest {
     private class FakeAudioTranscriptionCoordinator : AudioTranscriptionCoordinator {
         private val states = mutableMapOf<String, MutableStateFlow<AudioTranscriptionJobState>>()
         var lastJobId: String? = null
+        var lastSubmittedAsset: String? = null
 
         override suspend fun uploadAudio(file: File): Result<AudioUploadPayload> {
             return Result.Success(
@@ -184,6 +237,7 @@ class AudioFilesViewModelTest {
             uploadPayload: AudioUploadPayload,
         ): Result<String> {
             val id = "job-${states.size + 1}"
+            lastSubmittedAsset = audioAssetName
             lastJobId = id
             states[id] = MutableStateFlow(AudioTranscriptionJobState.InProgress(id, 10))
             return Result.Success(id)

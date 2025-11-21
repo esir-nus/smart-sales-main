@@ -18,6 +18,8 @@ import com.smartsales.feature.chat.history.toUiModel
 import com.smartsales.feature.connectivity.ConnectionState
 import com.smartsales.feature.connectivity.ConnectivityError
 import com.smartsales.feature.connectivity.DeviceConnectionManager
+import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
+import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.MediaClipStatus
 import com.smartsales.feature.media.MediaSyncCoordinator
 import com.smartsales.feature.media.MediaSyncState
@@ -31,6 +33,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreenViewModel.kt
 // 模块：:feature:chat
@@ -117,6 +120,7 @@ class HomeScreenViewModel @Inject constructor(
     private val aiSessionRepository: AiSessionRepository,
     private val deviceConnectionManager: DeviceConnectionManager,
     private val mediaSyncCoordinator: MediaSyncCoordinator,
+    private val transcriptionCoordinator: AudioTranscriptionCoordinator,
     private val quickSkillCatalog: QuickSkillCatalog,
     private val chatHistoryRepository: ChatHistoryRepository
 ) : ViewModel() {
@@ -128,6 +132,7 @@ class HomeScreenViewModel @Inject constructor(
     private var latestMediaSyncState: MediaSyncState? = null
     private val sessionId: String = "home-session"
     private var pendingSkillId: QuickSkillId? = null
+    private var transcriptionJob: Job? = null
 
     init {
         // 从 catalog 加载快捷技能到状态
@@ -239,6 +244,55 @@ class HomeScreenViewModel @Inject constructor(
     fun onTapAudioSummary() {
         if (_uiState.value.audioSummary != null) {
             _uiState.update { it.copy(navigationRequest = HomeNavigationRequest.AudioFiles) }
+        }
+    }
+
+    fun onTranscriptionRequested(request: TranscriptionChatRequest) {
+        val introId = nextMessageId()
+        val introMessage = ChatMessageUi(
+            id = introId,
+            role = ChatMessageRole.ASSISTANT,
+            content = "正在转写音频文件 ${request.fileName} ...",
+            timestampMillis = System.currentTimeMillis(),
+            isStreaming = true
+        )
+        _uiState.update { it.copy(chatMessages = it.chatMessages + introMessage, snackbarMessage = null) }
+        persistMessagesAsync()
+        transcriptionJob?.cancel()
+        transcriptionJob = viewModelScope.launch {
+            transcriptionCoordinator.observeJob(request.jobId).collectLatest { state ->
+                when (state) {
+                    AudioTranscriptionJobState.Idle -> Unit
+                    is AudioTranscriptionJobState.InProgress -> updateAssistantMessage(introId) { msg ->
+                        msg.copy(
+                            content = "正在转写音频文件 ${request.fileName} ... ${state.progressPercent}%",
+                            isStreaming = true
+                        )
+                    }
+
+                    is AudioTranscriptionJobState.Completed -> {
+                        updateAssistantMessage(introId, persistAfterUpdate = true) { msg ->
+                            msg.copy(
+                                content = "转写完成：${request.fileName}",
+                                isStreaming = false
+                            )
+                        }
+                        appendAssistantMessage(state.transcriptMarkdown)
+                    }
+
+                    is AudioTranscriptionJobState.Failed -> {
+                        val reason = state.reason.ifBlank { "转写失败" }
+                        updateAssistantMessage(introId, persistAfterUpdate = true) { msg ->
+                            msg.copy(
+                                content = "转写失败：$reason",
+                                isStreaming = false,
+                                hasError = true
+                            )
+                        }
+                        _uiState.update { it.copy(snackbarMessage = it.snackbarMessage ?: reason) }
+                    }
+                }
+            }
         }
     }
 
@@ -433,6 +487,23 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
+    private fun appendAssistantMessage(
+        content: String,
+        isStreaming: Boolean = false,
+        hasError: Boolean = false
+    ) {
+        val message = ChatMessageUi(
+            id = nextMessageId(),
+            role = ChatMessageRole.ASSISTANT,
+            content = content,
+            timestampMillis = System.currentTimeMillis(),
+            isStreaming = isStreaming,
+            hasError = hasError
+        )
+        _uiState.update { it.copy(chatMessages = it.chatMessages + message) }
+        persistMessagesAsync()
+    }
+
     private fun buildChatRequest(
         userMessage: String,
         skillId: QuickSkillId?,
@@ -583,6 +654,11 @@ class HomeScreenViewModel @Inject constructor(
     private fun formatSyncTime(timestamp: Long): String {
         val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
         return formatter.format(Date(timestamp))
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        transcriptionJob?.cancel()
     }
 
     private fun buildSkillConfirmation(definition: QuickSkillDefinition): String {

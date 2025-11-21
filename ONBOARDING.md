@@ -10,7 +10,40 @@
 - **Git** (已配置 SSH 密钥访问 GitHub)
 - **adb** (用于设备测试，Android SDK 自带)
 
+### 操作系统支持
+
+本指南主要针对 **Linux/macOS**，但 **Windows** 用户也可以使用。
+
+#### Windows 用户特别说明
+
+**命令行工具选择**：
+- 推荐使用 **Git Bash**（随 Git 安装）或 **PowerShell**
+- 本指南中的 `bash` 命令在 Git Bash 中可直接运行
+- 在 PowerShell 中，部分命令语法可能需要调整（例如：`$env:ANDROID_HOME` 而不是 `$ANDROID_HOME`）
+
+**Windows 路径配置**：
+```powershell
+# PowerShell 中设置环境变量（临时）
+$env:ANDROID_HOME = "C:\Users\YourName\AppData\Local\Android\Sdk"
+$env:JAVA_HOME = "C:\Program Files\Java\jdk-17"
+
+# 或使用 Git Bash（语法与 Linux 相同）
+export ANDROID_HOME="/c/Users/YourName/AppData/Local/Android/Sdk"
+export JAVA_HOME="/c/Program Files/Java/jdk-17"
+```
+
+**Windows 路径格式**：
+- Windows 路径：`C:\Users\Name\AppData\Local\Android\Sdk`
+- Git Bash 路径：`/c/Users/Name/AppData/Local/Android/Sdk`
+- `gradle.properties` 中使用 Windows 路径：`C:\\Users\\Name\\...`（双反斜杠）
+
+**adb 命令**：
+- Windows 中 adb 位于：`%ANDROID_HOME%\platform-tools\adb.exe`
+- 确保 `%ANDROID_HOME%\platform-tools` 已添加到 PATH 环境变量
+
 ### 验证环境
+
+**Linux/macOS**:
 ```bash
 # 检查 JDK 版本
 java -version  # 应该显示 17.x.x
@@ -22,13 +55,37 @@ echo $ANDROID_HOME  # 应该指向 Android SDK 路径
 adb version  # 应该显示 adb 版本
 ```
 
+**Windows (Git Bash)**:
+```bash
+# 检查 JDK 版本
+java -version  # 应该显示 17.x.x
+
+# 检查 Android SDK
+echo $ANDROID_HOME  # 应该指向 Android SDK 路径
+
+# 检查 adb
+adb version  # 应该显示 adb 版本
+```
+
+**Windows (PowerShell)**:
+```powershell
+# 检查 JDK 版本
+java -version  # 应该显示 17.x.x
+
+# 检查 Android SDK
+$env:ANDROID_HOME  # 应该指向 Android SDK 路径
+
+# 检查 adb
+adb version  # 应该显示 adb 版本
+```
+
 ---
 
 ## 🚀 第一步：克隆并探索项目（15 分钟）
 
 ### 1.1 克隆仓库
 ```bash
-git clone <repository-url>
+git clone <https://github.com/esir-nus/smart-sales-main.git>
 cd main_app
 ```
 
@@ -65,11 +122,25 @@ cat AGENTS.md
 
 如果 `gradle.properties` 中的 JDK 路径与你的不同：
 
+**Linux/macOS**:
 ```bash
 # 编辑 gradle.properties
 # 修改这一行指向你的 JDK 17 路径：
 org.gradle.java.home=/path/to/your/jdk-17
 ```
+
+**Windows**:
+```properties
+# 编辑 gradle.properties
+# Windows 路径需要使用双反斜杠或正斜杠：
+org.gradle.java.home=C:\\Program Files\\Java\\jdk-17
+# 或
+org.gradle.java.home=C:/Program Files/Java/jdk-17
+```
+
+**找到 JDK 路径的方法**：
+- **Linux/macOS**: `which java` 然后找到 JDK 目录（通常是 `/usr/lib/jvm/java-17-openjdk` 或 `/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home`）
+- **Windows**: JDK 通常安装在 `C:\Program Files\Java\jdk-17` 或通过 Android Studio 安装的位置
 
 ### 2.2 创建 local.properties 文件
 
@@ -87,9 +158,27 @@ touch local.properties
 
 **必需配置项**：
 
+**Linux/macOS**:
 ```properties
 # Android SDK 路径（必需）
 sdk.dir=/path/to/Android/Sdk
+```
+
+**Windows**:
+```properties
+# Android SDK 路径（必需）
+# Windows 路径可以使用正斜杠或反斜杠（双反斜杠）
+sdk.dir=C:/Users/YourName/AppData/Local/Android/Sdk
+# 或
+sdk.dir=C:\\Users\\YourName\\AppData\\Local\\Android\\Sdk
+```
+
+**查找 Android SDK 路径**：
+- **Android Studio**: File → Settings → Appearance & Behavior → System Settings → Android SDK → Android SDK Location
+- **默认位置**：
+  - **Linux**: `~/Android/Sdk`
+  - **macOS**: `~/Library/Android/sdk`
+  - **Windows**: `C:\Users\<Username>\AppData\Local\Android\Sdk`
 
 # DashScope API Key（AI 聊天功能）
 DASHSCOPE_API_KEY=your_dashscope_key_here
@@ -115,12 +204,25 @@ OSS_ENDPOINT=https://oss-cn-beijing.aliyuncs.com
 
 ### 2.3 首次构建验证
 
+**Linux/macOS/Git Bash**:
 ```bash
 # 清理并同步 Gradle
 ./gradlew clean
 
 # 尝试构建（首次会下载依赖，可能需要 5-10 分钟）
 ./gradlew :app:assembleDebug
+
+# 如果成功，你会看到：
+# BUILD SUCCESSFUL
+```
+
+**Windows (PowerShell/CMD)**:
+```powershell
+# 清理并同步 Gradle
+.\gradlew.bat clean
+
+# 尝试构建（首次会下载依赖，可能需要 5-10 分钟）
+.\gradlew.bat :app:assembleDebug
 
 # 如果成功，你会看到：
 # BUILD SUCCESSFUL
@@ -208,6 +310,7 @@ OSS_ENDPOINT=https://oss-cn-beijing.aliyuncs.com
 
 ### 5.1 运行应用
 
+**Linux/macOS/Git Bash**:
 ```bash
 # 连接到设备或启动模拟器
 adb devices
@@ -217,8 +320,21 @@ adb devices
 adb shell am start com.smartsales.aitest/.AiFeatureTestActivity
 ```
 
+**Windows (PowerShell/CMD)**:
+```powershell
+# 连接到设备或启动模拟器
+adb devices
+
+# 安装并运行
+.\gradlew.bat :app:installDebug
+adb shell am start com.smartsales.aitest/.AiFeatureTestActivity
+```
+
+**注意**：Windows 用户应使用 `gradlew.bat` 而不是 `./gradlew`。
+
 ### 5.2 运行测试
 
+**Linux/macOS/Git Bash**:
 ```bash
 # 单元测试
 ./gradlew testDebugUnitTest
@@ -235,14 +351,49 @@ adb shell am start com.smartsales.aitest/.AiFeatureTestActivity
 ./gradlew :app:assembleDebug :app:connectedDebugAndroidTest
 ```
 
+**Windows (PowerShell/CMD)**:
+```powershell
+# 单元测试
+.\gradlew.bat testDebugUnitTest
+
+# 运行特定模块的测试
+.\gradlew.bat :feature:connectivity:testDebugUnitTest
+.\gradlew.bat :feature:chat:testDebugUnitTest
+.\gradlew.bat :feature:media:testDebugUnitTest
+
+# Android UI 测试（需要设备）
+.\gradlew.bat :app:connectedDebugAndroidTest
+
+# 导航 Compose UI 冒烟测试
+.\gradlew.bat :app:assembleDebug :app:connectedDebugAndroidTest
+```
+
+**注意**：Windows 用户应使用 `.\gradlew.bat` 代替 `./gradlew`。
+
 ### 5.3 查看日志
 
+**Linux/macOS/Git Bash**:
 ```bash
 # 过滤项目日志
 adb logcat | grep -E "SmartSales|AiFeatureTest"
 
 # 或使用标签过滤
 adb logcat tag:SmartSalesChat:* *:S
+```
+
+**Windows (PowerShell)**:
+```powershell
+# 过滤项目日志
+adb logcat | Select-String -Pattern "SmartSales|AiFeatureTest"
+
+# 或使用标签过滤
+adb logcat tag:SmartSalesChat:* *:S
+```
+
+**Windows (CMD)**:
+```cmd
+# 过滤项目日志（需要先安装 findstr 或使用其他工具）
+adb logcat | findstr "SmartSales AiFeatureTest"
 ```
 
 ---
@@ -300,15 +451,37 @@ Test: ./gradlew :feature:chat:testDebugUnitTest
 ## ❓ 常见问题（故障排除）
 
 ### Q1: 构建失败 - "Plugin not found"
+**Linux/macOS/Git Bash**:
 ```bash
 # 解决方案：刷新依赖
 ./gradlew --refresh-dependencies
 ```
 
+**Windows**:
+```powershell
+# 解决方案：刷新依赖
+.\gradlew.bat --refresh-dependencies
+```
+
 ### Q2: 构建失败 - JDK 版本错误
+**Linux/macOS/Git Bash**:
 ```bash
 # 检查并设置正确的 JDK
 export JAVA_HOME=/path/to/jdk-17
+# 或修改 gradle.properties 中的 org.gradle.java.home
+```
+
+**Windows (PowerShell)**:
+```powershell
+# 检查并设置正确的 JDK（临时）
+$env:JAVA_HOME = "C:\Program Files\Java\jdk-17"
+# 或修改 gradle.properties 中的 org.gradle.java.home
+```
+
+**Windows (Git Bash)**:
+```bash
+# 检查并设置正确的 JDK
+export JAVA_HOME="/c/Program Files/Java/jdk-17"
 # 或修改 gradle.properties 中的 org.gradle.java.home
 ```
 

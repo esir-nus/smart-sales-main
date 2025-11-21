@@ -240,7 +240,12 @@ object HomeScreenTestTags {
     const val DEVICE_BANNER = "home_device_banner"
     const val AUDIO_CARD = "home_audio_card"
     const val PROFILE_BUTTON = "home_profile_button"
-    const val ACTIVE_SKILL_CHIP = "home_active_skill_chip"
+    const val ACTIVE_SKILL_CHIP = "active_skill_chip"
+    const val ACTIVE_SKILL_CHIP_CLOSE = "active_skill_chip_close"
+    const val USER_MESSAGE = "home_user_message"
+    const val ASSISTANT_MESSAGE = "home_assistant_message"
+    const val INPUT_FIELD = "home_input_field"
+    const val SEND_BUTTON = "home_send_button"
 }
 
 @Composable
@@ -348,8 +353,15 @@ private fun MessageBubble(
     message: ChatMessageUi,
     alignEnd: Boolean
 ) {
+    val bubbleTag = if (alignEnd) {
+        HomeScreenTestTags.USER_MESSAGE
+    } else {
+        HomeScreenTestTags.ASSISTANT_MESSAGE
+    }
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(bubbleTag),
         horizontalArrangement = if (alignEnd) Arrangement.End else Arrangement.Start
     ) {
         Card(
@@ -440,7 +452,9 @@ private fun HomeInputArea(
             OutlinedTextField(
                 value = inputValue,
                 onValueChange = onInputChanged,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(HomeScreenTestTags.INPUT_FIELD),
                 label = { Text(text = "输入问题") },
                 enabled = enabled
             )
@@ -450,7 +464,8 @@ private fun HomeInputArea(
             ) {
                 TextButton(
                     onClick = onSendClicked,
-                    enabled = inputValue.isNotBlank() && enabled
+                    enabled = inputValue.isNotBlank() && enabled,
+                    modifier = Modifier.testTag(HomeScreenTestTags.SEND_BUTTON)
                 ) {
                     Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "发送")
                     Spacer(modifier = Modifier.width(4.dp))
@@ -497,7 +512,10 @@ private fun ActiveSkillChip(
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             }
-            IconButton(onClick = onClear) {
+            IconButton(
+                onClick = onClear,
+                modifier = Modifier.testTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP_CLOSE)
+            ) {
                 Icon(
                     imageVector = Icons.Filled.Close,
                     contentDescription = "清除快捷技能"
@@ -516,9 +534,11 @@ private fun QuickSkillRow(
     if (skills.isEmpty()) return
     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         items(skills, key = { it.id }) { skill ->
+            val skillTag = "home_quick_skill_${skill.id}"
             AssistChip(
                 onClick = { onQuickSkillSelected(skill.id) },
                 enabled = enabled,
+                modifier = Modifier.testTag(skillTag),
                 label = {
                     Text(
                         text = skill.label,

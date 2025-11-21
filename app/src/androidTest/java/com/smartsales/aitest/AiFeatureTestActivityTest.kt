@@ -6,14 +6,18 @@ package com.smartsales.aitest
 // 作者：创建于 2025-11-21
 
 import android.content.Context
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.smartsales.aitest.setup.DeviceSetupTestTags
+import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.connectivity.BlePeripheral
 import com.smartsales.feature.connectivity.BleSession
@@ -154,6 +158,55 @@ class AiFeatureTestActivityTest {
         waitForPage(AiFeatureTestTags.PAGE_HOME)
     }
 
+    @Test
+    fun quickSkillTap_showsConfirmationAndChip() {
+        waitForPage(AiFeatureTestTags.PAGE_HOME)
+
+        tapQuickSkill(QuickSkillId.SUMMARIZE_LAST_MEETING)
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP).assertIsDisplayed()
+        composeRule.onAllNodesWithTag(HomeScreenTestTags.ASSISTANT_MESSAGE).assertCountEquals(1)
+        composeRule.onAllNodesWithTag(HomeScreenTestTags.USER_MESSAGE).assertCountEquals(0)
+        composeRule.onAllNodesWithText("Got it", substring = true).assertCountEquals(1)
+    }
+
+    @Test
+    fun quickSkillChip_closeClearsSelection() {
+        waitForPage(AiFeatureTestTags.PAGE_HOME)
+
+        tapQuickSkill(QuickSkillId.SUMMARIZE_LAST_MEETING)
+        composeRule.onNodeWithTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP_CLOSE).performClick()
+
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP)
+                .fetchSemanticsNodes().isEmpty()
+        }
+        composeRule.onAllNodesWithTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP).assertCountEquals(0)
+        composeRule.onAllNodesWithTag(HomeScreenTestTags.USER_MESSAGE).assertCountEquals(0)
+    }
+
+    @Test
+    fun quickSkill_sendConsumesSkill() {
+        waitForPage(AiFeatureTestTags.PAGE_HOME)
+
+        tapQuickSkill(QuickSkillId.SUMMARIZE_LAST_MEETING)
+        composeRule.onNodeWithTag(HomeScreenTestTags.INPUT_FIELD).performTextInput("请总结会议")
+        composeRule.onNodeWithTag(HomeScreenTestTags.SEND_BUTTON).performClick()
+
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            val userCount = composeRule.onAllNodesWithTag(HomeScreenTestTags.USER_MESSAGE)
+                .fetchSemanticsNodes().size
+            val chipVisible = composeRule.onAllNodesWithTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP)
+                .fetchSemanticsNodes().isNotEmpty()
+            userCount == 1 && !chipVisible
+        }
+
+        composeRule.onAllNodesWithTag(HomeScreenTestTags.USER_MESSAGE).assertCountEquals(1)
+        composeRule.onAllNodesWithTag(HomeScreenTestTags.ASSISTANT_MESSAGE).assertCountEquals(2)
+        composeRule.onAllNodesWithTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP).assertCountEquals(0)
+        composeRule.onAllNodesWithText("Got it", substring = true).assertCountEquals(1)
+    }
+
     private fun selectTab(tag: String) {
         composeRule.onNodeWithTag(tag).performClick()
     }
@@ -163,6 +216,11 @@ class AiFeatureTestActivityTest {
             composeRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithTag(tag).assertIsDisplayed()
+    }
+
+    private fun tapQuickSkill(skillId: QuickSkillId) {
+        val tag = "home_quick_skill_${skillId.name}"
+        composeRule.onNodeWithTag(tag).performClick()
     }
 
     private fun forceDeviceProvisioned() {

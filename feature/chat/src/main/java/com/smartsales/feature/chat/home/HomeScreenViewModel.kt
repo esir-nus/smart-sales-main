@@ -95,6 +95,7 @@ data class HomeUiState(
     val isStreaming: Boolean = false,
     val isLoadingHistory: Boolean = false,
     val quickSkills: List<QuickSkillUi> = emptyList(),
+    val selectedSkill: QuickSkillUi? = null,
     val deviceSnapshot: DeviceSnapshotUi? = null,
     val audioSummary: AudioSummaryUi? = null,
     val snackbarMessage: String? = null,
@@ -116,14 +117,17 @@ class HomeScreenViewModel @Inject constructor(
     private val quickSkillCatalog: QuickSkillCatalog
 ) : ViewModel() {
 
+    private val quickSkillDefinitions = quickSkillCatalog.homeQuickSkills()
+    private val quickSkillDefinitionsById = quickSkillDefinitions.associateBy { it.id }
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState
     private var latestMediaSyncState: MediaSyncState? = null
     private val sessionId: String = "home-session"
+    private var pendingSkillId: QuickSkillId? = null
 
     init {
         // 从 catalog 加载快捷技能到状态
-        val skills = quickSkillCatalog.homeQuickSkills().map { it.toUiModel() }
+        val skills = quickSkillDefinitions.map { it.toUiModel() }
         _uiState.update { it.copy(quickSkills = skills) }
         observeDeviceConnection()
         observeMediaSync()
@@ -135,22 +139,30 @@ class HomeScreenViewModel @Inject constructor(
 
     fun onSendMessage() {
         sendMessageInternal(
-            messageText = _uiState.value.inputText,
-            quickSkill = null
+            messageText = _uiState.value.inputText
         )
     }
 
     fun onSelectQuickSkill(skillId: QuickSkillId) {
-        val definition = quickSkillCatalog.homeQuickSkills().firstOrNull { it.id == skillId }
+        val definition = quickSkillDefinitionsById[skillId]
         if (definition == null) {
             _uiState.update { it.copy(snackbarMessage = "无法识别的快捷技能") }
             return
         }
-        // 快捷技能点击后复用共享发送 helper
-        sendMessageInternal(
-            messageText = definition.defaultPrompt,
-            quickSkill = definition
+        pendingSkillId = skillId
+        val confirmation = buildSkillConfirmation(definition)
+        val confirmationMessage = ChatMessageUi(
+            id = nextMessageId(),
+            role = ChatMessageRole.ASSISTANT,
+            content = confirmation,
+            timestampMillis = System.currentTimeMillis()
         )
+        _uiState.update { state ->
+            state.copy(
+                selectedSkill = definition.toUiModel(),
+                chatMessages = state.chatMessages + confirmationMessage
+            )
+        }
     }
 
     fun onLoadMoreHistory() {
@@ -235,7 +247,6 @@ class HomeScreenViewModel @Inject constructor(
         val failed = _uiState.value.chatMessages.firstOrNull { it.id == messageId } ?: return
         sendMessageInternal(
             messageText = failed.content,
-            quickSkill = null
         )
     }
 
@@ -301,10 +312,16 @@ class HomeScreenViewModel @Inject constructor(
     // 共享的发送 helper：输入框和快捷技能都走这里
     private fun sendMessageInternal(
         messageText: String,
-        quickSkill: QuickSkillDefinition?
     ) {
         val content = messageText.trim()
         if (content.isEmpty() || _uiState.value.isSending) return
+        val quickSkill = pendingSkillId?.let { id ->
+            quickSkillDefinitionsById[id]
+        }
+        if (quickSkill != null) {
+            pendingSkillId = null
+            _uiState.update { it.copy(selectedSkill = null) }
+        }
         val quickSkillId = quickSkill?.id
         val userMessage = createUserMessage(content)
         val assistantPlaceholder = createAssistantPlaceholder()
@@ -325,7 +342,7 @@ class HomeScreenViewModel @Inject constructor(
         }
         val newState = _uiState.value.copy(
             chatMessages = _uiState.value.chatMessages + userMessage + assistantPlaceholder,
-            inputText = if (quickSkillId == null) "" else _uiState.value.inputText,
+            inputText = "",
             isSending = true,
             isStreaming = true,
             snackbarMessage = null
@@ -533,6 +550,11 @@ class HomeScreenViewModel @Inject constructor(
     private fun formatSyncTime(timestamp: Long): String {
         val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
         return formatter.format(Date(timestamp))
+    }
+
+    private fun buildSkillConfirmation(definition: QuickSkillDefinition): String {
+        val action = definition.label.lowercase(Locale.getDefault())
+        return "Got it — I'm ready to $action. Tell me what you'd like to add."
     }
 
     private fun QuickSkillDefinition.toUiModel(): QuickSkillUi = QuickSkillUi(

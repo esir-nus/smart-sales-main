@@ -43,11 +43,29 @@ class DelegatingHomeAiChatService @Inject constructor(
             skillTags = request.quickSkillId?.let { setOf(it) } ?: emptySet(),
             transcriptMarkdown = request.audioContextSummary?.toMarkdown()
         )
+        var lastContent = ""
         delegate.streamMessage(dataRequest).collect { event ->
             when (event) {
-                is AiChatStreamEvent.Chunk -> emit(ChatStreamEvent.Delta(event.content))
-                is AiChatStreamEvent.Completed -> emit(ChatStreamEvent.Completed(event.response.displayText))
-                is AiChatStreamEvent.Error -> emit(ChatStreamEvent.Error(event.throwable))
+                is AiChatStreamEvent.Chunk -> {
+                    val content = event.content ?: ""
+                    val delta = if (content.startsWith(lastContent)) {
+                        content.substring(lastContent.length)
+                    } else {
+                        content
+                    }
+                    if (delta.isNotEmpty()) {
+                        emit(ChatStreamEvent.Delta(delta))
+                    }
+                    lastContent = content
+                }
+                is AiChatStreamEvent.Completed -> {
+                    lastContent = ""
+                    emit(ChatStreamEvent.Completed(event.response.displayText))
+                }
+                is AiChatStreamEvent.Error -> {
+                    lastContent = ""
+                    emit(ChatStreamEvent.Error(event.throwable))
+                }
             }
         }
     }

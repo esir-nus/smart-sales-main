@@ -77,7 +77,11 @@ fun DeviceSetupScreen(
                 enabled = state.step == DeviceSetupStep.Pairing || state.step == DeviceSetupStep.WifiProvisioning
             )
             if (state.errorMessage != null) {
-                ErrorBanner(message = state.errorMessage, onDismiss = onDismissError)
+                ErrorBanner(
+                    message = state.errorMessage,
+                    onDismiss = onDismissError,
+                    onRetry = onRetry
+                )
             }
             PrimaryActions(
                 state = state,
@@ -173,7 +177,11 @@ private fun WiFiForm(
 }
 
 @Composable
-private fun ErrorBanner(message: String, onDismiss: () -> Unit) {
+private fun ErrorBanner(
+    message: String,
+    onDismiss: () -> Unit,
+    onRetry: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -191,6 +199,7 @@ private fun ErrorBanner(message: String, onDismiss: () -> Unit) {
                 modifier = Modifier.weight(1f)
             )
             Spacer(modifier = Modifier.size(12.dp))
+            TextButton(onClick = onRetry) { Text(text = "重试") }
             TextButton(onClick = onDismiss) { Text(text = "知道了") }
         }
     }

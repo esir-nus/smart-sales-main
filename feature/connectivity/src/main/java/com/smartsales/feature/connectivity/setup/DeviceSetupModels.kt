@@ -15,10 +15,18 @@ enum class DeviceSetupStep {
     Error
 }
 
+enum class DeviceSetupErrorReason {
+    ScanTimeout,
+    ProvisioningFailed,
+    DeviceNotOnline,
+    Unknown
+}
+
 data class DeviceSetupUiState(
     val step: DeviceSetupStep = DeviceSetupStep.Idle,
     val progressMessage: String = "准备开始连接设备",
     val errorMessage: String? = null,
+    val errorReason: DeviceSetupErrorReason? = null,
     val isActionInProgress: Boolean = false,
     val deviceName: String? = null,
     val wifiSsid: String? = null,

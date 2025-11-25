@@ -47,7 +47,7 @@ class DeviceSetupViewModel @Inject constructor(
     }
 
     fun onStartScan() {
-        if (_uiState.value.isScanning) return
+        if (_uiState.value.isScanning || _uiState.value.step == DeviceSetupStep.WaitingForDeviceOnline) return
         bleScanner.start()
         val target = bleProfiles.joinToString { it.displayName }.ifBlank { "目标设备" }
         _uiState.update {
@@ -55,6 +55,7 @@ class DeviceSetupViewModel @Inject constructor(
                 step = DeviceSetupStep.Scanning,
                 progressMessage = "正在扫描设备（$target）…",
                 errorMessage = null,
+                errorReason = null,
                 isActionInProgress = true,
                 isScanning = true
             )
@@ -64,7 +65,10 @@ class DeviceSetupViewModel @Inject constructor(
             delay(SCAN_TIMEOUT_MS)
             if (_uiState.value.isScanning && _uiState.value.step == DeviceSetupStep.Scanning) {
                 bleScanner.stop()
-                setError("未找到设备，请确认设备已开启并靠近手机")
+                setError(
+                    message = "扫描超时，请重试扫描",
+                    reason = DeviceSetupErrorReason.ScanTimeout
+                )
             }
         }
     }
@@ -85,7 +89,7 @@ class DeviceSetupViewModel @Inject constructor(
                 credentials = WifiCredentials(ssid = "", password = "")
             )
             if (result is Result.Error) {
-                setError("配对失败，请重试")
+                setError("配对失败，请重试", DeviceSetupErrorReason.ProvisioningFailed)
             }
         }
     }
@@ -111,7 +115,10 @@ class DeviceSetupViewModel @Inject constructor(
             else -> null
         }
         if (session == null) {
-            setError("尚未连接到设备，请先扫描并配对")
+            setError(
+                "尚未连接到设备，请先扫描并配对",
+                DeviceSetupErrorReason.ProvisioningFailed
+            )
             return
         }
         viewModelScope.launch {
@@ -125,7 +132,10 @@ class DeviceSetupViewModel @Inject constructor(
                 credentials = WifiCredentials(ssid = ssid, password = password)
             )
             if (result is Result.Error) {
-                setError("Wi-Fi 配置失败，请检查网络和密码后重试")
+                setError(
+                    "Wi-Fi 配置失败，请检查网络和密码后重试",
+                    DeviceSetupErrorReason.ProvisioningFailed
+                )
             } else {
                 _uiState.update { it.copy(isSubmittingWifi = true, step = DeviceSetupStep.WifiProvisioning) }
                 triggerNetworkCheck(force = true)
@@ -139,6 +149,7 @@ class DeviceSetupViewModel @Inject constructor(
                 step = DeviceSetupStep.Scanning,
                 progressMessage = "正在重新扫描设备…",
                 errorMessage = null,
+                errorReason = null,
                 isActionInProgress = true,
                 isScanning = false,
                 isSubmittingWifi = false
@@ -160,6 +171,16 @@ class DeviceSetupViewModel @Inject constructor(
     private fun observeConnection() {
         viewModelScope.launch {
             connectionManager.state.collectLatest { state ->
+                // 防止已结束流程后的迟到回调影响 UI
+                if (_uiState.value.step == DeviceSetupStep.Error || _uiState.value.step == DeviceSetupStep.Ready) {
+                    when (state) {
+                        is ConnectionState.Error -> setError(
+                            message = toReadableError(state.error),
+                            reason = DeviceSetupErrorReason.Unknown
+                        )
+                        else -> return@collectLatest
+                    }
+                }
                 when (state) {
                     ConnectionState.Disconnected -> _uiState.update {
                         it.copy(
@@ -169,7 +190,9 @@ class DeviceSetupViewModel @Inject constructor(
                             isScanning = false,
                             isSubmittingWifi = false,
                             isDeviceOnline = false,
-                            deviceIp = null
+                            deviceIp = null,
+                            errorMessage = null,
+                            errorReason = null
                         )
                     }
 
@@ -207,16 +230,13 @@ class DeviceSetupViewModel @Inject constructor(
                     }
 
                     is ConnectionState.Error -> {
-                        val message = when (state.error) {
-                            is ConnectivityError.Timeout ->
-                                "未找到设备，请确认设备已开启并靠近手机"
-
-                            is ConnectivityError.ProvisioningFailed ->
-                                "Wi-Fi 配置失败，请检查网络和密码后重试"
-
-                            else -> "连接出错，请重试"
+                        val message = toReadableError(state.error)
+                        val reason = when (state.error) {
+                            is ConnectivityError.Timeout -> DeviceSetupErrorReason.ScanTimeout
+                            is ConnectivityError.ProvisioningFailed -> DeviceSetupErrorReason.ProvisioningFailed
+                            else -> DeviceSetupErrorReason.Unknown
                         }
-                        setError(message)
+                        setError(message, reason)
                     }
                 }
             }
@@ -227,6 +247,9 @@ class DeviceSetupViewModel @Inject constructor(
         viewModelScope.launch {
             bleScanner.devices.collectLatest { devices ->
                 if (devices.isEmpty()) return@collectLatest
+                if (_uiState.value.step == DeviceSetupStep.Error || _uiState.value.step == DeviceSetupStep.Ready) {
+                    return@collectLatest
+                }
                 val currentConnection = connectionManager.state.value
                 if (currentConnection !is ConnectionState.Disconnected) {
                     _uiState.update { it.copy(isScanning = false, isActionInProgress = false) }
@@ -263,7 +286,10 @@ class DeviceSetupViewModel @Inject constructor(
                 }
                 delay(NETWORK_CHECK_INTERVAL_MS)
             }
-            setError("无法连接到设备，请检查设备 Wi-Fi 状态")
+            setError(
+                message = "设备尚未上线，请检查 Wi-Fi 并重试",
+                reason = DeviceSetupErrorReason.DeviceNotOnline
+            )
         }
     }
 
@@ -288,12 +314,14 @@ class DeviceSetupViewModel @Inject constructor(
         networkCheckJob = null
     }
 
-    private fun setError(message: String) {
+    private fun setError(message: String, reason: DeviceSetupErrorReason = DeviceSetupErrorReason.Unknown) {
         bleScanner.stop()
+        scanTimeoutJob?.cancel()
         _uiState.update {
             it.copy(
                 step = DeviceSetupStep.Error,
                 errorMessage = message,
+                errorReason = reason,
                 isActionInProgress = false,
                 isScanning = false,
                 isSubmittingWifi = false
@@ -314,6 +342,15 @@ class DeviceSetupViewModel @Inject constructor(
         private const val NETWORK_CHECK_ATTEMPTS = 3
         private const val SCAN_TIMEOUT_MS = 12_000L
         private const val TAG = "${LogTags.CONNECTIVITY}/DeviceSetup"
+    }
+
+    private fun toReadableError(error: ConnectivityError): String = when (error) {
+        is ConnectivityError.Timeout -> "未找到设备，请确认设备已开启并靠近手机"
+        is ConnectivityError.ProvisioningFailed -> error.reason
+        is ConnectivityError.PermissionDenied -> "缺少权限：${error.permissions.joinToString()}"
+        is ConnectivityError.Transport -> error.reason
+        ConnectivityError.MissingSession -> "尚未建立会话，请重新扫描设备"
+        is ConnectivityError.PairingInProgress -> "配对冲突：${error.deviceName} 已在使用"
     }
 }
 

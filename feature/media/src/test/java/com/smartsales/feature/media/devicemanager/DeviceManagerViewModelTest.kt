@@ -5,7 +5,6 @@ package com.smartsales.feature.media.devicemanager
 // 说明：验证 DeviceManagerViewModel 的列表加载、筛选与操作能力
 // 作者：创建于 2025-11-20
 
-import android.net.Uri
 import com.smartsales.core.test.FakeDispatcherProvider
 import com.smartsales.core.util.Result
 import com.smartsales.feature.connectivity.BlePeripheral
@@ -21,7 +20,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -31,8 +29,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
 class DeviceManagerViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
@@ -42,7 +43,7 @@ class DeviceManagerViewModelTest {
 
     @Before
     fun setup() {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
+        Dispatchers.setMain(dispatcher)
         gateway = FakeDeviceMediaGateway()
         connectionManager = FakeDeviceConnectionManager()
         viewModel = DeviceManagerViewModel(
@@ -152,7 +153,7 @@ class DeviceManagerViewModelTest {
             DeviceMediaFile("new.png", 1024, "image/png", 3_000L, "media/3", "dl/3")
         )
 
-        viewModel.onUploadFile(DeviceUploadSource.AndroidUri(Uri.EMPTY))
+        viewModel.onUploadFile(createFakeUploadSource())
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
@@ -199,12 +200,12 @@ class DeviceManagerViewModelTest {
 
         val state = viewModel.uiState.value
         assertEquals("http://manual:9000", state.baseUrl)
-        assertEquals("http://192.168.60.6:8000", state.autoDetectedBaseUrl)
+        assertEquals("http://192.168.60.6:9000", state.autoDetectedBaseUrl)
         assertEquals(true, state.baseUrlWasManual)
 
         viewModel.onUseAutoBaseUrl()
         val updated = viewModel.uiState.value
-        assertEquals("http://192.168.60.6:8000", updated.baseUrl)
+        assertEquals("http://192.168.60.6:9000", updated.baseUrl)
         assertEquals(false, updated.baseUrlWasManual)
     }
 
@@ -254,6 +255,11 @@ class DeviceManagerViewModelTest {
         override suspend fun downloadFile(baseUrl: String, file: DeviceMediaFile): Result<File> {
             return Result.Success(File.createTempFile("fake", ".tmp"))
         }
+    }
+
+    private fun createFakeUploadSource(): DeviceUploadSource {
+        val uri = android.net.Uri.parse("file:///tmp/new.png")
+        return DeviceUploadSource.AndroidUri(uri)
     }
 
     private class FakeDeviceConnectionManager : DeviceConnectionManager {

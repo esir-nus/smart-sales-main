@@ -5,9 +5,10 @@ package com.smartsales.aitest
 // 说明：验证顶层导航在 Home/设备配网/设备文件/音频库/用户中心间的 Compose 路由切换
 // 作者：创建于 2025-11-21
 
-import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -29,10 +30,10 @@ class NavigationSmokeTest {
     @Test
     fun launchesHomeByDefault() {
         composeRule.onNodeWithTag(HomeScreenTestTags.ROOT).assertIsDisplayed()
-        composeRule.onNodeWithTag(AudioFilesTestTags.ROOT).assertDoesNotExist()
-        composeRule.onNodeWithTag(DeviceManagerRouteTestTags.ROOT).assertDoesNotExist()
-        composeRule.onNodeWithTag(DeviceSetupRouteTestTags.PAGE).assertDoesNotExist()
-        composeRule.onNodeWithTag(UserCenterTestTags.ROOT).assertDoesNotExist()
+        composeRule.onAllNodesWithTag(AudioFilesTestTags.ROOT).assertCountEquals(0)
+        composeRule.onAllNodesWithTag(DeviceManagerRouteTestTags.ROOT).assertCountEquals(0)
+        composeRule.onAllNodesWithTag(DeviceSetupRouteTestTags.PAGE).assertCountEquals(0)
+        composeRule.onAllNodesWithTag(UserCenterTestTags.ROOT).assertCountEquals(0)
     }
 
     @Test

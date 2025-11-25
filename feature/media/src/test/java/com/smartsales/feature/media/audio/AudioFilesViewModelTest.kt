@@ -25,7 +25,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -48,7 +47,7 @@ class AudioFilesViewModelTest {
 
     @Before
     fun setup() {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
+        Dispatchers.setMain(dispatcher)
         gateway = FakeDeviceMediaGateway()
         syncCoordinator = FakeMediaSyncCoordinator()
         endpointProvider = FakeDeviceHttpEndpointProvider()
@@ -66,30 +65,40 @@ class AudioFilesViewModelTest {
     }
 
     @Test
-    fun `initial load fetches audio list when endpoint is ready`() = runTest(dispatcher) {
+    fun `initial load shows loading then populates audio files`() = runTest(dispatcher) {
         gateway.files = listOf(
-            DeviceMediaFile(
-                name = "a1.wav",
-                sizeBytes = 100,
-                mimeType = "audio/wav",
-                modifiedAtMillis = 1_000L,
-                mediaUrl = "http://d/1",
-                downloadUrl = "http://d/1"
-            )
+            DeviceMediaFile("clip.wav", 100, "audio/wav", 1_000L, "http://m/1", "http://d/1"),
+            DeviceMediaFile("video.mp4", 200, "video/mp4", 2_000L, "http://m/2", "http://d/2")
         )
 
         endpointProvider.emit("http://10.0.0.1:8000")
+        assertTrue(viewModel.uiState.value.isLoading)
+
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertFalse(state.isLoading)
         assertEquals(1, state.recordings.size)
-        assertEquals("a1", state.recordings.first().title)
+        assertEquals("clip", state.recordings.first().title)
+        assertEquals(null, state.errorMessage)
+    }
+
+    @Test
+    fun `initial load surfaces error when fetch fails`() = runTest(dispatcher) {
+        gateway.fetchResult = Result.Error(IllegalStateException("offline"))
+
+        endpointProvider.emit("http://10.0.0.2:8000")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+        assertEquals("offline", state.errorMessage)
+        assertTrue(state.recordings.isEmpty())
     }
 
     @Test
     fun `sync toggles flag and refreshes items`() = runTest(dispatcher) {
-        endpointProvider.emit("http://10.0.0.2:8000")
+        endpointProvider.emit("http://10.0.0.3:8000")
         gateway.files = listOf(
             DeviceMediaFile("old.mp3", 1, "audio/mpeg", 10L, "m1", "d1")
         )
@@ -98,6 +107,7 @@ class AudioFilesViewModelTest {
         gateway.files = listOf(
             DeviceMediaFile("new.mp3", 1, "audio/mpeg", 20L, "m2", "d2")
         )
+
         viewModel.onSyncClicked()
         advanceUntilIdle()
 
@@ -110,7 +120,7 @@ class AudioFilesViewModelTest {
 
     @Test
     fun `delete removes item and reloads list`() = runTest(dispatcher) {
-        endpointProvider.emit("http://10.0.0.3:8000")
+        endpointProvider.emit("http://10.0.0.4:8000")
         gateway.files = listOf(
             DeviceMediaFile("keep.mp3", 1, "audio/mpeg", 10L, "m2", "d2"),
             DeviceMediaFile("drop.mp3", 1, "audio/mpeg", 20L, "m3", "d3")
@@ -127,7 +137,8 @@ class AudioFilesViewModelTest {
     @Test
     fun `errors populate errorMessage and can be dismissed`() = runTest(dispatcher) {
         gateway.fetchResult = Result.Error(IllegalStateException("boom"))
-        endpointProvider.emit("http://10.0.0.4:8000")
+
+        endpointProvider.emit("http://10.0.0.5:8000")
         advanceUntilIdle()
 
         assertEquals("boom", viewModel.uiState.value.errorMessage)

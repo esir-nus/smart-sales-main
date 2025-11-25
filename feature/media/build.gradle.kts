@@ -54,4 +54,5 @@ dependencies {
     testImplementation(projects.core.test)
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
+    testImplementation("org.robolectric:robolectric:4.11.1")
 }

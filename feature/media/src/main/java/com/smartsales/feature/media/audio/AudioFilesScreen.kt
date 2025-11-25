@@ -66,7 +66,10 @@ fun AudioFilesScreen(
             TopAppBar(
                 title = { Text(text = "音频库") },
                 actions = {
-                    IconButton(onClick = onSyncClicked) {
+                    IconButton(
+                        onClick = onSyncClicked,
+                        modifier = Modifier.testTag(AudioFilesTestTags.SYNC_BUTTON)
+                    ) {
                         Icon(Icons.Default.Upload, contentDescription = "同步")
                     }
                     IconButton(onClick = onRefresh) {
@@ -90,7 +93,9 @@ fun AudioFilesScreen(
                 ErrorBanner(
                     message = message,
                     onDismiss = onErrorDismissed,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(AudioFilesTestTags.ERROR_BANNER)
                 )
             }
             if (uiState.isLoading) {
@@ -103,7 +108,12 @@ fun AudioFilesScreen(
                     CircularProgressIndicator()
                 }
             } else if (uiState.recordings.isEmpty()) {
-                EmptyState(onRefresh = onRefresh, modifier = Modifier.weight(1f))
+                EmptyState(
+                    onRefresh = onRefresh,
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag(AudioFilesTestTags.EMPTY_STATE)
+                )
             } else {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
@@ -126,6 +136,9 @@ fun AudioFilesScreen(
 
 object AudioFilesTestTags {
     const val ROOT = "audio_files_screen_root"
+    const val SYNC_BUTTON = "audio_files_sync_button"
+    const val EMPTY_STATE = "audio_files_empty_state"
+    const val ERROR_BANNER = "audio_files_error_banner"
 }
 
 @Composable

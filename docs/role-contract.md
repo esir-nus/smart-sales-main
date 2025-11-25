@@ -26,6 +26,14 @@
 - MUST begin each task with a self-evaluation (Section 3.1).
 - Halts safely if ambiguity or conflicts are detected.
 
+- **IMPORTANT**:
+Codex must ALWAYS produce an evidence-based self-evaluation FIRST.
+Self-evaluation must cite actual project files, logs, or docs.
+Codex must not invent modules, functions, tests, or behaviors not present in the repo.
+Codex must stop and request clarification if any required information is missing.
+NO implementation code is allowed until the Operator explicitly unlocks it.
+
+
 ---
 
 ## 2. Invocation Rules

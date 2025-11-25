@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -229,17 +230,19 @@ fun HomeScreen(
                 .pullRefresh(pullRefreshState)
         ) {
             Column(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
             ) {
                 SessionHeader(
                     session = state.currentSession,
                     onNewChatClicked = onNewChatClicked
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                        .padding(vertical = 8.dp)
                 ) {
                     DeviceAudioBanner(
                         deviceSnapshot = state.deviceSnapshot,
@@ -249,6 +252,7 @@ fun HomeScreen(
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
+                Divider(modifier = Modifier.padding(vertical = 4.dp))
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -258,7 +262,7 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxSize(),
                         state = listState,
                         verticalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp)
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp)
                     ) {
                         item("session-list") {
                             SessionListSection(
@@ -368,7 +372,7 @@ private fun HomeTopBar(onProfileClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -580,6 +584,7 @@ private fun MessageBubble(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(horizontal = 4.dp)
             .testTag(bubbleTag),
         horizontalArrangement = if (alignEnd) Arrangement.End else Arrangement.Start
     ) {
@@ -627,7 +632,7 @@ private fun EmptyChatHint(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 32.dp),
+            .padding(vertical = 32.dp, horizontal = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -773,7 +778,7 @@ private fun SessionHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp)
+            .padding(horizontal = 4.dp)
             .testTag(HomeScreenTestTags.SESSION_HEADER),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween

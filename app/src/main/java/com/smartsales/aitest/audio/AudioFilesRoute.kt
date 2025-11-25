@@ -26,7 +26,6 @@ fun AudioFilesRoute(
         onSyncClicked = viewModel::onSyncClicked,
         onRecordingClicked = viewModel::onRecordingClicked,
         onPlayPauseClicked = viewModel::onPlayPauseClicked,
-        onApplyClicked = viewModel::onApplyClicked,
         onDeleteClicked = viewModel::onDeleteClicked,
         onErrorDismissed = viewModel::onErrorDismissed,
         modifier = modifier

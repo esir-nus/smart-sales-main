@@ -61,18 +61,6 @@ class DeviceManagerViewModel @Inject constructor(
         }
     }
 
-    fun onSelectTab(tab: DeviceMediaTab) {
-        val files = cachedFiles
-        _uiState.update { state ->
-            val filtered = tab.filter(files)
-            state.copy(
-                activeTab = tab,
-                visibleFiles = filtered,
-                selectedFile = filtered.firstOrNull { it.id == state.selectedFile?.id }
-            )
-        }
-    }
-
     fun onSelectFile(fileId: String) {
         val candidate = cachedFiles.firstOrNull { it.id == fileId } ?: return
         _uiState.update {
@@ -134,10 +122,9 @@ class DeviceManagerViewModel @Inject constructor(
                 is Result.Success -> {
                     cachedFiles = cachedFiles.filterNot { it.id == fileId }
                     _uiState.update { state ->
-                        val filtered = state.activeTab.filter(cachedFiles)
                         state.copy(
                             files = cachedFiles,
-                            visibleFiles = filtered,
+                            visibleFiles = cachedFiles,
                             selectedFile = state.selectedFile?.takeIf { it.id != fileId }
                         )
                     }
@@ -177,14 +164,13 @@ class DeviceManagerViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         when (val result = mediaGateway.fetchFiles(baseUrl)) {
             is Result.Success -> {
-                cachedFiles = result.data.map { it.toUi() }
+                cachedFiles = result.data.mapNotNull { it.toUiOrNull() }
                 _uiState.update { state ->
-                    val filtered = state.activeTab.filter(cachedFiles)
                     state.copy(
                         files = cachedFiles,
-                        visibleFiles = filtered,
+                        visibleFiles = cachedFiles,
                         selectedFile = state.selectedFile?.let { selected ->
-                            filtered.firstOrNull { it.id == selected.id }
+                            cachedFiles.firstOrNull { it.id == selected.id }
                         },
                         isLoading = false
                     )
@@ -207,13 +193,12 @@ class DeviceManagerViewModel @Inject constructor(
             if (it.id == fileId) it.copy(isApplied = applied) else it
         }
         _uiState.update { state ->
-            val filtered = state.activeTab.filter(cachedFiles)
             state.copy(
                 files = cachedFiles,
-                visibleFiles = filtered,
+                visibleFiles = cachedFiles,
                 selectedFile = state.selectedFile?.let { selected ->
-                    filtered.firstOrNull { it.id == selected.id }
-                        ?: filtered.firstOrNull { it.id == fileId }
+                    cachedFiles.firstOrNull { it.id == selected.id }
+                        ?: cachedFiles.firstOrNull { it.id == fileId }
                 }
             )
         }
@@ -350,7 +335,6 @@ data class DeviceManagerUiState(
     val baseUrlWasManual: Boolean = false,
     val files: List<DeviceFileUi> = emptyList(),
     val visibleFiles: List<DeviceFileUi> = emptyList(),
-    val activeTab: DeviceMediaTab = DeviceMediaTab.Images,
     val selectedFile: DeviceFileUi? = null,
     val isLoading: Boolean = false,
     val isUploading: Boolean = false,
@@ -366,22 +350,14 @@ data class DeviceFileUi(
     val modifiedAtText: String,
     val mediaUrl: String,
     val downloadUrl: String,
-    val isApplied: Boolean = false
+    val isApplied: Boolean = false,
+    val durationText: String? = null,
+    val thumbnailUrl: String? = null
 )
 
 enum class DeviceMediaTab {
-    Images,
     Videos,
-    Other;
-
-    fun matches(mimeType: String): Boolean = when (this) {
-        Images -> mimeType.startsWith("image", ignoreCase = true)
-        Videos -> mimeType.startsWith("video", ignoreCase = true)
-        Other -> !(mimeType.startsWith("image", true) || mimeType.startsWith("video", true))
-    }
-
-    fun filter(files: List<DeviceFileUi>): List<DeviceFileUi> =
-        files.filter { matches(it.mimeType) }
+    Gifs;
 }
 
 data class DeviceMediaFile(
@@ -413,11 +389,12 @@ sealed class DeviceConnectionUiState {
     fun isReadyForFiles(): Boolean = this is Connected
 }
 
-private fun DeviceMediaFile.toUi(): DeviceFileUi {
+private fun DeviceMediaFile.toUiOrNull(): DeviceFileUi? {
     val tab = when {
-        mimeType.startsWith("image", ignoreCase = true) -> DeviceMediaTab.Images
-        mimeType.startsWith("video", ignoreCase = true) -> DeviceMediaTab.Videos
-        else -> DeviceMediaTab.Other
+        isAudio() -> return null
+        isVideo() -> DeviceMediaTab.Videos
+        isGif() -> DeviceMediaTab.Gifs
+        else -> return null
     }
     return DeviceFileUi(
         id = name,
@@ -427,8 +404,27 @@ private fun DeviceMediaFile.toUi(): DeviceFileUi {
         mediaType = tab,
         modifiedAtText = formatTimestamp(modifiedAtMillis),
         mediaUrl = mediaUrl,
-        downloadUrl = downloadUrl
+        downloadUrl = downloadUrl,
+        durationText = null, // TODO: 未来接入时长元数据后显示真实时长
+        thumbnailUrl = mediaUrl // 静态缩略图占位，禁止自动播放
     )
+}
+
+private fun DeviceMediaFile.isVideo(): Boolean {
+    val lowerName = name.lowercase(Locale.ROOT)
+    if (isAudio()) return false
+    if (mimeType.startsWith("video", ignoreCase = true)) return true
+    return lowerName.endsWith(".mp4") || lowerName.endsWith(".mov") || lowerName.endsWith(".mkv")
+}
+
+private fun DeviceMediaFile.isGif(): Boolean =
+    mimeType.equals("image/gif", ignoreCase = true) || name.lowercase(Locale.ROOT).endsWith(".gif")
+
+private fun DeviceMediaFile.isAudio(): Boolean {
+    val lowerMime = mimeType.lowercase(Locale.ROOT)
+    if (lowerMime.startsWith("audio")) return true
+    val lowerName = name.lowercase(Locale.ROOT)
+    return lowerName.endsWith(".mp3") || lowerName.endsWith(".wav") || lowerName.endsWith(".m4a") || lowerName.endsWith(".aac") || lowerName.endsWith(".flac") || lowerName.endsWith(".ogg")
 }
 
 private fun formatSize(bytes: Long): String {

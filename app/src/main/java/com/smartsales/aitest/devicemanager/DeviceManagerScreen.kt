@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -50,7 +49,6 @@ import com.smartsales.feature.media.devicemanager.DeviceConnectionUiState
 import com.smartsales.feature.media.devicemanager.DeviceFileUi
 import com.smartsales.feature.media.devicemanager.DeviceManagerUiState
 import com.smartsales.feature.media.devicemanager.DeviceManagerViewModel
-import com.smartsales.feature.media.devicemanager.DeviceMediaTab
 import com.smartsales.feature.media.devicemanager.DeviceUploadSource
 import kotlinx.coroutines.delay
 
@@ -68,11 +66,10 @@ fun DeviceManagerRoute(modifier: Modifier = Modifier) {
     DeviceManagerScreen(
         state = state,
         onRefresh = viewModel::onRefreshFiles,
-        onSelectTab = viewModel::onSelectTab,
         onSelectFile = viewModel::onSelectFile,
         onApplyFile = viewModel::onApplyFile,
         onDeleteFile = viewModel::onDeleteFile,
-        onRequestUpload = { uploadLauncher.launch(arrayOf("image/*", "video/*")) },
+        onRequestUpload = { uploadLauncher.launch(arrayOf("video/*", "image/gif")) },
         onBaseUrlChange = viewModel::onBaseUrlChanged,
         onClearError = viewModel::onClearError,
         modifier = modifier.testTag(DeviceManagerRouteTestTags.ROOT)
@@ -83,7 +80,6 @@ fun DeviceManagerRoute(modifier: Modifier = Modifier) {
 fun DeviceManagerScreen(
     state: DeviceManagerUiState,
     onRefresh: () -> Unit,
-    onSelectTab: (DeviceMediaTab) -> Unit,
     onSelectFile: (String) -> Unit,
     onApplyFile: (String) -> Unit,
     onDeleteFile: (String) -> Unit,
@@ -136,7 +132,6 @@ fun DeviceManagerScreen(
             if (!isConnected) {
                 DisconnectedHint()
             } else {
-                TabRow(state.activeTab, onSelectTab)
                 val hasFiles = state.visibleFiles.isNotEmpty()
                 if (!hasFiles && !state.isLoading) {
                     DeviceManagerEmptyState()
@@ -160,27 +155,6 @@ fun DeviceManagerScreen(
                     SelectedFileCard(file = it)
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun TabRow(activeTab: DeviceMediaTab, onSelectTab: (DeviceMediaTab) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        DeviceMediaTab.entries.forEach { tab ->
-            FilterChip(
-                selected = tab == activeTab,
-                onClick = { onSelectTab(tab) },
-                label = {
-                    Text(
-                        text = when (tab) {
-                            DeviceMediaTab.Images -> "图片"
-                            DeviceMediaTab.Videos -> "视频"
-                            DeviceMediaTab.Other -> "其它"
-                        }
-                    )
-                }
-            )
         }
     }
 }
@@ -273,6 +247,35 @@ private fun DeviceFileCard(
                 overflow = TextOverflow.Ellipsis,
                 maxLines = 1
             )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = "时长：${file.durationText ?: "待获取"}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "静态预览",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = file.thumbnailUrl ?: "无缩略图",
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

@@ -89,8 +89,8 @@ class DeviceManagerScreenTest {
     @Test
     fun listState_rendersFilesAndTriggersActions() {
         val files = listOf(
-            fileUi(id = "cover.jpg", displayName = "cover.jpg"),
-            fileUi(id = "promo.mp4", displayName = "promo.mp4", mimeType = "video/mp4")
+            fileUi(id = "promo.mp4", displayName = "promo.mp4", mimeType = "video/mp4"),
+            fileUi(id = "loop.gif", displayName = "loop.gif", mimeType = "image/gif", mediaType = DeviceMediaTab.Gifs)
         )
         var refreshClicks = 0
         var uploadClicks = 0
@@ -106,8 +106,8 @@ class DeviceManagerScreenTest {
             onRequestUpload = { uploadClicks++ }
         )
 
-        composeRule.onNodeWithText("cover.jpg").assertIsDisplayed()
         composeRule.onNodeWithText("promo.mp4").assertIsDisplayed()
+        composeRule.onNodeWithText("loop.gif").assertIsDisplayed()
         composeRule.onNodeWithTag("device_manager_refresh_button").assertIsEnabled().performClick()
         composeRule.onNodeWithTag("device_manager_upload_button").assertIsEnabled().performClick()
 
@@ -136,7 +136,6 @@ class DeviceManagerScreenTest {
                     DeviceManagerScreen(
                         state = uiState,
                         onRefresh = {},
-                        onSelectTab = {},
                         onSelectFile = {},
                         onApplyFile = {},
                         onDeleteFile = {},
@@ -163,7 +162,6 @@ class DeviceManagerScreenTest {
     private fun renderDeviceManager(
         initialState: DeviceManagerUiState,
         onRefresh: () -> Unit = {},
-        onSelectTab: (DeviceMediaTab) -> Unit = {},
         onSelectFile: (String) -> Unit = {},
         onApplyFile: (String) -> Unit = {},
         onDeleteFile: (String) -> Unit = {},
@@ -177,7 +175,6 @@ class DeviceManagerScreenTest {
                 DeviceManagerScreen(
                     state = uiState,
                     onRefresh = onRefresh,
-                    onSelectTab = onSelectTab,
                     onSelectFile = onSelectFile,
                     onApplyFile = onApplyFile,
                     onDeleteFile = onDeleteFile,
@@ -207,7 +204,6 @@ class DeviceManagerScreenTest {
             baseUrlWasManual = true,
             files = files,
             visibleFiles = visibleFiles,
-            activeTab = DeviceMediaTab.Images,
             selectedFile = selectedFile,
             isLoading = isLoading,
             isUploading = isUploading,
@@ -218,15 +214,16 @@ class DeviceManagerScreenTest {
     private fun fileUi(
         id: String,
         displayName: String,
-        mimeType: String = "image/png",
-        isApplied: Boolean = false
+        mimeType: String = "video/mp4",
+        isApplied: Boolean = false,
+        mediaType: DeviceMediaTab = DeviceMediaTab.Videos
     ): DeviceFileUi {
         return DeviceFileUi(
             id = id,
             displayName = displayName,
             sizeText = "1.2MB",
             mimeType = mimeType,
-            mediaType = if (mimeType.startsWith("video")) DeviceMediaTab.Videos else DeviceMediaTab.Images,
+            mediaType = mediaType,
             modifiedAtText = "2025-11-20 10:00",
             mediaUrl = "http://example/$id",
             downloadUrl = "http://example/$id/download",

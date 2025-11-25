@@ -988,3 +988,51 @@ Risks / TODO:
 - BackHandler 仅将非 Home 页返回到 Home，若未来引入更复杂返回栈需调整逻辑。
 
 ---
+
+## 2025-11-25 – Media 单测修复与 Robolectric 引入
+
+Layer: T1  
+Modules: :feature:media  
+Docs / Files: feature/media/src/test/java/com/smartsales/feature/media/audio/AudioFilesViewModelTest.kt, feature/media/src/test/java/com/smartsales/feature/media/devicemanager/DeviceManagerViewModelTest.kt, feature/media/build.gradle.kts  
+Role Hook: Codex  
+Next Integration Step: None
+
+Summary:
+- 对齐 AudioFiles/DeviceManager 现有行为，更新/移除过期断言并补齐错误提示、同步、删除等状态校验。
+- 为 DeviceManager 测试添加 Robolectric 支持以稳定 Android Uri 依赖，上传用例使用安全假数据源。
+- 新增 Robolectric 测试依赖，确保 `./gradlew :feature:media:testDebugUnitTest` 通过。
+
+TDD Status:
+- [ ] Tests written first
+- [x] Tests added after implementation
+- [ ] Manual testing only
+
+Risks / TODO:
+- Robolectric 依赖尚未镜像到 `third_party/maven-repo`，离线环境需补充缓存。
+- 仅覆盖基础行为，未来接入真实媒体网关后需追加回归用例。
+
+---
+
+## 2025-11-25 – DeviceManager 媒体范围收窄 + 音频去除应用操作
+
+Layer: T1  
+Modules: :feature:media, :app  
+Docs / Files: feature/media/src/main/java/com/smartsales/feature/media/devicemanager/DeviceManagerViewModel.kt, app/src/main/java/com/smartsales/aitest/devicemanager/DeviceManagerScreen.kt, feature/media/src/main/java/com/smartsales/feature/media/audio/AudioFilesScreen.kt, feature/media/src/main/java/com/smartsales/feature/media/audio/AudioFilesViewModel.kt, tests under feature/media and app/androidTest  
+Role Hook: Codex  
+Next Integration Step: None
+
+Summary:
+- DeviceManager 仅展示视频/GIF，去掉 tab 分组与“其它”，严格按 mime/扩展名过滤掉所有音频和非可展示类型；上传也限制为视频/GIF，卡片展示静态预览占位与时长占位，禁止自动播放。
+- AudioFiles 页面移除“应用”操作，保留播放/删除并留 TODO 钩子用于未来转写/查看转写；同步路由与测试同步更新。
+- 单测/仪测同步调整过滤与 UI 期望，确保 mis-reported audio 也被过滤。
+
+TDD Status:
+- [ ] Tests written first
+- [x] Tests added after implementation
+- [ ] Manual testing only
+
+Risks / TODO:
+- 静态缩略图与时长仍为占位，需接入真实元数据/预览后完善。
+- Robolectric 依赖未镜像到 `third_party/maven-repo`，离线环境需提前缓存。
+
+---

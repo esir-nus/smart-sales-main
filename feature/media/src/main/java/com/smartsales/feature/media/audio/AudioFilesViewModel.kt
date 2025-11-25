@@ -82,15 +82,6 @@ class AudioFilesViewModel @Inject constructor(
         }
     }
 
-    fun onApplyClicked(id: String) {
-        performWithBaseUrl { base ->
-            when (val result = mediaGateway.applyFile(base, id)) {
-                is Result.Success -> Unit
-                is Result.Error -> emitError(result.throwable.message)
-            }
-        }
-    }
-
     fun onDeleteClicked(id: String) {
         performWithBaseUrl { base ->
             when (val result = mediaGateway.deleteFile(base, id)) {

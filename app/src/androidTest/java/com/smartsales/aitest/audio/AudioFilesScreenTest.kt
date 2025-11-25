@@ -51,7 +51,6 @@ class AudioFilesScreenTest {
                     onSyncClicked = {},
                     onRecordingClicked = {},
                     onPlayPauseClicked = {},
-                    onApplyClicked = {},
                     onDeleteClicked = {},
                     onErrorDismissed = {},
                     modifier = Modifier.fillMaxSize()
@@ -76,7 +75,6 @@ class AudioFilesScreenTest {
                     onSyncClicked = {},
                     onRecordingClicked = {},
                     onPlayPauseClicked = {},
-                    onApplyClicked = {},
                     onDeleteClicked = {},
                     onErrorDismissed = {},
                     modifier = Modifier.fillMaxSize()
@@ -105,7 +103,6 @@ class AudioFilesScreenTest {
                     onSyncClicked = {},
                     onRecordingClicked = {},
                     onPlayPauseClicked = {},
-                    onApplyClicked = {},
                     onDeleteClicked = {},
                     onErrorDismissed = { uiState = uiState.copy(errorMessage = null) },
                     modifier = Modifier.fillMaxSize()
@@ -133,7 +130,6 @@ class AudioFilesScreenTest {
                     onSyncClicked = {},
                     onRecordingClicked = {},
                     onPlayPauseClicked = {},
-                    onApplyClicked = {},
                     onDeleteClicked = {},
                     onErrorDismissed = {},
                     modifier = Modifier.fillMaxSize()

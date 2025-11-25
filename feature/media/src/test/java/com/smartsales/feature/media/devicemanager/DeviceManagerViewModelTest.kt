@@ -64,15 +64,16 @@ class DeviceManagerViewModelTest {
         advanceUntilIdle()
         gateway.files = listOf(
             DeviceMediaFile("image-1.jpg", 1024, "image/jpeg", 1_000L, "media/1", "dl/1"),
-            DeviceMediaFile("clip.mp4", 2048, "video/mp4", 2_000L, "media/2", "dl/2")
+            DeviceMediaFile("clip.mp4", 2048, "video/mp4", 2_000L, "media/2", "dl/2"),
+            DeviceMediaFile("anim.gif", 512, "image/gif", 3_000L, "media/3", "dl/3")
         )
 
         viewModel.onRefreshFiles()
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals(2, state.files.size)
-        assertEquals(1, state.visibleFiles.size) // 默认图片标签
+        assertEquals(2, state.files.size) // 仅视频+GIF
+        assertEquals(2, state.visibleFiles.size)
     }
 
     @Test
@@ -87,23 +88,6 @@ class DeviceManagerViewModelTest {
         val state = viewModel.uiState.value
         assertEquals("offline", state.errorMessage)
         assertEquals(false, state.isLoading)
-    }
-
-    @Test
-    fun `switch tab filters files`() = runTest(dispatcher) {
-        connectionManager.emitReady()
-        advanceUntilIdle()
-        gateway.files = listOf(
-            DeviceMediaFile("image-1.jpg", 1024, "image/jpeg", 1_000L, "media/1", "dl/1"),
-            DeviceMediaFile("clip.mp4", 2048, "video/mp4", 2_000L, "media/2", "dl/2")
-        )
-        viewModel.onRefreshFiles()
-        advanceUntilIdle()
-
-        viewModel.onSelectTab(DeviceMediaTab.Videos)
-        val state = viewModel.uiState.value
-        assertEquals(1, state.visibleFiles.size)
-        assertEquals("clip.mp4", state.visibleFiles.first().displayName)
     }
 
     @Test
@@ -150,7 +134,7 @@ class DeviceManagerViewModelTest {
         advanceUntilIdle()
 
         gateway.files = listOf(
-            DeviceMediaFile("new.png", 1024, "image/png", 3_000L, "media/3", "dl/3")
+            DeviceMediaFile("new.mp4", 1024, "video/mp4", 3_000L, "media/3", "dl/3")
         )
 
         viewModel.onUploadFile(createFakeUploadSource())

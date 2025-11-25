@@ -2,7 +2,7 @@ package com.smartsales.feature.media.audio
 
 // 文件：feature/media/src/main/java/com/smartsales/feature/media/audio/AudioFilesScreen.kt
 // 模块：:feature:media
-// 说明：音频库 Compose 界面，展示列表并触发同步、播放、应用及删除
+// 说明：音频库 Compose 界面，展示列表并触发同步、播放与删除（预留转写占位）
 // 作者：创建于 2025-11-21
 
 import androidx.compose.foundation.layout.Arrangement
@@ -22,7 +22,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.Card
@@ -53,7 +52,6 @@ fun AudioFilesScreen(
     onSyncClicked: () -> Unit,
     onRecordingClicked: (String) -> Unit,
     onPlayPauseClicked: (String) -> Unit,
-    onApplyClicked: (String) -> Unit,
     onDeleteClicked: (String) -> Unit,
     onErrorDismissed: () -> Unit,
     modifier: Modifier = Modifier
@@ -124,7 +122,6 @@ fun AudioFilesScreen(
                             recording = recording,
                             onClick = onRecordingClicked,
                             onPlayPauseClicked = onPlayPauseClicked,
-                            onApplyClicked = onApplyClicked,
                             onDeleteClicked = onDeleteClicked
                         )
                     }
@@ -146,7 +143,6 @@ private fun AudioRecordingItem(
     recording: AudioRecordingUi,
     onClick: (String) -> Unit,
     onPlayPauseClicked: (String) -> Unit,
-    onApplyClicked: (String) -> Unit,
     onDeleteClicked: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -212,11 +208,7 @@ private fun AudioRecordingItem(
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
-                TextButton(onClick = { onApplyClicked(recording.id) }) {
-                    Icon(Icons.Outlined.CheckCircle, contentDescription = null)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "应用")
-                }
+                // TODO: 未来在音频卡片加入“转写”“查看转写”操作
                 TextButton(onClick = { onDeleteClicked(recording.id) }) {
                     Icon(Icons.Default.Delete, contentDescription = null)
                     Spacer(modifier = Modifier.width(6.dp))

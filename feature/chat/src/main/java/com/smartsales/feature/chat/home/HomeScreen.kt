@@ -41,7 +41,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -63,6 +62,9 @@ import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.home.TranscriptionChatRequest
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreen.kt
 // 模块：:feature:chat
@@ -73,6 +75,7 @@ import kotlinx.coroutines.launch
 fun HomeScreenRoute(
     modifier: Modifier = Modifier,
     viewModel: HomeScreenViewModel = hiltViewModel(),
+    sessionId: String? = null,
     transcriptionRequest: TranscriptionChatRequest? = null,
     onTranscriptionRequestConsumed: () -> Unit = {},
     selectedSessionId: String? = null,
@@ -119,6 +122,9 @@ fun HomeScreenRoute(
             onSessionSelectionConsumed()
         }
     }
+    LaunchedEffect(sessionId) {
+        sessionId?.let { viewModel.setSession(it) }
+    }
 
     HomeScreen(
         state = state,
@@ -132,6 +138,9 @@ fun HomeScreenRoute(
         onRefreshDeviceAndAudio = viewModel::onRefreshDeviceAndAudio,
         onLoadMoreHistory = viewModel::onLoadMoreHistory,
         onProfileClicked = viewModel::onTapProfile,
+        onNewChatClicked = viewModel::onNewChatClicked,
+        onSessionSelected = viewModel::setSession,
+        chatErrorMessage = state.chatErrorMessage,
         modifier = modifier
     )
 }
@@ -150,6 +159,9 @@ fun HomeScreen(
     onRefreshDeviceAndAudio: () -> Unit,
     onLoadMoreHistory: () -> Unit,
     onProfileClicked: () -> Unit,
+    onNewChatClicked: () -> Unit = {},
+    onSessionSelected: (String) -> Unit = {},
+    chatErrorMessage: String? = null,
     modifier: Modifier = Modifier
 ) {
     val refreshingState = remember { mutableStateOf(false) }
@@ -219,6 +231,11 @@ fun HomeScreen(
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
+                SessionHeader(
+                    session = state.currentSession,
+                    onNewChatClicked = onNewChatClicked
+                )
+                Spacer(modifier = Modifier.height(8.dp))
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -243,6 +260,12 @@ fun HomeScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp)
                     ) {
+                        item("session-list") {
+                            SessionListSection(
+                                sessions = state.sessionList,
+                                onSessionSelected = onSessionSelected
+                            )
+                        }
                         if (state.isLoadingHistory) {
                             item("history-loading") {
                                 Text(
@@ -257,11 +280,15 @@ fun HomeScreen(
                         }
                         if (state.chatMessages.isEmpty()) {
                             item("empty") {
-                                EmptyChatHint(
-                                    quickSkills = state.quickSkills,
-                                    enabled = !state.isSending && !state.isStreaming,
-                                    onQuickSkillSelected = onQuickSkillSelected
-                                )
+                                if (state.sessionList.isEmpty()) {
+                                    EmptySessionHint(onNewChatClicked = onNewChatClicked)
+                                } else {
+                                    EmptyChatHint(
+                                        quickSkills = state.quickSkills,
+                                        enabled = !state.isSending && !state.isStreaming,
+                                        onQuickSkillSelected = onQuickSkillSelected
+                                    )
+                                }
                             }
                         } else {
                             items(state.chatMessages, key = { it.id }) { message ->
@@ -282,6 +309,20 @@ fun HomeScreen(
                 state = pullRefreshState,
                 modifier = Modifier.align(Alignment.TopCenter)
             )
+            chatErrorMessage?.let { message ->
+                SnackbarHost(
+                    hostState = remember { SnackbarHostState() },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 96.dp)
+                ) {
+                    Text(
+                        text = message,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
             if (showScrollToLatest.value) {
                 ScrollToLatestButton(
                     modifier = Modifier
@@ -305,11 +346,16 @@ object HomeScreenTestTags {
     const val ROOT = "home_screen_root"
     // 兼容旧测试
     const val PAGE = ROOT
+    const val SESSION_HEADER = "home_session_header"
+    const val LIST = "home_messages_list"
     const val DEVICE_BANNER = "home_device_banner"
     const val AUDIO_CARD = "home_audio_card"
     const val PROFILE_BUTTON = "home_profile_button"
     const val ACTIVE_SKILL_CHIP = "active_skill_chip"
     const val ACTIVE_SKILL_CHIP_CLOSE = "active_skill_chip_close"
+    const val SESSION_LIST = "home_session_list"
+    const val SESSION_LIST_ITEM_PREFIX = "home_session_item_"
+    const val NEW_CHAT_BUTTON = "home_new_chat_button"
     const val USER_MESSAGE = "home_user_message"
     const val ASSISTANT_MESSAGE = "home_assistant_message"
     const val INPUT_FIELD = "home_input_field"
@@ -418,6 +464,110 @@ private fun DeviceAudioBanner(
 }
 
 @Composable
+private fun SessionListSection(
+    sessions: List<SessionListItemUi>,
+    onSessionSelected: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(HomeScreenTestTags.SESSION_LIST),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "历史会话",
+            style = MaterialTheme.typography.titleSmall
+        )
+        if (sessions.isEmpty()) {
+            Text(
+                text = "暂无历史会话",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            return
+        }
+        sessions.forEach { session ->
+            SessionListItem(
+                session = session,
+                onClick = { onSessionSelected(session.id) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun SessionListItem(
+    session: SessionListItemUi,
+    onClick: () -> Unit
+) {
+    val background = if (session.isCurrent) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("${HomeScreenTestTags.SESSION_LIST_ITEM_PREFIX}${session.id}")
+            .clickable(onClick = onClick),
+        color = background,
+        tonalElevation = 1.dp,
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = session.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (session.isTranscription) {
+                    AssistChip(
+                        onClick = {},
+                        enabled = false,
+                        label = { Text(text = "通话分析") },
+                        colors = AssistChipDefaults.assistChipColors(
+                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
+                }
+                if (session.isCurrent) {
+                    AssistChip(
+                        onClick = {},
+                        enabled = false,
+                        label = { Text(text = "当前") },
+                        colors = AssistChipDefaults.assistChipColors(
+                            labelColor = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                }
+            }
+            if (session.lastMessagePreview.isNotBlank()) {
+                Text(
+                    text = session.lastMessagePreview,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(
+                text = formatSessionTime(session.updatedAtMillis),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
 private fun MessageBubble(
     message: ChatMessageUi,
     alignEnd: Boolean
@@ -463,6 +613,11 @@ private fun MessageBubble(
     }
 }
 
+private fun formatSessionTime(timestamp: Long): String {
+    val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+    return formatter.format(Date(timestamp))
+}
+
 @Composable
 private fun EmptyChatHint(
     quickSkills: List<QuickSkillUi>,
@@ -482,6 +637,22 @@ private fun EmptyChatHint(
             enabled = enabled,
             onQuickSkillSelected = onQuickSkillSelected
         )
+    }
+}
+
+@Composable
+private fun EmptySessionHint(onNewChatClicked: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = "还没有对话，点击「新建对话」开始聊天")
+        TextButton(onClick = onNewChatClicked) {
+            Text(text = "新建对话")
+        }
     }
 }
 
@@ -590,6 +761,50 @@ private fun ActiveSkillChip(
                     contentDescription = "清除快捷技能"
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun SessionHeader(
+    session: CurrentSessionUi,
+    onNewChatClicked: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .testTag(HomeScreenTestTags.SESSION_HEADER),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(
+                text = session.title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (session.isTranscription) {
+                AssistChip(
+                    onClick = {},
+                    enabled = false,
+                    label = { Text(text = "通话分析") },
+                    colors = AssistChipDefaults.assistChipColors(
+                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                )
+            }
+        }
+        TextButton(
+            onClick = onNewChatClicked,
+            modifier = Modifier.testTag(HomeScreenTestTags.NEW_CHAT_BUTTON)
+        ) {
+            Text(text = "新建对话")
         }
     }
 }

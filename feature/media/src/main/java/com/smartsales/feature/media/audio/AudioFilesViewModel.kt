@@ -219,14 +219,15 @@ class AudioFilesViewModel @Inject constructor(
                             items.any { recording -> recording.id == key }
                         },
                         isLoading = false,
-                        errorMessage = null
+                        errorMessage = null,
+                        loadErrorMessage = null
                     )
                 }
             }
 
             is Result.Error -> {
                 emitError(result.throwable.message)
-                _uiState.update { it.copy(isLoading = false) }
+                _uiState.update { it.copy(isLoading = false, loadErrorMessage = result.throwable.message) }
             }
         }
     }

@@ -9,6 +9,7 @@ data class TranscriptionChatRequest(
     val jobId: String,
     val fileName: String,
     val recordingId: String? = null,
+    val sessionId: String? = null,
     val transcriptPreview: String? = null,
     val transcriptMarkdown: String? = null
 )

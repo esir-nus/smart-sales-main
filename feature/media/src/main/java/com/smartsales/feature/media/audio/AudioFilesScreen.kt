@@ -42,7 +42,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.Divider
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -65,10 +69,12 @@ fun AudioFilesScreen(
     onErrorDismissed: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
     Scaffold(
         modifier = modifier
             .fillMaxSize()
             .testTag(AudioFilesTestTags.ROOT),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(text = "音频库") },
@@ -104,6 +110,16 @@ fun AudioFilesScreen(
                         .fillMaxWidth()
                         .testTag(AudioFilesTestTags.ERROR_BANNER)
                 )
+            }
+            uiState.loadErrorMessage?.let { message ->
+                Text(
+                    text = "加载录音失败，请稍后重试。",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                TextButton(onClick = onRefresh) {
+                    Text(text = "重试")
+                }
             }
             if (uiState.isLoading) {
                 Box(
@@ -146,6 +162,12 @@ fun AudioFilesScreen(
             onDismiss = onTranscriptDismissed,
             onAskAiClicked = onAskAiClicked
         )
+    }
+    uiState.errorMessage?.let { message ->
+        LaunchedEffect(message) {
+            snackbarHostState.showSnackbar(message)
+            onErrorDismissed()
+        }
     }
 }
 
@@ -333,7 +355,11 @@ private fun TranscriptViewerSheet(
             Spacer(modifier = Modifier.height(8.dp))
             Divider()
             Spacer(modifier = Modifier.height(8.dp))
-            val content = recording.fullTranscriptMarkdown ?: recording.transcriptPreview ?: "暂无内容"
+            val content = when (recording.transcriptionStatus) {
+                TranscriptionStatus.IN_PROGRESS -> "转写进行中，请稍后再试。"
+                TranscriptionStatus.ERROR -> "转写失败，可以重新创建转写任务。"
+                else -> recording.fullTranscriptMarkdown ?: recording.transcriptPreview ?: "暂无内容"
+            }
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

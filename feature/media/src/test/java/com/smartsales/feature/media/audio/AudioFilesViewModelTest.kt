@@ -102,6 +102,7 @@ class AudioFilesViewModelTest {
         assertFalse(state.isLoading)
         assertEquals("offline", state.errorMessage)
         assertTrue(state.recordings.isEmpty())
+        assertEquals("offline", state.loadErrorMessage)
     }
 
     @Test

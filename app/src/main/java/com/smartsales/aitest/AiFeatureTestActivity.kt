@@ -83,6 +83,7 @@ import com.smartsales.feature.chat.home.TranscriptionChatRequest
 import com.smartsales.feature.chat.history.ChatHistoryRoute
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
+import java.util.UUID
 import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
@@ -100,6 +101,7 @@ private fun AiFeatureTestApp() {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var currentPage by rememberSaveable { mutableStateOf(TestHomePage.Home) }
+    var manualSessionId by rememberSaveable { mutableStateOf("home-session") }
     var pendingTranscription by remember { mutableStateOf<TranscriptionChatRequest?>(null) }
     var pendingSessionId by remember { mutableStateOf<String?>(null) }
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -158,6 +160,7 @@ private fun AiFeatureTestApp() {
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .testTag(AiFeatureTestTags.PAGE_HOME),
+                                    sessionId = pendingSessionId ?: pendingTranscription?.sessionId ?: manualSessionId,
                                     transcriptionRequest = pendingTranscription,
                                     onTranscriptionRequestConsumed = { pendingTranscription = null },
                                     selectedSessionId = pendingSessionId,
@@ -202,13 +205,17 @@ private fun AiFeatureTestApp() {
                                         .fillMaxSize()
                                         .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES),
                                     onAskAiAboutTranscript = { recordingId, fileName, preview, full ->
+                                        val sessionId = "session-${UUID.randomUUID()}"
+                                        val jobId = "transcription-$recordingId"
                                         pendingTranscription = TranscriptionChatRequest(
-                                            jobId = "manual",
+                                            jobId = jobId,
                                             fileName = fileName,
                                             recordingId = recordingId,
+                                            sessionId = sessionId,
                                             transcriptPreview = preview,
                                             transcriptMarkdown = full
                                         )
+                                        pendingSessionId = sessionId
                                         currentPage = TestHomePage.Home
                                     }
                                 )

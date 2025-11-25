@@ -15,6 +15,8 @@ import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.history.ChatHistoryRepository
 import com.smartsales.feature.chat.history.toEntity
 import com.smartsales.feature.chat.history.toUiModel
+import com.smartsales.feature.chat.AiSessionRepository as SessionRepository
+import com.smartsales.feature.chat.AiSessionSummary
 import com.smartsales.feature.connectivity.ConnectionState
 import com.smartsales.feature.connectivity.ConnectivityError
 import com.smartsales.feature.connectivity.DeviceConnectionManager
@@ -32,8 +34,11 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
+
+private const val DEFAULT_SESSION_ID = "home-session"
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreenViewModel.kt
 // 模块：:feature:chat
@@ -93,6 +98,22 @@ sealed class HomeNavigationRequest {
     data object UserCenter : HomeNavigationRequest()
 }
 
+data class CurrentSessionUi(
+    val id: String,
+    val title: String,
+    val isTranscription: Boolean
+)
+
+/** UI 模型：会话列表的一条摘要。 */
+data class SessionListItemUi(
+    val id: String,
+    val title: String,
+    val lastMessagePreview: String,
+    val updatedAtMillis: Long,
+    val isCurrent: Boolean,
+    val isTranscription: Boolean
+)
+
 /** Home 页的不可变 UI 状态。 */
 data class HomeUiState(
     val chatMessages: List<ChatMessageUi> = emptyList(),
@@ -105,7 +126,14 @@ data class HomeUiState(
     val deviceSnapshot: DeviceSnapshotUi? = null,
     val audioSummary: AudioSummaryUi? = null,
     val snackbarMessage: String? = null,
-    val navigationRequest: HomeNavigationRequest? = null
+    val chatErrorMessage: String? = null,
+    val navigationRequest: HomeNavigationRequest? = null,
+    val sessionList: List<SessionListItemUi> = emptyList(),
+    val currentSession: CurrentSessionUi = CurrentSessionUi(
+        id = DEFAULT_SESSION_ID,
+        title = "新的聊天",
+        isTranscription = false
+    )
 )
 
 /** 外部依赖（除 AiChatService 外保留原有 stub）。 */
@@ -122,7 +150,8 @@ class HomeScreenViewModel @Inject constructor(
     private val mediaSyncCoordinator: MediaSyncCoordinator,
     private val transcriptionCoordinator: AudioTranscriptionCoordinator,
     private val quickSkillCatalog: QuickSkillCatalog,
-    private val chatHistoryRepository: ChatHistoryRepository
+    private val chatHistoryRepository: ChatHistoryRepository,
+    private val sessionRepository: SessionRepository
 ) : ViewModel() {
 
     private val quickSkillDefinitions = quickSkillCatalog.homeQuickSkills()
@@ -131,6 +160,7 @@ class HomeScreenViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = _uiState
     private var latestMediaSyncState: MediaSyncState? = null
     private var sessionId: String = DEFAULT_SESSION_ID
+    private var latestSessionSummaries: List<AiSessionSummary> = emptyList()
     private var pendingSkillId: QuickSkillId? = null
     private var transcriptionJob: Job? = null
 
@@ -138,9 +168,10 @@ class HomeScreenViewModel @Inject constructor(
         // 从 catalog 加载快捷技能到状态
         val skills = quickSkillDefinitions.map { it.toUiModel() }
         _uiState.update { it.copy(quickSkills = skills) }
-        loadSession(DEFAULT_SESSION_ID)
+        setSession(DEFAULT_SESSION_ID)
         observeDeviceConnection()
         observeMediaSync()
+        observeSessions()
     }
 
     fun onInputChanged(text: String) {
@@ -248,65 +279,87 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     fun onTranscriptionRequested(request: TranscriptionChatRequest) {
-        val transcript = request.transcriptMarkdown ?: request.transcriptPreview
-        if (!transcript.isNullOrBlank()) {
-            val contextMessage = ChatMessageUi(
-                id = nextMessageId(),
-                role = ChatMessageRole.ASSISTANT,
-                content = buildTranscriptContext(request.fileName, transcript),
-                timestampMillis = System.currentTimeMillis()
-            )
-            _uiState.update { state ->
-                state.copy(
-                    chatMessages = state.chatMessages + contextMessage,
-                    snackbarMessage = null
+        viewModelScope.launch {
+            val transcript = request.transcriptMarkdown ?: request.transcriptPreview
+            val targetSessionId = request.sessionId ?: "session-${UUID.randomUUID()}"
+            val title = "通话分析 – ${request.fileName}".take(40)
+            val existing = chatHistoryRepository.loadLatestSession(targetSessionId)
+            this@HomeScreenViewModel.sessionId = targetSessionId
+            ensureSessionSummary(targetSessionId, title)
+            _uiState.update {
+                it.copy(
+                    currentSession = CurrentSessionUi(
+                        id = targetSessionId,
+                        title = title,
+                        isTranscription = true
+                    ),
+                    chatMessages = existing.map { item -> item.toUiModel() },
+                    isLoadingHistory = false
                 )
             }
-            persistMessagesAsync()
-            return
-        }
-        val introId = nextMessageId()
-        val introMessage = ChatMessageUi(
-            id = introId,
-            role = ChatMessageRole.ASSISTANT,
-            content = "正在转写音频文件 ${request.fileName} ...",
-            timestampMillis = System.currentTimeMillis(),
-            isStreaming = true
-        )
-        _uiState.update { it.copy(chatMessages = it.chatMessages + introMessage, snackbarMessage = null) }
-        persistMessagesAsync()
-        transcriptionJob?.cancel()
-        transcriptionJob = viewModelScope.launch {
-            transcriptionCoordinator.observeJob(request.jobId).collectLatest { state ->
-                when (state) {
-                    AudioTranscriptionJobState.Idle -> Unit
-                    is AudioTranscriptionJobState.InProgress -> updateAssistantMessage(introId) { msg ->
-                        msg.copy(
-                            content = "正在转写音频文件 ${request.fileName} ... ${state.progressPercent}%",
-                            isStreaming = true
-                        )
-                    }
+            existing.lastOrNull()?.content?.let { updateSessionSummary(it) }
+            if (!transcript.isNullOrBlank() && existing.isEmpty()) {
+                val contextMessage = ChatMessageUi(
+                    id = nextMessageId(),
+                    role = ChatMessageRole.ASSISTANT,
+                    content = buildTranscriptContext(request.fileName, transcript),
+                    timestampMillis = System.currentTimeMillis()
+                )
+                _uiState.update { state ->
+                    state.copy(
+                        chatMessages = state.chatMessages + contextMessage,
+                        snackbarMessage = null
+                    )
+                }
+                persistMessagesAsync()
+                updateSessionSummary(contextMessage.content)
+                return@launch
+            }
+            if (transcript.isNullOrBlank()) {
+                val introId = nextMessageId()
+                val introMessage = ChatMessageUi(
+                    id = introId,
+                    role = ChatMessageRole.ASSISTANT,
+                    content = "正在转写音频文件 ${request.fileName} ...",
+                    timestampMillis = System.currentTimeMillis(),
+                    isStreaming = true
+                )
+                _uiState.update { it.copy(chatMessages = _uiState.value.chatMessages + introMessage, snackbarMessage = null) }
+                persistMessagesAsync()
+                transcriptionJob?.cancel()
+                transcriptionJob = launch {
+                    transcriptionCoordinator.observeJob(request.jobId).collectLatest { state ->
+                        when (state) {
+                            AudioTranscriptionJobState.Idle -> Unit
+                            is AudioTranscriptionJobState.InProgress -> updateAssistantMessage(introId) { msg ->
+                                msg.copy(
+                                    content = "正在转写音频文件 ${request.fileName} ... ${state.progressPercent}%",
+                                    isStreaming = true
+                                )
+                            }
 
-                    is AudioTranscriptionJobState.Completed -> {
-                        updateAssistantMessage(introId, persistAfterUpdate = true) { msg ->
-                            msg.copy(
-                                content = "转写完成：${request.fileName}",
-                                isStreaming = false
-                            )
-                        }
-                        appendAssistantMessage(state.transcriptMarkdown)
-                    }
+                            is AudioTranscriptionJobState.Completed -> {
+                                updateAssistantMessage(introId, persistAfterUpdate = true) { msg ->
+                                    msg.copy(
+                                        content = "转写完成：${request.fileName}",
+                                        isStreaming = false
+                                    )
+                                }
+                                appendAssistantMessage(state.transcriptMarkdown)
+                            }
 
-                    is AudioTranscriptionJobState.Failed -> {
-                        val reason = state.reason.ifBlank { "转写失败" }
-                        updateAssistantMessage(introId, persistAfterUpdate = true) { msg ->
-                            msg.copy(
-                                content = "转写失败：$reason",
-                                isStreaming = false,
-                                hasError = true
-                            )
+                            is AudioTranscriptionJobState.Failed -> {
+                                val reason = state.reason.ifBlank { "转写失败" }
+                                updateAssistantMessage(introId, persistAfterUpdate = true) { msg ->
+                                    msg.copy(
+                                        content = "转写失败：$reason",
+                                        isStreaming = false,
+                                        hasError = true
+                                    )
+                                }
+                                _uiState.update { it.copy(snackbarMessage = it.snackbarMessage ?: reason) }
+                            }
                         }
-                        _uiState.update { it.copy(snackbarMessage = it.snackbarMessage ?: reason) }
                     }
                 }
             }
@@ -329,17 +382,31 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     fun onDismissError() {
-        _uiState.update { it.copy(snackbarMessage = null) }
+        _uiState.update { it.copy(snackbarMessage = null, chatErrorMessage = null) }
     }
 
     fun onNavigationConsumed() {
         _uiState.update { it.copy(navigationRequest = null) }
     }
 
-    fun setSession(sessionId: String) {
-        if (sessionId == this.sessionId) return
-        this.sessionId = sessionId
-        loadSession(sessionId)
+    fun setSession(sessionId: String, titleOverride: String? = null, isTranscription: Boolean = false) {
+        viewModelScope.launch {
+            if (sessionId != this@HomeScreenViewModel.sessionId) {
+                this@HomeScreenViewModel.sessionId = sessionId
+                applySessionList()
+                loadSession(sessionId)
+            }
+            val summary = ensureSessionSummary(sessionId, titleOverride)
+            _uiState.update {
+                it.copy(
+                    currentSession = CurrentSessionUi(
+                        id = sessionId,
+                        title = summary.title,
+                        isTranscription = isTranscription
+                    )
+                )
+            }
+        }
     }
 
     fun setQuickSkills(skills: List<QuickSkillUi>) {
@@ -349,6 +416,27 @@ class HomeScreenViewModel @Inject constructor(
     fun clearSelectedSkill() {
         pendingSkillId = null
         _uiState.update { it.copy(selectedSkill = null) }
+    }
+
+    fun onNewChatClicked() {
+        viewModelScope.launch {
+            val newSessionId = "session-${UUID.randomUUID()}"
+            sessionId = newSessionId
+            val summary = ensureSessionSummary(newSessionId, titleOverride = "新的聊天")
+            _uiState.update {
+                it.copy(
+                    currentSession = CurrentSessionUi(
+                        id = newSessionId,
+                        title = summary.title,
+                        isTranscription = false
+                    ),
+                    chatMessages = emptyList(),
+                    isLoadingHistory = false
+                )
+            }
+            chatHistoryRepository.saveMessages(newSessionId, emptyList())
+            applySessionList()
+        }
     }
 
     private fun observeDeviceConnection() {
@@ -385,6 +473,29 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
+    private fun observeSessions() {
+        viewModelScope.launch {
+            sessionRepository.summaries.collectLatest { summaries ->
+                latestSessionSummaries = summaries
+                applySessionList()
+            }
+        }
+    }
+
+    private fun applySessionList() {
+        val mapped = latestSessionSummaries.map { summary ->
+            SessionListItemUi(
+                id = summary.id,
+                title = summary.title,
+                lastMessagePreview = summary.lastMessagePreview,
+                updatedAtMillis = summary.updatedAtMillis,
+                isCurrent = summary.id == sessionId,
+                isTranscription = summary.title.startsWith("通话分析 –")
+            )
+        }
+        _uiState.update { it.copy(sessionList = mapped) }
+    }
+
     private fun applyAudioSummary(syncState: MediaSyncState) {
         latestMediaSyncState = syncState
         val summary = syncState.toAudioSummaryUi()
@@ -409,6 +520,9 @@ class HomeScreenViewModel @Inject constructor(
                         isLoadingHistory = false
                     )
                 }
+                saved.lastOrNull()?.content?.let { preview ->
+                    updateSessionSummary(preview)
+                }
             } else {
                 _uiState.update { it.copy(isLoadingHistory = false) }
             }
@@ -428,6 +542,7 @@ class HomeScreenViewModel @Inject constructor(
     ) {
         val content = messageText.trim()
         if (content.isEmpty() || _uiState.value.isSending) return
+        _uiState.update { it.copy(chatErrorMessage = null) }
         val quickSkill = pendingSkillId?.let { id ->
             quickSkillDefinitionsById[id]
         }
@@ -462,6 +577,9 @@ class HomeScreenViewModel @Inject constructor(
         )
         _uiState.value = newState
         persistMessagesAsync()
+        viewModelScope.launch {
+            updateSessionSummary(userMessage.content)
+        }
         val request = buildChatRequest(content, quickSkillId, newState.chatMessages, audioContext)
         startStreamingResponse(request, assistantPlaceholder.id)
     }
@@ -483,6 +601,10 @@ class HomeScreenViewModel @Inject constructor(
                             msg.copy(content = event.fullText, isStreaming = false)
                         }
                         _uiState.update { it.copy(isSending = false, isStreaming = false) }
+                        viewModelScope.launch {
+                            updateSessionSummary(event.fullText)
+                            applySessionList()
+                        }
                     }
                     is ChatStreamEvent.Error -> {
                         // 错误：标记消息失败并弹出提示
@@ -493,7 +615,7 @@ class HomeScreenViewModel @Inject constructor(
                             it.copy(
                                 isSending = false,
                                 isStreaming = false,
-                                snackbarMessage = event.throwable.message ?: "AI 回复失败"
+                                chatErrorMessage = event.throwable.message ?: "AI 回复失败"
                             )
                         }
                     }
@@ -533,6 +655,9 @@ class HomeScreenViewModel @Inject constructor(
         )
         _uiState.update { it.copy(chatMessages = it.chatMessages + message) }
         persistMessagesAsync()
+        viewModelScope.launch {
+            updateSessionSummary(message.content)
+        }
     }
 
     private fun buildChatRequest(
@@ -711,7 +836,6 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     companion object {
-        private const val DEFAULT_SESSION_ID = "home-session"
         private fun buildTranscriptContext(fileName: String, transcript: String): String {
             return buildString {
                 append("你是一名销售助理。以下是通话记录，请帮我分析、总结或提出行动建议。\n")
@@ -719,5 +843,35 @@ class HomeScreenViewModel @Inject constructor(
                 append(transcript)
             }
         }
+    }
+
+    private suspend fun ensureSessionSummary(
+        sessionId: String,
+        titleOverride: String? = null
+    ): AiSessionSummary {
+        val existing = sessionRepository.findById(sessionId)
+        val title = titleOverride ?: existing?.title ?: "新的聊天"
+        val preview = existing?.lastMessagePreview ?: ""
+        val summary = AiSessionSummary(
+            id = sessionId,
+            title = title,
+            lastMessagePreview = preview,
+            updatedAtMillis = existing?.updatedAtMillis ?: System.currentTimeMillis(),
+            pinned = existing?.pinned ?: false
+        )
+        sessionRepository.upsert(summary)
+        return summary
+    }
+
+    private suspend fun updateSessionSummary(lastPreview: String) {
+        val existing = sessionRepository.findById(sessionId)
+        val summary = AiSessionSummary(
+            id = sessionId,
+            title = existing?.title ?: _uiState.value.currentSession.title,
+            lastMessagePreview = lastPreview,
+            updatedAtMillis = System.currentTimeMillis(),
+            pinned = existing?.pinned ?: false
+        )
+        sessionRepository.upsert(summary)
     }
 }

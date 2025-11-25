@@ -217,6 +217,7 @@ class AudioFilesViewModelTest {
         val recording = viewModel.uiState.value.recordings.first()
         assertEquals(TranscriptionStatus.DONE, recording.transcriptionStatus)
         assertEquals("第一行内容", recording.transcriptPreview)
+        assertEquals("第一行内容\n更多", recording.fullTranscriptMarkdown)
     }
 
     @Test

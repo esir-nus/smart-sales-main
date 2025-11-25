@@ -24,6 +24,7 @@ data class AudioRecordingUi(
     val createdAtText: String = "",
     val transcriptionStatus: TranscriptionStatus = TranscriptionStatus.NONE,
     val transcriptPreview: String? = null,
+    val fullTranscriptMarkdown: String? = null,
     val isPlaying: Boolean = false,
     val hasLocalCopy: Boolean = false
 )

@@ -8,6 +8,7 @@ package com.smartsales.feature.media.audio
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.junit4.ComposeTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -101,5 +102,53 @@ class AudioFilesScreenTest {
         composeRule.onNodeWithTag("${AudioFilesTestTags.STATUS_CHIP_PREFIX}d1").assertIsDisplayed()
         composeRule.onNodeWithText("已完成").assertIsDisplayed()
         composeRule.onNodeWithTag("${AudioFilesTestTags.TRANSCRIPT_BUTTON_PREFIX}d1").assertIsDisplayed()
+    }
+
+    @Test
+    fun transcriptViewer_showsFullContent_andDismisses() {
+        composeRule.setContent {
+            MaterialTheme {
+                AudioFilesScreen(
+                    uiState = AudioFilesUiState(
+                        recordings = listOf(
+                            AudioRecordingUi(
+                                id = "d2",
+                                title = "d2",
+                                fileName = "d2.wav",
+                                createdAtText = "today",
+                                transcriptionStatus = TranscriptionStatus.DONE,
+                                transcriptPreview = "preview",
+                                fullTranscriptMarkdown = "# 标题\n- 行1\n正文"
+                            )
+                        ),
+                        transcriptPreviewRecording = AudioRecordingUi(
+                            id = "d2",
+                            title = "d2",
+                            fileName = "d2.wav",
+                            createdAtText = "today",
+                            transcriptionStatus = TranscriptionStatus.DONE,
+                            transcriptPreview = "preview",
+                            fullTranscriptMarkdown = "# 标题\n- 行1\n正文"
+                        )
+                    ),
+                    onRefresh = {},
+                    onSyncClicked = {},
+                    onRecordingClicked = {},
+                    onPlayPauseClicked = {},
+                    onDeleteClicked = {},
+                    onTranscribeClicked = {},
+                    onTranscriptClicked = {},
+                    onTranscriptDismissed = {},
+                    onErrorDismissed = {},
+                    modifier = Modifier
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(AudioFilesTestTags.TRANSCRIPT_DIALOG).assertIsDisplayed()
+        composeRule.onNodeWithTag(AudioFilesTestTags.TRANSCRIPT_CONTENT).assertIsDisplayed()
+        composeRule.onNodeWithText("标题").assertIsDisplayed()
+        composeRule.onNodeWithText("行1").assertIsDisplayed()
+        composeRule.onNodeWithText("正文").assertIsDisplayed()
     }
 }

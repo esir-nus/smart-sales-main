@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,6 +23,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.Card
@@ -37,7 +40,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Divider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -136,7 +140,7 @@ fun AudioFilesScreen(
         }
     }
     uiState.transcriptPreviewRecording?.let { recording ->
-        TranscriptPreviewDialog(
+        TranscriptViewerSheet(
             recording = recording,
             onDismiss = onTranscriptDismissed
         )
@@ -152,6 +156,7 @@ object AudioFilesTestTags {
     const val TRANSCRIPT_BUTTON_PREFIX = "audio_files_transcript_"
     const val STATUS_CHIP_PREFIX = "audio_files_status_chip_"
     const val TRANSCRIPT_DIALOG = "audio_files_transcript_dialog"
+    const val TRANSCRIPT_CONTENT = "audio_files_transcript_content"
 }
 
 @Composable
@@ -304,19 +309,56 @@ private fun ErrorBanner(
 }
 
 @Composable
-private fun TranscriptPreviewDialog(
+@OptIn(ExperimentalMaterial3Api::class)
+private fun TranscriptViewerSheet(
     recording: AudioRecordingUi,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    androidx.compose.material3.ModalBottomSheet(
         modifier = Modifier.testTag(AudioFilesTestTags.TRANSCRIPT_DIALOG),
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
+        onDismissRequest = onDismiss
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            Text(
+                text = recording.fileName,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Divider()
+            Spacer(modifier = Modifier.height(8.dp))
+            val content = recording.fullTranscriptMarkdown ?: recording.transcriptPreview ?: "暂无内容"
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 200.dp, max = 480.dp)
+                    .verticalScroll(rememberScrollState())
+                    .testTag(AudioFilesTestTags.TRANSCRIPT_CONTENT),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                content.lines().forEach { line ->
+                    Text(
+                        text = formatMarkdownLite(line),
+                        style = when {
+                            line.startsWith("##") -> MaterialTheme.typography.titleSmall
+                            line.startsWith("#") -> MaterialTheme.typography.titleMedium
+                            line.startsWith("- ") -> MaterialTheme.typography.bodyMedium
+                            else -> MaterialTheme.typography.bodyMedium
+                        }
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
                 Text(text = "关闭")
             }
-        },
-        title = { Text(text = recording.fileName) },
-        text = { Text(text = recording.transcriptPreview ?: "暂无内容") }
-    )
+        }
+    }
 }
+
+@Composable
+private fun formatMarkdownLite(line: String): String =
+    line.trimStart('#', ' ', '\t')

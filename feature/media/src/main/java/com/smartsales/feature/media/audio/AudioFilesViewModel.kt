@@ -268,7 +268,8 @@ class AudioFilesViewModel @Inject constructor(
                                     if (recording.id == recordingId) {
                                         recording.copy(
                                             transcriptionStatus = TranscriptionStatus.DONE,
-                                            transcriptPreview = preview
+                                            transcriptPreview = preview,
+                                            fullTranscriptMarkdown = state.transcriptMarkdown
                                         )
                                     } else recording
                                 }

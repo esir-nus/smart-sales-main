@@ -37,6 +37,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,6 +54,9 @@ fun AudioFilesScreen(
     onRecordingClicked: (String) -> Unit,
     onPlayPauseClicked: (String) -> Unit,
     onDeleteClicked: (String) -> Unit,
+    onTranscribeClicked: (String) -> Unit,
+    onTranscriptClicked: (String) -> Unit,
+    onTranscriptDismissed: () -> Unit,
     onErrorDismissed: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -122,12 +126,20 @@ fun AudioFilesScreen(
                             recording = recording,
                             onClick = onRecordingClicked,
                             onPlayPauseClicked = onPlayPauseClicked,
-                            onDeleteClicked = onDeleteClicked
+                            onDeleteClicked = onDeleteClicked,
+                            onTranscribeClicked = onTranscribeClicked,
+                            onTranscriptClicked = onTranscriptClicked
                         )
                     }
                 }
             }
         }
+    }
+    uiState.transcriptPreviewRecording?.let { recording ->
+        TranscriptPreviewDialog(
+            recording = recording,
+            onDismiss = onTranscriptDismissed
+        )
     }
 }
 
@@ -136,6 +148,10 @@ object AudioFilesTestTags {
     const val SYNC_BUTTON = "audio_files_sync_button"
     const val EMPTY_STATE = "audio_files_empty_state"
     const val ERROR_BANNER = "audio_files_error_banner"
+    const val TRANSCRIBE_BUTTON_PREFIX = "audio_files_transcribe_"
+    const val TRANSCRIPT_BUTTON_PREFIX = "audio_files_transcript_"
+    const val STATUS_CHIP_PREFIX = "audio_files_status_chip_"
+    const val TRANSCRIPT_DIALOG = "audio_files_transcript_dialog"
 }
 
 @Composable
@@ -144,6 +160,8 @@ private fun AudioRecordingItem(
     onClick: (String) -> Unit,
     onPlayPauseClicked: (String) -> Unit,
     onDeleteClicked: (String) -> Unit,
+    onTranscribeClicked: (String) -> Unit,
+    onTranscriptClicked: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -176,25 +194,28 @@ private fun AudioRecordingItem(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                ElevatedAssistChip(
-                    onClick = { onClick(recording.id) },
-                    label = {
-                        Text(
-                            text = when (recording.transcriptionStatus) {
-                                AudioTranscriptionStatus.None -> "未转写"
-                                AudioTranscriptionStatus.InProgress -> "转写中"
-                                AudioTranscriptionStatus.Done -> "已转写"
-                                AudioTranscriptionStatus.Error -> "失败"
-                            }
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.VolumeUp,
-                            contentDescription = null
-                        )
-                    }
-                )
+                if (recording.transcriptionStatus != TranscriptionStatus.NONE) {
+                    ElevatedAssistChip(
+                        modifier = Modifier.testTag("${AudioFilesTestTags.STATUS_CHIP_PREFIX}${recording.id}"),
+                        onClick = { onClick(recording.id) },
+                        label = {
+                            Text(
+                                text = when (recording.transcriptionStatus) {
+                                    TranscriptionStatus.NONE -> "未转写"
+                                    TranscriptionStatus.IN_PROGRESS -> "转写中…"
+                                    TranscriptionStatus.DONE -> "已完成"
+                                    TranscriptionStatus.ERROR -> "失败"
+                                }
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.VolumeUp,
+                                contentDescription = null
+                            )
+                        }
+                    )
+                }
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -208,7 +229,22 @@ private fun AudioRecordingItem(
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
-                // TODO: 未来在音频卡片加入“转写”“查看转写”操作
+                if (recording.transcriptionStatus == TranscriptionStatus.NONE) {
+                    TextButton(
+                        onClick = { onTranscribeClicked(recording.id) },
+                        modifier = Modifier.testTag("${AudioFilesTestTags.TRANSCRIBE_BUTTON_PREFIX}${recording.id}")
+                    ) {
+                        Text(text = "转写")
+                    }
+                }
+                if (recording.transcriptionStatus == TranscriptionStatus.DONE) {
+                    TextButton(
+                        onClick = { onTranscriptClicked(recording.id) },
+                        modifier = Modifier.testTag("${AudioFilesTestTags.TRANSCRIPT_BUTTON_PREFIX}${recording.id}")
+                    ) {
+                        Text(text = "查看转写")
+                    }
+                }
                 TextButton(onClick = { onDeleteClicked(recording.id) }) {
                     Icon(Icons.Default.Delete, contentDescription = null)
                     Spacer(modifier = Modifier.width(6.dp))
@@ -265,4 +301,22 @@ private fun ErrorBanner(
             Text(text = "知道了")
         }
     }
+}
+
+@Composable
+private fun TranscriptPreviewDialog(
+    recording: AudioRecordingUi,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        modifier = Modifier.testTag(AudioFilesTestTags.TRANSCRIPT_DIALOG),
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = "关闭")
+            }
+        },
+        title = { Text(text = recording.fileName) },
+        text = { Text(text = recording.transcriptPreview ?: "暂无内容") }
+    )
 }

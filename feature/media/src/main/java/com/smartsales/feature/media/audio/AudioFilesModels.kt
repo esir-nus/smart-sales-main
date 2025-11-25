@@ -10,6 +10,7 @@ data class AudioFilesUiState(
     val isSyncing: Boolean = false,
     val recordings: List<AudioRecordingUi> = emptyList(),
     val selectedRecordingId: String? = null,
+    val transcriptPreviewRecording: AudioRecordingUi? = null,
     val errorMessage: String? = null
 )
 
@@ -20,14 +21,15 @@ data class AudioRecordingUi(
     val durationMillis: Long? = null,
     val createdAtMillis: Long? = null,
     val createdAtText: String = "",
-    val transcriptionStatus: AudioTranscriptionStatus = AudioTranscriptionStatus.None,
+    val transcriptionStatus: TranscriptionStatus = TranscriptionStatus.NONE,
+    val transcriptPreview: String? = null,
     val isPlaying: Boolean = false,
     val hasLocalCopy: Boolean = false
 )
 
-enum class AudioTranscriptionStatus {
-    None,
-    InProgress,
-    Done,
-    Error
+enum class TranscriptionStatus {
+    NONE,
+    IN_PROGRESS,
+    DONE,
+    ERROR
 }

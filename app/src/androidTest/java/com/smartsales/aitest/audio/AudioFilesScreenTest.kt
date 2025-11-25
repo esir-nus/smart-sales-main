@@ -29,7 +29,7 @@ import com.smartsales.feature.media.audio.AudioFilesScreen
 import com.smartsales.feature.media.audio.AudioFilesTestTags
 import com.smartsales.feature.media.audio.AudioFilesUiState
 import com.smartsales.feature.media.audio.AudioRecordingUi
-import com.smartsales.feature.media.audio.AudioTranscriptionStatus
+import com.smartsales.feature.media.audio.TranscriptionStatus
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -52,6 +52,9 @@ class AudioFilesScreenTest {
                     onRecordingClicked = {},
                     onPlayPauseClicked = {},
                     onDeleteClicked = {},
+                    onTranscribeClicked = {},
+                    onTranscriptClicked = {},
+                    onTranscriptDismissed = {},
                     onErrorDismissed = {},
                     modifier = Modifier.fillMaxSize()
                 )
@@ -76,6 +79,9 @@ class AudioFilesScreenTest {
                     onRecordingClicked = {},
                     onPlayPauseClicked = {},
                     onDeleteClicked = {},
+                    onTranscribeClicked = {},
+                    onTranscriptClicked = {},
+                    onTranscriptDismissed = {},
                     onErrorDismissed = {},
                     modifier = Modifier.fillMaxSize()
                 )
@@ -104,6 +110,9 @@ class AudioFilesScreenTest {
                     onRecordingClicked = {},
                     onPlayPauseClicked = {},
                     onDeleteClicked = {},
+                    onTranscribeClicked = {},
+                    onTranscriptClicked = {},
+                    onTranscriptDismissed = {},
                     onErrorDismissed = { uiState = uiState.copy(errorMessage = null) },
                     modifier = Modifier.fillMaxSize()
                 )
@@ -131,6 +140,9 @@ class AudioFilesScreenTest {
                     onRecordingClicked = {},
                     onPlayPauseClicked = {},
                     onDeleteClicked = {},
+                    onTranscribeClicked = {},
+                    onTranscriptClicked = {},
+                    onTranscriptDismissed = {},
                     onErrorDismissed = {},
                     modifier = Modifier.fillMaxSize()
                 )
@@ -147,7 +159,7 @@ class AudioFilesScreenTest {
             title = id,
             fileName = "$id.wav",
             createdAtText = "2025-11-21",
-            transcriptionStatus = AudioTranscriptionStatus.None
+            transcriptionStatus = TranscriptionStatus.NONE
         )
 
     private fun progressMatcher(): SemanticsMatcher =

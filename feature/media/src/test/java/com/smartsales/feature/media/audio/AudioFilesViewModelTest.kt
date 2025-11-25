@@ -16,6 +16,7 @@ import com.smartsales.feature.media.audiofiles.DeviceHttpEndpointProvider
 import com.smartsales.feature.media.devicemanager.DeviceMediaFile
 import com.smartsales.feature.media.devicemanager.DeviceMediaGateway
 import com.smartsales.feature.media.devicemanager.DeviceUploadSource
+import com.smartsales.feature.media.audio.TranscriptionStatus
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -80,6 +81,7 @@ class AudioFilesViewModelTest {
         assertFalse(state.isLoading)
         assertEquals(1, state.recordings.size)
         assertEquals("clip", state.recordings.first().title)
+        assertEquals(TranscriptionStatus.NONE, state.recordings.first().transcriptionStatus)
         assertEquals(null, state.errorMessage)
     }
 
@@ -144,6 +146,38 @@ class AudioFilesViewModelTest {
         assertEquals("boom", viewModel.uiState.value.errorMessage)
         viewModel.onErrorDismissed()
         assertEquals(null, viewModel.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun `transcribe click marks recording in progress`() = runTest(dispatcher) {
+        gateway.files = listOf(
+            DeviceMediaFile("voice.mp3", 1, "audio/mpeg", 10L, "m2", "d2")
+        )
+        endpointProvider.emit("http://10.0.0.6:8000")
+        advanceUntilIdle()
+
+        viewModel.onTranscribeClicked("voice.mp3")
+        val state = viewModel.uiState.value
+        val recording = state.recordings.first()
+        assertEquals(TranscriptionStatus.IN_PROGRESS, recording.transcriptionStatus)
+        assertEquals(null, state.transcriptPreviewRecording)
+        assertFalse(recording.transcriptPreview.isNullOrBlank())
+    }
+
+    @Test
+    fun `transcript dialog opens and dismisses`() = runTest(dispatcher) {
+        gateway.files = listOf(
+            DeviceMediaFile("voice2.mp3", 1, "audio/mpeg", 10L, "m2", "d2")
+        )
+        endpointProvider.emit("http://10.0.0.7:8000")
+        advanceUntilIdle()
+        viewModel.onTranscribeClicked("voice2.mp3")
+
+        viewModel.onTranscriptClicked("voice2.mp3")
+        assertEquals("voice2.mp3", viewModel.uiState.value.transcriptPreviewRecording?.id)
+
+        viewModel.onTranscriptDismissed()
+        assertEquals(null, viewModel.uiState.value.transcriptPreviewRecording)
     }
 
     private class FakeDeviceMediaGateway : DeviceMediaGateway {

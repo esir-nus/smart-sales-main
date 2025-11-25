@@ -91,6 +91,33 @@ class AudioFilesViewModel @Inject constructor(
         }
     }
 
+    fun onTranscribeClicked(id: String) {
+        _uiState.update { state ->
+            state.copy(
+                recordings = state.recordings.map { recording ->
+                    if (recording.id == id) {
+                        recording.copy(
+                            transcriptionStatus = TranscriptionStatus.IN_PROGRESS,
+                            transcriptPreview = recording.transcriptPreview ?: "转写占位内容"
+                        )
+                    } else {
+                        recording
+                    }
+                },
+                transcriptPreviewRecording = null
+            )
+        }
+    }
+
+    fun onTranscriptClicked(id: String) {
+        val target = _uiState.value.recordings.find { it.id == id } ?: return
+        _uiState.update { it.copy(transcriptPreviewRecording = target) }
+    }
+
+    fun onTranscriptDismissed() {
+        _uiState.update { it.copy(transcriptPreviewRecording = null) }
+    }
+
     fun onErrorDismissed() {
         _uiState.update { it.copy(errorMessage = null) }
     }
@@ -104,6 +131,7 @@ class AudioFilesViewModel @Inject constructor(
                         it.copy(
                             recordings = emptyList(),
                             selectedRecordingId = null,
+                            transcriptPreviewRecording = null,
                             isLoading = false,
                             errorMessage = null
                         )
@@ -139,6 +167,7 @@ class AudioFilesViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         recordings = items,
+                        transcriptPreviewRecording = null,
                         isLoading = false,
                         errorMessage = null
                     )
@@ -178,7 +207,7 @@ class AudioFilesViewModel @Inject constructor(
             durationMillis = null,
             createdAtMillis = modifiedAtMillis,
             createdAtText = formatTimestamp(modifiedAtMillis),
-            transcriptionStatus = AudioTranscriptionStatus.None,
+            transcriptionStatus = TranscriptionStatus.NONE,
             isPlaying = playingId == name,
             hasLocalCopy = false
         )

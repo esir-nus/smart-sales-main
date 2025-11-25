@@ -11,6 +11,7 @@ data class AudioFilesUiState(
     val recordings: List<AudioRecordingUi> = emptyList(),
     val selectedRecordingId: String? = null,
     val transcriptPreviewRecording: AudioRecordingUi? = null,
+    val tingwuTaskIds: Map<String, String> = emptyMap(),
     val errorMessage: String? = null
 )
 

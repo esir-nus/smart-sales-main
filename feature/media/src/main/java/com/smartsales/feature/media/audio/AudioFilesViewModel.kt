@@ -11,6 +11,7 @@ import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
 import com.smartsales.feature.media.MediaSyncCoordinator
 import com.smartsales.feature.media.audiofiles.DeviceHttpEndpointProvider
+import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
 import com.smartsales.feature.media.devicemanager.DeviceMediaFile
 import com.smartsales.feature.media.devicemanager.DeviceMediaGateway
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,6 +31,7 @@ import kotlinx.coroutines.withContext
 class AudioFilesViewModel @Inject constructor(
     private val mediaGateway: DeviceMediaGateway,
     private val mediaSyncCoordinator: MediaSyncCoordinator,
+    private val transcriptionCoordinator: AudioTranscriptionCoordinator,
     private val endpointProvider: DeviceHttpEndpointProvider,
     private val dispatchers: DispatcherProvider
 ) : ViewModel() {
@@ -39,6 +41,7 @@ class AudioFilesViewModel @Inject constructor(
 
     private var currentBaseUrl: String? = null
     private var playingId: String? = null
+    private val recordingSources = mutableMapOf<String, DeviceMediaFile>()
 
     init {
         observeEndpoint()
@@ -92,20 +95,59 @@ class AudioFilesViewModel @Inject constructor(
     }
 
     fun onTranscribeClicked(id: String) {
-        _uiState.update { state ->
-            state.copy(
-                recordings = state.recordings.map { recording ->
-                    if (recording.id == id) {
-                        recording.copy(
-                            transcriptionStatus = TranscriptionStatus.IN_PROGRESS,
-                            transcriptPreview = recording.transcriptPreview ?: "转写占位内容"
+        val base = currentBaseUrl ?: run {
+            markRecordingStatus(id, TranscriptionStatus.ERROR)
+            return emitError("设备未连接")
+        }
+        val deviceFile = recordingSources[id] ?: run {
+            markRecordingStatus(id, TranscriptionStatus.ERROR)
+            return emitError("未找到音频文件")
+        }
+        viewModelScope.launch(dispatchers.io) {
+            markRecordingStatus(id, TranscriptionStatus.IN_PROGRESS)
+            val localFile = when (val download = mediaGateway.downloadFile(base, deviceFile)) {
+                is Result.Success -> download.data
+                is Result.Error -> {
+                    markRecordingStatus(id, TranscriptionStatus.ERROR)
+                    emitError(download.throwable.message)
+                    return@launch
+                }
+            }
+            val uploadPayload = when (val upload = transcriptionCoordinator.uploadAudio(localFile)) {
+                is Result.Success -> upload.data
+                is Result.Error -> {
+                    markRecordingStatus(id, TranscriptionStatus.ERROR)
+                    emitError(upload.throwable.message)
+                    return@launch
+                }
+            }
+            when (
+                val submit = transcriptionCoordinator.submitTranscription(
+                    audioAssetName = deviceFile.name,
+                    language = DEFAULT_TINGWU_LANGUAGE,
+                    uploadPayload = uploadPayload
+                )
+            ) {
+                is Result.Success -> {
+                    val taskId = submit.data
+                    _uiState.update { state ->
+                        state.copy(
+                            recordings = state.recordings.map { recording ->
+                                if (recording.id == id) {
+                                    recording.copy(transcriptionStatus = TranscriptionStatus.IN_PROGRESS)
+                                } else recording
+                            },
+                            transcriptPreviewRecording = null,
+                            tingwuTaskIds = state.tingwuTaskIds + (id to taskId)
                         )
-                    } else {
-                        recording
                     }
-                },
-                transcriptPreviewRecording = null
-            )
+                }
+
+                is Result.Error -> {
+                    markRecordingStatus(id, TranscriptionStatus.ERROR)
+                    emitError(submit.throwable.message)
+                }
+            }
         }
     }
 
@@ -161,13 +203,18 @@ class AudioFilesViewModel @Inject constructor(
         }
         when (val result = mediaGateway.fetchFiles(baseUrl)) {
             is Result.Success -> {
+                recordingSources.clear()
                 val items = result.data
                     .filter { it.isAudio() }
+                    .onEach { recordingSources[it.name] = it }
                     .map { it.toUi(playingId) }
                 _uiState.update {
                     it.copy(
                         recordings = items,
                         transcriptPreviewRecording = null,
+                        tingwuTaskIds = it.tingwuTaskIds.filterKeys { key ->
+                            items.any { recording -> recording.id == key }
+                        },
                         isLoading = false,
                         errorMessage = null
                     )
@@ -185,6 +232,18 @@ class AudioFilesViewModel @Inject constructor(
         val base = currentBaseUrl ?: return emitError("设备未连接")
         viewModelScope.launch(dispatchers.io) {
             block(base)
+        }
+    }
+
+    private fun markRecordingStatus(id: String, status: TranscriptionStatus) {
+        _uiState.update { state ->
+            state.copy(
+                recordings = state.recordings.map { recording ->
+                    if (recording.id == id) {
+                        recording.copy(transcriptionStatus = status)
+                    } else recording
+                }
+            )
         }
     }
 
@@ -214,6 +273,7 @@ class AudioFilesViewModel @Inject constructor(
 
     companion object {
         private val AUDIO_EXTENSIONS = setOf(".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg")
+        private const val DEFAULT_TINGWU_LANGUAGE = "zh-CN"
 
         private fun formatTimestamp(timestamp: Long?): String {
             if (timestamp == null || timestamp <= 0) return "未知时间"

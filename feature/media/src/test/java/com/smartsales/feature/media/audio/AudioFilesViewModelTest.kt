@@ -12,6 +12,8 @@ import com.smartsales.feature.media.MediaClip
 import com.smartsales.feature.media.MediaClipStatus
 import com.smartsales.feature.media.MediaSyncCoordinator
 import com.smartsales.feature.media.MediaSyncState
+import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
+import com.smartsales.feature.media.audiofiles.AudioUploadPayload
 import com.smartsales.feature.media.audiofiles.DeviceHttpEndpointProvider
 import com.smartsales.feature.media.devicemanager.DeviceMediaFile
 import com.smartsales.feature.media.devicemanager.DeviceMediaGateway
@@ -44,6 +46,7 @@ class AudioFilesViewModelTest {
     private lateinit var gateway: FakeDeviceMediaGateway
     private lateinit var syncCoordinator: FakeMediaSyncCoordinator
     private lateinit var endpointProvider: FakeDeviceHttpEndpointProvider
+    private lateinit var transcriptionCoordinator: FakeTranscriptionCoordinator
     private lateinit var viewModel: AudioFilesViewModel
 
     @Before
@@ -52,9 +55,11 @@ class AudioFilesViewModelTest {
         gateway = FakeDeviceMediaGateway()
         syncCoordinator = FakeMediaSyncCoordinator()
         endpointProvider = FakeDeviceHttpEndpointProvider()
+        transcriptionCoordinator = FakeTranscriptionCoordinator()
         viewModel = AudioFilesViewModel(
             mediaGateway = gateway,
             mediaSyncCoordinator = syncCoordinator,
+            transcriptionCoordinator = transcriptionCoordinator,
             endpointProvider = endpointProvider,
             dispatchers = FakeDispatcherProvider(dispatcher)
         )
@@ -180,9 +185,43 @@ class AudioFilesViewModelTest {
         assertEquals(null, viewModel.uiState.value.transcriptPreviewRecording)
     }
 
+    @Test
+    fun `transcribe triggers download upload submit and stores task id`() = runTest(dispatcher) {
+        val file = DeviceMediaFile("clip.mp3", 1, "audio/mpeg", 10L, "m", "d")
+        gateway.files = listOf(file)
+        endpointProvider.emit("http://10.0.0.8:8000")
+        advanceUntilIdle()
+
+        viewModel.onTranscribeClicked("clip.mp3")
+        advanceUntilIdle()
+
+        assertTrue(gateway.downloadCalled)
+        assertEquals(file.name, transcriptionCoordinator.lastUploadedFile?.name)
+        assertEquals(TranscriptionStatus.IN_PROGRESS, viewModel.uiState.value.recordings.first().transcriptionStatus)
+        assertEquals("task-1", viewModel.uiState.value.tingwuTaskIds["clip.mp3"])
+    }
+
+    @Test
+    fun `transcribe failure sets error status`() = runTest(dispatcher) {
+        val file = DeviceMediaFile("clip2.mp3", 1, "audio/mpeg", 10L, "m", "d")
+        gateway.files = listOf(file)
+        gateway.downloadResult = Result.Error(IllegalStateException("no download"))
+        endpointProvider.emit("http://10.0.0.9:8000")
+        advanceUntilIdle()
+
+        viewModel.onTranscribeClicked("clip2.mp3")
+        advanceUntilIdle()
+
+        assertEquals(TranscriptionStatus.ERROR, viewModel.uiState.value.recordings.first().transcriptionStatus)
+        assertTrue(viewModel.uiState.value.tingwuTaskIds.isEmpty())
+        assertEquals("no download", viewModel.uiState.value.errorMessage)
+    }
+
     private class FakeDeviceMediaGateway : DeviceMediaGateway {
         var files: List<DeviceMediaFile> = emptyList()
         var fetchResult: Result<List<DeviceMediaFile>>? = null
+        var downloadResult: Result<File>? = null
+        var downloadCalled = false
 
         override suspend fun fetchFiles(baseUrl: String): Result<List<DeviceMediaFile>> =
             fetchResult ?: Result.Success(files)
@@ -198,8 +237,10 @@ class AudioFilesViewModelTest {
             return Result.Success(Unit)
         }
 
-        override suspend fun downloadFile(baseUrl: String, file: DeviceMediaFile): Result<File> =
-            Result.Success(File("tmp"))
+        override suspend fun downloadFile(baseUrl: String, file: DeviceMediaFile): Result<File> {
+            downloadCalled = true
+            return downloadResult ?: Result.Success(File(file.name))
+        }
     }
 
     private class FakeMediaSyncCoordinator : MediaSyncCoordinator {
@@ -243,6 +284,33 @@ class AudioFilesViewModelTest {
         override val deviceBaseUrl: Flow<String?> = flow.asStateFlow()
         fun emit(value: String?) {
             flow.value = value
+        }
+    }
+
+    private class FakeTranscriptionCoordinator : AudioTranscriptionCoordinator {
+        var uploadResult: Result<AudioUploadPayload> = Result.Success(
+            AudioUploadPayload("object-key", "presigned")
+        )
+        var submitResult: Result<String> = Result.Success("task-1")
+        var lastUploadedFile: File? = null
+        var lastSubmitAssetName: String? = null
+
+        override suspend fun uploadAudio(file: File): Result<AudioUploadPayload> {
+            lastUploadedFile = file
+            return uploadResult
+        }
+
+        override suspend fun submitTranscription(
+            audioAssetName: String,
+            language: String,
+            uploadPayload: AudioUploadPayload
+        ): Result<String> {
+            lastSubmitAssetName = audioAssetName
+            return submitResult
+        }
+
+        override fun observeJob(jobId: String): Flow<com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState> {
+            return MutableStateFlow(com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState.Idle)
         }
     }
 }

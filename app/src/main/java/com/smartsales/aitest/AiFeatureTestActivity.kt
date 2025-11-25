@@ -200,7 +200,17 @@ private fun AiFeatureTestApp() {
                                 AudioFilesRoute(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES)
+                                        .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES),
+                                    onAskAiAboutTranscript = { recordingId, fileName, preview, full ->
+                                        pendingTranscription = TranscriptionChatRequest(
+                                            jobId = "manual",
+                                            fileName = fileName,
+                                            recordingId = recordingId,
+                                            transcriptPreview = preview,
+                                            transcriptMarkdown = full
+                                        )
+                                        currentPage = TestHomePage.Home
+                                    }
                                 )
                             }
 

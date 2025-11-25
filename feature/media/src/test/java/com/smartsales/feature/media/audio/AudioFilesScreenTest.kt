@@ -47,6 +47,7 @@ class AudioFilesScreenTest {
                     onDeleteClicked = {},
                     onTranscribeClicked = { transcribeId = it },
                     onTranscriptClicked = {},
+                    onAskAiClicked = {},
                     onTranscriptDismissed = {},
                     onErrorDismissed = {},
                     modifier = Modifier
@@ -90,6 +91,7 @@ class AudioFilesScreenTest {
                     onDeleteClicked = {},
                     onTranscribeClicked = {},
                     onTranscriptClicked = {},
+                    onAskAiClicked = {},
                     onTranscriptDismissed = {},
                     onErrorDismissed = {},
                     modifier = Modifier
@@ -106,6 +108,7 @@ class AudioFilesScreenTest {
 
     @Test
     fun transcriptViewer_showsFullContent_andDismisses() {
+        var asked = false
         composeRule.setContent {
             MaterialTheme {
                 AudioFilesScreen(
@@ -138,6 +141,7 @@ class AudioFilesScreenTest {
                     onDeleteClicked = {},
                     onTranscribeClicked = {},
                     onTranscriptClicked = {},
+                    onAskAiClicked = { asked = true },
                     onTranscriptDismissed = {},
                     onErrorDismissed = {},
                     modifier = Modifier
@@ -150,5 +154,7 @@ class AudioFilesScreenTest {
         composeRule.onNodeWithText("标题").assertIsDisplayed()
         composeRule.onNodeWithText("行1").assertIsDisplayed()
         composeRule.onNodeWithText("正文").assertIsDisplayed()
+        composeRule.onNodeWithText("用 AI 分析本次通话").performClick()
+        assert(asked)
     }
 }

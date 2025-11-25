@@ -15,7 +15,8 @@ import com.smartsales.feature.media.audio.AudioFilesViewModel
 
 @Composable
 fun AudioFilesRoute(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onAskAiAboutTranscript: (recordingId: String, fileName: String, preview: String?, fullTranscript: String?) -> Unit = { _, _, _, _ -> }
 ) {
     val viewModel: AudioFilesViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -29,6 +30,15 @@ fun AudioFilesRoute(
         onDeleteClicked = viewModel::onDeleteClicked,
         onTranscribeClicked = viewModel::onTranscribeClicked,
         onTranscriptClicked = viewModel::onTranscriptClicked,
+        onAskAiClicked = { recording ->
+            viewModel.onTranscriptDismissed()
+            onAskAiAboutTranscript(
+                recording.id,
+                recording.fileName,
+                recording.transcriptPreview,
+                recording.fullTranscriptMarkdown
+            )
+        },
         onTranscriptDismissed = viewModel::onTranscriptDismissed,
         onErrorDismissed = viewModel::onErrorDismissed,
         modifier = modifier

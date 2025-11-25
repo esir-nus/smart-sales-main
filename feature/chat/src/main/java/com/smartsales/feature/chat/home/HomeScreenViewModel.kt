@@ -248,6 +248,23 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     fun onTranscriptionRequested(request: TranscriptionChatRequest) {
+        val transcript = request.transcriptMarkdown ?: request.transcriptPreview
+        if (!transcript.isNullOrBlank()) {
+            val contextMessage = ChatMessageUi(
+                id = nextMessageId(),
+                role = ChatMessageRole.ASSISTANT,
+                content = buildTranscriptContext(request.fileName, transcript),
+                timestampMillis = System.currentTimeMillis()
+            )
+            _uiState.update { state ->
+                state.copy(
+                    chatMessages = state.chatMessages + contextMessage,
+                    snackbarMessage = null
+                )
+            }
+            persistMessagesAsync()
+            return
+        }
         val introId = nextMessageId()
         val introMessage = ChatMessageUi(
             id = introId,
@@ -695,5 +712,12 @@ class HomeScreenViewModel @Inject constructor(
 
     companion object {
         private const val DEFAULT_SESSION_ID = "home-session"
+        private fun buildTranscriptContext(fileName: String, transcript: String): String {
+            return buildString {
+                append("你是一名销售助理。以下是通话记录，请帮我分析、总结或提出行动建议。\n")
+                append("文件：").append(fileName).append("\n")
+                append(transcript)
+            }
+        }
     }
 }

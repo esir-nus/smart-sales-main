@@ -60,6 +60,7 @@ fun AudioFilesScreen(
     onDeleteClicked: (String) -> Unit,
     onTranscribeClicked: (String) -> Unit,
     onTranscriptClicked: (String) -> Unit,
+    onAskAiClicked: (AudioRecordingUi) -> Unit,
     onTranscriptDismissed: () -> Unit,
     onErrorDismissed: () -> Unit,
     modifier: Modifier = Modifier
@@ -142,7 +143,8 @@ fun AudioFilesScreen(
     uiState.transcriptPreviewRecording?.let { recording ->
         TranscriptViewerSheet(
             recording = recording,
-            onDismiss = onTranscriptDismissed
+            onDismiss = onTranscriptDismissed,
+            onAskAiClicked = onAskAiClicked
         )
     }
 }
@@ -312,7 +314,8 @@ private fun ErrorBanner(
 @OptIn(ExperimentalMaterial3Api::class)
 private fun TranscriptViewerSheet(
     recording: AudioRecordingUi,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onAskAiClicked: (AudioRecordingUi) -> Unit
 ) {
     androidx.compose.material3.ModalBottomSheet(
         modifier = Modifier.testTag(AudioFilesTestTags.TRANSCRIPT_DIALOG),
@@ -352,6 +355,16 @@ private fun TranscriptViewerSheet(
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = {
+                    onDismiss()
+                    onAskAiClicked(recording)
+                },
+                modifier = Modifier.align(Alignment.Start)
+            ) {
+                Text(text = "用 AI 分析本次通话")
+            }
+            Spacer(modifier = Modifier.height(8.dp))
             Button(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
                 Text(text = "关闭")
             }

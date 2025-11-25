@@ -8,5 +8,7 @@ package com.smartsales.feature.chat.home
 data class TranscriptionChatRequest(
     val jobId: String,
     val fileName: String,
-    val recordingId: String? = null
+    val recordingId: String? = null,
+    val transcriptPreview: String? = null,
+    val transcriptMarkdown: String? = null
 )

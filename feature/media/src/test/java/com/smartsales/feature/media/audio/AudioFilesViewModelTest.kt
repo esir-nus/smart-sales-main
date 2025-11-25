@@ -19,6 +19,7 @@ import com.smartsales.feature.media.devicemanager.DeviceMediaFile
 import com.smartsales.feature.media.devicemanager.DeviceMediaGateway
 import com.smartsales.feature.media.devicemanager.DeviceUploadSource
 import com.smartsales.feature.media.audio.TranscriptionStatus
+import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -202,6 +203,38 @@ class AudioFilesViewModelTest {
     }
 
     @Test
+    fun `job completion updates status and preview`() = runTest(dispatcher) {
+        val file = DeviceMediaFile("clip3.mp3", 1, "audio/mpeg", 10L, "m", "d")
+        gateway.files = listOf(file)
+        endpointProvider.emit("http://10.0.0.10:8000")
+        advanceUntilIdle()
+
+        viewModel.onTranscribeClicked("clip3.mp3")
+        transcriptionCoordinator.emitState("task-1", AudioTranscriptionJobState.InProgress("task-1", 10))
+        transcriptionCoordinator.emitState("task-1", AudioTranscriptionJobState.Completed("task-1", "第一行内容\n更多"))
+        advanceUntilIdle()
+
+        val recording = viewModel.uiState.value.recordings.first()
+        assertEquals(TranscriptionStatus.DONE, recording.transcriptionStatus)
+        assertEquals("第一行内容", recording.transcriptPreview)
+    }
+
+    @Test
+    fun `job failure updates status to error`() = runTest(dispatcher) {
+        val file = DeviceMediaFile("clip4.mp3", 1, "audio/mpeg", 10L, "m", "d")
+        gateway.files = listOf(file)
+        endpointProvider.emit("http://10.0.0.11:8000")
+        advanceUntilIdle()
+
+        viewModel.onTranscribeClicked("clip4.mp3")
+        transcriptionCoordinator.emitState("task-1", AudioTranscriptionJobState.Failed("task-1", "fail"))
+        advanceUntilIdle()
+
+        val recording = viewModel.uiState.value.recordings.first()
+        assertEquals(TranscriptionStatus.ERROR, recording.transcriptionStatus)
+    }
+
+    @Test
     fun `transcribe failure sets error status`() = runTest(dispatcher) {
         val file = DeviceMediaFile("clip2.mp3", 1, "audio/mpeg", 10L, "m", "d")
         gateway.files = listOf(file)
@@ -294,6 +327,7 @@ class AudioFilesViewModelTest {
         var submitResult: Result<String> = Result.Success("task-1")
         var lastUploadedFile: File? = null
         var lastSubmitAssetName: String? = null
+        private val jobStates = mutableMapOf<String, MutableStateFlow<AudioTranscriptionJobState>>()
 
         override suspend fun uploadAudio(file: File): Result<AudioUploadPayload> {
             lastUploadedFile = file
@@ -309,8 +343,13 @@ class AudioFilesViewModelTest {
             return submitResult
         }
 
-        override fun observeJob(jobId: String): Flow<com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState> {
-            return MutableStateFlow(com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState.Idle)
+        override fun observeJob(jobId: String): Flow<AudioTranscriptionJobState> {
+            return jobStates.getOrPut(jobId) { MutableStateFlow<AudioTranscriptionJobState>(AudioTranscriptionJobState.Idle) }
+        }
+
+        fun emitState(jobId: String, state: AudioTranscriptionJobState) {
+            val flow = jobStates.getOrPut(jobId) { MutableStateFlow<AudioTranscriptionJobState>(AudioTranscriptionJobState.Idle) }
+            flow.value = state
         }
     }
 }

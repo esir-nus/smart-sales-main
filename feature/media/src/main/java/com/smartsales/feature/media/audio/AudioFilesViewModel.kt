@@ -11,6 +11,7 @@ import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
 import com.smartsales.feature.media.MediaSyncCoordinator
 import com.smartsales.feature.media.audiofiles.DeviceHttpEndpointProvider
+import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
 import com.smartsales.feature.media.devicemanager.DeviceMediaFile
 import com.smartsales.feature.media.devicemanager.DeviceMediaGateway
@@ -42,6 +43,7 @@ class AudioFilesViewModel @Inject constructor(
     private var currentBaseUrl: String? = null
     private var playingId: String? = null
     private val recordingSources = mutableMapOf<String, DeviceMediaFile>()
+    private val observingJobs = mutableSetOf<String>()
 
     init {
         observeEndpoint()
@@ -141,6 +143,7 @@ class AudioFilesViewModel @Inject constructor(
                             tingwuTaskIds = state.tingwuTaskIds + (id to taskId)
                         )
                     }
+                    observeJob(id, taskId)
                 }
 
                 is Result.Error -> {
@@ -247,6 +250,53 @@ class AudioFilesViewModel @Inject constructor(
         }
     }
 
+    private fun observeJob(recordingId: String, jobId: String) {
+        if (observingJobs.contains(jobId)) return
+        observingJobs.add(jobId)
+        viewModelScope.launch(dispatchers.default) {
+            transcriptionCoordinator.observeJob(jobId).collectLatest { state ->
+                when (state) {
+                    is com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState.InProgress -> {
+                        markRecordingStatus(recordingId, TranscriptionStatus.IN_PROGRESS)
+                    }
+
+                    is com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState.Completed -> {
+                        val preview = buildPreview(state.transcriptMarkdown)
+                        _uiState.update { ui ->
+                            ui.copy(
+                                recordings = ui.recordings.map { recording ->
+                                    if (recording.id == recordingId) {
+                                        recording.copy(
+                                            transcriptionStatus = TranscriptionStatus.DONE,
+                                            transcriptPreview = preview
+                                        )
+                                    } else recording
+                                }
+                            )
+                        }
+                        observingJobs.remove(jobId)
+                    }
+
+                    is com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState.Failed -> {
+                        markRecordingStatus(recordingId, TranscriptionStatus.ERROR)
+                        observingJobs.remove(jobId)
+                    }
+
+                    else -> {
+                        // Idle or unknown – no-op
+                    }
+                }
+            }
+        }
+    }
+
+    private fun buildPreview(markdown: String): String {
+        if (markdown.isBlank()) return "暂无内容"
+        val firstLine = markdown.lineSequence().firstOrNull { it.isNotBlank() }
+        val text = firstLine ?: markdown
+        return text.take(MAX_PREVIEW_LENGTH)
+    }
+
     private fun emitError(message: String?) {
         _uiState.update { it.copy(errorMessage = message ?: "操作失败") }
     }
@@ -274,6 +324,7 @@ class AudioFilesViewModel @Inject constructor(
     companion object {
         private val AUDIO_EXTENSIONS = setOf(".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg")
         private const val DEFAULT_TINGWU_LANGUAGE = "zh-CN"
+        private const val MAX_PREVIEW_LENGTH = 120
 
         private fun formatTimestamp(timestamp: Long?): String {
             if (timestamp == null || timestamp <= 0) return "未知时间"

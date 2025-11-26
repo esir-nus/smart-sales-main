@@ -12,6 +12,8 @@ import com.smartsales.data.aicore.tingwu.TingwuStatusData
 import com.smartsales.data.aicore.tingwu.TingwuStatusResponse
 import com.smartsales.data.aicore.tingwu.TingwuTranscription
 import com.smartsales.data.aicore.tingwu.TingwuTaskParameters
+import com.smartsales.data.aicore.tingwu.TingwuSummarizationParameters
+import com.google.gson.Gson
 import java.io.File
 import java.util.Optional
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -131,7 +133,33 @@ class RealTingwuCoordinatorTest {
             )
         )
 
-        assertEquals(true, api.lastCreateRequest?.parameters?.summarizationEnabled)
+        val request = api.lastCreateRequest
+        assertEquals(true, request?.parameters?.summarizationEnabled)
+        assertEquals(listOf("Paragraph"), request?.parameters?.summarization?.types)
+        val json = Gson().toJson(request)
+        assertTrue(json.contains("\"SummarizationEnabled\":true"))
+        assertTrue(json.contains("\"Summarization\":{\"Types\":[\"Paragraph\"]}"))
+    }
+
+    @Test
+    fun createTask_whenSummarizationDisabled_omitsSummarizationTypes() {
+        val request = TingwuCreateTaskRequest(
+            appKey = "demo",
+            input = com.smartsales.data.aicore.tingwu.TingwuTaskInput(
+                sourceLanguage = "cn",
+                taskKey = "k1",
+                fileUrl = "https://example.com/a.wav"
+            ),
+            parameters = TingwuTaskParameters(
+                transcription = null,
+                translationEnabled = null,
+                summarizationEnabled = false,
+                summarization = null
+            )
+        )
+        val json = Gson().toJson(request)
+        assertTrue(json.contains("\"SummarizationEnabled\":false"))
+        assertTrue(!json.contains("\"Summarization\""))
     }
 
     @Test

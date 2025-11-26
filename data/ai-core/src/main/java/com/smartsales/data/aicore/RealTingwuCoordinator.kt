@@ -21,6 +21,7 @@ import com.smartsales.data.aicore.tingwu.TingwuTaskParameters
 import com.smartsales.data.aicore.tingwu.TingwuTranscription
 import com.smartsales.data.aicore.tingwu.TingwuTranscriptSegment
 import com.smartsales.data.aicore.tingwu.TingwuTranscriptionParameters
+import com.smartsales.data.aicore.tingwu.TingwuSummarizationParameters
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -103,7 +104,10 @@ class RealTingwuCoordinator @Inject constructor(
                                 diarization = null,
                                 model = model
                             ),
-                            summarizationEnabled = true
+                            summarizationEnabled = true,
+                            summarization = TingwuSummarizationParameters(
+                                types = listOf("Paragraph")
+                            )
                         )
                     )
                 )

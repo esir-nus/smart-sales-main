@@ -75,7 +75,8 @@ data class TingwuResultResponse(
 data class TingwuTaskParameters(
     @SerializedName("Transcription") val transcription: TingwuTranscriptionParameters? = null,
     @SerializedName("TranslationEnabled") val translationEnabled: Boolean? = null,
-    @SerializedName("SummarizationEnabled") val summarizationEnabled: Boolean? = null
+    @SerializedName("SummarizationEnabled") val summarizationEnabled: Boolean? = null,
+    @SerializedName("Summarization") val summarization: TingwuSummarizationParameters? = null
 )
 
 data class TingwuTranscriptSegment(
@@ -125,6 +126,10 @@ data class TingwuTranscriptionParameters(
 
 data class TingwuDiarizationParameters(
     @SerializedName("SpeakerCount") val speakerCount: Int? = null
+)
+
+data class TingwuSummarizationParameters(
+    @SerializedName("Types") val types: List<String>
 )
 
 data class TingwuTranscription(

@@ -1,5 +1,5 @@
 **IMPORTANT**
-everytime i invoke this command, the ai should turn whateve i sent as enhanced commit messages following the below template rules and then execute git push
+everytime i invoke this command, the ai should turn whateve i sent as enhanced commit messages following the below template rules and then execute git push. also regardless of what source language, the commit message should be in Chinese.
 
 🎯 Purpose
 

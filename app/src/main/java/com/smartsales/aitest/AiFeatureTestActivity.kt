@@ -77,6 +77,8 @@ import com.smartsales.aitest.audio.AudioFilesRoute
 import com.smartsales.aitest.devicemanager.DeviceManagerRoute
 import com.smartsales.aitest.setup.DeviceSetupRoute
 import com.smartsales.aitest.usercenter.UserCenterRoute
+import com.smartsales.aitest.ui.HomeOverlayShell
+import com.smartsales.aitest.ui.OverlayPage
 import com.smartsales.core.util.Result
 import com.smartsales.feature.chat.home.HomeScreenRoute
 import com.smartsales.feature.chat.home.TranscriptionChatRequest
@@ -100,7 +102,8 @@ private fun AiFeatureTestApp() {
     val mediaServerClient = remember { MediaServerClient(context) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var currentPage by rememberSaveable { mutableStateOf(TestHomePage.Home) }
+    var currentSection by rememberSaveable { mutableStateOf(AppSection.HomeShell) }
+    var overlayPage by rememberSaveable { mutableStateOf(OverlayPage.Home) }
     var manualSessionId by rememberSaveable { mutableStateOf("home-session") }
     var pendingTranscription by remember { mutableStateOf<TranscriptionChatRequest?>(null) }
     var pendingSessionId by remember { mutableStateOf<String?>(null) }
@@ -124,8 +127,8 @@ private fun AiFeatureTestApp() {
         }
     }
 
-    BackHandler(enabled = currentPage != TestHomePage.Home) {
-        currentPage = TestHomePage.Home
+    BackHandler(enabled = currentSection == AppSection.HomeShell && overlayPage != OverlayPage.Home) {
+        overlayPage = OverlayPage.Home
     }
 
     MaterialTheme {
@@ -144,8 +147,11 @@ private fun AiFeatureTestApp() {
                         .padding(16.dp)
                 ) {
                     PageSelector(
-                        currentPage = currentPage,
-                        onPageSelected = { currentPage = it }
+                        currentPage = currentSection,
+                        onPageSelected = { target ->
+                            currentSection = target
+                            overlayPage = OverlayPage.Home
+                        }
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Box(
@@ -153,26 +159,63 @@ private fun AiFeatureTestApp() {
                             .weight(1f)
                             .fillMaxWidth()
                     ) {
-                        when (currentPage) {
-                            TestHomePage.Home -> {
-                                // Home 页：加载聊天 HomeScreen 并把回调映射到对应 Tab。
-                                HomeScreenRoute(
+                        when (currentSection) {
+                            AppSection.HomeShell -> {
+                                HomeOverlayShell(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .testTag(AiFeatureTestTags.PAGE_HOME),
-                                    sessionId = pendingSessionId ?: pendingTranscription?.sessionId ?: manualSessionId,
-                                    transcriptionRequest = pendingTranscription,
-                                    onTranscriptionRequestConsumed = { pendingTranscription = null },
-                                    selectedSessionId = pendingSessionId,
-                                    onSessionSelectionConsumed = { pendingSessionId = null },
-                                    onNavigateToDeviceManager = { currentPage = TestHomePage.DeviceManager },
-                                    onNavigateToDeviceSetup = { currentPage = TestHomePage.DeviceSetup },
-                                    onNavigateToAudioFiles = { currentPage = TestHomePage.AudioFiles },
-                                    onNavigateToUserCenter = { currentPage = TestHomePage.UserCenter }
+                                        .testTag(AiFeatureTestTags.OVERLAY_SHELL),
+                                    currentPage = overlayPage,
+                                    onPageChange = { overlayPage = it },
+                                    homeContent = {
+                                        HomeScreenRoute(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .testTag(AiFeatureTestTags.PAGE_HOME),
+                                            sessionId = pendingSessionId ?: pendingTranscription?.sessionId
+                                                ?: manualSessionId,
+                                            transcriptionRequest = pendingTranscription,
+                                            onTranscriptionRequestConsumed = { pendingTranscription = null },
+                                            selectedSessionId = pendingSessionId,
+                                            onSessionSelectionConsumed = { pendingSessionId = null },
+                                            onNavigateToDeviceManager = { overlayPage = OverlayPage.Device },
+                                            onNavigateToDeviceSetup = { currentSection = AppSection.DeviceSetup },
+                                            onNavigateToAudioFiles = { overlayPage = OverlayPage.Audio },
+                                            onNavigateToUserCenter = { currentSection = AppSection.UserCenter }
+                                        )
+                                    },
+                                    audioContent = {
+                                        AudioFilesRoute(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES),
+                                            onAskAiAboutTranscript = { recordingId, fileName, preview, full ->
+                                                val sessionId = "session-${UUID.randomUUID()}"
+                                                val jobId = "transcription-$recordingId"
+                                                pendingTranscription = TranscriptionChatRequest(
+                                                    jobId = jobId,
+                                                    fileName = fileName,
+                                                    recordingId = recordingId,
+                                                    sessionId = sessionId,
+                                                    transcriptPreview = preview,
+                                                    transcriptMarkdown = full
+                                                )
+                                                pendingSessionId = sessionId
+                                                overlayPage = OverlayPage.Home
+                                            }
+                                        )
+                                    },
+                                    deviceManagerContent = {
+                                        DeviceManagerRoute(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
+                                        )
+                                    }
                                 )
                             }
 
-                            TestHomePage.WifiBleTester -> {
+                            AppSection.WifiBleTester -> {
                                 WifiBleTesterRoute(
                                     modifier = Modifier
                                         .fillMaxSize()
@@ -182,63 +225,33 @@ private fun AiFeatureTestApp() {
                                 )
                             }
 
-                            TestHomePage.DeviceManager -> {
-                                DeviceManagerRoute(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
-                                )
-                            }
-
-                            TestHomePage.DeviceSetup -> {
+                            AppSection.DeviceSetup -> {
                                 DeviceSetupRoute(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .testTag(AiFeatureTestTags.PAGE_DEVICE_SETUP),
-                                    onCompleted = { currentPage = TestHomePage.DeviceManager }
+                                    onCompleted = { currentSection = AppSection.HomeShell }
                                 )
                             }
 
-                            TestHomePage.AudioFiles -> {
-                                AudioFilesRoute(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES),
-                                    onAskAiAboutTranscript = { recordingId, fileName, preview, full ->
-                                        val sessionId = "session-${UUID.randomUUID()}"
-                                        val jobId = "transcription-$recordingId"
-                                        pendingTranscription = TranscriptionChatRequest(
-                                            jobId = jobId,
-                                            fileName = fileName,
-                                            recordingId = recordingId,
-                                            sessionId = sessionId,
-                                            transcriptPreview = preview,
-                                            transcriptMarkdown = full
-                                        )
-                                        pendingSessionId = sessionId
-                                        currentPage = TestHomePage.Home
-                                    }
-                                )
-                            }
-
-                            TestHomePage.ChatHistory -> {
+                            AppSection.ChatHistory -> {
                                 ChatHistoryRoute(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .testTag(AiFeatureTestTags.PAGE_CHAT_HISTORY),
                                     onSessionSelected = { sessionId ->
                                         pendingSessionId = sessionId
-                                        currentPage = TestHomePage.Home
+                                        currentSection = AppSection.HomeShell
                                     }
                                 )
                             }
 
-                            TestHomePage.UserCenter -> {
+                            AppSection.UserCenter -> {
                                 UserCenterRoute(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .testTag(AiFeatureTestTags.PAGE_USER_CENTER),
-                                    onLogout = { currentPage = TestHomePage.Home }
+                                    onLogout = { currentSection = AppSection.HomeShell }
                                 )
                             }
                         }
@@ -250,60 +263,46 @@ private fun AiFeatureTestApp() {
 }
 
 @Composable
-private fun PageSelector(currentPage: TestHomePage, onPageSelected: (TestHomePage) -> Unit) {
+private fun PageSelector(currentPage: AppSection, onPageSelected: (AppSection) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         FilterChip(
-            selected = currentPage == TestHomePage.Home,
-            onClick = { onPageSelected(TestHomePage.Home) },
+            selected = currentPage == AppSection.HomeShell,
+            onClick = { onPageSelected(AppSection.HomeShell) },
             label = { Text("Home") },
             modifier = Modifier.testTag(AiFeatureTestTags.CHIP_HOME)
         )
         FilterChip(
-            selected = currentPage == TestHomePage.WifiBleTester,
-            onClick = { onPageSelected(TestHomePage.WifiBleTester) },
+            selected = currentPage == AppSection.WifiBleTester,
+            onClick = { onPageSelected(AppSection.WifiBleTester) },
             label = { Text("WiFi & BLE Tester") },
             modifier = Modifier.testTag(AiFeatureTestTags.CHIP_WIFI)
         )
         FilterChip(
-            selected = currentPage == TestHomePage.DeviceManager,
-            onClick = { onPageSelected(TestHomePage.DeviceManager) },
-            label = { Text("设备文件") },
-            modifier = Modifier.testTag(AiFeatureTestTags.CHIP_DEVICE_MANAGER)
-        )
-        FilterChip(
-            selected = currentPage == TestHomePage.DeviceSetup,
-            onClick = { onPageSelected(TestHomePage.DeviceSetup) },
+            selected = currentPage == AppSection.DeviceSetup,
+            onClick = { onPageSelected(AppSection.DeviceSetup) },
             label = { Text("设备连接") },
             modifier = Modifier.testTag(AiFeatureTestTags.CHIP_DEVICE_SETUP)
         )
         FilterChip(
-            selected = currentPage == TestHomePage.AudioFiles,
-            onClick = { onPageSelected(TestHomePage.AudioFiles) },
-            label = { Text("音频库") },
-            modifier = Modifier.testTag(AiFeatureTestTags.CHIP_AUDIO_FILES)
-        )
-        FilterChip(
-            selected = currentPage == TestHomePage.ChatHistory,
-            onClick = { onPageSelected(TestHomePage.ChatHistory) },
+            selected = currentPage == AppSection.ChatHistory,
+            onClick = { onPageSelected(AppSection.ChatHistory) },
             label = { Text("会话历史") },
             modifier = Modifier.testTag(AiFeatureTestTags.CHIP_CHAT_HISTORY)
         )
         FilterChip(
-            selected = currentPage == TestHomePage.UserCenter,
-            onClick = { onPageSelected(TestHomePage.UserCenter) },
+            selected = currentPage == AppSection.UserCenter,
+            onClick = { onPageSelected(AppSection.UserCenter) },
             label = { Text("用户中心") },
             modifier = Modifier.testTag(AiFeatureTestTags.CHIP_USER_CENTER)
         )
     }
 }
 
-private enum class TestHomePage {
-    Home,
+private enum class AppSection {
+    HomeShell,
     WifiBleTester,
-    DeviceManager,
     DeviceSetup,
     ChatHistory,
-    AudioFiles,
     UserCenter
 }
 
@@ -625,11 +624,10 @@ object AiFeatureTestTags {
     const val PAGE_AUDIO_FILES = "page_audio_files"
     const val PAGE_USER_CENTER = "page_user_center"
     const val PAGE_CHAT_HISTORY = "page_chat_history"
+    const val OVERLAY_SHELL = "overlay_shell"
     const val CHIP_HOME = "chip_home"
     const val CHIP_WIFI = "chip_wifi_ble"
-    const val CHIP_DEVICE_MANAGER = "chip_device_manager"
     const val CHIP_DEVICE_SETUP = "chip_device_setup"
-    const val CHIP_AUDIO_FILES = "chip_audio_files"
     const val CHIP_CHAT_HISTORY = "chip_chat_history"
     const val CHIP_USER_CENTER = "chip_user_center"
 }

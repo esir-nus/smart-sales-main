@@ -149,15 +149,12 @@ class DeviceHttpEndpointProviderImpl @Inject constructor(
     private fun buildBaseUrl(host: String?): String? {
         val trimmed = host?.trim().orEmpty()
         if (trimmed.isBlank()) return null
-        val withScheme = if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-            trimmed
-        } else {
-            "http://$trimmed"
-        }
-        val parsed = runCatching { Uri.parse(withScheme) }.getOrNull() ?: return null
-        val finalHost = parsed.host ?: return null
-        val scheme = parsed.scheme ?: "http"
-        val port = if (parsed.port == -1) DEFAULT_MEDIA_SERVER_PORT else parsed.port
+        val withScheme = if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) trimmed else "http://$trimmed"
+        val parsed = runCatching { Uri.parse(withScheme) }.getOrNull()
+        val finalHost = parsed?.host ?: trimmed.removePrefix("http://").removePrefix("https://").substringBefore("/")
+        if (finalHost.isBlank()) return null
+        val scheme = parsed?.scheme ?: "http"
+        val port = parsed?.let { if (it.port == -1) DEFAULT_MEDIA_SERVER_PORT else it.port } ?: DEFAULT_MEDIA_SERVER_PORT
         return "$scheme://$finalHost:$port"
     }
 

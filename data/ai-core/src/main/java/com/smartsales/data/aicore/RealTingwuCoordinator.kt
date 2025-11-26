@@ -15,6 +15,7 @@ import com.smartsales.data.aicore.tingwu.TingwuResultData
 import com.smartsales.data.aicore.tingwu.TingwuResultResponse
 import com.smartsales.data.aicore.tingwu.TingwuStatusData
 import com.smartsales.data.aicore.tingwu.TingwuStatusResponse
+import com.smartsales.data.aicore.TingwuChapter
 import com.smartsales.data.aicore.tingwu.TingwuTaskInput
 import com.smartsales.data.aicore.tingwu.TingwuTaskParameters
 import com.smartsales.data.aicore.tingwu.TingwuTranscription
@@ -249,7 +250,17 @@ class RealTingwuCoordinator @Inject constructor(
                                 flow.value = TingwuJobState.Failed(jobId, mapped)
                                 return@launch
                             }
-                            val mergedArtifacts = transcriptResult.artifacts ?: artifacts
+                            val mergedArtifacts = (transcriptResult.artifacts ?: artifacts)?.copy(
+                                chapters = transcriptResult.chapters ?: transcriptResult.artifacts?.chapters
+                                    ?: artifacts?.chapters,
+                                autoChaptersUrl = transcriptResult.artifacts?.autoChaptersUrl
+                                    ?: artifacts?.autoChaptersUrl
+                            ) ?: artifacts ?: transcriptResult.chapters?.let {
+                                TingwuJobArtifacts(
+                                    autoChaptersUrl = extractAutoChaptersUrl(data.resultLinks),
+                                    chapters = it
+                                )
+                            }
                             AiCoreLogger.d(TAG, "转写结果拉取成功：jobId=$jobId markdown长度=${transcriptResult.markdown.length}")
                             flow.value = TingwuJobState.Completed(
                                 jobId = jobId,
@@ -289,6 +300,7 @@ class RealTingwuCoordinator @Inject constructor(
     ): TranscriptResult = withContext(dispatchers.io) {
         AiCoreLogger.d(TAG, "开始拉取转写结果：jobId=$jobId")
         logVerbose { "拉取转写：jobId=$jobId resultLinks=${resultLinks?.size ?: 0} 个键" }
+        val chaptersUrl = extractAutoChaptersUrl(resultLinks) ?: fallbackArtifacts?.autoChaptersUrl
         // First try the /transcription endpoint
         AiCoreLogger.d(TAG, "尝试使用 /transcription 接口：jobId=$jobId")
         val inline = runCatching { api.getTaskResult(taskId = jobId) }.fold(
@@ -313,14 +325,17 @@ class RealTingwuCoordinator @Inject constructor(
                     }
                     val markdown = buildMarkdown(data.transcription)
                     AiCoreLogger.d(TAG, "转写 markdown 生成成功：jobId=$jobId markdown长度=${markdown.length}")
+                    val chapters = chaptersUrl?.let { fetchChaptersSafe(it, jobId) }
                     val artifacts = data.toArtifacts(
                         transcriptionUrl = data.transcription?.url,
-                        autoChaptersUrl = data.resultLinks?.get("AutoChapters"),
-                        extraResultUrls = data.resultLinks.orEmpty()
-                    ) ?: fallbackArtifacts
+                        autoChaptersUrl = extractAutoChaptersUrl(data.resultLinks),
+                        extraResultUrls = data.resultLinks.orEmpty(),
+                        chapters = chapters
+                    ) ?: fallbackArtifacts?.copy(chapters = chapters ?: fallbackArtifacts.chapters)
                     TranscriptResult(
                         markdown = markdown,
-                        artifacts = artifacts
+                        artifacts = artifacts,
+                        chapters = chapters
                     )
                 }
             },
@@ -351,13 +366,16 @@ class RealTingwuCoordinator @Inject constructor(
         val transcription = downloadTranscription(signedUrl, jobId)
         val markdown = buildMarkdown(transcription)
         AiCoreLogger.d(TAG, "转写 JSON 解析成功：jobId=$jobId markdown长度=${markdown.length}")
+        val chapters = chaptersUrl?.let { fetchChaptersSafe(it, jobId) }
         TranscriptResult(
             markdown = markdown,
             artifacts = fallbackArtifacts?.copy(
                 transcriptionUrl = signedUrl,
                 autoChaptersUrl = fallbackArtifacts.autoChaptersUrl,
-                extraResultUrls = fallbackArtifacts.extraResultUrls
-            ) ?: fallbackArtifacts
+                extraResultUrls = fallbackArtifacts.extraResultUrls,
+                chapters = chapters ?: fallbackArtifacts.chapters
+            ) ?: fallbackArtifacts,
+            chapters = chapters
         )
     }
 
@@ -385,6 +403,16 @@ class RealTingwuCoordinator @Inject constructor(
         }
         return transcriptionUrl
     }
+
+    private fun extractAutoChaptersUrl(resultLinks: Map<String, String>?): String? {
+        if (resultLinks.isNullOrEmpty()) return null
+        return resultLinks.entries.firstOrNull { it.key.equals("AutoChapters", ignoreCase = true) }?.value
+    }
+
+    private fun fetchChaptersSafe(url: String, jobId: String): List<TingwuChapter>? =
+        runCatching { downloadChapters(url, jobId) }.onFailure {
+            AiCoreLogger.w(TAG, "下载章节失败，将忽略：jobId=$jobId url=${url.take(80)} error=${it.message}")
+        }.getOrNull()
 
     private fun downloadTranscription(url: String, jobId: String): TingwuTranscription {
         AiCoreLogger.d(TAG, "开始下载转写 JSON：jobId=$jobId url=${url.take(100)}...")
@@ -415,6 +443,30 @@ class RealTingwuCoordinator @Inject constructor(
                 suggestion = "确认 Result.Transcription 链接仍在有效期内，或检查网络连接",
                 cause = io
             )
+        }
+    }
+
+    private fun downloadChapters(url: String, jobId: String): List<TingwuChapter> {
+        AiCoreLogger.d(TAG, "开始下载章节 JSON：jobId=$jobId url=${url.take(100)}...")
+        return try {
+            val connection = URL(url).openConnection().apply {
+                connectTimeout = config.tingwuReadTimeoutMillis.toInt()
+                readTimeout = config.tingwuReadTimeoutMillis.toInt()
+            }
+            connection.getInputStream().bufferedReader(Charsets.UTF_8).use { reader ->
+                val payload = reader.readText()
+                logVerbose { "章节 JSON 前 200 字符：${payload.take(200)}" }
+                val chapters = parseAutoChaptersPayload(payload)
+                if (chapters.isEmpty()) {
+                    AiCoreLogger.w(TAG, "章节 JSON 未解析出有效章节：jobId=$jobId")
+                } else {
+                    AiCoreLogger.d(TAG, "章节解析成功：jobId=$jobId 数量=${chapters.size}")
+                }
+                chapters
+            }
+        } catch (io: IOException) {
+            AiCoreLogger.e(TAG, "下载章节 JSON 失败：jobId=$jobId error=${io.message}", io)
+            emptyList()
         }
     }
 
@@ -714,7 +766,8 @@ class RealTingwuCoordinator @Inject constructor(
         fallbackArtifacts: TingwuJobArtifacts? = null,
         transcriptionUrl: String? = null,
         autoChaptersUrl: String? = null,
-        extraResultUrls: Map<String, String> = emptyMap()
+        extraResultUrls: Map<String, String> = emptyMap(),
+        chapters: List<TingwuChapter>? = null
     ): TingwuJobArtifacts? =
         buildArtifacts(
             mp3 = outputMp3Path ?: fallbackArtifacts?.outputMp3Path,
@@ -724,7 +777,8 @@ class RealTingwuCoordinator @Inject constructor(
             links = resultLinks ?: fallbackArtifacts?.resultLinks?.associate { it.label to it.url },
             transcriptionUrl = transcriptionUrl ?: fallbackArtifacts?.transcriptionUrl,
             autoChaptersUrl = autoChaptersUrl ?: fallbackArtifacts?.autoChaptersUrl,
-            extraResultUrls = if (extraResultUrls.isNotEmpty()) extraResultUrls else fallbackArtifacts?.extraResultUrls.orEmpty()
+            extraResultUrls = if (extraResultUrls.isNotEmpty()) extraResultUrls else fallbackArtifacts?.extraResultUrls.orEmpty(),
+            chapters = chapters ?: fallbackArtifacts?.chapters
         )
 
     private fun buildArtifacts(
@@ -735,7 +789,8 @@ class RealTingwuCoordinator @Inject constructor(
         links: Map<String, String>?,
         transcriptionUrl: String? = null,
         autoChaptersUrl: String? = null,
-        extraResultUrls: Map<String, String> = emptyMap()
+        extraResultUrls: Map<String, String> = emptyMap(),
+        chapters: List<TingwuChapter>? = null
     ): TingwuJobArtifacts? {
         if (
             mp3.isNullOrBlank() &&
@@ -745,7 +800,8 @@ class RealTingwuCoordinator @Inject constructor(
             links.isNullOrEmpty() &&
             transcriptionUrl.isNullOrBlank() &&
             autoChaptersUrl.isNullOrBlank() &&
-            extraResultUrls.isEmpty()
+            extraResultUrls.isEmpty() &&
+            chapters.isNullOrEmpty()
         ) {
             return null
         }
@@ -761,7 +817,8 @@ class RealTingwuCoordinator @Inject constructor(
             resultLinks = resultLinks,
             transcriptionUrl = transcriptionUrl,
             autoChaptersUrl = autoChaptersUrl,
-            extraResultUrls = extraResultUrls
+            extraResultUrls = extraResultUrls,
+            chapters = chapters
         )
     }
 
@@ -868,13 +925,6 @@ class RealTingwuCoordinator @Inject constructor(
         )
     }
 
-    companion object {
-        private val TAG = "${LogTags.AI_CORE}/Tingwu"
-        private const val DEFAULT_LANGUAGE = "zh-CN"
-        private const val DEFAULT_SOURCE_LANGUAGE = "cn"
-        private const val SUBMITTED_PROGRESS = 1
-    }
-
     private inline fun logVerbose(message: () -> String) {
         if (verboseLogging) {
             AiCoreLogger.v(TAG, message())
@@ -883,6 +933,59 @@ class RealTingwuCoordinator @Inject constructor(
 
     private data class TranscriptResult(
         val markdown: String,
-        val artifacts: TingwuJobArtifacts?
+        val artifacts: TingwuJobArtifacts?,
+        val chapters: List<TingwuChapter>?
     )
+
+    companion object {
+        private val TAG = "${LogTags.AI_CORE}/Tingwu"
+        private const val DEFAULT_LANGUAGE = "zh-CN"
+        private const val DEFAULT_SOURCE_LANGUAGE = "cn"
+        private const val SUBMITTED_PROGRESS = 1
+    }
+}
+
+internal fun parseAutoChaptersPayload(json: String): List<TingwuChapter> {
+    val root = runCatching { JsonParser.parseString(json) }.getOrNull() ?: return emptyList()
+    val array: JsonArray? = when {
+        root.isJsonArray -> root.asJsonArray
+        root.isJsonObject -> {
+            val obj = root.asJsonObject
+            obj.getAsJsonArray("Chapters")
+                ?: obj.getAsJsonArray("chapters")
+                ?: obj.getAsJsonArray("Items")
+                ?: obj.getAsJsonArray("items")
+        }
+        else -> null
+    }
+    val target = array ?: return emptyList()
+    return target.mapNotNull { element ->
+        if (!element.isJsonObject) return@mapNotNull null
+        val obj = element.asJsonObject
+        val title = obj.getPrimitiveString("Title")
+            ?: obj.getPrimitiveString("title")
+            ?: obj.getPrimitiveString("Name")
+            ?: obj.getPrimitiveString("name")
+        val startRaw = obj.getPrimitiveNumber("Start")
+            ?: obj.getPrimitiveNumber("StartTime")
+            ?: obj.getPrimitiveNumber("StartMs")
+        val endRaw = obj.getPrimitiveNumber("End")
+            ?: obj.getPrimitiveNumber("EndTime")
+            ?: obj.getPrimitiveNumber("EndMs")
+        val startMs = startRaw?.let { toMillis(it) }
+        val endMs = endRaw?.let { toMillis(it) }
+        if (title.isNullOrBlank() || startMs == null) return@mapNotNull null
+        TingwuChapter(title = title, startMs = startMs, endMs = endMs)
+    }
+}
+
+private fun JsonObject.getPrimitiveString(key: String): String? =
+    this.get(key)?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }?.asString
+
+private fun JsonObject.getPrimitiveNumber(key: String): Number? =
+    this.get(key)?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isNumber }?.asNumber
+
+private fun toMillis(number: Number): Long {
+    val value = number.toDouble()
+    return if (value > 100000) value.toLong() else (value * 1000).toLong()
 }

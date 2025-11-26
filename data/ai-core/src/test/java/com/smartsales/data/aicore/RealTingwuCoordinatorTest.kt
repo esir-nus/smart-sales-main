@@ -312,6 +312,22 @@ class RealTingwuCoordinatorTest {
                 )
         }
     }
+
+    @Test
+    fun parseAutoChaptersPayload_parsesList() {
+        val json = """
+            {
+              "Chapters": [
+                {"Title": "开场", "Start": 0, "End": 12.5},
+                {"Title": "报价讨论", "StartTime": 42, "EndTime": 85}
+              ]
+            }
+        """.trimIndent()
+        val chapters = parseAutoChaptersPayload(json)
+        assertEquals(2, chapters.size)
+        assertEquals("开场", chapters.first().title)
+        assertEquals(0L, chapters.first().startMs)
+    }
 }
 
 private fun statusResponse(

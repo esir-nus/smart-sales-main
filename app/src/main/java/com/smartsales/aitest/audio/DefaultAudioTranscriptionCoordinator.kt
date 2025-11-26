@@ -64,7 +64,14 @@ class DefaultAudioTranscriptionCoordinator @Inject constructor(
                     jobId = state.jobId,
                     transcriptMarkdown = state.transcriptMarkdown,
                     transcriptionUrl = state.artifacts?.transcriptionUrl,
-                    autoChaptersUrl = state.artifacts?.autoChaptersUrl
+                    autoChaptersUrl = state.artifacts?.autoChaptersUrl,
+                    chapters = state.artifacts?.chapters?.map {
+                        com.smartsales.feature.media.audio.TingwuChapterUi(
+                            title = it.title,
+                            startMs = it.startMs,
+                            endMs = it.endMs
+                        )
+                    }
                 )
                 is TingwuJobState.Failed -> AudioTranscriptionJobState.Failed(
                     jobId = state.jobId,

@@ -218,7 +218,8 @@ class AudioFilesViewModelTest {
                 jobId = "task-1",
                 transcriptMarkdown = "第一行内容\n更多",
                 transcriptionUrl = "https://example.com/transcription.json",
-                autoChaptersUrl = "https://example.com/chapters.json"
+                autoChaptersUrl = "https://example.com/chapters.json",
+                chapters = listOf(com.smartsales.data.aicore.TingwuChapter("开场", 1000, 5000))
             )
         )
         advanceUntilIdle()
@@ -229,6 +230,7 @@ class AudioFilesViewModelTest {
         assertEquals("第一行内容\n更多", recording.fullTranscriptMarkdown)
         assertEquals("https://example.com/transcription.json", recording.transcriptionUrl)
         assertEquals("https://example.com/chapters.json", recording.autoChaptersUrl)
+        assertEquals(1, recording.chapters?.size)
     }
 
     @Test

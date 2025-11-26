@@ -5,6 +5,8 @@ package com.smartsales.feature.media.audio
 // 说明：定义音频库的 UI 状态与展示模型
 // 作者：创建于 2025-11-21
 
+import com.smartsales.feature.media.audio.TingwuChapterUi
+
 data class AudioFilesUiState(
     val isLoading: Boolean = false,
     val isSyncing: Boolean = false,
@@ -29,7 +31,8 @@ data class AudioRecordingUi(
     val isPlaying: Boolean = false,
     val hasLocalCopy: Boolean = false,
     val transcriptionUrl: String? = null,
-    val autoChaptersUrl: String? = null
+    val autoChaptersUrl: String? = null,
+    val chapters: List<TingwuChapterUi>? = null
 )
 
 enum class TranscriptionStatus {

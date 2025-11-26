@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.outlined.Pause
@@ -47,11 +48,14 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.smartsales.feature.media.audio.TingwuChapterUi
+import kotlinx.coroutines.launch
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -343,6 +347,8 @@ private fun TranscriptViewerSheet(
         modifier = Modifier.testTag(AudioFilesTestTags.TRANSCRIPT_DIALOG),
         onDismissRequest = onDismiss
     ) {
+        val transcriptScrollState = rememberScrollState()
+        val coroutineScope = rememberCoroutineScope()
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -364,7 +370,7 @@ private fun TranscriptViewerSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 200.dp, max = 480.dp)
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(transcriptScrollState)
                     .testTag(AudioFilesTestTags.TRANSCRIPT_CONTENT),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -391,22 +397,50 @@ private fun TranscriptViewerSheet(
                 Text(text = "用 AI 分析本次通话")
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "章节（预留）",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            if (recording.autoChaptersUrl != null) {
+            recording.chapters?.let { chapters ->
                 Text(
-                    text = "已检测到章节数据，后续版本将提供章节视图。",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            } else {
-                Text(
-                    text = "暂无章节信息",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = "章节",
+                    style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(modifier = Modifier.height(6.dp))
+                if (chapters.isEmpty()) {
+                    Text(
+                        text = "暂无章节信息",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        chapters.forEachIndexed { index, chapter ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        coroutineScope.launch {
+                                            val target = (index * 200).coerceAtLeast(0)
+                                            transcriptScrollState.animateScrollTo(target)
+                                        }
+                                    }
+                                    .padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = formatChapterTime(chapter.startMs),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = chapter.title,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
             }
             Spacer(modifier = Modifier.height(8.dp))
             Button(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
@@ -419,3 +453,10 @@ private fun TranscriptViewerSheet(
 @Composable
 private fun formatMarkdownLite(line: String): String =
     line.trimStart('#', ' ', '\t')
+
+private fun formatChapterTime(startMs: Long): String {
+    val totalSeconds = (startMs / 1000).coerceAtLeast(0)
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "%02d:%02d".format(minutes, seconds)
+}

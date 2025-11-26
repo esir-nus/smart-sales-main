@@ -272,7 +272,8 @@ class AudioFilesViewModel @Inject constructor(
                                             transcriptPreview = preview,
                                             fullTranscriptMarkdown = state.transcriptMarkdown,
                                             transcriptionUrl = state.transcriptionUrl,
-                                            autoChaptersUrl = state.autoChaptersUrl
+                                            autoChaptersUrl = state.autoChaptersUrl,
+                                            chapters = state.chapters
                                         )
                                     } else recording
                                 }

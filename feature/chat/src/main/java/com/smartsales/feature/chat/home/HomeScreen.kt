@@ -402,6 +402,7 @@ object HomeScreenTestTags {
     const val SESSION_LOADING = "home_session_loading"
     const val SESSION_EMPTY = "home_session_empty"
     const val SESSION_LIST_ITEM_PREFIX = "home_session_item_"
+    const val SESSION_CURRENT_PREFIX = "home_session_current_"
     const val NEW_CHAT_BUTTON = "home_new_chat_button"
     const val SESSION_TITLE = "home_session_title"
     const val USER_MESSAGE = "home_user_message"
@@ -616,6 +617,7 @@ private fun SessionListItem(
                         onClick = {},
                         enabled = false,
                         label = { Text(text = "当前") },
+                        modifier = Modifier.testTag("${HomeScreenTestTags.SESSION_CURRENT_PREFIX}${session.id}"),
                         colors = AssistChipDefaults.assistChipColors(
                             labelColor = MaterialTheme.colorScheme.primary
                         )

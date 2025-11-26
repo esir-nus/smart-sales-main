@@ -110,6 +110,7 @@ class DeviceManagerViewModelTest {
 
     @Test
     fun `refresh when disconnected reports friendly message`() = runTest(dispatcher) {
+        advanceUntilIdle()
         viewModel.onRefreshFiles()
         advanceUntilIdle()
 

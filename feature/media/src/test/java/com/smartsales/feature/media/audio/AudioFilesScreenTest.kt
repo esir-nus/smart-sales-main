@@ -3,7 +3,7 @@ package com.smartsales.feature.media.audio
 // 文件：feature/media/src/test/java/com/smartsales/feature/media/audio/AudioFilesScreenTest.kt
 // 模块：:feature:media
 // 说明：验证 AudioFilesScreen 的转写占位 UI 与交互
-// 作者：创建于 2025-11-25
+// 作者：创建于 2025-11-26
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
@@ -17,14 +17,30 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.smartsales.feature.media.audio.AudioFilesTestTags
+import org.junit.Before
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowBuild
 
+@RunWith(RobolectricTestRunner::class)
+@Config(
+    manifest = "src/test/AndroidManifest.xml",
+    sdk = [33],
+    packageName = "org.robolectric.default"
+)
 class AudioFilesScreenTest {
 
     @get:Rule
     val composeRule: ComposeContentTestRule = createComposeRule()
+
+    @Before
+    fun setup() {
+        ShadowBuild.setFingerprint("robolectric")
+    }
 
     @Test
     fun transcribeButton_visibleAndTriggersCallback_whenNone() {
@@ -59,7 +75,7 @@ class AudioFilesScreenTest {
         }
 
         composeRule.onNodeWithTag("${AudioFilesTestTags.TRANSCRIBE_BUTTON_PREFIX}a1").assertIsDisplayed()
-        composeRule.onNodeWithText("转写").performClick()
+        composeRule.onNodeWithTag("${AudioFilesTestTags.TRANSCRIBE_BUTTON_PREFIX}a1").performClick()
         assertEquals("a1", transcribeId)
     }
 
@@ -103,9 +119,9 @@ class AudioFilesScreenTest {
         }
 
         composeRule.onNodeWithTag("${AudioFilesTestTags.STATUS_CHIP_PREFIX}p1").assertIsDisplayed()
-        composeRule.onNodeWithText("转写中…").assertIsDisplayed()
+        composeRule.onNodeWithText("转写中").assertIsDisplayed()
         composeRule.onNodeWithTag("${AudioFilesTestTags.STATUS_CHIP_PREFIX}d1").assertIsDisplayed()
-        composeRule.onNodeWithText("已完成").assertIsDisplayed()
+        composeRule.onNodeWithText("转写完成").assertIsDisplayed()
         composeRule.onNodeWithTag("${AudioFilesTestTags.TRANSCRIPT_BUTTON_PREFIX}d1").assertIsDisplayed()
     }
 
@@ -210,7 +226,7 @@ class AudioFilesScreenTest {
         }
 
         composeRule.onNodeWithTag(AudioFilesTestTags.TRANSCRIPT_SUMMARY).assertIsDisplayed()
-        composeRule.onNodeWithText("智能总结").assertIsDisplayed()
+        composeRule.onNodeWithText("AI 智能总结").assertIsDisplayed()
         composeRule.onNodeWithText("概览").assertIsDisplayed()
         composeRule.onNodeWithText("要点A").assertIsDisplayed()
         composeRule.onNodeWithText("行动1").assertIsDisplayed()

@@ -71,3 +71,4 @@ chore: update dependencies
 3. Focus on one change per commit
 4. Explain the 'why' not just the 'what'
 5. Be specific about the value delivered
+6. also commit in Chinese, even when the source languge is is English, alwasy commit in Chinese

@@ -19,9 +19,11 @@ import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -53,10 +55,11 @@ class DeviceManagerScreenTest {
         renderDeviceManager(state)
 
         composeRule.onNodeWithText("设备未连接").assertIsDisplayed()
-        composeRule.onNodeWithText("请先完成设备配网，然后刷新设备文件。").assertIsDisplayed()
-        composeRule.onNodeWithText("刷新设备状态").assertIsDisplayed()
+        composeRule.onNodeWithText("请先完成设备配网，然后重试连接并刷新设备文件。").assertIsDisplayed()
+        composeRule.onNodeWithText("重试连接").assertIsDisplayed()
         composeRule.onNodeWithTag("device_manager_refresh_button").assertIsNotEnabled()
         composeRule.onNodeWithTag("device_manager_upload_button").assertIsNotEnabled()
+        composeRule.onNodeWithTag("device_manager_simulator_placeholder").assertIsDisplayed()
     }
 
     @Test
@@ -71,7 +74,7 @@ class DeviceManagerScreenTest {
         composeRule.onNodeWithTag("device_manager_refresh_button").assertIsNotEnabled()
         composeRule.onNodeWithTag("device_manager_upload_button").assertIsNotEnabled()
         composeRule.onNodeWithText("刷新中...").assertIsDisplayed()
-        composeRule.onNodeWithText("上传文件").assertIsDisplayed()
+        composeRule.onNodeWithText("上传").assertIsDisplayed()
     }
 
     @Test
@@ -83,7 +86,7 @@ class DeviceManagerScreenTest {
         renderDeviceManager(state)
 
         composeRule.onNodeWithTag("device_manager_empty_state").assertIsDisplayed()
-        composeRule.onAllNodesWithText("应用").assertCountEquals(0)
+        composeRule.onNodeWithTag("device_manager_simulator_placeholder").assertIsDisplayed()
     }
 
     @Test
@@ -107,7 +110,7 @@ class DeviceManagerScreenTest {
     @Test
     fun listState_rendersFilesAndTriggersActions() {
         val files = listOf(
-            fileUi(id = "promo.mp4", displayName = "promo.mp4", mimeType = "video/mp4"),
+            fileUi(id = "promo.mp4", displayName = "promo.mp4", mimeType = "video/mp4", durationText = "00:10"),
             fileUi(id = "loop.gif", displayName = "loop.gif", mimeType = "image/gif", mediaType = DeviceMediaTab.Gifs)
         )
         var refreshClicks = 0
@@ -126,11 +129,34 @@ class DeviceManagerScreenTest {
 
         composeRule.onNodeWithText("promo.mp4").assertIsDisplayed()
         composeRule.onNodeWithText("loop.gif").assertIsDisplayed()
+        composeRule.onNodeWithText("00:10").assertIsDisplayed()
+        composeRule.onNodeWithText("2025-11-20 10:00").assertDoesNotExist()
+        composeRule.onNodeWithTag("device_manager_simulator_title").assertIsDisplayed()
         composeRule.onNodeWithTag("device_manager_refresh_button").assertIsEnabled().performClick()
         composeRule.onNodeWithTag("device_manager_upload_button").assertIsEnabled().performClick()
 
         assertEquals(1, refreshClicks)
         assertEquals(1, uploadClicks)
+    }
+
+    @Test
+    fun selectingFile_updatesSimulator() {
+        val files = listOf(
+            fileUi(id = "first.mp4", displayName = "first.mp4", mimeType = "video/mp4", durationText = "00:05"),
+            fileUi(id = "second.gif", displayName = "second.gif", mimeType = "image/gif", mediaType = DeviceMediaTab.Gifs)
+        )
+        renderDeviceManager(
+            initialState = createState(
+                connectionStatus = DeviceConnectionUiState.Connected(deviceName = "录音笔"),
+                files = files,
+                visibleFiles = files,
+                selectedFile = files.first()
+            )
+        )
+
+        composeRule.onNodeWithTag("device_manager_simulator_title").assertIsDisplayed().assertTextContains("first.mp4")
+        composeRule.onNodeWithText("second.gif").performClick()
+        composeRule.onNodeWithTag("device_manager_simulator_title").assertIsDisplayed().assertTextContains("second.gif")
     }
 
     @Test
@@ -196,7 +222,10 @@ class DeviceManagerScreenTest {
                     state = uiState,
                     onRefresh = onRefresh,
                     onRetryLoad = onRetryLoad,
-                    onSelectFile = onSelectFile,
+                    onSelectFile = { id ->
+                        uiState = uiState.copy(selectedFile = uiState.visibleFiles.firstOrNull { it.id == id })
+                        onSelectFile(id)
+                    },
                     onApplyFile = onApplyFile,
                     onDeleteFile = onDeleteFile,
                     onRequestUpload = onRequestUpload,
@@ -240,7 +269,8 @@ class DeviceManagerScreenTest {
         displayName: String,
         mimeType: String = "video/mp4",
         isApplied: Boolean = false,
-        mediaType: DeviceMediaTab = DeviceMediaTab.Videos
+        mediaType: DeviceMediaTab = DeviceMediaTab.Videos,
+        durationText: String? = null
     ): DeviceFileUi {
         return DeviceFileUi(
             id = id,
@@ -251,7 +281,8 @@ class DeviceManagerScreenTest {
             modifiedAtText = "2025-11-20 10:00",
             mediaUrl = "http://example/$id",
             downloadUrl = "http://example/$id/download",
-            isApplied = isApplied
+            isApplied = isApplied,
+            durationText = durationText
         )
     }
 

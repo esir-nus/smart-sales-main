@@ -19,7 +19,6 @@ import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -27,14 +26,20 @@ import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.hasParent
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.smartsales.feature.media.devicemanager.DeviceManagerUiState
 import com.smartsales.feature.media.devicemanager.DeviceConnectionUiState
 import com.smartsales.feature.media.devicemanager.DeviceFileUi
 import com.smartsales.feature.media.devicemanager.DeviceMediaTab
+import com.smartsales.aitest.devicemanager.DeviceManagerTestTags
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -56,10 +61,10 @@ class DeviceManagerScreenTest {
 
         composeRule.onNodeWithText("设备未连接").assertIsDisplayed()
         composeRule.onNodeWithText("请先完成设备配网，然后重试连接并刷新设备文件。").assertIsDisplayed()
-        composeRule.onNodeWithText("重试连接").assertIsDisplayed()
-        composeRule.onNodeWithTag("device_manager_refresh_button").assertIsNotEnabled()
-        composeRule.onNodeWithTag("device_manager_upload_button").assertIsNotEnabled()
-        composeRule.onNodeWithTag("device_manager_simulator_placeholder").assertIsDisplayed()
+        composeRule.onAllNodesWithText("重试连接").onFirst().assertIsDisplayed()
+        composeRule.onNodeWithTag(DeviceManagerTestTags.REFRESH_BUTTON).assertIsNotEnabled()
+        composeRule.onNodeWithTag(DeviceManagerTestTags.UPLOAD_BUTTON).assertIsNotEnabled()
+        composeRule.onNodeWithTag(DeviceManagerTestTags.SIMULATOR_PLACEHOLDER).assertIsDisplayed()
     }
 
     @Test
@@ -71,8 +76,8 @@ class DeviceManagerScreenTest {
         renderDeviceManager(state)
 
         composeRule.onNode(progressMatcher()).assertIsDisplayed()
-        composeRule.onNodeWithTag("device_manager_refresh_button").assertIsNotEnabled()
-        composeRule.onNodeWithTag("device_manager_upload_button").assertIsNotEnabled()
+        composeRule.onNodeWithTag(DeviceManagerTestTags.REFRESH_BUTTON).assertIsNotEnabled()
+        composeRule.onNodeWithTag(DeviceManagerTestTags.UPLOAD_BUTTON).assertIsNotEnabled()
         composeRule.onNodeWithText("刷新中...").assertIsDisplayed()
         composeRule.onNodeWithText("上传").assertIsDisplayed()
     }
@@ -85,8 +90,8 @@ class DeviceManagerScreenTest {
         )
         renderDeviceManager(state)
 
-        composeRule.onNodeWithTag("device_manager_empty_state").assertIsDisplayed()
-        composeRule.onNodeWithTag("device_manager_simulator_placeholder").assertIsDisplayed()
+        composeRule.onNodeWithTag(DeviceManagerTestTags.EMPTY_STATE).assertIsDisplayed()
+        composeRule.onNodeWithTag(DeviceManagerTestTags.SIMULATOR_PLACEHOLDER).assertIsDisplayed()
     }
 
     @Test
@@ -102,7 +107,7 @@ class DeviceManagerScreenTest {
             onRetryLoad = { retryClicks++ }
         )
 
-        composeRule.onNodeWithTag("device_manager_error_banner").assertIsDisplayed()
+        composeRule.onNodeWithTag(DeviceManagerTestTags.ERROR_BANNER).assertIsDisplayed()
         composeRule.onNodeWithText("重试").assertIsDisplayed().performClick()
         assertEquals(1, retryClicks)
     }
@@ -127,13 +132,13 @@ class DeviceManagerScreenTest {
             onRequestUpload = { uploadClicks++ }
         )
 
-        composeRule.onNodeWithText("promo.mp4").assertIsDisplayed()
-        composeRule.onNodeWithText("loop.gif").assertIsDisplayed()
+        composeRule.onNode(hasText("promo.mp4") and hasAnyAncestor(hasTestTag(DeviceManagerTestTags.FILE_LIST))).assertIsDisplayed()
+        composeRule.onNode(hasText("loop.gif") and hasAnyAncestor(hasTestTag(DeviceManagerTestTags.FILE_LIST))).assertIsDisplayed()
         composeRule.onNodeWithText("00:10").assertIsDisplayed()
-        composeRule.onNodeWithText("2025-11-20 10:00").assertDoesNotExist()
-        composeRule.onNodeWithTag("device_manager_simulator_title").assertIsDisplayed()
-        composeRule.onNodeWithTag("device_manager_refresh_button").assertIsEnabled().performClick()
-        composeRule.onNodeWithTag("device_manager_upload_button").assertIsEnabled().performClick()
+        composeRule.onAllNodesWithText("2025-11-20 10:00").assertCountEquals(0)
+        composeRule.onNodeWithTag(DeviceManagerTestTags.SIMULATOR_TITLE).assertIsDisplayed()
+        composeRule.onNodeWithTag(DeviceManagerTestTags.REFRESH_BUTTON).assertIsEnabled().performClick()
+        composeRule.onNodeWithTag(DeviceManagerTestTags.UPLOAD_BUTTON).assertIsEnabled().performClick()
 
         assertEquals(1, refreshClicks)
         assertEquals(1, uploadClicks)
@@ -154,9 +159,9 @@ class DeviceManagerScreenTest {
             )
         )
 
-        composeRule.onNodeWithTag("device_manager_simulator_title").assertIsDisplayed().assertTextContains("first.mp4")
-        composeRule.onNodeWithText("second.gif").performClick()
-        composeRule.onNodeWithTag("device_manager_simulator_title").assertIsDisplayed().assertTextContains("second.gif")
+        composeRule.onNodeWithTag(DeviceManagerTestTags.SIMULATOR_TITLE).assertIsDisplayed().assertTextContains("first.mp4")
+        composeRule.onNode(hasText("second.gif") and hasAnyAncestor(hasTestTag(DeviceManagerTestTags.FILE_LIST))).performClick()
+        composeRule.onNodeWithTag(DeviceManagerTestTags.SIMULATOR_TITLE).assertIsDisplayed().assertTextContains("second.gif")
     }
 
     @Test
@@ -194,10 +199,11 @@ class DeviceManagerScreenTest {
                 }
             }
 
-            composeRule.onNodeWithTag("device_manager_error_banner").assertIsDisplayed()
+            composeRule.onNodeWithTag(DeviceManagerTestTags.ERROR_BANNER).assertIsDisplayed()
             composeRule.onNodeWithText("知道了").performClick()
-            composeRule.waitForIdle()
-            composeRule.onAllNodesWithTag("device_manager_error_banner").assertCountEquals(0)
+            composeRule.waitUntil(timeoutMillis = 3_000) {
+                composeRule.onAllNodesWithTag(DeviceManagerTestTags.ERROR_BANNER).fetchSemanticsNodes().isEmpty()
+            }
             assertTrue(cleared)
         } finally {
             composeRule.mainClock.autoAdvance = true

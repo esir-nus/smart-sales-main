@@ -216,7 +216,7 @@ private fun DeviceConnectionHeader(
                     }
                     OutlinedButton(
                         onClick = onUpload,
-                        enabled = isConnected && !isUploading,
+                        enabled = isConnected && !isUploading && !isLoading,
                         modifier = Modifier.testTag(DeviceManagerTestTags.UPLOAD_BUTTON)
                     ) {
                         Icon(Icons.Default.CloudUpload, contentDescription = null)
@@ -284,7 +284,9 @@ private fun DeviceFileList(
     onSelect: (String) -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag(DeviceManagerTestTags.FILE_LIST),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(files, key = { it.id }) { file ->
@@ -605,12 +607,13 @@ private fun PreviewFrame(file: DeviceFileUi) {
     }
 }
 
-private object DeviceManagerTestTags {
+object DeviceManagerTestTags {
     const val CONNECT_BUTTON = "device_manager_connect_button"
     const val REFRESH_BUTTON = "device_manager_refresh_button"
     const val UPLOAD_BUTTON = "device_manager_upload_button"
     const val EMPTY_STATE = "device_manager_empty_state"
     const val ERROR_BANNER = "device_manager_error_banner"
+    const val FILE_LIST = "device_manager_file_list"
     const val SIMULATOR = "device_manager_simulator"
     const val SIMULATOR_PLACEHOLDER = "device_manager_simulator_placeholder"
     const val SIMULATOR_TITLE = "device_manager_simulator_title"

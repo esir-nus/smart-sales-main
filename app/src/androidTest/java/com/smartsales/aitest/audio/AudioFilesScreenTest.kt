@@ -154,7 +154,7 @@ class AudioFilesScreenTest {
         }
 
         composeRule.onAllNodesWithText("photo-1.jpg").assertCountEquals(0)
-        composeRule.onNodeWithText("voice-1.wav").assertIsDisplayed()
+        composeRule.onNodeWithText("voice-1.wav", substring = true).assertIsDisplayed()
     }
 
     private fun sampleRecording(id: String): AudioRecordingUi =

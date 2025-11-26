@@ -181,7 +181,10 @@ private fun AiFeatureTestApp() {
                                             onNavigateToDeviceManager = { overlayPage = OverlayPage.Device },
                                             onNavigateToDeviceSetup = { currentSection = AppSection.DeviceSetup },
                                             onNavigateToAudioFiles = { overlayPage = OverlayPage.Audio },
-                                            onNavigateToUserCenter = { currentSection = AppSection.UserCenter }
+                                            onNavigateToUserCenter = { currentSection = AppSection.UserCenter },
+                                            onSelectSession = { sessionId ->
+                                                pendingSessionId = sessionId
+                                            }
                                         )
                                     },
                                     audioContent = {

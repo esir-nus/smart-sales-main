@@ -48,6 +48,7 @@ All agents must follow that document as the authoritative behavior contract.
      // 说明：<简要中文说明>
      // 作者：创建于 <YYYY-MM-DD> # use real time, do not invent or guess
      ```
+   2. Major codeblock needs comments/annotations in Chinese for the convinence of other developers  
 
 ## Project Structure & Module Organization
 The workspace is defined in `settings.gradle.kts` and intentionally lean. `app/` hosts the Compose shell and remains the single entry point, `tingwuTestApp/` provides Tingwu upload helpers, `data/ai-core/` wraps DashScope/Tingwu/OSS clients, and `core/util` plus `core/test` hold reusable primitives and JVM fixtures. Feature code stays inside `feature/chat`, `feature/media`, and `feature/connectivity`. Assets live in `app/src/main/res/`, docs and plans go under `docs/` and `plans/`, and cached artifacts belong in `third_party/maven-repo/`.

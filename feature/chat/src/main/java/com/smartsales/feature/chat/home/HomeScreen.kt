@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -23,6 +24,7 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Person
@@ -51,6 +53,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
@@ -85,10 +88,13 @@ fun HomeScreenRoute(
     onNavigateToDeviceManager: () -> Unit = {},
     onNavigateToDeviceSetup: () -> Unit = {},
     onNavigateToAudioFiles: () -> Unit = {},
-    onNavigateToUserCenter: () -> Unit = {}
+    onNavigateToUserCenter: () -> Unit = {},
+    onSelectSession: (String) -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    // 抽屉开关保留在 Route 层，避免影响 ViewModel 状态
+    var showHistoryPanel by rememberSaveable { mutableStateOf(false) }
 
     // Snackbar 展示来自 ViewModel 的一次性提醒
     LaunchedEffect(state.snackbarMessage) {
@@ -143,7 +149,15 @@ fun HomeScreenRoute(
         onNewChatClicked = viewModel::onNewChatClicked,
         onSessionSelected = viewModel::setSession,
         chatErrorMessage = state.chatErrorMessage,
-        modifier = modifier
+        modifier = modifier,
+        showHistoryPanel = showHistoryPanel,
+        onToggleHistoryPanel = { showHistoryPanel = !showHistoryPanel },
+        onDismissHistoryPanel = { showHistoryPanel = false },
+        historySessions = state.sessionList.take(10),
+        onHistorySessionSelected = { sessionId ->
+            onSelectSession(sessionId)
+            showHistoryPanel = false
+        }
     )
 }
 
@@ -164,7 +178,12 @@ fun HomeScreen(
     onNewChatClicked: () -> Unit = {},
     onSessionSelected: (String) -> Unit = {},
     chatErrorMessage: String? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showHistoryPanel: Boolean = false,
+    onToggleHistoryPanel: () -> Unit = {},
+    onDismissHistoryPanel: () -> Unit = {},
+    historySessions: List<SessionListItemUi> = emptyList(),
+    onHistorySessionSelected: (String) -> Unit = {}
 ) {
     val refreshingState = remember { mutableStateOf(false) }
     LaunchedEffect(state.deviceSnapshot, state.audioSummary) {
@@ -210,7 +229,13 @@ fun HomeScreen(
             .fillMaxSize()
             .testTag(HomeScreenTestTags.ROOT),
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = { HomeTopBar(onProfileClick = onProfileClicked, deviceSnapshot = state.deviceSnapshot) },
+        topBar = {
+            HomeTopBar(
+                onProfileClick = onProfileClicked,
+                deviceSnapshot = state.deviceSnapshot,
+                onHistoryClick = onToggleHistoryPanel
+            )
+        },
         bottomBar = {
             HomeInputArea(
                 quickSkills = state.quickSkills,
@@ -344,6 +369,14 @@ fun HomeScreen(
                     }
                 )
             }
+            if (showHistoryPanel) {
+                HistoryPanel(
+                    sessions = historySessions,
+                    currentSessionId = state.currentSession.id,
+                    onDismiss = onDismissHistoryPanel,
+                    onSessionSelected = onHistorySessionSelected
+                )
+            }
         }
     }
 }
@@ -371,12 +404,17 @@ object HomeScreenTestTags {
     const val INPUT_FIELD = "home_input_field"
     const val SEND_BUTTON = "home_send_button"
     const val SCROLL_TO_LATEST = "home_scroll_to_latest_button"
+    const val HISTORY_TOGGLE = "home_history_toggle"
+    const val HISTORY_PANEL = "home_history_panel"
+    const val HISTORY_EMPTY = "home_history_empty"
+    const val HISTORY_ITEM_PREFIX = "home_history_item_"
 }
 
 @Composable
 private fun HomeTopBar(
     onProfileClick: () -> Unit,
-    deviceSnapshot: DeviceSnapshotUi?
+    deviceSnapshot: DeviceSnapshotUi?,
+    onHistoryClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -893,6 +931,93 @@ private fun ScrollToLatestButton(
                 contentDescription = "回到底部",
                 tint = MaterialTheme.colorScheme.onPrimaryContainer
             )
+        }
+    }
+}
+
+@Composable
+private fun HistoryPanel(
+    sessions: List<SessionListItemUi>,
+    currentSessionId: String,
+    onDismiss: () -> Unit,
+    onSessionSelected: (String) -> Unit
+) {
+    // 侧边抽屉：覆盖在右侧，点击遮罩即可关闭
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(onClick = onDismiss)
+        )
+        Surface(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .width(320.dp)
+                .fillMaxHeight()
+                .testTag(HomeScreenTestTags.HISTORY_PANEL),
+            tonalElevation = 6.dp,
+            shadowElevation = 8.dp,
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(text = "会话抽屉", style = MaterialTheme.typography.titleMedium)
+                if (sessions.isEmpty()) {
+                    Text(
+                        text = "暂无历史会话，先开始一次对话吧。",
+                        modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_EMPTY),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    sessions.forEach { session ->
+                        val isCurrent = session.id == currentSessionId
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onSessionSelected(session.id)
+                                }
+                                .testTag("${HomeScreenTestTags.HISTORY_ITEM_PREFIX}${session.id}"),
+                            color = if (isCurrent) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
+                            tonalElevation = if (isCurrent) 4.dp else 1.dp
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = session.title,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                if (session.lastMessagePreview.isNotBlank()) {
+                                    Text(
+                                        text = session.lastMessagePreview,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    text = formatSessionTime(session.updatedAtMillis),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -102,7 +102,8 @@ class RealTingwuCoordinator @Inject constructor(
                                 diarizationEnabled = true,
                                 diarization = null,
                                 model = model
-                            )
+                            ),
+                            summarizationEnabled = true
                         )
                     )
                 )

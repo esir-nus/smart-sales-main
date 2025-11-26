@@ -1,199 +1,250 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Wifi, RefreshCw, Upload, Trash2, CheckCircle, Smartphone, Image as ImageIcon, Video } from 'lucide-react';
+import { Wifi, RefreshCw, Upload, Smartphone, CheckCircle, Loader2, AlertCircle, Play, Pause, Maximize2 } from 'lucide-react';
 import NeumorphicCard from '@/components/ui/NeumorphicCard';
 import NeumorphicButton from '@/components/ui/NeumorphicButton';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import DeviceFileItem from '@/components/device/DeviceFileItem';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 
 export default function DeviceManagerPage() {
-  // States: disconnected, connecting, connected
-  const [connectionState, setConnectionState] = useState('disconnected');
+  // Start with 'connecting' to simulate auto-discovery on mount
+  const [connectionState, setConnectionState] = useState('connecting'); 
   const [files, setFiles] = useState([]);
-  const [activeTab, setActiveTab] = useState('image');
-  const [scanning, setScanning] = useState(false);
+  const [isLoadingFiles, setIsLoadingFiles] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false); 
+
+  // Auto-connect simulation on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setConnectionState('connected');
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
-    // Simulate fetching files when connected
     if (connectionState === 'connected') {
       loadFiles();
+    } else {
+      setFiles([]);
+      setSelectedFile(null);
     }
   }, [connectionState]);
 
   const loadFiles = async () => {
+    setIsLoadingFiles(true);
     try {
+      // Simulate API delay
+      await new Promise(r => setTimeout(r, 800));
       const data = await base44.entities.GadgetFile.list();
-      setFiles(data);
+      
+      // Mock data if list is empty or for dev
+      const mockData = [
+        { id: 1, filename: 'Promo_Summer_2025.png', type: 'image', url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&q=80', is_applied: true },
+        { id: 2, filename: 'Product_Demo.mp4', type: 'video', duration: '00:45', url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4', is_applied: false },
+        { id: 3, filename: 'Feature_Highlight.gif', type: 'gif', url: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDdtY2J6eG52YnJ6YnJ6YnJ6YnJ6YnJ6YnJ6YnJ6YnJ6YnJ6YnJ6/3o7TKSjRrfIPjeiB56/giphy.gif', is_applied: false },
+        { id: 4, filename: 'Store_Front.jpg', type: 'image', url: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&q=80', is_applied: false }
+      ];
+      
+      // Merge real data if exists, otherwise use mock
+      const finalData = (data && data.length > 0) ? data : mockData;
+      setFiles(finalData);
+      
+      // Auto-select the currently applied file, or the first one
+      const applied = finalData.find(f => f.is_applied);
+      setSelectedFile(applied || finalData[0] || null);
+
     } catch (e) {
       console.error("Failed to load files", e);
-      // Fallback mock data if entity fails
-      setFiles([
-        { id: 1, filename: 'Promo_Poster.png', type: 'image', url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&q=80', is_applied: true },
-        { id: 2, filename: 'Sales_Chart.png', type: 'image', url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80', is_applied: false }
-      ]);
+      // Error state handled by UI below if files is empty
+    } finally {
+      setIsLoadingFiles(false);
     }
   };
 
   const handleConnect = () => {
-    setScanning(true);
     setConnectionState('connecting');
-    
-    // Simulate scanning and connection delay
     setTimeout(() => {
-      setScanning(false);
       setConnectionState('connected');
-    }, 3000);
+    }, 2500);
+  };
+
+  const handleRefresh = () => {
+    loadFiles();
   };
 
   const handleApply = async (file) => {
-    // Optimistic update
+    // Update local state to reflect change
     const updatedFiles = files.map(f => ({
       ...f,
       is_applied: f.id === file.id
     }));
     setFiles(updatedFiles);
-    
-    // In real app: await base44.entities.GadgetFile.update(file.id, { is_applied: true });
-    // and unset others
+    setSelectedFile(file); // Also select it
+    // In real app: await base44.entities.GadgetFile.update(...)
   };
 
   const handleDelete = async (id) => {
     setFiles(files.filter(f => f.id !== id));
-    // await base44.entities.GadgetFile.delete(id);
+    if (selectedFile?.id === id) {
+        setSelectedFile(null);
+    }
   };
 
-  const filteredFiles = files.filter(f => f.type === activeTab);
-
   return (
-    <div className="h-full flex flex-col p-4 max-w-2xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-black">设备管理</h1>
-        <p className="text-[#8E8E93]">管理您的销售助手设备</p>
-      </div>
-
-      {/* Connection Status Card */}
-      <NeumorphicCard className="mb-8 flex flex-col items-center justify-center py-8 min-h-[200px] bg-white border border-[#E5E5EA] shadow-sm rounded-3xl">
-        {connectionState === 'disconnected' && (
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="text-center"
-          >
-            <div className="w-20 h-20 bg-[#F2F2F7] border border-[#E5E5EA] rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Smartphone className="w-10 h-10 text-[#8E8E93]" />
-            </div>
-            <h3 className="text-lg font-bold text-black mb-2">设备已断开</h3>
-            <p className="text-[#8E8E93] text-sm mb-6 max-w-xs mx-auto">
-              请确保您的设备已开启并处于连接范围内。
-            </p>
-            <NeumorphicButton onClick={handleConnect} variant="primary" className="px-8 py-3 bg-[#007AFF] hover:bg-[#0066CC] text-white">
-              连接设备
-            </NeumorphicButton>
-          </motion.div>
-        )}
-
-        {connectionState === 'connecting' && (
-          <div className="text-center">
-            <div className="relative w-24 h-24 mx-auto mb-6">
-              <motion.div 
-                animate={{ scale: [1, 1.5, 1], opacity: [1, 0, 1] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className="absolute inset-0 bg-[#007AFF]/20 rounded-full"
-              />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Wifi className="w-10 h-10 text-[#007AFF]" />
-              </div>
-            </div>
-            <h3 className="text-lg font-bold text-black">正在扫描设备...</h3>
-            <p className="text-[#8E8E93] text-sm mt-2">请稍候，正在建立连接</p>
+    <div className="h-full flex flex-col max-w-2xl mx-auto relative bg-[#F2F2F7]">
+      <div className="flex-1 overflow-y-auto px-4 pt-6 pb-24 scrollbar-hide">
+        
+        {/* Header */}
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-black">设备管理</h1>
+            <p className="text-[#8E8E93] text-sm">管理您的销售助手设备</p>
           </div>
-        )}
-
-        {connectionState === 'connected' && (
-          <div className="w-full px-4">
-             <div className="flex items-center justify-between mb-6">
-               <div className="flex items-center gap-3">
-                 <div className="p-3 bg-[#34C759]/10 rounded-full text-[#34C759]">
-                   <CheckCircle className="w-6 h-6" />
-                 </div>
-                 <div>
-                   <h3 className="font-bold text-black">销售助手 X1</h3>
-                   <p className="text-xs text-[#34C759]">已连接 • 电量 85%</p>
-                 </div>
-                 </div>
-                 <NeumorphicButton 
-                 onClick={() => setConnectionState('disconnected')}
-                 className="p-2 text-[#8E8E93] hover:bg-[#F2F2F7]"
-                 >
-                 <RefreshCw className="w-5 h-5" />
-                 </NeumorphicButton>
-             </div>
-
-             {/* Device Screen Preview (Placeholder) */}
-             <div className="bg-[#3A3A3C] rounded-xl aspect-video w-full mb-6 relative overflow-hidden shadow-inner flex items-center justify-center border border-[#E5E5EA]">
-                {files.find(f => f.is_applied) ? (
-                  <img 
-                    src={files.find(f => f.is_applied).url} 
-                    alt="Current Display" 
-                    className="w-full h-full object-cover opacity-90"
-                  />
-                ) : (
-                  <span className="text-white/50 text-sm">默认显示</span>
-                )}
-                <div className="absolute bottom-2 right-2 text-[10px] text-white/50 font-mono">实时预览</div>
-             </div>
-          </div>
-        )}
-      </NeumorphicCard>
-
-      {/* File Manager Section (Only when connected) */}
-      {connectionState === 'connected' && (
-        <div className="flex-1">
-           <div className="flex gap-4 mb-6">
+          {connectionState === 'connected' && (
              <button 
-               onClick={() => setActiveTab('image')}
-               className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${
-                 activeTab === 'image' 
-                   ? 'bg-[#007AFF] text-white shadow-md' 
-                   : 'text-[#8E8E93] bg-white border border-[#E5E5EA] hover:bg-[#F2F2F7]'
-               }`}
+               onClick={handleRefresh}
+               disabled={isLoadingFiles}
+               className={`p-2 rounded-full bg-white border border-[#E5E5EA] text-[#8E8E93] hover:text-[#007AFF] active:scale-95 shadow-sm transition-all duration-200 ${isLoadingFiles ? 'animate-spin' : ''}`}
+               aria-label="刷新文件列表"
              >
-               <div className="flex items-center justify-center gap-2">
-                 <ImageIcon size={16} /> 图片
-               </div>
+               <RefreshCw size={20} />
              </button>
-             <button 
-               onClick={() => setActiveTab('video')}
-               className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${
-                 activeTab === 'video' 
-                   ? 'bg-[#007AFF] text-white shadow-md' 
-                   : 'text-[#8E8E93] bg-white border border-[#E5E5EA] hover:bg-[#F2F2F7]'
-               }`}
-             >
-               <div className="flex items-center justify-center gap-2">
-                 <Video size={16} /> 视频
-               </div>
-             </button>
-           </div>
-
-           <div className="grid grid-cols-2 gap-4 pb-20">
-              {/* Upload New Card */}
-              <div className="neu-card rounded-2xl flex flex-col items-center justify-center p-6 border border-dashed border-[#C7C7CC] cursor-pointer hover:border-[#007AFF] transition-colors bg-[#F2F2F7]">
-                <Upload className="w-8 h-8 text-[#8E8E93] mb-2" />
-                <span className="text-xs text-[#8E8E93] font-bold">上传新文件</span>
-              </div>
-
-              {filteredFiles.map(file => (
-                <DeviceFileItem 
-                  key={file.id}
-                  file={file}
-                  onApply={handleApply}
-                  onDelete={handleDelete}
-                />
-              ))}
-           </div>
+          )}
         </div>
-      )}
+
+        {/* State: Disconnected */}
+        {connectionState === 'disconnected' && (
+           <NeumorphicCard className="flex flex-col items-center justify-center py-12 bg-white border border-[#E5E5EA] shadow-md rounded-3xl mt-4">
+              <div className="w-24 h-24 bg-[#F2F2F7] rounded-full flex items-center justify-center mb-6 text-[#8E8E93] shadow-inner">
+                 <Smartphone size={40} strokeWidth={1.5} />
+              </div>
+              <h3 className="text-lg font-bold text-black mb-2">设备未连接</h3>
+              <p className="text-[#8E8E93] text-sm mb-8 max-w-[220px] text-center leading-relaxed">
+                请连接设备以管理文件和查看实时预览
+              </p>
+              <div className="flex flex-col gap-3 w-full max-w-xs px-4">
+                <NeumorphicButton 
+                  onClick={() => setConnectionState('connecting')}
+                  variant="primary" 
+                  className="bg-[#007AFF] hover:opacity-90 active:scale-[0.98] text-white px-8 py-3 shadow-lg w-full transition-all duration-200"
+                >
+                   重试连接
+                </NeumorphicButton>
+
+                <Link to={createPageUrl('DeviceSetup')} className="w-full">
+                  <NeumorphicButton className="bg-transparent border border-[#E5E5EA] text-[#8E8E93] px-8 py-3 w-full hover:bg-[#F2F2F7] active:bg-[#E5E5EA] transition-all duration-200">
+                     配对新设备
+                  </NeumorphicButton>
+                </Link>
+              </div>
+           </NeumorphicCard>
+        )}
+
+        {/* State: Connecting */}
+        {connectionState === 'connecting' && (
+           <div className="flex flex-col items-center justify-center py-20 mt-4">
+              <Loader2 className="w-10 h-10 text-[#007AFF] animate-spin mb-4" />
+              <h3 className="text-lg font-medium text-black">正在连接设备...</h3>
+              <p className="text-sm text-[#8E8E93] mt-1">请确保设备在附近</p>
+           </div>
+        )}
+
+        {/* State: Connected */}
+        {connectionState === 'connected' && (
+           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              
+              {/* Persistent Simulator Viewer */}
+              <div className="bg-[#3A3A3C] rounded-2xl overflow-hidden shadow-xl border border-[#E5E5EA] relative aspect-video group">
+                 {selectedFile ? (
+                    <div className="w-full h-full relative flex items-center justify-center bg-black">
+                       {selectedFile.type === 'video' ? (
+                          <video 
+                             src={selectedFile.url} 
+                             className="w-full h-full object-contain"
+                             controls
+                             autoPlay={false}
+                          />
+                       ) : (
+                          <img 
+                             src={selectedFile.url} 
+                             alt="Preview" 
+                             className="w-full h-full object-contain"
+                          />
+                       )}
+                       
+                       {/* Overlay Info */}
+                       <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/60 to-transparent flex justify-between items-start">
+                          <div className="text-white text-xs font-medium drop-shadow-md">
+                             <span className="opacity-70">预览:</span> {selectedFile.filename}
+                          </div>
+                          {selectedFile.is_applied && (
+                             <span className="bg-[#34C759] text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm flex items-center gap-1">
+                                <CheckCircle size={10} /> 当前展示
+                             </span>
+                          )}
+                       </div>
+                    </div>
+                 ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-white/30">
+                       <Smartphone size={48} strokeWidth={1} className="mb-2 opacity-50" />
+                       <span className="text-sm">选择文件预览</span>
+                    </div>
+                 )}
+                 
+                 {/* Simulator Label */}
+                 <div className="absolute bottom-3 right-3 text-[10px] text-white/40 font-mono uppercase tracking-wider pointer-events-none">
+                    Device Simulator
+                 </div>
+              </div>
+
+              {/* Unified Media Grid */}
+              <div>
+                 <h3 className="text-sm font-bold text-[#8E8E93] uppercase tracking-wider mb-3 px-1">
+                    文件列表 ({files.length})
+                 </h3>
+                 
+                 {isLoadingFiles ? (
+                    <div className="grid grid-cols-2 gap-3">
+                       {[1,2,3,4].map(i => (
+                          <div key={i} className="aspect-[4/3] bg-white rounded-2xl animate-pulse" />
+                       ))}
+                    </div>
+                 ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                       {/* Upload Tile */}
+                       <div className="bg-white rounded-2xl border border-dashed border-[#C7C7CC] hover:border-[#007AFF] hover:bg-blue-50/30 active:scale-[0.98] transition-all duration-200 cursor-pointer flex flex-col items-center justify-center gap-2 min-h-[140px] group">
+                          <div className="w-10 h-10 rounded-full bg-[#F2F2F7] group-hover:bg-white group-hover:shadow-md transition-all duration-200 flex items-center justify-center text-[#007AFF]">
+                             <Upload size={20} />
+                          </div>
+                          <span className="text-xs font-bold text-[#8E8E93] group-hover:text-[#007AFF] transition-colors duration-200">上传新文件</span>
+                       </div>
+
+                       {/* File Items */}
+                       {files.map(file => (
+                          <DeviceFileItem 
+                             key={file.id}
+                             file={file}
+                             isSelected={selectedFile?.id === file.id}
+                             onSelect={setSelectedFile}
+                             onApply={handleApply}
+                             onDelete={handleDelete}
+                          />
+                       ))}
+                    </div>
+                 )}
+
+                 {!isLoadingFiles && files.length === 0 && (
+                    <div className="text-center py-10 text-[#8E8E93] text-sm bg-white rounded-2xl border border-[#E5E5EA] mt-3">
+                       暂无文件，请上传。
+                    </div>
+                 )}
+              </div>
+           </div>
+        )}
+      </div>
     </div>
   );
 }

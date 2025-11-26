@@ -1,152 +1,133 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
-import ChatBubble from '@/components/chat/ChatBubble';
-import { motion, useAnimation } from 'framer-motion';
-import AudioDrawer from '@/components/audio/AudioDrawer';
-import ChatWelcome from '@/components/chat/ChatWelcome';
-import ChatInput from '@/components/chat/ChatInput';
+import React, { useState, useEffect } from 'react';
+import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
+import HomeView from '@/components/home/HomeView';
+import AudioFilesPage from '@/pages/AudioFiles';
+import DeviceManagerPage from '@/pages/DeviceManager';
 
-export default function HomePage() {
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
+export default function HomeWithVerticalOverlays() {
+  // 0: Home, -1: Audio (Top), 1: Device (Bottom)
+  const [pageIndex, setPageIndex] = useState(0);
+  const y = useMotionValue(0);
+  const screenHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
+  
+  // Config - reduce gap to prevent blank space
+  const GAP = 0;
+  const LIMIT = screenHeight;
 
-  const [input, setInput] = useState('');
-  const [messages, setMessages] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [userName, setUserName] = useState('用户');
-  const messagesEndRef = useRef(null);
-
+  // Sync internal state with URL params
   useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const user = await base44.auth.me();
-        if (user?.full_name) setUserName(user.full_name.split(' ')[0]);
-      } catch (e) {
-        console.log('User not logged in');
-      }
-    };
-    loadUser();
-    
-    // Auto sync on enter
-    handleSync();
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('context')) {
+      setPageIndex(0);
+    }
   }, []);
 
-  const handleSync = () => {
-    setIsSyncing(true);
-    // Simulate sync delay
-    setTimeout(() => {
-      setIsSyncing(false);
-    }, 2000);
-  };
-
-  const handlePullDown = (event, info) => {
-    if (info.offset.y > 100 && !isDrawerOpen) {
-        setIsDrawerOpen(true);
-        handleSync();
-    }
-  };
-
+  // Animation logic
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    let targetY = 0;
+    if (pageIndex === -1) targetY = LIMIT; // Drag down -> Audio
+    if (pageIndex === 1) targetY = -LIMIT; // Drag up -> Device
 
-  const handleSend = async () => {
-    if (!input.trim() && !isLoading) return;
+    animate(y, targetY, { 
+      type: "spring", 
+      stiffness: 260, 
+      damping: 28,
+      mass: 0.8
+    });
+  }, [pageIndex, screenHeight, y, LIMIT]);
 
-    const userMsg = {
-      role: 'user',
-      content: input,
-      timestamp: new Date().toISOString(),
-    };
+  // Inverse transform for Home to simulate overlay effect (Home stays roughly in place)
+  const homeY = useTransform(y, value => -value);
+  
+  // Backdrop visuals
+  const backdropOpacity = useTransform(y, [-LIMIT, 0, LIMIT], [0.3, 0, 0.3]);
+  const backdropBlur = useTransform(y, [-LIMIT, 0, LIMIT], ["4px", "0px", "4px"]);
+  const backdropPointerEvents = useTransform(y, value => Math.abs(value) > 50 ? 'auto' : 'none');
 
-    setMessages(prev => [...prev, userMsg]);
-    setInput('');
-    setIsLoading(true);
+  const handleDragEnd = (e, { offset, velocity }) => {
+    const swipeThreshold = screenHeight * 0.15;
+    const velocityThreshold = 400;
 
-    try {
-      const prompt = input;
-      
-      const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are a smart sales assistant. Be professional, concise, and helpful. Use markdown formatting.
-        Respond in Chinese (Simplified).
-        User request: ${prompt}
-        
-        If user asks to analyze a client, provide a structured markdown response like:
-        ## 客户画像
-        - **性格**: ...
-        - **需求**: ...
-        ## 销售策略
-        - ...
-        
-        Keep the tone sophisticated.`,
-        add_context_from_internet: true
-      });
-
-      const aiMsg = {
-        role: 'assistant',
-        content: response || "抱歉，我暂时无法生成回复。",
-        timestamp: new Date().toISOString(),
-      };
-
-      setMessages(prev => [...prev, aiMsg]);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: "抱歉，处理您的请求时出现错误。",
-        timestamp: new Date().toISOString(),
-      }]);
-    } finally {
-      setIsLoading(false);
+    if (pageIndex === 0) {
+      if (offset.y > swipeThreshold || velocity.y > velocityThreshold) setPageIndex(-1);
+      else if (offset.y < -swipeThreshold || velocity.y < -velocityThreshold) setPageIndex(1);
+    } else {
+      // If open, closing is easier
+      if (pageIndex === -1 && (offset.y < -swipeThreshold || velocity.y < -velocityThreshold)) setPageIndex(0);
+      if (pageIndex === 1 && (offset.y > swipeThreshold || velocity.y > velocityThreshold)) setPageIndex(0);
     }
-  };
-
-  const handleSkillClick = (skill) => {
-    setInput(skill);
   };
 
   return (
-    <motion.div 
-        className="h-full flex flex-col bg-[#F2F2F7]"
+    <div className="h-screen w-full overflow-hidden bg-black relative">
+      <motion.div
+        className="h-full w-full relative"
+        style={{ y }}
         drag="y"
-        dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={{ top: 0.2, bottom: 0 }}
-        onDragEnd={handlePullDown}
-    >
-      <AudioDrawer 
-        isOpen={isDrawerOpen} 
-        onClose={() => setIsDrawerOpen(false)} 
-        onSync={handleSync}
-        isSyncing={isSyncing}
-      />
-      
-      {messages.length === 0 ? (
-        <ChatWelcome userName={userName} />
-      ) : (
-        <div className="flex-1 overflow-y-auto px-2 pb-4">
-          {messages.map((msg, idx) => (
-            <ChatBubble key={idx} message={msg} />
-          ))}
-          {isLoading && (
-            <div className="flex justify-start mb-6 ml-11">
-               <div className="flex gap-1 p-3 bg-white rounded-lg shadow-sm">
-                 <div className="w-2 h-2 bg-[#007AFF] rounded-full animate-bounce" />
-                 <div className="w-2 h-2 bg-[#007AFF] rounded-full animate-bounce delay-75" />
-                 <div className="w-2 h-2 bg-[#007AFF] rounded-full animate-bounce delay-150" />
-               </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-          </div>
-          )}
+        dragConstraints={{ 
+            top: pageIndex === 1 ? -LIMIT : (pageIndex === 0 ? -LIMIT : 0), 
+            bottom: pageIndex === -1 ? LIMIT : (pageIndex === 0 ? LIMIT : 0) 
+        }}
+        dragElastic={0.05}
+        dragTransition={{ bounceStiffness: 300, bounceDamping: 30 }}
+        onDragEnd={handleDragEnd}
+      >
+        {/* Top Layer: Audio Sync - "Drawer" style */}
+        <motion.div 
+          className="absolute left-0 w-full bg-[#F2F2F7] rounded-b-[24px] overflow-hidden z-30 shadow-2xl"
+          style={{ 
+            top: -LIMIT, 
+            height: screenHeight
+          }}
+        >
+           <AudioFilesPage />
+           {/* Handle Bar */}
+           <div className="absolute bottom-4 left-0 right-0 flex justify-center pointer-events-none">
+             <div className="w-10 h-1 bg-[#C7C7CC] rounded-full" />
+           </div>
+        </motion.div>
 
-          <ChatInput 
-            input={input}
-            setInput={setInput}
-            onSend={handleSend}
-            isLoading={isLoading}
-            onSkillClick={handleSkillClick}
-          />
-    </motion.div>
+        {/* Middle Layer: Home - Counter-transformed to appear static */}
+        <motion.div 
+          className="absolute top-0 left-0 w-full h-screen bg-[#F2F2F7] z-10 overflow-hidden"
+          style={{ 
+            y: homeY
+          }}
+        >
+           {/* Invisible Touch Targets for Opening */}
+           <div className="absolute top-0 left-0 right-0 h-16 z-50 cursor-grab active:cursor-grabbing" />
+           
+           <HomeView />
+           
+           {/* Backdrop Overlay for "Click to Close" */}
+           <motion.div 
+             className="absolute inset-0 bg-black/20 z-40"
+             style={{ 
+               opacity: backdropOpacity, 
+               backdropFilter: backdropBlur,
+               pointerEvents: backdropPointerEvents 
+             }}
+             onClick={() => setPageIndex(0)}
+           />
+
+           <div className="absolute bottom-0 left-0 right-0 h-16 z-50 cursor-grab active:cursor-grabbing" />
+        </motion.div>
+
+        {/* Bottom Layer: Device Manager - "Drawer" style */}
+        <div 
+          className="absolute left-0 w-full bg-[#F2F2F7] rounded-t-[24px] overflow-hidden z-30 shadow-2xl"
+          style={{ 
+            top: screenHeight, 
+            height: screenHeight 
+          }}
+        >
+           {/* Handle Bar */}
+           <div className="absolute top-4 left-0 right-0 flex justify-center z-50 pointer-events-none">
+             <div className="w-10 h-1 bg-[#C7C7CC] rounded-full" />
+           </div>
+           <DeviceManagerPage />
+        </div>
+      </motion.div>
+    </div>
   );
 }

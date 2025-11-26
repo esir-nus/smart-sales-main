@@ -11,6 +11,7 @@ import com.smartsales.data.aicore.tingwu.TingwuResultResponse
 import com.smartsales.data.aicore.tingwu.TingwuStatusData
 import com.smartsales.data.aicore.tingwu.TingwuStatusResponse
 import com.smartsales.data.aicore.tingwu.TingwuTranscription
+import com.smartsales.data.aicore.tingwu.TingwuTaskParameters
 import java.io.File
 import java.util.Optional
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -110,6 +111,161 @@ class RealTingwuCoordinatorTest {
         assertTrue(completed.transcriptMarkdown.contains("测试成功"))
         assertEquals("https://example.com/transcription.json", completed.artifacts?.transcriptionUrl)
         assertEquals("https://example.com/chapters.json", completed.artifacts?.autoChaptersUrl)
+    }
+
+    @Test
+    fun createTask_enablesSummarization() = runTest(dispatcher) {
+        val api = FakeTingwuApi()
+        val coordinator = RealTingwuCoordinator(
+            dispatchers = dispatchers,
+            api = api,
+            credentialsProvider = credentialsProvider,
+            signedUrlProvider = signedUrlProvider,
+            optionalConfig = Optional.empty()
+        )
+
+        coordinator.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav"
+            )
+        )
+
+        assertEquals(true, api.lastCreateRequest?.parameters?.summarizationEnabled)
+    }
+
+    @Test
+    fun completedJob_withSummarizationLink_emitsSmartSummary() = runTest(dispatcher) {
+        val summaryFile = createTempFile(suffix = ".json").toFile().apply {
+            writeText(
+                """
+                {
+                  "Summary":"会议概览",
+                  "KeyPoints":["要点1"],
+                  "ActionItems":["行动A"]
+                }
+                """.trimIndent()
+            )
+        }
+        val summaryUrl = summaryFile.toURI().toURL().toString()
+        val api = FakeTingwuApi()
+        api.enqueueStatus(statusResponse(status = "PROCESSING", progress = 30))
+        api.enqueueStatus(
+            statusResponse(
+                status = "SUCCEEDED",
+                progress = 100,
+                resultLinks = mapOf(
+                    "Transcription" to "https://example.com/transcription.json",
+                    "Summarization" to summaryUrl
+                )
+            )
+        )
+        api.resultData = TingwuResultResponse(
+            requestId = "req-result",
+            code = "0",
+            message = "Success",
+            data = TingwuResultData(
+                taskId = "job-1",
+                transcription = TingwuTranscription(
+                    text = "正文",
+                    segments = null,
+                    speakers = null,
+                    language = "zh",
+                    duration = 10.0,
+                    url = "https://example.com/transcription.json"
+                ),
+                resultLinks = mapOf(
+                    "Transcription" to "https://example.com/transcription.json",
+                    "Summarization" to summaryUrl
+                ),
+                outputMp3Path = null,
+                outputMp4Path = null,
+                outputThumbnailPath = null,
+                outputSpectrumPath = null
+            )
+        )
+        val coordinator = RealTingwuCoordinator(
+            dispatchers = dispatchers,
+            api = api,
+            credentialsProvider = credentialsProvider,
+            signedUrlProvider = signedUrlProvider,
+            optionalConfig = Optional.of(
+                AiCoreConfig(
+                    tingwuPollIntervalMillis = 10,
+                    tingwuPollTimeoutMillis = 200
+                )
+            )
+        )
+
+        val result = coordinator.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav"
+            )
+        )
+        assertTrue(result is Result.Success)
+        val jobId = (result as Result.Success).data
+        advanceTimeBy(20)
+        advanceUntilIdle()
+
+        val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
+        val summary = completed.artifacts?.smartSummary
+        assertEquals("会议概览", summary?.summary)
+        assertEquals(listOf("要点1"), summary?.keyPoints)
+        assertEquals(listOf("行动A"), summary?.actionItems)
+    }
+
+    @Test
+    fun completedJob_withoutSummarizationLink_keepsSmartSummaryNull() = runTest(dispatcher) {
+        val api = FakeTingwuApi()
+        api.enqueueStatus(statusResponse(status = "SUCCEEDED", progress = 100))
+        api.resultData = TingwuResultResponse(
+            requestId = "req-result",
+            code = "0",
+            message = "Success",
+            data = TingwuResultData(
+                taskId = "job-1",
+                transcription = TingwuTranscription(
+                    text = "正文",
+                    segments = null,
+                    speakers = null,
+                    language = "zh",
+                    duration = 10.0,
+                    url = "https://example.com/transcription.json"
+                ),
+                resultLinks = mapOf("Transcription" to "https://example.com/transcription.json"),
+                outputMp3Path = null,
+                outputMp4Path = null,
+                outputThumbnailPath = null,
+                outputSpectrumPath = null
+            )
+        )
+        val coordinator = RealTingwuCoordinator(
+            dispatchers = dispatchers,
+            api = api,
+            credentialsProvider = credentialsProvider,
+            signedUrlProvider = signedUrlProvider,
+            optionalConfig = Optional.of(
+                AiCoreConfig(
+                    tingwuPollIntervalMillis = 10,
+                    tingwuPollTimeoutMillis = 200
+                )
+            )
+        )
+
+        val result = coordinator.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav"
+            )
+        )
+        assertTrue(result is Result.Success)
+        val jobId = (result as Result.Success).data
+        advanceTimeBy(20)
+        advanceUntilIdle()
+
+        val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
+        assertEquals(null, completed.artifacts?.smartSummary)
     }
 
     @Test
@@ -241,6 +397,7 @@ class RealTingwuCoordinatorTest {
         private val statusQueue = ConcurrentLinkedQueue<TingwuStatusResponse>()
         var resultData: TingwuResultResponse? = null
         var failResultWith404: Boolean = false
+        var lastCreateRequest: TingwuCreateTaskRequest? = null
 
         fun enqueueStatus(data: TingwuStatusResponse) {
             statusQueue += data
@@ -251,6 +408,7 @@ class RealTingwuCoordinatorTest {
             operation: String?,
             body: TingwuCreateTaskRequest
         ): TingwuCreateTaskResponse {
+            lastCreateRequest = body
             return TingwuCreateTaskResponse(
                 requestId = "req-create",
                 code = "0",
@@ -283,7 +441,7 @@ class RealTingwuCoordinatorTest {
         ): TingwuResultResponse {
             if (failResultWith404) {
                 throw HttpException(
-                    Response.error(
+                    Response.error<TingwuResultResponse>(
                         404,
                         "Not Found".toResponseBody("application/json".toMediaType())
                     )

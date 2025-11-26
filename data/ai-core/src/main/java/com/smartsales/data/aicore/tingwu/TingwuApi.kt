@@ -74,7 +74,8 @@ data class TingwuResultResponse(
 
 data class TingwuTaskParameters(
     @SerializedName("Transcription") val transcription: TingwuTranscriptionParameters? = null,
-    @SerializedName("TranslationEnabled") val translationEnabled: Boolean? = null
+    @SerializedName("TranslationEnabled") val translationEnabled: Boolean? = null,
+    @SerializedName("SummarizationEnabled") val summarizationEnabled: Boolean? = null
 )
 
 data class TingwuTranscriptSegment(

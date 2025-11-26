@@ -67,7 +67,7 @@ class AiFeatureTestActivityTest {
         
         // 验证可以通过 Home 的导航入口跳转到其他页面，然后返回 Home
         // 测试设备配网导航
-        composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_BANNER).performClick()
+        composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_ENTRY).performClick()
         waitForPage(AiFeatureTestTags.PAGE_DEVICE_SETUP)
         
         // 验证可以通过 chip 返回 Home
@@ -128,7 +128,7 @@ class AiFeatureTestActivityTest {
         waitForPage(AiFeatureTestTags.PAGE_HOME)
 
         // 未配网时点击设备 Banner 应跳到设备配网
-        composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_BANNER).performClick()
+        composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_ENTRY).performClick()
         waitForPage(AiFeatureTestTags.PAGE_DEVICE_SETUP)
         selectTab(AiFeatureTestTags.CHIP_HOME)
         waitForPage(AiFeatureTestTags.PAGE_HOME)
@@ -142,7 +142,7 @@ class AiFeatureTestActivityTest {
         waitForPage(AiFeatureTestTags.PAGE_HOME)
 
         // 音频摘要入口跳到音频库
-        composeRule.onNodeWithTag(HomeScreenTestTags.AUDIO_CARD).performClick()
+        composeRule.onNodeWithTag(HomeScreenTestTags.AUDIO_ENTRY).performClick()
         waitForPage(AiFeatureTestTags.PAGE_AUDIO_FILES)
         selectTab(AiFeatureTestTags.CHIP_HOME)
         waitForPage(AiFeatureTestTags.PAGE_HOME)

@@ -121,7 +121,12 @@ class ChatHistoryViewModel @Inject constructor(
         if (observing) return
         observing = true
         viewModelScope.launch {
-            aiSessionRepository.summaries
+            val summariesFlow = runCatching { aiSessionRepository.summaries }
+                .onFailure { error ->
+                    _uiState.update { it.copy(isLoading = false, errorMessage = error.message) }
+                }
+                .getOrNull() ?: return@launch
+            summariesFlow
                 .catch { error ->
                     Log.w(TAG, "加载会话列表失败", error)
                     _uiState.update { it.copy(isLoading = false, errorMessage = error.message) }

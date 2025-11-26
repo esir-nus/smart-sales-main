@@ -7,11 +7,16 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.After
 import org.junit.Test
 
 // 文件：feature/chat/src/test/java/com/smartsales/feature/chat/history/ChatHistoryViewModelTest.kt
@@ -24,6 +29,16 @@ class ChatHistoryViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val sessionRepository = FakeAiSessionRepository()
     private val historyRepository = FakeChatHistoryRepository()
+
+    @Before
+    fun setMain() {
+        Dispatchers.setMain(dispatcher)
+    }
+
+    @After
+    fun resetMainDispatcher() {
+        Dispatchers.resetMain()
+    }
 
     @Test
     fun loadSessions_sortsPinnedAndLatest() = runTest(dispatcher) {

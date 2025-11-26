@@ -54,6 +54,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
@@ -285,10 +286,13 @@ fun HomeScreen(
                         .fillMaxWidth()
                 ) {
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .testTag(HomeScreenTestTags.LIST),
                         state = listState,
                         verticalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp)
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
+                        userScrollEnabled = true
                     ) {
                         item("session-list") {
                             SessionListSection(
@@ -399,6 +403,7 @@ object HomeScreenTestTags {
     const val SESSION_EMPTY = "home_session_empty"
     const val SESSION_LIST_ITEM_PREFIX = "home_session_item_"
     const val NEW_CHAT_BUTTON = "home_new_chat_button"
+    const val SESSION_TITLE = "home_session_title"
     const val USER_MESSAGE = "home_user_message"
     const val ASSISTANT_MESSAGE = "home_assistant_message"
     const val INPUT_FIELD = "home_input_field"
@@ -852,12 +857,13 @@ private fun SessionHeader(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.weight(1f)
         ) {
-            Text(
-                text = session.title,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+                Text(
+                    text = session.title,
+                    modifier = Modifier.testTag(HomeScreenTestTags.SESSION_TITLE),
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             if (session.isTranscription) {
                 AssistChip(
                     onClick = {},

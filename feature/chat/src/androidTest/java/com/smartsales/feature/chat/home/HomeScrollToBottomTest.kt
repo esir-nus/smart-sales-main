@@ -16,15 +16,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.test.assertDoesNotExist
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.fetchSemanticsNodes
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
 import org.junit.Test
@@ -38,29 +37,35 @@ class HomeScrollToBottomTest {
 
     @Test
     fun scrollButton_hiddenWhenLatestVisible() {
-        setHomeContent(messageCount = 30)
+        setHomeContent(messageCount = 40)
 
-        scrollToText("消息 29")
-
-        composeRule.onNodeWithTag(HomeScreenTestTags.SCROLL_TO_LATEST).assertDoesNotExist()
+        scrollToBottom(messageCount = 40)
+        waitForScrollButtonHidden()
     }
 
     @Test
     fun scrollButton_showsAfterScrollingAwayFromLatest() {
-        setHomeContent(messageCount = 30)
-        scrollToText("消息 29")
+        setHomeContent(messageCount = 40)
+        scrollToBottom(messageCount = 40)
+        waitForScrollButtonHidden()
 
-        scrollToText("消息 5")
+        scrollToIndex(5)
 
-        composeRule.onNodeWithTag(HomeScreenTestTags.SCROLL_TO_LATEST).assertIsDisplayed()
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            runCatching {
+                composeRule.onNodeWithTag(HomeScreenTestTags.SCROLL_TO_LATEST).assertIsDisplayed()
+                true
+            }.getOrDefault(false)
+        }
     }
 
     @Test
     fun deviceBanner_staysVisibleWhileScrollingLongList() {
-        setHomeContent(messageCount = 30)
-        scrollToText("消息 29")
+        setHomeContent(messageCount = 40)
+        scrollToBottom(messageCount = 40)
+        waitForScrollButtonHidden()
 
-        scrollToText("消息 5")
+        scrollToIndex(5)
 
         composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_ENTRY).assertIsDisplayed()
         composeRule.onNodeWithTag(HomeScreenTestTags.SCROLL_TO_LATEST).assertIsDisplayed()
@@ -68,17 +73,14 @@ class HomeScrollToBottomTest {
 
     @Test
     fun scrollButton_clickReturnsToBottomAndHides() {
-        setHomeContent(messageCount = 35)
-        scrollToText("消息 34")
-        scrollToText("消息 4")
+        setHomeContent(messageCount = 50)
+        scrollToBottom(messageCount = 50)
+        scrollToIndex(4)
 
         composeRule.onNodeWithTag(HomeScreenTestTags.SCROLL_TO_LATEST).performClick()
 
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-            !composeRule.onAllNodesWithTag(HomeScreenTestTags.SCROLL_TO_LATEST)
-                .fetchSemanticsNodes().any()
-        }
-        composeRule.onNodeWithText("消息 34").assertIsDisplayed()
+        waitForScrollButtonHidden()
+        composeRule.onNodeWithText("消息 49").assertIsDisplayed()
     }
 
     @Test
@@ -86,7 +88,7 @@ class HomeScrollToBottomTest {
         setHomeContent(messageCount = 2)
 
         composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_ENTRY).assertIsDisplayed()
-        composeRule.onNodeWithTag(HomeScreenTestTags.SCROLL_TO_LATEST).assertDoesNotExist()
+        composeRule.onAllNodesWithTag(HomeScreenTestTags.SCROLL_TO_LATEST).assertCountEquals(0)
     }
 
     @Test
@@ -94,7 +96,7 @@ class HomeScrollToBottomTest {
         setHomeContent(messageCount = 0)
 
         composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_ENTRY).assertIsDisplayed()
-        composeRule.onNodeWithTag(HomeScreenTestTags.SCROLL_TO_LATEST).assertDoesNotExist()
+        composeRule.onAllNodesWithTag(HomeScreenTestTags.SCROLL_TO_LATEST).assertCountEquals(0)
     }
 
     private fun setHomeContent(messageCount: Int) {
@@ -135,8 +137,24 @@ class HomeScrollToBottomTest {
         }
     }
 
-    private fun scrollToText(text: String) {
-        composeRule.onNodeWithText(text, substring = false, useUnmergedTree = true)
-            .performScrollTo()
+    private fun scrollToBottom(messageCount: Int) {
+        val targetIndex = messageCount + 1
+        scrollToIndex(targetIndex)
+        composeRule.waitForIdle()
+    }
+
+    private fun scrollToIndex(index: Int) {
+        composeRule.onAllNodesWithTag(HomeScreenTestTags.LIST)[0]
+            .performScrollToIndex(index)
+    }
+
+    private fun waitForScrollButtonHidden(timeoutMillis: Long = 5_000) {
+        composeRule.waitUntil(timeoutMillis = timeoutMillis) {
+            runCatching {
+                composeRule.onAllNodesWithTag(HomeScreenTestTags.SCROLL_TO_LATEST)
+                    .assertCountEquals(0)
+                true
+            }.getOrDefault(false)
+        }
     }
 }

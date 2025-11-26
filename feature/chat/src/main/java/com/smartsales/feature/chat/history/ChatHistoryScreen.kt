@@ -16,12 +16,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -44,13 +45,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.collectLatest
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/history/ChatHistoryScreen.kt
 // 模块：:feature:chat
@@ -59,6 +62,10 @@ import kotlinx.coroutines.flow.collectLatest
 
 object ChatHistoryTestTags {
     const val PAGE = "chat_history_page"
+    const val HEADER = "chat_history_header"
+    const val BACK = "chat_history_back"
+    const val REFRESH = "chat_history_refresh"
+    const val LOADING = "chat_history_loading"
     const val EMPTY = "chat_history_empty"
     const val ERROR = "chat_history_error"
     fun item(sessionId: String) = "chat_history_item_$sessionId"
@@ -68,7 +75,8 @@ object ChatHistoryTestTags {
 fun ChatHistoryRoute(
     modifier: Modifier = Modifier,
     viewModel: ChatHistoryViewModel = hiltViewModel(),
-    onSessionSelected: (String) -> Unit
+    onSessionSelected: (String) -> Unit,
+    onBackClick: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -91,6 +99,7 @@ fun ChatHistoryRoute(
     ChatHistoryScreen(
         state = state,
         onRefresh = viewModel::loadSessions,
+        onBackClick = onBackClick,
         onSessionClicked = viewModel::onSessionClicked,
         onRenameSession = viewModel::onRenameSession,
         onDeleteSession = viewModel::onDeleteSession,
@@ -105,6 +114,7 @@ fun ChatHistoryRoute(
 fun ChatHistoryScreen(
     state: ChatHistoryUiState,
     onRefresh: () -> Unit,
+    onBackClick: () -> Unit,
     onSessionClicked: (String) -> Unit,
     onRenameSession: (String, String) -> Unit,
     onDeleteSession: (String) -> Unit,
@@ -125,12 +135,25 @@ fun ChatHistoryScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                    .testTag(ChatHistoryTestTags.HEADER),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                IconButton(
+                    onClick = onBackClick,
+                    modifier = Modifier.testTag(ChatHistoryTestTags.BACK)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "返回"
+                    )
+                }
                 Text(text = "会话历史", style = MaterialTheme.typography.titleLarge)
-                IconButton(onClick = onRefresh) {
+                IconButton(
+                    onClick = onRefresh,
+                    modifier = Modifier.testTag(ChatHistoryTestTags.REFRESH)
+                ) {
                     Icon(Icons.Default.Refresh, contentDescription = "刷新")
                 }
             }
@@ -141,24 +164,48 @@ fun ChatHistoryScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            if (state.sessions.isEmpty() && !state.isLoading) {
+            if (state.isLoading) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .testTag(ChatHistoryTestTags.LOADING),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    LinearProgressIndicator(modifier = Modifier.weight(1f))
+                    Text(
+                        text = "正在加载历史会话...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            state.errorMessage?.let {
+                ErrorBanner(
+                    message = it,
+                    onDismissError = onDismissError
+                )
+            }
+            if (state.sessions.isEmpty() && !state.isLoading && state.errorMessage == null) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .testTag(ChatHistoryTestTags.EMPTY),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "暂无会话历史")
+                    Text(text = "暂无会话历史，先从首页开始一次对话吧")
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     items(state.sessions, key = { it.id }) { session ->
                         ChatHistoryItem(
                             session = session,
+                            formattedTime = formatSessionTime(session.updatedAt),
                             onClick = { onSessionClicked(session.id) },
                             onRename = {
                                 renameTarget = session
@@ -170,29 +217,6 @@ fun ChatHistoryScreen(
                         )
                     }
                 }
-            }
-        }
-    }
-
-    if (state.errorMessage != null) {
-        Surface(
-            color = MaterialTheme.colorScheme.errorContainer,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-                .testTag(ChatHistoryTestTags.ERROR)
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = state.errorMessage,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.weight(1f)
-                )
-                TextButton(onClick = onDismissError) { Text(text = "知道了") }
             }
         }
     }
@@ -230,6 +254,7 @@ fun ChatHistoryScreen(
 @Composable
 private fun ChatHistoryItem(
     session: ChatSessionUi,
+    formattedTime: String,
     onClick: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
@@ -248,8 +273,11 @@ private fun ChatHistoryItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
                         Text(
                             text = session.title,
                             style = MaterialTheme.typography.titleMedium,
@@ -257,18 +285,16 @@ private fun ChatHistoryItem(
                             overflow = TextOverflow.Ellipsis
                         )
                         if (session.pinned) {
-                            Spacer(modifier = Modifier.size(8.dp))
                             Box(
                                 modifier = Modifier
                                     .size(10.dp)
                                     .background(
                                         color = MaterialTheme.colorScheme.primary,
                                         shape = CircleShape
-                                    )
+                                )
                             )
                         }
                     }
-                    Spacer(modifier = Modifier.size(4.dp))
                     Text(
                         text = session.lastMessagePreview.orEmpty(),
                         style = MaterialTheme.typography.bodyMedium,
@@ -277,6 +303,13 @@ private fun ChatHistoryItem(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+                Text(
+                    text = formattedTime,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 ActionMenu(
                     pinned = session.pinned,
                     onRename = onRename,
@@ -287,6 +320,39 @@ private fun ChatHistoryItem(
             Divider(modifier = Modifier.padding(top = 8.dp))
         }
     }
+}
+
+@Composable
+private fun ErrorBanner(
+    message: String,
+    onDismissError: () -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .testTag(ChatHistoryTestTags.ERROR)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = message,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = onDismissError) { Text(text = "知道了") }
+        }
+    }
+}
+
+private fun formatSessionTime(timestamp: Long): String {
+    if (timestamp <= 0) return ""
+    val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+    return formatter.format(Date(timestamp))
 }
 
 @Composable

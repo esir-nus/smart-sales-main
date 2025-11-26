@@ -242,7 +242,8 @@ private fun AiFeatureTestApp() {
                                     onSessionSelected = { sessionId ->
                                         pendingSessionId = sessionId
                                         currentSection = AppSection.HomeShell
-                                    }
+                                    },
+                                    onBackClick = { currentSection = AppSection.HomeShell }
                                 )
                             }
 

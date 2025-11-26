@@ -6,6 +6,7 @@ package com.smartsales.feature.media.audio
 // 作者：创建于 2025-11-21
 
 import com.smartsales.feature.media.audio.TingwuChapterUi
+import com.smartsales.feature.media.audio.TingwuSmartSummaryUi
 
 data class AudioFilesUiState(
     val isLoading: Boolean = false,
@@ -32,7 +33,8 @@ data class AudioRecordingUi(
     val hasLocalCopy: Boolean = false,
     val transcriptionUrl: String? = null,
     val autoChaptersUrl: String? = null,
-    val chapters: List<TingwuChapterUi>? = null
+    val chapters: List<TingwuChapterUi>? = null,
+    val smartSummary: TingwuSmartSummaryUi? = null
 )
 
 enum class TranscriptionStatus {

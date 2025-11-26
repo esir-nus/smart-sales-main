@@ -330,8 +330,12 @@ class RealTingwuCoordinator @Inject constructor(
                         transcriptionUrl = data.transcription?.url,
                         autoChaptersUrl = extractAutoChaptersUrl(data.resultLinks),
                         extraResultUrls = data.resultLinks.orEmpty(),
-                        chapters = chapters
-                    ) ?: fallbackArtifacts?.copy(chapters = chapters ?: fallbackArtifacts.chapters)
+                        chapters = chapters,
+                        smartSummary = fetchSmartSummarySafe(data.resultLinks, jobId)
+                    ) ?: fallbackArtifacts?.copy(
+                        chapters = chapters ?: fallbackArtifacts.chapters,
+                        smartSummary = fallbackArtifacts.smartSummary
+                    )
                     TranscriptResult(
                         markdown = markdown,
                         artifacts = artifacts,
@@ -367,13 +371,15 @@ class RealTingwuCoordinator @Inject constructor(
         val markdown = buildMarkdown(transcription)
         AiCoreLogger.d(TAG, "转写 JSON 解析成功：jobId=$jobId markdown长度=${markdown.length}")
         val chapters = chaptersUrl?.let { fetchChaptersSafe(it, jobId) }
+        val smartSummary = fetchSmartSummarySafe(resultLinks, jobId)
         TranscriptResult(
             markdown = markdown,
             artifacts = fallbackArtifacts?.copy(
                 transcriptionUrl = signedUrl,
                 autoChaptersUrl = fallbackArtifacts.autoChaptersUrl,
                 extraResultUrls = fallbackArtifacts.extraResultUrls,
-                chapters = chapters ?: fallbackArtifacts.chapters
+                chapters = chapters ?: fallbackArtifacts.chapters,
+                smartSummary = smartSummary ?: fallbackArtifacts.smartSummary
             ) ?: fallbackArtifacts,
             chapters = chapters
         )
@@ -407,6 +413,14 @@ class RealTingwuCoordinator @Inject constructor(
     private fun extractAutoChaptersUrl(resultLinks: Map<String, String>?): String? {
         if (resultLinks.isNullOrEmpty()) return null
         return resultLinks.entries.firstOrNull { it.key.equals("AutoChapters", ignoreCase = true) }?.value
+    }
+
+    private fun extractSmartSummaryUrl(resultLinks: Map<String, String>?): String? {
+        if (resultLinks.isNullOrEmpty()) return null
+        val keys = listOf("MeetingAssistance", "Summarization", "SmartSummary", "Summary")
+        return resultLinks.entries.firstOrNull { entry ->
+            keys.any { key -> entry.key.equals(key, ignoreCase = true) }
+        }?.value
     }
 
     private fun fetchChaptersSafe(url: String, jobId: String): List<TingwuChapter>? =
@@ -467,6 +481,31 @@ class RealTingwuCoordinator @Inject constructor(
         } catch (io: IOException) {
             AiCoreLogger.e(TAG, "下载章节 JSON 失败：jobId=$jobId error=${io.message}", io)
             emptyList()
+        }
+    }
+
+    private fun fetchSmartSummarySafe(resultLinks: Map<String, String>?, jobId: String): TingwuSmartSummary? {
+        val url = extractSmartSummaryUrl(resultLinks) ?: return null
+        return runCatching { downloadSmartSummary(url, jobId) }.onFailure {
+            AiCoreLogger.w(TAG, "下载智能总结失败，将忽略：jobId=$jobId url=${url.take(80)} error=${it.message}")
+        }.getOrNull()
+    }
+
+    private fun downloadSmartSummary(url: String, jobId: String): TingwuSmartSummary? {
+        AiCoreLogger.d(TAG, "开始下载智能总结 JSON：jobId=$jobId url=${url.take(100)}...")
+        return try {
+            val connection = URL(url).openConnection().apply {
+                connectTimeout = config.tingwuReadTimeoutMillis.toInt()
+                readTimeout = config.tingwuReadTimeoutMillis.toInt()
+            }
+            connection.getInputStream().bufferedReader(Charsets.UTF_8).use { reader ->
+                val payload = reader.readText()
+                logVerbose { "智能总结 JSON 前 200 字符：${payload.take(200)}" }
+                parseSmartSummaryPayload(payload)
+            }
+        } catch (io: IOException) {
+            AiCoreLogger.e(TAG, "下载智能总结失败：jobId=$jobId error=${io.message}", io)
+            null
         }
     }
 
@@ -767,7 +806,8 @@ class RealTingwuCoordinator @Inject constructor(
         transcriptionUrl: String? = null,
         autoChaptersUrl: String? = null,
         extraResultUrls: Map<String, String> = emptyMap(),
-        chapters: List<TingwuChapter>? = null
+        chapters: List<TingwuChapter>? = null,
+        smartSummary: TingwuSmartSummary? = null
     ): TingwuJobArtifacts? =
         buildArtifacts(
             mp3 = outputMp3Path ?: fallbackArtifacts?.outputMp3Path,
@@ -778,7 +818,8 @@ class RealTingwuCoordinator @Inject constructor(
             transcriptionUrl = transcriptionUrl ?: fallbackArtifacts?.transcriptionUrl,
             autoChaptersUrl = autoChaptersUrl ?: fallbackArtifacts?.autoChaptersUrl,
             extraResultUrls = if (extraResultUrls.isNotEmpty()) extraResultUrls else fallbackArtifacts?.extraResultUrls.orEmpty(),
-            chapters = chapters ?: fallbackArtifacts?.chapters
+            chapters = chapters ?: fallbackArtifacts?.chapters,
+            smartSummary = smartSummary ?: fallbackArtifacts?.smartSummary
         )
 
     private fun buildArtifacts(
@@ -790,7 +831,8 @@ class RealTingwuCoordinator @Inject constructor(
         transcriptionUrl: String? = null,
         autoChaptersUrl: String? = null,
         extraResultUrls: Map<String, String> = emptyMap(),
-        chapters: List<TingwuChapter>? = null
+        chapters: List<TingwuChapter>? = null,
+        smartSummary: TingwuSmartSummary? = null
     ): TingwuJobArtifacts? {
         if (
             mp3.isNullOrBlank() &&
@@ -801,7 +843,8 @@ class RealTingwuCoordinator @Inject constructor(
             transcriptionUrl.isNullOrBlank() &&
             autoChaptersUrl.isNullOrBlank() &&
             extraResultUrls.isEmpty() &&
-            chapters.isNullOrEmpty()
+            chapters.isNullOrEmpty() &&
+            smartSummary == null
         ) {
             return null
         }
@@ -818,7 +861,8 @@ class RealTingwuCoordinator @Inject constructor(
             transcriptionUrl = transcriptionUrl,
             autoChaptersUrl = autoChaptersUrl,
             extraResultUrls = extraResultUrls,
-            chapters = chapters
+            chapters = chapters,
+            smartSummary = smartSummary
         )
     }
 
@@ -989,3 +1033,29 @@ private fun toMillis(number: Number): Long {
     val value = number.toDouble()
     return if (value > 100000) value.toLong() else (value * 1000).toLong()
 }
+
+internal fun parseSmartSummaryPayload(json: String): TingwuSmartSummary? {
+    val root = runCatching { JsonParser.parseString(json) }.getOrNull() ?: return null
+    if (!root.isJsonObject) return null
+    val obj = root.asJsonObject
+    val summary = obj.getPrimitiveString("Summary")
+        ?: obj.getPrimitiveString("Abstract")
+        ?: obj.getPrimitiveString("Summarization")
+    val keyPoints = obj.getAsJsonArray("KeyPoints")
+        ?: obj.getAsJsonArray("Highlights")
+        ?: obj.getAsJsonArray("Keypoints")
+    val actionItems = obj.getAsJsonArray("ActionItems")
+        ?: obj.getAsJsonArray("Todos")
+        ?: obj.getAsJsonArray("Tasks")
+    val keys = keyPoints?.mapNotNull { it.asStringOrNull() } ?: emptyList()
+    val actions = actionItems?.mapNotNull { it.asStringOrNull() } ?: emptyList()
+    if (summary.isNullOrBlank() && keys.isEmpty() && actions.isEmpty()) return null
+    return TingwuSmartSummary(
+        summary = summary,
+        keyPoints = keys,
+        actionItems = actions
+    )
+}
+
+private fun JsonElement.asStringOrNull(): String? =
+    takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }?.asString

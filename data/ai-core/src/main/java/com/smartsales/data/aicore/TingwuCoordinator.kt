@@ -33,7 +33,8 @@ data class TingwuJobArtifacts(
     val transcriptionUrl: String? = null,
     val autoChaptersUrl: String? = null,
     val extraResultUrls: Map<String, String> = emptyMap(),
-    val chapters: List<TingwuChapter>? = null
+    val chapters: List<TingwuChapter>? = null,
+    val smartSummary: TingwuSmartSummary? = null
 )
 
 data class TingwuResultLink(

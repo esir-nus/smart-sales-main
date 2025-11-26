@@ -71,6 +71,13 @@ class DefaultAudioTranscriptionCoordinator @Inject constructor(
                             startMs = it.startMs,
                             endMs = it.endMs
                         )
+                    },
+                    smartSummary = state.artifacts?.smartSummary?.let {
+                        com.smartsales.feature.media.audio.TingwuSmartSummaryUi(
+                            summary = it.summary,
+                            keyPoints = it.keyPoints,
+                            actionItems = it.actionItems
+                        )
                     }
                 )
                 is TingwuJobState.Failed -> AudioTranscriptionJobState.Failed(

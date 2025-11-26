@@ -7,6 +7,7 @@ package com.smartsales.feature.media.audiofiles
 
 import com.smartsales.core.util.Result
 import com.smartsales.feature.media.audio.TingwuChapterUi
+import com.smartsales.feature.media.audio.TingwuSmartSummaryUi
 import java.io.File
 import kotlinx.coroutines.flow.Flow
 
@@ -43,6 +44,7 @@ sealed interface AudioTranscriptionJobState {
         val transcriptionUrl: String? = null,
         val autoChaptersUrl: String? = null,
         val chapters: List<TingwuChapterUi>? = null,
+        val smartSummary: TingwuSmartSummaryUi? = null,
     ) : AudioTranscriptionJobState
 
     data class Failed(

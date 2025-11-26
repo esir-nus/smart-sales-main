@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.smartsales.feature.media.audio.TingwuChapterUi
+import com.smartsales.feature.media.audio.TingwuSmartSummaryUi
 import kotlinx.coroutines.launch
 
 @Composable
@@ -397,6 +398,55 @@ private fun TranscriptViewerSheet(
                 Text(text = "用 AI 分析本次通话")
             }
             Spacer(modifier = Modifier.height(8.dp))
+            recording.smartSummary?.let { summary ->
+                Text(
+                    text = "智能总结",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                if (summary.summary.isNullOrBlank() && summary.keyPoints.isEmpty() && summary.actionItems.isEmpty()) {
+                    Text(
+                        text = "暂无智能总结",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    summary.summary?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                    }
+                    if (summary.keyPoints.isNotEmpty()) {
+                        Text(text = "要点", style = MaterialTheme.typography.bodySmall)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        summary.keyPoints.forEach { point: String ->
+                            Text(
+                                text = "• $point",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                    }
+                    if (summary.actionItems.isNotEmpty()) {
+                        Text(text = "行动项", style = MaterialTheme.typography.bodySmall)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        summary.actionItems.forEach { item: String ->
+                            Text(
+                                text = "• $item",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
             recording.chapters?.let { chapters ->
                 Text(
                     text = "章节",
@@ -412,7 +462,7 @@ private fun TranscriptViewerSheet(
                     )
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        chapters.forEachIndexed { index, chapter ->
+                        chapters.forEachIndexed { index: Int, chapter: TingwuChapterUi ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()

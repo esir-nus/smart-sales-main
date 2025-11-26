@@ -219,7 +219,12 @@ class AudioFilesViewModelTest {
                 transcriptMarkdown = "第一行内容\n更多",
                 transcriptionUrl = "https://example.com/transcription.json",
                 autoChaptersUrl = "https://example.com/chapters.json",
-                chapters = listOf(com.smartsales.data.aicore.TingwuChapter("开场", 1000, 5000))
+                chapters = listOf(com.smartsales.feature.media.audio.TingwuChapterUi("开场", 1000, 5000)),
+                smartSummary = com.smartsales.feature.media.audio.TingwuSmartSummaryUi(
+                    summary = "概览",
+                    keyPoints = listOf("要点1"),
+                    actionItems = listOf("行动A")
+                )
             )
         )
         advanceUntilIdle()
@@ -231,6 +236,9 @@ class AudioFilesViewModelTest {
         assertEquals("https://example.com/transcription.json", recording.transcriptionUrl)
         assertEquals("https://example.com/chapters.json", recording.autoChaptersUrl)
         assertEquals(1, recording.chapters?.size)
+        assertEquals("概览", recording.smartSummary?.summary)
+        assertEquals(listOf("要点1"), recording.smartSummary?.keyPoints)
+        assertEquals(listOf("行动A"), recording.smartSummary?.actionItems)
     }
 
     @Test

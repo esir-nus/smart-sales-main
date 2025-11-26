@@ -328,6 +328,21 @@ class RealTingwuCoordinatorTest {
         assertEquals("开场", chapters.first().title)
         assertEquals(0L, chapters.first().startMs)
     }
+
+    @Test
+    fun parseSmartSummaryPayload_parsesSummaryAndLists() {
+        val json = """
+            {
+              "Summary": "会议概览",
+              "KeyPoints": ["要点1", "要点2"],
+              "ActionItems": ["行动A"]
+            }
+        """.trimIndent()
+        val summary = parseSmartSummaryPayload(json)
+        assertEquals("会议概览", summary?.summary)
+        assertEquals(listOf("要点1", "要点2"), summary?.keyPoints)
+        assertEquals(listOf("行动A"), summary?.actionItems)
+    }
 }
 
 private fun statusResponse(

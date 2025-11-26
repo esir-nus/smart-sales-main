@@ -22,9 +22,9 @@ import com.smartsales.feature.connectivity.DeviceConnectionManager
 import com.smartsales.feature.connectivity.DeviceNetworkStatus
 import com.smartsales.feature.connectivity.WifiCredentials
 import com.smartsales.feature.media.MediaSyncCoordinator
-import com.smartsales.feature.media.MediaSyncState
-import com.smartsales.feature.media.MediaSyncStateItem
 import com.smartsales.feature.media.MediaClipStatus
+import com.smartsales.feature.media.MediaClip
+import com.smartsales.feature.media.MediaSyncState
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
@@ -42,6 +42,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 
@@ -198,9 +199,13 @@ class HomeSessionListViewModelTest {
             MutableStateFlow(
                 MediaSyncState(
                     items = listOf(
-                        MediaSyncStateItem(
+                        MediaClip(
                             id = "1",
-                            name = "demo",
+                            title = "demo",
+                            customer = "demo",
+                            recordedAtMillis = 0L,
+                            durationSeconds = 0,
+                            sourceDeviceName = "device",
                             status = MediaClipStatus.Ready,
                             transcriptSource = "ready"
                         )

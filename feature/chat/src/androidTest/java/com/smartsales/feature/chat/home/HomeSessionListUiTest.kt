@@ -132,4 +132,33 @@ class HomeSessionListUiTest {
         composeRule.onNodeWithTag(HomeScreenTestTags.SESSION_LIST)
             .assertIsDisplayed()
     }
+
+    @Test
+    fun emptySessionList_showsFriendlyMessage() {
+        val snackbarHostState = SnackbarHostState()
+        composeRule.setContent {
+            MaterialTheme {
+                HomeScreen(
+                    state = HomeUiState(
+                        chatMessages = emptyList(),
+                        quickSkills = emptyList(),
+                        inputText = "",
+                        sessionList = emptyList()
+                    ),
+                    snackbarHostState = snackbarHostState,
+                    onInputChanged = {},
+                    onSendClicked = {},
+                    onQuickSkillSelected = {},
+                    onClearSelectedSkill = {},
+                    onDeviceBannerClicked = {},
+                    onAudioSummaryClicked = {},
+                    onRefreshDeviceAndAudio = {},
+                    onLoadMoreHistory = {},
+                    onProfileClicked = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.SESSION_EMPTY).assertIsDisplayed()
+    }
 }

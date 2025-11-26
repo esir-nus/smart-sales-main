@@ -391,6 +391,24 @@ private fun TranscriptViewerSheet(
                 Text(text = "用 AI 分析本次通话")
             }
             Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "章节（预留）",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (recording.autoChaptersUrl != null) {
+                Text(
+                    text = "已检测到章节数据，后续版本将提供章节视图。",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            } else {
+                Text(
+                    text = "暂无章节信息",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
             Button(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
                 Text(text = "关闭")
             }

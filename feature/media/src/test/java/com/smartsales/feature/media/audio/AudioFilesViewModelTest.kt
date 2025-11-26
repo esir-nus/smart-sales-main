@@ -212,13 +212,23 @@ class AudioFilesViewModelTest {
 
         viewModel.onTranscribeClicked("clip3.mp3")
         transcriptionCoordinator.emitState("task-1", AudioTranscriptionJobState.InProgress("task-1", 10))
-        transcriptionCoordinator.emitState("task-1", AudioTranscriptionJobState.Completed("task-1", "第一行内容\n更多"))
+        transcriptionCoordinator.emitState(
+            "task-1",
+            AudioTranscriptionJobState.Completed(
+                jobId = "task-1",
+                transcriptMarkdown = "第一行内容\n更多",
+                transcriptionUrl = "https://example.com/transcription.json",
+                autoChaptersUrl = "https://example.com/chapters.json"
+            )
+        )
         advanceUntilIdle()
 
         val recording = viewModel.uiState.value.recordings.first()
         assertEquals(TranscriptionStatus.DONE, recording.transcriptionStatus)
         assertEquals("第一行内容", recording.transcriptPreview)
         assertEquals("第一行内容\n更多", recording.fullTranscriptMarkdown)
+        assertEquals("https://example.com/transcription.json", recording.transcriptionUrl)
+        assertEquals("https://example.com/chapters.json", recording.autoChaptersUrl)
     }
 
     @Test

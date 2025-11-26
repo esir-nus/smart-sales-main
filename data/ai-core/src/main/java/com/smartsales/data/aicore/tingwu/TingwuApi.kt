@@ -131,5 +131,6 @@ data class TingwuTranscription(
     @SerializedName("Segments") val segments: List<TingwuTranscriptSegment>?,
     @SerializedName("Speakers") val speakers: List<TingwuSpeaker>?,
     @SerializedName("Language") val language: String?,
-    @SerializedName("Duration") val duration: Double?
+    @SerializedName("Duration") val duration: Double?,
+    @SerializedName("Url") val url: String? = null
 )

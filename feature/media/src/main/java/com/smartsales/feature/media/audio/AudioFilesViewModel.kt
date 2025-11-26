@@ -270,7 +270,9 @@ class AudioFilesViewModel @Inject constructor(
                                         recording.copy(
                                             transcriptionStatus = TranscriptionStatus.DONE,
                                             transcriptPreview = preview,
-                                            fullTranscriptMarkdown = state.transcriptMarkdown
+                                            fullTranscriptMarkdown = state.transcriptMarkdown,
+                                            transcriptionUrl = state.transcriptionUrl,
+                                            autoChaptersUrl = state.autoChaptersUrl
                                         )
                                     } else recording
                                 }

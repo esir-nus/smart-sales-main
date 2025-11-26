@@ -69,9 +69,13 @@ class RealTingwuCoordinatorTest {
                     segments = null,
                     speakers = null,
                     language = "zh",
-                    duration = 10.0
+                    duration = 10.0,
+                    url = "https://example.com/transcription.json"
                 ),
-                resultLinks = emptyMap(),
+                resultLinks = mapOf(
+                    "Transcription" to "https://example.com/transcription.json",
+                    "AutoChapters" to "https://example.com/chapters.json"
+                ),
                 outputMp3Path = null,
                 outputMp4Path = null,
                 outputThumbnailPath = null,
@@ -104,6 +108,8 @@ class RealTingwuCoordinatorTest {
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
         assertTrue(completed.transcriptMarkdown.contains("测试成功"))
+        assertEquals("https://example.com/transcription.json", completed.artifacts?.transcriptionUrl)
+        assertEquals("https://example.com/chapters.json", completed.artifacts?.autoChaptersUrl)
     }
 
     @Test

@@ -313,9 +313,14 @@ class RealTingwuCoordinator @Inject constructor(
                     }
                     val markdown = buildMarkdown(data.transcription)
                     AiCoreLogger.d(TAG, "转写 markdown 生成成功：jobId=$jobId markdown长度=${markdown.length}")
+                    val artifacts = data.toArtifacts(
+                        transcriptionUrl = data.transcription?.url,
+                        autoChaptersUrl = data.resultLinks?.get("AutoChapters"),
+                        extraResultUrls = data.resultLinks.orEmpty()
+                    ) ?: fallbackArtifacts
                     TranscriptResult(
                         markdown = markdown,
-                        artifacts = data.toArtifacts() ?: fallbackArtifacts
+                        artifacts = artifacts
                     )
                 }
             },
@@ -348,7 +353,11 @@ class RealTingwuCoordinator @Inject constructor(
         AiCoreLogger.d(TAG, "转写 JSON 解析成功：jobId=$jobId markdown长度=${markdown.length}")
         TranscriptResult(
             markdown = markdown,
-            artifacts = fallbackArtifacts
+            artifacts = fallbackArtifacts?.copy(
+                transcriptionUrl = signedUrl,
+                autoChaptersUrl = fallbackArtifacts.autoChaptersUrl,
+                extraResultUrls = fallbackArtifacts.extraResultUrls
+            ) ?: fallbackArtifacts
         )
     }
 
@@ -701,13 +710,21 @@ class RealTingwuCoordinator @Inject constructor(
             links = resultLinks
         )
 
-    private fun TingwuResultData.toArtifacts(): TingwuJobArtifacts? =
+    private fun TingwuResultData.toArtifacts(
+        fallbackArtifacts: TingwuJobArtifacts? = null,
+        transcriptionUrl: String? = null,
+        autoChaptersUrl: String? = null,
+        extraResultUrls: Map<String, String> = emptyMap()
+    ): TingwuJobArtifacts? =
         buildArtifacts(
-            mp3 = outputMp3Path,
-            mp4 = outputMp4Path,
-            thumb = outputThumbnailPath,
-            spectrum = outputSpectrumPath,
-            links = resultLinks
+            mp3 = outputMp3Path ?: fallbackArtifacts?.outputMp3Path,
+            mp4 = outputMp4Path ?: fallbackArtifacts?.outputMp4Path,
+            thumb = outputThumbnailPath ?: fallbackArtifacts?.outputThumbnailPath,
+            spectrum = outputSpectrumPath ?: fallbackArtifacts?.outputSpectrumPath,
+            links = resultLinks ?: fallbackArtifacts?.resultLinks?.associate { it.label to it.url },
+            transcriptionUrl = transcriptionUrl ?: fallbackArtifacts?.transcriptionUrl,
+            autoChaptersUrl = autoChaptersUrl ?: fallbackArtifacts?.autoChaptersUrl,
+            extraResultUrls = if (extraResultUrls.isNotEmpty()) extraResultUrls else fallbackArtifacts?.extraResultUrls.orEmpty()
         )
 
     private fun buildArtifacts(
@@ -715,14 +732,20 @@ class RealTingwuCoordinator @Inject constructor(
         mp4: String?,
         thumb: String?,
         spectrum: String?,
-        links: Map<String, String>?
+        links: Map<String, String>?,
+        transcriptionUrl: String? = null,
+        autoChaptersUrl: String? = null,
+        extraResultUrls: Map<String, String> = emptyMap()
     ): TingwuJobArtifacts? {
         if (
             mp3.isNullOrBlank() &&
             mp4.isNullOrBlank() &&
             thumb.isNullOrBlank() &&
             spectrum.isNullOrBlank() &&
-            links.isNullOrEmpty()
+            links.isNullOrEmpty() &&
+            transcriptionUrl.isNullOrBlank() &&
+            autoChaptersUrl.isNullOrBlank() &&
+            extraResultUrls.isEmpty()
         ) {
             return null
         }
@@ -735,7 +758,10 @@ class RealTingwuCoordinator @Inject constructor(
             outputMp4Path = mp4,
             outputThumbnailPath = thumb,
             outputSpectrumPath = spectrum,
-            resultLinks = resultLinks
+            resultLinks = resultLinks,
+            transcriptionUrl = transcriptionUrl,
+            autoChaptersUrl = autoChaptersUrl,
+            extraResultUrls = extraResultUrls
         )
     }
 

@@ -39,6 +39,8 @@ sealed interface AudioTranscriptionJobState {
     data class Completed(
         val jobId: String,
         val transcriptMarkdown: String,
+        val transcriptionUrl: String? = null,
+        val autoChaptersUrl: String? = null,
     ) : AudioTranscriptionJobState
 
     data class Failed(

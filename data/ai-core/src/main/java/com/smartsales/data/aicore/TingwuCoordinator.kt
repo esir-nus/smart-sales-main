@@ -29,7 +29,10 @@ data class TingwuJobArtifacts(
     val outputMp4Path: String? = null,
     val outputThumbnailPath: String? = null,
     val outputSpectrumPath: String? = null,
-    val resultLinks: List<TingwuResultLink> = emptyList()
+    val resultLinks: List<TingwuResultLink> = emptyList(),
+    val transcriptionUrl: String? = null,
+    val autoChaptersUrl: String? = null,
+    val extraResultUrls: Map<String, String> = emptyMap()
 )
 
 data class TingwuResultLink(

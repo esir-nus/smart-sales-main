@@ -63,6 +63,8 @@ class DefaultAudioTranscriptionCoordinator @Inject constructor(
                 is TingwuJobState.Completed -> AudioTranscriptionJobState.Completed(
                     jobId = state.jobId,
                     transcriptMarkdown = state.transcriptMarkdown,
+                    transcriptionUrl = state.artifacts?.transcriptionUrl,
+                    autoChaptersUrl = state.artifacts?.autoChaptersUrl
                 )
                 is TingwuJobState.Failed -> AudioTranscriptionJobState.Failed(
                     jobId = state.jobId,

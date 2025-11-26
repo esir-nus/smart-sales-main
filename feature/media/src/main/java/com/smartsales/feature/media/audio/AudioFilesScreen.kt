@@ -186,6 +186,7 @@ object AudioFilesTestTags {
     const val STATUS_CHIP_PREFIX = "audio_files_status_chip_"
     const val TRANSCRIPT_DIALOG = "audio_files_transcript_dialog"
     const val TRANSCRIPT_CONTENT = "audio_files_transcript_content"
+    const val TRANSCRIPT_SUMMARY = "audio_files_transcript_summary"
 }
 
 @Composable
@@ -344,16 +345,17 @@ private fun TranscriptViewerSheet(
     onDismiss: () -> Unit,
     onAskAiClicked: (AudioRecordingUi) -> Unit
 ) {
+    val scrollState = rememberScrollState()
     androidx.compose.material3.ModalBottomSheet(
         modifier = Modifier.testTag(AudioFilesTestTags.TRANSCRIPT_DIALOG),
         onDismissRequest = onDismiss
     ) {
-        val transcriptScrollState = rememberScrollState()
         val coroutineScope = rememberCoroutineScope()
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp)
+                .verticalScroll(scrollState)
         ) {
             Text(
                 text = recording.fileName,
@@ -362,6 +364,11 @@ private fun TranscriptViewerSheet(
             Spacer(modifier = Modifier.height(8.dp))
             Divider()
             Spacer(modifier = Modifier.height(8.dp))
+            val summary = recording.smartSummary?.takeIf { it.isMeaningful() }
+            summary?.let {
+                SummaryBlock(summary = it, modifier = Modifier.testTag(AudioFilesTestTags.TRANSCRIPT_SUMMARY))
+                Spacer(modifier = Modifier.height(12.dp))
+            }
             val content = when (recording.transcriptionStatus) {
                 TranscriptionStatus.IN_PROGRESS -> "转写进行中，请稍后再试。"
                 TranscriptionStatus.ERROR -> "转写失败，可以重新创建转写任务。"
@@ -370,8 +377,6 @@ private fun TranscriptViewerSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 200.dp, max = 480.dp)
-                    .verticalScroll(transcriptScrollState)
                     .testTag(AudioFilesTestTags.TRANSCRIPT_CONTENT),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -398,55 +403,6 @@ private fun TranscriptViewerSheet(
                 Text(text = "用 AI 分析本次通话")
             }
             Spacer(modifier = Modifier.height(8.dp))
-            recording.smartSummary?.let { summary ->
-                Text(
-                    text = "智能总结",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                if (summary.summary.isNullOrBlank() && summary.keyPoints.isEmpty() && summary.actionItems.isEmpty()) {
-                    Text(
-                        text = "暂无智能总结",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    summary.summary?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                    }
-                    if (summary.keyPoints.isNotEmpty()) {
-                        Text(text = "要点", style = MaterialTheme.typography.bodySmall)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        summary.keyPoints.forEach { point: String ->
-                            Text(
-                                text = "• $point",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(6.dp))
-                    }
-                    if (summary.actionItems.isNotEmpty()) {
-                        Text(text = "行动项", style = MaterialTheme.typography.bodySmall)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        summary.actionItems.forEach { item: String ->
-                            Text(
-                                text = "• $item",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(6.dp))
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-            }
             recording.chapters?.let { chapters ->
                 Text(
                     text = "章节",
@@ -469,7 +425,7 @@ private fun TranscriptViewerSheet(
                                     .clickable {
                                         coroutineScope.launch {
                                             val target = (index * 200).coerceAtLeast(0)
-                                            transcriptScrollState.animateScrollTo(target)
+                                            scrollState.animateScrollTo(target)
                                         }
                                     }
                                     .padding(vertical = 4.dp),
@@ -510,3 +466,55 @@ private fun formatChapterTime(startMs: Long): String {
     val seconds = totalSeconds % 60
     return "%02d:%02d".format(minutes, seconds)
 }
+
+@Composable
+private fun SummaryBlock(
+    summary: TingwuSmartSummaryUi,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = "智能总结",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        summary.summary?.takeIf { it.isNotBlank() }?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        if (summary.keyPoints.isNotEmpty()) {
+            Text(text = "要点", style = MaterialTheme.typography.bodySmall)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                summary.keyPoints.forEach { point ->
+                    Text(
+                        text = "• $point",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        if (summary.actionItems.isNotEmpty()) {
+            Text(text = "行动项", style = MaterialTheme.typography.bodySmall)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                summary.actionItems.forEach { item ->
+                    Text(
+                        text = "• $item",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun TingwuSmartSummaryUi.isMeaningful(): Boolean =
+    !summary.isNullOrBlank() || keyPoints.isNotEmpty() || actionItems.isNotEmpty()

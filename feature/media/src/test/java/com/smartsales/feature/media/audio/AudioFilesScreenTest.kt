@@ -8,12 +8,15 @@ package com.smartsales.feature.media.audio
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertDoesNotExist
-import androidx.compose.ui.test.junit4.ComposeTestRule
+import androidx.compose.ui.test.junit4.ComposeContentTestRule
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.smartsales.feature.media.audio.AudioFilesTestTags
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -21,7 +24,7 @@ import org.junit.Test
 class AudioFilesScreenTest {
 
     @get:Rule
-    val composeRule: ComposeTestRule = createComposeRule()
+    val composeRule: ComposeContentTestRule = createComposeRule()
 
     @Test
     fun transcribeButton_visibleAndTriggersCallback_whenNone() {
@@ -156,5 +159,106 @@ class AudioFilesScreenTest {
         composeRule.onNodeWithText("正文").assertIsDisplayed()
         composeRule.onNodeWithText("用 AI 分析本次通话").performClick()
         assert(asked)
+    }
+
+    @Test
+    fun transcriptViewer_showsSummary_whenProvided() {
+        composeRule.setContent {
+            MaterialTheme {
+                AudioFilesScreen(
+                    uiState = AudioFilesUiState(
+                        recordings = listOf(
+                            AudioRecordingUi(
+                                id = "d3",
+                                title = "d3",
+                                fileName = "d3.wav",
+                                createdAtText = "today",
+                                transcriptionStatus = TranscriptionStatus.DONE,
+                                smartSummary = TingwuSmartSummaryUi(
+                                    summary = "概览",
+                                    keyPoints = listOf("要点A"),
+                                    actionItems = listOf("行动1")
+                                )
+                            )
+                        ),
+                        transcriptPreviewRecording = AudioRecordingUi(
+                            id = "d3",
+                            title = "d3",
+                            fileName = "d3.wav",
+                            createdAtText = "today",
+                            transcriptionStatus = TranscriptionStatus.DONE,
+                            smartSummary = TingwuSmartSummaryUi(
+                                summary = "概览",
+                                keyPoints = listOf("要点A"),
+                                actionItems = listOf("行动1")
+                            )
+                        )
+                    ),
+                    onRefresh = {},
+                    onSyncClicked = {},
+                    onRecordingClicked = {},
+                    onPlayPauseClicked = {},
+                    onDeleteClicked = {},
+                    onTranscribeClicked = {},
+                    onTranscriptClicked = {},
+                    onAskAiClicked = {},
+                    onTranscriptDismissed = {},
+                    onErrorDismissed = {},
+                    modifier = Modifier
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(AudioFilesTestTags.TRANSCRIPT_SUMMARY).assertIsDisplayed()
+        composeRule.onNodeWithText("智能总结").assertIsDisplayed()
+        composeRule.onNodeWithText("概览").assertIsDisplayed()
+        composeRule.onNodeWithText("要点A").assertIsDisplayed()
+        composeRule.onNodeWithText("行动1").assertIsDisplayed()
+    }
+
+    @Test
+    fun transcriptViewer_hidesSummary_whenAbsent() {
+        composeRule.setContent {
+            MaterialTheme {
+                AudioFilesScreen(
+                    uiState = AudioFilesUiState(
+                        recordings = listOf(
+                            AudioRecordingUi(
+                                id = "d4",
+                                title = "d4",
+                                fileName = "d4.wav",
+                                createdAtText = "today",
+                                transcriptionStatus = TranscriptionStatus.DONE,
+                                transcriptPreview = "preview",
+                                fullTranscriptMarkdown = "内容"
+                            )
+                        ),
+                        transcriptPreviewRecording = AudioRecordingUi(
+                            id = "d4",
+                            title = "d4",
+                            fileName = "d4.wav",
+                            createdAtText = "today",
+                            transcriptionStatus = TranscriptionStatus.DONE,
+                            transcriptPreview = "preview",
+                            fullTranscriptMarkdown = "内容"
+                        )
+                    ),
+                    onRefresh = {},
+                    onSyncClicked = {},
+                    onRecordingClicked = {},
+                    onPlayPauseClicked = {},
+                    onDeleteClicked = {},
+                    onTranscribeClicked = {},
+                    onTranscriptClicked = {},
+                    onAskAiClicked = {},
+                    onTranscriptDismissed = {},
+                    onErrorDismissed = {},
+                    modifier = Modifier
+                )
+            }
+        }
+
+        composeRule.onAllNodesWithTag(AudioFilesTestTags.TRANSCRIPT_SUMMARY).assertCountEquals(0)
+        composeRule.onAllNodesWithText("智能总结").assertCountEquals(0)
     }
 }

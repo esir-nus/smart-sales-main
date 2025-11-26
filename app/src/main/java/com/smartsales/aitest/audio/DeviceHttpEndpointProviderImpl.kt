@@ -93,6 +93,7 @@ class DeviceHttpEndpointProviderImpl @Inject constructor(
     private suspend fun runDiscoveryWithRetry() {
         var attempt = 0
         while (attempt < MAX_ATTEMPTS && coroutineContext.isActive) {
+            if (readyToken == null) return
             attempt += 1
             val success = queryEndpointOnce()
             if (success) {

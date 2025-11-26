@@ -8,6 +8,7 @@ package com.smartsales.aitest.ui
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Text
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.ComposeContentTestRule
@@ -17,8 +18,8 @@ import androidx.compose.ui.test.onNodeWithText
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.runner.RunWith
+import androidx.test.ext.junit.runners.AndroidJUnit4
 
 @RunWith(AndroidJUnit4::class)
 class HomeOverlayShellTest {
@@ -26,13 +27,16 @@ class HomeOverlayShellTest {
     @get:Rule
     val composeRule: ComposeContentTestRule = createComposeRule()
 
+    @Before
+    fun setup() {}
+
     @Test
     fun showsCorrespondingLayer_whenPageChanges() {
-        var page = OverlayPage.Home
+        val page = mutableStateOf(OverlayPage.Home)
         composeRule.setContent {
             HomeOverlayShell(
-                currentPage = page,
-                onPageChange = { page = it },
+                currentPage = page.value,
+                onPageChange = { page.value = it },
                 homeContent = {
                     Box(Modifier.fillMaxSize()) { Text("home") }
                 },
@@ -48,12 +52,12 @@ class HomeOverlayShellTest {
         composeRule.onNodeWithTag(HomeOverlayTestTags.HOME_LAYER, useUnmergedTree = true).assertIsDisplayed()
         composeRule.onNodeWithText("home", useUnmergedTree = true).assertIsDisplayed()
 
-        composeRule.runOnUiThread { page = OverlayPage.Audio }
+        composeRule.runOnUiThread { page.value = OverlayPage.Audio }
         composeRule.waitForIdle()
         composeRule.onNodeWithTag(HomeOverlayTestTags.AUDIO_LAYER, useUnmergedTree = true).assertIsDisplayed()
         composeRule.onNodeWithText("audio", useUnmergedTree = true).assertIsDisplayed()
 
-        composeRule.runOnUiThread { page = OverlayPage.Device }
+        composeRule.runOnUiThread { page.value = OverlayPage.Device }
         composeRule.waitForIdle()
         composeRule.onNodeWithTag(HomeOverlayTestTags.DEVICE_LAYER, useUnmergedTree = true).assertIsDisplayed()
         composeRule.onNodeWithText("device", useUnmergedTree = true).assertIsDisplayed()

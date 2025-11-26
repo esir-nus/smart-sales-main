@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -42,7 +43,7 @@ class DeviceHttpEndpointProviderImplTest {
         val collectJob = collectBaseUrl(provider, results, this)
 
         fakeConnection.updateState(readyState())
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(1, fakeConnection.queryCount)
         assertEquals("http://10.0.0.2:8000", results.last())
@@ -67,15 +68,15 @@ class DeviceHttpEndpointProviderImplTest {
 
         fakeConnection.updateState(readyState())
 
-        advanceUntilIdle()
+        runCurrent()
         assertEquals(1, fakeConnection.queryCount)
 
         advanceTimeBy(1_000)
-        advanceUntilIdle()
+        runCurrent()
         assertEquals(2, fakeConnection.queryCount)
 
         advanceTimeBy(2_000)
-        advanceUntilIdle()
+        runCurrent()
         assertEquals(3, fakeConnection.queryCount)
         assertEquals("http://10.0.0.8:8000", results.last())
 
@@ -97,13 +98,13 @@ class DeviceHttpEndpointProviderImplTest {
         val collectJob = collectBaseUrl(provider, results, this)
 
         fakeConnection.updateState(readyState())
-        advanceUntilIdle()
+        runCurrent()
         assertEquals(1, fakeConnection.queryCount)
 
         fakeConnection.updateState(ConnectionState.Disconnected)
-        advanceUntilIdle()
+        runCurrent()
         advanceTimeBy(3_000)
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(1, fakeConnection.queryCount)
         assertNull(results.last())

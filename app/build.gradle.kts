@@ -104,8 +104,10 @@ dependencies {
     testImplementation(projects.core.test)
     testImplementation(libs.compose.ui.test.junit4)
     testImplementation("org.robolectric:robolectric:4.11.1")
+    testImplementation("com.google.guava:guava:32.1.2-jre")
     testImplementation("androidx.test:core:1.6.1")
     testImplementation("androidx.test.ext:junit:1.2.1")
+    testImplementation(libs.compose.ui.test.manifest)
 
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)

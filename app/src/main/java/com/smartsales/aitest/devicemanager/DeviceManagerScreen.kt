@@ -36,7 +36,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,7 +49,6 @@ import com.smartsales.feature.media.devicemanager.DeviceFileUi
 import com.smartsales.feature.media.devicemanager.DeviceManagerUiState
 import com.smartsales.feature.media.devicemanager.DeviceManagerViewModel
 import com.smartsales.feature.media.devicemanager.DeviceUploadSource
-import kotlinx.coroutines.delay
 
 @Composable
 fun DeviceManagerRoute(modifier: Modifier = Modifier) {
@@ -66,6 +64,7 @@ fun DeviceManagerRoute(modifier: Modifier = Modifier) {
     DeviceManagerScreen(
         state = state,
         onRefresh = viewModel::onRefreshFiles,
+        onRetryLoad = viewModel::onRetryLoad,
         onSelectFile = viewModel::onSelectFile,
         onApplyFile = viewModel::onApplyFile,
         onDeleteFile = viewModel::onDeleteFile,
@@ -80,6 +79,7 @@ fun DeviceManagerRoute(modifier: Modifier = Modifier) {
 fun DeviceManagerScreen(
     state: DeviceManagerUiState,
     onRefresh: () -> Unit,
+    onRetryLoad: () -> Unit,
     onSelectFile: (String) -> Unit,
     onApplyFile: (String) -> Unit,
     onDeleteFile: (String) -> Unit,
@@ -89,7 +89,7 @@ fun DeviceManagerScreen(
     modifier: Modifier = Modifier
 ) {
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
-        val isConnected = state.connectionStatus.isReadyForFiles()
+        val isConnected = state.isConnected
         Column(
             modifier = Modifier
                 .padding(innerPadding)
@@ -119,25 +119,38 @@ fun DeviceManagerScreen(
                 onRefresh = onRefresh,
                 onUpload = onRequestUpload
             )
-            if (state.isLoading) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            }
-            state.errorMessage?.let {
+            state.loadErrorMessage?.let {
                 ErrorBanner(
                     message = it,
+                    primaryActionLabel = "重试",
+                    onPrimaryAction = onRetryLoad,
+                    onDismiss = onClearError,
+                    modifier = Modifier.testTag(DeviceManagerTestTags.ERROR_BANNER)
+                )
+            } ?: state.errorMessage?.let {
+                ErrorBanner(
+                    message = it,
+                    primaryActionLabel = null,
+                    onPrimaryAction = null,
                     onDismiss = onClearError,
                     modifier = Modifier.testTag(DeviceManagerTestTags.ERROR_BANNER)
                 )
             }
             if (!isConnected) {
-                DisconnectedHint()
-            } else {
-                val hasFiles = state.visibleFiles.isNotEmpty()
-                if (!hasFiles && !state.isLoading) {
+                DisconnectedHint(onRefresh)
+                return@Column
+            }
+            when {
+                state.isLoading -> {
+                    LoadingBanner()
+                }
+                state.loadErrorMessage != null -> Unit
+                state.visibleFiles.isEmpty() -> {
                     DeviceManagerEmptyState()
-                } else if (hasFiles) {
+                }
+                else -> {
                     LazyColumn(
-                        modifier = Modifier.weight(1f, fill = false),
+                        modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(state.visibleFiles, key = { it.id }) { file ->
@@ -151,9 +164,9 @@ fun DeviceManagerScreen(
                         }
                     }
                 }
-                state.selectedFile?.let {
-                    SelectedFileCard(file = it)
-                }
+            }
+            state.selectedFile?.let { selected ->
+                SelectedFileCard(file = selected)
             }
         }
     }
@@ -214,6 +227,18 @@ private fun ActionButtons(
             Spacer(modifier = Modifier.width(4.dp))
             Text(text = if (isUploading) "上传中..." else "上传文件")
         }
+    }
+}
+
+@Composable
+private fun LoadingBanner() {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        LinearProgressIndicator(modifier = Modifier.weight(1f))
+        Text(text = "正在加载设备文件...")
     }
 }
 
@@ -326,9 +351,9 @@ private fun DeviceManagerEmptyState() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(text = "暂无文件", style = MaterialTheme.typography.titleMedium)
+            Text(text = "设备上还没有文件", style = MaterialTheme.typography.titleMedium)
             Text(
-                text = "点击上传按钮或触发设备同步后即可在此看到文件列表。",
+                text = "录制或拍摄内容后，再次刷新列表。",
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -336,20 +361,23 @@ private fun DeviceManagerEmptyState() {
 }
 
 @Composable
-private fun DisconnectedHint() {
+private fun DisconnectedHint(onRefresh: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(text = "设备未连接", style = MaterialTheme.typography.titleMedium)
             Text(
-                text = "连接 SmartSales 录音设备后即可浏览和刷新文件。",
+                text = "请先完成设备配网，然后刷新设备文件。",
                 style = MaterialTheme.typography.bodySmall
             )
+            OutlinedButton(onClick = onRefresh) {
+                Text("刷新设备状态")
+            }
         }
     }
 }
@@ -357,13 +385,11 @@ private fun DisconnectedHint() {
 @Composable
 private fun ErrorBanner(
     message: String,
-    onDismiss: () -> Unit,
+    primaryActionLabel: String?,
+    onPrimaryAction: (() -> Unit)?,
+    onDismiss: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
-    LaunchedEffect(message) {
-        delay(2800)
-        onDismiss()
-    }
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -373,8 +399,17 @@ private fun ErrorBanner(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(text = message, color = MaterialTheme.colorScheme.onErrorContainer)
-        TextButton(onClick = onDismiss) {
-            Text(text = "知道了", color = MaterialTheme.colorScheme.onErrorContainer)
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (primaryActionLabel != null && onPrimaryAction != null) {
+                TextButton(onClick = onPrimaryAction) {
+                    Text(text = primaryActionLabel, color = MaterialTheme.colorScheme.onErrorContainer)
+                }
+            }
+            if (onDismiss != null) {
+                TextButton(onClick = onDismiss) {
+                    Text(text = "知道了", color = MaterialTheme.colorScheme.onErrorContainer)
+                }
+            }
         }
     }
 }

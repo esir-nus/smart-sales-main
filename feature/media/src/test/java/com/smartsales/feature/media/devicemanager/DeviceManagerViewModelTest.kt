@@ -26,6 +26,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -74,6 +75,9 @@ class DeviceManagerViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(2, state.files.size) // 仅视频+GIF
         assertEquals(2, state.visibleFiles.size)
+        assertEquals(false, state.isLoading)
+        assertEquals(null, state.loadErrorMessage)
+        assertTrue(gateway.fetchCalls >= 1)
     }
 
     @Test
@@ -86,7 +90,67 @@ class DeviceManagerViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals("offline", state.errorMessage)
+        assertEquals("加载设备文件失败，请稍后重试。", state.loadErrorMessage)
+        assertEquals(false, state.isLoading)
+    }
+
+    @Test
+    fun `connected state triggers initial load`() = runTest(dispatcher) {
+        gateway.files = listOf(
+            DeviceMediaFile("clip.mp4", 2048, "video/mp4", 2_000L, "media/2", "dl/2")
+        )
+
+        connectionManager.emitReady()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(1, state.files.size)
+        assertEquals(1, gateway.fetchCalls)
+    }
+
+    @Test
+    fun `refresh when disconnected reports friendly message`() = runTest(dispatcher) {
+        viewModel.onRefreshFiles()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("设备未连接，无法刷新文件。", state.loadErrorMessage)
+        assertEquals(0, gateway.fetchCalls)
+    }
+
+    @Test
+    fun `retry after failure re-fetches files`() = runTest(dispatcher) {
+        connectionManager.emitReady()
+        gateway.fetchResult = Result.Error(IllegalStateException("offline"))
+        advanceUntilIdle()
+
+        viewModel.onRetryLoad()
+        advanceUntilIdle()
+
+        gateway.fetchResult = null
+        gateway.files = listOf(DeviceMediaFile("clip.mp4", 2048, "video/mp4", 2_000L, "media/2", "dl/2"))
+        viewModel.onRetryLoad()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(1, state.files.size)
+        assertEquals(null, state.loadErrorMessage)
+        assertTrue(gateway.fetchCalls >= 2)
+    }
+
+    @Test
+    fun `disconnected clears files and stops loading`() = runTest(dispatcher) {
+        connectionManager.emitReady()
+        gateway.files = listOf(DeviceMediaFile("clip.mp4", 2048, "video/mp4", 2_000L, "media/2", "dl/2"))
+        advanceUntilIdle()
+
+        connectionManager.emitDisconnected()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isConnected)
+        assertTrue(state.files.isEmpty())
+        assertEquals(null, state.loadErrorMessage)
         assertEquals(false, state.isLoading)
     }
 
@@ -216,8 +280,10 @@ class DeviceManagerViewModelTest {
         var fetchResult: Result<List<DeviceMediaFile>>? = null
         var uploadCalls = 0
         val appliedNames = mutableSetOf<String>()
+        var fetchCalls = 0
 
         override suspend fun fetchFiles(baseUrl: String): Result<List<DeviceMediaFile>> {
+            fetchCalls += 1
             return fetchResult ?: Result.Success(files)
         }
 
@@ -277,6 +343,10 @@ class DeviceManagerViewModelTest {
                     establishedAtMillis = System.currentTimeMillis()
                 )
             )
+        }
+
+        fun emitDisconnected() {
+            _state.value = ConnectionState.Disconnected
         }
 
         override fun selectPeripheral(peripheral: BlePeripheral) = Unit

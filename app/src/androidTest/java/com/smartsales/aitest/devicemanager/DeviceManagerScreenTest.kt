@@ -29,11 +29,10 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.smartsales.feature.media.devicemanager.DeviceManagerUiState
 import com.smartsales.feature.media.devicemanager.DeviceConnectionUiState
 import com.smartsales.feature.media.devicemanager.DeviceFileUi
-import com.smartsales.feature.media.devicemanager.DeviceManagerUiState
 import com.smartsales.feature.media.devicemanager.DeviceMediaTab
-import com.smartsales.aitest.devicemanager.DeviceManagerScreen
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -54,7 +53,8 @@ class DeviceManagerScreenTest {
         renderDeviceManager(state)
 
         composeRule.onNodeWithText("设备未连接").assertIsDisplayed()
-        composeRule.onNodeWithText("连接 SmartSales 录音设备后即可浏览和刷新文件。").assertIsDisplayed()
+        composeRule.onNodeWithText("请先完成设备配网，然后刷新设备文件。").assertIsDisplayed()
+        composeRule.onNodeWithText("刷新设备状态").assertIsDisplayed()
         composeRule.onNodeWithTag("device_manager_refresh_button").assertIsNotEnabled()
         composeRule.onNodeWithTag("device_manager_upload_button").assertIsNotEnabled()
     }
@@ -84,6 +84,24 @@ class DeviceManagerScreenTest {
 
         composeRule.onNodeWithTag("device_manager_empty_state").assertIsDisplayed()
         composeRule.onAllNodesWithText("应用").assertCountEquals(0)
+    }
+
+    @Test
+    fun loadErrorState_showsRetry() {
+        var retryClicks = 0
+        val state = createState(
+            connectionStatus = DeviceConnectionUiState.Connected(deviceName = "录音笔"),
+            isLoading = false,
+            loadErrorMessage = "加载设备文件失败，请稍后重试。"
+        )
+        renderDeviceManager(
+            initialState = state,
+            onRetryLoad = { retryClicks++ }
+        )
+
+        composeRule.onNodeWithTag("device_manager_error_banner").assertIsDisplayed()
+        composeRule.onNodeWithText("重试").assertIsDisplayed().performClick()
+        assertEquals(1, retryClicks)
     }
 
     @Test
@@ -136,6 +154,7 @@ class DeviceManagerScreenTest {
                     DeviceManagerScreen(
                         state = uiState,
                         onRefresh = {},
+                        onRetryLoad = {},
                         onSelectFile = {},
                         onApplyFile = {},
                         onDeleteFile = {},
@@ -166,6 +185,7 @@ class DeviceManagerScreenTest {
         onApplyFile: (String) -> Unit = {},
         onDeleteFile: (String) -> Unit = {},
         onRequestUpload: () -> Unit = {},
+        onRetryLoad: () -> Unit = {},
         onBaseUrlChange: (String) -> Unit = {},
         onClearError: () -> Unit = {}
     ) {
@@ -175,6 +195,7 @@ class DeviceManagerScreenTest {
                 DeviceManagerScreen(
                     state = uiState,
                     onRefresh = onRefresh,
+                    onRetryLoad = onRetryLoad,
                     onSelectFile = onSelectFile,
                     onApplyFile = onApplyFile,
                     onDeleteFile = onDeleteFile,
@@ -193,10 +214,12 @@ class DeviceManagerScreenTest {
         files: List<DeviceFileUi> = emptyList(),
         visibleFiles: List<DeviceFileUi> = files,
         selectedFile: DeviceFileUi? = null,
-        errorMessage: String? = null
+        errorMessage: String? = null,
+        loadErrorMessage: String? = null
     ): DeviceManagerUiState {
         return DeviceManagerUiState(
             connectionStatus = connectionStatus,
+            isConnected = connectionStatus.isReadyForFiles(),
             baseUrl = "http://10.0.2.2:8000",
             autoDetectedBaseUrl = null,
             isAutoDetectingBaseUrl = false,
@@ -207,7 +230,8 @@ class DeviceManagerScreenTest {
             selectedFile = selectedFile,
             isLoading = isLoading,
             isUploading = isUploading,
-            errorMessage = errorMessage
+            errorMessage = errorMessage,
+            loadErrorMessage = loadErrorMessage
         )
     }
 

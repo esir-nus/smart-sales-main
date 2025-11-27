@@ -30,6 +30,7 @@ object HomeOverlayTestTags {
     const val HOME_LAYER = "overlay_home_layer"
     const val AUDIO_LAYER = "overlay_audio_layer"
     const val DEVICE_LAYER = "overlay_device_layer"
+    const val ROOT = "overlay_shell_root"
 }
 
 @Composable
@@ -41,7 +42,9 @@ fun HomeOverlayShell(
     deviceManagerContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    BoxWithConstraints(modifier = modifier) {
+    BoxWithConstraints(
+        modifier = modifier.semantics { testTag = HomeOverlayTestTags.ROOT }
+    ) {
         val containerHeightPx = constraints.maxHeight.toFloat().coerceAtLeast(1f)
         var dragOffset by remember { mutableStateOf(0f) }
         val targetBase = when (currentPage) {

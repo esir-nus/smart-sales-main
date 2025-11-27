@@ -56,6 +56,7 @@ class AiFeatureTestActivityTest {
 
     @Test
     fun homeFirstNavigationShell_isProperlyIntegrated() {
+        composeRule.onRoot().printToLog("HomeShellTree")
         // 验证 Activity 启动时 Home 页面是默认显示
         waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
         composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_SHELL).assertIsDisplayed()

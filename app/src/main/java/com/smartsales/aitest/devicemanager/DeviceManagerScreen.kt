@@ -90,18 +90,26 @@ fun DeviceManagerScreen(
 ) {
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
         val isConnected = state.isConnected
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .padding(16.dp)
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            DeviceConnectionBanner(status = state.connectionStatus)
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedTextField(
-                    value = state.baseUrl,
-                    onValueChange = onBaseUrlChange,
+    Column(
+        modifier = Modifier
+            .padding(innerPadding)
+            .padding(16.dp)
+            .fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text = "设备管理", style = MaterialTheme.typography.titleLarge)
+            Text(
+                text = "管理已连接设备的媒体文件，刷新或上传以保持最新。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        DeviceConnectionBanner(status = state.connectionStatus)
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            OutlinedTextField(
+                value = state.baseUrl,
+                onValueChange = onBaseUrlChange,
                     label = { Text("服务地址") },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !state.isLoading
@@ -146,16 +154,18 @@ fun DeviceManagerScreen(
                 }
                 state.loadErrorMessage != null -> Unit
                 state.visibleFiles.isEmpty() -> {
-                    DeviceManagerEmptyState()
-                }
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(state.visibleFiles, key = { it.id }) { file ->
-                            DeviceFileCard(
-                                file = file,
+                DeviceManagerEmptyState()
+            }
+            else -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag(DeviceManagerTestTags.FILE_LIST),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(state.visibleFiles, key = { it.id }) { file ->
+                        DeviceFileCard(
+                            file = file,
                                 isSelected = state.selectedFile?.id == file.id,
                                 onSelect = { onSelectFile(file.id) },
                                 onApply = { onApplyFile(file.id) },
@@ -189,6 +199,11 @@ private fun DeviceConnectionBanner(status: DeviceConnectionUiState) {
             Text(text = title, style = MaterialTheme.typography.titleMedium)
             Text(
                 text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "连接设备后可刷新、上传与管理媒体文件。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -252,7 +267,8 @@ private fun DeviceFileCard(
 ) {
     Card(
         modifier = Modifier
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .testTag("${DeviceManagerTestTags.FILE_CARD_PREFIX}${file.id}"),
         colors = if (isSelected) {
             CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
         } else {
@@ -326,7 +342,7 @@ private fun DeviceFileCard(
 
 @Composable
 private fun SelectedFileCard(file: DeviceFileUi) {
-    Card {
+    Card(modifier = Modifier.testTag(DeviceManagerTestTags.SELECTED_FILE_CARD)) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(text = "选中项", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(6.dp))
@@ -414,11 +430,14 @@ private fun ErrorBanner(
     }
 }
 
-private object DeviceManagerTestTags {
+object DeviceManagerTestTags {
     const val REFRESH_BUTTON = "device_manager_refresh_button"
     const val UPLOAD_BUTTON = "device_manager_upload_button"
     const val EMPTY_STATE = "device_manager_empty_state"
     const val ERROR_BANNER = "device_manager_error_banner"
+    const val FILE_LIST = "device_manager_file_list"
+    const val FILE_CARD_PREFIX = "device_manager_file_card_"
+    const val SELECTED_FILE_CARD = "device_manager_selected_file"
 }
 
 object DeviceManagerRouteTestTags {

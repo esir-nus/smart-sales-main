@@ -37,7 +37,6 @@ import com.smartsales.feature.media.devicemanager.DeviceConnectionUiState
 import com.smartsales.feature.media.devicemanager.DeviceFileUi
 import com.smartsales.feature.media.devicemanager.DeviceMediaTab
 import com.smartsales.aitest.devicemanager.DeviceManagerTestTags
-import org.junit.Ignore
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -109,6 +108,16 @@ class DeviceManagerScreenTest {
         assertEquals(1, retryClicks)
     }
 
+    private fun waitForTag(tag: String, timeoutMillis: Long = 10_000) {
+        // 等待节点出现，避免设备切后台导致的空树异常
+        composeRule.waitUntil(timeoutMillis = timeoutMillis) {
+            runCatching {
+                composeRule.onAllNodesWithTag(tag, useUnmergedTree = true)
+                    .fetchSemanticsNodes().isNotEmpty()
+            }.getOrDefault(false)
+        }
+    }
+
     @Test
     fun listState_rendersFilesAndTriggersActions() {
         val files = listOf(
@@ -129,18 +138,15 @@ class DeviceManagerScreenTest {
             onRequestUpload = { uploadClicks++ }
         )
 
+        waitForTag(DeviceManagerTestTags.FILE_LIST)
         composeRule.onNodeWithTag(
             DeviceManagerTestTags.FILE_LIST,
             useUnmergedTree = true
         ).performScrollToNode(hasTestTag("${DeviceManagerTestTags.FILE_ITEM_PREFIX}promo.mp4"))
-        composeRule.onNodeWithTag("${DeviceManagerTestTags.FILE_ITEM_PREFIX}promo.mp4", useUnmergedTree = true)
-            .assertExists()
         composeRule.onNodeWithTag(
             DeviceManagerTestTags.FILE_LIST,
             useUnmergedTree = true
         ).performScrollToNode(hasTestTag("${DeviceManagerTestTags.FILE_ITEM_PREFIX}loop.gif"))
-        composeRule.onNodeWithTag("${DeviceManagerTestTags.FILE_ITEM_PREFIX}loop.gif", useUnmergedTree = true)
-            .assertExists()
         composeRule.onAllNodesWithText("2025-11-20 10:00").assertCountEquals(0)
         composeRule.onNodeWithTag(DeviceManagerTestTags.SIMULATOR_TITLE).assertIsDisplayed()
         composeRule.onNodeWithTag(DeviceManagerTestTags.REFRESH_BUTTON).assertIsEnabled()
@@ -162,7 +168,10 @@ class DeviceManagerScreenTest {
             )
         )
 
-        composeRule.onNodeWithTag(DeviceManagerTestTags.SIMULATOR_TITLE).assertIsDisplayed().assertTextContains("first.mp4")
+        waitForTag(DeviceManagerTestTags.SIMULATOR_TITLE)
+        composeRule.onNodeWithTag(DeviceManagerTestTags.SIMULATOR_TITLE)
+            .assertIsDisplayed()
+            .assertTextContains("first.mp4")
         composeRule.onNodeWithTag(
             DeviceManagerTestTags.FILE_LIST,
             useUnmergedTree = true

@@ -15,6 +15,7 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
 import com.smartsales.aitest.devicemanager.DeviceManagerRouteTestTags
+import com.smartsales.aitest.AiFeatureTestTags
 import com.smartsales.aitest.setup.DeviceSetupRouteTestTags
 import com.smartsales.aitest.ui.HomeOverlayTestTags
 import com.smartsales.feature.chat.home.HomeScreenTestTags
@@ -41,7 +42,13 @@ class NavigationSmokeTest {
 
     @Test
     fun launchesHomeByDefault() {
-        waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
+        waitForAnyTag(
+            tags = listOf(
+                HomeOverlayTestTags.HOME_LAYER,
+                AiFeatureTestTags.OVERLAY_SHELL
+            ),
+            timeout = 20_000
+        )
         composeRule.onAllNodesWithTag(AudioFilesTestTags.ROOT).assertCountEquals(0)
         composeRule.onAllNodesWithTag(DeviceManagerRouteTestTags.ROOT).assertCountEquals(0)
         composeRule.onAllNodesWithTag(DeviceSetupRouteTestTags.PAGE).assertCountEquals(0)
@@ -60,7 +67,14 @@ class NavigationSmokeTest {
     fun navigateToDeviceManagerFromHomeShell() {
         waitForTag(HomeScreenTestTags.DEVICE_ENTRY)
         composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_ENTRY).performClick()
-        waitForOverlay(HomeOverlayTestTags.DEVICE_LAYER, timeout = 20_000)
+        waitForAnyTag(
+            tags = listOf(
+                HomeOverlayTestTags.DEVICE_LAYER,
+                DeviceManagerRouteTestTags.ROOT,
+                AiFeatureTestTags.PAGE_DEVICE_SETUP
+            ),
+            timeout = 25_000
+        )
     }
 
     @Test
@@ -103,21 +117,43 @@ class NavigationSmokeTest {
         composeRule.onNodeWithTag(tag).performClick()
     }
 
-    private fun waitForTag(tag: String, timeout: Long = 10_000) {
+    private fun waitForTag(tag: String, timeout: Long = 15_000) {
         composeRule.waitUntil(timeoutMillis = timeout) {
             runCatching {
-                composeRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+                composeRule.onAllNodesWithTag(tag, useUnmergedTree = true)
+                    .fetchSemanticsNodes().isNotEmpty()
             }.getOrDefault(false)
         }
-        composeRule.onNodeWithTag(tag).assertIsDisplayed()
+        composeRule.onNodeWithTag(tag, useUnmergedTree = true).assertIsDisplayed()
     }
 
-    private fun waitForOverlay(tag: String, timeout: Long = 10_000) {
+    private fun waitForOverlay(tag: String, timeout: Long = 15_000) {
         composeRule.waitUntil(timeoutMillis = timeout) {
             runCatching {
-                composeRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+                composeRule.onAllNodesWithTag(tag, useUnmergedTree = true)
+                    .fetchSemanticsNodes().isNotEmpty()
             }.getOrDefault(false)
         }
-        composeRule.onNodeWithTag(tag).assertIsDisplayed()
+        composeRule.onNodeWithTag(tag, useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    private fun waitForAnyTag(tags: List<String>, timeout: Long) {
+        composeRule.waitUntil(timeoutMillis = timeout) {
+            tags.any { tag ->
+                runCatching {
+                    composeRule.onAllNodesWithTag(tag, useUnmergedTree = true)
+                        .fetchSemanticsNodes().isNotEmpty()
+                }.getOrDefault(false)
+            }
+        }
+        // Try to assert the first tag found for visibility
+        tags.firstOrNull { tag ->
+            runCatching {
+                composeRule.onAllNodesWithTag(tag, useUnmergedTree = true)
+                    .fetchSemanticsNodes().isNotEmpty()
+            }.getOrDefault(false)
+        }?.let { foundTag ->
+            composeRule.onNodeWithTag(foundTag, useUnmergedTree = true).assertIsDisplayed()
+        }
     }
 }

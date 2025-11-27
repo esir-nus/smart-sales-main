@@ -7,6 +7,7 @@ package com.smartsales.aitest
 
 import android.Manifest
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.widget.VideoView
 import androidx.activity.ComponentActivity
@@ -78,8 +79,10 @@ import com.smartsales.aitest.devicemanager.DeviceManagerRoute
 import com.smartsales.aitest.setup.DeviceSetupRoute
 import com.smartsales.aitest.usercenter.UserCenterRoute
 import com.smartsales.aitest.ui.HomeOverlayShell
+import java.util.Locale
 import com.smartsales.aitest.ui.OverlayPage
 import com.smartsales.core.util.Result
+import com.smartsales.feature.chat.home.HomeNavigationRequest
 import com.smartsales.feature.chat.home.HomeScreenRoute
 import com.smartsales.feature.chat.home.TranscriptionChatRequest
 import com.smartsales.feature.chat.history.ChatHistoryRoute
@@ -108,6 +111,7 @@ private fun AiFeatureTestApp() {
     var manualSessionId by rememberSaveable { mutableStateOf("home-session") }
     var pendingTranscription by remember { mutableStateOf<TranscriptionChatRequest?>(null) }
     var pendingSessionId by remember { mutableStateOf<String?>(null) }
+    var pendingNavigation by remember { mutableStateOf<HomeNavigationRequest?>(null) }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
@@ -117,7 +121,7 @@ private fun AiFeatureTestApp() {
     }
 
     LaunchedEffect(Unit) {
-        val missingPermissions = REQUIRED_BLE_PERMISSIONS.filter {
+        val missingPermissions = requiredBlePermissions().filter {
             ContextCompat.checkSelfPermission(
                 context,
                 it
@@ -128,8 +132,11 @@ private fun AiFeatureTestApp() {
         }
     }
 
-    BackHandler(enabled = currentSection == AppSection.HomeShell && overlayPage != OverlayPage.Home) {
-        overlayPage = OverlayPage.Home
+    BackHandler(enabled = currentSection != AppSection.HomeShell || overlayPage != OverlayPage.Home) {
+        when (currentSection) {
+            AppSection.HomeShell -> overlayPage = OverlayPage.Home
+            else -> currentSection = AppSection.HomeShell
+        }
     }
 
     MaterialTheme {
@@ -180,10 +187,17 @@ private fun AiFeatureTestApp() {
                                             onTranscriptionRequestConsumed = { pendingTranscription = null },
                                             selectedSessionId = pendingSessionId,
                                             onSessionSelectionConsumed = { pendingSessionId = null },
-                                            onNavigateToDeviceManager = { overlayPage = OverlayPage.Device },
-                                            onNavigateToDeviceSetup = { currentSection = AppSection.DeviceSetup },
-                                            onNavigateToAudioFiles = { overlayPage = OverlayPage.Audio },
+                                            onNavigateToDeviceManager = {
+                                                pendingNavigation = HomeNavigationRequest.DeviceManager
+                                            },
+                                            onNavigateToDeviceSetup = {
+                                                pendingNavigation = HomeNavigationRequest.DeviceSetup
+                                            },
+                                            onNavigateToAudioFiles = {
+                                                pendingNavigation = HomeNavigationRequest.AudioFiles
+                                            },
                                             onNavigateToUserCenter = { currentSection = AppSection.UserCenter },
+                                            onNavigationRequest = { request -> pendingNavigation = request },
                                             onSelectSession = { sessionId ->
                                                 pendingSessionId = sessionId
                                             }
@@ -263,6 +277,35 @@ private fun AiFeatureTestApp() {
                         }
                     }
                 }
+            }
+        }
+
+        LaunchedEffect(pendingNavigation) {
+            when (pendingNavigation) {
+                HomeNavigationRequest.DeviceManager -> {
+                    currentSection = AppSection.HomeShell
+                    overlayPage = OverlayPage.Device
+                }
+                HomeNavigationRequest.DeviceSetup -> {
+                    currentSection = AppSection.DeviceSetup
+                    overlayPage = OverlayPage.Home
+                }
+                HomeNavigationRequest.AudioFiles -> {
+                    currentSection = AppSection.HomeShell
+                    overlayPage = OverlayPage.Audio
+                }
+                HomeNavigationRequest.ChatHistory -> {
+                    currentSection = AppSection.ChatHistory
+                    overlayPage = OverlayPage.Home
+                }
+                HomeNavigationRequest.UserCenter -> {
+                    currentSection = AppSection.UserCenter
+                    overlayPage = OverlayPage.Home
+                }
+                null -> Unit
+            }
+            if (pendingNavigation != null) {
+                pendingNavigation = null
             }
         }
     }
@@ -613,14 +656,17 @@ private fun formatSize(bytes: Long): String {
         value /= 1024
         index++
     }
-    return String.format("%.1f%s", value, units[index])
+    return String.format(Locale.US, "%.1f%s", value, units[index])
 }
 
-private val REQUIRED_BLE_PERMISSIONS = listOf(
-    Manifest.permission.BLUETOOTH_SCAN,
-    Manifest.permission.BLUETOOTH_CONNECT,
-    Manifest.permission.ACCESS_FINE_LOCATION
-)
+private fun requiredBlePermissions(): List<String> {
+    val permissions = mutableListOf(Manifest.permission.ACCESS_FINE_LOCATION)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        permissions += Manifest.permission.BLUETOOTH_SCAN
+        permissions += Manifest.permission.BLUETOOTH_CONNECT
+    }
+    return permissions
+}
 
 object AiFeatureTestTags {
     // UI 与测试共享的标签集合（Home shell 根标签等）

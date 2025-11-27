@@ -95,6 +95,7 @@ fun HomeScreenRoute(
     onNavigateToDeviceSetup: () -> Unit = {},
     onNavigateToAudioFiles: () -> Unit = {},
     onNavigateToUserCenter: () -> Unit = {},
+    onNavigationRequest: (HomeNavigationRequest) -> Unit = {},
     onSelectSession: (String) -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -114,10 +115,13 @@ fun HomeScreenRoute(
     // 监听导航请求并通过回调交给宿主 Activity
     LaunchedEffect(state.navigationRequest) {
         when (state.navigationRequest) {
-            HomeNavigationRequest.DeviceManager -> onNavigateToDeviceManager()
-            HomeNavigationRequest.DeviceSetup -> onNavigateToDeviceSetup()
-            HomeNavigationRequest.AudioFiles -> onNavigateToAudioFiles()
-            HomeNavigationRequest.UserCenter -> onNavigateToUserCenter()
+            HomeNavigationRequest.DeviceManager -> onNavigationRequest(HomeNavigationRequest.DeviceManager)
+            HomeNavigationRequest.DeviceSetup -> onNavigationRequest(HomeNavigationRequest.DeviceSetup)
+            HomeNavigationRequest.AudioFiles -> onNavigationRequest(HomeNavigationRequest.AudioFiles)
+            HomeNavigationRequest.UserCenter -> onNavigationRequest(HomeNavigationRequest.UserCenter)
+            HomeNavigationRequest.ChatHistory -> {
+                showHistoryPanel = true
+            }
             else -> Unit
         }
         if (state.navigationRequest != null) {

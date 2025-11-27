@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { User, Bot, Copy, Check } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export default function ChatBubble({ message }) {
   const isUser = message.role === 'user';
@@ -17,7 +18,12 @@ export default function ChatBubble({ message }) {
   };
   
   return (
-    <div className={`flex w-full mb-6 ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className={`flex w-full mb-6 ${isUser ? 'justify-end' : 'justify-start'}`}
+    >
       {!isUser && (
         <div className="mr-3 flex-shrink-0">
           <div className="w-8 h-8 rounded-full bg-white border border-[#E5E5EA] flex items-center justify-center text-[#007AFF] shadow-sm">
@@ -68,6 +74,6 @@ export default function ChatBubble({ message }) {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

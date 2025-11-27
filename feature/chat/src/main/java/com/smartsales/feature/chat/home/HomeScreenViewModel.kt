@@ -263,9 +263,7 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     fun onTapAudioSummary() {
-        if (_uiState.value.audioSummary != null) {
-            _uiState.update { it.copy(navigationRequest = HomeNavigationRequest.AudioFiles) }
-        }
+        _uiState.update { it.copy(navigationRequest = HomeNavigationRequest.AudioFiles) }
     }
 
     fun onTranscriptionRequested(request: TranscriptionChatRequest) {

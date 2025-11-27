@@ -64,18 +64,7 @@ Every Orchestrator answer about a task should roughly contain:
 
 6. **Commit Entry**
 
-   * A small block in your house style (like T4), for progress-log or commit body, e.g.:
-
-     T6: Add chat sessions & history list
-
-     * Added chat session model and per-session message storage.
-     * Wired Chat screen to load messages by sessionId.
-     * Implemented simple session list UI and navigation from history to chat.
-     * Updated tests for new session and history behaviors.
-
-     Test: ./gradlew :feature:chat:testDebugUnitTest && ./gradlew :app:assembleDebug
-
-   * The exact bullets are flexible; they should read like real work actually done, not a template.
+Study @git-commit-rules.md
 
 ---
 

@@ -114,7 +114,10 @@ dependencies {
     androidTestImplementation(libs.compose.ui.test)
     androidTestImplementation("androidx.compose.ui:ui-test-android")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4-android")
+    androidTestImplementation("androidx.test:rules:1.5.0")
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(libs.androidx.test.espresso)
+    androidTestImplementation("com.google.dagger:hilt-android-testing:2.52")
+    kaptAndroidTest("com.google.dagger:hilt-android-compiler:2.52")
     debugImplementation(libs.compose.ui.test.manifest)
 }

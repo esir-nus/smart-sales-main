@@ -94,6 +94,13 @@ android {
             excludes += "META-INF/NOTICE.md"
         }
     }
+
+    lint {
+        disable += setOf(
+            "GradleDependency", // compileSdk 提示暂不升级
+            "TrustAllX509TrustManager" // 第三方 Aliyun SDK 内部实现
+        )
+    }
 }
 
 kotlin {
@@ -126,7 +133,7 @@ dependencies {
         exclude(group = "org.bouncycastle", module = "bcprov-jdk15on")
         exclude(group = "org.bouncycastle", module = "bcprov-ext-jdk15on")
     }
-    implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
+    implementation(libs.bcprov)
     kapt(libs.hilt.compiler)
 
     testImplementation(projects.core.test)

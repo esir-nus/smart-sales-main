@@ -13,6 +13,7 @@ import com.smartsales.feature.connectivity.WifiCredentials
 import com.smartsales.feature.connectivity.scan.BleScanner
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -25,6 +26,7 @@ import kotlinx.coroutines.launch
 // 模块：:feature:connectivity
 // 说明：封装扫描、配对、配网、等待上线到就绪的 UI 状态机
 // 作者：创建于 2025-11-21
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class DeviceSetupViewModel @Inject constructor(
     private val connectionManager: DeviceConnectionManager,

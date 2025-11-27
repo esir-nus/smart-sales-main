@@ -23,6 +23,7 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Person
@@ -33,7 +34,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -54,7 +55,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -84,7 +87,9 @@ fun HomeScreenRoute(
     onNavigateToDeviceManager: () -> Unit = {},
     onNavigateToDeviceSetup: () -> Unit = {},
     onNavigateToAudioFiles: () -> Unit = {},
-    onNavigateToUserCenter: () -> Unit = {}
+    onNavigateToUserCenter: () -> Unit = {},
+    onNavigateToChatHistory: () -> Unit = {},
+    onDeviceSnapshotChanged: (DeviceSnapshotUi?) -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -105,6 +110,7 @@ fun HomeScreenRoute(
             HomeNavigationRequest.DeviceSetup -> onNavigateToDeviceSetup()
             HomeNavigationRequest.AudioFiles -> onNavigateToAudioFiles()
             HomeNavigationRequest.UserCenter -> onNavigateToUserCenter()
+            HomeNavigationRequest.ChatHistory -> onNavigateToChatHistory()
             else -> Unit
         }
         if (state.navigationRequest != null) {
@@ -126,6 +132,9 @@ fun HomeScreenRoute(
     LaunchedEffect(sessionId) {
         sessionId?.let { viewModel.setSession(it) }
     }
+    LaunchedEffect(state.deviceSnapshot) {
+        onDeviceSnapshotChanged(state.deviceSnapshot)
+    }
 
     HomeScreen(
         state = state,
@@ -139,6 +148,7 @@ fun HomeScreenRoute(
         onRefreshDeviceAndAudio = viewModel::onRefreshDeviceAndAudio,
         onLoadMoreHistory = viewModel::onLoadMoreHistory,
         onProfileClicked = viewModel::onTapProfile,
+        onOpenHistory = viewModel::onOpenDrawer,
         onNewChatClicked = viewModel::onNewChatClicked,
         onSessionSelected = viewModel::setSession,
         chatErrorMessage = state.chatErrorMessage,
@@ -160,6 +170,7 @@ fun HomeScreen(
     onRefreshDeviceAndAudio: () -> Unit,
     onLoadMoreHistory: () -> Unit,
     onProfileClicked: () -> Unit,
+    onOpenHistory: () -> Unit,
     onNewChatClicked: () -> Unit = {},
     onSessionSelected: (String) -> Unit = {},
     chatErrorMessage: String? = null,
@@ -209,7 +220,12 @@ fun HomeScreen(
             .fillMaxSize()
             .testTag(HomeScreenTestTags.ROOT),
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = { HomeTopBar(onProfileClick = onProfileClicked) },
+        topBar = {
+            HomeTopBar(
+                onHistoryClick = onOpenHistory,
+                onProfileClick = onProfileClicked
+            )
+        },
         bottomBar = {
             HomeInputArea(
                 quickSkills = state.quickSkills,
@@ -252,7 +268,7 @@ fun HomeScreen(
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                Divider(modifier = Modifier.padding(vertical = 4.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -355,6 +371,7 @@ object HomeScreenTestTags {
     const val DEVICE_BANNER = "home_device_banner"
     const val AUDIO_CARD = "home_audio_card"
     const val PROFILE_BUTTON = "home_profile_button"
+    const val HISTORY_BUTTON = "home_history_button"
     const val ACTIVE_SKILL_CHIP = "active_skill_chip"
     const val ACTIVE_SKILL_CHIP_CLOSE = "active_skill_chip_close"
     const val SESSION_LIST = "home_session_list"
@@ -368,7 +385,10 @@ object HomeScreenTestTags {
 }
 
 @Composable
-private fun HomeTopBar(onProfileClick: () -> Unit) {
+private fun HomeTopBar(
+    onHistoryClick: () -> Unit,
+    onProfileClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -380,11 +400,19 @@ private fun HomeTopBar(onProfileClick: () -> Unit) {
             text = "AI 助手",
             style = MaterialTheme.typography.titleLarge
         )
-        IconButton(
-            onClick = onProfileClick,
-            modifier = Modifier.testTag(HomeScreenTestTags.PROFILE_BUTTON)
-        ) {
-            Icon(Icons.Filled.Person, contentDescription = "个人中心")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            IconButton(
+                onClick = onHistoryClick,
+                modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_BUTTON)
+            ) {
+                Icon(Icons.Filled.History, contentDescription = "历史会话")
+            }
+            IconButton(
+                onClick = onProfileClick,
+                modifier = Modifier.testTag(HomeScreenTestTags.PROFILE_BUTTON)
+            ) {
+                Icon(Icons.Filled.Person, contentDescription = "个人中心")
+            }
         }
     }
 }
@@ -436,7 +464,7 @@ private fun DeviceAudioBanner(
                     )
                 }
             }
-            Divider()
+            HorizontalDivider()
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -576,6 +604,7 @@ private fun MessageBubble(
     message: ChatMessageUi,
     alignEnd: Boolean
 ) {
+    val clipboard = LocalClipboardManager.current
     val bubbleTag = if (alignEnd) {
         HomeScreenTestTags.USER_MESSAGE
     } else {
@@ -613,6 +642,18 @@ private fun MessageBubble(
                         color = MaterialTheme.colorScheme.error
                     )
                 }
+                if (!alignEnd) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    TextButton(
+                        onClick = { clipboard.setText(AnnotatedString(message.content)) },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "复制",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
             }
         }
     }
@@ -636,7 +677,19 @@ private fun EmptyChatHint(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = "还没有对话，试试下面的快捷技能开始吧！")
+        Text(
+            text = "你好，我是你的销售助手",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Text(
+            text = "我可以帮你分析客户意图、生成话术与文档。",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "试试下面的快捷技能开始吧",
+            style = MaterialTheme.typography.bodyMedium
+        )
         QuickSkillRow(
             skills = quickSkills,
             enabled = enabled,

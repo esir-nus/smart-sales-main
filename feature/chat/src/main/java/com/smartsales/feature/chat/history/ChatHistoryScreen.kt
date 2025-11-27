@@ -1,33 +1,32 @@
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+
 package com.smartsales.feature.chat.history
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Divider
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -44,7 +43,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -61,6 +59,11 @@ object ChatHistoryTestTags {
     const val PAGE = "chat_history_page"
     const val EMPTY = "chat_history_empty"
     const val ERROR = "chat_history_error"
+    const val SHEET = "chat_history_sheet"
+    const val SHEET_PIN = "chat_history_sheet_pin"
+    const val SHEET_RENAME = "chat_history_sheet_rename"
+    const val SHEET_DELETE = "chat_history_sheet_delete"
+    const val SHEET_CANCEL = "chat_history_sheet_cancel"
     fun item(sessionId: String) = "chat_history_item_$sessionId"
 }
 
@@ -115,6 +118,7 @@ fun ChatHistoryScreen(
 ) {
     var renameTarget by rememberSaveable { mutableStateOf<ChatSessionUi?>(null) }
     var renameText by rememberSaveable { mutableStateOf("") }
+    var sheetSession by remember { mutableStateOf<ChatSessionUi?>(null) }
 
     Scaffold(
         modifier = modifier
@@ -160,16 +164,57 @@ fun ChatHistoryScreen(
                         ChatHistoryItem(
                             session = session,
                             onClick = { onSessionClicked(session.id) },
-                            onRename = {
-                                renameTarget = session
-                                renameText = session.title
-                            },
-                            onDelete = { onDeleteSession(session.id) },
-                            onPinToggle = { onPinToggle(session.id) },
+                            onLongPress = { sheetSession = session },
                             modifier = Modifier.testTag(ChatHistoryTestTags.item(session.id))
                         )
                     }
                 }
+            }
+        }
+    }
+
+    sheetSession?.let { session ->
+        ModalBottomSheet(
+            onDismissRequest = { sheetSession = null }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .testTag(ChatHistoryTestTags.SHEET),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SheetAction(
+                    label = if (session.pinned) "取消置顶" else "置顶",
+                    modifier = Modifier.testTag(ChatHistoryTestTags.SHEET_PIN),
+                    onClick = {
+                        onPinToggle(session.id)
+                        sheetSession = null
+                    }
+                )
+                SheetAction(
+                    label = "重命名",
+                    modifier = Modifier.testTag(ChatHistoryTestTags.SHEET_RENAME),
+                    onClick = {
+                        sheetSession = null
+                        renameTarget = session
+                        renameText = session.title
+                    }
+                )
+                SheetAction(
+                    label = "删除",
+                    modifier = Modifier.testTag(ChatHistoryTestTags.SHEET_DELETE),
+                    onClick = {
+                        onDeleteSession(session.id)
+                        sheetSession = null
+                    }
+                )
+                HorizontalDivider()
+                SheetAction(
+                    label = "取消",
+                    modifier = Modifier.testTag(ChatHistoryTestTags.SHEET_CANCEL),
+                    onClick = { sheetSession = null }
+                )
             }
         }
     }
@@ -231,21 +276,22 @@ fun ChatHistoryScreen(
 private fun ChatHistoryItem(
     session: ChatSessionUi,
     onClick: () -> Unit,
-    onRename: () -> Unit,
-    onDelete: () -> Unit,
-    onPinToggle: () -> Unit,
+    onLongPress: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongPress
+            ),
         tonalElevation = 2.dp
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.Start,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -277,62 +323,25 @@ private fun ChatHistoryItem(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                ActionMenu(
-                    pinned = session.pinned,
-                    onRename = onRename,
-                    onDelete = onDelete,
-                    onPinToggle = onPinToggle
-                )
             }
-            Divider(modifier = Modifier.padding(top = 8.dp))
+            HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
         }
     }
 }
 
 @Composable
-private fun ActionMenu(
-    pinned: Boolean,
-    onRename: () -> Unit,
-    onDelete: () -> Unit,
-    onPinToggle: () -> Unit
+private fun SheetAction(
+    label: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { expanded = true }) {
-            Icon(Icons.Default.MoreVert, contentDescription = "更多操作")
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            DropdownMenuItem(
-                text = { Text(text = if (pinned) "取消置顶" else "置顶") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.PushPin,
-                        contentDescription = null
-                    )
-                },
-                onClick = {
-                    expanded = false
-                    onPinToggle()
-                }
-            )
-            DropdownMenuItem(
-                text = { Text(text = "重命名") },
-                onClick = {
-                    expanded = false
-                    onRename()
-                }
-            )
-            DropdownMenuItem(
-                text = { Text(text = "删除") },
-                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) },
-                onClick = {
-                    expanded = false
-                    onDelete()
-                }
-            )
-        }
+    TextButton(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge
+        )
     }
 }

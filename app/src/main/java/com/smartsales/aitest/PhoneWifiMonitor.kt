@@ -73,12 +73,11 @@ class AndroidPhoneWifiMonitor @Inject constructor(
     }
 
     init {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && connectivityManager != null) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && connectivityManager != null && hasNetworkPermission()) {
             val request = NetworkRequest.Builder()
                 .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                 .build()
-            val manager = connectivityManager
-            runCatching { manager?.registerNetworkCallback(request, networkCallback) }
+            registerNetworkCallback(request)
         } else {
             val filter = IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION).apply {
                 addAction(ConnectivityManager.CONNECTIVITY_ACTION)
@@ -110,6 +109,17 @@ class AndroidPhoneWifiMonitor @Inject constructor(
             context,
             Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
+
+    private fun hasNetworkPermission(): Boolean =
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_NETWORK_STATE
+        ) == PackageManager.PERMISSION_GRANTED
+
+    @SuppressLint("MissingPermission")
+    private fun registerNetworkCallback(request: NetworkRequest) {
+        runCatching { connectivityManager?.registerNetworkCallback(request, networkCallback) }
+    }
 
     private fun sanitizeSsid(raw: String?): String? {
         if (raw.isNullOrBlank() || raw == "<unknown ssid>") return null

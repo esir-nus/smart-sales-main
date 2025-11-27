@@ -22,7 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Upload
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -33,6 +33,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedAssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -42,7 +43,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
-import androidx.compose.material3.Divider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -104,6 +104,11 @@ fun AudioFilesScreen(
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            Text(
+                text = "同步并管理设备录音，查看转写与分析。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             if (uiState.isSyncing) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
@@ -245,7 +250,7 @@ private fun AudioRecordingItem(
                         },
                         leadingIcon = {
                             Icon(
-                                imageVector = Icons.Default.VolumeUp,
+                                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                                 contentDescription = null
                             )
                         }
@@ -302,9 +307,9 @@ private fun EmptyState(onRefresh: () -> Unit, modifier: Modifier = Modifier) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(text = "暂无音频", style = MaterialTheme.typography.titleMedium)
+            Text(text = "暂无录音", style = MaterialTheme.typography.titleMedium)
             Text(
-                text = "同步设备录音或刷新列表以获取最新音频。",
+                text = "下拉或点击刷新，同步设备录音后即可查看转写与 AI 分析。",
                 style = MaterialTheme.typography.bodySmall
             )
             TextButton(onClick = onRefresh) {
@@ -333,7 +338,7 @@ private fun ErrorBanner(
             color = MaterialTheme.colorScheme.error
         )
         TextButton(onClick = onDismiss) {
-            Text(text = "知道了")
+            Text(text = "收起提示")
         }
     }
 }
@@ -362,7 +367,7 @@ private fun TranscriptViewerSheet(
                 style = MaterialTheme.typography.titleMedium
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Divider()
+            HorizontalDivider()
             Spacer(modifier = Modifier.height(8.dp))
             val summary = recording.smartSummary?.takeIf { it.isMeaningful() }
             summary?.let {
@@ -400,7 +405,7 @@ private fun TranscriptViewerSheet(
                 },
                 modifier = Modifier.align(Alignment.Start)
             ) {
-                Text(text = "用 AI 分析本次通话")
+                Text(text = "用 AI 分析转写")
             }
             Spacer(modifier = Modifier.height(8.dp))
             recording.chapters?.let { chapters ->

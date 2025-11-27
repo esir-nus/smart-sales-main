@@ -8,6 +8,7 @@ package com.smartsales.aitest.devicemanager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,6 +54,11 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.smartsales.aitest.ui.AppBadge
+import com.smartsales.aitest.ui.AppCard
+import com.smartsales.aitest.ui.AppGhostButton
+import com.smartsales.aitest.ui.AppPalette
+import com.smartsales.aitest.ui.AppShapes
 import com.smartsales.feature.media.devicemanager.DeviceConnectionUiState
 import com.smartsales.feature.media.devicemanager.DeviceFileUi
 import com.smartsales.feature.media.devicemanager.DeviceManagerUiState
@@ -102,6 +108,7 @@ fun DeviceManagerScreen(
         Column(
             modifier = Modifier
                 .padding(innerPadding)
+                .background(AppPalette.Background)
                 .padding(16.dp)
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -185,7 +192,7 @@ private fun DeviceConnectionHeader(
         is DeviceConnectionUiState.Connecting -> "正在连接设备" to (status.detail ?: "请稍候...")
         is DeviceConnectionUiState.Connected -> ("已连接 ${status.deviceName ?: ""}").trim() to "可以浏览、刷新与上传文件。"
     }
-    Card {
+    AppCard {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -206,31 +213,28 @@ private fun DeviceConnectionHeader(
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
+                    AppGhostButton(
+                        text = if (isConnected) "刷新" else "重试连接",
                         onClick = onConnect,
                         enabled = !isLoading,
                         modifier = Modifier.testTag(DeviceManagerTestTags.CONNECT_BUTTON)
-                    ) {
-                        Text(if (isConnected) "刷新" else "重试连接")
-                    }
+                    )
                     Button(
                         onClick = onRefresh,
                         enabled = isConnected && !isLoading,
-                        modifier = Modifier.testTag(DeviceManagerTestTags.REFRESH_BUTTON)
+                        modifier = Modifier.testTag(DeviceManagerTestTags.REFRESH_BUTTON),
+                        shape = AppShapes.ButtonShape
                     ) {
                         Icon(Icons.Default.Refresh, contentDescription = null)
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(text = if (isLoading) "刷新中..." else "刷新文件")
                     }
-                    OutlinedButton(
+                    AppGhostButton(
+                        text = if (isUploading) "上传中..." else "上传",
                         onClick = onUpload,
                         enabled = isConnected && !isUploading && !isLoading,
                         modifier = Modifier.testTag(DeviceManagerTestTags.UPLOAD_BUTTON)
-                    ) {
-                        Icon(Icons.Default.CloudUpload, contentDescription = null)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = if (isUploading) "上传中..." else "上传")
-                    }
+                    )
                 }
             }
         }
@@ -239,17 +243,21 @@ private fun DeviceConnectionHeader(
 
 @Composable
 private fun LoadingBanner() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+    AppCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(DeviceManagerTestTags.LOADING_INDICATOR)
     ) {
-        LinearProgressIndicator(
+        Row(
             modifier = Modifier
-                .weight(1f)
-                .testTag(DeviceManagerTestTags.LOADING_INDICATOR)
-        )
-        Text(text = "正在加载设备文件...")
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            LinearProgressIndicator(modifier = Modifier.weight(1f))
+            Text(text = "正在加载设备文件...")
+        }
     }
 }
 
@@ -353,13 +361,13 @@ private fun DeviceFileCard(
     onSelect: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant
-            }
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("${DeviceManagerTestTags.FILE_ITEM_PREFIX}${file.id}"),
+        colors = CardDefaults.cardColors(containerColor = AppPalette.Card),
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (isSelected) AppPalette.Accent.copy(alpha = 0.4f) else AppPalette.Border
         ),
         onClick = onSelect
     ) {
@@ -373,7 +381,7 @@ private fun DeviceFileCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(4f / 3f)
-                    .clip(MaterialTheme.shapes.medium)
+                    .clip(AppShapes.CardShape)
                     .background(MaterialTheme.colorScheme.surface),
                 contentAlignment = Alignment.Center
             ) {
@@ -383,8 +391,10 @@ private fun DeviceFileCard(
                     modifier = Modifier.fillMaxSize()
                 )
                 if (file.isApplied) {
-                    MetaBadge(
+                    AppBadge(
                         text = "当前展示",
+                        background = AppPalette.Success,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .padding(8.dp)
@@ -415,7 +425,7 @@ private fun DeviceFileCard(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     DurationPill(duration = file.durationText)
                     if (file.isApplied) {
-                        MetaBadge(text = "已应用")
+                        AppBadge(text = "已应用")
                     }
                 }
             }
@@ -427,7 +437,8 @@ private fun DeviceFileCard(
 private fun UploadTile(onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors = CardDefaults.cardColors(containerColor = AppPalette.Card),
+        border = BorderStroke(1.dp, AppPalette.Border),
         onClick = onClick
     ) {
         Column(
@@ -440,7 +451,7 @@ private fun UploadTile(onClick: () -> Unit) {
             Icon(
                 imageVector = Icons.Default.CloudUpload,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                tint = AppPalette.Accent
             )
             Text(text = "上传新文件", style = MaterialTheme.typography.bodyMedium)
             Text(
@@ -524,11 +535,10 @@ private fun Thumbnail(
 
 @Composable
 private fun DeviceManagerEmptyState() {
-    Card(
+    AppCard(
         modifier = Modifier
             .fillMaxWidth()
-            .testTag(DeviceManagerTestTags.EMPTY_STATE),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            .testTag(DeviceManagerTestTags.EMPTY_STATE)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -545,9 +555,8 @@ private fun DeviceManagerEmptyState() {
 
 @Composable
 private fun DisconnectedHint(onConnect: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    AppCard(
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -558,9 +567,7 @@ private fun DisconnectedHint(onConnect: () -> Unit) {
                 text = "请先完成设备配网，然后重试连接并刷新设备文件。",
                 style = MaterialTheme.typography.bodySmall
             )
-            OutlinedButton(onClick = onConnect) {
-                Text("重试连接")
-            }
+            AppGhostButton(text = "重试连接", onClick = onConnect)
         }
     }
 }
@@ -573,24 +580,29 @@ private fun ErrorBanner(
     onDismiss: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.errorContainer)
-            .padding(12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    AppCard(
+        modifier = modifier,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f))
     ) {
-        Text(text = message, color = MaterialTheme.colorScheme.onErrorContainer)
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            if (primaryActionLabel != null && onPrimaryAction != null) {
-                TextButton(onClick = onPrimaryAction) {
-                    Text(text = primaryActionLabel, color = MaterialTheme.colorScheme.onErrorContainer)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.errorContainer)
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = message, color = MaterialTheme.colorScheme.onErrorContainer)
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (primaryActionLabel != null && onPrimaryAction != null) {
+                    TextButton(onClick = onPrimaryAction) {
+                        Text(text = primaryActionLabel, color = MaterialTheme.colorScheme.onErrorContainer)
+                    }
                 }
-            }
-            if (onDismiss != null) {
-                TextButton(onClick = onDismiss) {
-                    Text(text = "知道了", color = MaterialTheme.colorScheme.onErrorContainer)
+                if (onDismiss != null) {
+                    TextButton(onClick = onDismiss) {
+                        Text(text = "知道了", color = MaterialTheme.colorScheme.onErrorContainer)
+                    }
                 }
             }
         }
@@ -604,11 +616,10 @@ private fun DeviceSimulatorPanel(
     onApply: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Card(
+    AppCard(
         modifier = Modifier
             .fillMaxWidth()
-            .testTag(DeviceManagerTestTags.SIMULATOR),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            .testTag(DeviceManagerTestTags.SIMULATOR)
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -659,11 +670,10 @@ private fun DeviceSimulatorPanel(
 
 @Composable
 private fun PreviewFrame(file: DeviceFileUi) {
-    Card(
+    AppCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(200.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Box(
             modifier = Modifier
@@ -712,6 +722,7 @@ object DeviceManagerTestTags {
     const val APPLY_BUTTON = "device_manager_apply_button"
     const val DELETE_BUTTON = "device_manager_delete_button"
     const val LOADING_INDICATOR = "device_manager_loading_indicator"
+    const val FILE_ITEM_PREFIX = "device_manager_file_item_"
 }
 
 object DeviceManagerRouteTestTags {

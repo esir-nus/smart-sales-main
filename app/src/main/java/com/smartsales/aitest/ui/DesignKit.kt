@@ -42,6 +42,7 @@ object AppShapes {
 @Composable
 fun AppCard(
     modifier: Modifier = Modifier,
+    border: BorderStroke = BorderStroke(1.dp, AppPalette.Border),
     content: @Composable () -> Unit,
 ) {
     Card(
@@ -49,7 +50,7 @@ fun AppCard(
             .shadow(elevation = 4.dp, shape = AppShapes.CardShape, clip = false),
         shape = AppShapes.CardShape,
         colors = CardDefaults.cardColors(containerColor = AppPalette.Card),
-        border = BorderStroke(1.dp, AppPalette.Border),
+        border = border,
         content = { content() }
     )
 }
@@ -60,10 +61,12 @@ fun AppGhostButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     OutlinedButton(
         onClick = onClick,
         modifier = modifier,
+        enabled = enabled,
         shape = AppShapes.ButtonShape,
         border = BorderStroke(1.dp, AppPalette.Border),
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),

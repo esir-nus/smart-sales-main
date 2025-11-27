@@ -1,5 +1,11 @@
 package com.smartsales.feature.chat.history
 
+// 文件：feature/chat/src/main/java/com/smartsales/feature/chat/history/ChatHistoryScreen.kt
+// 模块：:feature:chat
+// 说明：渲染聊天历史列表，提供重命名、删除、置顶与跳转
+// 作者：创建于 2025-11-27
+
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +21,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
@@ -22,6 +29,8 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
@@ -33,7 +42,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -45,6 +53,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -69,6 +80,20 @@ object ChatHistoryTestTags {
     const val EMPTY = "chat_history_empty"
     const val ERROR = "chat_history_error"
     fun item(sessionId: String) = "chat_history_item_$sessionId"
+}
+
+private object HistoryPalette {
+    val BackgroundStart = Color(0xFFF7F9FF)
+    val BackgroundEnd = Color(0xFFEFF2F7)
+    val Card = Color(0xFFFFFFFF)
+    val CardMuted = Color(0xFFF8F9FB)
+    val Border = Color(0xFFE5E5EA)
+    val Accent = Color(0xFF4B7BEC)
+    val Warning = Color(0xFFFFB020)
+}
+
+private object HistoryShapes {
+    val Card = RoundedCornerShape(16.dp)
 }
 
 @Composable
@@ -130,31 +155,39 @@ fun ChatHistoryScreen(
         modifier = modifier
             .fillMaxSize()
             .testTag(ChatHistoryTestTags.PAGE),
+        containerColor = Color.Transparent,
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
-            Row(
+            HistoryCard(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp)
-                    .testTag(ChatHistoryTestTags.HEADER),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .testTag(ChatHistoryTestTags.HEADER)
             ) {
-                IconButton(
-                    onClick = onBackClick,
-                    modifier = Modifier.testTag(ChatHistoryTestTags.BACK)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "返回"
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier.testTag(ChatHistoryTestTags.BACK)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "返回"
+                        )
+                    }
+                    Text(
+                        text = "会话历史",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.Black
                     )
-                }
-                Text(text = "会话历史", style = MaterialTheme.typography.titleLarge)
-                IconButton(
-                    onClick = onRefresh,
-                    modifier = Modifier.testTag(ChatHistoryTestTags.REFRESH)
-                ) {
-                    Icon(Icons.Default.Refresh, contentDescription = "刷新")
+                    IconButton(
+                        onClick = onRefresh,
+                        modifier = Modifier.testTag(ChatHistoryTestTags.REFRESH)
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = "刷新")
+                    }
                 }
             }
         }
@@ -163,22 +196,33 @@ fun ChatHistoryScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(HistoryPalette.BackgroundStart, HistoryPalette.BackgroundEnd)
+                    )
+                )
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
             if (state.isLoading) {
-                Row(
+                HistoryCard(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .testTag(ChatHistoryTestTags.LOADING),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .testTag(ChatHistoryTestTags.LOADING)
                 ) {
-                    LinearProgressIndicator(modifier = Modifier.weight(1f))
-                    Text(
-                        text = "正在加载历史会话...",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        LinearProgressIndicator(modifier = Modifier.weight(1f))
+                        Text(
+                            text = "正在加载历史会话...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = HistoryPalette.Border
+                        )
+                    }
                 }
             }
             state.errorMessage?.let {
@@ -188,13 +232,19 @@ fun ChatHistoryScreen(
                 )
             }
             if (state.sessions.isEmpty() && !state.isLoading && state.errorMessage == null) {
-                Box(
+                HistoryCard(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .testTag(ChatHistoryTestTags.EMPTY),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .testTag(ChatHistoryTestTags.EMPTY)
                 ) {
-                    Text(text = "暂无会话历史，先从首页开始一次对话吧")
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Text(text = "暂无会话历史，先从首页开始一次对话吧", color = HistoryPalette.Border)
+                    }
                 }
             } else {
                 LazyColumn(
@@ -261,11 +311,11 @@ private fun ChatHistoryItem(
     onPinToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
+    HistoryCard(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        tonalElevation = 2.dp
+        borderColor = if (session.pinned) HistoryPalette.Accent.copy(alpha = 0.4f) else HistoryPalette.Border
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
@@ -327,12 +377,13 @@ private fun ErrorBanner(
     message: String,
     onDismissError: () -> Unit
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.errorContainer,
+    HistoryCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .testTag(ChatHistoryTestTags.ERROR)
+            .testTag(ChatHistoryTestTags.ERROR),
+        containerColor = MaterialTheme.colorScheme.errorContainer,
+        borderColor = MaterialTheme.colorScheme.error.copy(alpha = 0.4f)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -346,6 +397,23 @@ private fun ErrorBanner(
             )
             TextButton(onClick = onDismissError) { Text(text = "知道了") }
         }
+    }
+}
+
+@Composable
+private fun HistoryCard(
+    modifier: Modifier = Modifier,
+    containerColor: Color = HistoryPalette.Card,
+    borderColor: Color = HistoryPalette.Border,
+    content: @Composable () -> Unit
+) {
+    Card(
+        modifier = modifier.shadow(6.dp, shape = HistoryShapes.Card, clip = false),
+        shape = HistoryShapes.Card,
+        border = BorderStroke(1.dp, borderColor),
+        colors = CardDefaults.cardColors(containerColor = containerColor)
+    ) {
+        content()
     }
 }
 

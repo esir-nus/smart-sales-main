@@ -5,6 +5,7 @@ package com.smartsales.feature.usercenter
 // 说明：用户中心 Compose 界面
 // 作者：创建于 2025-11-21
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,11 +39,32 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+
+object UserCenterTestTags {
+    const val ROOT = "user_center_screen_root"
+}
+
+private object UserCenterPalette {
+    val BackgroundStart = Color(0xFFF7F9FF)
+    val BackgroundEnd = Color(0xFFEFF2F7)
+    val Card = Color(0xFFFFFFFF)
+    val CardMuted = Color(0xFFF8F9FB)
+    val Border = Color(0xFFE5E5EA)
+    val Accent = Color(0xFF4B7BEC)
+}
+
+private object UserCenterShapes {
+    val Card = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+    val Button = androidx.compose.foundation.shape.RoundedCornerShape(14.dp)
+}
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,6 +82,7 @@ fun UserCenterScreen(
         modifier = modifier
             .fillMaxSize()
             .testTag(UserCenterTestTags.ROOT),
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text(text = "用户中心") },
@@ -74,25 +97,31 @@ fun UserCenterScreen(
         Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .padding(16.dp)
-                .fillMaxSize(),
+                .fillMaxSize()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(UserCenterPalette.BackgroundStart, UserCenterPalette.BackgroundEnd)
+                    )
+                )
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (uiState.isSaving) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                UserCenterCard {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
             }
             uiState.errorMessage?.let { message ->
-                ErrorBanner(
-                    message = message,
-                    onDismiss = onErrorDismissed,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                UserCenterCard {
+                    ErrorBanner(
+                        message = message,
+                        onDismiss = onErrorDismissed,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
-            ProfileHeader(uiState.userName)
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
+            UserCenterCard { ProfileHeader(uiState.userName) }
+            UserCenterCard {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -120,39 +149,40 @@ fun UserCenterScreen(
                     )
                 }
             }
-            FeatureFlagCard(
-                flags = uiState.featureFlags,
-                onToggle = onToggleFeatureFlag,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Button(
-                    onClick = onSaveClicked,
-                    enabled = !uiState.isSaving,
-                    modifier = Modifier.weight(1f)
+            UserCenterCard {
+                FeatureFlagCard(
+                    flags = uiState.featureFlags,
+                    onToggle = onToggleFeatureFlag,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            UserCenterCard {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Default.Save, contentDescription = null)
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(text = if (uiState.isSaving) "保存中..." else "保存")
-                }
-                TextButton(
-                    onClick = onLogoutClicked,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.Logout, contentDescription = null)
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(text = "退出登录")
+                    Button(
+                        onClick = onSaveClicked,
+                        enabled = !uiState.isSaving,
+                        shape = UserCenterShapes.Button,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Save, contentDescription = null)
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Text(text = if (uiState.isSaving) "保存中..." else "保存")
+                    }
+                    TextButton(
+                        onClick = onLogoutClicked,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Logout, contentDescription = null)
+                        Spacer(modifier = Modifier.size(8.dp))
+                        Text(text = "退出登录")
+                    }
                 }
             }
         }
     }
-}
-
-object UserCenterTestTags {
-    const val ROOT = "user_center_screen_root"
 }
 
 @Composable
@@ -196,39 +226,34 @@ private fun FeatureFlagCard(
     onToggle: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(text = "功能开关", style = MaterialTheme.typography.titleMedium)
-            if (flags.isEmpty()) {
-                Text(
-                    text = "暂无可配置的功能开关。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                flags.entries.forEachIndexed { index, entry ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(text = entry.key, style = MaterialTheme.typography.bodyMedium)
-                        Switch(
-                            checked = entry.value,
-                            onCheckedChange = { onToggle(entry.key) }
-                        )
-                    }
-                    if (index != flags.size - 1) {
-                        Divider()
-                    }
+        Text(text = "功能开关", style = MaterialTheme.typography.titleMedium)
+        if (flags.isEmpty()) {
+            Text(
+                text = "暂无可配置的功能开关。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            flags.entries.forEachIndexed { index, entry ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = entry.key, style = MaterialTheme.typography.bodyMedium)
+                    Switch(
+                        checked = entry.value,
+                        onCheckedChange = { onToggle(entry.key) }
+                    )
+                }
+                if (index != flags.size - 1) {
+                    Divider()
                 }
             }
         }
@@ -256,5 +281,21 @@ private fun ErrorBanner(
         TextButton(onClick = onDismiss) {
             Text(text = "关闭")
         }
+    }
+}
+
+@Composable
+private fun UserCenterCard(
+    content: @Composable () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(6.dp, shape = UserCenterShapes.Card, clip = false),
+        shape = UserCenterShapes.Card,
+        border = BorderStroke(1.dp, UserCenterPalette.Border),
+        colors = CardDefaults.cardColors(containerColor = UserCenterPalette.Card)
+    ) {
+        content()
     }
 }

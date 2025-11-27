@@ -5,6 +5,8 @@ package com.smartsales.feature.connectivity.setup
 // 说明：设备配网的步骤化 UI，展示扫描→配对→配网→等待上线→就绪
 // 作者：创建于 2025-11-21
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -31,6 +33,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -41,6 +46,23 @@ object DeviceSetupTestTags {
     const val PRIMARY_BUTTON = "device_setup_primary_button"
     const val ERROR_BANNER = "device_setup_error_banner"
     const val TO_DEVICE_MANAGER = "device_setup_go_device_manager"
+}
+
+/** 轻量调色板，贴合 React 叠层样式。 */
+private object SetupPalette {
+    val BackgroundStart = Color(0xFFF7F9FF)
+    val BackgroundEnd = Color(0xFFEFF2F7)
+    val Card = Color(0xFFFFFFFF)
+    val CardMuted = Color(0xFFF8F9FB)
+    val Border = Color(0xFFE5E5EA)
+    val Accent = Color(0xFF4B7BEC)
+    val Warning = Color(0xFFFFB020)
+    val Success = Color(0xFF34C759)
+}
+
+private object SetupShapes {
+    val Card = RoundedCornerShape(16.dp)
+    val Button = RoundedCornerShape(14.dp)
 }
 
 @Composable
@@ -64,8 +86,13 @@ fun DeviceSetupScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(SetupPalette.BackgroundStart, SetupPalette.BackgroundEnd)
+                    )
+                )
                 .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             StepHeader(state.step)
             StatusCard(state.progressMessage, state.step, modifier = Modifier.fillMaxWidth())
@@ -106,12 +133,20 @@ private fun StepHeader(step: DeviceSetupStep) {
         DeviceSetupStep.Ready -> "已完成"
         DeviceSetupStep.Error -> "需要重试"
     }
-    Text(
-        text = stepText,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.testTag(DeviceSetupTestTags.STEP_TEXT)
-    )
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = stepText,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black,
+            modifier = Modifier.testTag(DeviceSetupTestTags.STEP_TEXT)
+        )
+        Text(
+            text = "按提示完成扫描、配网与上线，与 React 叠层保持一致。",
+            style = MaterialTheme.typography.bodySmall,
+            color = SetupPalette.Border
+        )
+    }
 }
 
 @Composable
@@ -121,9 +156,10 @@ private fun StatusCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        modifier = modifier.shadow(6.dp, shape = SetupShapes.Card, clip = false),
+        shape = SetupShapes.Card,
+        border = BorderStroke(1.dp, SetupPalette.Border),
+        colors = CardDefaults.cardColors(containerColor = SetupPalette.CardMuted)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -143,7 +179,7 @@ private fun StatusCard(
                 DeviceSetupStep.Error -> "可重试或返回第一步重新扫描。"
                 else -> "点击下方按钮开始扫描。"
             }
-            Text(text = hint, style = MaterialTheme.typography.bodySmall)
+            Text(text = hint, style = MaterialTheme.typography.bodySmall, color = SetupPalette.Border)
         }
     }
 }
@@ -156,23 +192,37 @@ private fun WiFiForm(
     onPasswordChange: (String) -> Unit,
     enabled: Boolean
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    Card(
+        shape = SetupShapes.Card,
+        colors = CardDefaults.cardColors(containerColor = SetupPalette.Card),
+        border = BorderStroke(1.dp, SetupPalette.Border),
+        modifier = Modifier.shadow(4.dp, shape = SetupShapes.Card, clip = false)
     ) {
-        OutlinedTextField(
-            value = ssid,
-            onValueChange = onSsidChange,
-            label = { Text("Wi-Fi 名称") },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = enabled
-        )
-        OutlinedTextField(
-            value = password,
-            onValueChange = onPasswordChange,
-            label = { Text("Wi-Fi 密码") },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = enabled
-        )
+        Column(
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(text = "网络信息", style = MaterialTheme.typography.titleMedium, color = Color.Black)
+            OutlinedTextField(
+                value = ssid,
+                onValueChange = onSsidChange,
+                label = { Text("Wi-Fi 名称") },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = enabled
+            )
+            OutlinedTextField(
+                value = password,
+                onValueChange = onPasswordChange,
+                label = { Text("Wi-Fi 密码") },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = enabled
+            )
+            Text(
+                text = "填写后点击配置，系统会自动推送到设备。",
+                style = MaterialTheme.typography.bodySmall,
+                color = SetupPalette.Border
+            )
+        }
     }
 }
 
@@ -225,28 +275,42 @@ private fun PrimaryActions(
         DeviceSetupStep.Error -> "重试" to onRetry
         DeviceSetupStep.Ready -> "前往设备文件" to onOpenDeviceManager
     }
-    Button(
-        onClick = action,
-        enabled = when (state.step) {
-            DeviceSetupStep.WifiProvisioning,
-            DeviceSetupStep.WaitingForDeviceOnline -> false
-            DeviceSetupStep.Pairing -> ssid.isNotBlank() && !state.isActionInProgress && !state.isSubmittingWifi
-            DeviceSetupStep.Ready -> true
-            DeviceSetupStep.Scanning -> !state.isScanning
-            else -> !state.isActionInProgress
-        },
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag(DeviceSetupTestTags.PRIMARY_BUTTON),
-        contentPadding = PaddingValues(vertical = 12.dp)
-    ) { Text(text = label) }
-
-    if (state.step == DeviceSetupStep.Ready) {
-        TextButton(
-            onClick = onOpenDeviceManager,
+    Card(
+        modifier = Modifier.shadow(4.dp, shape = SetupShapes.Card, clip = false),
+        shape = SetupShapes.Card,
+        colors = CardDefaults.cardColors(containerColor = SetupPalette.Card)
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag(DeviceSetupTestTags.TO_DEVICE_MANAGER)
-        ) { Text(text = "前往音频列表") }
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Button(
+                onClick = action,
+                enabled = when (state.step) {
+                    DeviceSetupStep.WifiProvisioning,
+                    DeviceSetupStep.WaitingForDeviceOnline -> false
+                    DeviceSetupStep.Pairing -> ssid.isNotBlank() && !state.isActionInProgress && !state.isSubmittingWifi
+                    DeviceSetupStep.Ready -> true
+                    DeviceSetupStep.Scanning -> !state.isScanning
+                    else -> !state.isActionInProgress
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(DeviceSetupTestTags.PRIMARY_BUTTON),
+                contentPadding = PaddingValues(vertical = 12.dp),
+                shape = SetupShapes.Button
+            ) { Text(text = label) }
+
+            if (state.step == DeviceSetupStep.Ready) {
+                TextButton(
+                    onClick = onOpenDeviceManager,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(DeviceSetupTestTags.TO_DEVICE_MANAGER)
+                ) { Text(text = "前往音频列表") }
+            }
+        }
     }
 }

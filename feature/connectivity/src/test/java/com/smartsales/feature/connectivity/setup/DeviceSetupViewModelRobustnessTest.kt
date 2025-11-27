@@ -14,13 +14,22 @@ import com.smartsales.feature.connectivity.DeviceConnectionManager
 import com.smartsales.feature.connectivity.DeviceNetworkStatus
 import com.smartsales.feature.connectivity.WifiCredentials
 import com.smartsales.feature.connectivity.scan.BleScanner
+import com.smartsales.feature.connectivity.BleSession
+import com.smartsales.feature.connectivity.ProvisioningStatus
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -28,12 +37,24 @@ class DeviceSetupViewModelRobustnessTest {
 
     private val dispatcher = StandardTestDispatcher()
 
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(dispatcher)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
     @Test
     fun `scan timeout moves to error with retryable reason`() = runTest(dispatcher) {
         val vm = createViewModel()
 
+        advanceUntilIdle() // flush initial Disconnected emission
         vm.onStartScan()
         advanceTimeBy(13_000)
+        runCurrent()
 
         val state = vm.uiState.value
         assertEquals(DeviceSetupStep.Error, state.step)
@@ -44,18 +65,20 @@ class DeviceSetupViewModelRobustnessTest {
     fun `provisioning failure surfaces error reason`() = runTest(dispatcher) {
         val connection = FakeConnectionManager()
         connection.state.value = ConnectionState.Connected(
-            session = ConnectionState.Connected.Session(
+            session = BleSession(
                 peripheralId = "id",
                 peripheralName = "dev",
                 signalStrengthDbm = -40,
-                profileId = "p1"
-            ),
-            status = ConnectionState.DeviceStatus("wifi", true)
+                profileId = "p1",
+                secureToken = "token",
+                establishedAtMillis = 0L
+            )
         )
         connection.pairResult = Result.Error(IllegalStateException("fail"))
         val vm = createViewModel(connectionManager = connection)
 
         vm.onProvisionWifi("ssid", "pwd")
+        advanceUntilIdle()
 
         val state = vm.uiState.value
         assertEquals(DeviceSetupStep.Error, state.step)
@@ -66,19 +89,26 @@ class DeviceSetupViewModelRobustnessTest {
     fun `waiting for device online times out`() = runTest(dispatcher) {
         val connection = FakeConnectionManager()
         connection.state.value = ConnectionState.WifiProvisioned(
-            session = ConnectionState.Connected.Session(
+            session = BleSession(
                 peripheralId = "id",
                 peripheralName = "dev",
                 signalStrengthDbm = -40,
-                profileId = "p1"
+                profileId = "p1",
+                secureToken = "token",
+                establishedAtMillis = 0L
             ),
-            status = ConnectionState.DeviceStatus("wifi", true)
+            status = ProvisioningStatus(
+                wifiSsid = "wifi",
+                handshakeId = "h1",
+                credentialsHash = "hash"
+            )
         )
         connection.queryResult = Result.Error(IllegalStateException("offline"))
         val vm = createViewModel(connectionManager = connection)
 
         vm.onProvisionWifi("ssid", "pwd")
         advanceTimeBy(5_000)
+        runCurrent()
 
         val state = vm.uiState.value
         assertEquals(DeviceSetupErrorReason.DeviceNotOnline, state.errorReason)
@@ -88,20 +118,28 @@ class DeviceSetupViewModelRobustnessTest {
     fun `late callbacks after error do not change state`() = runTest(dispatcher) {
         val connection = FakeConnectionManager()
         val vm = createViewModel(connectionManager = connection)
+        advanceUntilIdle()
         vm.onStartScan()
         advanceTimeBy(13_000)
         assertEquals(DeviceSetupStep.Error, vm.uiState.value.step)
 
         connection.state.value = ConnectionState.WifiProvisioned(
-            session = ConnectionState.Connected.Session(
+            session = BleSession(
                 peripheralId = "id",
                 peripheralName = "dev",
                 signalStrengthDbm = -40,
-                profileId = "p1"
+                profileId = "p1",
+                secureToken = "token",
+                establishedAtMillis = 0L
             ),
-            status = ConnectionState.DeviceStatus("wifi", true)
+            status = ProvisioningStatus(
+                wifiSsid = "wifi",
+                handshakeId = "h1",
+                credentialsHash = "hash"
+            )
         )
         advanceTimeBy(2_000)
+        runCurrent()
 
         assertEquals(DeviceSetupStep.Error, vm.uiState.value.step)
     }
@@ -113,7 +151,7 @@ class DeviceSetupViewModelRobustnessTest {
         return DeviceSetupViewModel(
             connectionManager = connectionManager,
             bleScanner = scanner,
-            bleProfiles = listOf(BleProfileConfig("p1", "设备"))
+            bleProfiles = listOf(BleProfileConfig("p1", "设备", nameKeywords = listOf("dev")))
         )
     }
 

@@ -14,23 +14,44 @@ import com.smartsales.feature.connectivity.DeviceConnectionManager
 import com.smartsales.feature.connectivity.DeviceNetworkStatus
 import com.smartsales.feature.connectivity.WifiCredentials
 import com.smartsales.feature.connectivity.scan.BleScanner
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DeviceSetupViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
-    private val connectionManager = FakeDeviceConnectionManager()
-    private val scanner = FakeBleScanner()
-    private val profiles = listOf(BleProfileConfig(id = "bt311", displayName = "BT311", nameKeywords = emptyList(), scanServiceUuids = emptyList()))
-    private val viewModel = DeviceSetupViewModel(connectionManager, scanner, profiles)
+    private lateinit var connectionManager: FakeDeviceConnectionManager
+    private lateinit var scanner: FakeBleScanner
+    private lateinit var viewModel: DeviceSetupViewModel
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(dispatcher)
+        connectionManager = FakeDeviceConnectionManager()
+        scanner = FakeBleScanner()
+        viewModel = DeviceSetupViewModel(
+            connectionManager,
+            scanner,
+            listOf(BleProfileConfig(id = "bt311", displayName = "BT311", nameKeywords = emptyList(), scanServiceUuids = emptyList()))
+        )
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
 
     @Test
     fun startScan_updatesScanningStep() = runTest(dispatcher) {

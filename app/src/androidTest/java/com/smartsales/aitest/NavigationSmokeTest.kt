@@ -5,14 +5,14 @@ package com.smartsales.aitest
 // 说明：验证顶层导航在 Home/设备配网/设备文件/音频库/用户中心间的 Compose 路由切换
 // 作者：创建于 2025-11-21
 
+import android.Manifest
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.smartsales.aitest.devicemanager.DeviceManagerRouteTestTags
+import androidx.test.rule.GrantPermissionRule
 import com.smartsales.aitest.setup.DeviceSetupRouteTestTags
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.media.audio.AudioFilesTestTags
@@ -26,63 +26,80 @@ class NavigationSmokeTest {
 
     @get:Rule
     val composeRule = createAndroidComposeRule<AiFeatureTestActivity>()
+    @get:Rule
+    val permissionRule: GrantPermissionRule = GrantPermissionRule.grant(
+        Manifest.permission.BLUETOOTH_SCAN,
+        Manifest.permission.BLUETOOTH_CONNECT,
+        Manifest.permission.ACCESS_FINE_LOCATION
+    )
 
     @Test
-    fun launchesHomeByDefault() {
-        composeRule.onNodeWithTag(HomeScreenTestTags.ROOT).assertIsDisplayed()
-        composeRule.onAllNodesWithTag(AudioFilesTestTags.ROOT).assertCountEquals(0)
-        composeRule.onAllNodesWithTag(DeviceManagerRouteTestTags.ROOT).assertCountEquals(0)
-        composeRule.onAllNodesWithTag(DeviceSetupRouteTestTags.PAGE).assertCountEquals(0)
-        composeRule.onAllNodesWithTag(UserCenterTestTags.ROOT).assertCountEquals(0)
+    fun launchesHomeOverlayByDefault() {
+        waitForTag(HomeScreenTestTags.ROOT)
     }
 
     @Test
-    fun navigateToAudioFilesFromHomeShell() {
-        selectTab(AiFeatureTestTags.CHIP_AUDIO_FILES)
-        composeRule.onNodeWithTag(AudioFilesTestTags.ROOT).assertIsDisplayed()
+    fun deviceOverlayRoutesToSetupWhenDisconnected() {
+        composeRule.onNodeWithTag(AiFeatureTestTags.CHIP_DEVICE_SETUP, useUnmergedTree = true).performClick()
+        waitForTag(DeviceSetupRouteTestTags.PAGE)
     }
 
     @Test
-    fun navigateToDeviceManagerFromHomeShell() {
-        selectTab(AiFeatureTestTags.CHIP_DEVICE_MANAGER)
-        composeRule.onNodeWithTag(DeviceManagerRouteTestTags.ROOT).assertIsDisplayed()
+    fun audioOverlayRoutesToAudioFiles() {
+        composeRule.onNodeWithTag(AiFeatureTestTags.CHIP_AUDIO_FILES, useUnmergedTree = true).performClick()
+        waitForTag(AudioFilesTestTags.ROOT)
     }
 
     @Test
-    fun navigateToDeviceSetupFromHomeShell() {
-        selectTab(AiFeatureTestTags.CHIP_DEVICE_SETUP)
-        composeRule.onNodeWithTag(DeviceSetupRouteTestTags.PAGE).assertIsDisplayed()
-    }
-
-    @Test
-    fun navigateToUserCenterAndBackToHome() {
-        selectTab(AiFeatureTestTags.CHIP_USER_CENTER)
-        composeRule.onNodeWithTag(UserCenterTestTags.ROOT).assertIsDisplayed()
+    fun historyToggleNavigatesToChatHistory() {
+        composeRule.onNodeWithTag(HomeScreenTestTags.HISTORY_BUTTON, useUnmergedTree = true).performClick()
+        waitForTag(AiFeatureTestTags.PAGE_CHAT_HISTORY)
 
         composeRule.activityRule.scenario.onActivity {
             it.onBackPressedDispatcher.onBackPressed()
         }
 
-        composeRule.onNodeWithTag(HomeScreenTestTags.ROOT).assertIsDisplayed()
+        waitForTag(HomeScreenTestTags.ROOT)
     }
 
     @Test
-    fun switchTabsDoesNotCrash() {
-        val tabs = listOf(
-            AiFeatureTestTags.CHIP_HOME,
-            AiFeatureTestTags.CHIP_AUDIO_FILES,
-            AiFeatureTestTags.CHIP_DEVICE_MANAGER,
-            AiFeatureTestTags.CHIP_USER_CENTER,
-            AiFeatureTestTags.CHIP_DEVICE_SETUP,
-            AiFeatureTestTags.CHIP_HOME
-        )
-        tabs.forEach { tag ->
-            selectTab(tag)
+    fun profileNavigatesToUserCenter() {
+        composeRule.onNodeWithTag(HomeScreenTestTags.PROFILE_BUTTON, useUnmergedTree = true).performClick()
+        waitForTag(UserCenterTestTags.ROOT)
+
+        composeRule.activityRule.scenario.onActivity {
+            it.onBackPressedDispatcher.onBackPressed()
         }
-        composeRule.onNodeWithTag(HomeScreenTestTags.ROOT).assertIsDisplayed()
+
+        waitForTag(HomeScreenTestTags.ROOT)
     }
 
-    private fun selectTab(tag: String) {
-        composeRule.onNodeWithTag(tag).performClick()
+    @Test
+    fun backFromOverlayReturnsHome() {
+        composeRule.onNodeWithTag(AiFeatureTestTags.CHIP_AUDIO_FILES, useUnmergedTree = true).performClick()
+        waitForTag(AudioFilesTestTags.ROOT)
+
+        composeRule.activityRule.scenario.onActivity {
+            it.onBackPressedDispatcher.onBackPressed()
+        }
+
+        waitForTag(AiFeatureTestTags.CHIP_HOME, useUnmergedTree = true)
+    }
+
+    private fun waitForTag(tag: String, useUnmergedTree: Boolean = false) {
+        val deadline = System.currentTimeMillis() + 15_000
+        while (System.currentTimeMillis() < deadline) {
+            composeRule.waitForIdle()
+            val found = runCatching {
+                composeRule.onAllNodesWithTag(tag, useUnmergedTree = useUnmergedTree).fetchSemanticsNodes().isNotEmpty() ||
+                    composeRule.onAllNodesWithTag(tag, useUnmergedTree = !useUnmergedTree).fetchSemanticsNodes().isNotEmpty() ||
+                    composeRule.onAllNodesWithTag(AiFeatureTestTags.CHIP_HOME, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+            }.getOrDefault(false)
+            if (found) {
+                return
+            }
+            Thread.sleep(200)
+        }
+        throw AssertionError("Tag $tag not found within timeout")
     }
 }

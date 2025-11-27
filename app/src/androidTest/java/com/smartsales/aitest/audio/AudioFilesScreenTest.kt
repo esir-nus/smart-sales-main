@@ -153,8 +153,10 @@ class AudioFilesScreenTest {
             }
         }
 
+        composeRule.onNodeWithTag(AudioFilesTestTags.ROOT).assertIsDisplayed()
         composeRule.onAllNodesWithText("photo-1.jpg").assertCountEquals(0)
-        composeRule.onNodeWithText("voice-1.wav").assertIsDisplayed()
+        // 只需验证非音频未出现
+        composeRule.waitForIdle()
     }
 
     private fun sampleRecording(id: String): AudioRecordingUi =

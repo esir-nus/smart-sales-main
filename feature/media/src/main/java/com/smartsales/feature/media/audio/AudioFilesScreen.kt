@@ -121,7 +121,7 @@ fun AudioFilesScreen(
                         .testTag(AudioFilesTestTags.ERROR_BANNER)
                 )
             }
-            uiState.loadErrorMessage?.let { message ->
+            uiState.loadErrorMessage?.let {
                 Text(
                     text = "加载录音失败，请稍后重试。",
                     color = MaterialTheme.colorScheme.error,

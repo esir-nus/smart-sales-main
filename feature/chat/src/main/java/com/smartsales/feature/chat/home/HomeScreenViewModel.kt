@@ -273,9 +273,7 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     fun onTapAudioSummary() {
-        if (_uiState.value.audioSummary != null) {
-            _uiState.update { it.copy(navigationRequest = HomeNavigationRequest.AudioFiles) }
-        }
+        _uiState.update { it.copy(navigationRequest = HomeNavigationRequest.AudioFiles) }
     }
 
     fun onTranscriptionRequested(request: TranscriptionChatRequest) {
@@ -722,13 +720,13 @@ class HomeScreenViewModel @Inject constructor(
 
     private fun ConnectionState.toDeviceSnapshot(): DeviceSnapshotUi = when (this) {
         ConnectionState.Disconnected -> DeviceSnapshotUi(
-            statusText = "未连接",
+            statusText = "设备未连接，点击配网后再试",
             connectionState = DeviceConnectionStateUi.DISCONNECTED
         )
 
         is ConnectionState.Pairing -> DeviceSnapshotUi(
             deviceName = deviceName,
-            statusText = "正在配对 ${deviceName} (${progressPercent}%)",
+            statusText = "正在配对 ${deviceName}，请靠近设备 (${progressPercent}%)",
             connectionState = DeviceConnectionStateUi.CONNECTING
         )
 
@@ -740,14 +738,14 @@ class HomeScreenViewModel @Inject constructor(
 
         is ConnectionState.WifiProvisioned -> DeviceSnapshotUi(
             deviceName = session.peripheralName,
-            statusText = "${session.peripheralName} 已上线",
+            statusText = "${session.peripheralName} 已上线，网络：${status.wifiSsid}",
             connectionState = DeviceConnectionStateUi.CONNECTED,
             wifiName = status.wifiSsid
         )
 
         is ConnectionState.Syncing -> DeviceSnapshotUi(
             deviceName = session.peripheralName,
-            statusText = "${session.peripheralName} 正在保持连接",
+            statusText = "${session.peripheralName} 保持连接中",
             connectionState = DeviceConnectionStateUi.CONNECTED,
             wifiName = status.wifiSsid
         )

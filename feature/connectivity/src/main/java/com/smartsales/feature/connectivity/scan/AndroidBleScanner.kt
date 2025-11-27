@@ -7,9 +7,11 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
+import android.content.pm.PackageManager
 import com.smartsales.feature.connectivity.BlePeripheral
 import com.smartsales.feature.connectivity.BleProfileConfig
 import com.smartsales.feature.connectivity.ConnectivityLogger
+import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -32,6 +34,7 @@ class AndroidBleScanner @Inject constructor(
     private val profiles: List<BleProfileConfig>
 ) : BleScanner {
 
+    private val appContext: Context = context
     private val scope = CoroutineScope(Dispatchers.Main.immediate)
     private val adapter: BluetoothAdapter? = bluetoothManager.adapter
     private val scanner get() = adapter?.bluetoothLeScanner
@@ -77,9 +80,12 @@ class AndroidBleScanner @Inject constructor(
         _isScanning.value = false
     }
 
+    @SuppressLint("MissingPermission") // 仅在已授权时读取 device.name
     private fun handleResult(result: ScanResult) {
         val device = result.device ?: return
-        val displayName = device.name ?: result.scanRecord?.deviceName ?: ""
+        val displayName = (if (hasConnectPermission()) device.name else null)
+            ?: result.scanRecord?.deviceName
+            ?: ""
         val advertise = result.scanRecord
         val advertisedUuids = buildList {
             advertise?.serviceUuids?.map { it.uuid }?.let { addAll(it) }
@@ -108,6 +114,13 @@ class AndroidBleScanner @Inject constructor(
             _isScanning.value = false
             stop()
         }
+    }
+
+    private fun hasConnectPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            appContext,
+            android.Manifest.permission.BLUETOOTH_CONNECT
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun parseAdvertisedUuids(payload: ByteArray): List<java.util.UUID> {

@@ -135,12 +135,12 @@ private fun StatusCard(
                 modifier = Modifier.testTag(DeviceSetupTestTags.STATUS_TEXT)
             )
             val hint = when (step) {
-                DeviceSetupStep.Scanning -> "请确保设备已开机，靠近手机。"
-                DeviceSetupStep.Pairing -> "配对时请保持设备和手机距离在 1 米内。"
-                DeviceSetupStep.WifiProvisioning -> "填写正确的 Wi-Fi 名称和密码，设备会自动联网。"
-                DeviceSetupStep.WaitingForDeviceOnline -> "设备联网后会自动进入下一步，如超过 5 秒请重试。"
-                DeviceSetupStep.Ready -> "设备已准备就绪，可前往设备文件或音频列表。"
-                DeviceSetupStep.Error -> "可重试或返回第一步重新扫描。"
+                DeviceSetupStep.Scanning -> "正在搜索附近设备，保持靠近并确保设备已开机。"
+                DeviceSetupStep.Pairing -> "发现设备，准备蓝牙配对并采集设备信息。"
+                DeviceSetupStep.WifiProvisioning -> "录入 Wi-Fi 并下发到设备，确保同一网络环境。"
+                DeviceSetupStep.WaitingForDeviceOnline -> "等待设备联网上线，通常 5 秒内完成。"
+                DeviceSetupStep.Ready -> "设备已上线，可前往设备文件或音频库继续操作。"
+                DeviceSetupStep.Error -> "出现异常，可重试或返回重新扫描。"
                 else -> "点击下方按钮开始扫描。"
             }
             Text(text = hint, style = MaterialTheme.typography.bodySmall)
@@ -217,13 +217,13 @@ private fun PrimaryActions(
 ) {
     val (label, action) = when (state.step) {
         DeviceSetupStep.Idle,
-        DeviceSetupStep.Scanning -> "扫描设备" to onStartScan
+        DeviceSetupStep.Scanning -> "开始扫描" to onStartScan
 
         DeviceSetupStep.Pairing -> "配置 Wi-Fi" to { onProvisionWifi(ssid.trim(), password.trim()) }
         DeviceSetupStep.WifiProvisioning,
         DeviceSetupStep.WaitingForDeviceOnline -> "等待设备上线" to {}
-        DeviceSetupStep.Error -> "重试" to onRetry
-        DeviceSetupStep.Ready -> "前往设备文件" to onOpenDeviceManager
+        DeviceSetupStep.Error -> "重新扫描" to onRetry
+        DeviceSetupStep.Ready -> "前往设备管理" to onOpenDeviceManager
     }
     Button(
         onClick = action,

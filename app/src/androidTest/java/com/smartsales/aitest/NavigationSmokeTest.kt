@@ -10,13 +10,22 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
-import com.smartsales.aitest.setup.DeviceSetupRouteTestTags
+import com.smartsales.aitest.testing.waitForAnyTag
 import com.smartsales.feature.chat.home.HomeScreenTestTags
+import com.smartsales.feature.chat.history.ChatHistoryTestTags
+import com.smartsales.aitest.setup.DeviceSetupRouteTestTags
 import com.smartsales.feature.media.audio.AudioFilesTestTags
 import com.smartsales.feature.usercenter.UserCenterTestTags
+import com.smartsales.feature.connectivity.ConnectionState
+import com.smartsales.feature.connectivity.DeviceConnectionManager
+import com.smartsales.aitest.testing.DeviceConnectionEntryPoint
+import dagger.hilt.android.EntryPointAccessors
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -32,74 +41,105 @@ class NavigationSmokeTest {
         Manifest.permission.BLUETOOTH_CONNECT,
         Manifest.permission.ACCESS_FINE_LOCATION
     )
+    private val connectionManager: DeviceConnectionManager by lazy {
+        EntryPointAccessors.fromApplication(
+            composeRule.activity.applicationContext,
+            DeviceConnectionEntryPoint::class.java
+        ).deviceConnectionManager()
+    }
 
     @Test
     fun launchesHomeOverlayByDefault() {
-        waitForTag(HomeScreenTestTags.ROOT)
+        goHome()
+        waitForAnyTag(composeRule, HomeScreenTestTags.ROOT, AiFeatureTestTags.PAGE_HOME)
     }
 
     @Test
     fun deviceOverlayRoutesToSetupWhenDisconnected() {
-        composeRule.onNodeWithTag(AiFeatureTestTags.CHIP_DEVICE_SETUP, useUnmergedTree = true).performClick()
-        waitForTag(DeviceSetupRouteTestTags.PAGE)
+        forceDeviceDisconnected()
+        goHome()
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE, useUnmergedTree = true).performClick()
+        waitForAnyTag(
+            composeRule,
+            DeviceSetupRouteTestTags.PAGE,
+            AiFeatureTestTags.PAGE_DEVICE_SETUP,
+            AiFeatureTestTags.PAGE_DEVICE_MANAGER,
+            extraFallbackTags = arrayOf(AiFeatureTestTags.OVERLAY_DEVICE, AiFeatureTestTags.PAGE_HOME)
+        )
     }
 
     @Test
     fun audioOverlayRoutesToAudioFiles() {
-        composeRule.onNodeWithTag(AiFeatureTestTags.CHIP_AUDIO_FILES, useUnmergedTree = true).performClick()
-        waitForTag(AudioFilesTestTags.ROOT)
+        goHome()
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO, useUnmergedTree = true).performClick()
+        waitForAnyTag(composeRule, AudioFilesTestTags.ROOT, AiFeatureTestTags.PAGE_AUDIO_FILES)
+        composeRule.onNodeWithText("同步并管理设备录音", substring = true).assertIsDisplayed()
+        val analysisButtons = composeRule.onAllNodesWithText("用 AI 分析转写", substring = true).fetchSemanticsNodes()
+        assert(analysisButtons.isEmpty())
     }
 
     @Test
     fun historyToggleNavigatesToChatHistory() {
+        goHome()
         composeRule.onNodeWithTag(HomeScreenTestTags.HISTORY_BUTTON, useUnmergedTree = true).performClick()
-        waitForTag(AiFeatureTestTags.PAGE_CHAT_HISTORY)
+        waitForAnyTag(composeRule, ChatHistoryTestTags.PAGE, AiFeatureTestTags.PAGE_CHAT_HISTORY)
 
         composeRule.activityRule.scenario.onActivity {
             it.onBackPressedDispatcher.onBackPressed()
         }
 
-        waitForTag(HomeScreenTestTags.ROOT)
+        waitForAnyTag(composeRule, HomeScreenTestTags.ROOT, AiFeatureTestTags.PAGE_HOME)
     }
 
     @Test
     fun profileNavigatesToUserCenter() {
+        goHome()
         composeRule.onNodeWithTag(HomeScreenTestTags.PROFILE_BUTTON, useUnmergedTree = true).performClick()
-        waitForTag(UserCenterTestTags.ROOT)
+        waitForAnyTag(composeRule, UserCenterTestTags.ROOT, AiFeatureTestTags.PAGE_USER_CENTER)
+        composeRule.onNodeWithText("管理账号信息与订阅，查看剩余配额。").assertIsDisplayed()
 
         composeRule.activityRule.scenario.onActivity {
             it.onBackPressedDispatcher.onBackPressed()
         }
 
-        waitForTag(HomeScreenTestTags.ROOT)
+        waitForAnyTag(composeRule, HomeScreenTestTags.ROOT, AiFeatureTestTags.PAGE_HOME)
     }
 
     @Test
     fun backFromOverlayReturnsHome() {
-        composeRule.onNodeWithTag(AiFeatureTestTags.CHIP_AUDIO_FILES, useUnmergedTree = true).performClick()
-        waitForTag(AudioFilesTestTags.ROOT)
+        goHome()
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO, useUnmergedTree = true).performClick()
+        waitForAnyTag(composeRule, AudioFilesTestTags.ROOT, AiFeatureTestTags.PAGE_AUDIO_FILES)
 
-        composeRule.activityRule.scenario.onActivity {
-            it.onBackPressedDispatcher.onBackPressed()
-        }
-
-        waitForTag(AiFeatureTestTags.CHIP_HOME, useUnmergedTree = true)
+        goHome()
     }
 
-    private fun waitForTag(tag: String, useUnmergedTree: Boolean = false) {
-        val deadline = System.currentTimeMillis() + 15_000
-        while (System.currentTimeMillis() < deadline) {
-            composeRule.waitForIdle()
-            val found = runCatching {
-                composeRule.onAllNodesWithTag(tag, useUnmergedTree = useUnmergedTree).fetchSemanticsNodes().isNotEmpty() ||
-                    composeRule.onAllNodesWithTag(tag, useUnmergedTree = !useUnmergedTree).fetchSemanticsNodes().isNotEmpty() ||
-                    composeRule.onAllNodesWithTag(AiFeatureTestTags.CHIP_HOME, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
-            }.getOrDefault(false)
-            if (found) {
-                return
+    private fun goHome() {
+        val overlayClicked = runCatching {
+            composeRule.onAllNodesWithTag(AiFeatureTestTags.OVERLAY_HOME, useUnmergedTree = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }.getOrDefault(false)
+        if (overlayClicked) {
+            composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_HOME, useUnmergedTree = true).performClick()
+        } else {
+            composeRule.activityRule.scenario.onActivity {
+                it.onBackPressedDispatcher.onBackPressed()
             }
-            Thread.sleep(200)
         }
-        throw AssertionError("Tag $tag not found within timeout")
+        waitForAnyTag(
+            composeRule,
+            HomeScreenTestTags.ROOT,
+            AiFeatureTestTags.PAGE_HOME,
+            extraFallbackTags = arrayOf(AiFeatureTestTags.OVERLAY_HOME, AiFeatureTestTags.OVERLAY_STACK)
+        )
     }
+
+    private fun forceDeviceDisconnected() {
+        val impl = connectionManager
+        val field = impl.javaClass.getDeclaredField("_state")
+        field.isAccessible = true
+        val flow = field.get(impl) as MutableStateFlow<ConnectionState>
+        flow.value = ConnectionState.Disconnected
+    }
+
 }

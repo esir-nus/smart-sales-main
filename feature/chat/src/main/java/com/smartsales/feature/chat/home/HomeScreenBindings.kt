@@ -47,7 +47,7 @@ class DelegatingHomeAiChatService @Inject constructor(
         delegate.streamMessage(dataRequest).collect { event ->
             when (event) {
                 is AiChatStreamEvent.Chunk -> {
-                    val content = event.content ?: ""
+                    val content = event.content
                     val delta = if (content.startsWith(lastContent)) {
                         content.substring(lastContent.length)
                     } else {

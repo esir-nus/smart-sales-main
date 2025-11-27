@@ -11,6 +11,7 @@ import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.content.Context
+import android.os.Build
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.feature.connectivity.BlePeripheral
 import com.smartsales.feature.connectivity.BleSession
@@ -31,6 +32,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import dagger.hilt.android.qualifiers.ApplicationContext
+import androidx.annotation.RequiresApi
+import android.bluetooth.BluetoothStatusCodes
 
 private const val NETWORK_QUERY_COMMAND = "wifi#address#ip#name"
 private const val DEFAULT_CONNECTION_TIMEOUT_MS = 10_000L
@@ -428,8 +431,8 @@ private class GattContext(
         val descriptor = characteristic.getDescriptor(CLIENT_CHARACTERISTIC_CONFIG_UUID)
             ?: throw IllegalStateException("找不到通知描述符 $uuid")
         callback.prepareDescriptor(uuid)
-        descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-        if (!gatt.writeDescriptor(descriptor)) {
+        descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+        if (!gatt.writeDescriptorCompat(descriptor)) {
             throw IllegalStateException("写入通知描述符失败：$uuid")
         }
         withTimeout(operationTimeoutMillis) {
@@ -441,8 +444,7 @@ private class GattContext(
     suspend fun writeCharacteristic(uuid: UUID, payload: ByteArray) {
         val characteristic = findCharacteristic(uuid)
         callback.prepareWrite(uuid)
-        characteristic.value = payload
-        if (!gatt.writeCharacteristic(characteristic)) {
+        if (!gatt.writeCharacteristicCompat(characteristic, payload)) {
             throw IllegalStateException("写入特征失败：$uuid")
         }
         withTimeout(operationTimeoutMillis) {
@@ -574,7 +576,7 @@ private class GatewayGattCallback : BluetoothGattCallback() {
     ) {
         val expected = pendingReadUuid
         if (status == BluetoothGatt.GATT_SUCCESS && expected != null) {
-            readResultChannel.trySend(characteristic.uuid to (characteristic.value ?: byteArrayOf()))
+            readResultChannel.trySend(characteristic.uuid to (characteristic.getValue() ?: byteArrayOf()))
         } else if (status != BluetoothGatt.GATT_SUCCESS) {
             ConnectivityLogger.w("Characteristic read failed: $status")
         }
@@ -597,7 +599,7 @@ private class GatewayGattCallback : BluetoothGattCallback() {
         gatt: BluetoothGatt,
         characteristic: BluetoothGattCharacteristic
     ) {
-        val value = characteristic.value ?: byteArrayOf()
+        val value = characteristic.getValue() ?: byteArrayOf()
         notificationChannel.trySend(characteristic.uuid to value)
     }
 
@@ -615,6 +617,30 @@ private sealed interface GatewayOutcome<out T> {
 
 private val CLIENT_CHARACTERISTIC_CONFIG_UUID: UUID =
     UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+
+private fun BluetoothGatt.writeDescriptorCompat(descriptor: BluetoothGattDescriptor): Boolean {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        writeDescriptor(descriptor)
+    } else {
+        @Suppress("DEPRECATION")
+        writeDescriptor(descriptor)
+    }
+}
+
+private fun BluetoothGatt.writeCharacteristicCompat(
+    characteristic: BluetoothGattCharacteristic,
+    payload: ByteArray
+): Boolean {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        writeCharacteristic(characteristic, payload, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) ==
+            BluetoothStatusCodes.SUCCESS
+    } else {
+        @Suppress("DEPRECATION")
+        characteristic.setValue(payload)
+        @Suppress("DEPRECATION")
+        writeCharacteristic(characteristic)
+    }
+}
 
 private suspend fun GattContext.awaitNotificationOrRead(uuid: UUID): ByteArray =
     try {

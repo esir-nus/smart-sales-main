@@ -1,5 +1,6 @@
 package com.smartsales.feature.connectivity
 
+import androidx.annotation.VisibleForTesting
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
 import javax.inject.Inject
@@ -227,6 +228,11 @@ class DefaultDeviceConnectionManager @Inject constructor(
         )
         _state.value = ConnectionState.WifiProvisioned(session, syntheticStatus)
         startHeartbeat(session, syntheticStatus)
+    }
+
+    @VisibleForTesting
+    fun overrideStateForTest(state: ConnectionState) {
+        _state.value = state
     }
 
     private companion object {

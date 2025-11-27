@@ -15,9 +15,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.semantics.ProgressBarRangeInfo
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -30,7 +27,6 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.hasParent
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.hasAnyAncestor
@@ -75,7 +71,7 @@ class DeviceManagerScreenTest {
         )
         renderDeviceManager(state)
 
-        composeRule.onNode(progressMatcher()).assertIsDisplayed()
+        composeRule.onNodeWithTag(DeviceManagerTestTags.LOADING_INDICATOR).assertIsDisplayed()
         composeRule.onNodeWithTag(DeviceManagerTestTags.REFRESH_BUTTON).assertIsNotEnabled()
         composeRule.onNodeWithTag(DeviceManagerTestTags.UPLOAD_BUTTON).assertIsNotEnabled()
         composeRule.onNodeWithText("刷新中...").assertIsDisplayed()
@@ -291,10 +287,4 @@ class DeviceManagerScreenTest {
             durationText = durationText
         )
     }
-
-    private fun progressMatcher(): SemanticsMatcher =
-        SemanticsMatcher.expectValue(
-            SemanticsProperties.ProgressBarRangeInfo,
-            ProgressBarRangeInfo.Indeterminate
-        )
 }

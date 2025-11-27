@@ -236,7 +236,11 @@ private fun LoadingBanner() {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        LinearProgressIndicator(modifier = Modifier.weight(1f))
+        LinearProgressIndicator(
+            modifier = Modifier
+                .weight(1f)
+                .testTag(DeviceManagerTestTags.LOADING_INDICATOR)
+        )
         Text(text = "正在加载设备文件...")
     }
 }
@@ -619,6 +623,7 @@ object DeviceManagerTestTags {
     const val SIMULATOR_TITLE = "device_manager_simulator_title"
     const val APPLY_BUTTON = "device_manager_apply_button"
     const val DELETE_BUTTON = "device_manager_delete_button"
+    const val LOADING_INDICATOR = "device_manager_loading_indicator"
 }
 
 object DeviceManagerRouteTestTags {

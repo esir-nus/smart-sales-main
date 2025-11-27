@@ -16,6 +16,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
 import com.smartsales.aitest.devicemanager.DeviceManagerRouteTestTags
 import com.smartsales.aitest.setup.DeviceSetupRouteTestTags
+import com.smartsales.aitest.ui.HomeOverlayTestTags
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.media.audio.AudioFilesTestTags
 import com.smartsales.feature.usercenter.UserCenterTestTags
@@ -39,7 +40,7 @@ class NavigationSmokeTest {
 
     @Test
     fun launchesHomeByDefault() {
-        waitForTag(HomeScreenTestTags.ROOT)
+        waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
         composeRule.onAllNodesWithTag(AudioFilesTestTags.ROOT).assertCountEquals(0)
         composeRule.onAllNodesWithTag(DeviceManagerRouteTestTags.ROOT).assertCountEquals(0)
         composeRule.onAllNodesWithTag(DeviceSetupRouteTestTags.PAGE).assertCountEquals(0)
@@ -51,14 +52,14 @@ class NavigationSmokeTest {
         // 当前 shell 无音频库 chip，改为通过 Home 音频入口验证导航由 Home 层覆盖
         waitForTag(HomeScreenTestTags.AUDIO_ENTRY)
         composeRule.onNodeWithTag(HomeScreenTestTags.AUDIO_ENTRY).performClick()
-        waitForTag(AudioFilesTestTags.ROOT)
+        waitForOverlay(HomeOverlayTestTags.AUDIO_LAYER)
     }
 
     @Test
     fun navigateToDeviceManagerFromHomeShell() {
         waitForTag(HomeScreenTestTags.DEVICE_ENTRY)
         composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_ENTRY).performClick()
-        waitForTag(DeviceManagerRouteTestTags.ROOT)
+        waitForOverlay(HomeOverlayTestTags.DEVICE_LAYER)
     }
 
     @Test
@@ -76,7 +77,7 @@ class NavigationSmokeTest {
             it.onBackPressedDispatcher.onBackPressed()
         }
 
-        waitForTag(HomeScreenTestTags.ROOT)
+        waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
     }
 
     @Test
@@ -92,7 +93,7 @@ class NavigationSmokeTest {
             selectTab(tag)
             composeRule.waitForIdle()
         }
-        waitForTag(HomeScreenTestTags.ROOT)
+        waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
     }
 
     private fun selectTab(tag: String) {
@@ -100,6 +101,15 @@ class NavigationSmokeTest {
     }
 
     private fun waitForTag(tag: String, timeout: Long = 10_000) {
+        composeRule.waitUntil(timeoutMillis = timeout) {
+            runCatching {
+                composeRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+            }.getOrDefault(false)
+        }
+        composeRule.onNodeWithTag(tag).assertIsDisplayed()
+    }
+
+    private fun waitForOverlay(tag: String, timeout: Long = 10_000) {
         composeRule.waitUntil(timeoutMillis = timeout) {
             runCatching {
                 composeRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()

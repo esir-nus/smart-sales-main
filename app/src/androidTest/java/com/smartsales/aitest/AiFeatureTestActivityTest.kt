@@ -18,18 +18,18 @@ import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
-import com.smartsales.aitest.di.TestDeviceConnectionEntryPoint
+import com.smartsales.aitest.di.DeviceConnectionEntryPoint
 import com.smartsales.aitest.setup.DeviceSetupRouteTestTags
+import com.smartsales.aitest.ui.HomeOverlayTestTags
 import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.connectivity.BlePeripheral
 import com.smartsales.feature.connectivity.BleSession
 import com.smartsales.feature.connectivity.ConnectionState
-import com.smartsales.feature.connectivity.DeviceConnectionManager
+import com.smartsales.feature.connectivity.DefaultDeviceConnectionManager
 import com.smartsales.feature.connectivity.ProvisioningStatus
 import dagger.hilt.android.EntryPointAccessors
 import java.util.UUID
-import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -49,23 +49,15 @@ class AiFeatureTestActivityTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<AiFeatureTestActivity>()
 
-    private val connectionManager: DeviceConnectionManager by lazy {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        EntryPointAccessors.fromApplication(
-            context,
-            TestDeviceConnectionEntryPoint::class.java
-        ).deviceConnectionManager()
-    }
-
     @Test
     fun defaultTab_isHome() {
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
     }
 
     @Test
     fun homeFirstNavigationShell_isProperlyIntegrated() {
         // 验证 Activity 启动时 Home 页面是默认显示
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
         composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_SHELL).assertIsDisplayed()
 
         // 验证 Home chip 默认选中
@@ -77,22 +69,22 @@ class AiFeatureTestActivityTest {
 
         // 验证可以通过 chip 返回 Home
         selectTab(AiFeatureTestTags.CHIP_HOME)
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
 
         // 验证从其他页面也能导航回 Home
         selectTab(AiFeatureTestTags.CHIP_WIFI)
         waitForPage(AiFeatureTestTags.PAGE_WIFI)
 
         selectTab(AiFeatureTestTags.CHIP_HOME)
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
 
         // 最终验证 Home 页面仍然完整显示
-        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME).assertIsDisplayed()
+        waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
     }
 
     @Test
     fun chipRow_switchesBetweenAllRoutes() {
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
 
         selectTab(AiFeatureTestTags.CHIP_CHAT_HISTORY)
         waitForPage(AiFeatureTestTags.PAGE_CHAT_HISTORY)
@@ -102,34 +94,34 @@ class AiFeatureTestActivityTest {
 
         // 来回切换验证稳定性
         selectTab(AiFeatureTestTags.CHIP_HOME)
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
         selectTab(AiFeatureTestTags.CHIP_HOME)
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
     }
 
     @Test
     fun homeNavigationActions_switchTabs() {
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
 
         // 未配网时点击设备 Banner 应跳到设备配网
         composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_ENTRY).performClick()
         waitForPage(AiFeatureTestTags.PAGE_DEVICE_SETUP)
         selectTab(AiFeatureTestTags.CHIP_HOME)
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
 
         // 注入已连网状态后再次点击跳到设备文件
         forceDeviceProvisioned()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_BANNER).performClick()
-        waitForPage(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
+        waitForOverlay(HomeOverlayTestTags.DEVICE_LAYER)
         selectTab(AiFeatureTestTags.CHIP_HOME)
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
 
         // 音频摘要入口跳到音频库
         composeRule.onNodeWithTag(HomeScreenTestTags.AUDIO_ENTRY).performClick()
-        waitForPage(AiFeatureTestTags.PAGE_AUDIO_FILES)
+        waitForOverlay(HomeOverlayTestTags.AUDIO_LAYER)
         selectTab(AiFeatureTestTags.CHIP_HOME)
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
 
         // 个人中心图标跳到用户中心
         composeRule.onNodeWithTag(HomeScreenTestTags.PROFILE_BUTTON).performClick()
@@ -142,12 +134,12 @@ class AiFeatureTestActivityTest {
         waitForPage(AiFeatureTestTags.PAGE_DEVICE_SETUP)
 
         composeRule.onNodeWithTag(DeviceSetupRouteTestTags.COMPLETE_BUTTON).performClick()
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
     }
 
     @Test
     fun quickSkillTap_showsConfirmationAndChip() {
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
 
         tapQuickSkill(QuickSkillId.SUMMARIZE_LAST_MEETING)
 
@@ -159,7 +151,7 @@ class AiFeatureTestActivityTest {
 
     @Test
     fun quickSkillChip_closeClearsSelection() {
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
 
         tapQuickSkill(QuickSkillId.SUMMARIZE_LAST_MEETING)
         composeRule.onNodeWithTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP_CLOSE).performClick()
@@ -174,7 +166,7 @@ class AiFeatureTestActivityTest {
 
     @Test
     fun quickSkill_sendConsumesSkill() {
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        waitForOverlay(HomeOverlayTestTags.HOME_LAYER)
 
         tapQuickSkill(QuickSkillId.SUMMARIZE_LAST_MEETING)
         composeRule.onNodeWithTag(HomeScreenTestTags.INPUT_FIELD).performTextInput("请总结会议")
@@ -201,6 +193,13 @@ class AiFeatureTestActivityTest {
     }
 
     private fun waitForPage(tag: String) {
+        val mappedOverlay = when (tag) {
+            AiFeatureTestTags.PAGE_HOME -> HomeOverlayTestTags.HOME_LAYER
+            AiFeatureTestTags.PAGE_AUDIO_FILES -> HomeOverlayTestTags.AUDIO_LAYER
+            AiFeatureTestTags.PAGE_DEVICE_MANAGER -> HomeOverlayTestTags.DEVICE_LAYER
+            else -> null
+        }
+        mappedOverlay?.let { waitForOverlay(it) }
         composeRule.waitUntil(timeoutMillis = 10_000) {
             runCatching {
                 composeRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
@@ -215,7 +214,12 @@ class AiFeatureTestActivityTest {
     }
 
     private fun forceDeviceProvisioned() {
-        val impl = connectionManager
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val entryPoint = EntryPointAccessors.fromApplication(
+            context,
+            DeviceConnectionEntryPoint::class.java
+        )
+        val impl: DefaultDeviceConnectionManager = entryPoint.connectionManager()
         val session = BleSession.fromPeripheral(
             BlePeripheral(
                 id = "mock-device",
@@ -229,10 +233,7 @@ class AiFeatureTestActivityTest {
             handshakeId = UUID.randomUUID().toString(),
             credentialsHash = "hash-${UUID.randomUUID()}"
         )
-        val field = impl.javaClass.getDeclaredField("_state")
-        field.isAccessible = true
-        val flow = field.get(impl) as? MutableStateFlow<ConnectionState> ?: return
-        flow.value = ConnectionState.WifiProvisioned(session, status)
+        impl.overrideStateForTest(ConnectionState.WifiProvisioned(session, status))
     }
 
     private fun waitForAssistantMessages() {
@@ -242,5 +243,14 @@ class AiFeatureTestActivityTest {
                     .fetchSemanticsNodes().isNotEmpty()
             }.getOrDefault(false)
         }
+    }
+
+    private fun waitForOverlay(tag: String) {
+        composeRule.waitUntil(timeoutMillis = 10_000) {
+            runCatching {
+                composeRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+            }.getOrDefault(false)
+        }
+        composeRule.onNodeWithTag(tag).assertIsDisplayed()
     }
 }

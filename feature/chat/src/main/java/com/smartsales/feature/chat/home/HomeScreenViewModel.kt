@@ -190,21 +190,11 @@ class HomeScreenViewModel @Inject constructor(
             _uiState.update { it.copy(snackbarMessage = "无法识别的快捷技能") }
             return
         }
-        pendingSkillId = skillId
-        val confirmation = buildSkillConfirmation(definition)
-        val confirmationMessage = ChatMessageUi(
-            id = nextMessageId(),
-            role = ChatMessageRole.ASSISTANT,
-            content = confirmation,
-            timestampMillis = System.currentTimeMillis()
-        )
+        // 当前激活的快捷技能，用于展示顶部 Chip 和构造快捷提示词
         _uiState.update { state ->
-            state.copy(
-                selectedSkill = definition.toUiModel(),
-                chatMessages = state.chatMessages + confirmationMessage
-            )
+            state.copy(selectedSkill = definition.toUiModel())
         }
-        persistMessagesAsync()
+        sendQuickSkill(definition)
     }
 
     fun onLoadMoreHistory() {
@@ -548,7 +538,6 @@ class HomeScreenViewModel @Inject constructor(
         }
         if (quickSkill != null) {
             pendingSkillId = null
-            _uiState.update { it.copy(selectedSkill = null) }
         }
         val quickSkillId = quickSkill?.id
         val userMessage = createUserMessage(content)
@@ -595,6 +584,7 @@ class HomeScreenViewModel @Inject constructor(
                             msg.copy(content = msg.content + event.token)
                         }
                     }
+
                     is ChatStreamEvent.Completed -> {
                         // 完成：关闭 streaming，写入完整文本
                         updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
@@ -606,6 +596,7 @@ class HomeScreenViewModel @Inject constructor(
                             applySessionList()
                         }
                     }
+
                     is ChatStreamEvent.Error -> {
                         // 错误：标记消息失败并弹出提示
                         updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
@@ -622,6 +613,32 @@ class HomeScreenViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /** 快捷技能直接发起一次虚拟用户请求并触发助手回复。 */
+    private fun sendQuickSkill(definition: QuickSkillDefinition) {
+        val content = definition.defaultPrompt
+        val userMessage = createUserMessage(content)
+        val assistantPlaceholder = createAssistantPlaceholder()
+        val audioContext = if (definition.requiresAudioContext) {
+            buildAudioContextSummary()
+        } else {
+            null
+        }
+        val newState = _uiState.value.copy(
+            chatMessages = _uiState.value.chatMessages + userMessage + assistantPlaceholder,
+            inputText = "",
+            isSending = true,
+            isStreaming = true,
+            snackbarMessage = null
+        )
+        _uiState.value = newState
+        persistMessagesAsync()
+        viewModelScope.launch {
+            updateSessionSummary(userMessage.content)
+        }
+        val request = buildChatRequest(content, definition.id, newState.chatMessages, audioContext)
+        startStreamingResponse(request, assistantPlaceholder.id)
     }
 
     private fun updateAssistantMessage(

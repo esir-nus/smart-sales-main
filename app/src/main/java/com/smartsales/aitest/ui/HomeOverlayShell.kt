@@ -19,10 +19,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.platform.testTag
+import com.smartsales.aitest.AiFeatureTestTags
 
 enum class OverlayPage { Home, Audio, Device }
 
@@ -42,8 +42,9 @@ fun HomeOverlayShell(
     deviceManagerContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // 覆盖层根标签在 Activity 调用处下发，此处仅负责内部层级标签
     BoxWithConstraints(
-        modifier = modifier.semantics { testTag = HomeOverlayTestTags.ROOT }
+        modifier = modifier
     ) {
         val containerHeightPx = constraints.maxHeight.toFloat().coerceAtLeast(1f)
         var dragOffset by remember { mutableStateOf(0f) }
@@ -93,7 +94,7 @@ fun HomeOverlayShell(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .semantics { testTag = HomeOverlayTestTags.AUDIO_LAYER }
+                    .testTag(HomeOverlayTestTags.AUDIO_LAYER)
                     .zIndex(if (currentPage == OverlayPage.Audio) 1f else 0f)
                     .offset(y = audioOffset),
             ) {
@@ -102,7 +103,7 @@ fun HomeOverlayShell(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .semantics { testTag = HomeOverlayTestTags.HOME_LAYER }
+                    .testTag(HomeOverlayTestTags.HOME_LAYER)
                     .zIndex(if (currentPage == OverlayPage.Home) 2f else 0f)
                     .offset(y = homeOffset),
             ) {
@@ -111,7 +112,7 @@ fun HomeOverlayShell(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .semantics { testTag = HomeOverlayTestTags.DEVICE_LAYER }
+                    .testTag(HomeOverlayTestTags.DEVICE_LAYER)
                     .zIndex(if (currentPage == OverlayPage.Device) 1f else 0f)
                     .offset(y = deviceOffset),
             ) {

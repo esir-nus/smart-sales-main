@@ -1,0 +1,16 @@
+org.relaxng.datatype.Datatype
+org.relaxng.datatype.DatatypeBuilder
+org.relaxng.datatype.DatatypeException
+org.relaxng.datatype.DatatypeLibrary
+org.relaxng.datatype.DatatypeLibraryFactory
+org.relaxng.datatype.DatatypeStreamingValidator
+org.relaxng.datatype.ValidationContext
+org.relaxng.datatype.helpers.DatatypeLibraryLoader
+org.relaxng.datatype.helpers.DatatypeLibraryLoader$1
+org.relaxng.datatype.helpers.DatatypeLibraryLoader$Service
+org.relaxng.datatype.helpers.DatatypeLibraryLoader$Service$Loader
+org.relaxng.datatype.helpers.DatatypeLibraryLoader$Service$Loader2
+org.relaxng.datatype.helpers.DatatypeLibraryLoader$Service$ProviderEnumeration
+org.relaxng.datatype.helpers.DatatypeLibraryLoader$Service$Singleton
+org.relaxng.datatype.helpers.ParameterlessDatatypeBuilder
+org.relaxng.datatype.helpers.StreamingValidatorImpl

@@ -68,6 +68,8 @@ Place unit tests in `<module>/src/test/` with JUnit 4 and `kotlinx-coroutines-te
 
 ## Commit & Pull Request Guidelines
 Recent history (`Refactor: Clean up AiFeatureTestActivity`, `Update .gitignore…`) uses a `Scope: Imperative summary` style—keep the first verb capitalized, keep bodies wrapped near 72 columns, and add `Test:` trailers for executed commands. PRs must outline affected modules, reproduction steps, test/lint commands, and screenshots or logs for UI, BLE, or Tingwu changes. Link issues or TODO IDs and highlight dependency or credential updates explicitly.
+- 需要提交时主动给出 commit 建议；若相关用例已执行通过且改动稳定，直接提供建议；若测试未跑通或未执行，也可给出建议但需明确当前测试状态。
+- 在执行任何改动前需先给出基于证据的计划，包含假设、歧义/缺失信息、风险、相关文件与文档一致性检查；只有在收到“confirmed and execute”指令后才开始执行，未获确认前保持多轮沟通。
 
 ## Security & Configuration Tips
 Never commit `local.properties`; it stores DashScope, Tingwu, and OSS keys consumed by `data/ai-core`. `TINGWU_BASE_URL` automatically appends `/openapi/tingwu/v2/` unless you pass a proxy URL—note any overrides in PR descriptions. The repo pins Java 17 in `gradle.properties`; verify `JAVA_HOME` before running Gradle. Prefer the cached `third_party/maven-repo/` when network access is limited and scrub logs so chat transcripts or BLE payloads do not leak into commits.

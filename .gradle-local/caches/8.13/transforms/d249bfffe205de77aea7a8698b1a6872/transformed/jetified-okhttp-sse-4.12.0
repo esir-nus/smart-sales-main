@@ -1,0 +1,8 @@
+okhttp3.internal.sse.RealEventSource
+okhttp3.internal.sse.ServerSentEventReader
+okhttp3.internal.sse.ServerSentEventReader$Callback
+okhttp3.internal.sse.ServerSentEventReader$Companion
+okhttp3.sse.EventSource
+okhttp3.sse.EventSource$Factory
+okhttp3.sse.EventSourceListener
+okhttp3.sse.EventSources

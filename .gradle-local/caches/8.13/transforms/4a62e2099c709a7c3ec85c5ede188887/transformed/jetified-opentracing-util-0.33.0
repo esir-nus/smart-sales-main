@@ -1,0 +1,5 @@
+io.opentracing.util.GlobalTracer
+io.opentracing.util.GlobalTracer$1
+io.opentracing.util.GlobalTracer$2
+io.opentracing.util.ThreadLocalScope
+io.opentracing.util.ThreadLocalScopeManager

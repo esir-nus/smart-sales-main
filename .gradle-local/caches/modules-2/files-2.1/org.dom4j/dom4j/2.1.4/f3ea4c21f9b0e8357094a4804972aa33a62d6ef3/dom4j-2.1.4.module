@@ -1,0 +1,105 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "org.dom4j",
+    "module": "dom4j",
+    "version": "2.1.4",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "6.3",
+      "buildId": "axy3wi6hobfadel6oe4rhwoebq"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "dom4j-2.1.4.jar",
+          "url": "dom4j-2.1.4.jar",
+          "size": 324655,
+          "sha512": "b647a1c9cbd8e8e0a855160b8522fff8e1d4df95e54e116a1cfe66d17083ff8b8ca6fe706d6aeea6e7d3e0116212af9a5f6c7fade642869a33fc7a971d116af9",
+          "sha256": "235a9167a8a199be04b5326d92927ca0adeb90d11f69fe2e821b34ce8433b591",
+          "sha1": "35c16721b88cf17b8279fcb134c0abb161cc0e9b",
+          "md5": "8246840e53db2781ca941e4d3f9ad715"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 8,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "jaxen",
+          "module": "jaxen",
+          "version": {
+            "requires": "1.1.6"
+          }
+        },
+        {
+          "group": "javax.xml.stream",
+          "module": "stax-api",
+          "version": {
+            "requires": "1.0-2"
+          }
+        },
+        {
+          "group": "net.java.dev.msv",
+          "module": "xsdlib",
+          "version": {
+            "requires": "2013.6.1"
+          }
+        },
+        {
+          "group": "javax.xml.bind",
+          "module": "jaxb-api",
+          "version": {
+            "requires": "2.2.12"
+          }
+        },
+        {
+          "group": "pull-parser",
+          "module": "pull-parser",
+          "version": {
+            "requires": "2.1.10"
+          }
+        },
+        {
+          "group": "xpp3",
+          "module": "xpp3",
+          "version": {
+            "requires": "1.1.4c"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "dom4j-2.1.4.jar",
+          "url": "dom4j-2.1.4.jar",
+          "size": 324655,
+          "sha512": "b647a1c9cbd8e8e0a855160b8522fff8e1d4df95e54e116a1cfe66d17083ff8b8ca6fe706d6aeea6e7d3e0116212af9a5f6c7fade642869a33fc7a971d116af9",
+          "sha256": "235a9167a8a199be04b5326d92927ca0adeb90d11f69fe2e821b34ce8433b591",
+          "sha1": "35c16721b88cf17b8279fcb134c0abb161cc0e9b",
+          "md5": "8246840e53db2781ca941e4d3f9ad715"
+        }
+      ]
+    }
+  ]
+}

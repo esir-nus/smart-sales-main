@@ -54,11 +54,11 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.smartsales.aitest.ui.AppBadge
-import com.smartsales.aitest.ui.AppCard
-import com.smartsales.aitest.ui.AppGhostButton
-import com.smartsales.aitest.ui.AppPalette
-import com.smartsales.aitest.ui.AppShapes
+import com.smartsales.feature.media.ui.AppBadge
+import com.smartsales.feature.media.ui.AppCard
+import com.smartsales.feature.media.ui.AppGhostButton
+import com.smartsales.feature.media.ui.AppPalette
+import com.smartsales.feature.media.ui.AppShapes
 import com.smartsales.feature.media.devicemanager.DeviceConnectionUiState
 import com.smartsales.feature.media.devicemanager.DeviceFileUi
 import com.smartsales.feature.media.devicemanager.DeviceManagerUiState

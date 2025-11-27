@@ -102,8 +102,9 @@ private fun AiFeatureTestApp() {
     val mediaServerClient = remember { MediaServerClient(context) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var currentSection by rememberSaveable { mutableStateOf(AppSection.HomeShell) }
-    var overlayPage by rememberSaveable { mutableStateOf(OverlayPage.Home) }
+    // 测试场景下不恢复上次 Tab，始终默认进入 Home 覆盖层
+    var currentSection by remember { mutableStateOf(AppSection.HomeShell) }
+    var overlayPage by remember { mutableStateOf(OverlayPage.Home) }
     var manualSessionId by rememberSaveable { mutableStateOf("home-session") }
     var pendingTranscription by remember { mutableStateOf<TranscriptionChatRequest?>(null) }
     var pendingSessionId by remember { mutableStateOf<String?>(null) }
@@ -164,6 +165,7 @@ private fun AiFeatureTestApp() {
                                 HomeOverlayShell(
                                     modifier = Modifier
                                         .fillMaxSize()
+                                        // 测试用：为 Home 覆盖层根节点打上唯一标记，方便仪器测试查找
                                         .testTag(AiFeatureTestTags.OVERLAY_SHELL),
                                     currentPage = overlayPage,
                                     onPageChange = { overlayPage = it },
@@ -621,6 +623,7 @@ private val REQUIRED_BLE_PERMISSIONS = listOf(
 )
 
 object AiFeatureTestTags {
+    // UI 与测试共享的标签集合（Home shell 根标签等）
     const val PAGE_HOME = "page_home"
     const val PAGE_WIFI = "page_wifi_ble"
     const val PAGE_DEVICE_MANAGER = "page_device_manager"

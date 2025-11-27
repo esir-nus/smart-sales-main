@@ -1,5 +1,7 @@
 package com.smartsales.feature.chat.home
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,18 +25,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -63,9 +61,16 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.home.TranscriptionChatRequest
+import com.smartsales.feature.media.ui.AppBadge
+import com.smartsales.feature.media.ui.AppCard
+import com.smartsales.feature.media.ui.AppGhostButton
+import com.smartsales.feature.media.ui.AppPalette
+import com.smartsales.feature.media.ui.AppShapes
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -254,6 +259,7 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .background(AppPalette.Background)
                 .pullRefresh(pullRefreshState)
         ) {
             Column(
@@ -435,14 +441,10 @@ private fun HomeTopBar(
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (deviceSnapshot?.connectionState == DeviceConnectionStateUi.CONNECTED) {
-                AssistChip(
-                    onClick = {},
-                    enabled = false,
-                    label = { Text(text = "设备已连接") },
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        labelColor = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
+                AppBadge(
+                    text = "设备已连接",
+                    background = AppPalette.Success.copy(alpha = 0.16f),
+                    contentColor = AppPalette.Success
                 )
             }
             IconButton(
@@ -490,12 +492,11 @@ private fun EntryCard(
     onClick: () -> Unit,
     testTag: String
 ) {
-    Card(
+    AppCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .testTag(testTag),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -505,14 +506,14 @@ private fun EntryCard(
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = AppPalette.MutedText,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = supporting,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = AppPalette.MutedText,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -546,7 +547,7 @@ private fun SessionListSection(
                 Text(
                     text = "正在加载历史会话...",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = AppPalette.MutedText,
                     modifier = Modifier.testTag(HomeScreenTestTags.SESSION_LOADING)
                 )
             }
@@ -555,7 +556,7 @@ private fun SessionListSection(
             Text(
                 text = "暂无历史会话，先发一条消息试试吧",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = AppPalette.MutedText,
                 modifier = Modifier.testTag(HomeScreenTestTags.SESSION_EMPTY)
             )
             return
@@ -574,23 +575,21 @@ private fun SessionListItem(
     session: SessionListItemUi,
     onClick: () -> Unit
 ) {
-    val background = if (session.isCurrent) {
-        MaterialTheme.colorScheme.primaryContainer
+    val borderColor = if (session.isCurrent) {
+        AppPalette.Accent.copy(alpha = 0.4f)
     } else {
-        MaterialTheme.colorScheme.surfaceVariant
+        AppPalette.Border
     }
-    Surface(
+    AppCard(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("${HomeScreenTestTags.SESSION_LIST_ITEM_PREFIX}${session.id}")
             .clickable(onClick = onClick),
-        color = background,
-        tonalElevation = 1.dp,
-        shape = MaterialTheme.shapes.medium
+        border = BorderStroke(1.dp, borderColor)
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -603,24 +602,18 @@ private fun SessionListItem(
                     overflow = TextOverflow.Ellipsis
                 )
                 if (session.isTranscription) {
-                    AssistChip(
-                        onClick = {},
-                        enabled = false,
-                        label = { Text(text = "通话分析") },
-                        colors = AssistChipDefaults.assistChipColors(
-                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    AppBadge(
+                        text = "通话分析",
+                        background = AppPalette.Border,
+                        contentColor = AppPalette.MutedText
                     )
                 }
                 if (session.isCurrent) {
-                    AssistChip(
-                        onClick = {},
-                        enabled = false,
-                        label = { Text(text = "当前") },
-                        modifier = Modifier.testTag("${HomeScreenTestTags.SESSION_CURRENT_PREFIX}${session.id}"),
-                        colors = AssistChipDefaults.assistChipColors(
-                            labelColor = MaterialTheme.colorScheme.primary
-                        )
+                    AppBadge(
+                        text = "当前",
+                        background = AppPalette.Accent.copy(alpha = 0.12f),
+                        contentColor = AppPalette.Accent,
+                        modifier = Modifier.testTag("${HomeScreenTestTags.SESSION_CURRENT_PREFIX}${session.id}")
                     )
                 }
             }
@@ -630,13 +623,13 @@ private fun SessionListItem(
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = AppPalette.MutedText
                 )
             }
             Text(
                 text = formatSessionTime(session.updatedAtMillis),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AppPalette.MutedText
             )
         }
     }
@@ -647,6 +640,16 @@ private fun MessageBubble(
     message: ChatMessageUi,
     alignEnd: Boolean
 ) {
+    val containerColor = if (alignEnd) {
+        AppPalette.Accent.copy(alpha = 0.12f)
+    } else {
+        AppPalette.Card
+    }
+    val borderColor = if (alignEnd) {
+        AppPalette.Accent.copy(alpha = 0.5f)
+    } else {
+        AppPalette.Border
+    }
     val bubbleTag = if (alignEnd) {
         HomeScreenTestTags.USER_MESSAGE
     } else {
@@ -656,25 +659,24 @@ private fun MessageBubble(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 4.dp)
+            // 测试：为气泡打上唯一标签，方便 UI 自动化定位
             .testTag(bubbleTag),
         horizontalArrangement = if (alignEnd) Arrangement.End else Arrangement.Start
     ) {
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = if (alignEnd) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.secondaryContainer
-                }
-            )
+        AppCard(
+            containerColor = containerColor,
+            border = BorderStroke(1.dp, borderColor)
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(text = message.content)
+                Text(
+                    text = message.content,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 if (message.isStreaming) {
                     Text(
                         text = "AI 回复中...",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AppPalette.MutedText
                     )
                 }
                 if (message.hasError) {
@@ -700,34 +702,43 @@ private fun EmptyChatHint(
     enabled: Boolean,
     onQuickSkillSelected: (QuickSkillId) -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 32.dp, horizontal = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    AppCard(
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Text(text = "还没有对话，试试下面的快捷技能开始吧！")
-        QuickSkillRow(
-            skills = quickSkills,
-            enabled = enabled,
-            onQuickSkillSelected = onQuickSkillSelected
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 24.dp, horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = "还没有对话，试试下面的快捷技能开始吧！")
+            QuickSkillRow(
+                skills = quickSkills,
+                enabled = enabled,
+                onQuickSkillSelected = onQuickSkillSelected
+            )
+        }
     }
 }
 
 @Composable
 private fun EmptySessionHint(onNewChatClicked: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    AppCard(
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Text(text = "还没有对话，点击「新建对话」开始聊天")
-        TextButton(onClick = onNewChatClicked) {
-            Text(text = "新建对话")
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 24.dp, horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = "还没有对话，点击「新建对话」开始聊天")
+            AppGhostButton(
+                text = "新建对话",
+                onClick = onNewChatClicked
+            )
         }
     }
 }
@@ -743,13 +754,14 @@ private fun HomeInputArea(
     onQuickSkillSelected: (QuickSkillId) -> Unit,
     onClearSelectedSkill: () -> Unit
 ) {
-    Surface(
-        tonalElevation = 4.dp
+    AppCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding(),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -778,15 +790,19 @@ private fun HomeInputArea(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                TextButton(
+                AppGhostButton(
+                    text = "发送",
                     onClick = onSendClicked,
                     enabled = inputValue.isNotBlank() && enabled,
-                    modifier = Modifier.testTag(HomeScreenTestTags.SEND_BUTTON)
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "发送")
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "发送")
-                }
+                    modifier = Modifier.testTag(HomeScreenTestTags.SEND_BUTTON),
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "发送",
+                            tint = AppPalette.Accent
+                        )
+                    }
+                )
             }
         }
     }
@@ -799,10 +815,10 @@ private fun ActiveSkillChip(
     icon: ImageVector? = Icons.Filled.Lightbulb,
     onClear: () -> Unit
 ) {
-    Surface(
+    AppCard(
         modifier = modifier,
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        shape = MaterialTheme.shapes.large
+        border = BorderStroke(1.dp, AppPalette.Accent.copy(alpha = 0.4f)),
+        containerColor = AppPalette.Accent.copy(alpha = 0.08f)
     ) {
         Row(
             modifier = Modifier
@@ -819,13 +835,13 @@ private fun ActiveSkillChip(
                     Icon(
                         imageVector = it,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        tint = AppPalette.Accent
                     )
                 }
                 Text(
                     text = label,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                    color = AppPalette.Accent
                 )
             }
             IconButton(
@@ -867,22 +883,25 @@ private fun SessionHeader(
                     overflow = TextOverflow.Ellipsis
                 )
             if (session.isTranscription) {
-                AssistChip(
-                    onClick = {},
-                    enabled = false,
-                    label = { Text(text = "通话分析") },
-                    colors = AssistChipDefaults.assistChipColors(
-                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                AppBadge(
+                    text = "通话分析",
+                    background = AppPalette.Border,
+                    contentColor = AppPalette.MutedText
                 )
             }
         }
-        TextButton(
+        AppGhostButton(
+            text = "新建对话",
             onClick = onNewChatClicked,
-            modifier = Modifier.testTag(HomeScreenTestTags.NEW_CHAT_BUTTON)
-        ) {
-            Text(text = "新建对话")
-        }
+            modifier = Modifier.testTag(HomeScreenTestTags.NEW_CHAT_BUTTON),
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Filled.Add,
+                    contentDescription = null,
+                    tint = AppPalette.Accent
+                )
+            }
+        )
     }
 }
 
@@ -899,24 +918,22 @@ private fun QuickSkillRow(
     ) {
         items(skills, key = { it.id }) { skill ->
             val skillTag = "home_quick_skill_${skill.id}"
-            AssistChip(
+            AppGhostButton(
+                text = skill.label,
                 onClick = { onQuickSkillSelected(skill.id) },
-                enabled = enabled,
                 modifier = Modifier.testTag(skillTag),
-                label = {
-                    Text(
-                        text = skill.label,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                colors = AssistChipDefaults.assistChipColors(
-                    labelColor = if (skill.isRecommended) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
+                enabled = enabled,
+                leadingIcon = if (skill.isRecommended) {
+                    {
+                        Icon(
+                            imageVector = Icons.Filled.Lightbulb,
+                            contentDescription = null,
+                            tint = AppPalette.Accent
+                        )
                     }
-                )
+                } else {
+                    null
+                }
             )
         }
     }
@@ -955,17 +972,16 @@ private fun HistoryPanel(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(AppPalette.Background.copy(alpha = 0.6f))
                 .clickable(onClick = onDismiss)
         )
-        Surface(
+        AppCard(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .width(320.dp)
                 .fillMaxHeight()
                 .testTag(HomeScreenTestTags.HISTORY_PANEL),
-            tonalElevation = 6.dp,
-            shadowElevation = 8.dp,
-            color = MaterialTheme.colorScheme.surface
+            border = BorderStroke(1.dp, AppPalette.Border)
         ) {
             Column(
                 modifier = Modifier
@@ -978,24 +994,29 @@ private fun HistoryPanel(
                     Text(
                         text = "暂无历史会话，先开始一次对话吧。",
                         modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_EMPTY),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = AppPalette.MutedText
                     )
                 } else {
                     sessions.forEach { session ->
                         val isCurrent = session.id == currentSessionId
-                        Surface(
+                        val borderColor = if (isCurrent) {
+                            AppPalette.Accent.copy(alpha = 0.4f)
+                        } else {
+                            AppPalette.Border
+                        }
+                        AppCard(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
                                     onSessionSelected(session.id)
                                 }
                                 .testTag("${HomeScreenTestTags.HISTORY_ITEM_PREFIX}${session.id}"),
-                            color = if (isCurrent) {
-                                MaterialTheme.colorScheme.primaryContainer
+                            border = BorderStroke(1.dp, borderColor),
+                            containerColor = if (isCurrent) {
+                                AppPalette.Accent.copy(alpha = 0.08f)
                             } else {
-                                MaterialTheme.colorScheme.surfaceVariant
-                            },
-                            tonalElevation = if (isCurrent) 4.dp else 1.dp
+                                AppPalette.Card
+                            }
                         ) {
                             Column(
                                 modifier = Modifier.padding(12.dp),
@@ -1013,13 +1034,13 @@ private fun HistoryPanel(
                                         style = MaterialTheme.typography.bodyMedium,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = AppPalette.MutedText
                                     )
                                 }
                                 Text(
                                     text = formatSessionTime(session.updatedAtMillis),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = AppPalette.MutedText
                                 )
                             }
                         }

@@ -1,0 +1,190 @@
+---
+
+# **SmartSales Multi-Agent Role Contract (Condensed ≤150 lines)**
+
+## 1. Roles
+
+### 1.1 Operator (Human)
+
+* Does not write production code.
+* Sends Orchestrator prompts to Codex.
+* Runs builds, tests, manual QA.
+* Maintains `progress-log.md` as the canonical timeline.
+* Can override any role if unsafe or unclear.
+
+### 1.2 Orchestrator (Default ChatGPT)
+
+* Produces specs, flows, frozen tasks, and module boundaries.
+* Never writes implementation code unless explicitly allowed.
+* Creates **copy-paste-ready** Codex prompts.
+* Chooses and declares the Codex **MODE** (`ANALYSIS ONLY`, `IMPLEMENTATION`, or `HYBRID`) at the top of each Codex prompt.
+* Ensures tasks follow all project docs.
+* Applies **modular, no-overengineering** principles.
+* Ensures each task is small, scoped, testable, and isolated.
+* Must follow the mandatory Orchestrator Response Format.
+
+### 1.3 Codex (Explicit “Codex:”)
+
+* Implements code, diffs, and refactors exactly as Orchestrator specifies.
+* Never alters requirements.
+* Always starts its reply with an **evidence-based self-evaluation** section.
+* Obeys the MODE declared by the Orchestrator:
+  * `ANALYSIS ONLY` → **no code / no file edits**.
+  * `IMPLEMENTATION` → may edit code in the same reply **after** self-evaluation.
+  * `HYBRID` → may combine deeper analysis + implementation in one reply, but still **self-eval first**.
+* Stops safely if ambiguity is detected.
+* Waits for explicit Operator / Orchestrator unlock before performing implementation when the MODE is `ANALYSIS ONLY`.
+
+---
+
+## 2. Invocation Rules
+
+* **No prefix** → Orchestrator mode.
+* **“Codex:” prefix** → Codex mode.
+* Orchestrator must include a leading line in every Codex prompt:  
+  `MODE: ANALYSIS ONLY (NO CODE CHANGES)` **or**  
+  `MODE: IMPLEMENTATION` **or**  
+  `MODE: HYBRID`.
+* Operator chooses which role to invoke and when.
+
+---
+
+## 3. Output Rules
+
+### 3.1 Orchestrator Output
+
+* Allowed: specs, flows, tasks, prompts.
+* Not allowed: production code (unless explicitly requested).
+* Codex prompts must be self-contained and ready to paste.
+* Use minimal codeblocks.
+* Each Codex prompt must clearly describe:
+  * The MODE (analysis / implementation / hybrid).
+  * Scope limits (which files, which behaviors).
+  * Whether Codex may modify files or must stay read-only.
+
+### 3.2 Codex Output
+
+* In **all modes**, the reply begins with **Self-evaluation (evidence-based)**.
+* In `ANALYSIS ONLY` mode:
+  * Codex may **only** read, reason, and propose plans.
+  * No code edits, no diffs, no “pretend edits”.
+* In `IMPLEMENTATION` mode:
+  * Codex self-evaluates first, then writes implementation code / diffs in the same reply.
+* In `HYBRID` mode:
+  * Codex can do deeper analysis plus implementation in one reply, but still:
+    * Self-eval first,
+    * Then clearly separate analysis vs changes.
+* May propose optional improvements only **after** completing the requested scope.
+
+### 3.3 Mandatory Codex Self-Evaluation
+
+Must include:
+
+1. Interpretation
+2. Assumptions
+3. Ambiguities / missing info
+4. Risks
+5. Consistency check (role-contract + project docs)
+
+If critical issue:  
+**“Critical issue detected — pausing implementation. Awaiting Orchestrator clarification.”**
+
+---
+
+## 4. Collaboration Loop
+
+### 4.1 Default Two-Phase Loop (Analysis then Implementation)
+
+1. Orchestrator creates task + Codex prompt with  
+   `MODE: ANALYSIS ONLY (NO CODE CHANGES)`.
+2. Operator sends prompt to Codex.
+3. Codex returns **self-evaluation + analysis + plan only**.
+4. Operator forwards to Orchestrator.
+5. Orchestrator approves / corrects the plan.
+6. Orchestrator issues a second Codex prompt with  
+   `MODE: IMPLEMENTATION` (or `HYBRID`) summarizing the approved plan.
+7. Codex implements.
+8. Operator runs builds/tests and relays results.
+9. Orchestrator validates and issues next task.
+
+### 4.2 Direct Implementation / Hybrid (When Explicitly Requested)
+
+* Orchestrator may skip the two-phase loop and send a Codex prompt with  
+  `MODE: IMPLEMENTATION` or `MODE: HYBRID` when:
+  * The change is small, low-risk, and well-specified.
+* Codex still must:
+  * Start with self-evaluation,
+  * Respect the MODE (no edits in `ANALYSIS ONLY`).
+
+---
+
+## 5. Source of Truth Priority
+
+1. role-contract.md
+2. Operator explicit directives
+3. progress-log.md
+4. api-contracts.md
+5. ui-int-workflow.md
+6. frontend_inte_plan.md
+7. react-ui-reference.md
+8. AGENTS.md
+
+Higher overrides lower.
+
+---
+
+## 6. Stability & Safety
+
+### 6.1 No Requirement Drift
+
+Codex may not reinterpret tasks.
+
+### 6.2 Minimal-Assumption Principle
+
+If unspecified → choose the simplest option consistent with docs.
+
+### 6.3 No Hidden Refactors
+
+Structural or architectural changes require Orchestrator approval.
+
+### 6.4 Task Isolation
+
+Tasks must not depend on future steps.
+
+### 6.5 Evidence-Based Reasoning
+
+Both Orchestrator and Codex must base decisions on real repo files, logs, or explicit directives.
+
+---
+
+## 7. Orchestrator Mandatory Response Format
+
+Every Orchestrator task must include:
+
+1. **Task Title**
+2. **One-sentence overview**
+3. **Codex Prompt** (copy-paste-ready, with MODE header)
+4. **Context** (progress + relevant modules)
+5. **Operator Instructions** (3–4 steps)
+6. **Git Reminder** (when to commit & push)
+
+Additional:
+
+* Avoid large codeblocks.
+* Keep tasks modular and non-overengineered.
+* Include test + manual QA checklist when relevant.
+* Include a small “Tooling / Commands” section when external commands (Gradle, logcat, etc.) will help provide evidence back to the Orchestrator.
+
+---
+
+## 8. Project Stability Guarantee
+
+* Orchestrator ensures tasks never conflict.
+* Codex ensures implementation matches current integration state.
+* UI, tests, and feature behaviors must remain stable after every task.
+
+---
+
+**End of Contract**
+
+---

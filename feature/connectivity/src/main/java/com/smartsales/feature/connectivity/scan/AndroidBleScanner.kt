@@ -1,5 +1,6 @@
 package com.smartsales.feature.connectivity.scan
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
@@ -7,6 +8,9 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
 import com.smartsales.feature.connectivity.BlePeripheral
 import com.smartsales.feature.connectivity.BleProfileConfig
 import com.smartsales.feature.connectivity.ConnectivityLogger
@@ -32,6 +36,7 @@ class AndroidBleScanner @Inject constructor(
     private val profiles: List<BleProfileConfig>
 ) : BleScanner {
 
+    private val appContext = context
     private val scope = CoroutineScope(Dispatchers.Main.immediate)
     private val adapter: BluetoothAdapter? = bluetoothManager.adapter
     private val scanner get() = adapter?.bluetoothLeScanner
@@ -77,7 +82,17 @@ class AndroidBleScanner @Inject constructor(
         _isScanning.value = false
     }
 
+    @SuppressLint("MissingPermission")
     private fun handleResult(result: ScanResult) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            ContextCompat.checkSelfPermission(
+                appContext,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ConnectivityLogger.d("缺少 BLUETOOTH_CONNECT 权限，忽略扫描结果")
+            return
+        }
         val device = result.device ?: return
         val displayName = device.name ?: result.scanRecord?.deviceName ?: ""
         val advertise = result.scanRecord

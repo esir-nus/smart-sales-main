@@ -80,9 +80,12 @@ class LocalAudioStorageRepository @Inject constructor(
 
     private fun File.toStoredAudio(origin: AudioOrigin): StoredAudio {
         val duration = runCatching {
-            MediaMetadataRetriever().use { retriever ->
+            val retriever = MediaMetadataRetriever()
+            try {
                 retriever.setDataSource(absolutePath)
                 retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong()
+            } finally {
+                retriever.release()
             }
         }.getOrNull()
         return StoredAudio(

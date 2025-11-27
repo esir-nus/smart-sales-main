@@ -1,0 +1,2 @@
+com.alibaba.sdk.android.oss_android_sdk
+string app_name

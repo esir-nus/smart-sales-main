@@ -1,0 +1,13 @@
+io.opentracing.noop.NoopScopeManager
+io.opentracing.noop.NoopScopeManager$NoopScope
+io.opentracing.noop.NoopScopeManagerImpl
+io.opentracing.noop.NoopScopeManagerImpl$NoopScopeImpl
+io.opentracing.noop.NoopSpan
+io.opentracing.noop.NoopSpanBuilder
+io.opentracing.noop.NoopSpanBuilderImpl
+io.opentracing.noop.NoopSpanContext
+io.opentracing.noop.NoopSpanContextImpl
+io.opentracing.noop.NoopSpanImpl
+io.opentracing.noop.NoopTracer
+io.opentracing.noop.NoopTracerFactory
+io.opentracing.noop.NoopTracerImpl

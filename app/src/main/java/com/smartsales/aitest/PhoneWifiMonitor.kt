@@ -77,13 +77,20 @@ class AndroidPhoneWifiMonitor @Inject constructor(
             val request = NetworkRequest.Builder()
                 .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
                 .build()
-            val manager = connectivityManager
-            runCatching { manager?.registerNetworkCallback(request, networkCallback) }
+            registerNetworkCallbackIfPermitted(request)
         } else {
             val filter = IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION).apply {
                 addAction(ConnectivityManager.CONNECTIVITY_ACTION)
             }
             context.registerReceiver(wifiReceiver, filter)
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun registerNetworkCallbackIfPermitted(request: NetworkRequest) {
+        val manager = connectivityManager
+        if (hasNetworkPermission()) {
+            runCatching { manager?.registerNetworkCallback(request, networkCallback) }
         }
     }
 
@@ -104,6 +111,12 @@ class AndroidPhoneWifiMonitor @Inject constructor(
             null
         }
     }
+
+    private fun hasNetworkPermission(): Boolean =
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_NETWORK_STATE
+        ) == PackageManager.PERMISSION_GRANTED
 
     private fun hasLocationPermission(): Boolean =
         ContextCompat.checkSelfPermission(

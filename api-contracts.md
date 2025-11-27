@@ -6,6 +6,12 @@ This document is the single source of truth for every API/protocol that the Andr
 2. **Android binding** – which Kotlin classes talk to the interface and how.  
 3. **Code location** – module plus file path so anyone can open the implementation quickly.
 
+## Quick Start (for clients)
+- DashScope：`POST https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation`，Header `Authorization: Bearer <DASHSCOPE_API_KEY>`，超时约 10s+，重试 300ms 递增。
+- Tingwu：`https://<region>.aliyuncs.com/openapi/tingwu/v2/`，需 ROA 签名头（`x-acs-*`，`x-tingwu-app-key`）；浏览器需走后端代理，勿暴露密钥。
+- OSS：上传/预签名仅在后端执行，前端请调用后端获取上传/下载 URL，不要在浏览器暴露 AccessKey。
+- 设备媒体服务器：`http://<host>:<port>`（BLE 查询或手输），接口 `/files`、`/upload`、`/apply/{filename}`、`/delete/{filename}`，超时 10–15s。
+
 ## Cloud AI & Export Interfaces
 
 ### DashScope Text Generation (HTTP)
@@ -16,6 +22,23 @@ This document is the single source of truth for every API/protocol that the Andr
   - Error policy: all failures map to `AiCoreException(source=DASH_SCOPE, reason=MISSING_CREDENTIALS|NETWORK|TIMEOUT|REMOTE|UNKNOWN)`. `AiCoreConfig.dashscopeMaxRetries` controls retry count with a 300 ms incremental backoff, and `dashscopeRequestTimeoutMillis` protects synchronous calls via `withTimeout`.
   - Positive run: valid credentials + prompt → `DashscopeCompletion.displayText="您好，以下是建议..."`, final markdown contains “## 输入摘要”.  
     Negative run: blank `apiKey` triggers `AiCoreException(source=DASH_SCOPE, reason=MISSING_CREDENTIALS)` before the HTTP call happens.
+  - Example request:
+    ```json
+    POST /api/v1/services/aigc/text-generation/generation
+    Authorization: Bearer <DASHSCOPE_API_KEY>
+    {
+      "model": "qwen-max",
+      "messages": [
+        {"role": "system", "content": "你是智能销售助手..."},
+        {"role": "user", "content": "请总结会议要点"}
+      ],
+      "temperature": 0.3
+    }
+    ```
+  - Example response:
+    ```json
+    { "output": { "text": "您好，以下是建议..." } }
+    ```
 - **Android binding (Kotlin)**:
   - `DashscopeAiChatService` implements `AiChatService`, builds requests, handles retries/markdown, and exposes both unary and streaming flows.
   - `DefaultDashscopeClient` wraps the DashScope SDK (`Generation.call` / `streamCall`) and emits `DashscopeStreamEvent`.
@@ -36,6 +59,21 @@ This document is the single source of truth for every API/protocol that the Andr
   - Error policy: HTTP/network exceptions or malformed JSON map to `AiCoreException(source=TINGWU, reason=MISSING_CREDENTIALS|NETWORK|TIMEOUT|REMOTE|IO|UNKNOWN)` with suggestions (e.g., “启用 AiCoreConfig.enableTingwuHttpDns”). Timeouts fire when global or per-task limits lapse. Missing `taskId` or empty `Data` also throw `AiCoreException`.
   - Positive run: `PUT /tasks?type=offline` → `code:0, data:{taskId:"tw-001"}`; poller shows “转写中” and finally `TingwuJobState.Completed` with markdown + artifacts.  
     Negative run: `GET /tasks/{id}` returning `code:500, message:"signature invalid"` becomes `AiCoreException(reason=REMOTE)` prompting ROA signature review.
+  - Example create task body:
+    ```json
+    {
+      "AppKey": "<app-key>",
+      "Input": {"SourceLanguage": "zh-CN", "TaskKey": "task-123", "FileUrl": "https://oss/xxx.wav"},
+      "Parameters": {
+        "transcription": {"diarizationEnabled": true, "model": "general"},
+        "summarization": {"types": ["Paragraph"]}
+      }
+    }
+    ```
+  - Example status response:
+    ```json
+    {"code":0,"data":{"taskStatus":"COMPLETED","taskProgress":100,"Result":{"Transcription":"..."}}}
+    ```
 - **Android binding (Kotlin)**:
   - `RealTingwuCoordinator` implements `TingwuCoordinator`, glues job submission, polling, markdown assembly, and artifact hydration.
   - `TingwuApi` (Retrofit interface) plus `TingwuNetworkModule` build the HTTP stack (OkHttp with ROA signing, optional HTTPDNS/logging, configurable base URL).
@@ -53,6 +91,7 @@ This document is the single source of truth for every API/protocol that the Andr
   - Credentials are read from `local.properties` (`OSS_ACCESS_KEY_ID`, `OSS_ACCESS_KEY_SECRET`, `OSS_BUCKET_NAME`, `OSS_ENDPOINT`). Missing data short-circuits with `AiCoreException(source=OSS, reason=MISSING_CREDENTIALS)`.
   - Positive run: `PutObject` returns 2xx with `eTag`, presigned URL is stored in `OssUploadResult`.  
     Negative run: invalid bucket name or expired key triggers `ServiceException`, mapped to `AiCoreException(reason=REMOTE)` with `requestId` logged for support.
+  - Web client note: do not expose AccessKey in browser; use a backend to upload and presign, returning signed URLs to the client.
 - **Android binding (Kotlin)**:
   - `RealOssUploadClient` implements `OssUploadClient`, validates the input file, builds the SDK client, executes uploads, and wraps errors.
   - `RealOssSignedUrlProvider` implements `OssSignedUrlProvider` for presigning existing objects, reusing the same credential provider.

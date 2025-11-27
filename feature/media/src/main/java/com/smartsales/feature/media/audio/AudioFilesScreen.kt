@@ -5,6 +5,7 @@ package com.smartsales.feature.media.audio
 // 说明：音频库 Compose 界面，重构卡片列表与转写查看底sheet，突出同步与转写状态
 // 作者：创建于 2025-11-26
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -33,18 +34,16 @@ import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
-import androidx.compose.material3.ElevatedAssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -63,6 +62,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.smartsales.feature.media.audio.TingwuSmartSummaryUi
 import com.smartsales.feature.media.audio.TingwuChapterUi
+import com.smartsales.feature.media.ui.AppCard
+import com.smartsales.feature.media.ui.AppGhostButton
+import com.smartsales.feature.media.ui.AppPalette
+import com.smartsales.feature.media.ui.AppShapes
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -106,12 +109,13 @@ fun AudioFilesScreen(
         Column(
             modifier = Modifier
                 .padding(innerPadding)
+                .background(AppPalette.Background)
                 .padding(horizontal = 16.dp, vertical = 12.dp)
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (uiState.isSyncing) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                SyncingBanner()
             }
             uiState.errorMessage?.let { message ->
                 ErrorBanner(
@@ -128,9 +132,17 @@ fun AudioFilesScreen(
                     onDismiss = onErrorDismissed,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                TextButton(onClick = onRefresh) {
-                    Text(text = "重试")
-                }
+                AppGhostButton(
+                    text = "重试加载",
+                    onClick = onRefresh,
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null,
+                            tint = AppPalette.Accent
+                        )
+                    }
+                )
             }
             when {
                 uiState.isLoading -> LoadingState()
@@ -255,6 +267,26 @@ private fun buildStatusDisplay(
 }
 
 @Composable
+private fun SyncingBanner() {
+    AppCard {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            LinearProgressIndicator(modifier = Modifier.weight(1f))
+            Text(
+                text = "正在同步录音…",
+                style = MaterialTheme.typography.bodyMedium,
+                color = AppPalette.MutedText,
+            )
+        }
+    }
+}
+
+@Composable
 private fun AudioRecordingCard(
     recording: AudioRecordingUi,
     isSyncing: Boolean,
@@ -267,12 +299,19 @@ private fun AudioRecordingCard(
     modifier: Modifier = Modifier,
 ) {
     val statusDisplay = buildStatusDisplay(recording, isSyncing)
-    Card(
+    AppCard(
         modifier = modifier
             .fillMaxWidth()
             .testTag("${AudioFilesTestTags.CARD_PREFIX}${recording.id}")
             .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (recording.isPlaying) {
+                AppPalette.Accent.copy(alpha = 0.4f)
+            } else {
+                AppPalette.Border
+            }
+        ),
     ) {
         Column(
             modifier = Modifier
@@ -305,7 +344,7 @@ private fun AudioRecordingCard(
                             append(" · ${recording.fileName}")
                         },
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = AppPalette.MutedText,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -330,69 +369,87 @@ private fun AudioRecordingCard(
             Text(
                 text = statusDisplay.statusLine,
                 style = MaterialTheme.typography.bodyMedium,
+                color = AppPalette.MutedText,
                 modifier = Modifier.testTag("${AudioFilesTestTags.STATUS_TEXT_PREFIX}${recording.id}"),
             )
+            Divider()
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = { onPlayPauseClicked(recording.id) }) {
+                IconButton(
+                    onClick = { onPlayPauseClicked(recording.id) },
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = AppPalette.Accent),
+                ) {
                     Icon(
                         imageVector = if (recording.isPlaying) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
                         contentDescription = if (recording.isPlaying) "暂停" else "播放",
                     )
                 }
-                TextButton(onClick = onSyncClicked) {
-                    Icon(Icons.Default.Sync, contentDescription = null)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "同步")
-                }
+                AppGhostButton(
+                    text = "同步",
+                    onClick = onSyncClicked,
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Sync,
+                            contentDescription = null,
+                            tint = AppPalette.Accent
+                        )
+                    }
+                )
                 when (recording.transcriptionStatus) {
                     TranscriptionStatus.NONE -> {
-                        TextButton(
+                        AppGhostButton(
+                            text = "转写",
                             onClick = { onTranscribeClicked(recording.id) },
                             modifier = Modifier.testTag("${AudioFilesTestTags.TRANSCRIBE_BUTTON_PREFIX}${recording.id}"),
-                        ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = null)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "转写")
-                        }
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    tint = AppPalette.Accent
+                                )
+                            }
+                        )
                     }
                     TranscriptionStatus.ERROR -> {
-                        TextButton(
+                        AppGhostButton(
+                            text = "重新转写",
                             onClick = { onTranscribeClicked(recording.id) },
                             modifier = Modifier.testTag("${AudioFilesTestTags.TRANSCRIBE_BUTTON_PREFIX}${recording.id}"),
-                        ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(text = "重新转写")
-                        }
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Refresh,
+                                    contentDescription = null,
+                                    tint = AppPalette.Accent
+                                )
+                            }
+                        )
                     }
                     TranscriptionStatus.IN_PROGRESS -> {
-                        ElevatedAssistChip(
-                            onClick = {},
-                            label = { Text(text = "转写中…") },
-                            leadingIcon = {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(14.dp),
-                                    strokeWidth = 2.dp,
-                                )
-                            },
+                        StatusBadge(
+                            label = "转写中…",
+                            color = MaterialTheme.colorScheme.primary,
+                            icon = Icons.Default.HourglassEmpty,
                         )
                     }
                     TranscriptionStatus.DONE -> {
-                        TextButton(
+                        AppGhostButton(
+                            text = "查看转写",
                             onClick = { onTranscriptClicked(recording.id) },
                             modifier = Modifier.testTag("${AudioFilesTestTags.TRANSCRIPT_BUTTON_PREFIX}${recording.id}"),
-                        ) {
-                            Text(text = "查看转写")
-                        }
+                        )
                     }
                 }
                 Spacer(modifier = Modifier.weight(1f))
-                TextButton(onClick = { onDeleteClicked(recording.id) }) {
-                    Icon(Icons.Default.Delete, contentDescription = null)
+                TextButton(
+                    onClick = { onDeleteClicked(recording.id) },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(text = "删除")
                 }
@@ -408,31 +465,32 @@ private fun StatusBadge(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     tag: String? = null,
 ) {
-    ElevatedAssistChip(
-        modifier = tag?.let { Modifier.testTag(it) } ?: Modifier,
-        onClick = {},
-        label = {
-            Text(
-                text = label,
-                color = color,
-                fontWeight = FontWeight.Medium,
-            )
-        },
-        leadingIcon = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = color,
-            )
-        },
-    )
+    Row(
+        modifier = (tag?.let { Modifier.testTag(it) } ?: Modifier)
+            .background(color.copy(alpha = 0.12f), shape = AppShapes.ButtonShape)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(16.dp),
+        )
+        Text(
+            text = label,
+            color = color,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+        )
+    }
 }
 
 @Composable
 private fun EmptyState(onRefresh: () -> Unit, modifier: Modifier = Modifier) {
-    Card(
+    AppCard(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Column(
             modifier = Modifier
@@ -444,13 +502,19 @@ private fun EmptyState(onRefresh: () -> Unit, modifier: Modifier = Modifier) {
             Text(
                 text = "暂无录音 · 请先从设备同步。",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = AppPalette.MutedText,
             )
-            TextButton(onClick = onRefresh) {
-                Icon(Icons.Default.Refresh, contentDescription = null)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(text = "同步最新录音")
-            }
+            AppGhostButton(
+                text = "同步最新录音",
+                onClick = onRefresh,
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = null,
+                        tint = AppPalette.Accent
+                    )
+                }
+            )
         }
     }
 }
@@ -461,36 +525,48 @@ private fun ErrorBanner(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier
-            .background(MaterialTheme.colorScheme.errorContainer)
-            .padding(12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+    AppCard(
+        modifier = modifier,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
     ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onErrorContainer,
-        )
-        TextButton(onClick = onDismiss) {
-            Text(text = "知道了")
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.errorContainer)
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            TextButton(onClick = onDismiss) {
+                Text(text = "知道了", color = MaterialTheme.colorScheme.onErrorContainer)
+            }
         }
     }
 }
 
 @Composable
 private fun LoadingState() {
-    Column(
+    AppCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(220.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        CircularProgressIndicator()
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(text = "正在加载录音…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            CircularProgressIndicator()
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(text = "正在加载录音…", color = AppPalette.MutedText)
+        }
     }
 }
 
@@ -523,6 +599,7 @@ private fun TranscriptViewerSheet(
     ModalBottomSheet(
         modifier = Modifier.testTag(AudioFilesTestTags.TRANSCRIPT_DIALOG),
         onDismissRequest = onDismiss,
+        containerColor = AppPalette.Background,
     ) {
         Column(
             modifier = Modifier
@@ -531,90 +608,110 @@ private fun TranscriptViewerSheet(
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            AppCard {
                 Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Text(text = recording.fileName, style = MaterialTheme.typography.titleMedium)
-                    val durationText = recording.durationMillis?.let { formatDuration(it) }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Text(text = recording.fileName, style = MaterialTheme.typography.titleMedium)
+                            val durationText = recording.durationMillis?.let { formatDuration(it) }
+                            Text(
+                                text = listOfNotNull(durationText, recording.createdAtText.takeIf { it.isNotBlank() })
+                                    .joinToString(" · ")
+                                    .ifBlank { "基础信息缺失" },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppPalette.MutedText,
+                            )
+                        }
+                        StatusBadge(
+                            label = statusLabel,
+                            color = statusColor,
+                            icon = when (recording.transcriptionStatus) {
+                                TranscriptionStatus.DONE -> Icons.Default.CheckCircle
+                                TranscriptionStatus.ERROR -> Icons.Default.Error
+                                TranscriptionStatus.IN_PROGRESS -> Icons.Default.HourglassEmpty
+                                TranscriptionStatus.NONE -> Icons.Default.HourglassEmpty
+                            },
+                            tag = AudioFilesTestTags.TRANSCRIPT_STATUS,
+                        )
+                    }
                     Text(
-                        text = listOfNotNull(durationText, recording.createdAtText.takeIf { it.isNotBlank() })
-                            .joinToString(" · ")
-                            .ifBlank { "基础信息缺失" },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = statusMessage,
+                        color = statusColor,
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                StatusBadge(
-                    label = statusLabel,
-                    color = statusColor,
-                    icon = when (recording.transcriptionStatus) {
-                        TranscriptionStatus.DONE -> Icons.Default.CheckCircle
-                        TranscriptionStatus.ERROR -> Icons.Default.Error
-                        TranscriptionStatus.IN_PROGRESS -> Icons.Default.HourglassEmpty
-                        TranscriptionStatus.NONE -> Icons.Default.HourglassEmpty
-                    },
-                    tag = AudioFilesTestTags.TRANSCRIPT_STATUS,
-                )
             }
-            Text(
-                text = statusMessage,
-                color = statusColor,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Divider()
             val summary = recording.smartSummary?.takeIf { it.isMeaningful() }
             summary?.let {
-                SummaryBlock(
-                    summary = it,
-                    modifier = Modifier.testTag(AudioFilesTestTags.TRANSCRIPT_SUMMARY),
-                )
-                Divider()
-            }
-            Text(
-                text = "完整逐字稿",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            TranscriptContent(recording = recording)
-            recording.chapters?.let { chapters ->
-                Divider()
-                Text(
-                    text = "章节",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                if (chapters.isEmpty()) {
-                    Text(
-                        text = "暂无章节信息",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                AppCard {
+                    SummaryBlock(
+                        summary = it,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(AudioFilesTestTags.TRANSCRIPT_SUMMARY),
                     )
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        chapters.forEach { chapter ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    text = formatChapterTime(chapter.startMs),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
-                                Text(
-                                    text = chapter.title,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
+                }
+            }
+            AppCard {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Text(
+                        text = "完整逐字稿",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    TranscriptContent(recording = recording)
+                    recording.chapters?.let { chapters ->
+                        Divider()
+                        Text(
+                            text = "章节",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        if (chapters.isEmpty()) {
+                            Text(
+                                text = "暂无章节信息",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AppPalette.MutedText,
+                            )
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                chapters.forEach { chapter ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            text = formatChapterTime(chapter.startMs),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = AppPalette.Accent,
+                                        )
+                                        Text(
+                                            text = chapter.title,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -631,26 +728,32 @@ private fun TranscriptViewerSheet(
                         onAskAiClicked(recording)
                     },
                     modifier = Modifier.weight(1f),
+                    shape = AppShapes.ButtonShape,
                 ) {
                     Text(text = "用 AI 分析本次通话")
                 }
                 if (recording.transcriptionStatus == TranscriptionStatus.ERROR) {
-                    OutlinedButton(
+                    AppGhostButton(
+                        text = "重新转写",
                         onClick = {
                             onDismiss()
                             onRetranscribeClicked(recording.id)
                         },
-                    ) {
-                        Text(text = "重新转写")
-                    }
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                tint = AppPalette.Accent
+                            )
+                        }
+                    )
                 }
             }
-            TextButton(
+            AppGhostButton(
+                text = "关闭",
                 onClick = onDismiss,
                 modifier = Modifier.align(Alignment.End),
-            ) {
-                Text(text = "关闭")
-            }
+            )
         }
     }
 }
@@ -670,14 +773,16 @@ private fun TranscriptContent(recording: AudioRecordingUi) {
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         content.lines().forEach { line ->
+            val (textStyle, textColor) = when {
+                line.startsWith("##") -> MaterialTheme.typography.titleSmall to MaterialTheme.colorScheme.onSurface
+                line.startsWith("#") -> MaterialTheme.typography.titleMedium to MaterialTheme.colorScheme.onSurface
+                line.startsWith("- ") -> MaterialTheme.typography.bodyMedium to AppPalette.MutedText
+                else -> MaterialTheme.typography.bodyMedium to AppPalette.MutedText
+            }
             Text(
                 text = formatMarkdownLite(line),
-                style = when {
-                    line.startsWith("##") -> MaterialTheme.typography.titleSmall
-                    line.startsWith("#") -> MaterialTheme.typography.titleMedium
-                    line.startsWith("- ") -> MaterialTheme.typography.bodyMedium
-                    else -> MaterialTheme.typography.bodyMedium
-                },
+                style = textStyle,
+                color = textColor,
             )
         }
     }
@@ -714,7 +819,7 @@ private fun SummaryBlock(
         Text(
             text = "AI 智能总结",
             style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = AppPalette.MutedText,
         )
         summary.summary?.takeIf { it.isNotBlank() }?.let {
             Text(
@@ -730,7 +835,7 @@ private fun SummaryBlock(
                     Text(
                         text = "• $point",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = AppPalette.MutedText,
                     )
                 }
             }
@@ -742,7 +847,7 @@ private fun SummaryBlock(
                     Text(
                         text = "• $item",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = AppPalette.MutedText,
                     )
                 }
             }

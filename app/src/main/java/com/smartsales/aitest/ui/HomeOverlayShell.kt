@@ -6,23 +6,32 @@ package com.smartsales.aitest.ui
 // 作者：创建于 2025-11-26
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.testTag
-import com.smartsales.aitest.AiFeatureTestTags
 
 enum class OverlayPage { Home, Audio, Device }
 
@@ -91,33 +100,97 @@ fun HomeOverlayShell(
                     }
                 }
         ) {
-            Box(
+            OverlayLayer(
                 modifier = Modifier
                     .fillMaxSize()
                     .testTag(HomeOverlayTestTags.AUDIO_LAYER)
                     .zIndex(if (currentPage == OverlayPage.Audio) 1f else 0f)
                     .offset(y = audioOffset),
+                isActive = currentPage == OverlayPage.Audio
             ) {
                 audioContent()
             }
-            Box(
+            OverlayLayer(
                 modifier = Modifier
                     .fillMaxSize()
                     .testTag(HomeOverlayTestTags.HOME_LAYER)
                     .zIndex(if (currentPage == OverlayPage.Home) 2f else 0f)
                     .offset(y = homeOffset),
+                isActive = currentPage == OverlayPage.Home
             ) {
                 homeContent()
             }
-            Box(
+            OverlayLayer(
                 modifier = Modifier
                     .fillMaxSize()
                     .testTag(HomeOverlayTestTags.DEVICE_LAYER)
                     .zIndex(if (currentPage == OverlayPage.Device) 1f else 0f)
                     .offset(y = deviceOffset),
+                isActive = currentPage == OverlayPage.Device
             ) {
                 deviceManagerContent()
             }
         }
     }
+}
+
+/** 单层容器，增加柔和背景、抓手与模糊效果，贴近 React 叠层视觉。 */
+@Composable
+private fun OverlayLayer(
+    modifier: Modifier,
+    isActive: Boolean,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .padding(horizontal = 8.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = if (isActive) {
+                        listOf(Color(0xFFF7FAFF), Color.White)
+                    } else {
+                        listOf(Color(0xFFF3F5FB), Color(0xFFE9EDF5))
+                    }
+                )
+            )
+            .then(if (isActive) Modifier else Modifier.blur(10.dp)),
+    ) {
+        OverlayHandle(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 10.dp),
+            isActive = isActive
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 18.dp, start = 8.dp, end = 8.dp, bottom = 8.dp)
+        ) {
+            content()
+        }
+    }
+}
+
+/** 顶部抓手条，方便用户感知拖拽切换。 */
+@Composable
+private fun OverlayHandle(
+    modifier: Modifier = Modifier,
+    isActive: Boolean
+) {
+    Box(
+        modifier = modifier
+            .width(54.dp)
+            .height(8.dp)
+            .clip(RoundedCornerShape(50))
+            .background(
+                brush = Brush.horizontalGradient(
+                    colors = if (isActive) {
+                        listOf(Color(0xFF4B7BEC).copy(alpha = 0.35f), Color(0xFF4B7BEC).copy(alpha = 0.18f))
+                    } else {
+                        listOf(Color.Black.copy(alpha = 0.10f), Color.Black.copy(alpha = 0.06f))
+                    }
+                )
+            )
+    )
 }

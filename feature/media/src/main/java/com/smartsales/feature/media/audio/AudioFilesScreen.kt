@@ -49,7 +49,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -63,8 +62,12 @@ import androidx.compose.ui.unit.dp
 import com.smartsales.feature.media.audio.TingwuSmartSummaryUi
 import com.smartsales.feature.media.audio.TingwuChapterUi
 import com.smartsales.feature.media.ui.AppCard
+import com.smartsales.feature.media.ui.AppDivider
+import com.smartsales.feature.media.ui.AppGlassCard
 import com.smartsales.feature.media.ui.AppGhostButton
 import com.smartsales.feature.media.ui.AppPalette
+import com.smartsales.feature.media.ui.AppSectionHeader
+import com.smartsales.feature.media.ui.AppSurface
 import com.smartsales.feature.media.ui.AppShapes
 
 @Composable
@@ -89,90 +92,100 @@ fun AudioFilesScreen(
             .fillMaxSize()
             .testTag(AudioFilesTestTags.ROOT),
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text(text = "录音文件") },
-                actions = {
-                    IconButton(
-                        onClick = onSyncClicked,
-                        modifier = Modifier.testTag(AudioFilesTestTags.SYNC_BUTTON),
-                    ) {
-                        Icon(Icons.Default.Sync, contentDescription = "同步录音")
-                    }
-                    IconButton(onClick = onRefresh) {
-                        Icon(Icons.Default.Refresh, contentDescription = "刷新")
-                    }
-                },
-            )
-        },
     ) { innerPadding ->
-        Column(
+        AppSurface(
             modifier = Modifier
                 .padding(innerPadding)
-                .background(AppPalette.Background)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .fillMaxSize()
         ) {
-            if (uiState.isSyncing) {
-                SyncingBanner()
-            }
-            uiState.errorMessage?.let { message ->
-                ErrorBanner(
-                    message = message,
-                    onDismiss = onErrorDismissed,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag(AudioFilesTestTags.ERROR_BANNER),
-                )
-            }
-            uiState.loadErrorMessage?.let {
-                ErrorBanner(
-                    message = "加载录音失败，请稍后重试。",
-                    onDismiss = onErrorDismissed,
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 8.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                )
-                AppGhostButton(
-                    text = "重试加载",
-                    onClick = onRefresh,
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = null,
-                            tint = AppPalette.Accent
-                        )
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    AppSectionHeader(
+                        title = "录音文件",
+                        subtitle = "同步设备录音并查看转写、总结",
+                        accent = AppPalette.Accent
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IconButton(
+                            onClick = onSyncClicked,
+                            modifier = Modifier.testTag(AudioFilesTestTags.SYNC_BUTTON),
+                        ) {
+                            Icon(Icons.Default.Sync, contentDescription = "同步录音")
+                        }
+                        IconButton(onClick = onRefresh) {
+                            Icon(Icons.Default.Refresh, contentDescription = "刷新")
+                        }
                     }
-                )
-            }
-            when {
-                uiState.isLoading -> LoadingState()
-                uiState.recordings.isEmpty() -> EmptyState(
-                    onRefresh = onRefresh,
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag(AudioFilesTestTags.EMPTY_STATE),
-                )
-                else -> {
-                    LazyColumn(
+                }
+                if (uiState.isSyncing) {
+                    SyncingBanner()
+                }
+                uiState.errorMessage?.let { message ->
+                    ErrorBanner(
+                        message = message,
+                        onDismiss = onErrorDismissed,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(AudioFilesTestTags.ERROR_BANNER),
+                    )
+                }
+                uiState.loadErrorMessage?.let {
+                    ErrorBanner(
+                        message = "加载录音失败，请稍后重试。",
+                        onDismiss = onErrorDismissed,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    AppGhostButton(
+                        text = "重试加载",
+                        onClick = onRefresh,
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                tint = AppPalette.Accent
+                            )
+                        }
+                    )
+                }
+                when {
+                    uiState.isLoading -> LoadingState()
+                    uiState.recordings.isEmpty() -> EmptyState(
+                        onRefresh = onRefresh,
                         modifier = Modifier
                             .weight(1f)
-                            .testTag(AudioFilesTestTags.RECORDING_LIST),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        items(uiState.recordings, key = { it.id }) { recording ->
-                            AudioRecordingCard(
-                                recording = recording,
-                                isSyncing = uiState.isSyncing,
-                                onClick = {
-                                    onRecordingClicked(recording.id)
-                                    onTranscriptClicked(recording.id)
-                                },
-                                onPlayPauseClicked = onPlayPauseClicked,
-                                onDeleteClicked = onDeleteClicked,
-                                onTranscribeClicked = onTranscribeClicked,
-                                onTranscriptClicked = onTranscriptClicked,
-                                onSyncClicked = onSyncClicked,
-                            )
+                            .testTag(AudioFilesTestTags.EMPTY_STATE),
+                    )
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag(AudioFilesTestTags.RECORDING_LIST),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            items(uiState.recordings, key = { it.id }) { recording ->
+                                AudioRecordingCard(
+                                    recording = recording,
+                                    isSyncing = uiState.isSyncing,
+                                    onClick = {
+                                        onRecordingClicked(recording.id)
+                                        onTranscriptClicked(recording.id)
+                                    },
+                                    onPlayPauseClicked = onPlayPauseClicked,
+                                    onDeleteClicked = onDeleteClicked,
+                                    onTranscribeClicked = onTranscribeClicked,
+                                    onTranscriptClicked = onTranscriptClicked,
+                                    onSyncClicked = onSyncClicked,
+                                )
+                            }
                         }
                     }
                 }
@@ -268,7 +281,7 @@ private fun buildStatusDisplay(
 
 @Composable
 private fun SyncingBanner() {
-    AppCard {
+    AppGlassCard {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -299,7 +312,7 @@ private fun AudioRecordingCard(
     modifier: Modifier = Modifier,
 ) {
     val statusDisplay = buildStatusDisplay(recording, isSyncing)
-    AppCard(
+    AppGlassCard(
         modifier = modifier
             .fillMaxWidth()
             .testTag("${AudioFilesTestTags.CARD_PREFIX}${recording.id}")
@@ -372,7 +385,7 @@ private fun AudioRecordingCard(
                 color = AppPalette.MutedText,
                 modifier = Modifier.testTag("${AudioFilesTestTags.STATUS_TEXT_PREFIX}${recording.id}"),
             )
-            Divider()
+            AppDivider()
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -489,7 +502,7 @@ private fun StatusBadge(
 
 @Composable
 private fun EmptyState(onRefresh: () -> Unit, modifier: Modifier = Modifier) {
-    AppCard(
+    AppGlassCard(
         modifier = modifier.fillMaxWidth(),
     ) {
         Column(
@@ -551,7 +564,7 @@ private fun ErrorBanner(
 
 @Composable
 private fun LoadingState() {
-    AppCard(
+    AppGlassCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(220.dp),

@@ -7,8 +7,9 @@ package com.smartsales.aitest.devicemanager
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,8 +33,6 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -56,9 +55,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.feature.media.ui.AppBadge
 import com.smartsales.feature.media.ui.AppCard
+import com.smartsales.feature.media.ui.AppDivider
+import com.smartsales.feature.media.ui.AppGlassCard
 import com.smartsales.feature.media.ui.AppGhostButton
 import com.smartsales.feature.media.ui.AppPalette
+import com.smartsales.feature.media.ui.AppSectionHeader
 import com.smartsales.feature.media.ui.AppShapes
+import com.smartsales.feature.media.ui.AppSurface
 import com.smartsales.feature.media.devicemanager.DeviceConnectionUiState
 import com.smartsales.feature.media.devicemanager.DeviceFileUi
 import com.smartsales.feature.media.devicemanager.DeviceManagerUiState
@@ -105,74 +108,78 @@ fun DeviceManagerScreen(
 ) {
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
         val isConnected = state.isConnected
-        Column(
+        AppSurface(
             modifier = Modifier
                 .padding(innerPadding)
-                .background(AppPalette.Background)
-                .padding(16.dp)
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .fillMaxSize()
         ) {
-            DeviceConnectionHeader(
-                status = state.connectionStatus,
-                isLoading = state.isLoading,
-                isUploading = state.isUploading,
-                isConnected = isConnected,
-                onRefresh = onRefresh,
-                onUpload = onRequestUpload,
-                onConnect = onRefresh
-            )
-            ConnectionSettingsRow(
-                baseUrl = state.baseUrl,
-                hint = state.autoDetectStatus,
-                enabled = !state.isLoading,
-                onBaseUrlChange = onBaseUrlChange
-            )
-            state.loadErrorMessage?.let {
-                ErrorBanner(
-                    message = it,
-                    primaryActionLabel = "重试",
-                    onPrimaryAction = onRetryLoad,
-                    onDismiss = onClearError,
-                    modifier = Modifier.testTag(DeviceManagerTestTags.ERROR_BANNER)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 4.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                DeviceConnectionHeader(
+                    status = state.connectionStatus,
+                    isLoading = state.isLoading,
+                    isUploading = state.isUploading,
+                    isConnected = isConnected,
+                    onRefresh = onRefresh,
+                    onUpload = onRequestUpload,
+                    onConnect = onRefresh
                 )
-            } ?: state.errorMessage?.let {
-                ErrorBanner(
-                    message = it,
-                    primaryActionLabel = null,
-                    onPrimaryAction = null,
-                    onDismiss = onClearError,
-                    modifier = Modifier.testTag(DeviceManagerTestTags.ERROR_BANNER)
+                ConnectionSettingsRow(
+                    baseUrl = state.baseUrl,
+                    hint = state.autoDetectStatus,
+                    enabled = !state.isLoading,
+                    onBaseUrlChange = onBaseUrlChange
                 )
-            }
-            if (!isConnected) {
-                DisconnectedHint(onConnect = onRefresh)
-            }
-            Box(modifier = Modifier.weight(1f, fill = true)) {
-                when {
-                    state.isLoading -> LoadingBanner()
-                    state.loadErrorMessage != null -> Unit
-                    state.visibleFiles.isEmpty() -> DeviceManagerEmptyState()
-                    else -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        FileListHeader(
-                            total = state.visibleFiles.size,
-                            onUpload = if (state.isConnected) onRequestUpload else null
-                        )
-                        DeviceFileGrid(
-                            files = state.visibleFiles,
-                            selectedId = state.selectedFile?.id,
-                            onSelect = onSelectFile,
-                            onUpload = if (state.isConnected) onRequestUpload else null
-                        )
+                state.loadErrorMessage?.let {
+                    ErrorBanner(
+                        message = it,
+                        primaryActionLabel = "重试",
+                        onPrimaryAction = onRetryLoad,
+                        onDismiss = onClearError,
+                        modifier = Modifier.testTag(DeviceManagerTestTags.ERROR_BANNER)
+                    )
+                } ?: state.errorMessage?.let {
+                    ErrorBanner(
+                        message = it,
+                        primaryActionLabel = null,
+                        onPrimaryAction = null,
+                        onDismiss = onClearError,
+                        modifier = Modifier.testTag(DeviceManagerTestTags.ERROR_BANNER)
+                    )
+                }
+                if (!isConnected) {
+                    DisconnectedHint(onConnect = onRefresh)
+                }
+                Box(modifier = Modifier.weight(1f, fill = true)) {
+                    when {
+                        state.isLoading -> LoadingBanner()
+                        state.loadErrorMessage != null -> Unit
+                        state.visibleFiles.isEmpty() -> DeviceManagerEmptyState()
+                        else -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            FileListHeader(
+                                total = state.visibleFiles.size,
+                                onUpload = if (state.isConnected) onRequestUpload else null
+                            )
+                            DeviceFileGrid(
+                                files = state.visibleFiles,
+                                selectedId = state.selectedFile?.id,
+                                onSelect = onSelectFile,
+                                onUpload = if (state.isConnected) onRequestUpload else null
+                            )
+                        }
                     }
                 }
+                DeviceSimulatorPanel(
+                    selected = state.selectedFile,
+                    isConnected = isConnected,
+                    onApply = { state.selectedFile?.let { onApplyFile(it.id) } },
+                    onDelete = { state.selectedFile?.let { onDeleteFile(it.id) } }
+                )
             }
-            DeviceSimulatorPanel(
-                selected = state.selectedFile,
-                isConnected = isConnected,
-                onApply = { state.selectedFile?.let { onApplyFile(it.id) } },
-                onDelete = { state.selectedFile?.let { onDeleteFile(it.id) } }
-            )
         }
     }
 }
@@ -187,55 +194,62 @@ private fun DeviceConnectionHeader(
     onUpload: () -> Unit,
     onConnect: () -> Unit
 ) {
-    val (title, subtitle) = when (status) {
-        is DeviceConnectionUiState.Disconnected -> "未连接设备" to (status.reason ?: "请开启设备并保持 Wi-Fi/BLE 可用。")
-        is DeviceConnectionUiState.Connecting -> "正在连接设备" to (status.detail ?: "请稍候...")
-        is DeviceConnectionUiState.Connected -> ("已连接 ${status.deviceName ?: ""}").trim() to "可以浏览、刷新与上传文件。"
+    val (title, subtitle, accent) = when (status) {
+        is DeviceConnectionUiState.Disconnected -> Triple(
+            "未连接设备",
+            status.reason ?: "请开启设备并保持 Wi-Fi/BLE 可用。",
+            AppPalette.Warning
+        )
+        is DeviceConnectionUiState.Connecting -> Triple(
+            "正在连接设备",
+            status.detail ?: "请稍候...",
+            AppPalette.Info
+        )
+        is DeviceConnectionUiState.Connected -> Triple(
+            ("已连接 ${status.deviceName ?: ""}").trim(),
+            "可以浏览、刷新与上传文件。",
+            AppPalette.Success
+        )
     }
-    AppCard {
+    AppGlassCard {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            AppSectionHeader(
+                title = title,
+                subtitle = subtitle,
+                accent = accent
+            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(text = title, style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                AppGhostButton(
+                    text = if (isConnected) "刷新" else "重试连接",
+                    onClick = onConnect,
+                    enabled = !isLoading,
+                    modifier = Modifier.testTag(DeviceManagerTestTags.CONNECT_BUTTON)
+                )
+                Button(
+                    onClick = onRefresh,
+                    enabled = isConnected && !isLoading,
+                    modifier = Modifier.testTag(DeviceManagerTestTags.REFRESH_BUTTON),
+                    shape = AppShapes.ButtonShape
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = if (isLoading) "刷新中..." else "刷新文件")
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AppGhostButton(
-                        text = if (isConnected) "刷新" else "重试连接",
-                        onClick = onConnect,
-                        enabled = !isLoading,
-                        modifier = Modifier.testTag(DeviceManagerTestTags.CONNECT_BUTTON)
-                    )
-                    Button(
-                        onClick = onRefresh,
-                        enabled = isConnected && !isLoading,
-                        modifier = Modifier.testTag(DeviceManagerTestTags.REFRESH_BUTTON),
-                        shape = AppShapes.ButtonShape
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = null)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = if (isLoading) "刷新中..." else "刷新文件")
-                    }
-                    AppGhostButton(
-                        text = if (isUploading) "上传中..." else "上传",
-                        onClick = onUpload,
-                        enabled = isConnected && !isUploading && !isLoading,
-                        modifier = Modifier.testTag(DeviceManagerTestTags.UPLOAD_BUTTON)
-                    )
-                }
+                AppGhostButton(
+                    text = if (isUploading) "上传中..." else "上传",
+                    onClick = onUpload,
+                    enabled = isConnected && !isUploading && !isLoading,
+                    modifier = Modifier.testTag(DeviceManagerTestTags.UPLOAD_BUTTON)
+                )
             }
         }
     }
@@ -268,17 +282,19 @@ private fun ConnectionSettingsRow(
     enabled: Boolean,
     onBaseUrlChange: (String) -> Unit
 ) {
-    Card {
+    AppCard(
+        containerColor = AppPalette.CardMuted
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text(
-                text = "连接设置",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            AppSectionHeader(
+                title = "连接设置",
+                subtitle = "优先使用自动探测到的设备地址",
+                accent = AppPalette.Accent
             )
             OutlinedTextField(
                 value = baseUrl,
@@ -291,7 +307,7 @@ private fun ConnectionSettingsRow(
             Text(
                 text = hint,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = AppPalette.MutedText
             )
         }
     }
@@ -302,24 +318,23 @@ private fun FileListHeader(
     total: Int,
     onUpload: (() -> Unit)?
 ) {
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            text = "文件列表 ($total)",
-            style = MaterialTheme.typography.titleMedium
+        AppSectionHeader(
+            title = "文件列表 ($total)",
+            subtitle = "视频与 GIF 将在此处展示，保持与 React 卡片一致",
+            accent = AppPalette.Accent
         )
         if (onUpload != null) {
-            OutlinedButton(
+            AppGhostButton(
+                text = "上传新文件",
                 onClick = onUpload,
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
-            ) {
-                Icon(Icons.Default.CloudUpload, contentDescription = null)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(text = "上传新文件")
-            }
+                leadingIcon = {
+                    Icon(Icons.Default.CloudUpload, contentDescription = null, tint = AppPalette.Accent)
+                }
+            )
         }
     }
 }
@@ -360,16 +375,16 @@ private fun DeviceFileCard(
     isSelected: Boolean,
     onSelect: () -> Unit
 ) {
-    Card(
+    AppCard(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onSelect() }
             .testTag("${DeviceManagerTestTags.FILE_ITEM_PREFIX}${file.id}"),
-        colors = CardDefaults.cardColors(containerColor = AppPalette.Card),
         border = BorderStroke(
             width = 1.dp,
             color = if (isSelected) AppPalette.Accent.copy(alpha = 0.4f) else AppPalette.Border
         ),
-        onClick = onSelect
+        containerColor = AppPalette.Card
     ) {
         Column(
             modifier = Modifier
@@ -382,7 +397,7 @@ private fun DeviceFileCard(
                     .fillMaxWidth()
                     .aspectRatio(4f / 3f)
                     .clip(AppShapes.CardShape)
-                    .background(MaterialTheme.colorScheme.surface),
+                    .background(AppPalette.CardMuted),
                 contentAlignment = Alignment.Center
             ) {
                 Thumbnail(
@@ -401,6 +416,7 @@ private fun DeviceFileCard(
                     )
                 }
             }
+            AppDivider(modifier = Modifier.padding(horizontal = 2.dp))
             Column(
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
@@ -435,11 +451,11 @@ private fun DeviceFileCard(
 
 @Composable
 private fun UploadTile(onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = AppPalette.Card),
-        border = BorderStroke(1.dp, AppPalette.Border),
-        onClick = onClick
+    AppGlassCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        border = BorderStroke(1.dp, AppPalette.AccentSoft)
     ) {
         Column(
             modifier = Modifier
@@ -616,7 +632,7 @@ private fun DeviceSimulatorPanel(
     onApply: () -> Unit,
     onDelete: () -> Unit
 ) {
-    AppCard(
+    AppGlassCard(
         modifier = Modifier
             .fillMaxWidth()
             .testTag(DeviceManagerTestTags.SIMULATOR)

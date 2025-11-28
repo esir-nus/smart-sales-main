@@ -89,9 +89,9 @@ class AiFeatureTestActivityTest {
 
     @Test
     fun navigationWithoutChips_coversOverlaysAndHomeActions() {
+        waitForHomeRendered()
         forceDeviceDisconnected()
         goHome()
-        waitForHomeRendered()
 
         // 设备 overlay -> 配网
         composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE, useUnmergedTree = true).performClick()
@@ -154,7 +154,7 @@ class AiFeatureTestActivityTest {
         // 个人中心图标跳到用户中心
         composeRule.onNodeWithTag(HomeScreenTestTags.PROFILE_BUTTON, useUnmergedTree = true).performClick()
         waitForPage(AiFeatureTestTags.PAGE_USER_CENTER)
-        composeRule.onNodeWithText("管理账号信息与订阅，查看剩余配额。", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText("管理账号、订阅与隐私设置，查看剩余配额。", substring = true).assertIsDisplayed()
     }
 
     @Test

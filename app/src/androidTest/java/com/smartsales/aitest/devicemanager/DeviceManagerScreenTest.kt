@@ -54,9 +54,9 @@ class DeviceManagerScreenTest {
         )
         renderDeviceManager(state)
 
-        composeRule.onNodeWithText("设备未连接").assertIsDisplayed()
-        composeRule.onNodeWithText("请先完成设备配网，然后刷新设备文件。").assertIsDisplayed()
-        composeRule.onNodeWithText("刷新设备状态").assertIsDisplayed()
+        composeRule.onAllNodesWithText("设备未连接").assertCountEquals(2)
+        composeRule.onNodeWithText("请连接设备以管理文件和查看预览。").assertIsDisplayed()
+        composeRule.onNodeWithText("重试连接").assertIsDisplayed()
     }
 
     @Test
@@ -69,7 +69,7 @@ class DeviceManagerScreenTest {
 
         composeRule.onNode(progressMatcher()).assertIsDisplayed()
         composeRule.onNodeWithText("刷新中...").assertIsDisplayed()
-        composeRule.onNodeWithText("上传文件").assertIsDisplayed()
+        composeRule.onNodeWithText("上传新文件").assertIsDisplayed()
     }
 
     @Test
@@ -81,7 +81,7 @@ class DeviceManagerScreenTest {
         renderDeviceManager(state)
 
         composeRule.onNodeWithText("设备管理").assertIsDisplayed()
-        composeRule.onNodeWithText("管理已连接设备的媒体文件，刷新或上传以保持最新。").assertIsDisplayed()
+        composeRule.onNodeWithText("管理您的销售助手设备，刷新或上传文件。").assertIsDisplayed()
         composeRule.onNodeWithTag(DeviceManagerTestTags.EMPTY_STATE).assertIsDisplayed()
         composeRule.onAllNodesWithText("应用").assertCountEquals(0)
     }

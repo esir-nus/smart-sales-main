@@ -411,10 +411,10 @@ private fun DraggableOverlayStack(
 
     Surface(
         modifier = modifier
-            .width(72.dp)
+            .width(68.dp)
             .fillMaxHeight()
             .background(
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
                 shape = MaterialTheme.shapes.large
             )
             .draggable(
@@ -423,14 +423,14 @@ private fun DraggableOverlayStack(
                 onDragStopped = { velocity -> settle(velocity) }
             )
             .testTag(AiFeatureTestTags.OVERLAY_STACK),
-        tonalElevation = 0.5.dp,
+        tonalElevation = 0.dp,
         shadowElevation = 0.dp,
         shape = MaterialTheme.shapes.large
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(vertical = 18.dp, horizontal = 4.dp),
+                .padding(vertical = 16.dp, horizontal = 4.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -497,13 +497,13 @@ private fun OverlayCard(
                 .fillMaxWidth()
                 .padding(vertical = 8.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .height(2.dp)
-                    .width(26.dp)
-                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f), shape = MaterialTheme.shapes.small)
+                    .height(3.dp)
+                    .width(28.dp)
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), shape = MaterialTheme.shapes.small)
             )
             Text(text = label, style = MaterialTheme.typography.bodyMedium)
             Text(

@@ -14,6 +14,7 @@ import com.smartsales.feature.connectivity.DeviceConnectionManager
 import com.smartsales.feature.connectivity.DeviceNetworkStatus
 import com.smartsales.feature.connectivity.ProvisioningStatus
 import com.smartsales.feature.connectivity.WifiCredentials
+import com.smartsales.feature.media.audiofiles.DeviceHttpEndpointProvider
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -41,16 +42,19 @@ class DeviceManagerViewModelTest {
     private lateinit var viewModel: DeviceManagerViewModel
     private lateinit var gateway: FakeDeviceMediaGateway
     private lateinit var connectionManager: FakeDeviceConnectionManager
+    private lateinit var endpointProvider: FakeDeviceHttpEndpointProvider
 
     @Before
     fun setup() {
         Dispatchers.setMain(dispatcher)
         gateway = FakeDeviceMediaGateway()
         connectionManager = FakeDeviceConnectionManager()
+        endpointProvider = FakeDeviceHttpEndpointProvider()
         viewModel = DeviceManagerViewModel(
             gateway,
             connectionManager,
-            FakeDispatcherProvider(dispatcher)
+            FakeDispatcherProvider(dispatcher),
+            endpointProvider
         )
     }
 
@@ -110,6 +114,7 @@ class DeviceManagerViewModelTest {
 
     @Test
     fun `refresh when disconnected reports friendly message`() = runTest(dispatcher) {
+        advanceUntilIdle() // 等待初始连接状态落地，避免覆盖提示文案
         viewModel.onRefreshFiles()
         advanceUntilIdle()
 
@@ -273,6 +278,16 @@ class DeviceManagerViewModelTest {
 
         val state = viewModel.uiState.value
         assertEquals("http://192.168.70.7:8000", state.autoDetectedBaseUrl)
+    }
+
+    private class FakeDeviceHttpEndpointProvider(
+        initial: String? = null
+    ) : DeviceHttpEndpointProvider {
+        private val flow = MutableStateFlow(initial)
+        override val deviceBaseUrl: StateFlow<String?> = flow
+        fun emit(value: String?) {
+            flow.value = value
+        }
     }
 
     private class FakeDeviceMediaGateway : DeviceMediaGateway {

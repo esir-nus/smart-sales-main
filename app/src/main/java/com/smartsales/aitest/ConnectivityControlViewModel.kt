@@ -11,6 +11,7 @@ import com.smartsales.feature.connectivity.ConnectionState
 import com.smartsales.feature.connectivity.DeviceConnectionManager
 import com.smartsales.feature.connectivity.WifiCredentials
 import com.smartsales.feature.connectivity.scan.BleScanner
+import com.smartsales.feature.media.audiofiles.DeviceHttpEndpointProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -72,7 +73,8 @@ class ConnectivityControlViewModel @Inject constructor(
     private val connectionManager: DeviceConnectionManager,
     private val phoneWifiMonitor: PhoneWifiMonitor,
     private val bleScanner: BleScanner,
-    private val bleProfiles: List<BleProfileConfig>
+    private val bleProfiles: List<BleProfileConfig>,
+    private val endpointProvider: DeviceHttpEndpointProvider
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ConnectivityControlState())
@@ -290,6 +292,7 @@ class ConnectivityControlViewModel @Inject constructor(
                         ?: _uiState.value.wifiSsid.takeIf { it.isNotBlank() }
                     val match = evaluateNetworkMatch(sanitizedDevice ?: status.deviceWifiName, fallbackPhone)
                     val newBase = buildBaseUrl(status.ipAddress, _uiState.value.mediaServerBaseUrl)
+                    endpointProvider.publishBaseUrl(newBase)
                     _uiState.update {
                         it.copy(
                             httpIp = status.ipAddress,
@@ -324,6 +327,7 @@ class ConnectivityControlViewModel @Inject constructor(
     fun updateMediaServerBaseUrl(raw: String) {
         val currentBase = _uiState.value.mediaServerBaseUrl
         val normalized = normalizeBaseUrl(raw, extractPort(currentBase))
+        endpointProvider.publishBaseUrl(normalized)
         _uiState.update {
             it.copy(
                 mediaServerBaseUrl = normalized,

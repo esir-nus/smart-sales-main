@@ -11,16 +11,17 @@ Scope & principles
 - Use DesignKit tokens/components as the React UI-kit equivalents (gradients/glass cards/badges/buttons).
 
 Route/component matrix (parity checkpoints)
-- **Home overlays**: Default landing = Home. Vertical stack (Home center, Device up, Audio down). Back → Home. Entry cards: Device → DeviceManager when connected else DeviceSetup; Audio → AudioFiles; Profile → UserCenter; History toggle matches React.
-- **DeviceManager**: Entry via Home card/overlay. States: disconnected banner, loading, empty, list, errors. Actions: refresh/upload/apply/delete as per React copy.
+- **Home overlays**: Default landing = Home. Vertical stack (Home center, Device up, Audio down). Back → Home. Entry cards: Device → DeviceManager when connected else DeviceSetup; Audio → AudioFiles; Profile → UserCenter; History toggle matches React。Home hero = LOGO、问候语、两行 bullet +技能 pills。
+- **DeviceManager**: Entry via Home card/overlay. States: disconnected banner, loading, empty, list, errors. Actions: refresh/upload/apply/delete as per React copy。视觉：深色预览卡“选择文件预览” + upload tile 卡，空态“暂无文件，请上传。”，顶部刷新按钮。
 - **DeviceSetup**: From Home when not connected. Steps, hints, CTA labels mirror React.
-- **AudioFiles**: From Home card. Empty/loading/error/recording list, transcript sheet, actions match React.
-- **ChatHistory**: Drawer/route behavior mirrors React; empty/loading, rename/delete/pin flows consistent.
-- **UserCenter**: Entry via profile; form, flags, save/logout states match React copy.
+- **AudioFiles**: From Home card. Empty/loading/error/recording list, transcript sheet, actions match React。列表支持已同步/未同步/转写中/错误标记，右侧状态标签或文字；顶部刷新；转写完成页含播放器+时间轴+Markdown 文本+底部“用 AI 分析本次通话”大按钮。
+- **ChatHistory**: Drawer/route behavior mirrors React; empty/loading, rename/delete/pin flows consistent。
+- **UserCenter**: Entry via profile; form, flags, save/logout states match React copy。淡紫背景，头像圆卡 + 邮箱，卡片式入口：设备管理/订阅管理/隐私与安全/通用设置。
 
 Visual alignment
 - Use DesignKit for consistent visuals (gradients, glass cards, badges, buttons) mirroring the React UI kit.
 - Match empty/loading/error text to React; keep test tags stable.
+- 参考 `UI/` 及 `real-interface/*.jpg`：浅灰背景、圆角白卡、顶部 AppBar icons、底部大按钮渐变（Transcript CTA）、设备预览深色卡、UserCenter icon-leading 卡片。
 
 Navigation contract
 - HomeScreenViewModel emits `HomeNavigationRequest` (DeviceManager/Setup/AudioFiles/UserCenter/History) based on state.
@@ -52,29 +53,12 @@ Workstreams（技术视角）
 
 Execution steps
 - Shell: make AiFeatureTestActivity honor Home navigation requests with the React vertical overlays (Home center, Device up → manager/setup by connection, Audio down), always backing to Home.
-- Home UI: mirror React welcome/skill-first chat (Markdown/复制 affordance, chip lifecycle) while keeping session handling and test tags.
+- Home UI: mirror React welcome/skill-first chat (Markdown/复制 affordance, chip lifecycle) while keeping session handling and test tags；Hero 区域对齐实机：LOGO、问候语、两行 bullet、技能 pills。
 - Screen states: copy React empty/loading/error/CTA text and actions for DeviceManager, DeviceSetup, AudioFiles (transcript drawer “用 AI 分析本次通话”), ChatHistory (long-press rename/pin/delete), and UserCenter menus.
 - Tests: refresh instrumentation to assert the React journeys (overlay routing, device/audio/profile/history taps) without weakening assertions; keep unmerged trees for overlays and reasonable timeouts.
 
-Progress (2025-11-27)
-- Shell/navigation aligned: AiFeatureTestActivity consumes Home navigation requests and routes device overlay to setup when offline and manager when connected; back always returns Home.
-- Tests updated: Home overlays/actions drive navigation (history/profile/audio/device) without relying on Home chips; Wi-Fi tester chip kept for manual entry.
-- Home chat: assistant气泡支持「复制」操作，空态改为销售助手欢迎文案；会话长按底部抽屉可置顶/重命名/删除；首页叠层添加渐变背景、设备/音频卡片使用 DesignKit 色板，空态文案改为 React 技能导向。
-- DeviceManager 文案对齐 React：标题/副标题更新，未连接与空态提示改为“请连接设备以管理文件和查看预览”“暂无文件，请上传或刷新”，上传按钮为“上传新文件”，列表显示文件总数与“当前展示”徽标，预览卡片使用 DesignKit 渐变。
-- DeviceSetup 文案与 CTA 对齐 React：扫描/配对/等待/完成提示调整，完成后按钮为“前往设备管理”，背景加入渐变。
-- AudioFiles 文案对齐：标题改为“录音文件”，描述与空态贴合 React，列表补充录音总数，转写抽屉 CTA 调整为“用 AI 分析本次通话”，列表与状态标签文案同步。
-- UserCenter 顶部说明更新为账号/订阅/隐私导语，头像副标题对齐 React 菜单导语，并新增“设备管理/订阅管理/隐私与安全/通用设置”快捷入口。
-- Instrumentation refreshed：AiFeatureTestActivityTest 覆盖无 Chip 导航路径，NavigationSmokeTest 断言 AudioFiles/UserCenter 文案，并复位设备状态防止 flake。
-- DeviceManager 仪表测试稳定：文件卡/选中卡补充 testTag，列表滚动基于 testTag 规避同名文本导致的多节点冲突。
-- Home 导航测试收敛：AiFeatureTestActivityTest 等待 Home 根/叠层标签以确保覆盖 Home overlay 渲染，消除漏检 flake。
-- 全量仪表测试通过：`:app:connectedDebugAndroidTest` 全绿，覆盖 Home overlay、DeviceManager、AudioFiles、UserCenter 等路径。
-- ChatHistory 长按操作对齐：底部动作表文案更新（置顶到顶部/重命名会话/删除并清除消息），置顶展示“置顶”徽标，新增长按重命名/删除测试。
-- Shell/Home 视觉收口：Home overlay 叠层与 DeviceManager Screen 增加 DesignKit 渐变背景，overlay 入口添加按压/选中缩放动画并支持上下拖拽切换；空态欢迎文案与音频 CTA 对齐 React；叠层拖拽视效/阴影/贴近 React 布局。
-- DeviceManager baseUrl 自动同步：监听 DeviceHttpEndpointProvider，将 Wi-Fi/BLE 发现的 baseUrl 自动写入 DeviceManager 并触发刷新，减少手填 URL。
-- Lint 清理：修复 HTTP DNS 空注解、BLE 权限与 Wi-Fi 权限、音频元数据 API 兼容，bcprov 版本与版本库归档，`./gradlew lint` 现已无阻塞错误。
-- BLE GATT 写入增加 BLUETOOTH_CONNECT 检查与 SecurityException 捕获，lint 通过。
-- React UI audit完成：Home 垂直拖拽 overlay、Sidebar 历史分组/重命名/置顶、设备状态卡、DeviceSetup → DeviceManager 自动跳转、AudioFiles/Transcript CTA、UserCenter 菜单项等差异已记录，准备下一轮实现。
-- Next up: 如有新差异，补充 Home/DeviceManager 视觉细节；继续监控导航仪表 flake。
+Progress tracking
+- 进度详情移至 `docs/react_align_progress.md`（含日期与对应改动），本文件仅保留对齐要求。
 
 Risks & mitigations
 - Instrumentation flake: wait on tags/state, avoid sleeps.

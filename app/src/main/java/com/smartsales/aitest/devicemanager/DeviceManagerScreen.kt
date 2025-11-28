@@ -8,7 +8,9 @@ package com.smartsales.aitest.devicemanager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,7 +21,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Delete
@@ -42,7 +43,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -97,14 +97,7 @@ fun DeviceManagerScreen(
         Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
-                            MaterialTheme.colorScheme.surface
-                        )
-                    )
-                )
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f))
                 .padding(16.dp)
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -113,6 +106,12 @@ fun DeviceManagerScreen(
                 state = state,
                 onBaseUrlChange = onBaseUrlChange
             )
+            if (isConnected) {
+                DevicePreviewRow(
+                    onUpload = onRequestUpload,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
             ActionButtons(
                 isConnected = isConnected,
                 isLoading = state.isLoading,
@@ -151,9 +150,10 @@ fun DeviceManagerScreen(
                 }
 
                 else -> {
+                    FileListHeader(total = state.files.size, modifier = Modifier.fillMaxWidth())
                     Text(
-                        text = "文件列表 · 共 ${state.files.size} 个，当前展示 ${state.visibleFiles.size}",
-                        style = MaterialTheme.typography.titleMedium,
+                        text = "当前展示 ${state.visibleFiles.size}",
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     LazyColumn(
@@ -454,7 +454,7 @@ private fun DeviceManagerEmptyState() {
         ) {
             Text(text = "设备上还没有文件", style = MaterialTheme.typography.titleMedium)
             Text(
-                text = "暂无文件，请上传或刷新。",
+                text = "暂无文件，请上传。",
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -527,4 +527,96 @@ object DeviceManagerTestTags {
 
 object DeviceManagerRouteTestTags {
     const val ROOT = "device_manager_screen_root"
+}
+
+@Composable
+private fun DevicePreviewRow(
+    onUpload: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.86f)
+            )
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "选择文件预览",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                )
+                Text(
+                    text = "DEVICE SIMULATOR",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(12.dp)
+                )
+            }
+        }
+        UploadTile(onUpload = onUpload, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+@Composable
+private fun UploadTile(
+    onUpload: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .height(140.dp)
+            .clickable(onClick = onUpload),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Default.CloudUpload,
+                contentDescription = "上传文件",
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "上传新文件",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+private fun FileListHeader(total: Int, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "文件列表 ($total)",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Text(
+            text = "支持刷新、上传与应用展示文件。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 }

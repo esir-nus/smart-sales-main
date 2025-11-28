@@ -51,6 +51,19 @@ class DeviceHttpEndpointProviderImpl @Inject constructor(
         observeConnection()
     }
 
+    override fun publishBaseUrl(baseUrl: String?) {
+        val normalized = normalizeBaseUrl(baseUrl)
+        if (normalized != null) {
+            cancelDiscoveryJob()
+            hasAttemptedForToken = true
+            baseUrlFlow.value = normalized
+        } else {
+            baseUrlFlow.value = null
+            hasAttemptedForToken = false
+            requestDiscovery(force = true)
+        }
+    }
+
     private fun observeConnection() {
         scope.launch {
             connectionManager.state.collect { state ->
@@ -103,7 +116,8 @@ class DeviceHttpEndpointProviderImpl @Inject constructor(
                 delay(delayMillis)
             }
         }
-        Log.w(TAG, "查询设备网络状态失败，已达到最大重试次数 ($MAX_ATTEMPTS)")
+        // JVM 单测环境无 Android Log，降级为标准输出
+        runCatching { Log.w(TAG, "查询设备网络状态失败，已达到最大重试次数 ($MAX_ATTEMPTS)") }
     }
 
     private suspend fun queryEndpointOnce(): Boolean =
@@ -147,7 +161,14 @@ class DeviceHttpEndpointProviderImpl @Inject constructor(
     }
 
     private fun buildBaseUrl(host: String?): String? {
-        val trimmed = host?.trim().orEmpty()
+        return normalizeBaseUrl(host)
+    }
+
+    private fun backoffDelay(attempt: Int): Long =
+        RETRY_DELAYS_MS.getOrElse(attempt - 1) { RETRY_DELAYS_MS.last() }
+
+    private fun normalizeBaseUrl(raw: String?): String? {
+        val trimmed = raw?.trim().orEmpty()
         if (trimmed.isBlank()) return null
         val withScheme = if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
             trimmed
@@ -155,14 +176,11 @@ class DeviceHttpEndpointProviderImpl @Inject constructor(
             "http://$trimmed"
         }
         val parsed = runCatching { Uri.parse(withScheme) }.getOrNull() ?: return null
-        val finalHost = parsed.host ?: return null
+        val host = parsed.host ?: return null
         val scheme = parsed.scheme ?: "http"
         val port = if (parsed.port == -1) DEFAULT_MEDIA_SERVER_PORT else parsed.port
-        return "$scheme://$finalHost:$port"
+        return "$scheme://$host:$port"
     }
-
-    private fun backoffDelay(attempt: Int): Long =
-        RETRY_DELAYS_MS.getOrElse(attempt - 1) { RETRY_DELAYS_MS.last() }
 
     @VisibleForTesting
     internal fun cancelForTest() {

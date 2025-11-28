@@ -13,6 +13,13 @@ android {
         minSdk = 26
     }
 
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
+    }
+
     buildFeatures {
         compose = true
     }

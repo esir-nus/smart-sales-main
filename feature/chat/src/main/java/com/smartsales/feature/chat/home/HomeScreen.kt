@@ -59,6 +59,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
@@ -414,7 +415,7 @@ private fun HomeTopBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "AI 助手",
+            text = "新对话",
             style = MaterialTheme.typography.titleLarge
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -708,21 +709,50 @@ private fun EmptyChatHint(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 32.dp, horizontal = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Box(
+            modifier = Modifier
+                .size(96.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "LOGO",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
         Text(
-            text = "欢迎回来，我是销售助手",
-            style = MaterialTheme.typography.titleMedium
+            text = "你好，我是您的销售助手",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface
         )
         Text(
-            text = "我可以：提炼客户意图与痛点、生成跟进话术与总结、整理行动项。",
+            text = "我可以帮您：",
+            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+        )
+        Column(
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Text(
+                text = "• 分析用户画像、意图、痛点。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "• 生成 PDF、CSV 文档及思维导图。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Text(
+            text = "让我们开始吧",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = "试试下方快捷技能，快速开启对话。",
-            style = MaterialTheme.typography.bodyMedium
         )
         QuickSkillRow(
             skills = quickSkills,

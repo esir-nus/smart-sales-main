@@ -46,7 +46,7 @@
       ]
     },
     {
-      "heading": "Progress (2025-11-27)",
+      "heading": "Progress (2025-11-28)",
       "bullets": [
         "Shell/navigation aligned: AiFeatureTestActivity consumes Home navigation requests and routes device overlay to setup when offline and manager when connected; back always returns Home.",
         "Tests updated: Home overlays/actions drive navigation (history/profile/audio/device) without relying on Home chips; Wi-Fi tester chip kept for manual entry.",
@@ -57,8 +57,10 @@
         "UserCenter 顶部说明更新为账号/订阅/隐私导语，头像副标题对齐 React 菜单导语，并新增“设备管理/订阅管理/隐私与安全/通用设置”快捷入口。",
         "Instrumentation refreshed：AiFeatureTestActivityTest 覆盖无 Chip 导航路径，NavigationSmokeTest 断言 AudioFiles/UserCenter 文案，并复位设备状态防止 flake。",
         "BLE GATT 写入增加 BLUETOOTH_CONNECT 检查与捕获 SecurityException，lint 通过。",
+        "AudioFiles → Chat 桥接：转写完成事件携带 jobId/markdown 推送到 Home 会话，Activity 直接创建“通话分析”会话并复用 React 文案；补齐 ViewModel/Route 事件与测试。",
+        "新增 instrumentation 烟测：AudioFiles 转写 → “用 AI 分析本次通话” → Home 会话路径；JVM Compose UI 测试暂忽略，依赖仪表覆盖。",
         "React UI audit完成：Home 垂直拖拽 overlay、Sidebar 历史分组/重命名/置顶、设备状态卡、DeviceSetup → DeviceManager 自动跳转、AudioFiles/Transcript CTA、UserCenter 菜单项等差异已记录，准备下一轮实现。",
-        "Next up: 收口 DeviceSetup/DeviceManager 视觉与提示细节（DesignKit 背景、预览卡片）、补齐 UserCenter 菜单项，按 React 文案对齐提示与 CTA。"
+        "Next up: 收口 DeviceSetup/DeviceManager 视觉与提示细节（DesignKit 背景、预览卡片）、补齐 UserCenter 菜单项，按 React 文案对齐提示与 CTA；视情况重开或替换 AudioFiles JVM Compose 测试，保持 instrumentation 烟测。"
       ]
     },
     {

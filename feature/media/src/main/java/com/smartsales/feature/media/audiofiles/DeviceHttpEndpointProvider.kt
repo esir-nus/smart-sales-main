@@ -14,4 +14,10 @@ import kotlinx.coroutines.flow.Flow
  */
 interface DeviceHttpEndpointProvider {
     val deviceBaseUrl: Flow<String?>
+
+    /**
+     * 允许上游手动或自动推送新的 BaseUrl，例如 Wi-Fi/BLE 查询结果或调试面板输入。
+     * 传入 null 时会清空当前地址，方便重新探测。
+     */
+    fun publishBaseUrl(baseUrl: String?) {}
 }

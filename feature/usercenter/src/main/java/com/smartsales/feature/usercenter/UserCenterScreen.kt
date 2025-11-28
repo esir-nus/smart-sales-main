@@ -20,6 +20,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.outlined.CreditCard
+import androidx.compose.material.icons.outlined.Devices
+import androidx.compose.material.icons.outlined.PrivacyTip
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.KeyboardArrowRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -44,6 +49,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.vector.ImageVector
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,6 +70,7 @@ fun UserCenterScreen(
     Scaffold(
         modifier = modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f))
             .testTag(UserCenterTestTags.ROOT),
         topBar = {
             TopAppBar(
@@ -83,11 +90,7 @@ fun UserCenterScreen(
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = "账号信息、订阅与隐私偏好都在这里，保存后会同步到 React 端。",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            ProfileHeader(userName = uiState.userName, email = uiState.email)
             if (uiState.isSaving) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
@@ -98,7 +101,6 @@ fun UserCenterScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
             }
-            ProfileHeader(uiState.userName)
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -173,37 +175,39 @@ object UserCenterTestTags {
 }
 
 @Composable
-private fun ProfileHeader(userName: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+private fun ProfileHeader(userName: String, email: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.medium)
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(64.dp)
+                .size(72.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = userName.take(1).ifBlank { "U" },
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.primary
             )
         }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = if (userName.isBlank()) "未命名用户" else userName,
-                style = MaterialTheme.typography.titleMedium
-            )
-            Text(
-                text = "账号概览、订阅与隐私入口",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        Text(
+            text = if (userName.isBlank()) "未命名用户" else userName,
+            style = MaterialTheme.typography.titleMedium
+        )
+        Text(
+            text = if (email.isBlank()) "邮箱未填写" else email,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -239,25 +243,29 @@ private fun ShortcutMenuCard(
             Text(text = "快捷入口", style = MaterialTheme.typography.titleMedium)
             ShortcutRow(
                 title = "设备管理",
-                subtitle = "查看设备状态、文件与上传入口",
+                subtitle = "管理已配对的设备与文件",
+                icon = Icons.Outlined.Devices,
                 onClick = onOpenDeviceManager
             )
             HorizontalDivider()
             ShortcutRow(
                 title = "订阅管理",
-                subtitle = "查看套餐、续费与发票",
+                subtitle = "套餐、续费与发票",
+                icon = Icons.Outlined.CreditCard,
                 onClick = onOpenSubscription
             )
             HorizontalDivider()
             ShortcutRow(
                 title = "隐私与安全",
-                subtitle = "密码、双重认证与数据控制",
+                subtitle = "密码、双重认证、数据控制",
+                icon = Icons.Outlined.PrivacyTip,
                 onClick = onOpenPrivacy
             )
             HorizontalDivider()
             ShortcutRow(
                 title = "通用设置",
-                subtitle = "语言、通知与主题偏好",
+                subtitle = "语言、通知与主题",
+                icon = Icons.Outlined.Settings,
                 onClick = onOpenGeneral
             )
         }
@@ -265,18 +273,36 @@ private fun ShortcutMenuCard(
 }
 
 @Composable
-private fun ShortcutRow(title: String, subtitle: String, onClick: () -> Unit) {
-    Column(
+private fun ShortcutRow(title: String, subtitle: String, icon: ImageVector, onClick: () -> Unit) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(text = title, style = MaterialTheme.typography.bodyLarge)
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(text = title, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Icon(
+            imageVector = Icons.Outlined.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

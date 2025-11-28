@@ -15,9 +15,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
@@ -51,6 +53,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -217,50 +220,30 @@ private fun AudioRecordingItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    StatusIcon(recording = recording, onClick = onClick)
                     Text(
                         text = recording.title,
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Text(
-                        text = "${recording.createdAtText} · ${recording.fileName}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
                 }
-                if (recording.transcriptionStatus != TranscriptionStatus.NONE) {
-                    ElevatedAssistChip(
-                        modifier = Modifier.testTag("${AudioFilesTestTags.STATUS_CHIP_PREFIX}${recording.id}"),
-                        onClick = { onClick(recording.id) },
-                        label = {
-                            Text(
-                                text = when (recording.transcriptionStatus) {
-                                    TranscriptionStatus.NONE -> "未转写"
-                                    TranscriptionStatus.IN_PROGRESS -> "转写中..."
-                                    TranscriptionStatus.DONE -> "已完成"
-                                    TranscriptionStatus.ERROR -> "转写失败"
-                                }
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                                contentDescription = null
-                            )
-                        }
-                    )
-                }
+                StatusTag(
+                    recording = recording,
+                    onClick = onTranscriptClicked
+                )
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -273,28 +256,143 @@ private fun AudioRecordingItem(
                         contentDescription = if (recording.isPlaying) "暂停" else "播放"
                     )
                 }
-                Spacer(modifier = Modifier.width(4.dp))
-                if (recording.transcriptionStatus == TranscriptionStatus.NONE) {
+                Text(
+                    text = formatDuration(recording.durationMillis),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = recording.createdAtText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = recording.fileName,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            HorizontalDivider()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ActionButtons(
+                    recording = recording,
+                    onTranscribeClicked = onTranscribeClicked,
+                    onTranscriptClicked = onTranscriptClicked,
+                    onDeleteClicked = onDeleteClicked
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatusIcon(recording: AudioRecordingUi, onClick: (String) -> Unit) {
+    val container = when (recording.transcriptionStatus) {
+        TranscriptionStatus.DONE -> MaterialTheme.colorScheme.primaryContainer
+        TranscriptionStatus.ERROR -> MaterialTheme.colorScheme.errorContainer
+        TranscriptionStatus.IN_PROGRESS -> MaterialTheme.colorScheme.secondaryContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .background(container, shape = MaterialTheme.shapes.medium)
+            .clickable { onClick(recording.id) },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun StatusTag(
+    recording: AudioRecordingUi,
+    onClick: (String) -> Unit
+) {
+    val (label, color) = when (recording.transcriptionStatus) {
+        TranscriptionStatus.DONE -> "已同步" to MaterialTheme.colorScheme.primary
+        TranscriptionStatus.IN_PROGRESS -> "转写中..." to MaterialTheme.colorScheme.tertiary
+        TranscriptionStatus.ERROR -> "Sync Error" to MaterialTheme.colorScheme.error
+        TranscriptionStatus.NONE -> "Not Synced" to MaterialTheme.colorScheme.secondary
+    }
+    ElevatedAssistChip(
+        modifier = Modifier.testTag("${AudioFilesTestTags.STATUS_CHIP_PREFIX}${recording.id}"),
+        onClick = { onClick(recording.id) },
+        label = { Text(text = label, color = color) },
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                contentDescription = null,
+                tint = color
+            )
+        }
+    )
+}
+
+@Composable
+private fun ActionButtons(
+    recording: AudioRecordingUi,
+    onTranscribeClicked: (String) -> Unit,
+    onTranscriptClicked: (String) -> Unit,
+    onDeleteClicked: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            when (recording.transcriptionStatus) {
+                TranscriptionStatus.NONE -> {
                     TextButton(
                         onClick = { onTranscribeClicked(recording.id) },
                         modifier = Modifier.testTag("${AudioFilesTestTags.TRANSCRIBE_BUTTON_PREFIX}${recording.id}")
                     ) {
-                        Text(text = "用 AI 转写")
+                        Text(text = "查看/转写")
                     }
                 }
-                if (recording.transcriptionStatus == TranscriptionStatus.DONE) {
+
+                TranscriptionStatus.DONE -> {
                     TextButton(
                         onClick = { onTranscriptClicked(recording.id) },
                         modifier = Modifier.testTag("${AudioFilesTestTags.TRANSCRIPT_BUTTON_PREFIX}${recording.id}")
                     ) {
-                        Text(text = "查看转写结果")
+                        Text(text = "查看转写")
                     }
                 }
-                TextButton(onClick = { onDeleteClicked(recording.id) }) {
-                    Icon(Icons.Default.Delete, contentDescription = null)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "删除")
+
+                TranscriptionStatus.IN_PROGRESS -> {
+                    Text(
+                        text = "转写中...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
                 }
+
+                TranscriptionStatus.ERROR -> {
+                    Text(
+                        text = "Sync Error",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick = { onDeleteClicked(recording.id) }) {
+                Text(text = "删除")
             }
         }
     }
@@ -368,12 +466,17 @@ private fun TranscriptViewerSheet(
                 .verticalScroll(scrollState)
         ) {
             Text(
-                text = recording.fileName,
-                style = MaterialTheme.typography.titleMedium
+                text = "通话转写",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider()
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+            PlayerStub(
+                title = recording.fileName,
+                duration = formatDuration(recording.durationMillis),
+                onPlayPause = { /* 播放占位 */ }
+            )
+            Spacer(modifier = Modifier.height(12.dp))
             val summary = recording.smartSummary?.takeIf { it.isMeaningful() }
             summary?.let {
             SummaryBlock(summary = it, modifier = Modifier.testTag(AudioFilesTestTags.TRANSCRIPT_SUMMARY))
@@ -403,15 +506,14 @@ private fun TranscriptViewerSheet(
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            Button(
+            GradientCtaButton(
+                label = "用 AI 分析本次通话",
+                modifier = Modifier.fillMaxWidth(),
                 onClick = {
                     onDismiss()
                     onAskAiClicked(recording)
-                },
-                modifier = Modifier.align(Alignment.Start)
-            ) {
-                Text(text = "用 AI 分析本次通话")
-            }
+                }
+            )
             Spacer(modifier = Modifier.height(8.dp))
             recording.chapters?.let { chapters ->
                 Text(
@@ -528,3 +630,80 @@ private fun SummaryBlock(
 
 private fun TingwuSmartSummaryUi.isMeaningful(): Boolean =
     !summary.isNullOrBlank() || keyPoints.isNotEmpty() || actionItems.isNotEmpty()
+
+@Composable
+private fun PlayerStub(
+    title: String,
+    duration: String,
+    onPlayPause: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            IconButton(onClick = onPlayPause) {
+                Icon(
+                    imageVector = Icons.Outlined.PlayArrow,
+                    contentDescription = "播放",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = title, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    text = "转写摘要",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(
+                text = duration,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun GradientCtaButton(
+    label: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .background(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primary,
+                        MaterialTheme.colorScheme.secondary
+                    )
+                ),
+                shape = MaterialTheme.shapes.large
+            )
+            .clickable(onClick = onClick)
+            .padding(vertical = 14.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onPrimary
+        )
+    }
+}
+
+private fun formatDuration(durationMillis: Long?): String {
+    if (durationMillis == null || durationMillis <= 0) return "--:--"
+    val totalSeconds = (durationMillis / 1000).coerceAtLeast(0)
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "%02d:%02d".format(minutes, seconds)
+}

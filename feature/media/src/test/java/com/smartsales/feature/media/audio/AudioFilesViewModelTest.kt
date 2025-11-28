@@ -166,11 +166,12 @@ class AudioFilesViewModelTest {
         advanceUntilIdle()
 
         viewModel.onTranscribeClicked("voice.mp3")
+        advanceUntilIdle()
         val state = viewModel.uiState.value
         val recording = state.recordings.first()
         assertEquals(TranscriptionStatus.IN_PROGRESS, recording.transcriptionStatus)
         assertEquals(null, state.transcriptPreviewRecording)
-        assertFalse(recording.transcriptPreview.isNullOrBlank())
+        assertEquals(null, recording.transcriptPreview)
     }
 
     @Test

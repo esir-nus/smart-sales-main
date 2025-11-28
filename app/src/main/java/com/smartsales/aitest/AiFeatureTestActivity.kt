@@ -89,12 +89,16 @@ import com.smartsales.core.util.Result
 import com.smartsales.feature.chat.home.DeviceConnectionStateUi
 import com.smartsales.feature.chat.home.DeviceSnapshotUi
 import com.smartsales.feature.chat.home.HomeScreenRoute
+import com.smartsales.feature.chat.home.HomeScreenViewModel
 import com.smartsales.feature.chat.home.TranscriptionChatRequest
 import com.smartsales.feature.chat.history.ChatHistoryRoute
+import com.smartsales.feature.media.audio.AudioFilesEvent
+import com.smartsales.feature.media.audio.AudioFilesViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
-import java.util.UUID
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -117,10 +121,10 @@ private fun AiFeatureTestApp() {
     val mediaServerClient = remember { MediaServerClient(context) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val homeViewModel: HomeScreenViewModel = hiltViewModel()
+    val audioFilesViewModel: AudioFilesViewModel = hiltViewModel()
     var currentPage by rememberSaveable { mutableStateOf(TestHomePage.Home) }
     var latestDeviceSnapshot by remember { mutableStateOf<DeviceSnapshotUi?>(null) }
-    var manualSessionId by rememberSaveable { mutableStateOf("home-session") }
-    var pendingTranscription by remember { mutableStateOf<TranscriptionChatRequest?>(null) }
     var pendingSessionId by remember { mutableStateOf<String?>(null) }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -139,6 +143,27 @@ private fun AiFeatureTestApp() {
         }
         if (missingPermissions.isNotEmpty()) {
             permissionLauncher.launch(missingPermissions.toTypedArray())
+        }
+    }
+
+    LaunchedEffect(audioFilesViewModel) {
+        audioFilesViewModel.events.collect { event ->
+            when (event) {
+                is AudioFilesEvent.TranscriptReady -> {
+                    val sessionId = "session-${event.jobId}"
+                    homeViewModel.onTranscriptionRequested(
+                        TranscriptionChatRequest(
+                            jobId = event.jobId,
+                            fileName = event.fileName,
+                            recordingId = event.recordingId,
+                            sessionId = sessionId,
+                            transcriptPreview = event.transcriptPreview,
+                            transcriptMarkdown = event.fullTranscriptMarkdown
+                        )
+                    )
+                    pendingSessionId = sessionId
+                }
+            }
         }
     }
 
@@ -232,10 +257,8 @@ private fun AiFeatureTestApp() {
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .testTag(AiFeatureTestTags.PAGE_HOME),
-                                        sessionId = pendingSessionId ?: pendingTranscription?.sessionId
-                                            ?: manualSessionId,
-                                        transcriptionRequest = pendingTranscription,
-                                        onTranscriptionRequestConsumed = { pendingTranscription = null },
+                                        viewModel = homeViewModel,
+                                        sessionId = pendingSessionId,
                                         selectedSessionId = pendingSessionId,
                                         onSessionSelectionConsumed = { pendingSessionId = null },
                                         onNavigateToDeviceManager = { openDeviceSection() },
@@ -279,16 +302,19 @@ private fun AiFeatureTestApp() {
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES),
-                                        onAskAiAboutTranscript = { recordingId, fileName, preview, full ->
-                                            val sessionId = "session-${UUID.randomUUID()}"
-                                            val jobId = "transcription-$recordingId"
-                                            pendingTranscription = TranscriptionChatRequest(
-                                                jobId = jobId,
-                                                fileName = fileName,
-                                                recordingId = recordingId,
-                                                sessionId = sessionId,
-                                                transcriptPreview = preview,
-                                                transcriptMarkdown = full
+                                        viewModel = audioFilesViewModel,
+                                        onAskAiAboutTranscript = { recordingId, fileName, jobId, preview, full ->
+                                            val resolvedJobId = jobId ?: "transcription-$recordingId"
+                                            val sessionId = "session-$resolvedJobId"
+                                            homeViewModel.onTranscriptionRequested(
+                                                TranscriptionChatRequest(
+                                                    jobId = resolvedJobId,
+                                                    fileName = fileName,
+                                                    recordingId = recordingId,
+                                                    sessionId = sessionId,
+                                                    transcriptPreview = preview,
+                                                    transcriptMarkdown = full
+                                                )
                                             )
                                             pendingSessionId = sessionId
                                             setPage(TestHomePage.Home)

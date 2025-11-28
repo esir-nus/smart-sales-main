@@ -20,8 +20,11 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
@@ -39,6 +42,8 @@ class AudioFilesViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(AudioFilesUiState(isLoading = true))
     val uiState: StateFlow<AudioFilesUiState> = _uiState.asStateFlow()
+    private val _events = MutableSharedFlow<AudioFilesEvent>(extraBufferCapacity = 8)
+    val events: SharedFlow<AudioFilesEvent> = _events.asSharedFlow()
 
     private var currentBaseUrl: String? = null
     private var playingId: String? = null
@@ -280,6 +285,20 @@ class AudioFilesViewModel @Inject constructor(
                                 }
                             )
                         }
+                        val fileName = recordingSources[recordingId]?.name ?: recordingId
+                        val transcript = state.transcriptMarkdown
+                        if (transcript.isNotBlank()) {
+                            _events.tryEmit(
+                                AudioFilesEvent.TranscriptReady(
+                                    recordingId = recordingId,
+                                    fileName = fileName,
+                                    jobId = jobId,
+                                    transcriptPreview = preview,
+                                    fullTranscriptMarkdown = transcript,
+                                    transcriptionUrl = state.transcriptionUrl
+                                )
+                            )
+                        }
                         observingJobs.remove(jobId)
                     }
 
@@ -338,4 +357,15 @@ class AudioFilesViewModel @Inject constructor(
             return formatter.format(Date(timestamp))
         }
     }
+}
+
+sealed interface AudioFilesEvent {
+    data class TranscriptReady(
+        val recordingId: String,
+        val fileName: String,
+        val jobId: String,
+        val transcriptPreview: String?,
+        val fullTranscriptMarkdown: String?,
+        val transcriptionUrl: String?
+    ) : AudioFilesEvent
 }

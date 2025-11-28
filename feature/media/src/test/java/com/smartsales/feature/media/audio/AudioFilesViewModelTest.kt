@@ -25,9 +25,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -239,6 +241,37 @@ class AudioFilesViewModelTest {
         assertEquals("概览", recording.smartSummary?.summary)
         assertEquals(listOf("要点1"), recording.smartSummary?.keyPoints)
         assertEquals(listOf("行动A"), recording.smartSummary?.actionItems)
+    }
+
+    @Test
+    fun `job completion emits transcript event`() = runTest(dispatcher) {
+        val file = DeviceMediaFile("clip5.mp3", 1, "audio/mpeg", 10L, "m", "d")
+        gateway.files = listOf(file)
+        endpointProvider.emit("http://10.0.0.12:8000")
+
+        val received = mutableListOf<AudioFilesEvent>()
+        val collectJob = backgroundScope.launch {
+            viewModel.events.collect { received += it }
+        }
+
+        advanceUntilIdle()
+
+        viewModel.onTranscribeClicked("clip5.mp3")
+        transcriptionCoordinator.emitState(
+            "task-1",
+            AudioTranscriptionJobState.Completed(
+                jobId = "task-1",
+                transcriptMarkdown = "转写完成",
+                transcriptionUrl = "https://example.com/transcription.json"
+            )
+        )
+        advanceUntilIdle()
+
+        val ready = received.filterIsInstance<AudioFilesEvent.TranscriptReady>().firstOrNull()
+        assertEquals("clip5.mp3", ready?.recordingId)
+        assertEquals("task-1", ready?.jobId)
+        assertEquals("转写完成", ready?.fullTranscriptMarkdown)
+        collectJob.cancel()
     }
 
     @Test

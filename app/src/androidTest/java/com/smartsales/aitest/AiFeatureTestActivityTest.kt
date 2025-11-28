@@ -263,15 +263,10 @@ class AiFeatureTestActivityTest {
     }
 
     private fun forceDeviceDisconnected() {
-        val impl = connectionManager
-        val field = impl.javaClass.getDeclaredField("_state")
-        field.isAccessible = true
-        val flow = field.get(impl) as MutableStateFlow<ConnectionState>
-        flow.value = ConnectionState.Disconnected
+        updateConnectionState(ConnectionState.Disconnected)
     }
 
     private fun forceDeviceProvisioned() {
-        val impl = connectionManager
         val session = BleSession.fromPeripheral(
             BlePeripheral(
                 id = "mock-device",
@@ -285,10 +280,7 @@ class AiFeatureTestActivityTest {
             handshakeId = UUID.randomUUID().toString(),
             credentialsHash = "hash-${UUID.randomUUID()}"
         )
-        val field = impl.javaClass.getDeclaredField("_state")
-        field.isAccessible = true
-        val flow = field.get(impl) as MutableStateFlow<ConnectionState>
-        flow.value = ConnectionState.WifiProvisioned(session, status)
+        updateConnectionState(ConnectionState.WifiProvisioned(session, status))
     }
 
     private fun clickIfExists(tag: String): Boolean {
@@ -330,4 +322,16 @@ class AiFeatureTestActivityTest {
         )
     }
 
+    private fun updateConnectionState(newState: ConnectionState) {
+        val impl = connectionManager
+        val field = impl.javaClass.getDeclaredField("_state")
+        field.isAccessible = true
+        val flow = field.get(impl)
+        if (flow is MutableStateFlow<*>) {
+            @Suppress("UNCHECKED_CAST")
+            (flow as MutableStateFlow<ConnectionState>).value = newState
+        } else {
+            throw IllegalStateException("Connection state field is not MutableStateFlow")
+        }
+    }
 }

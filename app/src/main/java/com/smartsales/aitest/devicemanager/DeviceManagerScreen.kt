@@ -23,6 +23,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -158,6 +160,11 @@ fun DeviceManagerScreen(
                 }
 
                 else -> {
+                    Text(
+                        text = "文件列表 (${state.visibleFiles.size})",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     LazyColumn(
                         modifier = Modifier
                             .weight(1f)
@@ -273,7 +280,28 @@ private fun DeviceFileCard(
         onClick = onSelect
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text(text = file.displayName, style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = file.displayName,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (file.isApplied) {
+                    AssistChip(
+                        onClick = {},
+                        enabled = false,
+                        label = { Text(text = "当前展示") },
+                        colors = AssistChipDefaults.assistChipColors(
+                            labelColor = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                }
+            }
             Text(
                 text = "${file.mimeType} · ${file.sizeText}",
                 style = MaterialTheme.typography.bodySmall
@@ -318,11 +346,7 @@ private fun DeviceFileCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (file.isApplied) {
-                    Text(text = "已应用", color = MaterialTheme.colorScheme.primary)
-                } else {
-                    Spacer(modifier = Modifier.height(0.dp))
-                }
+                Spacer(modifier = Modifier.weight(1f))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = onApply) {
                         Text("应用")

@@ -130,6 +130,7 @@ fun UserCenterScreen(
                 onToggle = onToggleFeatureFlag,
                 modifier = Modifier.fillMaxWidth()
             )
+            ShortcutMenuCard(modifier = Modifier.fillMaxWidth())
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth()
@@ -192,6 +193,42 @@ private fun ProfileHeader(userName: String) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+@Composable
+private fun ShortcutMenuCard(modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(text = "快捷入口", style = MaterialTheme.typography.titleMedium)
+            ShortcutRow(title = "设备管理", subtitle = "管理已配对设备与文件")
+            HorizontalDivider()
+            ShortcutRow(title = "订阅管理", subtitle = "查看和续费订阅套餐")
+            HorizontalDivider()
+            ShortcutRow(title = "隐私与安全", subtitle = "密码、双重认证与数据控制")
+            HorizontalDivider()
+            ShortcutRow(title = "通用设置", subtitle = "语言与通知偏好")
+        }
+    }
+}
+
+@Composable
+private fun ShortcutRow(title: String, subtitle: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(text = title, style = MaterialTheme.typography.bodyLarge)
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

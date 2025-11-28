@@ -54,7 +54,7 @@ class DeviceManagerScreenTest {
         )
         renderDeviceManager(state)
 
-        composeRule.onAllNodesWithText("设备未连接").assertCountEquals(2)
+        composeRule.onNodeWithText("设备未连接").assertIsDisplayed()
         composeRule.onNodeWithText("请连接设备以管理文件和查看预览。").assertIsDisplayed()
         composeRule.onNodeWithText("重试连接").assertIsDisplayed()
     }

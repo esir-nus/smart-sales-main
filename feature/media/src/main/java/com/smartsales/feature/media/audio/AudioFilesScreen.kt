@@ -148,6 +148,11 @@ fun AudioFilesScreen(
                         .testTag(AudioFilesTestTags.EMPTY_STATE)
                 )
             } else {
+                Text(
+                    text = "共 ${uiState.recordings.size} 条录音",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 LazyColumn(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(10.dp)

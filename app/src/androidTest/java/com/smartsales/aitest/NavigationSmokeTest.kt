@@ -97,6 +97,7 @@ class NavigationSmokeTest {
         composeRule.onNodeWithTag(HomeScreenTestTags.PROFILE_BUTTON, useUnmergedTree = true).performClick()
         waitForAnyTag(composeRule, UserCenterTestTags.ROOT, AiFeatureTestTags.PAGE_USER_CENTER)
         composeRule.onNodeWithText("管理账号、订阅与隐私设置，查看剩余配额。").assertIsDisplayed()
+        composeRule.onNodeWithText("订阅管理").assertIsDisplayed()
 
         composeRule.activityRule.scenario.onActivity {
             it.onBackPressedDispatcher.onBackPressed()

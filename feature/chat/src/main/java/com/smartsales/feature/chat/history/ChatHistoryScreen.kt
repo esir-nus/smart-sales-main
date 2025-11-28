@@ -17,9 +17,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -145,6 +146,12 @@ fun ChatHistoryScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            Text(
+                text = "长按会话可置顶、重命名或删除，保持与 React 历史侧边一致。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
             if (state.sessions.isEmpty() && !state.isLoading) {
                 Box(
                     modifier = Modifier
@@ -152,7 +159,7 @@ fun ChatHistoryScreen(
                         .testTag(ChatHistoryTestTags.EMPTY),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "暂无会话历史")
+                    Text(text = "暂无历史记录，开始新的对话吧。")
                 }
             } else {
                 LazyColumn(
@@ -185,7 +192,7 @@ fun ChatHistoryScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 SheetAction(
-                    label = if (session.pinned) "取消置顶" else "置顶",
+                    label = if (session.pinned) "取消置顶" else "置顶到顶部",
                     modifier = Modifier.testTag(ChatHistoryTestTags.SHEET_PIN),
                     onClick = {
                         onPinToggle(session.id)
@@ -193,7 +200,7 @@ fun ChatHistoryScreen(
                     }
                 )
                 SheetAction(
-                    label = "重命名",
+                    label = "重命名会话",
                     modifier = Modifier.testTag(ChatHistoryTestTags.SHEET_RENAME),
                     onClick = {
                         sheetSession = null
@@ -202,7 +209,7 @@ fun ChatHistoryScreen(
                     }
                 )
                 SheetAction(
-                    label = "删除",
+                    label = "删除并清除消息",
                     modifier = Modifier.testTag(ChatHistoryTestTags.SHEET_DELETE),
                     onClick = {
                         onDeleteSession(session.id)
@@ -261,7 +268,7 @@ fun ChatHistoryScreen(
                         renameTarget = null
                     },
                     enabled = renameText.isNotBlank()
-                ) { Text(text = "保存") }
+                ) { Text(text = "保存标题") }
             },
             dismissButton = {
                 TextButton(onClick = { renameTarget = null }) {
@@ -304,13 +311,14 @@ private fun ChatHistoryItem(
                         )
                         if (session.pinned) {
                             Spacer(modifier = Modifier.size(8.dp))
-                            Box(
-                                modifier = Modifier
-                                    .size(10.dp)
-                                    .background(
-                                        color = MaterialTheme.colorScheme.primary,
-                                        shape = CircleShape
-                                    )
+                            AssistChip(
+                                onClick = {},
+                                enabled = false,
+                                label = { Text(text = "置顶") },
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                    labelColor = MaterialTheme.colorScheme.primary
+                                )
                             )
                         }
                     }

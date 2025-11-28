@@ -5,6 +5,9 @@ package com.smartsales.feature.media.audio
 // 说明：音频库 Compose 界面，展示列表并触发同步、播放与删除（预留转写占位）
 // 作者：创建于 2025-11-21
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,7 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
@@ -41,6 +43,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -638,7 +641,7 @@ private fun PlayerStub(
     onPlayPause: () -> Unit
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.94f))
     ) {
         Row(
             modifier = Modifier
@@ -647,15 +650,34 @@ private fun PlayerStub(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            IconButton(onClick = onPlayPause) {
+            IconButton(
+                onClick = onPlayPause,
+                modifier = Modifier
+                    .size(48.dp)
+                    .border(
+                        BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        ),
+                        shape = MaterialTheme.shapes.medium
+                    ),
+                colors = IconButtonDefaults.iconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
                 Icon(
                     imageVector = Icons.Outlined.PlayArrow,
-                    contentDescription = "播放",
-                    tint = MaterialTheme.colorScheme.primary
+                    contentDescription = "播放"
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 Text(
                     text = "转写摘要",
                     style = MaterialTheme.typography.bodySmall,

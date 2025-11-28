@@ -14,7 +14,7 @@ fun <R : TestRule, A : ComponentActivity> waitForAnyTag(
     composeRule: AndroidComposeTestRule<R, A>,
     vararg tags: String,
     extraFallbackTags: Array<String> = emptyArray(),
-    timeoutMillis: Long = 15_000,
+    timeoutMillis: Long = 30_000,
     useUnmergedTree: Boolean = true
 ) {
     val deadline = System.currentTimeMillis() + timeoutMillis

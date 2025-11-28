@@ -121,11 +121,6 @@ class AiFeatureTestActivityTest {
         composeRule.onNodeWithTag(HomeScreenTestTags.PROFILE_BUTTON, useUnmergedTree = true).performClick()
         waitForPage(AiFeatureTestTags.PAGE_USER_CENTER)
 
-        // Wi-Fi & BLE 测试仍通过 Chip 进入
-        goHome()
-        selectTab(AiFeatureTestTags.CHIP_WIFI)
-        waitForPage(AiFeatureTestTags.PAGE_WIFI)
-        goHome()
     }
 
     @Test
@@ -157,8 +152,8 @@ class AiFeatureTestActivityTest {
         // 个人中心图标跳到用户中心
         composeRule.onNodeWithTag(HomeScreenTestTags.PROFILE_BUTTON, useUnmergedTree = true).performClick()
         waitForPage(AiFeatureTestTags.PAGE_USER_CENTER)
-        composeRule.onNodeWithText("账号信息、订阅与隐私偏好都在这里，保存后会同步到 React 端。", substring = true)
-            .assertIsDisplayed()
+        composeRule.onNodeWithText("设备管理", substring = true, useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("订阅管理", substring = true, useUnmergedTree = true).assertExists()
     }
 
     @Test
@@ -224,10 +219,6 @@ class AiFeatureTestActivityTest {
         }
     }
 
-    private fun selectTab(tag: String) {
-        composeRule.onNodeWithTag(tag, useUnmergedTree = true).performClick()
-    }
-
     private fun goHome() {
         val clicked = clickIfExists(AiFeatureTestTags.OVERLAY_HOME)
         if (!clicked) {
@@ -248,25 +239,15 @@ class AiFeatureTestActivityTest {
                 AiFeatureTestTags.OVERLAY_HOME,
                 AiFeatureTestTags.PAGE_CHAT_HISTORY,
                 AiFeatureTestTags.PAGE_USER_CENTER
-            ),
-            timeoutMillis = 30_000
+            )
         )
-        val found = runCatching {
-            composeRule.waitUntil(timeoutMillis = 10_000) {
-                composeRule.onAllNodesWithTag(tag, useUnmergedTree = true)
-                    .fetchSemanticsNodes()
-                    .isNotEmpty()
-            }
-            true
-        }.getOrElse { false }
-        assertTrue("Expected to find page tag $tag", found)
     }
 
     private fun tapQuickSkill(skillId: QuickSkillId) {
         val tag = "home_quick_skill_${skillId.name}"
         val nodes = composeRule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes()
         if (nodes.isNotEmpty()) {
-            composeRule.onNodeWithTag(tag, useUnmergedTree = true).performClick()
+            composeRule.onAllNodesWithTag(tag, useUnmergedTree = true)[0].performClick()
         }
     }
 

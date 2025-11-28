@@ -63,6 +63,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -249,35 +250,28 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
-                            MaterialTheme.colorScheme.surface
-                        )
-                    )
-                )
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.08f))
                 .pullRefresh(pullRefreshState)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp)
+                .padding(horizontal = 16.dp)
             ) {
                 SessionHeader(
                     session = state.currentSession,
                     onNewChatClicked = onNewChatClicked
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp)
-                ) {
-                    DeviceAudioBanner(
-                        deviceSnapshot = state.deviceSnapshot,
-                        audioSummary = state.audioSummary,
-                        onDeviceClick = onDeviceBannerClicked,
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+        ) {
+            DeviceAudioBanner(
+                deviceSnapshot = state.deviceSnapshot,
+                audioSummary = state.audioSummary,
+                onDeviceClick = onDeviceBannerClicked,
                         onAudioClick = onAudioSummaryClicked
                     )
                 }
@@ -407,18 +401,16 @@ private fun HomeTopBar(
     onHistoryClick: () -> Unit,
     onProfileClick: () -> Unit
 ) {
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
-        Text(
-            text = "新对话",
-            style = MaterialTheme.typography.titleLarge
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             IconButton(
                 onClick = onHistoryClick,
                 modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_BUTTON)
@@ -432,6 +424,11 @@ private fun HomeTopBar(
                 Icon(Icons.Filled.Person, contentDescription = "个人中心")
             }
         }
+        Text(
+            text = "新对话",
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.align(Alignment.Center)
+        )
     }
 }
 
@@ -708,50 +705,57 @@ private fun EmptyChatHint(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 32.dp, horizontal = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(vertical = 20.dp, horizontal = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
-                .size(96.dp)
+                .size(64.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.04f)),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "LOGO",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
+                fontWeight = FontWeight.Bold
             )
         }
         Text(
-            text = "你好，我是您的销售助手",
+            text = "你好",
             style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = "我是您的销售助手",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary
         )
         Text(
             text = "我可以帮您：",
-            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
         )
         Column(
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
             horizontalAlignment = Alignment.Start
         ) {
             Text(
                 text = "• 分析用户画像、意图、痛点。",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
                 text = "• 生成 PDF、CSV 文档及思维导图。",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Text(
             text = "让我们开始吧",
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         QuickSkillRow(
@@ -790,14 +794,16 @@ private fun HomeInputArea(
     onClearSelectedSkill: () -> Unit
 ) {
     Surface(
-        tonalElevation = 4.dp
+        tonalElevation = 2.dp,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             QuickSkillRow(
                 skills = quickSkills,

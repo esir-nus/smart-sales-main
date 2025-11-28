@@ -52,10 +52,12 @@ Workstreams（技术视角）
 - 变更防护：新增差异需更新 `react_align_plan.md`，并以小步提交 + 仪表验证锁定行为。
 
 Execution steps
-- Shell: make AiFeatureTestActivity honor Home navigation requests with the React vertical overlays (Home center, Device up → manager/setup by connection, Audio down), always backing to Home.
-- Home UI: mirror React welcome/skill-first chat (Markdown/复制 affordance, chip lifecycle) while keeping session handling and test tags；Hero 区域对齐实机：LOGO、问候语、两行 bullet、技能 pills。
-- Screen states: copy React empty/loading/error/CTA text and actions for DeviceManager, DeviceSetup, AudioFiles (transcript drawer “用 AI 分析本次通话”), ChatHistory (long-press rename/pin/delete), and UserCenter menus.
-- Tests: refresh instrumentation to assert the React journeys (overlay routing, device/audio/profile/history taps) without weakening assertions; keep unmerged trees for overlays and reasonable timeouts.
+- 对齐参考：完整走读 `UI/Pages/*.jsx` + `UI/Components` 与 `real-interface/*.jpg`，梳理每屏布局、间距、圆角、色板、复制文案。
+- 设计 token：落地浅灰背景、卡片圆角/阴影、渐变 CTA、手柄宽高与 icon 尺寸，集中在 Compose 端的 DesignKit（可放 `core/util/ui` 或各 feature 内复用）。
+- Shell 叠层：让 AiFeatureTestActivity 的竖向 overlay 与 React 一致（窄 rail、轻背景、统一 handle），返回行为始终回到 Home；保持 testTag 覆盖。
+- 分屏迁移：Home（Hero LOGO/问候/要点对齐）、DeviceManager（浅色 Hero + 空/错/加载文案）、AudioFiles（转写抽屉、播放器描边与渐变 CTA）、UserCenter（淡紫背景+卡片栈）、DeviceSetup/ChatHistory（流程与文案对齐）。
+- 仪表测试：每屏调整后同步更新对应 androidTest，验证 overlay 路由、入口点击与 CTA 文案，保持 tag 不变。
+- 验证：跑 `./gradlew testDebugUnitTest` 以及关键 UI 测试（connectedDebugAndroidTest 视环境）；发现新的 React 差异及时更新 `docs/react_align_progress.md` / plan 数据。
 
 Progress tracking
 - 进度详情移至 `docs/react_align_progress.md`（含日期与对应改动），本文件仅保留对齐要求。

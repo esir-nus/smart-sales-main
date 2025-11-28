@@ -205,7 +205,20 @@ private fun AiFeatureTestApp() {
         val showSnackbar: (String) -> Unit = { message ->
             scope.launch { snackbarHostState.showSnackbar(message) }
         }
-        Scaffold(snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { innerPadding ->
+        Scaffold(
+            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+            topBar = {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = "新对话", style = MaterialTheme.typography.titleLarge)
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
+        ) { innerPadding ->
             Surface(
                 modifier = Modifier
                     .fillMaxSize()
@@ -214,8 +227,8 @@ private fun AiFeatureTestApp() {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 8.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             DraggableOverlayStack(
                 currentOverlay = currentOverlay,
@@ -396,31 +409,29 @@ private fun DraggableOverlayStack(
         }
     }
 
-    Box(
+    Surface(
         modifier = modifier
-            .width(120.dp)
+            .width(72.dp)
             .fillMaxHeight()
             .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                        MaterialTheme.colorScheme.surface
-                    )
-                ),
-                shape = MaterialTheme.shapes.medium
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                shape = MaterialTheme.shapes.large
             )
             .draggable(
                 state = dragState,
                 orientation = Orientation.Vertical,
                 onDragStopped = { velocity -> settle(velocity) }
             )
-            .testTag(AiFeatureTestTags.OVERLAY_STACK)
+            .testTag(AiFeatureTestTags.OVERLAY_STACK),
+        tonalElevation = 0.5.dp,
+        shadowElevation = 0.dp,
+        shape = MaterialTheme.shapes.large
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(vertical = 24.dp, horizontal = 8.dp),
-            verticalArrangement = Arrangement.SpaceEvenly,
+                .padding(vertical = 18.dp, horizontal = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             OverlayCard(
@@ -459,7 +470,7 @@ private fun OverlayCard(
     val base = overlayToPosition(overlay)
     val distance = 1f - kotlin.math.abs(currentOffset - base).coerceIn(0f, 1f)
     val scale = 0.92f + distance * 0.12f
-    val elevation = 2.dp + (distance * 6).dp
+    val elevation = 1.dp + (distance * 2).dp
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val pressedScale by animateFloatAsState(
@@ -475,11 +486,7 @@ private fun OverlayCard(
             )
             .then(if (tag != null) Modifier.testTag(tag) else Modifier),
         colors = CardDefaults.cardColors(
-            containerColor = if (overlay == HomeOverlay.Home) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f)
-            }
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(elevation),
         onClick = onClick,
@@ -488,17 +495,17 @@ private fun OverlayCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = 6.dp),
+                .padding(vertical = 8.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Box(
                 modifier = Modifier
-                     .height(3.dp)
-                     .width(28.dp)
-                    .background(MaterialTheme.colorScheme.onSurfaceVariant, shape = MaterialTheme.shapes.small)
+                    .height(2.dp)
+                    .width(26.dp)
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f), shape = MaterialTheme.shapes.small)
             )
-            Text(text = label, style = MaterialTheme.typography.bodyLarge)
+            Text(text = label, style = MaterialTheme.typography.bodyMedium)
             Text(
                 text = when (overlay) {
                     HomeOverlay.Home -> "主页"
@@ -514,44 +521,7 @@ private fun OverlayCard(
 
 @Composable
 private fun PageSelector(currentPage: TestHomePage, onPageSelected: (TestHomePage) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        FilterChip(
-            selected = currentPage == TestHomePage.WifiBleTester,
-            onClick = { onPageSelected(TestHomePage.WifiBleTester) },
-            label = { Text("WiFi & BLE Tester") },
-            modifier = Modifier.testTag(AiFeatureTestTags.CHIP_WIFI)
-        )
-        FilterChip(
-            selected = currentPage == TestHomePage.DeviceManager,
-            onClick = { onPageSelected(TestHomePage.DeviceManager) },
-            label = { Text("设备文件") },
-            modifier = Modifier.testTag(AiFeatureTestTags.CHIP_DEVICE_MANAGER)
-        )
-        FilterChip(
-            selected = currentPage == TestHomePage.DeviceSetup,
-            onClick = { onPageSelected(TestHomePage.DeviceSetup) },
-            label = { Text("设备连接") },
-            modifier = Modifier.testTag(AiFeatureTestTags.CHIP_DEVICE_SETUP)
-        )
-        FilterChip(
-            selected = currentPage == TestHomePage.AudioFiles,
-            onClick = { onPageSelected(TestHomePage.AudioFiles) },
-            label = { Text("音频库") },
-            modifier = Modifier.testTag(AiFeatureTestTags.CHIP_AUDIO_FILES)
-        )
-        FilterChip(
-            selected = currentPage == TestHomePage.ChatHistory,
-            onClick = { onPageSelected(TestHomePage.ChatHistory) },
-            label = { Text("会话历史") },
-            modifier = Modifier.testTag(AiFeatureTestTags.CHIP_CHAT_HISTORY)
-        )
-        FilterChip(
-            selected = currentPage == TestHomePage.UserCenter,
-            onClick = { onPageSelected(TestHomePage.UserCenter) },
-            label = { Text("用户中心") },
-            modifier = Modifier.testTag(AiFeatureTestTags.CHIP_USER_CENTER)
-        )
-    }
+    // 省略底部 Chips，导航由顶部按钮与 overlay 控制，保持 UI 简洁
 }
 
 private enum class HomeOverlay {

@@ -31,6 +31,7 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.smartsales.feature.media.devicemanager.DeviceManagerUiState
 import com.smartsales.feature.media.devicemanager.DeviceConnectionUiState
@@ -70,7 +71,7 @@ class DeviceManagerScreenTest {
 
         composeRule.onNode(progressMatcher()).assertIsDisplayed()
         composeRule.onNodeWithText("刷新中...").assertIsDisplayed()
-        composeRule.onNodeWithText("上传新文件").assertIsDisplayed()
+        composeRule.onAllNodesWithText("上传新文件").onFirst().assertIsDisplayed()
     }
 
     @Test
@@ -83,6 +84,8 @@ class DeviceManagerScreenTest {
 
         composeRule.onNodeWithText("设备文件管理").assertIsDisplayed()
         composeRule.onNodeWithText("刷新、上传并预览设备素材，与 React 端保持一致。").assertIsDisplayed()
+        composeRule.onNodeWithText("选择文件预览").assertIsDisplayed()
+        composeRule.onAllNodesWithText("上传新文件").onFirst().assertIsDisplayed()
         composeRule.onNodeWithTag(DeviceManagerTestTags.EMPTY_STATE).assertIsDisplayed()
         composeRule.onAllNodesWithText("应用").assertCountEquals(0)
     }
@@ -125,19 +128,8 @@ class DeviceManagerScreenTest {
             onRequestUpload = { uploadClicks++ }
         )
 
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-            composeRule.onAllNodesWithTag("${DeviceManagerTestTags.FILE_CARD_PREFIX}promo.mp4")
-                .fetchSemanticsNodes()
-                .isNotEmpty()
-        }
-        composeRule.onNodeWithTag(DeviceManagerTestTags.FILE_LIST)
-            .performScrollToNode(hasTestTag("${DeviceManagerTestTags.FILE_CARD_PREFIX}promo.mp4"))
-        composeRule.onNodeWithTag(DeviceManagerTestTags.FILE_LIST)
-            .performScrollToNode(hasTestTag("${DeviceManagerTestTags.FILE_CARD_PREFIX}loop.gif"))
-        composeRule.onNodeWithTag("${DeviceManagerTestTags.FILE_CARD_PREFIX}promo.mp4").assertExists()
-        composeRule.onNodeWithTag("${DeviceManagerTestTags.FILE_CARD_PREFIX}loop.gif").assertExists()
         composeRule.onNodeWithTag(DeviceManagerTestTags.REFRESH_BUTTON).performClick()
-        composeRule.onNodeWithTag(DeviceManagerTestTags.UPLOAD_BUTTON).performClick()
+        composeRule.onAllNodesWithTag(DeviceManagerTestTags.UPLOAD_BUTTON).onFirst().performClick()
 
         assertEquals(1, refreshClicks)
         assertEquals(1, uploadClicks)

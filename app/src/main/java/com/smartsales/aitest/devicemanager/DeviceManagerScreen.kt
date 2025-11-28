@@ -189,7 +189,7 @@ private fun DeviceManagerHero(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f)
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.08f)
         )
     ) {
         Column(

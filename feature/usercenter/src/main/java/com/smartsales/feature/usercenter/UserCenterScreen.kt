@@ -73,15 +73,15 @@ fun UserCenterScreen(
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f))
             .testTag(UserCenterTestTags.ROOT),
         topBar = {
-            TopAppBar(
-                title = { Text(text = "用户中心") },
-                actions = {
-                    IconButton(onClick = onSaveClicked, enabled = !uiState.isSaving) {
-                        Icon(Icons.Default.Save, contentDescription = "保存")
-                    }
+        TopAppBar(
+            title = { Text(text = "用户中心") },
+            actions = {
+                IconButton(onClick = onSaveClicked, enabled = !uiState.isSaving) {
+                    Icon(Icons.Default.Save, contentDescription = "保存")
                 }
-            )
-        }
+            }
+        )
+    }
     ) { innerPadding ->
         Column(
             modifier = Modifier

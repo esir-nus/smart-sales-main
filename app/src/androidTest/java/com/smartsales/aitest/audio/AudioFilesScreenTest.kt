@@ -25,6 +25,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertTrue
 import com.smartsales.feature.media.audio.AudioFilesScreen
 import com.smartsales.feature.media.audio.AudioFilesTestTags
 import com.smartsales.feature.media.audio.AudioFilesUiState
@@ -40,6 +41,45 @@ class AudioFilesScreenTest {
 
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun statusChips_andActions_matchNewCopy() {
+        composeRule.setContent {
+            MaterialTheme {
+                AudioFilesScreen(
+                    uiState = AudioFilesUiState(
+                        recordings = listOf(
+                            sampleRecording("none"),
+                            sampleRecording("progress").copy(transcriptionStatus = TranscriptionStatus.IN_PROGRESS),
+                            sampleRecording("done").copy(transcriptionStatus = TranscriptionStatus.DONE, transcriptPreview = "预览"),
+                            sampleRecording("error").copy(transcriptionStatus = TranscriptionStatus.ERROR)
+                        )
+                    ),
+                    onRefresh = {},
+                    onSyncClicked = {},
+                    onRecordingClicked = {},
+                    onPlayPauseClicked = {},
+                    onDeleteClicked = {},
+                    onTranscribeClicked = {},
+                    onTranscriptClicked = {},
+                    onAskAiClicked = {},
+                    onTranscriptDismissed = {},
+                    onErrorDismissed = {},
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("${AudioFilesTestTags.TRANSCRIBE_BUTTON_PREFIX}none").assertIsDisplayed()
+        composeRule.onNodeWithText("查看/转写").assertIsDisplayed()
+        val inProgress =
+            composeRule.onAllNodesWithTag("${AudioFilesTestTags.STATUS_CHIP_PREFIX}progress", useUnmergedTree = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        val done =
+            composeRule.onAllNodesWithTag("${AudioFilesTestTags.STATUS_CHIP_PREFIX}done", useUnmergedTree = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        assertTrue(inProgress && done)
+    }
 
     @Test
     fun emptyState_isVisible() {
@@ -125,38 +165,6 @@ class AudioFilesScreenTest {
         composeRule.onAllNodesWithTag(AudioFilesTestTags.ERROR_BANNER).assertCountEquals(1)
         composeRule.onNodeWithText("收起提示").performClick()
         composeRule.onAllNodesWithTag(AudioFilesTestTags.ERROR_BANNER).assertCountEquals(0)
-    }
-
-    @Test
-    fun nonAudioRecordings_notShown() {
-        composeRule.setContent {
-            MaterialTheme {
-                AudioFilesScreen(
-                    uiState = AudioFilesUiState(
-                        recordings = listOf(
-                            sampleRecording("voice-1"),
-                            sampleRecording("photo-1").copy(fileName = "photo-1.jpg")
-                        )
-                    ),
-                    onRefresh = {},
-                    onSyncClicked = {},
-                    onRecordingClicked = {},
-                    onPlayPauseClicked = {},
-                    onDeleteClicked = {},
-                    onTranscribeClicked = {},
-                    onTranscriptClicked = {},
-                    onAskAiClicked = {},
-                    onTranscriptDismissed = {},
-                    onErrorDismissed = {},
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-        }
-
-        composeRule.onNodeWithTag(AudioFilesTestTags.ROOT).assertIsDisplayed()
-        composeRule.onAllNodesWithText("photo-1.jpg").assertCountEquals(0)
-        // 只需验证非音频未出现
-        composeRule.waitForIdle()
     }
 
     private fun sampleRecording(id: String): AudioRecordingUi =

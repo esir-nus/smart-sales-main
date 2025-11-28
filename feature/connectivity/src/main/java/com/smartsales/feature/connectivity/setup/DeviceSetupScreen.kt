@@ -5,7 +5,9 @@ package com.smartsales.feature.connectivity.setup
 // 说明：设备配网的步骤化 UI，展示扫描→配对→配网→等待上线→就绪
 // 作者：创建于 2025-11-21
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -32,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -61,37 +64,50 @@ fun DeviceSetupScreen(
     }
 
     Surface(modifier = modifier.fillMaxSize()) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                            MaterialTheme.colorScheme.surface
+                        )
+                    )
+                )
         ) {
-            StepHeader(state.step)
-            StatusCard(state.progressMessage, state.step, modifier = Modifier.fillMaxWidth())
-            WiFiForm(
-                ssid = ssid,
-                password = password,
-                onSsidChange = { ssid = it },
-                onPasswordChange = { password = it },
-                enabled = state.step == DeviceSetupStep.Pairing || state.step == DeviceSetupStep.WifiProvisioning
-            )
-            if (state.errorMessage != null) {
-                ErrorBanner(
-                    message = state.errorMessage,
-                    onDismiss = onDismissError,
-                    onRetry = onRetry
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                StepHeader(state.step)
+                StatusCard(state.progressMessage, state.step, modifier = Modifier.fillMaxWidth())
+                WiFiForm(
+                    ssid = ssid,
+                    password = password,
+                    onSsidChange = { ssid = it },
+                    onPasswordChange = { password = it },
+                    enabled = state.step == DeviceSetupStep.Pairing || state.step == DeviceSetupStep.WifiProvisioning
+                )
+                if (state.errorMessage != null) {
+                    ErrorBanner(
+                        message = state.errorMessage,
+                        onDismiss = onDismissError,
+                        onRetry = onRetry
+                    )
+                }
+                PrimaryActions(
+                    state = state,
+                    ssid = ssid,
+                    password = password,
+                    onStartScan = onStartScan,
+                    onProvisionWifi = onProvisionWifi,
+                    onRetry = onRetry,
+                    onOpenDeviceManager = onOpenDeviceManager
                 )
             }
-            PrimaryActions(
-                state = state,
-                ssid = ssid,
-                password = password,
-                onStartScan = onStartScan,
-                onProvisionWifi = onProvisionWifi,
-                onRetry = onRetry,
-                onOpenDeviceManager = onOpenDeviceManager
-            )
         }
     }
 }
@@ -135,12 +151,12 @@ private fun StatusCard(
                 modifier = Modifier.testTag(DeviceSetupTestTags.STATUS_TEXT)
             )
             val hint = when (step) {
-                DeviceSetupStep.Scanning -> "正在搜索附近设备，保持靠近并确保设备已开机。"
-                DeviceSetupStep.Pairing -> "发现设备，准备蓝牙配对并采集设备信息。"
-                DeviceSetupStep.WifiProvisioning -> "录入 Wi-Fi 并下发到设备，确保同一网络环境。"
-                DeviceSetupStep.WaitingForDeviceOnline -> "等待设备联网上线，通常 5 秒内完成。"
-                DeviceSetupStep.Ready -> "设备已上线，可前往设备文件或音频库继续操作。"
-                DeviceSetupStep.Error -> "出现异常，可重试或返回重新扫描。"
+                DeviceSetupStep.Scanning -> "靠近设备并保持开机，扫描后会自动进入配对。"
+                DeviceSetupStep.Pairing -> "发现设备，正在蓝牙配对并同步设备标识。"
+                DeviceSetupStep.WifiProvisioning -> "填写 Wi-Fi 信息并下发，确保手机与设备在同一网络。"
+                DeviceSetupStep.WaitingForDeviceOnline -> "等待设备上线，通常 5 秒内完成；如未上线请检查路由器。"
+                DeviceSetupStep.Ready -> "配网完成，去设备管理查看文件或继续上传素材。"
+                DeviceSetupStep.Error -> "连接异常，可重试扫描，或检查电源与网络后再试。"
                 else -> "点击下方按钮开始扫描。"
             }
             Text(text = hint, style = MaterialTheme.typography.bodySmall)
@@ -219,10 +235,10 @@ private fun PrimaryActions(
         DeviceSetupStep.Idle,
         DeviceSetupStep.Scanning -> "开始扫描" to onStartScan
 
-        DeviceSetupStep.Pairing -> "配置 Wi-Fi" to { onProvisionWifi(ssid.trim(), password.trim()) }
+        DeviceSetupStep.Pairing -> "下发 Wi-Fi 并继续" to { onProvisionWifi(ssid.trim(), password.trim()) }
         DeviceSetupStep.WifiProvisioning,
         DeviceSetupStep.WaitingForDeviceOnline -> "等待设备上线" to {}
-        DeviceSetupStep.Error -> "重新扫描" to onRetry
+        DeviceSetupStep.Error -> "重新开始配网" to onRetry
         DeviceSetupStep.Ready -> "前往设备管理" to onOpenDeviceManager
     }
     Button(
@@ -247,6 +263,6 @@ private fun PrimaryActions(
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag(DeviceSetupTestTags.TO_DEVICE_MANAGER)
-        ) { Text(text = "前往音频列表") }
+        ) { Text(text = "查看设备管理") }
     }
 }

@@ -154,7 +154,8 @@ class AiFeatureTestActivityTest {
         // 个人中心图标跳到用户中心
         composeRule.onNodeWithTag(HomeScreenTestTags.PROFILE_BUTTON, useUnmergedTree = true).performClick()
         waitForPage(AiFeatureTestTags.PAGE_USER_CENTER)
-        composeRule.onNodeWithText("管理账号、订阅与隐私设置，查看剩余配额。", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText("账号信息、订阅与隐私偏好都在这里，保存后会同步到 React 端。", substring = true)
+            .assertIsDisplayed()
     }
 
     @Test

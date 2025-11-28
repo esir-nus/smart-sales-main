@@ -84,7 +84,7 @@ fun UserCenterScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "管理账号、订阅与隐私设置，查看剩余配额。",
+                text = "账号信息、订阅与隐私偏好都在这里，保存后会同步到 React 端。",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -199,7 +199,7 @@ private fun ProfileHeader(userName: String) {
                 style = MaterialTheme.typography.titleMedium
             )
             Text(
-                text = "订阅管理、隐私与通用设置",
+                text = "账号概览、订阅与隐私入口",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -239,13 +239,13 @@ private fun ShortcutMenuCard(
             Text(text = "快捷入口", style = MaterialTheme.typography.titleMedium)
             ShortcutRow(
                 title = "设备管理",
-                subtitle = "管理已配对设备与文件",
+                subtitle = "查看设备状态、文件与上传入口",
                 onClick = onOpenDeviceManager
             )
             HorizontalDivider()
             ShortcutRow(
                 title = "订阅管理",
-                subtitle = "查看和续费订阅套餐",
+                subtitle = "查看套餐、续费与发票",
                 onClick = onOpenSubscription
             )
             HorizontalDivider()
@@ -257,7 +257,7 @@ private fun ShortcutMenuCard(
             HorizontalDivider()
             ShortcutRow(
                 title = "通用设置",
-                subtitle = "语言与通知偏好",
+                subtitle = "语言、通知与主题偏好",
                 onClick = onOpenGeneral
             )
         }

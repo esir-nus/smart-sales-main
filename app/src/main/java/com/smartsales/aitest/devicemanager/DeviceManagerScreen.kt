@@ -99,29 +99,10 @@ fun DeviceManagerScreen(
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(text = "设备管理", style = MaterialTheme.typography.titleLarge)
-                Text(
-                    text = "管理您的销售助手设备，刷新或上传文件。",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            DeviceConnectionBanner(status = state.connectionStatus)
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedTextField(
-                    value = state.baseUrl,
-                    onValueChange = onBaseUrlChange,
-                    label = { Text("服务地址") },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.isLoading
-                )
-                Text(
-                    text = state.autoDetectStatus,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            DeviceManagerHero(
+                state = state,
+                onBaseUrlChange = onBaseUrlChange
+            )
             ActionButtons(
                 isConnected = isConnected,
                 isLoading = state.isLoading,
@@ -161,7 +142,7 @@ fun DeviceManagerScreen(
 
                 else -> {
                     Text(
-                        text = "文件列表 (${state.visibleFiles.size})",
+                        text = "文件列表 · 共 ${state.files.size} 个，当前展示 ${state.visibleFiles.size}",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -191,13 +172,66 @@ fun DeviceManagerScreen(
 }
 
 @Composable
-private fun DeviceConnectionBanner(status: DeviceConnectionUiState) {
+private fun DeviceManagerHero(
+    state: DeviceManagerUiState,
+    onBaseUrlChange: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(text = "设备文件管理", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    text = "刷新、上传并预览设备素材，与 React 端保持一致。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            DeviceConnectionBanner(
+                status = state.connectionStatus,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                OutlinedTextField(
+                    value = state.baseUrl,
+                    onValueChange = onBaseUrlChange,
+                    label = { Text("媒体服务地址") },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isLoading
+                )
+                Text(
+                    text = state.autoDetectStatus,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DeviceConnectionBanner(
+    status: DeviceConnectionUiState,
+    modifier: Modifier = Modifier
+) {
     val (title, subtitle) = when (status) {
         is DeviceConnectionUiState.Disconnected -> "设备未连接" to (status.reason ?: "请连接设备以管理文件和查看预览。")
         is DeviceConnectionUiState.Connecting -> "正在连接设备..." to (status.detail ?: "请确保设备在附近")
         is DeviceConnectionUiState.Connected -> ("已连接 ${status.deviceName ?: ""}").trim() to "可预览、刷新和上传文件。"
     }
-    Card {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -256,7 +290,7 @@ private fun LoadingBanner() {
         verticalAlignment = Alignment.CenterVertically
     ) {
         LinearProgressIndicator(modifier = Modifier.weight(1f))
-        Text(text = "正在加载设备文件...")
+        Text(text = "正在同步设备文件列表...")
     }
 }
 
@@ -320,7 +354,9 @@ private fun DeviceFileCard(
             )
             Spacer(modifier = Modifier.height(6.dp))
             Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.12f)
+                )
             ) {
                 Column(
                     modifier = Modifier
@@ -329,9 +365,9 @@ private fun DeviceFileCard(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = "静态预览",
+                        text = "预览链接",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Text(
                         text = file.thumbnailUrl ?: "无缩略图",
@@ -366,6 +402,17 @@ private fun SelectedFileCard(file: DeviceFileUi) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(text = "选中项", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(6.dp))
+            if (file.isApplied) {
+                AssistChip(
+                    onClick = {},
+                    enabled = false,
+                    label = { Text(text = "当前展示") },
+                    colors = AssistChipDefaults.assistChipColors(
+                        labelColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+            }
             Text(text = file.displayName, style = MaterialTheme.typography.bodyLarge)
             Text(text = "类型：${file.mimeType}")
             Text(text = "大小：${file.sizeText}")

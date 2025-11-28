@@ -576,7 +576,7 @@ private class GatewayGattCallback : BluetoothGattCallback() {
     ) {
         val expected = pendingReadUuid
         if (status == BluetoothGatt.GATT_SUCCESS && expected != null) {
-            readResultChannel.trySend(characteristic.uuid to (characteristic.getValue() ?: byteArrayOf()))
+            readResultChannel.trySend(characteristic.uuid to (characteristic.legacyValue() ?: byteArrayOf()))
         } else if (status != BluetoothGatt.GATT_SUCCESS) {
             ConnectivityLogger.w("Characteristic read failed: $status")
         }
@@ -599,7 +599,7 @@ private class GatewayGattCallback : BluetoothGattCallback() {
         gatt: BluetoothGatt,
         characteristic: BluetoothGattCharacteristic
     ) {
-        val value = characteristic.getValue() ?: byteArrayOf()
+        val value = characteristic.legacyValue() ?: byteArrayOf()
         notificationChannel.trySend(characteristic.uuid to value)
     }
 
@@ -635,11 +635,20 @@ private fun BluetoothGatt.writeCharacteristicCompat(
         writeCharacteristic(characteristic, payload, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) ==
             BluetoothStatusCodes.SUCCESS
     } else {
-        @Suppress("DEPRECATION")
-        characteristic.setValue(payload)
+        characteristic.legacySetValue(payload)
         @Suppress("DEPRECATION")
         writeCharacteristic(characteristic)
     }
+}
+
+private fun BluetoothGattCharacteristic.legacyValue(): ByteArray? {
+    @Suppress("DEPRECATION")
+    return value
+}
+
+private fun BluetoothGattCharacteristic.legacySetValue(payload: ByteArray): Boolean {
+    @Suppress("DEPRECATION")
+    return setValue(payload)
 }
 
 private suspend fun GattContext.awaitNotificationOrRead(uuid: UUID): ByteArray =

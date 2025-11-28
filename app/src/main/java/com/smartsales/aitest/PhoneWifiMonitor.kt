@@ -80,6 +80,7 @@ class AndroidPhoneWifiMonitor @Inject constructor(
             registerNetworkCallback(request)
         } else {
             val filter = IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION).apply {
+                @Suppress("DEPRECATION")
                 addAction(ConnectivityManager.CONNECTIVITY_ACTION)
             }
             context.registerReceiver(wifiReceiver, filter)
@@ -94,9 +95,9 @@ class AndroidPhoneWifiMonitor @Inject constructor(
                 val manager = connectivityManager
                 manager
                     ?.getNetworkCapabilities(manager.activeNetwork)
-                    ?.transportInfo as? WifiInfo ?: wifiManager?.connectionInfo
+                    ?.transportInfo as? WifiInfo ?: legacyConnectionInfo()
             } else {
-                wifiManager?.connectionInfo
+                legacyConnectionInfo()
             }
             sanitizeSsid(wifiInfo?.ssid)
         } catch (ex: SecurityException) {
@@ -125,6 +126,9 @@ class AndroidPhoneWifiMonitor @Inject constructor(
         if (raw.isNullOrBlank() || raw == "<unknown ssid>") return null
         return raw.trim().trim('"').ifBlank { null }
     }
+
+    @Suppress("DEPRECATION")
+    private fun legacyConnectionInfo(): WifiInfo? = wifiManager?.connectionInfo
 }
 
 @Module

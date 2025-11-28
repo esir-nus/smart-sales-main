@@ -356,6 +356,14 @@ private fun DeviceFileCard(
                 overflow = TextOverflow.Ellipsis,
                 maxLines = 1
             )
+            if (file.isApplied) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "设备当前展示此文件",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = "时长：${file.durationText ?: "待获取"}",

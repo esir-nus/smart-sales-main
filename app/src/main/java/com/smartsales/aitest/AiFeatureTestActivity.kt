@@ -14,6 +14,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -65,6 +68,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
@@ -94,6 +98,10 @@ import kotlinx.coroutines.launch
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 
 @AndroidEntryPoint
 class AiFeatureTestActivity : ComponentActivity() {
@@ -184,7 +192,7 @@ private fun AiFeatureTestApp() {
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    HomeOverlayStack(
+                    DraggableOverlayStack(
                         currentOverlay = currentOverlay,
                         onSelectDevice = { openDeviceSection() },
                         onSelectHome = { openHomeOverlay() },
@@ -316,16 +324,48 @@ private fun AiFeatureTestApp() {
 }
 
 @Composable
-private fun HomeOverlayStack(
+private fun DraggableOverlayStack(
     currentOverlay: HomeOverlay,
     onSelectDevice: () -> Unit,
     onSelectHome: () -> Unit,
     onSelectAudio: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val dragRangePx = with(density) { 240.dp.toPx() }
+    val offset = remember { Animatable(overlayToPosition(currentOverlay)) }
+    val target = overlayToPosition(currentOverlay)
+
+    LaunchedEffect(target) {
+        offset.animateTo(
+            targetValue = target,
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+        )
+    }
+
+    val dragState = rememberDraggableState { delta ->
+        val next = (offset.value + delta / dragRangePx).coerceIn(-1f, 1f)
+        scope.launch { offset.snapTo(next) }
+    }
+
+    fun settle(velocity: Float) {
+        val adjusted = offset.value + (velocity / 4_000f).coerceIn(-0.2f, 0.2f)
+        val destination = when {
+            adjusted > 0.25f -> HomeOverlay.Device
+            adjusted < -0.25f -> HomeOverlay.Audio
+            else -> HomeOverlay.Home
+        }
+        when (destination) {
+            HomeOverlay.Device -> onSelectDevice()
+            HomeOverlay.Audio -> onSelectAudio()
+            HomeOverlay.Home -> onSelectHome()
+        }
+    }
+
     Box(
         modifier = modifier
-            .width(120.dp)
+            .width(140.dp)
             .fillMaxHeight()
             .background(
                 brush = Brush.verticalGradient(
@@ -336,61 +376,107 @@ private fun HomeOverlayStack(
                 ),
                 shape = MaterialTheme.shapes.medium
             )
+            .draggable(
+                state = dragState,
+                orientation = Orientation.Vertical,
+                onDragStopped = { velocity -> settle(velocity) }
+            )
             .testTag(AiFeatureTestTags.OVERLAY_STACK)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(vertical = 24.dp),
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.SpaceEvenly,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            OverlayChip(
-                label = "设备",
-                selected = currentOverlay == HomeOverlay.Device,
-                tag = AiFeatureTestTags.OVERLAY_DEVICE,
-                onClick = onSelectDevice
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            OverlayChip(
-                label = "Home",
-                selected = currentOverlay == HomeOverlay.Home,
-                tag = AiFeatureTestTags.OVERLAY_HOME,
-                onClick = onSelectHome
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            OverlayChip(
+            OverlayCard(
                 label = "音频",
-                selected = currentOverlay == HomeOverlay.Audio,
-                tag = AiFeatureTestTags.OVERLAY_AUDIO,
-                onClick = onSelectAudio
+                overlay = HomeOverlay.Audio,
+                currentOffset = offset.value,
+                onClick = onSelectAudio,
+                tag = AiFeatureTestTags.OVERLAY_AUDIO
+            )
+            OverlayCard(
+                label = "Home",
+                overlay = HomeOverlay.Home,
+                currentOffset = offset.value,
+                onClick = onSelectHome,
+                tag = AiFeatureTestTags.OVERLAY_HOME
+            )
+            OverlayCard(
+                label = "设备",
+                overlay = HomeOverlay.Device,
+                currentOffset = offset.value,
+                onClick = onSelectDevice,
+                tag = AiFeatureTestTags.OVERLAY_DEVICE
             )
         }
     }
 }
 
 @Composable
-private fun OverlayChip(
+private fun OverlayCard(
     label: String,
-    selected: Boolean,
-    tag: String,
-    onClick: () -> Unit
+    overlay: HomeOverlay,
+    currentOffset: Float,
+    onClick: () -> Unit,
+    tag: String
 ) {
+    val base = overlayToPosition(overlay)
+    val distance = 1f - kotlin.math.abs(currentOffset - base).coerceIn(0f, 1f)
+    val scale = 0.92f + distance * 0.12f
+    val elevation = 2.dp + (distance * 6).dp
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(targetValue = if (pressed) 0.95f else 1f, label = "overlay_press")
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        interactionSource = interactionSource,
-        label = { Text(label) },
+    val pressedScale by animateFloatAsState(
+        targetValue = if (pressed) 0.95f else 1f,
+        animationSpec = tween(durationMillis = 120),
+        label = "overlay_press_anim"
+    )
+    Card(
         modifier = Modifier
             .graphicsLayer(
-                scaleX = scale,
-                scaleY = scale
+                scaleX = scale * pressedScale,
+                scaleY = scale * pressedScale
             )
-            .testTag(tag)
-    )
+            .testTag(tag),
+        colors = CardDefaults.cardColors(
+            containerColor = if (overlay == HomeOverlay.Home) {
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.16f)
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
+        ),
+        elevation = CardDefaults.cardElevation(elevation),
+        onClick = onClick,
+        interactionSource = interactionSource
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .height(4.dp)
+                    .width(32.dp)
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant, shape = MaterialTheme.shapes.small)
+            )
+            Text(text = label, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = when (overlay) {
+                    HomeOverlay.Home -> "主页"
+                    HomeOverlay.Audio -> "音频"
+                    HomeOverlay.Device -> "设备"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 }
 
 @Composable
@@ -439,6 +525,12 @@ private enum class HomeOverlay {
     Device,
     Home,
     Audio
+}
+
+private fun overlayToPosition(overlay: HomeOverlay): Float = when (overlay) {
+    HomeOverlay.Audio -> -1f
+    HomeOverlay.Home -> 0f
+    HomeOverlay.Device -> 1f
 }
 
 private enum class TestHomePage {

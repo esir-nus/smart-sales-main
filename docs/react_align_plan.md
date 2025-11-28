@@ -45,11 +45,11 @@ Progress (2025-11-27)
 - Home 导航测试收敛：AiFeatureTestActivityTest 等待 Home 根/叠层标签以确保覆盖 Home overlay 渲染，消除漏检 flake。
 - 全量仪表测试通过：`:app:connectedDebugAndroidTest` 全绿，覆盖 Home overlay、DeviceManager、AudioFiles、UserCenter 等路径。
 - ChatHistory 长按操作对齐：底部动作表文案更新（置顶到顶部/重命名会话/删除并清除消息），置顶展示“置顶”徽标，新增长按重命名/删除测试。
-- Shell/Home 视觉收口：Home overlay 叠层与 DeviceManager Screen 增加 DesignKit 渐变背景，overlay 入口添加按压缩放动画；空态欢迎文案与音频 CTA 对齐 React。
+- Shell/Home 视觉收口：Home overlay 叠层与 DeviceManager Screen 增加 DesignKit 渐变背景，overlay 入口添加按压/选中缩放动画并支持上下拖拽切换；空态欢迎文案与音频 CTA 对齐 React。
 - Lint 清理：修复 HTTP DNS 空注解、BLE 权限与 Wi-Fi 权限、音频元数据 API 兼容，bcprov 版本与版本库归档，`./gradlew lint` 现已无阻塞错误。
 - BLE GATT 写入增加 BLUETOOTH_CONNECT 检查与 SecurityException 捕获，lint 通过。
 - React UI audit完成：Home 垂直拖拽 overlay、Sidebar 历史分组/重命名/置顶、设备状态卡、DeviceSetup → DeviceManager 自动跳转、AudioFiles/Transcript CTA、UserCenter 菜单项等差异已记录，准备下一轮实现。
-- Next up: 若有剩余差异，补充 Home overlay/动画细节与 DeviceManager 预览卡视觉，保持 React 文案一致，并持续压测导航仪表 flake。
+- Next up: 如有新差异，补充 Home/DeviceManager 视觉细节；继续监控导航仪表 flake。
 
 Risks & mitigations
 - Instrumentation flake: wait on tags/state, avoid sleeps.

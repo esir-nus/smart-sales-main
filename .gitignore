@@ -18,6 +18,8 @@ release/
 
 # Gradle files
 .gradle/
+.gradle-local/
+.gradle-tmp/
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/

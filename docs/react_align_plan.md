@@ -26,6 +26,30 @@ Navigation contract
 - HomeScreenViewModel emits `HomeNavigationRequest` (DeviceManager/Setup/AudioFiles/UserCenter/History) based on state.
 - AiFeatureTestActivity consumes requests, switches overlays/pages accordingly; back returns to Home overlay/section.
 
+Roadmap & milestones
+- M1 Shell 导航对齐（完成）  
+  - Home 竖向叠层切换（音频/主页/设备），返回栈统一回到 Home。  
+  - `HomeNavigationRequest` → AiFeatureTestActivity 路由落地，测试覆盖入口/返回。
+- M2 文案与状态对齐（完成）  
+  - DeviceSetup/DeviceManager/AudioFiles/ChatHistory/UserCenter 的空/错/加载/CTA 文案与 React 一致。  
+  - 对应 UI/仪表测试更新、保持 testTag 稳定。
+- M3 视觉与交互细节（完成）  
+  - DesignKit 色板、渐变、徽章、按钮；Home 叠层拖拽/按压动画；DeviceManager 应用状态提示。  
+  - Applied 徽标与“当前展示”文案、AudioFiles CTA 与 Transcript 抽屉文案同步 React。
+- M4 集成性改进（待办）  
+  - 自动同步 Wi-Fi/BLE baseUrl 至 DeviceManager/AudioFiles；转写结果回写聊天历史。  
+  - React 新 UI 变更日常回归，确保新差异可追踪。
+- M5 稳定性与验证（进行中）  
+  - 导航/叠层/页面仪表测试抗 flake，`connectedDebugAndroidTest`、lint 常绿；依赖/权限健康检查。
+
+Workstreams（技术视角）
+- React 差异审计：监控 React/JSX 变更，记录新增 UI/文案/动效差异并排期合入（持续）。
+- Shell 叠层交互：保持拖拽/弹簧参数、手柄、遮罩与测试 tag；必要时调整物理参数以贴合 React。
+- 视觉与文案一致性：按页面核对 DesignKit 色板、渐变、徽章、CTA 文案；避免平台差异导致的对齐偏差。
+- 跨页面集成：baseUrl 自动同步（Wi-Fi/BLE → DeviceManager/AudioFiles）、转写结果回写聊天历史，确保逻辑与 React 一致。
+- 稳定性与测试：导航/叠层/页面仪表测试维护，flake 监控；lint/依赖健康度检查。
+- 变更防护：新增差异需更新 `react_align_plan.md`，并以小步提交 + 仪表验证锁定行为。
+
 Execution steps
 - Shell: make AiFeatureTestActivity honor Home navigation requests with the React vertical overlays (Home center, Device up → manager/setup by connection, Audio down), always backing to Home.
 - Home UI: mirror React welcome/skill-first chat (Markdown/复制 affordance, chip lifecycle) while keeping session handling and test tags.
@@ -45,7 +69,8 @@ Progress (2025-11-27)
 - Home 导航测试收敛：AiFeatureTestActivityTest 等待 Home 根/叠层标签以确保覆盖 Home overlay 渲染，消除漏检 flake。
 - 全量仪表测试通过：`:app:connectedDebugAndroidTest` 全绿，覆盖 Home overlay、DeviceManager、AudioFiles、UserCenter 等路径。
 - ChatHistory 长按操作对齐：底部动作表文案更新（置顶到顶部/重命名会话/删除并清除消息），置顶展示“置顶”徽标，新增长按重命名/删除测试。
-- Shell/Home 视觉收口：Home overlay 叠层与 DeviceManager Screen 增加 DesignKit 渐变背景，overlay 入口添加按压/选中缩放动画并支持上下拖拽切换；空态欢迎文案与音频 CTA 对齐 React。
+- Shell/Home 视觉收口：Home overlay 叠层与 DeviceManager Screen 增加 DesignKit 渐变背景，overlay 入口添加按压/选中缩放动画并支持上下拖拽切换；空态欢迎文案与音频 CTA 对齐 React；叠层拖拽视效/阴影/贴近 React 布局。
+- DeviceManager baseUrl 自动同步：监听 DeviceHttpEndpointProvider，将 Wi-Fi/BLE 发现的 baseUrl 自动写入 DeviceManager 并触发刷新，减少手填 URL。
 - Lint 清理：修复 HTTP DNS 空注解、BLE 权限与 Wi-Fi 权限、音频元数据 API 兼容，bcprov 版本与版本库归档，`./gradlew lint` 现已无阻塞错误。
 - BLE GATT 写入增加 BLUETOOTH_CONNECT 检查与 SecurityException 捕获，lint 通过。
 - React UI audit完成：Home 垂直拖拽 overlay、Sidebar 历史分组/重命名/置顶、设备状态卡、DeviceSetup → DeviceManager 自动跳转、AudioFiles/Transcript CTA、UserCenter 菜单项等差异已记录，准备下一轮实现。

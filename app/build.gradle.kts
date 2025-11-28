@@ -106,5 +106,8 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4-android")
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(libs.androidx.test.espresso)
+    androidTestImplementation(libs.androidx.test.rules)
+    androidTestImplementation(libs.hilt.android)
+    kaptAndroidTest(libs.hilt.compiler)
     debugImplementation(libs.compose.ui.test.manifest)
 }

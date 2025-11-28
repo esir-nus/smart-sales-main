@@ -186,23 +186,29 @@ private fun AiFeatureTestApp() {
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    DraggableOverlayStack(
-                        currentOverlay = currentOverlay,
-                        onSelectDevice = { openDeviceSection() },
-                        onSelectHome = { openHomeOverlay() },
-                        onSelectAudio = { openAudioOverlay() }
-                    )
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            DraggableOverlayStack(
+                currentOverlay = currentOverlay,
+                onSelectDevice = { openDeviceSection() },
+                onSelectHome = { openHomeOverlay() },
+                onSelectAudio = { openAudioOverlay() },
+                showTags = currentPage in setOf(
+                    TestHomePage.Home,
+                    TestHomePage.AudioFiles,
+                    TestHomePage.DeviceManager,
+                    TestHomePage.DeviceSetup
+                )
+            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            ) {
                         PageSelector(
                             currentPage = currentPage,
                             onPageSelected = { page ->
@@ -329,6 +335,7 @@ private fun DraggableOverlayStack(
     onSelectDevice: () -> Unit,
     onSelectHome: () -> Unit,
     onSelectAudio: () -> Unit,
+    showTags: Boolean,
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
@@ -365,12 +372,12 @@ private fun DraggableOverlayStack(
 
     Box(
         modifier = modifier
-            .width(140.dp)
+            .width(120.dp)
             .fillMaxHeight()
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                         MaterialTheme.colorScheme.surface
                     )
                 ),
@@ -386,7 +393,7 @@ private fun DraggableOverlayStack(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(vertical = 24.dp),
+                .padding(vertical = 24.dp, horizontal = 8.dp),
             verticalArrangement = Arrangement.SpaceEvenly,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -395,21 +402,21 @@ private fun DraggableOverlayStack(
                 overlay = HomeOverlay.Audio,
                 currentOffset = offset.value,
                 onClick = onSelectAudio,
-                tag = AiFeatureTestTags.OVERLAY_AUDIO
+                tag = if (showTags) AiFeatureTestTags.OVERLAY_AUDIO else null
             )
             OverlayCard(
                 label = "Home",
                 overlay = HomeOverlay.Home,
                 currentOffset = offset.value,
                 onClick = onSelectHome,
-                tag = AiFeatureTestTags.OVERLAY_HOME
+                tag = if (showTags) AiFeatureTestTags.OVERLAY_HOME else null
             )
             OverlayCard(
                 label = "设备",
                 overlay = HomeOverlay.Device,
                 currentOffset = offset.value,
                 onClick = onSelectDevice,
-                tag = AiFeatureTestTags.OVERLAY_DEVICE
+                tag = if (showTags) AiFeatureTestTags.OVERLAY_DEVICE else null
             )
         }
     }
@@ -421,7 +428,7 @@ private fun OverlayCard(
     overlay: HomeOverlay,
     currentOffset: Float,
     onClick: () -> Unit,
-    tag: String
+    tag: String?
 ) {
     val base = overlayToPosition(overlay)
     val distance = 1f - kotlin.math.abs(currentOffset - base).coerceIn(0f, 1f)
@@ -440,12 +447,12 @@ private fun OverlayCard(
                 scaleX = scale * pressedScale,
                 scaleY = scale * pressedScale
             )
-            .testTag(tag),
+            .then(if (tag != null) Modifier.testTag(tag) else Modifier),
         colors = CardDefaults.cardColors(
             containerColor = if (overlay == HomeOverlay.Home) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.16f)
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
             } else {
-                MaterialTheme.colorScheme.surfaceVariant
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f)
             }
         ),
         elevation = CardDefaults.cardElevation(elevation),
@@ -455,14 +462,14 @@ private fun OverlayCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp),
+                .padding(vertical = 12.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .height(4.dp)
-                    .width(32.dp)
+                     .height(3.dp)
+                     .width(28.dp)
                     .background(MaterialTheme.colorScheme.onSurfaceVariant, shape = MaterialTheme.shapes.small)
             )
             Text(text = label, style = MaterialTheme.typography.bodyLarge)

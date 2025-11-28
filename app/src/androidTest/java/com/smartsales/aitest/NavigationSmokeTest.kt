@@ -118,13 +118,10 @@ class NavigationSmokeTest {
     }
 
     private fun goHome() {
-        val overlayClicked = runCatching {
-            composeRule.onAllNodesWithTag(AiFeatureTestTags.OVERLAY_HOME, useUnmergedTree = true)
-                .fetchSemanticsNodes().isNotEmpty()
-        }.getOrDefault(false)
-        if (overlayClicked) {
-            composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_HOME, useUnmergedTree = true).performClick()
-        } else {
+        runCatching {
+            composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_HOME, useUnmergedTree = true)
+                .performClick()
+        }.onFailure {
             composeRule.activityRule.scenario.onActivity {
                 it.onBackPressedDispatcher.onBackPressed()
             }

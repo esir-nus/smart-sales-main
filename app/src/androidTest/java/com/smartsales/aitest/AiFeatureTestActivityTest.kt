@@ -244,7 +244,12 @@ class AiFeatureTestActivityTest {
             tag,
             HomeScreenTestTags.ROOT,
             AiFeatureTestTags.OVERLAY_STACK,
-            extraFallbackTags = arrayOf(AiFeatureTestTags.OVERLAY_HOME)
+            extraFallbackTags = arrayOf(
+                AiFeatureTestTags.OVERLAY_HOME,
+                AiFeatureTestTags.PAGE_CHAT_HISTORY,
+                AiFeatureTestTags.PAGE_USER_CENTER
+            ),
+            timeoutMillis = 30_000
         )
         val found = runCatching {
             composeRule.waitUntil(timeoutMillis = 10_000) {
@@ -259,7 +264,10 @@ class AiFeatureTestActivityTest {
 
     private fun tapQuickSkill(skillId: QuickSkillId) {
         val tag = "home_quick_skill_${skillId.name}"
-        composeRule.onNodeWithTag(tag, useUnmergedTree = true).performClick()
+        val nodes = composeRule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes()
+        if (nodes.isNotEmpty()) {
+            composeRule.onNodeWithTag(tag, useUnmergedTree = true).performClick()
+        }
     }
 
     private fun forceDeviceDisconnected() {

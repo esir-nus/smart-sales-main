@@ -36,6 +36,10 @@ All agents must follow that document as the authoritative behavior contract.
      - 避免依赖访问极慢或经常超时的海外源。
    - 在提示命令或配置时，可给出示例镜像配置，但不强制改动现有脚本。
 
+5. **Kotlin 项目请合理使用 helper**
+   - 按最佳工程实践调用辅助脚本/工具，遵守现有代码风格、测试与依赖规范。
+   - 不以省事为由跳过质量检查；helper 仅用于加速，而非替代审查和验证。
+
    --- 
 ## Code Style & Language Rules
 

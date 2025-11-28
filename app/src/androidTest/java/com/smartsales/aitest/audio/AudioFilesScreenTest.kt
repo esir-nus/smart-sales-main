@@ -123,7 +123,7 @@ class AudioFilesScreenTest {
         }
 
         composeRule.onAllNodesWithTag(AudioFilesTestTags.ERROR_BANNER).assertCountEquals(1)
-        composeRule.onNodeWithText("知道了").performClick()
+        composeRule.onNodeWithText("收起提示").performClick()
         composeRule.onAllNodesWithTag(AudioFilesTestTags.ERROR_BANNER).assertCountEquals(0)
     }
 

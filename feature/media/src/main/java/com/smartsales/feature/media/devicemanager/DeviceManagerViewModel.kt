@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.smartsales.feature.media.audiofiles.DeviceHttpEndpointProvider
 
 private const val DEFAULT_MEDIA_SERVER_PORT = 8000
 private const val DEFAULT_MEDIA_SERVER_BASE_URL = "http://10.0.2.2:$DEFAULT_MEDIA_SERVER_PORT"
@@ -37,7 +38,8 @@ private const val LOAD_ERROR_MESSAGE = "加载设备文件失败，请稍后重�
 class DeviceManagerViewModel @Inject constructor(
     private val mediaGateway: DeviceMediaGateway,
     private val connectionManager: DeviceConnectionManager,
-    private val dispatcherProvider: DispatcherProvider
+    private val dispatcherProvider: DispatcherProvider,
+    private val endpointProvider: DeviceHttpEndpointProvider
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DeviceManagerUiState())
@@ -48,6 +50,7 @@ class DeviceManagerViewModel @Inject constructor(
 
     init {
         observeConnection()
+        observeEndpoint()
     }
 
     fun onRefreshFiles() {
@@ -241,7 +244,8 @@ class DeviceManagerViewModel @Inject constructor(
         }
     }
 
-    private fun observeConnection() {
+    private fun observeConnection()
+ {
         viewModelScope.launch(dispatcherProvider.default) {
             var lastReadyForNetwork = false
             var lastReadyForFiles = false
@@ -289,6 +293,25 @@ class DeviceManagerViewModel @Inject constructor(
                 }
                 lastReadyForNetwork = readyForNetwork
                 lastReadyForFiles = readyForFiles
+            }
+        }
+    }
+
+    private fun observeEndpoint() {
+        viewModelScope.launch(dispatcherProvider.default) {
+            endpointProvider.deviceBaseUrl.collectLatest { baseUrl ->
+                if (baseUrl.isNullOrBlank()) return@collectLatest
+                _uiState.update { state ->
+                    val shouldOverride = !state.baseUrlWasManual || state.baseUrl.isBlank()
+                    if (!shouldOverride) state else state.copy(
+                        baseUrl = baseUrl,
+                        baseUrlWasManual = false,
+                        autoDetectStatus = "自动同步设备地址"
+                    )
+                }
+                if (_uiState.value.isConnected) {
+                    loadFiles(_uiState.value.baseUrl)
+                }
             }
         }
     }

@@ -103,7 +103,7 @@ abstract class AiCoreModule {
         @Provides
         @Singleton
         fun provideTingwuDns(
-            @javax.annotation.Nullable resolver: HttpDnsResolver?,
+            resolver: HttpDnsResolver?,
             optionalConfig: Optional<AiCoreConfig>
         ): okhttp3.Dns {
             val config = optionalConfig.orElse(AiCoreConfig())
@@ -121,7 +121,6 @@ abstract class AiCoreModule {
 
         @Provides
         @Singleton
-        @javax.annotation.Nullable
         fun provideDefaultHttpDnsResolver(): HttpDnsResolver? = null
 
     }

@@ -1,6 +1,7 @@
 package com.smartsales.feature.chat.home
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,6 +63,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Brush
 import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.home.TranscriptionChatRequest
 import kotlinx.coroutines.flow.collect
@@ -243,6 +245,14 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
+                            MaterialTheme.colorScheme.surface
+                        )
+                    )
+                )
                 .pullRefresh(pullRefreshState)
         ) {
             Column(
@@ -438,7 +448,9 @@ private fun DeviceAudioBanner(
     // Home 只读取连接/媒体状态，不控制底层逻辑
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.14f)
+        )
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Column(
@@ -474,7 +486,7 @@ private fun DeviceAudioBanner(
                         color = if (snapshot.connectionState == DeviceConnectionStateUi.ERROR) {
                             MaterialTheme.colorScheme.error
                         } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                            MaterialTheme.colorScheme.onPrimaryContainer
                         }
                     )
                 }
@@ -503,7 +515,7 @@ private fun DeviceAudioBanner(
                     }
                 }
                 TextButton(onClick = onAudioClick, enabled = audioSummary != null) {
-                    Text(text = "查看音频")
+                    Text(text = "进入录音文件")
                 }
             }
         }
@@ -693,30 +705,16 @@ private fun EmptyChatHint(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "你好，我是你的销售助手",
+            text = "欢迎回来，我是销售助手",
             style = MaterialTheme.typography.titleMedium
         )
         Text(
-            text = "我可以帮您：",
+            text = "我可以：提炼客户意图与痛点、生成跟进话术与总结、整理行动项。",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "- 分析用户画像、意图、痛点。",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = "- 生成 PDF、CSV 文档和思维导图。",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = "让我们开始吧",
-            style = MaterialTheme.typography.bodyMedium
-        )
-        Text(
-            text = "试试下面的快捷技能开始吧",
+            text = "试试下方快捷技能，快速开启对话。",
             style = MaterialTheme.typography.bodyMedium
         )
         QuickSkillRow(

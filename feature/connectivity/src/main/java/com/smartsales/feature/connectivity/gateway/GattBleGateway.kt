@@ -11,7 +11,9 @@ import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
+import androidx.core.content.ContextCompat
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.feature.connectivity.BlePeripheral
 import com.smartsales.feature.connectivity.BleSession
@@ -135,21 +137,21 @@ class GattBleGateway @Inject constructor(
             val callback = GatewayGattCallback()
             val gatt = connect(device, callback)
                 ?: return@withContext GatewayOutcome.Failure(BleGatewayResult.TransportError("连接失败"))
-            val context = GattContext(gatt, callback)
+            val gattContext = GattContext(context, gatt, callback)
             try {
-                context.awaitServices()
+                gattContext.awaitServices()
                 val config = configCache[peripheralId] ?: discoverConfig(gatt).also {
                     configCache[peripheralId] = it
                     ConnectivityLogger.i(
                         "Discovered BLE service=${it.serviceUuid} write=${it.credentialCharacteristicUuid} status=${it.provisioningStatusCharacteristicUuid} hotspot=${it.hotspotCharacteristicUuid}"
                     )
                 }
-                context.attachConfig(config)
-                context.ensureNotifications(config.provisioningStatusCharacteristicUuid)
+                gattContext.attachConfig(config)
+                gattContext.ensureNotifications(config.provisioningStatusCharacteristicUuid)
                 if (config.hotspotCharacteristicUuid != config.provisioningStatusCharacteristicUuid) {
-                    context.ensureNotifications(config.hotspotCharacteristicUuid)
+                    gattContext.ensureNotifications(config.hotspotCharacteristicUuid)
                 }
-                GatewayOutcome.Success(block(context, config))
+                GatewayOutcome.Success(block(gattContext, config))
             } catch (ex: TimeoutCancellationException) {
                 GatewayOutcome.Failure(BleGatewayResult.Timeout)
             } catch (ex: SecurityException) {
@@ -170,7 +172,7 @@ class GattBleGateway @Inject constructor(
                     BleGatewayResult.TransportError(ex.message ?: "BLE 传输失败")
                 )
             } finally {
-                context.close()
+                gattContext.close()
             }
         }
     }
@@ -398,6 +400,7 @@ private fun BluetoothGattCharacteristic.supportsRead(): Boolean =
 
 @SuppressLint("MissingPermission")
 private class GattContext(
+    private val appContext: Context,
     private val gatt: BluetoothGatt,
     private val callback: GatewayGattCallback,
     private var operationTimeoutMillis: Long = DEFAULT_OPERATION_TIMEOUT_MS
@@ -412,6 +415,12 @@ private class GattContext(
         operationTimeoutMillis = value.operationTimeoutMillis
     }
 
+    private fun ensureConnectPermission() {
+        if (!appContext.hasBleConnectPermission()) {
+            throw SecurityException("缺少 BLUETOOTH_CONNECT 权限")
+        }
+    }
+
     private fun requireConfig(): BleGatewayConfig =
         config ?: throw IllegalStateException("尚未加载 BLE 配置")
 
@@ -424,6 +433,7 @@ private class GattContext(
 
     suspend fun ensureNotifications(uuid: UUID) {
         if (notificationEnabled.contains(uuid)) return
+        ensureConnectPermission()
         val characteristic = findCharacteristic(uuid)
         if (!gatt.setCharacteristicNotification(characteristic, true)) {
             throw IllegalStateException("无法打开通知：$uuid")
@@ -432,7 +442,7 @@ private class GattContext(
             ?: throw IllegalStateException("找不到通知描述符 $uuid")
         callback.prepareDescriptor(uuid)
         descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
-        if (!gatt.writeDescriptorCompat(descriptor)) {
+        if (!gatt.writeDescriptorCompat(appContext, descriptor)) {
             throw IllegalStateException("写入通知描述符失败：$uuid")
         }
         withTimeout(operationTimeoutMillis) {
@@ -442,9 +452,10 @@ private class GattContext(
     }
 
     suspend fun writeCharacteristic(uuid: UUID, payload: ByteArray) {
+        ensureConnectPermission()
         val characteristic = findCharacteristic(uuid)
         callback.prepareWrite(uuid)
-        if (!gatt.writeCharacteristicCompat(characteristic, payload)) {
+        if (!gatt.writeCharacteristicCompat(appContext, characteristic, payload)) {
             throw IllegalStateException("写入特征失败：$uuid")
         }
         withTimeout(operationTimeoutMillis) {
@@ -453,6 +464,7 @@ private class GattContext(
     }
 
     suspend fun readCharacteristic(uuid: UUID): ByteArray {
+        ensureConnectPermission()
         val characteristic = findCharacteristic(uuid)
         callback.prepareRead(uuid)
         if (!gatt.readCharacteristic(characteristic)) {
@@ -618,26 +630,51 @@ private sealed interface GatewayOutcome<out T> {
 private val CLIENT_CHARACTERISTIC_CONFIG_UUID: UUID =
     UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
 
-private fun BluetoothGatt.writeDescriptorCompat(descriptor: BluetoothGattDescriptor): Boolean {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        writeDescriptor(descriptor)
-    } else {
-        @Suppress("DEPRECATION")
-        writeDescriptor(descriptor)
+@SuppressLint("MissingPermission")
+private fun BluetoothGatt.writeDescriptorCompat(
+    context: Context,
+    descriptor: BluetoothGattDescriptor
+): Boolean {
+    if (!context.hasBleConnectPermission()) {
+        throw SecurityException("缺少 BLUETOOTH_CONNECT 权限")
+    }
+    return runCatching {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            writeDescriptor(descriptor)
+        } else {
+            @Suppress("DEPRECATION")
+            writeDescriptor(descriptor)
+        }
+    }.getOrElse { throwable ->
+        ConnectivityLogger.w("Descriptor write aborted：${throwable.message}")
+        false
     }
 }
 
+@SuppressLint("MissingPermission")
 private fun BluetoothGatt.writeCharacteristicCompat(
+    context: Context,
     characteristic: BluetoothGattCharacteristic,
     payload: ByteArray
 ): Boolean {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        writeCharacteristic(characteristic, payload, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) ==
-            BluetoothStatusCodes.SUCCESS
-    } else {
-        characteristic.legacySetValue(payload)
-        @Suppress("DEPRECATION")
-        writeCharacteristic(characteristic)
+    if (!context.hasBleConnectPermission()) {
+        throw SecurityException("缺少 BLUETOOTH_CONNECT 权限")
+    }
+    return runCatching {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            writeCharacteristic(
+                characteristic,
+                payload,
+                BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            ) == BluetoothStatusCodes.SUCCESS
+        } else {
+            characteristic.legacySetValue(payload)
+            @Suppress("DEPRECATION")
+            writeCharacteristic(characteristic)
+        }
+    }.getOrElse { throwable ->
+        ConnectivityLogger.w("Characteristic write aborted：${throwable.message}")
+        false
     }
 }
 
@@ -657,3 +694,10 @@ private suspend fun GattContext.awaitNotificationOrRead(uuid: UUID): ByteArray =
     } catch (ex: TimeoutCancellationException) {
         readCharacteristic(uuid)
     }
+
+private fun Context.hasBleConnectPermission(): Boolean {
+    return ContextCompat.checkSelfPermission(
+        this,
+        Manifest.permission.BLUETOOTH_CONNECT
+    ) == PackageManager.PERMISSION_GRANTED
+}

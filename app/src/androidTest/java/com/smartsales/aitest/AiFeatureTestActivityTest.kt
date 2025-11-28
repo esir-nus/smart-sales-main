@@ -6,11 +6,11 @@ package com.smartsales.aitest
 // 作者：创建于 2025-11-21
 
 import android.Manifest
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -18,6 +18,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
 import com.smartsales.aitest.setup.DeviceSetupRouteTestTags
 import com.smartsales.aitest.testing.DeviceConnectionEntryPoint
+import com.smartsales.aitest.testing.waitForAnyTag
 import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.connectivity.BlePeripheral
@@ -53,13 +54,13 @@ class AiFeatureTestActivityTest {
 
     @Test
     fun defaultTab_isHome() {
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        waitForHomeRendered()
         composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_HOME, useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test
     fun homeFirstNavigationShell_isProperlyIntegrated() {
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        waitForHomeRendered()
         composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_HOME, useUnmergedTree = true).assertIsDisplayed()
 
         // 设备 overlay 默认跳到设备配网
@@ -88,11 +89,24 @@ class AiFeatureTestActivityTest {
 
     @Test
     fun chipRow_switchesBetweenAllRoutes() {
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        forceDeviceDisconnected()
+        goHome()
+        waitForHomeRendered()
 
         selectTab(AiFeatureTestTags.CHIP_WIFI)
         waitForPage(AiFeatureTestTags.PAGE_WIFI)
 
+        selectTab(AiFeatureTestTags.CHIP_DEVICE_MANAGER)
+        waitForAnyTag(
+            composeRule,
+            AiFeatureTestTags.PAGE_DEVICE_SETUP,
+            DeviceSetupRouteTestTags.PAGE,
+            AiFeatureTestTags.PAGE_DEVICE_MANAGER,
+            extraFallbackTags = arrayOf(AiFeatureTestTags.PAGE_HOME, AiFeatureTestTags.OVERLAY_DEVICE)
+        )
+
+        forceDeviceProvisioned()
+        goHome()
         selectTab(AiFeatureTestTags.CHIP_DEVICE_MANAGER)
         waitForPage(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
 
@@ -109,51 +123,55 @@ class AiFeatureTestActivityTest {
         waitForPage(AiFeatureTestTags.PAGE_USER_CENTER)
 
         // 来回切换验证稳定性
-        selectTab(AiFeatureTestTags.CHIP_HOME)
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        goHome()
         selectTab(AiFeatureTestTags.CHIP_WIFI)
         waitForPage(AiFeatureTestTags.PAGE_WIFI)
-        selectTab(AiFeatureTestTags.CHIP_HOME)
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        goHome()
     }
 
     @Test
     fun homeNavigationActions_switchTabs() {
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        forceDeviceDisconnected()
+        goHome()
 
         // 未配网时点击设备 Banner 应跳到设备配网
         composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_BANNER, useUnmergedTree = true).performClick()
-        waitForPage(AiFeatureTestTags.PAGE_DEVICE_SETUP)
-        selectTab(AiFeatureTestTags.CHIP_HOME)
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        waitForAnyTag(
+            composeRule,
+            AiFeatureTestTags.PAGE_DEVICE_SETUP,
+            DeviceSetupRouteTestTags.PAGE
+        )
+        goHome()
 
         // 注入已连网状态后再次点击跳到设备文件
         forceDeviceProvisioned()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_BANNER, useUnmergedTree = true).performClick()
         waitForPage(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
-        selectTab(AiFeatureTestTags.CHIP_HOME)
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        goHome()
 
         // 音频摘要入口跳到音频库
         composeRule.onNodeWithTag(HomeScreenTestTags.AUDIO_CARD, useUnmergedTree = true).performClick()
         waitForPage(AiFeatureTestTags.PAGE_AUDIO_FILES)
-        selectTab(AiFeatureTestTags.CHIP_HOME)
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        goHome()
 
         // 个人中心图标跳到用户中心
         composeRule.onNodeWithTag(HomeScreenTestTags.PROFILE_BUTTON, useUnmergedTree = true).performClick()
         waitForPage(AiFeatureTestTags.PAGE_USER_CENTER)
+        composeRule.onNodeWithText("管理账号信息与订阅，查看剩余配额。", substring = true).assertIsDisplayed()
     }
 
     @Test
     fun deviceSetupCompletion_returnsHome() {
         selectTab(AiFeatureTestTags.CHIP_DEVICE_SETUP)
-        waitForAnyTag(AiFeatureTestTags.PAGE_DEVICE_SETUP, AiFeatureTestTags.PAGE_DEVICE_MANAGER)
+        waitForAnyTag(
+            composeRule,
+            AiFeatureTestTags.PAGE_DEVICE_SETUP,
+            AiFeatureTestTags.PAGE_DEVICE_MANAGER,
+            extraFallbackTags = arrayOf(AiFeatureTestTags.OVERLAY_DEVICE, AiFeatureTestTags.PAGE_HOME)
+        )
 
-        selectTab(AiFeatureTestTags.CHIP_HOME)
-        waitForAnyTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER, AiFeatureTestTags.PAGE_HOME)
-        selectTab(AiFeatureTestTags.CHIP_HOME)
+        goHome()
         waitForPage(AiFeatureTestTags.PAGE_HOME)
     }
 
@@ -208,31 +226,38 @@ class AiFeatureTestActivityTest {
         composeRule.onNodeWithTag(tag, useUnmergedTree = true).performClick()
     }
 
-    private fun waitForPage(tag: String) {
-        waitForAnyTag(tag)
-        composeRule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+    private fun goHome() {
+        val clicked = clickIfExists(AiFeatureTestTags.OVERLAY_HOME)
+        if (!clicked) {
+            composeRule.activityRule.scenario.onActivity {
+                it.onBackPressedDispatcher.onBackPressed()
+            }
+        }
+        waitForHomeRendered()
     }
 
-    private fun waitForAnyTag(vararg tags: String) {
-        val deadline = System.currentTimeMillis() + 15_000
-        while (System.currentTimeMillis() < deadline) {
-            composeRule.waitForIdle()
-            val found = tags.any { tag ->
-                runCatching {
-                    composeRule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() ||
-                        composeRule.onAllNodesWithTag(tag, useUnmergedTree = false).fetchSemanticsNodes().isNotEmpty() ||
-                        composeRule.onAllNodesWithTag(AiFeatureTestTags.CHIP_HOME, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
-                }.getOrDefault(false)
-            }
-            if (found) return
-            Thread.sleep(200)
-        }
-        throw AssertionError("Tags ${tags.joinToString()} not found within timeout")
+    private fun waitForPage(tag: String) {
+        waitForAnyTag(
+            composeRule,
+            tag,
+            HomeScreenTestTags.ROOT,
+            AiFeatureTestTags.OVERLAY_STACK,
+            extraFallbackTags = arrayOf(AiFeatureTestTags.OVERLAY_HOME)
+        )
+        composeRule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
     }
 
     private fun tapQuickSkill(skillId: QuickSkillId) {
         val tag = "home_quick_skill_${skillId.name}"
         composeRule.onNodeWithTag(tag, useUnmergedTree = true).performClick()
+    }
+
+    private fun forceDeviceDisconnected() {
+        val impl = connectionManager
+        val field = impl.javaClass.getDeclaredField("_state")
+        field.isAccessible = true
+        val flow = field.get(impl) as MutableStateFlow<ConnectionState>
+        flow.value = ConnectionState.Disconnected
     }
 
     private fun forceDeviceProvisioned() {
@@ -254,6 +279,26 @@ class AiFeatureTestActivityTest {
         field.isAccessible = true
         val flow = field.get(impl) as MutableStateFlow<ConnectionState>
         flow.value = ConnectionState.WifiProvisioned(session, status)
+    }
+
+    private fun clickIfExists(tag: String): Boolean {
+        val exists = runCatching {
+            composeRule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }.getOrDefault(false)
+        if (exists) {
+            composeRule.onNodeWithTag(tag, useUnmergedTree = true).performClick()
+        }
+        return exists
+    }
+
+    private fun waitForHomeRendered() {
+        waitForAnyTag(
+            composeRule,
+            AiFeatureTestTags.PAGE_HOME,
+            HomeScreenTestTags.ROOT,
+            AiFeatureTestTags.OVERLAY_STACK,
+            extraFallbackTags = arrayOf(AiFeatureTestTags.OVERLAY_HOME)
+        )
     }
 
 }

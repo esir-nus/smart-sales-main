@@ -424,6 +424,17 @@ private fun DeviceAudioBanner(
     onDeviceClick: () -> Unit,
     onAudioClick: () -> Unit
 ) {
+    val snapshot = deviceSnapshot ?: DeviceSnapshotUi(
+        statusText = "设备未连接，点击开始配网",
+        connectionState = DeviceConnectionStateUi.DISCONNECTED
+    )
+    val supportingText = when (snapshot.connectionState) {
+        DeviceConnectionStateUi.DISCONNECTED -> "请连接设备以管理文件和查看预览"
+        DeviceConnectionStateUi.CONNECTING -> "正在连接设备，请保持靠近"
+        DeviceConnectionStateUi.WAITING_FOR_NETWORK -> "设备已连接，等待联网完成"
+        DeviceConnectionStateUi.CONNECTED -> "设备在线，可管理文件与录音"
+        DeviceConnectionStateUi.ERROR -> snapshot.errorSummary
+    }
     // Home 只读取连接/媒体状态，不控制底层逻辑
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -439,28 +450,32 @@ private fun DeviceAudioBanner(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = deviceSnapshot?.statusText ?: "等待连接设备",
+                    text = snapshot.statusText,
                     style = MaterialTheme.typography.titleMedium
                 )
-                deviceSnapshot?.deviceName?.let {
+                snapshot.deviceName?.let {
                     Text(
                         text = it,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                deviceSnapshot?.wifiName?.let {
+                snapshot.wifiName?.let {
                     Text(
                         text = "Wi-Fi：$it",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                deviceSnapshot?.errorSummary?.let {
+                supportingText?.let {
                     Text(
                         text = it,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
+                        color = if (snapshot.connectionState == DeviceConnectionStateUi.ERROR) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
                     )
                 }
             }
@@ -682,9 +697,23 @@ private fun EmptyChatHint(
             style = MaterialTheme.typography.titleMedium
         )
         Text(
-            text = "我可以帮你分析客户意图、生成话术与文档。",
+            text = "我可以帮您：",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "- 分析用户画像、意图、痛点。",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "- 生成 PDF、CSV 文档和思维导图。",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "让我们开始吧",
+            style = MaterialTheme.typography.bodyMedium
         )
         Text(
             text = "试试下面的快捷技能开始吧",

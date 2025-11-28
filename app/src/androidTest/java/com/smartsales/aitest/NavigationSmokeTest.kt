@@ -51,7 +51,7 @@ class NavigationSmokeTest {
     @Test
     fun launchesHomeOverlayByDefault() {
         goHome()
-        waitForAnyTag(composeRule, HomeScreenTestTags.ROOT, AiFeatureTestTags.PAGE_HOME)
+        waitForHomeRendered()
     }
 
     @Test
@@ -88,7 +88,7 @@ class NavigationSmokeTest {
             it.onBackPressedDispatcher.onBackPressed()
         }
 
-        waitForAnyTag(composeRule, HomeScreenTestTags.ROOT, AiFeatureTestTags.PAGE_HOME)
+        waitForHomeRendered()
     }
 
     @Test
@@ -102,7 +102,7 @@ class NavigationSmokeTest {
             it.onBackPressedDispatcher.onBackPressed()
         }
 
-        waitForAnyTag(composeRule, HomeScreenTestTags.ROOT, AiFeatureTestTags.PAGE_HOME)
+        waitForHomeRendered()
     }
 
     @Test
@@ -126,12 +126,7 @@ class NavigationSmokeTest {
                 it.onBackPressedDispatcher.onBackPressed()
             }
         }
-        waitForAnyTag(
-            composeRule,
-            HomeScreenTestTags.ROOT,
-            AiFeatureTestTags.PAGE_HOME,
-            extraFallbackTags = arrayOf(AiFeatureTestTags.OVERLAY_HOME, AiFeatureTestTags.OVERLAY_STACK)
-        )
+        waitForHomeRendered()
     }
 
     private fun forceDeviceDisconnected() {
@@ -140,6 +135,16 @@ class NavigationSmokeTest {
         field.isAccessible = true
         val flow = field.get(impl) as MutableStateFlow<ConnectionState>
         flow.value = ConnectionState.Disconnected
+    }
+
+    private fun waitForHomeRendered() {
+        waitForAnyTag(
+            composeRule,
+            HomeScreenTestTags.ROOT,
+            AiFeatureTestTags.PAGE_HOME,
+            AiFeatureTestTags.OVERLAY_STACK,
+            extraFallbackTags = arrayOf(AiFeatureTestTags.OVERLAY_HOME)
+        )
     }
 
 }

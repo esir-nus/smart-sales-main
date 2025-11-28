@@ -720,32 +720,32 @@ class HomeScreenViewModel @Inject constructor(
 
     private fun ConnectionState.toDeviceSnapshot(): DeviceSnapshotUi = when (this) {
         ConnectionState.Disconnected -> DeviceSnapshotUi(
-            statusText = "设备未连接，点击配网后再试",
+            statusText = "设备未连接，点击开始配网",
             connectionState = DeviceConnectionStateUi.DISCONNECTED
         )
 
         is ConnectionState.Pairing -> DeviceSnapshotUi(
             deviceName = deviceName,
-            statusText = "正在配对 ${deviceName}，请靠近设备 (${progressPercent}%)",
+            statusText = "正在连接设备，请保持靠近",
             connectionState = DeviceConnectionStateUi.CONNECTING
         )
 
         is ConnectionState.Connected -> DeviceSnapshotUi(
             deviceName = session.peripheralName,
-            statusText = "BLE 已连接，等待设备联网...",
+            statusText = "设备已连接，等待联网",
             connectionState = DeviceConnectionStateUi.WAITING_FOR_NETWORK
         )
 
         is ConnectionState.WifiProvisioned -> DeviceSnapshotUi(
             deviceName = session.peripheralName,
-            statusText = "${session.peripheralName} 已上线，网络：${status.wifiSsid}",
+            statusText = "设备已上线，网络：${status.wifiSsid}",
             connectionState = DeviceConnectionStateUi.CONNECTED,
             wifiName = status.wifiSsid
         )
 
         is ConnectionState.Syncing -> DeviceSnapshotUi(
             deviceName = session.peripheralName,
-            statusText = "${session.peripheralName} 保持连接中",
+            statusText = "设备在线，网络：${status.wifiSsid}",
             connectionState = DeviceConnectionStateUi.CONNECTED,
             wifiName = status.wifiSsid
         )

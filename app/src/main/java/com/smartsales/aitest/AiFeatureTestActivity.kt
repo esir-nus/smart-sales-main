@@ -293,7 +293,11 @@ private fun AiFeatureTestApp() {
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .testTag(AiFeatureTestTags.PAGE_USER_CENTER),
-                                        onLogout = { setPage(TestHomePage.Home) }
+                                        onLogout = { setPage(TestHomePage.Home) },
+                                        onOpenDeviceManager = { setPage(TestHomePage.DeviceManager) },
+                                        onOpenSubscription = { openHomeOverlay() },
+                                        onOpenPrivacy = { openHomeOverlay() },
+                                        onOpenGeneral = { openHomeOverlay() }
                                     )
                                 }
                             }

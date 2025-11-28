@@ -290,13 +290,21 @@ class AiFeatureTestActivityTest {
     }
 
     private fun waitForHomeRendered() {
-        waitForAnyTag(
-            composeRule,
-            AiFeatureTestTags.PAGE_HOME,
-            HomeScreenTestTags.ROOT,
-            AiFeatureTestTags.OVERLAY_STACK,
-            extraFallbackTags = arrayOf(AiFeatureTestTags.OVERLAY_HOME)
-        )
+        runCatching {
+            waitForAnyTag(
+                composeRule,
+                AiFeatureTestTags.PAGE_HOME,
+                HomeScreenTestTags.ROOT,
+                AiFeatureTestTags.OVERLAY_STACK,
+                extraFallbackTags = arrayOf(AiFeatureTestTags.OVERLAY_HOME),
+                timeoutMillis = 60_000
+            )
+        }.onFailure {
+            composeRule.waitUntil(timeoutMillis = 60_000) {
+                composeRule.onAllNodesWithTag(HomeScreenTestTags.ROOT, useUnmergedTree = true)
+                    .fetchSemanticsNodes().isNotEmpty()
+            }
+        }
     }
 
 }

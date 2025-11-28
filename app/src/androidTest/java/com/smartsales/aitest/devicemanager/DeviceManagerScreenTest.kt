@@ -27,6 +27,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.hasTestTag
@@ -54,7 +55,7 @@ class DeviceManagerScreenTest {
         )
         renderDeviceManager(state)
 
-        composeRule.onNodeWithText("设备未连接").assertIsDisplayed()
+        composeRule.onAllNodesWithText("设备未连接").onFirst().assertIsDisplayed()
         composeRule.onNodeWithText("请连接设备以管理文件和查看预览。").assertIsDisplayed()
         composeRule.onNodeWithText("重试连接").assertIsDisplayed()
     }

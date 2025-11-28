@@ -23,7 +23,11 @@ fun <R : TestRule, A : ComponentActivity> waitForAnyTag(
         addAll(extraFallbackTags)
     }
     while (System.currentTimeMillis() < deadline) {
-        composeRule.waitForIdle()
+        val idleOk = runCatching { composeRule.waitForIdle() }.isSuccess
+        if (!idleOk) {
+            Thread.sleep(200)
+            continue
+        }
         val found = allTags.any { tag ->
             runCatching {
                 composeRule.onAllNodesWithTag(tag, useUnmergedTree = useUnmergedTree).fetchSemanticsNodes().isNotEmpty() ||

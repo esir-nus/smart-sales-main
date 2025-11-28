@@ -18,7 +18,11 @@ import com.smartsales.feature.usercenter.UserCenterViewModel
 @Composable
 fun UserCenterRoute(
     modifier: Modifier = Modifier,
-    onLogout: () -> Unit = {}
+    onLogout: () -> Unit = {},
+    onOpenDeviceManager: () -> Unit = {},
+    onOpenSubscription: () -> Unit = {},
+    onOpenPrivacy: () -> Unit = {},
+    onOpenGeneral: () -> Unit = {}
 ) {
     val viewModel: UserCenterViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -39,6 +43,10 @@ fun UserCenterRoute(
         onSaveClicked = viewModel::onSaveClicked,
         onLogoutClicked = viewModel::onLogoutClicked,
         onErrorDismissed = viewModel::onErrorDismissed,
+        onOpenDeviceManager = onOpenDeviceManager,
+        onOpenSubscription = onOpenSubscription,
+        onOpenPrivacy = onOpenPrivacy,
+        onOpenGeneral = onOpenGeneral,
         modifier = modifier
     )
 }

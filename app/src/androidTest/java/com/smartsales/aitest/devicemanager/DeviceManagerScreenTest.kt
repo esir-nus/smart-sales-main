@@ -83,7 +83,7 @@ class DeviceManagerScreenTest {
         renderDeviceManager(state)
 
         composeRule.onNodeWithText("设备文件管理").assertIsDisplayed()
-        composeRule.onNodeWithText("刷新、上传并预览设备素材，与 React 端保持一致。").assertIsDisplayed()
+        composeRule.onNodeWithText("管理您的销售助手设备，刷新、上传并预览素材。").assertIsDisplayed()
         composeRule.onNodeWithText("选择文件预览").assertIsDisplayed()
         composeRule.onAllNodesWithText("上传新文件").onFirst().assertIsDisplayed()
         composeRule.onNodeWithTag(DeviceManagerTestTags.EMPTY_STATE).assertIsDisplayed()

@@ -60,6 +60,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.smartsales.core.util.AppDesignTokens
 import com.smartsales.feature.media.audio.TingwuChapterUi
 import com.smartsales.feature.media.audio.TingwuSmartSummaryUi
 import kotlinx.coroutines.launch
@@ -81,6 +82,7 @@ fun AudioFilesScreen(
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
+    val designTokens = AppDesignTokens.current()
     Scaffold(
         modifier = modifier
             .fillMaxSize()
@@ -108,7 +110,7 @@ fun AudioFilesScreen(
                 .padding(innerPadding)
                 .padding(16.dp)
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.08f)),
+                .background(designTokens.mutedSurface),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
@@ -220,8 +222,8 @@ private fun AudioRecordingItem(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = MaterialTheme.shapes.large,
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+        elevation = CardDefaults.cardElevation(defaultElevation = designTokens.cardElevation),
+        border = BorderStroke(1.dp, designTokens.cardBorder)
     ) {
         Column(
             modifier = Modifier
@@ -336,8 +338,8 @@ private fun StatusTag(
     val (label, color) = when (recording.transcriptionStatus) {
         TranscriptionStatus.DONE -> "已同步" to MaterialTheme.colorScheme.primary
         TranscriptionStatus.IN_PROGRESS -> "转写中..." to MaterialTheme.colorScheme.tertiary
-        TranscriptionStatus.ERROR -> "Sync Error" to MaterialTheme.colorScheme.error
-        TranscriptionStatus.NONE -> "Not Synced" to MaterialTheme.colorScheme.secondary
+        TranscriptionStatus.ERROR -> "转写失败" to MaterialTheme.colorScheme.error
+        TranscriptionStatus.NONE -> "未同步" to MaterialTheme.colorScheme.secondary
     }
     ElevatedAssistChip(
         modifier = Modifier.testTag("${AudioFilesTestTags.STATUS_CHIP_PREFIX}${recording.id}"),
@@ -395,7 +397,7 @@ private fun ActionButtons(
 
                 TranscriptionStatus.ERROR -> {
                     Text(
-                        text = "Sync Error",
+                        text = "转写失败",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error
                     )
@@ -714,14 +716,12 @@ private fun GradientCtaButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+    val designTokens = AppDesignTokens.current()
     Box(
         modifier = modifier
             .background(
                 brush = Brush.horizontalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primary,
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.82f)
-                    )
+                    colors = designTokens.ctaGradient
                 ),
                 shape = MaterialTheme.shapes.large
             )

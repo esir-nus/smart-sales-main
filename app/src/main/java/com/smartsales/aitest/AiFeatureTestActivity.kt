@@ -94,6 +94,7 @@ import com.smartsales.feature.chat.home.TranscriptionChatRequest
 import com.smartsales.feature.chat.history.ChatHistoryRoute
 import com.smartsales.feature.media.audio.AudioFilesEvent
 import com.smartsales.feature.media.audio.AudioFilesViewModel
+import com.smartsales.core.util.AppDesignTokens
 import androidx.hilt.navigation.compose.hiltViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
@@ -379,6 +380,7 @@ private fun DraggableOverlayStack(
 ) {
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
+    val designTokens = AppDesignTokens.current()
     val dragRangePx = with(density) { 240.dp.toPx() }
     val offset = remember { Animatable(overlayToPosition(currentOverlay)) }
     val target = overlayToPosition(currentOverlay)
@@ -411,7 +413,7 @@ private fun DraggableOverlayStack(
 
     Surface(
         modifier = modifier
-            .width(68.dp)
+            .width(designTokens.overlayRailWidth)
             .fillMaxHeight()
             .background(
                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
@@ -501,9 +503,9 @@ private fun OverlayCard(
         ) {
             Box(
                 modifier = Modifier
-                    .height(3.dp)
-                    .width(28.dp)
-                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), shape = MaterialTheme.shapes.small)
+                    .height(designTokens.overlayHandleSize.height)
+                    .width(designTokens.overlayHandleSize.width)
+                    .background(designTokens.overlayHandleColor, shape = MaterialTheme.shapes.small)
             )
             Text(text = label, style = MaterialTheme.typography.bodyMedium)
             Text(

@@ -7,6 +7,8 @@ package com.smartsales.aitest.devicemanager
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,6 +50,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.smartsales.core.util.AppDesignTokens
 import com.smartsales.feature.media.devicemanager.DeviceConnectionUiState
 import com.smartsales.feature.media.devicemanager.DeviceFileUi
 import com.smartsales.feature.media.devicemanager.DeviceManagerUiState
@@ -94,11 +97,13 @@ fun DeviceManagerScreen(
 ) {
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
         val isConnected = state.isConnected
+        val designTokens = AppDesignTokens.current()
         Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.08f))
+                .background(designTokens.mutedSurface)
                 .padding(12.dp)
+                .verticalScroll(rememberScrollState())
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -208,7 +213,7 @@ private fun DeviceManagerHero(
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(text = "设备文件管理", style = MaterialTheme.typography.titleLarge)
                 Text(
-                    text = "刷新、上传并预览设备素材，与 React 端保持一致。",
+                    text = "管理您的销售助手设备，刷新、上传并预览素材。",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

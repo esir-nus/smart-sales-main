@@ -107,7 +107,8 @@ fun AudioFilesScreen(
             modifier = Modifier
                 .padding(innerPadding)
                 .padding(16.dp)
-            .fillMaxSize(),
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.08f)),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
@@ -217,13 +218,16 @@ private fun AudioRecordingItem(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = MaterialTheme.shapes.large,
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -298,10 +302,16 @@ private fun AudioRecordingItem(
 @Composable
 private fun StatusIcon(recording: AudioRecordingUi, onClick: (String) -> Unit) {
     val container = when (recording.transcriptionStatus) {
-        TranscriptionStatus.DONE -> MaterialTheme.colorScheme.primaryContainer
-        TranscriptionStatus.ERROR -> MaterialTheme.colorScheme.errorContainer
-        TranscriptionStatus.IN_PROGRESS -> MaterialTheme.colorScheme.secondaryContainer
+        TranscriptionStatus.DONE -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+        TranscriptionStatus.ERROR -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
+        TranscriptionStatus.IN_PROGRESS -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
         else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    val tint = when (recording.transcriptionStatus) {
+        TranscriptionStatus.DONE -> MaterialTheme.colorScheme.primary
+        TranscriptionStatus.ERROR -> MaterialTheme.colorScheme.error
+        TranscriptionStatus.IN_PROGRESS -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     Box(
         modifier = Modifier
@@ -313,7 +323,7 @@ private fun StatusIcon(recording: AudioRecordingUi, onClick: (String) -> Unit) {
         Icon(
             imageVector = Icons.AutoMirrored.Filled.VolumeUp,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+            tint = tint
         )
     }
 }
@@ -405,7 +415,9 @@ private fun ActionButtons(
 private fun EmptyState(onRefresh: () -> Unit, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
     ) {
         Column(
             modifier = Modifier
@@ -459,7 +471,8 @@ private fun TranscriptViewerSheet(
     val scrollState = rememberScrollState()
     androidx.compose.material3.ModalBottomSheet(
         modifier = Modifier.testTag(AudioFilesTestTags.TRANSCRIPT_DIALOG),
-        onDismissRequest = onDismiss
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface
     ) {
         val coroutineScope = rememberCoroutineScope()
         Column(
@@ -641,7 +654,9 @@ private fun PlayerStub(
     onPlayPause: () -> Unit
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.94f))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = MaterialTheme.shapes.large,
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Row(
             modifier = Modifier
@@ -662,8 +677,8 @@ private fun PlayerStub(
                         shape = MaterialTheme.shapes.medium
                     ),
                 colors = IconButtonDefaults.iconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.primary
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
                 Icon(
@@ -705,13 +720,13 @@ private fun GradientCtaButton(
                 brush = Brush.horizontalGradient(
                     colors = listOf(
                         MaterialTheme.colorScheme.primary,
-                        MaterialTheme.colorScheme.secondary
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.82f)
                     )
                 ),
                 shape = MaterialTheme.shapes.large
             )
             .clickable(onClick = onClick)
-            .padding(vertical = 14.dp),
+            .padding(vertical = 16.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(

@@ -70,7 +70,7 @@ fun UserCenterScreen(
     Scaffold(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f))
+            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.18f))
             .testTag(UserCenterTestTags.ROOT),
         topBar = {
         TopAppBar(
@@ -86,9 +86,9 @@ fun UserCenterScreen(
         Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
                 .fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             ProfileHeader(userName = uiState.userName, email = uiState.email)
             if (uiState.isSaving) {
@@ -103,7 +103,8 @@ fun UserCenterScreen(
             }
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = MaterialTheme.shapes.large
             ) {
                 Column(
                     modifier = Modifier
@@ -179,8 +180,8 @@ private fun ProfileHeader(userName: String, email: String) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.medium)
-            .padding(16.dp),
+            .background(MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.large)
+            .padding(vertical = 20.dp, horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -188,7 +189,7 @@ private fun ProfileHeader(userName: String, email: String) {
             modifier = Modifier
                 .size(72.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -315,7 +316,8 @@ private fun FeatureFlagCard(
 ) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = MaterialTheme.shapes.large
     ) {
         Column(
             modifier = Modifier

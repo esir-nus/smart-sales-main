@@ -130,7 +130,7 @@ fun ChatHistoryScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -145,6 +145,7 @@ fun ChatHistoryScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.06f))
         ) {
             Text(
                 text = "长按会话可置顶、重命名或删除，保持与 React 历史侧边一致。",
@@ -159,13 +160,17 @@ fun ChatHistoryScreen(
                         .testTag(ChatHistoryTestTags.EMPTY),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "暂无历史记录，开始新的对话吧。")
+                    Text(
+                        text = "暂无历史记录，开始新的对话吧。",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     items(state.sessions, key = { it.id }) { session ->
                         ChatHistoryItem(

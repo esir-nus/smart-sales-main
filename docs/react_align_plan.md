@@ -37,7 +37,7 @@ Roadmap & milestones
 - M3 视觉与交互细节（完成）  
   - DesignKit 色板、渐变、徽章、按钮；Home 叠层拖拽/按压动画；DeviceManager 应用状态提示。  
   - Applied 徽标与“当前展示”文案、AudioFiles CTA 与 Transcript 抽屉文案同步 React。
-- M4 集成性改进（待办）  
+- M4 集成性改进（进行中）  
   - 自动同步 Wi-Fi/BLE baseUrl 至 DeviceManager/AudioFiles；转写结果回写聊天历史。  
   - React 新 UI 变更日常回归，确保新差异可追踪。
 - M5 稳定性与验证（进行中）  
@@ -58,6 +58,7 @@ Execution steps
 - 分屏迁移：Home（Hero LOGO/问候/要点对齐）、DeviceManager（浅色 Hero + 空/错/加载文案）、AudioFiles（转写抽屉、播放器描边与渐变 CTA）、UserCenter（淡紫背景+卡片栈）、DeviceSetup/ChatHistory（流程与文案对齐）。
 - 仪表测试：每屏调整后同步更新对应 androidTest，验证 overlay 路由、入口点击与 CTA 文案，保持 tag 不变。
 - 验证：跑 `./gradlew testDebugUnitTest` 以及关键 UI 测试（connectedDebugAndroidTest 视环境）；发现新的 React 差异及时更新 `docs/react_align_progress.md` / plan 数据。
+- 当前进展：Home top bar/hero 与浅灰背景已对齐；DeviceManager 预览卡/空态卡片与上传 tile 对齐；AudioFiles 列表卡与转写抽屉/CTA 对齐；UserCenter 背景与卡片栈对齐；ChatHistory/DeviceSetup 间距与背景调优完成。
 
 Progress tracking
 - 进度详情移至 `docs/react_align_progress.md`（含日期与对应改动），本文件仅保留对齐要求。

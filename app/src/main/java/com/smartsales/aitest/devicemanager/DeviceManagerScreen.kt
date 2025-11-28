@@ -97,8 +97,8 @@ fun DeviceManagerScreen(
         Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f))
-                .padding(16.dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.08f))
+                .padding(12.dp)
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -146,7 +146,14 @@ fun DeviceManagerScreen(
                 }
                 state.loadErrorMessage != null -> Unit
                 state.visibleFiles.isEmpty() -> {
-                    DeviceManagerEmptyState()
+                    FileListHeader(total = state.files.size, modifier = Modifier.fillMaxWidth())
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        UploadTile(onUpload = onRequestUpload, modifier = Modifier.weight(1f))
+                        EmptyFilesCard(modifier = Modifier.weight(1f))
+                    }
                 }
 
                 else -> {
@@ -189,7 +196,7 @@ private fun DeviceManagerHero(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.08f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f)
         )
     ) {
         Column(
@@ -203,7 +210,7 @@ private fun DeviceManagerHero(
                 Text(
                     text = "刷新、上传并预览设备素材，与 React 端保持一致。",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             DeviceConnectionBanner(
@@ -441,22 +448,26 @@ private fun SelectedFileCard(file: DeviceFileUi) {
 }
 
 @Composable
-private fun DeviceManagerEmptyState() {
+private fun EmptyFilesCard(modifier: Modifier = Modifier) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = modifier
+            .height(140.dp)
             .testTag(DeviceManagerTestTags.EMPTY_STATE),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = MaterialTheme.shapes.large,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+        )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = "设备上还没有文件", style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = "暂无文件，请上传。",
-                style = MaterialTheme.typography.bodySmall
-            )
+            Text(text = "暂无文件，请上传。", style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
@@ -543,8 +554,10 @@ private fun DevicePreviewRow(
                 .fillMaxWidth()
                 .height(180.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.86f)
-            )
+                containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
+            ),
+            shape = MaterialTheme.shapes.large,
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -558,14 +571,13 @@ private fun DevicePreviewRow(
                 Text(
                     text = "DEVICE SIMULATOR",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(12.dp)
                 )
             }
         }
-        UploadTile(onUpload = onUpload, modifier = Modifier.fillMaxWidth())
     }
 }
 
@@ -578,7 +590,12 @@ private fun UploadTile(
         modifier = modifier
             .height(140.dp)
             .clickable(onClick = onUpload),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = MaterialTheme.shapes.large,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+        )
     ) {
         Column(
             modifier = Modifier

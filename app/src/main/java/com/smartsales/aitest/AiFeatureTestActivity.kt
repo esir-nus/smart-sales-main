@@ -15,6 +15,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -62,6 +63,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
@@ -88,6 +91,9 @@ import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
 import java.util.UUID
 import kotlinx.coroutines.launch
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 
 @AndroidEntryPoint
 class AiFeatureTestActivity : ComponentActivity() {
@@ -317,34 +323,49 @@ private fun HomeOverlayStack(
     onSelectAudio: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Box(
         modifier = modifier
             .width(120.dp)
             .fillMaxHeight()
-            .testTag(AiFeatureTestTags.OVERLAY_STACK),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                        MaterialTheme.colorScheme.surface
+                    )
+                ),
+                shape = MaterialTheme.shapes.medium
+            )
+            .testTag(AiFeatureTestTags.OVERLAY_STACK)
     ) {
-        OverlayChip(
-            label = "设备",
-            selected = currentOverlay == HomeOverlay.Device,
-            tag = AiFeatureTestTags.OVERLAY_DEVICE,
-            onClick = onSelectDevice
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        OverlayChip(
-            label = "Home",
-            selected = currentOverlay == HomeOverlay.Home,
-            tag = AiFeatureTestTags.OVERLAY_HOME,
-            onClick = onSelectHome
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        OverlayChip(
-            label = "音频",
-            selected = currentOverlay == HomeOverlay.Audio,
-            tag = AiFeatureTestTags.OVERLAY_AUDIO,
-            onClick = onSelectAudio
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(vertical = 24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            OverlayChip(
+                label = "设备",
+                selected = currentOverlay == HomeOverlay.Device,
+                tag = AiFeatureTestTags.OVERLAY_DEVICE,
+                onClick = onSelectDevice
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            OverlayChip(
+                label = "Home",
+                selected = currentOverlay == HomeOverlay.Home,
+                tag = AiFeatureTestTags.OVERLAY_HOME,
+                onClick = onSelectHome
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            OverlayChip(
+                label = "音频",
+                selected = currentOverlay == HomeOverlay.Audio,
+                tag = AiFeatureTestTags.OVERLAY_AUDIO,
+                onClick = onSelectAudio
+            )
+        }
     }
 }
 
@@ -355,11 +376,20 @@ private fun OverlayChip(
     tag: String,
     onClick: () -> Unit
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(targetValue = if (pressed) 0.95f else 1f, label = "overlay_press")
     FilterChip(
         selected = selected,
         onClick = onClick,
+        interactionSource = interactionSource,
         label = { Text(label) },
-        modifier = Modifier.testTag(tag)
+        modifier = Modifier
+            .graphicsLayer(
+                scaleX = scale,
+                scaleY = scale
+            )
+            .testTag(tag)
     )
 }
 

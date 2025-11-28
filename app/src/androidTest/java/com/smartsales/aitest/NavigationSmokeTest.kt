@@ -73,7 +73,7 @@ class NavigationSmokeTest {
         goHome()
         composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO, useUnmergedTree = true).performClick()
         waitForAnyTag(composeRule, AudioFilesTestTags.ROOT, AiFeatureTestTags.PAGE_AUDIO_FILES)
-        composeRule.onNodeWithText("同步并管理设备录音", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText("管理录音、同步 Tingwu 转写并用 AI 分析通话。", substring = true).assertIsDisplayed()
         val analysisButtons = composeRule.onAllNodesWithText("用 AI 分析转写", substring = true).fetchSemanticsNodes()
         assert(analysisButtons.isEmpty())
     }

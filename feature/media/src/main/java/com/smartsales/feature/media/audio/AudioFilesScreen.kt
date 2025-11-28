@@ -101,11 +101,11 @@ fun AudioFilesScreen(
             modifier = Modifier
                 .padding(innerPadding)
                 .padding(16.dp)
-                .fillMaxSize(),
+            .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "同步并管理设备录音",
+                text = "管理录音、同步 Tingwu 转写并用 AI 分析通话。",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -123,7 +123,7 @@ fun AudioFilesScreen(
             }
             uiState.loadErrorMessage?.let {
                 Text(
-                    text = "加载录音失败，请稍后重试。",
+                    text = "加载录音失败，请检查网络或稍后重试。",
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -149,7 +149,7 @@ fun AudioFilesScreen(
                 )
             } else {
                 Text(
-                    text = "共 ${uiState.recordings.size} 条录音",
+                    text = "录音列表 · 共 ${uiState.recordings.size} 条",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -247,9 +247,9 @@ private fun AudioRecordingItem(
                             Text(
                                 text = when (recording.transcriptionStatus) {
                                     TranscriptionStatus.NONE -> "未转写"
-                                    TranscriptionStatus.IN_PROGRESS -> "转写中…"
+                                    TranscriptionStatus.IN_PROGRESS -> "转写中..."
                                     TranscriptionStatus.DONE -> "已完成"
-                                    TranscriptionStatus.ERROR -> "失败"
+                                    TranscriptionStatus.ERROR -> "转写失败"
                                 }
                             )
                         },
@@ -279,7 +279,7 @@ private fun AudioRecordingItem(
                         onClick = { onTranscribeClicked(recording.id) },
                         modifier = Modifier.testTag("${AudioFilesTestTags.TRANSCRIBE_BUTTON_PREFIX}${recording.id}")
                     ) {
-                        Text(text = "转写")
+                        Text(text = "用 AI 转写")
                     }
                 }
                 if (recording.transcriptionStatus == TranscriptionStatus.DONE) {
@@ -287,7 +287,7 @@ private fun AudioRecordingItem(
                         onClick = { onTranscriptClicked(recording.id) },
                         modifier = Modifier.testTag("${AudioFilesTestTags.TRANSCRIPT_BUTTON_PREFIX}${recording.id}")
                     ) {
-                        Text(text = "查看转写")
+                        Text(text = "查看转写结果")
                     }
                 }
                 TextButton(onClick = { onDeleteClicked(recording.id) }) {
@@ -314,13 +314,13 @@ private fun EmptyState(onRefresh: () -> Unit, modifier: Modifier = Modifier) {
         ) {
             Text(text = "暂无录音", style = MaterialTheme.typography.titleMedium)
             Text(
-                text = "暂无录音，下拉同步。",
+                text = "暂无录音，请连接设备后点击右上角同步或刷新列表。",
                 style = MaterialTheme.typography.bodySmall
             )
             TextButton(onClick = onRefresh) {
                 Icon(Icons.Default.Refresh, contentDescription = null)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(text = "刷新")
+                Text(text = "刷新录音")
             }
         }
     }
@@ -376,14 +376,14 @@ private fun TranscriptViewerSheet(
             Spacer(modifier = Modifier.height(8.dp))
             val summary = recording.smartSummary?.takeIf { it.isMeaningful() }
             summary?.let {
-                SummaryBlock(summary = it, modifier = Modifier.testTag(AudioFilesTestTags.TRANSCRIPT_SUMMARY))
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-            val content = when (recording.transcriptionStatus) {
-                TranscriptionStatus.IN_PROGRESS -> "转写进行中，请稍后再试。"
-                TranscriptionStatus.ERROR -> "转写失败，可以重新创建转写任务。"
-                else -> recording.fullTranscriptMarkdown ?: recording.transcriptPreview ?: "暂无内容"
-            }
+            SummaryBlock(summary = it, modifier = Modifier.testTag(AudioFilesTestTags.TRANSCRIPT_SUMMARY))
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        val content = when (recording.transcriptionStatus) {
+            TranscriptionStatus.IN_PROGRESS -> "转写进行中，请稍后查看。"
+            TranscriptionStatus.ERROR -> "转写失败，请重试创建转写任务或检查网络。"
+            else -> recording.fullTranscriptMarkdown ?: recording.transcriptPreview ?: "暂无内容"
+        }
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

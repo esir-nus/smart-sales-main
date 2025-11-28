@@ -79,7 +79,7 @@ fun UserCenterScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "管理账号信息与订阅，查看剩余配额。",
+                text = "管理账号、订阅与隐私设置，查看剩余配额。",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -187,7 +187,7 @@ private fun ProfileHeader(userName: String) {
                 style = MaterialTheme.typography.titleMedium
             )
             Text(
-                text = "管理个人信息与功能开关",
+                text = "订阅管理、隐私与通用设置",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

@@ -90,26 +90,26 @@ fun DeviceManagerScreen(
 ) {
     Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
         val isConnected = state.isConnected
-    Column(
-        modifier = Modifier
-            .padding(innerPadding)
-            .padding(16.dp)
-            .fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(text = "设备管理", style = MaterialTheme.typography.titleLarge)
-            Text(
-                text = "管理已连接设备的媒体文件，刷新或上传以保持最新。",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        DeviceConnectionBanner(status = state.connectionStatus)
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedTextField(
-                value = state.baseUrl,
-                onValueChange = onBaseUrlChange,
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .padding(16.dp)
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(text = "设备管理", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    text = "管理您的销售助手设备，刷新或上传文件。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            DeviceConnectionBanner(status = state.connectionStatus)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                OutlinedTextField(
+                    value = state.baseUrl,
+                    onValueChange = onBaseUrlChange,
                     label = { Text("服务地址") },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !state.isLoading
@@ -154,18 +154,19 @@ fun DeviceManagerScreen(
                 }
                 state.loadErrorMessage != null -> Unit
                 state.visibleFiles.isEmpty() -> {
-                DeviceManagerEmptyState()
-            }
-            else -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag(DeviceManagerTestTags.FILE_LIST),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(state.visibleFiles, key = { it.id }) { file ->
-                        DeviceFileCard(
-                            file = file,
+                    DeviceManagerEmptyState()
+                }
+
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag(DeviceManagerTestTags.FILE_LIST),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(state.visibleFiles, key = { it.id }) { file ->
+                            DeviceFileCard(
+                                file = file,
                                 isSelected = state.selectedFile?.id == file.id,
                                 onSelect = { onSelectFile(file.id) },
                                 onApply = { onApplyFile(file.id) },
@@ -185,9 +186,9 @@ fun DeviceManagerScreen(
 @Composable
 private fun DeviceConnectionBanner(status: DeviceConnectionUiState) {
     val (title, subtitle) = when (status) {
-        is DeviceConnectionUiState.Disconnected -> "未连接设备" to (status.reason ?: "请开启设备并保持 Wi-Fi/BLE 可用。")
-        is DeviceConnectionUiState.Connecting -> "正在连接设备" to (status.detail ?: "请稍候...")
-        is DeviceConnectionUiState.Connected -> ("已连接 ${status.deviceName ?: ""}").trim() to "可以浏览、刷新与上传文件。"
+        is DeviceConnectionUiState.Disconnected -> "设备未连接" to (status.reason ?: "请连接设备以管理文件和查看预览。")
+        is DeviceConnectionUiState.Connecting -> "正在连接设备..." to (status.detail ?: "请确保设备在附近")
+        is DeviceConnectionUiState.Connected -> ("已连接 ${status.deviceName ?: ""}").trim() to "可预览、刷新和上传文件。"
     }
     Card {
         Column(
@@ -199,11 +200,6 @@ private fun DeviceConnectionBanner(status: DeviceConnectionUiState) {
             Text(text = title, style = MaterialTheme.typography.titleMedium)
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = "连接设备后可刷新、上传与管理媒体文件。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -240,7 +236,7 @@ private fun ActionButtons(
         ) {
             Icon(Icons.Default.CloudUpload, contentDescription = null)
             Spacer(modifier = Modifier.width(4.dp))
-            Text(text = if (isUploading) "上传中..." else "上传文件")
+            Text(text = if (isUploading) "上传中..." else "上传新文件")
         }
     }
 }
@@ -369,7 +365,7 @@ private fun DeviceManagerEmptyState() {
         ) {
             Text(text = "设备上还没有文件", style = MaterialTheme.typography.titleMedium)
             Text(
-                text = "录制或拍摄内容后，再次刷新列表。",
+                text = "暂无文件，请上传或刷新。",
                 style = MaterialTheme.typography.bodySmall
             )
         }
@@ -388,11 +384,11 @@ private fun DisconnectedHint(onRefresh: () -> Unit) {
         ) {
             Text(text = "设备未连接", style = MaterialTheme.typography.titleMedium)
             Text(
-                text = "请先完成设备配网，然后刷新设备文件。",
+                text = "请连接设备以管理文件和查看预览。",
                 style = MaterialTheme.typography.bodySmall
             )
             OutlinedButton(onClick = onRefresh) {
-                Text("刷新设备状态")
+                Text("重试连接")
             }
         }
     }

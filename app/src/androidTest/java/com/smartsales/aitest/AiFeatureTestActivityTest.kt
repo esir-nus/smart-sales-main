@@ -88,41 +88,37 @@ class AiFeatureTestActivityTest {
     }
 
     @Test
-    fun chipRow_switchesBetweenAllRoutes() {
+    fun navigationWithoutChips_coversOverlaysAndHomeActions() {
         forceDeviceDisconnected()
         goHome()
         waitForHomeRendered()
 
-        selectTab(AiFeatureTestTags.CHIP_WIFI)
-        waitForPage(AiFeatureTestTags.PAGE_WIFI)
-
-        selectTab(AiFeatureTestTags.CHIP_DEVICE_MANAGER)
-        waitForAnyTag(
-            composeRule,
-            AiFeatureTestTags.PAGE_DEVICE_SETUP,
-            DeviceSetupRouteTestTags.PAGE,
-            AiFeatureTestTags.PAGE_DEVICE_MANAGER,
-            extraFallbackTags = arrayOf(AiFeatureTestTags.PAGE_HOME, AiFeatureTestTags.OVERLAY_DEVICE)
-        )
-
-        forceDeviceProvisioned()
-        goHome()
-        selectTab(AiFeatureTestTags.CHIP_DEVICE_MANAGER)
-        waitForPage(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
-
-        selectTab(AiFeatureTestTags.CHIP_DEVICE_SETUP)
+        // 设备 overlay -> 配网
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE, useUnmergedTree = true).performClick()
         waitForPage(AiFeatureTestTags.PAGE_DEVICE_SETUP)
 
-        selectTab(AiFeatureTestTags.CHIP_AUDIO_FILES)
+        // 切换为已配网，再次进入设备 overlay -> 文件管理
+        forceDeviceProvisioned()
+        goHome()
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE, useUnmergedTree = true).performClick()
+        waitForPage(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
+
+        // 音频 overlay -> 音频库
+        goHome()
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO, useUnmergedTree = true).performClick()
         waitForPage(AiFeatureTestTags.PAGE_AUDIO_FILES)
 
-        selectTab(AiFeatureTestTags.CHIP_CHAT_HISTORY)
+        // 历史入口 -> 会话历史
+        goHome()
+        composeRule.onNodeWithTag(HomeScreenTestTags.HISTORY_BUTTON, useUnmergedTree = true).performClick()
         waitForPage(AiFeatureTestTags.PAGE_CHAT_HISTORY)
 
-        selectTab(AiFeatureTestTags.CHIP_USER_CENTER)
+        // 个人中心入口 -> 用户中心
+        goHome()
+        composeRule.onNodeWithTag(HomeScreenTestTags.PROFILE_BUTTON, useUnmergedTree = true).performClick()
         waitForPage(AiFeatureTestTags.PAGE_USER_CENTER)
 
-        // 来回切换验证稳定性
+        // Wi-Fi & BLE 测试仍通过 Chip 进入
         goHome()
         selectTab(AiFeatureTestTags.CHIP_WIFI)
         waitForPage(AiFeatureTestTags.PAGE_WIFI)
@@ -163,7 +159,9 @@ class AiFeatureTestActivityTest {
 
     @Test
     fun deviceSetupCompletion_returnsHome() {
-        selectTab(AiFeatureTestTags.CHIP_DEVICE_SETUP)
+        forceDeviceDisconnected()
+        goHome()
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE, useUnmergedTree = true).performClick()
         waitForAnyTag(
             composeRule,
             AiFeatureTestTags.PAGE_DEVICE_SETUP,

@@ -82,7 +82,7 @@ fun AudioFilesScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(text = "音频库") },
+                title = { Text(text = "录音文件") },
                 actions = {
                     IconButton(
                         onClick = onSyncClicked,
@@ -105,7 +105,7 @@ fun AudioFilesScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "同步并管理设备录音，查看转写与分析。",
+                text = "同步并管理设备录音",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -309,7 +309,7 @@ private fun EmptyState(onRefresh: () -> Unit, modifier: Modifier = Modifier) {
         ) {
             Text(text = "暂无录音", style = MaterialTheme.typography.titleMedium)
             Text(
-                text = "下拉或点击刷新，同步设备录音后即可查看转写与 AI 分析。",
+                text = "暂无录音，下拉同步。",
                 style = MaterialTheme.typography.bodySmall
             )
             TextButton(onClick = onRefresh) {
@@ -405,7 +405,7 @@ private fun TranscriptViewerSheet(
                 },
                 modifier = Modifier.align(Alignment.Start)
             ) {
-                Text(text = "用 AI 分析转写")
+                Text(text = "用 AI 分析本次通话")
             }
             Spacer(modifier = Modifier.height(8.dp))
             recording.chapters?.let { chapters ->

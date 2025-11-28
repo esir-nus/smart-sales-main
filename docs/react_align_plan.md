@@ -34,16 +34,21 @@ Execution steps
 
 Progress (2025-11-27)
 - Shell/navigation aligned: AiFeatureTestActivity consumes Home navigation requests and routes device overlay to setup when offline and manager when connected; back always returns Home.
-- Tests updated: DeviceManager chip now expects DeviceSetup when offline and DeviceManager after provisioning.
-- Home chat: assistant气泡支持「复制」操作，空态改为销售助手欢迎文案；会话长按底部抽屉可置顶/重命名/删除。
-- DeviceManager 屏新增标题与说明，贴近 React “设备管理” 头部。 
-- DeviceSetup 文案与 CTA 对齐 React：扫描/配对/等待/完成提示调整，完成后按钮为“前往设备管理”。
-- AudioFiles 文案对齐：顶部说明文案、空态提示、错误收起按钮、转写抽屉 CTA 更贴近 React。
-- UserCenter 顶部补充账号说明文案，贴近 React 配置页介绍。
-- Instrumentation refreshed：AiFeatureTestActivityTest 覆盖 UserCenter 说明文案，ChatHistoryScreenTest 验证长按抽屉置顶操作，NavigationSmokeTest 断言 AudioFiles/ UserCenter 文案，并复位设备状态防止 flake。
+- Tests updated: Home overlays/actions drive navigation (history/profile/audio/device) without relying on Home chips; Wi-Fi tester chip kept for manual entry.
+- Home chat: assistant气泡支持「复制」操作，空态改为销售助手欢迎文案；会话长按底部抽屉可置顶/重命名/删除；首页叠层添加渐变背景、设备/音频卡片使用 DesignKit 色板，空态文案改为 React 技能导向。
+- DeviceManager 文案对齐 React：标题/副标题更新，未连接与空态提示改为“请连接设备以管理文件和查看预览”“暂无文件，请上传或刷新”，上传按钮为“上传新文件”，列表显示文件总数与“当前展示”徽标，预览卡片使用 DesignKit 渐变。
+- DeviceSetup 文案与 CTA 对齐 React：扫描/配对/等待/完成提示调整，完成后按钮为“前往设备管理”，背景加入渐变。
+- AudioFiles 文案对齐：标题改为“录音文件”，描述与空态贴合 React，列表补充录音总数，转写抽屉 CTA 调整为“用 AI 分析本次通话”，列表与状态标签文案同步。
+- UserCenter 顶部说明更新为账号/订阅/隐私导语，头像副标题对齐 React 菜单导语，并新增“设备管理/订阅管理/隐私与安全/通用设置”快捷入口。
+- Instrumentation refreshed：AiFeatureTestActivityTest 覆盖无 Chip 导航路径，NavigationSmokeTest 断言 AudioFiles/UserCenter 文案，并复位设备状态防止 flake。
 - DeviceManager 仪表测试稳定：文件卡/选中卡补充 testTag，列表滚动基于 testTag 规避同名文本导致的多节点冲突。
+- Home 导航测试收敛：AiFeatureTestActivityTest 等待 Home 根/叠层标签以确保覆盖 Home overlay 渲染，消除漏检 flake。
+- 全量仪表测试通过：`:app:connectedDebugAndroidTest` 全绿，覆盖 Home overlay、DeviceManager、AudioFiles、UserCenter 等路径。
+- ChatHistory 长按操作对齐：底部动作表文案更新（置顶到顶部/重命名会话/删除并清除消息），置顶展示“置顶”徽标，新增长按重命名/删除测试。
+- Lint 清理：修复 HTTP DNS 空注解、BLE 权限与 Wi-Fi 权限、音频元数据 API 兼容，bcprov 版本与版本库归档，`./gradlew lint` 现已无阻塞错误。
+- BLE GATT 写入增加 BLUETOOTH_CONNECT 检查与 SecurityException 捕获，lint 通过。
 - React UI audit完成：Home 垂直拖拽 overlay、Sidebar 历史分组/重命名/置顶、设备状态卡、DeviceSetup → DeviceManager 自动跳转、AudioFiles/Transcript CTA、UserCenter 菜单项等差异已记录，准备下一轮实现。
-- Next up: apply overlay/overlay-return 逻辑与 Device 状态文案调整，移除对 Home chip 的依赖，更新导航测试等待 Home root/page。
+- Next up: 若有剩余差异，补充 Home overlay/动画细节与 DeviceManager 预览卡视觉，保持 React 文案一致，并持续压测导航仪表 flake。
 
 Risks & mitigations
 - Instrumentation flake: wait on tags/state, avoid sleeps.

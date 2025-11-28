@@ -29,6 +29,8 @@ import com.smartsales.feature.connectivity.ProvisioningStatus
 import dagger.hilt.android.EntryPointAccessors
 import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
+import android.os.SystemClock
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -64,6 +66,7 @@ class AiFeatureTestActivityTest {
         composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_HOME, useUnmergedTree = true).assertIsDisplayed()
 
         // 设备 overlay 默认跳到设备配网
+        forceDeviceDisconnected()
         composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE, useUnmergedTree = true).performClick()
         waitForPage(AiFeatureTestTags.PAGE_DEVICE_SETUP)
 
@@ -243,7 +246,15 @@ class AiFeatureTestActivityTest {
             AiFeatureTestTags.OVERLAY_STACK,
             extraFallbackTags = arrayOf(AiFeatureTestTags.OVERLAY_HOME)
         )
-        composeRule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        val found = runCatching {
+            composeRule.waitUntil(timeoutMillis = 10_000) {
+                composeRule.onAllNodesWithTag(tag, useUnmergedTree = true)
+                    .fetchSemanticsNodes()
+                    .isNotEmpty()
+            }
+            true
+        }.getOrElse { false }
+        assertTrue("Expected to find page tag $tag", found)
     }
 
     private fun tapQuickSkill(skillId: QuickSkillId) {
@@ -291,21 +302,32 @@ class AiFeatureTestActivityTest {
     }
 
     private fun waitForHomeRendered() {
-        runCatching {
-            waitForAnyTag(
-                composeRule,
-                AiFeatureTestTags.PAGE_HOME,
-                HomeScreenTestTags.ROOT,
-                AiFeatureTestTags.OVERLAY_STACK,
-                extraFallbackTags = arrayOf(AiFeatureTestTags.OVERLAY_HOME),
-                timeoutMillis = 60_000
-            )
-        }.onFailure {
-            composeRule.waitUntil(timeoutMillis = 60_000) {
-                composeRule.onAllNodesWithTag(HomeScreenTestTags.ROOT, useUnmergedTree = true)
-                    .fetchSemanticsNodes().isNotEmpty()
-            }
+        val tags = listOf(
+            AiFeatureTestTags.PAGE_HOME,
+            HomeScreenTestTags.ROOT,
+            AiFeatureTestTags.OVERLAY_STACK,
+            AiFeatureTestTags.OVERLAY_HOME
+        )
+        val start = SystemClock.uptimeMillis()
+        while (SystemClock.uptimeMillis() - start < 60_000) {
+            composeRule.waitForIdle()
+            val hasHierarchy = runCatching {
+                tags.any { tag ->
+                    composeRule.onAllNodesWithTag(tag, useUnmergedTree = true)
+                        .fetchSemanticsNodes()
+                        .isNotEmpty()
+                }
+            }.getOrDefault(false)
+            if (hasHierarchy) return
         }
+        waitForAnyTag(
+            composeRule,
+            AiFeatureTestTags.PAGE_HOME,
+            HomeScreenTestTags.ROOT,
+            AiFeatureTestTags.OVERLAY_STACK,
+            extraFallbackTags = arrayOf(AiFeatureTestTags.OVERLAY_HOME),
+            timeoutMillis = 30_000
+        )
     }
 
 }

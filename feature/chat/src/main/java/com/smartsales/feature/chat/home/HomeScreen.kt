@@ -1,5 +1,8 @@
 package com.smartsales.feature.chat.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -353,11 +356,15 @@ fun HomeScreen(
                     )
                 }
             }
-            if (showScrollToLatest.value) {
+            AnimatedVisibility(
+                visible = showScrollToLatest.value,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+            ) {
                 ScrollToLatestButton(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(16.dp),
                     onClick = {
                         val lastIndex = state.chatMessages.lastIndex
                         if (lastIndex >= 0) {

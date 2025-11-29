@@ -161,7 +161,6 @@ class HomeScreenViewModel @Inject constructor(
     private var latestMediaSyncState: MediaSyncState? = null
     private var sessionId: String = DEFAULT_SESSION_ID
     private var latestSessionSummaries: List<AiSessionSummary> = emptyList()
-    private var pendingSkillId: QuickSkillId? = null
     private var transcriptionJob: Job? = null
 
     init {
@@ -190,21 +189,11 @@ class HomeScreenViewModel @Inject constructor(
             _uiState.update { it.copy(snackbarMessage = "无法识别的快捷技能") }
             return
         }
-        pendingSkillId = skillId
-        val confirmation = buildSkillConfirmation(definition)
-        val confirmationMessage = ChatMessageUi(
-            id = nextMessageId(),
-            role = ChatMessageRole.ASSISTANT,
-            content = confirmation,
-            timestampMillis = System.currentTimeMillis()
-        )
         _uiState.update { state ->
             state.copy(
-                selectedSkill = definition.toUiModel(),
-                chatMessages = state.chatMessages + confirmationMessage
+                selectedSkill = definition.toUiModel()
             )
         }
-        persistMessagesAsync()
     }
 
     fun onLoadMoreHistory() {
@@ -420,11 +409,6 @@ class HomeScreenViewModel @Inject constructor(
         _uiState.update { it.copy(quickSkills = skills) }
     }
 
-    fun clearSelectedSkill() {
-        pendingSkillId = null
-        _uiState.update { it.copy(selectedSkill = null) }
-    }
-
     fun onNewChatClicked() {
         viewModelScope.launch {
             val newSessionId = "session-${UUID.randomUUID()}"
@@ -550,12 +534,8 @@ class HomeScreenViewModel @Inject constructor(
         val content = messageText.trim()
         if (content.isEmpty() || _uiState.value.isSending) return
         _uiState.update { it.copy(chatErrorMessage = null) }
-        val quickSkill = pendingSkillId?.let { id ->
+        val quickSkill = _uiState.value.selectedSkill?.id?.let { id ->
             quickSkillDefinitionsById[id]
-        }
-        if (quickSkill != null) {
-            pendingSkillId = null
-            _uiState.update { it.copy(selectedSkill = null) }
         }
         val quickSkillId = quickSkill?.id
         val userMessage = createUserMessage(content)
@@ -682,7 +662,7 @@ class HomeScreenViewModel @Inject constructor(
         return ChatRequest(
             sessionId = sessionId,
             userMessage = userMessage,
-            quickSkillId = skillId?.name,
+            quickSkillId = mapSkillToMode(skillId),
             audioContextSummary = audioContext,
             history = history
         )
@@ -824,11 +804,6 @@ class HomeScreenViewModel @Inject constructor(
         transcriptionJob?.cancel()
     }
 
-    private fun buildSkillConfirmation(definition: QuickSkillDefinition): String {
-        val action = definition.label.lowercase(Locale.getDefault())
-        return "Got it — I'm ready to $action. Tell me what you'd like to add."
-    }
-
     private fun QuickSkillDefinition.toUiModel(): QuickSkillUi = QuickSkillUi(
         id = id,
         label = label,
@@ -843,6 +818,13 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     companion object {
+        private fun mapSkillToMode(skillId: QuickSkillId?): String? = when (skillId) {
+            QuickSkillId.SUMMARIZE_LAST_MEETING -> "SMART_ANALYS"
+            QuickSkillId.EXTRACT_ACTION_ITEMS -> "GENERATE_PDF"
+            QuickSkillId.WRITE_FOLLOWUP_EMAIL -> "GENERATE_CSV"
+            else -> null
+        }
+
         private fun buildTranscriptContext(fileName: String, transcript: String): String {
             return buildString {
                 append("通话分析 · ").append(fileName).append("\n")

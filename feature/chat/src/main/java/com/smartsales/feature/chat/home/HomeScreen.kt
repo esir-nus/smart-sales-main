@@ -25,10 +25,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
@@ -151,7 +149,6 @@ fun HomeScreenRoute(
         onInputChanged = viewModel::onInputChanged,
         onSendClicked = viewModel::onSendMessage,
         onQuickSkillSelected = viewModel::onSelectQuickSkill,
-        onClearSelectedSkill = viewModel::clearSelectedSkill,
         onDeviceBannerClicked = viewModel::onTapDeviceBanner,
         onAudioSummaryClicked = viewModel::onTapAudioSummary,
         onRefreshDeviceAndAudio = viewModel::onRefreshDeviceAndAudio,
@@ -180,7 +177,6 @@ fun HomeScreen(
     onInputChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
     onQuickSkillSelected: (QuickSkillId) -> Unit,
-    onClearSelectedSkill: () -> Unit,
     onDeviceBannerClicked: () -> Unit,
     onAudioSummaryClicked: () -> Unit,
     onRefreshDeviceAndAudio: () -> Unit,
@@ -261,8 +257,7 @@ fun HomeScreen(
                 inputValue = state.inputText,
                 onInputChanged = onInputChanged,
                 onSendClicked = onSendClicked,
-                onQuickSkillSelected = onQuickSkillSelected,
-                onClearSelectedSkill = onClearSelectedSkill
+                onQuickSkillSelected = onQuickSkillSelected
             )
         }
     ) { innerPadding ->
@@ -337,6 +332,7 @@ fun HomeScreen(
                                 } else {
                                     EmptyChatHint(
                                         quickSkills = state.quickSkills,
+                                        selectedSkillId = state.selectedSkill?.id,
                                         enabled = !state.isSending && !state.isStreaming,
                                         onQuickSkillSelected = onQuickSkillSelected
                                     )
@@ -356,7 +352,11 @@ fun HomeScreen(
                                 }
                             }
                             itemsIndexed(state.chatMessages, key = { _, item -> item.id }) { index, message ->
-                                val tagModifier = if (message.role == ChatMessageRole.ASSISTANT && index == state.chatMessages.lastIndex) {
+                                val isTranscriptSummary = message.role == ChatMessageRole.ASSISTANT &&
+                                    message.content.contains("通话分析")
+                                val tagModifier = if (message.role == ChatMessageRole.ASSISTANT &&
+                                    (index == state.chatMessages.lastIndex || isTranscriptSummary)
+                                ) {
                                     Modifier.testTag(HomeScreenTestTags.ASSISTANT_MESSAGE)
                                 } else {
                                     Modifier
@@ -736,6 +736,7 @@ private fun formatSessionTime(timestamp: Long): String {
 @Composable
 private fun EmptyChatHint(
     quickSkills: List<QuickSkillUi>,
+    selectedSkillId: QuickSkillId?,
     enabled: Boolean,
     onQuickSkillSelected: (QuickSkillId) -> Unit
 ) {
@@ -749,6 +750,7 @@ private fun EmptyChatHint(
         Text(text = "还没有对话，试试下面的快捷技能开始吧！")
         QuickSkillRow(
             skills = quickSkills,
+            selectedSkillId = selectedSkillId,
             enabled = enabled,
             onQuickSkillSelected = onQuickSkillSelected
         )
@@ -779,37 +781,30 @@ private fun HomeInputArea(
     inputValue: String,
     onInputChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
-    onQuickSkillSelected: (QuickSkillId) -> Unit,
-    onClearSelectedSkill: () -> Unit
+    onQuickSkillSelected: (QuickSkillId) -> Unit
 ) {
     Surface(
         tonalElevation = 4.dp
     ) {
-        Column(
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        QuickSkillRow(
+            skills = quickSkills,
+            selectedSkillId = selectedSkill?.id,
+            enabled = enabled,
+            onQuickSkillSelected = onQuickSkillSelected
+        )
+        OutlinedTextField(
+            value = inputValue,
+            onValueChange = onInputChanged,
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            QuickSkillRow(
-                skills = quickSkills,
-                enabled = enabled,
-                onQuickSkillSelected = onQuickSkillSelected
-            )
-            selectedSkill?.let {
-                ActiveSkillChip(
-                    label = it.label,
-                    onClear = onClearSelectedSkill,
-                    modifier = Modifier.testTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP)
-                )
-            }
-            OutlinedTextField(
-                value = inputValue,
-                onValueChange = onInputChanged,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(HomeScreenTestTags.INPUT_FIELD),
+                .testTag(HomeScreenTestTags.INPUT_FIELD),
                 label = { Text(text = "输入问题") },
                 enabled = enabled
             )
@@ -826,55 +821,6 @@ private fun HomeInputArea(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(text = "发送")
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ActiveSkillChip(
-    label: String,
-    modifier: Modifier = Modifier,
-    icon: ImageVector? = Icons.Filled.Lightbulb,
-    onClear: () -> Unit
-) {
-    Surface(
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        shape = MaterialTheme.shapes.large
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                icon?.let {
-                    Icon(
-                        imageVector = it,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                }
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-            }
-            IconButton(
-                onClick = onClear,
-                modifier = Modifier.testTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP_CLOSE)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "清除快捷技能"
-                )
             }
         }
     }
@@ -928,6 +874,7 @@ private fun SessionHeader(
 @Composable
 private fun QuickSkillRow(
     skills: List<QuickSkillUi>,
+    selectedSkillId: QuickSkillId?,
     enabled: Boolean,
     onQuickSkillSelected: (QuickSkillId) -> Unit
 ) {
@@ -938,6 +885,21 @@ private fun QuickSkillRow(
     ) {
         items(skills, key = { it.id }) { skill ->
             val skillTag = "home_quick_skill_${skill.id}"
+            val isSelected = skill.id == selectedSkillId
+            val colors = AssistChipDefaults.assistChipColors(
+                containerColor = if (isSelected) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                },
+                labelColor = if (isSelected) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else if (skill.isRecommended) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
+            )
             AssistChip(
                 onClick = { onQuickSkillSelected(skill.id) },
                 enabled = enabled,
@@ -949,13 +911,8 @@ private fun QuickSkillRow(
                         overflow = TextOverflow.Ellipsis
                     )
                 },
-                colors = AssistChipDefaults.assistChipColors(
-                    labelColor = if (skill.isRecommended) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    }
-                )
+                // 快捷技能视为模式选择，仅高亮选中态，不向聊天插入消息
+                colors = colors
             )
         }
     }

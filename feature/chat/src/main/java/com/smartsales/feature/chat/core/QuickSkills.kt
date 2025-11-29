@@ -34,35 +34,27 @@ class DefaultQuickSkillCatalog : QuickSkillCatalog {
         return listOf(
             QuickSkillDefinition(
                 id = QuickSkillId.SUMMARIZE_LAST_MEETING,
-                label = "内容总结",
-                description = "总结最近一次对话的要点和结论。",
-                defaultPrompt = "请用 3-5 条要点总结最近一次会议/通话的核心信息、结论和下一步计划。",
-                requiresAudioContext = true,
+                label = "Smart analys",
+                description = "智能分析模式，仅切换模式不发送消息。",
+                defaultPrompt = "请对当前会话进行综合分析，并给出可执行建议。",
+                requiresAudioContext = false,
                 isRecommended = true
             ),
             QuickSkillDefinition(
                 id = QuickSkillId.EXTRACT_ACTION_ITEMS,
-                label = "亮点与行动项",
-                description = "提炼亮点并列出可执行的后续动作。",
-                defaultPrompt = "提炼会议/通话中的亮点，并列出明确的行动项（含负责人和预估时间）。",
-                requiresAudioContext = true,
+                label = "Generate PDF",
+                description = "生成 PDF 报告模式，发送消息时按此模式处理。",
+                defaultPrompt = "请基于对话生成 PDF 报告的大纲和内容。",
+                requiresAudioContext = false,
                 isRecommended = true
             ),
             QuickSkillDefinition(
                 id = QuickSkillId.WRITE_FOLLOWUP_EMAIL,
-                label = "帮我写邮件",
-                description = "生成通话后的跟进邮件。",
-                defaultPrompt = "请写一封简短友好的跟进邮件，包含感谢、价值回顾和清晰的下一步邀请。",
+                label = "Generate CSV",
+                description = "导出 CSV 模式，发送消息时按此模式处理。",
+                defaultPrompt = "请整理对话要点并生成 CSV 字段与样例。",
                 requiresAudioContext = false,
                 isRecommended = true
-            ),
-            QuickSkillDefinition(
-                id = QuickSkillId.PREP_NEXT_MEETING,
-                label = "准备下次会议",
-                description = "输出下次会议的简要备忘。",
-                defaultPrompt = "请生成下次客户会议的简要备忘：会议目标、关键话题、需询问的问题。",
-                requiresAudioContext = false,
-                isRecommended = false
             )
         )
     }

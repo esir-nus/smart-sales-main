@@ -20,7 +20,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -40,6 +39,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
@@ -302,24 +303,24 @@ private fun AiFeatureTestApp() {
                                     .fillMaxSize()
                                     .testTag(audioPageTag),
                                 viewModel = audioFilesViewModel,
-                        onAskAiAboutTranscript = { recordingId, fileName, jobId, preview, full ->
-                            val resolvedJobId = jobId ?: "transcription-$recordingId"
-                            val sessionId = "session-$resolvedJobId"
-                            pendingSessionId = sessionId
-                            homeViewModel.onTranscriptionRequested(
-                                TranscriptionChatRequest(
-                                    jobId = resolvedJobId,
-                                    fileName = fileName,
-                                    recordingId = recordingId,
-                                    sessionId = sessionId,
-                                    transcriptPreview = preview,
-                                    transcriptMarkdown = full
-                                )
+                                onAskAiAboutTranscript = { recordingId, fileName, jobId, preview, full ->
+                                    val resolvedJobId = jobId ?: "transcription-$recordingId"
+                                    val sessionId = "session-$resolvedJobId"
+                                    pendingSessionId = sessionId
+                                    homeViewModel.onTranscriptionRequested(
+                                        TranscriptionChatRequest(
+                                            jobId = resolvedJobId,
+                                            fileName = fileName,
+                                            recordingId = recordingId,
+                                            sessionId = sessionId,
+                                            transcriptPreview = preview,
+                                            transcriptMarkdown = full
+                                        )
+                                    )
+                                    updateOverlayState(OverlayState.HOME)
+                                }
                             )
-                            updateOverlayState(OverlayState.HOME)
-                        }
-                    )
-                },
+                        },
                         device = {
                             DeviceManagerRoute(
                                 modifier = Modifier
@@ -429,6 +430,8 @@ private fun VerticalLayerShell(
     val density = LocalDensity.current
     val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
     val dragThreshold = screenHeightPx * 0.15f
+    val peekTop = with(density) { 64.dp.toPx() } // 底部抽屉留出顶部空隙，提示可下拉关闭
+    val peekBottom = with(density) { 64.dp.toPx() } // 顶部抽屉留出底部空隙，提示可上推关闭
     var dragOffset by remember { mutableStateOf(0f) }
     val draggableState = rememberDraggableState { delta ->
         dragOffset += delta
@@ -481,22 +484,70 @@ private fun VerticalLayerShell(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .offset { IntOffset(0, (audioOffset + dragOffset).roundToInt()) }
+                .offset {
+                    // 抽屉展开时保留顶部露出 Home，便于下拉关闭
+                    val target = audioOffset + dragOffset + peekTop
+                    IntOffset(0, target.roundToInt())
+                }
                 .zIndex(2f)
                 .then(if (audioHidden) Modifier.semantics { invisibleToUser() } else Modifier)
         ) {
-            audio()
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp)
+                        .height(6.dp)
+                        .align(Alignment.CenterHorizontally)
+                        .background(
+                            color = Color.Gray.copy(alpha = 0.35f),
+                            shape = RoundedCornerShape(3.dp)
+                        )
+                )
+                Box(modifier = Modifier.weight(1f)) {
+                    audio()
+                }
+            }
         }
 
         val deviceHidden = overlayState != OverlayState.DEVICE_OPEN
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .offset { IntOffset(0, (deviceOffset + dragOffset).roundToInt()) }
+                .offset {
+                    // 顶部抽屉展开时保留底部露出 Home，便于上推关闭
+                    val target = deviceOffset + dragOffset - peekBottom
+                    IntOffset(0, target.roundToInt())
+                }
                 .zIndex(2f)
                 .then(if (deviceHidden) Modifier.semantics { invisibleToUser() } else Modifier)
         ) {
-            device()
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 6.dp)
+                        .height(6.dp)
+                        .align(Alignment.CenterHorizontally)
+                        .background(
+                            color = Color.Gray.copy(alpha = 0.35f),
+                            shape = RoundedCornerShape(3.dp)
+                        )
+                )
+                Box(modifier = Modifier.weight(1f)) {
+                    device()
+                }
+            }
         }
     }
 }

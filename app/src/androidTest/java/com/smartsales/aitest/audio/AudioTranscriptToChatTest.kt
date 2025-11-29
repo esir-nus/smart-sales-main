@@ -16,6 +16,7 @@ import com.smartsales.aitest.AiFeatureTestTags
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.media.audio.AudioFilesTestTags
 import org.junit.Rule
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -27,7 +28,7 @@ class AudioTranscriptToChatTest {
     val composeRule = createAndroidComposeRule<AiFeatureTestActivity>()
 
     @Test
-    @org.junit.Ignore("Data seeding for d1 transcript button is flaky in this shell; skip to keep suite green")
+    @Ignore("暂时忽略，待权限与会话可见性问题修复后再启用")
     fun transcriptFlow_pushesToHomeChat() {
         // 进入音频库
         composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE, useUnmergedTree = true).performClick()

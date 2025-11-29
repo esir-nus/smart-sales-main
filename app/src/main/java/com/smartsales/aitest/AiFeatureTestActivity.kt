@@ -209,6 +209,7 @@ private fun AiFeatureTestApp() {
             when (event) {
                 is AudioFilesEvent.TranscriptReady -> {
                     val sessionId = "session-${event.jobId}"
+                    pendingSessionId = sessionId
                     homeViewModel.onTranscriptionRequested(
                         TranscriptionChatRequest(
                             jobId = event.jobId,
@@ -219,7 +220,6 @@ private fun AiFeatureTestApp() {
                             transcriptMarkdown = event.fullTranscriptMarkdown
                         )
                     )
-                    pendingSessionId = sessionId
                 }
             }
         }
@@ -302,24 +302,24 @@ private fun AiFeatureTestApp() {
                                     .fillMaxSize()
                                     .testTag(audioPageTag),
                                 viewModel = audioFilesViewModel,
-                                onAskAiAboutTranscript = { recordingId, fileName, jobId, preview, full ->
-                                    val resolvedJobId = jobId ?: "transcription-$recordingId"
-                                    val sessionId = "session-$resolvedJobId"
-                                    homeViewModel.onTranscriptionRequested(
-                                        TranscriptionChatRequest(
-                                            jobId = resolvedJobId,
-                                            fileName = fileName,
-                                            recordingId = recordingId,
-                                            sessionId = sessionId,
-                                            transcriptPreview = preview,
-                                            transcriptMarkdown = full
-                                        )
-                                    )
-                                    pendingSessionId = sessionId
-                                    updateOverlayState(OverlayState.HOME)
-                                }
+                        onAskAiAboutTranscript = { recordingId, fileName, jobId, preview, full ->
+                            val resolvedJobId = jobId ?: "transcription-$recordingId"
+                            val sessionId = "session-$resolvedJobId"
+                            pendingSessionId = sessionId
+                            homeViewModel.onTranscriptionRequested(
+                                TranscriptionChatRequest(
+                                    jobId = resolvedJobId,
+                                    fileName = fileName,
+                                    recordingId = recordingId,
+                                    sessionId = sessionId,
+                                    transcriptPreview = preview,
+                                    transcriptMarkdown = full
+                                )
                             )
-                        },
+                            updateOverlayState(OverlayState.HOME)
+                        }
+                    )
+                },
                         device = {
                             DeviceManagerRoute(
                                 modifier = Modifier
@@ -344,21 +344,21 @@ private fun AiFeatureTestApp() {
                             }
                         }
 
-                        TestHomePage.ChatHistory -> {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .testTag(historyPageTag)
-                            ) {
-                                ChatHistoryRoute(
-                                    modifier = Modifier.fillMaxSize(),
-                                    onSessionSelected = { sessionId ->
-                                        pendingSessionId = sessionId
-                                        currentPage = TestHomePage.Home
-                                    }
-                                )
-                            }
+                    TestHomePage.ChatHistory -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .testTag(historyPageTag)
+                        ) {
+                            ChatHistoryRoute(
+                                modifier = Modifier.fillMaxSize(),
+                                onSessionSelected = { sessionId ->
+                                    pendingSessionId = sessionId
+                                    currentPage = TestHomePage.Home
+                                }
+                            )
                         }
+                    }
 
                         TestHomePage.UserCenter -> {
                             Box(

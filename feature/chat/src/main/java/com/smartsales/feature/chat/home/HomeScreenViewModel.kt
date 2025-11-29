@@ -311,8 +311,17 @@ class HomeScreenViewModel @Inject constructor(
                 }
                 persistMessagesAsync()
                 updateSessionSummary(contextMessage.content)
-                return@launch
             }
+            val introMessage = ChatMessageUi(
+                id = nextMessageId(),
+                role = ChatMessageRole.ASSISTANT,
+                content = "通话分析 · 已为你加载录音 ${request.fileName}，直接提问即可。",
+                timestampMillis = System.currentTimeMillis()
+            )
+            _uiState.update { state ->
+                state.copy(chatMessages = state.chatMessages + introMessage)
+            }
+            persistMessagesAsync()
             if (transcript.isNullOrBlank()) {
                 val introId = nextMessageId()
                 val introMessage = ChatMessageUi(
@@ -836,6 +845,7 @@ class HomeScreenViewModel @Inject constructor(
     companion object {
         private fun buildTranscriptContext(fileName: String, transcript: String): String {
             return buildString {
+                append("通话分析 · ").append(fileName).append("\n")
                 append("你是一名销售助理。以下是通话记录，请帮我分析、总结或提出行动建议。\n")
                 append("文件：").append(fileName).append("\n")
                 append(transcript)

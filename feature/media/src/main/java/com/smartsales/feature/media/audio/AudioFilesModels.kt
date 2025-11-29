@@ -34,7 +34,8 @@ data class AudioRecordingUi(
     val transcriptionUrl: String? = null,
     val autoChaptersUrl: String? = null,
     val chapters: List<TingwuChapterUi>? = null,
-    val smartSummary: TingwuSmartSummaryUi? = null
+    val smartSummary: TingwuSmartSummaryUi? = null,
+    val sourceLabel: String = "设备"
 )
 
 enum class TranscriptionStatus {

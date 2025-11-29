@@ -196,6 +196,32 @@ class AudioFilesViewModel @Inject constructor(
         }
     }
 
+    fun seedDemoDataIfEmpty() {
+        if (_uiState.value.recordings.isNotEmpty()) return
+        val now = System.currentTimeMillis()
+        val demo = AudioRecordingUi(
+            id = "d1",
+            title = "示例通话 d1",
+            fileName = "d1.wav",
+            createdAtMillis = now,
+            createdAtText = "刚刚",
+            durationMillis = 180_000,
+            transcriptionStatus = TranscriptionStatus.DONE,
+            transcriptPreview = "示例转写片段：客户需求是提升转化率。",
+            fullTranscriptMarkdown = "## 通话摘要\n- 客户关注转化率\n- 需要跟进报价\n",
+            sourceLabel = "演示数据"
+        )
+        _uiState.update {
+            it.copy(
+                recordings = listOf(demo),
+                transcriptPreviewRecording = null,
+                isLoading = false,
+                errorMessage = null,
+                loadErrorMessage = null
+            )
+        }
+    }
+
     private fun observeSyncState() {
         viewModelScope.launch(dispatchers.default) {
             mediaSyncCoordinator.state.collectLatest { syncState ->

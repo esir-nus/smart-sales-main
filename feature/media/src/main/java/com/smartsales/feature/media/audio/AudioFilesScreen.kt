@@ -48,6 +48,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -90,7 +91,7 @@ fun AudioFilesScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(text = "录音文件") },
+                title = { Text(text = "录音库 · Audio") },
                 actions = {
                     IconButton(
                         onClick = onSyncClicked,
@@ -206,6 +207,7 @@ object AudioFilesTestTags {
     const val TRANSCRIPT_DIALOG = "audio_files_transcript_dialog"
     const val TRANSCRIPT_CONTENT = "audio_files_transcript_content"
     const val TRANSCRIPT_SUMMARY = "audio_files_transcript_summary"
+    const val ASK_AI_BUTTON = "audio_files_ask_ai_button"
 }
 
 @Composable
@@ -250,10 +252,7 @@ private fun AudioRecordingItem(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                StatusTag(
-                    recording = recording,
-                    onClick = onTranscriptClicked
-                )
+                StatusBadges(recording = recording, onTranscriptClicked = onTranscriptClicked)
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -266,19 +265,21 @@ private fun AudioRecordingItem(
                         contentDescription = if (recording.isPlaying) "暂停" else "播放"
                     )
                 }
-                Text(
-                    text = formatDuration(recording.durationMillis),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = recording.createdAtText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column {
+                    Text(
+                        text = formatDuration(recording.durationMillis),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = recording.createdAtText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = recording.fileName,
+                    text = "${recording.fileName} · ${recording.sourceLabel}",
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -332,28 +333,39 @@ private fun StatusIcon(recording: AudioRecordingUi, onClick: (String) -> Unit) {
 }
 
 @Composable
-private fun StatusTag(
+private fun StatusBadges(
     recording: AudioRecordingUi,
-    onClick: (String) -> Unit
+    onTranscriptClicked: (String) -> Unit
 ) {
     val (label, color) = when (recording.transcriptionStatus) {
-        TranscriptionStatus.DONE -> "已同步" to MaterialTheme.colorScheme.primary
-        TranscriptionStatus.IN_PROGRESS -> "转写中..." to MaterialTheme.colorScheme.tertiary
+        TranscriptionStatus.DONE -> "已转写" to MaterialTheme.colorScheme.primary
+        TranscriptionStatus.IN_PROGRESS -> "转写中" to MaterialTheme.colorScheme.tertiary
         TranscriptionStatus.ERROR -> "转写失败" to MaterialTheme.colorScheme.error
-        TranscriptionStatus.NONE -> "未同步" to MaterialTheme.colorScheme.secondary
+        TranscriptionStatus.NONE -> "未转写" to MaterialTheme.colorScheme.secondary
     }
-    ElevatedAssistChip(
-        modifier = Modifier.testTag("${AudioFilesTestTags.STATUS_CHIP_PREFIX}${recording.id}"),
-        onClick = { onClick(recording.id) },
-        label = { Text(text = label, color = color) },
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                contentDescription = null,
-                tint = color
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ElevatedAssistChip(
+            modifier = Modifier.testTag("${AudioFilesTestTags.STATUS_CHIP_PREFIX}${recording.id}"),
+            onClick = { onTranscriptClicked(recording.id) },
+            label = { Text(text = label, color = color) },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                    contentDescription = null,
+                    tint = color
+                )
+            }
+        )
+        ElevatedAssistChip(
+            onClick = {},
+            enabled = false,
+            label = { Text(text = "来源: ${recording.sourceLabel}") },
+            colors = AssistChipDefaults.assistChipColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                labelColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-    )
+        )
+    }
 }
 
 @Composable
@@ -527,7 +539,9 @@ private fun TranscriptViewerSheet(
             Spacer(modifier = Modifier.height(12.dp))
             GradientCtaButton(
                 label = "用 AI 分析本次通话",
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(AudioFilesTestTags.ASK_AI_BUTTON),
                 onClick = {
                     onDismiss()
                     onAskAiClicked(recording)

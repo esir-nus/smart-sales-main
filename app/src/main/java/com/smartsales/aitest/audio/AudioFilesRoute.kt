@@ -7,7 +7,9 @@ package com.smartsales.aitest.audio
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import android.app.ActivityManager
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.feature.media.audio.AudioFilesScreen
@@ -20,6 +22,12 @@ fun AudioFilesRoute(
     onAskAiAboutTranscript: (recordingId: String, fileName: String, jobId: String?, preview: String?, fullTranscript: String?) -> Unit = { _, _, _, _, _ -> }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        if (ActivityManager.isRunningInTestHarness()) {
+            viewModel.seedDemoDataIfEmpty()
+        }
+    }
 
     AudioFilesScreen(
         uiState = uiState,

@@ -34,33 +34,33 @@ class DefaultQuickSkillCatalog : QuickSkillCatalog {
         return listOf(
             QuickSkillDefinition(
                 id = QuickSkillId.SUMMARIZE_LAST_MEETING,
-                label = "Summarize last meeting",
-                description = "Summarize key points from my most recent sales conversation.",
-                defaultPrompt = "Summarize the key points, decisions, and next steps from my most recent sales conversation.",
+                label = "内容总结",
+                description = "总结最近一次对话的要点和结论。",
+                defaultPrompt = "请用 3-5 条要点总结最近一次会议/通话的核心信息、结论和下一步计划。",
                 requiresAudioContext = true,
                 isRecommended = true
             ),
             QuickSkillDefinition(
                 id = QuickSkillId.EXTRACT_ACTION_ITEMS,
-                label = "Extract action items",
-                description = "List concrete follow-up actions from the latest meetings.",
-                defaultPrompt = "Extract clear, numbered action items with owners and due dates from recent sales meetings.",
+                label = "亮点与行动项",
+                description = "提炼亮点并列出可执行的后续动作。",
+                defaultPrompt = "提炼会议/通话中的亮点，并列出明确的行动项（含负责人和预估时间）。",
                 requiresAudioContext = true,
                 isRecommended = true
             ),
             QuickSkillDefinition(
                 id = QuickSkillId.WRITE_FOLLOWUP_EMAIL,
-                label = "Draft follow-up email",
-                description = "Draft a concise, friendly follow-up email after a client call.",
-                defaultPrompt = "Draft a concise, friendly follow-up email after a client sales call, including thanks, recap of value, and a clear next step.",
+                label = "帮我写邮件",
+                description = "生成通话后的跟进邮件。",
+                defaultPrompt = "请写一封简短友好的跟进邮件，包含感谢、价值回顾和清晰的下一步邀请。",
                 requiresAudioContext = false,
                 isRecommended = true
             ),
             QuickSkillDefinition(
                 id = QuickSkillId.PREP_NEXT_MEETING,
-                label = "Prep next meeting",
-                description = "Generate a prep brief for my next meeting based on recent notes.",
-                defaultPrompt = "Generate a short prep brief for my next client meeting: objectives, key talking points, and questions to ask.",
+                label = "准备下次会议",
+                description = "输出下次会议的简要备忘。",
+                defaultPrompt = "请生成下次客户会议的简要备忘：会议目标、关键话题、需询问的问题。",
                 requiresAudioContext = false,
                 isRecommended = false
             )

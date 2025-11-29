@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -25,6 +26,7 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lightbulb
@@ -59,8 +61,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -71,6 +75,9 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.widget.Toast
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreen.kt
 // 模块：:feature:chat
@@ -424,6 +431,7 @@ object HomeScreenTestTags {
     const val HISTORY_PANEL = "home_history_panel"
     const val HISTORY_EMPTY = "home_history_empty"
     const val HISTORY_ITEM_PREFIX = "home_history_item_"
+    const val MESSAGE_COPY_BUTTON = "home_message_copy_button"
 }
 
 @Composable
@@ -439,27 +447,43 @@ private fun HomeTopBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "AI 助手",
-            style = MaterialTheme.typography.titleLarge
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(
+                text = "SmartSales 助手",
+                style = MaterialTheme.typography.titleLarge
+            )
             if (deviceSnapshot?.connectionState == DeviceConnectionStateUi.CONNECTED) {
                 AssistChip(
                     onClick = {},
                     enabled = false,
-                    label = { Text(text = "设备已连接") },
+                    label = { Text(text = "设备在线") },
                     colors = AssistChipDefaults.assistChipColors(
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                         labelColor = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 )
+            } else {
+                AssistChip(
+                    onClick = {},
+                    enabled = false,
+                    label = { Text(text = "等待设备") },
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                )
             }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(
                 onClick = onHistoryClick,
                 modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_TOGGLE)
             ) {
-                Icon(Icons.Filled.History, contentDescription = "历史记录")
+                Icon(Icons.Filled.History, contentDescription = "历史会话")
             }
             IconButton(
                 onClick = onProfileClick,
@@ -668,6 +692,8 @@ private fun MessageBubble(
     } else {
         HomeScreenTestTags.ASSISTANT_MESSAGE
     }
+    val context = LocalContext.current
+    val clipboard = context.getSystemService(ClipboardManager::class.java)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -676,6 +702,7 @@ private fun MessageBubble(
         horizontalArrangement = if (alignEnd) Arrangement.End else Arrangement.Start
     ) {
         Card(
+            shape = MaterialTheme.shapes.large,
             colors = CardDefaults.cardColors(
                 containerColor = if (alignEnd) {
                     MaterialTheme.colorScheme.primaryContainer
@@ -684,21 +711,54 @@ private fun MessageBubble(
                 }
             )
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(text = message.content)
-                if (message.isStreaming) {
+            Box(
+                modifier = Modifier
+                    .padding(12.dp)
+                    .widthIn(min = 0.dp, max = 520.dp)
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text(
-                        text = "AI 回复中...",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = message.content,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.takeIf { !alignEnd }
+                            ?: MaterialTheme.colorScheme.onPrimaryContainer
                     )
+                    if (message.isStreaming) {
+                        Text(
+                            text = "AI 回复中...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (message.hasError) {
+                        Text(
+                            text = "发送失败，稍后重试",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
-                if (message.hasError) {
-                    Text(
-                        text = "发送失败，稍后重试",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
+                if (!alignEnd && !message.content.isBlank()) {
+                    IconButton(
+                        onClick = {
+                            val clip = ClipData.newPlainText("assistant_reply", message.content)
+                            clipboard?.setPrimaryClip(clip)
+                            Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .size(28.dp)
+                            .testTag(HomeScreenTestTags.MESSAGE_COPY_BUTTON)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.ContentCopy,
+                            contentDescription = "复制",
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
                 }
             }
         }

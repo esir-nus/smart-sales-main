@@ -8,25 +8,28 @@ package com.smartsales.aitest
 import android.Manifest
 import android.net.Uri
 import android.os.Bundle
+import android.os.Process
 import android.widget.VideoView
+import android.util.Log
+import android.app.ActivityManager
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -43,7 +46,6 @@ import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -64,7 +66,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
@@ -81,9 +82,6 @@ import com.smartsales.aitest.audio.AudioFilesRoute
 import com.smartsales.aitest.devicemanager.DeviceManagerRoute
 import com.smartsales.aitest.setup.DeviceSetupRoute
 import com.smartsales.aitest.usercenter.UserCenterRoute
-import com.smartsales.aitest.ui.shell.HomeOverlayLayer
-import com.smartsales.aitest.ui.shell.VerticalOverlayShell
-import com.smartsales.core.util.AppDesignTokens
 import com.smartsales.core.util.Result
 import com.smartsales.feature.chat.home.DeviceConnectionStateUi
 import com.smartsales.feature.chat.home.DeviceSnapshotUi
@@ -93,17 +91,48 @@ import com.smartsales.feature.chat.home.TranscriptionChatRequest
 import com.smartsales.feature.chat.history.ChatHistoryRoute
 import com.smartsales.feature.media.audio.AudioFilesEvent
 import com.smartsales.feature.media.audio.AudioFilesViewModel
+import com.smartsales.aitest.ui.shell.HomeOverlayLayer
+import com.smartsales.aitest.ui.shell.VerticalOverlayShell
 import androidx.hilt.navigation.compose.hiltViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 
 @AndroidEntryPoint
 class AiFeatureTestActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        Log.i(
+            ACTIVITY_LOG_TAG,
+            "onCreate start pid=${Process.myPid()} savedInstanceState=${savedInstanceState != null}"
+        )
         super.onCreate(savedInstanceState)
-        setContent { AiFeatureTestApp() }
+        val runningInTest = ActivityManager.isRunningInTestHarness()
+        if (runningInTest) {
+            // 测试环境下保持前台并确保窗口可聚焦
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+                    WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                    WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
+            )
+            window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
+            window.setFlags(
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+            )
+        }
+        setContent {
+            Log.i(
+                ACTIVITY_LOG_TAG,
+                "setContent attached, entering AiFeatureTestApp pid=${Process.myPid()}"
+            )
+            AiFeatureTestApp()
+        }
+    }
+
+    companion object {
+        private const val ACTIVITY_LOG_TAG = "AiFeatureTestActivity"
     }
 }
 
@@ -116,7 +145,8 @@ private fun AiFeatureTestApp() {
     val homeViewModel: HomeScreenViewModel = hiltViewModel()
     val audioFilesViewModel: AudioFilesViewModel = hiltViewModel()
     var currentPage by rememberSaveable { mutableStateOf(TestHomePage.Home) }
-    var homeOverlay by rememberSaveable { mutableStateOf(HomeOverlayLayer.Home) }
+    var currentOverlay by rememberSaveable { mutableStateOf(HomeOverlayLayer.Home) }
+    var deviceOverlayPage by rememberSaveable { mutableStateOf(DeviceOverlayPage.Setup) }
     var latestDeviceSnapshot by remember { mutableStateOf<DeviceSnapshotUi?>(null) }
     var pendingSessionId by remember { mutableStateOf<String?>(null) }
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -126,6 +156,7 @@ private fun AiFeatureTestApp() {
             scope.launch { snackbarHostState.showSnackbar("缺少 BLE 或定位权限，无法扫描 BT311。") }
         }
     }
+    val runningInTest = ActivityManager.isRunningInTestHarness()
 
     LaunchedEffect(Unit) {
         val missingPermissions = REQUIRED_BLE_PERMISSIONS.filter {
@@ -134,7 +165,7 @@ private fun AiFeatureTestApp() {
                 it
             ) != android.content.pm.PackageManager.PERMISSION_GRANTED
         }
-        if (missingPermissions.isNotEmpty()) {
+        if (!runningInTest && missingPermissions.isNotEmpty()) {
             permissionLauncher.launch(missingPermissions.toTypedArray())
         }
     }
@@ -161,27 +192,60 @@ private fun AiFeatureTestApp() {
     }
 
     fun setPage(page: TestHomePage) {
-        currentPage = page
-        if (page == TestHomePage.AudioFiles) {
-            homeOverlay = HomeOverlayLayer.Audio
-            currentPage = TestHomePage.Home
-        } else if (page == TestHomePage.DeviceManager) {
-            homeOverlay = HomeOverlayLayer.Device
-            currentPage = TestHomePage.Home
-        } else if (page == TestHomePage.Home) {
-            homeOverlay = HomeOverlayLayer.Home
+        when (page) {
+            TestHomePage.DeviceManager -> {
+                deviceOverlayPage = DeviceOverlayPage.Manager
+                currentOverlay = HomeOverlayLayer.Device
+                currentPage = TestHomePage.Home
+            }
+
+            TestHomePage.DeviceSetup -> {
+                deviceOverlayPage = DeviceOverlayPage.Setup
+                currentOverlay = HomeOverlayLayer.Device
+                currentPage = TestHomePage.Home
+            }
+
+            TestHomePage.AudioFiles -> {
+                currentOverlay = HomeOverlayLayer.Audio
+                currentPage = TestHomePage.Home
+            }
+
+            else -> {
+                currentPage = page
+                currentOverlay = HomeOverlayLayer.Home
+            }
         }
     }
 
-    val isHomeStack = remember(currentPage) {
-        currentPage in setOf(
-            TestHomePage.Home,
-            TestHomePage.AudioFiles,
-            TestHomePage.DeviceManager
-        )
+    fun openHomeOverlay() {
+        currentOverlay = HomeOverlayLayer.Home
+        if (
+            currentPage !in setOf(
+                TestHomePage.Home,
+                TestHomePage.WifiBleTester,
+                TestHomePage.ChatHistory,
+                TestHomePage.UserCenter
+            )
+        ) {
+            currentPage = TestHomePage.Home
+        }
     }
 
-    BackHandler(enabled = isHomeStack && homeOverlay != HomeOverlayLayer.Home) {
+    fun openAudioOverlay() {
+        setPage(TestHomePage.AudioFiles)
+    }
+
+    fun openDeviceSection(forceSetup: Boolean = false) {
+        deviceOverlayPage = when {
+            forceSetup -> DeviceOverlayPage.Setup
+            latestDeviceSnapshot?.connectionState == DeviceConnectionStateUi.CONNECTED -> DeviceOverlayPage.Manager
+            else -> DeviceOverlayPage.Setup
+        }
+        currentOverlay = HomeOverlayLayer.Device
+        currentPage = TestHomePage.Home
+    }
+
+    BackHandler(enabled = currentOverlay == HomeOverlayLayer.Home && currentPage != TestHomePage.Home) {
         setPage(TestHomePage.Home)
     }
 
@@ -191,25 +255,52 @@ private fun AiFeatureTestApp() {
         }
         Scaffold(
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+            topBar = {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = "新对话", style = MaterialTheme.typography.titleLarge)
+                    Spacer(modifier = Modifier.weight(1f))
+                    // 显式按钮控制顶部/底部抽屉，便于测试模式下不依赖拖拽
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IconButton(
+                            onClick = { openAudioOverlay() },
+                            modifier = Modifier.testTag(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = "打开音频抽屉")
+                        }
+                        IconButton(
+                            onClick = { openDeviceSection() },
+                            modifier = Modifier.testTag(AiFeatureTestTags.OVERLAY_DEVICE_HANDLE)
+                        ) {
+                            Icon(Icons.Default.Upload, contentDescription = "打开设备抽屉")
+                        }
+                    }
+                }
+            }
         ) { innerPadding ->
             Surface(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                when {
-                    isHomeStack -> {
-                        VerticalOverlayShell(
-                            modifier = Modifier.fillMaxSize(),
-                            currentLayer = homeOverlay,
-                            onLayerChange = { layer ->
-                                when (layer) {
-                                    HomeOverlayLayer.Audio -> setPage(TestHomePage.AudioFiles)
-                                    HomeOverlayLayer.Home -> setPage(TestHomePage.Home)
-                                    HomeOverlayLayer.Device -> setPage(TestHomePage.DeviceManager)
-                                }
-                            },
-                            homeContent = {
+                VerticalOverlayShell(
+                    currentLayer = currentOverlay,
+                    enableDrag = false,
+                    onLayerChange = { layer ->
+                        when (layer) {
+                            HomeOverlayLayer.Home -> openHomeOverlay()
+                            HomeOverlayLayer.Audio -> openAudioOverlay()
+                            HomeOverlayLayer.Device -> openDeviceSection()
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                    homeContent = {
+                        when (currentPage) {
+                            TestHomePage.Home -> {
                                 HomeScreenRoute(
                                     modifier = Modifier
                                         .fillMaxSize()
@@ -218,95 +309,122 @@ private fun AiFeatureTestApp() {
                                     sessionId = pendingSessionId,
                                     selectedSessionId = pendingSessionId,
                                     onSessionSelectionConsumed = { pendingSessionId = null },
-                                    onNavigateToDeviceManager = { setPage(TestHomePage.DeviceManager) },
-                                    onNavigateToDeviceSetup = { setPage(TestHomePage.DeviceSetup) },
+                                    onNavigateToDeviceManager = { openDeviceSection() },
+                                    onNavigateToDeviceSetup = { openDeviceSection(forceSetup = true) },
                                     onNavigateToAudioFiles = { setPage(TestHomePage.AudioFiles) },
                                     onNavigateToUserCenter = { setPage(TestHomePage.UserCenter) },
                                     onNavigateToChatHistory = { setPage(TestHomePage.ChatHistory) },
                                     onDeviceSnapshotChanged = { latestDeviceSnapshot = it }
                                 )
-                            },
-                            audioContent = {
-                                AudioFilesRoute(
+                            }
+
+                            TestHomePage.WifiBleTester -> {
+                                WifiBleTesterRoute(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES),
-                                    viewModel = audioFilesViewModel,
-                                    onAskAiAboutTranscript = { recordingId, fileName, jobId, preview, full ->
-                                        val resolvedJobId = jobId ?: "transcription-$recordingId"
-                                        val sessionId = "session-$resolvedJobId"
-                                        homeViewModel.onTranscriptionRequested(
-                                            TranscriptionChatRequest(
-                                                jobId = resolvedJobId,
-                                                fileName = fileName,
-                                                recordingId = recordingId,
-                                                sessionId = sessionId,
-                                                transcriptPreview = preview,
-                                                transcriptMarkdown = full
-                                            )
-                                        )
+                                        .testTag(AiFeatureTestTags.PAGE_WIFI),
+                                    mediaServerClient = mediaServerClient,
+                                    onShowMessage = showSnackbar
+                                )
+                            }
+
+                            TestHomePage.ChatHistory -> {
+                                ChatHistoryRoute(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .testTag(AiFeatureTestTags.PAGE_CHAT_HISTORY),
+                                    onSessionSelected = { sessionId ->
                                         pendingSessionId = sessionId
                                         setPage(TestHomePage.Home)
                                     }
                                 )
-                            },
-                            deviceContent = {
+                            }
+
+                            TestHomePage.UserCenter -> {
+                                UserCenterRoute(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .testTag(AiFeatureTestTags.PAGE_USER_CENTER),
+                                    onLogout = { setPage(TestHomePage.Home) },
+                                    onOpenDeviceManager = { openDeviceSection() },
+                                    onOpenSubscription = { openHomeOverlay() },
+                                    onOpenPrivacy = { openHomeOverlay() },
+                                    onOpenGeneral = { openHomeOverlay() }
+                                )
+                            }
+
+                            else -> {
+                                HomeScreenRoute(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .testTag(AiFeatureTestTags.PAGE_HOME),
+                                    viewModel = homeViewModel,
+                                    sessionId = pendingSessionId,
+                                    selectedSessionId = pendingSessionId,
+                                    onSessionSelectionConsumed = { pendingSessionId = null },
+                                    onNavigateToDeviceManager = { openDeviceSection() },
+                                    onNavigateToDeviceSetup = { openDeviceSection(forceSetup = true) },
+                                    onNavigateToAudioFiles = { setPage(TestHomePage.AudioFiles) },
+                                    onNavigateToUserCenter = { setPage(TestHomePage.UserCenter) },
+                                    onNavigateToChatHistory = { setPage(TestHomePage.ChatHistory) },
+                                    onDeviceSnapshotChanged = { latestDeviceSnapshot = it }
+                                )
+                            }
+                        }
+                    },
+                    audioContent = {
+                        AudioFilesRoute(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES),
+                            viewModel = audioFilesViewModel,
+                            onAskAiAboutTranscript = { recordingId, fileName, jobId, preview, full ->
+                                val resolvedJobId = jobId ?: "transcription-$recordingId"
+                                val sessionId = "session-$resolvedJobId"
+                                homeViewModel.onTranscriptionRequested(
+                                    TranscriptionChatRequest(
+                                        jobId = resolvedJobId,
+                                        fileName = fileName,
+                                        recordingId = recordingId,
+                                        sessionId = sessionId,
+                                        transcriptPreview = preview,
+                                        transcriptMarkdown = full
+                                    )
+                                )
+                                pendingSessionId = sessionId
+                                setPage(TestHomePage.Home)
+                            }
+                        )
+                    },
+                    deviceContent = {
+                        when (deviceOverlayPage) {
+                            DeviceOverlayPage.Manager -> {
                                 DeviceManagerRoute(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
                                 )
                             }
-                        )
-                    }
 
-                    currentPage == TestHomePage.WifiBleTester -> {
-                        WifiBleTesterRoute(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .testTag(AiFeatureTestTags.PAGE_WIFI),
-                            mediaServerClient = mediaServerClient,
-                            onShowMessage = showSnackbar
-                        )
-                    }
-
-                    currentPage == TestHomePage.DeviceSetup -> {
-                        DeviceSetupRoute(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .testTag(AiFeatureTestTags.PAGE_DEVICE_SETUP),
-                            onCompleted = { setPage(TestHomePage.DeviceManager) }
-                        )
-                    }
-
-                    currentPage == TestHomePage.ChatHistory -> {
-                        ChatHistoryRoute(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .testTag(AiFeatureTestTags.PAGE_CHAT_HISTORY),
-                            onSessionSelected = { sessionId ->
-                                pendingSessionId = sessionId
-                                setPage(TestHomePage.Home)
+                            DeviceOverlayPage.Setup -> {
+                                DeviceSetupRoute(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .testTag(AiFeatureTestTags.PAGE_DEVICE_SETUP),
+                                    onCompleted = { deviceOverlayPage = DeviceOverlayPage.Manager }
+                                )
                             }
-                        )
+                        }
                     }
-
-                    currentPage == TestHomePage.UserCenter -> {
-                        UserCenterRoute(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .testTag(AiFeatureTestTags.PAGE_USER_CENTER),
-                            onLogout = { setPage(TestHomePage.Home) },
-                            onOpenDeviceManager = { setPage(TestHomePage.DeviceManager) },
-                            onOpenSubscription = { setPage(TestHomePage.Home) },
-                            onOpenPrivacy = { setPage(TestHomePage.Home) },
-                            onOpenGeneral = { setPage(TestHomePage.Home) }
-                        )
-                    }
-                }
+                )
             }
         }
     }
+}
+
+private enum class DeviceOverlayPage {
+    Manager,
+    Setup
 }
 
 private enum class TestHomePage {
@@ -643,11 +761,17 @@ object AiFeatureTestTags {
     const val CHIP_AUDIO_FILES = "chip_audio_files"
     const val CHIP_CHAT_HISTORY = "chip_chat_history"
     const val CHIP_USER_CENTER = "chip_user_center"
+    const val OVERLAY_STACK = "overlay_stack"
+    const val OVERLAY_HOME = "overlay_home"
+    const val OVERLAY_DEVICE = "overlay_device"
+    const val OVERLAY_AUDIO = "overlay_audio"
+
+    // 垂直 overlay shell 相关 testTag（用于 NavigationSmokeTest 等）
     const val OVERLAY_SHELL = "overlay_shell"
-    const val OVERLAY_BACKDROP = "overlay_backdrop"
     const val OVERLAY_HOME_LAYER = "overlay_home_layer"
     const val OVERLAY_AUDIO_LAYER = "overlay_audio_layer"
     const val OVERLAY_DEVICE_LAYER = "overlay_device_layer"
     const val OVERLAY_AUDIO_HANDLE = "overlay_audio_handle"
     const val OVERLAY_DEVICE_HANDLE = "overlay_device_handle"
+    const val OVERLAY_BACKDROP = "overlay_backdrop"
 }

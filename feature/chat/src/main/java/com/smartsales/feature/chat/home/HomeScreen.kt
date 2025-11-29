@@ -1,10 +1,7 @@
 package com.smartsales.feature.chat.home
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import android.util.Log
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -38,9 +36,10 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -55,22 +54,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.Brush
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.feature.chat.core.QuickSkillId
-import com.smartsales.feature.chat.home.TranscriptionChatRequest
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -96,10 +91,13 @@ fun HomeScreenRoute(
     onNavigateToAudioFiles: () -> Unit = {},
     onNavigateToUserCenter: () -> Unit = {},
     onNavigateToChatHistory: () -> Unit = {},
-    onDeviceSnapshotChanged: (DeviceSnapshotUi?) -> Unit = {}
+    onDeviceSnapshotChanged: (DeviceSnapshotUi?) -> Unit = {},
 ) {
+    Log.i("HomeScreenRoute", "HomeScreenRoute composed - entering function")
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    // 抽屉开关保留在 Route 层，避免影响 ViewModel 状态
+    var showHistoryPanel by rememberSaveable { mutableStateOf(false) }
 
     // Snackbar 展示来自 ViewModel 的一次性提醒
     LaunchedEffect(state.snackbarMessage) {
@@ -155,11 +153,18 @@ fun HomeScreenRoute(
         onRefreshDeviceAndAudio = viewModel::onRefreshDeviceAndAudio,
         onLoadMoreHistory = viewModel::onLoadMoreHistory,
         onProfileClicked = viewModel::onTapProfile,
-        onOpenHistory = viewModel::onOpenDrawer,
         onNewChatClicked = viewModel::onNewChatClicked,
         onSessionSelected = viewModel::setSession,
         chatErrorMessage = state.chatErrorMessage,
-        modifier = modifier
+        modifier = modifier,
+        showHistoryPanel = showHistoryPanel,
+        onToggleHistoryPanel = { showHistoryPanel = !showHistoryPanel },
+        onDismissHistoryPanel = { showHistoryPanel = false },
+        historySessions = state.sessionList.take(10),
+        onHistorySessionSelected = { sessionId ->
+            viewModel.setSession(sessionId)
+            showHistoryPanel = false
+        }
     )
 }
 
@@ -177,12 +182,17 @@ fun HomeScreen(
     onRefreshDeviceAndAudio: () -> Unit,
     onLoadMoreHistory: () -> Unit,
     onProfileClicked: () -> Unit,
-    onOpenHistory: () -> Unit,
     onNewChatClicked: () -> Unit = {},
     onSessionSelected: (String) -> Unit = {},
     chatErrorMessage: String? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showHistoryPanel: Boolean = false,
+    onToggleHistoryPanel: () -> Unit = {},
+    onDismissHistoryPanel: () -> Unit = {},
+    historySessions: List<SessionListItemUi> = emptyList(),
+    onHistorySessionSelected: (String) -> Unit = {}
 ) {
+    Log.i("HomeScreen", "HomeScreen composed - entering function")
     val refreshingState = remember { mutableStateOf(false) }
     LaunchedEffect(state.deviceSnapshot, state.audioSummary) {
         refreshingState.value = false
@@ -229,8 +239,9 @@ fun HomeScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             HomeTopBar(
-                onHistoryClick = onOpenHistory,
-                onProfileClick = onProfileClicked
+                onProfileClick = onProfileClicked,
+                deviceSnapshot = state.deviceSnapshot,
+                onHistoryClick = onToggleHistoryPanel
             )
         },
         bottomBar = {
@@ -250,47 +261,50 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.08f))
                 .pullRefresh(pullRefreshState)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                .padding(horizontal = 16.dp)
+                    .padding(horizontal = 16.dp)
             ) {
                 SessionHeader(
                     session = state.currentSession,
                     onNewChatClicked = onNewChatClicked
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)
-        ) {
-            DeviceAudioBanner(
-                deviceSnapshot = state.deviceSnapshot,
-                audioSummary = state.audioSummary,
-                onDeviceClick = onDeviceBannerClicked,
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                ) {
+                    EntryCards(
+                        deviceSnapshot = state.deviceSnapshot,
+                        audioSummary = state.audioSummary,
+                        onDeviceClick = onDeviceBannerClicked,
                         onAudioClick = onAudioSummaryClicked
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                Divider(modifier = Modifier.padding(vertical = 4.dp))
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
                 ) {
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .testTag(HomeScreenTestTags.LIST),
                         state = listState,
                         verticalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp)
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
+                        userScrollEnabled = true
                     ) {
                         item("session-list") {
                             SessionListSection(
                                 sessions = state.sessionList,
+                                isLoading = state.isLoadingHistory,
                                 onSessionSelected = onSessionSelected
                             )
                         }
@@ -351,15 +365,11 @@ fun HomeScreen(
                     )
                 }
             }
-            AnimatedVisibility(
-                visible = showScrollToLatest.value,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp)
-            ) {
+            if (showScrollToLatest.value) {
                 ScrollToLatestButton(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp),
                     onClick = {
                         val lastIndex = state.chatMessages.lastIndex
                         if (lastIndex >= 0) {
@@ -370,6 +380,14 @@ fun HomeScreen(
                     }
                 )
             }
+            if (showHistoryPanel) {
+                HistoryPanel(
+                    sessions = historySessions,
+                    currentSessionId = state.currentSession.id,
+                    onDismiss = onDismissHistoryPanel,
+                    onSessionSelected = onHistorySessionSelected
+                )
+            }
         }
     }
 }
@@ -378,44 +396,67 @@ object HomeScreenTestTags {
     const val ROOT = "home_screen_root"
     // 兼容旧测试
     const val PAGE = ROOT
+    const val DEVICE_ENTRY = "home_device_entry"
+    const val AUDIO_ENTRY = "home_audio_entry"
     const val SESSION_HEADER = "home_session_header"
     const val LIST = "home_messages_list"
-    const val DEVICE_BANNER = "home_device_banner"
-    const val AUDIO_CARD = "home_audio_card"
+    const val DEVICE_BANNER = DEVICE_ENTRY
+    const val AUDIO_CARD = AUDIO_ENTRY
     const val PROFILE_BUTTON = "home_profile_button"
-    const val HISTORY_BUTTON = "home_history_button"
     const val ACTIVE_SKILL_CHIP = "active_skill_chip"
     const val ACTIVE_SKILL_CHIP_CLOSE = "active_skill_chip_close"
     const val SESSION_LIST = "home_session_list"
+    const val SESSION_LOADING = "home_session_loading"
+    const val SESSION_EMPTY = "home_session_empty"
     const val SESSION_LIST_ITEM_PREFIX = "home_session_item_"
+    const val SESSION_CURRENT_PREFIX = "home_session_current_"
     const val NEW_CHAT_BUTTON = "home_new_chat_button"
+    const val SESSION_TITLE = "home_session_title"
     const val USER_MESSAGE = "home_user_message"
     const val ASSISTANT_MESSAGE = "home_assistant_message"
     const val INPUT_FIELD = "home_input_field"
     const val SEND_BUTTON = "home_send_button"
     const val SCROLL_TO_LATEST = "home_scroll_to_latest_button"
+    const val HISTORY_TOGGLE = "home_history_toggle"
+    const val HISTORY_PANEL = "home_history_panel"
+    const val HISTORY_EMPTY = "home_history_empty"
+    const val HISTORY_ITEM_PREFIX = "home_history_item_"
 }
 
 @Composable
 private fun HomeTopBar(
-    onHistoryClick: () -> Unit,
-    onProfileClick: () -> Unit
+    onProfileClick: () -> Unit,
+    deviceSnapshot: DeviceSnapshotUi?,
+    onHistoryClick: () -> Unit
 ) {
-    Box(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Text(
+            text = "AI 助手",
+            style = MaterialTheme.typography.titleLarge
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (deviceSnapshot?.connectionState == DeviceConnectionStateUi.CONNECTED) {
+                AssistChip(
+                    onClick = {},
+                    enabled = false,
+                    label = { Text(text = "设备已连接") },
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                )
+            }
             IconButton(
                 onClick = onHistoryClick,
-                modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_BUTTON)
+                modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_TOGGLE)
             ) {
-                Icon(Icons.Filled.History, contentDescription = "历史会话")
+                Icon(Icons.Filled.History, contentDescription = "历史记录")
             }
             IconButton(
                 onClick = onProfileClick,
@@ -424,105 +465,70 @@ private fun HomeTopBar(
                 Icon(Icons.Filled.Person, contentDescription = "个人中心")
             }
         }
-        Text(
-            text = "新对话",
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.align(Alignment.Center)
-        )
     }
 }
 
 @Composable
-private fun DeviceAudioBanner(
+private fun EntryCards(
     deviceSnapshot: DeviceSnapshotUi?,
     audioSummary: AudioSummaryUi?,
     onDeviceClick: () -> Unit,
     onAudioClick: () -> Unit
 ) {
-    val snapshot = deviceSnapshot ?: DeviceSnapshotUi(
-        statusText = "设备未连接，点击开始配网",
-        connectionState = DeviceConnectionStateUi.DISCONNECTED
-    )
-    val supportingText = when (snapshot.connectionState) {
-        DeviceConnectionStateUi.DISCONNECTED -> "请连接设备以管理文件和查看预览"
-        DeviceConnectionStateUi.CONNECTING -> "正在连接设备，请保持靠近"
-        DeviceConnectionStateUi.WAITING_FOR_NETWORK -> "设备已连接，等待联网完成"
-        DeviceConnectionStateUi.CONNECTED -> "设备在线，可管理文件与录音"
-        DeviceConnectionStateUi.ERROR -> snapshot.errorSummary
-    }
-    // Home 只读取连接/媒体状态，不控制底层逻辑
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.14f)
-        )
+    Column(
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(HomeScreenTestTags.DEVICE_BANNER)
-                    .clickable(onClick = onDeviceClick)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = snapshot.statusText,
-                    style = MaterialTheme.typography.titleMedium
-                )
-                snapshot.deviceName?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                snapshot.wifiName?.let {
-                    Text(
-                        text = "Wi-Fi：$it",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                supportingText?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (snapshot.connectionState == DeviceConnectionStateUi.ERROR) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        }
-                    )
-                }
-            }
-            HorizontalDivider()
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(HomeScreenTestTags.AUDIO_CARD)
-                    .clickable(onClick = onAudioClick)
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = audioSummary?.headline ?: "暂无录音摘要",
-                        style = MaterialTheme.typography.titleSmall
-                    )
-                    audioSummary?.detail?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                TextButton(onClick = onAudioClick, enabled = audioSummary != null) {
-                    Text(text = "进入录音文件")
-                }
-            }
+        EntryCard(
+            title = "设备管理",
+            subtitle = deviceSnapshot?.statusText ?: "查看设备文件与连接状态",
+            supporting = deviceSnapshot?.deviceName ?: "点击进入设备管理",
+            onClick = onDeviceClick,
+            testTag = HomeScreenTestTags.DEVICE_ENTRY
+        )
+        EntryCard(
+            title = "音频库",
+            subtitle = audioSummary?.headline ?: "同步录音并查看转写",
+            supporting = audioSummary?.detail ?: "上传或查看最近转写内容",
+            onClick = onAudioClick,
+            testTag = HomeScreenTestTags.AUDIO_ENTRY
+        )
+    }
+}
+
+@Composable
+private fun EntryCard(
+    title: String,
+    subtitle: String,
+    supporting: String,
+    onClick: () -> Unit,
+    testTag: String
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .testTag(testTag),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(text = title, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = supporting,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -530,6 +536,7 @@ private fun DeviceAudioBanner(
 @Composable
 private fun SessionListSection(
     sessions: List<SessionListItemUi>,
+    isLoading: Boolean,
     onSessionSelected: (String) -> Unit
 ) {
     Column(
@@ -542,11 +549,27 @@ private fun SessionListSection(
             text = "历史会话",
             style = MaterialTheme.typography.titleSmall
         )
+        if (isLoading) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                LinearProgressIndicator(modifier = Modifier.weight(1f))
+                Text(
+                    text = "正在加载历史会话...",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag(HomeScreenTestTags.SESSION_LOADING)
+                )
+            }
+        }
         if (sessions.isEmpty()) {
             Text(
-                text = "暂无历史会话",
+                text = "暂无历史会话，先发一条消息试试吧",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag(HomeScreenTestTags.SESSION_EMPTY)
             )
             return
         }
@@ -607,6 +630,7 @@ private fun SessionListItem(
                         onClick = {},
                         enabled = false,
                         label = { Text(text = "当前") },
+                        modifier = Modifier.testTag("${HomeScreenTestTags.SESSION_CURRENT_PREFIX}${session.id}"),
                         colors = AssistChipDefaults.assistChipColors(
                             labelColor = MaterialTheme.colorScheme.primary
                         )
@@ -636,7 +660,6 @@ private fun MessageBubble(
     message: ChatMessageUi,
     alignEnd: Boolean
 ) {
-    val clipboard = LocalClipboardManager.current
     val bubbleTag = if (alignEnd) {
         HomeScreenTestTags.USER_MESSAGE
     } else {
@@ -674,18 +697,6 @@ private fun MessageBubble(
                         color = MaterialTheme.colorScheme.error
                     )
                 }
-                if (!alignEnd) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    TextButton(
-                        onClick = { clipboard.setText(AnnotatedString(message.content)) },
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "复制",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                }
             }
         }
     }
@@ -705,59 +716,11 @@ private fun EmptyChatHint(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 20.dp, horizontal = 12.dp),
+            .padding(vertical = 32.dp, horizontal = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            modifier = Modifier
-                .size(64.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.04f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "LOGO",
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
-                fontWeight = FontWeight.Bold
-            )
-        }
-        Text(
-            text = "你好",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "我是您的销售助手",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Text(
-            text = "我可以帮您：",
-            style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
-        )
-        Column(
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            horizontalAlignment = Alignment.Start
-        ) {
-            Text(
-                text = "• 分析用户画像、意图、痛点。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = "• 生成 PDF、CSV 文档及思维导图。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Text(
-            text = "让我们开始吧",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Text(text = "还没有对话，试试下面的快捷技能开始吧！")
         QuickSkillRow(
             skills = quickSkills,
             enabled = enabled,
@@ -794,16 +757,14 @@ private fun HomeInputArea(
     onClearSelectedSkill: () -> Unit
 ) {
     Surface(
-        tonalElevation = 2.dp,
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+        tonalElevation = 4.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             QuickSkillRow(
                 skills = quickSkills,
@@ -911,12 +872,13 @@ private fun SessionHeader(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.weight(1f)
         ) {
-            Text(
-                text = session.title,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+                Text(
+                    text = session.title,
+                    modifier = Modifier.testTag(HomeScreenTestTags.SESSION_TITLE),
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             if (session.isTranscription) {
                 AssistChip(
                     onClick = {},
@@ -944,7 +906,10 @@ private fun QuickSkillRow(
     onQuickSkillSelected: (QuickSkillId) -> Unit
 ) {
     if (skills.isEmpty()) return
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(horizontal = 4.dp)
+    ) {
         items(skills, key = { it.id }) { skill ->
             val skillTag = "home_quick_skill_${skill.id}"
             AssistChip(
@@ -987,6 +952,93 @@ private fun ScrollToLatestButton(
                 contentDescription = "回到底部",
                 tint = MaterialTheme.colorScheme.onPrimaryContainer
             )
+        }
+    }
+}
+
+@Composable
+private fun HistoryPanel(
+    sessions: List<SessionListItemUi>,
+    currentSessionId: String,
+    onDismiss: () -> Unit,
+    onSessionSelected: (String) -> Unit
+) {
+    // 侧边抽屉：覆盖在右侧，点击遮罩即可关闭
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(onClick = onDismiss)
+        )
+        Surface(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .width(320.dp)
+                .fillMaxHeight()
+                .testTag(HomeScreenTestTags.HISTORY_PANEL),
+            tonalElevation = 6.dp,
+            shadowElevation = 8.dp,
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(text = "会话抽屉", style = MaterialTheme.typography.titleMedium)
+                if (sessions.isEmpty()) {
+                    Text(
+                        text = "暂无历史会话，先开始一次对话吧。",
+                        modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_EMPTY),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    sessions.forEach { session ->
+                        val isCurrent = session.id == currentSessionId
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onSessionSelected(session.id)
+                                }
+                                .testTag("${HomeScreenTestTags.HISTORY_ITEM_PREFIX}${session.id}"),
+                            color = if (isCurrent) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
+                            tonalElevation = if (isCurrent) 4.dp else 1.dp
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = session.title,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                if (session.lastMessagePreview.isNotBlank()) {
+                                    Text(
+                                        text = session.lastMessagePreview,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    text = formatSessionTime(session.updatedAtMillis),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

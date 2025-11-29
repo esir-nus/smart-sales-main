@@ -6,10 +6,9 @@ package com.smartsales.aitest.ui.shell
 // 作者：创建于 2025-11-29
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -17,25 +16,29 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.smartsales.aitest.AiFeatureTestTags
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 enum class HomeOverlayLayer { Audio, Home, Device }
 private enum class DragDirection { Up, Down }
@@ -44,6 +47,7 @@ private enum class DragDirection { Up, Down }
 fun VerticalOverlayShell(
     currentLayer: HomeOverlayLayer,
     onLayerChange: (HomeOverlayLayer) -> Unit,
+    enableDrag: Boolean,
     modifier: Modifier = Modifier,
     homeContent: @Composable () -> Unit,
     audioContent: @Composable () -> Unit,
@@ -53,125 +57,147 @@ fun VerticalOverlayShell(
         onLayerChange(HomeOverlayLayer.Home)
     }
 
-    BoxWithConstraints(modifier = modifier.testTag(AiFeatureTestTags.OVERLAY_SHELL)) {
-        // Home 层始终存在，overlay 通过遮罩与 AnimatedVisibility 覆盖其上
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxSize()
+            .testTag(AiFeatureTestTags.OVERLAY_SHELL)
+    ) {
+        val heightPx = with(LocalDensity.current) { constraints.maxHeight.toFloat() }
+        val targetForLayer: (HomeOverlayLayer) -> Float = { layer ->
+            when (layer) {
+                HomeOverlayLayer.Home -> 0f
+                HomeOverlayLayer.Audio -> heightPx
+                HomeOverlayLayer.Device -> -heightPx
+            }
+        }
+        val dragOffset = remember { mutableStateOf(targetForLayer(currentLayer)) }
+        val animatedOffset = animateFloatAsState(
+            targetValue = dragOffset.value,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow
+            ),
+            label = "overlay_offset"
+        )
+
+        LaunchedEffect(currentLayer, heightPx) {
+            dragOffset.value = targetForLayer(currentLayer)
+        }
+
+        val threshold = heightPx * 0.18f
+        val backdropAlpha = (abs(animatedOffset.value) / heightPx).coerceIn(0f, 0.35f)
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .testTag(AiFeatureTestTags.OVERLAY_HOME_LAYER),
-        ) {
-            homeContent()
-            if (currentLayer == HomeOverlayLayer.Home) {
-                OverlayHandle(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                .testTag(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE),
-                    onClick = { onLayerChange(HomeOverlayLayer.Audio) },
-                    triggerDragDirection = DragDirection.Down,
-                )
-                OverlayHandle(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .testTag(AiFeatureTestTags.OVERLAY_DEVICE_HANDLE),
-                    onClick = { onLayerChange(HomeOverlayLayer.Device) },
-                    triggerDragDirection = DragDirection.Up,
-                )
-            }
-        }
-
-        val hasOverlay = currentLayer != HomeOverlayLayer.Home
-        AnimatedVisibility(
-            visible = hasOverlay,
-            enter = slideInVertically(
-                initialOffsetY = { 0 },
-                animationSpec = tween(durationMillis = 150),
-            ),
-            exit = slideOutVertically(
-                targetOffsetY = { 0 },
-                animationSpec = tween(durationMillis = 150),
-            ),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.25f))
-                    .clickable { onLayerChange(HomeOverlayLayer.Home) }
-                    .testTag(AiFeatureTestTags.OVERLAY_BACKDROP),
-            )
-        }
-
-        AnimatedVisibility(
-            visible = currentLayer == HomeOverlayLayer.Audio,
-            enter = slideInVertically(
-                initialOffsetY = { -it },
-                animationSpec = tween(durationMillis = 220),
-            ),
-            exit = slideOutVertically(
-                targetOffsetY = { -it },
-                animationSpec = tween(durationMillis = 200),
-            ),
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.TopCenter,
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight()
-                        .padding(horizontal = 8.dp, vertical = 12.dp)
-                        .testTag(AiFeatureTestTags.OVERLAY_AUDIO_LAYER),
-                    tonalElevation = 6.dp,
-                    color = MaterialTheme.colorScheme.surface,
-                    shape = RoundedCornerShape(16.dp),
-                ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        audioContent()
-                        OverlayHandle(
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = 12.dp),
-                            onClick = { onLayerChange(HomeOverlayLayer.Home) },
+                .let { base ->
+                    if (!enableDrag) return@let base
+                    base.pointerInput(heightPx) {
+                        detectVerticalDragGestures(
+                            onDragStart = {
+                                dragOffset.value = animatedOffset.value
+                            },
+                            onVerticalDrag = { _, dragAmount ->
+                                val next = (dragOffset.value + dragAmount).coerceIn(-heightPx, heightPx)
+                                dragOffset.value = next
+                            },
+                            onDragEnd = {
+                                val value = dragOffset.value
+                                val nextLayer = when {
+                                    value > threshold -> HomeOverlayLayer.Audio
+                                    value < -threshold -> HomeOverlayLayer.Device
+                                    else -> HomeOverlayLayer.Home
+                                }
+                                dragOffset.value = targetForLayer(nextLayer)
+                                if (nextLayer != currentLayer) onLayerChange(nextLayer)
+                            },
+                            onDragCancel = {
+                                dragOffset.value = targetForLayer(currentLayer)
+                            }
                         )
                     }
                 }
-            }
-        }
-
-        AnimatedVisibility(
-            visible = currentLayer == HomeOverlayLayer.Device,
-            enter = slideInVertically(
-                initialOffsetY = { it },
-                animationSpec = tween(durationMillis = 220),
-            ),
-            exit = slideOutVertically(
-                targetOffsetY = { it },
-                animationSpec = tween(durationMillis = 200),
-            ),
         ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.BottomCenter,
+            // Middle layer (Home) counter-moves for static feel
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .offset { IntOffset(0, (-animatedOffset.value).roundToInt()) }
+                    .testTag(AiFeatureTestTags.OVERLAY_HOME_LAYER),
+                color = MaterialTheme.colorScheme.background
             ) {
-                Surface(
+                Box(modifier = Modifier.fillMaxSize()) {
+                    homeContent()
+                    OverlayHandle(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 10.dp)
+                            .testTag(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE),
+                        onClick = { onLayerChange(HomeOverlayLayer.Audio) },
+                        triggerDragDirection = DragDirection.Down,
+                    )
+                    OverlayHandle(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 10.dp)
+                            .testTag(AiFeatureTestTags.OVERLAY_DEVICE_HANDLE),
+                        onClick = { onLayerChange(HomeOverlayLayer.Device) },
+                        triggerDragDirection = DragDirection.Up,
+                    )
+                }
+            }
+
+            if (backdropAlpha > 0.01f) {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .fillMaxHeight()
-                        .padding(horizontal = 8.dp, vertical = 12.dp)
-                        .testTag(AiFeatureTestTags.OVERLAY_DEVICE_LAYER),
-                    tonalElevation = 6.dp,
-                    color = MaterialTheme.colorScheme.surface,
-                    shape = RoundedCornerShape(16.dp),
-                ) {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        deviceContent()
-                        OverlayHandle(
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(top = 12.dp),
-                            onClick = { onLayerChange(HomeOverlayLayer.Home) },
-                        )
-                    }
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = backdropAlpha))
+                        .clickable { onLayerChange(HomeOverlayLayer.Home) }
+                        .testTag(AiFeatureTestTags.OVERLAY_BACKDROP),
+                )
+            }
+
+            // Top drawer (Audio)
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .offset { IntOffset(0, (animatedOffset.value - heightPx).roundToInt()) }
+                    .padding(horizontal = 12.dp, vertical = 14.dp)
+                    .clip(RoundedCornerShape(bottomStart = 18.dp, bottomEnd = 18.dp))
+                    .testTag(AiFeatureTestTags.OVERLAY_AUDIO_LAYER),
+                tonalElevation = 8.dp,
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    audioContent()
+                    OverlayHandle(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 14.dp),
+                        onClick = { onLayerChange(HomeOverlayLayer.Home) },
+                    )
+                }
+            }
+
+            // Bottom drawer (Device)
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .offset { IntOffset(0, (animatedOffset.value + heightPx).roundToInt()) }
+                    .padding(horizontal = 12.dp, vertical = 14.dp)
+                    .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
+                    .testTag(AiFeatureTestTags.OVERLAY_DEVICE_LAYER),
+                tonalElevation = 8.dp,
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    deviceContent()
+                    OverlayHandle(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 14.dp),
+                        onClick = { onLayerChange(HomeOverlayLayer.Home) },
+                    )
                 }
             }
         }

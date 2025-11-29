@@ -34,7 +34,7 @@ object AppDesignTokens {
         mutedSurface = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.08f),
         cardShape = MaterialTheme.shapes.large,
         cardBorder = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        cardElevation = CardDefaults.cardElevation(defaultElevation = 4.dp).defaultElevation,
+        cardElevation = 4.dp,
         ctaGradient = listOf(
             MaterialTheme.colorScheme.primary,
             MaterialTheme.colorScheme.primary.copy(alpha = 0.82f)

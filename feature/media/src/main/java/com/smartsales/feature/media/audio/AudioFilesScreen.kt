@@ -218,6 +218,7 @@ private fun AudioRecordingItem(
     onTranscriptClicked: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val designTokens = AppDesignTokens.current()
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),

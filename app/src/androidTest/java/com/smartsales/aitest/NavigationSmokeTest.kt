@@ -100,9 +100,7 @@ class NavigationSmokeTest {
     }
 
     private fun goHome() {
-        waitForShell()
-
-        val homeVisible = hasTag(HomeScreenTestTags.ROOT)
+        val homeVisible = hasTag(HomeScreenTestTags.ROOT) || hasTag(AiFeatureTestTags.PAGE_HOME)
         if (homeVisible) return
 
         val backdropExists = hasTag(AiFeatureTestTags.OVERLAY_BACKDROP)
@@ -117,24 +115,23 @@ class NavigationSmokeTest {
     }
 
     private fun waitForHomeRendered() {
-        waitForShell()
-        composeRule.waitUntil(timeoutMillis = 60_000) { hasTag(HomeScreenTestTags.ROOT) }
-        composeRule.onNodeWithTag(HomeScreenTestTags.ROOT, useUnmergedTree = true).assertIsDisplayed()
         composeRule.waitUntil(timeoutMillis = 10_000) {
-            hasTag(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE) &&
-                hasTag(AiFeatureTestTags.OVERLAY_DEVICE_HANDLE)
+            hasTag(HomeScreenTestTags.ROOT) || hasTag(AiFeatureTestTags.PAGE_HOME)
         }
+        composeRule.onNodeWithTag(HomeScreenTestTags.ROOT, useUnmergedTree = true).assertIsDisplayed()
     }
 
-    private fun waitForShell() {
-        composeRule.waitUntil(timeoutMillis = 10_000) { hasTag(AiFeatureTestTags.OVERLAY_SHELL) }
-    }
-
-    private fun hasTag(tag: String): Boolean =
-        runCatching {
+    private fun hasTag(tag: String): Boolean {
+        val merged = runCatching {
+            composeRule.onAllNodesWithTag(tag, useUnmergedTree = false)
+                .fetchSemanticsNodes().isNotEmpty()
+        }.getOrDefault(false)
+        if (merged) return true
+        return runCatching {
             composeRule.onAllNodesWithTag(tag, useUnmergedTree = true)
                 .fetchSemanticsNodes().isNotEmpty()
         }.getOrDefault(false)
+    }
 
     private fun isOnNonHomePage(): Boolean = hasTag(AiFeatureTestTags.PAGE_USER_CENTER) ||
         hasTag(AiFeatureTestTags.PAGE_CHAT_HISTORY) ||

@@ -34,5 +34,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- 测试专用极简 Activity，用于验证 instrumentation 能否正常渲染 Compose -->
+        <activity
+            android:name=".DummyTestActivity"
+            android:exported="false"
+            android:label="DummyTestActivity" />
     </application>
 </manifest>

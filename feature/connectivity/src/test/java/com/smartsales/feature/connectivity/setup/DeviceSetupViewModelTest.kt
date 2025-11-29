@@ -19,8 +19,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.resetMain
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.After
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -30,7 +35,18 @@ class DeviceSetupViewModelTest {
     private val connectionManager = FakeDeviceConnectionManager()
     private val scanner = FakeBleScanner()
     private val profiles = listOf(BleProfileConfig(id = "bt311", displayName = "BT311", nameKeywords = emptyList(), scanServiceUuids = emptyList()))
-    private val viewModel = DeviceSetupViewModel(connectionManager, scanner, profiles)
+    private lateinit var viewModel: DeviceSetupViewModel
+
+    @Before
+    fun setup() {
+        Dispatchers.setMain(dispatcher)
+        viewModel = DeviceSetupViewModel(connectionManager, scanner, profiles)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
 
     @Test
     fun startScan_updatesScanningStep() = runTest(dispatcher) {

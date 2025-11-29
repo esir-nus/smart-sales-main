@@ -18,7 +18,10 @@ import androidx.test.rule.GrantPermissionRule
 import com.smartsales.aitest.testing.waitForAnyTag
 import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.home.HomeScreenTestTags
+import com.smartsales.feature.media.audio.AudioFilesTestTags
 import android.os.SystemClock
+import org.junit.rules.RuleChain
+import org.junit.rules.TestRule
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -26,44 +29,42 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class AiFeatureTestActivityTest {
 
-    @get:Rule
-    val composeRule = createAndroidComposeRule<AiFeatureTestActivity>()
-    @get:Rule
-    val permissionRule: GrantPermissionRule = GrantPermissionRule.grant(
+    private val composeRule = createAndroidComposeRule<AiFeatureTestActivity>()
+    private val permissionRule: GrantPermissionRule = GrantPermissionRule.grant(
         Manifest.permission.BLUETOOTH_SCAN,
         Manifest.permission.BLUETOOTH_CONNECT,
         Manifest.permission.ACCESS_FINE_LOCATION
     )
 
+    @get:Rule
+    val ruleChain: TestRule = RuleChain.outerRule(permissionRule).around(composeRule)
+
     @Test
     fun defaultTab_isHome() {
         waitForHomeRendered()
         composeRule.onNodeWithTag(HomeScreenTestTags.ROOT, useUnmergedTree = true).assertIsDisplayed()
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE, useUnmergedTree = true).assertIsDisplayed()
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE_HANDLE, useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test
-    fun overlayHandles_showSheetsAndBackdrops() {
+    fun topBarButtons_navigateAudioAndDevice() {
         waitForHomeRendered()
 
-        // 打开音频 overlay
         composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE, useUnmergedTree = true).performClick()
         waitForAnyTag(
             composeRule,
-            AiFeatureTestTags.OVERLAY_AUDIO_LAYER,
-            AiFeatureTestTags.PAGE_AUDIO_FILES
+            AiFeatureTestTags.PAGE_AUDIO_FILES,
+            AudioFilesTestTags.ROOT
         )
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_BACKDROP, useUnmergedTree = true).assertIsDisplayed()
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_BACKDROP, useUnmergedTree = true).performClick()
+        composeRule.activityRule.scenario.onActivity {
+            it.onBackPressedDispatcher.onBackPressed()
+        }
         waitForHomeRendered()
 
-        // 打开设备 overlay
         composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE_HANDLE, useUnmergedTree = true).performClick()
         waitForAnyTag(
             composeRule,
-            AiFeatureTestTags.OVERLAY_DEVICE_LAYER,
-            AiFeatureTestTags.PAGE_DEVICE_MANAGER
+            AiFeatureTestTags.PAGE_DEVICE_MANAGER,
+            AiFeatureTestTags.PAGE_DEVICE_SETUP
         )
         composeRule.activityRule.scenario.onActivity {
             it.onBackPressedDispatcher.onBackPressed()
@@ -119,13 +120,11 @@ class AiFeatureTestActivityTest {
     }
 
     private fun goHome() {
-        val backdropExists = runCatching {
-            composeRule.onAllNodesWithTag(AiFeatureTestTags.OVERLAY_BACKDROP, useUnmergedTree = true)
+        val homeVisible = runCatching {
+            composeRule.onAllNodesWithTag(HomeScreenTestTags.ROOT, useUnmergedTree = true)
                 .fetchSemanticsNodes().isNotEmpty()
         }.getOrDefault(false)
-        if (backdropExists) {
-            composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_BACKDROP, useUnmergedTree = true).performClick()
-        } else {
+        if (!homeVisible) {
             composeRule.activityRule.scenario.onActivity {
                 it.onBackPressedDispatcher.onBackPressed()
             }
@@ -154,30 +153,10 @@ class AiFeatureTestActivityTest {
     }
 
     private fun waitForHomeRendered() {
-        val tags = listOf(
-            AiFeatureTestTags.PAGE_HOME,
-            HomeScreenTestTags.ROOT,
-            AiFeatureTestTags.OVERLAY_AUDIO_HANDLE,
-            AiFeatureTestTags.OVERLAY_DEVICE_HANDLE
-        )
-        val start = SystemClock.uptimeMillis()
-        while (SystemClock.uptimeMillis() - start < 60_000) {
-            composeRule.waitForIdle()
-            val hasHierarchy = runCatching {
-                tags.any { tag ->
-                    composeRule.onAllNodesWithTag(tag, useUnmergedTree = true)
-                        .fetchSemanticsNodes()
-                        .isNotEmpty()
-                }
-            }.getOrDefault(false)
-            if (hasHierarchy) return
+        composeRule.waitUntil(timeoutMillis = 10_000) {
+            composeRule.onAllNodesWithTag(HomeScreenTestTags.ROOT, useUnmergedTree = true)
+                .fetchSemanticsNodes().isNotEmpty()
         }
-        waitForAnyTag(
-            composeRule,
-            AiFeatureTestTags.PAGE_HOME,
-            HomeScreenTestTags.ROOT,
-            extraFallbackTags = arrayOf(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE),
-            timeoutMillis = 30_000
-        )
+        composeRule.onNodeWithTag(HomeScreenTestTags.ROOT, useUnmergedTree = true).assertIsDisplayed()
     }
 }

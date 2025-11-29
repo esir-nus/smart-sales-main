@@ -87,7 +87,7 @@ class ChatHistoryNavigationTest {
         }
         assumeTrue("seed message missing", seeded)
         waitForPage(AiFeatureTestTags.PAGE_HOME)
-        composeRule.onNodeWithTag(com.smartsales.feature.chat.home.HomeScreenTestTags.HISTORY_BUTTON, useUnmergedTree = true)
+        composeRule.onNodeWithTag(com.smartsales.feature.chat.home.HomeScreenTestTags.HISTORY_TOGGLE, useUnmergedTree = true)
             .performClick()
         waitForPage(AiFeatureTestTags.PAGE_CHAT_HISTORY)
 

@@ -14,8 +14,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -73,17 +75,28 @@ fun DeviceSetupScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp, vertical = 18.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                StepHeader(state.step)
-                StatusCard(state.progressMessage, state.step, modifier = Modifier.fillMaxWidth())
-                WiFiForm(
-                    ssid = ssid,
-                    password = password,
-                    onSsidChange = { ssid = it },
-                    onPasswordChange = { password = it },
-                    enabled = state.step == DeviceSetupStep.Pairing || state.step == DeviceSetupStep.WifiProvisioning
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .widthIn(max = 520.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    PlaceholderCard(step = state.step, modifier = Modifier.fillMaxWidth())
+                    StepHeader(state.step)
+                    StatusCard(state.progressMessage, state.step, modifier = Modifier.fillMaxWidth())
+                    WiFiCard(
+                        ssid = ssid,
+                        password = password,
+                        onSsidChange = { ssid = it },
+                        onPasswordChange = { password = it },
+                        enabled = state.step == DeviceSetupStep.Pairing || state.step == DeviceSetupStep.WifiProvisioning
+                    )
+                }
                 if (state.errorMessage != null) {
                     ErrorBanner(
                         message = state.errorMessage,
@@ -158,30 +171,76 @@ private fun StatusCard(
 }
 
 @Composable
-private fun WiFiForm(
+private fun PlaceholderCard(step: DeviceSetupStep, modifier: Modifier = Modifier) {
+    val statusText = when (step) {
+        DeviceSetupStep.Scanning -> "正在搜索设备..."
+        DeviceSetupStep.Pairing -> "发现设备，正在配对"
+        DeviceSetupStep.WifiProvisioning -> "准备配置网络"
+        DeviceSetupStep.WaitingForDeviceOnline -> "等待设备上线"
+        DeviceSetupStep.Ready -> "连接成功"
+        DeviceSetupStep.Error -> "需要重试"
+        else -> "开始扫描设备"
+    }
+    Card(
+        modifier = modifier.height(180.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f), shape = RoundedCornerShape(18.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "\uD83D\uDCF1", style = MaterialTheme.typography.titleLarge)
+            }
+            Text(text = statusText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun WiFiCard(
     ssid: String,
     password: String,
     onSsidChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     enabled: Boolean
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        OutlinedTextField(
-            value = ssid,
-            onValueChange = onSsidChange,
-            label = { Text("Wi-Fi 名称") },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = enabled
-        )
-        OutlinedTextField(
-            value = password,
-            onValueChange = onPasswordChange,
-            label = { Text("Wi-Fi 密码") },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = enabled
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            OutlinedTextField(
+                value = ssid,
+                onValueChange = onSsidChange,
+                label = { Text("Wi-Fi 名称") },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = enabled
+            )
+            OutlinedTextField(
+                value = password,
+                onValueChange = onPasswordChange,
+                label = { Text("Wi-Fi 密码") },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = enabled
+            )
+        }
     }
 }
 

@@ -101,7 +101,7 @@ fun ChatHistoryRoute(
         onPinToggle = viewModel::onPinToggle,
         onDismissError = viewModel::onDismissError,
         snackbarHostState = snackbarHostState,
-        modifier = modifier
+        modifier = modifier.testTag(ChatHistoryTestTags.PAGE)
     )
 }
 

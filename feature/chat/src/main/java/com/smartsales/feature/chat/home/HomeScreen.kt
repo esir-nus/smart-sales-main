@@ -158,7 +158,10 @@ fun HomeScreenRoute(
         chatErrorMessage = state.chatErrorMessage,
         modifier = modifier,
         showHistoryPanel = showHistoryPanel,
-        onToggleHistoryPanel = { showHistoryPanel = !showHistoryPanel },
+        onToggleHistoryPanel = {
+            showHistoryPanel = false
+            onNavigateToChatHistory()
+        },
         onDismissHistoryPanel = { showHistoryPanel = false },
         historySessions = state.sessionList.take(10),
         onHistorySessionSelected = { sessionId ->

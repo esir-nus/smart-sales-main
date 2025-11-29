@@ -119,6 +119,27 @@ class AiFeatureTestActivityTest {
         }
     }
 
+    @Test
+    fun homeTags_areUnique() {
+        waitForHomeRendered()
+        assertSingleTag(HomeScreenTestTags.ROOT)
+        assertSingleTag(AiFeatureTestTags.PAGE_HOME)
+    }
+
+    @Test
+    fun otherPageTags_areUniqueWhenNavigated() {
+        waitForHomeRendered()
+
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE, useUnmergedTree = true).performClick()
+        assertSingleTag(AiFeatureTestTags.PAGE_AUDIO_FILES)
+        composeRule.activityRule.scenario.onActivity {
+            it.onBackPressedDispatcher.onBackPressed()
+        }
+
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE_HANDLE, useUnmergedTree = true).performClick()
+        assertSingleTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
+    }
+
     private fun goHome() {
         val homeVisible = runCatching {
             composeRule.onAllNodesWithTag(HomeScreenTestTags.ROOT, useUnmergedTree = true)
@@ -158,5 +179,12 @@ class AiFeatureTestActivityTest {
                 .fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithTag(HomeScreenTestTags.ROOT, useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    // 检查给定 tag 仅出现一次，确保 PAGE/ROOT 唯一性
+    private fun assertSingleTag(tag: String) {
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().size == 1
+        }
     }
 }

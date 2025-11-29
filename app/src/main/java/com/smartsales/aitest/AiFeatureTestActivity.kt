@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -66,11 +67,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -230,107 +233,150 @@ private fun AiFeatureTestApp() {
                 }
             }
         ) { innerPadding ->
-        Surface(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                    .testTag(homePageTag)
-        ) {
-            when (currentPage) {
-                TestHomePage.Home -> {
-                        HomeScreenRoute(
+            val isOverlayPage = currentPage == TestHomePage.AudioFiles ||
+                currentPage == TestHomePage.DeviceManager ||
+                currentPage == TestHomePage.DeviceSetup
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                when (currentPage) {
+                    TestHomePage.Home -> {
+                        Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .testTag(AiFeatureTestTags.PAGE_HOME),
-                            viewModel = homeViewModel,
-                            sessionId = pendingSessionId,
-                            selectedSessionId = pendingSessionId,
-                            onSessionSelectionConsumed = { pendingSessionId = null },
-                            onNavigateToDeviceManager = { currentPage = TestHomePage.DeviceManager },
-                            onNavigateToDeviceSetup = { currentPage = TestHomePage.DeviceSetup },
-                            onNavigateToAudioFiles = { currentPage = TestHomePage.AudioFiles },
-                            onNavigateToUserCenter = { currentPage = TestHomePage.UserCenter },
-                            onNavigateToChatHistory = { currentPage = TestHomePage.ChatHistory },
-                            onDeviceSnapshotChanged = { latestDeviceSnapshot = it }
-                        )
+                                .testTag(homePageTag)
+                        ) {
+                            HomeScreenRoute(
+                                modifier = Modifier.fillMaxSize(),
+                                viewModel = homeViewModel,
+                                sessionId = pendingSessionId,
+                                selectedSessionId = pendingSessionId,
+                                onSessionSelectionConsumed = { pendingSessionId = null },
+                                onNavigateToDeviceManager = { currentPage = TestHomePage.DeviceManager },
+                                onNavigateToDeviceSetup = { currentPage = TestHomePage.DeviceSetup },
+                                onNavigateToAudioFiles = { currentPage = TestHomePage.AudioFiles },
+                                onNavigateToUserCenter = { currentPage = TestHomePage.UserCenter },
+                                onNavigateToChatHistory = { currentPage = TestHomePage.ChatHistory },
+                                onDeviceSnapshotChanged = { latestDeviceSnapshot = it }
+                            )
+                        }
                     }
 
                     TestHomePage.WifiBleTester -> {
-                        WifiBleTesterRoute(
+                        Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .testTag(AiFeatureTestTags.PAGE_WIFI),
-                            mediaServerClient = mediaServerClient,
-                            onShowMessage = showSnackbar
-                        )
+                                .testTag(AiFeatureTestTags.PAGE_WIFI)
+                        ) {
+                            WifiBleTesterRoute(
+                                modifier = Modifier.fillMaxSize(),
+                                mediaServerClient = mediaServerClient,
+                                onShowMessage = showSnackbar
+                            )
+                        }
                     }
 
                     TestHomePage.ChatHistory -> {
-                        ChatHistoryRoute(
+                        Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .testTag(historyPageTag),
-                            onSessionSelected = { sessionId ->
-                                pendingSessionId = sessionId
-                                currentPage = TestHomePage.Home
-                            }
-                        )
+                                .testTag(historyPageTag)
+                        ) {
+                            ChatHistoryRoute(
+                                modifier = Modifier.fillMaxSize(),
+                                onSessionSelected = { sessionId ->
+                                    pendingSessionId = sessionId
+                                    currentPage = TestHomePage.Home
+                                }
+                            )
+                        }
                     }
 
                     TestHomePage.UserCenter -> {
-                        UserCenterRoute(
+                        Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .testTag(userCenterPageTag),
-                            onLogout = { currentPage = TestHomePage.Home },
-                            onOpenDeviceManager = { currentPage = TestHomePage.DeviceManager },
-                            onOpenSubscription = { currentPage = TestHomePage.Home },
-                            onOpenPrivacy = { currentPage = TestHomePage.Home },
-                            onOpenGeneral = { currentPage = TestHomePage.Home }
-                        )
+                                .testTag(userCenterPageTag)
+                        ) {
+                            UserCenterRoute(
+                                modifier = Modifier.fillMaxSize(),
+                                onLogout = { currentPage = TestHomePage.Home },
+                                onOpenDeviceManager = { currentPage = TestHomePage.DeviceManager },
+                                onOpenSubscription = { currentPage = TestHomePage.Home },
+                                onOpenPrivacy = { currentPage = TestHomePage.Home },
+                                onOpenGeneral = { currentPage = TestHomePage.Home }
+                            )
+                        }
                     }
 
                     TestHomePage.AudioFiles -> {
-                        AudioFilesRoute(
+                        Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .testTag(audioPageTag),
-                            viewModel = audioFilesViewModel,
-                            onAskAiAboutTranscript = { recordingId, fileName, jobId, preview, full ->
-                                val resolvedJobId = jobId ?: "transcription-$recordingId"
-                                val sessionId = "session-$resolvedJobId"
-                                homeViewModel.onTranscriptionRequested(
-                                    TranscriptionChatRequest(
-                                        jobId = resolvedJobId,
-                                        fileName = fileName,
-                                        recordingId = recordingId,
-                                        sessionId = sessionId,
-                                        transcriptPreview = preview,
-                                        transcriptMarkdown = full
+                                .testTag(audioPageTag)
+                        ) {
+                            AudioFilesRoute(
+                                modifier = Modifier.fillMaxSize(),
+                                viewModel = audioFilesViewModel,
+                                onAskAiAboutTranscript = { recordingId, fileName, jobId, preview, full ->
+                                    val resolvedJobId = jobId ?: "transcription-$recordingId"
+                                    val sessionId = "session-$resolvedJobId"
+                                    homeViewModel.onTranscriptionRequested(
+                                        TranscriptionChatRequest(
+                                            jobId = resolvedJobId,
+                                            fileName = fileName,
+                                            recordingId = recordingId,
+                                            sessionId = sessionId,
+                                            transcriptPreview = preview,
+                                            transcriptMarkdown = full
+                                        )
                                     )
-                                )
-                                pendingSessionId = sessionId
-                                currentPage = TestHomePage.Home
-                            }
-                        )
+                                    pendingSessionId = sessionId
+                                    currentPage = TestHomePage.Home
+                                }
+                            )
+                        }
                     }
 
                     TestHomePage.DeviceManager -> {
-                        DeviceManagerRoute(
+                        Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .testTag(devicePageTag)
-                        )
+                        ) {
+                            DeviceManagerRoute(
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
 
                     TestHomePage.DeviceSetup -> {
-                        DeviceSetupRoute(
+                        Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .testTag(deviceSetupTag),
-                            onCompleted = { currentPage = TestHomePage.DeviceManager }
-                        )
+                                .testTag(deviceSetupTag)
+                        ) {
+                            DeviceSetupRoute(
+                                modifier = Modifier.fillMaxSize(),
+                                onCompleted = { currentPage = TestHomePage.DeviceManager }
+                            )
+                        }
                     }
+                }
+
+                if (isOverlayPage) {
+                    // overlay 打开时的遮罩层，覆盖在当前 overlay 内容之上，点击返回 Home
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .zIndex(1f)
+                            .background(Color.Black.copy(alpha = 0.32f))
+                            .testTag(AiFeatureTestTags.OVERLAY_BACKDROP)
+                            .clickable { currentPage = TestHomePage.Home }
+                    )
                 }
             }
         }

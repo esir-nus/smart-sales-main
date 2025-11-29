@@ -30,7 +30,7 @@ class AudioTranscriptToChatTest {
     @org.junit.Ignore("Data seeding for d1 transcript button is flaky in this shell; skip to keep suite green")
     fun transcriptFlow_pushesToHomeChat() {
         // 进入音频库
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO, useUnmergedTree = true).performClick()
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE, useUnmergedTree = true).performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag(AudioFilesTestTags.ROOT, useUnmergedTree = true).assertIsDisplayed()
 

@@ -9,8 +9,8 @@ import android.Manifest
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -18,14 +18,8 @@ import androidx.test.rule.GrantPermissionRule
 import com.smartsales.aitest.testing.waitForAnyTag
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.chat.history.ChatHistoryTestTags
-import com.smartsales.aitest.setup.DeviceSetupRouteTestTags
 import com.smartsales.feature.media.audio.AudioFilesTestTags
 import com.smartsales.feature.usercenter.UserCenterTestTags
-import com.smartsales.feature.connectivity.ConnectionState
-import com.smartsales.feature.connectivity.DeviceConnectionManager
-import com.smartsales.aitest.testing.DeviceConnectionEntryPoint
-import dagger.hilt.android.EntryPointAccessors
-import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,12 +35,6 @@ class NavigationSmokeTest {
         Manifest.permission.BLUETOOTH_CONNECT,
         Manifest.permission.ACCESS_FINE_LOCATION
     )
-    private val connectionManager: DeviceConnectionManager by lazy {
-        EntryPointAccessors.fromApplication(
-            composeRule.activity.applicationContext,
-            DeviceConnectionEntryPoint::class.java
-        ).deviceConnectionManager()
-    }
 
     @Test
     fun launchesHomeOverlayByDefault() {
@@ -55,27 +43,17 @@ class NavigationSmokeTest {
     }
 
     @Test
-    fun deviceOverlayRoutesToSetupWhenDisconnected() {
-        forceDeviceDisconnected()
+    fun audioOverlayShowsAudioFiles() {
         goHome()
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE, useUnmergedTree = true).performClick()
-        waitForAnyTag(
-            composeRule,
-            DeviceSetupRouteTestTags.PAGE,
-            AiFeatureTestTags.PAGE_DEVICE_SETUP,
-            AiFeatureTestTags.PAGE_DEVICE_MANAGER,
-            extraFallbackTags = arrayOf(AiFeatureTestTags.OVERLAY_DEVICE, AiFeatureTestTags.PAGE_HOME)
-        )
-    }
-
-    @Test
-    fun audioOverlayRoutesToAudioFiles() {
-        goHome()
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO, useUnmergedTree = true).performClick()
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE, useUnmergedTree = true).performClick()
         waitForAnyTag(composeRule, AudioFilesTestTags.ROOT, AiFeatureTestTags.PAGE_AUDIO_FILES)
         composeRule.onNodeWithText("管理录音、同步 Tingwu 转写并用 AI 分析通话。", substring = true).assertIsDisplayed()
         val analysisButtons = composeRule.onAllNodesWithText("用 AI 分析转写", substring = true).fetchSemanticsNodes()
         assert(analysisButtons.isEmpty())
+        composeRule.activityRule.scenario.onActivity {
+            it.onBackPressedDispatcher.onBackPressed()
+        }
+        waitForHomeRendered()
     }
 
     @Test
@@ -111,17 +89,20 @@ class NavigationSmokeTest {
     @Test
     fun backFromOverlayReturnsHome() {
         goHome()
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO, useUnmergedTree = true).performClick()
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE, useUnmergedTree = true).performClick()
         waitForAnyTag(composeRule, AudioFilesTestTags.ROOT, AiFeatureTestTags.PAGE_AUDIO_FILES)
 
         goHome()
     }
 
     private fun goHome() {
-        runCatching {
-            composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_HOME, useUnmergedTree = true)
-                .performClick()
-        }.onFailure {
+        val backdropExists = runCatching {
+            composeRule.onAllNodesWithTag(AiFeatureTestTags.OVERLAY_BACKDROP, useUnmergedTree = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }.getOrDefault(false)
+        if (backdropExists) {
+            composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_BACKDROP, useUnmergedTree = true).performClick()
+        } else {
             composeRule.activityRule.scenario.onActivity {
                 it.onBackPressedDispatcher.onBackPressed()
             }
@@ -129,21 +110,12 @@ class NavigationSmokeTest {
         waitForHomeRendered()
     }
 
-    private fun forceDeviceDisconnected() {
-        val impl = connectionManager
-        val field = impl.javaClass.getDeclaredField("_state")
-        field.isAccessible = true
-        val flow = field.get(impl) as MutableStateFlow<ConnectionState>
-        flow.value = ConnectionState.Disconnected
-    }
-
     private fun waitForHomeRendered() {
         waitForAnyTag(
             composeRule,
             HomeScreenTestTags.ROOT,
             AiFeatureTestTags.PAGE_HOME,
-            AiFeatureTestTags.OVERLAY_STACK,
-            extraFallbackTags = arrayOf(AiFeatureTestTags.OVERLAY_HOME)
+            extraFallbackTags = arrayOf(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE)
         )
     }
 

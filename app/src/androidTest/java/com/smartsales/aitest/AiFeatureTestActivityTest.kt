@@ -9,28 +9,16 @@ import android.Manifest
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
-import com.smartsales.aitest.setup.DeviceSetupRouteTestTags
-import com.smartsales.aitest.testing.DeviceConnectionEntryPoint
 import com.smartsales.aitest.testing.waitForAnyTag
 import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.home.HomeScreenTestTags
-import com.smartsales.feature.connectivity.BlePeripheral
-import com.smartsales.feature.connectivity.BleSession
-import com.smartsales.feature.connectivity.ConnectionState
-import com.smartsales.feature.connectivity.DeviceConnectionManager
-import com.smartsales.feature.connectivity.ProvisioningStatus
-import dagger.hilt.android.EntryPointAccessors
-import java.util.UUID
-import kotlinx.coroutines.flow.MutableStateFlow
 import android.os.SystemClock
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -47,129 +35,40 @@ class AiFeatureTestActivityTest {
         Manifest.permission.ACCESS_FINE_LOCATION
     )
 
-    private val connectionManager: DeviceConnectionManager by lazy {
-        EntryPointAccessors.fromApplication(
-            composeRule.activity.applicationContext,
-            DeviceConnectionEntryPoint::class.java
-        ).deviceConnectionManager()
-    }
-
     @Test
     fun defaultTab_isHome() {
         waitForHomeRendered()
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_HOME, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag(HomeScreenTestTags.ROOT, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE_HANDLE, useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test
-    fun homeFirstNavigationShell_isProperlyIntegrated() {
+    fun overlayHandles_showSheetsAndBackdrops() {
         waitForHomeRendered()
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_HOME, useUnmergedTree = true).assertIsDisplayed()
 
-        // 设备 overlay 默认跳到设备配网
-        forceDeviceDisconnected()
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE, useUnmergedTree = true).performClick()
-        waitForPage(AiFeatureTestTags.PAGE_DEVICE_SETUP)
+        // 打开音频 overlay
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE, useUnmergedTree = true).performClick()
+        waitForAnyTag(
+            composeRule,
+            AiFeatureTestTags.OVERLAY_AUDIO_LAYER,
+            AiFeatureTestTags.PAGE_AUDIO_FILES
+        )
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_BACKDROP, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_BACKDROP, useUnmergedTree = true).performClick()
+        waitForHomeRendered()
 
-        // 音频 overlay 跳到音频库
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO, useUnmergedTree = true).performClick()
-        waitForPage(AiFeatureTestTags.PAGE_AUDIO_FILES)
-
-        // 返回 Home
+        // 打开设备 overlay
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE_HANDLE, useUnmergedTree = true).performClick()
+        waitForAnyTag(
+            composeRule,
+            AiFeatureTestTags.OVERLAY_DEVICE_LAYER,
+            AiFeatureTestTags.PAGE_DEVICE_MANAGER
+        )
         composeRule.activityRule.scenario.onActivity {
             it.onBackPressedDispatcher.onBackPressed()
         }
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
-
-        // 历史入口
-        composeRule.onNodeWithTag(HomeScreenTestTags.HISTORY_BUTTON, useUnmergedTree = true).performClick()
-        waitForPage(AiFeatureTestTags.PAGE_CHAT_HISTORY)
-
-        composeRule.activityRule.scenario.onActivity {
-            it.onBackPressedDispatcher.onBackPressed()
-        }
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
-    }
-
-    @Test
-    fun navigationWithoutChips_coversOverlaysAndHomeActions() {
         waitForHomeRendered()
-        forceDeviceDisconnected()
-        goHome()
-
-        // 设备 overlay -> 配网
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE, useUnmergedTree = true).performClick()
-        waitForPage(AiFeatureTestTags.PAGE_DEVICE_SETUP)
-
-        // 切换为已配网，再次进入设备 overlay -> 文件管理
-        forceDeviceProvisioned()
-        goHome()
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE, useUnmergedTree = true).performClick()
-        waitForPage(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
-
-        // 音频 overlay -> 音频库
-        goHome()
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO, useUnmergedTree = true).performClick()
-        waitForPage(AiFeatureTestTags.PAGE_AUDIO_FILES)
-
-        // 历史入口 -> 会话历史
-        goHome()
-        composeRule.onNodeWithTag(HomeScreenTestTags.HISTORY_BUTTON, useUnmergedTree = true).performClick()
-        waitForPage(AiFeatureTestTags.PAGE_CHAT_HISTORY)
-
-        // 个人中心入口 -> 用户中心
-        goHome()
-        composeRule.onNodeWithTag(HomeScreenTestTags.PROFILE_BUTTON, useUnmergedTree = true).performClick()
-        waitForPage(AiFeatureTestTags.PAGE_USER_CENTER)
-
-    }
-
-    @Test
-    fun homeNavigationActions_switchTabs() {
-        forceDeviceDisconnected()
-        goHome()
-
-        // 未配网时点击设备 Banner 应跳到设备配网
-        composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_BANNER, useUnmergedTree = true).performClick()
-        waitForAnyTag(
-            composeRule,
-            AiFeatureTestTags.PAGE_DEVICE_SETUP,
-            DeviceSetupRouteTestTags.PAGE
-        )
-        goHome()
-
-        // 注入已连网状态后再次点击跳到设备文件
-        forceDeviceProvisioned()
-        composeRule.waitForIdle()
-        composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_BANNER, useUnmergedTree = true).performClick()
-        waitForPage(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
-        goHome()
-
-        // 音频摘要入口跳到音频库
-        composeRule.onNodeWithTag(HomeScreenTestTags.AUDIO_CARD, useUnmergedTree = true).performClick()
-        waitForPage(AiFeatureTestTags.PAGE_AUDIO_FILES)
-        goHome()
-
-        // 个人中心图标跳到用户中心
-        composeRule.onNodeWithTag(HomeScreenTestTags.PROFILE_BUTTON, useUnmergedTree = true).performClick()
-        waitForPage(AiFeatureTestTags.PAGE_USER_CENTER)
-        composeRule.onNodeWithText("设备管理", substring = true, useUnmergedTree = true).assertExists()
-        composeRule.onNodeWithText("订阅管理", substring = true, useUnmergedTree = true).assertExists()
-    }
-
-    @Test
-    fun deviceSetupCompletion_returnsHome() {
-        forceDeviceDisconnected()
-        goHome()
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE, useUnmergedTree = true).performClick()
-        waitForAnyTag(
-            composeRule,
-            AiFeatureTestTags.PAGE_DEVICE_SETUP,
-            AiFeatureTestTags.PAGE_DEVICE_MANAGER,
-            extraFallbackTags = arrayOf(AiFeatureTestTags.OVERLAY_DEVICE, AiFeatureTestTags.PAGE_HOME)
-        )
-
-        goHome()
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
     }
 
     @Test
@@ -220,8 +119,13 @@ class AiFeatureTestActivityTest {
     }
 
     private fun goHome() {
-        val clicked = clickIfExists(AiFeatureTestTags.OVERLAY_HOME)
-        if (!clicked) {
+        val backdropExists = runCatching {
+            composeRule.onAllNodesWithTag(AiFeatureTestTags.OVERLAY_BACKDROP, useUnmergedTree = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }.getOrDefault(false)
+        if (backdropExists) {
+            composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_BACKDROP, useUnmergedTree = true).performClick()
+        } else {
             composeRule.activityRule.scenario.onActivity {
                 it.onBackPressedDispatcher.onBackPressed()
             }
@@ -234,9 +138,7 @@ class AiFeatureTestActivityTest {
             composeRule,
             tag,
             HomeScreenTestTags.ROOT,
-            AiFeatureTestTags.OVERLAY_STACK,
             extraFallbackTags = arrayOf(
-                AiFeatureTestTags.OVERLAY_HOME,
                 AiFeatureTestTags.PAGE_CHAT_HISTORY,
                 AiFeatureTestTags.PAGE_USER_CENTER
             )
@@ -251,43 +153,12 @@ class AiFeatureTestActivityTest {
         }
     }
 
-    private fun forceDeviceDisconnected() {
-        updateConnectionState(ConnectionState.Disconnected)
-    }
-
-    private fun forceDeviceProvisioned() {
-        val session = BleSession.fromPeripheral(
-            BlePeripheral(
-                id = "mock-device",
-                name = "BT311 测试",
-                signalStrengthDbm = -55,
-                profileId = "bt311"
-            )
-        )
-        val status = ProvisioningStatus(
-            wifiSsid = "DemoWifi",
-            handshakeId = UUID.randomUUID().toString(),
-            credentialsHash = "hash-${UUID.randomUUID()}"
-        )
-        updateConnectionState(ConnectionState.WifiProvisioned(session, status))
-    }
-
-    private fun clickIfExists(tag: String): Boolean {
-        val exists = runCatching {
-            composeRule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
-        }.getOrDefault(false)
-        if (exists) {
-            composeRule.onNodeWithTag(tag, useUnmergedTree = true).performClick()
-        }
-        return exists
-    }
-
     private fun waitForHomeRendered() {
         val tags = listOf(
             AiFeatureTestTags.PAGE_HOME,
             HomeScreenTestTags.ROOT,
-            AiFeatureTestTags.OVERLAY_STACK,
-            AiFeatureTestTags.OVERLAY_HOME
+            AiFeatureTestTags.OVERLAY_AUDIO_HANDLE,
+            AiFeatureTestTags.OVERLAY_DEVICE_HANDLE
         )
         val start = SystemClock.uptimeMillis()
         while (SystemClock.uptimeMillis() - start < 60_000) {
@@ -305,22 +176,8 @@ class AiFeatureTestActivityTest {
             composeRule,
             AiFeatureTestTags.PAGE_HOME,
             HomeScreenTestTags.ROOT,
-            AiFeatureTestTags.OVERLAY_STACK,
-            extraFallbackTags = arrayOf(AiFeatureTestTags.OVERLAY_HOME),
+            extraFallbackTags = arrayOf(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE),
             timeoutMillis = 30_000
         )
-    }
-
-    private fun updateConnectionState(newState: ConnectionState) {
-        val impl = connectionManager
-        val field = impl.javaClass.getDeclaredField("_state")
-        field.isAccessible = true
-        val flow = field.get(impl)
-        if (flow is MutableStateFlow<*>) {
-            @Suppress("UNCHECKED_CAST")
-            (flow as MutableStateFlow<ConnectionState>).value = newState
-        } else {
-            throw IllegalStateException("Connection state field is not MutableStateFlow")
-        }
     }
 }

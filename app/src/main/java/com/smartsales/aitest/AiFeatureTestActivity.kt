@@ -227,7 +227,7 @@ private fun AiFeatureTestApp() {
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "新对话", style = MaterialTheme.typography.titleLarge)
+                    Text(text = titleForPage(currentPage), style = MaterialTheme.typography.titleLarge)
                     Spacer(modifier = Modifier.weight(1f))
                 }
             }
@@ -312,11 +312,15 @@ private fun AiFeatureTestApp() {
                                 }
 
                                 TestHomePage.DeviceManager -> {
-                                    DeviceManagerRoute(
+                                    Box(
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
-                                    )
+                                    ) {
+                                        DeviceManagerRoute(
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
                                 }
 
                                 TestHomePage.DeviceSetup -> {
@@ -329,28 +333,32 @@ private fun AiFeatureTestApp() {
                                 }
 
                                 TestHomePage.AudioFiles -> {
-                                    AudioFilesRoute(
+                                    Box(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES),
-                                        viewModel = audioFilesViewModel,
-                                        onAskAiAboutTranscript = { recordingId, fileName, jobId, preview, full ->
-                                            val resolvedJobId = jobId ?: "transcription-$recordingId"
-                                            val sessionId = "session-$resolvedJobId"
-                                            homeViewModel.onTranscriptionRequested(
-                                                TranscriptionChatRequest(
-                                                    jobId = resolvedJobId,
-                                                    fileName = fileName,
-                                                    recordingId = recordingId,
-                                                    sessionId = sessionId,
-                                                    transcriptPreview = preview,
-                                                    transcriptMarkdown = full
+                                            .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES)
+                                    ) {
+                                        AudioFilesRoute(
+                                            modifier = Modifier.fillMaxSize(),
+                                            viewModel = audioFilesViewModel,
+                                            onAskAiAboutTranscript = { recordingId, fileName, jobId, preview, full ->
+                                                val resolvedJobId = jobId ?: "transcription-$recordingId"
+                                                val sessionId = "session-$resolvedJobId"
+                                                homeViewModel.onTranscriptionRequested(
+                                                    TranscriptionChatRequest(
+                                                        jobId = resolvedJobId,
+                                                        fileName = fileName,
+                                                        recordingId = recordingId,
+                                                        sessionId = sessionId,
+                                                        transcriptPreview = preview,
+                                                        transcriptMarkdown = full
+                                                    )
                                                 )
-                                            )
-                                            pendingSessionId = sessionId
-                                            setPage(TestHomePage.Home)
-                                        }
-                                    )
+                                                pendingSessionId = sessionId
+                                                setPage(TestHomePage.Home)
+                                            }
+                                        )
+                                    }
                                 }
 
                                 TestHomePage.ChatHistory -> {
@@ -598,6 +606,16 @@ private fun overlayToPosition(overlay: HomeOverlay): Float = when (overlay) {
     HomeOverlay.Audio -> -1f
     HomeOverlay.Home -> 0f
     HomeOverlay.Device -> 1f
+}
+
+private fun titleForPage(page: TestHomePage): String = when (page) {
+    TestHomePage.Home -> "新对话"
+    TestHomePage.AudioFiles -> "录音文件"
+    TestHomePage.DeviceManager -> "设备管理"
+    TestHomePage.DeviceSetup -> "设备初始化"
+    TestHomePage.ChatHistory -> "聊天记录"
+    TestHomePage.UserCenter -> "用户中心"
+    TestHomePage.WifiBleTester -> "连接测试"
 }
 
 private enum class TestHomePage {

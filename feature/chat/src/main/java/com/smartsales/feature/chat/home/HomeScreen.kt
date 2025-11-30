@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -59,7 +60,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -198,6 +201,7 @@ fun HomeScreen(
         refreshingState.value = false
     }
     val coroutineScope = rememberCoroutineScope()
+    val clipboardManager = LocalClipboardManager.current
     val pullRefreshState = rememberPullRefreshState(
         refreshing = refreshingState.value,
         onRefresh = {
@@ -351,22 +355,28 @@ fun HomeScreen(
                                     )
                                 }
                             }
-                            itemsIndexed(state.chatMessages, key = { _, item -> item.id }) { index, message ->
-                                val isTranscriptSummary = message.role == ChatMessageRole.ASSISTANT &&
-                                    message.content.contains("通话分析")
-                                val tagModifier = if (message.role == ChatMessageRole.ASSISTANT &&
-                                    (index == state.chatMessages.lastIndex || isTranscriptSummary)
-                                ) {
-                                    Modifier.testTag(HomeScreenTestTags.ASSISTANT_MESSAGE)
-                                } else {
-                                    Modifier
+                    itemsIndexed(state.chatMessages, key = { _, item -> item.id }) { index, message ->
+                        val isTranscriptSummary = message.role == ChatMessageRole.ASSISTANT &&
+                            message.content.contains("通话分析")
+                        val tagModifier = if (message.role == ChatMessageRole.ASSISTANT &&
+                            (index == state.chatMessages.lastIndex || isTranscriptSummary)
+                        ) {
+                            Modifier.testTag(HomeScreenTestTags.ASSISTANT_MESSAGE)
+                        } else {
+                            Modifier
+                        }
+                        MessageBubble(
+                            message = message,
+                            alignEnd = message.role == ChatMessageRole.USER,
+                            modifier = tagModifier,
+                            onCopyAssistant = { content ->
+                                clipboardManager.setText(AnnotatedString(content))
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("已复制到剪贴板")
                                 }
-                                MessageBubble(
-                                    message = message,
-                                    alignEnd = message.role == ChatMessageRole.USER,
-                                    modifier = tagModifier
-                                )
                             }
+                        )
+                    }
                             item("chat-bottom-pad") {
                                 Spacer(modifier = Modifier.height(72.dp))
                             }
@@ -442,6 +452,7 @@ object HomeScreenTestTags {
     const val SESSION_TITLE = "home_session_title"
     const val USER_MESSAGE = "home_user_message"
     const val ASSISTANT_MESSAGE = "home_assistant_message"
+    const val ASSISTANT_COPY_PREFIX = "home_assistant_copy_"
     const val INPUT_FIELD = "home_input_field"
     const val SEND_BUTTON = "home_send_button"
     const val SCROLL_TO_LATEST = "home_scroll_to_latest_button"
@@ -687,7 +698,8 @@ private fun SessionListItem(
 private fun MessageBubble(
     message: ChatMessageUi,
     alignEnd: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onCopyAssistant: (String) -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -708,6 +720,23 @@ private fun MessageBubble(
             )
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
+                if (!alignEnd) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        IconButton(
+                            onClick = { onCopyAssistant(message.content) },
+                            modifier = Modifier.testTag("${HomeScreenTestTags.ASSISTANT_COPY_PREFIX}${message.id}")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.ContentCopy,
+                                contentDescription = "复制助手消息",
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                }
                 Text(text = message.content)
                 if (message.isStreaming) {
                     Text(

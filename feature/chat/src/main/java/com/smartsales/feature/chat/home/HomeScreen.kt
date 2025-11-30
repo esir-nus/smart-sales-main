@@ -306,11 +306,16 @@ fun HomeScreen(
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Text(
-                                        text = "你好，我是您的销售助手",
+                                        text = "你好，${state.userName}",
                                         style = MaterialTheme.typography.titleMedium
                                     )
                                     Text(
                                         text = "我可以帮您总结对话、分析异议、辅导话术、生成日报。",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "还没有对话，试着发送第一条消息吧。",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -323,23 +328,9 @@ fun HomeScreen(
                                     onSessionSelected = onSessionSelected
                                 )
                             }
-                            if (state.isLoadingHistory) {
-                                item("history-loading") {
-                                    Text(
-                                        text = "加载历史记录...",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 8.dp)
-                                    )
-                                }
-                            }
-                            item("empty") {
-                                if (state.sessionList.isEmpty()) {
+                            if (state.sessionList.isEmpty()) {
+                                item("empty-session") {
                                     EmptySessionHint(onNewChatClicked = onNewChatClicked)
-                                } else {
-                                    EmptyChatHint(userName = state.userName)
                                 }
                             }
                         } else {

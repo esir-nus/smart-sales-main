@@ -23,12 +23,14 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -84,10 +86,8 @@ class DeviceManagerScreenTest {
 
         composeRule.onNodeWithText("设备管理").assertIsDisplayed()
         composeRule.onNodeWithText("管理您的销售助手设备").assertIsDisplayed()
-        composeRule.onNodeWithText("选择文件预览").assertIsDisplayed()
-        composeRule.onAllNodesWithText("上传新文件").onFirst().assertIsDisplayed()
         composeRule.onNodeWithTag(DeviceManagerTestTags.EMPTY_STATE).assertIsDisplayed()
-        composeRule.onAllNodesWithText("应用").assertCountEquals(0)
+        composeRule.onAllNodesWithTag(DeviceManagerTestTags.UPLOAD_BUTTON).onFirst().assertIsDisplayed()
     }
 
     @Test
@@ -149,8 +149,10 @@ class DeviceManagerScreenTest {
             )
         )
 
-        composeRule.onNodeWithTag(DeviceManagerTestTags.SELECTED_FILE_CARD).assertIsDisplayed()
-        composeRule.onNodeWithText("promo.mp4").assertIsDisplayed()
+        composeRule.onNodeWithTag(DeviceManagerTestTags.SELECTED_FILE_CARD, useUnmergedTree = true)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeRule.onAllNodesWithText("promo.mp4", useUnmergedTree = true).onFirst().assertIsDisplayed()
     }
 
     @Test

@@ -70,6 +70,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.feature.chat.core.QuickSkillId
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -718,18 +719,33 @@ private fun MessageBubble(
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 if (!alignEnd) {
+                    var hasCopied by remember { mutableStateOf(false) }
+                    LaunchedEffect(hasCopied) {
+                        if (hasCopied) {
+                            delay(2_000)
+                            hasCopied = false
+                        }
+                    }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End
                     ) {
-                        IconButton(
-                            onClick = { onCopyAssistant(message.content) },
+                        TextButton(
+                            onClick = {
+                                onCopyAssistant(message.content)
+                                hasCopied = true
+                            },
                             modifier = Modifier.testTag("${HomeScreenTestTags.ASSISTANT_COPY_PREFIX}${message.id}")
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.ContentCopy,
-                                contentDescription = "复制助手消息",
+                                contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (hasCopied) "已复制" else "复制",
+                                style = MaterialTheme.typography.bodySmall
                             )
                         }
                     }

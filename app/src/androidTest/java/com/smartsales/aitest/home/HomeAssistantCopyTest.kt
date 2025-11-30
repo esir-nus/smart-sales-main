@@ -71,6 +71,9 @@ class HomeAssistantCopyTest {
             .assertIsDisplayed()
             .performClick()
 
+        composeRule.onNodeWithText("已复制", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.mainClock.advanceTimeBy(2_100)
+        composeRule.onNodeWithText("复制", useUnmergedTree = true).assertIsDisplayed()
         composeRule.onNodeWithText("已复制到剪贴板", substring = true, useUnmergedTree = true)
             .assertIsDisplayed()
     }

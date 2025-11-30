@@ -57,6 +57,7 @@ class UserCenterViewModelTest {
         assertEquals("tester@example.com", state.email)
         assertEquals(10, state.tokensRemaining)
         assertEquals(true, state.featureFlags["开关A"])
+        assertTrue(state.canLogout)
     }
 
     @Test
@@ -98,6 +99,7 @@ class UserCenterViewModelTest {
         advanceUntilIdle()
 
         assertTrue(event.await() is UserCenterEvent.Logout)
+        assertFalse(viewModel.uiState.value.canLogout)
     }
 
     private class FakeUserProfileRepository : UserProfileRepository {

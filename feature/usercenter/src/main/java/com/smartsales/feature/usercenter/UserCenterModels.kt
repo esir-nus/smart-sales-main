@@ -11,7 +11,8 @@ data class UserCenterUiState(
     val tokensRemaining: Int? = null,
     val featureFlags: Map<String, Boolean> = emptyMap(),
     val isSaving: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val canLogout: Boolean = false
 )
 
 sealed interface UserCenterEvent {

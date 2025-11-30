@@ -30,7 +30,10 @@ fun UserCenterRoute(
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
-                UserCenterEvent.Logout -> onLogout()
+                UserCenterEvent.Logout -> {
+                    viewModel.onLogoutConfirmed()
+                    onLogout()
+                }
             }
         }
     }

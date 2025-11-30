@@ -109,7 +109,8 @@ class UserCenterViewModel @Inject constructor(
                 tokensRemaining = profile.tokensRemaining,
                 featureFlags = LinkedHashMap(profile.featureFlags),
                 isSaving = false,
-                errorMessage = null
+                errorMessage = null,
+                canLogout = true
             )
         }
     }
@@ -121,4 +122,18 @@ class UserCenterViewModel @Inject constructor(
             tokensRemaining = tokensRemaining,
             featureFlags = LinkedHashMap(featureFlags)
         )
+
+    fun onLogoutConfirmed() {
+        _uiState.update {
+            it.copy(
+                userName = "",
+                email = "",
+                tokensRemaining = null,
+                featureFlags = emptyMap(),
+                canLogout = false,
+                errorMessage = null,
+                isSaving = false
+            )
+        }
+    }
 }

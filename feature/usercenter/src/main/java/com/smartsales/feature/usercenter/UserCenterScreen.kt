@@ -97,53 +97,6 @@ fun UserCenterScreen(
             )
             Spacer(modifier = Modifier.size(4.dp))
             ProfileHeader(userName = uiState.userName, email = uiState.email)
-            if (uiState.isSaving) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            }
-            uiState.errorMessage?.let { message ->
-                ErrorBanner(
-                    message = message,
-                    onDismiss = onErrorDismissed,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = MaterialTheme.shapes.large
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedTextField(
-                        value = uiState.userName,
-                        onValueChange = onUserNameChanged,
-                        label = { Text(text = "用户名") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = uiState.email,
-                        onValueChange = onEmailChanged,
-                        label = { Text(text = "邮箱") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Text(
-                        text = uiState.tokensRemaining?.let { "剩余 Tokens：$it" } ?: "剩余 Tokens：--",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            FeatureFlagCard(
-                flags = uiState.featureFlags,
-                onToggle = onToggleFeatureFlag,
-                modifier = Modifier.fillMaxWidth()
-            )
             ShortcutMenuCard(
                 onOpenDeviceManager = onOpenDeviceManager,
                 onOpenSubscription = onOpenSubscription,
@@ -151,22 +104,10 @@ fun UserCenterScreen(
                 onOpenGeneral = onOpenGeneral,
                 modifier = Modifier.fillMaxWidth()
             )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Button(
-                    onClick = onSaveClicked,
-                    enabled = !uiState.isSaving,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(Icons.Default.Save, contentDescription = null)
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(text = if (uiState.isSaving) "保存中..." else "保存")
-                }
+            if (uiState.canLogout) {
                 TextButton(
                     onClick = onLogoutClicked,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Default.Logout, contentDescription = null)
                     Spacer(modifier = Modifier.size(8.dp))

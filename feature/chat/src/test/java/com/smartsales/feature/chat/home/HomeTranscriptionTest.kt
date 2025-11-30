@@ -98,6 +98,23 @@ class HomeTranscriptionTest {
         )
     }
 
+    @Test
+    fun `transcription request injects intro and transcript context`() = runTest(dispatcher) {
+        viewModel.onTranscriptionRequested(
+            TranscriptionChatRequest(
+                jobId = "job-2",
+                fileName = "call-1.wav",
+                transcriptMarkdown = "## 内容\n- 要点"
+            )
+        )
+
+        advanceUntilIdle()
+
+        val messages = viewModel.uiState.value.chatMessages
+        assertTrue(messages.any { it.content.contains("通话分析") && it.content.contains("call-1.wav") })
+        assertTrue(messages.any { it.content.contains("已加载录音") && it.content.contains("要点") })
+    }
+
     private class FakeAiChatService : AiChatService {
         override fun streamChat(request: ChatRequest): Flow<ChatStreamEvent> = flowOf()
     }

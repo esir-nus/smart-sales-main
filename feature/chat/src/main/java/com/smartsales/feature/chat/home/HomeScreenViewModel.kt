@@ -304,7 +304,7 @@ class HomeScreenViewModel @Inject constructor(
             val introMessage = ChatMessageUi(
                 id = nextMessageId(),
                 role = ChatMessageRole.ASSISTANT,
-                content = "通话分析 · 已为你加载录音 ${request.fileName}，直接提问即可。",
+                content = "通话分析 · 已为你加载录音 ${request.fileName} 的转写内容，我可以帮你总结对话、提炼要点或生成跟进话术。",
                 timestampMillis = System.currentTimeMillis()
             )
             _uiState.update { state ->
@@ -827,9 +827,7 @@ class HomeScreenViewModel @Inject constructor(
 
         private fun buildTranscriptContext(fileName: String, transcript: String): String {
             return buildString {
-                append("通话分析 · ").append(fileName).append("\n")
-                append("你是一名销售助理。以下是通话记录，请帮我分析、总结或提出行动建议。\n")
-                append("文件：").append(fileName).append("\n")
+                append("已加载录音 ").append(fileName).append(" 的转写内容。以下为通话文本，结合上下文回答用户问题：\n")
                 append(transcript)
             }
         }

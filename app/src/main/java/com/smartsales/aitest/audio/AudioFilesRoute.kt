@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import android.app.ActivityManager
+import com.smartsales.aitest.BuildConfig
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.feature.media.audio.AudioFilesScreen
@@ -24,7 +25,7 @@ fun AudioFilesRoute(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
-        if (ActivityManager.isRunningInTestHarness()) {
+        if (ActivityManager.isRunningInTestHarness() || BuildConfig.DEBUG) {
             viewModel.seedDemoDataIfEmpty()
         }
     }

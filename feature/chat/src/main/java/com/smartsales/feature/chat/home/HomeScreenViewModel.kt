@@ -120,6 +120,7 @@ data class HomeUiState(
     val inputText: String = "",
     val isSending: Boolean = false,
     val isStreaming: Boolean = false,
+    val isInputBusy: Boolean = false,
     val isLoadingHistory: Boolean = false,
     val quickSkills: List<QuickSkillUi> = emptyList(),
     val selectedSkill: QuickSkillUi? = null,
@@ -560,6 +561,7 @@ class HomeScreenViewModel @Inject constructor(
             inputText = "",
             isSending = true,
             isStreaming = true,
+            isInputBusy = true,
             snackbarMessage = null
         )
         _uiState.value = newState
@@ -587,7 +589,7 @@ class HomeScreenViewModel @Inject constructor(
                         updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
                             msg.copy(content = event.fullText, isStreaming = false)
                         }
-                        _uiState.update { it.copy(isSending = false, isStreaming = false) }
+                        _uiState.update { it.copy(isSending = false, isStreaming = false, isInputBusy = false) }
                         viewModelScope.launch {
                             updateSessionSummary(event.fullText)
                             applySessionList()
@@ -602,6 +604,7 @@ class HomeScreenViewModel @Inject constructor(
                             it.copy(
                                 isSending = false,
                                 isStreaming = false,
+                                isInputBusy = false,
                                 chatErrorMessage = event.throwable.message ?: "AI 回复失败"
                             )
                         }

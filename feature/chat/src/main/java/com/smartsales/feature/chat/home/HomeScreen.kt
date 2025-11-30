@@ -258,7 +258,9 @@ fun HomeScreen(
             HomeInputArea(
                 quickSkills = state.quickSkills,
                 selectedSkill = state.selectedSkill,
-                enabled = !state.isSending && !state.isStreaming,
+                enabled = !state.isSending && !state.isStreaming
+                    && !state.isInputBusy,
+                busy = state.isInputBusy,
                 inputValue = state.inputText,
                 onInputChanged = onInputChanged,
                 onSendClicked = onSendClicked,
@@ -809,6 +811,7 @@ private fun HomeInputArea(
     quickSkills: List<QuickSkillUi>,
     selectedSkill: QuickSkillUi?,
     enabled: Boolean,
+    busy: Boolean,
     inputValue: String,
     onInputChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
@@ -827,7 +830,7 @@ private fun HomeInputArea(
         QuickSkillRow(
             skills = quickSkills,
             selectedSkillId = selectedSkill?.id,
-            enabled = enabled,
+            enabled = enabled && !busy,
             onQuickSkillSelected = onQuickSkillSelected
         )
         OutlinedTextField(
@@ -836,21 +839,21 @@ private fun HomeInputArea(
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag(HomeScreenTestTags.INPUT_FIELD),
-                label = { Text(text = "上传文件或输入消息...") },
-                enabled = enabled
-            )
+            label = { Text(text = "上传文件或输入消息...") },
+            enabled = enabled
+        )
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+            horizontalArrangement = Arrangement.End
+        ) {
+            TextButton(
+                onClick = onSendClicked,
+                enabled = inputValue.isNotBlank() && enabled && !busy,
+                modifier = Modifier.testTag(HomeScreenTestTags.SEND_BUTTON)
             ) {
-                TextButton(
-                    onClick = onSendClicked,
-                    enabled = inputValue.isNotBlank() && enabled,
-                    modifier = Modifier.testTag(HomeScreenTestTags.SEND_BUTTON)
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "发送")
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "发送")
+                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = if (busy) "发送中" else "发送")
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(text = if (busy) "发送中..." else "发送")
                 }
             }
         }

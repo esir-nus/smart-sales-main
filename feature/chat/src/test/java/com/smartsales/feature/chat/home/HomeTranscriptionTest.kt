@@ -40,6 +40,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
 
@@ -96,6 +97,7 @@ class HomeTranscriptionTest {
         assertTrue(
             viewModel.uiState.value.chatMessages.any { it.content.contains("## 转写结果") }
         )
+        assertFalse(viewModel.uiState.value.isInputBusy)
     }
 
     @Test

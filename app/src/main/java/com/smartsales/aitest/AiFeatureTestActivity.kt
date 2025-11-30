@@ -221,10 +221,15 @@ private fun AiFeatureTestApp() {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = titleForPage(currentPage), style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        text = titleForPage(currentPage),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                     Spacer(modifier = Modifier.weight(1f))
                 }
             }
@@ -364,6 +369,7 @@ private fun AiFeatureTestApp() {
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .testTag(AiFeatureTestTags.PAGE_CHAT_HISTORY),
+                                        onBackClick = { goHome() },
                                         onSessionSelected = { sessionId ->
                                             pendingSessionId = sessionId
                                             goHome()

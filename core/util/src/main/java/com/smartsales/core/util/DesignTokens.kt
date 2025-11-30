@@ -31,16 +31,16 @@ data class DesignTokens(
 object AppDesignTokens {
     @Composable
     fun current(): DesignTokens = DesignTokens(
-        mutedSurface = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.08f),
-        cardShape = MaterialTheme.shapes.large,
-        cardBorder = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        cardElevation = 4.dp,
+        mutedSurface = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f),
+        cardShape = MaterialTheme.shapes.extraLarge,
+        cardBorder = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        cardElevation = 6.dp,
         ctaGradient = listOf(
             MaterialTheme.colorScheme.primary,
             MaterialTheme.colorScheme.primary.copy(alpha = 0.82f)
         ),
-        overlayRailWidth = 68.dp,
-        overlayHandleSize = DpSize(28.dp, 3.dp),
+        overlayRailWidth = 72.dp,
+        overlayHandleSize = DpSize(32.dp, 4.dp),
         overlayHandleColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
     )
 }

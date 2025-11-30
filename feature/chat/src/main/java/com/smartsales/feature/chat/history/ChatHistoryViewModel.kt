@@ -8,6 +8,7 @@ import com.smartsales.feature.chat.AiSessionRepository
 import com.smartsales.feature.chat.AiSessionSummary
 import javax.inject.Inject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import androidx.annotation.VisibleForTesting
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -55,6 +56,7 @@ class ChatHistoryViewModel @Inject constructor(
     private val chatHistoryRepository: ChatHistoryRepository
 ) : ViewModel() {
 
+    private var nowProvider: () -> Long = { System.currentTimeMillis() }
     private val _uiState = MutableStateFlow(ChatHistoryUiState(isLoading = true))
     val uiState: StateFlow<ChatHistoryUiState> = _uiState.asStateFlow()
 
@@ -84,10 +86,7 @@ class ChatHistoryViewModel @Inject constructor(
                 _uiState.update { it.copy(errorMessage = "会话不存在") }
                 return@launch
             }
-            val updated = session.copy(
-                title = newTitle,
-                updatedAtMillis = System.currentTimeMillis()
-            )
+            val updated = session.copy(title = newTitle)
             safeUpsert(updated)
         }
     }
@@ -111,16 +110,19 @@ class ChatHistoryViewModel @Inject constructor(
                 _uiState.update { it.copy(errorMessage = "会话不存在") }
                 return@launch
             }
-            val updated = session.copy(
-                pinned = !session.pinned,
-                updatedAtMillis = System.currentTimeMillis()
-            )
+            val updated = session.copy(pinned = !session.pinned)
             safeUpsert(updated)
         }
     }
 
     fun onDismissError() {
         _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    @VisibleForTesting
+    fun overrideNowProvider(provider: () -> Long) {
+        nowProvider = provider
+        viewModelScope.launch { refreshFromRepo() }
     }
 
     private fun observeSessions() {
@@ -133,15 +135,14 @@ class ChatHistoryViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false, errorMessage = error.message) }
                 }
                 .collectLatest { summaries ->
-                    applySessions(summaries)
+                    applySessions(summaries, nowProvider.invoke())
                 }
         }
     }
 
-    private fun applySessions(summaries: List<AiSessionSummary>) {
-        val now = System.currentTimeMillis()
+    private fun applySessions(summaries: List<AiSessionSummary>, nowMillis: Long) {
         val sessions = summaries.toUiModels()
-        val grouped = sessions.groupByBucket(now).map { (label, items) ->
+        val grouped = sessions.groupByBucket(nowMillis).map { (label, items) ->
             ChatHistoryGroupUi(
                 label = label,
                 items = items
@@ -168,11 +169,13 @@ class ChatHistoryViewModel @Inject constructor(
     }
 
     private fun List<ChatSessionUi>.groupByBucket(nowMillis: Long): Map<String, List<ChatSessionUi>> {
+        val sevenDays = 7L * 24 * 60 * 60 * 1000
+        val thirtyDays = 30L * 24 * 60 * 60 * 1000
         return this.groupBy { session ->
-            val days = ((nowMillis - session.updatedAt) / 86_400_000L).coerceAtLeast(0)
+            val diff = (nowMillis - session.updatedAt).coerceAtLeast(0)
             when {
-                days <= 7 -> "7天内"
-                days <= 30 -> "30天内"
+                diff <= sevenDays -> "7天内"
+                diff <= thirtyDays -> "30天内"
                 else -> "更早"
             }
         }.filterValues { it.isNotEmpty() }
@@ -189,7 +192,7 @@ class ChatHistoryViewModel @Inject constructor(
 
     private suspend fun refreshFromRepo() {
         runCatching { aiSessionRepository.summaries.first() }
-            .onSuccess { applySessions(it) }
+            .onSuccess { applySessions(it, nowProvider.invoke()) }
             .onFailure { error ->
                 Log.w(TAG, "刷新会话列表失败", error)
                 _uiState.update { it.copy(errorMessage = error.message ?: "刷新失败") }

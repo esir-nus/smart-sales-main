@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -42,6 +43,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -692,25 +694,30 @@ private fun MessageBubble(
     modifier: Modifier = Modifier,
     onCopyAssistant: (String) -> Unit = {}
 ) {
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp)
-            .then(
-                if (alignEnd) Modifier.testTag(HomeScreenTestTags.USER_MESSAGE) else modifier
-            ),
-        horizontalArrangement = if (alignEnd) Arrangement.End else Arrangement.Start
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .then(if (alignEnd) Modifier.testTag(HomeScreenTestTags.USER_MESSAGE) else modifier),
+        contentAlignment = if (alignEnd) Alignment.CenterEnd else Alignment.CenterStart
     ) {
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = if (alignEnd) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.secondaryContainer
-                }
-            )
+        val shape = if (alignEnd) {
+            RoundedCornerShape(topStart = 16.dp, topEnd = 2.dp, bottomEnd = 16.dp, bottomStart = 16.dp)
+        } else {
+            RoundedCornerShape(topStart = 2.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 16.dp)
+        }
+        Surface(
+            modifier = Modifier.fillMaxWidth(0.88f),
+            shape = shape,
+            tonalElevation = 2.dp,
+            shadowElevation = 2.dp,
+            color = if (alignEnd) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
                 if (!alignEnd) {
                     var hasCopied by remember { mutableStateOf(false) }
                     LaunchedEffect(hasCopied) {
@@ -733,7 +740,7 @@ private fun MessageBubble(
                             Icon(
                                 imageVector = Icons.Filled.ContentCopy,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
@@ -743,8 +750,13 @@ private fun MessageBubble(
                         }
                     }
                 }
-                Text(text = message.content)
+                Text(
+                    text = message.content,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
                 if (message.isStreaming) {
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = "AI 回复中...",
                         style = MaterialTheme.typography.bodySmall,
@@ -752,6 +764,7 @@ private fun MessageBubble(
                     )
                 }
                 if (message.hasError) {
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = "发送失败，稍后重试",
                         style = MaterialTheme.typography.bodySmall,
@@ -817,8 +830,8 @@ private fun HomeInputArea(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             QuickSkillRow(
                 skills = quickSkills,
@@ -832,8 +845,17 @@ private fun HomeInputArea(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag(HomeScreenTestTags.INPUT_FIELD),
-                label = { Text(text = "上传文件或输入消息...") },
-                enabled = enabled
+                placeholder = { Text(text = "输入消息或粘贴转写片段…") },
+                shape = MaterialTheme.shapes.large,
+                enabled = enabled,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
+                ),
+                singleLine = false,
+                minLines = 2
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -907,8 +929,8 @@ private fun QuickSkillRow(
 ) {
     if (skills.isEmpty()) return
     LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(horizontal = 4.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(horizontal = 6.dp)
     ) {
         items(skills, key = { it.id }) { skill ->
             val skillTag = "home_quick_skill_${skill.id}"
@@ -931,7 +953,9 @@ private fun QuickSkillRow(
                 AssistChip(
                     onClick = { onQuickSkillSelected(skill.id) },
                     enabled = enabled,
-                    modifier = Modifier.testTag(skillTag),
+                    modifier = Modifier
+                        .testTag(skillTag)
+                        .padding(vertical = 2.dp),
                     label = {
                         Text(
                             text = skill.label,

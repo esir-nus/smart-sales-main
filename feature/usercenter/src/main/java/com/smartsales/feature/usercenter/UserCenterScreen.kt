@@ -111,14 +111,18 @@ private fun ProfileHeader(
 ) {
     val resolvedName = if (isGuest) "访客用户" else displayName.ifBlank { "访客用户" }
     val resolvedEmail = if (isGuest) "请登录以管理账户" else email.ifBlank { "邮箱未填写" }
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface, shape = MaterialTheme.shapes.large)
-            .padding(vertical = 20.dp, horizontal = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 22.dp, horizontal = 18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
         Box(
             modifier = Modifier
                 .size(76.dp)
@@ -153,6 +157,7 @@ private fun ProfileHeader(
             }
         }
     }
+    }
 }
 
 @Composable
@@ -165,7 +170,9 @@ private fun ShortcutMenuCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = MaterialTheme.shapes.extraLarge,
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
     ) {
         Column(
             modifier = Modifier

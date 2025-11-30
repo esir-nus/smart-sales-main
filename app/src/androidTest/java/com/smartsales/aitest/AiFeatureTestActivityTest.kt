@@ -137,9 +137,21 @@ class AiFeatureTestActivityTest {
         composeRule.activityRule.scenario.onActivity {
             it.onBackPressedDispatcher.onBackPressed()
         }
+        waitForHomeRendered()
 
         composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE_HANDLE, useUnmergedTree = true).performClick()
         assertSingleTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
+        composeRule.activityRule.scenario.onActivity {
+            it.onBackPressedDispatcher.onBackPressed()
+        }
+        waitForHomeRendered()
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.HISTORY_TOGGLE, useUnmergedTree = true).performClick()
+        assertSingleTag(AiFeatureTestTags.PAGE_CHAT_HISTORY)
+        composeRule.activityRule.scenario.onActivity {
+            it.onBackPressedDispatcher.onBackPressed()
+        }
+        waitForHomeRendered()
     }
 
     private fun goHome() {

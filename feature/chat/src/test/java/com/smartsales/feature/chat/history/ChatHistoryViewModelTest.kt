@@ -3,7 +3,6 @@ package com.smartsales.feature.chat.history
 import com.smartsales.feature.chat.AiSessionRepository
 import com.smartsales.feature.chat.AiSessionSummary
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.emitAll
@@ -32,6 +31,7 @@ class ChatHistoryViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val sessionRepository = FakeAiSessionRepository()
     private val historyRepository = FakeChatHistoryRepository()
+    private val fixedNow = 40L * 24 * 60 * 60 * 1000 // 40 天标尺，方便分桶
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
@@ -46,22 +46,43 @@ class ChatHistoryViewModelTest {
     fun loadSessions_sortsPinnedAndLatest() = runTest(dispatcher) {
         sessionRepository.seed(
             listOf(
-                summary(id = "s1", updated = 1_000),
-                summary(id = "s2", updated = 2_000, pinned = true),
-                summary(id = "s3", updated = 3_000)
+                summary(id = "s1", updated = fixedNow - dayMillis(10)),
+                summary(id = "s2", updated = fixedNow - dayMillis(1), pinned = true),
+                summary(id = "s3", updated = fixedNow - dayMillis(2))
             )
         )
         val viewModel = buildViewModel()
-
+        viewModel.overrideNowProvider { fixedNow }
         advanceUntilIdle()
         val sessions = viewModel.uiState.value.groups.flatMap { it.items }
         assertEquals(listOf("s2", "s3", "s1"), sessions.map { it.id })
     }
 
     @Test
-    fun onSessionClicked_emitsNavigation() = runTest(dispatcher) {
-        sessionRepository.seed(listOf(summary("s1", 1000)))
+    fun grouping_placesSessionsIntoBuckets() = runTest(dispatcher) {
+        sessionRepository.seed(
+            listOf(
+                summary(id = "week", updated = fixedNow - dayMillis(2)),
+                summary(id = "month", updated = fixedNow - dayMillis(20)),
+                summary(id = "older", updated = fixedNow - dayMillis(35))
+            )
+        )
         val viewModel = buildViewModel()
+        viewModel.overrideNowProvider { fixedNow }
+
+        advanceUntilIdle()
+        val groups = viewModel.uiState.value.groups
+        assertEquals(listOf("7天内", "30天内", "更早"), groups.map { it.label })
+        assertEquals(listOf("week"), groups[0].items.map { it.id })
+        assertEquals(listOf("month"), groups[1].items.map { it.id })
+        assertEquals(listOf("older"), groups[2].items.map { it.id })
+    }
+
+    @Test
+    fun onSessionClicked_emitsNavigation() = runTest(dispatcher) {
+        sessionRepository.seed(listOf(summary("s1", fixedNow)))
+        val viewModel = buildViewModel()
+        viewModel.overrideNowProvider { fixedNow }
         advanceUntilIdle()
 
         viewModel.onSessionClicked("s1")
@@ -71,8 +92,9 @@ class ChatHistoryViewModelTest {
 
     @Test
     fun rename_updatesSessionTitle() = runTest(dispatcher) {
-        sessionRepository.seed(listOf(summary("s1", 1000, title = "old")))
+        sessionRepository.seed(listOf(summary("s1", fixedNow, title = "old")))
         val viewModel = buildViewModel()
+        viewModel.overrideNowProvider { fixedNow }
         advanceUntilIdle()
 
         viewModel.onRenameSession("s1", "new")
@@ -84,8 +106,9 @@ class ChatHistoryViewModelTest {
 
     @Test
     fun delete_removesSession() = runTest(dispatcher) {
-        sessionRepository.seed(listOf(summary("s1", 1000)))
+        sessionRepository.seed(listOf(summary("s1", fixedNow)))
         val viewModel = buildViewModel()
+        viewModel.overrideNowProvider { fixedNow }
         advanceUntilIdle()
 
         viewModel.onDeleteSession("s1")
@@ -99,11 +122,12 @@ class ChatHistoryViewModelTest {
     fun pinToggle_reordersSessions() = runTest(dispatcher) {
         sessionRepository.seed(
             listOf(
-                summary("s1", 1000),
-                summary("s2", 2000)
+                summary("s1", fixedNow - dayMillis(1)),
+                summary("s2", fixedNow - dayMillis(2))
             )
         )
         val viewModel = buildViewModel()
+        viewModel.overrideNowProvider { fixedNow }
         advanceUntilIdle()
 
         viewModel.onPinToggle("s1")
@@ -125,7 +149,11 @@ class ChatHistoryViewModelTest {
     }
 
     private fun buildViewModel(): ChatHistoryViewModel =
-        ChatHistoryViewModel(sessionRepository, historyRepository)
+        ChatHistoryViewModel(sessionRepository, historyRepository).also {
+            it.overrideNowProvider { fixedNow }
+        }
+
+    private fun dayMillis(days: Long): Long = days * 24 * 60 * 60 * 1000
 
     private fun summary(
         id: String,

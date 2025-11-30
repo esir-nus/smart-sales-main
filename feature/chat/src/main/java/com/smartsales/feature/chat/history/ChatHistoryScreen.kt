@@ -18,7 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.AlertDialog
@@ -35,6 +36,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,6 +51,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.flow.collectLatest
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/history/ChatHistoryScreen.kt
@@ -72,7 +77,8 @@ object ChatHistoryTestTags {
 fun ChatHistoryRoute(
     modifier: Modifier = Modifier,
     viewModel: ChatHistoryViewModel = hiltViewModel(),
-    onSessionSelected: (String) -> Unit
+    onSessionSelected: (String) -> Unit,
+    onBackClick: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -94,7 +100,7 @@ fun ChatHistoryRoute(
 
     ChatHistoryScreen(
         state = state,
-        onRefresh = viewModel::loadSessions,
+        onBackClick = onBackClick,
         onSessionClicked = { sessionId ->
             // 保留 ViewModel 逻辑，再直接通知宿主回到 Home 打开该会话
             viewModel.onSessionClicked(sessionId)
@@ -112,12 +118,13 @@ fun ChatHistoryRoute(
 @Composable
 fun ChatHistoryScreen(
     state: ChatHistoryUiState,
-    onRefresh: () -> Unit,
+    onBackClick: () -> Unit,
     onSessionClicked: (String) -> Unit,
     onRenameSession: (String, String) -> Unit,
     onDeleteSession: (String) -> Unit,
     onPinToggle: (String) -> Unit,
     onDismissError: () -> Unit,
+    onSearchClick: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     modifier: Modifier = Modifier
 ) {
@@ -131,18 +138,25 @@ fun ChatHistoryScreen(
             .testTag(ChatHistoryTestTags.PAGE),
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = "聊天记录", style = MaterialTheme.typography.titleLarge)
-                IconButton(onClick = onRefresh) {
-                    Icon(Icons.Default.Refresh, contentDescription = "刷新")
+            TopAppBar(
+                title = { Text(text = "聊天记录") },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "返回"
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onSearchClick) {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = "搜索（占位，无动作）"
+                        )
+                    }
                 }
-            }
+            )
         }
     ) { innerPadding ->
         Column(
@@ -213,7 +227,7 @@ fun ChatHistoryScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 SheetAction(
-                    label = if (session.pinned) "取消置顶" else "置顶到顶部",
+                    label = if (session.pinned) "取消置顶" else "置顶会话",
                     modifier = Modifier.testTag(ChatHistoryTestTags.SHEET_PIN),
                     onClick = {
                         onPinToggle(session.id)
@@ -221,7 +235,7 @@ fun ChatHistoryScreen(
                     }
                 )
                 SheetAction(
-                    label = "重命名会话",
+                    label = "重命名",
                     modifier = Modifier.testTag(ChatHistoryTestTags.SHEET_RENAME),
                     onClick = {
                         sheetSession = null
@@ -230,7 +244,7 @@ fun ChatHistoryScreen(
                     }
                 )
                 SheetAction(
-                    label = "删除并清除消息",
+                    label = "删除",
                     modifier = Modifier.testTag(ChatHistoryTestTags.SHEET_DELETE),
                     onClick = {
                         onDeleteSession(session.id)
@@ -314,9 +328,12 @@ private fun ChatHistoryItem(
                 onClick = onClick,
                 onLongClick = onLongPress
             ),
-        tonalElevation = 2.dp
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = 2.dp,
+        shadowElevation = 1.dp,
+        color = MaterialTheme.colorScheme.surface
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Start,
@@ -351,6 +368,12 @@ private fun ChatHistoryItem(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
+                    Spacer(modifier = Modifier.size(2.dp))
+                    Text(
+                        text = formatDate(session.updatedAt),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
             HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
@@ -373,4 +396,9 @@ private fun SheetAction(
             style = MaterialTheme.typography.bodyLarge
         )
     }
+}
+
+private fun formatDate(timestamp: Long): String {
+    val formatter = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
+    return formatter.format(Date(timestamp))
 }

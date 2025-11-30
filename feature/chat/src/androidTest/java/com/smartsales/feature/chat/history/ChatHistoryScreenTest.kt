@@ -3,7 +3,6 @@ package com.smartsales.feature.chat.history
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -13,7 +12,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performTextInput
-import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextReplacement
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -35,17 +34,22 @@ class ChatHistoryScreenTest {
             MaterialTheme {
                 ChatHistoryScreen(
                     state = ChatHistoryUiState(
-                        sessions = listOf(
-                            ChatSessionUi(
-                                id = "s1",
-                                title = "会话一",
-                                lastMessagePreview = "最近一条消息",
-                                updatedAt = 1_000,
-                                pinned = false
+                        groups = listOf(
+                            ChatHistoryGroupUi(
+                                label = "7天内",
+                                items = listOf(
+                                    ChatSessionUi(
+                                        id = "s1",
+                                        title = "会话一",
+                                        lastMessagePreview = "最近一条消息",
+                                        updatedAt = 1_000,
+                                        pinned = false
+                                    )
+                                )
                             )
                         )
                     ),
-                    onRefresh = {},
+                    onBackClick = {},
                     onSessionClicked = { clicked = it },
                     onRenameSession = { _, _ -> },
                     onDeleteSession = {},
@@ -67,7 +71,7 @@ class ChatHistoryScreenTest {
             MaterialTheme {
                 ChatHistoryScreen(
                     state = ChatHistoryUiState(),
-                    onRefresh = {},
+                    onBackClick = {},
                     onSessionClicked = {},
                     onRenameSession = { _, _ -> },
                     onDeleteSession = {},
@@ -93,7 +97,7 @@ class ChatHistoryScreenTest {
                 }
                 ChatHistoryScreen(
                     state = state.value,
-                    onRefresh = {},
+                    onBackClick = {},
                     onSessionClicked = {},
                     onRenameSession = { _, _ -> },
                     onDeleteSession = {},
@@ -115,17 +119,22 @@ class ChatHistoryScreenTest {
             MaterialTheme {
                 ChatHistoryScreen(
                     state = ChatHistoryUiState(
-                        sessions = listOf(
-                            ChatSessionUi(
-                                id = "s1",
-                                title = "会话一",
-                                lastMessagePreview = "最近一条消息",
-                                updatedAt = 1_000,
-                                pinned = false
+                        groups = listOf(
+                            ChatHistoryGroupUi(
+                                label = "7天内",
+                                items = listOf(
+                                    ChatSessionUi(
+                                        id = "s1",
+                                        title = "会话一",
+                                        lastMessagePreview = "最近一条消息",
+                                        updatedAt = 1_000,
+                                        pinned = false
+                                    )
+                                )
                             )
                         )
                     ),
-                    onRefresh = {},
+                    onBackClick = {},
                     onSessionClicked = {},
                     onRenameSession = { _, _ -> },
                     onDeleteSession = {},
@@ -151,17 +160,22 @@ class ChatHistoryScreenTest {
             MaterialTheme {
                 ChatHistoryScreen(
                     state = ChatHistoryUiState(
-                        sessions = listOf(
-                            ChatSessionUi(
-                                id = "s1",
-                                title = "会话一",
-                                lastMessagePreview = "最近一条消息",
-                                updatedAt = 1_000,
-                                pinned = false
+                        groups = listOf(
+                            ChatHistoryGroupUi(
+                                label = "7天内",
+                                items = listOf(
+                                    ChatSessionUi(
+                                        id = "s1",
+                                        title = "会话一",
+                                        lastMessagePreview = "最近一条消息",
+                                        updatedAt = 1_000,
+                                        pinned = false
+                                    )
+                                )
                             )
                         )
                     ),
-                    onRefresh = {},
+                    onBackClick = {},
                     onSessionClicked = {},
                     onRenameSession = { id, title -> renamed = id to title },
                     onDeleteSession = { deleted = it },
@@ -174,7 +188,7 @@ class ChatHistoryScreenTest {
         composeRule.onNodeWithTag(ChatHistoryTestTags.item("s1"))
             .performTouchInput { longClick() }
         composeRule.onNodeWithTag(ChatHistoryTestTags.SHEET_RENAME).performClick()
-        composeRule.onNodeWithText("标题").performTextInput("新标题")
+        composeRule.onNodeWithText("标题").performTextReplacement("新标题")
         composeRule.onNodeWithText("保存标题").performClick()
         assertEquals("s1" to "新标题", renamed)
 

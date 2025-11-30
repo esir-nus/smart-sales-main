@@ -18,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
  * 设计 token，用于保持多模块视觉一致。
  */
 data class DesignTokens(
+    val appBackground: Color,
     val mutedSurface: Color,
     val cardShape: Shape,
     val cardBorder: Color,
@@ -31,7 +32,8 @@ data class DesignTokens(
 object AppDesignTokens {
     @Composable
     fun current(): DesignTokens = DesignTokens(
-        mutedSurface = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f),
+        appBackground = Color(0xFFF2F2F7),
+        mutedSurface = Color(0xFFF2F2F7),
         cardShape = MaterialTheme.shapes.extraLarge,
         cardBorder = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
         cardElevation = 6.dp,
@@ -39,7 +41,7 @@ object AppDesignTokens {
             MaterialTheme.colorScheme.primary,
             MaterialTheme.colorScheme.primary.copy(alpha = 0.82f)
         ),
-        overlayRailWidth = 72.dp,
+        overlayRailWidth = 60.dp,
         overlayHandleSize = DpSize(32.dp, 4.dp),
         overlayHandleColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
     )

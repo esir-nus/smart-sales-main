@@ -14,6 +14,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -46,6 +47,7 @@ import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -212,32 +214,42 @@ private fun AiFeatureTestApp() {
     }
 
     MaterialTheme {
+        val designTokens = AppDesignTokens.current()
         val showSnackbar: (String) -> Unit = { message ->
             scope.launch { snackbarHostState.showSnackbar(message) }
         }
         Scaffold(
+            containerColor = designTokens.appBackground,
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
             topBar = {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 2.dp
                 ) {
-                    Text(
-                        text = titleForPage(currentPage),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = titleForPage(currentPage),
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                        Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                    }
                 }
             }
         ) { innerPadding ->
             Surface(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
+                    .padding(innerPadding),
+                color = designTokens.appBackground
             ) {
         Row(
             modifier = Modifier
@@ -262,17 +274,6 @@ private fun AiFeatureTestApp() {
                     .weight(1f)
                     .fillMaxHeight()
             ) {
-                        PageSelector(
-                            currentPage = currentPage,
-                            onPageSelected = { page ->
-                                when (page) {
-                                    TestHomePage.DeviceManager -> openDeviceSection()
-                                    TestHomePage.DeviceSetup -> openDeviceSection(forceSetup = true)
-                                    else -> setPage(page)
-                                }
-                            }
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
                         Box(
                             modifier = Modifier
                                 .weight(1f)
@@ -444,26 +445,23 @@ private fun DraggableOverlayStack(
         modifier = modifier
             .width(designTokens.overlayRailWidth)
             .fillMaxHeight()
-            .background(
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                shape = MaterialTheme.shapes.large
-            )
-            .padding(vertical = 8.dp)
             .draggable(
                 state = dragState,
                 orientation = Orientation.Vertical,
                 onDragStopped = { velocity -> settle(velocity) }
             )
             .testTag(AiFeatureTestTags.OVERLAY_STACK),
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
-        shape = MaterialTheme.shapes.large
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+        tonalElevation = 2.dp,
+        shadowElevation = 2.dp,
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(1.dp, designTokens.cardBorder)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(vertical = 16.dp, horizontal = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(vertical = 12.dp, horizontal = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             OverlayCard(
@@ -514,7 +512,7 @@ private fun OverlayCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .sizeIn(minWidth = 64.dp, minHeight = 72.dp)
+            .sizeIn(minWidth = 56.dp, minHeight = 64.dp)
             .graphicsLayer(
                 scaleX = scale * pressedScale,
                 scaleY = scale * pressedScale
@@ -523,6 +521,8 @@ private fun OverlayCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(1.dp, designTokens.cardBorder),
         elevation = CardDefaults.cardElevation(elevation),
         onClick = onClick,
         interactionSource = interactionSource
@@ -530,7 +530,7 @@ private fun OverlayCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp, horizontal = 6.dp),
+                .padding(vertical = 10.dp, horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
@@ -550,52 +550,6 @@ private fun OverlayCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-    }
-}
-
-@Composable
-@Suppress("UNUSED_PARAMETER")
-private fun PageSelector(currentPage: TestHomePage, onPageSelected: (TestHomePage) -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                shape = MaterialTheme.shapes.medium
-            )
-            .padding(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = "快速导航",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 4.dp)
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            val pages = listOf(
-                TestHomePage.Home to "Home",
-                TestHomePage.AudioFiles to "音频库",
-                TestHomePage.DeviceManager to "设备",
-                TestHomePage.ChatHistory to "历史",
-                TestHomePage.UserCenter to "个人"
-            )
-            pages.forEach { (page, label) ->
-                val selected = page == currentPage
-                AssistChip(
-                    onClick = { onPageSelected(page) },
-                    label = { Text(text = label) },
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-                        labelColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-                    ),
-                    modifier = Modifier.weight(1f)
-                )
-            }
         }
     }
 }

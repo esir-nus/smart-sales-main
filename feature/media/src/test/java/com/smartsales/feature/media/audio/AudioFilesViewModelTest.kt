@@ -76,7 +76,7 @@ class AudioFilesViewModelTest {
     @Test
     fun `initial load shows loading then populates audio files`() = runTest(dispatcher) {
         gateway.files = listOf(
-            DeviceMediaFile("clip.wav", 100, "audio/wav", 1_000L, "http://m/1", "http://d/1"),
+            DeviceMediaFile("clip.wav", 100, "audio/wav", 1_000L, "http://m/1", "http://d/1", location = "上海 浦东", source = "phone"),
             DeviceMediaFile("video.mp4", 200, "video/mp4", 2_000L, "http://m/2", "http://d/2")
         )
 
@@ -91,6 +91,8 @@ class AudioFilesViewModelTest {
         assertEquals("clip", state.recordings.first().title)
         assertEquals(TranscriptionStatus.NONE, state.recordings.first().transcriptionStatus)
         assertEquals(null, state.errorMessage)
+        assertEquals("上海 浦东", state.recordings.first().locationText)
+        assertEquals("本机录音", state.recordings.first().sourceLabel)
     }
 
     @Test

@@ -448,7 +448,9 @@ data class DeviceMediaFile(
     val mimeType: String,
     val modifiedAtMillis: Long,
     val mediaUrl: String,
-    val downloadUrl: String
+    val downloadUrl: String,
+    val location: String? = null,
+    val source: String? = null
 )
 
 sealed interface DeviceUploadSource {

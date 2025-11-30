@@ -33,7 +33,9 @@ data class MediaServerFile(
     val mimeType: String,
     val modifiedAtMillis: Long,
     val mediaUrl: String,
-    val downloadUrl: String
+    val downloadUrl: String,
+    val location: String? = null,
+    val source: String? = null
 ) {
     val isVideo: Boolean = mimeType.startsWith("video")
     val isImage: Boolean = mimeType.startsWith("image")
@@ -67,7 +69,9 @@ class MediaServerClient @Inject constructor(
                             mimeType = obj.optString("mimeType", "application/octet-stream"),
                             modifiedAtMillis = obj.optLong("modifiedAtMillis"),
                             mediaUrl = absoluteUrl(normalized, obj.optString("mediaUrl", "")),
-                            downloadUrl = absoluteUrl(normalized, obj.optString("downloadUrl", ""))
+                            downloadUrl = absoluteUrl(normalized, obj.optString("downloadUrl", "")),
+                            location = obj.optStringOrNull("location"),
+                            source = obj.optStringOrNull("source")
                         )
                     )
                 }
@@ -219,6 +223,9 @@ class MediaServerClient @Inject constructor(
             disconnect()
         }
     }
+
+    private fun JSONObject.optStringOrNull(key: String): String? =
+        optString(key, "").takeIf { it.isNotBlank() }
 
     companion object {
         private fun normalizeBaseUrl(raw: String): String? {

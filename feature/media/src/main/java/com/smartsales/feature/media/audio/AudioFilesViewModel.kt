@@ -206,6 +206,7 @@ class AudioFilesViewModel @Inject constructor(
             fileName = "d1.wav",
             createdAtMillis = now,
             createdAtText = "刚刚",
+            locationText = "上海 · 徐汇",
             durationMillis = 180_000,
             transcriptionStatus = TranscriptionStatus.DONE,
             transcriptPreview = "示例转写片段：客户需求是提升转化率。",
@@ -368,20 +369,31 @@ class AudioFilesViewModel @Inject constructor(
             durationMillis = null,
             createdAtMillis = modifiedAtMillis,
             createdAtText = formatTimestamp(modifiedAtMillis),
+            locationText = location?.takeIf { it.isNotBlank() },
             transcriptionStatus = TranscriptionStatus.NONE,
             isPlaying = playingId == name,
-            hasLocalCopy = false
+            hasLocalCopy = false,
+            sourceLabel = mapSourceLabel(source)
         )
 
     companion object {
         private val AUDIO_EXTENSIONS = setOf(".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg")
         private const val DEFAULT_TINGWU_LANGUAGE = "zh-CN"
         private const val MAX_PREVIEW_LENGTH = 120
+        private const val DEFAULT_SOURCE_LABEL = "设备录音"
 
         private fun formatTimestamp(timestamp: Long?): String {
             if (timestamp == null || timestamp <= 0) return "未知时间"
             val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.CHINA)
             return formatter.format(Date(timestamp))
+        }
+
+        fun mapSourceLabel(raw: String?): String = when (raw?.trim()?.lowercase(Locale.ROOT)) {
+            "phone", "mobile", "local", "local_recording" -> "本机录音"
+            "device", "hardware", "gadget", "peripheral" -> "设备录音"
+            "cloud", "oss", "remote" -> "云端录音"
+            null, "" -> DEFAULT_SOURCE_LABEL
+            else -> raw
         }
     }
 }

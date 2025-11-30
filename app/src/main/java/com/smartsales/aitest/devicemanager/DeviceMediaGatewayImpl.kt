@@ -54,7 +54,9 @@ private fun MediaServerFile.toDeviceMediaFile(): DeviceMediaFile =
         mimeType = mimeType,
         modifiedAtMillis = modifiedAtMillis,
         mediaUrl = mediaUrl,
-        downloadUrl = downloadUrl
+        downloadUrl = downloadUrl,
+        location = location,
+        source = source
     )
 
 private fun DeviceMediaFile.toMediaServerFile(): MediaServerFile =
@@ -64,7 +66,9 @@ private fun DeviceMediaFile.toMediaServerFile(): MediaServerFile =
         mimeType = mimeType,
         modifiedAtMillis = modifiedAtMillis,
         mediaUrl = mediaUrl,
-        downloadUrl = downloadUrl
+        downloadUrl = downloadUrl,
+        location = location,
+        source = source
     )
 
 @Module

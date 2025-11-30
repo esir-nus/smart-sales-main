@@ -249,6 +249,38 @@ class AudioFilesScreenTest {
         composeRule.onAllNodesWithTag(AudioFilesTestTags.ASK_AI_BUTTON).assertCountEquals(0)
     }
 
+    @Test
+    fun locationAndSource_renderWhenPresent() {
+        composeRule.setContent {
+            MaterialTheme {
+                AudioFilesScreen(
+                    uiState = AudioFilesUiState(
+                        recordings = listOf(
+                            sampleRecording("meta").copy(
+                                locationText = "深圳 · 南山",
+                                sourceLabel = "本机录音"
+                            )
+                        )
+                    ),
+                    onRefresh = {},
+                    onSyncClicked = {},
+                    onRecordingClicked = {},
+                    onPlayPauseClicked = {},
+                    onDeleteClicked = {},
+                    onTranscribeClicked = {},
+                    onTranscriptClicked = {},
+                    onAskAiClicked = {},
+                    onTranscriptDismissed = {},
+                    onErrorDismissed = {},
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("深圳 · 南山").assertIsDisplayed()
+        composeRule.onNodeWithText("本机录音").assertIsDisplayed()
+    }
+
     private fun sampleRecording(id: String): AudioRecordingUi =
         AudioRecordingUi(
             id = id,

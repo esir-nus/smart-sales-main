@@ -253,12 +253,23 @@ private fun AudioRecordingItem(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     StatusIcon(recording = recording, onClick = onClick)
-                    Text(
-                        text = recording.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = recording.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        recording.locationText?.takeIf { it.isNotBlank() }?.let { location ->
+                            Text(
+                                text = location,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
                 }
                 StatusBadges(recording = recording, onTranscriptClicked = onTranscriptClicked)
             }
@@ -286,13 +297,19 @@ private fun AudioRecordingItem(
                     )
                 }
                 Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = "${recording.fileName} · ${recording.sourceLabel}",
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = recording.fileName,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    SourceLabel(label = recording.sourceLabel)
+                }
             }
             HorizontalDivider()
             Row(
@@ -366,16 +383,21 @@ private fun StatusBadges(
                 )
             }
         )
-        ElevatedAssistChip(
-            onClick = {},
-            enabled = false,
-            label = { Text(text = "来源: ${recording.sourceLabel}") },
-            colors = AssistChipDefaults.assistChipColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        )
     }
+}
+
+@Composable
+private fun SourceLabel(label: String) {
+    if (label.isBlank()) return
+    ElevatedAssistChip(
+        onClick = {},
+        enabled = false,
+        label = { Text(text = label) },
+        colors = AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    )
 }
 
 @Composable

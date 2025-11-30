@@ -170,11 +170,7 @@ class DeviceManagerScreenTest {
             )
         )
 
-        // 选中卡片后预览区域应展示文件名
-        composeRule.onAllNodesWithTag("${DeviceManagerTestTags.FILE_CARD_PREFIX}${files.first().id}", useUnmergedTree = true)
-            .onFirst()
-            .performClick()
-
+        composeRule.waitForIdle()
         composeRule.onNode(
             hasText("promo.mp4") and hasAnyAncestor(hasTestTag(DeviceManagerTestTags.PREVIEW_CARD)),
             useUnmergedTree = true

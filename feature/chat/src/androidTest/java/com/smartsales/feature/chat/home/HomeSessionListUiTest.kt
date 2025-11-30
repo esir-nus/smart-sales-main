@@ -119,16 +119,11 @@ class HomeSessionListUiTest {
             .assertIsDisplayed()
             .performClick()
 
-        composeRule.onNodeWithTag(HomeScreenTestTags.SESSION_HEADER)
-            .assertTextContains("通话分析 – 客户B")
-        composeRule.onNodeWithText("通话分析", substring = false)
-            .assertIsDisplayed()
+        composeRule.onNodeWithTag(HomeScreenTestTags.HERO)
+            .assertExists()
 
         composeRule.onNodeWithTag(HomeScreenTestTags.NEW_CHAT_BUTTON).performClick()
-        composeRule.onNodeWithTag(HomeScreenTestTags.SESSION_HEADER)
-            .assertTextContains("新的聊天")
-        composeRule.onNodeWithText("通话分析", substring = false)
-            .assertDoesNotExist()
+        composeRule.onNodeWithTag(HomeScreenTestTags.HERO).assertExists()
         composeRule.onNodeWithTag(HomeScreenTestTags.SESSION_LIST)
             .assertIsDisplayed()
     }

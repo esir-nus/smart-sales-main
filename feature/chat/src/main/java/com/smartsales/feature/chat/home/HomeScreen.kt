@@ -2,6 +2,7 @@ package com.smartsales.feature.chat.home
 
 import android.util.Log
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,8 +39,6 @@ import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -163,8 +162,6 @@ fun HomeScreenRoute(
         onLoadMoreHistory = viewModel::onLoadMoreHistory,
         onProfileClicked = viewModel::onTapProfile,
         onNewChatClicked = viewModel::onNewChatClicked,
-        onSmartAnalysis = viewModel::onSmartAnalysisClicked,
-        onExportPdf = viewModel::onExportPdfClicked,
         onSessionSelected = viewModel::setSession,
         chatErrorMessage = state.chatErrorMessage,
         modifier = modifier,
@@ -175,8 +172,7 @@ fun HomeScreenRoute(
         onHistorySessionSelected = { sessionId ->
             viewModel.setSession(sessionId)
             showHistoryPanel = false
-        },
-        exportInProgress = state.exportInProgress
+        }
     )
 }
 
@@ -189,23 +185,20 @@ fun HomeScreen(
     onSendClicked: () -> Unit,
     onQuickSkillSelected: (QuickSkillId) -> Unit,
     onDeviceBannerClicked: () -> Unit,
-    onAudioSummaryClicked: () -> Unit,
-    onRefreshDeviceAndAudio: () -> Unit,
-    onLoadMoreHistory: () -> Unit,
-    onProfileClicked: () -> Unit,
-    onNewChatClicked: () -> Unit = {},
-    onSmartAnalysis: () -> Unit = {},
-    onExportPdf: () -> Unit = {},
-    onSessionSelected: (String) -> Unit = {},
-    chatErrorMessage: String? = null,
-    modifier: Modifier = Modifier,
-    showHistoryPanel: Boolean = false,
-    onToggleHistoryPanel: () -> Unit = {},
-    onDismissHistoryPanel: () -> Unit = {},
-    historySessions: List<SessionListItemUi> = emptyList(),
-    onHistorySessionSelected: (String) -> Unit = {},
-    exportInProgress: Boolean = false
-) {
+        onAudioSummaryClicked: () -> Unit,
+        onRefreshDeviceAndAudio: () -> Unit,
+        onLoadMoreHistory: () -> Unit,
+        onProfileClicked: () -> Unit,
+        onNewChatClicked: () -> Unit = {},
+        onSessionSelected: (String) -> Unit = {},
+        chatErrorMessage: String? = null,
+        modifier: Modifier = Modifier,
+        showHistoryPanel: Boolean = false,
+        onToggleHistoryPanel: () -> Unit = {},
+        onDismissHistoryPanel: () -> Unit = {},
+        historySessions: List<SessionListItemUi> = emptyList(),
+        onHistorySessionSelected: (String) -> Unit = {}
+    ) {
     Log.i("HomeScreen", "HomeScreen composed - entering function")
     val refreshingState = remember { mutableStateOf(false) }
     LaunchedEffect(state.deviceSnapshot, state.audioSummary) {
@@ -289,18 +282,11 @@ fun HomeScreen(
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
             ) {
-                SessionHeader(
-                    session = state.currentSession,
-                    onNewChatClicked = onNewChatClicked
+                HomeHeroSection(
+                    userName = state.userName,
+                    hasMessages = state.chatMessages.isNotEmpty()
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                ActionButtonsRow(
-                    onSmartAnalysis = onSmartAnalysis,
-                    onExportPdf = onExportPdf,
-                    isExporting = exportInProgress,
-                    isBusy = state.isSending || state.isInputBusy
-                )
-                Spacer(modifier = Modifier.height(8.dp))
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -317,39 +303,7 @@ fun HomeScreen(
                         userScrollEnabled = true
                     ) {
                         if (!hasActiveChat) {
-                            item("welcome") {
-                                Column(
-                                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(
-                                        text = "你好，${state.userName}",
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
-                                    Text(
-                                        text = "我可以帮您总结对话、分析异议、辅导话术、生成日报。",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Text(
-                                        text = "还没有对话，试着发送第一条消息吧。",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                            item("session-list") {
-                                SessionListSection(
-                                    sessions = state.sessionList,
-                                    isLoading = state.isLoadingHistory,
-                                    onSessionSelected = onSessionSelected
-                                )
-                            }
-                            if (state.sessionList.isEmpty()) {
-                                item("empty-session") {
-                                    EmptySessionHint(onNewChatClicked = onNewChatClicked)
-                                }
-                            }
+                            item("welcome_spacer") { Spacer(modifier = Modifier.height(8.dp)) }
                         } else {
                             if (state.isLoadingHistory) {
                                 item("history-loading") {
@@ -438,6 +392,68 @@ fun HomeScreen(
     }
 }
 
+@Composable
+private fun HomeHeroSection(
+    userName: String,
+    hasMessages: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag(HomeScreenTestTags.HERO),
+        shape = MaterialTheme.shapes.extraLarge,
+        tonalElevation = 1.dp,
+        shadowElevation = 2.dp,
+        color = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "你好，$userName",
+                style = MaterialTheme.typography.titleLarge
+            )
+            Text(
+                text = "我是您的销售助手",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                BulletLine("总结对话，分析异议，辅导话术")
+                BulletLine("生成日报、PDF/CSV 报告，帮助复盘")
+                BulletLine("导出思维导图，辅助会议决策")
+            }
+            if (!hasMessages) {
+                Text(
+                    text = "让我们开始吧",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BulletLine(text: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
+        Box(
+            modifier = Modifier
+                .padding(top = 6.dp)
+                .size(4.dp)
+                .background(MaterialTheme.colorScheme.primary, shape = CircleShape)
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
 object HomeScreenTestTags {
     const val ROOT = "home_screen_root"
     // 兼容旧测试
@@ -468,8 +484,7 @@ object HomeScreenTestTags {
     const val HISTORY_PANEL = "home_history_panel"
     const val HISTORY_EMPTY = "home_history_empty"
     const val HISTORY_ITEM_PREFIX = "home_history_item_"
-    const val SMART_ANALYSIS_BUTTON = "home_smart_analysis_button"
-    const val EXPORT_PDF_BUTTON = "home_export_pdf_button"
+    const val HERO = "home_hero"
 }
 
 @Composable
@@ -588,46 +603,9 @@ private fun SessionListSection(
     isLoading: Boolean,
     onSessionSelected: (String) -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag(HomeScreenTestTags.SESSION_LIST),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = "历史会话",
-            style = MaterialTheme.typography.titleSmall
-        )
-        if (isLoading) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                LinearProgressIndicator(modifier = Modifier.weight(1f))
-                Text(
-                    text = "正在加载历史会话...",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.testTag(HomeScreenTestTags.SESSION_LOADING)
-                )
-            }
-        }
-        if (sessions.isEmpty()) {
-            Text(
-                text = "暂无历史会话，先发一条消息试试吧",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.testTag(HomeScreenTestTags.SESSION_EMPTY)
-            )
-            return
-        }
-        sessions.forEach { session ->
-            SessionListItem(
-                session = session,
-                onClick = { onSessionSelected(session.id) }
-            )
-        }
+    // React 对齐后历史列表入口移至独立页面，这里保留空实现以维护测试 tag 兼容
+    if (isLoading) {
+        LinearProgressIndicator(modifier = Modifier.testTag(HomeScreenTestTags.SESSION_LOADING))
     }
 }
 
@@ -937,37 +915,6 @@ private fun SessionHeader(
     }
 }
 
-@Composable
-private fun ActionButtonsRow(
-    onSmartAnalysis: () -> Unit,
-    onExportPdf: () -> Unit,
-    isExporting: Boolean,
-    isBusy: Boolean
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Button(
-            onClick = onSmartAnalysis,
-            enabled = !isBusy,
-            modifier = Modifier
-                .weight(1f)
-                .testTag(HomeScreenTestTags.SMART_ANALYSIS_BUTTON)
-        ) {
-            Text(text = "智能分析")
-        }
-        OutlinedButton(
-            onClick = onExportPdf,
-            enabled = !isExporting,
-            modifier = Modifier
-                .weight(1f)
-                .testTag(HomeScreenTestTags.EXPORT_PDF_BUTTON)
-        ) {
-            Text(text = if (isExporting) "导出中..." else "导出 PDF")
-        }
-    }
-}
 
 @Composable
 private fun QuickSkillRow(

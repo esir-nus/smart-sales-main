@@ -3,9 +3,10 @@ package com.smartsales.feature.usercenter
 // 文件：feature/usercenter/src/main/java/com/smartsales/feature/usercenter/UserCenterScreen.kt
 // 模块：:feature:usercenter
 // 说明：用户中心 Compose 界面
-// 作者：创建于 2025-11-21
+// 作者：创建于 2025-11-30
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,106 +14,77 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Logout
-import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.CreditCard
 import androidx.compose.material.icons.outlined.Devices
+import androidx.compose.material.icons.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.KeyboardArrowRight
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.vector.ImageVector
 
 @Composable
-@OptIn(ExperimentalMaterial3Api::class)
 fun UserCenterScreen(
     uiState: UserCenterUiState,
-    onUserNameChanged: (String) -> Unit,
-    onEmailChanged: (String) -> Unit,
-    onToggleFeatureFlag: (String) -> Unit,
-    onSaveClicked: () -> Unit,
-    onLogoutClicked: () -> Unit,
-    onErrorDismissed: () -> Unit,
-    onOpenDeviceManager: () -> Unit = {},
-    onOpenSubscription: () -> Unit = {},
-    onOpenPrivacy: () -> Unit = {},
-    onOpenGeneral: () -> Unit = {},
+    onDeviceManagerClick: () -> Unit,
+    onSubscriptionClick: () -> Unit,
+    onPrivacyClick: () -> Unit,
+    onGeneralSettingsClick: () -> Unit,
+    onLoginClick: () -> Unit,
+    onLogoutClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Scaffold(
+    Surface(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.18f))
-            .testTag(UserCenterTestTags.ROOT),
-        topBar = {
-        TopAppBar(
-            title = { Text(text = "用户中心") },
-            actions = {
-                IconButton(onClick = onSaveClicked, enabled = !uiState.isSaving) {
-                    Icon(Icons.Default.Save, contentDescription = "保存")
-                }
-            }
-        )
-    }
-    ) { innerPadding ->
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
+            .testTag(UserCenterTestTags.ROOT)
+    ) {
         Column(
             modifier = Modifier
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = "管理账号、订阅和设置",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            ProfileHeader(
+                displayName = uiState.displayName,
+                email = uiState.email,
+                isGuest = uiState.isGuest,
+                onLoginClick = onLoginClick
             )
-            Spacer(modifier = Modifier.size(4.dp))
-            ProfileHeader(userName = uiState.userName, email = uiState.email)
             ShortcutMenuCard(
-                onOpenDeviceManager = onOpenDeviceManager,
-                onOpenSubscription = onOpenSubscription,
-                onOpenPrivacy = onOpenPrivacy,
-                onOpenGeneral = onOpenGeneral,
-                modifier = Modifier.fillMaxWidth()
+                onOpenDeviceManager = onDeviceManagerClick,
+                onOpenSubscription = onSubscriptionClick,
+                onOpenPrivacy = onPrivacyClick,
+                onOpenGeneral = onGeneralSettingsClick
             )
             if (uiState.canLogout) {
-                TextButton(
-                    onClick = onLogoutClicked,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Logout, contentDescription = null)
-                    Spacer(modifier = Modifier.size(8.dp))
-                    Text(text = "退出登录")
-                }
+                DangerRow(
+                    title = "退出登录",
+                    icon = Icons.Default.Logout,
+                    onClick = onLogoutClick,
+                    modifier = Modifier.testTag(UserCenterTestTags.ROW_LOGOUT)
+                )
             }
         }
     }
@@ -120,10 +92,25 @@ fun UserCenterScreen(
 
 object UserCenterTestTags {
     const val ROOT = "user_center_screen_root"
+    const val HEADER_NAME = "user_center_header_name"
+    const val HEADER_EMAIL = "user_center_header_email"
+    const val BUTTON_LOGIN = "user_center_button_login"
+    const val ROW_DEVICE_MANAGER = "user_center_row_device_manager"
+    const val ROW_SUBSCRIPTION = "user_center_row_subscription"
+    const val ROW_PRIVACY = "user_center_row_privacy"
+    const val ROW_GENERAL = "user_center_row_general"
+    const val ROW_LOGOUT = "user_center_row_logout"
 }
 
 @Composable
-private fun ProfileHeader(userName: String, email: String) {
+private fun ProfileHeader(
+    displayName: String,
+    email: String,
+    isGuest: Boolean,
+    onLoginClick: () -> Unit
+) {
+    val resolvedName = if (isGuest) "访客用户" else displayName.ifBlank { "访客用户" }
+    val resolvedEmail = if (isGuest) "请登录以管理账户" else email.ifBlank { "邮箱未填写" }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -134,40 +121,38 @@ private fun ProfileHeader(userName: String, email: String) {
     ) {
         Box(
             modifier = Modifier
-                .size(72.dp)
+                .size(76.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)),
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = userName.take(1).ifBlank { "U" },
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.primary
+            Icon(
+                imageVector = Icons.Default.Person,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
             )
         }
         Text(
-            text = if (userName.isBlank()) "未命名用户" else userName,
-            style = MaterialTheme.typography.titleMedium
+            text = resolvedName,
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            modifier = Modifier.testTag(UserCenterTestTags.HEADER_NAME)
         )
         Text(
-            text = if (email.isBlank()) "邮箱未填写" else email,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            text = resolvedEmail,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.testTag(UserCenterTestTags.HEADER_EMAIL)
         )
+        if (isGuest) {
+            OutlinedButton(
+                onClick = onLoginClick,
+                modifier = Modifier.testTag(UserCenterTestTags.BUTTON_LOGIN)
+            ) {
+                Text(text = "登录")
+            }
+        }
     }
-}
-
-@Composable
-private fun ShortcutMenuCard(modifier: Modifier = Modifier) {
-    ShortcutMenuCard(
-        onOpenDeviceManager = {},
-        onOpenSubscription = {},
-        onOpenPrivacy = {},
-        onOpenGeneral = {},
-        modifier = modifier
-    )
 }
 
 @Composable
@@ -179,53 +164,66 @@ private fun ShortcutMenuCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(text = "快捷入口", style = MaterialTheme.typography.titleMedium)
             ShortcutRow(
                 title = "设备管理",
                 subtitle = "管理已配对的设备与文件",
                 icon = Icons.Outlined.Devices,
-                onClick = onOpenDeviceManager
+                onClick = onOpenDeviceManager,
+                modifier = Modifier.testTag(UserCenterTestTags.ROW_DEVICE_MANAGER)
             )
             HorizontalDivider()
+            Text(
+                text = "账户",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             ShortcutRow(
                 title = "订阅管理",
-                subtitle = "套餐、续费与发票",
+                subtitle = "查看套餐、续费与发票",
                 icon = Icons.Outlined.CreditCard,
-                onClick = onOpenSubscription
+                onClick = onOpenSubscription,
+                modifier = Modifier.testTag(UserCenterTestTags.ROW_SUBSCRIPTION)
             )
-            HorizontalDivider()
             ShortcutRow(
                 title = "隐私与安全",
                 subtitle = "密码、双重认证、数据控制",
                 icon = Icons.Outlined.PrivacyTip,
-                onClick = onOpenPrivacy
+                onClick = onOpenPrivacy,
+                modifier = Modifier.testTag(UserCenterTestTags.ROW_PRIVACY)
             )
-            HorizontalDivider()
             ShortcutRow(
                 title = "通用设置",
                 subtitle = "语言、通知与主题",
                 icon = Icons.Outlined.Settings,
-                onClick = onOpenGeneral
+                onClick = onOpenGeneral,
+                modifier = Modifier.testTag(UserCenterTestTags.ROW_GENERAL)
             )
         }
     }
 }
 
 @Composable
-private fun ShortcutRow(title: String, subtitle: String, icon: ImageVector, onClick: () -> Unit) {
+private fun ShortcutRow(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -256,71 +254,29 @@ private fun ShortcutRow(title: String, subtitle: String, icon: ImageVector, onCl
 }
 
 @Composable
-private fun FeatureFlagCard(
-    flags: Map<String, Boolean>,
-    onToggle: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = MaterialTheme.shapes.large
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(text = "功能开关", style = MaterialTheme.typography.titleMedium)
-            if (flags.isEmpty()) {
-                Text(
-                    text = "暂无可配置的功能开关。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                flags.entries.forEachIndexed { index, entry ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(text = entry.key, style = MaterialTheme.typography.bodyMedium)
-                        Switch(
-                            checked = entry.value,
-                            onCheckedChange = { onToggle(entry.key) }
-                        )
-                    }
-                    if (index != flags.size - 1) {
-                        HorizontalDivider()
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ErrorBanner(
-    message: String,
-    onDismiss: () -> Unit,
+private fun DangerRow(
+    title: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
-            .background(MaterialTheme.colorScheme.errorContainer)
-            .padding(12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onErrorContainer
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.error
         )
-        TextButton(onClick = onDismiss) {
-            Text(text = "关闭")
-        }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.error
+        )
     }
 }

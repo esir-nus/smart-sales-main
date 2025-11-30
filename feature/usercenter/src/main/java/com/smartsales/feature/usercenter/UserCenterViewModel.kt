@@ -2,17 +2,15 @@ package com.smartsales.feature.usercenter
 
 // 文件：feature/usercenter/src/main/java/com/smartsales/feature/usercenter/UserCenterViewModel.kt
 // 模块：:feature:usercenter
-// 说明：管理用户中心数据、保存与登出的 ViewModel
-// 作者：创建于 2025-11-21
+// 说明：管理用户中心数据与导航事件的 ViewModel
+// 作者：创建于 2025-11-30
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.core.util.DispatcherProvider
-import com.smartsales.core.util.Result
 import com.smartsales.feature.usercenter.data.UserProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -21,9 +19,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-
-private const val SAVE_DELAY_MS = 500L
 
 @HiltViewModel
 class UserCenterViewModel @Inject constructor(
@@ -41,99 +36,69 @@ class UserCenterViewModel @Inject constructor(
         loadUser()
     }
 
-    fun onUserNameChanged(value: String) {
-        _uiState.update { it.copy(userName = value) }
-    }
-
-    fun onEmailChanged(value: String) {
-        _uiState.update { it.copy(email = value) }
-    }
-
-    fun onToggleFeatureFlag(key: String) {
-        _uiState.update { state ->
-            val updated = LinkedHashMap(state.featureFlags)
-            val current = updated[key] ?: false
-            updated[key] = !current
-            state.copy(featureFlags = updated)
-        }
-    }
-
-    fun onSaveClicked() {
-        if (_uiState.value.isSaving) return
-        viewModelScope.launch(dispatchers.io) {
-            _uiState.update { it.copy(isSaving = true, errorMessage = null) }
-            delay(SAVE_DELAY_MS)
-            val profile = uiState.value.toProfile()
-            when (val result = repository.save(profile)) {
-                is Result.Success -> {
-                    _uiState.update { it.copy(isSaving = false, errorMessage = null) }
-                }
-                is Result.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            isSaving = false,
-                            errorMessage = result.throwable.message ?: "保存失败"
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    fun onLogoutClicked() {
-        viewModelScope.launch(dispatchers.default) {
-            _events.emit(UserCenterEvent.Logout)
-        }
-    }
-
-    fun onErrorDismissed() {
-        _uiState.update { it.copy(errorMessage = null) }
-    }
-
     private fun loadUser() {
         viewModelScope.launch(dispatchers.io) {
-            when (val result = repository.load()) {
-                is Result.Success -> applyProfile(result.data)
-                is Result.Error -> _uiState.update {
-                    it.copy(errorMessage = result.throwable.message ?: "加载用户失败")
-                }
-            }
+            val result = repository.load()
+            applyProfile(result)
         }
     }
 
-    private suspend fun applyProfile(profile: UserProfile) = withContext(dispatchers.default) {
+    private fun applyProfile(profile: UserProfile) {
         _uiState.update {
             it.copy(
-                userName = profile.userName,
+                displayName = profile.displayName,
                 email = profile.email,
-                tokensRemaining = profile.tokensRemaining,
-                featureFlags = LinkedHashMap(profile.featureFlags),
-                isSaving = false,
-                errorMessage = null,
-                canLogout = true
+                isGuest = profile.isGuest,
+                canLogout = !profile.isGuest
             )
         }
     }
 
-    private fun UserCenterUiState.toProfile(): UserProfile =
-        UserProfile(
-            userName = userName,
-            email = email,
-            tokensRemaining = tokensRemaining,
-            featureFlags = LinkedHashMap(featureFlags)
-        )
+    fun onDeviceManagerClick() {
+        viewModelScope.launch(dispatchers.default) {
+            _events.emit(UserCenterEvent.DeviceManager)
+        }
+    }
 
-    fun onLogoutConfirmed() {
-        _uiState.update {
-            it.copy(
-                userName = "",
-                email = "",
-                tokensRemaining = null,
-                featureFlags = emptyMap(),
-                canLogout = false,
-                errorMessage = null,
-                isSaving = false
+    fun onSubscriptionClick() {
+        viewModelScope.launch(dispatchers.default) {
+            _events.emit(UserCenterEvent.Subscription)
+        }
+    }
+
+    fun onPrivacyClick() {
+        viewModelScope.launch(dispatchers.default) {
+            _events.emit(UserCenterEvent.Privacy)
+        }
+    }
+
+    fun onGeneralSettingsClick() {
+        viewModelScope.launch(dispatchers.default) {
+            _events.emit(UserCenterEvent.General)
+        }
+    }
+
+    fun onLoginClick() {
+        if (!_uiState.value.isGuest) return
+        viewModelScope.launch(dispatchers.io) {
+            val profile = UserProfile(
+                displayName = "SmartSales 用户",
+                email = "user@example.com",
+                isGuest = false
             )
+            repository.save(profile)
+            applyProfile(profile)
+            _events.emit(UserCenterEvent.Login)
+        }
+    }
+
+    fun onLogoutClick() {
+        if (!_uiState.value.canLogout) return
+        viewModelScope.launch(dispatchers.io) {
+            repository.clear()
+            val guest = UserProfile(displayName = "", email = "", isGuest = true)
+            applyProfile(guest)
+            _events.emit(UserCenterEvent.Logout)
         }
     }
 }

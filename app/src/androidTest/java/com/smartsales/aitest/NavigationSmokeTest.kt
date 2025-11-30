@@ -78,10 +78,10 @@ class NavigationSmokeTest {
         goHome()
         composeRule.onNodeWithTag(HomeScreenTestTags.PROFILE_BUTTON, useUnmergedTree = true).performClick()
         waitForAnyTag(composeRule, UserCenterTestTags.ROOT, AiFeatureTestTags.PAGE_USER_CENTER)
-        composeRule.onAllNodesWithText("账号信息、订阅与隐私偏好都在这里，保存后会同步到 React 端。", substring = true, useUnmergedTree = true)
-            .fetchSemanticsNodes().isNotEmpty()
-        composeRule.onAllNodesWithText("订阅管理", substring = true, useUnmergedTree = true)
-            .fetchSemanticsNodes().isNotEmpty()
+        composeRule.onNodeWithText("设备管理", substring = true, useUnmergedTree = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithText("订阅管理", substring = true, useUnmergedTree = true)
+            .assertIsDisplayed()
 
         composeRule.activityRule.scenario.onActivity {
             it.onBackPressedDispatcher.onBackPressed()

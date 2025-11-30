@@ -3,19 +3,17 @@ package com.smartsales.feature.usercenter
 // 文件：feature/usercenter/src/test/java/com/smartsales/feature/usercenter/UserCenterViewModelTest.kt
 // 模块：:feature:usercenter
 // 说明：验证用户中心 ViewModel 的基本状态更新与事件
-// 作者：创建于 2025-11-21
+// 作者：创建于 2025-11-30
 
 import com.smartsales.core.test.FakeDispatcherProvider
-import com.smartsales.core.util.Result
 import com.smartsales.feature.usercenter.data.UserProfileRepository
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -53,70 +51,41 @@ class UserCenterViewModelTest {
     fun `loadUser populates initial state`() = runTest(dispatcher) {
         advanceUntilIdle()
         val state = viewModel.uiState.value
-        assertEquals("Tester", state.userName)
+        assertEquals("Tester", state.displayName)
         assertEquals("tester@example.com", state.email)
-        assertEquals(10, state.tokensRemaining)
-        assertEquals(true, state.featureFlags["开关A"])
+        assertFalse(state.isGuest)
         assertTrue(state.canLogout)
-    }
-
-    @Test
-    fun `editing fields updates ui state`() = runTest(dispatcher) {
-        advanceUntilIdle()
-        viewModel.onUserNameChanged("NewName")
-        viewModel.onEmailChanged("a@b.com")
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        assertEquals("NewName", state.userName)
-        assertEquals("a@b.com", state.email)
-    }
-
-    @Test
-    fun `toggle feature flag flips value`() = runTest(dispatcher) {
-        advanceUntilIdle()
-        viewModel.onToggleFeatureFlag("开关A")
-        advanceUntilIdle()
-        assertEquals(false, viewModel.uiState.value.featureFlags["开关A"])
-    }
-
-    @Test
-    fun `save shows saving then clears`() = runTest(dispatcher) {
-        advanceUntilIdle()
-        viewModel.onSaveClicked()
-        advanceTimeBy(100)
-        assertTrue(viewModel.uiState.value.isSaving)
-        advanceTimeBy(600)
-        advanceUntilIdle()
-        assertFalse(viewModel.uiState.value.isSaving)
     }
 
     @Test
     fun `logout emits event`() = runTest(dispatcher) {
         advanceUntilIdle()
         val event = backgroundScope.async { viewModel.events.first() }
-        viewModel.onLogoutClicked()
+        viewModel.onLogoutClick()
         advanceUntilIdle()
 
         assertTrue(event.await() is UserCenterEvent.Logout)
         assertFalse(viewModel.uiState.value.canLogout)
+        assertTrue(viewModel.uiState.value.isGuest)
     }
 
     private class FakeUserProfileRepository : UserProfileRepository {
         private val store = AtomicReference(
             UserProfile(
-                userName = "Tester",
+                displayName = "Tester",
                 email = "tester@example.com",
-                tokensRemaining = 10,
-                featureFlags = linkedMapOf("开关A" to true, "开关B" to false)
+                isGuest = false
             )
         )
 
-        override suspend fun load(): Result<UserProfile> = Result.Success(store.get())
+        override suspend fun load(): UserProfile = store.get()
 
-        override suspend fun save(profile: UserProfile): Result<Unit> {
+        override suspend fun save(profile: UserProfile) {
             store.set(profile)
-            return Result.Success(Unit)
+        }
+
+        override suspend fun clear() {
+            store.set(UserProfile(displayName = "", email = "", isGuest = true))
         }
     }
 }

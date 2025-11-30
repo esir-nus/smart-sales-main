@@ -3,7 +3,7 @@ package com.smartsales.aitest.usercenter
 // 文件：app/src/main/java/com/smartsales/aitest/usercenter/UserCenterRoute.kt
 // 模块：:app
 // 说明：用户中心页面的 Route，连接 ViewModel 与 UI
-// 作者：创建于 2025-11-21
+// 作者：创建于 2025-11-30
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,26 +30,24 @@ fun UserCenterRoute(
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
-                UserCenterEvent.Logout -> {
-                    viewModel.onLogoutConfirmed()
-                    onLogout()
-                }
+                UserCenterEvent.Logout -> onLogout()
+                UserCenterEvent.DeviceManager -> onOpenDeviceManager()
+                UserCenterEvent.Subscription -> onOpenSubscription()
+                UserCenterEvent.Privacy -> onOpenPrivacy()
+                UserCenterEvent.General -> onOpenGeneral()
+                UserCenterEvent.Login -> Unit
             }
         }
     }
 
     UserCenterScreen(
         uiState = uiState,
-        onUserNameChanged = viewModel::onUserNameChanged,
-        onEmailChanged = viewModel::onEmailChanged,
-        onToggleFeatureFlag = viewModel::onToggleFeatureFlag,
-        onSaveClicked = viewModel::onSaveClicked,
-        onLogoutClicked = viewModel::onLogoutClicked,
-        onErrorDismissed = viewModel::onErrorDismissed,
-        onOpenDeviceManager = onOpenDeviceManager,
-        onOpenSubscription = onOpenSubscription,
-        onOpenPrivacy = onOpenPrivacy,
-        onOpenGeneral = onOpenGeneral,
+        onDeviceManagerClick = viewModel::onDeviceManagerClick,
+        onSubscriptionClick = viewModel::onSubscriptionClick,
+        onPrivacyClick = viewModel::onPrivacyClick,
+        onGeneralSettingsClick = viewModel::onGeneralSettingsClick,
+        onLoginClick = viewModel::onLoginClick,
+        onLogoutClick = viewModel::onLogoutClick,
         modifier = modifier
     )
 }

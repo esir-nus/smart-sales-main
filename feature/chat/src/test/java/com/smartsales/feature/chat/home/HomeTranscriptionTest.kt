@@ -26,6 +26,10 @@ import com.smartsales.feature.media.MediaSyncState
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
+import com.smartsales.data.aicore.ExportManager
+import com.smartsales.data.aicore.ExportFormat
+import com.smartsales.data.aicore.ExportResult
+import com.smartsales.feature.chat.ChatShareHandler
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -64,7 +68,9 @@ class HomeTranscriptionTest {
             quickSkillCatalog = FakeQuickSkillCatalog(),
             chatHistoryRepository = FakeChatHistoryRepository(),
             sessionRepository = FakeSessionRepository(),
-            userProfileRepository = FakeUserProfileRepository()
+            userProfileRepository = FakeUserProfileRepository(),
+            exportManager = FakeExportManager(),
+            shareHandler = FakeShareHandler()
         )
     }
 
@@ -224,5 +230,16 @@ class HomeTranscriptionTest {
 
         override fun observeJob(jobId: String): Flow<AudioTranscriptionJobState> =
             jobs.getOrPut(jobId) { MutableStateFlow(AudioTranscriptionJobState.Idle) }
+    }
+
+    private class FakeExportManager : ExportManager {
+        override suspend fun exportMarkdown(markdown: String, format: ExportFormat): Result<ExportResult> =
+            Result.Success(ExportResult("demo.pdf", "application/pdf", ByteArray(0)))
+    }
+
+    private class FakeShareHandler : ChatShareHandler {
+        override suspend fun copyMarkdown(markdown: String): Result<Unit> = Result.Success(Unit)
+        override suspend fun copyAssistantReply(text: String): Result<Unit> = Result.Success(Unit)
+        override suspend fun shareExport(result: ExportResult): Result<Unit> = Result.Success(Unit)
     }
 }

@@ -295,13 +295,13 @@ private fun AiFeatureTestApp() {
                                             selectedSessionId = pendingSessionId,
                                             onSessionSelectionConsumed = { pendingSessionId = null },
                                             onNavigateToDeviceManager = { openDeviceSection() },
-                                            onNavigateToDeviceSetup = { openDeviceSection(forceSetup = true) },
-                                            onNavigateToAudioFiles = { setPage(TestHomePage.AudioFiles) },
-                                            onNavigateToUserCenter = { setPage(TestHomePage.UserCenter) },
-                                            onNavigateToChatHistory = { setPage(TestHomePage.ChatHistory) },
-                                            onDeviceSnapshotChanged = { latestDeviceSnapshot = it }
-                                        )
-                                    }
+                                        onNavigateToDeviceSetup = { openDeviceSection(forceSetup = true) },
+                                        onNavigateToAudioFiles = { setPage(TestHomePage.AudioFiles) },
+                                        onNavigateToUserCenter = { setPage(TestHomePage.UserCenter) },
+                                        onNavigateToChatHistory = { setPage(TestHomePage.ChatHistory) },
+                                        onDeviceSnapshotChanged = { latestDeviceSnapshot = it }
+                                    )
+                                }
                                 }
 
                                 TestHomePage.WifiBleTester -> {

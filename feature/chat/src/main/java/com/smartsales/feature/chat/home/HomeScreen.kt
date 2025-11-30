@@ -38,6 +38,8 @@ import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -161,6 +163,8 @@ fun HomeScreenRoute(
         onLoadMoreHistory = viewModel::onLoadMoreHistory,
         onProfileClicked = viewModel::onTapProfile,
         onNewChatClicked = viewModel::onNewChatClicked,
+        onSmartAnalysis = viewModel::onSmartAnalysisClicked,
+        onExportPdf = viewModel::onExportPdfClicked,
         onSessionSelected = viewModel::setSession,
         chatErrorMessage = state.chatErrorMessage,
         modifier = modifier,
@@ -171,7 +175,8 @@ fun HomeScreenRoute(
         onHistorySessionSelected = { sessionId ->
             viewModel.setSession(sessionId)
             showHistoryPanel = false
-        }
+        },
+        exportInProgress = state.exportInProgress
     )
 }
 
@@ -189,6 +194,8 @@ fun HomeScreen(
     onLoadMoreHistory: () -> Unit,
     onProfileClicked: () -> Unit,
     onNewChatClicked: () -> Unit = {},
+    onSmartAnalysis: () -> Unit = {},
+    onExportPdf: () -> Unit = {},
     onSessionSelected: (String) -> Unit = {},
     chatErrorMessage: String? = null,
     modifier: Modifier = Modifier,
@@ -196,7 +203,8 @@ fun HomeScreen(
     onToggleHistoryPanel: () -> Unit = {},
     onDismissHistoryPanel: () -> Unit = {},
     historySessions: List<SessionListItemUi> = emptyList(),
-    onHistorySessionSelected: (String) -> Unit = {}
+    onHistorySessionSelected: (String) -> Unit = {},
+    exportInProgress: Boolean = false
 ) {
     Log.i("HomeScreen", "HomeScreen composed - entering function")
     val refreshingState = remember { mutableStateOf(false) }
@@ -286,6 +294,13 @@ fun HomeScreen(
                     onNewChatClicked = onNewChatClicked
                 )
                 Spacer(modifier = Modifier.height(12.dp))
+                ActionButtonsRow(
+                    onSmartAnalysis = onSmartAnalysis,
+                    onExportPdf = onExportPdf,
+                    isExporting = exportInProgress,
+                    isBusy = state.isSending || state.isInputBusy
+                )
+                Spacer(modifier = Modifier.height(8.dp))
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -453,6 +468,8 @@ object HomeScreenTestTags {
     const val HISTORY_PANEL = "home_history_panel"
     const val HISTORY_EMPTY = "home_history_empty"
     const val HISTORY_ITEM_PREFIX = "home_history_item_"
+    const val SMART_ANALYSIS_BUTTON = "home_smart_analysis_button"
+    const val EXPORT_PDF_BUTTON = "home_export_pdf_button"
 }
 
 @Composable
@@ -916,6 +933,38 @@ private fun SessionHeader(
             modifier = Modifier.testTag(HomeScreenTestTags.NEW_CHAT_BUTTON)
         ) {
             Text(text = "新建对话")
+        }
+    }
+}
+
+@Composable
+private fun ActionButtonsRow(
+    onSmartAnalysis: () -> Unit,
+    onExportPdf: () -> Unit,
+    isExporting: Boolean,
+    isBusy: Boolean
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Button(
+            onClick = onSmartAnalysis,
+            enabled = !isBusy,
+            modifier = Modifier
+                .weight(1f)
+                .testTag(HomeScreenTestTags.SMART_ANALYSIS_BUTTON)
+        ) {
+            Text(text = "智能分析")
+        }
+        OutlinedButton(
+            onClick = onExportPdf,
+            enabled = !isExporting,
+            modifier = Modifier
+                .weight(1f)
+                .testTag(HomeScreenTestTags.EXPORT_PDF_BUTTON)
+        ) {
+            Text(text = if (isExporting) "导出中..." else "导出 PDF")
         }
     }
 }

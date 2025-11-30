@@ -26,6 +26,10 @@ import com.smartsales.feature.chat.AiSessionRepository as SessionRepository
 import com.smartsales.feature.chat.AiSessionSummary
 import com.smartsales.feature.usercenter.UserProfile
 import com.smartsales.feature.usercenter.data.UserProfileRepository
+import com.smartsales.data.aicore.ExportFormat
+import com.smartsales.data.aicore.ExportManager
+import com.smartsales.data.aicore.ExportResult
+import com.smartsales.feature.chat.ChatShareHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -159,7 +163,23 @@ class HomeUserNameTest {
                 override suspend fun delete(id: String) {}
                 override suspend fun findById(id: String): AiSessionSummary? = null
             },
-            userProfileRepository = profileRepo
+            userProfileRepository = profileRepo,
+            exportManager = object : ExportManager {
+                override suspend fun exportMarkdown(markdown: String, format: ExportFormat): com.smartsales.core.util.Result<ExportResult> =
+                    com.smartsales.core.util.Result.Success(
+                        ExportResult("demo.pdf", "application/pdf", ByteArray(0))
+                    )
+            },
+            shareHandler = object : ChatShareHandler {
+                override suspend fun copyMarkdown(markdown: String): com.smartsales.core.util.Result<Unit> =
+                    com.smartsales.core.util.Result.Success(Unit)
+
+                override suspend fun copyAssistantReply(text: String): com.smartsales.core.util.Result<Unit> =
+                    com.smartsales.core.util.Result.Success(Unit)
+
+                override suspend fun shareExport(result: ExportResult): com.smartsales.core.util.Result<Unit> =
+                    com.smartsales.core.util.Result.Success(Unit)
+            }
         )
     }
 

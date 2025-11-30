@@ -34,16 +34,16 @@ class DefaultQuickSkillCatalog : QuickSkillCatalog {
         return listOf(
             QuickSkillDefinition(
                 id = QuickSkillId.SUMMARIZE_LAST_MEETING,
-                label = "Smart analys",
-                description = "智能分析模式，仅切换模式不发送消息。",
+                label = "智能分析",
+                description = "生成对话总结与建议。",
                 defaultPrompt = "请对当前会话进行综合分析，并给出可执行建议。",
                 requiresAudioContext = false,
                 isRecommended = true
             ),
             QuickSkillDefinition(
                 id = QuickSkillId.EXTRACT_ACTION_ITEMS,
-                label = "Generate PDF",
-                description = "生成 PDF 报告模式，发送消息时按此模式处理。",
+                label = "导出 PDF",
+                description = "生成 PDF 报告。",
                 defaultPrompt = "请基于对话生成 PDF 报告的大纲和内容。",
                 requiresAudioContext = false,
                 isRecommended = true

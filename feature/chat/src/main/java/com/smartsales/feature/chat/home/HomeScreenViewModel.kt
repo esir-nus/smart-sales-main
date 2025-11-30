@@ -20,6 +20,7 @@ import com.smartsales.feature.chat.AiSessionSummary
 import com.smartsales.feature.connectivity.ConnectionState
 import com.smartsales.feature.connectivity.ConnectivityError
 import com.smartsales.feature.connectivity.DeviceConnectionManager
+import com.smartsales.feature.chat.ChatShareHandler
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.MediaClipStatus
@@ -27,6 +28,8 @@ import com.smartsales.feature.media.MediaSyncCoordinator
 import com.smartsales.feature.media.MediaSyncState
 import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.feature.usercenter.UserProfile
+import com.smartsales.data.aicore.ExportFormat
+import com.smartsales.data.aicore.ExportManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -137,7 +140,8 @@ data class HomeUiState(
         title = "新的聊天",
         isTranscription = false
     ),
-    val userName: String = "用户"
+    val userName: String = "用户",
+    val exportInProgress: Boolean = false
 )
 
 /** 外部依赖（除 AiChatService 外保留原有 stub）。 */
@@ -156,7 +160,9 @@ class HomeScreenViewModel @Inject constructor(
     private val quickSkillCatalog: QuickSkillCatalog,
     private val chatHistoryRepository: ChatHistoryRepository,
     private val sessionRepository: SessionRepository,
-    private val userProfileRepository: UserProfileRepository
+    private val userProfileRepository: UserProfileRepository,
+    private val exportManager: ExportManager,
+    private val shareHandler: ChatShareHandler
 ) : ViewModel() {
 
     private val quickSkillDefinitions = quickSkillCatalog.homeQuickSkills()
@@ -167,6 +173,7 @@ class HomeScreenViewModel @Inject constructor(
     private var sessionId: String = DEFAULT_SESSION_ID
     private var latestSessionSummaries: List<AiSessionSummary> = emptyList()
     private var transcriptionJob: Job? = null
+    private var latestAnalysisMarkdown: String? = null
 
     init {
         // 从 catalog 加载快捷技能到状态
@@ -187,6 +194,57 @@ class HomeScreenViewModel @Inject constructor(
         sendMessageInternal(
             messageText = _uiState.value.inputText
         )
+    }
+
+    fun onSmartAnalysisClicked() {
+        if (_uiState.value.isSending) return
+        val definition = quickSkillDefinitionsById[QuickSkillId.SUMMARIZE_LAST_MEETING]
+        _uiState.update { state ->
+            state.copy(
+                selectedSkill = definition?.toUiModel() ?: state.selectedSkill
+            )
+        }
+        val prompt = definition?.defaultPrompt ?: "请总结当前对话并给出可执行建议。"
+        sendMessageInternal(
+            messageText = prompt,
+            skillOverride = QuickSkillId.SUMMARIZE_LAST_MEETING
+        ) { summary ->
+            latestAnalysisMarkdown = summary
+        }
+    }
+
+    fun onExportPdfClicked() {
+        if (_uiState.value.exportInProgress) return
+        val markdown = latestAnalysisMarkdown ?: buildTranscriptMarkdown(_uiState.value.chatMessages)
+        if (markdown.isBlank()) {
+            _uiState.update { it.copy(snackbarMessage = "暂无可导出的内容") }
+            return
+        }
+        _uiState.update { it.copy(exportInProgress = true, chatErrorMessage = null) }
+        viewModelScope.launch {
+            when (val result = exportManager.exportMarkdown(markdown, ExportFormat.PDF)) {
+                is Result.Success -> {
+                    when (val share = shareHandler.shareExport(result.data)) {
+                        is Result.Success -> _uiState.update { it.copy(exportInProgress = false) }
+                        is Result.Error -> _uiState.update {
+                            it.copy(
+                                exportInProgress = false,
+                                chatErrorMessage = share.throwable.message ?: "分享失败"
+                            )
+                        }
+                    }
+                }
+
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            exportInProgress = false,
+                            chatErrorMessage = result.throwable.message ?: "导出失败"
+                        )
+                    }
+                }
+            }
+        }
     }
 
     fun onSelectQuickSkill(skillId: QuickSkillId) {
@@ -395,6 +453,7 @@ class HomeScreenViewModel @Inject constructor(
         viewModelScope.launch {
             if (sessionId != this@HomeScreenViewModel.sessionId) {
                 this@HomeScreenViewModel.sessionId = sessionId
+                latestAnalysisMarkdown = null
                 applySessionList()
                 loadSession(sessionId)
             }
@@ -419,6 +478,7 @@ class HomeScreenViewModel @Inject constructor(
         viewModelScope.launch {
             val newSessionId = "session-${UUID.randomUUID()}"
             sessionId = newSessionId
+            latestAnalysisMarkdown = null
             val summary = ensureSessionSummary(newSessionId, titleOverride = "新的聊天")
             _uiState.update {
                 it.copy(
@@ -536,11 +596,13 @@ class HomeScreenViewModel @Inject constructor(
     // 共享的发送 helper：输入框和快捷技能都走这里
     private fun sendMessageInternal(
         messageText: String,
+        skillOverride: QuickSkillId? = null,
+        onCompleted: (String) -> Unit = {}
     ) {
         val content = messageText.trim()
         if (content.isEmpty() || _uiState.value.isSending) return
         _uiState.update { it.copy(chatErrorMessage = null) }
-        val quickSkill = _uiState.value.selectedSkill?.id?.let { id ->
+        val quickSkill = (skillOverride ?: _uiState.value.selectedSkill?.id)?.let { id ->
             quickSkillDefinitionsById[id]
         }
         val quickSkillId = quickSkill?.id
@@ -575,11 +637,15 @@ class HomeScreenViewModel @Inject constructor(
             updateSessionSummary(userMessage.content)
         }
         val request = buildChatRequest(content, quickSkillId, newState.chatMessages, audioContext)
-        startStreamingResponse(request, assistantPlaceholder.id)
+        startStreamingResponse(request, assistantPlaceholder.id, onCompleted = onCompleted)
     }
 
     /** 启动 streaming，更新最后一条助手气泡。 */
-    private fun startStreamingResponse(request: ChatRequest, assistantId: String) {
+    private fun startStreamingResponse(
+        request: ChatRequest,
+        assistantId: String,
+        onCompleted: (String) -> Unit = {}
+    ) {
         viewModelScope.launch {
             aiChatService.streamChat(request).collect { event ->
                 when (event) {
@@ -594,6 +660,7 @@ class HomeScreenViewModel @Inject constructor(
                         updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
                             msg.copy(content = event.fullText, isStreaming = false)
                         }
+                        onCompleted(event.fullText)
                         _uiState.update { it.copy(isSending = false, isStreaming = false, isInputBusy = false) }
                         viewModelScope.launch {
                             updateSessionSummary(event.fullText)
@@ -674,6 +741,17 @@ class HomeScreenViewModel @Inject constructor(
             audioContextSummary = audioContext,
             history = history
         )
+    }
+
+    private fun buildTranscriptMarkdown(messages: List<ChatMessageUi>): String {
+        if (messages.isEmpty()) return ""
+        val builder = StringBuilder()
+        builder.append("# 对话记录\n\n")
+        messages.forEach { msg ->
+            val role = if (msg.role == ChatMessageRole.USER) "用户" else "助手"
+            builder.append("- **$role**：${msg.content}\n")
+        }
+        return builder.toString()
     }
 
     private fun createUserMessage(content: String): ChatMessageUi = ChatMessageUi(

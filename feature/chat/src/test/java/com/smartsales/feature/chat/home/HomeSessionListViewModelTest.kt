@@ -45,6 +45,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import com.smartsales.data.aicore.ExportManager
+import com.smartsales.data.aicore.ExportFormat
+import com.smartsales.data.aicore.ExportResult
+import com.smartsales.feature.chat.ChatShareHandler
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeSessionListViewModelTest {
@@ -68,7 +72,9 @@ class HomeSessionListViewModelTest {
             quickSkillCatalog = FakeQuickSkillCatalog(),
             chatHistoryRepository = fakeHistoryRepository,
             sessionRepository = sessionRepository,
-            userProfileRepository = FakeUserProfileRepository()
+            userProfileRepository = FakeUserProfileRepository(),
+            exportManager = FakeExportManager(),
+            shareHandler = FakeShareHandler()
         )
     }
 
@@ -262,5 +268,16 @@ class HomeSessionListViewModelTest {
         override suspend fun clear() {
             profile = com.smartsales.feature.usercenter.UserProfile("", "", true)
         }
+    }
+
+    private class FakeExportManager : ExportManager {
+        override suspend fun exportMarkdown(markdown: String, format: ExportFormat): Result<ExportResult> =
+            Result.Success(ExportResult("demo.pdf", "application/pdf", ByteArray(0)))
+    }
+
+    private class FakeShareHandler : ChatShareHandler {
+        override suspend fun copyMarkdown(markdown: String): Result<Unit> = Result.Success(Unit)
+        override suspend fun copyAssistantReply(text: String): Result<Unit> = Result.Success(Unit)
+        override suspend fun shareExport(result: ExportResult): Result<Unit> = Result.Success(Unit)
     }
 }

@@ -161,6 +161,7 @@ class AudioFilesViewModel @Inject constructor(
 
     fun onTranscriptClicked(id: String) {
         val target = _uiState.value.recordings.find { it.id == id } ?: return
+        if (target.transcriptionStatus != TranscriptionStatus.DONE) return
         _uiState.update { it.copy(transcriptPreviewRecording = target) }
     }
 

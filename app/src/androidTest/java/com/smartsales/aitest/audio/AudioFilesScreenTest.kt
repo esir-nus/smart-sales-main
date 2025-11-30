@@ -23,6 +23,9 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertTrue
@@ -71,7 +74,16 @@ class AudioFilesScreenTest {
         }
 
         composeRule.onNodeWithTag("${AudioFilesTestTags.TRANSCRIBE_BUTTON_PREFIX}none").assertIsDisplayed()
-        composeRule.onNodeWithText("查看/转写").assertIsDisplayed()
+        composeRule.onNodeWithTag(AudioFilesTestTags.RECORDING_LIST)
+            .performScrollToNode(hasText("转写"))
+        composeRule.onNodeWithTag(AudioFilesTestTags.RECORDING_LIST)
+            .performScrollToNode(hasText("转写中…"))
+        composeRule.onNodeWithTag(AudioFilesTestTags.RECORDING_LIST)
+            .performScrollToNode(hasText("等待转写完成"))
+        composeRule.onNodeWithTag(AudioFilesTestTags.RECORDING_LIST)
+            .performScrollToNode(hasText("查看转写"))
+        composeRule.onNodeWithTag(AudioFilesTestTags.RECORDING_LIST)
+            .performScrollToNode(hasText("转写失败，重试"))
         val inProgress =
             composeRule.onAllNodesWithTag("${AudioFilesTestTags.STATUS_CHIP_PREFIX}progress", useUnmergedTree = true)
                 .fetchSemanticsNodes().isNotEmpty()
@@ -165,6 +177,76 @@ class AudioFilesScreenTest {
         composeRule.onAllNodesWithTag(AudioFilesTestTags.ERROR_BANNER).assertCountEquals(1)
         composeRule.onNodeWithText("收起提示").performClick()
         composeRule.onAllNodesWithTag(AudioFilesTestTags.ERROR_BANNER).assertCountEquals(0)
+    }
+
+    @Test
+    fun transcriptSheet_showsAskAiOnlyWhenDone() {
+        composeRule.setContent {
+            MaterialTheme {
+                AudioFilesScreen(
+                    uiState = AudioFilesUiState(
+                        recordings = listOf(
+                            sampleRecording("done").copy(
+                                transcriptionStatus = TranscriptionStatus.DONE,
+                                fullTranscriptMarkdown = "内容"
+                            )
+                        ),
+                        transcriptPreviewRecording = sampleRecording("done").copy(
+                            transcriptionStatus = TranscriptionStatus.DONE,
+                            fullTranscriptMarkdown = "内容"
+                        )
+                    ),
+                    onRefresh = {},
+                    onSyncClicked = {},
+                    onRecordingClicked = {},
+                    onPlayPauseClicked = {},
+                    onDeleteClicked = {},
+                    onTranscribeClicked = {},
+                    onTranscriptClicked = {},
+                    onAskAiClicked = {},
+                    onTranscriptDismissed = {},
+                    onErrorDismissed = {},
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(AudioFilesTestTags.ASK_AI_BUTTON).assertIsDisplayed()
+    }
+
+    @Test
+    fun transcriptSheet_hidesAskAiWhenNotDone() {
+        composeRule.setContent {
+            MaterialTheme {
+                AudioFilesScreen(
+                    uiState = AudioFilesUiState(
+                        recordings = listOf(
+                            sampleRecording("progress").copy(
+                                transcriptionStatus = TranscriptionStatus.IN_PROGRESS,
+                                fullTranscriptMarkdown = "内容"
+                            )
+                        ),
+                        transcriptPreviewRecording = sampleRecording("progress").copy(
+                            transcriptionStatus = TranscriptionStatus.IN_PROGRESS,
+                            fullTranscriptMarkdown = "内容"
+                        )
+                    ),
+                    onRefresh = {},
+                    onSyncClicked = {},
+                    onRecordingClicked = {},
+                    onPlayPauseClicked = {},
+                    onDeleteClicked = {},
+                    onTranscribeClicked = {},
+                    onTranscriptClicked = {},
+                    onAskAiClicked = {},
+                    onTranscriptDismissed = {},
+                    onErrorDismissed = {},
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+
+        composeRule.onAllNodesWithTag(AudioFilesTestTags.ASK_AI_BUTTON).assertCountEquals(0)
     }
 
     private fun sampleRecording(id: String): AudioRecordingUi =

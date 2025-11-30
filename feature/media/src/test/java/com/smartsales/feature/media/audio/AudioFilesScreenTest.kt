@@ -13,6 +13,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -115,9 +116,13 @@ class AudioFilesScreenTest {
         }
 
         composeRule.onNodeWithTag("${AudioFilesTestTags.STATUS_CHIP_PREFIX}p1").assertIsDisplayed()
-        composeRule.onNodeWithText("转写中…").assertIsDisplayed()
+        composeRule.onNodeWithTag(AudioFilesTestTags.RECORDING_LIST)
+            .performScrollToNode(hasText("转写中…"))
+        composeRule.onNodeWithTag(AudioFilesTestTags.RECORDING_LIST)
+            .performScrollToNode(hasText("等待转写完成"))
         composeRule.onNodeWithTag("${AudioFilesTestTags.STATUS_CHIP_PREFIX}d1").assertIsDisplayed()
-        composeRule.onNodeWithText("已完成").assertIsDisplayed()
+        composeRule.onNodeWithTag(AudioFilesTestTags.RECORDING_LIST)
+            .performScrollToNode(hasText("转写完成"))
         composeRule.onNodeWithTag("${AudioFilesTestTags.TRANSCRIPT_BUTTON_PREFIX}d1").assertIsDisplayed()
     }
 

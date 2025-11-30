@@ -182,11 +182,35 @@ class AudioFilesViewModelTest {
         endpointProvider.emit("http://10.0.0.7:8000")
         advanceUntilIdle()
         viewModel.onTranscribeClicked("voice2.mp3")
+        transcriptionCoordinator.emitState(
+            "task-1",
+            AudioTranscriptionJobState.Completed(
+                jobId = "task-1",
+                transcriptMarkdown = "内容",
+                transcriptionUrl = "https://example.com/transcription.json"
+            )
+        )
+        advanceUntilIdle()
 
         viewModel.onTranscriptClicked("voice2.mp3")
         assertEquals("voice2.mp3", viewModel.uiState.value.transcriptPreviewRecording?.id)
 
         viewModel.onTranscriptDismissed()
+        assertEquals(null, viewModel.uiState.value.transcriptPreviewRecording)
+    }
+
+    @Test
+    fun `onTranscriptClicked ignores non done recordings`() = runTest(dispatcher) {
+        gateway.files = listOf(
+            DeviceMediaFile("voice3.mp3", 1, "audio/mpeg", 10L, "m3", "d3")
+        )
+        endpointProvider.emit("http://10.0.0.13:8000")
+        advanceUntilIdle()
+
+        viewModel.onTranscribeClicked("voice3.mp3")
+        advanceUntilIdle()
+
+        viewModel.onTranscriptClicked("voice3.mp3")
         assertEquals(null, viewModel.uiState.value.transcriptPreviewRecording)
     }
 

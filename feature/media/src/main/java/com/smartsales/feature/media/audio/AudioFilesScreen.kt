@@ -120,6 +120,11 @@ fun AudioFilesScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             if (uiState.isSyncing) {
+                Text(
+                    text = "录音同步中…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
             uiState.errorMessage?.let { message ->
@@ -164,7 +169,9 @@ fun AudioFilesScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 LazyColumn(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag(AudioFilesTestTags.RECORDING_LIST),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(uiState.recordings, key = { it.id }) { recording ->
@@ -201,6 +208,7 @@ object AudioFilesTestTags {
     const val SYNC_BUTTON = "audio_files_sync_button"
     const val EMPTY_STATE = "audio_files_empty_state"
     const val ERROR_BANNER = "audio_files_error_banner"
+    const val RECORDING_LIST = "audio_files_recording_list"
     const val TRANSCRIBE_BUTTON_PREFIX = "audio_files_transcribe_"
     const val TRANSCRIPT_BUTTON_PREFIX = "audio_files_transcript_"
     const val STATUS_CHIP_PREFIX = "audio_files_status_chip_"
@@ -337,17 +345,19 @@ private fun StatusBadges(
     recording: AudioRecordingUi,
     onTranscriptClicked: (String) -> Unit
 ) {
-    val (label, color) = when (recording.transcriptionStatus) {
-        TranscriptionStatus.DONE -> "已转写" to MaterialTheme.colorScheme.primary
-        TranscriptionStatus.IN_PROGRESS -> "转写中" to MaterialTheme.colorScheme.tertiary
-        TranscriptionStatus.ERROR -> "转写失败" to MaterialTheme.colorScheme.error
-        TranscriptionStatus.NONE -> "未转写" to MaterialTheme.colorScheme.secondary
+    val mapping = transcriptionUiMapping(recording.transcriptionStatus)
+    val color = when (recording.transcriptionStatus) {
+        TranscriptionStatus.DONE -> MaterialTheme.colorScheme.primary
+        TranscriptionStatus.IN_PROGRESS -> MaterialTheme.colorScheme.tertiary
+        TranscriptionStatus.ERROR -> MaterialTheme.colorScheme.error
+        TranscriptionStatus.NONE -> MaterialTheme.colorScheme.secondary
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ElevatedAssistChip(
             modifier = Modifier.testTag("${AudioFilesTestTags.STATUS_CHIP_PREFIX}${recording.id}"),
+            enabled = recording.transcriptionStatus == TranscriptionStatus.DONE,
             onClick = { onTranscriptClicked(recording.id) },
-            label = { Text(text = label, color = color) },
+            label = { Text(text = mapping.badgeLabel, color = color) },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.VolumeUp,
@@ -375,45 +385,48 @@ private fun ActionButtons(
     onTranscriptClicked: (String) -> Unit,
     onDeleteClicked: (String) -> Unit
 ) {
+    val mapping = transcriptionUiMapping(recording.transcriptionStatus)
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            when (recording.transcriptionStatus) {
-                TranscriptionStatus.NONE -> {
+            when (mapping.action) {
+                TranscriptionAction.START -> {
                     TextButton(
                         onClick = { onTranscribeClicked(recording.id) },
                         modifier = Modifier.testTag("${AudioFilesTestTags.TRANSCRIBE_BUTTON_PREFIX}${recording.id}")
                     ) {
-                        Text(text = "查看/转写")
+                        Text(text = mapping.actionLabel)
                     }
                 }
 
-                TranscriptionStatus.DONE -> {
+                TranscriptionAction.OPEN -> {
                     TextButton(
                         onClick = { onTranscriptClicked(recording.id) },
                         modifier = Modifier.testTag("${AudioFilesTestTags.TRANSCRIPT_BUTTON_PREFIX}${recording.id}")
                     ) {
-                        Text(text = "查看转写")
+                        Text(text = mapping.actionLabel)
                     }
                 }
 
-                TranscriptionStatus.IN_PROGRESS -> {
+                TranscriptionAction.NONE -> {
                     Text(
-                        text = "转写中...",
+                        text = mapping.actionLabel,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.tertiary
                     )
                 }
 
-                TranscriptionStatus.ERROR -> {
-                    Text(
-                        text = "转写失败",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
-                    )
+                TranscriptionAction.RETRY -> {
+                    TextButton(onClick = { onTranscribeClicked(recording.id) }) {
+                        Text(
+                            text = mapping.actionLabel,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             }
         }
@@ -510,14 +523,14 @@ private fun TranscriptViewerSheet(
             Spacer(modifier = Modifier.height(12.dp))
             val summary = recording.smartSummary?.takeIf { it.isMeaningful() }
             summary?.let {
-            SummaryBlock(summary = it, modifier = Modifier.testTag(AudioFilesTestTags.TRANSCRIPT_SUMMARY))
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-        val content = when (recording.transcriptionStatus) {
-            TranscriptionStatus.IN_PROGRESS -> "转写进行中，请稍后查看。"
-            TranscriptionStatus.ERROR -> "转写失败，请重试创建转写任务或检查网络。"
-            else -> recording.fullTranscriptMarkdown ?: recording.transcriptPreview ?: "暂无内容"
-        }
+                SummaryBlock(summary = it, modifier = Modifier.testTag(AudioFilesTestTags.TRANSCRIPT_SUMMARY))
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+            val content = when (recording.transcriptionStatus) {
+                TranscriptionStatus.IN_PROGRESS -> "转写进行中，请稍后查看。"
+                TranscriptionStatus.ERROR -> "转写失败，请重试创建转写任务或检查网络。"
+                else -> recording.fullTranscriptMarkdown ?: recording.transcriptPreview ?: "暂无内容"
+            }
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -537,16 +550,18 @@ private fun TranscriptViewerSheet(
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            GradientCtaButton(
-                label = "用 AI 分析本次通话",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(AudioFilesTestTags.ASK_AI_BUTTON),
-                onClick = {
-                    onDismiss()
-                    onAskAiClicked(recording)
-                }
-            )
+            if (recording.transcriptionStatus == TranscriptionStatus.DONE) {
+                GradientCtaButton(
+                    label = "用 AI 分析本次通话",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(AudioFilesTestTags.ASK_AI_BUTTON),
+                    onClick = {
+                        onDismiss()
+                        onAskAiClicked(recording)
+                    }
+                )
+            }
             Spacer(modifier = Modifier.height(8.dp))
             recording.chapters?.let { chapters ->
                 Text(
@@ -751,6 +766,46 @@ private fun GradientCtaButton(
         )
     }
 }
+
+private data class TranscriptionUiMapping(
+    val badgeLabel: String,
+    val actionLabel: String,
+    val action: TranscriptionAction
+)
+
+private enum class TranscriptionAction {
+    START,
+    OPEN,
+    RETRY,
+    NONE
+}
+
+private fun transcriptionUiMapping(status: TranscriptionStatus): TranscriptionUiMapping =
+    when (status) {
+        TranscriptionStatus.NONE -> TranscriptionUiMapping(
+            badgeLabel = "未转写",
+            actionLabel = "转写",
+            action = TranscriptionAction.START
+        )
+
+        TranscriptionStatus.IN_PROGRESS -> TranscriptionUiMapping(
+            badgeLabel = "转写中…",
+            actionLabel = "等待转写完成",
+            action = TranscriptionAction.NONE
+        )
+
+        TranscriptionStatus.DONE -> TranscriptionUiMapping(
+            badgeLabel = "转写完成",
+            actionLabel = "查看转写",
+            action = TranscriptionAction.OPEN
+        )
+
+        TranscriptionStatus.ERROR -> TranscriptionUiMapping(
+            badgeLabel = "转写失败",
+            actionLabel = "转写失败，重试",
+            action = TranscriptionAction.RETRY
+        )
+    }
 
 private fun formatDuration(durationMillis: Long?): String {
     if (durationMillis == null || durationMillis <= 0) return "--:--"

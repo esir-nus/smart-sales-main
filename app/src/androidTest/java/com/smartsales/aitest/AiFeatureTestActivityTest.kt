@@ -73,39 +73,42 @@ class AiFeatureTestActivityTest {
     }
 
     @Test
-    fun quickSkillTap_showsConfirmationAndChip() {
+    fun quickSkillTap_setsModeWithoutCreatingMessages() {
+        waitForPage(AiFeatureTestTags.PAGE_HOME)
+
+        val assistantBefore = countByTag(HomeScreenTestTags.ASSISTANT_MESSAGE)
+        val userBefore = countByTag(HomeScreenTestTags.USER_MESSAGE)
+
+        tapQuickSkill(QuickSkillId.SUMMARIZE_LAST_MEETING)
+
+        // 芯片仍可见且高亮，但不应生成任何聊天气泡
+        val skillTag = "home_quick_skill_${QuickSkillId.SUMMARIZE_LAST_MEETING.name}"
+        composeRule.onNodeWithTag(skillTag, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onAllNodesWithTag(HomeScreenTestTags.ASSISTANT_MESSAGE, useUnmergedTree = true)
+            .fetchSemanticsNodes().size.let { after ->
+                assert(after == assistantBefore)
+            }
+        composeRule.onAllNodesWithTag(HomeScreenTestTags.USER_MESSAGE, useUnmergedTree = true)
+            .fetchSemanticsNodes().size.let { after ->
+                assert(after == userBefore)
+            }
+        composeRule.onAllNodesWithTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP, useUnmergedTree = true)
+            .fetchSemanticsNodes().isEmpty()
+    }
+
+    @Test
+    fun quickSkillTap_showsNoSkillBubble() {
         waitForPage(AiFeatureTestTags.PAGE_HOME)
 
         tapQuickSkill(QuickSkillId.SUMMARIZE_LAST_MEETING)
 
-        composeRule.onNodeWithTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP, useUnmergedTree = true).assertIsDisplayed()
+        // 新 UX 不生成底部技能气泡
+        composeRule.onAllNodesWithTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP, useUnmergedTree = true)
+            .fetchSemanticsNodes().isEmpty()
     }
 
     @Test
-    fun quickSkillChip_closeClearsSelection() {
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
-
-        tapQuickSkill(QuickSkillId.SUMMARIZE_LAST_MEETING)
-        val chipAppeared = runCatching {
-            composeRule.waitUntil(timeoutMillis = 3_000) {
-                composeRule.onAllNodesWithTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP, useUnmergedTree = true)
-                    .fetchSemanticsNodes().isNotEmpty()
-            }
-            true
-        }.getOrDefault(false)
-        if (!chipAppeared) return
-        composeRule.onNodeWithTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP_CLOSE, useUnmergedTree = true).performClick()
-
-        runCatching {
-            composeRule.waitUntil(timeoutMillis = 10_000) {
-                composeRule.onAllNodesWithTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP, useUnmergedTree = true)
-                    .fetchSemanticsNodes().isEmpty()
-            }
-        }
-    }
-
-    @Test
-    fun quickSkill_sendConsumesSkill() {
+    fun quickSkill_sendUsesModeWithoutSkillBubble() {
         waitForPage(AiFeatureTestTags.PAGE_HOME)
 
         tapQuickSkill(QuickSkillId.SUMMARIZE_LAST_MEETING)
@@ -113,10 +116,9 @@ class AiFeatureTestActivityTest {
         composeRule.onNodeWithTag(HomeScreenTestTags.SEND_BUTTON).performClick()
 
         composeRule.waitForIdle()
-        composeRule.waitUntil(timeoutMillis = 10_000) {
-            composeRule.onAllNodesWithTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP, useUnmergedTree = true)
-                .fetchSemanticsNodes().isEmpty()
-        }
+        // 发送后仍不应出现技能气泡
+        composeRule.onAllNodesWithTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP, useUnmergedTree = true)
+            .fetchSemanticsNodes().isEmpty()
     }
 
     @Test
@@ -172,6 +174,10 @@ class AiFeatureTestActivityTest {
             composeRule.onAllNodesWithTag(tag, useUnmergedTree = true)[0].performClick()
         }
     }
+
+    private fun countByTag(tag: String): Int = runCatching {
+        composeRule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().size
+    }.getOrDefault(0)
 
     private fun waitForHomeRendered() {
         composeRule.waitUntil(timeoutMillis = 10_000) {

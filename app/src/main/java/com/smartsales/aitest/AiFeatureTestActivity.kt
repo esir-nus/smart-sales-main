@@ -6,53 +6,48 @@ package com.smartsales.aitest
 // 作者：创建于 2025-11-20
 
 import android.Manifest
-import android.app.ActivityManager
 import android.net.Uri
 import android.os.Bundle
-import android.os.Process
-import android.util.Log
-import android.view.WindowManager
 import android.widget.VideoView
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -72,23 +67,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.invisibleToUser
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.zIndex
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import androidx.hilt.navigation.compose.hiltViewModel
 import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.decode.GifDecoder
@@ -99,61 +88,41 @@ import com.smartsales.aitest.devicemanager.DeviceManagerRoute
 import com.smartsales.aitest.setup.DeviceSetupRoute
 import com.smartsales.aitest.usercenter.UserCenterRoute
 import com.smartsales.core.util.Result
+import com.smartsales.feature.chat.home.HomeScreenTestTags
+import com.smartsales.feature.chat.home.DeviceConnectionStateUi
 import com.smartsales.feature.chat.home.DeviceSnapshotUi
 import com.smartsales.feature.chat.home.HomeScreenRoute
-import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.chat.home.HomeScreenViewModel
 import com.smartsales.feature.chat.home.TranscriptionChatRequest
 import com.smartsales.feature.chat.history.ChatHistoryRoute
 import com.smartsales.feature.media.audio.AudioFilesEvent
 import com.smartsales.feature.media.audio.AudioFilesViewModel
+import com.smartsales.core.util.AppDesignTokens
+import androidx.hilt.navigation.compose.hiltViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import java.io.File
-import kotlin.math.roundToInt
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 
 @AndroidEntryPoint
 class AiFeatureTestActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        Log.i(
-            ACTIVITY_LOG_TAG,
-            "onCreate start pid=${Process.myPid()} savedInstanceState=${savedInstanceState != null}"
-        )
         super.onCreate(savedInstanceState)
-        val runningInTest = ActivityManager.isRunningInTestHarness()
-        if (runningInTest) {
-            // 测试环境下保持前台并确保窗口可聚焦
-            window.addFlags(
-                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
-                    WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
-                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
-                    WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
-            )
-            window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
-            window.setFlags(
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-            )
-        }
+        Log.i("AiFeatureTestActivity", "onCreate before setContent (ui-integration)")
         setContent {
-            Log.i(
-                ACTIVITY_LOG_TAG,
-                "setContent attached, entering AiFeatureTestApp pid=${Process.myPid()}"
-            )
+            Log.i("AiFeatureTestActivity", "setContent attached, entering AiFeatureTestApp (ui-integration)")
             AiFeatureTestApp()
         }
     }
-
-    companion object {
-        private const val ACTIVITY_LOG_TAG = "AiFeatureTestActivity"
-    }
-}
-
-private enum class OverlayState {
-    AUDIO_OPEN,
-    HOME,
-    DEVICE_OPEN
 }
 
 @Composable
@@ -165,31 +134,16 @@ private fun AiFeatureTestApp() {
     val homeViewModel: HomeScreenViewModel = hiltViewModel()
     val audioFilesViewModel: AudioFilesViewModel = hiltViewModel()
     var currentPage by rememberSaveable { mutableStateOf(TestHomePage.Home) }
-    var overlayState by rememberSaveable { mutableStateOf(OverlayState.HOME) }
     var latestDeviceSnapshot by remember { mutableStateOf<DeviceSnapshotUi?>(null) }
     var pendingSessionId by remember { mutableStateOf<String?>(null) }
+    val goHome: () -> Unit = {
+        currentPage = TestHomePage.Home
+    }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
         if (results.values.any { granted -> !granted }) {
             scope.launch { snackbarHostState.showSnackbar("缺少 BLE 或定位权限，无法扫描 BT311。") }
-        }
-    }
-    val runningInTest = ActivityManager.isRunningInTestHarness()
-
-    // 确保关键屏幕有 testTag，便于测试与排查
-    val homePageTag = AiFeatureTestTags.PAGE_HOME
-    val audioPageTag = AiFeatureTestTags.PAGE_AUDIO_FILES
-    val devicePageTag = AiFeatureTestTags.PAGE_DEVICE_MANAGER
-    val deviceSetupTag = AiFeatureTestTags.PAGE_DEVICE_SETUP
-    val historyPageTag = AiFeatureTestTags.PAGE_CHAT_HISTORY
-    val userCenterPageTag = AiFeatureTestTags.PAGE_USER_CENTER
-    val updateOverlayState: (OverlayState) -> Unit = { state ->
-        overlayState = state
-        currentPage = when (state) {
-            OverlayState.AUDIO_OPEN -> TestHomePage.AudioFiles
-            OverlayState.HOME -> TestHomePage.Home
-            OverlayState.DEVICE_OPEN -> TestHomePage.DeviceManager
         }
     }
 
@@ -200,7 +154,7 @@ private fun AiFeatureTestApp() {
                 it
             ) != android.content.pm.PackageManager.PERMISSION_GRANTED
         }
-        if (!runningInTest && missingPermissions.isNotEmpty()) {
+        if (missingPermissions.isNotEmpty()) {
             permissionLauncher.launch(missingPermissions.toTypedArray())
         }
     }
@@ -210,7 +164,6 @@ private fun AiFeatureTestApp() {
             when (event) {
                 is AudioFilesEvent.TranscriptReady -> {
                     val sessionId = "session-${event.jobId}"
-                    pendingSessionId = sessionId
                     homeViewModel.onTranscriptionRequested(
                         TranscriptionChatRequest(
                             jobId = event.jobId,
@@ -221,16 +174,45 @@ private fun AiFeatureTestApp() {
                             transcriptMarkdown = event.fullTranscriptMarkdown
                         )
                     )
+                    pendingSessionId = sessionId
                 }
             }
         }
     }
 
-    LaunchedEffect(currentPage) {
-        overlayState = overlayStateFromPage(currentPage) ?: OverlayState.HOME
+    fun overlayFor(page: TestHomePage): HomeOverlay = when (page) {
+        TestHomePage.DeviceManager,
+        TestHomePage.DeviceSetup -> HomeOverlay.Device
+        TestHomePage.AudioFiles -> HomeOverlay.Audio
+        else -> HomeOverlay.Home
     }
 
-    BackHandler(enabled = currentPage != TestHomePage.Home) { currentPage = TestHomePage.Home }
+    fun setPage(page: TestHomePage) {
+        currentPage = page
+    }
+
+    fun openHomeOverlay() {
+        goHome()
+    }
+
+    fun openAudioOverlay() {
+        setPage(TestHomePage.AudioFiles)
+    }
+
+    fun openDeviceSection(forceSetup: Boolean = false) {
+        val destination = when {
+            forceSetup -> TestHomePage.DeviceSetup
+            latestDeviceSnapshot?.connectionState == DeviceConnectionStateUi.CONNECTED -> TestHomePage.DeviceManager
+            else -> TestHomePage.DeviceSetup
+        }
+        setPage(destination)
+    }
+
+    val currentOverlay = overlayFor(currentPage)
+
+    BackHandler(enabled = currentPage != TestHomePage.Home) {
+        goHome()
+    }
 
     MaterialTheme {
         val showSnackbar: (String) -> Unit = { message ->
@@ -247,156 +229,375 @@ private fun AiFeatureTestApp() {
                 ) {
                     Text(text = "新对话", style = MaterialTheme.typography.titleLarge)
                     Spacer(modifier = Modifier.weight(1f))
-                    // 顶栏导航按钮切换页面
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        IconButton(
-                            onClick = { updateOverlayState(OverlayState.AUDIO_OPEN) },
-                            modifier = Modifier.testTag(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE)
-                        ) {
-                            Icon(Icons.Default.Refresh, contentDescription = "打开音频页")
-                        }
-                        IconButton(
-                            onClick = { updateOverlayState(OverlayState.DEVICE_OPEN) },
-                            modifier = Modifier.testTag(AiFeatureTestTags.OVERLAY_DEVICE_HANDLE)
-                        ) {
-                            Icon(Icons.Default.Upload, contentDescription = "打开设备页")
-                        }
-                    }
                 }
             }
         ) { innerPadding ->
-            Box(
+            Surface(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                val overlayPage = overlayStateFromPage(currentPage)
-                if (overlayPage != null) {
-                    VerticalLayerShell(
-                        overlayState = overlayPage,
-                        onOverlayStateChange = updateOverlayState,
-                        modifier = Modifier.fillMaxSize(),
-                        home = {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .testTag(homePageTag)
-                            ) {
-                                HomeScreenRoute(
-                                    modifier = Modifier.fillMaxSize(),
-                                    viewModel = homeViewModel,
-                                    sessionId = pendingSessionId,
-                                    selectedSessionId = pendingSessionId,
-                                    onSessionSelectionConsumed = { pendingSessionId = null },
-                                    onNavigateToDeviceManager = { updateOverlayState(OverlayState.DEVICE_OPEN) },
-                                    onNavigateToDeviceSetup = { currentPage = TestHomePage.DeviceSetup },
-                                    onNavigateToAudioFiles = { updateOverlayState(OverlayState.AUDIO_OPEN) },
-                                    onNavigateToUserCenter = { currentPage = TestHomePage.UserCenter },
-                                    onNavigateToChatHistory = { currentPage = TestHomePage.ChatHistory },
-                                    onDeviceSnapshotChanged = { latestDeviceSnapshot = it }
-                                )
-                            }
-                        },
-                        audio = {
-                            AudioFilesRoute(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .testTag(audioPageTag),
-                                viewModel = audioFilesViewModel,
-                                onAskAiAboutTranscript = { recordingId, fileName, jobId, preview, full ->
-                                    val resolvedJobId = jobId ?: "transcription-$recordingId"
-                                    val sessionId = "session-$resolvedJobId"
-                                    pendingSessionId = sessionId
-                                    homeViewModel.onTranscriptionRequested(
-                                        TranscriptionChatRequest(
-                                            jobId = resolvedJobId,
-                                            fileName = fileName,
-                                            recordingId = recordingId,
-                                            sessionId = sessionId,
-                                            transcriptPreview = preview,
-                                            transcriptMarkdown = full
-                                        )
-                                    )
-                                    updateOverlayState(OverlayState.HOME)
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            DraggableOverlayStack(
+                currentOverlay = currentOverlay,
+                onSelectDevice = { openDeviceSection() },
+                onSelectHome = { openHomeOverlay() },
+                onSelectAudio = { openAudioOverlay() },
+                showTags = currentPage in setOf(
+                    TestHomePage.Home,
+                    TestHomePage.AudioFiles,
+                    TestHomePage.DeviceManager,
+                    TestHomePage.DeviceSetup
+                )
+            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            ) {
+                        PageSelector(
+                            currentPage = currentPage,
+                            onPageSelected = { page ->
+                                when (page) {
+                                    TestHomePage.DeviceManager -> openDeviceSection()
+                                    TestHomePage.DeviceSetup -> openDeviceSection(forceSetup = true)
+                                    else -> setPage(page)
                                 }
-                            )
-                        },
-                        device = {
-                            DeviceManagerRoute(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .testTag(devicePageTag)
-                            )
-                        }
-                    )
-                } else {
-                    when (currentPage) {
-                        TestHomePage.WifiBleTester -> {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .testTag(AiFeatureTestTags.PAGE_WIFI)
-                            ) {
-                                WifiBleTesterRoute(
-                                    modifier = Modifier.fillMaxSize(),
-                                    mediaServerClient = mediaServerClient,
-                                    onShowMessage = showSnackbar
-                                )
                             }
-                        }
-
-                    TestHomePage.ChatHistory -> {
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .testTag(historyPageTag)
+                                .weight(1f)
+                                .fillMaxWidth()
                         ) {
-                            ChatHistoryRoute(
-                                modifier = Modifier.fillMaxSize(),
-                                onSessionSelected = { sessionId ->
-                                    pendingSessionId = sessionId
-                                    currentPage = TestHomePage.Home
+                            when (currentPage) {
+                                TestHomePage.Home -> {
+                                    // Home 页：加载聊天 HomeScreen 并把回调映射到对应 Tab。
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .testTag(AiFeatureTestTags.PAGE_HOME)
+                                            .testTag(HomeScreenTestTags.ROOT)
+                                    ) {
+                                        HomeScreenRoute(
+                                            modifier = Modifier.fillMaxSize(),
+                                            viewModel = homeViewModel,
+                                            sessionId = pendingSessionId,
+                                            selectedSessionId = pendingSessionId,
+                                            onSessionSelectionConsumed = { pendingSessionId = null },
+                                            onNavigateToDeviceManager = { openDeviceSection() },
+                                            onNavigateToDeviceSetup = { openDeviceSection(forceSetup = true) },
+                                            onNavigateToAudioFiles = { setPage(TestHomePage.AudioFiles) },
+                                            onNavigateToUserCenter = { setPage(TestHomePage.UserCenter) },
+                                            onNavigateToChatHistory = { setPage(TestHomePage.ChatHistory) },
+                                            onDeviceSnapshotChanged = { latestDeviceSnapshot = it }
+                                        )
+                                    }
                                 }
-                            )
-                        }
-                    }
 
-                        TestHomePage.UserCenter -> {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .testTag(userCenterPageTag)
-                            ) {
-                                UserCenterRoute(
-                                    modifier = Modifier.fillMaxSize(),
-                                    onLogout = { currentPage = TestHomePage.Home },
-                                    onOpenDeviceManager = { updateOverlayState(OverlayState.DEVICE_OPEN) },
-                                    onOpenSubscription = { currentPage = TestHomePage.Home },
-                                    onOpenPrivacy = { currentPage = TestHomePage.Home },
-                                    onOpenGeneral = { currentPage = TestHomePage.Home }
-                                )
+                                TestHomePage.WifiBleTester -> {
+                                    WifiBleTesterRoute(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .testTag(AiFeatureTestTags.PAGE_WIFI),
+                                        mediaServerClient = mediaServerClient,
+                                        onShowMessage = showSnackbar
+                                    )
+                                }
+
+                                TestHomePage.DeviceManager -> {
+                                    DeviceManagerRoute(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
+                                    )
+                                }
+
+                                TestHomePage.DeviceSetup -> {
+                                    DeviceSetupRoute(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .testTag(AiFeatureTestTags.PAGE_DEVICE_SETUP),
+                                        onCompleted = { setPage(TestHomePage.DeviceManager) }
+                                    )
+                                }
+
+                                TestHomePage.AudioFiles -> {
+                                    AudioFilesRoute(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES),
+                                        viewModel = audioFilesViewModel,
+                                        onAskAiAboutTranscript = { recordingId, fileName, jobId, preview, full ->
+                                            val resolvedJobId = jobId ?: "transcription-$recordingId"
+                                            val sessionId = "session-$resolvedJobId"
+                                            homeViewModel.onTranscriptionRequested(
+                                                TranscriptionChatRequest(
+                                                    jobId = resolvedJobId,
+                                                    fileName = fileName,
+                                                    recordingId = recordingId,
+                                                    sessionId = sessionId,
+                                                    transcriptPreview = preview,
+                                                    transcriptMarkdown = full
+                                                )
+                                            )
+                                            pendingSessionId = sessionId
+                                            setPage(TestHomePage.Home)
+                                        }
+                                    )
+                                }
+
+                                TestHomePage.ChatHistory -> {
+                                    ChatHistoryRoute(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .testTag(AiFeatureTestTags.PAGE_CHAT_HISTORY),
+                                        onSessionSelected = { sessionId ->
+                                            Log.d("T9_Debug", "AiFeatureTestActivity.onSessionSelected sessionId=$sessionId")
+                                            pendingSessionId = sessionId
+                                            goHome()
+                                        }
+                                    )
+                                }
+
+                                TestHomePage.UserCenter -> {
+                                    UserCenterRoute(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .testTag(AiFeatureTestTags.PAGE_USER_CENTER),
+                                        onLogout = { goHome() },
+                                        onOpenDeviceManager = { setPage(TestHomePage.DeviceManager) },
+                                        onOpenSubscription = { goHome() },
+                                        onOpenPrivacy = { goHome() },
+                                        onOpenGeneral = { goHome() }
+                                    )
+                                }
                             }
                         }
-
-                        TestHomePage.DeviceSetup -> {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .testTag(deviceSetupTag)
-                            ) {
-                                DeviceSetupRoute(
-                                    modifier = Modifier.fillMaxSize(),
-                                    onCompleted = { updateOverlayState(OverlayState.DEVICE_OPEN) }
-                                )
-                            }
-                        }
-
-                        else -> Unit
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun DraggableOverlayStack(
+    currentOverlay: HomeOverlay,
+    onSelectDevice: () -> Unit,
+    onSelectHome: () -> Unit,
+    onSelectAudio: () -> Unit,
+    showTags: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val designTokens = AppDesignTokens.current()
+    val dragRangePx = with(density) { 240.dp.toPx() }
+    val offset = remember { Animatable(overlayToPosition(currentOverlay)) }
+    val target = overlayToPosition(currentOverlay)
+
+    LaunchedEffect(target) {
+        offset.animateTo(
+            targetValue = target,
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+        )
+    }
+
+    val dragState = rememberDraggableState { delta ->
+        val next = (offset.value + delta / dragRangePx).coerceIn(-1f, 1f)
+        scope.launch { offset.snapTo(next) }
+    }
+
+    fun settle(velocity: Float) {
+        val adjusted = offset.value + (velocity / 4_000f).coerceIn(-0.2f, 0.2f)
+        val destination = when {
+            adjusted > 0.25f -> HomeOverlay.Device
+            adjusted < -0.25f -> HomeOverlay.Audio
+            else -> HomeOverlay.Home
+        }
+        when (destination) {
+            HomeOverlay.Device -> onSelectDevice()
+            HomeOverlay.Audio -> onSelectAudio()
+            HomeOverlay.Home -> onSelectHome()
+        }
+    }
+
+    Surface(
+        modifier = modifier
+            .width(designTokens.overlayRailWidth)
+            .fillMaxHeight()
+            .background(
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                shape = MaterialTheme.shapes.large
+            )
+            .padding(vertical = 8.dp)
+            .draggable(
+                state = dragState,
+                orientation = Orientation.Vertical,
+                onDragStopped = { velocity -> settle(velocity) }
+            )
+            .testTag(AiFeatureTestTags.OVERLAY_STACK),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+        shape = MaterialTheme.shapes.large
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(vertical = 16.dp, horizontal = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            OverlayCard(
+                label = "音频",
+                overlay = HomeOverlay.Audio,
+                currentOffset = offset.value,
+                onClick = onSelectAudio,
+                tag = if (showTags) AiFeatureTestTags.OVERLAY_AUDIO_HANDLE else null
+            )
+            OverlayCard(
+                label = "Home",
+                overlay = HomeOverlay.Home,
+                currentOffset = offset.value,
+                onClick = onSelectHome,
+                tag = if (showTags) AiFeatureTestTags.OVERLAY_HOME else null
+            )
+            OverlayCard(
+                label = "设备",
+                overlay = HomeOverlay.Device,
+                currentOffset = offset.value,
+                onClick = onSelectDevice,
+                tag = if (showTags) AiFeatureTestTags.OVERLAY_DEVICE_HANDLE else null
+            )
+        }
+    }
+}
+
+@Composable
+private fun OverlayCard(
+    label: String,
+    overlay: HomeOverlay,
+    currentOffset: Float,
+    onClick: () -> Unit,
+    tag: String?
+) {
+    val designTokens = AppDesignTokens.current()
+    val base = overlayToPosition(overlay)
+    val distance = 1f - kotlin.math.abs(currentOffset - base).coerceIn(0f, 1f)
+    val scale = 0.92f + distance * 0.12f
+    val elevation = 1.dp + (distance * 2).dp
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressedScale by animateFloatAsState(
+        targetValue = if (pressed) 0.95f else 1f,
+        animationSpec = tween(durationMillis = 120),
+        label = "overlay_press_anim"
+    )
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .sizeIn(minWidth = 64.dp, minHeight = 72.dp)
+            .graphicsLayer(
+                scaleX = scale * pressedScale,
+                scaleY = scale * pressedScale
+            )
+            .then(if (tag != null) Modifier.testTag(tag) else Modifier),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(elevation),
+        onClick = onClick,
+        interactionSource = interactionSource
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp, horizontal = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .height(designTokens.overlayHandleSize.height)
+                    .width(designTokens.overlayHandleSize.width)
+                    .background(designTokens.overlayHandleColor, shape = MaterialTheme.shapes.small)
+            )
+            Text(text = label, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = when (overlay) {
+                    HomeOverlay.Home -> "主页"
+                    HomeOverlay.Audio -> "音频"
+                    HomeOverlay.Device -> "设备"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun PageSelector(currentPage: TestHomePage, onPageSelected: (TestHomePage) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                shape = MaterialTheme.shapes.medium
+            )
+            .padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "快速导航",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 4.dp)
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            val pages = listOf(
+                TestHomePage.Home to "Home",
+                TestHomePage.AudioFiles to "音频库",
+                TestHomePage.DeviceManager to "设备",
+                TestHomePage.ChatHistory to "历史",
+                TestHomePage.UserCenter to "个人"
+            )
+            pages.forEach { (page, label) ->
+                val selected = page == currentPage
+                AssistChip(
+                    onClick = { onPageSelected(page) },
+                    label = { Text(text = label) },
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                        labelColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+private enum class HomeOverlay {
+    Device,
+    Home,
+    Audio
+}
+
+private fun overlayToPosition(overlay: HomeOverlay): Float = when (overlay) {
+    HomeOverlay.Audio -> -1f
+    HomeOverlay.Home -> 0f
+    HomeOverlay.Device -> 1f
 }
 
 private enum class TestHomePage {
@@ -407,149 +608,6 @@ private enum class TestHomePage {
     ChatHistory,
     AudioFiles,
     UserCenter
-}
-
-private fun overlayStateFromPage(page: TestHomePage): OverlayState? = when (page) {
-    TestHomePage.AudioFiles -> OverlayState.AUDIO_OPEN
-    TestHomePage.DeviceManager -> OverlayState.DEVICE_OPEN
-    TestHomePage.Home -> OverlayState.HOME
-    else -> null
-}
-
-@Composable
-@OptIn(ExperimentalComposeUiApi::class)
-private fun VerticalLayerShell(
-    overlayState: OverlayState,
-    onOverlayStateChange: (OverlayState) -> Unit,
-    modifier: Modifier = Modifier,
-    home: @Composable () -> Unit,
-    audio: @Composable () -> Unit,
-    device: @Composable () -> Unit,
-) {
-    val configuration = LocalConfiguration.current
-    val density = LocalDensity.current
-    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
-    val dragThreshold = screenHeightPx * 0.15f
-    val peekTop = with(density) { 64.dp.toPx() } // 底部抽屉留出顶部空隙，提示可下拉关闭
-    val peekBottom = with(density) { 64.dp.toPx() } // 顶部抽屉留出底部空隙，提示可上推关闭
-    var dragOffset by remember { mutableStateOf(0f) }
-    val draggableState = rememberDraggableState { delta ->
-        dragOffset += delta
-    }
-
-    val audioTarget = if (overlayState == OverlayState.AUDIO_OPEN) 0f else -screenHeightPx
-    val deviceTarget = if (overlayState == OverlayState.DEVICE_OPEN) 0f else screenHeightPx
-    val audioOffset by animateFloatAsState(targetValue = audioTarget, label = "audioOffset")
-    val deviceOffset by animateFloatAsState(targetValue = deviceTarget, label = "deviceOffset")
-
-    Box(
-        modifier = modifier.draggable(
-            orientation = Orientation.Vertical,
-            state = draggableState,
-            onDragStopped = {
-                val totalDrag = dragOffset
-                dragOffset = 0f
-                val target = when {
-                    totalDrag > dragThreshold -> {
-                        if (overlayState == OverlayState.DEVICE_OPEN) OverlayState.HOME else OverlayState.AUDIO_OPEN
-                    }
-
-                    totalDrag < -dragThreshold -> {
-                        if (overlayState == OverlayState.AUDIO_OPEN) OverlayState.HOME else OverlayState.DEVICE_OPEN
-                    }
-
-                    else -> overlayState
-                }
-                onOverlayStateChange(target)
-            }
-        )
-    ) {
-        // Home 层始终存在，overlay 盖上时由遮罩处理
-        Box(modifier = Modifier.fillMaxSize()) {
-            home()
-        }
-
-        if (overlayState != OverlayState.HOME) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .zIndex(1f)
-                    .background(Color.Black.copy(alpha = 0.28f))
-                    .testTag(AiFeatureTestTags.OVERLAY_BACKDROP)
-                    .clickable { onOverlayStateChange(OverlayState.HOME) }
-            )
-        }
-
-        val audioHidden = overlayState != OverlayState.AUDIO_OPEN
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .offset {
-                    // 抽屉展开时保留顶部露出 Home，便于下拉关闭
-                    val target = audioOffset + dragOffset + peekTop
-                    IntOffset(0, target.roundToInt())
-                }
-                .zIndex(2f)
-                .then(if (audioHidden) Modifier.semantics { invisibleToUser() } else Modifier)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 6.dp)
-                        .height(6.dp)
-                        .align(Alignment.CenterHorizontally)
-                        .background(
-                            color = Color.Gray.copy(alpha = 0.35f),
-                            shape = RoundedCornerShape(3.dp)
-                        )
-                )
-                Box(modifier = Modifier.weight(1f)) {
-                    audio()
-                }
-            }
-        }
-
-        val deviceHidden = overlayState != OverlayState.DEVICE_OPEN
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .offset {
-                    // 顶部抽屉展开时保留底部露出 Home，便于上推关闭
-                    val target = deviceOffset + dragOffset - peekBottom
-                    IntOffset(0, target.roundToInt())
-                }
-                .zIndex(2f)
-                .then(if (deviceHidden) Modifier.semantics { invisibleToUser() } else Modifier)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 6.dp)
-                        .height(6.dp)
-                        .align(Alignment.CenterHorizontally)
-                        .background(
-                            color = Color.Gray.copy(alpha = 0.35f),
-                            shape = RoundedCornerShape(3.dp)
-                        )
-                )
-                Box(modifier = Modifier.weight(1f)) {
-                    device()
-                }
-            }
-        }
-    }
 }
 
 @Composable

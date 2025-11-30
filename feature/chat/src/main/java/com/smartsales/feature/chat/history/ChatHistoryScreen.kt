@@ -2,6 +2,7 @@
 
 package com.smartsales.feature.chat.history
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -95,7 +96,12 @@ fun ChatHistoryRoute(
     ChatHistoryScreen(
         state = state,
         onRefresh = viewModel::loadSessions,
-        onSessionClicked = viewModel::onSessionClicked,
+        onSessionClicked = { sessionId ->
+            Log.d("T9_Debug", "ChatHistoryRoute.onSessionClicked sessionId=$sessionId")
+            // 保留 ViewModel 逻辑，再直接通知宿主回到 Home 打开该会话
+            viewModel.onSessionClicked(sessionId)
+            onSessionSelected(sessionId)
+        },
         onRenameSession = viewModel::onRenameSession,
         onDeleteSession = viewModel::onDeleteSession,
         onPinToggle = viewModel::onPinToggle,
@@ -175,7 +181,10 @@ fun ChatHistoryScreen(
                     items(state.sessions, key = { it.id }) { session ->
                         ChatHistoryItem(
                             session = session,
-                            onClick = { onSessionClicked(session.id) },
+                            onClick = {
+                                Log.d("T9_Debug", "ChatHistoryScreen.onSessionClicked item id=${session.id}")
+                                onSessionClicked(session.id)
+                            },
                             onLongPress = { sheetSession = session },
                             modifier = Modifier.testTag(ChatHistoryTestTags.item(session.id))
                         )

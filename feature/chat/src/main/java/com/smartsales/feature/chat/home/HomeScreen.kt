@@ -900,20 +900,26 @@ private fun QuickSkillRow(
                     MaterialTheme.colorScheme.onSurface
                 }
             )
-            AssistChip(
-                onClick = { onQuickSkillSelected(skill.id) },
-                enabled = enabled,
-                modifier = Modifier.testTag(skillTag),
-                label = {
-                    Text(
-                        text = skill.label,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                // 快捷技能视为模式选择，仅高亮选中态，不向聊天插入消息
-                colors = colors
-            )
+            Box {
+                AssistChip(
+                    onClick = { onQuickSkillSelected(skill.id) },
+                    enabled = enabled,
+                    modifier = Modifier.testTag(skillTag),
+                    label = {
+                        Text(
+                            text = skill.label,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    // 快捷技能视为模式选择，仅高亮选中态，不向聊天插入消息
+                    colors = colors
+                )
+                if (isSelected) {
+                    // 测试用：标记当前选中的快捷技能，便于断言选中态
+                    Box(modifier = Modifier.fillMaxSize().testTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP))
+                }
+            }
         }
     }
 }

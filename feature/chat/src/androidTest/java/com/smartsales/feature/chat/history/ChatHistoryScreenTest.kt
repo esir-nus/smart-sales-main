@@ -28,6 +28,55 @@ class ChatHistoryScreenTest {
     val composeRule = createComposeRule()
 
     @Test
+    fun search_filtersAndClears() {
+        composeRule.setContent {
+            MaterialTheme {
+                ChatHistoryScreen(
+                    state = ChatHistoryUiState(
+                        searchQuery = "",
+                        groups = listOf(
+                            ChatHistoryGroupUi(
+                                label = "7天内",
+                                items = listOf(
+                                    ChatSessionUi(
+                                        id = "s1",
+                                        title = "客户报价方案",
+                                        lastMessagePreview = "简短摘要",
+                                        updatedAt = 1_000,
+                                        pinned = false
+                                    ),
+                                    ChatSessionUi(
+                                        id = "s2",
+                                        title = "内部周会纪要",
+                                        lastMessagePreview = "总结",
+                                        updatedAt = 2_000,
+                                        pinned = false
+                                    )
+                                )
+                            )
+                        )
+                    ),
+                    onBackClick = {},
+                    onSessionClicked = {},
+                    onRenameSession = { _, _ -> },
+                    onDeleteSession = {},
+                    onPinToggle = {},
+                    onDismissError = {},
+                    onSearchQueryChanged = {}
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("搜索标题或摘要").performTextInput("报价")
+        composeRule.onNodeWithText("客户报价方案").assertIsDisplayed()
+        composeRule.onNodeWithText("内部周会纪要").assertDoesNotExist()
+
+        composeRule.onNodeWithText("清除").performClick()
+        composeRule.onNodeWithText("客户报价方案").assertIsDisplayed()
+        composeRule.onNodeWithText("内部周会纪要").assertIsDisplayed()
+    }
+
+    @Test
     fun sessions_renderAndClickNotifies() {
         var clicked: String? = null
         composeRule.setContent {
@@ -54,7 +103,8 @@ class ChatHistoryScreenTest {
                     onRenameSession = { _, _ -> },
                     onDeleteSession = {},
                     onPinToggle = {},
-                    onDismissError = {}
+                    onDismissError = {},
+                    onSearchQueryChanged = {}
                 )
             }
         }
@@ -76,7 +126,8 @@ class ChatHistoryScreenTest {
                     onRenameSession = { _, _ -> },
                     onDeleteSession = {},
                     onPinToggle = {},
-                    onDismissError = {}
+                    onDismissError = {},
+                    onSearchQueryChanged = {}
                 )
             }
         }
@@ -102,7 +153,8 @@ class ChatHistoryScreenTest {
                     onRenameSession = { _, _ -> },
                     onDeleteSession = {},
                     onPinToggle = {},
-                    onDismissError = { state.value = state.value.copy(errorMessage = null) }
+                    onDismissError = { state.value = state.value.copy(errorMessage = null) },
+                    onSearchQueryChanged = {}
                 )
             }
         }
@@ -139,7 +191,8 @@ class ChatHistoryScreenTest {
                     onRenameSession = { _, _ -> },
                     onDeleteSession = {},
                     onPinToggle = { pinToggled = true },
-                    onDismissError = {}
+                    onDismissError = {},
+                    onSearchQueryChanged = {}
                 )
             }
         }
@@ -180,7 +233,8 @@ class ChatHistoryScreenTest {
                     onRenameSession = { id, title -> renamed = id to title },
                     onDeleteSession = { deleted = it },
                     onPinToggle = {},
-                    onDismissError = {}
+                    onDismissError = {},
+                    onSearchQueryChanged = {}
                 )
             }
         }

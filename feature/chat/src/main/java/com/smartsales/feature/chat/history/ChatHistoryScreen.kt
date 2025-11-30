@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -110,6 +111,7 @@ fun ChatHistoryRoute(
         onDeleteSession = viewModel::onDeleteSession,
         onPinToggle = viewModel::onPinToggle,
         onDismissError = viewModel::onDismissError,
+        onSearchQueryChanged = viewModel::onSearchQueryChanged,
         snackbarHostState = snackbarHostState,
         modifier = modifier
     )
@@ -124,6 +126,7 @@ fun ChatHistoryScreen(
     onDeleteSession: (String) -> Unit,
     onPinToggle: (String) -> Unit,
     onDismissError: () -> Unit,
+    onSearchQueryChanged: (String) -> Unit,
     onSearchClick: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     modifier: Modifier = Modifier
@@ -165,6 +168,11 @@ fun ChatHistoryScreen(
                 .padding(innerPadding)
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.06f))
         ) {
+            SearchRow(
+                query = state.searchQuery,
+                onQueryChange = onSearchQueryChanged,
+                onClear = { onSearchQueryChanged("") }
+            )
             Text(
                 text = "长按会话可置顶、重命名或删除，保持与 React 历史侧边一致。",
                 style = MaterialTheme.typography.bodySmall,
@@ -178,8 +186,13 @@ fun ChatHistoryScreen(
                         .testTag(ChatHistoryTestTags.EMPTY),
                     contentAlignment = Alignment.Center
                 ) {
+                    val text = if (state.searchQuery.isBlank()) {
+                        "暂无历史记录，开始新的对话吧。"
+                    } else {
+                        "未找到匹配的会话"
+                    }
                     Text(
-                        text = "暂无历史记录，开始新的对话吧。",
+                        text = text,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -396,6 +409,31 @@ private fun SheetAction(
             style = MaterialTheme.typography.bodyLarge
         )
     }
+}
+
+@Composable
+private fun SearchRow(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onClear: () -> Unit
+) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        placeholder = { Text(text = "搜索标题或摘要") },
+        leadingIcon = { Icon(imageVector = Icons.Filled.Search, contentDescription = null) },
+        trailingIcon = {
+            if (query.isNotBlank()) {
+                IconButton(onClick = onClear) {
+                    Icon(imageVector = Icons.Filled.Close, contentDescription = "清除")
+                }
+            }
+        },
+        singleLine = true
+    )
 }
 
 private fun formatDate(timestamp: Long): String {

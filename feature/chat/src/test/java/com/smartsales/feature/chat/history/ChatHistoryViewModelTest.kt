@@ -139,6 +139,47 @@ class ChatHistoryViewModelTest {
     }
 
     @Test
+    fun search_filtersAcrossBuckets_preservesPinnedOrder() = runTest(dispatcher) {
+        sessionRepository.seed(
+            listOf(
+                summary("pinned", fixedNow - dayMillis(2), title = "客户报价", pinned = true),
+                summary("recent", fixedNow - dayMillis(1), title = "会议纪要"),
+                summary("older", fixedNow - dayMillis(20), title = "报价复盘")
+            )
+        )
+        val viewModel = buildViewModel()
+        viewModel.overrideNowProvider { fixedNow }
+        advanceUntilIdle()
+
+        viewModel.onSearchQueryChanged("报价")
+        advanceUntilIdle()
+
+        val groups = viewModel.uiState.value.groups
+        // 应保留匹配项并保持置顶优先
+        assertEquals(listOf("7天内", "30天内"), groups.map { it.label })
+        assertEquals(listOf("pinned"), groups[0].items.map { it.id })
+        assertEquals(listOf("older"), groups[1].items.map { it.id })
+    }
+
+    @Test
+    fun search_blankRestoresBaseGroups_andNoMatchYieldsEmpty() = runTest(dispatcher) {
+        sessionRepository.seed(listOf(summary("s1", fixedNow, title = "销售回顾")))
+        val viewModel = buildViewModel()
+        viewModel.overrideNowProvider { fixedNow }
+        advanceUntilIdle()
+
+        // no match
+        viewModel.onSearchQueryChanged("不存在")
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.groups.isEmpty())
+
+        // clear search restores
+        viewModel.onSearchQueryChanged("")
+        advanceUntilIdle()
+        assertEquals(1, viewModel.uiState.value.groups.sumOf { it.items.size })
+    }
+
+    @Test
     @Ignore("Fake repository cannot surface flow error without breaking interface; skip")
     fun repositoryError_setsErrorMessage() = runTest(dispatcher) {
         sessionRepository.shouldFail = true

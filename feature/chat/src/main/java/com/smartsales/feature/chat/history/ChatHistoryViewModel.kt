@@ -38,7 +38,8 @@ data class ChatHistoryUiState(
     val groups: List<ChatHistoryGroupUi> = emptyList(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
-    val selectedSessionId: String? = null
+    val selectedSessionId: String? = null,
+    val searchQuery: String = ""
 )
 
 data class ChatHistoryGroupUi(
@@ -59,6 +60,7 @@ class ChatHistoryViewModel @Inject constructor(
     private var nowProvider: () -> Long = { System.currentTimeMillis() }
     private val _uiState = MutableStateFlow(ChatHistoryUiState(isLoading = true))
     val uiState: StateFlow<ChatHistoryUiState> = _uiState.asStateFlow()
+    private var baseGroups: List<ChatHistoryGroupUi> = emptyList()
 
     private val _events = MutableSharedFlow<ChatHistoryEvent>()
     val events: SharedFlow<ChatHistoryEvent> = _events.asSharedFlow()
@@ -66,6 +68,16 @@ class ChatHistoryViewModel @Inject constructor(
 
     init {
         observeSessions()
+    }
+
+    fun onSearchQueryChanged(query: String) {
+        val normalized = query
+        _uiState.update {
+            it.copy(
+                searchQuery = normalized,
+                groups = applySearch(normalized, baseGroups)
+            )
+        }
     }
 
     fun loadSessions() {
@@ -152,9 +164,10 @@ class ChatHistoryViewModel @Inject constructor(
                     )
             )
         }.sortedBy { bucketOrder(it.label) }
+        baseGroups = grouped
         _uiState.update {
             it.copy(
-                groups = grouped,
+                groups = applySearch(it.searchQuery, baseGroups),
                 isLoading = false,
                 errorMessage = null
             )
@@ -200,9 +213,21 @@ class ChatHistoryViewModel @Inject constructor(
     }
 
     private suspend fun findSession(sessionId: String): AiSessionSummary? {
-        val cached = _uiState.value.groups.flatMap { it.items }.firstOrNull { it.id == sessionId }
+        val cached = baseGroups.flatMap { it.items }.firstOrNull { it.id == sessionId }
         if (cached != null) return cached.toSummary()
         return aiSessionRepository.findById(sessionId)
+    }
+
+    private fun applySearch(query: String, groups: List<ChatHistoryGroupUi>): List<ChatHistoryGroupUi> {
+        if (query.isBlank()) return groups
+        val lowered = query.lowercase()
+        return groups.mapNotNull { group ->
+            val filtered = group.items.filter { session ->
+                session.title.lowercase().contains(lowered) ||
+                    session.lastMessagePreview.orEmpty().lowercase().contains(lowered)
+            }
+            if (filtered.isEmpty()) null else group.copy(items = filtered)
+        }
     }
 
     private fun List<AiSessionSummary>.toUiModels(): List<ChatSessionUi> =

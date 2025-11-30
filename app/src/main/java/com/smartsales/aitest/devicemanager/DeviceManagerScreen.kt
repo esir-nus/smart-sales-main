@@ -521,6 +521,7 @@ object DeviceManagerTestTags {
     const val FILE_LIST = "device_manager_file_list"
     const val FILE_CARD_PREFIX = "device_manager_file_card_"
     const val SELECTED_FILE_CARD = "device_manager_selected_file"
+    const val PREVIEW_CARD = "device_manager_preview_card"
 }
 
 object DeviceManagerRouteTestTags {
@@ -532,7 +533,7 @@ private fun DevicePreview(file: DeviceFileUi?, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier
             .height(200.dp)
-            .testTag(DeviceManagerTestTags.SELECTED_FILE_CARD),
+            .testTag(DeviceManagerTestTags.PREVIEW_CARD),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(

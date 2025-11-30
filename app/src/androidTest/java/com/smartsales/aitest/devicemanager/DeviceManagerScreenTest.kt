@@ -23,17 +23,16 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onFirst
-import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.smartsales.feature.media.devicemanager.DeviceManagerUiState
 import com.smartsales.feature.media.devicemanager.DeviceConnectionUiState
@@ -149,10 +148,15 @@ class DeviceManagerScreenTest {
             )
         )
 
-        composeRule.onNodeWithTag(DeviceManagerTestTags.SELECTED_FILE_CARD, useUnmergedTree = true)
-            .performScrollTo()
-            .assertIsDisplayed()
-        composeRule.onAllNodesWithText("promo.mp4", useUnmergedTree = true).onFirst().assertIsDisplayed()
+        // 选中卡片后预览区域应展示文件名
+        composeRule.onAllNodesWithTag("${DeviceManagerTestTags.FILE_CARD_PREFIX}${files.first().id}", useUnmergedTree = true)
+            .onFirst()
+            .performClick()
+
+        composeRule.onNode(
+            hasText("promo.mp4") and hasAnyAncestor(hasTestTag(DeviceManagerTestTags.PREVIEW_CARD)),
+            useUnmergedTree = true
+        ).assertExists()
     }
 
     @Test

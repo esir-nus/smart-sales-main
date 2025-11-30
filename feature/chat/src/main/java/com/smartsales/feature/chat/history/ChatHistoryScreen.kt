@@ -2,7 +2,6 @@
 
 package com.smartsales.feature.chat.history
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -97,7 +96,6 @@ fun ChatHistoryRoute(
         state = state,
         onRefresh = viewModel::loadSessions,
         onSessionClicked = { sessionId ->
-            Log.d("T9_Debug", "ChatHistoryRoute.onSessionClicked sessionId=$sessionId")
             // 保留 ViewModel 逻辑，再直接通知宿主回到 Home 打开该会话
             viewModel.onSessionClicked(sessionId)
             onSessionSelected(sessionId)
@@ -140,7 +138,7 @@ fun ChatHistoryScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "会话历史", style = MaterialTheme.typography.titleLarge)
+                Text(text = "聊天记录", style = MaterialTheme.typography.titleLarge)
                 IconButton(onClick = onRefresh) {
                     Icon(Icons.Default.Refresh, contentDescription = "刷新")
                 }
@@ -182,7 +180,6 @@ fun ChatHistoryScreen(
                         ChatHistoryItem(
                             session = session,
                             onClick = {
-                                Log.d("T9_Debug", "ChatHistoryScreen.onSessionClicked item id=${session.id}")
                                 onSessionClicked(session.id)
                             },
                             onLongPress = { sheetSession = session },

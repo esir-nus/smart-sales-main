@@ -9,7 +9,6 @@ import android.Manifest
 import android.net.Uri
 import android.os.Bundle
 import android.widget.VideoView
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -117,9 +116,7 @@ import androidx.compose.material3.AssistChipDefaults
 class AiFeatureTestActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.i("AiFeatureTestActivity", "onCreate before setContent (ui-integration)")
         setContent {
-            Log.i("AiFeatureTestActivity", "setContent attached, entering AiFeatureTestApp (ui-integration)")
             AiFeatureTestApp()
         }
     }
@@ -245,7 +242,7 @@ private fun AiFeatureTestApp() {
         ) {
             DraggableOverlayStack(
                 currentOverlay = currentOverlay,
-                onSelectDevice = { openDeviceSection() },
+                onSelectDevice = { setPage(TestHomePage.DeviceManager) },
                 onSelectHome = { openHomeOverlay() },
                 onSelectAudio = { openAudioOverlay() },
                 showTags = currentPage in setOf(
@@ -367,7 +364,6 @@ private fun AiFeatureTestApp() {
                                             .fillMaxSize()
                                             .testTag(AiFeatureTestTags.PAGE_CHAT_HISTORY),
                                         onSessionSelected = { sessionId ->
-                                            Log.d("T9_Debug", "AiFeatureTestActivity.onSessionSelected sessionId=$sessionId")
                                             pendingSessionId = sessionId
                                             goHome()
                                         }
@@ -552,6 +548,7 @@ private fun OverlayCard(
 }
 
 @Composable
+@Suppress("UNUSED_PARAMETER")
 private fun PageSelector(currentPage: TestHomePage, onPageSelected: (TestHomePage) -> Unit) {
     Column(
         modifier = Modifier

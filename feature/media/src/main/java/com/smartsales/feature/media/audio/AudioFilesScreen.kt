@@ -91,7 +91,7 @@ fun AudioFilesScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(text = "录音库 · Audio") },
+                title = { Text(text = "录音文件") },
                 actions = {
                     IconButton(
                         onClick = onSyncClicked,
@@ -442,7 +442,7 @@ private fun EmptyState(onRefresh: () -> Unit, modifier: Modifier = Modifier) {
         ) {
             Text(text = "暂无录音", style = MaterialTheme.typography.titleMedium)
             Text(
-                text = "暂无录音，请连接设备后点击右上角同步或刷新列表。",
+                text = "暂无录音，下拉同步。",
                 style = MaterialTheme.typography.bodySmall
             )
             TextButton(onClick = onRefresh) {

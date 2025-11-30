@@ -2,7 +2,7 @@ package com.smartsales.aitest.devicemanager
 
 // 文件：app/src/main/java/com/smartsales/aitest/devicemanager/DeviceManagerScreen.kt
 // 模块：:app
-// 说明：设备文件管理页面的 Route 与 Compose UI
+// 说明：设备管理页面的 Route 与 Compose UI
 // 作者：创建于 2025-11-20
 
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -211,9 +211,9 @@ private fun DeviceManagerHero(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(text = "设备文件管理", style = MaterialTheme.typography.titleLarge)
+                Text(text = "设备管理", style = MaterialTheme.typography.titleLarge)
                 Text(
-                    text = "管理您的销售助手设备，刷新、上传并预览素材。",
+                    text = "管理您的销售助手设备",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

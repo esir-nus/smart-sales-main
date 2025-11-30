@@ -25,6 +25,8 @@ import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.MediaClipStatus
 import com.smartsales.feature.media.MediaSyncCoordinator
 import com.smartsales.feature.media.MediaSyncState
+import com.smartsales.feature.usercenter.data.UserProfileRepository
+import com.smartsales.feature.usercenter.UserProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -134,7 +136,8 @@ data class HomeUiState(
         id = DEFAULT_SESSION_ID,
         title = "新的聊天",
         isTranscription = false
-    )
+    ),
+    val userName: String = "用户"
 )
 
 /** 外部依赖（除 AiChatService 外保留原有 stub）。 */
@@ -152,7 +155,8 @@ class HomeScreenViewModel @Inject constructor(
     private val transcriptionCoordinator: AudioTranscriptionCoordinator,
     private val quickSkillCatalog: QuickSkillCatalog,
     private val chatHistoryRepository: ChatHistoryRepository,
-    private val sessionRepository: SessionRepository
+    private val sessionRepository: SessionRepository,
+    private val userProfileRepository: UserProfileRepository
 ) : ViewModel() {
 
     private val quickSkillDefinitions = quickSkillCatalog.homeQuickSkills()
@@ -172,6 +176,7 @@ class HomeScreenViewModel @Inject constructor(
         observeDeviceConnection()
         observeMediaSync()
         observeSessions()
+        loadUserProfile()
     }
 
     fun onInputChanged(text: String) {
@@ -807,6 +812,15 @@ class HomeScreenViewModel @Inject constructor(
         transcriptionJob?.cancel()
     }
 
+    private fun loadUserProfile() {
+        viewModelScope.launch {
+            runCatching { userProfileRepository.load() }
+                .onSuccess { profile ->
+                    _uiState.update { it.copy(userName = deriveUserName(profile)) }
+                }
+        }
+    }
+
     private fun QuickSkillDefinition.toUiModel(): QuickSkillUi = QuickSkillUi(
         id = id,
         label = label,
@@ -833,6 +847,15 @@ class HomeScreenViewModel @Inject constructor(
                 append("已加载录音 ").append(fileName).append(" 的转写内容。以下为通话文本，结合上下文回答用户问题：\n")
                 append(transcript)
             }
+        }
+
+        internal fun deriveUserName(profile: UserProfile): String {
+            if (!profile.displayName.isNullOrBlank()) return profile.displayName
+            if (!profile.email.isNullOrBlank()) {
+                val prefix = profile.email.substringBefore("@").ifBlank { profile.email }
+                if (prefix.isNotBlank()) return prefix
+            }
+            return "用户"
         }
     }
 

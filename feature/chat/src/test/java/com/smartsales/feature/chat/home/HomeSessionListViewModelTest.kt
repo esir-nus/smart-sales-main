@@ -67,7 +67,8 @@ class HomeSessionListViewModelTest {
             transcriptionCoordinator = FakeTranscriptionCoordinator(),
             quickSkillCatalog = FakeQuickSkillCatalog(),
             chatHistoryRepository = fakeHistoryRepository,
-            sessionRepository = sessionRepository
+            sessionRepository = sessionRepository,
+            userProfileRepository = FakeUserProfileRepository()
         )
     }
 
@@ -245,5 +246,21 @@ class HomeSessionListViewModelTest {
 
         override fun observeJob(jobId: String): Flow<AudioTranscriptionJobState> =
             flowOf(AudioTranscriptionJobState.Completed(jobId, "## 完成"))
+    }
+
+    private class FakeUserProfileRepository : com.smartsales.feature.usercenter.data.UserProfileRepository {
+        private var profile = com.smartsales.feature.usercenter.UserProfile(
+            displayName = "会话用户",
+            email = "session@example.com",
+            isGuest = false
+        )
+        override suspend fun load(): com.smartsales.feature.usercenter.UserProfile = profile
+        override suspend fun save(profile: com.smartsales.feature.usercenter.UserProfile) {
+            this.profile = profile
+        }
+
+        override suspend fun clear() {
+            profile = com.smartsales.feature.usercenter.UserProfile("", "", true)
+        }
     }
 }

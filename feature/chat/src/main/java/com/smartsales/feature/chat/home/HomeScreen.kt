@@ -339,7 +339,7 @@ fun HomeScreen(
                                 if (state.sessionList.isEmpty()) {
                                     EmptySessionHint(onNewChatClicked = onNewChatClicked)
                                 } else {
-                                    EmptyChatHint()
+                                    EmptyChatHint(userName = state.userName)
                                 }
                             }
                         } else {
@@ -778,7 +778,7 @@ private fun formatSessionTime(timestamp: Long): String {
 }
 
 @Composable
-private fun EmptyChatHint() {
+private fun EmptyChatHint(userName: String) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -786,6 +786,8 @@ private fun EmptyChatHint() {
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Text(text = "你好，$userName", style = MaterialTheme.typography.titleMedium)
+        Text(text = "我是您的销售助手", style = MaterialTheme.typography.bodyMedium)
         Text(text = "还没有对话，试着发送第一条消息吧。")
     }
 }
@@ -820,40 +822,40 @@ private fun HomeInputArea(
     Surface(
         tonalElevation = 4.dp
     ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        QuickSkillRow(
-            skills = quickSkills,
-            selectedSkillId = selectedSkill?.id,
-            enabled = enabled && !busy,
-            onQuickSkillSelected = onQuickSkillSelected
-        )
-        OutlinedTextField(
-            value = inputValue,
-            onValueChange = onInputChanged,
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag(HomeScreenTestTags.INPUT_FIELD),
-            label = { Text(text = "上传文件或输入消息...") },
-            enabled = enabled
-        )
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            QuickSkillRow(
+                skills = quickSkills,
+                selectedSkillId = selectedSkill?.id,
+                enabled = enabled && !busy,
+                onQuickSkillSelected = onQuickSkillSelected
+            )
+            OutlinedTextField(
+                value = inputValue,
+                onValueChange = onInputChanged,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(HomeScreenTestTags.INPUT_FIELD),
+                label = { Text(text = "上传文件或输入消息...") },
+                enabled = enabled
+            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
-        ) {
-            TextButton(
-                onClick = onSendClicked,
-                enabled = inputValue.isNotBlank() && enabled && !busy,
-                modifier = Modifier.testTag(HomeScreenTestTags.SEND_BUTTON)
+                horizontalArrangement = Arrangement.End
             ) {
-                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = if (busy) "发送中" else "发送")
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(text = if (busy) "发送中..." else "发送")
+                TextButton(
+                    onClick = onSendClicked,
+                    enabled = inputValue.isNotBlank() && enabled && !busy,
+                    modifier = Modifier.testTag(HomeScreenTestTags.SEND_BUTTON)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = if (busy) "发送中" else "发送")
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = if (busy) "发送中..." else "发送")
                 }
             }
         }

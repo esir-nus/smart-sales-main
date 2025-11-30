@@ -54,6 +54,7 @@ dependencies {
     implementation(projects.core.util)
     implementation(projects.feature.connectivity)
     implementation(projects.feature.media)
+    implementation(projects.feature.usercenter)
     implementation(platform(libs.compose.bom))
     implementation("androidx.compose.material:material")
     implementation(libs.bundles.compose.ui)

@@ -63,7 +63,8 @@ class HomeTranscriptionTest {
             transcriptionCoordinator = transcriptionCoordinator,
             quickSkillCatalog = FakeQuickSkillCatalog(),
             chatHistoryRepository = FakeChatHistoryRepository(),
-            sessionRepository = FakeSessionRepository()
+            sessionRepository = FakeSessionRepository(),
+            userProfileRepository = FakeUserProfileRepository()
         )
     }
 
@@ -119,6 +120,22 @@ class HomeTranscriptionTest {
 
     private class FakeAiChatService : AiChatService {
         override fun streamChat(request: ChatRequest): Flow<ChatStreamEvent> = flowOf()
+    }
+
+    private class FakeUserProfileRepository : com.smartsales.feature.usercenter.data.UserProfileRepository {
+        private var profile = com.smartsales.feature.usercenter.UserProfile(
+            displayName = "测试用户",
+            email = "user@example.com",
+            isGuest = false
+        )
+        override suspend fun load(): com.smartsales.feature.usercenter.UserProfile = profile
+        override suspend fun save(profile: com.smartsales.feature.usercenter.UserProfile) {
+            this.profile = profile
+        }
+
+        override suspend fun clear() {
+            profile = com.smartsales.feature.usercenter.UserProfile("", "", true)
+        }
     }
 
     private class FakeAiSessionRepository : AiSessionRepository {

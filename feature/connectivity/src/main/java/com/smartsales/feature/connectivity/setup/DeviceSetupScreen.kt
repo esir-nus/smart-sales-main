@@ -40,12 +40,10 @@ object DeviceSetupTestTags {
 @Composable
 fun DeviceSetupScreen(
     state: DeviceSetupUiState,
-    onStartScan: () -> Unit,
-    onProvisionWifi: (ssid: String, password: String) -> Unit,
+    onPrimaryClick: () -> Unit,
+    onSecondaryClick: () -> Unit,
     onRetry: () -> Unit,
-    onOpenDeviceManager: () -> Unit,
     onDismissError: () -> Unit,
-    onBackToHome: () -> Unit,
     onWifiSsidChanged: (String) -> Unit,
     onWifiPasswordChanged: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -101,17 +99,14 @@ fun DeviceSetupScreen(
                             onRetry = onRetry,
                             onBack = {
                                 onDismissError()
-                                onBackToHome()
+                                onSecondaryClick()
                             }
                         )
                     }
                     PrimaryButtons(
                         state = state,
-                        onStartScan = onStartScan,
-                        onProvisionWifi = onProvisionWifi,
-                        onRetry = onRetry,
-                        onOpenDeviceManager = onOpenDeviceManager,
-                        onBackToHome = onBackToHome
+                        onPrimaryClick = onPrimaryClick,
+                        onSecondaryClick = onSecondaryClick
                     )
                 }
             }
@@ -188,25 +183,11 @@ private fun ErrorBanner(
 @Composable
 private fun PrimaryButtons(
     state: DeviceSetupUiState,
-    onStartScan: () -> Unit,
-    onProvisionWifi: (String, String) -> Unit,
-    onRetry: () -> Unit,
-    onOpenDeviceManager: () -> Unit,
-    onBackToHome: () -> Unit
+    onPrimaryClick: () -> Unit,
+    onSecondaryClick: () -> Unit
 ) {
-    val primaryAction = when (state.step) {
-        DeviceSetupStep.Idle,
-        DeviceSetupStep.Scanning -> onStartScan
-
-        DeviceSetupStep.Pairing -> { { onProvisionWifi(state.wifiSsid.trim(), state.wifiPassword.trim()) } }
-        DeviceSetupStep.WifiProvisioning,
-        DeviceSetupStep.WaitingForDeviceOnline -> { {} }
-        DeviceSetupStep.Error -> onRetry
-        DeviceSetupStep.Ready -> onOpenDeviceManager
-    }
-
     Button(
-        onClick = primaryAction,
+        onClick = onPrimaryClick,
         enabled = state.isPrimaryEnabled,
         modifier = Modifier
             .fillMaxWidth()
@@ -217,7 +198,7 @@ private fun PrimaryButtons(
 
     state.secondaryLabel?.let { secondary ->
         TextButton(
-            onClick = onBackToHome,
+            onClick = onSecondaryClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag(DeviceSetupTestTags.SECONDARY_BUTTON)

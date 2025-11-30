@@ -30,12 +30,10 @@ class DeviceSetupScreenTest {
                         secondaryLabel = "返回首页",
                         isPrimaryEnabled = true
                     ),
-                    onStartScan = {},
-                    onProvisionWifi = { _, _ -> },
+                    onPrimaryClick = {},
+                    onSecondaryClick = {},
                     onRetry = {},
-                    onOpenDeviceManager = {},
                     onDismissError = {},
-                    onBackToHome = {},
                     onWifiSsidChanged = {},
                     onWifiPasswordChanged = {}
                 )
@@ -60,12 +58,10 @@ class DeviceSetupScreenTest {
                         secondaryLabel = "返回首页",
                         isPrimaryEnabled = true
                     ),
-                    onStartScan = {},
-                    onProvisionWifi = { _, _ -> },
+                    onPrimaryClick = {},
+                    onSecondaryClick = {},
                     onRetry = {},
-                    onOpenDeviceManager = {},
                     onDismissError = {},
-                    onBackToHome = {},
                     onWifiSsidChanged = {},
                     onWifiPasswordChanged = {}
                 )
@@ -89,12 +85,10 @@ class DeviceSetupScreenTest {
                         showWifiForm = true,
                         isPrimaryEnabled = false
                     ),
-                    onStartScan = {},
-                    onProvisionWifi = { _, _ -> },
+                    onPrimaryClick = {},
+                    onSecondaryClick = {},
                     onRetry = {},
-                    onOpenDeviceManager = {},
                     onDismissError = {},
-                    onBackToHome = {},
                     onWifiSsidChanged = {},
                     onWifiPasswordChanged = {}
                 )

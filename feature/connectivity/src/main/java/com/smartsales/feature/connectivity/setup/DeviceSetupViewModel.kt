@@ -41,11 +41,30 @@ class DeviceSetupViewModel @Inject constructor(
 
     private var networkCheckJob: Job? = null
     private var scanTimeoutJob: Job? = null
+    private var pendingPeripheral: BlePeripheral? = null
+    private var hasEmittedReadyEvent = false
+    private var hasStarted = false
 
     init {
         observeConnection()
         observeScanner()
-        updateUi { it }
+        startAutoScan()
+    }
+
+    private fun startAutoScan() {
+        if (hasStarted) return
+        hasStarted = true
+        bleScanner.start()
+        updateUi {
+            it.copy(
+                step = DeviceSetupStep.Scanning,
+                isScanning = true,
+                isActionInProgress = true,
+                errorMessage = null,
+                errorReason = null
+            )
+        }
+        startScanTimeout()
     }
 
     fun onWifiSsidChanged(value: String) {
@@ -56,36 +75,61 @@ class DeviceSetupViewModel @Inject constructor(
         updateUi { it.copy(wifiPassword = value) }
     }
 
-    fun onStartScan() {
-        val current = _uiState.value
-        if (current.isScanning || current.step == DeviceSetupStep.WaitingForDeviceOnline) return
-        bleScanner.start()
+    fun onPrimaryClick() {
+        when (_uiState.value.step) {
+            DeviceSetupStep.Idle,
+            DeviceSetupStep.Scanning -> {
+                if (!hasStarted) startAutoScan()
+            }
+            DeviceSetupStep.Found -> {
+                selectPendingPeripheral()
+                updateUi { it.copy(step = DeviceSetupStep.WifiInput, showWifiForm = true) }
+            }
+            DeviceSetupStep.WifiInput -> {
+                val ssid = _uiState.value.wifiSsid.trim()
+                val password = _uiState.value.wifiPassword.trim()
+                if (ssid.isBlank() || password.isBlank()) return
+                onProvisionWifi(ssid, password)
+            }
+            DeviceSetupStep.Pairing,
+            DeviceSetupStep.WifiProvisioning,
+            DeviceSetupStep.WaitingForDeviceOnline -> Unit
+            DeviceSetupStep.Error -> onRetry()
+            DeviceSetupStep.Ready -> viewModelScope.launch { _events.emit(DeviceSetupEvent.OpenDeviceManager) }
+        }
+    }
+
+    fun onSecondaryClick() {
+        viewModelScope.launch { _events.emit(DeviceSetupEvent.BackToHome) }
+    }
+
+    fun onRetry() {
+        pendingPeripheral = null
+        hasEmittedReadyEvent = false
+        hasStarted = false
+        bleScanner.stop()
         updateUi {
             it.copy(
                 step = DeviceSetupStep.Scanning,
                 errorMessage = null,
                 errorReason = null,
                 isActionInProgress = true,
-                isScanning = true,
-                showWifiForm = false,
+                isScanning = false,
+                isSubmittingWifi = false,
                 wifiPassword = "",
                 wifiSsid = ""
             )
         }
-        scanTimeoutJob?.cancel()
-        scanTimeoutJob = viewModelScope.launch {
-            delay(SCAN_TIMEOUT_MS)
-            if (_uiState.value.isScanning && _uiState.value.step == DeviceSetupStep.Scanning) {
-                bleScanner.stop()
-                setError(
-                    message = "扫描超时，请重试配网",
-                    reason = DeviceSetupErrorReason.ScanTimeout
-                )
-            }
-        }
+        connectionManager.forgetDevice()
+        startAutoScan()
     }
 
-    fun onProvisionWifi(ssid: String, password: String) {
+    private fun selectPendingPeripheral() {
+        val target = pendingPeripheral ?: return
+        connectionManager.selectPeripheral(target)
+    }
+
+    private fun onProvisionWifi(ssid: String, password: String) {
         updateUi {
             it.copy(
                 step = DeviceSetupStep.WifiProvisioning,
@@ -133,27 +177,6 @@ class DeviceSetupViewModel @Inject constructor(
         }
     }
 
-    fun onRetry() {
-        bleScanner.stop()
-        updateUi {
-            it.copy(
-                step = DeviceSetupStep.Scanning,
-                errorMessage = null,
-                errorReason = null,
-                isActionInProgress = true,
-                isScanning = false,
-                isSubmittingWifi = false,
-                wifiPassword = ""
-            )
-        }
-        viewModelScope.launch { connectionManager.retry() }
-        onStartScan()
-    }
-
-    fun onOpenDeviceManager() {
-        viewModelScope.launch { _events.emit(DeviceSetupEvent.OpenDeviceManager) }
-    }
-
     fun onDismissError() {
         updateUi { it.copy(errorMessage = null) }
     }
@@ -171,39 +194,53 @@ class DeviceSetupViewModel @Inject constructor(
                     return@collectLatest
                 }
                 when (state) {
-                    ConnectionState.Disconnected -> updateUi {
-                        it.copy(
-                            step = DeviceSetupStep.Idle,
-                            isActionInProgress = false,
-                            isScanning = false,
-                            isSubmittingWifi = false,
-                            isDeviceOnline = false,
-                            deviceIp = null,
-                            errorMessage = null,
-                            errorReason = null
-                        )
+                    ConnectionState.Disconnected -> {
+                        if (_uiState.value.step == DeviceSetupStep.Found || _uiState.value.step == DeviceSetupStep.WifiInput) {
+                            // 保留“发现设备/填写 Wi-Fi”界面，不回落到 Idle
+                            return@collectLatest
+                        }
+                        updateUi {
+                            it.copy(
+                                step = if (hasStarted) DeviceSetupStep.Scanning else DeviceSetupStep.Idle,
+                                isActionInProgress = hasStarted,
+                                isScanning = hasStarted,
+                                isSubmittingWifi = false,
+                                isDeviceOnline = false,
+                                deviceIp = null,
+                                errorMessage = null,
+                                errorReason = null
+                            )
+                        }
                     }
 
-                    is ConnectionState.Pairing -> updateUi {
-                        it.copy(
-                            step = DeviceSetupStep.Pairing,
-                            deviceName = state.deviceName,
-                            isActionInProgress = true,
-                            isScanning = false
-                        )
+                    is ConnectionState.Pairing -> {
+                        cancelScanTimeout()
+                        updateUi {
+                            it.copy(
+                                step = DeviceSetupStep.Pairing,
+                                deviceName = state.deviceName,
+                                isActionInProgress = true,
+                                isScanning = false
+                            )
+                        }
                     }
 
-                    is ConnectionState.Connected -> updateUi {
-                        it.copy(
-                            step = DeviceSetupStep.Pairing,
-                            deviceName = state.session.peripheralName,
-                            isActionInProgress = false,
-                            isScanning = false
-                        )
+                    is ConnectionState.Connected -> {
+                        cancelScanTimeout()
+                        updateUi {
+                            it.copy(
+                                step = DeviceSetupStep.WifiInput,
+                                deviceName = state.session.peripheralName,
+                                isActionInProgress = false,
+                                isScanning = false,
+                                showWifiForm = true
+                            )
+                        }
                     }
 
                     is ConnectionState.WifiProvisioned,
                     is ConnectionState.Syncing -> {
+                        cancelScanTimeout()
                         updateUi { current ->
                             if (current.step == DeviceSetupStep.Ready) current else current.copy(
                                 step = DeviceSetupStep.WaitingForDeviceOnline,
@@ -240,10 +277,18 @@ class DeviceSetupViewModel @Inject constructor(
                     updateUi { it.copy(isScanning = false, isActionInProgress = false) }
                     return@collectLatest
                 }
-                scanTimeoutJob?.cancel()
+                cancelScanTimeout()
                 updateUi { it.copy(isScanning = false, isActionInProgress = false) }
-                val first = devices.first()
-                connectionManager.selectPeripheral(first)
+                pendingPeripheral = devices.first()
+                updateUi {
+                    it.copy(
+                        step = DeviceSetupStep.Found,
+                        deviceName = pendingPeripheral?.name,
+                        isActionInProgress = false,
+                        isScanning = false,
+                        showWifiForm = false
+                    )
+                }
             }
         }
         viewModelScope.launch {
@@ -296,11 +341,16 @@ class DeviceSetupViewModel @Inject constructor(
         }
         networkCheckJob?.cancel()
         networkCheckJob = null
+        cancelScanTimeout()
+        if (!hasEmittedReadyEvent) {
+            hasEmittedReadyEvent = true
+            viewModelScope.launch { _events.emit(DeviceSetupEvent.OpenDeviceManager) }
+        }
     }
 
     private fun setError(message: String, reason: DeviceSetupErrorReason = DeviceSetupErrorReason.Unknown) {
         bleScanner.stop()
-        scanTimeoutJob?.cancel()
+        cancelScanTimeout()
         updateUi {
             it.copy(
                 step = DeviceSetupStep.Error,
@@ -318,7 +368,7 @@ class DeviceSetupViewModel @Inject constructor(
         networkCheckJob?.cancel()
         _events.resetReplayCache()
         bleScanner.stop()
-        scanTimeoutJob?.cancel()
+        cancelScanTimeout()
     }
 
     companion object {
@@ -340,68 +390,76 @@ class DeviceSetupViewModel @Inject constructor(
         _uiState.update { transform(it).enrich() }
     }
 
+    private fun startScanTimeout() {
+        scanTimeoutJob?.cancel()
+        scanTimeoutJob = viewModelScope.launch {
+            delay(SCAN_TIMEOUT_MS)
+            if (_uiState.value.step == DeviceSetupStep.Scanning && _uiState.value.isScanning) {
+                bleScanner.stop()
+                setError(
+                    message = "扫描超时，请重试配网",
+                    reason = DeviceSetupErrorReason.ScanTimeout
+                )
+            }
+        }
+    }
+
+    private fun cancelScanTimeout() {
+        scanTimeoutJob?.cancel()
+        scanTimeoutJob = null
+    }
+
     private fun DeviceSetupUiState.enrich(): DeviceSetupUiState {
         val (desc, primary, secondary, showWifi, enabled) = when (step) {
-            DeviceSetupStep.Idle -> Tuple5(
-                "未连接设备，点击开始配网。",
-                "开始配网",
-                "跳过，稍后再说",
+            DeviceSetupStep.Idle,
+            DeviceSetupStep.Scanning -> Tuple5(
+                "正在搜索设备…",
+                "正在搜索…",
+                "返回首页",
+                false,
+                false
+            )
+
+            DeviceSetupStep.Found -> Tuple5(
+                "发现新设备，继续配置网络。",
+                "配置网络",
+                "返回首页",
                 false,
                 true
             )
 
-            DeviceSetupStep.Scanning -> Tuple5(
-                "正在扫描附近设备，请保持设备靠近。",
-                "扫描中",
+            DeviceSetupStep.WifiInput -> Tuple5(
+                "连接 Wi-Fi，确保与手机在同一网络。",
+                "连接设备",
+                "返回首页",
+                true,
+                wifiSsid.isNotBlank() && wifiPassword.isNotBlank()
+            )
+
+            DeviceSetupStep.Pairing,
+            DeviceSetupStep.WifiProvisioning,
+            DeviceSetupStep.WaitingForDeviceOnline -> Tuple5(
+                "正在配对并同步配置，请稍候…",
+                "正在连接…",
                 "返回首页",
                 false,
                 false
             )
 
-            DeviceSetupStep.Pairing -> {
-                val name = deviceName?.let { " $it" }.orEmpty()
-                Tuple5(
-                    "已发现设备$name，填写 Wi-Fi 完成配网。",
-                    "下发 Wi-Fi 并继续",
-                    "返回首页",
-                    true,
-                    wifiSsid.isNotBlank() && wifiPassword.isNotBlank() && !isSubmittingWifi && !isActionInProgress
-                )
-            }
-
-            DeviceSetupStep.WifiProvisioning -> Tuple5(
-                "正在为设备配置网络，请稍候…",
-                "正在配网",
+            DeviceSetupStep.Ready -> Tuple5(
+                "连接成功，正在跳转到设备管理。",
+                "进入设备管理",
                 "返回首页",
-                true,
-                false
+                false,
+                true
             )
-
-            DeviceSetupStep.WaitingForDeviceOnline -> Tuple5(
-                "等待设备上线，请保持设备通电并靠近路由器。",
-                "等待设备上线",
-                "返回首页",
-                true,
-                false
-            )
-
-            DeviceSetupStep.Ready -> {
-                val ipPart = deviceIp?.takeIf { it.isNotBlank() }?.let { " ($it)" }.orEmpty()
-                Tuple5(
-                    "设备已连接$ipPart，可前往设备管理。",
-                    "进入设备管理",
-                    "返回首页",
-                    false,
-                    true
-                )
-            }
 
             DeviceSetupStep.Error -> Tuple5(
                 errorMessage ?: "配网失败，请重试",
                 "重试配网",
                 "返回首页",
                 false,
-                !isActionInProgress
+                true
             )
         }
         return copy(
@@ -425,4 +483,5 @@ class DeviceSetupViewModel @Inject constructor(
 
 sealed class DeviceSetupEvent {
     data object OpenDeviceManager : DeviceSetupEvent()
+    data object BackToHome : DeviceSetupEvent()
 }

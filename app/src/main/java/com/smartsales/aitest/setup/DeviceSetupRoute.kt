@@ -6,6 +6,7 @@ package com.smartsales.aitest.setup
 // 作者：创建于 2025-11-20
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -13,6 +14,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.feature.connectivity.setup.DeviceSetupScreen
 import com.smartsales.feature.connectivity.setup.DeviceSetupViewModel
 import com.smartsales.feature.connectivity.setup.DeviceSetupTestTags
+import com.smartsales.feature.connectivity.setup.DeviceSetupEvent
+import kotlinx.coroutines.flow.collect
 
 @Composable
 fun DeviceSetupRoute(
@@ -22,14 +25,20 @@ fun DeviceSetupRoute(
     viewModel: DeviceSetupViewModel = hiltViewModel()
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle().value
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect { event ->
+            when (event) {
+                DeviceSetupEvent.OpenDeviceManager -> onCompleted()
+                DeviceSetupEvent.BackToHome -> onBackToHome()
+            }
+        }
+    }
     DeviceSetupScreen(
         state = state,
-        onStartScan = viewModel::onStartScan,
-        onProvisionWifi = viewModel::onProvisionWifi,
+        onPrimaryClick = viewModel::onPrimaryClick,
+        onSecondaryClick = viewModel::onSecondaryClick,
         onRetry = viewModel::onRetry,
-        onOpenDeviceManager = onCompleted,
         onDismissError = viewModel::onDismissError,
-        onBackToHome = onBackToHome,
         onWifiSsidChanged = viewModel::onWifiSsidChanged,
         onWifiPasswordChanged = viewModel::onWifiPasswordChanged,
         modifier = modifier.testTag(DeviceSetupRouteTestTags.PAGE)

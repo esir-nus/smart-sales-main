@@ -24,7 +24,6 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.advanceUntilIdle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.After
@@ -50,10 +49,9 @@ class DeviceSetupViewModelRobustnessTest {
     @Test
     fun `scan timeout moves to error with retryable reason`() = runTest(dispatcher) {
         viewModel = createViewModel()
-        advanceUntilIdle()
-        viewModel.onStartScan()
+        dispatcher.scheduler.runCurrent()
         advanceTimeBy(13_000)
-        advanceUntilIdle()
+        dispatcher.scheduler.runCurrent()
 
         val state = viewModel.uiState.value
         assertEquals(DeviceSetupStep.Error, state.step)
@@ -75,10 +73,12 @@ class DeviceSetupViewModelRobustnessTest {
         )
         connection.pairResult = Result.Error(IllegalStateException("fail"))
         viewModel = createViewModel(connectionManager = connection)
-        advanceUntilIdle()
+        dispatcher.scheduler.runCurrent()
 
-        viewModel.onProvisionWifi("ssid", "pwd")
-        advanceUntilIdle()
+        viewModel.onWifiSsidChanged("ssid")
+        viewModel.onWifiPasswordChanged("pwd")
+        viewModel.onPrimaryClick()
+        dispatcher.scheduler.runCurrent()
 
         val state = viewModel.uiState.value
         assertEquals(DeviceSetupStep.Error, state.step)
@@ -105,11 +105,13 @@ class DeviceSetupViewModelRobustnessTest {
         )
         connection.queryResult = Result.Error(IllegalStateException("offline"))
         viewModel = createViewModel(connectionManager = connection)
-        advanceUntilIdle()
+        dispatcher.scheduler.runCurrent()
 
-        viewModel.onProvisionWifi("ssid", "pwd")
+        viewModel.onWifiSsidChanged("ssid")
+        viewModel.onWifiPasswordChanged("pwd")
+        viewModel.onPrimaryClick()
         advanceTimeBy(5_000)
-        advanceUntilIdle()
+        dispatcher.scheduler.runCurrent()
 
         val state = viewModel.uiState.value
         assertEquals(DeviceSetupErrorReason.DeviceNotOnline, state.errorReason)
@@ -119,10 +121,9 @@ class DeviceSetupViewModelRobustnessTest {
     fun `late callbacks after error do not change state`() = runTest(dispatcher) {
         val connection = FakeConnectionManager()
         viewModel = createViewModel(connectionManager = connection)
-        advanceUntilIdle()
-        viewModel.onStartScan()
+        dispatcher.scheduler.runCurrent()
         advanceTimeBy(13_000)
-        advanceUntilIdle()
+        dispatcher.scheduler.runCurrent()
         assertEquals(DeviceSetupStep.Error, viewModel.uiState.value.step)
 
         connection.state.value = ConnectionState.WifiProvisioned(
@@ -141,7 +142,7 @@ class DeviceSetupViewModelRobustnessTest {
             )
         )
         advanceTimeBy(2_000)
-        advanceUntilIdle()
+        dispatcher.scheduler.runCurrent()
 
         assertEquals(DeviceSetupStep.Error, viewModel.uiState.value.step)
     }

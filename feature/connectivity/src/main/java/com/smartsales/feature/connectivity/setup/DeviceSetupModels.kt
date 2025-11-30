@@ -8,6 +8,8 @@ package com.smartsales.feature.connectivity.setup
 enum class DeviceSetupStep {
     Idle,
     Scanning,
+    Found,
+    WifiInput,
     Pairing,
     WifiProvisioning,
     WaitingForDeviceOnline,

@@ -49,13 +49,17 @@ class DeviceSetupViewModelTest {
     }
 
     @Test
-    fun startScan_updatesScanningStep() = runTest(dispatcher) {
-        viewModel.onStartScan()
-
+    fun autoScan_then_found_then_wifi_input() = runTest(dispatcher) {
+        dispatcher.scheduler.runCurrent()
         assertEquals(DeviceSetupStep.Scanning, viewModel.uiState.value.step)
+
         scanner.emitDevice(BlePeripheral("1", "BT311", -50))
-        advanceUntilIdle()
-        assertEquals(DeviceSetupStep.Pairing, viewModel.uiState.value.step)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(DeviceSetupStep.Found, viewModel.uiState.value.step)
+
+        viewModel.onPrimaryClick() // 配置网络 -> Wi-Fi 输入
+        dispatcher.scheduler.runCurrent()
+        assertEquals(DeviceSetupStep.WifiInput, viewModel.uiState.value.step)
     }
 
     @Test
@@ -79,6 +83,20 @@ class DeviceSetupViewModelTest {
 
         assertEquals(DeviceSetupStep.Error, viewModel.uiState.value.step)
         assertTrue(viewModel.uiState.value.errorMessage?.isNotBlank() == true)
+    }
+
+    @Test
+    fun wifi_input_requires_credentials() = runTest(dispatcher) {
+        connectionManager.state.value = ConnectionState.Connected(connectionManager.session)
+        advanceUntilIdle()
+
+        assertEquals(DeviceSetupStep.WifiInput, viewModel.uiState.value.step)
+        assertTrue(viewModel.uiState.value.isPrimaryEnabled.not())
+
+        viewModel.onWifiSsidChanged("ssid")
+        viewModel.onWifiPasswordChanged("pwd")
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.isPrimaryEnabled)
     }
 
     @Test

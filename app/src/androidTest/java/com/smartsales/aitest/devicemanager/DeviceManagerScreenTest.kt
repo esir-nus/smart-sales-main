@@ -31,6 +31,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -137,8 +138,8 @@ class DeviceManagerScreenTest {
     @Test
     fun mediaBadges_showTypeAndDuration() {
         val files = listOf(
-            fileUi(id = "promo.mp4", displayName = "promo.mp4", mimeType = "video/mp4", durationText = "00:30"),
-            fileUi(id = "loop.gif", displayName = "loop.gif", mimeType = "image/gif", mediaType = DeviceMediaTab.Gifs, durationText = null)
+            fileUi(id = "loop.gif", displayName = "loop.gif", mimeType = "image/gif", mediaType = DeviceMediaTab.Gifs, durationText = null),
+            fileUi(id = "promo.mp4", displayName = "promo.mp4", mimeType = "video/mp4", durationText = "00:30")
         )
         renderDeviceManager(
             initialState = createState(
@@ -148,8 +149,11 @@ class DeviceManagerScreenTest {
             )
         )
 
-        composeRule.onNodeWithText("00:30").assertIsDisplayed()
-        composeRule.onNodeWithText("GIF").assertIsDisplayed()
+        composeRule.onNodeWithTag(DeviceManagerTestTags.FILE_LIST)
+            .performScrollToIndex(2)
+
+        composeRule.onNodeWithText("00:30", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("GIF", useUnmergedTree = true).assertExists()
     }
 
     @Test

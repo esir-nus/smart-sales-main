@@ -281,34 +281,6 @@ fun HomeScreen(
                     onNewChatClicked = onNewChatClicked
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp)
-                ) {
-                    EntryCards(
-                        deviceSnapshot = state.deviceSnapshot,
-                        audioSummary = state.audioSummary,
-                        onDeviceClick = onDeviceBannerClicked,
-                        onAudioClick = onAudioSummaryClicked
-                    )
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = "你好，我是您的销售助手",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = "我可以帮您总结对话、分析异议、辅导话术、生成日报。",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                Divider(modifier = Modifier.padding(vertical = 4.dp))
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -325,6 +297,22 @@ fun HomeScreen(
                         userScrollEnabled = true
                     ) {
                         if (!hasActiveChat) {
+                            item("welcome") {
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = "你好，我是您的销售助手",
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                    Text(
+                                        text = "我可以帮您总结对话、分析异议、辅导话术、生成日报。",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                             item("session-list") {
                                 SessionListSection(
                                     sessions = state.sessionList,
@@ -369,28 +357,28 @@ fun HomeScreen(
                                     )
                                 }
                             }
-                    itemsIndexed(state.chatMessages, key = { _, item -> item.id }) { index, message ->
-                        val isTranscriptSummary = message.role == ChatMessageRole.ASSISTANT &&
-                            message.content.contains("通话分析")
-                        val tagModifier = if (message.role == ChatMessageRole.ASSISTANT &&
-                            (index == state.chatMessages.lastIndex || isTranscriptSummary)
-                        ) {
-                            Modifier.testTag(HomeScreenTestTags.ASSISTANT_MESSAGE)
-                        } else {
-                            Modifier
-                        }
-                        MessageBubble(
-                            message = message,
-                            alignEnd = message.role == ChatMessageRole.USER,
-                            modifier = tagModifier,
-                            onCopyAssistant = { content ->
-                                clipboardManager.setText(AnnotatedString(content))
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("已复制到剪贴板")
+                            itemsIndexed(state.chatMessages, key = { _, item -> item.id }) { index, message ->
+                                val isTranscriptSummary = message.role == ChatMessageRole.ASSISTANT &&
+                                    message.content.contains("通话分析")
+                                val tagModifier = if (message.role == ChatMessageRole.ASSISTANT &&
+                                    (index == state.chatMessages.lastIndex || isTranscriptSummary)
+                                ) {
+                                    Modifier.testTag(HomeScreenTestTags.ASSISTANT_MESSAGE)
+                                } else {
+                                    Modifier
                                 }
+                                MessageBubble(
+                                    message = message,
+                                    alignEnd = message.role == ChatMessageRole.USER,
+                                    modifier = tagModifier,
+                                    onCopyAssistant = { content ->
+                                        clipboardManager.setText(AnnotatedString(content))
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("已复制到剪贴板")
+                                        }
+                                    }
+                                )
                             }
-                        )
-                    }
                             item("chat-bottom-pad") {
                                 Spacer(modifier = Modifier.height(72.dp))
                             }

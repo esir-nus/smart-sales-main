@@ -325,7 +325,8 @@ private fun AiFeatureTestApp() {
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .testTag(AiFeatureTestTags.PAGE_DEVICE_SETUP),
-                                        onCompleted = { setPage(TestHomePage.DeviceManager) }
+                                        onCompleted = { setPage(TestHomePage.DeviceManager) },
+                                        onBackToHome = { goHome() }
                                     )
                                 }
 

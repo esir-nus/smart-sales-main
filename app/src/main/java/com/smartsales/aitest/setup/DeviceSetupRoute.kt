@@ -18,6 +18,7 @@ import com.smartsales.feature.connectivity.setup.DeviceSetupTestTags
 fun DeviceSetupRoute(
     modifier: Modifier = Modifier,
     onCompleted: () -> Unit,
+    onBackToHome: () -> Unit = {},
     viewModel: DeviceSetupViewModel = hiltViewModel()
 ) {
     val state = viewModel.uiState.collectAsStateWithLifecycle().value
@@ -28,6 +29,9 @@ fun DeviceSetupRoute(
         onRetry = viewModel::onRetry,
         onOpenDeviceManager = onCompleted,
         onDismissError = viewModel::onDismissError,
+        onBackToHome = onBackToHome,
+        onWifiSsidChanged = viewModel::onWifiSsidChanged,
+        onWifiPasswordChanged = viewModel::onWifiPasswordChanged,
         modifier = modifier.testTag(DeviceSetupRouteTestTags.PAGE)
     )
 }

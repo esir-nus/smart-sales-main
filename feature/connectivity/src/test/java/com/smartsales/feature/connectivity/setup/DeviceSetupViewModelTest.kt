@@ -3,7 +3,7 @@ package com.smartsales.feature.connectivity.setup
 // 文件：feature/connectivity/src/test/java/com/smartsales/feature/connectivity/setup/DeviceSetupViewModelTest.kt
 // 模块：:feature:connectivity
 // 说明：验证设备配网视图模型的步骤映射与错误重试
-// 作者：创建于 2025-11-21
+// 作者：创建于 2025-11-30
 
 import com.smartsales.core.util.Result
 import com.smartsales.feature.connectivity.BlePeripheral
@@ -86,6 +86,7 @@ class DeviceSetupViewModelTest {
         viewModel.onRetry()
 
         assertEquals(DeviceSetupStep.Scanning, viewModel.uiState.value.step)
+        assertEquals("", viewModel.uiState.value.wifiPassword)
     }
 
     private class FakeDeviceConnectionManager : DeviceConnectionManager {

@@ -2,22 +2,15 @@ package com.smartsales.feature.connectivity.setup
 
 // 文件：feature/connectivity/src/main/java/com/smartsales/feature/connectivity/setup/DeviceSetupScreen.kt
 // 模块：:feature:connectivity
-// 说明：设备配网的步骤化 UI，展示扫描→配对→配网→等待上线→就绪
-// 作者：创建于 2025-11-21
+// 说明：对齐 React 的设备配网界面，基于连接状态展示开始/配网中/成功/失败布局
+// 作者：创建于 2025-11-30
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -28,24 +21,20 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 object DeviceSetupTestTags {
-    const val STEP_TEXT = "device_setup_step_text"
-    const val STATUS_TEXT = "device_setup_status_text"
+    const val TITLE = "device_setup_title"
+    const val DESCRIPTION = "device_setup_description"
     const val PRIMARY_BUTTON = "device_setup_primary_button"
+    const val SECONDARY_BUTTON = "device_setup_secondary_button"
+    const val WIFI_SSID = "device_setup_wifi_ssid"
+    const val WIFI_PASSWORD = "device_setup_wifi_password"
     const val ERROR_BANNER = "device_setup_error_banner"
-    const val TO_DEVICE_MANAGER = "device_setup_go_device_manager"
 }
 
 @Composable
@@ -56,265 +45,204 @@ fun DeviceSetupScreen(
     onRetry: () -> Unit,
     onOpenDeviceManager: () -> Unit,
     onDismissError: () -> Unit,
+    onBackToHome: () -> Unit,
+    onWifiSsidChanged: (String) -> Unit,
+    onWifiPasswordChanged: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var ssid by remember { mutableStateOf(state.wifiSsid.orEmpty()) }
-    var password by remember { mutableStateOf("") }
-
-    LaunchedEffect(state.wifiSsid) {
-        ssid = state.wifiSsid.orEmpty()
-    }
-
-    Surface(modifier = modifier.fillMaxSize()) {
-        Box(
+    Surface(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.08f))
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.08f))
+                .padding(horizontal = 20.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 18.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .widthIn(max = 520.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .padding(horizontal = 16.dp, vertical = 18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    PlaceholderCard(step = state.step, modifier = Modifier.fillMaxWidth())
-                    StepHeader(state.step)
-                    StatusCard(state.progressMessage, state.step, modifier = Modifier.fillMaxWidth())
-                    WiFiCard(
-                        ssid = ssid,
-                        password = password,
-                        onSsidChange = { ssid = it },
-                        onPasswordChange = { password = it },
-                        enabled = state.step == DeviceSetupStep.Pairing || state.step == DeviceSetupStep.WifiProvisioning
+                    Text(
+                        text = state.title,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.testTag(DeviceSetupTestTags.TITLE)
+                    )
+                    Text(
+                        text = state.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag(DeviceSetupTestTags.DESCRIPTION)
+                    )
+                    if (state.showWifiForm) {
+                        WifiForm(
+                            ssid = state.wifiSsid,
+                            password = state.wifiPassword,
+                            onSsidChange = onWifiSsidChanged,
+                            onPasswordChange = onWifiPasswordChanged,
+                            enabled = state.isPrimaryEnabled || state.step == DeviceSetupStep.Pairing
+                        )
+                    }
+                    if (state.errorMessage != null && state.step == DeviceSetupStep.Error) {
+                        ErrorBanner(
+                            message = state.errorMessage,
+                            onRetry = onRetry,
+                            onBack = {
+                                onDismissError()
+                                onBackToHome()
+                            }
+                        )
+                    }
+                    PrimaryButtons(
+                        state = state,
+                        onStartScan = onStartScan,
+                        onProvisionWifi = onProvisionWifi,
+                        onRetry = onRetry,
+                        onOpenDeviceManager = onOpenDeviceManager,
+                        onBackToHome = onBackToHome
                     )
                 }
-                if (state.errorMessage != null) {
-                    ErrorBanner(
-                        message = state.errorMessage,
-                        onDismiss = onDismissError,
-                        onRetry = onRetry
-                    )
-                }
-                PrimaryActions(
-                    state = state,
-                    ssid = ssid,
-                    password = password,
-                    onStartScan = onStartScan,
-                    onProvisionWifi = onProvisionWifi,
-                    onRetry = onRetry,
-                    onOpenDeviceManager = onOpenDeviceManager
-                )
             }
         }
     }
 }
 
 @Composable
-private fun StepHeader(step: DeviceSetupStep) {
-    val stepText = when (step) {
-        DeviceSetupStep.Idle, DeviceSetupStep.Scanning -> "步骤 1/4：扫描设备"
-        DeviceSetupStep.Pairing -> "步骤 2/4：蓝牙配对"
-        DeviceSetupStep.WifiProvisioning -> "步骤 3/4：配置 Wi-Fi"
-        DeviceSetupStep.WaitingForDeviceOnline -> "步骤 4/4：等待设备上线"
-        DeviceSetupStep.Ready -> "已完成"
-        DeviceSetupStep.Error -> "需要重试"
-    }
-    Text(
-        text = stepText,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.testTag(DeviceSetupTestTags.STEP_TEXT)
-    )
-}
-
-@Composable
-private fun StatusCard(
-    message: String,
-    step: DeviceSetupStep,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.testTag(DeviceSetupTestTags.STATUS_TEXT)
-            )
-            val hint = when (step) {
-                DeviceSetupStep.Scanning -> "靠近设备并保持开机，扫描后会自动进入配对。"
-                DeviceSetupStep.Pairing -> "发现设备，正在蓝牙配对并同步设备标识。"
-                DeviceSetupStep.WifiProvisioning -> "填写 Wi-Fi 信息并下发，确保手机与设备在同一网络。"
-                DeviceSetupStep.WaitingForDeviceOnline -> "等待设备上线，通常 5 秒内完成；如未上线请检查路由器。"
-                DeviceSetupStep.Ready -> "配网完成，去设备管理查看文件或继续上传素材。"
-                DeviceSetupStep.Error -> "连接异常，可重试扫描，或检查电源与网络后再试。"
-                else -> "点击下方按钮开始扫描。"
-            }
-            Text(text = hint, style = MaterialTheme.typography.bodySmall)
-        }
-    }
-}
-
-@Composable
-private fun PlaceholderCard(step: DeviceSetupStep, modifier: Modifier = Modifier) {
-    val statusText = when (step) {
-        DeviceSetupStep.Scanning -> "正在搜索设备..."
-        DeviceSetupStep.Pairing -> "发现设备，正在配对"
-        DeviceSetupStep.WifiProvisioning -> "准备配置网络"
-        DeviceSetupStep.WaitingForDeviceOnline -> "等待设备上线"
-        DeviceSetupStep.Ready -> "连接成功"
-        DeviceSetupStep.Error -> "需要重试"
-        else -> "开始扫描设备"
-    }
-    Card(
-        modifier = modifier.height(180.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(72.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f), shape = RoundedCornerShape(18.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "\uD83D\uDCF1", style = MaterialTheme.typography.titleLarge)
-            }
-            Text(text = statusText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-private fun WiFiCard(
+private fun WifiForm(
     ssid: String,
     password: String,
     onSsidChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     enabled: Boolean
 ) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Column(
+        OutlinedTextField(
+            value = ssid,
+            onValueChange = onSsidChange,
+            label = { Text("Wi-Fi 名称") },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            OutlinedTextField(
-                value = ssid,
-                onValueChange = onSsidChange,
-                label = { Text("Wi-Fi 名称") },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = enabled
-            )
-            OutlinedTextField(
-                value = password,
-                onValueChange = onPasswordChange,
-                label = { Text("Wi-Fi 密码") },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = enabled
-            )
-        }
+                .testTag(DeviceSetupTestTags.WIFI_SSID),
+            enabled = enabled
+        )
+        OutlinedTextField(
+            value = password,
+            onValueChange = onPasswordChange,
+            label = { Text("Wi-Fi 密码") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(DeviceSetupTestTags.WIFI_PASSWORD),
+            enabled = enabled
+        )
     }
 }
 
 @Composable
 private fun ErrorBanner(
     message: String,
-    onDismiss: () -> Unit,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    onBack: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .testTag(DeviceSetupTestTags.ERROR_BANNER),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+        shape = RoundedCornerShape(12.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
                 text = message,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.weight(1f)
+                color = MaterialTheme.colorScheme.onErrorContainer
             )
-            Spacer(modifier = Modifier.size(12.dp))
-            TextButton(onClick = onRetry) { Text(text = "重试") }
-            TextButton(onClick = onDismiss) { Text(text = "知道了") }
+        RowActions(
+            primaryLabel = "重试配网",
+            secondaryLabel = "返回首页",
+            onPrimary = onRetry,
+            onSecondary = onBack
+        )
+    }
+}
+}
+
+@Composable
+private fun PrimaryButtons(
+    state: DeviceSetupUiState,
+    onStartScan: () -> Unit,
+    onProvisionWifi: (String, String) -> Unit,
+    onRetry: () -> Unit,
+    onOpenDeviceManager: () -> Unit,
+    onBackToHome: () -> Unit
+) {
+    val primaryAction = when (state.step) {
+        DeviceSetupStep.Idle,
+        DeviceSetupStep.Scanning -> onStartScan
+
+        DeviceSetupStep.Pairing -> { { onProvisionWifi(state.wifiSsid.trim(), state.wifiPassword.trim()) } }
+        DeviceSetupStep.WifiProvisioning,
+        DeviceSetupStep.WaitingForDeviceOnline -> { {} }
+        DeviceSetupStep.Error -> onRetry
+        DeviceSetupStep.Ready -> onOpenDeviceManager
+    }
+
+    Button(
+        onClick = primaryAction,
+        enabled = state.isPrimaryEnabled,
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(DeviceSetupTestTags.PRIMARY_BUTTON)
+    ) {
+        Text(text = state.primaryLabel)
+    }
+
+    state.secondaryLabel?.let { secondary ->
+        TextButton(
+            onClick = onBackToHome,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(DeviceSetupTestTags.SECONDARY_BUTTON)
+        ) {
+            Text(text = secondary)
         }
     }
 }
 
 @Composable
-private fun PrimaryActions(
-    state: DeviceSetupUiState,
-    ssid: String,
-    password: String,
-    onStartScan: () -> Unit,
-    onProvisionWifi: (String, String) -> Unit,
-    onRetry: () -> Unit,
-    onOpenDeviceManager: () -> Unit
+private fun RowActions(
+    primaryLabel: String,
+    secondaryLabel: String,
+    onPrimary: () -> Unit,
+    onSecondary: () -> Unit
 ) {
-    val (label, action) = when (state.step) {
-        DeviceSetupStep.Idle,
-        DeviceSetupStep.Scanning -> "开始扫描" to onStartScan
-
-        DeviceSetupStep.Pairing -> "下发 Wi-Fi 并继续" to { onProvisionWifi(ssid.trim(), password.trim()) }
-        DeviceSetupStep.WifiProvisioning,
-        DeviceSetupStep.WaitingForDeviceOnline -> "等待设备上线" to {}
-        DeviceSetupStep.Error -> "重新开始配网" to onRetry
-        DeviceSetupStep.Ready -> "前往设备管理" to onOpenDeviceManager
-    }
-    Button(
-        onClick = action,
-        enabled = when (state.step) {
-            DeviceSetupStep.WifiProvisioning,
-            DeviceSetupStep.WaitingForDeviceOnline -> false
-            DeviceSetupStep.Pairing -> ssid.isNotBlank() && !state.isActionInProgress && !state.isSubmittingWifi
-            DeviceSetupStep.Ready -> true
-            DeviceSetupStep.Scanning -> !state.isScanning
-            else -> !state.isActionInProgress
-        },
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag(DeviceSetupTestTags.PRIMARY_BUTTON),
-        contentPadding = PaddingValues(vertical = 12.dp)
-    ) { Text(text = label) }
-
-    if (state.step == DeviceSetupStep.Ready) {
-        TextButton(
-            onClick = onOpenDeviceManager,
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag(DeviceSetupTestTags.TO_DEVICE_MANAGER)
-        ) { Text(text = "查看设备管理") }
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Button(onClick = onPrimary, modifier = Modifier.fillMaxWidth()) {
+            Text(text = primaryLabel)
+        }
+        TextButton(onClick = onSecondary, modifier = Modifier.fillMaxWidth()) {
+            Text(text = secondaryLabel)
+        }
     }
 }

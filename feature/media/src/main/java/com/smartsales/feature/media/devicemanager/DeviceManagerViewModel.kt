@@ -116,10 +116,18 @@ class DeviceManagerViewModel @Inject constructor(
             return
         }
         viewModelScope.launch(dispatcherProvider.io) {
+            _uiState.update { it.copy(applyInProgressId = fileId) }
             when (val result = mediaGateway.applyFile(_uiState.value.baseUrl, fileId)) {
-                is Result.Success -> updateAppliedFile(fileId, applied = true)
+                is Result.Success -> {
+                    updateAppliedFile(fileId, applied = true)
+                    _uiState.update { it.copy(applyInProgressId = null) }
+                }
+
                 is Result.Error -> _uiState.update {
-                    it.copy(errorMessage = result.throwable.message ?: "应用失败")
+                    it.copy(
+                        errorMessage = result.throwable.message ?: "应用失败",
+                        applyInProgressId = null
+                    )
                 }
             }
         }
@@ -284,6 +292,7 @@ class DeviceManagerViewModel @Inject constructor(
                             files = emptyList(),
                             visibleFiles = emptyList(),
                             selectedFile = null,
+                            applyInProgressId = null,
                             isLoading = false,
                             isUploading = false,
                             loadErrorMessage = null,
@@ -407,6 +416,7 @@ data class DeviceManagerUiState(
     val files: List<DeviceFileUi> = emptyList(),
     val visibleFiles: List<DeviceFileUi> = emptyList(),
     val selectedFile: DeviceFileUi? = null,
+    val applyInProgressId: String? = null,
     val isLoading: Boolean = false,
     val isUploading: Boolean = false,
     val errorMessage: String? = null,

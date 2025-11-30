@@ -136,6 +136,24 @@ class DeviceManagerScreenTest {
     }
 
     @Test
+    fun preview_showsSelectedFile() {
+        val files = listOf(
+            fileUi(id = "promo.mp4", displayName = "promo.mp4", mimeType = "video/mp4")
+        )
+        renderDeviceManager(
+            initialState = createState(
+                connectionStatus = DeviceConnectionUiState.Connected(deviceName = "录音笔"),
+                files = files,
+                visibleFiles = files,
+                selectedFile = files.first()
+            )
+        )
+
+        composeRule.onNodeWithTag(DeviceManagerTestTags.SELECTED_FILE_CARD).assertIsDisplayed()
+        composeRule.onNodeWithText("promo.mp4").assertIsDisplayed()
+    }
+
+    @Test
     fun errorBanner_dismissClearsState() {
         composeRule.mainClock.autoAdvance = false
         try {

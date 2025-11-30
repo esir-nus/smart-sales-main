@@ -175,6 +175,20 @@ class DeviceManagerViewModelTest {
         val state = viewModel.uiState.value
         assertTrue(gateway.appliedNames.contains("clip.mp4"))
         assertEquals(true, state.files.first().isApplied)
+        assertEquals(null, state.applyInProgressId)
+    }
+
+    @Test
+    fun `select file updates ui state`() = runTest(dispatcher) {
+        gateway.files = listOf(
+            DeviceMediaFile("clip.mp4", 2048, "video/mp4", 2_000L, "media/2", "dl/2")
+        )
+        connectionManager.emitReady()
+        advanceUntilIdle()
+
+        viewModel.onSelectFile("clip.mp4")
+        val state = viewModel.uiState.value
+        assertEquals("clip.mp4", state.selectedFile?.id)
     }
 
     @Test

@@ -336,12 +336,7 @@ fun HomeScreen(
                                 if (state.sessionList.isEmpty()) {
                                     EmptySessionHint(onNewChatClicked = onNewChatClicked)
                                 } else {
-                                    EmptyChatHint(
-                                        quickSkills = state.quickSkills,
-                                        selectedSkillId = state.selectedSkill?.id,
-                                        enabled = !state.isSending && !state.isStreaming,
-                                        onQuickSkillSelected = onQuickSkillSelected
-                                    )
+                                    EmptyChatHint()
                                 }
                             }
                         } else {
@@ -765,12 +760,7 @@ private fun formatSessionTime(timestamp: Long): String {
 }
 
 @Composable
-private fun EmptyChatHint(
-    quickSkills: List<QuickSkillUi>,
-    selectedSkillId: QuickSkillId?,
-    enabled: Boolean,
-    onQuickSkillSelected: (QuickSkillId) -> Unit
-) {
+private fun EmptyChatHint() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -778,13 +768,7 @@ private fun EmptyChatHint(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = "还没有对话，试试下面的快捷技能开始吧！")
-        QuickSkillRow(
-            skills = quickSkills,
-            selectedSkillId = selectedSkillId,
-            enabled = enabled,
-            onQuickSkillSelected = onQuickSkillSelected
-        )
+        Text(text = "还没有对话，试着发送第一条消息吧。")
     }
 }
 

@@ -135,6 +135,24 @@ class DeviceManagerScreenTest {
     }
 
     @Test
+    fun mediaBadges_showTypeAndDuration() {
+        val files = listOf(
+            fileUi(id = "promo.mp4", displayName = "promo.mp4", mimeType = "video/mp4", durationText = "00:30"),
+            fileUi(id = "loop.gif", displayName = "loop.gif", mimeType = "image/gif", mediaType = DeviceMediaTab.Gifs, durationText = null)
+        )
+        renderDeviceManager(
+            initialState = createState(
+                connectionStatus = DeviceConnectionUiState.Connected(deviceName = "录音笔"),
+                files = files,
+                visibleFiles = files
+            )
+        )
+
+        composeRule.onNodeWithText("00:30").assertIsDisplayed()
+        composeRule.onNodeWithText("GIF").assertIsDisplayed()
+    }
+
+    @Test
     fun preview_showsSelectedFile() {
         val files = listOf(
             fileUi(id = "promo.mp4", displayName = "promo.mp4", mimeType = "video/mp4")
@@ -265,7 +283,9 @@ class DeviceManagerScreenTest {
         displayName: String,
         mimeType: String = "video/mp4",
         isApplied: Boolean = false,
-        mediaType: DeviceMediaTab = DeviceMediaTab.Videos
+        mediaType: DeviceMediaTab = DeviceMediaTab.Videos,
+        durationText: String? = "00:45",
+        mediaLabel: String = if (mediaType == DeviceMediaTab.Gifs) "GIF" else "视频"
     ): DeviceFileUi {
         return DeviceFileUi(
             id = id,
@@ -273,10 +293,12 @@ class DeviceManagerScreenTest {
             sizeText = "1.2MB",
             mimeType = mimeType,
             mediaType = mediaType,
+            mediaLabel = mediaLabel,
             modifiedAtText = "2025-11-20 10:00",
             mediaUrl = "http://example/$id",
             downloadUrl = "http://example/$id/download",
-            isApplied = isApplied
+            isApplied = isApplied,
+            durationText = durationText
         )
     }
 

@@ -374,12 +374,6 @@ private fun DeviceFileCard(
                 )
             }
             Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "时长：${file.durationText ?: "待获取"}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(6.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -392,6 +386,7 @@ private fun DeviceFileCard(
                         contentDescription = "预览 ${file.displayName}",
                         modifier = Modifier.fillMaxSize()
                     )
+                    TypeBadge(label = file.mediaLabel, modifier = Modifier.align(Alignment.TopStart))
                     if (file.mediaType == DeviceMediaTab.Videos) {
                         Icon(
                             imageVector = Icons.Filled.PlayArrow,
@@ -403,6 +398,14 @@ private fun DeviceFileCard(
                                     MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
                                     shape = CircleShape
                                 )
+                                .padding(6.dp)
+                        )
+                    }
+                    file.durationText?.takeIf { it.isNotBlank() }?.let { duration ->
+                        DurationBadge(
+                            duration = duration,
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
                                 .padding(6.dp)
                         )
                     }
@@ -642,6 +645,47 @@ private fun UploadTile(
             )
         }
     }
+}
+
+@Composable
+private fun TypeBadge(label: String, modifier: Modifier = Modifier) {
+    if (label.isBlank()) return
+    AssistChip(
+        onClick = {},
+        enabled = false,
+        label = { Text(text = label) },
+        modifier = modifier.padding(6.dp),
+        colors = AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    )
+}
+
+@Composable
+private fun DurationBadge(duration: String, modifier: Modifier = Modifier) {
+    AssistChip(
+        onClick = {},
+        enabled = false,
+        label = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(text = duration, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        modifier = modifier,
+        colors = AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    )
 }
 
 @Composable

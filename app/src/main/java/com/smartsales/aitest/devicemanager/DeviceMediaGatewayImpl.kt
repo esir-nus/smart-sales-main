@@ -55,6 +55,7 @@ private fun MediaServerFile.toDeviceMediaFile(): DeviceMediaFile =
         modifiedAtMillis = modifiedAtMillis,
         mediaUrl = mediaUrl,
         downloadUrl = downloadUrl,
+        durationMillis = durationMillis,
         location = location,
         source = source
     )
@@ -67,6 +68,7 @@ private fun DeviceMediaFile.toMediaServerFile(): MediaServerFile =
         modifiedAtMillis = modifiedAtMillis,
         mediaUrl = mediaUrl,
         downloadUrl = downloadUrl,
+        durationMillis = durationMillis,
         location = location,
         source = source
     )

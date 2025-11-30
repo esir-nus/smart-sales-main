@@ -429,6 +429,7 @@ data class DeviceFileUi(
     val sizeText: String,
     val mimeType: String,
     val mediaType: DeviceMediaTab,
+    val mediaLabel: String,
     val modifiedAtText: String,
     val mediaUrl: String,
     val downloadUrl: String,
@@ -449,6 +450,7 @@ data class DeviceMediaFile(
     val modifiedAtMillis: Long,
     val mediaUrl: String,
     val downloadUrl: String,
+    val durationMillis: Long? = null,
     val location: String? = null,
     val source: String? = null
 )
@@ -486,10 +488,14 @@ private fun DeviceMediaFile.toUiOrNull(): DeviceFileUi? {
         sizeText = formatSize(sizeBytes),
         mimeType = mimeType,
         mediaType = tab,
+        mediaLabel = when (tab) {
+            DeviceMediaTab.Videos -> "视频"
+            DeviceMediaTab.Gifs -> "GIF"
+        },
         modifiedAtText = formatTimestamp(modifiedAtMillis),
         mediaUrl = mediaUrl,
         downloadUrl = downloadUrl,
-        durationText = null, // TODO: 未来接入时长元数据后显示真实时长
+        durationText = durationMillis?.let { formatDuration(it) },
         thumbnailUrl = mediaUrl // 静态缩略图占位，禁止自动播放
     )
 }
@@ -509,6 +515,19 @@ private fun DeviceMediaFile.isAudio(): Boolean {
     if (lowerMime.startsWith("audio")) return true
     val lowerName = name.lowercase(Locale.ROOT)
     return lowerName.endsWith(".mp3") || lowerName.endsWith(".wav") || lowerName.endsWith(".m4a") || lowerName.endsWith(".aac") || lowerName.endsWith(".flac") || lowerName.endsWith(".ogg")
+}
+
+private fun formatDuration(durationMillis: Long): String {
+    if (durationMillis <= 0) return ""
+    val totalSeconds = (durationMillis / 1000).coerceAtLeast(0)
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (hours > 0) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%02d:%02d".format(minutes, seconds)
+    }
 }
 
 private fun formatSize(bytes: Long): String {

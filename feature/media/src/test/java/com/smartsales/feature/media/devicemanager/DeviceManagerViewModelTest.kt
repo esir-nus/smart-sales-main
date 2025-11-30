@@ -69,8 +69,8 @@ class DeviceManagerViewModelTest {
         advanceUntilIdle()
         gateway.files = listOf(
             DeviceMediaFile("image-1.jpg", 1024, "image/jpeg", 1_000L, "media/1", "dl/1"),
-            DeviceMediaFile("clip.mp4", 2048, "video/mp4", 2_000L, "media/2", "dl/2"),
-            DeviceMediaFile("anim.gif", 512, "image/gif", 3_000L, "media/3", "dl/3")
+            DeviceMediaFile("clip.mp4", 2048, "video/mp4", 2_000L, "media/2", "dl/2", durationMillis = 90_000),
+            DeviceMediaFile("anim.gif", 512, "image/gif", 3_000L, "media/3", "dl/3", durationMillis = 5_000)
         )
 
         viewModel.onRefreshFiles()
@@ -82,6 +82,27 @@ class DeviceManagerViewModelTest {
         assertEquals(false, state.isLoading)
         assertEquals(null, state.loadErrorMessage)
         assertTrue(gateway.fetchCalls >= 1)
+    }
+
+    @Test
+    fun `mapping sets type label and duration`() = runTest(dispatcher) {
+        connectionManager.emitReady()
+        advanceUntilIdle()
+        gateway.files = listOf(
+            DeviceMediaFile("clip.mp4", 2048, "video/mp4", 2_000L, "media/2", "dl/2", durationMillis = 75_000),
+            DeviceMediaFile("anim.gif", 512, "image/gif", 3_000L, "media/3", "dl/3", durationMillis = 4_000)
+        )
+
+        viewModel.onRefreshFiles()
+        advanceUntilIdle()
+
+        val files = viewModel.uiState.value.files
+        val video = files.first { it.id == "clip.mp4" }
+        val gif = files.first { it.id == "anim.gif" }
+        assertEquals("视频", video.mediaLabel)
+        assertEquals("01:15", video.durationText)
+        assertEquals("GIF", gif.mediaLabel)
+        assertEquals("00:04", gif.durationText)
     }
 
     @Test

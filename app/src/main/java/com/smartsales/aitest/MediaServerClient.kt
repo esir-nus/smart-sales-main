@@ -34,6 +34,7 @@ data class MediaServerFile(
     val modifiedAtMillis: Long,
     val mediaUrl: String,
     val downloadUrl: String,
+    val durationMillis: Long? = null,
     val location: String? = null,
     val source: String? = null
 ) {
@@ -70,6 +71,7 @@ class MediaServerClient @Inject constructor(
                             modifiedAtMillis = obj.optLong("modifiedAtMillis"),
                             mediaUrl = absoluteUrl(normalized, obj.optString("mediaUrl", "")),
                             downloadUrl = absoluteUrl(normalized, obj.optString("downloadUrl", "")),
+                            durationMillis = obj.optLongOrNull("durationMillis"),
                             location = obj.optStringOrNull("location"),
                             source = obj.optStringOrNull("source")
                         )
@@ -226,6 +228,12 @@ class MediaServerClient @Inject constructor(
 
     private fun JSONObject.optStringOrNull(key: String): String? =
         optString(key, "").takeIf { it.isNotBlank() }
+
+    private fun JSONObject.optLongOrNull(key: String): Long? {
+        if (!has(key)) return null
+        val value = optLong(key, Long.MIN_VALUE)
+        return if (value == Long.MIN_VALUE) null else value
+    }
 
     companion object {
         private fun normalizeBaseUrl(raw: String): String? {

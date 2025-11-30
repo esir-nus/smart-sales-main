@@ -41,8 +41,8 @@ object AppDesignTokens {
             MaterialTheme.colorScheme.primary,
             MaterialTheme.colorScheme.primary.copy(alpha = 0.82f)
         ),
-        overlayRailWidth = 60.dp,
-        overlayHandleSize = DpSize(32.dp, 4.dp),
+        overlayRailWidth = 48.dp,
+        overlayHandleSize = DpSize(28.dp, 3.dp),
         overlayHandleColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
     )
 }

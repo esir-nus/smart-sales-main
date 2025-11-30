@@ -224,13 +224,14 @@ private fun AiFeatureTestApp() {
             topBar = {
                 Surface(
                     color = MaterialTheme.colorScheme.surface,
-                    shadowElevation = 2.dp
+                    shadowElevation = 1.dp
                 ) {
                     Column {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                .height(56.dp)
+                                .padding(horizontal = 16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
@@ -240,7 +241,7 @@ private fun AiFeatureTestApp() {
                             )
                             Spacer(modifier = Modifier.weight(1f))
                         }
-                        Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                        Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
                     }
                 }
             }
@@ -451,17 +452,16 @@ private fun DraggableOverlayStack(
                 onDragStopped = { velocity -> settle(velocity) }
             )
             .testTag(AiFeatureTestTags.OVERLAY_STACK),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-        tonalElevation = 2.dp,
-        shadowElevation = 2.dp,
-        shape = MaterialTheme.shapes.large,
-        border = BorderStroke(1.dp, designTokens.cardBorder)
+        color = Color.Transparent,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+        shape = MaterialTheme.shapes.large
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(vertical = 12.dp, horizontal = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(vertical = 10.dp, horizontal = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             OverlayCard(
@@ -512,25 +512,24 @@ private fun OverlayCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .sizeIn(minWidth = 56.dp, minHeight = 64.dp)
+            .sizeIn(minWidth = 48.dp, minHeight = 56.dp)
             .graphicsLayer(
                 scaleX = scale * pressedScale,
                 scaleY = scale * pressedScale
             )
             .then(if (tag != null) Modifier.testTag(tag) else Modifier),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
         ),
         shape = MaterialTheme.shapes.medium,
-        border = BorderStroke(1.dp, designTokens.cardBorder),
-        elevation = CardDefaults.cardElevation(elevation),
+        elevation = CardDefaults.cardElevation(elevation.coerceAtMost(4.dp)),
         onClick = onClick,
         interactionSource = interactionSource
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 10.dp, horizontal = 8.dp),
+                .padding(vertical = 8.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {

@@ -90,6 +90,12 @@ fun UserCenterScreen(
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            Text(
+                text = "管理账号、订阅和设置",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.size(4.dp))
             ProfileHeader(userName = uiState.userName, email = uiState.email)
             if (uiState.isSaving) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())

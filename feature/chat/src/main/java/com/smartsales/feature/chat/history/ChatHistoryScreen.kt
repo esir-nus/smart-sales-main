@@ -157,7 +157,7 @@ fun ChatHistoryScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
-            if (state.sessions.isEmpty() && !state.isLoading) {
+            if (state.groups.isEmpty() && !state.isLoading) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -176,15 +176,25 @@ fun ChatHistoryScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
                 ) {
-                    items(state.sessions, key = { it.id }) { session ->
-                        ChatHistoryItem(
-                            session = session,
-                            onClick = {
-                                onSessionClicked(session.id)
-                            },
-                            onLongPress = { sheetSession = session },
-                            modifier = Modifier.testTag(ChatHistoryTestTags.item(session.id))
-                        )
+                    state.groups.forEach { group ->
+                        item("header-${group.label}") {
+                            Text(
+                                text = group.label,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        }
+                        items(group.items, key = { it.id }) { session ->
+                            ChatHistoryItem(
+                                session = session,
+                                onClick = {
+                                    onSessionClicked(session.id)
+                                },
+                                onLongPress = { sheetSession = session },
+                                modifier = Modifier.testTag(ChatHistoryTestTags.item(session.id))
+                            )
+                        }
                     }
                 }
             }

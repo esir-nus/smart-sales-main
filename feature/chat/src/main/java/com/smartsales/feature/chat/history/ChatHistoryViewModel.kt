@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -33,10 +34,15 @@ data class ChatSessionUi(
 )
 
 data class ChatHistoryUiState(
-    val sessions: List<ChatSessionUi> = emptyList(),
+    val groups: List<ChatHistoryGroupUi> = emptyList(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val selectedSessionId: String? = null
+)
+
+data class ChatHistoryGroupUi(
+    val label: String,
+    val items: List<ChatSessionUi>
 )
 
 sealed class ChatHistoryEvent {
@@ -127,35 +133,77 @@ class ChatHistoryViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false, errorMessage = error.message) }
                 }
                 .collectLatest { summaries ->
-                    _uiState.update {
-                        it.copy(
-                            sessions = summaries.toUiModels(),
-                            isLoading = false
-                        )
-                    }
+                    applySessions(summaries)
                 }
         }
     }
 
+    private fun applySessions(summaries: List<AiSessionSummary>) {
+        val now = System.currentTimeMillis()
+        val sessions = summaries.toUiModels()
+        val grouped = sessions.groupByBucket(now).map { (label, items) ->
+            ChatHistoryGroupUi(
+                label = label,
+                items = items
+                    .sortedWith(
+                        compareByDescending<ChatSessionUi> { it.pinned }
+                            .thenByDescending { it.updatedAt }
+                    )
+            )
+        }.sortedBy { bucketOrder(it.label) }
+        _uiState.update {
+            it.copy(
+                groups = grouped,
+                isLoading = false,
+                errorMessage = null
+            )
+        }
+    }
+
+    private fun bucketOrder(label: String): Int = when (label) {
+        "7天内" -> 0
+        "30天内" -> 1
+        "更早" -> 2
+        else -> 3
+    }
+
+    private fun List<ChatSessionUi>.groupByBucket(nowMillis: Long): Map<String, List<ChatSessionUi>> {
+        return this.groupBy { session ->
+            val days = ((nowMillis - session.updatedAt) / 86_400_000L).coerceAtLeast(0)
+            when {
+                days <= 7 -> "7天内"
+                days <= 30 -> "30天内"
+                else -> "更早"
+            }
+        }.filterValues { it.isNotEmpty() }
+    }
+
     private suspend fun safeUpsert(summary: AiSessionSummary) {
         runCatching { aiSessionRepository.upsert(summary) }
+            .onSuccess { refreshFromRepo() }
             .onFailure { error ->
                 Log.w(TAG, "更新会话失败", error)
                 _uiState.update { it.copy(errorMessage = error.message ?: "操作失败") }
             }
     }
 
+    private suspend fun refreshFromRepo() {
+        runCatching { aiSessionRepository.summaries.first() }
+            .onSuccess { applySessions(it) }
+            .onFailure { error ->
+                Log.w(TAG, "刷新会话列表失败", error)
+                _uiState.update { it.copy(errorMessage = error.message ?: "刷新失败") }
+            }
+    }
+
     private suspend fun findSession(sessionId: String): AiSessionSummary? {
-        val cached = _uiState.value.sessions.firstOrNull { it.id == sessionId }
+        val cached = _uiState.value.groups.flatMap { it.items }.firstOrNull { it.id == sessionId }
         if (cached != null) return cached.toSummary()
         return aiSessionRepository.findById(sessionId)
     }
 
     private fun List<AiSessionSummary>.toUiModels(): List<ChatSessionUi> =
-        sortedWith(
-            compareByDescending<AiSessionSummary> { it.pinned }
-                .thenByDescending { it.updatedAtMillis }
-        ).map {
+        sortedByDescending { it.updatedAtMillis }.map {
             ChatSessionUi(
                 id = it.id,
                 title = it.title,

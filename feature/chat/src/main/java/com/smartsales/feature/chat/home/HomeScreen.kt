@@ -294,6 +294,20 @@ fun HomeScreen(
                     )
                 }
                 Spacer(modifier = Modifier.height(12.dp))
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "你好，我是您的销售助手",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = "我可以帮您总结对话、分析异议、辅导话术、生成日报。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
                 Divider(modifier = Modifier.padding(vertical = 4.dp))
                 Box(
                     modifier = Modifier
@@ -834,7 +848,7 @@ private fun HomeInputArea(
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag(HomeScreenTestTags.INPUT_FIELD),
-                label = { Text(text = "输入问题") },
+                label = { Text(text = "上传文件或输入消息...") },
                 enabled = enabled
             )
             Row(

@@ -54,7 +54,7 @@ class ChatHistoryViewModelTest {
         val viewModel = buildViewModel()
 
         advanceUntilIdle()
-        val sessions = viewModel.uiState.value.sessions
+        val sessions = viewModel.uiState.value.groups.flatMap { it.items }
         assertEquals(listOf("s2", "s3", "s1"), sessions.map { it.id })
     }
 
@@ -78,7 +78,8 @@ class ChatHistoryViewModelTest {
         viewModel.onRenameSession("s1", "new")
         advanceUntilIdle()
 
-        assertEquals("new", viewModel.uiState.value.sessions.first().title)
+        val sessions = viewModel.uiState.value.groups.flatMap { it.items }
+        assertEquals("new", sessions.first().title)
     }
 
     @Test
@@ -90,7 +91,7 @@ class ChatHistoryViewModelTest {
         viewModel.onDeleteSession("s1")
         advanceUntilIdle()
 
-        assertTrue(viewModel.uiState.value.sessions.isEmpty())
+        assertTrue(viewModel.uiState.value.groups.isEmpty())
         assertTrue(historyRepository.deletedIds.contains("s1"))
     }
 
@@ -108,7 +109,8 @@ class ChatHistoryViewModelTest {
         viewModel.onPinToggle("s1")
         advanceUntilIdle()
 
-        assertEquals(listOf("s1", "s2"), viewModel.uiState.value.sessions.map { it.id })
+        val sessions = viewModel.uiState.value.groups.flatMap { it.items }
+        assertEquals(listOf("s1", "s2"), sessions.map { it.id })
         assertTrue(sessionRepository.findById("s1")?.pinned == true)
     }
 

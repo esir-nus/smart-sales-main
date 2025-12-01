@@ -41,5 +41,6 @@ data class DeviceSetupUiState(
     val deviceIp: String? = null,
     val isDeviceOnline: Boolean = false,
     val showWifiForm: Boolean = false,
-    val isPrimaryEnabled: Boolean = true
+    val isPrimaryEnabled: Boolean = true,
+    val canRetryScan: Boolean = false
 )

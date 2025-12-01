@@ -54,8 +54,10 @@ class DeviceSetupViewModelRobustnessTest {
         dispatcher.scheduler.runCurrent()
 
         val state = viewModel.uiState.value
-        assertEquals(DeviceSetupStep.Error, state.step)
+        assertEquals(DeviceSetupStep.Scanning, state.step)
         assertEquals(DeviceSetupErrorReason.ScanTimeout, state.errorReason)
+        assertTrue(state.canRetryScan)
+        assertTrue(state.isPrimaryEnabled)
     }
 
     @Test

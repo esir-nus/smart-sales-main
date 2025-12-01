@@ -52,6 +52,8 @@ class DeviceSetupViewModelTest {
     fun autoScan_then_found_then_wifi_input() = runTest(dispatcher) {
         dispatcher.scheduler.runCurrent()
         assertEquals(DeviceSetupStep.Scanning, viewModel.uiState.value.step)
+        assertTrue(viewModel.uiState.value.isScanning)
+        assertTrue(viewModel.uiState.value.canRetryScan.not())
 
         scanner.emitDevice(BlePeripheral("1", "BT311", -50))
         dispatcher.scheduler.runCurrent()
@@ -105,6 +107,33 @@ class DeviceSetupViewModelTest {
 
         assertEquals(DeviceSetupStep.Scanning, viewModel.uiState.value.step)
         assertEquals("", viewModel.uiState.value.wifiPassword)
+    }
+
+    @Test
+    fun scan_start_failure_allows_retry() = runTest(dispatcher) {
+        val failingScanner = FakeBleScanner().apply { startSucceeds = false }
+        viewModel = DeviceSetupViewModel(connectionManager, failingScanner, profiles)
+        dispatcher.scheduler.runCurrent()
+
+        val state = viewModel.uiState.value
+        assertEquals(DeviceSetupStep.Scanning, state.step)
+        assertTrue(state.canRetryScan)
+        assertTrue(state.isScanning.not())
+    }
+
+    @Test
+    fun scan_timeout_enables_retry() = runTest(dispatcher) {
+        dispatcher.scheduler.runCurrent()
+        advanceUntilIdle()
+
+        advanceUntilIdle()
+        dispatcher.scheduler.advanceTimeBy(12_500)
+        dispatcher.scheduler.runCurrent()
+
+        val state = viewModel.uiState.value
+        assertEquals(DeviceSetupStep.Scanning, state.step)
+        assertTrue(state.canRetryScan)
+        assertTrue(state.isScanning.not())
     }
 
     private class FakeDeviceConnectionManager : DeviceConnectionManager {
@@ -164,9 +193,10 @@ class DeviceSetupViewModelTest {
     private class FakeBleScanner : BleScanner {
         override val devices: MutableStateFlow<List<BlePeripheral>> = MutableStateFlow(emptyList())
         override val isScanning: MutableStateFlow<Boolean> = MutableStateFlow(false)
+        var startSucceeds: Boolean = true
 
         override fun start() {
-            isScanning.value = true
+            isScanning.value = startSucceeds
         }
 
         override fun stop() {

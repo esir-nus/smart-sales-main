@@ -43,7 +43,6 @@ class DeviceSetupViewModel @Inject constructor(
     private var scanTimeoutJob: Job? = null
     private var pendingPeripheral: BlePeripheral? = null
     private var hasEmittedReadyEvent = false
-    private var hasStarted = false
 
     init {
         observeConnection()
@@ -52,19 +51,23 @@ class DeviceSetupViewModel @Inject constructor(
     }
 
     private fun startAutoScan() {
-        if (hasStarted) return
-        hasStarted = true
-        bleScanner.start()
+        if (_uiState.value.isScanning) return
+        pendingPeripheral = null
         updateUi {
             it.copy(
                 step = DeviceSetupStep.Scanning,
                 isScanning = true,
                 isActionInProgress = true,
+                canRetryScan = false,
                 errorMessage = null,
                 errorReason = null
             )
         }
+        bleScanner.start()
         startScanTimeout()
+        if (!bleScanner.isScanning.value) {
+            markScanFailed("未能开始扫描，请检查蓝牙和权限后重试")
+        }
     }
 
     fun onWifiSsidChanged(value: String) {
@@ -79,7 +82,7 @@ class DeviceSetupViewModel @Inject constructor(
         when (_uiState.value.step) {
             DeviceSetupStep.Idle,
             DeviceSetupStep.Scanning -> {
-                if (!hasStarted) startAutoScan()
+                if (!_uiState.value.isScanning) startAutoScan()
             }
             DeviceSetupStep.Found -> {
                 selectPendingPeripheral()
@@ -106,7 +109,6 @@ class DeviceSetupViewModel @Inject constructor(
     fun onRetry() {
         pendingPeripheral = null
         hasEmittedReadyEvent = false
-        hasStarted = false
         bleScanner.stop()
         updateUi {
             it.copy(
@@ -116,6 +118,7 @@ class DeviceSetupViewModel @Inject constructor(
                 isActionInProgress = true,
                 isScanning = false,
                 isSubmittingWifi = false,
+                canRetryScan = false,
                 wifiPassword = "",
                 wifiSsid = ""
             )
@@ -206,7 +209,8 @@ class DeviceSetupViewModel @Inject constructor(
                                 isDeviceOnline = false,
                                 deviceIp = null,
                                 errorMessage = null,
-                                errorReason = null
+                                errorReason = null,
+                                canRetryScan = false
                             )
                         }
                     }
@@ -216,11 +220,12 @@ class DeviceSetupViewModel @Inject constructor(
                             // 保留“发现设备/填写 Wi-Fi”界面，不回落到 Idle
                             return@collectLatest
                         }
+                        val scanning = _uiState.value.isScanning
                         updateUi {
                             it.copy(
-                                step = if (hasStarted) DeviceSetupStep.Scanning else DeviceSetupStep.Idle,
-                                isActionInProgress = hasStarted,
-                                isScanning = hasStarted,
+                                step = if (scanning || it.canRetryScan) DeviceSetupStep.Scanning else DeviceSetupStep.Idle,
+                                isActionInProgress = scanning,
+                                isScanning = scanning,
                                 isSubmittingWifi = false,
                                 isDeviceOnline = false,
                                 deviceIp = null,
@@ -235,7 +240,8 @@ class DeviceSetupViewModel @Inject constructor(
                             it.copy(
                                 isActionInProgress = true,
                                 isScanning = false,
-                                errorMessage = null
+                                errorMessage = null,
+                                canRetryScan = false
                             )
                         }
                     }
@@ -247,7 +253,8 @@ class DeviceSetupViewModel @Inject constructor(
                                 step = DeviceSetupStep.Pairing,
                                 deviceName = state.deviceName,
                                 isActionInProgress = true,
-                                isScanning = false
+                                isScanning = false,
+                                canRetryScan = false
                             )
                         }
                     }
@@ -260,6 +267,7 @@ class DeviceSetupViewModel @Inject constructor(
                                 deviceName = state.session.peripheralName,
                                 isActionInProgress = false,
                                 isScanning = false,
+                                canRetryScan = false,
                                 showWifiForm = true
                             )
                         }
@@ -272,7 +280,8 @@ class DeviceSetupViewModel @Inject constructor(
                             if (current.step == DeviceSetupStep.Ready) current else current.copy(
                                 step = DeviceSetupStep.WaitingForDeviceOnline,
                                 isActionInProgress = true,
-                                isSubmittingWifi = true
+                                isSubmittingWifi = true,
+                                canRetryScan = false
                             )
                         }
                         triggerNetworkCheck()
@@ -313,6 +322,7 @@ class DeviceSetupViewModel @Inject constructor(
                         deviceName = pendingPeripheral?.name,
                         isActionInProgress = false,
                         isScanning = false,
+                        canRetryScan = false,
                         showWifiForm = false
                     )
                 }
@@ -320,7 +330,12 @@ class DeviceSetupViewModel @Inject constructor(
         }
         viewModelScope.launch {
             bleScanner.isScanning.collectLatest { scanning ->
-                updateUi { it.copy(isScanning = scanning) }
+                val stillSearching = pendingPeripheral == null && _uiState.value.step == DeviceSetupStep.Scanning
+                if (!scanning && stillSearching) {
+                    markScanFailed("未发现设备，请检查设备电源与距离后重试")
+                } else {
+                    updateUi { it.copy(isScanning = scanning) }
+                }
             }
         }
     }
@@ -361,6 +376,7 @@ class DeviceSetupViewModel @Inject constructor(
                     isActionInProgress = false,
                     isSubmittingWifi = false,
                     isScanning = false,
+                    canRetryScan = false,
                     isDeviceOnline = true,
                     deviceIp = sanitizedIp ?: current.deviceIp
                 )
@@ -385,7 +401,8 @@ class DeviceSetupViewModel @Inject constructor(
                 errorReason = reason,
                 isActionInProgress = false,
                 isScanning = false,
-                isSubmittingWifi = false
+                isSubmittingWifi = false,
+                canRetryScan = false
             )
         }
     }
@@ -423,13 +440,26 @@ class DeviceSetupViewModel @Inject constructor(
         scanTimeoutJob?.cancel()
         scanTimeoutJob = viewModelScope.launch {
             delay(SCAN_TIMEOUT_MS)
-            if (_uiState.value.step == DeviceSetupStep.Scanning && _uiState.value.isScanning) {
+            val state = _uiState.value
+            if (state.step == DeviceSetupStep.Scanning && pendingPeripheral == null) {
                 bleScanner.stop()
-                setError(
-                    message = "扫描超时，请重试配网",
-                    reason = DeviceSetupErrorReason.ScanTimeout
-                )
+                markScanFailed("未发现设备，请检查设备电源与距离后重试", DeviceSetupErrorReason.ScanTimeout)
             }
+        }
+    }
+
+    private fun markScanFailed(message: String, reason: DeviceSetupErrorReason = DeviceSetupErrorReason.ScanTimeout) {
+        cancelScanTimeout()
+        pendingPeripheral = null
+        updateUi {
+            it.copy(
+                step = DeviceSetupStep.Scanning,
+                isActionInProgress = false,
+                isScanning = false,
+                canRetryScan = true,
+                errorMessage = message,
+                errorReason = reason
+            )
         }
     }
 
@@ -441,13 +471,16 @@ class DeviceSetupViewModel @Inject constructor(
     private fun DeviceSetupUiState.enrich(): DeviceSetupUiState {
         val (desc, primary, secondary, showWifi, enabled) = when (step) {
             DeviceSetupStep.Idle,
-            DeviceSetupStep.Scanning -> Tuple5(
-                "正在搜索设备…",
-                "正在搜索…",
-                "返回首页",
-                false,
-                false
-            )
+            DeviceSetupStep.Scanning -> {
+                val retryable = canRetryScan && !isScanning
+                Tuple5(
+                    if (retryable) "未发现设备，请检查设备电源或蓝牙后重新扫描。" else "正在搜索设备…",
+                    if (retryable) "重新扫描" else "正在搜索…",
+                    "返回首页",
+                    false,
+                    retryable
+                )
+            }
 
             DeviceSetupStep.Found -> Tuple5(
                 "发现新设备，继续配置网络。",

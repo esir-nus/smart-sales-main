@@ -218,6 +218,7 @@ class DeviceManagerScreenTest {
                     DeviceManagerScreen(
                         state = uiState,
                         onRefresh = {},
+                        onStartSetup = {},
                         onRetryLoad = {},
                         onSelectFile = {},
                         onApplyFile = {},

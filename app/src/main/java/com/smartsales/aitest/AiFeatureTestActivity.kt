@@ -84,6 +84,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
 import coil.ImageLoader
 import coil.compose.AsyncImage
@@ -240,26 +241,28 @@ private fun AiFeatureTestApp(
             containerColor = designTokens.appBackground,
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
             topBar = {
-                Surface(
-                    color = MaterialTheme.colorScheme.surface,
-                    shadowElevation = 1.dp
-                ) {
-                    Column {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
-                                .padding(horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = titleForPage(currentPage),
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.weight(1f))
+                if (currentPage != TestHomePage.Home) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface,
+                        shadowElevation = 1.dp
+                    ) {
+                        Column {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp)
+                                    .padding(horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = titleForPage(currentPage),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
                         }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
                     }
                 }
             }
@@ -555,24 +558,25 @@ private fun VerticalOverlayLayout(
     home: @Composable () -> Unit,
     audio: @Composable () -> Unit,
     device: @Composable () -> Unit
-) {
-    val density = LocalDensity.current
-    val scope = rememberCoroutineScope()
+    ) {
+        val density = LocalDensity.current
+        val scope = rememberCoroutineScope()
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(backgroundColor)
     ) {
         val heightPx = with(density) { maxHeight.toPx().coerceAtLeast(1f) }
-        val audioAnchor = heightPx
+        val openFraction = 0.85f
+        val audioAnchor = heightPx * openFraction
         val homeAnchor = 0f
-        val deviceAnchor = -heightPx
+        val deviceAnchor = -heightPx * openFraction
         val offset = remember(heightPx) {
-            Animatable(overlayToAnchor(currentOverlay, heightPx))
+            Animatable(overlayToAnchor(currentOverlay, heightPx, openFraction))
         }
 
         LaunchedEffect(heightPx, currentOverlay) {
-            val target = overlayToAnchor(currentOverlay, heightPx)
+            val target = overlayToAnchor(currentOverlay, heightPx, openFraction)
             offset.animateTo(
                 targetValue = target,
                 animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
@@ -585,12 +589,15 @@ private fun VerticalOverlayLayout(
         }
 
         fun settle(velocity: Float) {
-            val threshold = heightPx * 0.25f
-            val destination = when {
-                offset.value > threshold || velocity > 1_000f -> HomeOverlay.Audio
-                offset.value < -threshold || velocity < -1_000f -> HomeOverlay.Device
-                else -> HomeOverlay.Home
-            }
+            val projection = offset.value + velocity * 0.05f
+            val anchors = listOf(
+                audioAnchor to HomeOverlay.Audio,
+                homeAnchor to HomeOverlay.Home,
+                deviceAnchor to HomeOverlay.Device
+            )
+            val destination = anchors.minBy { (anchor, _) ->
+                kotlin.math.abs(projection - anchor)
+            }.second
             onOverlayChange(destination)
         }
 
@@ -611,14 +618,13 @@ private fun VerticalOverlayLayout(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .graphicsLayer { alpha = if (isOverlayOpen) 0f else 1f }
             ) { home() }
 
             if (isOverlayOpen) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                        .background(Color.Black.copy(alpha = 0.35f))
                         .clickable { onOverlayChange(HomeOverlay.Home) }
                         .testTag(AiFeatureTestTags.OVERLAY_BACKDROP)
                 )
@@ -717,14 +723,18 @@ private fun overlayToPosition(overlay: HomeOverlay): Float = when (overlay) {
     HomeOverlay.Device -> 1f
 }
 
-private fun overlayToAnchor(overlay: HomeOverlay, heightPx: Float): Float = when (overlay) {
-    HomeOverlay.Audio -> heightPx
+private fun overlayToAnchor(
+    overlay: HomeOverlay,
+    heightPx: Float,
+    openFraction: Float = 1f
+): Float = when (overlay) {
+    HomeOverlay.Audio -> heightPx * openFraction
     HomeOverlay.Home -> 0f
-    HomeOverlay.Device -> -heightPx
+    HomeOverlay.Device -> -heightPx * openFraction
 }
 
 private fun titleForPage(page: TestHomePage): String = when (page) {
-    TestHomePage.Home -> "新对话"
+    TestHomePage.Home -> ""
     TestHomePage.AudioFiles -> "录音文件"
     TestHomePage.DeviceManager -> "设备管理"
     TestHomePage.DeviceSetup -> "设备初始化"

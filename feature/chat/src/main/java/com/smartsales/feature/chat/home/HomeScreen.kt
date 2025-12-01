@@ -290,17 +290,22 @@ fun HomeScreen(
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
             ) {
-                HomeHeroSection(
-                    userName = state.userName,
-                    hasMessages = state.chatMessages.isNotEmpty()
-                )
-                Spacer(modifier = Modifier.height(12.dp))
+                val hasMessages = state.chatMessages.isNotEmpty()
+                if (!hasMessages) {
+                    HomeHeroSection(
+                        userName = state.userName,
+                        hasMessages = hasMessages
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                } else {
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
                 ) {
-                    val hasActiveChat = state.chatMessages.isNotEmpty()
+                    val hasActiveChat = hasMessages
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()

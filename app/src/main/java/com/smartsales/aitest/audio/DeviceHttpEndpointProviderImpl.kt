@@ -157,6 +157,7 @@ class DeviceHttpEndpointProviderImpl @Inject constructor(
     private fun ConnectionState.readyToken(): String? = when (this) {
         is ConnectionState.WifiProvisioned -> session.secureToken
         is ConnectionState.Syncing -> session.secureToken
+        is ConnectionState.Connected -> session.secureToken
         else -> null
     }
 

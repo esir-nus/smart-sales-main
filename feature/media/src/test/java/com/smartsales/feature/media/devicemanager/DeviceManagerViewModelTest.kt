@@ -89,6 +89,36 @@ class DeviceManagerViewModelTest {
     }
 
     @Test
+    fun `connected empty list shows no error`() = runTest(dispatcher) {
+        connectionManager.emitReady()
+        advanceUntilIdle()
+        gateway.files = emptyList()
+
+        viewModel.onRefreshFiles()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(0, state.files.size)
+        assertEquals(null, state.loadErrorMessage)
+        assertTrue(state.isConnected)
+    }
+
+    @Test
+    fun `connected fetch error shows load error but stays connected`() = runTest(dispatcher) {
+        connectionManager.emitReady()
+        gateway.fetchResult = Result.Error(IllegalStateException("http fail"))
+        advanceUntilIdle()
+
+        viewModel.onRefreshFiles()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("加载设备文件失败，请稍后重试。", state.loadErrorMessage)
+        assertTrue(state.isConnected)
+        assertEquals(0, state.files.size)
+    }
+
+    @Test
     fun `mapping sets type label and duration`() = runTest(dispatcher) {
         connectionManager.emitReady()
         advanceUntilIdle()

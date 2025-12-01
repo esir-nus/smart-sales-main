@@ -269,6 +269,10 @@ class DeviceManagerViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(
                         isConnected = readyForFiles,
+                        canRetryConnect = when (connection) {
+                            ConnectionState.NeedsSetup -> false
+                            else -> true
+                        },
                         connectionStatus = connection.toUiState(),
                         autoDetectStatus = if (readyForNetwork) {
                             state.autoDetectStatus
@@ -418,6 +422,7 @@ private fun ConnectivityError.toReadableMessage(): String = when (this) {
 data class DeviceManagerUiState(
     val connectionStatus: DeviceConnectionUiState = DeviceConnectionUiState.Disconnected(),
     val isConnected: Boolean = false,
+    val canRetryConnect: Boolean = true,
     val baseUrl: String = DEFAULT_MEDIA_SERVER_BASE_URL,
     val autoDetectedBaseUrl: String? = null,
     val isAutoDetectingBaseUrl: Boolean = false,

@@ -142,7 +142,7 @@ fun DeviceManagerScreen(
                     modifier = Modifier.testTag(DeviceManagerTestTags.ERROR_BANNER)
                 )
             }
-            if (!isConnected) {
+            if (!isConnected && state.canRetryConnect) {
                 DisconnectedHint(onRefresh)
                 return@Column
             }

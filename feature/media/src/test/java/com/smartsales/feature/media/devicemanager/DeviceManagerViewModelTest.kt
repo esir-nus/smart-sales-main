@@ -175,6 +175,7 @@ class DeviceManagerViewModelTest {
 
         val state = viewModel.uiState.value
         assertFalse(state.isConnected)
+        assertTrue(state.canRetryConnect)
         assertTrue(state.files.isEmpty())
         assertEquals(null, state.loadErrorMessage)
         assertEquals(false, state.isLoading)
@@ -197,6 +198,16 @@ class DeviceManagerViewModelTest {
         assertTrue(gateway.appliedNames.contains("clip.mp4"))
         assertEquals(true, state.files.first().isApplied)
         assertEquals(null, state.applyInProgressId)
+    }
+
+    @Test
+    fun `needs setup hides retry connect`() = runTest(dispatcher) {
+        connectionManager.emitNeedsSetup()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.canRetryConnect)
+        assertFalse(state.isConnected)
     }
 
     @Test
@@ -395,6 +406,10 @@ class DeviceManagerViewModelTest {
 
         fun emitDisconnected() {
             _state.value = ConnectionState.Disconnected
+        }
+
+        fun emitNeedsSetup() {
+            _state.value = ConnectionState.NeedsSetup
         }
 
         override fun selectPeripheral(peripheral: BlePeripheral) = Unit

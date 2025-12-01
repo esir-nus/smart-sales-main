@@ -585,12 +585,12 @@ private fun VerticalOverlayLayout(
         }
 
         fun settle(velocity: Float) {
-            val projection = offset.value + velocity * 0.1f
-            val destination = listOf(
-                HomeOverlay.Audio to audioAnchor,
-                HomeOverlay.Home to homeAnchor,
-                HomeOverlay.Device to deviceAnchor
-            ).minBy { kotlin.math.abs(projection - it.second) }.first
+            val threshold = heightPx * 0.25f
+            val destination = when {
+                offset.value > threshold || velocity > 1_000f -> HomeOverlay.Audio
+                offset.value < -threshold || velocity < -1_000f -> HomeOverlay.Device
+                else -> HomeOverlay.Home
+            }
             onOverlayChange(destination)
         }
 
@@ -606,13 +606,14 @@ private fun VerticalOverlayLayout(
             val stackOffset = offset.value
             val audioOffset = stackOffset - heightPx
             val deviceOffset = stackOffset + heightPx
+            val isOverlayOpen = kotlin.math.abs(stackOffset - homeAnchor) > 1f
 
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .graphicsLayer { alpha = if (isOverlayOpen) 0f else 1f }
             ) { home() }
 
-            val isOverlayOpen = kotlin.math.abs(stackOffset - homeAnchor) > 1f
             if (isOverlayOpen) {
                 Box(
                     modifier = Modifier
@@ -627,12 +628,14 @@ private fun VerticalOverlayLayout(
                 modifier = Modifier
                     .fillMaxSize()
                     .offset { IntOffset(0, audioOffset.roundToInt()) }
+                    .zIndex(0.8f)
             ) { audio() }
 
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .offset { IntOffset(0, deviceOffset.roundToInt()) }
+                    .zIndex(0.9f)
             ) { device() }
         }
     }

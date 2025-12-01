@@ -564,9 +564,9 @@ private fun VerticalOverlayLayout(
             .background(backgroundColor)
     ) {
         val heightPx = with(density) { maxHeight.toPx().coerceAtLeast(1f) }
-        val topAnchor = heightPx
-        val midAnchor = 0f
-        val bottomAnchor = -heightPx
+        val audioAnchor = heightPx
+        val homeAnchor = 0f
+        val deviceAnchor = -heightPx
         val offset = remember(heightPx) {
             Animatable(overlayToAnchor(currentOverlay, heightPx))
         }
@@ -580,16 +580,16 @@ private fun VerticalOverlayLayout(
         }
 
         val dragState = rememberDraggableState { delta ->
-            val next = (offset.value + delta).coerceIn(bottomAnchor, topAnchor)
+            val next = (offset.value + delta).coerceIn(deviceAnchor, audioAnchor)
             scope.launch { offset.snapTo(next) }
         }
 
         fun settle(velocity: Float) {
             val projection = offset.value + velocity * 0.1f
             val destination = listOf(
-                HomeOverlay.Audio to topAnchor,
-                HomeOverlay.Home to midAnchor,
-                HomeOverlay.Device to bottomAnchor
+                HomeOverlay.Audio to audioAnchor,
+                HomeOverlay.Home to homeAnchor,
+                HomeOverlay.Device to deviceAnchor
             ).minBy { kotlin.math.abs(projection - it.second) }.first
             onOverlayChange(destination)
         }
@@ -605,8 +605,12 @@ private fun VerticalOverlayLayout(
         ) {
             val stackOffset = offset.value
             val audioOffset = stackOffset - heightPx
-            val homeOffset = stackOffset
             val deviceOffset = stackOffset + heightPx
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) { home() }
 
             Box(
                 modifier = Modifier
@@ -617,16 +621,10 @@ private fun VerticalOverlayLayout(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .offset { IntOffset(0, homeOffset.roundToInt()) }
-            ) { home() }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
                     .offset { IntOffset(0, deviceOffset.roundToInt()) }
             ) { device() }
 
-            if (kotlin.math.abs(stackOffset - midAnchor) > 1f) {
+            if (kotlin.math.abs(stackOffset - homeAnchor) > 1f) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()

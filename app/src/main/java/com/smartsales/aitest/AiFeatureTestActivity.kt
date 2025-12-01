@@ -36,6 +36,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
@@ -67,8 +68,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.annotation.VisibleForTesting
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
@@ -116,6 +119,15 @@ import androidx.compose.material3.AssistChipDefaults
 
 @AndroidEntryPoint
 class AiFeatureTestActivity : ComponentActivity() {
+    @VisibleForTesting
+    fun setOverlayForTest(overlay: HomeOverlay) {
+        when (overlay) {
+            HomeOverlay.Home -> setPage(TestHomePage.Home)
+            HomeOverlay.Audio -> setPage(TestHomePage.AudioFiles)
+            HomeOverlay.Device -> setPage(TestHomePage.DeviceManager)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -252,29 +264,15 @@ private fun AiFeatureTestApp() {
                     .padding(innerPadding),
                 color = designTokens.appBackground
             ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 8.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            DraggableOverlayStack(
-                currentOverlay = currentOverlay,
-                onSelectDevice = { setPage(TestHomePage.DeviceManager) },
-                onSelectHome = { openHomeOverlay() },
-                onSelectAudio = { openAudioOverlay() },
-                showTags = currentPage in setOf(
-                    TestHomePage.Home,
-                    TestHomePage.AudioFiles,
-                    TestHomePage.DeviceManager,
-                    TestHomePage.DeviceSetup
-                )
-            )
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 8.dp, vertical = 10.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                    ) {
                         Box(
                             modifier = Modifier
                                 .weight(1f)
@@ -282,7 +280,6 @@ private fun AiFeatureTestApp() {
                         ) {
                             when (currentPage) {
                                 TestHomePage.Home -> {
-                                    // Home 页：加载聊天 HomeScreen 并把回调映射到对应 Tab。
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
@@ -296,13 +293,13 @@ private fun AiFeatureTestApp() {
                                             selectedSessionId = pendingSessionId,
                                             onSessionSelectionConsumed = { pendingSessionId = null },
                                             onNavigateToDeviceManager = { openDeviceSection() },
-                                        onNavigateToDeviceSetup = { openDeviceSection(forceSetup = true) },
-                                        onNavigateToAudioFiles = { setPage(TestHomePage.AudioFiles) },
-                                        onNavigateToUserCenter = { setPage(TestHomePage.UserCenter) },
-                                        onNavigateToChatHistory = { setPage(TestHomePage.ChatHistory) },
-                                        onDeviceSnapshotChanged = { latestDeviceSnapshot = it }
-                                    )
-                                }
+                                            onNavigateToDeviceSetup = { openDeviceSection(forceSetup = true) },
+                                            onNavigateToAudioFiles = { setPage(TestHomePage.AudioFiles) },
+                                            onNavigateToUserCenter = { setPage(TestHomePage.UserCenter) },
+                                            onNavigateToChatHistory = { setPage(TestHomePage.ChatHistory) },
+                                            onDeviceSnapshotChanged = { latestDeviceSnapshot = it }
+                                        )
+                                    }
                                 }
 
                                 TestHomePage.WifiBleTester -> {

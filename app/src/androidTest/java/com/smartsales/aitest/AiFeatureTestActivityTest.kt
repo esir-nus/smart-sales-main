@@ -49,7 +49,9 @@ class AiFeatureTestActivityTest {
     fun topBarButtons_navigateAudioAndDevice() {
         waitForHomeRendered()
 
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE, useUnmergedTree = true).performClick()
+        composeRule.activityRule.scenario.onActivity {
+            it.setOverlayForTest(HomeOverlay.Audio)
+        }
         waitForAnyTag(
             composeRule,
             AiFeatureTestTags.PAGE_AUDIO_FILES,
@@ -60,7 +62,9 @@ class AiFeatureTestActivityTest {
         }
         waitForHomeRendered()
 
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE_HANDLE, useUnmergedTree = true).performClick()
+        composeRule.activityRule.scenario.onActivity {
+            it.setOverlayForTest(HomeOverlay.Device)
+        }
         waitForAnyTag(
             composeRule,
             AiFeatureTestTags.PAGE_DEVICE_MANAGER,

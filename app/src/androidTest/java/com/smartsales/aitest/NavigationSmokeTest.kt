@@ -49,7 +49,9 @@ class NavigationSmokeTest {
     @Test
     fun audioOverlayShowsAudioFiles() {
         goHome()
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE, useUnmergedTree = true).performClick()
+        composeRule.activityRule.scenario.onActivity {
+            it.setOverlayForTest(HomeOverlay.Audio)
+        }
         waitForAnyTag(composeRule, AudioFilesTestTags.ROOT, AiFeatureTestTags.PAGE_AUDIO_FILES)
         composeRule.onNodeWithText("管理录音、同步 Tingwu 转写并用 AI 分析通话。", substring = true).assertIsDisplayed()
         val analysisButtons = composeRule.onAllNodesWithText("用 AI 分析转写", substring = true).fetchSemanticsNodes()
@@ -93,7 +95,9 @@ class NavigationSmokeTest {
     @Test
     fun backFromOverlayReturnsHome() {
         goHome()
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE, useUnmergedTree = true).performClick()
+        composeRule.activityRule.scenario.onActivity {
+            it.setOverlayForTest(HomeOverlay.Audio)
+        }
         waitForAnyTag(composeRule, AudioFilesTestTags.ROOT, AiFeatureTestTags.PAGE_AUDIO_FILES)
 
         goHome()

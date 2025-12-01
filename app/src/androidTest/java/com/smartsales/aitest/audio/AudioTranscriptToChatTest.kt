@@ -33,7 +33,9 @@ class AudioTranscriptToChatTest {
     @Test
     fun transcriptFlow_pushesToHomeChat() {
         // 进入音频库
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE, useUnmergedTree = true).performClick()
+        composeRule.activityRule.scenario.onActivity {
+            it.setOverlayForTest(HomeOverlay.Audio)
+        }
         composeRule.waitForIdle()
         composeRule.onNodeWithTag(AudioFilesTestTags.ROOT, useUnmergedTree = true).assertIsDisplayed()
 

@@ -24,9 +24,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -36,7 +36,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
@@ -48,7 +47,7 @@ import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -71,8 +70,8 @@ import androidx.compose.runtime.setValue
 import androidx.annotation.VisibleForTesting
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
@@ -116,28 +115,31 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.flow.MutableStateFlow
 
 @AndroidEntryPoint
 class AiFeatureTestActivity : ComponentActivity() {
     @VisibleForTesting
-    fun setOverlayForTest(overlay: HomeOverlay) {
-        when (overlay) {
-            HomeOverlay.Home -> setPage(TestHomePage.Home)
-            HomeOverlay.Audio -> setPage(TestHomePage.AudioFiles)
-            HomeOverlay.Device -> setPage(TestHomePage.DeviceManager)
-        }
+    val overlayTestState: MutableStateFlow<TestHomePage?> = MutableStateFlow(null)
+
+    @VisibleForTesting
+    fun setOverlayForTest(page: TestHomePage) {
+        overlayTestState.value = page
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            AiFeatureTestApp()
+            AiFeatureTestApp(overlayTestFlow = overlayTestState)
         }
     }
 }
 
 @Composable
-private fun AiFeatureTestApp() {
+private fun AiFeatureTestApp(
+    overlayTestFlow: MutableStateFlow<TestHomePage?>? = null
+) {
     val context = LocalContext.current
     val mediaServerClient = remember { MediaServerClient(context) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -149,6 +151,13 @@ private fun AiFeatureTestApp() {
     var pendingSessionId by remember { mutableStateOf<String?>(null) }
     val goHome: () -> Unit = {
         currentPage = TestHomePage.Home
+    }
+    val overlayTestOverride = overlayTestFlow?.collectAsState()?.value
+    LaunchedEffect(overlayTestOverride) {
+        overlayTestOverride?.let { page ->
+            currentPage = page
+            overlayTestFlow.value = null
+        }
     }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -191,23 +200,8 @@ private fun AiFeatureTestApp() {
         }
     }
 
-    fun overlayFor(page: TestHomePage): HomeOverlay = when (page) {
-        TestHomePage.DeviceManager,
-        TestHomePage.DeviceSetup -> HomeOverlay.Device
-        TestHomePage.AudioFiles -> HomeOverlay.Audio
-        else -> HomeOverlay.Home
-    }
-
     fun setPage(page: TestHomePage) {
         currentPage = page
-    }
-
-    fun openHomeOverlay() {
-        goHome()
-    }
-
-    fun openAudioOverlay() {
-        setPage(TestHomePage.AudioFiles)
     }
 
     fun openDeviceSection(forceSetup: Boolean = false) {
@@ -218,8 +212,6 @@ private fun AiFeatureTestApp() {
         }
         setPage(destination)
     }
-
-    val currentOverlay = overlayFor(currentPage)
 
     BackHandler(enabled = currentPage != TestHomePage.Home) {
         goHome()
@@ -253,7 +245,7 @@ private fun AiFeatureTestApp() {
                             )
                             Spacer(modifier = Modifier.weight(1f))
                         }
-                        Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
                     }
                 }
             }
@@ -572,7 +564,7 @@ private fun titleForPage(page: TestHomePage): String = when (page) {
     TestHomePage.WifiBleTester -> "连接测试"
 }
 
-private enum class TestHomePage {
+enum class TestHomePage {
     Home,
     WifiBleTester,
     DeviceManager,

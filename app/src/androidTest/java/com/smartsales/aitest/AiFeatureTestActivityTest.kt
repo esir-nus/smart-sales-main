@@ -18,6 +18,7 @@ import androidx.test.rule.GrantPermissionRule
 import com.smartsales.aitest.testing.waitForAnyTag
 import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.home.HomeScreenTestTags
+import com.smartsales.aitest.TestHomePage
 import com.smartsales.feature.media.audio.AudioFilesTestTags
 import android.os.SystemClock
 import org.junit.rules.RuleChain
@@ -50,7 +51,7 @@ class AiFeatureTestActivityTest {
         waitForHomeRendered()
 
         composeRule.activityRule.scenario.onActivity {
-            it.setOverlayForTest(HomeOverlay.Audio)
+            it.setOverlayForTest(TestHomePage.AudioFiles)
         }
         waitForAnyTag(
             composeRule,
@@ -63,7 +64,7 @@ class AiFeatureTestActivityTest {
         waitForHomeRendered()
 
         composeRule.activityRule.scenario.onActivity {
-            it.setOverlayForTest(HomeOverlay.Device)
+            it.setOverlayForTest(TestHomePage.DeviceManager)
         }
         waitForAnyTag(
             composeRule,
@@ -136,17 +137,23 @@ class AiFeatureTestActivityTest {
     fun otherPageTags_areUniqueWhenNavigated() {
         waitForHomeRendered()
 
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO_HANDLE, useUnmergedTree = true).performClick()
-        assertSingleTag(AiFeatureTestTags.PAGE_AUDIO_FILES)
         composeRule.activityRule.scenario.onActivity {
-            it.onBackPressedDispatcher.onBackPressed()
+            it.setOverlayForTest(TestHomePage.AudioFiles)
+        }
+        assertSingleTag(AiFeatureTestTags.PAGE_AUDIO_FILES)
+
+        composeRule.activityRule.scenario.onActivity {
+            it.setOverlayForTest(TestHomePage.Home)
         }
         waitForHomeRendered()
 
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE_HANDLE, useUnmergedTree = true).performClick()
-        assertSingleTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
         composeRule.activityRule.scenario.onActivity {
-            it.onBackPressedDispatcher.onBackPressed()
+            it.setOverlayForTest(TestHomePage.DeviceManager)
+        }
+        assertSingleTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
+
+        composeRule.activityRule.scenario.onActivity {
+            it.setOverlayForTest(TestHomePage.Home)
         }
         waitForHomeRendered()
 

@@ -21,6 +21,7 @@ import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.chat.history.ChatHistoryTestTags
 import com.smartsales.feature.media.audio.AudioFilesTestTags
 import com.smartsales.feature.usercenter.UserCenterTestTags
+import com.smartsales.aitest.TestHomePage
 import org.junit.rules.RuleChain
 import org.junit.rules.TestRule
 import org.junit.Rule
@@ -50,7 +51,7 @@ class NavigationSmokeTest {
     fun audioOverlayShowsAudioFiles() {
         goHome()
         composeRule.activityRule.scenario.onActivity {
-            it.setOverlayForTest(HomeOverlay.Audio)
+            it.setOverlayForTest(TestHomePage.AudioFiles)
         }
         waitForAnyTag(composeRule, AudioFilesTestTags.ROOT, AiFeatureTestTags.PAGE_AUDIO_FILES)
         composeRule.onNodeWithText("管理录音、同步 Tingwu 转写并用 AI 分析通话。", substring = true).assertIsDisplayed()
@@ -96,7 +97,7 @@ class NavigationSmokeTest {
     fun backFromOverlayReturnsHome() {
         goHome()
         composeRule.activityRule.scenario.onActivity {
-            it.setOverlayForTest(HomeOverlay.Audio)
+            it.setOverlayForTest(TestHomePage.AudioFiles)
         }
         waitForAnyTag(composeRule, AudioFilesTestTags.ROOT, AiFeatureTestTags.PAGE_AUDIO_FILES)
 

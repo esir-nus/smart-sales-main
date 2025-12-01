@@ -17,6 +17,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.smartsales.aitest.AiFeatureTestActivity
 import com.smartsales.aitest.AiFeatureTestTags
+import com.smartsales.aitest.TestHomePage
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.media.audio.AudioFilesTestTags
 import org.junit.Rule
@@ -34,7 +35,7 @@ class AudioTranscriptToChatTest {
     fun transcriptFlow_pushesToHomeChat() {
         // 进入音频库
         composeRule.activityRule.scenario.onActivity {
-            it.setOverlayForTest(HomeOverlay.Audio)
+            it.setOverlayForTest(TestHomePage.AudioFiles)
         }
         composeRule.waitForIdle()
         composeRule.onNodeWithTag(AudioFilesTestTags.ROOT, useUnmergedTree = true).assertIsDisplayed()

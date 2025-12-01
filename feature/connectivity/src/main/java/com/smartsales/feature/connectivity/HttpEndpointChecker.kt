@@ -16,14 +16,14 @@ class DefaultHttpEndpointChecker : HttpEndpointChecker {
     override suspend fun isReachable(baseUrl: String): Boolean {
         return runCatching {
             val url = URL(baseUrl)
-            (url.openConnection() as HttpURLConnection).use { conn ->
-                conn.requestMethod = "HEAD"
-                conn.connectTimeout = 4_000
-                conn.readTimeout = 4_000
-                conn.connect()
-                val code = conn.responseCode
-                code in 200..399
-            }
+            val conn = (url.openConnection() as HttpURLConnection)
+            conn.requestMethod = "HEAD"
+            conn.connectTimeout = 4_000
+            conn.readTimeout = 4_000
+            conn.connect()
+            val code = conn.responseCode
+            conn.disconnect()
+            code in 200..399
         }.getOrElse { false }
     }
 }

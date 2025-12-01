@@ -858,6 +858,8 @@ class HomeScreenViewModel @Inject constructor(
         is ConnectivityError.PermissionDenied -> "缺少权限：${permissions.joinToString()}"
         is ConnectivityError.Timeout -> "连接超时，请稍后重试"
         is ConnectivityError.Transport -> reason
+        is ConnectivityError.EndpointUnreachable -> reason.ifBlank { "设备服务不可达" }
+        is ConnectivityError.DeviceNotFound -> "未找到设备 ${deviceId}"
         ConnectivityError.MissingSession -> "当前没有有效的配对会话"
     }
 

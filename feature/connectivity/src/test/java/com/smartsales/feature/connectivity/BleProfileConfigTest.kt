@@ -15,7 +15,7 @@ class BleProfileConfigTest {
         id = "bt311",
         displayName = "BT311",
         nameKeywords = listOf("BT311", "BT-311"),
-        scanServiceUuids = emptyList()
+        scanServiceUuids = listOf(UUID.fromString("6E400001-B5A3-F393-E0A9-E50E24DCCA9E"))
     )
 
     @Test

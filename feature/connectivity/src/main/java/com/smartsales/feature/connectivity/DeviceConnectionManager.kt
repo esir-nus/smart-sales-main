@@ -124,11 +124,8 @@ class DefaultDeviceConnectionManager @Inject constructor(
             return
         }
         when (_state.value) {
-            is ConnectionState.Connected,
-            is ConnectionState.Pairing,
-            is ConnectionState.WifiProvisioned,
-            is ConnectionState.Syncing,
-            is ConnectionState.AutoReconnecting -> return
+            is ConnectionState.AutoReconnecting,
+            is ConnectionState.Pairing -> return
             else -> Unit
         }
         val now = System.currentTimeMillis()

@@ -409,6 +409,8 @@ class DeviceSetupViewModel @Inject constructor(
         is ConnectivityError.ProvisioningFailed -> error.reason
         is ConnectivityError.PermissionDenied -> "缺少权限：${error.permissions.joinToString()}"
         is ConnectivityError.Transport -> error.reason
+        is ConnectivityError.EndpointUnreachable -> error.reason.ifBlank { "设备服务不可达" }
+        is ConnectivityError.DeviceNotFound -> "未找到设备 ${error.deviceId}"
         ConnectivityError.MissingSession -> "尚未建立会话，请重新扫描设备"
         is ConnectivityError.PairingInProgress -> "配对冲突：${error.deviceName} 已在使用"
     }

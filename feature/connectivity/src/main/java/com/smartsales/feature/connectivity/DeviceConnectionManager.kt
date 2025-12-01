@@ -28,6 +28,12 @@ interface DeviceConnectionManager {
     fun forgetDevice()
     suspend fun requestHotspotCredentials(): Result<WifiCredentials>
     suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus>
+
+    /** 若已有凭据且未连接，则根据退避策略尝试自动重连。 */
+    fun scheduleAutoReconnectIfNeeded()
+
+    /** 立即重连，跳过退避（需已有凭据）。 */
+    fun forceReconnectNow()
 }
 
 @Singleton
@@ -48,6 +54,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
     private var heartbeatJob: Job? = null
     private var autoRetryJob: Job? = null
     private var autoRetryAttempts = 0
+    private var reconnectMeta = AutoReconnectMeta()
 
     override fun selectPeripheral(peripheral: BlePeripheral) {
         val session = BleSession.fromPeripheral(peripheral)
@@ -105,8 +112,75 @@ class DefaultDeviceConnectionManager @Inject constructor(
         cancelAutoRetry()
         currentSession = null
         lastCredentials = null
+        reconnectMeta = AutoReconnectMeta()
         _state.value = ConnectionState.Disconnected
     }
+
+    override fun scheduleAutoReconnectIfNeeded() {
+        val credsReady = hasStoredSession()
+        if (!credsReady) {
+            _state.value = ConnectionState.NeedsSetup
+            return
+        }
+        when (val current = _state.value) {
+            is ConnectionState.Connected,
+            is ConnectionState.Pairing,
+            is ConnectionState.WifiProvisioned,
+            is ConnectionState.Syncing,
+            is ConnectionState.AutoReconnecting -> return
+            else -> Unit
+        }
+        val now = System.currentTimeMillis()
+        val requiredInterval = requiredIntervalFor(reconnectMeta.failureCount)
+        val elapsed = now - reconnectMeta.lastAttemptMillis
+        if (elapsed < requiredInterval) {
+            ConnectivityLogger.d("跳过自动重连：退避中 ${elapsed}ms < ${requiredInterval}ms")
+            return
+        }
+        launchReconnect()
+    }
+
+    override fun forceReconnectNow() {
+        if (!hasStoredSession()) {
+            _state.value = ConnectionState.NeedsSetup
+            return
+        }
+        launchReconnect(ignoreBackoff = true)
+    }
+
+    private fun launchReconnect(ignoreBackoff: Boolean = false) {
+        val attempt = reconnectMeta.failureCount + 1
+        _state.value = ConnectionState.AutoReconnecting(attempt)
+        val sessionSnapshot = currentSession
+        scope.launch(dispatchers.io) {
+            reconnectMeta = reconnectMeta.copy(lastAttemptMillis = System.currentTimeMillis())
+            if (sessionSnapshot == null) {
+                _state.value = ConnectionState.NeedsSetup
+                return@launch
+            }
+            val networkStatus = provisioner.queryNetworkStatus(sessionSnapshot)
+            when (networkStatus) {
+                is Result.Success -> {
+                    _state.value = ConnectionState.WifiProvisioned(sessionSnapshot, ProvisioningStatus(
+                        wifiSsid = networkStatus.data.deviceWifiName.ifBlank { "BT311" },
+                        handshakeId = "reconnect-${networkStatus.data.hashCode()}",
+                        credentialsHash = reconnectMeta.failureCount.toString()
+                    ))
+                    _state.value = ConnectionState.Connected(sessionSnapshot)
+                    reconnectMeta = AutoReconnectMeta()
+                }
+
+                is Result.Error -> {
+                    val nextFailure = reconnectMeta.failureCount + 1
+                    reconnectMeta = reconnectMeta.copy(failureCount = nextFailure)
+                    _state.value = ConnectionState.Error(ConnectivityError.Transport(networkStatus.throwable.message ?: "重连失败"))
+                    _state.value = ConnectionState.Disconnected
+                }
+            }
+        }
+    }
+
+    private fun hasStoredSession(): Boolean = currentSession != null && lastCredentials != null
 
     override suspend fun requestHotspotCredentials(): Result<WifiCredentials> =
         withContext(dispatchers.io) {
@@ -234,4 +308,18 @@ class DefaultDeviceConnectionManager @Inject constructor(
         const val AUTO_RETRY_DELAY_MS = 2_000L
         const val AUTO_RETRY_MAX_ATTEMPTS = 2
     }
+}
+
+private data class AutoReconnectMeta(
+    val lastAttemptMillis: Long = 0L,
+    val failureCount: Int = 0
+)
+
+private fun requiredIntervalFor(failureCount: Int): Long = when (failureCount) {
+    0 -> 0L
+    1 -> 5_000L
+    2 -> 10_000L
+    3 -> 20_000L
+    4 -> 40_000L
+    else -> 60_000L
 }

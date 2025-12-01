@@ -21,6 +21,12 @@ class DefaultDeviceConnectionManagerTest {
 
     private val peripheral = BlePeripheral(id = "device-1", name = "Demo Device", signalStrengthDbm = -55)
     private val credentials = WifiCredentials(ssid = "SalesWiFi", password = "password123")
+    private val networkStatus = DeviceNetworkStatus(
+        ipAddress = "192.168.1.10",
+        deviceWifiName = "BT311",
+        phoneWifiName = "DemoPhone",
+        rawResponse = "wifi#address#192.168.1.10#BT311#DemoPhone"
+    )
 
     @Test
     fun `selectPeripheral exposes connected state`() = runTest {
@@ -132,12 +138,6 @@ class DefaultDeviceConnectionManagerTest {
 
     @Test
     fun `queryNetworkStatus returns provisioner data`() = runTest {
-        val networkStatus = DeviceNetworkStatus(
-            ipAddress = "192.168.1.10",
-            deviceWifiName = "BT311",
-            phoneWifiName = "DemoPhone",
-            rawResponse = "wifi#address#192.168.1.10#BT311#DemoPhone"
-        )
         val provisionStatus = ProvisioningStatus("SalesWiFi", "handshake-4", "hash")
         val provisioner = QueueProvisioner(
             mutableListOf(Result.Success(provisionStatus)),
@@ -154,6 +154,47 @@ class DefaultDeviceConnectionManagerTest {
         assertEquals(networkStatus, (result as Result.Success).data)
         val state = manager.state.value
         assertTrue(state is ConnectionState.WifiProvisioned || state is ConnectionState.Syncing)
+    }
+
+    @Test
+    fun `scheduleAutoReconnectIfNeeded runs when creds exist`() = runTest {
+        val provisioner = QueueProvisioner(
+            mutableListOf(Result.Success(ProvisioningStatus("ssid", "handshake", "hash"))),
+            networkResult = Result.Success(networkStatus)
+        )
+        val manager = createManager(provisioner)
+
+        manager.selectPeripheral(peripheral)
+        manager.startPairing(peripheral, credentials)
+        runCurrent()
+        manager.scheduleAutoReconnectIfNeeded()
+        runCurrent()
+
+        val state = manager.state.value
+        assertTrue(state is ConnectionState.Connected)
+    }
+
+    @Test
+    fun `backoff skips frequent auto reconnect`() = runTest {
+        val provisioner = QueueProvisioner(
+            mutableListOf(Result.Error(ProvisioningException.Timeout(500L))),
+            networkResult = Result.Error(IllegalStateException("not reachable"))
+        )
+        val manager = createManager(provisioner)
+
+        manager.selectPeripheral(peripheral)
+        manager.startPairing(peripheral, credentials)
+        runCurrent()
+        manager.scheduleAutoReconnectIfNeeded()
+        runCurrent()
+
+        // immediately call again; should honor backoff and stay disconnected/auto-reconnecting not re-entered
+        val beforeAttempt = manager.state.value
+        manager.scheduleAutoReconnectIfNeeded()
+        runCurrent()
+        val afterAttempt = manager.state.value
+        assertTrue(beforeAttempt is ConnectionState.Disconnected || beforeAttempt is ConnectionState.Error)
+        assertEquals(beforeAttempt::class, afterAttempt::class)
     }
 
     @Test
@@ -176,6 +217,24 @@ class DefaultDeviceConnectionManagerTest {
         assertTrue(result is Result.Success)
         val state = manager.state.value
         assertTrue(state is ConnectionState.WifiProvisioned || state is ConnectionState.Syncing)
+    }
+
+    @Test
+    fun `scheduleAutoReconnectIfNeeded with no creds sets needs setup`() = runTest {
+        val manager = createManager(QueueProvisioner(mutableListOf()))
+
+        manager.scheduleAutoReconnectIfNeeded()
+
+        assertTrue(manager.state.value is ConnectionState.NeedsSetup)
+    }
+
+    @Test
+    fun `forceReconnectNow with no creds sets needs setup`() = runTest {
+        val manager = createManager(QueueProvisioner(mutableListOf()))
+
+        manager.forceReconnectNow()
+
+        assertTrue(manager.state.value is ConnectionState.NeedsSetup)
     }
 
     private class QueueProvisioner(

@@ -64,8 +64,12 @@ sealed interface ConnectivityError {
 }
 
 sealed interface ConnectionState {
+    /** 尚未保存任何设备信息，需要完整配网。 */
+    data object NeedsSetup : ConnectionState
+
     data object Disconnected : ConnectionState
     data class Connected(val session: BleSession) : ConnectionState
+    data class AutoReconnecting(val attempt: Int) : ConnectionState
     data class Pairing(
         val deviceName: String,
         val progressPercent: Int,
@@ -82,6 +86,11 @@ sealed interface ConnectionState {
         val status: ProvisioningStatus,
         val lastHeartbeatAtMillis: Long
     ) : ConnectionState
-
     data class Error(val error: ConnectivityError) : ConnectionState
+}
+
+sealed interface ReconnectErrorReason {
+    data object DeviceNotFound : ReconnectErrorReason
+    data object Network : ReconnectErrorReason
+    data object Backoff : ReconnectErrorReason
 }

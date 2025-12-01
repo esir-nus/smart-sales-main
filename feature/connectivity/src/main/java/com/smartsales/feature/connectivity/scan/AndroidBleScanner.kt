@@ -91,6 +91,9 @@ class AndroidBleScanner @Inject constructor(
             advertise?.serviceUuids?.map { it.uuid }?.let { addAll(it) }
             advertise?.bytes?.let { addAll(parseAdvertisedUuids(it)) }
         }
+        ConnectivityLogger.d(
+            "扫描到设备 ${device.address} (${displayName.ifBlank { "Unknown" }}) rssi=${result.rssi} uuids=${advertisedUuids.joinToString()}"
+        )
         val profile = profiles.firstOrNull { cfg ->
             cfg.matches(displayName, advertisedUuids)
         }

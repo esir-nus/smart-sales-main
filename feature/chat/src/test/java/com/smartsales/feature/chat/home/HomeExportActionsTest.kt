@@ -122,7 +122,7 @@ class HomeExportActionsTest {
         viewModel.onSmartAnalysisClicked()
         advanceUntilIdle()
 
-        assertEquals(QuickSkillId.SUMMARIZE_LAST_MEETING, aiChatService.lastRequest?.quickSkillId)
+        assertEquals("SUMMARY", aiChatService.lastRequest?.quickSkillId)
         assertTrue(viewModel.uiState.value.chatMessages.any { it.role == ChatMessageRole.ASSISTANT && !it.isStreaming })
     }
 

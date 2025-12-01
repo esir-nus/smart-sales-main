@@ -6,7 +6,6 @@ package com.smartsales.aitest
 // 作者：创建于 2025-11-21
 
 import android.Manifest
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -139,12 +138,12 @@ class AiFeatureTestActivityTest {
         composeRule.onNodeWithTag(HomeScreenTestTags.EXPORT_PDF, useUnmergedTree = true)
             .assertIsDisplayed()
             .performClick()
-        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertIsDisplayed()
 
         composeRule.onNodeWithTag(HomeScreenTestTags.EXPORT_CSV, useUnmergedTree = true)
             .assertIsDisplayed()
             .performClick()
-        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test

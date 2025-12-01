@@ -60,6 +60,8 @@ sealed interface ConnectivityError {
     data class PermissionDenied(val permissions: Set<String>) : ConnectivityError
     data class Timeout(val timeoutMillis: Long) : ConnectivityError
     data class Transport(val reason: String) : ConnectivityError
+    data class DeviceNotFound(val deviceId: String) : ConnectivityError
+    data class EndpointUnreachable(val reason: String) : ConnectivityError
     data object MissingSession : ConnectivityError
 }
 

@@ -189,5 +189,8 @@ class DeviceSetupViewModelRobustnessTest {
             Result.Error(IllegalStateException("no creds"))
 
         override suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus> = queryResult
+
+        override fun scheduleAutoReconnectIfNeeded() {}
+        override fun forceReconnectNow() {}
     }
 }

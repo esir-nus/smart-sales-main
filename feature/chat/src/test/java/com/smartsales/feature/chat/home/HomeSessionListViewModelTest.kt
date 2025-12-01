@@ -199,6 +199,9 @@ class HomeSessionListViewModelTest {
 
         override suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus> =
             Result.Error(UnsupportedOperationException())
+
+        override fun scheduleAutoReconnectIfNeeded() {}
+        override fun forceReconnectNow() {}
     }
 
     private class FakeMediaSyncCoordinator : MediaSyncCoordinator {

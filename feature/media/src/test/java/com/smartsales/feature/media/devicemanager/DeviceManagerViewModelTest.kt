@@ -368,7 +368,7 @@ class DeviceManagerViewModelTest {
         var networkStatusResult: Result<DeviceNetworkStatus> = Result.Error(IllegalStateException("未配置网络"))
 
         fun emitReady() {
-            _state.value = ConnectionState.Syncing(
+            _state.value = ConnectionState.Connected(
                 session = BleSession(
                     peripheralId = "p1",
                     peripheralName = "BT311",
@@ -377,8 +377,6 @@ class DeviceManagerViewModelTest {
                     secureToken = "token",
                     establishedAtMillis = System.currentTimeMillis()
                 ),
-                status = ProvisioningStatus("WiFi", "handshake", "hash"),
-                lastHeartbeatAtMillis = System.currentTimeMillis()
             )
         }
 
@@ -411,5 +409,7 @@ class DeviceManagerViewModelTest {
             Result.Error(IllegalStateException())
 
         override suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus> = networkStatusResult
+        override fun scheduleAutoReconnectIfNeeded() {}
+        override fun forceReconnectNow() {}
     }
 }

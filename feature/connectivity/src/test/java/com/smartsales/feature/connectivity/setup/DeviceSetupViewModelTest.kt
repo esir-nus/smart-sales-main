@@ -156,6 +156,9 @@ class DeviceSetupViewModelTest {
         fun emitNetworkStatus(result: Result<DeviceNetworkStatus>) {
             lastNetworkResult = result
         }
+
+        override fun scheduleAutoReconnectIfNeeded() {}
+        override fun forceReconnectNow() {}
     }
 
     private class FakeBleScanner : BleScanner {

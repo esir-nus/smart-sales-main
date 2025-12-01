@@ -87,10 +87,9 @@ class FakeMediaSyncCoordinatorTest {
         first.cancel()
     }
 
-    private fun readyState(): ConnectionState.WifiProvisioned {
+    private fun readyState(): ConnectionState.Connected {
         val session = BleSession.fromPeripheral(BlePeripheral(id = "1", name = "SmartSales", signalStrengthDbm = -55))
-        val status = ProvisioningStatus(wifiSsid = "DemoWifi", handshakeId = "handshake", credentialsHash = "hash")
-        return ConnectionState.WifiProvisioned(session = session, status = status)
+        return ConnectionState.Connected(session = session)
     }
 
     private class StubConnectionManager(initial: ConnectionState) : DeviceConnectionManager {
@@ -117,5 +116,8 @@ class FakeMediaSyncCoordinatorTest {
 
         override suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus> =
             throw UnsupportedOperationException()
+
+        override fun scheduleAutoReconnectIfNeeded() = Unit
+        override fun forceReconnectNow() = Unit
     }
 }

@@ -40,6 +40,7 @@ interface DeviceConnectionManager {
 class DefaultDeviceConnectionManager @Inject constructor(
     private val provisioner: WifiProvisioner,
     private val dispatchers: DispatcherProvider,
+    private val httpChecker: HttpEndpointChecker,
     private val externalScope: CoroutineScope = CoroutineScope(SupervisorJob() + dispatchers.default)
 ) : DeviceConnectionManager {
 
@@ -161,22 +162,20 @@ class DefaultDeviceConnectionManager @Inject constructor(
                 _state.value = ConnectionState.NeedsSetup
                 return@launch
             }
-            val networkStatus = provisioner.queryNetworkStatus(sessionSnapshot)
-            when (networkStatus) {
-                is Result.Success -> {
-                    _state.value = ConnectionState.WifiProvisioned(sessionSnapshot, ProvisioningStatus(
-                        wifiSsid = networkStatus.data.deviceWifiName.ifBlank { "BT311" },
-                        handshakeId = "reconnect-${networkStatus.data.hashCode()}",
-                        credentialsHash = reconnectMeta.failureCount.toString()
-                    ))
-                    _state.value = ConnectionState.Connected(sessionSnapshot)
+            when (val outcome = connectUsingSession(sessionSnapshot)) {
+                is ConnectionState.Connected -> {
+                    _state.value = outcome
                     reconnectMeta = AutoReconnectMeta()
                 }
-
-                is Result.Error -> {
+                is ConnectionState.Error -> {
                     val nextFailure = reconnectMeta.failureCount + 1
                     reconnectMeta = reconnectMeta.copy(failureCount = nextFailure)
-                    _state.value = ConnectionState.Error(ConnectivityError.Transport(networkStatus.throwable.message ?: "重连失败"))
+                    _state.value = outcome
+                    _state.value = ConnectionState.Disconnected
+                }
+                else -> {
+                    val nextFailure = reconnectMeta.failureCount + 1
+                    reconnectMeta = reconnectMeta.copy(failureCount = nextFailure)
                     _state.value = ConnectionState.Disconnected
                 }
             }
@@ -306,10 +305,54 @@ class DefaultDeviceConnectionManager @Inject constructor(
         startHeartbeat(session, syntheticStatus)
     }
 
+    private suspend fun connectUsingSession(session: BleSession): ConnectionState {
+        val networkStatus = provisioner.queryNetworkStatus(session)
+        return when (networkStatus) {
+            is Result.Success -> {
+                val baseUrl = buildBaseUrl(networkStatus.data.ipAddress)
+                    ?: return ConnectionState.Error(ConnectivityError.EndpointUnreachable("无效的设备地址"))
+                if (!httpChecker.isReachable(baseUrl)) {
+                    ConnectionState.Error(ConnectivityError.EndpointUnreachable("设备服务不可达"))
+                } else {
+                    ConnectionState.Connected(session)
+                }
+            }
+
+            is Result.Error -> {
+                val error = mapProvisioningError(networkStatus.throwable)
+                ConnectionState.Error(error)
+            }
+        }
+    }
+
+    private fun mapProvisioningError(throwable: Throwable): ConnectivityError {
+        return when (throwable) {
+            is ProvisioningException.Transport -> {
+                val msg = throwable.message ?: "传输失败"
+                if (msg.contains("找不到设备")) {
+                    ConnectivityError.DeviceNotFound(currentSession?.peripheralId ?: "unknown")
+                } else {
+                    ConnectivityError.Transport(msg)
+                }
+            }
+
+            else -> throwable.toConnectivityError()
+        }
+    }
+
+    private fun buildBaseUrl(host: String?): String? {
+        val sanitizedHost = host?.trim().orEmpty().ifBlank { return null }
+        val pureHost = sanitizedHost.removePrefix("http://").removePrefix("https://").substringBefore("/")
+        if (pureHost.isBlank()) return null
+        val port = DEFAULT_MEDIA_SERVER_PORT
+        return "http://$pureHost:$port"
+    }
+
     private companion object {
         const val HEARTBEAT_INTERVAL_MS = 1_500L
         const val AUTO_RETRY_DELAY_MS = 2_000L
         const val AUTO_RETRY_MAX_ATTEMPTS = 2
+        const val DEFAULT_MEDIA_SERVER_PORT = 8000
     }
 }
 

@@ -198,6 +198,43 @@ class DefaultDeviceConnectionManagerTest {
     }
 
     @Test
+    fun `auto reconnect fails on unreachable endpoint`() = runTest {
+        val provisioner = QueueProvisioner(
+            mutableListOf(Result.Success(ProvisioningStatus("ssid", "handshake", "hash"))),
+            networkResult = Result.Success(networkStatus)
+        )
+        val manager = createManager(
+            provisioner = provisioner,
+            httpChecker = object : HttpEndpointChecker {
+                override suspend fun isReachable(baseUrl: String): Boolean = false
+            }
+        )
+
+        manager.selectPeripheral(peripheral)
+        manager.startPairing(peripheral, credentials)
+        runCurrent()
+        manager.scheduleAutoReconnectIfNeeded()
+        runCurrent()
+
+        assertTrue(manager.state.value is ConnectionState.Disconnected)
+    }
+
+    @Test
+    fun `auto reconnect handles device not found`() = runTest {
+        val provisioner = QueueProvisioner(
+            mutableListOf(Result.Success(ProvisioningStatus("ssid", "handshake", "hash"))),
+            networkResult = Result.Error(ProvisioningException.Transport("找不到设备"))
+        )
+        val manager = createManager(provisioner)
+
+        manager.selectPeripheral(peripheral)
+        manager.scheduleAutoReconnectIfNeeded()
+        runCurrent()
+
+        assertTrue(manager.state.value is ConnectionState.Disconnected)
+    }
+
+    @Test
     fun `queryNetworkStatus after manual connect marks ready`() = runTest {
         val networkStatus = DeviceNetworkStatus(
             ipAddress = "192.168.1.30",
@@ -265,12 +302,16 @@ class DefaultDeviceConnectionManagerTest {
 
     private fun TestScope.createManager(
         provisioner: WifiProvisioner,
-        dispatcher: TestDispatcher = StandardTestDispatcher(testScheduler)
+        dispatcher: TestDispatcher = StandardTestDispatcher(testScheduler),
+        httpChecker: HttpEndpointChecker = object : HttpEndpointChecker {
+            override suspend fun isReachable(baseUrl: String): Boolean = true
+        }
     ): DefaultDeviceConnectionManager {
         val dispatcherProvider = FakeDispatcherProvider(dispatcher)
         return DefaultDeviceConnectionManager(
             provisioner = provisioner,
             dispatchers = dispatcherProvider,
+            httpChecker = httpChecker,
             externalScope = backgroundScope
         )
     }

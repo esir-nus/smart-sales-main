@@ -52,6 +52,10 @@ object ConnectivityProvidesModule {
 
     @Provides
     @Singleton
+    fun provideHttpEndpointChecker(): HttpEndpointChecker = DefaultHttpEndpointChecker()
+
+    @Provides
+    @Singleton
     fun provideBleProfiles(): List<BleProfileConfig> {
         val overrides = parseProfileOverrides(BuildConfig.BLE_PROFILE_OVERRIDES)
         if (!overrides.isNullOrEmpty()) {

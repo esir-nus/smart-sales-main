@@ -368,10 +368,10 @@ class DeviceManagerViewModel @Inject constructor(
     }
 
 private fun ConnectionState.isReadyForFiles(): Boolean =
-    this is ConnectionState.WifiProvisioned || this is ConnectionState.Syncing
+    this is ConnectionState.Connected
 
 private fun ConnectionState.canQueryNetwork(): Boolean =
-    this is ConnectionState.Connected || isReadyForFiles()
+    this is ConnectionState.Connected
 
 private fun ConnectionState.toUiState(): DeviceConnectionUiState = when (this) {
     ConnectionState.NeedsSetup -> DeviceConnectionUiState.Disconnected("需要先完成设备配网")
@@ -390,6 +390,8 @@ private fun ConnectivityError.toReadableMessage(): String = when (this) {
     is ConnectivityError.PermissionDenied -> "缺少权限：${permissions.joinToString()}"
     is ConnectivityError.Timeout -> "操作超时（${timeoutMillis}ms）"
     is ConnectivityError.Transport -> reason.ifBlank { "传输异常" }
+    is ConnectivityError.EndpointUnreachable -> reason.ifBlank { "设备服务不可达" }
+    is ConnectivityError.DeviceNotFound -> "未找到设备 ${deviceId}"
     ConnectivityError.MissingSession -> "未找到连接会话"
 }
 

@@ -159,7 +159,7 @@ class FakeMediaSyncCoordinator @Inject constructor(
     }
 
     private fun ConnectionState.isReadyForMedia(): Boolean =
-        this is ConnectionState.WifiProvisioned || this is ConnectionState.Syncing
+        this is ConnectionState.Connected
 
     private fun ConnectionState.blockedReason(): String = when (this) {
         ConnectionState.NeedsSetup -> "尚未完成配网，无法同步媒体。"
@@ -173,6 +173,8 @@ class FakeMediaSyncCoordinator @Inject constructor(
             is ConnectivityError.PermissionDenied -> "权限不足：${err.permissions.joinToString()}。"
             is ConnectivityError.Timeout -> "连接超时，等待自动重试。"
             is ConnectivityError.Transport -> err.reason
+            is ConnectivityError.EndpointUnreachable -> err.reason
+            is ConnectivityError.DeviceNotFound -> "未找到设备 ${err.deviceId}"
             ConnectivityError.MissingSession -> "当前没有有效的配对会话。"
         }
 

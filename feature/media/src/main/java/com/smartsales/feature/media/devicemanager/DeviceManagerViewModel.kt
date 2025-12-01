@@ -51,10 +51,12 @@ class DeviceManagerViewModel @Inject constructor(
     init {
         observeConnection()
         observeEndpoint()
+        connectionManager.scheduleAutoReconnectIfNeeded()
     }
 
     fun onRefreshFiles() {
         if (!_uiState.value.isConnected) {
+            connectionManager.forceReconnectNow()
             _uiState.update {
                 it.copy(
                     loadErrorMessage = "设备未连接，无法刷新文件。",
@@ -102,7 +104,11 @@ class DeviceManagerViewModel @Inject constructor(
     }
 
     fun onRetryLoad() {
-        onRefreshFiles()
+        if (_uiState.value.isConnected) {
+            onRefreshFiles()
+        } else {
+            connectionManager.forceReconnectNow()
+        }
     }
 
     fun onApplyFile(fileId: String) {

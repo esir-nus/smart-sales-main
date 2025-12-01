@@ -183,7 +183,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
         }
     }
 
-    private fun hasStoredSession(): Boolean = currentSession != null && lastCredentials != null
+    private fun hasStoredSession(): Boolean = currentSession != null
 
     override suspend fun requestHotspotCredentials(): Result<WifiCredentials> =
         withContext(dispatchers.io) {

@@ -1,5 +1,7 @@
 package com.smartsales.feature.chat.home
 
+import android.net.Uri
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.core.util.Result
@@ -23,6 +25,7 @@ import com.smartsales.feature.connectivity.DeviceConnectionManager
 import com.smartsales.feature.chat.ChatShareHandler
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
+import com.smartsales.feature.media.audiofiles.AudioStorageRepository
 import com.smartsales.feature.media.MediaClipStatus
 import com.smartsales.feature.media.MediaSyncCoordinator
 import com.smartsales.feature.media.MediaSyncState
@@ -31,17 +34,23 @@ import com.smartsales.feature.usercenter.UserProfile
 import com.smartsales.data.aicore.ExportFormat
 import com.smartsales.data.aicore.ExportManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.withContext
 
 private const val DEFAULT_SESSION_ID = "home-session"
 
@@ -126,6 +135,7 @@ data class HomeUiState(
     val isSending: Boolean = false,
     val isStreaming: Boolean = false,
     val isInputBusy: Boolean = false,
+    val isBusy: Boolean = false,
     val isLoadingHistory: Boolean = false,
     val quickSkills: List<QuickSkillUi> = emptyList(),
     val selectedSkill: QuickSkillUi? = null,
@@ -141,7 +151,8 @@ data class HomeUiState(
         isTranscription = false
     ),
     val userName: String = "用户",
-    val exportInProgress: Boolean = false
+    val exportInProgress: Boolean = false,
+    val showWelcomeHero: Boolean = true
 )
 
 /** 外部依赖（除 AiChatService 外保留原有 stub）。 */
@@ -152,11 +163,13 @@ interface AiSessionRepository {
 /** HomeScreenViewModel：驱动聊天、快捷技能以及设备/音频快照。 */
 @HiltViewModel
 class HomeScreenViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val aiChatService: AiChatService,
     private val aiSessionRepository: AiSessionRepository,
     private val deviceConnectionManager: DeviceConnectionManager,
     private val mediaSyncCoordinator: MediaSyncCoordinator,
     private val transcriptionCoordinator: AudioTranscriptionCoordinator,
+    private val audioStorageRepository: AudioStorageRepository,
     private val quickSkillCatalog: QuickSkillCatalog,
     private val chatHistoryRepository: ChatHistoryRepository,
     private val sessionRepository: SessionRepository,
@@ -339,6 +352,117 @@ class HomeScreenViewModel @Inject constructor(
         _uiState.update { it.copy(navigationRequest = HomeNavigationRequest.AudioFiles) }
     }
 
+    /** 处理用户上传的本地音频，保存到本地并提交 Tingwu 转写。 */
+    fun onAudioFilePicked(uri: Uri) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isInputBusy = true, isBusy = true, snackbarMessage = null, showWelcomeHero = false) }
+            val stored = withContext(Dispatchers.IO) {
+                runCatching { audioStorageRepository.importFromPhone(uri) }
+            }.getOrElse { error ->
+                _uiState.update {
+                    it.copy(
+                        isInputBusy = false,
+                        isBusy = false,
+                        snackbarMessage = error.message ?: "导入音频失败"
+                    )
+                }
+                return@launch
+            }
+            val localPath = stored.localUri.path
+            if (localPath.isNullOrBlank()) {
+                _uiState.update {
+                    it.copy(
+                        isInputBusy = false,
+                        isBusy = false,
+                        snackbarMessage = "找不到本地音频路径"
+                    )
+                }
+                return@launch
+            }
+            val uploadPayload = when (val upload = transcriptionCoordinator.uploadAudio(File(localPath))) {
+                is Result.Success -> upload.data
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isInputBusy = false,
+                            isBusy = false,
+                            snackbarMessage = upload.throwable.message ?: "上传音频失败"
+                        )
+                    }
+                    return@launch
+                }
+            }
+            when (val submit = transcriptionCoordinator.submitTranscription(
+                audioAssetName = stored.displayName,
+                language = "zh-CN",
+                uploadPayload = uploadPayload
+            )) {
+                is Result.Success -> {
+                    _uiState.update { it.copy(isInputBusy = false, isBusy = false, snackbarMessage = "音频已上传，正在转写…") }
+                    onTranscriptionRequested(
+                        TranscriptionChatRequest(
+                            jobId = submit.data,
+                            fileName = stored.displayName,
+                            recordingId = stored.id
+                        )
+                    )
+                }
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isInputBusy = false,
+                            isBusy = false,
+                            snackbarMessage = submit.throwable.message ?: "提交转写失败"
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /** 处理用户上传图片，保存并触发占位分析。 */
+    fun onImagePicked(uri: Uri) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isBusy = true, isInputBusy = true, snackbarMessage = null, showWelcomeHero = false) }
+            val saved = withContext(Dispatchers.IO) {
+                runCatching { saveImageToCache(uri) }
+            }.getOrElse { error ->
+                _uiState.update {
+                    it.copy(
+                        isBusy = false,
+                        isInputBusy = false,
+                        snackbarMessage = error.message ?: "保存图片失败"
+                    )
+                }
+                return@launch
+            }
+            val placeholderId = nextMessageId()
+            val placeholder = ChatMessageUi(
+                id = placeholderId,
+                role = ChatMessageRole.ASSISTANT,
+                content = "已上传图片：${saved.name}，正在分析…",
+                timestampMillis = System.currentTimeMillis(),
+                isStreaming = true
+            )
+            _uiState.update { state ->
+                state.copy(
+                    chatMessages = state.chatMessages + placeholder,
+                    snackbarMessage = state.snackbarMessage
+                )
+            }
+            persistMessagesAsync()
+            // TODO: 接入 DashScope 图像分析，当前为占位分析
+            delay(800)
+            updateAssistantMessage(placeholderId, persistAfterUpdate = true) { msg ->
+                msg.copy(
+                    content = "图片分析占位：${saved.name}。图像解析接口接入后将提供详细描述。",
+                    isStreaming = false
+                )
+            }
+            _uiState.update { it.copy(isBusy = false, isInputBusy = false) }
+        }
+    }
+
     fun onTranscriptionRequested(request: TranscriptionChatRequest) {
         viewModelScope.launch {
             val transcript = request.transcriptMarkdown ?: request.transcriptPreview
@@ -355,7 +479,8 @@ class HomeScreenViewModel @Inject constructor(
                         isTranscription = true
                     ),
                     chatMessages = existing.map { item -> item.toUiModel() },
-                    isLoadingHistory = false
+                    isLoadingHistory = false,
+                    showWelcomeHero = false
                 )
             }
             existing.lastOrNull()?.content?.let { updateSessionSummary(it) }
@@ -459,13 +584,21 @@ class HomeScreenViewModel @Inject constructor(
         _uiState.update { it.copy(navigationRequest = null) }
     }
 
-    fun setSession(sessionId: String, titleOverride: String? = null, isTranscription: Boolean = false) {
+    fun setSession(
+        sessionId: String,
+        titleOverride: String? = null,
+        isTranscription: Boolean = false,
+        allowHero: Boolean = true
+    ) {
         viewModelScope.launch {
             if (sessionId != this@HomeScreenViewModel.sessionId) {
                 this@HomeScreenViewModel.sessionId = sessionId
                 latestAnalysisMarkdown = null
                 applySessionList()
                 loadSession(sessionId)
+            }
+            if (!allowHero) {
+                _uiState.update { it.copy(showWelcomeHero = false) }
             }
             val summary = ensureSessionSummary(sessionId, titleOverride)
             _uiState.update {
@@ -474,7 +607,8 @@ class HomeScreenViewModel @Inject constructor(
                         id = sessionId,
                         title = summary.title,
                         isTranscription = isTranscription
-                    )
+                    ),
+                    showWelcomeHero = if (allowHero) it.showWelcomeHero else false
                 )
             }
         }
@@ -498,7 +632,8 @@ class HomeScreenViewModel @Inject constructor(
                         isTranscription = false
                     ),
                     chatMessages = emptyList(),
-                    isLoadingHistory = false
+                    isLoadingHistory = false,
+                    showWelcomeHero = true
                 )
             }
             chatHistoryRepository.saveMessages(newSessionId, emptyList())
@@ -584,7 +719,8 @@ class HomeScreenViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         chatMessages = saved.map { item -> item.toUiModel() },
-                        isLoadingHistory = false
+                        isLoadingHistory = false,
+                        showWelcomeHero = false
                     )
                 }
                 saved.lastOrNull()?.content?.let { preview ->
@@ -610,7 +746,7 @@ class HomeScreenViewModel @Inject constructor(
         onCompleted: (String) -> Unit = {}
     ) {
         val content = messageText.trim()
-        if (content.isEmpty() || _uiState.value.isSending) return
+        if (content.isEmpty() || _uiState.value.isBusy) return
         _uiState.update { it.copy(chatErrorMessage = null) }
         val quickSkill = (skillOverride ?: _uiState.value.selectedSkill?.id)?.let { id ->
             quickSkillDefinitionsById[id]
@@ -639,7 +775,9 @@ class HomeScreenViewModel @Inject constructor(
             isSending = true,
             isStreaming = true,
             isInputBusy = true,
-            snackbarMessage = null
+            isBusy = true,
+            snackbarMessage = null,
+            showWelcomeHero = false
         )
         _uiState.value = newState
         persistMessagesAsync()
@@ -671,7 +809,7 @@ class HomeScreenViewModel @Inject constructor(
                             msg.copy(content = event.fullText, isStreaming = false)
                         }
                         onCompleted(event.fullText)
-                        _uiState.update { it.copy(isSending = false, isStreaming = false, isInputBusy = false) }
+                        _uiState.update { it.copy(isSending = false, isStreaming = false, isInputBusy = false, isBusy = false) }
                         viewModelScope.launch {
                             updateSessionSummary(event.fullText)
                             applySessionList()
@@ -687,6 +825,7 @@ class HomeScreenViewModel @Inject constructor(
                                 isSending = false,
                                 isStreaming = false,
                                 isInputBusy = false,
+                                isBusy = false,
                                 chatErrorMessage = event.throwable.message ?: "AI 回复失败"
                             )
                         }
@@ -988,5 +1127,18 @@ class HomeScreenViewModel @Inject constructor(
             pinned = existing?.pinned ?: false
         )
         sessionRepository.upsert(summary)
+    }
+
+    private fun saveImageToCache(uri: Uri): File {
+        val cacheDir = File(appContext.cacheDir, "images").apply { mkdirs() }
+        val name = uri.lastPathSegment?.substringAfterLast('/') ?: "image-${System.currentTimeMillis()}.jpg"
+        val outFile = File(cacheDir, name)
+        val resolver = appContext.contentResolver
+        resolver.openInputStream(uri)?.use { input ->
+            outFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        } ?: throw IOException("无法读取所选图片")
+        return outFile
     }
 }

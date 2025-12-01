@@ -1,8 +1,11 @@
 package com.smartsales.feature.chat.home
 
+import android.net.Uri
 import android.util.Log
-import androidx.compose.foundation.clickable
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +30,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Person
@@ -137,13 +142,13 @@ fun HomeScreenRoute(
         selectedSessionId?.let {
             val currentId = state.currentSession.id
             if (it != currentId) {
-                viewModel.setSession(it)
+                viewModel.setSession(it, allowHero = false)
             }
             onSessionSelectionConsumed()
         }
     }
     LaunchedEffect(sessionId) {
-        sessionId?.let { viewModel.setSession(it) }
+        sessionId?.let { viewModel.setSession(it, allowHero = false) }
     }
     LaunchedEffect(state.deviceSnapshot) {
         onDeviceSnapshotChanged(state.deviceSnapshot)
@@ -166,13 +171,15 @@ fun HomeScreenRoute(
         onNewChatClicked = viewModel::onNewChatClicked,
         onSessionSelected = viewModel::setSession,
         chatErrorMessage = state.chatErrorMessage,
+        onPickAudioFile = viewModel::onAudioFilePicked,
+        onPickImageFile = viewModel::onImagePicked,
         modifier = modifier,
         showHistoryPanel = showHistoryPanel,
         onToggleHistoryPanel = { viewModel.onOpenDrawer() },
         onDismissHistoryPanel = { showHistoryPanel = false },
         historySessions = state.sessionList.take(10),
         onHistorySessionSelected = { sessionId ->
-            viewModel.setSession(sessionId)
+            viewModel.setSession(sessionId, allowHero = false)
             showHistoryPanel = false
         }
     )
@@ -197,6 +204,8 @@ fun HomeScreen(
     onSessionSelected: (String) -> Unit = {},
     chatErrorMessage: String? = null,
     exportInProgress: Boolean,
+    onPickAudioFile: (Uri) -> Unit = {},
+    onPickImageFile: (Uri) -> Unit = {},
     modifier: Modifier = Modifier,
     showHistoryPanel: Boolean = false,
     onToggleHistoryPanel: () -> Unit = {},
@@ -220,6 +229,16 @@ fun HomeScreen(
             }
         }
     )
+    val audioPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let { onPickAudioFile(it) }
+    }
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let { onPickImageFile(it) }
+    }
 
     val listState = rememberLazyListState()
     val showScrollToLatest = remember { mutableStateOf(false) }
@@ -266,16 +285,17 @@ fun HomeScreen(
             HomeInputArea(
                 quickSkills = state.quickSkills,
                 selectedSkill = state.selectedSkill,
-                enabled = !state.isSending && !state.isStreaming
-                    && !state.isInputBusy,
-                busy = state.isInputBusy,
+                enabled = !state.isBusy,
+                busy = state.isBusy,
                 exporting = exportInProgress,
                 inputValue = state.inputText,
                 onInputChanged = onInputChanged,
                 onSendClicked = onSendClicked,
                 onQuickSkillSelected = onQuickSkillSelected,
                 onExportPdfClicked = onExportPdfClicked,
-                onExportCsvClicked = onExportCsvClicked
+                onExportCsvClicked = onExportCsvClicked,
+                onPickAudio = { audioPicker.launch(arrayOf("audio/*")) },
+                onPickImage = { imagePicker.launch(arrayOf("image/*")) }
             )
         }
     ) { innerPadding ->
@@ -290,70 +310,75 @@ fun HomeScreen(
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
             ) {
-                val hasMessages = state.chatMessages.isNotEmpty()
-                if (!hasMessages) {
-                    HomeHeroSection(
-                        userName = state.userName,
-                        hasMessages = hasMessages
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                } else {
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                ) {
-                    val hasActiveChat = hasMessages
-                    LazyColumn(
+                val showHero = state.showWelcomeHero && !state.isLoadingHistory && !state.currentSession.isTranscription
+                if (showHero) {
+                    Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .testTag(HomeScreenTestTags.LIST),
-                        state = listState,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
-                        userScrollEnabled = true
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        if (!hasActiveChat) {
-                            item("welcome_spacer") { Spacer(modifier = Modifier.height(8.dp)) }
-                        } else {
-                            if (state.isLoadingHistory) {
-                                item("history-loading") {
-                                    Text(
-                                        text = "加载历史记录...",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 8.dp)
+                        HomeHeroSection(
+                            userName = state.userName,
+                            hasMessages = false
+                        )
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                    ) {
+                        val hasActiveChat = state.chatMessages.isNotEmpty()
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .testTag(HomeScreenTestTags.LIST),
+                            state = listState,
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
+                            userScrollEnabled = true
+                        ) {
+                            if (!hasActiveChat) {
+                                item("welcome_spacer") { Spacer(modifier = Modifier.height(8.dp)) }
+                            } else {
+                                if (state.isLoadingHistory) {
+                                    item("history-loading") {
+                                        Text(
+                                            text = "加载历史记录...",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 8.dp)
+                                        )
+                                    }
+                                }
+                                itemsIndexed(state.chatMessages, key = { _, item -> item.id }) { index, message ->
+                                    val isTranscriptSummary = message.role == ChatMessageRole.ASSISTANT &&
+                                        message.content.contains("通话分析")
+                                    val tagModifier = if (message.role == ChatMessageRole.ASSISTANT &&
+                                        (index == state.chatMessages.lastIndex || isTranscriptSummary)
+                                    ) {
+                                        Modifier.testTag(HomeScreenTestTags.ASSISTANT_MESSAGE)
+                                    } else {
+                                        Modifier
+                                    }
+                                    MessageBubble(
+                                        message = message,
+                                        alignEnd = message.role == ChatMessageRole.USER,
+                                        modifier = tagModifier,
+                                        onCopyAssistant = { content ->
+                                            clipboardManager.setText(AnnotatedString(content))
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar("已复制到剪贴板")
+                                            }
+                                        }
                                     )
                                 }
-                            }
-                            itemsIndexed(state.chatMessages, key = { _, item -> item.id }) { index, message ->
-                                val isTranscriptSummary = message.role == ChatMessageRole.ASSISTANT &&
-                                    message.content.contains("通话分析")
-                                val tagModifier = if (message.role == ChatMessageRole.ASSISTANT &&
-                                    (index == state.chatMessages.lastIndex || isTranscriptSummary)
-                                ) {
-                                    Modifier.testTag(HomeScreenTestTags.ASSISTANT_MESSAGE)
-                                } else {
-                                    Modifier
+                                item("chat-bottom-pad") {
+                                    Spacer(modifier = Modifier.height(72.dp))
                                 }
-                                MessageBubble(
-                                    message = message,
-                                    alignEnd = message.role == ChatMessageRole.USER,
-                                    modifier = tagModifier,
-                                    onCopyAssistant = { content ->
-                                        clipboardManager.setText(AnnotatedString(content))
-                                        coroutineScope.launch {
-                                            snackbarHostState.showSnackbar("已复制到剪贴板")
-                                        }
-                                    }
-                                )
-                            }
-                            item("chat-bottom-pad") {
-                                Spacer(modifier = Modifier.height(72.dp))
                             }
                         }
                     }
@@ -834,7 +859,9 @@ private fun HomeInputArea(
     onSendClicked: () -> Unit,
     onQuickSkillSelected: (QuickSkillId) -> Unit,
     onExportPdfClicked: () -> Unit,
-    onExportCsvClicked: () -> Unit
+    onExportCsvClicked: () -> Unit,
+    onPickAudio: () -> Unit,
+    onPickImage: () -> Unit
 ) {
     Surface(
         tonalElevation = 4.dp
@@ -856,6 +883,11 @@ private fun HomeInputArea(
                 exporting = exporting || busy,
                 onExportPdfClicked = onExportPdfClicked,
                 onExportCsvClicked = onExportCsvClicked
+            )
+            AttachmentRow(
+                enabled = enabled && !busy,
+                onPickAudio = onPickAudio,
+                onPickImage = onPickImage
             )
             OutlinedTextField(
                 value = inputValue,
@@ -914,6 +946,41 @@ private fun ExportActionRow(
             enabled = !exporting,
             modifier = Modifier.testTag(HomeScreenTestTags.EXPORT_CSV),
             label = { Text(text = "导出 CSV") }
+        )
+    }
+}
+
+@Composable
+private fun AttachmentRow(
+    enabled: Boolean,
+    onPickAudio: () -> Unit,
+    onPickImage: () -> Unit
+){
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        AssistChip(
+            onClick = onPickAudio,
+            enabled = enabled,
+            label = { Text(text = "上传音频") },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.AudioFile,
+                    contentDescription = "上传音频"
+                )
+            }
+        )
+        AssistChip(
+            onClick = onPickImage,
+            enabled = enabled,
+            label = { Text(text = "上传图片") },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.AddPhotoAlternate,
+                    contentDescription = "上传图片"
+                )
+            }
         )
     }
 }

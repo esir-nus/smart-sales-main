@@ -17,10 +17,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -29,6 +31,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
@@ -79,6 +82,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import coil.ImageLoader
@@ -117,6 +121,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlin.math.roundToInt
 
 @AndroidEntryPoint
 class AiFeatureTestActivity : ComponentActivity() {
@@ -203,6 +208,9 @@ private fun AiFeatureTestApp(
 
     fun setPage(page: TestHomePage) {
         currentPage = page
+        if (page != TestHomePage.Home) {
+            overlayState = HomeOverlay.Home
+        }
     }
 
     fun openDeviceSection(forceSetup: Boolean = false) {
@@ -267,11 +275,8 @@ private fun AiFeatureTestApp(
                         .fillMaxSize()
                         .padding(horizontal = 8.dp, vertical = 10.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                    ) {
-                        OverlayScaffold(
+                    when (currentPage) {
+                        TestHomePage.Home -> OverlayScaffold(
                             currentOverlay = overlayState,
                             onOverlayChange = { overlayState = it },
                             mediaServerClient = mediaServerClient,
@@ -284,6 +289,74 @@ private fun AiFeatureTestApp(
                             latestDeviceSnapshot = latestDeviceSnapshot,
                             onDeviceSnapshotChanged = { latestDeviceSnapshot = it },
                             showSnackbar = showSnackbar
+                        )
+
+                        TestHomePage.WifiBleTester -> WifiBleTesterRoute(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .testTag(AiFeatureTestTags.PAGE_WIFI),
+                            mediaServerClient = mediaServerClient,
+                            onShowMessage = showSnackbar
+                        )
+
+                        TestHomePage.DeviceManager -> DeviceManagerRoute(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER),
+                            onNavigateToDeviceSetup = { setPage(TestHomePage.DeviceSetup) }
+                        )
+
+                        TestHomePage.DeviceSetup -> DeviceSetupRoute(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .testTag(AiFeatureTestTags.PAGE_DEVICE_SETUP),
+                            onCompleted = { setPage(TestHomePage.DeviceManager) },
+                            onBackToHome = { goHome() }
+                        )
+
+                        TestHomePage.AudioFiles -> AudioFilesRoute(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES),
+                            viewModel = audioFilesViewModel,
+                            onAskAiAboutTranscript = { recordingId, fileName, jobId, preview, full ->
+                                val resolvedJobId = jobId ?: "transcription-$recordingId"
+                                val sessionId = "session-$resolvedJobId"
+                                homeViewModel.onTranscriptionRequested(
+                                    TranscriptionChatRequest(
+                                        jobId = resolvedJobId,
+                                        fileName = fileName,
+                                        recordingId = recordingId,
+                                        sessionId = sessionId,
+                                        transcriptPreview = preview,
+                                        transcriptMarkdown = full
+                                    )
+                                )
+                                pendingSessionId = sessionId
+                                setPage(TestHomePage.Home)
+                            }
+                        )
+
+                        TestHomePage.ChatHistory -> ChatHistoryRoute(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .testTag(AiFeatureTestTags.PAGE_CHAT_HISTORY),
+                            onBackClick = { goHome() },
+                            onSessionSelected = { sessionId ->
+                                pendingSessionId = sessionId
+                                goHome()
+                            }
+                        )
+
+                        TestHomePage.UserCenter -> UserCenterRoute(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .testTag(AiFeatureTestTags.PAGE_USER_CENTER),
+                            onLogout = { goHome() },
+                            onOpenDeviceManager = { setPage(TestHomePage.DeviceManager) },
+                            onOpenSubscription = { goHome() },
+                            onOpenPrivacy = { goHome() },
+                            onOpenGeneral = { goHome() }
                         )
                     }
                 }
@@ -344,7 +417,6 @@ private fun OverlayScaffold(
                     modifier = Modifier
                         .fillMaxSize()
                         .testTag(AiFeatureTestTags.OVERLAY_AUDIO_LAYER)
-                        .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES)
                 ) {
                     AudioFilesRoute(
                         modifier = Modifier.fillMaxSize(),
@@ -372,7 +444,6 @@ private fun OverlayScaffold(
                     modifier = Modifier
                         .fillMaxSize()
                         .testTag(AiFeatureTestTags.OVERLAY_DEVICE_LAYER)
-                        .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
                 ) {
                     DeviceManagerRoute(
                         modifier = Modifier.fillMaxSize(),
@@ -487,72 +558,83 @@ private fun VerticalOverlayLayout(
 ) {
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
-    val heightPx = with(density) { 720.dp.toPx() } // fallback; will be replaced with layout height
-    val offset = remember { Animatable(overlayToPosition(currentOverlay)) }
-    val target = overlayToPosition(currentOverlay)
-
-    LaunchedEffect(target) {
-        offset.animateTo(
-            targetValue = target,
-            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-        )
-    }
-
-    val dragState = rememberDraggableState { delta ->
-        val next = (offset.value + delta / heightPx).coerceIn(-1f, 1f)
-        scope.launch { offset.snapTo(next) }
-    }
-
-    fun settle(velocity: Float) {
-        val adjusted = offset.value + (velocity / 4_000f).coerceIn(-0.25f, 0.25f)
-        val destination = when {
-            adjusted > 0.2f -> HomeOverlay.Device
-            adjusted < -0.2f -> HomeOverlay.Audio
-            else -> HomeOverlay.Home
-        }
-        onOverlayChange(destination)
-    }
-
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(backgroundColor)
-            .draggable(
-                state = dragState,
-                orientation = Orientation.Vertical,
-                onDragStopped = { velocity -> settle(velocity) }
-            )
     ) {
-        val overlayOffset = offset.value
-        val verticalTranslation = { position: HomeOverlay ->
-            val base = overlayToPosition(position)
-            val delta = (overlayOffset - base) * with(density) { 320.dp.toPx() }
-            delta
+        val heightPx = with(density) { maxHeight.toPx().coerceAtLeast(1f) }
+        val topAnchor = heightPx
+        val midAnchor = 0f
+        val bottomAnchor = -heightPx
+        val offset = remember(heightPx) {
+            Animatable(overlayToAnchor(currentOverlay, heightPx))
         }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer { translationY = verticalTranslation(HomeOverlay.Audio) }
-        ) { audio() }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer { translationY = verticalTranslation(HomeOverlay.Home) }
-        ) { home() }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer { translationY = verticalTranslation(HomeOverlay.Device) }
-        ) { device() }
 
-        if (currentOverlay != HomeOverlay.Home) {
+        LaunchedEffect(heightPx, currentOverlay) {
+            val target = overlayToAnchor(currentOverlay, heightPx)
+            offset.animateTo(
+                targetValue = target,
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+            )
+        }
+
+        val dragState = rememberDraggableState { delta ->
+            val next = (offset.value + delta).coerceIn(bottomAnchor, topAnchor)
+            scope.launch { offset.snapTo(next) }
+        }
+
+        fun settle(velocity: Float) {
+            val projection = offset.value + velocity * 0.1f
+            val destination = listOf(
+                HomeOverlay.Audio to topAnchor,
+                HomeOverlay.Home to midAnchor,
+                HomeOverlay.Device to bottomAnchor
+            ).minBy { kotlin.math.abs(projection - it.second) }.first
+            onOverlayChange(destination)
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .draggable(
+                    state = dragState,
+                    orientation = Orientation.Vertical,
+                    onDragStopped = { velocity -> settle(velocity) }
+                )
+        ) {
+            val stackOffset = offset.value
+            val audioOffset = stackOffset - heightPx
+            val homeOffset = stackOffset
+            val deviceOffset = stackOffset + heightPx
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
-                    .clickable { onOverlayChange(HomeOverlay.Home) }
-                    .testTag(AiFeatureTestTags.OVERLAY_BACKDROP)
-            )
+                    .offset { IntOffset(0, audioOffset.roundToInt()) }
+            ) { audio() }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .offset { IntOffset(0, homeOffset.roundToInt()) }
+            ) { home() }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .offset { IntOffset(0, deviceOffset.roundToInt()) }
+            ) { device() }
+
+            if (kotlin.math.abs(stackOffset - midAnchor) > 1f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                        .clickable { onOverlayChange(HomeOverlay.Home) }
+                        .testTag(AiFeatureTestTags.OVERLAY_BACKDROP)
+                )
+            }
         }
     }
 }
@@ -631,6 +713,12 @@ private fun overlayToPosition(overlay: HomeOverlay): Float = when (overlay) {
     HomeOverlay.Audio -> -1f
     HomeOverlay.Home -> 0f
     HomeOverlay.Device -> 1f
+}
+
+private fun overlayToAnchor(overlay: HomeOverlay, heightPx: Float): Float = when (overlay) {
+    HomeOverlay.Audio -> heightPx
+    HomeOverlay.Home -> 0f
+    HomeOverlay.Device -> -heightPx
 }
 
 private fun titleForPage(page: TestHomePage): String = when (page) {

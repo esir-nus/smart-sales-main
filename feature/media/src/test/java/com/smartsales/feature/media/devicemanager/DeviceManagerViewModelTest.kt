@@ -60,7 +60,6 @@ class DeviceManagerViewModelTest {
             FakeDispatcherProvider(dispatcher),
             endpointProvider
         )
-        viewModel.onBaseUrlChanged("http://10.0.2.2:8000")
     }
 
     @After
@@ -384,7 +383,7 @@ class DeviceManagerViewModelTest {
     }
 
     private class FakeDeviceHttpEndpointProvider(
-        initial: String? = null
+        initial: String? = "http://10.0.2.2:8000"
     ) : DeviceHttpEndpointProvider {
         private val flow = MutableStateFlow(initial)
         override val deviceBaseUrl: StateFlow<String?> = flow

@@ -184,7 +184,8 @@ class DeviceManagerViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 baseUrl = value.trim(),
-                baseUrlWasManual = true
+                baseUrlWasManual = true,
+                hasResolvedBaseUrl = true
             )
         }
     }
@@ -194,7 +195,8 @@ class DeviceManagerViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 baseUrl = autoBase,
-                baseUrlWasManual = false
+                baseUrlWasManual = false,
+                hasResolvedBaseUrl = true
             )
         }
     }
@@ -298,7 +300,8 @@ class DeviceManagerViewModel @Inject constructor(
                             state.isAutoDetectingBaseUrl
                         } else {
                             false
-                        }
+                        },
+                        hasResolvedBaseUrl = state.hasResolvedBaseUrl && readyForNetwork
                     )
                 }
                 if (!readyForNetwork) {
@@ -308,7 +311,10 @@ class DeviceManagerViewModel @Inject constructor(
                     triggerAutoDetect()
                 }
                 if (readyForFiles && !lastReadyForFiles) {
-                    loadFiles(_uiState.value.baseUrl)
+                    val state = _uiState.value
+                    if (state.hasResolvedBaseUrl || state.baseUrlWasManual || state.baseUrl != DEFAULT_MEDIA_SERVER_BASE_URL) {
+                        loadFiles(state.baseUrl)
+                    }
                 }
                 if (!readyForFiles) {
                     cachedFiles = emptyList()
@@ -321,7 +327,8 @@ class DeviceManagerViewModel @Inject constructor(
                             isLoading = false,
                             isUploading = false,
                             loadErrorMessage = null,
-                            errorMessage = null
+                            errorMessage = null,
+                            hasResolvedBaseUrl = it.baseUrlWasManual
                         )
                     }
                 }
@@ -340,7 +347,8 @@ class DeviceManagerViewModel @Inject constructor(
                     if (!shouldOverride) state else state.copy(
                         baseUrl = baseUrl,
                         baseUrlWasManual = false,
-                        autoDetectStatus = "自动同步设备地址"
+                        autoDetectStatus = "自动同步设备地址",
+                        hasResolvedBaseUrl = true
                     )
                 }
                 if (_uiState.value.isConnected) {
@@ -369,8 +377,12 @@ class DeviceManagerViewModel @Inject constructor(
                             baseUrl = if (shouldOverride) detectedBase else state.baseUrl,
                             isAutoDetectingBaseUrl = false,
                             baseUrlWasManual = if (shouldOverride) false else state.baseUrlWasManual,
-                            autoDetectStatus = "已检测到 ${result.data.ipAddress}"
+                            autoDetectStatus = "已检测到 ${result.data.ipAddress}",
+                            hasResolvedBaseUrl = true
                         )
+                    }
+                    if (_uiState.value.isConnected) {
+                        loadFiles(_uiState.value.baseUrl)
                     }
                 }
 
@@ -444,6 +456,7 @@ data class DeviceManagerUiState(
     val isAutoDetectingBaseUrl: Boolean = false,
     val autoDetectStatus: String = AUTO_DETECT_WAITING_MESSAGE,
     val baseUrlWasManual: Boolean = false,
+    val hasResolvedBaseUrl: Boolean = false,
     val files: List<DeviceFileUi> = emptyList(),
     val visibleFiles: List<DeviceFileUi> = emptyList(),
     val selectedFile: DeviceFileUi? = null,

@@ -39,6 +39,7 @@ class DeviceHttpEndpointProviderImplTest {
             connectionManager = fakeConnection,
             dispatchers = FakeDispatcherProvider(dispatcher)
         )
+        provider.publishBaseUrl("http://10.0.0.2:8000")
         val results = mutableListOf<String?>()
         val collectJob = collectBaseUrl(provider, results, this)
 

@@ -336,6 +336,7 @@ class DeviceManagerViewModelTest {
         assertEquals("http://192.168.50.10:8000", state.autoDetectedBaseUrl)
         assertEquals(false, state.baseUrlWasManual)
         assertEquals(false, state.isAutoDetectingBaseUrl)
+        assertEquals(true, state.hasResolvedBaseUrl)
     }
 
     @Test

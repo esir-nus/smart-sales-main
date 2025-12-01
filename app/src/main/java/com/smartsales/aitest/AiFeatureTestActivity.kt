@@ -149,6 +149,7 @@ private fun AiFeatureTestApp(
     var currentPage by rememberSaveable { mutableStateOf(TestHomePage.Home) }
     var latestDeviceSnapshot by remember { mutableStateOf<DeviceSnapshotUi?>(null) }
     var pendingSessionId by remember { mutableStateOf<String?>(null) }
+    var overlayState by rememberSaveable { mutableStateOf(HomeOverlay.Home) }
     val goHome: () -> Unit = {
         currentPage = TestHomePage.Home
     }
@@ -211,10 +212,15 @@ private fun AiFeatureTestApp(
             else -> TestHomePage.DeviceSetup
         }
         setPage(destination)
+        overlayState = if (destination == TestHomePage.DeviceManager) HomeOverlay.Device else HomeOverlay.Home
     }
 
-    BackHandler(enabled = currentPage != TestHomePage.Home) {
-        goHome()
+    BackHandler(enabled = currentPage != TestHomePage.Home || overlayState != HomeOverlay.Home) {
+        if (overlayState != HomeOverlay.Home) {
+            overlayState = HomeOverlay.Home
+        } else {
+            goHome()
+        }
     }
 
     MaterialTheme {
@@ -265,128 +271,119 @@ private fun AiFeatureTestApp(
                         modifier = Modifier
                             .fillMaxSize()
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth()
-                        ) {
-                            when (currentPage) {
-                                TestHomePage.Home -> {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .testTag(AiFeatureTestTags.PAGE_HOME)
-                                            .testTag(HomeScreenTestTags.ROOT)
-                                    ) {
-                                        HomeScreenRoute(
-                                            modifier = Modifier.fillMaxSize(),
-                                            viewModel = homeViewModel,
-                                            sessionId = pendingSessionId,
-                                            selectedSessionId = pendingSessionId,
-                                            onSessionSelectionConsumed = { pendingSessionId = null },
-                                            onNavigateToDeviceManager = { openDeviceSection() },
-                                            onNavigateToDeviceSetup = { openDeviceSection(forceSetup = true) },
-                                            onNavigateToAudioFiles = { setPage(TestHomePage.AudioFiles) },
-                                            onNavigateToUserCenter = { setPage(TestHomePage.UserCenter) },
-                                            onNavigateToChatHistory = { setPage(TestHomePage.ChatHistory) },
-                                            onDeviceSnapshotChanged = { latestDeviceSnapshot = it }
-                                        )
-                                    }
-                                }
-
-                                TestHomePage.WifiBleTester -> {
-                                    WifiBleTesterRoute(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .testTag(AiFeatureTestTags.PAGE_WIFI),
-                                        mediaServerClient = mediaServerClient,
-                                        onShowMessage = showSnackbar
-                                    )
-                                }
-
-                                TestHomePage.DeviceManager -> {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
-                                    ) {
-                                        DeviceManagerRoute(
-                                            modifier = Modifier.fillMaxSize(),
-                                            onNavigateToDeviceSetup = { openDeviceSection(forceSetup = true) }
-                                        )
-                                    }
-                                }
-
-                                TestHomePage.DeviceSetup -> {
-                                    DeviceSetupRoute(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .testTag(AiFeatureTestTags.PAGE_DEVICE_SETUP),
-                                        onCompleted = { setPage(TestHomePage.DeviceManager) },
-                                        onBackToHome = { goHome() }
-                                    )
-                                }
-
-                                TestHomePage.AudioFiles -> {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES)
-                                    ) {
-                                        AudioFilesRoute(
-                                            modifier = Modifier.fillMaxSize(),
-                                            viewModel = audioFilesViewModel,
-                                            onAskAiAboutTranscript = { recordingId, fileName, jobId, preview, full ->
-                                                val resolvedJobId = jobId ?: "transcription-$recordingId"
-                                                val sessionId = "session-$resolvedJobId"
-                                                homeViewModel.onTranscriptionRequested(
-                                                    TranscriptionChatRequest(
-                                                        jobId = resolvedJobId,
-                                                        fileName = fileName,
-                                                        recordingId = recordingId,
-                                                        sessionId = sessionId,
-                                                        transcriptPreview = preview,
-                                                        transcriptMarkdown = full
-                                                    )
-                                                )
-                                                pendingSessionId = sessionId
-                                                setPage(TestHomePage.Home)
-                                            }
-                                        )
-                                    }
-                                }
-
-                                TestHomePage.ChatHistory -> {
-                                    ChatHistoryRoute(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .testTag(AiFeatureTestTags.PAGE_CHAT_HISTORY),
-                                        onBackClick = { goHome() },
-                                        onSessionSelected = { sessionId ->
-                                            pendingSessionId = sessionId
-                                            goHome()
-                                        }
-                                    )
-                                }
-
-                                TestHomePage.UserCenter -> {
-                                    UserCenterRoute(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .testTag(AiFeatureTestTags.PAGE_USER_CENTER),
-                                        onLogout = { goHome() },
-                                        onOpenDeviceManager = { setPage(TestHomePage.DeviceManager) },
-                                        onOpenSubscription = { goHome() },
-                                        onOpenPrivacy = { goHome() },
-                                        onOpenGeneral = { goHome() }
-                                    )
-                                }
-                            }
-                        }
+                        OverlayScaffold(
+                            currentOverlay = overlayState,
+                            onOverlayChange = { overlayState = it },
+                            mediaServerClient = mediaServerClient,
+                            homeViewModel = homeViewModel,
+                            audioFilesViewModel = audioFilesViewModel,
+                            setPage = ::setPage,
+                            goHome = goHome,
+                            pendingSessionId = pendingSessionId,
+                            onPendingSessionConsumed = { pendingSessionId = null },
+                            latestDeviceSnapshot = latestDeviceSnapshot,
+                            onDeviceSnapshotChanged = { latestDeviceSnapshot = it },
+                            showSnackbar = showSnackbar
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun OverlayScaffold(
+    currentOverlay: HomeOverlay,
+    onOverlayChange: (HomeOverlay) -> Unit,
+    mediaServerClient: MediaServerClient,
+    homeViewModel: HomeScreenViewModel,
+    audioFilesViewModel: AudioFilesViewModel,
+    setPage: (TestHomePage) -> Unit,
+    goHome: () -> Unit,
+    pendingSessionId: String?,
+    onPendingSessionConsumed: () -> Unit,
+    latestDeviceSnapshot: DeviceSnapshotUi?,
+    onDeviceSnapshotChanged: (DeviceSnapshotUi?) -> Unit,
+    showSnackbar: (String) -> Unit
+) {
+    val designTokens = AppDesignTokens.current()
+    Box(modifier = Modifier.fillMaxSize()) {
+        VerticalOverlayLayout(
+            currentOverlay = currentOverlay,
+            onOverlayChange = onOverlayChange,
+            backgroundColor = designTokens.appBackground,
+            home = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag(AiFeatureTestTags.OVERLAY_HOME_LAYER)
+                        .testTag(AiFeatureTestTags.PAGE_HOME)
+                        .testTag(HomeScreenTestTags.ROOT)
+                ) {
+                    HomeScreenRoute(
+                        modifier = Modifier.fillMaxSize(),
+                        viewModel = homeViewModel,
+                        sessionId = pendingSessionId,
+                        selectedSessionId = pendingSessionId,
+                        onSessionSelectionConsumed = onPendingSessionConsumed,
+                        onNavigateToDeviceManager = { onOverlayChange(HomeOverlay.Device) },
+                        onNavigateToDeviceSetup = {
+                            setPage(TestHomePage.DeviceSetup)
+                            onOverlayChange(HomeOverlay.Home)
+                        },
+                        onNavigateToAudioFiles = { onOverlayChange(HomeOverlay.Audio) },
+                        onNavigateToUserCenter = { setPage(TestHomePage.UserCenter) },
+                        onNavigateToChatHistory = { setPage(TestHomePage.ChatHistory) },
+                        onDeviceSnapshotChanged = onDeviceSnapshotChanged
+                    )
+                }
+            },
+            audio = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag(AiFeatureTestTags.OVERLAY_AUDIO_LAYER)
+                        .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES)
+                ) {
+                    AudioFilesRoute(
+                        modifier = Modifier.fillMaxSize(),
+                        viewModel = audioFilesViewModel,
+                        onAskAiAboutTranscript = { recordingId, fileName, jobId, preview, full ->
+                            val resolvedJobId = jobId ?: "transcription-$recordingId"
+                            val sessionId = "session-$resolvedJobId"
+                            homeViewModel.onTranscriptionRequested(
+                                TranscriptionChatRequest(
+                                    jobId = resolvedJobId,
+                                    fileName = fileName,
+                                    recordingId = recordingId,
+                                    sessionId = sessionId,
+                                    transcriptPreview = preview,
+                                    transcriptMarkdown = full
+                                )
+                            )
+                            onOverlayChange(HomeOverlay.Home)
+                        }
+                    )
+                }
+            },
+            device = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag(AiFeatureTestTags.OVERLAY_DEVICE_LAYER)
+                        .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
+                ) {
+                    DeviceManagerRoute(
+                        modifier = Modifier.fillMaxSize(),
+                        onNavigateToDeviceSetup = {
+                            setPage(TestHomePage.DeviceSetup)
+                            onOverlayChange(HomeOverlay.Home)
+                        }
+                    )
+                }
+            }
+        )
     }
 }
 
@@ -474,6 +471,87 @@ private fun DraggableOverlayStack(
                 currentOffset = offset.value,
                 onClick = onSelectDevice,
                 tag = if (showTags) AiFeatureTestTags.OVERLAY_DEVICE_HANDLE else null
+            )
+        }
+    }
+}
+
+@Composable
+private fun VerticalOverlayLayout(
+    currentOverlay: HomeOverlay,
+    onOverlayChange: (HomeOverlay) -> Unit,
+    backgroundColor: Color,
+    home: @Composable () -> Unit,
+    audio: @Composable () -> Unit,
+    device: @Composable () -> Unit
+) {
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
+    val heightPx = with(density) { 720.dp.toPx() } // fallback; will be replaced with layout height
+    val offset = remember { Animatable(overlayToPosition(currentOverlay)) }
+    val target = overlayToPosition(currentOverlay)
+
+    LaunchedEffect(target) {
+        offset.animateTo(
+            targetValue = target,
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+        )
+    }
+
+    val dragState = rememberDraggableState { delta ->
+        val next = (offset.value + delta / heightPx).coerceIn(-1f, 1f)
+        scope.launch { offset.snapTo(next) }
+    }
+
+    fun settle(velocity: Float) {
+        val adjusted = offset.value + (velocity / 4_000f).coerceIn(-0.25f, 0.25f)
+        val destination = when {
+            adjusted > 0.2f -> HomeOverlay.Device
+            adjusted < -0.2f -> HomeOverlay.Audio
+            else -> HomeOverlay.Home
+        }
+        onOverlayChange(destination)
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundColor)
+            .draggable(
+                state = dragState,
+                orientation = Orientation.Vertical,
+                onDragStopped = { velocity -> settle(velocity) }
+            )
+    ) {
+        val overlayOffset = offset.value
+        val verticalTranslation = { position: HomeOverlay ->
+            val base = overlayToPosition(position)
+            val delta = (overlayOffset - base) * with(density) { 320.dp.toPx() }
+            delta
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { translationY = verticalTranslation(HomeOverlay.Audio) }
+        ) { audio() }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { translationY = verticalTranslation(HomeOverlay.Home) }
+        ) { home() }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { translationY = verticalTranslation(HomeOverlay.Device) }
+        ) { device() }
+
+        if (currentOverlay != HomeOverlay.Home) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                    .clickable { onOverlayChange(HomeOverlay.Home) }
+                    .testTag(AiFeatureTestTags.OVERLAY_BACKDROP)
             )
         }
     }

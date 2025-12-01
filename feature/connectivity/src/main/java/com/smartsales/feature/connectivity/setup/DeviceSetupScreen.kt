@@ -84,7 +84,7 @@ fun DeviceSetupScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.testTag(DeviceSetupTestTags.DESCRIPTION)
                     )
-                    if (state.showWifiForm) {
+                    if (state.showWifiForm || state.setupStep == SetupStep.WifiForm) {
                         WifiForm(
                             ssid = state.wifiSsid,
                             password = state.wifiPassword,
@@ -93,7 +93,7 @@ fun DeviceSetupScreen(
                             enabled = state.isPrimaryEnabled || state.step == DeviceSetupStep.Pairing
                         )
                     }
-                    if (state.errorMessage != null && state.step == DeviceSetupStep.Error) {
+                    if (state.errorMessage != null && (state.step == DeviceSetupStep.Error || state.setupStep == SetupStep.Error)) {
                         ErrorBanner(
                             message = state.errorMessage,
                             onRetry = onRetry,

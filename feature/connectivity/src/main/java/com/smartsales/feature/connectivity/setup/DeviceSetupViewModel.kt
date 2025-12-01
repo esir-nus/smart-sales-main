@@ -50,12 +50,25 @@ class DeviceSetupViewModel @Inject constructor(
         startAutoScan()
     }
 
+    private fun DeviceSetupStep.toSetupStep(): SetupStep = when (this) {
+        DeviceSetupStep.Idle -> SetupStep.Preflight
+        DeviceSetupStep.Scanning -> SetupStep.Scanning
+        DeviceSetupStep.Found -> SetupStep.ConnectingBle
+        DeviceSetupStep.WifiInput -> SetupStep.WifiForm
+        DeviceSetupStep.Pairing -> SetupStep.ProvisioningWifi
+        DeviceSetupStep.WifiProvisioning -> SetupStep.ProvisioningWifi
+        DeviceSetupStep.WaitingForDeviceOnline -> SetupStep.ConnectingHttp
+        DeviceSetupStep.Ready -> SetupStep.Completed
+        DeviceSetupStep.Error -> SetupStep.Error
+    }
+
     private fun startAutoScan() {
         if (_uiState.value.isScanning) return
         pendingPeripheral = null
         updateUi {
             it.copy(
                 step = DeviceSetupStep.Scanning,
+                setupStep = DeviceSetupStep.Scanning.toSetupStep(),
                 isScanning = true,
                 isActionInProgress = true,
                 canRetryScan = false,
@@ -113,6 +126,7 @@ class DeviceSetupViewModel @Inject constructor(
         updateUi {
             it.copy(
                 step = DeviceSetupStep.Scanning,
+                setupStep = DeviceSetupStep.Scanning.toSetupStep(),
                 errorMessage = null,
                 errorReason = null,
                 isActionInProgress = true,
@@ -136,6 +150,7 @@ class DeviceSetupViewModel @Inject constructor(
         updateUi {
             it.copy(
                 step = DeviceSetupStep.WifiProvisioning,
+                setupStep = DeviceSetupStep.WifiProvisioning.toSetupStep(),
                 wifiSsid = ssid,
                 wifiPassword = password,
                 errorMessage = null,
@@ -174,7 +189,13 @@ class DeviceSetupViewModel @Inject constructor(
                     DeviceSetupErrorReason.ProvisioningFailed
                 )
             } else {
-                updateUi { it.copy(isSubmittingWifi = true, step = DeviceSetupStep.WifiProvisioning) }
+                updateUi {
+                    it.copy(
+                        isSubmittingWifi = true,
+                        step = DeviceSetupStep.WifiProvisioning,
+                        setupStep = DeviceSetupStep.WifiProvisioning.toSetupStep()
+                    )
+                }
                 triggerNetworkCheck(force = true)
             }
         }
@@ -196,6 +217,9 @@ class DeviceSetupViewModel @Inject constructor(
                     }
                     return@collectLatest
                 }
+                if (_uiState.value.step == DeviceSetupStep.Scanning && _uiState.value.canRetryScan && pendingPeripheral == null) {
+                    return@collectLatest
+                }
                 when (state) {
                     ConnectionState.NeedsSetup -> {
                         pendingPeripheral = null
@@ -203,6 +227,7 @@ class DeviceSetupViewModel @Inject constructor(
                         updateUi {
                             it.copy(
                                 step = DeviceSetupStep.Idle,
+                                setupStep = DeviceSetupStep.Idle.toSetupStep(),
                                 isActionInProgress = false,
                                 isScanning = false,
                                 isSubmittingWifi = false,
@@ -224,6 +249,7 @@ class DeviceSetupViewModel @Inject constructor(
                         updateUi {
                             it.copy(
                                 step = if (scanning || it.canRetryScan) DeviceSetupStep.Scanning else DeviceSetupStep.Idle,
+                                setupStep = (if (scanning || it.canRetryScan) DeviceSetupStep.Scanning else DeviceSetupStep.Idle).toSetupStep(),
                                 isActionInProgress = scanning,
                                 isScanning = scanning,
                                 isSubmittingWifi = false,
@@ -251,6 +277,7 @@ class DeviceSetupViewModel @Inject constructor(
                         updateUi {
                             it.copy(
                                 step = DeviceSetupStep.Pairing,
+                                setupStep = DeviceSetupStep.Pairing.toSetupStep(),
                                 deviceName = state.deviceName,
                                 isActionInProgress = true,
                                 isScanning = false,
@@ -264,6 +291,7 @@ class DeviceSetupViewModel @Inject constructor(
                         updateUi {
                             it.copy(
                                 step = DeviceSetupStep.WifiInput,
+                                setupStep = DeviceSetupStep.WifiInput.toSetupStep(),
                                 deviceName = state.session.peripheralName,
                                 isActionInProgress = false,
                                 isScanning = false,
@@ -279,6 +307,7 @@ class DeviceSetupViewModel @Inject constructor(
                         updateUi { current ->
                             if (current.step == DeviceSetupStep.Ready) current else current.copy(
                                 step = DeviceSetupStep.WaitingForDeviceOnline,
+                                setupStep = DeviceSetupStep.WaitingForDeviceOnline.toSetupStep(),
                                 isActionInProgress = true,
                                 isSubmittingWifi = true,
                                 canRetryScan = false
@@ -309,7 +338,7 @@ class DeviceSetupViewModel @Inject constructor(
                     return@collectLatest
                 }
                 val currentConnection = connectionManager.state.value
-                if (currentConnection !is ConnectionState.Disconnected) {
+                if (currentConnection !is ConnectionState.Disconnected && currentConnection !is ConnectionState.NeedsSetup) {
                     updateUi { it.copy(isScanning = false, isActionInProgress = false) }
                     return@collectLatest
                 }
@@ -319,6 +348,7 @@ class DeviceSetupViewModel @Inject constructor(
                 updateUi {
                     it.copy(
                         step = DeviceSetupStep.Found,
+                        setupStep = DeviceSetupStep.Found.toSetupStep(),
                         deviceName = pendingPeripheral?.name,
                         isActionInProgress = false,
                         isScanning = false,
@@ -373,6 +403,7 @@ class DeviceSetupViewModel @Inject constructor(
             } else {
                 current.copy(
                     step = DeviceSetupStep.Ready,
+                    setupStep = DeviceSetupStep.Ready.toSetupStep(),
                     isActionInProgress = false,
                     isSubmittingWifi = false,
                     isScanning = false,
@@ -397,6 +428,7 @@ class DeviceSetupViewModel @Inject constructor(
         updateUi {
             it.copy(
                 step = DeviceSetupStep.Error,
+                setupStep = DeviceSetupStep.Error.toSetupStep(),
                 errorMessage = message,
                 errorReason = reason,
                 isActionInProgress = false,
@@ -454,6 +486,7 @@ class DeviceSetupViewModel @Inject constructor(
         updateUi {
             it.copy(
                 step = DeviceSetupStep.Scanning,
+                setupStep = DeviceSetupStep.Scanning.toSetupStep(),
                 isActionInProgress = false,
                 isScanning = false,
                 canRetryScan = true,
@@ -469,6 +502,7 @@ class DeviceSetupViewModel @Inject constructor(
     }
 
     private fun DeviceSetupUiState.enrich(): DeviceSetupUiState {
+        val mappedSetupStep = step.toSetupStep()
         val (desc, primary, secondary, showWifi, enabled) = when (step) {
             DeviceSetupStep.Idle,
             DeviceSetupStep.Scanning -> {
@@ -530,7 +564,8 @@ class DeviceSetupViewModel @Inject constructor(
             primaryLabel = primary,
             secondaryLabel = secondary,
             showWifiForm = showWifi,
-            isPrimaryEnabled = enabled
+            isPrimaryEnabled = enabled,
+            setupStep = mappedSetupStep
         )
     }
 

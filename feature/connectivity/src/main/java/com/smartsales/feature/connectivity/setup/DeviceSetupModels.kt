@@ -24,8 +24,23 @@ enum class DeviceSetupErrorReason {
     Unknown
 }
 
+enum class SetupStep {
+    Preflight,
+    Scanning,
+    NoDeviceFound,
+    ConnectingBle,
+    CheckingStatus,
+    WifiForm,
+    ProvisioningWifi,
+    ConnectingHttp,
+    SavingSession,
+    Completed,
+    Error
+}
+
 data class DeviceSetupUiState(
     val step: DeviceSetupStep = DeviceSetupStep.Idle,
+    val setupStep: SetupStep = SetupStep.Preflight,
     val title: String = "设备配网",
     val description: String = "准备开始连接设备",
     val primaryLabel: String = "开始配网",

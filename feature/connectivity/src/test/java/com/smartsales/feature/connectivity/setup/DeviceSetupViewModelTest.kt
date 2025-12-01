@@ -52,16 +52,19 @@ class DeviceSetupViewModelTest {
     fun autoScan_then_found_then_wifi_input() = runTest(dispatcher) {
         dispatcher.scheduler.runCurrent()
         assertEquals(DeviceSetupStep.Scanning, viewModel.uiState.value.step)
+        assertEquals(SetupStep.Scanning, viewModel.uiState.value.setupStep)
         assertTrue(viewModel.uiState.value.isScanning)
         assertTrue(viewModel.uiState.value.canRetryScan.not())
 
         scanner.emitDevice(BlePeripheral("1", "BT311", -50))
         dispatcher.scheduler.runCurrent()
         assertEquals(DeviceSetupStep.Found, viewModel.uiState.value.step)
+        assertEquals(SetupStep.ConnectingBle, viewModel.uiState.value.setupStep)
 
         viewModel.onPrimaryClick() // 配置网络 -> Wi-Fi 输入
         dispatcher.scheduler.runCurrent()
         assertEquals(DeviceSetupStep.WifiInput, viewModel.uiState.value.step)
+        assertEquals(SetupStep.WifiForm, viewModel.uiState.value.setupStep)
     }
 
     @Test
@@ -71,10 +74,12 @@ class DeviceSetupViewModelTest {
         advanceUntilIdle()
 
         assertEquals(DeviceSetupStep.Ready, viewModel.uiState.value.step)
+        assertEquals(SetupStep.Completed, viewModel.uiState.value.setupStep)
         assertEquals("192.168.0.2", viewModel.uiState.value.deviceIp)
         connectionManager.emitNetworkStatus(Result.Error(IllegalStateException("offline")))
         advanceUntilIdle()
         assertEquals(DeviceSetupStep.Ready, viewModel.uiState.value.step)
+        assertEquals(SetupStep.Completed, viewModel.uiState.value.setupStep)
         assertEquals("192.168.0.2", viewModel.uiState.value.deviceIp)
     }
 
@@ -106,6 +111,7 @@ class DeviceSetupViewModelTest {
         viewModel.onRetry()
 
         assertEquals(DeviceSetupStep.Scanning, viewModel.uiState.value.step)
+        assertEquals(SetupStep.Scanning, viewModel.uiState.value.setupStep)
         assertEquals("", viewModel.uiState.value.wifiPassword)
     }
 
@@ -119,6 +125,34 @@ class DeviceSetupViewModelTest {
         assertEquals(DeviceSetupStep.Scanning, state.step)
         assertTrue(state.canRetryScan)
         assertTrue(state.isScanning.not())
+    }
+
+    @Test
+    fun setupStep_maps_from_deviceSetupStep() = runTest(dispatcher) {
+        dispatcher.scheduler.runCurrent()
+        assertEquals(SetupStep.Scanning, viewModel.uiState.value.setupStep)
+
+        scanner.emitDevice(BlePeripheral("3", "BT311", -55))
+        dispatcher.scheduler.runCurrent()
+        assertEquals(SetupStep.ConnectingBle, viewModel.uiState.value.setupStep)
+
+        viewModel.onPrimaryClick()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(SetupStep.WifiForm, viewModel.uiState.value.setupStep)
+    }
+
+    @Test
+    fun scan_allows_needsSetup_state() = runTest(dispatcher) {
+        val connection = FakeDeviceConnectionManager()
+        connection.state.value = ConnectionState.NeedsSetup
+        val vm = DeviceSetupViewModel(connection, scanner, profiles)
+        dispatcher.scheduler.runCurrent()
+
+        scanner.emitDevice(BlePeripheral("2", "BT311-2", -60))
+        dispatcher.scheduler.runCurrent()
+
+        assertEquals(DeviceSetupStep.Found, vm.uiState.value.step)
+        assertEquals(SetupStep.ConnectingBle, vm.uiState.value.setupStep)
     }
 
     @Test

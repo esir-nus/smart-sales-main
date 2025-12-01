@@ -194,6 +194,23 @@ class DeviceSetupViewModel @Inject constructor(
                     return@collectLatest
                 }
                 when (state) {
+                    ConnectionState.NeedsSetup -> {
+                        pendingPeripheral = null
+                        hasEmittedReadyEvent = false
+                        updateUi {
+                            it.copy(
+                                step = DeviceSetupStep.Idle,
+                                isActionInProgress = false,
+                                isScanning = false,
+                                isSubmittingWifi = false,
+                                isDeviceOnline = false,
+                                deviceIp = null,
+                                errorMessage = null,
+                                errorReason = null
+                            )
+                        }
+                    }
+
                     ConnectionState.Disconnected -> {
                         if (_uiState.value.step == DeviceSetupStep.Found || _uiState.value.step == DeviceSetupStep.WifiInput) {
                             // 保留“发现设备/填写 Wi-Fi”界面，不回落到 Idle
@@ -209,6 +226,16 @@ class DeviceSetupViewModel @Inject constructor(
                                 deviceIp = null,
                                 errorMessage = null,
                                 errorReason = null
+                            )
+                        }
+                    }
+
+                    is ConnectionState.AutoReconnecting -> {
+                        updateUi {
+                            it.copy(
+                                isActionInProgress = true,
+                                isScanning = false,
+                                errorMessage = null
                             )
                         }
                     }

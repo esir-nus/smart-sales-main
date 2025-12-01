@@ -804,6 +804,11 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     private fun ConnectionState.toDeviceSnapshot(): DeviceSnapshotUi = when (this) {
+        ConnectionState.NeedsSetup -> DeviceSnapshotUi(
+            statusText = "设备未配网，点击开始配置",
+            connectionState = DeviceConnectionStateUi.DISCONNECTED
+        )
+
         ConnectionState.Disconnected -> DeviceSnapshotUi(
             statusText = "设备未连接，点击开始配网",
             connectionState = DeviceConnectionStateUi.DISCONNECTED
@@ -812,6 +817,11 @@ class HomeScreenViewModel @Inject constructor(
         is ConnectionState.Pairing -> DeviceSnapshotUi(
             deviceName = deviceName,
             statusText = "正在连接设备，请保持靠近",
+            connectionState = DeviceConnectionStateUi.CONNECTING
+        )
+
+        is ConnectionState.AutoReconnecting -> DeviceSnapshotUi(
+            statusText = "正在自动重连设备…",
             connectionState = DeviceConnectionStateUi.CONNECTING
         )
 

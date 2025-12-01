@@ -368,7 +368,9 @@ private fun ConnectionState.canQueryNetwork(): Boolean =
     this is ConnectionState.Connected || isReadyForFiles()
 
 private fun ConnectionState.toUiState(): DeviceConnectionUiState = when (this) {
+    ConnectionState.NeedsSetup -> DeviceConnectionUiState.Disconnected("需要先完成设备配网")
     ConnectionState.Disconnected -> DeviceConnectionUiState.Disconnected()
+    is ConnectionState.AutoReconnecting -> DeviceConnectionUiState.Connecting("正在自动重连…")
     is ConnectionState.Pairing -> DeviceConnectionUiState.Connecting(deviceName)
     is ConnectionState.Connected -> DeviceConnectionUiState.Connecting(session.peripheralName)
     is ConnectionState.WifiProvisioned -> DeviceConnectionUiState.Connected(session.peripheralName)

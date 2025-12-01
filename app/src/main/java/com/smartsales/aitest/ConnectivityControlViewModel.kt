@@ -370,7 +370,9 @@ class ConnectivityControlViewModel @Inject constructor(
         }
 
     private fun ConnectionState.describe(): String = when (this) {
+        ConnectionState.NeedsSetup -> "未配网"
         ConnectionState.Disconnected -> "未连接"
+        is ConnectionState.AutoReconnecting -> "自动重连中（第 ${attempt} 次）"
         is ConnectionState.Connected -> "已连接 ${session.peripheralName}"
         is ConnectionState.Pairing -> "配对 ${deviceName} · 进度 ${progressPercent}%"
         is ConnectionState.WifiProvisioned -> "已同步 Wi-Fi：${status.wifiSsid}"

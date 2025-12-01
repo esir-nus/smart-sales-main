@@ -122,7 +122,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
             _state.value = ConnectionState.NeedsSetup
             return
         }
-        when (val current = _state.value) {
+        when (_state.value) {
             is ConnectionState.Connected,
             is ConnectionState.Pairing,
             is ConnectionState.WifiProvisioned,
@@ -149,6 +149,9 @@ class DefaultDeviceConnectionManager @Inject constructor(
     }
 
     private fun launchReconnect(ignoreBackoff: Boolean = false) {
+        if (ignoreBackoff) {
+            reconnectMeta = reconnectMeta.copy(lastAttemptMillis = 0L)
+        }
         val attempt = reconnectMeta.failureCount + 1
         _state.value = ConnectionState.AutoReconnecting(attempt)
         val sessionSnapshot = currentSession

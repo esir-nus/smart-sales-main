@@ -61,6 +61,26 @@ class DeviceManagerScreenTest {
         composeRule.onAllNodesWithText("设备未连接").onFirst().assertIsDisplayed()
         composeRule.onNodeWithText("请连接设备以管理文件和查看预览。").assertIsDisplayed()
         composeRule.onNodeWithText("重试连接").assertIsDisplayed()
+        composeRule.onAllNodesWithTag(DeviceManagerTestTags.START_SETUP_BUTTON).assertCountEquals(0)
+    }
+
+    @Test
+    fun needsSetup_showsSetupButton_andHidesRetry() {
+        var setupClicks = 0
+        val state = createState(
+            connectionStatus = DeviceConnectionUiState.Disconnected(reason = "需要先完成设备配网"),
+            canRetryConnect = false,
+            canStartSetup = true
+        )
+        renderDeviceManager(
+            state,
+            onStartSetup = { setupClicks++ }
+        )
+
+        composeRule.onNodeWithTag(DeviceManagerTestTags.START_SETUP_BUTTON).assertIsDisplayed()
+        composeRule.onNodeWithText("开始配网").assertIsDisplayed().performClick()
+        composeRule.onAllNodesWithText("重试连接").assertCountEquals(0)
+        assertEquals(1, setupClicks)
     }
 
     @Test
@@ -224,6 +244,7 @@ class DeviceManagerScreenTest {
     private fun renderDeviceManager(
         initialState: DeviceManagerUiState,
         onRefresh: () -> Unit = {},
+        onStartSetup: () -> Unit = {},
         onSelectFile: (String) -> Unit = {},
         onApplyFile: (String) -> Unit = {},
         onDeleteFile: (String) -> Unit = {},
@@ -238,6 +259,7 @@ class DeviceManagerScreenTest {
                 DeviceManagerScreen(
                     state = uiState,
                     onRefresh = onRefresh,
+                    onStartSetup = onStartSetup,
                     onRetryLoad = onRetryLoad,
                     onSelectFile = onSelectFile,
                     onApplyFile = onApplyFile,
@@ -258,11 +280,15 @@ class DeviceManagerScreenTest {
         visibleFiles: List<DeviceFileUi> = files,
         selectedFile: DeviceFileUi? = null,
         errorMessage: String? = null,
-        loadErrorMessage: String? = null
+        loadErrorMessage: String? = null,
+        canRetryConnect: Boolean = true,
+        canStartSetup: Boolean = false
     ): DeviceManagerUiState {
         return DeviceManagerUiState(
             connectionStatus = connectionStatus,
             isConnected = connectionStatus.isReadyForFiles(),
+            canRetryConnect = canRetryConnect,
+            canStartSetup = canStartSetup,
             baseUrl = "http://10.0.2.2:8000",
             autoDetectedBaseUrl = null,
             isAutoDetectingBaseUrl = false,

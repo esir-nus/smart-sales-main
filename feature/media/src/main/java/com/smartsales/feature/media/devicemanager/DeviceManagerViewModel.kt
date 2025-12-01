@@ -20,8 +20,11 @@ import java.util.Locale
 import javax.inject.Inject
 import java.io.File
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
@@ -44,6 +47,8 @@ class DeviceManagerViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(DeviceManagerUiState())
     val uiState: StateFlow<DeviceManagerUiState> = _uiState.asStateFlow()
+    private val _events = MutableSharedFlow<DeviceManagerEvent>()
+    val events: SharedFlow<DeviceManagerEvent> = _events.asSharedFlow()
 
     private var cachedFiles: List<DeviceFileUi> = emptyList()
     private var autoDetectJob: Job? = null
@@ -67,6 +72,12 @@ class DeviceManagerViewModel @Inject constructor(
             return
         }
         loadFiles(_uiState.value.baseUrl)
+    }
+
+    fun onStartSetupClick() {
+        viewModelScope.launch(dispatcherProvider.default) {
+            _events.emit(DeviceManagerEvent.NavigateToDeviceSetup)
+        }
     }
 
     fun onSelectFile(fileId: String) {
@@ -273,6 +284,10 @@ class DeviceManagerViewModel @Inject constructor(
                             ConnectionState.NeedsSetup -> false
                             else -> true
                         },
+                        canStartSetup = when (connection) {
+                            ConnectionState.NeedsSetup -> true
+                            else -> false
+                        },
                         connectionStatus = connection.toUiState(),
                         autoDetectStatus = if (readyForNetwork) {
                             state.autoDetectStatus
@@ -423,6 +438,7 @@ data class DeviceManagerUiState(
     val connectionStatus: DeviceConnectionUiState = DeviceConnectionUiState.Disconnected(),
     val isConnected: Boolean = false,
     val canRetryConnect: Boolean = true,
+    val canStartSetup: Boolean = false,
     val baseUrl: String = DEFAULT_MEDIA_SERVER_BASE_URL,
     val autoDetectedBaseUrl: String? = null,
     val isAutoDetectingBaseUrl: Boolean = false,
@@ -472,6 +488,10 @@ data class DeviceMediaFile(
 
 sealed interface DeviceUploadSource {
     data class AndroidUri(val uri: Uri) : DeviceUploadSource
+}
+
+sealed interface DeviceManagerEvent {
+    data object NavigateToDeviceSetup : DeviceManagerEvent
 }
 
 interface DeviceMediaGateway {

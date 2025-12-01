@@ -9,15 +9,18 @@ import com.smartsales.core.test.FakeDispatcherProvider
 import com.smartsales.core.util.Result
 import com.smartsales.feature.connectivity.BlePeripheral
 import com.smartsales.feature.connectivity.BleSession
+import com.smartsales.feature.connectivity.ConnectivityError
 import com.smartsales.feature.connectivity.ConnectionState
 import com.smartsales.feature.connectivity.DeviceConnectionManager
 import com.smartsales.feature.connectivity.DeviceNetworkStatus
 import com.smartsales.feature.connectivity.ProvisioningStatus
 import com.smartsales.feature.connectivity.WifiCredentials
 import com.smartsales.feature.media.audiofiles.DeviceHttpEndpointProvider
+import com.smartsales.feature.media.devicemanager.DeviceManagerEvent
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -25,6 +28,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -176,9 +180,20 @@ class DeviceManagerViewModelTest {
         val state = viewModel.uiState.value
         assertFalse(state.isConnected)
         assertTrue(state.canRetryConnect)
+        assertFalse(state.canStartSetup)
         assertTrue(state.files.isEmpty())
         assertEquals(null, state.loadErrorMessage)
         assertEquals(false, state.isLoading)
+    }
+
+    @Test
+    fun `error state keeps retry connect`() = runTest(dispatcher) {
+        connectionManager.emitError()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.canRetryConnect)
+        assertFalse(state.canStartSetup)
     }
 
     @Test
@@ -201,13 +216,23 @@ class DeviceManagerViewModelTest {
     }
 
     @Test
-    fun `needs setup hides retry connect`() = runTest(dispatcher) {
+    fun `needs setup exposes setup cta`() = runTest(dispatcher) {
         connectionManager.emitNeedsSetup()
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertFalse(state.canRetryConnect)
         assertFalse(state.isConnected)
+        assertTrue(state.canStartSetup)
+    }
+
+    @Test
+    fun `start setup click emits navigation event`() = runTest(dispatcher) {
+        val event = withTimeout(1_000) {
+            viewModel.onStartSetupClick()
+            viewModel.events.first()
+        }
+        assertEquals(DeviceManagerEvent.NavigateToDeviceSetup, event)
     }
 
     @Test
@@ -410,6 +435,10 @@ class DeviceManagerViewModelTest {
 
         fun emitNeedsSetup() {
             _state.value = ConnectionState.NeedsSetup
+        }
+
+        fun emitError() {
+            _state.value = ConnectionState.Error(ConnectivityError.Transport("离线"))
         }
 
         override fun selectPeripheral(peripheral: BlePeripheral) = Unit

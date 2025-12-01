@@ -45,6 +45,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,9 +64,14 @@ import com.smartsales.feature.media.devicemanager.DeviceMediaTab
 import com.smartsales.feature.media.devicemanager.DeviceManagerUiState
 import com.smartsales.feature.media.devicemanager.DeviceManagerViewModel
 import com.smartsales.feature.media.devicemanager.DeviceUploadSource
+import com.smartsales.feature.media.devicemanager.DeviceManagerEvent
+import kotlinx.coroutines.flow.collectLatest
 
 @Composable
-fun DeviceManagerRoute(modifier: Modifier = Modifier) {
+fun DeviceManagerRoute(
+    modifier: Modifier = Modifier,
+    onNavigateToDeviceSetup: () -> Unit = {}
+) {
     val viewModel: DeviceManagerViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val uploadLauncher = rememberLauncherForActivityResult(
@@ -75,9 +81,17 @@ fun DeviceManagerRoute(modifier: Modifier = Modifier) {
             viewModel.onUploadFile(DeviceUploadSource.AndroidUri(uri))
         }
     }
+    LaunchedEffect(viewModel) {
+        viewModel.events.collectLatest { event ->
+            when (event) {
+                DeviceManagerEvent.NavigateToDeviceSetup -> onNavigateToDeviceSetup()
+            }
+        }
+    }
     DeviceManagerScreen(
         state = state,
         onRefresh = viewModel::onRefreshFiles,
+        onStartSetup = viewModel::onStartSetupClick,
         onRetryLoad = viewModel::onRetryLoad,
         onSelectFile = viewModel::onSelectFile,
         onApplyFile = viewModel::onApplyFile,
@@ -93,6 +107,7 @@ fun DeviceManagerRoute(modifier: Modifier = Modifier) {
 fun DeviceManagerScreen(
     state: DeviceManagerUiState,
     onRefresh: () -> Unit,
+    onStartSetup: () -> Unit,
     onRetryLoad: () -> Unit,
     onSelectFile: (String) -> Unit,
     onApplyFile: (String) -> Unit,
@@ -116,7 +131,8 @@ fun DeviceManagerScreen(
         ) {
             DeviceManagerHero(
                 state = state,
-                onBaseUrlChange = onBaseUrlChange
+                onBaseUrlChange = onBaseUrlChange,
+                onStartSetup = onStartSetup
             )
             ActionButtons(
                 isConnected = isConnected,
@@ -192,7 +208,8 @@ fun DeviceManagerScreen(
 @Composable
 private fun DeviceManagerHero(
     state: DeviceManagerUiState,
-    onBaseUrlChange: (String) -> Unit
+    onBaseUrlChange: (String) -> Unit,
+    onStartSetup: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -218,6 +235,16 @@ private fun DeviceManagerHero(
                 status = state.connectionStatus,
                 modifier = Modifier.fillMaxWidth()
             )
+            if (state.canStartSetup) {
+                Button(
+                    onClick = onStartSetup,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(DeviceManagerTestTags.START_SETUP_BUTTON)
+                ) {
+                    Text(text = "开始配网")
+                }
+            }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedTextField(
                     value = state.baseUrl,
@@ -519,6 +546,7 @@ private fun ErrorBanner(
 object DeviceManagerTestTags {
     const val REFRESH_BUTTON = "device_manager_refresh_button"
     const val UPLOAD_BUTTON = "device_manager_upload_button"
+    const val START_SETUP_BUTTON = "device_manager_start_setup_button"
     const val EMPTY_STATE = "device_manager_empty_state"
     const val ERROR_BANNER = "device_manager_error_banner"
     const val FILE_LIST = "device_manager_file_list"

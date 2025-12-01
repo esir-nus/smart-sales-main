@@ -311,7 +311,8 @@ private fun AiFeatureTestApp(
                                             .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
                                     ) {
                                         DeviceManagerRoute(
-                                            modifier = Modifier.fillMaxSize()
+                                            modifier = Modifier.fillMaxSize(),
+                                            onNavigateToDeviceSetup = { openDeviceSection(forceSetup = true) }
                                         )
                                     }
                                 }

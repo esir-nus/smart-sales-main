@@ -58,7 +58,7 @@ class DeviceSetupViewModelRobustnessTest {
         assertEquals(DeviceSetupErrorReason.ScanTimeout, state.errorReason)
         assertTrue(state.canRetryScan)
         assertTrue(state.isPrimaryEnabled)
-        assertEquals(SetupStep.Scanning, state.setupStep)
+        assertEquals(SetupStep.NoDeviceFound, state.setupStep)
     }
 
     @Test
@@ -128,7 +128,7 @@ class DeviceSetupViewModelRobustnessTest {
         advanceTimeBy(13_000)
         dispatcher.scheduler.runCurrent()
         assertEquals(DeviceSetupStep.Scanning, viewModel.uiState.value.step)
-        assertEquals(SetupStep.Scanning, viewModel.uiState.value.setupStep)
+        assertEquals(SetupStep.NoDeviceFound, viewModel.uiState.value.setupStep)
         assertTrue(viewModel.uiState.value.canRetryScan)
 
         connection.state.value = ConnectionState.WifiProvisioned(
@@ -150,7 +150,7 @@ class DeviceSetupViewModelRobustnessTest {
         dispatcher.scheduler.runCurrent()
 
         assertEquals(DeviceSetupStep.Scanning, viewModel.uiState.value.step)
-        assertEquals(SetupStep.Scanning, viewModel.uiState.value.setupStep)
+        assertEquals(SetupStep.NoDeviceFound, viewModel.uiState.value.setupStep)
     }
 
     private fun createViewModel(

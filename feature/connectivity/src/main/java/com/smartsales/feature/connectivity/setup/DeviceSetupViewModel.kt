@@ -486,7 +486,6 @@ class DeviceSetupViewModel @Inject constructor(
         updateUi {
             it.copy(
                 step = DeviceSetupStep.Scanning,
-                setupStep = DeviceSetupStep.Scanning.toSetupStep(),
                 isActionInProgress = false,
                 isScanning = false,
                 canRetryScan = true,
@@ -502,7 +501,10 @@ class DeviceSetupViewModel @Inject constructor(
     }
 
     private fun DeviceSetupUiState.enrich(): DeviceSetupUiState {
-        val mappedSetupStep = step.toSetupStep()
+        val mappedSetupStep = when {
+            step == DeviceSetupStep.Scanning && canRetryScan && !isScanning -> SetupStep.NoDeviceFound
+            else -> step.toSetupStep()
+        }
         val (desc, primary, secondary, showWifi, enabled) = when (step) {
             DeviceSetupStep.Idle,
             DeviceSetupStep.Scanning -> {

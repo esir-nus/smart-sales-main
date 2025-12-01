@@ -168,6 +168,7 @@ class DeviceSetupViewModelTest {
         assertEquals(DeviceSetupStep.Scanning, state.step)
         assertTrue(state.canRetryScan)
         assertTrue(state.isScanning.not())
+        assertEquals(SetupStep.NoDeviceFound, state.setupStep)
     }
 
     private class FakeDeviceConnectionManager : DeviceConnectionManager {

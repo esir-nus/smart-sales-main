@@ -8,9 +8,11 @@ import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.pm.PackageManager
+import android.util.Log
 import com.smartsales.feature.connectivity.BlePeripheral
 import com.smartsales.feature.connectivity.BleProfileConfig
 import com.smartsales.feature.connectivity.ConnectivityLogger
+import com.smartsales.feature.connectivity.BuildConfig
 import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -47,6 +49,8 @@ class AndroidBleScanner @Inject constructor(
     private val _isScanning = MutableStateFlow(false)
     override val isScanning: StateFlow<Boolean> = _isScanning
 
+    private var debugLoggedCount = 0
+
     private val callback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             handleResult(result)
@@ -67,6 +71,7 @@ class AndroidBleScanner @Inject constructor(
         }
         _devices.value = emptyList()
         _isScanning.value = true
+        debugLoggedCount = 0
         runCatching { scanner?.startScan(null, scanSettings, callback) }
             .onFailure {
                 _isScanning.value = false
@@ -91,6 +96,7 @@ class AndroidBleScanner @Inject constructor(
             advertise?.serviceUuids?.map { it.uuid }?.let { addAll(it) }
             advertise?.bytes?.let { addAll(parseAdvertisedUuids(it)) }
         }
+        logDebug(device.address, displayName, advertisedUuids)
         ConnectivityLogger.d(
             "扫描到设备 ${device.address} (${displayName.ifBlank { "Unknown" }}) rssi=${result.rssi} uuids=${advertisedUuids.joinToString()}"
         )
@@ -164,5 +170,17 @@ class AndroidBleScanner @Inject constructor(
             }
         }
         return uuids
+    }
+
+    private fun logDebug(address: String, name: String, uuids: List<java.util.UUID>) {
+        if (!BuildConfig.DEBUG) return
+        if (debugLoggedCount >= 30) return
+        val defaultProfile = profiles.firstOrNull()
+        val matches = defaultProfile?.matches(name, uuids) ?: false
+        Log.d(
+            "BT311Scan",
+            "addr=$address, name=${name.ifBlank { "Unknown" }}, uuids=${uuids.joinToString()}, matches=$matches"
+        )
+        debugLoggedCount += 1
     }
 }

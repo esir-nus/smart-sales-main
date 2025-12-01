@@ -612,6 +612,17 @@ private fun VerticalOverlayLayout(
                     .fillMaxSize()
             ) { home() }
 
+            val isOverlayOpen = kotlin.math.abs(stackOffset - homeAnchor) > 1f
+            if (isOverlayOpen) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                        .clickable { onOverlayChange(HomeOverlay.Home) }
+                        .testTag(AiFeatureTestTags.OVERLAY_BACKDROP)
+                )
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -623,16 +634,6 @@ private fun VerticalOverlayLayout(
                     .fillMaxSize()
                     .offset { IntOffset(0, deviceOffset.roundToInt()) }
             ) { device() }
-
-            if (kotlin.math.abs(stackOffset - homeAnchor) > 1f) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
-                        .clickable { onOverlayChange(HomeOverlay.Home) }
-                        .testTag(AiFeatureTestTags.OVERLAY_BACKDROP)
-                )
-            }
         }
     }
 }

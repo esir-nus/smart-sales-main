@@ -203,8 +203,12 @@ class DeviceHttpEndpointProviderImplTest {
 
         override fun forgetDevice() = Unit
 
+        override fun forceReconnectNow() = Unit
+
         override suspend fun requestHotspotCredentials(): Result<WifiCredentials> =
             Result.Error(UnsupportedOperationException("not used"))
+
+        override fun scheduleAutoReconnectIfNeeded() = Unit
 
         override suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus> {
             queryCount += 1

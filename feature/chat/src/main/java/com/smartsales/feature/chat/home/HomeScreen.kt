@@ -38,7 +38,6 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -159,6 +158,9 @@ fun HomeScreenRoute(
         onDeviceBannerClicked = viewModel::onTapDeviceBanner,
         onAudioSummaryClicked = viewModel::onTapAudioSummary,
         onRefreshDeviceAndAudio = viewModel::onRefreshDeviceAndAudio,
+        onExportPdfClicked = viewModel::onExportPdfClicked,
+        onExportCsvClicked = viewModel::onExportCsvClicked,
+        exportInProgress = state.exportInProgress,
         onLoadMoreHistory = viewModel::onLoadMoreHistory,
         onProfileClicked = viewModel::onTapProfile,
         onNewChatClicked = viewModel::onNewChatClicked,
@@ -184,21 +186,24 @@ fun HomeScreen(
     onInputChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
     onQuickSkillSelected: (QuickSkillId) -> Unit,
+    onExportPdfClicked: () -> Unit,
+    onExportCsvClicked: () -> Unit,
     onDeviceBannerClicked: () -> Unit,
-        onAudioSummaryClicked: () -> Unit,
-        onRefreshDeviceAndAudio: () -> Unit,
-        onLoadMoreHistory: () -> Unit,
-        onProfileClicked: () -> Unit,
-        onNewChatClicked: () -> Unit = {},
-        onSessionSelected: (String) -> Unit = {},
-        chatErrorMessage: String? = null,
-        modifier: Modifier = Modifier,
-        showHistoryPanel: Boolean = false,
-        onToggleHistoryPanel: () -> Unit = {},
-        onDismissHistoryPanel: () -> Unit = {},
-        historySessions: List<SessionListItemUi> = emptyList(),
-        onHistorySessionSelected: (String) -> Unit = {}
-    ) {
+    onAudioSummaryClicked: () -> Unit,
+    onRefreshDeviceAndAudio: () -> Unit,
+    onLoadMoreHistory: () -> Unit,
+    onProfileClicked: () -> Unit,
+    onNewChatClicked: () -> Unit = {},
+    onSessionSelected: (String) -> Unit = {},
+    chatErrorMessage: String? = null,
+    exportInProgress: Boolean,
+    modifier: Modifier = Modifier,
+    showHistoryPanel: Boolean = false,
+    onToggleHistoryPanel: () -> Unit = {},
+    onDismissHistoryPanel: () -> Unit = {},
+    historySessions: List<SessionListItemUi> = emptyList(),
+    onHistorySessionSelected: (String) -> Unit = {}
+) {
     Log.i("HomeScreen", "HomeScreen composed - entering function")
     val refreshingState = remember { mutableStateOf(false) }
     LaunchedEffect(state.deviceSnapshot, state.audioSummary) {
@@ -264,10 +269,13 @@ fun HomeScreen(
                 enabled = !state.isSending && !state.isStreaming
                     && !state.isInputBusy,
                 busy = state.isInputBusy,
+                exporting = exportInProgress,
                 inputValue = state.inputText,
                 onInputChanged = onInputChanged,
                 onSendClicked = onSendClicked,
-                onQuickSkillSelected = onQuickSkillSelected
+                onQuickSkillSelected = onQuickSkillSelected,
+                onExportPdfClicked = onExportPdfClicked,
+                onExportCsvClicked = onExportCsvClicked
             )
         }
     ) { innerPadding ->
@@ -473,6 +481,8 @@ object HomeScreenTestTags {
     const val SESSION_LIST_ITEM_PREFIX = "home_session_item_"
     const val SESSION_CURRENT_PREFIX = "home_session_current_"
     const val NEW_CHAT_BUTTON = "home_new_chat_button"
+    const val EXPORT_PDF = "home_export_pdf"
+    const val EXPORT_CSV = "home_export_csv"
     const val SESSION_TITLE = "home_session_title"
     const val USER_MESSAGE = "home_user_message"
     const val ASSISTANT_MESSAGE = "home_assistant_message"
@@ -813,10 +823,13 @@ private fun HomeInputArea(
     selectedSkill: QuickSkillUi?,
     enabled: Boolean,
     busy: Boolean,
+    exporting: Boolean,
     inputValue: String,
     onInputChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
-    onQuickSkillSelected: (QuickSkillId) -> Unit
+    onQuickSkillSelected: (QuickSkillId) -> Unit,
+    onExportPdfClicked: () -> Unit,
+    onExportCsvClicked: () -> Unit
 ) {
     Surface(
         tonalElevation = 4.dp
@@ -833,6 +846,11 @@ private fun HomeInputArea(
                 selectedSkillId = selectedSkill?.id,
                 enabled = enabled && !busy,
                 onQuickSkillSelected = onQuickSkillSelected
+            )
+            ExportActionRow(
+                exporting = exporting || busy,
+                onExportPdfClicked = onExportPdfClicked,
+                onExportCsvClicked = onExportCsvClicked
             )
             OutlinedTextField(
                 value = inputValue,
@@ -867,6 +885,31 @@ private fun HomeInputArea(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ExportActionRow(
+    exporting: Boolean,
+    onExportPdfClicked: () -> Unit,
+    onExportCsvClicked: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        AssistChip(
+            onClick = onExportPdfClicked,
+            enabled = !exporting,
+            modifier = Modifier.testTag(HomeScreenTestTags.EXPORT_PDF),
+            label = { Text(text = "导出 PDF") }
+        )
+        AssistChip(
+            onClick = onExportCsvClicked,
+            enabled = !exporting,
+            modifier = Modifier.testTag(HomeScreenTestTags.EXPORT_CSV),
+            label = { Text(text = "导出 CSV") }
+        )
     }
 }
 
@@ -945,28 +988,22 @@ private fun QuickSkillRow(
                     MaterialTheme.colorScheme.onSurface
                 }
             )
-            Box {
-                AssistChip(
-                    onClick = { onQuickSkillSelected(skill.id) },
-                    enabled = enabled,
-                    modifier = Modifier
-                        .testTag(skillTag)
-                        .padding(vertical = 2.dp),
-                    label = {
-                        Text(
-                            text = skill.label,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                    // 快捷技能视为模式选择，仅高亮选中态，不向聊天插入消息
-                    colors = colors
-                )
-                if (isSelected) {
-                    // 测试用：标记当前选中的快捷技能，便于断言选中态
-                    Box(modifier = Modifier.fillMaxSize().testTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP))
-                }
-            }
+            AssistChip(
+                onClick = { onQuickSkillSelected(skill.id) },
+                enabled = enabled,
+                modifier = Modifier
+                    .testTag(skillTag)
+                    .padding(vertical = 2.dp),
+                label = {
+                    Text(
+                        text = skill.label,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
+                // 快捷技能作为快捷填充，无需额外气泡
+                colors = colors
+            )
         }
     }
 }

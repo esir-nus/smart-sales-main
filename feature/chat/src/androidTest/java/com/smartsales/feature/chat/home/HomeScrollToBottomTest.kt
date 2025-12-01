@@ -124,12 +124,15 @@ class HomeScrollToBottomTest {
                     onInputChanged = {},
                     onSendClicked = {},
                     onQuickSkillSelected = { _ -> },
-                    onClearSelectedSkill = {},
+                    onExportPdfClicked = {},
+                    onExportCsvClicked = {},
                     onDeviceBannerClicked = {},
                     onAudioSummaryClicked = {},
                     onRefreshDeviceAndAudio = {},
                     onLoadMoreHistory = {},
                     onProfileClicked = {},
+                    chatErrorMessage = null,
+                    exportInProgress = false
                 )
             }
         }

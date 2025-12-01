@@ -214,6 +214,29 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     fun onExportPdfClicked() {
+        exportMarkdown(ExportFormat.PDF)
+    }
+
+    fun onExportCsvClicked() {
+        exportMarkdown(ExportFormat.CSV)
+    }
+
+    fun onSelectQuickSkill(skillId: QuickSkillId) {
+        val definition = quickSkillDefinitionsById[skillId]
+        if (definition == null) {
+            _uiState.update { it.copy(snackbarMessage = "无法识别的快捷技能") }
+            return
+        }
+        _uiState.update { state ->
+            state.copy(
+                selectedSkill = definition.toUiModel(),
+                inputText = definition.defaultPrompt,
+                chatErrorMessage = null
+            )
+        }
+    }
+
+    private fun exportMarkdown(format: ExportFormat) {
         if (_uiState.value.exportInProgress) return
         val markdown = latestAnalysisMarkdown ?: buildTranscriptMarkdown(_uiState.value.chatMessages)
         if (markdown.isBlank()) {
@@ -222,7 +245,7 @@ class HomeScreenViewModel @Inject constructor(
         }
         _uiState.update { it.copy(exportInProgress = true, chatErrorMessage = null) }
         viewModelScope.launch {
-            when (val result = exportManager.exportMarkdown(markdown, ExportFormat.PDF)) {
+            when (val result = exportManager.exportMarkdown(markdown, format)) {
                 is Result.Success -> {
                     when (val share = shareHandler.shareExport(result.data)) {
                         is Result.Success -> _uiState.update { it.copy(exportInProgress = false) }
@@ -244,19 +267,6 @@ class HomeScreenViewModel @Inject constructor(
                     }
                 }
             }
-        }
-    }
-
-    fun onSelectQuickSkill(skillId: QuickSkillId) {
-        val definition = quickSkillDefinitionsById[skillId]
-        if (definition == null) {
-            _uiState.update { it.copy(snackbarMessage = "无法识别的快捷技能") }
-            return
-        }
-        _uiState.update { state ->
-            state.copy(
-                selectedSkill = definition.toUiModel()
-            )
         }
     }
 
@@ -914,9 +924,10 @@ class HomeScreenViewModel @Inject constructor(
 
     companion object {
         private fun mapSkillToMode(skillId: QuickSkillId?): String? = when (skillId) {
-            QuickSkillId.SUMMARIZE_LAST_MEETING -> "SMART_ANALYS"
-            QuickSkillId.EXTRACT_ACTION_ITEMS -> "GENERATE_PDF"
-            QuickSkillId.WRITE_FOLLOWUP_EMAIL -> "GENERATE_CSV"
+            QuickSkillId.SUMMARIZE_LAST_MEETING -> "SUMMARY"
+            QuickSkillId.EXTRACT_ACTION_ITEMS -> "OBJECTION_ANALYSIS"
+            QuickSkillId.WRITE_FOLLOWUP_EMAIL -> "COACHING"
+            QuickSkillId.PREP_NEXT_MEETING -> "DAILY_REPORT"
             else -> null
         }
 

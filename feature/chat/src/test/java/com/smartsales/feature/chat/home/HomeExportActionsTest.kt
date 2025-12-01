@@ -127,6 +127,18 @@ class HomeExportActionsTest {
     }
 
     @Test
+    fun `quick skill prefills prompt without sending`() = runTest(dispatcher) {
+        viewModel.onSelectQuickSkill(QuickSkillId.SUMMARIZE_LAST_MEETING)
+
+        assertEquals(
+            "请总结当前对话的要点，并给出关键结论与建议。",
+            viewModel.uiState.value.inputText
+        )
+        assertEquals(QuickSkillId.SUMMARIZE_LAST_MEETING, viewModel.uiState.value.selectedSkill?.id)
+        assertTrue(viewModel.uiState.value.chatMessages.isEmpty())
+    }
+
+    @Test
     fun `export pdf uses analysis markdown and shares`() = runTest(dispatcher) {
         viewModel.onSmartAnalysisClicked()
         advanceUntilIdle()
@@ -135,6 +147,19 @@ class HomeExportActionsTest {
         advanceUntilIdle()
 
         assertEquals("分析结果", exportManager.lastMarkdown)
+        assertTrue(shareHandler.shared)
+        assertTrue(!viewModel.uiState.value.exportInProgress)
+    }
+
+    @Test
+    fun `export csv uses analysis markdown and shares`() = runTest(dispatcher) {
+        viewModel.onSmartAnalysisClicked()
+        advanceUntilIdle()
+
+        viewModel.onExportCsvClicked()
+        advanceUntilIdle()
+
+        assertEquals(ExportFormat.CSV, exportManager.lastFormat)
         assertTrue(shareHandler.shared)
         assertTrue(!viewModel.uiState.value.exportInProgress)
     }
@@ -151,8 +176,10 @@ class HomeExportActionsTest {
 
     private class RecordingExportManager : ExportManager {
         var lastMarkdown: String? = null
+        var lastFormat: ExportFormat? = null
         override suspend fun exportMarkdown(markdown: String, format: ExportFormat): Result<ExportResult> {
             lastMarkdown = markdown
+            lastFormat = format
             return Result.Success(ExportResult("demo.pdf", "application/pdf", ByteArray(0)))
         }
     }

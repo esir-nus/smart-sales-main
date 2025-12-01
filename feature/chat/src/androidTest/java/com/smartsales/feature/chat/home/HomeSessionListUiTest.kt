@@ -70,7 +70,8 @@ class HomeSessionListUiTest {
                     onInputChanged = {},
                     onSendClicked = {},
                     onQuickSkillSelected = {},
-                    onClearSelectedSkill = {},
+                    onExportPdfClicked = {},
+                    onExportCsvClicked = {},
                     onDeviceBannerClicked = {},
                     onAudioSummaryClicked = {},
                     onRefreshDeviceAndAudio = {},
@@ -110,7 +111,14 @@ class HomeSessionListUiTest {
                             chatMessages = emptyList(),
                             sessionList = updatedList
                         )
-                    }
+                    },
+                    chatErrorMessage = null,
+                    exportInProgress = false,
+                    showHistoryPanel = false,
+                    onToggleHistoryPanel = {},
+                    onDismissHistoryPanel = {},
+                    historySessions = emptyList(),
+                    onHistorySessionSelected = {}
                 )
             }
         }

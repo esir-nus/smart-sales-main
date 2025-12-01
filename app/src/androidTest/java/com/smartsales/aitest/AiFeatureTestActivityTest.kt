@@ -6,12 +6,15 @@ package com.smartsales.aitest
 // 作者：创建于 2025-11-21
 
 import android.Manifest
+import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
@@ -20,7 +23,6 @@ import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.aitest.TestHomePage
 import com.smartsales.feature.media.audio.AudioFilesTestTags
-import android.os.SystemClock
 import org.junit.rules.RuleChain
 import org.junit.rules.TestRule
 import org.junit.Rule
@@ -86,9 +88,11 @@ class AiFeatureTestActivityTest {
 
         tapQuickSkill(QuickSkillId.SUMMARIZE_LAST_MEETING)
 
-        // 芯片仍可见且高亮，但不应生成任何聊天气泡
+        // 芯片仍可见，输入框被快捷 prompt 预填，但不应生成任何聊天气泡或跳转
         val skillTag = "home_quick_skill_${QuickSkillId.SUMMARIZE_LAST_MEETING.name}"
         composeRule.onNodeWithTag(skillTag, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithTag(HomeScreenTestTags.INPUT_FIELD, useUnmergedTree = true)
+            .assertTextContains("请总结当前对话", substring = true)
         composeRule.onAllNodesWithTag(HomeScreenTestTags.ASSISTANT_MESSAGE, useUnmergedTree = true)
             .fetchSemanticsNodes().size.let { after ->
                 assert(after == assistantBefore)
@@ -97,8 +101,6 @@ class AiFeatureTestActivityTest {
             .fetchSemanticsNodes().size.let { after ->
                 assert(after == userBefore)
             }
-        composeRule.onAllNodesWithTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP, useUnmergedTree = true)
-            .fetchSemanticsNodes().isEmpty()
     }
 
     @Test
@@ -108,8 +110,9 @@ class AiFeatureTestActivityTest {
         tapQuickSkill(QuickSkillId.SUMMARIZE_LAST_MEETING)
 
         // 新 UX 不生成底部技能气泡
-        composeRule.onAllNodesWithTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP, useUnmergedTree = true)
-            .fetchSemanticsNodes().isEmpty()
+        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithTag(HomeScreenTestTags.INPUT_FIELD, useUnmergedTree = true)
+            .assertTextContains("请总结当前对话", substring = true)
     }
 
     @Test
@@ -117,13 +120,31 @@ class AiFeatureTestActivityTest {
         waitForPage(AiFeatureTestTags.PAGE_HOME)
 
         tapQuickSkill(QuickSkillId.SUMMARIZE_LAST_MEETING)
-        composeRule.onNodeWithTag(HomeScreenTestTags.INPUT_FIELD).performTextInput("请总结会议")
+        composeRule.onNodeWithTag(HomeScreenTestTags.INPUT_FIELD, useUnmergedTree = true)
+            .performTextClearance()
+        composeRule.onNodeWithTag(HomeScreenTestTags.INPUT_FIELD, useUnmergedTree = true)
+            .performTextInput("请总结会议")
         composeRule.onNodeWithTag(HomeScreenTestTags.SEND_BUTTON).performClick()
 
         composeRule.waitForIdle()
         // 发送后仍不应出现技能气泡
         composeRule.onAllNodesWithTag(HomeScreenTestTags.ACTIVE_SKILL_CHIP, useUnmergedTree = true)
             .fetchSemanticsNodes().isEmpty()
+    }
+
+    @Test
+    fun exportButtons_doNotNavigateAway() {
+        waitForPage(AiFeatureTestTags.PAGE_HOME)
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.EXPORT_PDF, useUnmergedTree = true)
+            .assertIsDisplayed()
+            .performClick()
+        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertExists()
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.EXPORT_CSV, useUnmergedTree = true)
+            .assertIsDisplayed()
+            .performClick()
+        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertExists()
     }
 
     @Test

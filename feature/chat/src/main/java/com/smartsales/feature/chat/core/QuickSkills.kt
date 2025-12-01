@@ -34,25 +34,33 @@ class DefaultQuickSkillCatalog : QuickSkillCatalog {
         return listOf(
             QuickSkillDefinition(
                 id = QuickSkillId.SUMMARIZE_LAST_MEETING,
-                label = "智能分析",
+                label = "内容总结",
                 description = "生成对话总结与建议。",
-                defaultPrompt = "请对当前会话进行综合分析，并给出可执行建议。",
+                defaultPrompt = "请总结当前对话的要点，并给出关键结论与建议。",
                 requiresAudioContext = false,
                 isRecommended = true
             ),
             QuickSkillDefinition(
                 id = QuickSkillId.EXTRACT_ACTION_ITEMS,
-                label = "导出 PDF",
-                description = "生成 PDF 报告。",
-                defaultPrompt = "请基于对话生成 PDF 报告的大纲和内容。",
+                label = "异议分析",
+                description = "提炼客户异议与应对。",
+                defaultPrompt = "请分析对话中的客户异议，并给出应对要点和建议话术。",
                 requiresAudioContext = false,
                 isRecommended = true
             ),
             QuickSkillDefinition(
                 id = QuickSkillId.WRITE_FOLLOWUP_EMAIL,
-                label = "Generate CSV",
-                description = "导出 CSV 模式，发送消息时按此模式处理。",
-                defaultPrompt = "请整理对话要点并生成 CSV 字段与样例。",
+                label = "话术辅导",
+                description = "生成下一步沟通话术。",
+                defaultPrompt = "请根据当前对话，为下一次跟进生成具体的话术建议。",
+                requiresAudioContext = false,
+                isRecommended = true
+            ),
+            QuickSkillDefinition(
+                id = QuickSkillId.PREP_NEXT_MEETING,
+                label = "生成日报",
+                description = "整理日报格式输出。",
+                defaultPrompt = "请按日报格式整理今日沟通的摘要、行动项与风险提醒。",
                 requiresAudioContext = false,
                 isRecommended = true
             )

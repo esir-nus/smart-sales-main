@@ -6,7 +6,6 @@ package com.smartsales.aitest.ui.screens.home
 // 作者：创建于 2025-12-02
 
 import android.net.Uri
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -233,7 +232,7 @@ fun HomeScreen(
                             state = listState,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(messages, key = { it.id }) { message ->
                                 ChatMessageBubble(message = message)
@@ -472,4 +471,3 @@ private fun ScrollToLatestButton(
         }
     }
 }
-import androidx.compose.runtime.rememberCoroutineScope

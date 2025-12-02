@@ -72,6 +72,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -399,23 +400,28 @@ fun HomeScreen(
                                         } else {
                                             Modifier
                                         }
-                                        MessageBubble(
-                                            message = message,
-                                            alignEnd = message.role == ChatMessageRole.USER,
-                                            modifier = tagModifier,
-                                            onCopyAssistant = { content ->
-                                                clipboardManager.setText(AnnotatedString(content))
-                                                coroutineScope.launch {
-                                                    snackbarHostState.showSnackbar("已复制到剪贴板")
-                                                }
+                                    MessageBubble(
+                                        message = message,
+                                        alignEnd = message.role == ChatMessageRole.USER,
+                                        modifier = tagModifier,
+                                        onCopyAssistant = { content ->
+                                            clipboardManager.setText(AnnotatedString(content))
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar("已复制到剪贴板")
                                             }
-                                        )
-                                    }
-                                    item("chat-bottom-pad") {
-                                        Spacer(modifier = Modifier.height(72.dp))
+                                        }
+                                    )
+                                }
+                                if (state.chatMessages.lastOrNull()?.isStreaming == true) {
+                                    item("typing-indicator") {
+                                        AssistantTypingBubble()
                                     }
                                 }
+                                item("chat-bottom-pad") {
+                                    Spacer(modifier = Modifier.height(72.dp))
+                                }
                             }
+                        }
                             if (showScrollToLatest.value) {
                                 ScrollToLatestButton(
                                     modifier = Modifier
@@ -854,20 +860,16 @@ private fun MessageBubble(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
             .then(if (alignEnd) Modifier.testTag(HomeScreenTestTags.USER_MESSAGE) else modifier),
         contentAlignment = if (alignEnd) Alignment.CenterEnd else Alignment.CenterStart
     ) {
-        val shape = if (alignEnd) {
-            RoundedCornerShape(topStart = 16.dp, topEnd = 2.dp, bottomEnd = 16.dp, bottomStart = 16.dp)
-        } else {
-            RoundedCornerShape(topStart = 2.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 16.dp)
-        }
+        val shape = RoundedCornerShape(14.dp)
         Surface(
-            modifier = Modifier.fillMaxWidth(0.88f),
+            modifier = Modifier.fillMaxWidth(0.9f),
             shape = shape,
-            tonalElevation = 2.dp,
-            shadowElevation = 2.dp,
+            tonalElevation = if (alignEnd) 2.dp else 3.dp,
+            shadowElevation = 0.dp,
             color = if (alignEnd) {
                 MaterialTheme.colorScheme.primaryContainer
             } else {
@@ -912,14 +914,6 @@ private fun MessageBubble(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                if (message.isStreaming) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "AI 回复中...",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
                 if (message.hasError) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(

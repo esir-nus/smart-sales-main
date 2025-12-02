@@ -394,24 +394,28 @@ private fun OverlayScaffold(
                         .fillMaxSize()
                         .testTag(AiFeatureTestTags.OVERLAY_HOME_LAYER)
                         .testTag(AiFeatureTestTags.PAGE_HOME)
-                        .testTag(HomeScreenTestTags.ROOT)
                 ) {
-                    HomeScreenRoute(
-                        modifier = Modifier.fillMaxSize(),
-                        viewModel = homeViewModel,
-                        sessionId = pendingSessionId,
-                        selectedSessionId = pendingSessionId,
-                        onSessionSelectionConsumed = onPendingSessionConsumed,
-                        onNavigateToDeviceManager = { onOverlayChange(HomeOverlay.Device) },
-                        onNavigateToDeviceSetup = {
-                            setPage(TestHomePage.DeviceSetup)
-                            onOverlayChange(HomeOverlay.Home)
-                        },
-                        onNavigateToAudioFiles = { onOverlayChange(HomeOverlay.Audio) },
-                        onNavigateToUserCenter = { setPage(TestHomePage.UserCenter) },
-                        onNavigateToChatHistory = { setPage(TestHomePage.ChatHistory) },
-                        onDeviceSnapshotChanged = onDeviceSnapshotChanged
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                    ) {
+                        HomeScreenRoute(
+                            modifier = Modifier.fillMaxSize(),
+                            viewModel = homeViewModel,
+                            sessionId = pendingSessionId,
+                            selectedSessionId = pendingSessionId,
+                            onSessionSelectionConsumed = onPendingSessionConsumed,
+                            onNavigateToDeviceManager = { onOverlayChange(HomeOverlay.Device) },
+                            onNavigateToDeviceSetup = {
+                                setPage(TestHomePage.DeviceSetup)
+                                onOverlayChange(HomeOverlay.Home)
+                            },
+                            onNavigateToAudioFiles = { onOverlayChange(HomeOverlay.Audio) },
+                            onNavigateToUserCenter = { setPage(TestHomePage.UserCenter) },
+                            onNavigateToChatHistory = { setPage(TestHomePage.ChatHistory) },
+                            onDeviceSnapshotChanged = onDeviceSnapshotChanged
+                        )
+                    }
                 }
             },
             audio = {

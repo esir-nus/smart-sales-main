@@ -10,12 +10,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
+import androidx.compose.material3.Divider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
@@ -40,7 +46,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.aitest.ui.components.ChatMessageBubble
-import com.smartsales.aitest.ui.components.ChatWelcomeScreen
 import com.smartsales.aitest.ui.components.SkillChips
 import com.smartsales.aitest.ui.screens.home.model.SkillSuggestion
 import com.smartsales.aitest.ui.screens.home.model.toSkillSuggestion
@@ -59,7 +64,7 @@ fun HomeScreen(
     val messages = uiState.chatMessages.toUiMessages()
     val skills: List<SkillSuggestion> = uiState.quickSkills.map { it.toSkillSuggestion() }
     val isLoading = uiState.isStreaming || uiState.isSending
-    val showWelcome = uiState.showWelcomeHero && uiState.chatMessages.isEmpty()
+    val isEmptySession = uiState.chatMessages.isEmpty()
     val inputEnabled = !uiState.isInputBusy && !uiState.isBusy
     val canSend = uiState.inputText.isNotBlank() && !uiState.isBusy
 
@@ -85,40 +90,8 @@ fun HomeScreen(
                     }
                 }
             )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .testTag("page_home"),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
-                if (showWelcome) {
-                    ChatWelcomeScreen(userName = uiState.userName, modifier = Modifier.fillMaxSize())
-                } else {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        items(messages, key = { it.id }) { message ->
-                            ChatMessageBubble(message = message)
-                        }
-                        if (isLoading) {
-                            item(key = "typing") {
-                                TypingIndicator()
-                            }
-                        }
-                    }
-                }
-            }
+        },
+        bottomBar = {
             Surface(
                 shadowElevation = 8.dp,
                 tonalElevation = 2.dp
@@ -128,12 +101,6 @@ fun HomeScreen(
                         ErrorBanner(
                             message = error,
                             onDismiss = { viewModel.onDismissError() }
-                        )
-                    }
-                    if (uiState.chatMessages.isEmpty()) {
-                        SkillChips(
-                            skills = skills,
-                            onSkillClick = { skill -> viewModel.onSelectQuickSkill(skill.id) }
                         )
                     }
                     ChatInputArea(
@@ -147,6 +114,38 @@ fun HomeScreen(
                         inputEnabled = inputEnabled,
                         canSend = canSend
                     )
+                }
+            }
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.08f))
+                .testTag("page_home")
+        ) {
+            if (isEmptySession) {
+                EmptyConversationContent(
+                    userName = uiState.userName,
+                    skills = skills.take(3),
+                    onSkillClick = { skill -> viewModel.onSelectQuickSkill(skill.id) }
+                )
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    items(messages, key = { it.id }) { message ->
+                        ChatMessageBubble(message = message)
+                    }
+                    if (isLoading) {
+                        item(key = "typing") {
+                            TypingIndicator()
+                        }
+                    }
                 }
             }
         }
@@ -173,7 +172,7 @@ private fun ChatInputArea(
             modifier = Modifier.fillMaxWidth(),
             maxLines = 4,
             enabled = inputEnabled,
-            placeholder = { Text(text = "输入消息...") }
+            placeholder = { Text(text = "上传文件或输入消息...") }
         )
         FilledIconButton(
             onClick = onSend,
@@ -226,5 +225,87 @@ private fun ErrorBanner(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun EmptyConversationContent(
+    userName: String,
+    skills: List<SkillSuggestion>,
+    onSkillClick: (SkillSuggestion) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        EmptyHeroBlock(userName = userName)
+        CapabilitiesBlock()
+        Text(
+            text = "让我们开始吧",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(top = 4.dp)
+        )
+        SkillChips(
+            skills = skills,
+            onSkillClick = onSkillClick,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Divider(modifier = Modifier.fillMaxWidth())
+    }
+}
+
+@Composable
+private fun EmptyHeroBlock(
+    userName: String
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "LOGO",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = "你好, $userName",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = "我是您的销售助手",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+@Composable
+private fun CapabilitiesBlock() {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text(
+            text = "我可以帮您：",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = "• 分析用户画像、意图、痛点。",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = "• 生成 PDF、CSV 文档及思维导图。",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

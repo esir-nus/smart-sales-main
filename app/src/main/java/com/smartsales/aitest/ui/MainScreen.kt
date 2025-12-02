@@ -30,7 +30,7 @@ import com.smartsales.aitest.navigation.Screen
 import com.smartsales.aitest.ui.screens.audio.AudioFilesScreen
 import com.smartsales.aitest.ui.screens.device.DeviceManagerScreen
 import com.smartsales.aitest.ui.screens.home.HomeScreen
-import com.smartsales.aitest.ui.screens.user.UserPlaceholder
+import com.smartsales.aitest.ui.screens.user.UserCenterScreen
 
 @Composable
 fun MainScreen() {
@@ -69,7 +69,7 @@ fun MainScreen() {
             composable(Screen.Home.route) { HomeScreen() }
             composable(Screen.Audio.route) { AudioFilesScreen() }
             composable(Screen.Device.route) { DeviceManagerScreen() }
-            composable(Screen.User.route) { UserPlaceholder() }
+            composable(Screen.User.route) { UserCenterScreen() }
         }
     }
 }

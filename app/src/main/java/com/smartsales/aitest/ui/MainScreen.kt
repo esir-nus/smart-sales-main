@@ -28,7 +28,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.smartsales.aitest.navigation.Screen
 import com.smartsales.aitest.ui.screens.audio.AudioFilesScreen
-import com.smartsales.aitest.ui.screens.device.DevicePlaceholder
+import com.smartsales.aitest.ui.screens.device.DeviceManagerScreen
 import com.smartsales.aitest.ui.screens.home.HomeScreen
 import com.smartsales.aitest.ui.screens.user.UserPlaceholder
 
@@ -68,7 +68,7 @@ fun MainScreen() {
         ) {
             composable(Screen.Home.route) { HomeScreen() }
             composable(Screen.Audio.route) { AudioFilesScreen() }
-            composable(Screen.Device.route) { DevicePlaceholder() }
+            composable(Screen.Device.route) { DeviceManagerScreen() }
             composable(Screen.User.route) { UserPlaceholder() }
         }
     }

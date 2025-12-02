@@ -9,7 +9,10 @@ enum class QuickSkillId {
     SUMMARIZE_LAST_MEETING,
     EXTRACT_ACTION_ITEMS,
     WRITE_FOLLOWUP_EMAIL,
-    PREP_NEXT_MEETING
+    PREP_NEXT_MEETING,
+    SMART_ANALYSIS,
+    EXPORT_PDF,
+    EXPORT_CSV
 }
 
 /** 快捷技能定义，包含 UI 标签与默认 Prompt。 */
@@ -63,6 +66,30 @@ class DefaultQuickSkillCatalog : QuickSkillCatalog {
                 defaultPrompt = "请按日报格式整理今日沟通的摘要、行动项与风险提醒。",
                 requiresAudioContext = false,
                 isRecommended = true
+            ),
+            QuickSkillDefinition(
+                id = QuickSkillId.SMART_ANALYSIS,
+                label = "智能分析",
+                description = "汇总并分析当前上下文。",
+                defaultPrompt = "请基于当前对话与上下文，给出简明的智能分析和关键结论。",
+                requiresAudioContext = false,
+                isRecommended = true
+            ),
+            QuickSkillDefinition(
+                id = QuickSkillId.EXPORT_PDF,
+                label = "生成 PDF",
+                description = "导出当前对话为 PDF。",
+                defaultPrompt = "",
+                requiresAudioContext = false,
+                isRecommended = false
+            ),
+            QuickSkillDefinition(
+                id = QuickSkillId.EXPORT_CSV,
+                label = "生成 CSV",
+                description = "导出当前对话为 CSV。",
+                defaultPrompt = "",
+                requiresAudioContext = false,
+                isRecommended = false
             )
         )
     }

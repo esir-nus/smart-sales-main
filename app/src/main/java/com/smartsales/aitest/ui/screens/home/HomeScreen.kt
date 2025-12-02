@@ -6,8 +6,17 @@ package com.smartsales.aitest.ui.screens.home
 // 作者：创建于 2025-12-02
 
 import android.net.Uri
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.with
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,22 +27,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.background
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.AudioFile
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material3.Divider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.AudioFile
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -51,13 +58,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import com.smartsales.aitest.ui.components.ChatMessageBubble
 import com.smartsales.aitest.ui.components.SkillChips
 import com.smartsales.aitest.ui.screens.home.model.SkillSuggestion
@@ -67,7 +77,7 @@ import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.chat.home.HomeScreenViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeScreenViewModel,
@@ -75,21 +85,22 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
     val messages = uiState.chatMessages.toUiMessages()
     val skills: List<SkillSuggestion> = uiState.quickSkills.map { it.toSkillSuggestion() }
     val emptySkillOrder = listOf(
-        QuickSkillId.SUMMARIZE_LAST_MEETING,
-        QuickSkillId.PREP_NEXT_MEETING,
-        QuickSkillId.WRITE_FOLLOWUP_EMAIL
+        QuickSkillId.SMART_ANALYSIS,
+        QuickSkillId.EXPORT_PDF,
+        QuickSkillId.EXPORT_CSV
     )
     val emptySkills: List<SkillSuggestion> = uiState.quickSkills
         .filter { it.id in emptySkillOrder }
         .sortedBy { emptySkillOrder.indexOf(it.id) }
         .map { quick ->
             val customLabel = when (quick.id) {
-                QuickSkillId.SUMMARIZE_LAST_MEETING -> "智能分析"
-                QuickSkillId.PREP_NEXT_MEETING -> "生成 PDF"
-                QuickSkillId.WRITE_FOLLOWUP_EMAIL -> "生成 CSV"
+                QuickSkillId.SMART_ANALYSIS -> "智能分析"
+                QuickSkillId.EXPORT_PDF -> "生成 PDF"
+                QuickSkillId.EXPORT_CSV -> "生成 CSV"
                 else -> quick.label
             }
             quick.toSkillSuggestion().copy(label = customLabel)
@@ -98,12 +109,8 @@ fun HomeScreen(
     val isEmptySession = uiState.chatMessages.isEmpty()
     val inputEnabled = !uiState.isInputBusy && !uiState.isBusy
     val canSend = uiState.inputText.isNotBlank() && !uiState.isBusy
+    var showScrollToLatest by remember { mutableStateOf(false) }
     var uploadMenuExpanded by rememberSaveable { mutableStateOf(false) }
-    val filePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        uri?.let { viewModel.onAudioFilePicked(it) }
-    }
     val audioPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -118,6 +125,18 @@ fun HomeScreen(
     LaunchedEffect(uiState.chatMessages.size) {
         if (uiState.chatMessages.isNotEmpty()) {
             listState.animateScrollToItem(uiState.chatMessages.size - 1)
+        }
+    }
+    LaunchedEffect(isEmptySession) {
+        if (isEmptySession) {
+            showScrollToLatest = false
+        }
+    }
+    LaunchedEffect(listState) {
+        androidx.compose.runtime.snapshotFlow { listState.layoutInfo }.collect { layoutInfo ->
+            val lastVisible = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            val lastIndex = (layoutInfo.totalItemsCount - 1).coerceAtLeast(0)
+            showScrollToLatest = lastVisible < lastIndex && !isEmptySession
         }
     }
 
@@ -143,7 +162,17 @@ fun HomeScreen(
                 shadowElevation = 8.dp,
                 tonalElevation = 2.dp
             ) {
-                Column {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(bottom = 4.dp)
+                ) {
+                    if (!isEmptySession) {
+                        SkillChips(
+                            skills = emptySkills,
+                            onSkillClick = { skill -> viewModel.onSelectQuickSkill(skill.id) },
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+                    }
                     uiState.chatErrorMessage?.let { error ->
                         ErrorBanner(
                             message = error,
@@ -163,10 +192,6 @@ fun HomeScreen(
                         onUploadClick = { uploadMenuExpanded = true },
                         uploadMenuExpanded = uploadMenuExpanded,
                         onUploadMenuDismiss = { uploadMenuExpanded = false },
-                        onUploadFile = {
-                            uploadMenuExpanded = false
-                            filePicker.launch(arrayOf("*/*"))
-                        },
                         onUploadAudio = {
                             uploadMenuExpanded = false
                             audioPicker.launch(arrayOf("audio/*"))
@@ -187,25 +212,52 @@ fun HomeScreen(
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.08f))
                 .testTag("page_home")
         ) {
-            if (isEmptySession) {
-                EmptyConversationContent(
-                    userName = uiState.userName,
-                    skills = emptySkills,
-                    onSkillClick = { skill -> viewModel.onSelectQuickSkill(skill.id) }
-                )
-            } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    items(messages, key = { it.id }) { message ->
-                        ChatMessageBubble(message = message)
-                    }
-                    if (isLoading) {
-                        item(key = "typing") {
-                            TypingIndicator()
+            AnimatedContent(
+                targetState = isEmptySession,
+                transitionSpec = {
+                    (fadeIn() + slideInVertically { it / 8 }) with
+                        (fadeOut() + slideOutVertically { -it / 8 })
+                },
+                modifier = Modifier.fillMaxSize(),
+                label = "home_empty_transition"
+            ) { empty ->
+                if (empty) {
+                    EmptyConversationContent(
+                        userName = uiState.userName,
+                        skills = emptySkills,
+                        onSkillClick = { skill -> viewModel.onSelectQuickSkill(skill.id) }
+                    )
+                } else {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            items(messages, key = { it.id }) { message ->
+                                ChatMessageBubble(message = message)
+                            }
+                            if (isLoading) {
+                                item(key = "typing") {
+                                    TypingIndicator()
+                                }
+                            }
+                        }
+                        if (showScrollToLatest) {
+                            ScrollToLatestButton(
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(16.dp),
+                                onClick = {
+                                    val lastIndex = messages.lastIndex
+                                    if (lastIndex >= 0) {
+                                        coroutineScope.launch {
+                                            listState.animateScrollToItem(lastIndex)
+                                        }
+                                    }
+                                }
+                            )
                         }
                     }
                 }
@@ -224,7 +276,6 @@ private fun ChatInputArea(
     onUploadClick: () -> Unit,
     uploadMenuExpanded: Boolean,
     onUploadMenuDismiss: () -> Unit,
-    onUploadFile: () -> Unit,
     onUploadAudio: () -> Unit,
     onUploadImage: () -> Unit
 ) {
@@ -246,11 +297,6 @@ private fun ChatInputArea(
                 expanded = uploadMenuExpanded,
                 onDismissRequest = onUploadMenuDismiss
             ) {
-                DropdownMenuItem(
-                    leadingIcon = { Icon(Icons.Outlined.Description, contentDescription = null) },
-                    text = { Text(text = "上传文件") },
-                    onClick = onUploadFile
-                )
                 DropdownMenuItem(
                     leadingIcon = { Icon(Icons.Outlined.AudioFile, contentDescription = null) },
                     text = { Text(text = "上传音频") },
@@ -405,3 +451,25 @@ private fun CapabilitiesBlock() {
         )
     }
 }
+
+@Composable
+private fun ScrollToLatestButton(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier.testTag(HomeScreenTestTags.SCROLL_TO_LATEST),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        tonalElevation = 6.dp
+    ) {
+        IconButton(onClick = onClick) {
+            Icon(
+                imageVector = Icons.Filled.Send,
+                contentDescription = "跳至最新",
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+    }
+}
+import androidx.compose.runtime.rememberCoroutineScope

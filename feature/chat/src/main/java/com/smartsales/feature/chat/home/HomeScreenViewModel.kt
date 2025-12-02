@@ -240,12 +240,33 @@ class HomeScreenViewModel @Inject constructor(
             _uiState.update { it.copy(snackbarMessage = "无法识别的快捷技能") }
             return
         }
-        _uiState.update { state ->
-            state.copy(
-                selectedSkill = definition.toUiModel(),
-                inputText = definition.defaultPrompt,
-                chatErrorMessage = null
-            )
+        when (skillId) {
+            QuickSkillId.SMART_ANALYSIS -> {
+                val prompt = definition.defaultPrompt.ifBlank {
+                    "请基于当前对话与上下文，给出简明的智能分析和关键结论。"
+                }
+                sendMessageInternal(
+                    messageText = prompt,
+                    skillOverride = QuickSkillId.SMART_ANALYSIS
+                ) { summary ->
+                    latestAnalysisMarkdown = summary
+                }
+            }
+            QuickSkillId.EXPORT_PDF -> {
+                onExportPdfClicked()
+            }
+            QuickSkillId.EXPORT_CSV -> {
+                onExportCsvClicked()
+            }
+            else -> {
+                _uiState.update { state ->
+                    state.copy(
+                        selectedSkill = definition.toUiModel(),
+                        inputText = definition.defaultPrompt,
+                        chatErrorMessage = null
+                    )
+                }
+            }
         }
     }
 

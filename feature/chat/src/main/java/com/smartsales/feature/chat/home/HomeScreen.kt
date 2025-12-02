@@ -4,6 +4,13 @@ import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.with
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -46,6 +53,7 @@ import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.material3.Divider
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
@@ -194,7 +202,7 @@ fun HomeScreenRoute(
     )
 }
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(ExperimentalMaterialApi::class, ExperimentalAnimationApi::class)
 @Composable
 fun HomeScreen(
     state: HomeUiState,
@@ -251,18 +259,18 @@ fun HomeScreen(
 
     val listState = rememberLazyListState()
     val emptySkillOrder = listOf(
-        QuickSkillId.SUMMARIZE_LAST_MEETING,
-        QuickSkillId.PREP_NEXT_MEETING,
-        QuickSkillId.WRITE_FOLLOWUP_EMAIL
+        QuickSkillId.SMART_ANALYSIS,
+        QuickSkillId.EXPORT_PDF,
+        QuickSkillId.EXPORT_CSV
     )
-    val emptySkills = state.quickSkills
+    val allowedSkills = state.quickSkills
         .filter { it.id in emptySkillOrder }
         .sortedBy { emptySkillOrder.indexOf(it.id) }
         .map { quick ->
             val customLabel = when (quick.id) {
-                QuickSkillId.SUMMARIZE_LAST_MEETING -> "智能分析"
-                QuickSkillId.PREP_NEXT_MEETING -> "生成 PDF"
-                QuickSkillId.WRITE_FOLLOWUP_EMAIL -> "生成 CSV"
+                QuickSkillId.SMART_ANALYSIS -> "智能分析"
+                QuickSkillId.EXPORT_PDF -> "生成 PDF"
+                QuickSkillId.EXPORT_CSV -> "生成 CSV"
                 else -> quick.label
             }
             quick.copy(label = customLabel)
@@ -314,8 +322,9 @@ fun HomeScreen(
             },
             bottomBar = {
                 HomeInputArea(
-                    quickSkills = state.quickSkills,
+                    quickSkills = allowedSkills,
                     selectedSkill = state.selectedSkill,
+                    showQuickSkills = state.chatMessages.isNotEmpty(),
                     enabled = !state.isBusy,
                     busy = state.isBusy,
                     inputValue = state.inputText,
@@ -333,29 +342,27 @@ fun HomeScreen(
                     .padding(innerPadding)
                     .pullRefresh(pullRefreshState)
             ) {
-                Column(
+                AnimatedContent(
+                    targetState = state.chatMessages.isEmpty(),
+                    transitionSpec = {
+                        (fadeIn() + slideInVertically { it / 8 }) with
+                            (fadeOut() + slideOutVertically { -it / 8 })
+                    },
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 16.dp)
-                ) {
-                    val showHero = state.showWelcomeHero && !state.isLoadingHistory && !state.currentSession.isTranscription
-                    if (showHero) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth()
-                        ) {
-                            EmptyStateContent(
-                                userName = state.userName,
-                                skills = emptySkills,
-                                onSkillSelected = onQuickSkillSelected
-                            )
-                        }
+                        .padding(horizontal = 16.dp),
+                    label = "feature_home_empty_transition"
+                ) { empty ->
+                    if (empty) {
+                        EmptyStateContent(
+                            userName = state.userName,
+                            skills = allowedSkills,
+                            onSkillSelected = onQuickSkillSelected
+                        )
                     } else {
                         Box(
                             modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth()
+                                .fillMaxSize()
                         ) {
                             val hasActiveChat = state.chatMessages.isNotEmpty()
                             LazyColumn(
@@ -408,6 +415,21 @@ fun HomeScreen(
                                         Spacer(modifier = Modifier.height(72.dp))
                                     }
                                 }
+                            }
+                            if (showScrollToLatest.value) {
+                                ScrollToLatestButton(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .padding(16.dp),
+                                    onClick = {
+                                        val lastIndex = state.chatMessages.lastIndex
+                                        if (lastIndex >= 0) {
+                                            coroutineScope.launch {
+                                                listState.animateScrollToItem(lastIndex)
+                                            }
+                                        }
+                                    }
+                                )
                             }
                         }
                     }
@@ -951,6 +973,7 @@ private fun EmptySessionHint(onNewChatClicked: () -> Unit) {
 private fun HomeInputArea(
     quickSkills: List<QuickSkillUi>,
     selectedSkill: QuickSkillUi?,
+    showQuickSkills: Boolean,
     enabled: Boolean,
     busy: Boolean,
     inputValue: String,
@@ -969,12 +992,14 @@ private fun HomeInputArea(
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            QuickSkillRow(
-                skills = quickSkills,
-                selectedSkillId = selectedSkill?.id,
-                enabled = enabled && !busy,
-                onQuickSkillSelected = onQuickSkillSelected
-            )
+            if (showQuickSkills) {
+                QuickSkillRow(
+                    skills = quickSkills,
+                    selectedSkillId = selectedSkill?.id,
+                    enabled = enabled && !busy,
+                    onQuickSkillSelected = onQuickSkillSelected
+                )
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth(),
@@ -992,14 +1017,6 @@ private fun HomeInputArea(
                         expanded = uploadMenuExpanded,
                         onDismissRequest = { uploadMenuExpanded = false }
                     ) {
-                        DropdownMenuItem(
-                            leadingIcon = { Icon(Icons.Outlined.Description, contentDescription = null) },
-                            text = { Text(text = "上传文件") },
-                            onClick = {
-                                uploadMenuExpanded = false
-                                onPickAudio()
-                            }
-                        )
                         DropdownMenuItem(
                             leadingIcon = { Icon(Icons.Outlined.AudioFile, contentDescription = null) },
                             text = { Text(text = "上传音频") },

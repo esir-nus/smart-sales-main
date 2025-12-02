@@ -51,8 +51,6 @@ fun AudioFilesRoute(
         },
         onTranscriptDismissed = viewModel::onTranscriptDismissed,
         onErrorDismissed = viewModel::onErrorDismissed,
-        onNavigateToDeviceSetup = { viewModel.onStartSetupClick() },
-        onRetryConnect = { viewModel.onRefreshFiles() },
         modifier = modifier
     )
 }

@@ -1128,10 +1128,22 @@ private fun HistoryPanel(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(text = "会话抽屉", style = MaterialTheme.typography.titleMedium)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = "历史会话", style = MaterialTheme.typography.titleMedium)
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = "关闭"
+                        )
+                    }
+                }
                 if (sessions.isEmpty()) {
                     Text(
                         text = "暂无历史会话，先开始一次对话吧。",
@@ -1139,46 +1151,49 @@ private fun HistoryPanel(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
-                    sessions.forEach { session ->
-                        val isCurrent = session.id == currentSessionId
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onSessionSelected(session.id)
-                                }
-                                .testTag("${HomeScreenTestTags.HISTORY_ITEM_PREFIX}${session.id}"),
-                            color = if (isCurrent) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surfaceVariant
-                            },
-                            tonalElevation = if (isCurrent) 4.dp else 1.dp
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(vertical = 4.dp)
+                    ) {
+                        items(items = sessions, key = { it.id }) { session ->
+                            val isCurrent = session.id == currentSessionId
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSessionSelected(session.id) }
+                                    .testTag("${HomeScreenTestTags.HISTORY_ITEM_PREFIX}${session.id}"),
+                                color = if (isCurrent) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                },
+                                tonalElevation = if (isCurrent) 4.dp else 1.dp
                             ) {
-                                Text(
-                                    text = session.title,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                if (session.lastMessagePreview.isNotBlank()) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
                                     Text(
-                                        text = session.lastMessagePreview,
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        text = session.title,
+                                        style = MaterialTheme.typography.bodyLarge,
                                         maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    if (session.lastMessagePreview.isNotBlank()) {
+                                        Text(
+                                            text = session.lastMessagePreview,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Text(
+                                        text = formatSessionTime(session.updatedAtMillis),
+                                        style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-                                Text(
-                                    text = formatSessionTime(session.updatedAtMillis),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
                             }
                         }
                     }

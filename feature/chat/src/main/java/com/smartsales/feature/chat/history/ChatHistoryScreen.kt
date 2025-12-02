@@ -112,6 +112,7 @@ fun ChatHistoryRoute(
         onPinToggle = viewModel::onPinToggle,
         onDismissError = viewModel::onDismissError,
         onSearchQueryChanged = viewModel::onSearchQueryChanged,
+        onRetryLoad = viewModel::onRetryLoad,
         snackbarHostState = snackbarHostState,
         modifier = modifier
     )
@@ -128,6 +129,7 @@ fun ChatHistoryScreen(
     onDismissError: () -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     onSearchClick: () -> Unit = {},
+    onRetryLoad: () -> Unit,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     modifier: Modifier = Modifier
 ) {
@@ -142,7 +144,7 @@ fun ChatHistoryScreen(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text(text = "聊天记录") },
+                title = { Text(text = "历史会话") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
@@ -173,13 +175,15 @@ fun ChatHistoryScreen(
                 onQueryChange = onSearchQueryChanged,
                 onClear = { onSearchQueryChanged("") }
             )
-            Text(
-                text = "长按会话可置顶、重命名或删除，保持与 React 历史侧边一致。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-            if (state.groups.isEmpty() && !state.isLoading) {
+            if (state.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (state.groups.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -292,7 +296,7 @@ fun ChatHistoryScreen(
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     modifier = Modifier.weight(1f)
                 )
-                TextButton(onClick = onDismissError) { Text(text = "知道了") }
+                TextButton(onClick = onRetryLoad) { Text(text = "重试") }
             }
         }
     }

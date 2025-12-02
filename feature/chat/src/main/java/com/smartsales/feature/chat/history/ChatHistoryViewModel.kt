@@ -84,6 +84,13 @@ class ChatHistoryViewModel @Inject constructor(
         observeSessions()
     }
 
+    fun onRetryLoad() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            refreshFromRepo()
+        }
+    }
+
     fun onSessionClicked(sessionId: String) {
         _uiState.update { it.copy(selectedSessionId = sessionId) }
         viewModelScope.launch {

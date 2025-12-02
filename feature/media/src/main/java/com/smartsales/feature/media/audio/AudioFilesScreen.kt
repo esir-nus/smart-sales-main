@@ -84,8 +84,6 @@ fun AudioFilesScreen(
     onAskAiClicked: (AudioRecordingUi) -> Unit,
     onTranscriptDismissed: () -> Unit,
     onErrorDismissed: () -> Unit,
-    onNavigateToDeviceSetup: () -> Unit = {},
-    onRetryConnect: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -130,16 +128,24 @@ fun AudioFilesScreen(
                     .pullRefresh(pullRefreshState),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                AudioStatusCard(
-                    isConnected = uiState.isConnected,
-                    connectionText = uiState.connectionStatusText,
-                    onConnect = onNavigateToDeviceSetup,
-                    onRetry = onRetryConnect
+                Text(
+                    text = "管理录音、同步 Tingwu 转写并用 AI 分析通话。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                ManualSyncHint(
-                    isSyncing = uiState.isSyncing,
-                    isLoading = uiState.isLoading
-                )
+                if (uiState.isSyncing) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp))
+                        Text(
+                            text = "同步中…",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
                 uiState.errorMessage?.let { message ->
                     ErrorBanner(
                         message = message,
@@ -213,12 +219,6 @@ fun AudioFilesScreen(
             onDismiss = onTranscriptDismissed,
             onAskAiClicked = onAskAiClicked
         )
-    }
-    uiState.errorMessage?.let { message ->
-        LaunchedEffect(message) {
-            snackbarHostState.showSnackbar(message)
-            onErrorDismissed()
-        }
     }
 }
 
@@ -417,62 +417,6 @@ private fun SourceLabel(label: String) {
             labelColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     )
-}
-
-@Composable
-private fun AudioStatusCard(
-    isConnected: Boolean,
-    connectionText: String,
-    onConnect: () -> Unit,
-    onRetry: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = MaterialTheme.shapes.large,
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(text = "设备状态", style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = connectionText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(onClick = onConnect, enabled = !isConnected) {
-                    Text(text = if (isConnected) "已连接" else "连接设备")
-                }
-                TextButton(onClick = onRetry) {
-                    Text(text = if (isConnected) "刷新状态" else "重试连接")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ManualSyncHint(
-    isSyncing: Boolean,
-    isLoading: Boolean
-) {
-    if (!isSyncing && !isLoading) return
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(
-            text = if (isSyncing) "内容同步中…" else "加载录音中…",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary
-        )
-        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-    }
 }
 
 @Composable

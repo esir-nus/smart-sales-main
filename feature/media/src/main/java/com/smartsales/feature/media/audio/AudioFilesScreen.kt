@@ -172,7 +172,11 @@ fun AudioFilesScreen(
                             .weight(1f),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator()
+                        Text(
+                            text = "正在加载录音...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 } else if (uiState.recordings.isEmpty()) {
                     EmptyState(

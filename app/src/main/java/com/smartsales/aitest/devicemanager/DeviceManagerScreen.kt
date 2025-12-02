@@ -130,7 +130,9 @@ fun DeviceManagerScreen(
     onClearError: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
+    Scaffold(modifier = modifier
+        .fillMaxSize()
+        .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER)) { innerPadding ->
         val isConnected = state.isConnected
         val designTokens = AppDesignTokens.current()
         Column(

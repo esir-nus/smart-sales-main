@@ -41,7 +41,9 @@ fun DeviceSetupRoute(
         onDismissError = viewModel::onDismissError,
         onWifiSsidChanged = viewModel::onWifiSsidChanged,
         onWifiPasswordChanged = viewModel::onWifiPasswordChanged,
-        modifier = modifier.testTag(DeviceSetupRouteTestTags.PAGE)
+        modifier = modifier
+            .testTag(DeviceSetupRouteTestTags.PAGE)
+            .testTag(AiFeatureTestTags.PAGE_DEVICE_SETUP)
     )
 }
 

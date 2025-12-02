@@ -162,7 +162,22 @@ private fun AiFeatureTestApp(
     val overlayTestOverride = overlayTestFlow?.collectAsState()?.value
     LaunchedEffect(overlayTestOverride) {
         overlayTestOverride?.let { page ->
-            currentPage = page
+            when (page) {
+                TestHomePage.AudioFiles -> {
+                    currentPage = TestHomePage.Home
+                    overlayState = HomeOverlay.Audio
+                }
+                TestHomePage.DeviceManager -> {
+                    currentPage = TestHomePage.Home
+                    overlayState = HomeOverlay.Device
+                }
+                else -> {
+                    currentPage = page
+                    if (page != TestHomePage.Home) {
+                        overlayState = HomeOverlay.Home
+                    }
+                }
+            }
             overlayTestFlow.value = null
         }
     }
@@ -393,7 +408,7 @@ private fun OverlayScaffold(
                     modifier = Modifier
                         .fillMaxSize()
                         .testTag(AiFeatureTestTags.OVERLAY_HOME_LAYER)
-                        .testTag(AiFeatureTestTags.PAGE_HOME)
+                        .testTag(HomeScreenTestTags.ROOT)
                 ) {
                     Box(
                         modifier = Modifier
@@ -423,6 +438,7 @@ private fun OverlayScaffold(
                     modifier = Modifier
                         .fillMaxSize()
                         .testTag(AiFeatureTestTags.OVERLAY_AUDIO_LAYER)
+                        .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES)
                 ) {
                     AudioFilesRoute(
                         modifier = Modifier.fillMaxSize(),

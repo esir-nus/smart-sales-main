@@ -8,6 +8,7 @@ package com.smartsales.aitest.ui.screens.user
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -41,6 +42,7 @@ import com.smartsales.aitest.ui.components.ProfileHeaderCard
 import com.smartsales.aitest.ui.components.SettingsMenuItem
 import com.smartsales.aitest.ui.screens.user.model.SubscriptionTierUi
 import com.smartsales.aitest.ui.screens.user.model.UserProfileUi
+import com.smartsales.aitest.ui.screens.user.model.label
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

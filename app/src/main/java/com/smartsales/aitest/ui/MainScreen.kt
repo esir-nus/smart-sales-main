@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -28,7 +29,7 @@ import androidx.navigation.compose.rememberNavController
 import com.smartsales.aitest.navigation.Screen
 import com.smartsales.aitest.ui.screens.audio.AudioPlaceholder
 import com.smartsales.aitest.ui.screens.device.DevicePlaceholder
-import com.smartsales.aitest.ui.screens.home.HomePlaceholder
+import com.smartsales.aitest.ui.screens.home.HomeScreen
 import com.smartsales.aitest.ui.screens.user.UserPlaceholder
 
 @Composable
@@ -65,7 +66,7 @@ fun MainScreen() {
             startDestination = Screen.Home.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.Home.route) { HomePlaceholder() }
+            composable(Screen.Home.route) { HomeScreen() }
             composable(Screen.Audio.route) { AudioPlaceholder() }
             composable(Screen.Device.route) { DevicePlaceholder() }
             composable(Screen.User.route) { UserPlaceholder() }

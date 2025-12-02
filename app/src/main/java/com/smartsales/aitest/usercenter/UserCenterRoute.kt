@@ -20,7 +20,6 @@ fun UserCenterRoute(
     modifier: Modifier = Modifier,
     onLogout: () -> Unit = {},
     onOpenDeviceManager: () -> Unit = {},
-    onOpenSubscription: () -> Unit = {},
     onOpenPrivacy: () -> Unit = {},
     onOpenGeneral: () -> Unit = {}
 ) {
@@ -32,10 +31,9 @@ fun UserCenterRoute(
             when (event) {
                 UserCenterEvent.Logout -> onLogout()
                 UserCenterEvent.DeviceManager -> onOpenDeviceManager()
-                UserCenterEvent.Subscription -> onOpenSubscription()
                 UserCenterEvent.Privacy -> onOpenPrivacy()
-                UserCenterEvent.General -> onOpenGeneral()
                 UserCenterEvent.Login -> Unit
+                else -> Unit
             }
         }
     }
@@ -43,9 +41,7 @@ fun UserCenterRoute(
     UserCenterScreen(
         uiState = uiState,
         onDeviceManagerClick = viewModel::onDeviceManagerClick,
-        onSubscriptionClick = viewModel::onSubscriptionClick,
         onPrivacyClick = viewModel::onPrivacyClick,
-        onGeneralSettingsClick = viewModel::onGeneralSettingsClick,
         onLoginClick = viewModel::onLoginClick,
         onLogoutClick = viewModel::onLogoutClick,
         modifier = modifier

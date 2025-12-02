@@ -9,7 +9,13 @@ data class UserCenterUiState(
     val displayName: String = "",
     val email: String = "",
     val isGuest: Boolean = true,
-    val canLogout: Boolean = false
+    val canLogout: Boolean = false,
+    val organization: String? = null,
+    val role: String? = null,
+    val phone: String? = null,
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null,
+    val appVersion: String = ""
 )
 
 sealed interface UserCenterEvent {
@@ -19,10 +25,14 @@ sealed interface UserCenterEvent {
     data object Privacy : UserCenterEvent
     data object General : UserCenterEvent
     data object Login : UserCenterEvent
+    data object About : UserCenterEvent
 }
 
 data class UserProfile(
     val displayName: String,
     val email: String,
-    val isGuest: Boolean
+    val isGuest: Boolean,
+    val organization: String? = null,
+    val role: String? = null,
+    val phone: String? = null
 )

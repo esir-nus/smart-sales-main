@@ -357,7 +357,6 @@ private fun AiFeatureTestApp(
                                 .testTag(AiFeatureTestTags.PAGE_USER_CENTER),
                             onLogout = { goHome() },
                             onOpenDeviceManager = { setPage(TestHomePage.DeviceManager) },
-                            onOpenSubscription = { goHome() },
                             onOpenPrivacy = { goHome() },
                             onOpenGeneral = { goHome() }
                         )

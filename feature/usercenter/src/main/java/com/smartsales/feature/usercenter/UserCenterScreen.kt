@@ -18,15 +18,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.outlined.CreditCard
 import androidx.compose.material.icons.outlined.Devices
 import androidx.compose.material.icons.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.PrivacyTip
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -47,9 +47,7 @@ import androidx.compose.ui.unit.dp
 fun UserCenterScreen(
     uiState: UserCenterUiState,
     onDeviceManagerClick: () -> Unit,
-    onSubscriptionClick: () -> Unit,
     onPrivacyClick: () -> Unit,
-    onGeneralSettingsClick: () -> Unit,
     onLoginClick: () -> Unit,
     onLogoutClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -69,14 +67,18 @@ fun UserCenterScreen(
             ProfileHeader(
                 displayName = uiState.displayName,
                 email = uiState.email,
+                organization = uiState.organization,
+                role = uiState.role,
+                phone = uiState.phone,
                 isGuest = uiState.isGuest,
+                isLoading = uiState.isLoading,
+                errorMessage = uiState.errorMessage,
                 onLoginClick = onLoginClick
             )
             ShortcutMenuCard(
                 onOpenDeviceManager = onDeviceManagerClick,
-                onOpenSubscription = onSubscriptionClick,
                 onOpenPrivacy = onPrivacyClick,
-                onOpenGeneral = onGeneralSettingsClick
+                versionText = uiState.appVersion
             )
             if (uiState.canLogout) {
                 DangerRow(
@@ -96,9 +98,8 @@ object UserCenterTestTags {
     const val HEADER_EMAIL = "user_center_header_email"
     const val BUTTON_LOGIN = "user_center_button_login"
     const val ROW_DEVICE_MANAGER = "user_center_row_device_manager"
-    const val ROW_SUBSCRIPTION = "user_center_row_subscription"
     const val ROW_PRIVACY = "user_center_row_privacy"
-    const val ROW_GENERAL = "user_center_row_general"
+    const val ROW_ABOUT = "user_center_row_about"
     const val ROW_LOGOUT = "user_center_row_logout"
 }
 
@@ -106,7 +107,12 @@ object UserCenterTestTags {
 private fun ProfileHeader(
     displayName: String,
     email: String,
+    organization: String?,
+    role: String?,
+    phone: String?,
     isGuest: Boolean,
+    isLoading: Boolean,
+    errorMessage: String?,
     onLoginClick: () -> Unit
 ) {
     val resolvedName = if (isGuest) "访客用户" else displayName.ifBlank { "访客用户" }
@@ -123,49 +129,62 @@ private fun ProfileHeader(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-        Box(
-            modifier = Modifier
-                .size(76.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Person,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
-        Text(
-            text = resolvedName,
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-            modifier = Modifier.testTag(UserCenterTestTags.HEADER_NAME)
-        )
-        Text(
-            text = resolvedEmail,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.testTag(UserCenterTestTags.HEADER_EMAIL)
-        )
-        if (isGuest) {
-            OutlinedButton(
-                onClick = onLoginClick,
-                modifier = Modifier.testTag(UserCenterTestTags.BUTTON_LOGIN)
+            Box(
+                modifier = Modifier
+                    .size(76.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
             ) {
-                Text(text = "登录")
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+            if (isLoading) {
+                CircularProgressIndicator()
+            } else {
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                Text(
+                    text = resolvedName,
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    modifier = Modifier.testTag(UserCenterTestTags.HEADER_NAME)
+                )
+                Text(
+                    text = resolvedEmail,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.testTag(UserCenterTestTags.HEADER_EMAIL)
+                )
+                InfoRow(label = "机构", value = organization)
+                InfoRow(label = "角色", value = role)
+                InfoRow(label = "电话", value = phone)
+                if (isGuest) {
+                    OutlinedButton(
+                        onClick = onLoginClick,
+                        modifier = Modifier.testTag(UserCenterTestTags.BUTTON_LOGIN)
+                    ) {
+                        Text(text = "登录")
+                    }
+                }
             }
         }
-    }
     }
 }
 
 @Composable
 private fun ShortcutMenuCard(
     onOpenDeviceManager: () -> Unit,
-    onOpenSubscription: () -> Unit,
     onOpenPrivacy: () -> Unit,
-    onOpenGeneral: () -> Unit,
+    versionText: String,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -189,32 +208,43 @@ private fun ShortcutMenuCard(
             )
             HorizontalDivider()
             Text(
-                text = "账户",
+                text = "偏好与安全",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             ShortcutRow(
-                title = "订阅管理",
-                subtitle = "查看套餐、续费与发票",
-                icon = Icons.Outlined.CreditCard,
-                onClick = onOpenSubscription,
-                modifier = Modifier.testTag(UserCenterTestTags.ROW_SUBSCRIPTION)
-            )
-            ShortcutRow(
                 title = "隐私与安全",
-                subtitle = "密码、双重认证、数据控制",
+                subtitle = "密码、隐私声明、数据控制",
                 icon = Icons.Outlined.PrivacyTip,
                 onClick = onOpenPrivacy,
                 modifier = Modifier.testTag(UserCenterTestTags.ROW_PRIVACY)
             )
             ShortcutRow(
-                title = "通用设置",
-                subtitle = "语言、通知与主题",
-                icon = Icons.Outlined.Settings,
-                onClick = onOpenGeneral,
-                modifier = Modifier.testTag(UserCenterTestTags.ROW_GENERAL)
+                title = "关于",
+                subtitle = "版本 $versionText",
+                icon = Icons.Filled.Info,
+                onClick = {},
+                modifier = Modifier.testTag(UserCenterTestTags.ROW_ABOUT)
             )
         }
+    }
+}
+
+@Composable
+private fun InfoRow(
+    label: String,
+    value: String?
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            text = value?.takeIf { it.isNotBlank() } ?: "未填写",
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }
 

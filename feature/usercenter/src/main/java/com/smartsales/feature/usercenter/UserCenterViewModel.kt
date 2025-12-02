@@ -38,18 +38,32 @@ class UserCenterViewModel @Inject constructor(
 
     private fun loadUser() {
         viewModelScope.launch(dispatchers.io) {
-            val result = repository.load()
-            applyProfile(result)
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            runCatching { repository.load() }
+                .onSuccess { profile -> applyProfile(profile, loadingDone = true) }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = error.message ?: "用户信息加载失败"
+                        )
+                    }
+                }
         }
     }
 
-    private fun applyProfile(profile: UserProfile) {
+    private fun applyProfile(profile: UserProfile, loadingDone: Boolean = false) {
         _uiState.update {
             it.copy(
                 displayName = profile.displayName,
                 email = profile.email,
                 isGuest = profile.isGuest,
-                canLogout = !profile.isGuest
+                canLogout = !profile.isGuest,
+                organization = profile.organization,
+                role = profile.role,
+                phone = profile.phone,
+                isLoading = !loadingDone,
+                errorMessage = null
             )
         }
     }

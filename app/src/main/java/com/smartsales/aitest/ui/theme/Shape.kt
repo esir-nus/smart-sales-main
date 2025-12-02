@@ -16,3 +16,6 @@ val AppShapes = Shapes(
     large = RoundedCornerShape(16.dp),
     extraLarge = RoundedCornerShape(20.dp)
 )
+
+// 使用建议：small 适合控件手柄/小按钮，medium 用于输入框与按钮，
+// large 适合卡片/弹窗，extraLarge 用于大卡片、底部弹窗；圆角胶囊场景使用 CircleShape。

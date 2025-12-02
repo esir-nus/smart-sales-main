@@ -12,14 +12,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 // 如需精确的 Inter 字体，可在 res/font 下补充字体文件后替换该回退。
+// 映射说明：HeroBrand/Logo → displayLarge，HeroGreeting → headlineLarge，
+// HeroSubtitle → headlineSmall，AppTitle → titleLarge，SectionTitle → titleMedium，
+// Body → bodyMedium，Caption → bodySmall 或 label*。
 val Inter = FontFamily.SansSerif
 
 val AppTypography = Typography(
     displayLarge = TextStyle(
         fontFamily = Inter,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 36.sp,
-        lineHeight = 44.sp,
+        fontWeight = FontWeight.Bold,
+        fontSize = 34.sp,
+        lineHeight = 42.sp,
         letterSpacing = (-0.25).sp
     ),
     displayMedium = TextStyle(
@@ -57,27 +60,27 @@ val AppTypography = Typography(
     titleLarge = TextStyle(
         fontFamily = Inter,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 22.sp,
-        lineHeight = 28.sp
+        fontSize = 18.sp,
+        lineHeight = 24.sp
     ),
     titleMedium = TextStyle(
         fontFamily = Inter,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 18.sp,
-        lineHeight = 24.sp
+        fontSize = 16.sp,
+        lineHeight = 22.sp
     ),
     titleSmall = TextStyle(
         fontFamily = Inter,
         fontWeight = FontWeight.Medium,
-        fontSize = 16.sp,
-        lineHeight = 22.sp
+        fontSize = 14.sp,
+        lineHeight = 20.sp
     ),
     bodyLarge = TextStyle(
         fontFamily = Inter,
         fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.2.sp
+        fontSize = 15.sp,
+        lineHeight = 22.sp,
+        letterSpacing = 0.1.sp
     ),
     bodyMedium = TextStyle(
         fontFamily = Inter,

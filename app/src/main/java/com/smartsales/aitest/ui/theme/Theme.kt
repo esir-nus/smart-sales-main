@@ -10,8 +10,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -19,7 +19,7 @@ import androidx.core.view.WindowCompat
 private val PrimaryContainer = AccentPrimary.copy(alpha = 0.12f).compositeOver(BackgroundSurface)
 private val SecondaryContainer = AccentSecondary.copy(alpha = 0.12f).compositeOver(BackgroundSurface)
 private val TertiaryContainer = AccentTertiary.copy(alpha = 0.12f).compositeOver(BackgroundSurface)
-private val DangerContainer = AccentDanger.copy(alpha = 0.12f).compositeOver(BackgroundSurface)
+private val DangerContainer = SurfaceDanger
 
 private val LightColorScheme = lightColorScheme(
     primary = AccentPrimary,
@@ -31,12 +31,12 @@ private val LightColorScheme = lightColorScheme(
     secondary = AccentSecondary,
     onSecondary = TextPrimary,
     secondaryContainer = SecondaryContainer,
-    onSecondaryContainer = TextStrong,
+    onSecondaryContainer = TextSecondary,
 
     tertiary = AccentTertiary,
     onTertiary = Color.White,
     tertiaryContainer = TertiaryContainer,
-    onTertiaryContainer = AccentTertiary,
+    onTertiaryContainer = TextSecondary,
 
     background = BackgroundApp,
     onBackground = TextPrimary,
@@ -51,11 +51,11 @@ private val LightColorScheme = lightColorScheme(
     error = AccentDanger,
     onError = Color.White,
     errorContainer = DangerContainer,
-    onErrorContainer = TextPrimary,
+    onErrorContainer = AccentDanger,
 
     outline = BorderSubtle,
     outlineVariant = TextTertiary,
-    scrim = Color(0x66000000)
+    scrim = BackdropScrim
 )
 
 @Suppress("UnusedParameter")

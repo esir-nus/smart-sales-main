@@ -37,6 +37,10 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.AudioFile
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -44,6 +48,8 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -242,6 +248,23 @@ fun HomeScreen(
     }
 
     val listState = rememberLazyListState()
+    val emptySkillOrder = listOf(
+        QuickSkillId.SUMMARIZE_LAST_MEETING,
+        QuickSkillId.PREP_NEXT_MEETING,
+        QuickSkillId.WRITE_FOLLOWUP_EMAIL
+    )
+    val emptySkills = state.quickSkills
+        .filter { it.id in emptySkillOrder }
+        .sortedBy { emptySkillOrder.indexOf(it.id) }
+        .map { quick ->
+            val customLabel = when (quick.id) {
+                QuickSkillId.SUMMARIZE_LAST_MEETING -> "智能分析"
+                QuickSkillId.PREP_NEXT_MEETING -> "生成 PDF"
+                QuickSkillId.WRITE_FOLLOWUP_EMAIL -> "生成 CSV"
+                else -> quick.label
+            }
+            quick.copy(label = customLabel)
+        }
     val showScrollToLatest = remember { mutableStateOf(false) }
     LaunchedEffect(listState, state.chatMessages.size, state.isLoadingHistory) {
         snapshotFlow {
@@ -298,8 +321,6 @@ fun HomeScreen(
                     onInputChanged = onInputChanged,
                     onSendClicked = onSendClicked,
                     onQuickSkillSelected = onQuickSkillSelected,
-                    onExportPdfClicked = onExportPdfClicked,
-                    onExportCsvClicked = onExportCsvClicked,
                     onPickAudio = { audioPicker.launch(arrayOf("audio/*")) },
                     onPickImage = { imagePicker.launch(arrayOf("image/*")) }
                 )
@@ -318,17 +339,11 @@ fun HomeScreen(
                 ) {
                     val showHero = state.showWelcomeHero && !state.isLoadingHistory && !state.currentSession.isTranscription
                     if (showHero) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            HomeHeroSection(
-                                userName = state.userName,
-                                hasMessages = false
-                            )
-                        }
+                        EmptyStateContent(
+                            userName = state.userName,
+                            skills = emptySkills,
+                            onSkillSelected = onQuickSkillSelected
+                        )
                     } else {
                         Box(
                             modifier = Modifier
@@ -861,19 +876,15 @@ private fun HomeInputArea(
     selectedSkill: QuickSkillUi?,
     enabled: Boolean,
     busy: Boolean,
-    exporting: Boolean,
     inputValue: String,
     onInputChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
     onQuickSkillSelected: (QuickSkillId) -> Unit,
-    onExportPdfClicked: () -> Unit,
-    onExportCsvClicked: () -> Unit,
     onPickAudio: () -> Unit,
     onPickImage: () -> Unit
 ) {
-    Surface(
-        tonalElevation = 4.dp
-    ) {
+    var uploadMenuExpanded by rememberSaveable { mutableStateOf(false) }
+    Surface(tonalElevation = 4.dp) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -887,38 +898,67 @@ private fun HomeInputArea(
                 enabled = enabled && !busy,
                 onQuickSkillSelected = onQuickSkillSelected
             )
-            ExportActionRow(
-                exporting = exporting || busy,
-                onExportPdfClicked = onExportPdfClicked,
-                onExportCsvClicked = onExportCsvClicked
-            )
-            AttachmentRow(
-                enabled = enabled && !busy,
-                onPickAudio = onPickAudio,
-                onPickImage = onPickImage
-            )
-            OutlinedTextField(
-                value = inputValue,
-                onValueChange = onInputChanged,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(HomeScreenTestTags.INPUT_FIELD),
-                placeholder = { Text(text = "输入消息或粘贴转写片段…") },
-                shape = MaterialTheme.shapes.large,
-                enabled = enabled,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
-                ),
-                singleLine = false,
-                minLines = 2
-            )
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Box {
+                    IconButton(
+                        onClick = { uploadMenuExpanded = true },
+                        enabled = enabled && !busy
+                    ) {
+                        Icon(imageVector = Icons.Outlined.Add, contentDescription = "上传或附件")
+                    }
+                    DropdownMenu(
+                        expanded = uploadMenuExpanded,
+                        onDismissRequest = { uploadMenuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            leadingIcon = { Icon(Icons.Outlined.Description, contentDescription = null) },
+                            text = { Text(text = "上传文件") },
+                            onClick = {
+                                uploadMenuExpanded = false
+                                onPickAudio()
+                            }
+                        )
+                        DropdownMenuItem(
+                            leadingIcon = { Icon(Icons.Outlined.AudioFile, contentDescription = null) },
+                            text = { Text(text = "上传音频") },
+                            onClick = {
+                                uploadMenuExpanded = false
+                                onPickAudio()
+                            }
+                        )
+                        DropdownMenuItem(
+                            leadingIcon = { Icon(Icons.Outlined.Image, contentDescription = null) },
+                            text = { Text(text = "上传图片") },
+                            onClick = {
+                                uploadMenuExpanded = false
+                                onPickImage()
+                            }
+                        )
+                    }
+                }
+                OutlinedTextField(
+                    value = inputValue,
+                    onValueChange = onInputChanged,
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag(HomeScreenTestTags.INPUT_FIELD),
+                    placeholder = { Text(text = "上传文件或输入消息...") },
+                    shape = MaterialTheme.shapes.large,
+                    enabled = enabled,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
+                    ),
+                    singleLine = false,
+                    minLines = 2
+                )
                 TextButton(
                     onClick = onSendClicked,
                     enabled = inputValue.isNotBlank() && enabled && !busy,

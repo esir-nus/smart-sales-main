@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -316,7 +318,6 @@ fun HomeScreen(
                     selectedSkill = state.selectedSkill,
                     enabled = !state.isBusy,
                     busy = state.isBusy,
-                    exporting = exportInProgress,
                     inputValue = state.inputText,
                     onInputChanged = onInputChanged,
                     onSendClicked = onSendClicked,
@@ -339,11 +340,17 @@ fun HomeScreen(
                 ) {
                     val showHero = state.showWelcomeHero && !state.isLoadingHistory && !state.currentSession.isTranscription
                     if (showHero) {
-                        EmptyStateContent(
-                            userName = state.userName,
-                            skills = emptySkills,
-                            onSkillSelected = onQuickSkillSelected
-                        )
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                        ) {
+                            EmptyStateContent(
+                                userName = state.userName,
+                                skills = emptySkills,
+                                onSkillSelected = onQuickSkillSelected
+                            )
+                        }
                     } else {
                         Box(
                             modifier = Modifier
@@ -451,6 +458,76 @@ fun HomeScreen(
         }
     }
 }
+}
+
+@Composable
+private fun EmptyStateContent(
+    userName: String,
+    skills: List<QuickSkillUi>,
+    onSkillSelected: (QuickSkillId) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "LOGO",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = "你好，$userName",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "我是您的销售助手",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Text(
+                text = "我可以帮您：",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "• 分析用户画像、意图、痛点。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "• 生成 PDF、CSV 文档及思维导图。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Text(
+            text = "让我们开始吧",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        QuickSkillRow(
+            skills = skills,
+            selectedSkillId = null,
+            enabled = true,
+            onQuickSkillSelected = onSkillSelected
+        )
+        Divider(modifier = Modifier.fillMaxWidth())
+    }
 }
 
 @Composable

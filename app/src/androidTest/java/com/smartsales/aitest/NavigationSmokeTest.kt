@@ -67,7 +67,7 @@ class NavigationSmokeTest {
     fun historyToggleNavigatesToChatHistory() {
         goHome()
         composeRule.onNodeWithTag(HomeScreenTestTags.HISTORY_TOGGLE, useUnmergedTree = true).performClick()
-        waitForAnyTag(composeRule, ChatHistoryTestTags.PAGE, AiFeatureTestTags.PAGE_CHAT_HISTORY)
+        waitForAnyTag(composeRule, HomeScreenTestTags.HISTORY_PANEL, ChatHistoryTestTags.PAGE)
 
         composeRule.activityRule.scenario.onActivity {
             it.onBackPressedDispatcher.onBackPressed()
@@ -81,10 +81,7 @@ class NavigationSmokeTest {
         goHome()
         composeRule.onNodeWithTag(HomeScreenTestTags.PROFILE_BUTTON, useUnmergedTree = true).performClick()
         waitForAnyTag(composeRule, UserCenterTestTags.ROOT, AiFeatureTestTags.PAGE_USER_CENTER)
-        composeRule.onNodeWithText("设备管理", substring = true, useUnmergedTree = true)
-            .assertIsDisplayed()
-        composeRule.onNodeWithText("订阅管理", substring = true, useUnmergedTree = true)
-            .assertIsDisplayed()
+        composeRule.onNodeWithText("设备管理", substring = true, useUnmergedTree = true).assertIsDisplayed()
 
         composeRule.activityRule.scenario.onActivity {
             it.onBackPressedDispatcher.onBackPressed()

@@ -49,6 +49,10 @@ class AudioTranscriptToChatTest {
             .performClick()
 
         // 回到 Home，确认创建了通话分析会话并展示转写内容
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
         composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertIsDisplayed()
         composeRule.waitUntil(timeoutMillis = 5_000) {
             composeRule.onAllNodesWithText("已为你加载录音", substring = true, useUnmergedTree = true)

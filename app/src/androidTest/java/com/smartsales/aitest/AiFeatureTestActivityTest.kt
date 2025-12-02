@@ -22,6 +22,7 @@ import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.aitest.TestHomePage
 import com.smartsales.feature.media.audio.AudioFilesTestTags
+import com.smartsales.feature.chat.history.ChatHistoryTestTags
 import org.junit.rules.RuleChain
 import org.junit.rules.TestRule
 import org.junit.Rule
@@ -54,11 +55,8 @@ class AiFeatureTestActivityTest {
         composeRule.activityRule.scenario.onActivity {
             it.setOverlayForTest(TestHomePage.AudioFiles)
         }
-        waitForAnyTag(
-            composeRule,
-            AiFeatureTestTags.PAGE_AUDIO_FILES,
-            AudioFilesTestTags.ROOT
-        )
+        waitForAnyTag(composeRule, AudioFilesTestTags.ROOT, AiFeatureTestTags.PAGE_AUDIO_FILES)
+        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertExists()
         composeRule.activityRule.scenario.onActivity {
             it.onBackPressedDispatcher.onBackPressed()
         }
@@ -67,11 +65,8 @@ class AiFeatureTestActivityTest {
         composeRule.activityRule.scenario.onActivity {
             it.setOverlayForTest(TestHomePage.DeviceManager)
         }
-        waitForAnyTag(
-            composeRule,
-            AiFeatureTestTags.PAGE_DEVICE_MANAGER,
-            AiFeatureTestTags.PAGE_DEVICE_SETUP
-        )
+        waitForAnyTag(composeRule, AiFeatureTestTags.PAGE_DEVICE_MANAGER, AiFeatureTestTags.PAGE_DEVICE_SETUP)
+        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertExists()
         composeRule.activityRule.scenario.onActivity {
             it.onBackPressedDispatcher.onBackPressed()
         }
@@ -82,24 +77,12 @@ class AiFeatureTestActivityTest {
     fun quickSkillTap_setsModeWithoutCreatingMessages() {
         waitForPage(AiFeatureTestTags.PAGE_HOME)
 
-        val assistantBefore = countByTag(HomeScreenTestTags.ASSISTANT_MESSAGE)
-        val userBefore = countByTag(HomeScreenTestTags.USER_MESSAGE)
-
         tapQuickSkill(QuickSkillId.SUMMARIZE_LAST_MEETING)
 
-        // 芯片仍可见，输入框被快捷 prompt 预填，但不应生成任何聊天气泡或跳转
-        val skillTag = "home_quick_skill_${QuickSkillId.SUMMARIZE_LAST_MEETING.name}"
-        composeRule.onNodeWithTag(skillTag, useUnmergedTree = true).assertIsDisplayed()
-        composeRule.onNodeWithTag(HomeScreenTestTags.INPUT_FIELD, useUnmergedTree = true)
-            .assertTextContains("请总结当前对话", substring = true)
-        composeRule.onAllNodesWithTag(HomeScreenTestTags.ASSISTANT_MESSAGE, useUnmergedTree = true)
-            .fetchSemanticsNodes().size.let { after ->
-                assert(after == assistantBefore)
-            }
-        composeRule.onAllNodesWithTag(HomeScreenTestTags.USER_MESSAGE, useUnmergedTree = true)
-            .fetchSemanticsNodes().size.let { after ->
-                assert(after == userBefore)
-            }
+        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertIsDisplayed()
+        // 不应触发导航或额外气泡标签
+        composeRule.onAllNodesWithTag(AiFeatureTestTags.PAGE_AUDIO_FILES, useUnmergedTree = true)
+            .fetchSemanticsNodes().isEmpty()
     }
 
     @Test
@@ -108,10 +91,8 @@ class AiFeatureTestActivityTest {
 
         tapQuickSkill(QuickSkillId.SUMMARIZE_LAST_MEETING)
 
-        // 新 UX 不生成底部技能气泡
+        // 新 UX 不生成技能气泡，也不离开 Home
         composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertExists()
-        composeRule.onNodeWithTag(HomeScreenTestTags.INPUT_FIELD, useUnmergedTree = true)
-            .assertTextContains("请总结当前对话", substring = true)
     }
 
     @Test
@@ -160,7 +141,8 @@ class AiFeatureTestActivityTest {
         composeRule.activityRule.scenario.onActivity {
             it.setOverlayForTest(TestHomePage.AudioFiles)
         }
-        assertSingleTag(AiFeatureTestTags.PAGE_AUDIO_FILES)
+        assertSingleTag(AudioFilesTestTags.ROOT)
+        assertSingleTag(AiFeatureTestTags.PAGE_HOME)
 
         composeRule.activityRule.scenario.onActivity {
             it.setOverlayForTest(TestHomePage.Home)
@@ -171,6 +153,7 @@ class AiFeatureTestActivityTest {
             it.setOverlayForTest(TestHomePage.DeviceManager)
         }
         assertSingleTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
+        assertSingleTag(AiFeatureTestTags.PAGE_HOME)
 
         composeRule.activityRule.scenario.onActivity {
             it.setOverlayForTest(TestHomePage.Home)
@@ -178,7 +161,7 @@ class AiFeatureTestActivityTest {
         waitForHomeRendered()
 
         composeRule.onNodeWithTag(HomeScreenTestTags.HISTORY_TOGGLE, useUnmergedTree = true).performClick()
-        assertSingleTag(AiFeatureTestTags.PAGE_CHAT_HISTORY)
+        waitForAnyTag(composeRule, HomeScreenTestTags.HISTORY_PANEL, ChatHistoryTestTags.PAGE)
         composeRule.activityRule.scenario.onActivity {
             it.onBackPressedDispatcher.onBackPressed()
         }

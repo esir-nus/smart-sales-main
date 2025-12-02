@@ -74,21 +74,9 @@ class UserCenterViewModel @Inject constructor(
         }
     }
 
-    fun onSubscriptionClick() {
-        viewModelScope.launch(dispatchers.default) {
-            _events.emit(UserCenterEvent.Subscription)
-        }
-    }
-
     fun onPrivacyClick() {
         viewModelScope.launch(dispatchers.default) {
             _events.emit(UserCenterEvent.Privacy)
-        }
-    }
-
-    fun onGeneralSettingsClick() {
-        viewModelScope.launch(dispatchers.default) {
-            _events.emit(UserCenterEvent.General)
         }
     }
 

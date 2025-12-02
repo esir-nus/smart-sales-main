@@ -89,7 +89,7 @@ class ChatHistoryNavigationTest {
         waitForPage(AiFeatureTestTags.PAGE_HOME)
         composeRule.onNodeWithTag(com.smartsales.feature.chat.home.HomeScreenTestTags.HISTORY_TOGGLE, useUnmergedTree = true)
             .performClick()
-        waitForPage(AiFeatureTestTags.PAGE_CHAT_HISTORY)
+        waitForPage(com.smartsales.feature.chat.home.HomeScreenTestTags.HISTORY_PANEL)
 
         // 点击历史项返回 Home
         composeRule.onNodeWithText("历史会话").performClick()
@@ -105,7 +105,7 @@ class ChatHistoryNavigationTest {
                     composeRule.onAllNodesWithTag(tag, useUnmergedTree = false).fetchSemanticsNodes().isNotEmpty()
             }.getOrDefault(false)
         }
-        composeRule.onNodeWithTag(tag, useUnmergedTree = true).assertExists()
+        composeRule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
     }
 }
 

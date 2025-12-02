@@ -21,9 +21,7 @@ data class UserCenterUiState(
 sealed interface UserCenterEvent {
     data object Logout : UserCenterEvent
     data object DeviceManager : UserCenterEvent
-    data object Subscription : UserCenterEvent
     data object Privacy : UserCenterEvent
-    data object General : UserCenterEvent
     data object Login : UserCenterEvent
     data object About : UserCenterEvent
 }

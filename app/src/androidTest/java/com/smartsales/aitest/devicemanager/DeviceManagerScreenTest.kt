@@ -221,6 +221,7 @@ class DeviceManagerScreenTest {
                         onStartSetup = {},
                         onRetryLoad = {},
                         onSelectFile = {},
+                        onDismissViewer = {},
                         onApplyFile = {},
                         onDeleteFile = {},
                         onRequestUpload = {},
@@ -247,6 +248,7 @@ class DeviceManagerScreenTest {
         onRefresh: () -> Unit = {},
         onStartSetup: () -> Unit = {},
         onSelectFile: (String) -> Unit = {},
+        onDismissViewer: () -> Unit = {},
         onApplyFile: (String) -> Unit = {},
         onDeleteFile: (String) -> Unit = {},
         onRequestUpload: () -> Unit = {},
@@ -263,6 +265,7 @@ class DeviceManagerScreenTest {
                     onStartSetup = onStartSetup,
                     onRetryLoad = onRetryLoad,
                     onSelectFile = onSelectFile,
+                    onDismissViewer = onDismissViewer,
                     onApplyFile = onApplyFile,
                     onDeleteFile = onDeleteFile,
                     onRequestUpload = onRequestUpload,
@@ -283,7 +286,8 @@ class DeviceManagerScreenTest {
         errorMessage: String? = null,
         loadErrorMessage: String? = null,
         canRetryConnect: Boolean = true,
-        canStartSetup: Boolean = false
+        canStartSetup: Boolean = false,
+        viewerFile: DeviceFileUi? = null
     ): DeviceManagerUiState {
         return DeviceManagerUiState(
             connectionStatus = connectionStatus,
@@ -301,7 +305,8 @@ class DeviceManagerScreenTest {
             isLoading = isLoading,
             isUploading = isUploading,
             errorMessage = errorMessage,
-            loadErrorMessage = loadErrorMessage
+            loadErrorMessage = loadErrorMessage,
+            viewerFile = viewerFile
         )
     }
 
@@ -312,7 +317,11 @@ class DeviceManagerScreenTest {
         isApplied: Boolean = false,
         mediaType: DeviceMediaTab = DeviceMediaTab.Videos,
         durationText: String? = "00:45",
-        mediaLabel: String = if (mediaType == DeviceMediaTab.Gifs) "GIF" else "视频"
+        mediaLabel: String = when (mediaType) {
+            DeviceMediaTab.Videos -> "视频"
+            DeviceMediaTab.Gifs -> "GIF"
+            DeviceMediaTab.Images -> "图片"
+        }
     ): DeviceFileUi {
         return DeviceFileUi(
             id = id,

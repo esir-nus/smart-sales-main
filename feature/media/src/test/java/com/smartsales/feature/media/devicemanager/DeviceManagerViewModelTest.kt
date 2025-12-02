@@ -81,8 +81,8 @@ class DeviceManagerViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertEquals(2, state.files.size) // 仅视频+GIF
-        assertEquals(2, state.visibleFiles.size)
+        assertEquals(3, state.files.size) // 视频 + GIF + 图片
+        assertEquals(3, state.visibleFiles.size)
         assertEquals(false, state.isLoading)
         assertEquals(null, state.loadErrorMessage)
         assertTrue(gateway.fetchCalls >= 1)
@@ -276,6 +276,25 @@ class DeviceManagerViewModelTest {
         viewModel.onSelectFile("clip.mp4")
         val state = viewModel.uiState.value
         assertEquals("clip.mp4", state.selectedFile?.id)
+        assertEquals("clip.mp4", state.viewerFile?.id)
+    }
+
+    @Test
+    fun `viewer clears when file deleted`() = runTest(dispatcher) {
+        connectionManager.emitReady()
+        advanceUntilIdle()
+        gateway.files = listOf(
+            DeviceMediaFile("clip.mp4", 2048, "video/mp4", 2_000L, "media/2", "dl/2")
+        )
+        viewModel.onRefreshFiles()
+        advanceUntilIdle()
+        viewModel.onSelectFile("clip.mp4")
+        viewModel.onDeleteFile("clip.mp4")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(null, state.viewerFile)
+        assertEquals(0, state.files.size)
     }
 
     @Test

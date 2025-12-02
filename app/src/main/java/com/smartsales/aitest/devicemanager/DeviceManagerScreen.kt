@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -57,6 +58,14 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.window.Dialog
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.ui.viewinterop.AndroidView
+import android.net.Uri
 import com.smartsales.core.util.AppDesignTokens
 import com.smartsales.feature.media.devicemanager.DeviceConnectionUiState
 import com.smartsales.feature.media.devicemanager.DeviceFileUi
@@ -94,9 +103,10 @@ fun DeviceManagerRoute(
         onStartSetup = viewModel::onStartSetupClick,
         onRetryLoad = viewModel::onRetryLoad,
         onSelectFile = viewModel::onSelectFile,
+        onDismissViewer = viewModel::onCloseViewer,
         onApplyFile = viewModel::onApplyFile,
         onDeleteFile = viewModel::onDeleteFile,
-        onRequestUpload = { uploadLauncher.launch(arrayOf("video/*", "image/gif")) },
+        onRequestUpload = { uploadLauncher.launch(arrayOf("video/*", "image/*")) },
         onBaseUrlChange = viewModel::onBaseUrlChanged,
         onClearError = viewModel::onClearError,
         modifier = modifier.testTag(DeviceManagerRouteTestTags.ROOT)
@@ -110,6 +120,7 @@ fun DeviceManagerScreen(
     onStartSetup: () -> Unit,
     onRetryLoad: () -> Unit,
     onSelectFile: (String) -> Unit,
+    onDismissViewer: () -> Unit,
     onApplyFile: (String) -> Unit,
     onDeleteFile: (String) -> Unit,
     onRequestUpload: () -> Unit,
@@ -202,6 +213,12 @@ fun DeviceManagerScreen(
                 }
             }
         }
+    }
+    state.viewerFile?.let { file ->
+        MediaViewerDialog(
+            file = file,
+            onDismiss = onDismissViewer
+        )
     }
 }
 
@@ -553,6 +570,7 @@ object DeviceManagerTestTags {
     const val FILE_CARD_PREFIX = "device_manager_file_card_"
     const val SELECTED_FILE_CARD = "device_manager_selected_file"
     const val PREVIEW_CARD = "device_manager_preview_card"
+    const val MEDIA_VIEWER = "device_manager_media_viewer"
 }
 
 object DeviceManagerRouteTestTags {
@@ -633,6 +651,164 @@ private fun DevicePreview(file: DeviceFileUi?, modifier: Modifier = Modifier) {
                 Text(text = "类型：${file.mimeType}", style = MaterialTheme.typography.bodySmall)
                 Text(text = "大小：${file.sizeText}", style = MaterialTheme.typography.bodySmall)
             }
+        }
+    }
+}
+
+@Composable
+private fun MediaViewerDialog(
+    file: DeviceFileUi,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .testTag(DeviceManagerTestTags.MEDIA_VIEWER),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(text = "媒体预览", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            text = file.displayName,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    TextButton(onClick = onDismiss) {
+                        Text(text = "关闭")
+                    }
+                }
+                when (file.mediaType) {
+                    DeviceMediaTab.Videos -> VideoViewerContent(url = file.mediaUrl)
+                    else -> ImageViewerContent(url = file.mediaUrl)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImageViewerContent(url: String) {
+    var isLoading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 180.dp)
+    ) {
+        if (url.isBlank()) {
+            error = "无法加载媒体，请稍后重试"
+            isLoading = false
+        }
+        AsyncImage(
+            model = url,
+            contentDescription = "媒体预览",
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(4f / 3f),
+            onLoading = {
+                isLoading = true
+                error = null
+            },
+            onSuccess = {
+                isLoading = false
+                error = null
+            },
+            onError = {
+                isLoading = false
+                error = "无法加载媒体，请稍后重试"
+            }
+        )
+        if (isLoading && error == null) {
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        }
+        error?.let { msg ->
+            Text(
+                text = msg,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.align(Alignment.Center)
+            )
+        }
+    }
+}
+
+@Composable
+private fun VideoViewerContent(url: String) {
+    var isPrepared by remember { mutableStateOf(false) }
+    var isPlaying by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(16f / 9f)
+    ) {
+        if (url.isBlank()) {
+            error = "无法加载媒体，请稍后重试"
+            isPrepared = true
+        }
+        AndroidView(
+            factory = { viewContext ->
+                android.widget.VideoView(viewContext).apply {
+                    setVideoURI(Uri.parse(url))
+                    setOnPreparedListener { player ->
+                        isPrepared = true
+                        player.isLooping = true
+                        if (isPlaying) start() else pause()
+                    }
+                    setOnErrorListener { _, _, _ ->
+                        error = "无法加载媒体，请稍后重试"
+                        true
+                    }
+                }
+            },
+            update = { view ->
+                if (error != null) {
+                    view.stopPlayback()
+                } else if (isPrepared) {
+                    if (isPlaying) {
+                        if (!view.isPlaying) view.start()
+                    } else {
+                        if (view.isPlaying) view.pause()
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxSize()
+        )
+        if (!isPrepared && error == null) {
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+        }
+        IconButton(
+            onClick = { isPlaying = !isPlaying },
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            Icon(
+                imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                contentDescription = "播放切换",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        error?.let { msg ->
+            Text(
+                text = msg,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.align(Alignment.Center)
+            )
         }
     }
 }

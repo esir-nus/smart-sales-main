@@ -83,8 +83,15 @@ class DeviceManagerViewModel @Inject constructor(
     fun onSelectFile(fileId: String) {
         val candidate = cachedFiles.firstOrNull { it.id == fileId } ?: return
         _uiState.update {
-            it.copy(selectedFile = candidate)
+            it.copy(
+                selectedFile = candidate,
+                viewerFile = candidate
+            )
         }
+    }
+
+    fun onCloseViewer() {
+        _uiState.update { it.copy(viewerFile = null) }
     }
 
     fun onUploadFile(source: DeviceUploadSource) {
@@ -168,7 +175,8 @@ class DeviceManagerViewModel @Inject constructor(
                         state.copy(
                             files = cachedFiles,
                             visibleFiles = cachedFiles,
-                            selectedFile = state.selectedFile?.takeIf { it.id != fileId }
+                            selectedFile = state.selectedFile?.takeIf { it.id != fileId },
+                            viewerFile = state.viewerFile?.takeIf { it.id != fileId }
                         )
                     }
                 }
@@ -228,6 +236,9 @@ class DeviceManagerViewModel @Inject constructor(
                         selectedFile = state.selectedFile?.let { selected ->
                             cachedFiles.firstOrNull { it.id == selected.id }
                         },
+                        viewerFile = state.viewerFile?.let { viewer ->
+                            cachedFiles.firstOrNull { it.id == viewer.id }
+                        },
                         isLoading = false,
                         loadErrorMessage = null,
                         errorMessage = null
@@ -246,6 +257,7 @@ class DeviceManagerViewModel @Inject constructor(
                         files = emptyList(),
                         visibleFiles = emptyList(),
                         selectedFile = null,
+                        viewerFile = null,
                         isLoading = false,
                         loadErrorMessage = LOAD_ERROR_MESSAGE,
                         errorMessage = null
@@ -323,6 +335,7 @@ class DeviceManagerViewModel @Inject constructor(
                             files = emptyList(),
                             visibleFiles = emptyList(),
                             selectedFile = null,
+                            viewerFile = null,
                             applyInProgressId = null,
                             isLoading = false,
                             isUploading = false,
@@ -460,6 +473,7 @@ data class DeviceManagerUiState(
     val files: List<DeviceFileUi> = emptyList(),
     val visibleFiles: List<DeviceFileUi> = emptyList(),
     val selectedFile: DeviceFileUi? = null,
+    val viewerFile: DeviceFileUi? = null,
     val applyInProgressId: String? = null,
     val isLoading: Boolean = false,
     val isUploading: Boolean = false,
@@ -484,7 +498,8 @@ data class DeviceFileUi(
 
 enum class DeviceMediaTab {
     Videos,
-    Gifs;
+    Gifs,
+    Images;
 }
 
 data class DeviceMediaFile(
@@ -528,6 +543,7 @@ private fun DeviceMediaFile.toUiOrNull(): DeviceFileUi? {
         isAudio() -> return null
         isVideo() -> DeviceMediaTab.Videos
         isGif() -> DeviceMediaTab.Gifs
+        isImage() -> DeviceMediaTab.Images
         else -> return null
     }
     return DeviceFileUi(
@@ -539,6 +555,7 @@ private fun DeviceMediaFile.toUiOrNull(): DeviceFileUi? {
         mediaLabel = when (tab) {
             DeviceMediaTab.Videos -> "视频"
             DeviceMediaTab.Gifs -> "GIF"
+            DeviceMediaTab.Images -> "图片"
         },
         modifiedAtText = formatTimestamp(modifiedAtMillis),
         mediaUrl = mediaUrl,
@@ -557,6 +574,14 @@ private fun DeviceMediaFile.isVideo(): Boolean {
 
 private fun DeviceMediaFile.isGif(): Boolean =
     mimeType.equals("image/gif", ignoreCase = true) || name.lowercase(Locale.ROOT).endsWith(".gif")
+
+private fun DeviceMediaFile.isImage(): Boolean {
+    val lowerMime = mimeType.lowercase(Locale.ROOT)
+    if (isGif()) return false
+    if (lowerMime.startsWith("image")) return true
+    val lowerName = name.lowercase(Locale.ROOT)
+    return lowerName.endsWith(".png") || lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || lowerName.endsWith(".webp")
+}
 
 private fun DeviceMediaFile.isAudio(): Boolean {
     val lowerMime = mimeType.lowercase(Locale.ROOT)

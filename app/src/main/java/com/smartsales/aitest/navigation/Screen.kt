@@ -21,6 +21,7 @@ sealed class Screen(
     data object Audio : Screen("audio_files", "录音", Icons.Filled.AudioFile)
     data object Device : Screen("device_manager", "设备", Icons.Filled.Devices)
     data object User : Screen("user_center", "我的", Icons.Filled.Person)
+    data object ChatHistory : Screen("chat_history", "聊天记录", Icons.Filled.Chat)
 
     companion object {
         val items = listOf(Home, Audio, Device, User)

@@ -12,13 +12,13 @@ import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -27,10 +27,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.smartsales.aitest.navigation.Screen
+import com.smartsales.aitest.ui.screens.history.ChatHistoryShell
 import com.smartsales.aitest.ui.screens.audio.AudioFilesScreen
 import com.smartsales.aitest.ui.screens.device.DeviceManagerScreen
 import com.smartsales.aitest.ui.screens.home.HomeScreen
 import com.smartsales.aitest.ui.screens.user.UserCenterScreen
+import com.smartsales.feature.chat.home.HomeScreenViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
 fun MainScreen() {
@@ -66,10 +69,24 @@ fun MainScreen() {
             startDestination = Screen.Home.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.Home.route) { HomeScreen() }
+            composable(Screen.Home.route) { backStackEntry ->
+                val homeViewModel: HomeScreenViewModel = hiltViewModel(backStackEntry)
+                HomeScreen(
+                    viewModel = homeViewModel,
+                    onNavigateToHistory = { navController.navigate(Screen.ChatHistory.route) }
+                )
+            }
             composable(Screen.Audio.route) { AudioFilesScreen() }
             composable(Screen.Device.route) { DeviceManagerScreen() }
             composable(Screen.User.route) { UserCenterScreen() }
+            composable(Screen.ChatHistory.route) {
+                val homeBackStackEntry = remember { navController.getBackStackEntry(Screen.Home.route) }
+                val homeViewModel: HomeScreenViewModel = hiltViewModel(homeBackStackEntry)
+                ChatHistoryShell(
+                    homeViewModel = homeViewModel,
+                    onBack = { navController.popBackStack() }
+                )
+            }
         }
     }
 }

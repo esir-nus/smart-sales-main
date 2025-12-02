@@ -42,6 +42,8 @@ import com.smartsales.aitest.ui.screens.history.model.groupSessionsByTime
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
+// 说明：底部导航已使用 ChatHistoryShell + feature/chat 的 ChatHistoryRoute，此文件保留作旧版本地模拟，不再挂接导航入口。
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatHistoryScreen() {

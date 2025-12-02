@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,7 +38,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.aitest.ui.components.ChatMessageBubble
 import com.smartsales.aitest.ui.components.ChatWelcomeScreen
@@ -46,11 +46,13 @@ import com.smartsales.aitest.ui.screens.home.model.SkillSuggestion
 import com.smartsales.aitest.ui.screens.home.model.toSkillSuggestion
 import com.smartsales.aitest.ui.screens.home.model.toUiMessages
 import com.smartsales.feature.chat.home.HomeScreenViewModel
+import com.smartsales.feature.chat.home.HomeScreenTestTags
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    viewModel: HomeScreenViewModel = hiltViewModel()
+    viewModel: HomeScreenViewModel,
+    onNavigateToHistory: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
@@ -72,6 +74,12 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text(text = "新对话") },
                 actions = {
+                    IconButton(
+                        onClick = onNavigateToHistory,
+                        modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_TOGGLE)
+                    ) {
+                        Icon(Icons.Filled.History, contentDescription = "历史记录")
+                    }
                     IconButton(onClick = { viewModel.onNewChatClicked() }) {
                         Icon(Icons.Filled.Refresh, contentDescription = "新建对话")
                     }

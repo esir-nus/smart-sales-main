@@ -4,6 +4,7 @@ package com.smartsales.aitest.ui.screens.device
 // 模块：:app
 // 说明：底部导航设备管理页（本地模拟），支持连接状态与文件列表展示
 // 作者：创建于 2025-12-02
+// 备注：底部导航已改用 DeviceManagerShell 承载真实流程，本文件仅作旧版示例保留
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

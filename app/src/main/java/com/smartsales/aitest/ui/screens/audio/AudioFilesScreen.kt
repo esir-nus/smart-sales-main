@@ -4,6 +4,7 @@ package com.smartsales.aitest.ui.screens.audio
 // 模块：:app
 // 说明：底部导航 Audio 页 UI，使用本地模拟数据展示同步与转写流程
 // 作者：创建于 2025-12-02
+// 备注：底部导航已改用 AudioFilesShell 承载真实流程，本文件仅作旧版示例保留
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box

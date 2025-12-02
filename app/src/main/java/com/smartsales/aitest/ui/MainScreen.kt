@@ -6,11 +6,6 @@ package com.smartsales.aitest.ui
 // 作者：创建于 2025-12-02
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AudioFile
-import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.filled.Devices
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -28,8 +23,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.smartsales.aitest.navigation.Screen
 import com.smartsales.aitest.ui.screens.history.ChatHistoryShell
-import com.smartsales.aitest.ui.screens.audio.AudioFilesScreen
-import com.smartsales.aitest.ui.screens.device.DeviceManagerScreen
+import com.smartsales.aitest.ui.screens.audio.AudioFilesShell
+import com.smartsales.aitest.ui.screens.device.DeviceManagerShell
 import com.smartsales.aitest.ui.screens.home.HomeScreen
 import com.smartsales.aitest.ui.screens.user.UserCenterScreen
 import com.smartsales.feature.chat.home.HomeScreenViewModel
@@ -76,11 +71,24 @@ fun MainScreen() {
                     onNavigateToHistory = { navController.navigate(Screen.ChatHistory.route) }
                 )
             }
-            composable(Screen.Audio.route) { AudioFilesScreen() }
-            composable(Screen.Device.route) { DeviceManagerScreen() }
+            composable(Screen.Audio.route) {
+                val homeBackStackEntry = remember(navController) { navController.getBackStackEntry(Screen.Home.route) }
+                val homeViewModel: HomeScreenViewModel = hiltViewModel(homeBackStackEntry)
+                AudioFilesShell(
+                    homeViewModel = homeViewModel,
+                    onNavigateHome = {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
+            }
+            composable(Screen.Device.route) { DeviceManagerShell() }
             composable(Screen.User.route) { UserCenterScreen() }
             composable(Screen.ChatHistory.route) {
-                val homeBackStackEntry = remember { navController.getBackStackEntry(Screen.Home.route) }
+                val homeBackStackEntry = remember(navController) { navController.getBackStackEntry(Screen.Home.route) }
                 val homeViewModel: HomeScreenViewModel = hiltViewModel(homeBackStackEntry)
                 ChatHistoryShell(
                     homeViewModel = homeViewModel,

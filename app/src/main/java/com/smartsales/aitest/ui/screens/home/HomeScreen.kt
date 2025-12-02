@@ -5,6 +5,9 @@ package com.smartsales.aitest.ui.screens.home
 // 说明：底部导航 Home 页聊天体验，接入 feature/chat 的真实聊天 ViewModel
 // 作者：创建于 2025-12-02
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,12 +24,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.AudioFile
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.Divider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -40,6 +49,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -50,8 +63,9 @@ import com.smartsales.aitest.ui.components.SkillChips
 import com.smartsales.aitest.ui.screens.home.model.SkillSuggestion
 import com.smartsales.aitest.ui.screens.home.model.toSkillSuggestion
 import com.smartsales.aitest.ui.screens.home.model.toUiMessages
-import com.smartsales.feature.chat.home.HomeScreenViewModel
+import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.home.HomeScreenTestTags
+import com.smartsales.feature.chat.home.HomeScreenViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,10 +77,43 @@ fun HomeScreen(
     val listState = rememberLazyListState()
     val messages = uiState.chatMessages.toUiMessages()
     val skills: List<SkillSuggestion> = uiState.quickSkills.map { it.toSkillSuggestion() }
+    val emptySkillOrder = listOf(
+        QuickSkillId.SUMMARIZE_LAST_MEETING,
+        QuickSkillId.PREP_NEXT_MEETING,
+        QuickSkillId.WRITE_FOLLOWUP_EMAIL
+    )
+    val emptySkills: List<SkillSuggestion> = uiState.quickSkills
+        .filter { it.id in emptySkillOrder }
+        .sortedBy { emptySkillOrder.indexOf(it.id) }
+        .map { quick ->
+            val customLabel = when (quick.id) {
+                QuickSkillId.SUMMARIZE_LAST_MEETING -> "智能分析"
+                QuickSkillId.PREP_NEXT_MEETING -> "生成 PDF"
+                QuickSkillId.WRITE_FOLLOWUP_EMAIL -> "生成 CSV"
+                else -> quick.label
+            }
+            quick.toSkillSuggestion().copy(label = customLabel)
+        }
     val isLoading = uiState.isStreaming || uiState.isSending
     val isEmptySession = uiState.chatMessages.isEmpty()
     val inputEnabled = !uiState.isInputBusy && !uiState.isBusy
     val canSend = uiState.inputText.isNotBlank() && !uiState.isBusy
+    var uploadMenuExpanded by rememberSaveable { mutableStateOf(false) }
+    val filePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.onAudioFilePicked(it) }
+    }
+    val audioPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.onAudioFilePicked(it) }
+    }
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.onImagePicked(it) }
+    }
 
     LaunchedEffect(uiState.chatMessages.size) {
         if (uiState.chatMessages.isNotEmpty()) {
@@ -112,7 +159,22 @@ fun HomeScreen(
                             }
                         },
                         inputEnabled = inputEnabled,
-                        canSend = canSend
+                        canSend = canSend,
+                        onUploadClick = { uploadMenuExpanded = true },
+                        uploadMenuExpanded = uploadMenuExpanded,
+                        onUploadMenuDismiss = { uploadMenuExpanded = false },
+                        onUploadFile = {
+                            uploadMenuExpanded = false
+                            filePicker.launch(arrayOf("*/*"))
+                        },
+                        onUploadAudio = {
+                            uploadMenuExpanded = false
+                            audioPicker.launch(arrayOf("audio/*"))
+                        },
+                        onUploadImage = {
+                            uploadMenuExpanded = false
+                            imagePicker.launch(arrayOf("image/*"))
+                        }
                     )
                 }
             }
@@ -128,7 +190,7 @@ fun HomeScreen(
             if (isEmptySession) {
                 EmptyConversationContent(
                     userName = uiState.userName,
-                    skills = skills.take(3),
+                    skills = emptySkills,
                     onSkillClick = { skill -> viewModel.onSelectQuickSkill(skill.id) }
                 )
             } else {
@@ -158,26 +220,60 @@ private fun ChatInputArea(
     onInputChange: (String) -> Unit,
     onSend: () -> Unit,
     inputEnabled: Boolean,
-    canSend: Boolean
+    canSend: Boolean,
+    onUploadClick: () -> Unit,
+    uploadMenuExpanded: Boolean,
+    onUploadMenuDismiss: () -> Unit,
+    onUploadFile: () -> Unit,
+    onUploadAudio: () -> Unit,
+    onUploadImage: () -> Unit
 ) {
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        Box {
+            IconButton(
+                onClick = onUploadClick,
+                enabled = inputEnabled
+            ) {
+                Icon(Icons.Outlined.Add, contentDescription = "上传或附件")
+            }
+            DropdownMenu(
+                expanded = uploadMenuExpanded,
+                onDismissRequest = onUploadMenuDismiss
+            ) {
+                DropdownMenuItem(
+                    leadingIcon = { Icon(Icons.Outlined.Description, contentDescription = null) },
+                    text = { Text(text = "上传文件") },
+                    onClick = onUploadFile
+                )
+                DropdownMenuItem(
+                    leadingIcon = { Icon(Icons.Outlined.AudioFile, contentDescription = null) },
+                    text = { Text(text = "上传音频") },
+                    onClick = onUploadAudio
+                )
+                DropdownMenuItem(
+                    leadingIcon = { Icon(Icons.Outlined.Image, contentDescription = null) },
+                    text = { Text(text = "上传图片") },
+                    onClick = onUploadImage
+                )
+            }
+        }
         OutlinedTextField(
             value = inputText,
             onValueChange = onInputChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.weight(1f),
             maxLines = 4,
             enabled = inputEnabled,
             placeholder = { Text(text = "上传文件或输入消息...") }
         )
         FilledIconButton(
             onClick = onSend,
-            enabled = canSend,
-            modifier = Modifier.align(Alignment.End)
+            enabled = canSend
         ) {
             Icon(Icons.Filled.Send, contentDescription = "发送")
         }

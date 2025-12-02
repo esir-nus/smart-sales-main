@@ -13,6 +13,8 @@ import com.smartsales.feature.media.MediaSyncCoordinator
 import com.smartsales.feature.media.audiofiles.DeviceHttpEndpointProvider
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
+import com.smartsales.feature.media.audiofiles.AudioStorageRepository
+import com.smartsales.feature.media.audiofiles.StoredAudio
 import com.smartsales.feature.media.devicemanager.DeviceMediaFile
 import com.smartsales.feature.media.devicemanager.DeviceMediaGateway
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -37,6 +39,7 @@ class AudioFilesViewModel @Inject constructor(
     private val mediaSyncCoordinator: MediaSyncCoordinator,
     private val transcriptionCoordinator: AudioTranscriptionCoordinator,
     private val endpointProvider: DeviceHttpEndpointProvider,
+    private val audioStorageRepository: AudioStorageRepository,
     private val dispatchers: DispatcherProvider
 ) : ViewModel() {
 
@@ -48,11 +51,14 @@ class AudioFilesViewModel @Inject constructor(
     private var currentBaseUrl: String? = null
     private var playingId: String? = null
     private val recordingSources = mutableMapOf<String, DeviceMediaFile>()
+    private var deviceUiItems: List<AudioRecordingUi> = emptyList()
+    private val storedAudios = mutableMapOf<String, StoredAudio>()
     private val observingJobs = mutableSetOf<String>()
 
     init {
         observeEndpoint()
         observeSyncState()
+        observeStorage()
     }
 
     fun onRefresh() {
@@ -102,22 +108,44 @@ class AudioFilesViewModel @Inject constructor(
     }
 
     fun onTranscribeClicked(id: String) {
-        val base = currentBaseUrl ?: run {
-            markRecordingStatus(id, TranscriptionStatus.ERROR)
-            return emitError("设备未连接")
-        }
-        val deviceFile = recordingSources[id] ?: run {
+        val stored = storedAudios[id]
+        val deviceFile = recordingSources[id]
+        if (stored == null && deviceFile == null) {
             markRecordingStatus(id, TranscriptionStatus.ERROR)
             return emitError("未找到音频文件")
         }
         viewModelScope.launch(dispatchers.io) {
             markRecordingStatus(id, TranscriptionStatus.IN_PROGRESS)
-            val localFile = when (val download = mediaGateway.downloadFile(base, deviceFile)) {
-                is Result.Success -> download.data
-                is Result.Error -> {
-                    markRecordingStatus(id, TranscriptionStatus.ERROR)
-                    emitError(download.throwable.message)
-                    return@launch
+            val localFile = when {
+                stored != null -> {
+                    val path = stored.localUri.path
+                    if (path.isNullOrBlank()) {
+                        markRecordingStatus(id, TranscriptionStatus.ERROR)
+                        emitError("找不到本地音频路径")
+                        return@launch
+                    }
+                    java.io.File(path)
+                }
+
+                else -> {
+                    val base = currentBaseUrl ?: run {
+                        markRecordingStatus(id, TranscriptionStatus.ERROR)
+                        emitError("设备未连接")
+                        return@launch
+                    }
+                    val device = deviceFile ?: run {
+                        markRecordingStatus(id, TranscriptionStatus.ERROR)
+                        emitError("未找到音频文件")
+                        return@launch
+                    }
+                    when (val download = mediaGateway.downloadFile(base, device)) {
+                        is Result.Success -> download.data
+                        is Result.Error -> {
+                            markRecordingStatus(id, TranscriptionStatus.ERROR)
+                            emitError(download.throwable.message)
+                            return@launch
+                        }
+                    }
                 }
             }
             val uploadPayload = when (val upload = transcriptionCoordinator.uploadAudio(localFile)) {
@@ -130,7 +158,7 @@ class AudioFilesViewModel @Inject constructor(
             }
             when (
                 val submit = transcriptionCoordinator.submitTranscription(
-                    audioAssetName = deviceFile.name,
+                    audioAssetName = deviceFile?.name ?: stored?.displayName ?: id,
                     language = DEFAULT_TINGWU_LANGUAGE,
                     uploadPayload = uploadPayload
                 )
@@ -233,6 +261,16 @@ class AudioFilesViewModel @Inject constructor(
         }
     }
 
+    private fun observeStorage() {
+        viewModelScope.launch(dispatchers.default) {
+            audioStorageRepository.audios.collectLatest { audios ->
+                storedAudios.clear()
+                audios.forEach { storedAudios[it.id] = it }
+                rebuildRecordings()
+            }
+        }
+    }
+
     private suspend fun loadRecordings(baseUrl: String, showLoading: Boolean) {
         if (showLoading) {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -240,17 +278,21 @@ class AudioFilesViewModel @Inject constructor(
         when (val result = mediaGateway.fetchFiles(baseUrl)) {
             is Result.Success -> {
                 recordingSources.clear()
+                val existing = _uiState.value.recordings.associateBy { it.id }
                 val items = result.data
                     .filter { it.isAudio() }
                     .onEach { recordingSources[it.name] = it }
-                    .map { it.toUi(playingId) }
+                    .mapNotNull { file ->
+                        val previous = existing[file.name]
+                        file.toUi(playingId)?.let { mergeUi(it, previous) }
+                    }
+                deviceUiItems = items
+                rebuildRecordings(items)
                 _uiState.update {
+                    val retainedIds = deviceUiItems.map { it.id } + storedAudios.keys
                     it.copy(
-                        recordings = items,
                         transcriptPreviewRecording = null,
-                        tingwuTaskIds = it.tingwuTaskIds.filterKeys { key ->
-                            items.any { recording -> recording.id == key }
-                        },
+                        tingwuTaskIds = it.tingwuTaskIds.filterKeys { key -> retainedIds.contains(key) },
                         isLoading = false,
                         errorMessage = null,
                         loadErrorMessage = null
@@ -315,16 +357,16 @@ class AudioFilesViewModel @Inject constructor(
                         }
                         val fileName = recordingSources[recordingId]?.name ?: recordingId
                         val transcript = state.transcriptMarkdown
-                        if (transcript.isNotBlank()) {
-                            _events.tryEmit(
-                                AudioFilesEvent.TranscriptReady(
-                                    recordingId = recordingId,
-                                    fileName = fileName,
-                                    jobId = jobId,
-                                    transcriptPreview = preview,
-                                    fullTranscriptMarkdown = transcript,
-                                    transcriptionUrl = state.transcriptionUrl
-                                )
+                    if (transcript.isNotBlank()) {
+                        _events.tryEmit(
+                            AudioFilesEvent.TranscriptReady(
+                                recordingId = recordingId,
+                                fileName = storedAudios[recordingId]?.displayName ?: fileName,
+                                jobId = jobId,
+                                transcriptPreview = preview,
+                                fullTranscriptMarkdown = transcript,
+                                transcriptionUrl = state.transcriptionUrl
+                            )
                             )
                         }
                         observingJobs.remove(jobId)
@@ -354,6 +396,70 @@ class AudioFilesViewModel @Inject constructor(
         _uiState.update { it.copy(errorMessage = message ?: "操作失败") }
     }
 
+    private fun StoredAudio.toUi(previous: AudioRecordingUi?): AudioRecordingUi {
+        val title = displayName.substringBeforeLast('.', displayName)
+        return AudioRecordingUi(
+            id = id,
+            title = title,
+            fileName = displayName,
+            durationMillis = durationMillis,
+            createdAtMillis = timestampMillis,
+            createdAtText = formatTimestamp(timestampMillis),
+            locationText = null,
+            transcriptionStatus = previous?.transcriptionStatus ?: TranscriptionStatus.NONE,
+            transcriptPreview = previous?.transcriptPreview,
+            fullTranscriptMarkdown = previous?.fullTranscriptMarkdown,
+            isPlaying = previous?.isPlaying ?: false,
+            hasLocalCopy = true,
+            transcriptionUrl = previous?.transcriptionUrl,
+            autoChaptersUrl = previous?.autoChaptersUrl,
+            chapters = previous?.chapters,
+            smartSummary = previous?.smartSummary,
+            sourceLabel = if (origin == com.smartsales.feature.media.audiofiles.AudioOrigin.PHONE) "聊天上传" else "设备录音"
+        )
+    }
+
+    private fun rebuildRecordings(
+        deviceItems: List<AudioRecordingUi>? = null
+    ) {
+        val existing = _uiState.value.recordings.associateBy { it.id }
+        val deviceList = deviceItems ?: deviceUiItems
+        val storedList = storedAudios.values.mapNotNull { stored ->
+            val previous = existing[stored.id]
+            stored.toUi(previous)
+        }
+        val merged = LinkedHashMap<String, AudioRecordingUi>()
+        deviceList.forEach { item ->
+            val previous = existing[item.id]
+            merged[item.id] = mergeUi(item, previous)
+        }
+        storedList.forEach { item ->
+            val previous = merged[item.id] ?: existing[item.id]
+            merged[item.id] = mergeUi(item, previous)
+        }
+        _uiState.update {
+            it.copy(recordings = merged.values.toList())
+        }
+    }
+
+    private fun mergeUi(
+        base: AudioRecordingUi,
+        previous: AudioRecordingUi?
+    ): AudioRecordingUi {
+        if (previous == null) return base
+        return base.copy(
+            transcriptionStatus = previous.transcriptionStatus,
+            transcriptPreview = previous.transcriptPreview ?: base.transcriptPreview,
+            fullTranscriptMarkdown = previous.fullTranscriptMarkdown ?: base.fullTranscriptMarkdown,
+            isPlaying = previous.isPlaying,
+            hasLocalCopy = previous.hasLocalCopy || base.hasLocalCopy,
+            transcriptionUrl = previous.transcriptionUrl ?: base.transcriptionUrl,
+            autoChaptersUrl = previous.autoChaptersUrl ?: base.autoChaptersUrl,
+            chapters = previous.chapters ?: base.chapters,
+            smartSummary = previous.smartSummary ?: base.smartSummary
+        )
+    }
+
     private fun DeviceMediaFile.isAudio(): Boolean {
         val lower = mimeType.lowercase(Locale.ROOT)
         if (lower.startsWith("audio/")) return true
@@ -361,18 +467,27 @@ class AudioFilesViewModel @Inject constructor(
         return AUDIO_EXTENSIONS.any { nameLower.endsWith(it) }
     }
 
-    private fun DeviceMediaFile.toUi(playingId: String?): AudioRecordingUi =
+    private fun DeviceMediaFile.toUi(
+        playingId: String?,
+        previous: AudioRecordingUi? = null
+    ): AudioRecordingUi? =
         AudioRecordingUi(
             id = name,
             title = name.substringBeforeLast(".", name),
             fileName = name,
-            durationMillis = null,
+            durationMillis = previous?.durationMillis,
             createdAtMillis = modifiedAtMillis,
             createdAtText = formatTimestamp(modifiedAtMillis),
             locationText = location?.takeIf { it.isNotBlank() },
-            transcriptionStatus = TranscriptionStatus.NONE,
+            transcriptionStatus = previous?.transcriptionStatus ?: TranscriptionStatus.NONE,
+            transcriptPreview = previous?.transcriptPreview,
+            fullTranscriptMarkdown = previous?.fullTranscriptMarkdown,
             isPlaying = playingId == name,
-            hasLocalCopy = false,
+            hasLocalCopy = previous?.hasLocalCopy ?: false,
+            transcriptionUrl = previous?.transcriptionUrl,
+            autoChaptersUrl = previous?.autoChaptersUrl,
+            chapters = previous?.chapters,
+            smartSummary = previous?.smartSummary,
             sourceLabel = mapSourceLabel(source)
         )
 

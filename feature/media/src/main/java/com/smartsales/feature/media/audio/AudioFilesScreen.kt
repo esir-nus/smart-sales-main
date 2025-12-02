@@ -22,6 +22,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
@@ -84,6 +87,10 @@ fun AudioFilesScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val designTokens = AppDesignTokens.current()
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = uiState.isSyncing || uiState.isLoading,
+        onRefresh = onSyncClicked
+    )
     Scaffold(
         modifier = modifier
             .fillMaxSize()
@@ -95,11 +102,12 @@ fun AudioFilesScreen(
                 actions = {
                     IconButton(
                         onClick = onSyncClicked,
+                        enabled = !uiState.isSyncing,
                         modifier = Modifier.testTag(AudioFilesTestTags.SYNC_BUTTON)
                     ) {
                         Icon(Icons.Default.Upload, contentDescription = "同步")
                     }
-                    IconButton(onClick = onRefresh) {
+                    IconButton(onClick = onRefresh, enabled = !uiState.isSyncing) {
                         Icon(Icons.Default.Refresh, contentDescription = "刷新")
                     }
                 }
@@ -111,7 +119,8 @@ fun AudioFilesScreen(
                 .padding(innerPadding)
                 .padding(16.dp)
                 .fillMaxSize()
-                .background(designTokens.mutedSurface),
+                .background(designTokens.mutedSurface)
+                .pullRefresh(pullRefreshState),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
@@ -187,6 +196,11 @@ fun AudioFilesScreen(
                 }
             }
         }
+        PullRefreshIndicator(
+            refreshing = uiState.isSyncing || uiState.isLoading,
+            state = pullRefreshState,
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
     }
     uiState.transcriptPreviewRecording?.let { recording ->
         TranscriptViewerSheet(
@@ -475,9 +489,9 @@ private fun EmptyState(onRefresh: () -> Unit, modifier: Modifier = Modifier) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(text = "暂无录音", style = MaterialTheme.typography.titleMedium)
+            Text(text = "暂无录音文件", style = MaterialTheme.typography.titleMedium)
             Text(
-                text = "暂无录音，下拉同步。",
+                text = "下拉或点击同步即可加载录音。",
                 style = MaterialTheme.typography.bodySmall
             )
             TextButton(onClick = onRefresh) {

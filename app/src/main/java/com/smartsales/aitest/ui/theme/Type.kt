@@ -116,6 +116,5 @@ val AppTypography = Typography(
         fontSize = 11.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.1.sp
-    ),
-    defaultFontFamily = Inter
+    )
 )

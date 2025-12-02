@@ -2,13 +2,14 @@ package com.smartsales.aitest.ui.screens.home
 
 // 文件：app/src/main/java/com/smartsales/aitest/ui/screens/home/HomeScreen.kt
 // 模块：:app
-// 说明：底部导航 Home 页聊天体验（本地模拟，无后端依赖）
+// 说明：底部导航 Home 页聊天体验，接入 feature/chat 的真实聊天 ViewModel
 // 作者：创建于 2025-12-02
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,13 +17,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -31,45 +33,37 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.aitest.ui.components.ChatMessageBubble
 import com.smartsales.aitest.ui.components.ChatWelcomeScreen
 import com.smartsales.aitest.ui.components.SkillChips
-import com.smartsales.aitest.ui.screens.home.model.ChatMessage
-import com.smartsales.aitest.ui.screens.home.model.MessageRole
 import com.smartsales.aitest.ui.screens.home.model.SkillSuggestion
-import java.util.UUID
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.smartsales.aitest.ui.screens.home.model.toSkillSuggestion
+import com.smartsales.aitest.ui.screens.home.model.toUiMessages
+import com.smartsales.feature.chat.home.HomeScreenViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
-    var messages by remember { mutableStateOf<List<ChatMessage>>(emptyList()) }
-    var inputText by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
+fun HomeScreen(
+    viewModel: HomeScreenViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
-    val userName = "用户" // TODO: 接入真实用户
-    val skills = remember {
-        listOf(
-            SkillSuggestion("skill_summary", "内容总结", "帮我总结这段通话的关键内容"),
-            SkillSuggestion("skill_objection", "异议分析", "分析客户提出的异议和顾虑"),
-            SkillSuggestion("skill_coach", "话术辅导", "给出应对建议和话术优化"),
-            SkillSuggestion("skill_report", "生成日报", "根据今天的工作生成日报")
-        )
-    }
+    val messages = uiState.chatMessages.toUiMessages()
+    val skills: List<SkillSuggestion> = uiState.quickSkills.map { it.toSkillSuggestion() }
+    val isLoading = uiState.isStreaming || uiState.isSending
+    val showWelcome = uiState.showWelcomeHero && uiState.chatMessages.isEmpty()
+    val inputEnabled = !uiState.isInputBusy && !uiState.isBusy
+    val canSend = uiState.inputText.isNotBlank() && !uiState.isBusy
 
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.lastIndex)
+    LaunchedEffect(uiState.chatMessages.size) {
+        if (uiState.chatMessages.isNotEmpty()) {
+            listState.animateScrollToItem(uiState.chatMessages.size - 1)
         }
     }
 
@@ -78,11 +72,7 @@ fun HomeScreen() {
             TopAppBar(
                 title = { Text(text = "新对话") },
                 actions = {
-                    IconButton(onClick = {
-                        messages = emptyList()
-                        inputText = ""
-                        isLoading = false
-                    }) {
+                    IconButton(onClick = { viewModel.onNewChatClicked() }) {
                         Icon(Icons.Filled.Refresh, contentDescription = "新建对话")
                     }
                 }
@@ -101,8 +91,8 @@ fun HomeScreen() {
                     .weight(1f)
                     .fillMaxWidth()
             ) {
-                if (messages.isEmpty()) {
-                    ChatWelcomeScreen(userName = userName, modifier = Modifier.fillMaxSize())
+                if (showWelcome) {
+                    ChatWelcomeScreen(userName = uiState.userName, modifier = Modifier.fillMaxSize())
                 } else {
                     LazyColumn(
                         state = listState,
@@ -126,40 +116,28 @@ fun HomeScreen() {
                 tonalElevation = 2.dp
             ) {
                 Column {
-                    if (messages.isEmpty()) {
+                    uiState.chatErrorMessage?.let { error ->
+                        ErrorBanner(
+                            message = error,
+                            onDismiss = { viewModel.onDismissError() }
+                        )
+                    }
+                    if (uiState.chatMessages.isEmpty()) {
                         SkillChips(
                             skills = skills,
-                            onSkillClick = { skill -> inputText = skill.prompt }
+                            onSkillClick = { skill -> viewModel.onSelectQuickSkill(skill.id) }
                         )
                     }
                     ChatInputArea(
-                        inputText = inputText,
-                        onInputChange = { inputText = it },
+                        inputText = uiState.inputText,
+                        onInputChange = viewModel::onInputChanged,
                         onSend = {
-                            if (inputText.isBlank() || isLoading) return@ChatInputArea
-                            val prompt = inputText
-                            val userMessage = ChatMessage(
-                                id = UUID.randomUUID().toString(),
-                                content = prompt.trim(),
-                                role = MessageRole.USER,
-                                timestamp = System.currentTimeMillis()
-                            )
-                            messages = messages + userMessage
-                            inputText = ""
-                            isLoading = true
-                            scope.launch {
-                                delay(1500)
-                                val aiMessage = ChatMessage(
-                                    id = UUID.randomUUID().toString(),
-                                    content = "我理解您的需求。根据您的问题「$prompt」，我建议采用以下策略：\n\n1. 先了解客户的具体需求\n2. 提供针对性的解决方案\n3. 强调产品的独特价值\n\n您需要我进一步分析吗？",
-                                    role = MessageRole.ASSISTANT,
-                                    timestamp = System.currentTimeMillis()
-                                )
-                                messages = messages + aiMessage
-                                isLoading = false
+                            if (canSend) {
+                                viewModel.onSendMessage()
                             }
                         },
-                        isLoading = isLoading
+                        inputEnabled = inputEnabled,
+                        canSend = canSend
                     )
                 }
             }
@@ -172,7 +150,8 @@ private fun ChatInputArea(
     inputText: String,
     onInputChange: (String) -> Unit,
     onSend: () -> Unit,
-    isLoading: Boolean
+    inputEnabled: Boolean,
+    canSend: Boolean
 ) {
     Column(
         modifier = Modifier
@@ -185,12 +164,12 @@ private fun ChatInputArea(
             onValueChange = onInputChange,
             modifier = Modifier.fillMaxWidth(),
             maxLines = 4,
-            enabled = !isLoading,
+            enabled = inputEnabled,
             placeholder = { Text(text = "输入消息...") }
         )
         FilledIconButton(
             onClick = onSend,
-            enabled = inputText.isNotBlank() && !isLoading,
+            enabled = canSend,
             modifier = Modifier.align(Alignment.End)
         ) {
             Icon(Icons.Filled.Send, contentDescription = "发送")
@@ -205,7 +184,39 @@ private fun TypingIndicator() {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
-        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
     )
+}
+
+@Composable
+private fun ErrorBanner(
+    message: String,
+    onDismiss: () -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        tonalElevation = 1.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "关闭错误"
+                )
+            }
+        }
+    }
 }

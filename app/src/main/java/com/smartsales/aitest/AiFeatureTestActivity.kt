@@ -95,6 +95,7 @@ import com.smartsales.aitest.audio.AudioFilesRoute
 import com.smartsales.aitest.devicemanager.DeviceManagerRoute
 import com.smartsales.aitest.setup.DeviceSetupRoute
 import com.smartsales.aitest.usercenter.UserCenterRoute
+import com.smartsales.aitest.ui.theme.AppTheme
 import com.smartsales.core.util.Result
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.chat.home.DeviceConnectionStateUi
@@ -247,7 +248,7 @@ private fun AiFeatureTestApp(
         }
     }
 
-    MaterialTheme {
+    AppTheme {
         val designTokens = AppDesignTokens.current()
         val showSnackbar: (String) -> Unit = { message ->
             scope.launch { snackbarHostState.showSnackbar(message) }

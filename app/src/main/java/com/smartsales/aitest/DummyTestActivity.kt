@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import com.smartsales.aitest.ui.theme.AppTheme
 
 class DummyTestActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -24,7 +25,9 @@ class DummyTestActivity : ComponentActivity() {
 
         setContent {
             Log.d(TAG, "setContent start")
-            DummyRoot()
+            AppTheme {
+                DummyRoot()
+            }
             Log.d(TAG, "setContent end")
         }
     }

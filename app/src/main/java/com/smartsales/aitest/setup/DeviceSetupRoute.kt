@@ -16,6 +16,7 @@ import com.smartsales.feature.connectivity.setup.DeviceSetupViewModel
 import com.smartsales.feature.connectivity.setup.DeviceSetupTestTags
 import com.smartsales.feature.connectivity.setup.DeviceSetupEvent
 import kotlinx.coroutines.flow.collect
+import com.smartsales.aitest.AiFeatureTestTags
 
 @Composable
 fun DeviceSetupRoute(

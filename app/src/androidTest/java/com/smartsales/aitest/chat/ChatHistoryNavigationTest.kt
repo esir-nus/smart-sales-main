@@ -93,10 +93,17 @@ class ChatHistoryNavigationTest {
 
         // 点击历史项返回 Home
         composeRule.onNodeWithText("历史会话").performClick()
+        composeRule.waitUntil(timeoutMillis = 7_000) {
+            composeRule.onAllNodesWithTag(com.smartsales.feature.chat.home.HomeScreenTestTags.HISTORY_PANEL, useUnmergedTree = true)
+                .fetchSemanticsNodes().isEmpty()
+        }
         waitForPage(AiFeatureTestTags.PAGE_HOME)
-
-        // 仅验证已回到 Home
-        waitForPage(AiFeatureTestTags.PAGE_HOME)
+        // 验证消息已加载
+        composeRule.waitUntil(timeoutMillis = 7_000) {
+            composeRule.onAllNodesWithText("预置消息", substring = true, useUnmergedTree = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText("预置消息", substring = true, useUnmergedTree = true).assertIsDisplayed()
     }
     private fun waitForPage(tag: String) {
         composeRule.waitUntil(timeoutMillis = 7_000) {

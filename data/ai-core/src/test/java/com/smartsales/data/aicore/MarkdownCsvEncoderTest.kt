@@ -35,4 +35,22 @@ class MarkdownCsvEncoderTest {
         val expected = "section,content${System.lineSeparator()}\"content\",\"\""
         assertEquals(expected, csv)
     }
+
+    @Test
+    fun encode_preservesSubtitleStyleTranscriptLines() {
+        val markdown = """
+            ## 逐字稿
+            - [00:01] 发言人 1：你好罗总。
+            - [00:05] 发言人 2：欢迎光临。
+        """.trimIndent()
+
+        val csv = MarkdownCsvEncoder.encode(markdown).toString(StandardCharsets.UTF_8)
+        val expected = """
+            section,content
+            "逐字稿","[00:01] 发言人 1：你好罗总。"
+            "逐字稿","[00:05] 发言人 2：欢迎光临。"
+        """.trimIndent().replace("\n", System.lineSeparator())
+
+        assertEquals(expected, csv)
+    }
 }

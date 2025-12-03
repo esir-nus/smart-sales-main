@@ -737,20 +737,29 @@ class RealTingwuCoordinator @Inject constructor(
         diarizedSegments: List<DiarizedSegment> = emptyList()
     ): String {
         if (diarizedSegments.isNotEmpty()) {
+            val sorted = diarizedSegments.sortedBy { it.startMs }
             val builder = StringBuilder()
-            val distinctSpeakers = diarizedSegments.map { it.speakerIndex }.distinct().size
+            val distinctSpeakers = sorted.map { it.speakerIndex }.distinct().size
             builder.append("## 逐字稿\n")
-            diarizedSegments.forEach { segment ->
+            sorted.forEach { segment ->
                 val label = if (distinctSpeakers > 1) "发言人 ${segment.speakerIndex}" else null
                 val begin = formatTimeMs(segment.startMs)
                 val end = formatTimeMs(segment.endMs)
+                val hasValidRange = segment.endMs > segment.startMs &&
+                    segment.endMs - segment.startMs <= MAX_SUBTITLE_DURATION_MS
                 builder.append("- ")
-                label?.let { builder.append(it).append(" ") }
                 if (segment.startMs > 0 || segment.endMs > 0) {
-                    builder.append("[").append(begin).append(" - ").append(end).append("] ")
+                    builder.append("[")
+                        .append(begin)
+                    if (hasValidRange) {
+                        builder.append(" - ").append(end)
+                    }
+                    builder.append("] ")
                 }
-                builder.append("：")
-                    .append(segment.text.ifBlank { "（空白）" })
+                if (label != null) {
+                    builder.append(label).append("：")
+                }
+                builder.append(segment.text.ifBlank { "（空白）" })
                     .append("\n")
             }
             return builder.toString().trimEnd()
@@ -783,6 +792,17 @@ class RealTingwuCoordinator @Inject constructor(
 
     private fun buildDiarizedSegments(transcription: TingwuTranscription?): List<DiarizedSegment> {
         if (transcription == null) return emptyList()
+        // 若文本本身已经是 Markdown / 段落结构，则直接交给上层渲染，不再强行拆分为逐字字幕。
+        val rawText = transcription.text.orEmpty()
+        val normalizedText = rawText.replace("\r\n", "\n")
+        val looksPreFormatted = normalizedText.contains("\n- ") ||
+            normalizedText.trimStart().startsWith("#") ||
+            normalizedText.contains("\n\n")
+
+        if (looksPreFormatted) {
+            return emptyList()
+        }
+
         val speakerOrder = LinkedHashMap<String, Int>()
         transcription.speakers?.forEachIndexed { index, speaker ->
             speakerOrder[speaker.id] = index + 1
@@ -796,22 +816,46 @@ class RealTingwuCoordinator @Inject constructor(
         val sortedSegments = transcription.segments.orEmpty()
             .filter { !it.text.isNullOrBlank() }
             .sortedBy { it.start ?: 0.0 }
+
+        // 当返回中没有结构化 Segments，但存在纯文本时，按句号拆分为伪字幕行。
+        if (sortedSegments.isEmpty() && rawText.isNotBlank()) {
+            val sentences = splitIntoSentences(normalizedText)
+            if (sentences.isNotEmpty()) {
+                var cursorMs = SYNTHETIC_SENTENCE_GAP_MS
+                return sentences.map { sentence ->
+                    val text = sentence.trim()
+                    val startMs = cursorMs
+                    cursorMs += SYNTHETIC_SENTENCE_GAP_MS
+                    DiarizedSegment(
+                        speakerId = "spk_default",
+                        speakerIndex = 1,
+                        startMs = startMs,
+                        endMs = startMs,
+                        text = text
+                    )
+                }
+            }
+        }
+
         val diarized = sortedSegments.map { segment ->
             val (speakerId, speakerIndex) = resolveSpeaker(segment.speaker)
             val startMs = ((segment.start ?: 0.0) * 1000).toLong()
             val endMs = ((segment.end ?: segment.start ?: 0.0) * 1000).toLong()
+            val normalizedStart = max(startMs, 0)
+            val normalizedEnd = max(endMs, 0)
+            val safeEnd = if (normalizedEnd >= normalizedStart) normalizedEnd else normalizedStart
             DiarizedSegment(
                 speakerId = speakerId,
                 speakerIndex = speakerIndex,
-                startMs = max(startMs, 0),
-                endMs = max(endMs, 0),
+                startMs = normalizedStart,
+                endMs = safeEnd,
                 text = segment.text?.trim().orEmpty()
             )
         }
         val merged = mutableListOf<DiarizedSegment>()
         diarized.forEach { segment ->
             val last = merged.lastOrNull()
-            if (last != null && last.speakerIndex == segment.speakerIndex) {
+            if (last != null && shouldMergeAsSubtitle(last, segment)) {
                 val combined = last.copy(
                     endMs = max(last.endMs, segment.endMs),
                     text = (last.text + " " + segment.text).trim()
@@ -1072,6 +1116,38 @@ class RealTingwuCoordinator @Inject constructor(
         )
     }
 
+    /** 判断两段是否可以安全合并为一行字幕。 */
+    private fun shouldMergeAsSubtitle(previous: DiarizedSegment, next: DiarizedSegment): Boolean {
+        if (previous.speakerIndex != next.speakerIndex) return false
+        val gapMs = next.startMs - previous.endMs
+        if (gapMs < 0 || gapMs > MAX_SUBTITLE_GAP_MS) return false
+        val combinedDuration = max(next.endMs, previous.endMs) - min(previous.startMs, next.startMs)
+        if (combinedDuration > MAX_SUBTITLE_DURATION_MS) return false
+        val combinedLength = previous.text.length + 1 + next.text.length
+        if (combinedLength > MAX_SUBTITLE_TEXT_LENGTH) return false
+        return true
+    }
+
+    private fun splitIntoSentences(text: String): List<String> {
+        val sentences = mutableListOf<String>()
+        val current = StringBuilder()
+        text.forEach { ch ->
+            current.append(ch)
+            if (ch in SENTENCE_DELIMITERS) {
+                val sentence = current.toString().trim()
+                if (sentence.isNotEmpty()) {
+                    sentences.add(sentence)
+                }
+                current.clear()
+            }
+        }
+        val remainder = current.toString().trim()
+        if (remainder.isNotEmpty()) {
+            sentences.add(remainder)
+        }
+        return sentences
+    }
+
     private inline fun logVerbose(message: () -> String) {
         if (verboseLogging) {
             AiCoreLogger.v(TAG, message())
@@ -1090,6 +1166,11 @@ class RealTingwuCoordinator @Inject constructor(
         private const val DEFAULT_LANGUAGE = "zh-CN"
         private const val DEFAULT_SOURCE_LANGUAGE = "cn"
         private const val SUBMITTED_PROGRESS = 1
+        private const val MAX_SUBTITLE_GAP_MS = 2_000L
+        private const val MAX_SUBTITLE_DURATION_MS = 10_000L
+        private const val MAX_SUBTITLE_TEXT_LENGTH = 100
+        private const val SYNTHETIC_SENTENCE_GAP_MS = 3_000L
+        private val SENTENCE_DELIMITERS = setOf('。', '？', '！', '.', '!', '?')
     }
 }
 

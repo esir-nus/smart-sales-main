@@ -53,6 +53,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val DEFAULT_SESSION_ID = "home-session"
+private const val DEFAULT_SESSION_TITLE = "新的聊天"
 private const val LONG_CONTENT_THRESHOLD = 240
 private const val CONTEXT_LENGTH_LIMIT = 800
 private const val CONTEXT_MESSAGE_LIMIT = 5
@@ -311,15 +312,15 @@ class HomeScreenViewModel @Inject constructor(
         when (skillId) {
             QuickSkillId.SMART_ANALYSIS -> {
                 if (_uiState.value.isBusy) return
-                _uiState.update { state ->
-                    val toggled = !state.isSmartAnalysisMode
-                    state.copy(
-                        isSmartAnalysisMode = toggled,
-                        selectedSkill = if (toggled) definition.toUiModel() else null,
-                        inputText = state.inputText
-                    )
-                }
-            }
+        _uiState.update { state ->
+            val toggled = !state.isSmartAnalysisMode
+            state.copy(
+                isSmartAnalysisMode = toggled,
+                selectedSkill = if (toggled) definition.toUiModel() else null,
+                inputText = state.inputText
+            )
+        }
+    }
             QuickSkillId.EXPORT_PDF -> {
                 onExportPdfClicked()
             }
@@ -947,7 +948,7 @@ class HomeScreenViewModel @Inject constructor(
     ) {
         val isSmartAnalysis = request.quickSkillId == "SMART_ANALYSIS"
         val streamingDeduplicator = StreamingDeduplicator(isSmartAnalysis)
-        
+
         viewModelScope.launch {
             aiChatService.streamChat(request).collect { event ->
                 when (event) {
@@ -973,6 +974,7 @@ class HomeScreenViewModel @Inject constructor(
                         viewModelScope.launch {
                             updateSessionSummary(cleaned)
                             applySessionList()
+                            maybeGenerateSessionTitle(request, cleaned)
                         }
                     }
                     is ChatStreamEvent.Error -> {
@@ -2195,7 +2197,7 @@ class HomeScreenViewModel @Inject constructor(
         titleOverride: String? = null
     ): AiSessionSummary {
         val existing = sessionRepository.findById(sessionId)
-        val title = titleOverride ?: existing?.title ?: "新的聊天"
+        val title = titleOverride ?: existing?.title ?: DEFAULT_SESSION_TITLE
         val preview = existing?.lastMessagePreview ?: ""
         val summary = AiSessionSummary(
             id = sessionId,
@@ -2218,6 +2220,23 @@ class HomeScreenViewModel @Inject constructor(
             pinned = existing?.pinned ?: false
         )
         sessionRepository.upsert(summary)
+    }
+
+    private suspend fun maybeGenerateSessionTitle(request: ChatRequest, assistantText: String) {
+        if (request.quickSkillId != null) return
+        val existing = sessionRepository.findById(sessionId)
+        if (existing != null && existing.title != DEFAULT_SESSION_TITLE) return
+        val hasAssistantBefore = _uiState.value.chatMessages.any { it.role == ChatMessageRole.ASSISTANT }
+        if (hasAssistantBefore) return
+        val firstUserMessage = _uiState.value.chatMessages.firstOrNull { it.role == ChatMessageRole.USER }?.content ?: return
+        val createdAt = existing?.updatedAtMillis ?: System.currentTimeMillis()
+        val title = com.smartsales.feature.chat.title.SessionTitleGenerator.deriveSessionTitle(
+            updatedAtMillis = createdAt,
+            firstUserMessage = firstUserMessage,
+            firstAssistantMessage = assistantText
+        )
+        sessionRepository.updateTitle(sessionId, title)
+        applySessionList()
     }
 
     private fun saveImageToCache(uri: Uri): File {

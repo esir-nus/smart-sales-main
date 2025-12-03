@@ -25,6 +25,7 @@ interface AiSessionRepository {
     suspend fun upsert(summary: AiSessionSummary)
     suspend fun delete(id: String)
     suspend fun findById(id: String): AiSessionSummary?
+    suspend fun updateTitle(id: String, newTitle: String)
 }
 
 @Singleton
@@ -53,5 +54,15 @@ class InMemoryAiSessionRepository @Inject constructor() : AiSessionRepository {
 
     override suspend fun findById(id: String): AiSessionSummary? = internal.value.firstOrNull {
         it.id == id
+    }
+
+    override suspend fun updateTitle(id: String, newTitle: String) {
+        mutex.withLock {
+            internal.update { existing ->
+                existing.map { summary ->
+                    if (summary.id == id) summary.copy(title = newTitle) else summary
+                }
+            }
+        }
     }
 }

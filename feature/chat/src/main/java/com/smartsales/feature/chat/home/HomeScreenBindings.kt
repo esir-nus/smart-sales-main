@@ -71,20 +71,30 @@ class DelegatingHomeAiChatService @Inject constructor(
     }
 
     private fun buildPromptWithHistory(request: ChatRequest): String {
-        if (request.history.isEmpty()) return request.userMessage
-        val historyText = request.history.joinToString(separator = "\n") { item ->
-            val role = when (item.role) {
-                ChatRole.USER -> "用户"
-                ChatRole.ASSISTANT -> "助手"
+        val builder = StringBuilder()
+        if (request.history.isNotEmpty()) {
+            val historyText = request.history.joinToString(separator = "\n") { item ->
+                val role = when (item.role) {
+                    ChatRole.USER -> "用户"
+                    ChatRole.ASSISTANT -> "助手"
+                }
+                "$role：${item.content}"
             }
-            "$role：${item.content}"
+            builder.appendLine("历史对话：")
+            builder.appendLine(historyText)
+            builder.appendLine()
         }
-        return buildString {
-            appendLine("历史对话：")
-            appendLine(historyText)
-            appendLine()
-            append("最新问题：${request.userMessage}")
+        builder.append("最新问题：${request.userMessage}")
+        if (request.quickSkillId == null) {
+            builder.appendLine()
+            builder.appendLine()
+            builder.appendLine("请按下面步骤回复：")
+            builder.appendLine("1) 先用 1-2 句话复述用户问题。")
+            builder.appendLine("2) 给出简短分析，避免重复。")
+            builder.appendLine("3) 用要点列出可执行的下一步。")
+            builder.append("4) 如信息不足，请先说明并友好邀请补充；如需深度拆解，可提醒使用「智能分析」获得完整版。")
         }
+        return builder.toString()
     }
 
     private fun AudioContextSummary.toMarkdown(): String = buildString {

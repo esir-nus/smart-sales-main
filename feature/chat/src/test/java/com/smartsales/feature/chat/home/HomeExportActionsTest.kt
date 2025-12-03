@@ -164,6 +164,27 @@ class HomeExportActionsTest {
         assertTrue(!viewModel.uiState.value.exportInProgress)
     }
 
+    @Test
+    fun `low information input skips ai call and hints only once`() = runTest(dispatcher) {
+        viewModel.onInputChanged("是")
+        viewModel.onSendMessage()
+        advanceUntilIdle()
+
+        assertEquals(null, aiChatService.lastRequest)
+        val assistantCountFirst = viewModel.uiState.value.chatMessages.count { it.role == ChatMessageRole.ASSISTANT }
+        assertEquals(1, assistantCountFirst)
+
+        viewModel.onInputChanged("好的")
+        viewModel.onSendMessage()
+        advanceUntilIdle()
+
+        assertEquals(null, aiChatService.lastRequest)
+        val assistantCountSecond = viewModel.uiState.value.chatMessages.count { it.role == ChatMessageRole.ASSISTANT }
+        assertEquals(1, assistantCountSecond)
+        val userCount = viewModel.uiState.value.chatMessages.count { it.role == ChatMessageRole.USER }
+        assertEquals(2, userCount)
+    }
+
     private class RecordingAiChatService : AiChatService {
         var lastRequest: ChatRequest? = null
         override fun streamChat(request: ChatRequest): Flow<ChatStreamEvent> {

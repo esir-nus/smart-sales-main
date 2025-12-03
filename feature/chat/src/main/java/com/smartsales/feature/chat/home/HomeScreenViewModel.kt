@@ -185,6 +185,8 @@ class HomeScreenViewModel @Inject constructor(
     private var latestMediaSyncState: MediaSyncState? = null
     private var sessionId: String = DEFAULT_SESSION_ID
     private var latestSessionSummaries: List<AiSessionSummary> = emptyList()
+    private var hasShownLowInfoHint: Boolean = false
+    private var hasShownAnalysisExportHint: Boolean = false
     private var transcriptionJob: Job? = null
     private var latestAnalysisMarkdown: String? = null
 
@@ -204,8 +206,34 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     fun onSendMessage() {
+        val rawInput = _uiState.value.inputText
+        val content = rawInput.trim()
+        if (content.isEmpty() || _uiState.value.isBusy) return
+        if (isLowInformationReply(content)) {
+            val userMessage = createUserMessage(content)
+            _uiState.update { state ->
+                state.copy(
+                    chatMessages = state.chatMessages + userMessage,
+                    inputText = "",
+                    chatErrorMessage = null,
+                    showWelcomeHero = false,
+                    snackbarMessage = null
+                )
+            }
+            persistMessagesAsync()
+            viewModelScope.launch {
+                updateSessionSummary(userMessage.content)
+            }
+            if (!hasShownLowInfoHint) {
+                hasShownLowInfoHint = true
+                appendAssistantMessage(
+                    content = "我还不太确定你的需求，能再多提供一些上下文或问题细节吗？"
+                )
+            }
+            return
+        }
         sendMessageInternal(
-            messageText = _uiState.value.inputText
+            messageText = content
         )
     }
 
@@ -221,9 +249,7 @@ class HomeScreenViewModel @Inject constructor(
         sendMessageInternal(
             messageText = prompt,
             skillOverride = QuickSkillId.SUMMARIZE_LAST_MEETING
-        ) { summary ->
-            latestAnalysisMarkdown = summary
-        }
+        ) { summary -> handleSmartAnalysisCompleted(summary) }
     }
 
     fun onExportPdfClicked() {
@@ -263,9 +289,7 @@ class HomeScreenViewModel @Inject constructor(
                 sendMessageInternal(
                     messageText = prompt,
                     skillOverride = QuickSkillId.SMART_ANALYSIS
-                ) { summary ->
-                    latestAnalysisMarkdown = summary
-                }
+                ) { summary -> handleSmartAnalysisCompleted(summary) }
             }
             QuickSkillId.EXPORT_PDF -> {
                 onExportPdfClicked()
@@ -506,6 +530,8 @@ class HomeScreenViewModel @Inject constructor(
             val title = "通话分析 – ${request.fileName}".take(40)
             val existing = chatHistoryRepository.loadLatestSession(targetSessionId)
             this@HomeScreenViewModel.sessionId = targetSessionId
+            hasShownLowInfoHint = false
+            hasShownAnalysisExportHint = false
             ensureSessionSummary(targetSessionId, title)
             _uiState.update {
                 it.copy(
@@ -630,6 +656,8 @@ class HomeScreenViewModel @Inject constructor(
             if (sessionId != this@HomeScreenViewModel.sessionId) {
                 this@HomeScreenViewModel.sessionId = sessionId
                 latestAnalysisMarkdown = null
+                hasShownLowInfoHint = false
+                hasShownAnalysisExportHint = false
                 applySessionList()
                 loadSession(sessionId)
             }
@@ -659,6 +687,8 @@ class HomeScreenViewModel @Inject constructor(
             val newSessionId = "session-${UUID.randomUUID()}"
             sessionId = newSessionId
             latestAnalysisMarkdown = null
+            hasShownLowInfoHint = false
+            hasShownAnalysisExportHint = false
             val summary = ensureSessionSummary(newSessionId, titleOverride = "新的聊天")
             _uiState.update {
                 it.copy(
@@ -969,6 +999,21 @@ class HomeScreenViewModel @Inject constructor(
         return true
     }
 
+    private fun isLowInformationReply(text: String): Boolean {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return true
+        val normalized = trimmed.lowercase(Locale.getDefault())
+        val ackTokens = setOf("是", "好", "好的", "嗯", "嗯嗯", "ok", "行", "可以", "可以的", "收到")
+        if (ackTokens.contains(normalized)) return true
+        if (normalized.length < 2) return true
+        if (normalized.length <= 2) {
+            val stripped = normalized.replace(Regex("[的呢啊呀哦！!？?。，、,.~·\\s]+"), "")
+            if (stripped.isEmpty()) return true
+            if (stripped.all { it in listOf('的', '呢', '啊', '呀', '哦') }) return true
+        }
+        return false
+    }
+
     /** 根据已订阅的媒体同步状态构建轻量音频上下文，仅供聊天请求使用。 */
     private fun buildAudioContextSummary(): AudioContextSummary? {
         val state = latestMediaSyncState ?: return null
@@ -1124,12 +1169,23 @@ class HomeScreenViewModel @Inject constructor(
         value = transform(value)
     }
 
+    private fun handleSmartAnalysisCompleted(summary: String) {
+        latestAnalysisMarkdown = summary
+        if (!hasShownAnalysisExportHint) {
+            hasShownAnalysisExportHint = true
+            appendAssistantMessage(
+                content = "智能分析完成，如需分享可直接导出 PDF 或 CSV。"
+            )
+        }
+    }
+
     companion object {
         private fun mapSkillToMode(skillId: QuickSkillId?): String? = when (skillId) {
             QuickSkillId.SUMMARIZE_LAST_MEETING -> "SUMMARY"
             QuickSkillId.EXTRACT_ACTION_ITEMS -> "OBJECTION_ANALYSIS"
             QuickSkillId.WRITE_FOLLOWUP_EMAIL -> "COACHING"
             QuickSkillId.PREP_NEXT_MEETING -> "DAILY_REPORT"
+            QuickSkillId.SMART_ANALYSIS -> "SMART_ANALYSIS"
             else -> null
         }
 

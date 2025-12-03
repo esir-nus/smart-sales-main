@@ -35,10 +35,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudUpload
@@ -227,7 +225,6 @@ fun DeviceManagerContent(
             .fillMaxSize()
             .background(designTokens.mutedSurface)
             .padding(horizontal = 12.dp, vertical = 12.dp)
-            .verticalScroll(rememberScrollState())
             .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -272,7 +269,8 @@ fun DeviceManagerContent(
                 onRequestUpload = onRequestUpload,
                 onSelectFile = onSelectFile,
                 onApplyFile = onApplyFile,
-                onDeleteFile = { deleteTarget = it }
+                onDeleteFile = { deleteTarget = it },
+                modifier = Modifier.weight(1f, fill = true)
             )
         }
     }
@@ -449,7 +447,8 @@ private fun FileListSection(
     onRequestUpload: () -> Unit,
     onSelectFile: (String) -> Unit,
     onApplyFile: (String) -> Unit,
-    onDeleteFile: (DeviceFileUi) -> Unit
+    onDeleteFile: (DeviceFileUi) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -483,7 +482,7 @@ private fun FileListSection(
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 200.dp)
             .testTag(DeviceManagerTestTags.FILE_LIST),

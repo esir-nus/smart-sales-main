@@ -21,7 +21,8 @@ data class TingwuRequest(
     val audioAssetName: String,
     val language: String = "zh-CN",
     val ossObjectKey: String? = null,
-    val fileUrl: String? = null
+    val fileUrl: String? = null,
+    val diarizationEnabled: Boolean = true
 )
 
 data class TingwuJobArtifacts(
@@ -34,12 +35,22 @@ data class TingwuJobArtifacts(
     val autoChaptersUrl: String? = null,
     val extraResultUrls: Map<String, String> = emptyMap(),
     val chapters: List<TingwuChapter>? = null,
-    val smartSummary: TingwuSmartSummary? = null
+    val smartSummary: TingwuSmartSummary? = null,
+    val diarizedSegments: List<DiarizedSegment>? = null
 )
 
 data class TingwuResultLink(
     val label: String,
     val url: String
+)
+
+/** 统一的说话人分段模型，用于渲染转写时标记发言人和时间轴。 */
+data class DiarizedSegment(
+    val speakerId: String?,
+    val speakerIndex: Int,
+    val startMs: Long,
+    val endMs: Long,
+    val text: String
 )
 
 sealed class TingwuJobState {

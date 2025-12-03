@@ -226,9 +226,8 @@ class HomeScreenViewModel @Inject constructor(
             }
             if (!hasShownLowInfoHint) {
                 hasShownLowInfoHint = true
-                appendAssistantMessage(
-                    content = "我还不太确定你的需求，能再多提供一些上下文或问题细节吗？"
-                )
+                val response = getGreetingResponse(content)
+                appendAssistantMessage(content = response)
             }
             return
         }
@@ -1326,23 +1325,66 @@ class HomeScreenViewModel @Inject constructor(
     }
     
     /**
-     * 修复编号混乱问题（如 "11)1)"、"2)1)" 等）
+     * 修复编号混乱问题（如 "11)1)"、"2)1)"、"11) 用户1)" 等）
      */
     private fun fixNumberingIssues(text: String): String {
-        // 修复重复编号模式：如 "11)1)" -> "1)"
-        var fixed = text.replace(Regex("(\\d+)[)）]\\s*(\\d+)[)）]"), "$1)")
-        
-        // 修复编号后紧跟编号：如 "2)1)" -> "2)"
-        fixed = fixed.replace(Regex("(\\d+)[)）]\\s*(\\d+)[)）]"), "$1)")
-        
-        // 修复编号混乱的标题：如 "2)核心洞察1)" -> "核心洞察："
-        fixed = fixed.replace(Regex("\\d+[)）]\\s*(核心洞察|下一步行动)\\s*\\d*[)）]?"), "$1：")
-        
-        return fixed
+        // 按行处理，每行单独修复
+        return text.lines().joinToString("\n") { line ->
+            var fixed = line
+            
+            // 检测渐进式累积模式：如 "11) 用户1) 用户询问1) 用户询问..."
+            // 如果一行包含多个编号模式，很可能是累积
+            val numberPattern = Regex("\\d+[)）]")
+            val numberMatches = numberPattern.findAll(fixed).toList()
+            
+            if (numberMatches.size > 1) {
+                // 找到所有编号位置
+                val numbers = numberMatches.map { it.value }
+                
+                // 如果编号数量 >= 2，尝试提取最后一个编号后的内容
+                // 但也要考虑可能是正常的列表格式（如 "1) 第一点 2) 第二点"）
+                // 所以我们需要更智能的判断：如果编号之间没有明显的分隔（如换行或长文本），可能是累积
+                
+                // 检查是否是累积模式：编号之间只有短文本（< 10 字符）
+                var isAccumulated = false
+                for (i in 0 until numberMatches.size - 1) {
+                    val start = numberMatches[i].range.last + 1
+                    val end = numberMatches[i + 1].range.first
+                    val between = fixed.substring(start, end).trim()
+                    // 如果编号之间的文本很短（< 10 字符），可能是累积
+                    if (between.length < 10 && !between.contains("。") && !between.contains("，")) {
+                        isAccumulated = true
+                        break
+                    }
+                }
+                
+                if (isAccumulated) {
+                    // 累积模式：只保留最后一个编号及其后的内容
+                    val lastMatch = numberMatches.last()
+                    fixed = fixed.substring(lastMatch.range.first)
+                } else {
+                    // 正常列表格式：移除重复的编号前缀，只保留第一个
+                    // 但保留所有内容
+                    val firstMatch = numberMatches.first()
+                    val afterFirst = fixed.substring(firstMatch.range.last + 1)
+                    // 移除后续的编号前缀
+                    fixed = firstMatch.value + " " + afterFirst.replace(Regex("\\d+[)）]\\s*"), "")
+                }
+            }
+            
+            // 修复重复编号模式：如 "11)1)" -> "1)"
+            fixed = fixed.replace(Regex("(\\d+)[)）]\\s*(\\d+)[)）]"), "$1)")
+            
+            // 修复编号混乱的标题：如 "2)核心洞察1)" -> "核心洞察："
+            fixed = fixed.replace(Regex("\\d+[)）]\\s*(核心洞察|下一步行动)\\s*\\d*[)）]?"), "$1：")
+            
+            fixed
+        }
     }
     
     /**
      * 清理内容累积模式：如果一行包含前面多行的内容，进行清理
+     * 检测渐进式累积模式：如 "A) B) C) D)" 这种渐进式累积
      */
     private fun cleanAccumulatedContent(text: String): String {
         val lines = text.lines()
@@ -1360,28 +1402,81 @@ class HomeScreenViewModel @Inject constructor(
                 continue
             }
             
+            // 检测渐进式累积模式：编号) 文本编号) 文本编号) 文本
+            val numberPattern = Regex("\\d+[)）]")
+            val numberMatches = numberPattern.findAll(trimmed).toList()
+            
+            // 如果包含多个编号，检查是否是累积模式
+            var isProgressiveAccumulation = false
+            if (numberMatches.size >= 2) {
+                // 检查编号之间的文本是否逐渐累积
+                var previousText = ""
+                for (i in 0 until numberMatches.size - 1) {
+                    val start = numberMatches[i].range.last + 1
+                    val end = numberMatches[i + 1].range.first
+                    val currentText = trimmed.substring(start, end).trim()
+                    
+                    // 如果当前文本包含前面的文本，可能是累积
+                    if (previousText.isNotEmpty() && currentText.contains(previousText)) {
+                        isProgressiveAccumulation = true
+                        break
+                    }
+                    previousText = currentText
+                }
+            }
+            
+            if (isProgressiveAccumulation) {
+                // 渐进式累积：只保留最后一个编号及其后的内容
+                val lastMatch = numberMatches.last()
+                val newContent = trimmed.substring(lastMatch.range.first).trim()
+                if (newContent.isNotEmpty()) {
+                    result.add(newContent)
+                    seenSentences += normalizeSentence(newContent)
+                }
+                continue
+            }
+            
             val normalized = normalizeSentence(trimmed)
             
             // 检查是否是累积模式：如果当前行包含前面见过的多个长句子
             val accumulatedCount = seenSentences.count { existing ->
-                existing.length > 20 && normalized.contains(existing)
+                existing.length > 15 && normalized.contains(existing)
             }
             
-            // 如果包含 2 个或以上的前面句子，很可能是累积重复
-            if (accumulatedCount >= 2) {
+            // 计算重复内容的比例
+            var totalRepeatedLength = 0
+            seenSentences.forEach { existing ->
+                if (existing.length > 15 && normalized.contains(existing)) {
+                    totalRepeatedLength += existing.length
+                }
+            }
+            val repetitionRatio = if (normalized.isNotEmpty()) {
+                totalRepeatedLength.toDouble() / normalized.length
+            } else {
+                0.0
+            }
+            
+            // 更激进的清理阈值：如果包含 1 个或以上的前面句子，或者重复比例 > 50%
+            if (accumulatedCount >= 1 || repetitionRatio > 0.5) {
                 // 尝试提取新内容：移除所有见过的句子
                 var newContent = trimmed
+                var removedAny = false
                 seenSentences.forEach { existing ->
-                    if (existing.length > 20) {
-                        newContent = newContent.replace(existing, "")
+                    if (existing.length > 15) {
+                        // 尝试在原始文本中找到并移除重复部分
+                        val originalExisting = findOriginalSentence(trimmed, existing)
+                        if (originalExisting != null && originalExisting.length > 15) {
+                            newContent = newContent.replace(originalExisting, "")
+                            removedAny = true
+                        }
                     }
                 }
                 newContent = newContent.trim()
                 
                 // 如果还有新内容，保留；否则跳过
-                if (newContent.length > 5) {
+                if (newContent.length > 5 && (removedAny || newContent.length < trimmed.length * 0.7)) {
                     result.add(newContent)
-                    seenSentences += normalized
+                    seenSentences += normalizeSentence(newContent)
                 }
             } else {
                 // 正常行，直接添加
@@ -1391,6 +1486,45 @@ class HomeScreenViewModel @Inject constructor(
         }
         
         return result.joinToString("\n")
+    }
+    
+    /**
+     * 在原始文本中查找归一化后的句子对应的原始句子
+     */
+    private fun findOriginalSentence(original: String, normalized: String): String? {
+        // 简单的查找：尝试在原始文本中找到包含归一化内容的部分
+        val words = normalized.chunked(3) // 将归一化内容分成3字符的块
+        if (words.isEmpty()) return null
+        
+        // 查找第一个词块在原始文本中的位置
+        val firstChunk = words.first()
+        var startIndex = -1
+        for (i in 0 until original.length - firstChunk.length) {
+            val normalizedSubstring = normalizeSentence(original.substring(i, i + firstChunk.length))
+            if (normalizedSubstring.contains(firstChunk)) {
+                startIndex = i
+                break
+            }
+        }
+        
+        if (startIndex == -1) return null
+        
+        // 从起始位置向后查找，直到找到完整的匹配
+        var endIndex = startIndex + firstChunk.length
+        while (endIndex < original.length) {
+            val candidate = original.substring(startIndex, endIndex)
+            val candidateNormalized = normalizeSentence(candidate)
+            if (candidateNormalized.contains(normalized)) {
+                return candidate
+            }
+            if (candidateNormalized.length > normalized.length * 1.5) {
+                // 如果候选文本已经比归一化文本长很多，停止查找
+                break
+            }
+            endIndex++
+        }
+        
+        return null
     }
     
     /**
@@ -1404,6 +1538,50 @@ class HomeScreenViewModel @Inject constructor(
         // 归一化：转小写，去除标点和多余空格
         return withoutNumbers.lowercase(Locale.getDefault())
             .replace(Regex("[\\p{Punct}\\s]+"), "")
+    }
+    
+    /**
+     * 根据问候语内容返回友好的回复
+     */
+    private fun getGreetingResponse(input: String): String {
+        val normalized = input.trim().lowercase(Locale.getDefault())
+        
+        return when {
+            normalized == "你好" || normalized == "您好" || normalized == "hello" || normalized == "hi" || normalized == "hey" || normalized == "嗨" -> {
+                "你好！我是您的销售助手，可以帮助您：\n" +
+                "• 分析客户对话和会议记录\n" +
+                "• 生成销售话术和建议\n" +
+                "• 总结工作日报\n" +
+                "• 分析行业趋势和竞争情况\n\n" +
+                "请告诉我您需要什么帮助？"
+            }
+            normalized == "你是谁" || normalized == "你是谁？" || normalized.contains("who are you") -> {
+                "我是您的智能销售助手，专注于帮助销售团队提升工作效率。\n\n" +
+                "我可以帮您：\n" +
+                "• 智能分析：分析客户对话、会议记录，提取关键洞察\n" +
+                "• 话术辅导：根据场景生成专业的销售话术\n" +
+                "• 日报生成：整理工作摘要、行动项和风险提醒\n" +
+                "• 趋势分析：分析行业动态和竞争格局\n\n" +
+                "有什么我可以帮您的吗？"
+            }
+            normalized.contains("早上好") || normalized.contains("good morning") -> {
+                "早上好！新的一天开始了，有什么销售相关的问题需要我帮助吗？"
+            }
+            normalized.contains("下午好") || normalized.contains("good afternoon") -> {
+                "下午好！今天的工作进展如何？需要我帮您分析什么吗？"
+            }
+            normalized.contains("晚上好") || normalized.contains("good evening") -> {
+                "晚上好！今天辛苦了，有什么需要我帮您总结或分析的吗？"
+            }
+            else -> {
+                "我还不太确定你的需求，能再多提供一些上下文或问题细节吗？\n\n" +
+                "我可以帮您：\n" +
+                "• 分析客户对话或会议记录\n" +
+                "• 生成销售话术和建议\n" +
+                "• 总结工作日报\n" +
+                "• 分析行业趋势"
+            }
+        }
     }
     
     /**
@@ -1433,11 +1611,36 @@ class HomeScreenViewModel @Inject constructor(
             
             // 检测异常累积：如果新内容包含大量重复的句子，可能是 LLM 重复输出
             val lines = newContent.lines()
-            if (lines.size > 20) {
+            // 降低阈值：行数 > 10 就触发清理（而不是 20）
+            if (lines.size > 10) {
                 // 如果行数过多，可能是异常累积，进行清理
                 val cleaned = cleanAccumulatedContent(newContent)
                 lastProcessedContent = cleaned
                 return cleaned
+            }
+            
+            // 实时累积检测：每处理几行就检查一次是否有累积模式
+            // 检查最近几行是否有重复模式
+            if (lines.size >= 3) {
+                val recentLines = lines.takeLast(3)
+                var hasAccumulation = false
+                for (i in 1 until recentLines.size) {
+                    val current = recentLines[i].trim()
+                    val previous = recentLines[i - 1].trim()
+                    val currentNormalized = normalizeSentence(current)
+                    val previousNormalized = normalizeSentence(previous)
+                    // 如果当前行包含前一行的大部分内容，可能是累积
+                    if (previousNormalized.length > 10 && currentNormalized.contains(previousNormalized)) {
+                        hasAccumulation = true
+                        break
+                    }
+                }
+                if (hasAccumulation) {
+                    // 触发清理
+                    val cleaned = cleanAccumulatedContent(newContent)
+                    lastProcessedContent = cleaned
+                    return cleaned
+                }
             }
             
             // 处理新增内容，检测重复
@@ -1498,7 +1701,7 @@ class HomeScreenViewModel @Inject constructor(
         }
         
         /**
-         * 清理累积的重复内容
+         * 清理累积的重复内容（更激进的清理策略）
          */
         private fun cleanAccumulatedContent(content: String): String {
             val lines = content.lines()
@@ -1514,6 +1717,39 @@ class HomeScreenViewModel @Inject constructor(
                     continue
                 }
                 
+                // 检测渐进式累积模式：编号) 文本编号) 文本编号) 文本
+                val numberPattern = Regex("\\d+[)）]")
+                val numberMatches = numberPattern.findAll(trimmed).toList()
+                
+                var isProgressiveAccumulation = false
+                if (numberMatches.size >= 2) {
+                    var previousText = ""
+                    for (i in 0 until numberMatches.size - 1) {
+                        val start = numberMatches[i].range.last + 1
+                        val end = numberMatches[i + 1].range.first
+                        val currentText = trimmed.substring(start, end).trim()
+                        if (previousText.isNotEmpty() && currentText.contains(previousText)) {
+                            isProgressiveAccumulation = true
+                            break
+                        }
+                        previousText = currentText
+                    }
+                }
+                
+                if (isProgressiveAccumulation) {
+                    // 渐进式累积：只保留最后一个编号及其后的内容
+                    val lastMatch = numberMatches.last()
+                    val newContent = trimmed.substring(lastMatch.range.first).trim()
+                    if (newContent.isNotEmpty()) {
+                        val normalized = normalizeSentence(newContent)
+                        if (!seenNormalized.contains(normalized)) {
+                            seenNormalized += normalized
+                            result.add(newContent)
+                        }
+                    }
+                    continue
+                }
+                
                 val normalized = normalizeSentence(trimmed)
                 // 如果归一化后的内容已见过，跳过
                 if (seenNormalized.contains(normalized)) {
@@ -1521,10 +1757,25 @@ class HomeScreenViewModel @Inject constructor(
                 }
                 
                 // 检查是否是累积模式（包含前面见过的长句子）
-                val isAccumulated = seenNormalized.any { existing ->
-                    existing.length > 15 && normalized.contains(existing)
+                val accumulatedCount = seenNormalized.count { existing ->
+                    existing.length > 10 && normalized.contains(existing)
                 }
-                if (isAccumulated) {
+                
+                // 计算重复内容的比例
+                var totalRepeatedLength = 0
+                seenNormalized.forEach { existing ->
+                    if (existing.length > 10 && normalized.contains(existing)) {
+                        totalRepeatedLength += existing.length
+                    }
+                }
+                val repetitionRatio = if (normalized.isNotEmpty()) {
+                    totalRepeatedLength.toDouble() / normalized.length
+                } else {
+                    0.0
+                }
+                
+                // 更激进的清理：如果包含 1 个或以上的前面句子，或者重复比例 > 40%
+                if (accumulatedCount >= 1 || repetitionRatio > 0.4) {
                     continue
                 }
                 

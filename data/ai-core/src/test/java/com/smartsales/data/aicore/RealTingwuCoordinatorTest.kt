@@ -13,6 +13,8 @@ import com.smartsales.data.aicore.tingwu.TingwuStatusResponse
 import com.smartsales.data.aicore.tingwu.TingwuTranscription
 import com.smartsales.data.aicore.tingwu.TingwuTaskParameters
 import com.smartsales.data.aicore.tingwu.TingwuSummarizationParameters
+import com.smartsales.data.aicore.tingwu.TingwuTranscriptSegment
+import com.smartsales.data.aicore.tingwu.TingwuSpeaker
 import com.google.gson.Gson
 import java.io.File
 import java.util.Optional
@@ -139,6 +141,7 @@ class RealTingwuCoordinatorTest {
         val json = Gson().toJson(request)
         assertTrue(json.contains("\"SummarizationEnabled\":true"))
         assertTrue(json.contains("\"Summarization\":{\"Types\":[\"Paragraph\"]}"))
+        assertTrue(json.contains("\"DiarizationEnabled\":true"))
     }
 
     @Test
@@ -160,6 +163,94 @@ class RealTingwuCoordinatorTest {
         val json = Gson().toJson(request)
         assertTrue(json.contains("\"SummarizationEnabled\":false"))
         assertTrue(!json.contains("\"Summarization\""))
+    }
+
+    @Test
+    fun createTask_respectsDiarizationFlag() = runTest(dispatcher) {
+        val api = FakeTingwuApi()
+        val coordinator = RealTingwuCoordinator(
+            dispatchers = dispatchers,
+            api = api,
+            credentialsProvider = credentialsProvider,
+            signedUrlProvider = signedUrlProvider,
+            optionalConfig = Optional.empty()
+        )
+
+        coordinator.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav",
+                diarizationEnabled = false
+            )
+        )
+
+        val request = api.lastCreateRequest
+        val json = Gson().toJson(request)
+        assertTrue(json.contains("\"DiarizationEnabled\":false"))
+    }
+
+    @Test
+    fun diarizedSegments_renderWithSpeakerLabels() = runTest(dispatcher) {
+        val api = FakeTingwuApi()
+        api.enqueueStatus(statusResponse(status = "PROCESSING", progress = 30))
+        api.enqueueStatus(statusResponse(status = "SUCCEEDED", progress = 100))
+        api.resultData = TingwuResultResponse(
+            requestId = "req-result",
+            code = "0",
+            message = "Success",
+            data = TingwuResultData(
+                taskId = "job-1",
+                transcription = TingwuTranscription(
+                    text = "",
+                    segments = listOf(
+                        TingwuTranscriptSegment(id = 1, start = 0.0, end = 1.2, text = "你好", speaker = "spk_1"),
+                        TingwuTranscriptSegment(id = 2, start = 1.3, end = 2.4, text = "欢迎光临", speaker = "spk_2"),
+                        TingwuTranscriptSegment(id = 3, start = 2.5, end = 3.0, text = "继续说明", speaker = "spk_2")
+                    ),
+                    speakers = listOf(
+                        TingwuSpeaker(id = "spk_1", name = "客户"),
+                        TingwuSpeaker(id = "spk_2", name = "销售")
+                    ),
+                    language = "zh",
+                    duration = 3.0,
+                    url = "https://example.com/transcription.json"
+                ),
+                resultLinks = emptyMap(),
+                outputMp3Path = null,
+                outputMp4Path = null,
+                outputThumbnailPath = null,
+                outputSpectrumPath = null
+            )
+        )
+        val coordinator = RealTingwuCoordinator(
+            dispatchers = dispatchers,
+            api = api,
+            credentialsProvider = credentialsProvider,
+            signedUrlProvider = signedUrlProvider,
+            optionalConfig = Optional.of(
+                AiCoreConfig(
+                    tingwuPollIntervalMillis = 10,
+                    tingwuPollTimeoutMillis = 200
+                )
+            )
+        )
+
+        val result = coordinator.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav"
+            )
+        )
+        assertTrue(result is Result.Success)
+        val jobId = (result as Result.Success).data
+        advanceTimeBy(20)
+        advanceUntilIdle()
+
+        val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
+        assertTrue(completed.transcriptMarkdown.contains("发言人 1"))
+        assertTrue(completed.transcriptMarkdown.contains("发言人 2"))
+        assertTrue(completed.transcriptMarkdown.contains("欢迎光临 继续说明"))
+        assertEquals(2, completed.artifacts?.diarizedSegments?.size)
     }
 
     @Test

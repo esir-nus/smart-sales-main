@@ -21,6 +21,7 @@ import com.smartsales.data.aicore.tingwu.TingwuTaskParameters
 import com.smartsales.data.aicore.tingwu.TingwuTranscription
 import com.smartsales.data.aicore.tingwu.TingwuTranscriptSegment
 import com.smartsales.data.aicore.tingwu.TingwuTranscriptionParameters
+import com.smartsales.data.aicore.tingwu.TingwuDiarizationParameters
 import com.smartsales.data.aicore.tingwu.TingwuSummarizationParameters
 import java.io.IOException
 import java.net.SocketTimeoutException
@@ -66,6 +67,7 @@ class RealTingwuCoordinator @Inject constructor(
     private val jobStates = ConcurrentHashMap<String, MutableStateFlow<TingwuJobState>>()
     private val pollingJobs = ConcurrentHashMap<String, Job>()
     private val timeFormatter = DecimalFormat("00")
+    private val speakerDisplayConfig: SpeakerDisplayConfig = config.speakerDisplayConfig
     private val verboseLogging = config.tingwuVerboseLogging
     private val gson = Gson()
 
@@ -87,8 +89,15 @@ class RealTingwuCoordinator @Inject constructor(
             val requestedLanguage = request.language.ifBlank { DEFAULT_LANGUAGE }
             val sourceLanguage = mapSourceLanguage(requestedLanguage)
             val model = config.tingwuModelOverride?.takeIf { it.isNotBlank() } ?: credentials.model
+            val diarizationParameters = if (request.diarizationEnabled) {
+                TingwuDiarizationParameters(
+                    speakerCount = 2
+                )
+            } else {
+                null
+            }
             logVerbose {
-                "创建 Tingwu 任务：taskKey=$taskKey fileUrl=$resolvedUrl lang=$requestedLanguage source=$sourceLanguage model=$model"
+                "创建 Tingwu 任务：taskKey=$taskKey fileUrl=$resolvedUrl lang=$requestedLanguage source=$sourceLanguage model=$model diarizationEnabled=${request.diarizationEnabled} speakerCount=${diarizationParameters?.speakerCount}"
             }
             runCatching {
                 val response = api.createTranscriptionTask(
@@ -102,7 +111,7 @@ class RealTingwuCoordinator @Inject constructor(
                         parameters = TingwuTaskParameters(
                             transcription = TingwuTranscriptionParameters(
                                 diarizationEnabled = request.diarizationEnabled,
-                                diarization = null,
+                                diarization = diarizationParameters,
                                 model = model
                             ),
                             summarizationEnabled = true,
@@ -330,7 +339,8 @@ class RealTingwuCoordinator @Inject constructor(
                         "拉取成功：jobId=$jobId text=$textLength requestId=${response.requestId}"
                     }
                     val diarizedSegments = buildDiarizedSegments(data.transcription)
-                    val markdown = buildMarkdown(data.transcription, diarizedSegments)
+                    val speakerLabels = buildSpeakerLabels(data.transcription, diarizedSegments)
+                    val markdown = buildMarkdown(data.transcription, diarizedSegments, speakerLabels)
                     AiCoreLogger.d(TAG, "转写 markdown 生成成功：jobId=$jobId markdown长度=${markdown.length}")
                     val chapters = chaptersUrl?.let { fetchChaptersSafe(it, jobId) }
                     val artifacts = data.toArtifacts(
@@ -339,12 +349,14 @@ class RealTingwuCoordinator @Inject constructor(
                         extraResultUrls = data.resultLinks.orEmpty(),
                         chapters = chapters,
                         smartSummary = fetchSmartSummarySafe(data.resultLinks, jobId),
-                        diarizedSegments = diarizedSegments.takeIf { it.isNotEmpty() }
+                        diarizedSegments = diarizedSegments.takeIf { it.isNotEmpty() },
+                        speakerLabels = speakerLabels
                     ) ?: fallbackArtifacts?.copy(
                         chapters = chapters ?: fallbackArtifacts.chapters,
                         smartSummary = fallbackArtifacts.smartSummary,
                         diarizedSegments = diarizedSegments.takeIf { it.isNotEmpty() }
-                            ?: fallbackArtifacts.diarizedSegments
+                            ?: fallbackArtifacts.diarizedSegments,
+                        speakerLabels = if (speakerLabels.isNotEmpty()) speakerLabels else fallbackArtifacts.speakerLabels
                     )
                     TranscriptResult(
                         markdown = markdown,
@@ -380,7 +392,8 @@ class RealTingwuCoordinator @Inject constructor(
         AiCoreLogger.d(TAG, "开始从 URL 下载转写 JSON：jobId=$jobId")
         val transcription = downloadTranscription(signedUrl, jobId)
         val diarizedSegments = buildDiarizedSegments(transcription)
-        val markdown = buildMarkdown(transcription, diarizedSegments)
+        val speakerLabels = buildSpeakerLabels(transcription, diarizedSegments)
+        val markdown = buildMarkdown(transcription, diarizedSegments, speakerLabels)
         AiCoreLogger.d(TAG, "转写 JSON 解析成功：jobId=$jobId markdown长度=${markdown.length}")
         val chapters = chaptersUrl?.let { fetchChaptersSafe(it, jobId) }
         val smartSummary = fetchSmartSummarySafe(resultLinks, jobId)
@@ -393,7 +406,8 @@ class RealTingwuCoordinator @Inject constructor(
                 chapters = chapters ?: fallbackArtifacts.chapters,
                 smartSummary = smartSummary ?: fallbackArtifacts.smartSummary,
                 diarizedSegments = diarizedSegments.takeIf { it.isNotEmpty() }
-                    ?: fallbackArtifacts.diarizedSegments
+                    ?: fallbackArtifacts.diarizedSegments,
+                speakerLabels = if (speakerLabels.isNotEmpty()) speakerLabels else fallbackArtifacts.speakerLabels
             ) ?: fallbackArtifacts,
             chapters = chapters,
             diarizedSegments = diarizedSegments.takeIf { it.isNotEmpty() }
@@ -734,15 +748,24 @@ class RealTingwuCoordinator @Inject constructor(
 
     private fun buildMarkdown(
         transcription: TingwuTranscription?,
-        diarizedSegments: List<DiarizedSegment> = emptyList()
+        diarizedSegments: List<DiarizedSegment> = emptyList(),
+        speakerLabels: Map<String, String> = emptyMap(),
     ): String {
         if (diarizedSegments.isNotEmpty()) {
             val sorted = diarizedSegments.sortedBy { it.startMs }
             val builder = StringBuilder()
-            val distinctSpeakers = sorted.map { it.speakerIndex }.distinct().size
+            val uniqueSpeakerIds = sorted.mapNotNull { it.speakerId }.toSet()
+            val isSingleSpeaker = uniqueSpeakerIds.size <= 1
+            val hideLabelWhenSingle = speakerDisplayConfig.hideLabelWhenSingleSpeaker
             builder.append("## 逐字稿\n")
             sorted.forEach { segment ->
-                val label = if (distinctSpeakers > 1) "发言人 ${segment.speakerIndex}" else null
+                val label = when {
+                    isSingleSpeaker && hideLabelWhenSingle -> null
+                    else -> {
+                        val rawId = segment.speakerId
+                        speakerLabels[rawId] ?: "发言人 ${segment.speakerIndex}"
+                    }
+                }
                 val begin = formatTimeMs(segment.startMs)
                 val end = formatTimeMs(segment.endMs)
                 val hasValidRange = segment.endMs > segment.startMs &&
@@ -756,11 +779,10 @@ class RealTingwuCoordinator @Inject constructor(
                     }
                     builder.append("] ")
                 }
-                if (label != null) {
-                    builder.append(label).append("：")
+                label?.let { nonNullLabel ->
+                    builder.append(nonNullLabel).append("：")
                 }
-                builder.append(segment.text.ifBlank { "（空白）" })
-                    .append("\n")
+                builder.append(segment.text.ifBlank { "（空白）" }).append("\n")
             }
             return builder.toString().trimEnd()
         }
@@ -837,10 +859,13 @@ class RealTingwuCoordinator @Inject constructor(
             }
         }
 
+        val baseStartSeconds = sortedSegments.minOfOrNull { it.start ?: 0.0 }?.coerceAtLeast(0.0) ?: 0.0
         val diarized = sortedSegments.map { segment ->
             val (speakerId, speakerIndex) = resolveSpeaker(segment.speaker)
-            val startMs = ((segment.start ?: 0.0) * 1000).toLong()
-            val endMs = ((segment.end ?: segment.start ?: 0.0) * 1000).toLong()
+            val rawStart = (segment.start ?: 0.0) - baseStartSeconds
+            val rawEnd = (segment.end ?: segment.start ?: 0.0) - baseStartSeconds
+            val startMs = (rawStart * 1000).toLong()
+            val endMs = (rawEnd * 1000).toLong()
             val normalizedStart = max(startMs, 0)
             val normalizedEnd = max(endMs, 0)
             val safeEnd = if (normalizedEnd >= normalizedStart) normalizedEnd else normalizedStart
@@ -878,6 +903,29 @@ class RealTingwuCoordinator @Inject constructor(
         return merged
     }
 
+    /**
+     * 根据 Tingwu 的说话人信息和分段结果，为每个 speakerId 生成稳定且可读的显示名称。
+     */
+    private fun buildSpeakerLabels(
+        transcription: TingwuTranscription?,
+        segments: List<DiarizedSegment>,
+    ): Map<String, String> {
+        if (transcription == null || segments.isEmpty()) return emptyMap()
+        val speakerIdsInOrder = segments
+            .mapNotNull { it.speakerId }
+            .distinct()
+        if (speakerIdsInOrder.isEmpty()) return emptyMap()
+        val speakersById = transcription.speakers.orEmpty().associateBy { it.id }
+        val labels = LinkedHashMap<String, String>()
+        speakerIdsInOrder.forEachIndexed { index, id ->
+            val fromName = speakersById[id]?.name?.takeIf { it.isNotBlank() }
+            val fromConfig = speakerDisplayConfig.defaultLabelsByIndex.getOrNull(index)
+            val fallback = "发言人 ${index + 1}"
+            labels[id] = fromName ?: fromConfig ?: fallback
+        }
+        return labels
+    }
+
     private fun formatTime(value: Double?): String {
         if (value == null) return "00:00"
         val totalSeconds = max(value.toInt(), 0)
@@ -889,9 +937,14 @@ class RealTingwuCoordinator @Inject constructor(
     private fun formatTimeMs(value: Long): String {
         if (value <= 0) return "00:00"
         val totalSeconds = (value / 1000).toInt()
-        val minutes = totalSeconds / 60
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
         val seconds = totalSeconds % 60
-        return "${timeFormatter.format(minutes)}:${timeFormatter.format(seconds)}"
+        return if (hours > 0) {
+            "${timeFormatter.format(hours)}:${timeFormatter.format(minutes)}:${timeFormatter.format(seconds)}"
+        } else {
+            "${timeFormatter.format(minutes)}:${timeFormatter.format(seconds)}"
+        }
     }
 
     private fun inferProgress(status: TingwuStatusData): Int {
@@ -950,7 +1003,8 @@ class RealTingwuCoordinator @Inject constructor(
         extraResultUrls: Map<String, String> = emptyMap(),
         chapters: List<TingwuChapter>? = null,
         smartSummary: TingwuSmartSummary? = null,
-        diarizedSegments: List<DiarizedSegment>? = null
+        diarizedSegments: List<DiarizedSegment>? = null,
+        speakerLabels: Map<String, String> = emptyMap(),
     ): TingwuJobArtifacts? =
         buildArtifacts(
             mp3 = outputMp3Path ?: fallbackArtifacts?.outputMp3Path,
@@ -963,7 +1017,8 @@ class RealTingwuCoordinator @Inject constructor(
             extraResultUrls = if (extraResultUrls.isNotEmpty()) extraResultUrls else fallbackArtifacts?.extraResultUrls.orEmpty(),
             chapters = chapters ?: fallbackArtifacts?.chapters,
             smartSummary = smartSummary ?: fallbackArtifacts?.smartSummary,
-            diarizedSegments = diarizedSegments ?: fallbackArtifacts?.diarizedSegments
+            diarizedSegments = diarizedSegments ?: fallbackArtifacts?.diarizedSegments,
+            speakerLabels = if (speakerLabels.isNotEmpty()) speakerLabels else fallbackArtifacts?.speakerLabels.orEmpty(),
         )
 
     private fun buildArtifacts(
@@ -977,7 +1032,8 @@ class RealTingwuCoordinator @Inject constructor(
         extraResultUrls: Map<String, String> = emptyMap(),
         chapters: List<TingwuChapter>? = null,
         smartSummary: TingwuSmartSummary? = null,
-        diarizedSegments: List<DiarizedSegment>? = null
+        diarizedSegments: List<DiarizedSegment>? = null,
+        speakerLabels: Map<String, String> = emptyMap(),
     ): TingwuJobArtifacts? {
         if (
             mp3.isNullOrBlank() &&
@@ -990,7 +1046,8 @@ class RealTingwuCoordinator @Inject constructor(
             extraResultUrls.isEmpty() &&
             chapters.isNullOrEmpty() &&
             smartSummary == null &&
-            diarizedSegments.isNullOrEmpty()
+            diarizedSegments.isNullOrEmpty() &&
+            speakerLabels.isEmpty()
         ) {
             return null
         }
@@ -1009,7 +1066,8 @@ class RealTingwuCoordinator @Inject constructor(
             extraResultUrls = extraResultUrls,
             chapters = chapters,
             smartSummary = smartSummary,
-            diarizedSegments = diarizedSegments
+            diarizedSegments = diarizedSegments,
+            speakerLabels = speakerLabels,
         )
     }
 

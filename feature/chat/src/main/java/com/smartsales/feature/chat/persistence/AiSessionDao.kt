@@ -23,4 +23,7 @@ interface AiSessionDao {
 
     @Query("SELECT * FROM ai_session WHERE session_id = :sessionId LIMIT 1")
     suspend fun findById(sessionId: String): AiSessionEntity?
+
+    @Query("UPDATE ai_session SET title = :newTitle WHERE session_id = :sessionId")
+    suspend fun updateTitle(sessionId: String, newTitle: String)
 }

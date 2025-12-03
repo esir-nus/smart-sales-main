@@ -42,6 +42,12 @@ class RoomAiSessionRepository(
         dao.findById(id)?.toSummary()
     }
 
+    override suspend fun updateTitle(id: String, newTitle: String) {
+        withContext(dispatchers.io) {
+            dao.updateTitle(id, newTitle)
+        }
+    }
+
     private fun AiSessionEntity.toSummary(): AiSessionSummary = AiSessionSummary(
         id = id,
         title = title,

@@ -4,6 +4,18 @@ package com.smartsales.data.aicore
 // 模块：:data:ai-core
 // 说明：定义AI核心模块可配置项，便于不同App切换真/假实现
 // 作者：创建于 2025-11-16
+
+/**
+ * 说话人展示配置，用于将 Tingwu 返回的 SpeakerId 映射为更友好的角色名称。
+ *
+ * @param defaultLabelsByIndex 按索引顺序给出的默认角色名，例如 ["客户", "销售"]。
+ * @param hideLabelWhenSingleSpeaker 当只有一个说话人时，是否隐藏标签，仅展示时间 + 文本。
+ */
+data class SpeakerDisplayConfig(
+    val defaultLabelsByIndex: List<String> = listOf("客户", "销售"),
+    val hideLabelWhenSingleSpeaker: Boolean = true,
+)
+
 data class AiCoreConfig(
     val preferFakeAiChat: Boolean = false,
     val dashscopeMaxRetries: Int = 1,
@@ -27,5 +39,6 @@ data class AiCoreConfig(
     val tingwuInitialPollDelayMillis: Long = 2_000,
     val enableTingwuHttpDns: Boolean = false,
     val enableTingwuNetworkEventLog: Boolean = false,
-    val tingwuGlobalPollTimeoutMillis: Long = 600_000
+    val tingwuGlobalPollTimeoutMillis: Long = 600_000,
+    val speakerDisplayConfig: SpeakerDisplayConfig = SpeakerDisplayConfig(),
 )

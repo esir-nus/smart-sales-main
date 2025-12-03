@@ -36,7 +36,9 @@ data class TingwuJobArtifacts(
     val extraResultUrls: Map<String, String> = emptyMap(),
     val chapters: List<TingwuChapter>? = null,
     val smartSummary: TingwuSmartSummary? = null,
-    val diarizedSegments: List<DiarizedSegment>? = null
+    val diarizedSegments: List<DiarizedSegment>? = null,
+    /** 说话人ID到可读名称的映射，例如 \"1\" -> \"客户\"、\"2\" -> \"销售\"。 */
+    val speakerLabels: Map<String, String> = emptyMap(),
 )
 
 data class TingwuResultLink(

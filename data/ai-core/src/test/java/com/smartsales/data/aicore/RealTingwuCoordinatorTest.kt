@@ -142,6 +142,8 @@ class RealTingwuCoordinatorTest {
         assertTrue(json.contains("\"SummarizationEnabled\":true"))
         assertTrue(json.contains("\"Summarization\":{\"Types\":[\"Paragraph\"]}"))
         assertTrue(json.contains("\"DiarizationEnabled\":true"))
+        // 默认开启说话人分离时，应显式下发 SpeakerCount=2
+        assertTrue(json.contains("\"Diarization\":{\"SpeakerCount\":2}"))
     }
 
     @Test
@@ -187,6 +189,8 @@ class RealTingwuCoordinatorTest {
         val request = api.lastCreateRequest
         val json = Gson().toJson(request)
         assertTrue(json.contains("\"DiarizationEnabled\":false"))
+        // 关闭说话人分离时，不应包含 Diarization 对象
+        assertTrue(!json.contains("\"Diarization\""))
     }
 
     @Test
@@ -252,13 +256,18 @@ class RealTingwuCoordinatorTest {
         assertEquals(2, lines.size)
         val first = lines[0]
         val second = lines[1]
-        assertTrue(first.contains("发言人 1"))
-        assertTrue(second.contains("发言人 2"))
+        // TingwuSpeaker.name 提供了自定义名称，应优先展示为“客户/销售”
+        assertTrue(first.contains("客户"))
+        assertTrue(second.contains("销售"))
         assertTrue(second.contains("欢迎光临 继续说明"))
         // 校验时间戳格式为 [mm:ss] 或 [mm:ss - mm:ss]
         assertTrue(first.contains("[00:00]") || Regex("\\[\\d{2}:\\d{2}(\\s-\\s\\d{2}:\\d{2})?]").containsMatchIn(first))
         assertTrue(Regex("\\[\\d{2}:\\d{2}(\\s-\\s\\d{2}:\\d{2})?]").containsMatchIn(second))
         assertEquals(2, completed.artifacts?.diarizedSegments?.size)
+        // speakerLabels 中也应包含两个人的映射
+        val labels = completed.artifacts?.speakerLabels
+        assertEquals("客户", labels?.get("spk_1"))
+        assertEquals("销售", labels?.get("spk_2"))
     }
 
     @Test

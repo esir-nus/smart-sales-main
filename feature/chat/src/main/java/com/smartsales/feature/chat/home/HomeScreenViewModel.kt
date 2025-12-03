@@ -928,8 +928,10 @@ class HomeScreenViewModel @Inject constructor(
             updateSessionSummary(userMessage.content)
         }
         val request = buildChatRequest(content, quickSkillId, newState.chatMessages, audioContext)
+        val isFirstAssistantReply = quickSkillId == null &&
+            newState.chatMessages.none { it.role == ChatMessageRole.ASSISTANT }
         startStreamingResponse(
-            request = request,
+            request = request.copy(isFirstAssistantReply = isFirstAssistantReply),
             assistantId = assistantPlaceholder.id,
             onCompleted = onCompleted,
             onCompletedTransform = onCompletedTransform

@@ -30,7 +30,8 @@ data class ChatRequest(
     val userMessage: String,
     val quickSkillId: String? = null,
     val audioContextSummary: AudioContextSummary? = null,
-    val history: List<ChatHistoryItem> = emptyList()
+    val history: List<ChatHistoryItem> = emptyList(),
+    val isFirstAssistantReply: Boolean = false
 )
 
 /** Streaming 事件模型：token 增量、完成、错误。 */

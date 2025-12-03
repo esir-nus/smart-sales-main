@@ -155,13 +155,23 @@ class DelegatingHomeAiChatService @Inject constructor(
         if (request.quickSkillId == null) {
             builder.appendLine()
             builder.appendLine()
-            builder.appendLine("请按下面格式回复（总长不超过 200 字）：")
-            builder.appendLine("1) 用 1-2 句话复述用户问题；如信息不足，直接说明需要更多细节")
-            builder.appendLine("2) 用 2-3 条要点给出核心洞察")
-            builder.appendLine("3) 用 2-4 条可执行建议")
-            builder.appendLine("4) 如需深度拆解，可提醒使用「智能分析」获取完整版并可导出 PDF/CSV")
-            builder.appendLine()
-            builder.append("重要：不要重复前面的内容，每个编号只写一次，不要累积重复。")
+            if (request.isFirstAssistantReply) {
+                builder.appendLine("你是销售助手。若这是本会话的首条助手回复，请严格以以下格式开头：")
+                builder.appendLine("【客户】<主要客户或联系人名称，无法识别时写“未知客户”>")
+                builder.appendLine("【场景】<简短的销售场景/任务名，如 报价跟进、会议纪要、客户异议处理、跟进邮件、销售话术优化、通用销售咨询>")
+                builder.appendLine()
+                builder.appendLine("（如有误，请简单说明客户和场景，我会更新理解。）")
+                builder.appendLine()
+                builder.appendLine("在上述固定开头后，继续给出完整、有帮助的回答。")
+            } else {
+                builder.appendLine("请按下面格式回复（总长不超过 200 字）：")
+                builder.appendLine("1) 用 1-2 句话复述用户问题；如信息不足，直接说明需要更多细节")
+                builder.appendLine("2) 用 2-3 条要点给出核心洞察")
+                builder.appendLine("3) 用 2-4 条可执行建议")
+                builder.appendLine("4) 如需深度拆解，可提醒使用「智能分析」获取完整版并可导出 PDF/CSV")
+                builder.appendLine()
+                builder.append("重要：不要重复前面的内容，每个编号只写一次，不要累积重复。")
+            }
         }
         return builder.toString()
     }

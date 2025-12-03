@@ -22,7 +22,9 @@ import com.smartsales.aitest.ui.screens.home.model.SkillSuggestion
 fun SkillChips(
     skills: List<SkillSuggestion>,
     onSkillClick: (SkillSuggestion) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    selectedId: com.smartsales.feature.chat.core.QuickSkillId? = null,
+    enabled: Boolean = true
 ) {
     Row(
         modifier = modifier
@@ -33,8 +35,20 @@ fun SkillChips(
         skills.forEach { skill ->
             SuggestionChip(
                 onClick = { onSkillClick(skill) },
+                enabled = enabled,
                 label = { Text(text = skill.label) },
-                colors = SuggestionChipDefaults.suggestionChipColors()
+                colors = SuggestionChipDefaults.suggestionChipColors(
+                    containerColor = if (skill.id == selectedId) {
+                        androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant
+                    },
+                    labelColor = if (skill.id == selectedId) {
+                        androidx.compose.material3.MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+                    }
+                )
             )
         }
     }

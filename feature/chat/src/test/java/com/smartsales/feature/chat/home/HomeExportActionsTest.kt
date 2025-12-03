@@ -188,6 +188,18 @@ class HomeExportActionsTest {
         assertEquals(2, userCount)
     }
 
+    @Test
+    fun `smart analysis with no analyzable content shows fallback without sending`() = runTest(dispatcher) {
+        viewModel.onSelectQuickSkill(QuickSkillId.SMART_ANALYSIS)
+        viewModel.onSendMessage()
+        advanceUntilIdle()
+
+        assertEquals(false, viewModel.uiState.value.isSmartAnalysisMode)
+        val assistantFallback = viewModel.uiState.value.chatMessages.lastOrNull { it.role == ChatMessageRole.ASSISTANT }
+        assertTrue(assistantFallback?.content?.contains("内容太少") == true)
+        assertEquals(null, aiChatService.lastRequest)
+    }
+
     private class RecordingAiChatService : AiChatService {
         var lastRequest: ChatRequest? = null
         override fun streamChat(request: ChatRequest): Flow<ChatStreamEvent> {

@@ -122,7 +122,10 @@ fun HomeScreen(
     val isLoading = uiState.isStreaming || uiState.isSending
     val isEmptySession = uiState.chatMessages.isEmpty()
     val inputEnabled = !uiState.isInputBusy && !uiState.isBusy
-    val canSend = uiState.inputText.isNotBlank() && !uiState.isBusy
+    val canSend = when {
+        uiState.isSmartAnalysisMode -> !uiState.isBusy
+        else -> uiState.inputText.isNotBlank() && !uiState.isBusy
+    }
     var showScrollToLatest by remember { mutableStateOf(false) }
     var uploadMenuExpanded by rememberSaveable { mutableStateOf(false) }
     val audioPicker = rememberLauncherForActivityResult(
@@ -222,7 +225,9 @@ fun HomeScreen(
                         SkillChips(
                             skills = emptySkills,
                             onSkillClick = { skill -> viewModel.onSelectQuickSkill(skill.id) },
-                            modifier = Modifier.padding(horizontal = 8.dp)
+                            modifier = Modifier.padding(horizontal = 8.dp),
+                            selectedId = if (uiState.isSmartAnalysisMode) QuickSkillId.SMART_ANALYSIS else null,
+                            enabled = inputEnabled
                         )
                     }
                     uiState.chatErrorMessage?.let { error ->
@@ -241,6 +246,7 @@ fun HomeScreen(
                         },
                         inputEnabled = inputEnabled,
                         canSend = canSend,
+                        isSmartAnalysisMode = uiState.isSmartAnalysisMode,
                         onUploadClick = { uploadMenuExpanded = true },
                         uploadMenuExpanded = uploadMenuExpanded,
                         onUploadMenuDismiss = { uploadMenuExpanded = false },
@@ -371,6 +377,7 @@ private fun ChatInputArea(
     onSend: () -> Unit,
     inputEnabled: Boolean,
     canSend: Boolean,
+    isSmartAnalysisMode: Boolean,
     onUploadClick: () -> Unit,
     uploadMenuExpanded: Boolean,
     onUploadMenuDismiss: () -> Unit,
@@ -407,13 +414,18 @@ private fun ChatInputArea(
                 )
             }
         }
+        val placeholderText = if (isSmartAnalysisMode) {
+            "说明你想分析什么（默认分析最近的一段长内容）"
+        } else {
+            "上传文件或输入消息..."
+        }
         OutlinedTextField(
             value = inputText,
             onValueChange = onInputChange,
             modifier = Modifier.weight(1f),
             maxLines = 4,
             enabled = inputEnabled,
-            placeholder = { Text(text = "上传文件或输入消息...") }
+            placeholder = { Text(text = placeholderText) }
         )
         FilledIconButton(
             onClick = onSend,

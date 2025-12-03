@@ -53,6 +53,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val DEFAULT_SESSION_ID = "home-session"
+private const val LONG_CONTENT_THRESHOLD = 240
+private const val CONTEXT_LENGTH_LIMIT = 800
+private const val CONTEXT_MESSAGE_LIMIT = 5
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreenViewModel.kt
 // 模块：:feature:chat
@@ -152,7 +155,8 @@ data class HomeUiState(
     ),
     val userName: String = "用户",
     val exportInProgress: Boolean = false,
-    val showWelcomeHero: Boolean = true
+    val showWelcomeHero: Boolean = true,
+    val isSmartAnalysisMode: Boolean = false
 )
 
 /** 外部依赖（除 AiChatService 外保留原有 stub）。 */
@@ -208,7 +212,12 @@ class HomeScreenViewModel @Inject constructor(
     fun onSendMessage() {
         val rawInput = _uiState.value.inputText
         val content = rawInput.trim()
-        if (content.isEmpty() || _uiState.value.isBusy) return
+        if (_uiState.value.isBusy) return
+        if (_uiState.value.isSmartAnalysisMode) {
+            handleSmartAnalysisSend(content)
+            return
+        }
+        if (content.isEmpty()) return
         if (isLowInformationReply(content)) {
             val userMessage = createUserMessage(content)
             _uiState.update { state ->
@@ -236,26 +245,53 @@ class HomeScreenViewModel @Inject constructor(
         )
     }
 
-    fun onSmartAnalysisClicked() {
+    private fun handleSmartAnalysisSend(rawInput: String) {
         if (_uiState.value.isSending) return
-        val candidateText = latestUserContent() ?: _uiState.value.inputText.trim()
-        if (!isAnalyzable(candidateText)) {
+        val goal = rawInput.trim()
+        val isEmptyGoal = goal.isEmpty()
+        val isLowInfo = if (isEmptyGoal) false else isLowInfoAnalysisInput(goal)
+        val (mainContent, contextContent) = findLatestLongContent()
+        if (mainContent == null) {
             appendAssistantMessage(
-                content = "智能分析需要更完整的上下文，请粘贴几句话的内容或问题，再次点击「智能分析」。"
+                content = "当前对话内容太少，我没法做有价值的智能分析。\n建议先粘贴一段对话、邮件或会议记录，然后再点击「智能分析」。"
             )
+            _uiState.update { it.copy(isSmartAnalysisMode = false, selectedSkill = null, inputText = "") }
             return
         }
-        val definition = quickSkillDefinitionsById[QuickSkillId.SUMMARIZE_LAST_MEETING]
-        _uiState.update { state ->
-            state.copy(
-                selectedSkill = definition?.toUiModel() ?: state.selectedSkill
-            )
-        }
-        val prompt = definition?.defaultPrompt ?: "请总结当前对话并给出可执行建议。"
+        val analysisGoal = if (!isEmptyGoal && !isLowInfo) goal else "通用分析"
+        val preface = if (isEmptyGoal || isLowInfo) {
+            "（提示）你没有额外说明分析目标，我将基于最近的一段对话内容做通用智能分析。"
+        } else null
+        val userMessage = buildSmartAnalysisUserMessage(
+            mainContent = mainContent,
+            context = contextContent,
+            goal = analysisGoal
+        )
+        _uiState.update { it.copy(isSmartAnalysisMode = false, selectedSkill = null, inputText = "") }
         sendMessageInternal(
-            messageText = prompt,
-            skillOverride = QuickSkillId.SUMMARIZE_LAST_MEETING
-        ) { summary -> handleSmartAnalysisCompleted(summary) }
+            messageText = userMessage,
+            skillOverride = QuickSkillId.SMART_ANALYSIS,
+            userDisplayText = if (!isEmptyGoal && !isLowInfo) {
+                "智能分析：${goal.take(60)}"
+            } else {
+                "智能分析（通用）"
+            },
+            onCompleted = { summary -> handleSmartAnalysisCompleted(summary) },
+            onCompletedTransform = { body ->
+                buildString {
+                    append("智能分析结果\n\n")
+                    preface?.let {
+                        append(it.trim()).append("\n\n")
+                    }
+                    append(body.trim())
+                }.trim()
+            }
+        )
+    }
+
+    fun onSmartAnalysisClicked() {
+        // 兼容旧入口：改为开启/关闭智能分析模式，不直接发送
+        onSelectQuickSkill(QuickSkillId.SMART_ANALYSIS)
     }
 
     fun onExportPdfClicked() {
@@ -274,28 +310,15 @@ class HomeScreenViewModel @Inject constructor(
         }
         when (skillId) {
             QuickSkillId.SMART_ANALYSIS -> {
-                val candidateText = latestUserContent() ?: _uiState.value.inputText.trim()
-                if (!isAnalyzable(candidateText)) {
-                    appendAssistantMessage(
-                        content = """
-                            结构化洞察：
-                            - 当前内容过于简短，我无法做有价值的分析。
-
-                            下一步行动：
-                            - 简要说明您想分析的场景（例如：客户异议、邮件内容或会议纪要）。
-                            - 粘贴一段原始对话或文档片段（建议不少于 3 句话）。
-                            - 然后再次点击「智能分析」，我会给出结构化洞察和具体建议。
-                        """.trimIndent()
+                if (_uiState.value.isBusy) return
+                _uiState.update { state ->
+                    val toggled = !state.isSmartAnalysisMode
+                    state.copy(
+                        isSmartAnalysisMode = toggled,
+                        selectedSkill = if (toggled) definition.toUiModel() else null,
+                        inputText = state.inputText
                     )
-                    return
                 }
-                val prompt = definition.defaultPrompt.ifBlank {
-                    "请基于当前对话与上下文，给出简明的智能分析和关键结论。"
-                }
-                sendMessageInternal(
-                    messageText = prompt,
-                    skillOverride = QuickSkillId.SMART_ANALYSIS
-                ) { summary -> handleSmartAnalysisCompleted(summary) }
             }
             QuickSkillId.EXPORT_PDF -> {
                 onExportPdfClicked()
@@ -708,6 +731,7 @@ class HomeScreenViewModel @Inject constructor(
                 latestAnalysisMarkdown = null
                 hasShownLowInfoHint = false
                 hasShownAnalysisExportHint = false
+                _uiState.update { it.copy(isSmartAnalysisMode = false, selectedSkill = null) }
                 applySessionList()
                 loadSession(sessionId)
             }
@@ -739,6 +763,7 @@ class HomeScreenViewModel @Inject constructor(
             latestAnalysisMarkdown = null
             hasShownLowInfoHint = false
             hasShownAnalysisExportHint = false
+            _uiState.update { it.copy(isSmartAnalysisMode = false, selectedSkill = null) }
             val summary = ensureSessionSummary(newSessionId, titleOverride = "新的聊天")
             _uiState.update {
                 it.copy(
@@ -859,7 +884,9 @@ class HomeScreenViewModel @Inject constructor(
     private fun sendMessageInternal(
         messageText: String,
         skillOverride: QuickSkillId? = null,
-        onCompleted: (String) -> Unit = {}
+        userDisplayText: String? = null,
+        onCompleted: (String) -> Unit = {},
+        onCompletedTransform: ((String) -> String)? = null
     ) {
         val content = messageText.trim()
         if (content.isEmpty() || _uiState.value.isBusy) return
@@ -868,7 +895,7 @@ class HomeScreenViewModel @Inject constructor(
             quickSkillDefinitionsById[id]
         }
         val quickSkillId = quickSkill?.id
-        val userMessage = createUserMessage(content)
+        val userMessage = createUserMessage(userDisplayText ?: content)
         val assistantPlaceholder = createAssistantPlaceholder()
         val audioContext = when {
             quickSkill?.requiresAudioContext == true -> {
@@ -901,14 +928,20 @@ class HomeScreenViewModel @Inject constructor(
             updateSessionSummary(userMessage.content)
         }
         val request = buildChatRequest(content, quickSkillId, newState.chatMessages, audioContext)
-        startStreamingResponse(request, assistantPlaceholder.id, onCompleted = onCompleted)
+        startStreamingResponse(
+            request = request,
+            assistantId = assistantPlaceholder.id,
+            onCompleted = onCompleted,
+            onCompletedTransform = onCompletedTransform
+        )
     }
 
     /** 启动 streaming，更新最后一条助手气泡。 */
     private fun startStreamingResponse(
         request: ChatRequest,
         assistantId: String,
-        onCompleted: (String) -> Unit = {}
+        onCompleted: (String) -> Unit = {},
+        onCompletedTransform: ((String) -> String)? = null
     ) {
         val isSmartAnalysis = request.quickSkillId == "SMART_ANALYSIS"
         val streamingDeduplicator = StreamingDeduplicator(isSmartAnalysis)
@@ -928,7 +961,8 @@ class HomeScreenViewModel @Inject constructor(
                     }
                     is ChatStreamEvent.Completed -> {
                         // 完成：关闭 streaming，最终清理和去重
-                        val cleaned = sanitizeAssistantOutput(event.fullText, isSmartAnalysis)
+                        val sanitized = sanitizeAssistantOutput(event.fullText, isSmartAnalysis)
+                        val cleaned = onCompletedTransform?.invoke(sanitized) ?: sanitized
                         updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
                             msg.copy(content = cleaned, isStreaming = false)
                         }
@@ -1084,6 +1118,23 @@ class HomeScreenViewModel @Inject constructor(
             if (stripped.length <= 2) return true
         }
         
+        return false
+    }
+
+    private fun isLowInfoAnalysisInput(text: String): Boolean {
+        val normalized = text.trim().lowercase(Locale.getDefault())
+        if (normalized.isEmpty()) return true
+        if (normalized.length <= 3) {
+            val stop = setOf("的", "啊", "么", "吗", "吧", "哦", "呢", "hi", "hi!", "ok", "?", "？", "分析", "看看")
+            if (stop.contains(normalized)) return true
+        }
+        val greetings = setOf("你好", "您好", "hello", "hi", "你是谁", "嘿", "早", "下午好", "晚上好")
+        if (greetings.contains(normalized)) return true
+        val filler = setOf("分析", "看看", "随便", "随便看看", "简单看看", "简单分析")
+        if (filler.contains(normalized)) return true
+        if (normalized.length <= 4 && normalized.all { it.isWhitespace() || it in listOf('的', '啊', '吗', '呢', '?', '？') }) {
+            return true
+        }
         return false
     }
 
@@ -1250,6 +1301,44 @@ class HomeScreenViewModel @Inject constructor(
                 content = "智能分析完成，如需分享可直接导出 PDF 或 CSV。"
             )
         }
+    }
+
+    private fun findLatestLongContent(): Pair<String?, String?> {
+        val messages = _uiState.value.chatMessages.asReversed()
+        var primary: String? = null
+        val contextChunks = mutableListOf<String>()
+        var contextLength = 0
+        for (msg in messages) {
+            val text = msg.content.trim()
+            if (text.isEmpty()) continue
+            if (primary == null && text.length >= LONG_CONTENT_THRESHOLD) {
+                primary = text
+                continue
+            }
+            if (contextChunks.size < CONTEXT_MESSAGE_LIMIT && contextLength < CONTEXT_LENGTH_LIMIT) {
+                val toAdd = text.take(CONTEXT_LENGTH_LIMIT - contextLength)
+                contextChunks += toAdd
+                contextLength += toAdd.length
+            } else {
+                break
+            }
+        }
+        return primary to contextChunks.asReversed().joinToString("\n")
+    }
+
+    private fun buildSmartAnalysisUserMessage(
+        mainContent: String,
+        context: String?,
+        goal: String
+    ): String {
+        val builder = StringBuilder()
+        builder.appendLine("分析目标：").appendLine(goal.trim()).appendLine()
+        builder.appendLine("主体内容：").appendLine(mainContent.trim()).appendLine()
+        context?.takeIf { it.isNotBlank() }?.let {
+            builder.appendLine("最近上下文：").appendLine(it.trim()).appendLine()
+        }
+        builder.appendLine("请基于上述主体内容完成结构化智能分析。")
+        return builder.toString().trim()
     }
 
     private fun sanitizeAssistantOutput(raw: String, isSmartAnalysis: Boolean = false): String {

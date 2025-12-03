@@ -867,18 +867,36 @@ class HomeScreenViewModel @Inject constructor(
         assistantId: String,
         onCompleted: (String) -> Unit = {}
     ) {
+        val isSmartAnalysis = request.quickSkillId == "SMART_ANALYSIS"
+        val streamingDeduplicator = StreamingDeduplicator(isSmartAnalysis)
+        
         viewModelScope.launch {
             aiChatService.streamChat(request).collect { event ->
                 when (event) {
                     is ChatStreamEvent.Delta -> {
-                        // 处理 streaming token，追加到当前助手消息
+                        // 处理 streaming token，实时去重
                         updateAssistantMessage(assistantId) { msg ->
-                            msg.copy(content = msg.content + event.token)
+                            val newContent = msg.content + event.token
+                            
+                            // 异常检测：如果内容异常增长（可能是重复累积），触发清理
+                            val contentLength = newContent.length
+                            val lineCount = newContent.lines().size
+                            
+                            // 如果行数过多或内容过长，可能是异常累积
+                            if (lineCount > 50 || contentLength > 5000) {
+                                // 触发清理，使用去重器处理
+                                val cleaned = streamingDeduplicator.processDelta(newContent)
+                                msg.copy(content = cleaned)
+                            } else {
+                                // 正常流式去重
+                                val deduplicated = streamingDeduplicator.processDelta(newContent)
+                                msg.copy(content = deduplicated)
+                            }
                         }
                     }
                     is ChatStreamEvent.Completed -> {
-                        // 完成：关闭 streaming，写入完整文本
-                        val cleaned = sanitizeAssistantOutput(event.fullText)
+                        // 完成：关闭 streaming，最终清理和去重
+                        val cleaned = sanitizeAssistantOutput(event.fullText, isSmartAnalysis)
                         updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
                             msg.copy(content = cleaned, isStreaming = false)
                         }
@@ -1011,14 +1029,29 @@ class HomeScreenViewModel @Inject constructor(
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return true
         val normalized = trimmed.lowercase(Locale.getDefault())
+        
+        // 常见问候语和确认词
+        val greetingTokens = setOf(
+            "你好", "您好", "hello", "hi", "hey", "嗨",
+            "你是谁", "你是谁？", "who are you", "who are you?",
+            "早上好", "下午好", "晚上好", "good morning", "good afternoon", "good evening"
+        )
+        if (greetingTokens.contains(normalized)) return true
+        
         val ackTokens = setOf("是", "好", "好的", "嗯", "嗯嗯", "ok", "行", "可以", "可以的", "收到")
         if (ackTokens.contains(normalized)) return true
+        
         if (normalized.length < 2) return true
-        if (normalized.length <= 2) {
+        
+        // 2-3 个字符的简单输入
+        if (normalized.length <= 3) {
             val stripped = normalized.replace(Regex("[的呢啊呀哦！!？?。，、,.~·\\s]+"), "")
             if (stripped.isEmpty()) return true
             if (stripped.all { it in listOf('的', '呢', '啊', '呀', '哦') }) return true
+            // 如果去除标点后只剩 1-2 个字符，很可能是低信息输入
+            if (stripped.length <= 2) return true
         }
+        
         return false
     }
 
@@ -1187,12 +1220,25 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
-    private fun sanitizeAssistantOutput(raw: String): String {
-        val lines = raw.lines()
+    private fun sanitizeAssistantOutput(raw: String, isSmartAnalysis: Boolean = false): String {
+        // 第一步：修复编号混乱（如 "11)1)"、"2)1)" 等）
+        val fixedNumbering = fixNumberingIssues(raw)
+        
+        // 第二步：检测并清理内容累积模式
+        val cleanedAccumulation = cleanAccumulatedContent(fixedNumbering)
+        
+        // 第三步：标准去重处理
+        val lines = cleanedAccumulation.lines()
         val result = mutableListOf<String>()
         val seenHeadings = mutableSetOf<String>()
         val seenBulletsByHeading = mutableMapOf<String, MutableSet<String>>()
+        val seenSentences = mutableSetOf<String>() // 句子级别去重
         var currentHeading: String? = null
+        
+        // 更健壮的标题检测正则
+        val insightHeadingRegex = Regex("^结构化洞察[：:：]?\\s*$")
+        val actionHeadingRegex = Regex("^下一步行动[：:：]?\\s*$")
+        
         lines.forEach { line ->
             val trimmed = line.trim()
             if (trimmed.isEmpty()) {
@@ -1201,11 +1247,16 @@ class HomeScreenViewModel @Inject constructor(
                 }
                 return@forEach
             }
+            
+            // 使用正则匹配标题，更灵活
             val heading = when {
-                trimmed.startsWith("结构化洞察") -> "结构化洞察："
-                trimmed.startsWith("下一步行动") -> "下一步行动："
+                insightHeadingRegex.matches(trimmed) -> "结构化洞察："
+                actionHeadingRegex.matches(trimmed) -> "下一步行动："
+                trimmed.contains("结构化洞察") && trimmed.length <= 10 -> "结构化洞察："
+                trimmed.contains("下一步行动") && trimmed.length <= 10 -> "下一步行动："
                 else -> null
             }
+            
             if (heading != null) {
                 if (seenHeadings.contains(heading)) {
                     currentHeading = heading
@@ -1216,21 +1267,297 @@ class HomeScreenViewModel @Inject constructor(
                 result.add(heading)
                 return@forEach
             }
-            if (trimmed.startsWith("- ")) {
+            
+            // 处理要点（- 开头）
+            if (trimmed.startsWith("- ") || trimmed.startsWith("• ") || trimmed.startsWith("· ")) {
                 val headingKey = currentHeading ?: "default"
                 val seenBullets = seenBulletsByHeading.getOrPut(headingKey) { mutableSetOf() }
-                val bullet = trimmed.removePrefix("- ").trim()
-                if (seenBullets.size >= 5 || seenBullets.contains(bullet)) return@forEach
+                var bullet = trimmed.removePrefix("- ").removePrefix("• ").removePrefix("· ").trim()
+                
+                // 修复编号：移除混乱的编号模式
+                bullet = bullet.replace(Regex("^\\d+[)）]\\s*"), "")
+                    .replace(Regex("\\d+[)）]\\s*"), "")
+                    .trim()
+                
+                // 归一化要点内容用于去重
+                val normalizedBullet = normalizeSentence(bullet)
+                
+                // 检查是否重复（归一化后匹配）
+                val isDuplicate = seenBullets.any { existing ->
+                    normalizeSentence(existing) == normalizedBullet
+                }
+                
+                // 检查内容累积：如果包含前面见过的长句子
+                val isAccumulated = seenSentences.any { existing ->
+                    existing.length > 15 && normalizedBullet.contains(existing)
+                }
+                
+                // SMART_ANALYSIS 最多 5 条，普通消息最多 4 条
+                val maxBullets = if (isSmartAnalysis) 5 else 4
+                if (seenBullets.size >= maxBullets || isDuplicate || isAccumulated) return@forEach
+                
                 seenBullets += bullet
+                seenSentences += normalizedBullet
                 result.add("- $bullet")
                 return@forEach
             }
-            val globalSeen = seenBulletsByHeading.getOrPut("plain") { mutableSetOf() }
-            if (globalSeen.contains(trimmed)) return@forEach
-            globalSeen += trimmed
+            
+            // 普通文本行：句子级别去重
+            val normalizedLine = normalizeSentence(trimmed)
+            
+            // 检查完全重复
+            if (seenSentences.contains(normalizedLine)) {
+                return@forEach
+            }
+            
+            // 检查内容累积：如果包含前面见过的长句子
+            val isAccumulated = seenSentences.any { existing ->
+                existing.length > 15 && normalizedLine.contains(existing)
+            }
+            if (isAccumulated) {
+                return@forEach
+            }
+            
+            seenSentences += normalizedLine
             result.add(trimmed)
         }
+        
         return result.dropWhile { it.isBlank() }.joinToString("\n").trimEnd()
+    }
+    
+    /**
+     * 修复编号混乱问题（如 "11)1)"、"2)1)" 等）
+     */
+    private fun fixNumberingIssues(text: String): String {
+        // 修复重复编号模式：如 "11)1)" -> "1)"
+        var fixed = text.replace(Regex("(\\d+)[)）]\\s*(\\d+)[)）]"), "$1)")
+        
+        // 修复编号后紧跟编号：如 "2)1)" -> "2)"
+        fixed = fixed.replace(Regex("(\\d+)[)）]\\s*(\\d+)[)）]"), "$1)")
+        
+        // 修复编号混乱的标题：如 "2)核心洞察1)" -> "核心洞察："
+        fixed = fixed.replace(Regex("\\d+[)）]\\s*(核心洞察|下一步行动)\\s*\\d*[)）]?"), "$1：")
+        
+        return fixed
+    }
+    
+    /**
+     * 清理内容累积模式：如果一行包含前面多行的内容，进行清理
+     */
+    private fun cleanAccumulatedContent(text: String): String {
+        val lines = text.lines()
+        if (lines.size < 2) return text
+        
+        val result = mutableListOf<String>()
+        val seenSentences = mutableListOf<String>()
+        
+        for (line in lines) {
+            val trimmed = line.trim()
+            if (trimmed.isEmpty()) {
+                if (result.lastOrNull()?.isNotBlank() == true) {
+                    result.add("")
+                }
+                continue
+            }
+            
+            val normalized = normalizeSentence(trimmed)
+            
+            // 检查是否是累积模式：如果当前行包含前面见过的多个长句子
+            val accumulatedCount = seenSentences.count { existing ->
+                existing.length > 20 && normalized.contains(existing)
+            }
+            
+            // 如果包含 2 个或以上的前面句子，很可能是累积重复
+            if (accumulatedCount >= 2) {
+                // 尝试提取新内容：移除所有见过的句子
+                var newContent = trimmed
+                seenSentences.forEach { existing ->
+                    if (existing.length > 20) {
+                        newContent = newContent.replace(existing, "")
+                    }
+                }
+                newContent = newContent.trim()
+                
+                // 如果还有新内容，保留；否则跳过
+                if (newContent.length > 5) {
+                    result.add(newContent)
+                    seenSentences += normalized
+                }
+            } else {
+                // 正常行，直接添加
+                result.add(line)
+                seenSentences += normalized
+            }
+        }
+        
+        return result.joinToString("\n")
+    }
+    
+    /**
+     * 归一化句子用于比较（去除标点、空格、编号等）
+     */
+    private fun normalizeSentence(sentence: String): String {
+        // 移除编号模式
+        val withoutNumbers = sentence.replace(Regex("^\\d+[)）]\\s*"), "")
+            .replace(Regex("\\d+[)）]\\s*"), "")
+        
+        // 归一化：转小写，去除标点和多余空格
+        return withoutNumbers.lowercase(Locale.getDefault())
+            .replace(Regex("[\\p{Punct}\\s]+"), "")
+    }
+    
+    /**
+     * 流式去重器，在流式过程中实时去重，避免用户看到重复内容
+     * 使用增量处理：只处理新增的内容，而不是重新处理整个累积内容
+     */
+    private class StreamingDeduplicator(private val isSmartAnalysis: Boolean) {
+        private val seenHeadings = mutableSetOf<String>()
+        private val seenSentences = mutableSetOf<String>()
+        private var lastProcessedLength = 0
+        private var lastProcessedContent = ""
+        
+        fun processDelta(newContent: String): String {
+            // 如果新内容长度没有增加，说明可能是重复处理，直接返回上次结果
+            if (newContent.length <= lastProcessedLength) {
+                return lastProcessedContent
+            }
+            
+            // 只处理新增的部分（增量）
+            val newPart = newContent.substring(lastProcessedLength)
+            lastProcessedLength = newContent.length
+            
+            // 如果新增部分为空，返回上次结果
+            if (newPart.isEmpty()) {
+                return lastProcessedContent
+            }
+            
+            // 检测异常累积：如果新内容包含大量重复的句子，可能是 LLM 重复输出
+            val lines = newContent.lines()
+            if (lines.size > 20) {
+                // 如果行数过多，可能是异常累积，进行清理
+                val cleaned = cleanAccumulatedContent(newContent)
+                lastProcessedContent = cleaned
+                return cleaned
+            }
+            
+            // 处理新增内容，检测重复
+            val result = StringBuilder(lastProcessedContent)
+            val newLines = newPart.split('\n')
+            
+            for (line in newLines) {
+                val trimmed = line.trim()
+                if (trimmed.isEmpty()) {
+                    if (result.isNotEmpty() && !result.endsWith('\n')) {
+                        result.append('\n')
+                    }
+                    continue
+                }
+                
+                // 检测标题重复
+                val heading = detectHeading(trimmed)
+                if (heading != null) {
+                    if (seenHeadings.contains(heading)) {
+                        // 跳过重复标题
+                        continue
+                    }
+                    seenHeadings += heading
+                    if (result.isNotEmpty() && !result.endsWith('\n')) {
+                        result.append('\n')
+                    }
+                    result.append(heading)
+                    result.append('\n')
+                    continue
+                }
+                
+                // 检测句子重复（归一化后比较）
+                val normalized = normalizeSentence(trimmed)
+                if (seenSentences.contains(normalized)) {
+                    // 跳过重复句子
+                    continue
+                }
+                
+                // 检测内容累积模式：如果一行包含前面见过的长句子，可能是累积重复
+                val isAccumulated = seenSentences.any { existing ->
+                    existing.length > 10 && trimmed.contains(existing)
+                }
+                if (isAccumulated) {
+                    // 跳过累积重复的行
+                    continue
+                }
+                
+                seenSentences += normalized
+                if (result.isNotEmpty() && !result.endsWith('\n')) {
+                    result.append('\n')
+                }
+                result.append(line)
+            }
+            
+            val processed = result.toString()
+            lastProcessedContent = processed
+            return processed
+        }
+        
+        /**
+         * 清理累积的重复内容
+         */
+        private fun cleanAccumulatedContent(content: String): String {
+            val lines = content.lines()
+            val result = mutableListOf<String>()
+            val seenNormalized = mutableSetOf<String>()
+            
+            for (line in lines) {
+                val trimmed = line.trim()
+                if (trimmed.isEmpty()) {
+                    if (result.lastOrNull()?.isNotBlank() == true) {
+                        result.add("")
+                    }
+                    continue
+                }
+                
+                val normalized = normalizeSentence(trimmed)
+                // 如果归一化后的内容已见过，跳过
+                if (seenNormalized.contains(normalized)) {
+                    continue
+                }
+                
+                // 检查是否是累积模式（包含前面见过的长句子）
+                val isAccumulated = seenNormalized.any { existing ->
+                    existing.length > 15 && normalized.contains(existing)
+                }
+                if (isAccumulated) {
+                    continue
+                }
+                
+                seenNormalized += normalized
+                result.add(line)
+            }
+            
+            return result.joinToString("\n").trimEnd()
+        }
+        
+        /**
+         * 归一化句子用于比较（去除标点、空格、编号等）
+         */
+        private fun normalizeSentence(sentence: String): String {
+            // 移除编号模式（如 "1)"、"2)核心洞察："等）
+            val withoutNumbers = sentence.replace(Regex("^\\d+[)）]\\s*"), "")
+                .replace(Regex("\\d+[)）]\\s*"), "")
+            
+            // 归一化：转小写，去除标点和多余空格
+            return withoutNumbers.lowercase(Locale.getDefault())
+                .replace(Regex("[\\p{Punct}\\s]+"), "")
+        }
+        
+        private fun detectHeading(line: String): String? {
+            val trimmed = line.trim()
+            return when {
+                Regex("^结构化洞察[：:：]?\\s*$").matches(trimmed) -> "结构化洞察："
+                Regex("^下一步行动[：:：]?\\s*$").matches(trimmed) -> "下一步行动："
+                trimmed == "结构化洞察" -> "结构化洞察："
+                trimmed == "下一步行动" -> "下一步行动："
+                else -> null
+            }
+        }
     }
 
     companion object {

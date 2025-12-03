@@ -48,10 +48,28 @@ class DelegatingHomeAiChatService @Inject constructor(
             when (event) {
                 is AiChatStreamEvent.Chunk -> {
                     val content = event.content
-                    val delta = if (content.startsWith(lastContent)) {
-                        content.substring(lastContent.length)
-                    } else {
-                        content
+                    val delta = when {
+                        // 正常情况：新内容以旧内容开头，提取增量
+                        content.startsWith(lastContent) -> {
+                            content.substring(lastContent.length)
+                        }
+                        // 如果新内容比旧内容短，可能是重置，使用全部内容
+                        content.length < lastContent.length -> {
+                            content
+                        }
+                        // 如果新内容不以旧内容开头，可能是 LLM 返回了累积内容，尝试提取增量
+                        lastContent.isNotEmpty() && content.length > lastContent.length -> {
+                            // 尝试找到 lastContent 在新内容中的位置
+                            val index = content.indexOf(lastContent)
+                            if (index >= 0) {
+                                content.substring(index + lastContent.length)
+                            } else {
+                                // 如果找不到，使用全部内容（可能是全新的内容）
+                                content
+                            }
+                        }
+                        // 默认情况：使用全部内容
+                        else -> content
                     }
                     if (delta.isNotEmpty()) {
                         emit(ChatStreamEvent.Delta(delta))
@@ -85,14 +103,17 @@ class DelegatingHomeAiChatService @Inject constructor(
             builder.appendLine()
         }
         builder.append("最新问题：${request.userMessage}")
+        // SMART_ANALYSIS 使用专门的 prompt，普通聊天使用不同的格式
         if (request.quickSkillId == null) {
             builder.appendLine()
             builder.appendLine()
-            builder.appendLine("请按下面格式输出，保持简洁、不要重复同一句或同一要点，总长不超过 200 字：")
-            builder.appendLine("概要：用 1-2 句话复述用户问题；如信息不足，请直接说明需要更多细节。")
-            builder.appendLine("简要分析：用 2-3 条要点给出核心洞察，避免灌水或重复。")
-            builder.appendLine("下一步行动：用 2-4 条可执行建议。")
-            builder.append("智能分析提示：如需深度拆解，可提醒使用「智能分析」获取完整版并可导出 PDF/CSV。")
+            builder.appendLine("请按下面格式回复（总长不超过 200 字）：")
+            builder.appendLine("1) 用 1-2 句话复述用户问题；如信息不足，直接说明需要更多细节")
+            builder.appendLine("2) 用 2-3 条要点给出核心洞察")
+            builder.appendLine("3) 用 2-4 条可执行建议")
+            builder.appendLine("4) 如需深度拆解，可提醒使用「智能分析」获取完整版并可导出 PDF/CSV")
+            builder.appendLine()
+            builder.append("重要：不要重复前面的内容，每个编号只写一次，不要累积重复。")
         }
         return builder.toString()
     }

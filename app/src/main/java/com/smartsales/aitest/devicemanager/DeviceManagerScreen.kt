@@ -98,9 +98,10 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun DeviceManagerRoute(
     modifier: Modifier = Modifier,
-    onNavigateToDeviceSetup: () -> Unit = {}
+    onNavigateToDeviceSetup: () -> Unit = {},
+    viewModelOverride: DeviceManagerViewModel? = null
 ) {
-    val viewModel: DeviceManagerViewModel = hiltViewModel()
+    val viewModel: DeviceManagerViewModel = viewModelOverride ?: hiltViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val uploadLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -148,9 +149,23 @@ fun DeviceManagerScreen(
     onBaseUrlChange: (String) -> Unit,
     onUseAutoBaseUrl: () -> Unit,
     onClearError: () -> Unit,
+    showCloseButton: Boolean = false,
+    onCloseRequested: () -> Unit = {},
     onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val navigationIcon: @Composable () -> Unit = if (onBack != null) {
+        {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "返回"
+                )
+            }
+        }
+    } else {
+        {}
+    }
     Scaffold(
         modifier = modifier
             .fillMaxSize()
@@ -158,16 +173,7 @@ fun DeviceManagerScreen(
         topBar = {
             TopAppBar(
                 title = { Text(text = "设备管理") },
-                navigationIcon = if (onBack != null) {
-                    {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "返回"
-                            )
-                        }
-                    }
-                } else null
+                navigationIcon = navigationIcon
             )
         }
     ) { innerPadding ->
@@ -184,6 +190,8 @@ fun DeviceManagerScreen(
             onBaseUrlChange = onBaseUrlChange,
             onUseAutoBaseUrl = onUseAutoBaseUrl,
             onClearError = onClearError,
+            showCloseButton = showCloseButton,
+            onCloseRequested = onCloseRequested,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
@@ -205,6 +213,8 @@ fun DeviceManagerContent(
     onBaseUrlChange: (String) -> Unit,
     onUseAutoBaseUrl: () -> Unit,
     onClearError: () -> Unit,
+    showCloseButton: Boolean = false,
+    onCloseRequested: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var deleteTarget by remember { mutableStateOf<DeviceFileUi?>(null) }
@@ -227,7 +237,9 @@ fun DeviceManagerContent(
             onRefresh = refreshAction,
             onStartSetup = onStartSetup,
             onBaseUrlChange = onBaseUrlChange,
-            onUseAutoBaseUrl = onUseAutoBaseUrl
+            onUseAutoBaseUrl = onUseAutoBaseUrl,
+            showCloseButton = showCloseButton,
+            onCloseRequested = onCloseRequested
         )
         state.loadErrorMessage?.let {
             ErrorBanner(
@@ -503,7 +515,9 @@ private fun DeviceManagerHeader(
     onRefresh: () -> Unit,
     onStartSetup: () -> Unit,
     onBaseUrlChange: (String) -> Unit,
-    onUseAutoBaseUrl: () -> Unit
+    onUseAutoBaseUrl: () -> Unit,
+    showCloseButton: Boolean,
+    onCloseRequested: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -511,101 +525,116 @@ private fun DeviceManagerHeader(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f)
         )
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(16.dp)
         ) {
-            val statusText = when (val status = state.connectionStatus) {
-                is DeviceConnectionUiState.Disconnected -> status.reason ?: "设备未连接"
-                is DeviceConnectionUiState.Connecting -> status.detail ?: "连接中..."
-                is DeviceConnectionUiState.Connected -> status.deviceName?.let { "已连接 $it" } ?: "已连接"
-            }
-            val statusColor = when (state.connectionStatus) {
-                is DeviceConnectionUiState.Connected -> MaterialTheme.colorScheme.primary
-                is DeviceConnectionUiState.Connecting -> MaterialTheme.colorScheme.tertiary
-                is DeviceConnectionUiState.Disconnected -> MaterialTheme.colorScheme.error
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "设备管理", style = MaterialTheme.typography.titleLarge)
-                Text(
-                    text = "管理您的销售助手设备",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = statusText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = statusColor
-                )
-                OutlinedTextField(
-                    value = state.baseUrl,
-                    onValueChange = onBaseUrlChange,
-                    label = { Text(text = "媒体服务地址") },
-                    singleLine = true,
-                    enabled = !isBusy,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                val statusText = when (val status = state.connectionStatus) {
+                    is DeviceConnectionUiState.Disconnected -> status.reason ?: "设备未连接"
+                    is DeviceConnectionUiState.Connecting -> status.detail ?: "连接中..."
+                    is DeviceConnectionUiState.Connected -> status.deviceName?.let { "已连接 $it" } ?: "已连接"
+                }
+                val statusColor = when (state.connectionStatus) {
+                    is DeviceConnectionUiState.Connected -> MaterialTheme.colorScheme.primary
+                    is DeviceConnectionUiState.Connecting -> MaterialTheme.colorScheme.tertiary
+                    is DeviceConnectionUiState.Disconnected -> MaterialTheme.colorScheme.error
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    Text(text = "设备管理", style = MaterialTheme.typography.titleLarge)
                     Text(
-                        text = state.autoDetectStatus,
+                        text = "管理您的销售助手设备",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = statusText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = statusColor
+                    )
+                    OutlinedTextField(
+                        value = state.baseUrl,
+                        onValueChange = onBaseUrlChange,
+                        label = { Text(text = "媒体服务地址") },
+                        singleLine = true,
+                        enabled = !isBusy,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = state.autoDetectStatus,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        state.autoDetectedBaseUrl?.takeIf { it.isNotBlank() }?.let {
+                            TextButton(onClick = onUseAutoBaseUrl, enabled = !state.baseUrlWasManual) {
+                                Text(text = "使用检测地址")
+                            }
+                        }
+                    }
+                }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        tonalElevation = 2.dp
+                    ) {
+                        IconButton(
+                            onClick = onRefresh,
+                            enabled = !isBusy,
+                            modifier = Modifier.testTag(DeviceManagerTestTags.REFRESH_BUTTON)
+                        ) {
+                            if (isBusy) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Filled.Refresh,
+                                    contentDescription = "刷新"
+                                )
+                            }
+                        }
+                    }
+                    Text(
+                        text = if (state.isLoading) "刷新中..." else "刷新",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    state.autoDetectedBaseUrl?.takeIf { it.isNotBlank() }?.let {
-                        TextButton(onClick = onUseAutoBaseUrl, enabled = !state.baseUrlWasManual) {
-                            Text(text = "使用检测地址")
+                    if (state.canStartSetup) {
+                        TextButton(
+                            onClick = onStartSetup,
+                            modifier = Modifier.testTag(DeviceManagerTestTags.START_SETUP_BUTTON)
+                        ) {
+                            Text(text = "开始配网")
                         }
                     }
                 }
             }
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    tonalElevation = 2.dp
+            if (showCloseButton) {
+                IconButton(
+                    onClick = onCloseRequested,
+                    modifier = Modifier.align(Alignment.TopEnd)
                 ) {
-                    IconButton(
-                        onClick = onRefresh,
-                        enabled = !isBusy,
-                        modifier = Modifier.testTag(DeviceManagerTestTags.REFRESH_BUTTON)
-                    ) {
-                        if (isBusy) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Filled.Refresh,
-                                contentDescription = "刷新"
-                            )
-                        }
-                    }
-                }
-                Text(
-                    text = if (state.isLoading) "刷新中..." else "刷新",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (state.canStartSetup) {
-                    TextButton(
-                        onClick = onStartSetup,
-                        modifier = Modifier.testTag(DeviceManagerTestTags.START_SETUP_BUTTON)
-                    ) {
-                        Text(text = "开始配网")
-                    }
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "关闭设备管理"
+                    )
                 }
             }
         }

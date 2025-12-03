@@ -71,7 +71,18 @@ class DefaultQuickSkillCatalog : QuickSkillCatalog {
                 id = QuickSkillId.SMART_ANALYSIS,
                 label = "智能分析",
                 description = "汇总并分析当前上下文。",
-                defaultPrompt = "请基于当前对话与上下文，给出简明的智能分析和关键结论。",
+                defaultPrompt = """
+                    你是一名销售助手，请输出简洁、结构化的分析。
+                    只输出下面两段，顺序保持一致，标题各出现一次：
+                    结构化洞察：
+                    - 用 3~5 条要点概括客户意图、痛点、机会或风险。不要重复同一句或同一观点。
+                    下一步行动：
+                    - 用 3~5 条要点给出可执行建议或澄清问题。
+                    限制：
+                    - 每条要点以“- ”开头，不要在要点里再次出现“结构化洞察”或“下一步行动”等标题。
+                    - 总字数不超过 300 字，避免灌水、重复。
+                    - 如果上下文很模糊或几乎没有信息（例如只有一个字/表情），在“结构化洞察”的首条明确说明信息不足；在“下一步行动”给出 2~3 条澄清或引导建议，不要假装已经分析。
+                """.trimIndent(),
                 requiresAudioContext = false,
                 isRecommended = true
             ),

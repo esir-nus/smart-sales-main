@@ -242,6 +242,21 @@ class HomeScreenViewModel @Inject constructor(
         }
         when (skillId) {
             QuickSkillId.SMART_ANALYSIS -> {
+                val candidateText = latestUserContent() ?: _uiState.value.inputText.trim()
+                if (!isAnalyzable(candidateText)) {
+                    appendAssistantMessage(
+                        content = """
+                            结构化洞察：
+                            - 当前内容过于简短，我无法做有价值的分析。
+
+                            下一步行动：
+                            - 简要说明您想分析的场景（例如：客户异议、邮件内容或会议纪要）。
+                            - 粘贴一段原始对话或文档片段（建议不少于 3 句话）。
+                            - 然后再次点击「智能分析」，我会给出结构化洞察和具体建议。
+                        """.trimIndent()
+                    )
+                    return
+                }
                 val prompt = definition.defaultPrompt.ifBlank {
                     "请基于当前对话与上下文，给出简明的智能分析和关键结论。"
                 }
@@ -938,6 +953,21 @@ class HomeScreenViewModel @Inject constructor(
         timestampMillis = System.currentTimeMillis(),
         isStreaming = true
     )
+
+    private fun latestUserContent(): String? =
+        _uiState.value.chatMessages.lastOrNull { it.role == ChatMessageRole.USER }?.content?.trim()
+
+    private fun isAnalyzable(text: String?): Boolean {
+        if (text.isNullOrBlank()) return false
+        val normalized = text.trim()
+        val len = normalized.length
+        if (len < 12) return false
+        val stripped = normalized.replace(Regex("[\\p{Punct}\\s]+"), "")
+        if (stripped.length < 8) return false
+        val stopwords = setOf("的", "了", "嗯", "啊", "哦", "好", "好的", "ok", "OK", "是", "对", "嗯嗯", "行", "可以")
+        if (stopwords.contains(stripped.lowercase(Locale.getDefault()))) return false
+        return true
+    }
 
     /** 根据已订阅的媒体同步状态构建轻量音频上下文，仅供聊天请求使用。 */
     private fun buildAudioContextSummary(): AudioContextSummary? {

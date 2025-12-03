@@ -8,6 +8,7 @@ package com.smartsales.aitest.ui.screens.home
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.fadeIn
@@ -93,7 +94,8 @@ import kotlinx.coroutines.flow.collectLatest
 fun HomeScreen(
     viewModel: HomeScreenViewModel,
     onNavigateToHistory: () -> Unit = {},
-    onNavigateToDeviceSetup: () -> Unit = {}
+    onNavigateToDeviceSetup: () -> Unit = {},
+    deviceManagerViewModel: DeviceManagerViewModel? = null
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
@@ -135,20 +137,24 @@ fun HomeScreen(
     }
     var showDeviceManager by rememberSaveable { mutableStateOf(false) }
     val deviceSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val deviceManagerViewModel: DeviceManagerViewModel = hiltViewModel()
-    val deviceManagerState by deviceManagerViewModel.uiState.collectAsStateWithLifecycle()
+    val resolvedDeviceManagerViewModel: DeviceManagerViewModel =
+        deviceManagerViewModel ?: hiltViewModel()
+    val deviceManagerState by resolvedDeviceManagerViewModel.uiState.collectAsStateWithLifecycle()
     val deviceUploadLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
-        uri?.let { deviceManagerViewModel.onUploadFile(DeviceUploadSource.AndroidUri(it)) }
+        uri?.let { resolvedDeviceManagerViewModel.onUploadFile(DeviceUploadSource.AndroidUri(it)) }
     }
 
-    LaunchedEffect(deviceManagerViewModel) {
-        deviceManagerViewModel.events.collectLatest { event ->
+    LaunchedEffect(resolvedDeviceManagerViewModel) {
+        resolvedDeviceManagerViewModel.events.collectLatest { event ->
             when (event) {
                 DeviceManagerEvent.NavigateToDeviceSetup -> {
-                    showDeviceManager = false
-                    onNavigateToDeviceSetup()
+                    coroutineScope.launch {
+                        deviceSheetState.hide()
+                        showDeviceManager = false
+                        onNavigateToDeviceSetup()
+                    }
                 }
             }
         }
@@ -177,7 +183,18 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text(text = "新对话") },
                 actions = {
-                    IconButton(onClick = { showDeviceManager = true }) {
+                    IconButton(
+                        onClick = {
+                            if (showDeviceManager) {
+                                coroutineScope.launch {
+                                    deviceSheetState.hide()
+                                    showDeviceManager = false
+                                }
+                            } else {
+                                showDeviceManager = true
+                            }
+                        }
+                    ) {
                         Icon(Icons.Filled.Devices, contentDescription = "设备管理")
                     }
                     IconButton(
@@ -300,26 +317,45 @@ fun HomeScreen(
         }
     }
 
+    BackHandler(enabled = showDeviceManager) {
+        coroutineScope.launch {
+            deviceSheetState.hide()
+            showDeviceManager = false
+        }
+    }
+
     if (showDeviceManager) {
         ModalBottomSheet(
-            onDismissRequest = { showDeviceManager = false },
+            onDismissRequest = {
+                coroutineScope.launch {
+                    deviceSheetState.hide()
+                    showDeviceManager = false
+                }
+            },
             sheetState = deviceSheetState,
             dragHandle = { BottomSheetDefaults.DragHandle() },
             modifier = Modifier.fillMaxHeight(0.95f)
         ) {
             DeviceManagerContent(
                 state = deviceManagerState,
-                onRefresh = deviceManagerViewModel::onRefreshFiles,
-                onStartSetup = deviceManagerViewModel::onStartSetupClick,
-                onRetryLoad = deviceManagerViewModel::onRetryLoad,
-                onSelectFile = deviceManagerViewModel::onSelectFile,
-                onDismissViewer = deviceManagerViewModel::onCloseViewer,
-                onApplyFile = deviceManagerViewModel::onApplyFile,
-                onDeleteFile = deviceManagerViewModel::onDeleteFile,
+                onRefresh = resolvedDeviceManagerViewModel::onRefreshFiles,
+                onStartSetup = resolvedDeviceManagerViewModel::onStartSetupClick,
+                onRetryLoad = resolvedDeviceManagerViewModel::onRetryLoad,
+                onSelectFile = resolvedDeviceManagerViewModel::onSelectFile,
+                onDismissViewer = resolvedDeviceManagerViewModel::onCloseViewer,
+                onApplyFile = resolvedDeviceManagerViewModel::onApplyFile,
+                onDeleteFile = resolvedDeviceManagerViewModel::onDeleteFile,
                 onRequestUpload = { deviceUploadLauncher.launch(arrayOf("video/*", "image/*")) },
-                onBaseUrlChange = deviceManagerViewModel::onBaseUrlChanged,
-                onUseAutoBaseUrl = deviceManagerViewModel::onUseAutoBaseUrl,
-                onClearError = deviceManagerViewModel::onClearError,
+                onBaseUrlChange = resolvedDeviceManagerViewModel::onBaseUrlChanged,
+                onUseAutoBaseUrl = resolvedDeviceManagerViewModel::onUseAutoBaseUrl,
+                onClearError = resolvedDeviceManagerViewModel::onClearError,
+                showCloseButton = true,
+                onCloseRequested = {
+                    coroutineScope.launch {
+                        deviceSheetState.hide()
+                        showDeviceManager = false
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER)

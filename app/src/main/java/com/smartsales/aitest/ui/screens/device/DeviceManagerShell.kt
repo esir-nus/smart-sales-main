@@ -14,14 +14,19 @@ import com.smartsales.aitest.AiFeatureTestTags
 import com.smartsales.aitest.devicemanager.DeviceManagerRoute
 
 @Composable
-fun DeviceManagerShell() {
+fun DeviceManagerShell(
+    viewModel: com.smartsales.feature.media.devicemanager.DeviceManagerViewModel? = null,
+    onNavigateToDeviceSetup: () -> Unit = {}
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
             .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
     ) {
         DeviceManagerRoute(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            onNavigateToDeviceSetup = onNavigateToDeviceSetup,
+            viewModelOverride = viewModel
         )
     }
 }

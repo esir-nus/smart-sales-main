@@ -29,11 +29,14 @@ import com.smartsales.aitest.ui.screens.home.HomeScreen
 import com.smartsales.aitest.ui.screens.user.UserCenterScreen
 import com.smartsales.feature.chat.home.HomeScreenViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.smartsales.feature.media.devicemanager.DeviceManagerViewModel
 
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
     val items = Screen.items
+    val deviceBackStackEntry = remember(navController) { navController.getBackStackEntry(Screen.Device.route) }
+    val deviceManagerViewModel: DeviceManagerViewModel = hiltViewModel(deviceBackStackEntry)
     Scaffold(
         bottomBar = {
             NavigationBar {
@@ -75,7 +78,8 @@ fun MainScreen() {
                             launchSingleTop = true
                             restoreState = true
                         }
-                    }
+                    },
+                    deviceManagerViewModel = deviceManagerViewModel
                 )
             }
             composable(Screen.Audio.route) {
@@ -92,7 +96,11 @@ fun MainScreen() {
                     }
                 )
             }
-            composable(Screen.Device.route) { DeviceManagerShell() }
+            composable(Screen.Device.route) {
+                DeviceManagerShell(
+                    viewModel = deviceManagerViewModel
+                )
+            }
             composable(Screen.User.route) {
                 UserCenterScreen(
                     onOpenDeviceManager = {

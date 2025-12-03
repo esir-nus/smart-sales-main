@@ -226,6 +226,7 @@ class DeviceManagerScreenTest {
                         onDeleteFile = {},
                         onRequestUpload = {},
                         onBaseUrlChange = {},
+                        onUseAutoBaseUrl = {},
                         onClearError = {
                             cleared = true
                             uiState = uiState.copy(errorMessage = null)
@@ -254,6 +255,7 @@ class DeviceManagerScreenTest {
         onRequestUpload: () -> Unit = {},
         onRetryLoad: () -> Unit = {},
         onBaseUrlChange: (String) -> Unit = {},
+        onUseAutoBaseUrl: () -> Unit = {},
         onClearError: () -> Unit = {}
     ) {
         composeRule.setContent {
@@ -270,6 +272,7 @@ class DeviceManagerScreenTest {
                     onDeleteFile = onDeleteFile,
                     onRequestUpload = onRequestUpload,
                     onBaseUrlChange = onBaseUrlChange,
+                    onUseAutoBaseUrl = onUseAutoBaseUrl,
                     onClearError = onClearError
                 )
             }

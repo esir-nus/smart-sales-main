@@ -46,7 +46,9 @@ import com.smartsales.aitest.ui.screens.user.model.label
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UserCenterScreen() {
+fun UserCenterScreen(
+    onOpenDeviceManager: () -> Unit = {}
+) {
     var userProfile by remember {
         mutableStateOf(
             UserProfileUi(
@@ -125,7 +127,11 @@ fun UserCenterScreen() {
                     icon = item.icon,
                     title = item.title,
                     subtitle = item.subtitle,
-                    onClick = { /* TODO: 导航到对应页面，如切换到底部设备页 */ },
+                    onClick = {
+                        if (item.title == "设备管理") {
+                            onOpenDeviceManager()
+                        }
+                    },
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
             }

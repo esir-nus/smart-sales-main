@@ -68,7 +68,14 @@ fun MainScreen() {
                 val homeViewModel: HomeScreenViewModel = hiltViewModel(backStackEntry)
                 HomeScreen(
                     viewModel = homeViewModel,
-                    onNavigateToHistory = { navController.navigate(Screen.ChatHistory.route) }
+                    onNavigateToHistory = { navController.navigate(Screen.ChatHistory.route) },
+                    onNavigateToDeviceSetup = {
+                        navController.navigate(Screen.Device.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
                 )
             }
             composable(Screen.Audio.route) {
@@ -86,7 +93,17 @@ fun MainScreen() {
                 )
             }
             composable(Screen.Device.route) { DeviceManagerShell() }
-            composable(Screen.User.route) { UserCenterScreen() }
+            composable(Screen.User.route) {
+                UserCenterScreen(
+                    onOpenDeviceManager = {
+                        navController.navigate(Screen.Device.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
+            }
             composable(Screen.ChatHistory.route) {
                 val homeBackStackEntry = remember(navController) { navController.getBackStackEntry(Screen.Home.route) }
                 val homeViewModel: HomeScreenViewModel = hiltViewModel(homeBackStackEntry)

@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -33,12 +34,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AudioFile
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -46,8 +49,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -66,21 +71,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
+import com.smartsales.aitest.AiFeatureTestTags
 import com.smartsales.aitest.ui.components.ChatMessageBubble
 import com.smartsales.aitest.ui.components.SkillChips
 import com.smartsales.aitest.ui.screens.home.model.SkillSuggestion
 import com.smartsales.aitest.ui.screens.home.model.toSkillSuggestion
 import com.smartsales.aitest.ui.screens.home.model.toUiMessages
+import com.smartsales.aitest.devicemanager.DeviceManagerContent
+import com.smartsales.feature.media.devicemanager.DeviceManagerEvent
+import com.smartsales.feature.media.devicemanager.DeviceManagerViewModel
+import com.smartsales.feature.media.devicemanager.DeviceUploadSource
 import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.chat.home.HomeScreenViewModel
+import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun HomeScreen(
     viewModel: HomeScreenViewModel,
-    onNavigateToHistory: () -> Unit = {}
+    onNavigateToHistory: () -> Unit = {},
+    onNavigateToDeviceSetup: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
@@ -120,6 +133,26 @@ fun HomeScreen(
     ) { uri: Uri? ->
         uri?.let { viewModel.onImagePicked(it) }
     }
+    var showDeviceManager by rememberSaveable { mutableStateOf(false) }
+    val deviceSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val deviceManagerViewModel: DeviceManagerViewModel = hiltViewModel()
+    val deviceManagerState by deviceManagerViewModel.uiState.collectAsStateWithLifecycle()
+    val deviceUploadLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let { deviceManagerViewModel.onUploadFile(DeviceUploadSource.AndroidUri(it)) }
+    }
+
+    LaunchedEffect(deviceManagerViewModel) {
+        deviceManagerViewModel.events.collectLatest { event ->
+            when (event) {
+                DeviceManagerEvent.NavigateToDeviceSetup -> {
+                    showDeviceManager = false
+                    onNavigateToDeviceSetup()
+                }
+            }
+        }
+    }
 
     LaunchedEffect(uiState.chatMessages.size) {
         if (uiState.chatMessages.isNotEmpty()) {
@@ -144,6 +177,9 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text(text = "新对话") },
                 actions = {
+                    IconButton(onClick = { showDeviceManager = true }) {
+                        Icon(Icons.Filled.Devices, contentDescription = "设备管理")
+                    }
                     IconButton(
                         onClick = onNavigateToHistory,
                         modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_TOGGLE)
@@ -261,6 +297,33 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+    }
+
+    if (showDeviceManager) {
+        ModalBottomSheet(
+            onDismissRequest = { showDeviceManager = false },
+            sheetState = deviceSheetState,
+            dragHandle = { BottomSheetDefaults.DragHandle() },
+            modifier = Modifier.fillMaxHeight(0.95f)
+        ) {
+            DeviceManagerContent(
+                state = deviceManagerState,
+                onRefresh = deviceManagerViewModel::onRefreshFiles,
+                onStartSetup = deviceManagerViewModel::onStartSetupClick,
+                onRetryLoad = deviceManagerViewModel::onRetryLoad,
+                onSelectFile = deviceManagerViewModel::onSelectFile,
+                onDismissViewer = deviceManagerViewModel::onCloseViewer,
+                onApplyFile = deviceManagerViewModel::onApplyFile,
+                onDeleteFile = deviceManagerViewModel::onDeleteFile,
+                onRequestUpload = { deviceUploadLauncher.launch(arrayOf("video/*", "image/*")) },
+                onBaseUrlChange = deviceManagerViewModel::onBaseUrlChanged,
+                onUseAutoBaseUrl = deviceManagerViewModel::onUseAutoBaseUrl,
+                onClearError = deviceManagerViewModel::onClearError,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER)
+            )
         }
     }
 }

@@ -3,10 +3,19 @@ package com.smartsales.aitest.devicemanager
 // 文件：app/src/main/java/com/smartsales/aitest/devicemanager/DeviceManagerScreen.kt
 // 模块：:app
 // 说明：设备管理页面的 Route 与 Compose UI
-// 作者：创建于 2025-11-20
+// 作者：创建于 2025-12-03
 
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,68 +24,75 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.smartsales.aitest.AiFeatureTestTags
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.ui.window.Dialog
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.ui.viewinterop.AndroidView
-import android.net.Uri
 import com.smartsales.core.util.AppDesignTokens
 import com.smartsales.feature.media.devicemanager.DeviceConnectionUiState
 import com.smartsales.feature.media.devicemanager.DeviceFileUi
-import com.smartsales.feature.media.devicemanager.DeviceMediaTab
+import com.smartsales.feature.media.devicemanager.DeviceManagerEvent
 import com.smartsales.feature.media.devicemanager.DeviceManagerUiState
 import com.smartsales.feature.media.devicemanager.DeviceManagerViewModel
+import com.smartsales.feature.media.devicemanager.DeviceMediaTab
 import com.smartsales.feature.media.devicemanager.DeviceUploadSource
-import com.smartsales.feature.media.devicemanager.DeviceManagerEvent
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
@@ -111,11 +127,13 @@ fun DeviceManagerRoute(
         onDeleteFile = viewModel::onDeleteFile,
         onRequestUpload = { uploadLauncher.launch(arrayOf("video/*", "image/*")) },
         onBaseUrlChange = viewModel::onBaseUrlChanged,
+        onUseAutoBaseUrl = viewModel::onUseAutoBaseUrl,
         onClearError = viewModel::onClearError,
         modifier = modifier.testTag(DeviceManagerRouteTestTags.ROOT)
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeviceManagerScreen(
     state: DeviceManagerUiState,
@@ -128,223 +146,468 @@ fun DeviceManagerScreen(
     onDeleteFile: (String) -> Unit,
     onRequestUpload: () -> Unit,
     onBaseUrlChange: (String) -> Unit,
+    onUseAutoBaseUrl: () -> Unit,
     onClearError: () -> Unit,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    Scaffold(modifier = modifier
-        .fillMaxSize()
-        .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER)) { innerPadding ->
-        val isConnected = state.isConnected
-        val designTokens = AppDesignTokens.current()
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .background(designTokens.mutedSurface)
-                .padding(12.dp)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            DeviceManagerHero(
-                state = state,
-                onBaseUrlChange = onBaseUrlChange,
-                onStartSetup = onStartSetup
-            )
-            ActionButtons(
-                isConnected = isConnected,
-                isLoading = state.isLoading,
-                isUploading = state.isUploading,
-                onRefresh = onRefresh,
-                onUpload = onRequestUpload
-            )
-            state.loadErrorMessage?.let {
-                ErrorBanner(
-                    message = it,
-                    primaryActionLabel = "重试",
-                    onPrimaryAction = onRetryLoad,
-                    onDismiss = onClearError,
-                    modifier = Modifier.testTag(DeviceManagerTestTags.ERROR_BANNER)
-                )
-            } ?: state.errorMessage?.let {
-                ErrorBanner(
-                    message = it,
-                    primaryActionLabel = null,
-                    onPrimaryAction = null,
-                    onDismiss = onClearError,
-                    modifier = Modifier.testTag(DeviceManagerTestTags.ERROR_BANNER)
-                )
-            }
-            if (!isConnected && state.canRetryConnect) {
-                DisconnectedHint(onRefresh)
-                return@Column
-            }
-            DevicePreview(file = state.selectedFile, modifier = Modifier.fillMaxWidth())
-            when {
-                state.isLoading -> {
-                    LoadingBanner()
-                }
-                state.loadErrorMessage != null -> Unit
-                state.visibleFiles.isEmpty() -> {
-                    FileListHeader(total = state.files.size, modifier = Modifier.fillMaxWidth())
-                    UploadTile(onUpload = onRequestUpload, modifier = Modifier.fillMaxWidth())
-                    EmptyFilesCard(modifier = Modifier.fillMaxWidth())
-                }
-
-                else -> {
-                    FileListHeader(total = state.files.size, modifier = Modifier.fillMaxWidth())
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag(DeviceManagerTestTags.FILE_LIST),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(vertical = 4.dp)
-                    ) {
-                        item {
-                            UploadTile(onUpload = onRequestUpload)
-                        }
-                        items(state.visibleFiles, key = { it.id }) { file ->
-                            DeviceFileCard(
-                                file = file,
-                                isSelected = state.selectedFile?.id == file.id,
-                                isApplying = state.applyInProgressId == file.id,
-                                onSelect = { onSelectFile(file.id) },
-                                onApply = { onApplyFile(file.id) },
-                                onDelete = { onDeleteFile(file.id) }
+    Scaffold(
+        modifier = modifier
+            .fillMaxSize()
+            .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER),
+        topBar = {
+            TopAppBar(
+                title = { Text(text = "设备管理") },
+                navigationIcon = if (onBack != null) {
+                    {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "返回"
                             )
                         }
                     }
-                }
-            }
+                } else null
+            )
+        }
+    ) { innerPadding ->
+        DeviceManagerContent(
+            state = state,
+            onRefresh = onRefresh,
+            onStartSetup = onStartSetup,
+            onRetryLoad = onRetryLoad,
+            onSelectFile = onSelectFile,
+            onDismissViewer = onDismissViewer,
+            onApplyFile = onApplyFile,
+            onDeleteFile = onDeleteFile,
+            onRequestUpload = onRequestUpload,
+            onBaseUrlChange = onBaseUrlChange,
+            onUseAutoBaseUrl = onUseAutoBaseUrl,
+            onClearError = onClearError,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        )
+    }
+}
+
+@Composable
+fun DeviceManagerContent(
+    state: DeviceManagerUiState,
+    onRefresh: () -> Unit,
+    onStartSetup: () -> Unit,
+    onRetryLoad: () -> Unit,
+    onSelectFile: (String) -> Unit,
+    onDismissViewer: () -> Unit,
+    onApplyFile: (String) -> Unit,
+    onDeleteFile: (String) -> Unit,
+    onRequestUpload: () -> Unit,
+    onBaseUrlChange: (String) -> Unit,
+    onUseAutoBaseUrl: () -> Unit,
+    onClearError: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var deleteTarget by remember { mutableStateOf<DeviceFileUi?>(null) }
+    val designTokens = AppDesignTokens.current()
+    val isBusy = state.isLoading || state.isUploading
+    val refreshAction = if (state.loadErrorMessage != null) onRetryLoad else onRefresh
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(designTokens.mutedSurface)
+            .padding(horizontal = 12.dp, vertical = 12.dp)
+            .verticalScroll(rememberScrollState())
+            .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        DeviceManagerHeader(
+            state = state,
+            isBusy = isBusy,
+            onRefresh = refreshAction,
+            onStartSetup = onStartSetup,
+            onBaseUrlChange = onBaseUrlChange,
+            onUseAutoBaseUrl = onUseAutoBaseUrl
+        )
+        state.loadErrorMessage?.let {
+            ErrorBanner(
+                message = it,
+                primaryActionLabel = "重试",
+                onPrimaryAction = onRetryLoad,
+                onDismiss = onClearError,
+                modifier = Modifier.testTag(DeviceManagerTestTags.ERROR_BANNER)
+            )
+        } ?: state.errorMessage?.let {
+            ErrorBanner(
+                message = it,
+                primaryActionLabel = null,
+                onPrimaryAction = null,
+                onDismiss = onClearError,
+                modifier = Modifier.testTag(DeviceManagerTestTags.ERROR_BANNER)
+            )
+        }
+
+        if (!state.isConnected && state.canRetryConnect) {
+            DisconnectedHint(onRetryLoad)
+        } else {
+            DeviceSimulatorCard(
+                file = state.selectedFile,
+                onCloseViewer = onDismissViewer
+            )
+            FileListSection(
+                state = state,
+                actionsEnabled = state.isConnected && !isBusy,
+                onRequestUpload = onRequestUpload,
+                onSelectFile = onSelectFile,
+                onApplyFile = onApplyFile,
+                onDeleteFile = { deleteTarget = it }
+            )
         }
     }
+
     state.viewerFile?.let { file ->
         MediaViewerDialog(
             file = file,
             onDismiss = onDismissViewer
         )
     }
+    deleteTarget?.let { file ->
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text(text = "删除文件") },
+            text = { Text(text = "确定删除 ${file.displayName} 吗？此操作不可撤销。") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteFile(file.id)
+                        deleteTarget = null
+                    }
+                ) { Text(text = "删除") }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteTarget = null }) { Text(text = "取消") }
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+private fun DeviceSimulatorCard(
+    file: DeviceFileUi?,
+    onCloseViewer: () -> Unit
+) {
+    val targetKey = file?.id ?: "empty"
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(220.dp)
+            .testTag(DeviceManagerTestTags.PREVIEW_CARD),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp)
+        ) {
+            AnimatedContent(
+                targetState = targetKey,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(220)) togetherWith
+                        fadeOut(animationSpec = tween(180))
+                },
+                label = "device_simulator_animation"
+            ) {
+                val scale by animateFloatAsState(
+                    targetValue = if (file == null) 0.98f else 1f,
+                    label = "device_simulator_scale"
+                )
+                if (file == null) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                scaleX = scale
+                                scaleY = scale
+                            },
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Devices,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "选择文件预览",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                scaleX = scale
+                                scaleY = scale
+                            },
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val previewUrl = file.thumbnailUrl ?: file.mediaUrl
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(140.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                        ) {
+                            AsyncImage(
+                                model = previewUrl,
+                                contentDescription = "预览 ${file.displayName}",
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            if (file.mediaType == DeviceMediaTab.Videos) {
+                                Icon(
+                                    imageVector = Icons.Filled.PlayArrow,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier
+                                        .align(Alignment.Center)
+                                        .background(
+                                            MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                                            shape = CircleShape
+                                        )
+                                        .padding(6.dp)
+                                )
+                            }
+                            file.durationText?.takeIf { it.isNotBlank() }?.let { duration ->
+                                DurationBadge(
+                                    duration = duration,
+                                    modifier = Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .padding(8.dp)
+                                )
+                            }
+                        }
+                        Text(
+                            text = file.displayName,
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "修改时间：${file.modifiedAtText}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+            if (file != null) {
+                IconButton(
+                    onClick = onCloseViewer,
+                    modifier = Modifier.align(Alignment.TopEnd)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "关闭预览"
+                    )
+                }
+            }
+            Text(
+                text = "DEVICE SIMULATOR",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.align(Alignment.BottomEnd)
+            )
+        }
+    }
 }
 
 @Composable
-private fun DeviceManagerHero(
+private fun FileListSection(
     state: DeviceManagerUiState,
+    actionsEnabled: Boolean,
+    onRequestUpload: () -> Unit,
+    onSelectFile: (String) -> Unit,
+    onApplyFile: (String) -> Unit,
+    onDeleteFile: (DeviceFileUi) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "文件列表 (${state.files.size})",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Button(
+            onClick = onRequestUpload,
+            enabled = actionsEnabled && state.isConnected,
+            modifier = Modifier.testTag(DeviceManagerTestTags.UPLOAD_BUTTON)
+        ) {
+            Icon(imageVector = Icons.Filled.CloudUpload, contentDescription = null)
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(text = if (state.isUploading) "上传中..." else "上传新文件")
+        }
+    }
+    if (state.isLoading) {
+        LoadingBanner()
+        return
+    }
+
+    if (state.visibleFiles.isEmpty()) {
+        UploadTile(onUpload = onRequestUpload)
+        EmptyFilesCard()
+        return
+    }
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 200.dp)
+            .testTag(DeviceManagerTestTags.FILE_LIST),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(vertical = 6.dp)
+    ) {
+        item {
+            UploadTile(onUpload = onRequestUpload)
+        }
+        items(state.visibleFiles, key = { it.id }) { file ->
+            DeviceFileCard(
+                file = file,
+                isSelected = state.selectedFile?.id == file.id,
+                isApplying = state.applyInProgressId == file.id,
+                actionsEnabled = actionsEnabled,
+                onSelect = { onSelectFile(file.id) },
+                onApply = { onApplyFile(file.id) },
+                onDelete = { onDeleteFile(file) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun DeviceManagerHeader(
+    state: DeviceManagerUiState,
+    isBusy: Boolean,
+    onRefresh: () -> Unit,
+    onStartSetup: () -> Unit,
     onBaseUrlChange: (String) -> Unit,
-    onStartSetup: () -> Unit
+    onUseAutoBaseUrl: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f)
         )
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            val statusText = when (val status = state.connectionStatus) {
+                is DeviceConnectionUiState.Disconnected -> status.reason ?: "设备未连接"
+                is DeviceConnectionUiState.Connecting -> status.detail ?: "连接中..."
+                is DeviceConnectionUiState.Connected -> status.deviceName?.let { "已连接 $it" } ?: "已连接"
+            }
+            val statusColor = when (state.connectionStatus) {
+                is DeviceConnectionUiState.Connected -> MaterialTheme.colorScheme.primary
+                is DeviceConnectionUiState.Connecting -> MaterialTheme.colorScheme.tertiary
+                is DeviceConnectionUiState.Disconnected -> MaterialTheme.colorScheme.error
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
                 Text(text = "设备管理", style = MaterialTheme.typography.titleLarge)
                 Text(
                     text = "管理您的销售助手设备",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-            DeviceConnectionBanner(
-                status = state.connectionStatus,
-                modifier = Modifier.fillMaxWidth()
-            )
-            if (state.canStartSetup) {
-                Button(
-                    onClick = onStartSetup,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag(DeviceManagerTestTags.START_SETUP_BUTTON)
-                ) {
-                    Text(text = "开始配网")
-                }
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = statusText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = statusColor
+                )
                 OutlinedTextField(
                     value = state.baseUrl,
                     onValueChange = onBaseUrlChange,
-                    label = { Text("媒体服务地址") },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.isLoading
+                    label = { Text(text = "媒体服务地址") },
+                    singleLine = true,
+                    enabled = !isBusy,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                Text(
-                    text = state.autoDetectStatus,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = state.autoDetectStatus,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    state.autoDetectedBaseUrl?.takeIf { it.isNotBlank() }?.let {
+                        TextButton(onClick = onUseAutoBaseUrl, enabled = !state.baseUrlWasManual) {
+                            Text(text = "使用检测地址")
+                        }
+                    }
+                }
             }
-        }
-    }
-}
-
-@Composable
-private fun DeviceConnectionBanner(
-    status: DeviceConnectionUiState,
-    modifier: Modifier = Modifier
-) {
-    val (title, subtitle) = when (status) {
-        is DeviceConnectionUiState.Disconnected -> "设备未连接" to (status.reason ?: "请连接设备以管理文件和查看预览。")
-        is DeviceConnectionUiState.Connecting -> "正在连接设备..." to (status.detail ?: "请确保设备在附近")
-        is DeviceConnectionUiState.Connected -> ("已连接 ${status.deviceName ?: ""}").trim() to "可预览、刷新和上传文件。"
-    }
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun ActionButtons(
-    isConnected: Boolean,
-    isLoading: Boolean,
-    isUploading: Boolean,
-    onRefresh: () -> Unit,
-    onUpload: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Button(
-            onClick = onRefresh,
-            enabled = isConnected && !isLoading,
-            modifier = Modifier.testTag(DeviceManagerTestTags.REFRESH_BUTTON)
-        ) {
-            Icon(Icons.Default.Refresh, contentDescription = null)
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(text = if (isLoading) "刷新中..." else "刷新")
-        }
-        OutlinedButton(
-            onClick = onUpload,
-            enabled = isConnected && !isUploading,
-            modifier = Modifier.testTag(DeviceManagerTestTags.UPLOAD_BUTTON)
-        ) {
-            Icon(Icons.Default.CloudUpload, contentDescription = null)
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(text = if (isUploading) "上传中..." else "上传新文件")
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    tonalElevation = 2.dp
+                ) {
+                    IconButton(
+                        onClick = onRefresh,
+                        enabled = !isBusy,
+                        modifier = Modifier.testTag(DeviceManagerTestTags.REFRESH_BUTTON)
+                    ) {
+                        if (isBusy) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Filled.Refresh,
+                                contentDescription = "刷新"
+                            )
+                        }
+                    }
+                }
+                Text(
+                    text = if (state.isLoading) "刷新中..." else "刷新",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (state.canStartSetup) {
+                    TextButton(
+                        onClick = onStartSetup,
+                        modifier = Modifier.testTag(DeviceManagerTestTags.START_SETUP_BUTTON)
+                    ) {
+                        Text(text = "开始配网")
+                    }
+                }
+            }
         }
     }
 }
@@ -366,6 +629,7 @@ private fun DeviceFileCard(
     file: DeviceFileUi,
     isSelected: Boolean,
     isApplying: Boolean,
+    actionsEnabled: Boolean,
     onSelect: () -> Unit,
     onApply: () -> Unit,
     onDelete: () -> Unit
@@ -381,52 +645,17 @@ private fun DeviceFileCard(
         },
         onClick = onSelect
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = file.displayName,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (file.isApplied) {
-                    AssistChip(
-                        onClick = {},
-                        enabled = false,
-                        label = { Text(text = "当前展示") },
-                        colors = AssistChipDefaults.assistChipColors(
-                            labelColor = MaterialTheme.colorScheme.primary
-                        )
-                    )
-                }
-            }
-            Text(
-                text = "${file.mimeType} · ${file.sizeText}",
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = "修改时间：${file.modifiedAtText}",
-                style = MaterialTheme.typography.bodySmall,
-                overflow = TextOverflow.Ellipsis,
-                maxLines = 1
-            )
-            if (file.isApplied) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "设备当前展示此文件",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            Spacer(modifier = Modifier.height(6.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp)
+                    .clip(RoundedCornerShape(12.dp))
             ) {
                 val previewUrl = file.thumbnailUrl ?: file.mediaUrl
                 if (previewUrl.isNotBlank()) {
@@ -467,19 +696,53 @@ private fun DeviceFileCard(
                     )
                 }
             }
+            Text(
+                text = file.displayName,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = "${file.mimeType} · ${file.sizeText}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "修改时间：${file.modifiedAtText}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (file.isApplied) {
+                AssistChip(
+                    onClick = {},
+                    enabled = false,
+                    label = { Text(text = "当前展示") },
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+                        labelColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(modifier = Modifier.weight(1f))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = onApply, enabled = !isApplying) {
-                        Text(if (isApplying) "正在应用..." else "应用")
-                    }
-                    IconButton(onClick = onDelete) {
-                        Icon(Icons.Default.Delete, contentDescription = "删除")
-                    }
+                FilledIconButton(
+                    onClick = onApply,
+                    enabled = actionsEnabled && !isApplying,
+                    modifier = Modifier.height(40.dp)
+                ) {
+                    Text(text = if (isApplying) "应用中..." else "应用")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(
+                    onClick = onDelete,
+                    enabled = actionsEnabled
+                ) {
+                    Icon(imageVector = Icons.Filled.Delete, contentDescription = "删除")
                 }
             }
         }
@@ -487,17 +750,14 @@ private fun DeviceFileCard(
 }
 
 @Composable
-private fun EmptyFilesCard(modifier: Modifier = Modifier) {
+private fun EmptyFilesCard() {
     Card(
-        modifier = modifier
-            .height(140.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(120.dp)
             .testTag(DeviceManagerTestTags.EMPTY_STATE),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = MaterialTheme.shapes.large,
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-        )
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
     ) {
         Column(
             modifier = Modifier
@@ -526,7 +786,7 @@ private fun DisconnectedHint(onRefresh: () -> Unit) {
                 text = "请连接设备以管理文件和查看预览。",
                 style = MaterialTheme.typography.bodySmall
             )
-            OutlinedButton(onClick = onRefresh) {
+            TextButton(onClick = onRefresh) {
                 Text("重试连接")
             }
         }
@@ -583,93 +843,15 @@ object DeviceManagerRouteTestTags {
 }
 
 @Composable
-private fun DevicePreview(file: DeviceFileUi?, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier
-            .height(200.dp)
-            .testTag(DeviceManagerTestTags.PREVIEW_CARD),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(text = "预览", style = MaterialTheme.typography.titleMedium)
-            if (file == null) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "请选择文件预览",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            } else {
-                val previewUrl = file.thumbnailUrl ?: file.mediaUrl
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(140.dp)
-                ) {
-                    AsyncImage(
-                        model = previewUrl,
-                        contentDescription = "预览 ${file.displayName}",
-                        modifier = Modifier.fillMaxSize()
-                    )
-                    if (file.mediaType == DeviceMediaTab.Videos) {
-                        Icon(
-                            imageVector = Icons.Filled.PlayArrow,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .background(
-                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
-                                    shape = CircleShape
-                                )
-                                .padding(6.dp)
-                        )
-                    }
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = file.displayName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (file.isApplied) {
-                        AssistChip(
-                            onClick = {},
-                            enabled = false,
-                            label = { Text(text = "当前展示") },
-                            colors = AssistChipDefaults.assistChipColors(
-                                labelColor = MaterialTheme.colorScheme.primary
-                            )
-                        )
-                    }
-                }
-                Text(text = "类型：${file.mimeType}", style = MaterialTheme.typography.bodySmall)
-                Text(text = "大小：${file.sizeText}", style = MaterialTheme.typography.bodySmall)
-            }
-        }
-    }
-}
-
-@Composable
 private fun MediaViewerDialog(
     file: DeviceFileUi,
     onDismiss: () -> Unit
 ) {
-    Dialog(onDismissRequest = onDismiss) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .wrapContentHeight()
+                .heightIn(min = 280.dp)
                 .testTag(DeviceManagerTestTags.MEDIA_VIEWER),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
@@ -801,12 +983,12 @@ private fun VideoViewerContent(url: String) {
             onClick = { isPlaying = !isPlaying },
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            Icon(
-                imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                contentDescription = "播放切换",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = "播放切换",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
         error?.let { msg ->
             Text(
                 text = msg,
@@ -820,16 +1002,15 @@ private fun VideoViewerContent(url: String) {
 
 @Composable
 private fun UploadTile(
-    onUpload: () -> Unit,
-    modifier: Modifier = Modifier
+    onUpload: () -> Unit
 ) {
     Card(
-        modifier = modifier
+        modifier = Modifier
             .height(140.dp)
             .clickable(onClick = onUpload),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = MaterialTheme.shapes.large,
-        border = androidx.compose.foundation.BorderStroke(
+        border = BorderStroke(
             1.dp,
             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
         )
@@ -842,7 +1023,7 @@ private fun UploadTile(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
-                imageVector = Icons.Default.CloudUpload,
+                imageVector = Icons.Filled.CloudUpload,
                 contentDescription = "上传文件",
                 tint = MaterialTheme.colorScheme.primary
             )
@@ -895,23 +1076,4 @@ private fun DurationBadge(duration: String, modifier: Modifier = Modifier) {
             labelColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     )
-}
-
-@Composable
-private fun FileListHeader(total: Int, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "文件列表 ($total)",
-            style = MaterialTheme.typography.titleMedium
-        )
-        Text(
-            text = "支持刷新、上传与应用展示文件。",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
 }

@@ -48,29 +48,7 @@ class DelegatingHomeAiChatService @Inject constructor(
             when (event) {
                 is AiChatStreamEvent.Chunk -> {
                     val content = event.content
-                    val delta = when {
-                        // 正常情况：新内容以旧内容开头，提取增量
-                        content.startsWith(lastContent) -> {
-                            content.substring(lastContent.length)
-                        }
-                        // 如果新内容比旧内容短，可能是重置，使用全部内容
-                        content.length < lastContent.length -> {
-                            content
-                        }
-                        // 如果新内容不以旧内容开头，可能是 LLM 返回了累积内容，尝试提取增量
-                        lastContent.isNotEmpty() && content.length > lastContent.length -> {
-                            // 尝试找到 lastContent 在新内容中的位置
-                            val index = content.indexOf(lastContent)
-                            if (index >= 0) {
-                                content.substring(index + lastContent.length)
-                            } else {
-                                // 如果找不到，使用全部内容（可能是全新的内容）
-                                content
-                            }
-                        }
-                        // 默认情况：使用全部内容
-                        else -> content
-                    }
+                    val delta = extractDelta(content, lastContent)
                     if (delta.isNotEmpty()) {
                         emit(ChatStreamEvent.Delta(delta))
                     }
@@ -86,6 +64,76 @@ class DelegatingHomeAiChatService @Inject constructor(
                 }
             }
         }
+    }
+
+    /**
+     * 使用最长公共前缀（LCP）算法提取增量内容
+     * 更健壮地处理 DashScope 返回的累积内容
+     */
+    private fun extractDelta(newContent: String, lastContent: String): String {
+        if (lastContent.isEmpty()) {
+            return newContent
+        }
+        
+        // 情况1：新内容以旧内容开头（最常见的情况）
+        if (newContent.startsWith(lastContent)) {
+            return newContent.substring(lastContent.length)
+        }
+        
+        // 情况2：新内容比旧内容短，可能是重置
+        if (newContent.length < lastContent.length) {
+            return newContent
+        }
+        
+        // 情况3：使用最长公共前缀算法找到匹配的前缀
+        val lcp = findLongestCommonPrefix(newContent, lastContent)
+        if (lcp.length >= lastContent.length * 0.8) {
+            // 如果公共前缀足够长（>= 80%），认为匹配成功
+            return newContent.substring(lcp.length)
+        }
+        
+        // 情况4：尝试在新内容中查找旧内容的位置
+        val index = newContent.indexOf(lastContent)
+        if (index >= 0) {
+            return newContent.substring(index + lastContent.length)
+        }
+        
+        // 情况5：尝试查找旧内容的子串（处理格式变化）
+        // 如果旧内容足够长，尝试查找其大部分内容
+        if (lastContent.length > 20) {
+            val searchKey = lastContent.substring(0, lastContent.length / 2)
+            val foundIndex = newContent.indexOf(searchKey)
+            if (foundIndex >= 0 && foundIndex < newContent.length / 2) {
+                // 如果找到的位置在内容前半部分，可能是累积
+                val remaining = newContent.substring(foundIndex + searchKey.length)
+                // 检查剩余部分是否包含旧内容的后续部分
+                val nextKey = lastContent.substring(searchKey.length)
+                if (remaining.startsWith(nextKey)) {
+                    return remaining.substring(nextKey.length)
+                }
+            }
+        }
+        
+        // 情况6：无法确定增量，返回全部内容（可能是全新的内容）
+        return newContent
+    }
+    
+    /**
+     * 找到两个字符串的最长公共前缀
+     */
+    private fun findLongestCommonPrefix(str1: String, str2: String): String {
+        val minLength = minOf(str1.length, str2.length)
+        var commonLength = 0
+        
+        for (i in 0 until minLength) {
+            if (str1[i] == str2[i]) {
+                commonLength++
+            } else {
+                break
+            }
+        }
+        
+        return str1.substring(0, commonLength)
     }
 
     private fun buildPromptWithHistory(request: ChatRequest): String {

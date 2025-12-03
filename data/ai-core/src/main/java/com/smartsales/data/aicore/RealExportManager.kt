@@ -12,21 +12,25 @@ import kotlinx.coroutines.withContext
 
 // 文件：data/ai-core/src/main/java/com/smartsales/data/aicore/RealExportManager.kt
 // 模块：:data:ai-core
-// 说明：将Markdown转换成真实的PDF/CSV并写入本地缓存目录
+// 说明：将Markdown转换成真实的PDF/CSV并写入本地缓存目录，支持自定义文件名
 // 作者：创建于 2025-11-16
 @Singleton
 class RealExportManager @Inject constructor(
     private val dispatchers: DispatcherProvider,
     private val fileStore: ExportFileStore
 ) : ExportManager {
-    override suspend fun exportMarkdown(markdown: String, format: ExportFormat): Result<ExportResult> =
+    override suspend fun exportMarkdown(
+        markdown: String,
+        format: ExportFormat,
+        suggestedFileName: String?,
+    ): Result<ExportResult> =
         withContext(dispatchers.io) {
             runCatching {
                 val payload = when (format) {
                     ExportFormat.PDF -> MarkdownPdfEncoder.encode(markdown)
                     ExportFormat.CSV -> MarkdownCsvEncoder.encode(markdown)
                 }
-                val fileName = buildFileName(format)
+                val fileName = buildFileName(suggestedFileName, format)
                 val mimeType = if (format == ExportFormat.PDF) "application/pdf" else "text/csv"
                 val localPath = fileStore.persist(fileName, payload, mimeType)
                 val result = ExportResult(
@@ -38,8 +42,8 @@ class RealExportManager @Inject constructor(
                 AiCoreLogger.d(TAG, "导出成功：$fileName ($mimeType)")
                 result
             }.fold(
-                onSuccess = { Result.Success(it) },
-                onFailure = {
+            onSuccess = { Result.Success(it) },
+            onFailure = {
                     val error = AiCoreException(
                         source = AiCoreErrorSource.EXPORT,
                         reason = AiCoreErrorReason.IO,
@@ -53,9 +57,25 @@ class RealExportManager @Inject constructor(
             )
         }
 
-    private fun buildFileName(format: ExportFormat): String {
+    private fun buildFileName(baseNameOverride: String?, format: ExportFormat): String {
         val ext = if (format == ExportFormat.PDF) "pdf" else "csv"
-        return "smart-sales-${System.currentTimeMillis()}.$ext"
+        val base =
+            baseNameOverride
+                ?.takeIf { it.isNotBlank() }
+                ?: "smart-sales-${System.currentTimeMillis()}"
+        val sanitizedBase = sanitizeFileName(base)
+        return "$sanitizedBase.$ext"
+    }
+
+    /**
+     * 清理文件名中的非法字符并限制长度，避免文件系统错误。
+     */
+    private fun sanitizeFileName(fileName: String): String {
+        return fileName
+            .replace(Regex("[\\\\/:*?\"<>|]"), "_")
+            .replace(Regex("\\s+"), "_")
+            .take(100)
+            .ifBlank { "smart-sales-export" }
     }
 
     companion object {

@@ -121,6 +121,38 @@ class DeviceSetupViewModelRobustnessTest {
     }
 
     @Test
+    fun `query network exceptions are mapped to error state`() = runTest(dispatcher) {
+        val connection = FakeConnectionManager().apply { throwOnQuery = true }
+        connection.state.value = ConnectionState.WifiProvisioned(
+            session = BleSession(
+                peripheralId = "id",
+                peripheralName = "dev",
+                signalStrengthDbm = -40,
+                profileId = "p1",
+                secureToken = "t",
+                establishedAtMillis = 0L
+            ),
+            status = ProvisioningStatus(
+                wifiSsid = "wifi",
+                handshakeId = "h",
+                credentialsHash = "hash"
+            )
+        )
+        viewModel = createViewModel(connectionManager = connection)
+        dispatcher.scheduler.runCurrent()
+
+        viewModel.onWifiSsidChanged("ssid")
+        viewModel.onWifiPasswordChanged("pwd")
+        viewModel.onPrimaryClick()
+        advanceTimeBy(2_000)
+        dispatcher.scheduler.runCurrent()
+
+        val state = viewModel.uiState.value
+        assertEquals(DeviceSetupStep.Error, state.step)
+        assertEquals(DeviceSetupErrorReason.DeviceNotOnline, state.errorReason)
+    }
+
+    @Test
     fun `late callbacks after error do not change state`() = runTest(dispatcher) {
         val connection = FakeConnectionManager()
         viewModel = createViewModel(connectionManager = connection)
@@ -181,6 +213,7 @@ class DeviceSetupViewModelRobustnessTest {
         override val state: MutableStateFlow<ConnectionState> = MutableStateFlow(ConnectionState.Disconnected)
         var pairResult: Result<Unit> = Result.Success(Unit)
         var queryResult: Result<DeviceNetworkStatus> = Result.Error(IllegalStateException("offline"))
+        var throwOnQuery: Boolean = false
 
         override fun selectPeripheral(peripheral: BlePeripheral) = Unit
 
@@ -194,7 +227,10 @@ class DeviceSetupViewModelRobustnessTest {
         override suspend fun requestHotspotCredentials(): Result<WifiCredentials> =
             Result.Error(IllegalStateException("no creds"))
 
-        override suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus> = queryResult
+        override suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus> {
+            if (throwOnQuery) throw IllegalStateException("network boom")
+            return queryResult
+        }
 
         override fun scheduleAutoReconnectIfNeeded() {}
         override fun forceReconnectNow() {}

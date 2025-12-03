@@ -274,7 +274,11 @@ class HomeSessionListViewModelTest {
     }
 
     private class FakeExportManager : ExportManager {
-        override suspend fun exportMarkdown(markdown: String, format: ExportFormat): Result<ExportResult> =
+        override suspend fun exportMarkdown(
+            markdown: String,
+            format: ExportFormat,
+            suggestedFileName: String?
+        ): Result<ExportResult> =
             Result.Success(ExportResult("demo.pdf", "application/pdf", ByteArray(0)))
     }
 

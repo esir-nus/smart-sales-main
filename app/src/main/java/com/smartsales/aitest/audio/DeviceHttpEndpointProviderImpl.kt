@@ -126,7 +126,12 @@ class DeviceHttpEndpointProviderImpl @Inject constructor(
             if (currentToken == null) {
                 return@withLock false
             }
-            when (val result = connectionManager.queryNetworkStatus()) {
+            val result = runCatching { connectionManager.queryNetworkStatus() }.getOrElse { error ->
+                baseUrlFlow.value = null
+                runCatching { Log.e(TAG, "查询设备网络状态异常", error) }
+                return@withLock false
+            }
+            when (result) {
                 is Result.Success -> {
                     val normalized = buildBaseUrl(result.data.ipAddress)
                     if (normalized != null && currentToken == readyToken) {

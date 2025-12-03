@@ -165,7 +165,11 @@ class HomeUserNameTest {
             },
             userProfileRepository = profileRepo,
             exportManager = object : ExportManager {
-                override suspend fun exportMarkdown(markdown: String, format: ExportFormat): com.smartsales.core.util.Result<ExportResult> =
+                override suspend fun exportMarkdown(
+                    markdown: String,
+                    format: ExportFormat,
+                    suggestedFileName: String?
+                ): com.smartsales.core.util.Result<ExportResult> =
                     com.smartsales.core.util.Result.Success(
                         ExportResult("demo.pdf", "application/pdf", ByteArray(0))
                     )

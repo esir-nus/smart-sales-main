@@ -201,7 +201,11 @@ class HomeExportActionsTest {
     private class RecordingExportManager : ExportManager {
         var lastMarkdown: String? = null
         var lastFormat: ExportFormat? = null
-        override suspend fun exportMarkdown(markdown: String, format: ExportFormat): Result<ExportResult> {
+        override suspend fun exportMarkdown(
+            markdown: String,
+            format: ExportFormat,
+            suggestedFileName: String?
+        ): Result<ExportResult> {
             lastMarkdown = markdown
             lastFormat = format
             return Result.Success(ExportResult("demo.pdf", "application/pdf", ByteArray(0)))

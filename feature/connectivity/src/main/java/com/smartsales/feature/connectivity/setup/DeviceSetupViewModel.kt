@@ -174,15 +174,23 @@ class DeviceSetupViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            val result = connectionManager.startPairing(
-                peripheral = BlePeripheral(
-                    id = session.peripheralId,
-                    name = session.peripheralName,
-                    signalStrengthDbm = session.signalStrengthDbm,
-                    profileId = session.profileId
-                ),
-                credentials = WifiCredentials(ssid = ssid, password = password)
-            )
+            val result = runCatching {
+                connectionManager.startPairing(
+                    peripheral = BlePeripheral(
+                        id = session.peripheralId,
+                        name = session.peripheralName,
+                        signalStrengthDbm = session.signalStrengthDbm,
+                        profileId = session.profileId
+                    ),
+                    credentials = WifiCredentials(ssid = ssid, password = password)
+                )
+            }.getOrElse { throwable ->
+                setError(
+                    "Wi-Fi 配置失败，请检查网络和密码后重试",
+                    DeviceSetupErrorReason.ProvisioningFailed
+                )
+                return@launch
+            }
             if (result is Result.Error) {
                 setError(
                     "Wi-Fi 配置失败，请检查网络和密码后重试",
@@ -376,7 +384,15 @@ class DeviceSetupViewModel @Inject constructor(
         if (!force && _uiState.value.isDeviceOnline && _uiState.value.deviceIp != null) return
         networkCheckJob = viewModelScope.launch {
             repeat(NETWORK_CHECK_ATTEMPTS) {
-                when (val result = connectionManager.queryNetworkStatus()) {
+                val result = runCatching { connectionManager.queryNetworkStatus() }
+                    .getOrElse { throwable ->
+                        setError(
+                            message = "设备网络异常，请重试",
+                            reason = DeviceSetupErrorReason.DeviceNotOnline
+                        )
+                        return@launch
+                    }
+                when (result) {
                     is Result.Success -> {
                         setReady(result.data.ipAddress)
                         return@launch
@@ -384,6 +400,13 @@ class DeviceSetupViewModel @Inject constructor(
 
                     is Result.Error -> {
                         // 等待下一次重试
+                        if (it == NETWORK_CHECK_ATTEMPTS - 1) {
+                            setError(
+                                message = "设备网络异常，请重试",
+                                reason = DeviceSetupErrorReason.DeviceNotOnline
+                            )
+                            return@launch
+                        }
                     }
                 }
                 delay(NETWORK_CHECK_INTERVAL_MS)

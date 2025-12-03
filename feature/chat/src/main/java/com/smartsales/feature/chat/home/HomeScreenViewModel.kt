@@ -929,7 +929,7 @@ class HomeScreenViewModel @Inject constructor(
             updateSessionSummary(userMessage.content)
         }
         val request = buildChatRequest(content, quickSkillId, newState.chatMessages, audioContext)
-        val isFirstAssistantReply = quickSkillId == null &&
+        val isFirstAssistantReply =
             newState.chatMessages.none { it.role == ChatMessageRole.ASSISTANT }
         startStreamingResponse(
             request = request.copy(isFirstAssistantReply = isFirstAssistantReply),
@@ -2223,12 +2223,13 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     private suspend fun maybeGenerateSessionTitle(request: ChatRequest, assistantText: String) {
-        if (request.quickSkillId != null) return
+        if (!request.isFirstAssistantReply) return
         val existing = sessionRepository.findById(sessionId)
         if (existing != null && existing.title != DEFAULT_SESSION_TITLE) return
-        val hasAssistantBefore = _uiState.value.chatMessages.any { it.role == ChatMessageRole.ASSISTANT }
-        if (hasAssistantBefore) return
-        val firstUserMessage = _uiState.value.chatMessages.firstOrNull { it.role == ChatMessageRole.USER }?.content ?: return
+        val firstUserMessage = _uiState.value.chatMessages
+            .firstOrNull { it.role == ChatMessageRole.USER }
+            ?.content
+            ?: return
         val createdAt = existing?.updatedAtMillis ?: System.currentTimeMillis()
         val title = com.smartsales.feature.chat.title.SessionTitleGenerator.deriveSessionTitle(
             updatedAtMillis = createdAt,

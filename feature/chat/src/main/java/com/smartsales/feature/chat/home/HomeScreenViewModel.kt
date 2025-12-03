@@ -239,6 +239,13 @@ class HomeScreenViewModel @Inject constructor(
 
     fun onSmartAnalysisClicked() {
         if (_uiState.value.isSending) return
+        val candidateText = latestUserContent() ?: _uiState.value.inputText.trim()
+        if (!isAnalyzable(candidateText)) {
+            appendAssistantMessage(
+                content = "智能分析需要更完整的上下文，请粘贴几句话的内容或问题，再次点击「智能分析」。"
+            )
+            return
+        }
         val definition = quickSkillDefinitionsById[QuickSkillId.SUMMARIZE_LAST_MEETING]
         _uiState.update { state ->
             state.copy(
@@ -871,13 +878,14 @@ class HomeScreenViewModel @Inject constructor(
                     }
                     is ChatStreamEvent.Completed -> {
                         // 完成：关闭 streaming，写入完整文本
+                        val cleaned = sanitizeAssistantOutput(event.fullText)
                         updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
-                            msg.copy(content = event.fullText, isStreaming = false)
+                            msg.copy(content = cleaned, isStreaming = false)
                         }
-                        onCompleted(event.fullText)
+                        onCompleted(cleaned)
                         _uiState.update { it.copy(isSending = false, isStreaming = false, isInputBusy = false, isBusy = false) }
                         viewModelScope.launch {
-                            updateSessionSummary(event.fullText)
+                            updateSessionSummary(cleaned)
                             applySessionList()
                         }
                     }
@@ -1177,6 +1185,52 @@ class HomeScreenViewModel @Inject constructor(
                 content = "智能分析完成，如需分享可直接导出 PDF 或 CSV。"
             )
         }
+    }
+
+    private fun sanitizeAssistantOutput(raw: String): String {
+        val lines = raw.lines()
+        val result = mutableListOf<String>()
+        val seenHeadings = mutableSetOf<String>()
+        val seenBulletsByHeading = mutableMapOf<String, MutableSet<String>>()
+        var currentHeading: String? = null
+        lines.forEach { line ->
+            val trimmed = line.trim()
+            if (trimmed.isEmpty()) {
+                if (result.lastOrNull()?.isNotBlank() == true) {
+                    result.add("")
+                }
+                return@forEach
+            }
+            val heading = when {
+                trimmed.startsWith("结构化洞察") -> "结构化洞察："
+                trimmed.startsWith("下一步行动") -> "下一步行动："
+                else -> null
+            }
+            if (heading != null) {
+                if (seenHeadings.contains(heading)) {
+                    currentHeading = heading
+                    return@forEach
+                }
+                seenHeadings += heading
+                currentHeading = heading
+                result.add(heading)
+                return@forEach
+            }
+            if (trimmed.startsWith("- ")) {
+                val headingKey = currentHeading ?: "default"
+                val seenBullets = seenBulletsByHeading.getOrPut(headingKey) { mutableSetOf() }
+                val bullet = trimmed.removePrefix("- ").trim()
+                if (seenBullets.size >= 5 || seenBullets.contains(bullet)) return@forEach
+                seenBullets += bullet
+                result.add("- $bullet")
+                return@forEach
+            }
+            val globalSeen = seenBulletsByHeading.getOrPut("plain") { mutableSetOf() }
+            if (globalSeen.contains(trimmed)) return@forEach
+            globalSeen += trimmed
+            result.add(trimmed)
+        }
+        return result.dropWhile { it.isBlank() }.joinToString("\n").trimEnd()
     }
 
     companion object {

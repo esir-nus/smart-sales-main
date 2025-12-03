@@ -88,11 +88,11 @@ class DelegatingHomeAiChatService @Inject constructor(
         if (request.quickSkillId == null) {
             builder.appendLine()
             builder.appendLine()
-            builder.appendLine("请按下面步骤回复：")
-            builder.appendLine("1) 先用 1-2 句话复述用户问题。")
-            builder.appendLine("2) 给出简短分析，避免重复。")
-            builder.appendLine("3) 用要点列出可执行的下一步。")
-            builder.append("4) 如信息不足，请先说明并友好邀请补充；如需深度拆解，可提醒使用「智能分析」获得完整版。")
+            builder.appendLine("请按下面格式输出，保持简洁、不要重复同一句或同一要点，总长不超过 200 字：")
+            builder.appendLine("概要：用 1-2 句话复述用户问题；如信息不足，请直接说明需要更多细节。")
+            builder.appendLine("简要分析：用 2-3 条要点给出核心洞察，避免灌水或重复。")
+            builder.appendLine("下一步行动：用 2-4 条可执行建议。")
+            builder.append("智能分析提示：如需深度拆解，可提醒使用「智能分析」获取完整版并可导出 PDF/CSV。")
         }
         return builder.toString()
     }

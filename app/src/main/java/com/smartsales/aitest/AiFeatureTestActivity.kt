@@ -710,7 +710,7 @@ private fun OverlayCard(
                 .padding(vertical = 8.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
+        ) {nothing
             Box(
                 modifier = Modifier
                     .height(designTokens.overlayHandleSize.height)

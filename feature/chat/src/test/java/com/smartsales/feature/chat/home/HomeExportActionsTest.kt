@@ -119,6 +119,7 @@ class HomeExportActionsTest {
 
     @Test
     fun `smart analysis uses quick skill and appends assistant message`() = runTest(dispatcher) {
+        viewModel.onInputChanged("请帮我总结汽车行业的市场趋势和风险要点")
         viewModel.onSmartAnalysisClicked()
         advanceUntilIdle()
 
@@ -140,6 +141,7 @@ class HomeExportActionsTest {
 
     @Test
     fun `export pdf uses analysis markdown and shares`() = runTest(dispatcher) {
+        viewModel.onInputChanged("请帮我总结汽车行业的市场趋势和风险要点")
         viewModel.onSmartAnalysisClicked()
         advanceUntilIdle()
 
@@ -153,6 +155,7 @@ class HomeExportActionsTest {
 
     @Test
     fun `export csv uses analysis markdown and shares`() = runTest(dispatcher) {
+        viewModel.onInputChanged("请帮我总结汽车行业的市场趋势和风险要点")
         viewModel.onSmartAnalysisClicked()
         advanceUntilIdle()
 

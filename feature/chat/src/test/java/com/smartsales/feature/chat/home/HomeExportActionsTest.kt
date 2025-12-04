@@ -18,6 +18,7 @@ import com.smartsales.feature.chat.core.ChatStreamEvent
 import com.smartsales.feature.chat.home.orchestrator.HomeOrchestrator
 import com.smartsales.feature.chat.core.DefaultQuickSkillCatalog
 import com.smartsales.feature.chat.core.QuickSkillId
+import com.smartsales.feature.chat.title.SessionTitleResolver
 import com.smartsales.feature.chat.history.ChatHistoryRepository
 import com.smartsales.feature.chat.history.ChatMessageEntity
 import com.smartsales.feature.connectivity.ConnectionState
@@ -48,6 +49,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import com.smartsales.core.metahub.MetaHub
+import com.smartsales.core.metahub.SessionMetadata
+import com.smartsales.core.metahub.TranscriptMetadata
+import com.smartsales.core.metahub.ExportMetadata
+import com.smartsales.core.metahub.TokenUsage
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeExportActionsTest {
@@ -105,6 +111,7 @@ class HomeExportActionsTest {
                 override suspend fun delete(id: String) {}
                 override suspend fun findById(id: String): AiSessionSummary? = null
             },
+            sessionTitleResolver = SessionTitleResolver(FakeMetaHub()),
             userProfileRepository = object : UserProfileRepository {
                 override suspend fun load(): UserProfile = UserProfile("测试", "test@example.com", false)
                 override suspend fun save(profile: UserProfile) {}
@@ -242,5 +249,15 @@ class HomeExportActionsTest {
             shared = true
             return Result.Success(Unit)
         }
+    }
+
+    private class FakeMetaHub : MetaHub {
+        override suspend fun upsertSession(metadata: SessionMetadata) {}
+        override suspend fun getSession(sessionId: String): SessionMetadata? = null
+        override suspend fun upsertTranscript(metadata: TranscriptMetadata) {}
+        override suspend fun getTranscriptBySession(sessionId: String): TranscriptMetadata? = null
+        override suspend fun upsertExport(metadata: ExportMetadata) {}
+        override suspend fun getExport(sessionId: String): ExportMetadata? = null
+        override suspend fun logUsage(usage: TokenUsage) {}
     }
 }

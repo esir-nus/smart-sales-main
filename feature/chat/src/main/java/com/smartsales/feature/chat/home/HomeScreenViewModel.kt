@@ -5,7 +5,6 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.core.util.Result
-import com.smartsales.feature.chat.core.AiChatService
 import com.smartsales.feature.chat.core.AudioContextSummary
 import com.smartsales.feature.chat.core.ChatHistoryItem
 import com.smartsales.feature.chat.core.ChatRequest
@@ -18,6 +17,7 @@ import com.smartsales.feature.chat.home.orchestrator.HomeOrchestrator
 import com.smartsales.feature.chat.history.ChatHistoryRepository
 import com.smartsales.feature.chat.history.toEntity
 import com.smartsales.feature.chat.history.toUiModel
+import com.smartsales.feature.chat.title.SessionTitleResolver
 import com.smartsales.feature.chat.AiSessionRepository as SessionRepository
 import com.smartsales.feature.chat.AiSessionSummary
 import com.smartsales.feature.connectivity.ConnectionState
@@ -179,6 +179,7 @@ class HomeScreenViewModel @Inject constructor(
     private val quickSkillCatalog: QuickSkillCatalog,
     private val chatHistoryRepository: ChatHistoryRepository,
     private val sessionRepository: SessionRepository,
+    private val sessionTitleResolver: SessionTitleResolver,
     private val userProfileRepository: UserProfileRepository,
     private val exportManager: ExportManager,
     private val shareHandler: ChatShareHandler
@@ -2232,7 +2233,8 @@ class HomeScreenViewModel @Inject constructor(
             ?.content
             ?: return
         val createdAt = existing?.updatedAtMillis ?: System.currentTimeMillis()
-        val title = com.smartsales.feature.chat.title.SessionTitleGenerator.deriveSessionTitle(
+        val title = sessionTitleResolver.resolveTitle(
+            sessionId = sessionId,
             updatedAtMillis = createdAt,
             firstUserMessage = firstUserMessage,
             firstAssistantMessage = assistantText

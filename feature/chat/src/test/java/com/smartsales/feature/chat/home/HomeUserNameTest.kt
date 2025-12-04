@@ -14,6 +14,7 @@ import com.smartsales.feature.chat.core.QuickSkillDefinition
 import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.history.ChatHistoryRepository
 import com.smartsales.feature.chat.history.ChatMessageEntity
+import com.smartsales.feature.chat.title.SessionTitleResolver
 import com.smartsales.feature.connectivity.ConnectionState
 import com.smartsales.feature.connectivity.DeviceConnectionManager
 import com.smartsales.feature.media.MediaSyncCoordinator
@@ -45,6 +46,11 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import com.smartsales.core.metahub.MetaHub
+import com.smartsales.core.metahub.SessionMetadata
+import com.smartsales.core.metahub.TranscriptMetadata
+import com.smartsales.core.metahub.ExportMetadata
+import com.smartsales.core.metahub.TokenUsage
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeUserNameTest {
@@ -164,6 +170,7 @@ class HomeUserNameTest {
                 override suspend fun delete(id: String) {}
                 override suspend fun findById(id: String): AiSessionSummary? = null
             },
+            sessionTitleResolver = SessionTitleResolver(FakeMetaHub()),
             userProfileRepository = profileRepo,
             exportManager = object : ExportManager {
                 override suspend fun exportMarkdown(
@@ -186,6 +193,16 @@ class HomeUserNameTest {
                     com.smartsales.core.util.Result.Success(Unit)
             }
         )
+    }
+
+    private class FakeMetaHub : MetaHub {
+        override suspend fun upsertSession(metadata: SessionMetadata) {}
+        override suspend fun getSession(sessionId: String): SessionMetadata? = null
+        override suspend fun upsertTranscript(metadata: TranscriptMetadata) {}
+        override suspend fun getTranscriptBySession(sessionId: String): TranscriptMetadata? = null
+        override suspend fun upsertExport(metadata: ExportMetadata) {}
+        override suspend fun getExport(sessionId: String): ExportMetadata? = null
+        override suspend fun logUsage(usage: TokenUsage) {}
     }
 
     private class FakeUserProfileRepository(

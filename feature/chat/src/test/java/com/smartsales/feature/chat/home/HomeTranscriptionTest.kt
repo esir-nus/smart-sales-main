@@ -30,6 +30,12 @@ import com.smartsales.feature.media.audiofiles.AudioUploadPayload
 import com.smartsales.data.aicore.ExportManager
 import com.smartsales.data.aicore.ExportFormat
 import com.smartsales.data.aicore.ExportResult
+import com.smartsales.feature.chat.title.SessionTitleResolver
+import com.smartsales.core.metahub.MetaHub
+import com.smartsales.core.metahub.SessionMetadata
+import com.smartsales.core.metahub.TranscriptMetadata
+import com.smartsales.core.metahub.ExportMetadata
+import com.smartsales.core.metahub.TokenUsage
 import com.smartsales.feature.chat.ChatShareHandler
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +77,7 @@ class HomeTranscriptionTest {
             quickSkillCatalog = FakeQuickSkillCatalog(),
             chatHistoryRepository = FakeChatHistoryRepository(),
             sessionRepository = FakeSessionRepository(),
+            sessionTitleResolver = SessionTitleResolver(FakeMetaHub()),
             userProfileRepository = FakeUserProfileRepository(),
             exportManager = FakeExportManager(),
             shareHandler = FakeShareHandler()
@@ -258,5 +265,15 @@ class HomeTranscriptionTest {
         override suspend fun copyMarkdown(markdown: String): Result<Unit> = Result.Success(Unit)
         override suspend fun copyAssistantReply(text: String): Result<Unit> = Result.Success(Unit)
         override suspend fun shareExport(result: ExportResult): Result<Unit> = Result.Success(Unit)
+    }
+
+    private class FakeMetaHub : MetaHub {
+        override suspend fun upsertSession(metadata: SessionMetadata) {}
+        override suspend fun getSession(sessionId: String): SessionMetadata? = null
+        override suspend fun upsertTranscript(metadata: TranscriptMetadata) {}
+        override suspend fun getTranscriptBySession(sessionId: String): TranscriptMetadata? = null
+        override suspend fun upsertExport(metadata: ExportMetadata) {}
+        override suspend fun getExport(sessionId: String): ExportMetadata? = null
+        override suspend fun logUsage(usage: TokenUsage) {}
     }
 }

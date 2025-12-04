@@ -14,6 +14,9 @@ import com.smartsales.feature.chat.core.ChatStreamEvent
 import com.smartsales.feature.chat.core.QuickSkillCatalog
 import com.smartsales.feature.chat.core.QuickSkillDefinition
 import com.smartsales.feature.chat.core.QuickSkillId
+import com.smartsales.feature.chat.core.ChatRequest
+import com.smartsales.feature.chat.core.ChatStreamEvent
+import com.smartsales.feature.chat.home.orchestrator.HomeOrchestrator
 import com.smartsales.feature.chat.history.ChatHistoryRepository
 import com.smartsales.feature.chat.history.ChatMessageEntity
 import com.smartsales.feature.connectivity.BlePeripheral
@@ -57,14 +60,16 @@ class HomeSessionListViewModelTest {
     private lateinit var sessionRepository: FakeSessionRepository
     private lateinit var viewModel: HomeScreenViewModel
     private lateinit var fakeHistoryRepository: FakeChatHistoryRepository
+    private lateinit var aiChatService: FakeAiChatService
 
     @Before
     fun setup() {
         Dispatchers.setMain(dispatcher)
         sessionRepository = FakeSessionRepository()
         fakeHistoryRepository = FakeChatHistoryRepository()
+        aiChatService = FakeAiChatService()
         viewModel = HomeScreenViewModel(
-            aiChatService = FakeAiChatService(),
+            homeOrchestrator = FakeHomeOrchestrator(aiChatService),
             aiSessionRepository = FakeAiSessionRepository(),
             deviceConnectionManager = FakeDeviceConnectionManager(),
             mediaSyncCoordinator = FakeMediaSyncCoordinator(),
@@ -228,6 +233,13 @@ class HomeSessionListViewModelTest {
 
     private class FakeQuickSkillCatalog : QuickSkillCatalog {
         override fun homeQuickSkills(): List<QuickSkillDefinition> = emptyList()
+    }
+
+    private class FakeHomeOrchestrator(
+        private val delegate: AiChatService
+    ) : HomeOrchestrator {
+        override fun streamChat(request: ChatRequest): Flow<ChatStreamEvent> =
+            delegate.streamChat(request)
     }
 
     private class FakeChatHistoryRepository : ChatHistoryRepository {

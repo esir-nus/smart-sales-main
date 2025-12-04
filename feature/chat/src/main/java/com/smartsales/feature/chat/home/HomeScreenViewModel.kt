@@ -14,6 +14,7 @@ import com.smartsales.feature.chat.core.ChatStreamEvent
 import com.smartsales.feature.chat.core.QuickSkillCatalog
 import com.smartsales.feature.chat.core.QuickSkillDefinition
 import com.smartsales.feature.chat.core.QuickSkillId
+import com.smartsales.feature.chat.home.orchestrator.HomeOrchestrator
 import com.smartsales.feature.chat.history.ChatHistoryRepository
 import com.smartsales.feature.chat.history.toEntity
 import com.smartsales.feature.chat.history.toUiModel
@@ -169,7 +170,7 @@ interface AiSessionRepository {
 @HiltViewModel
 class HomeScreenViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
-    private val aiChatService: AiChatService,
+    private val homeOrchestrator: HomeOrchestrator,
     private val aiSessionRepository: AiSessionRepository,
     private val deviceConnectionManager: DeviceConnectionManager,
     private val mediaSyncCoordinator: MediaSyncCoordinator,
@@ -950,7 +951,7 @@ class HomeScreenViewModel @Inject constructor(
         val streamingDeduplicator = StreamingDeduplicator(isSmartAnalysis)
 
         viewModelScope.launch {
-            aiChatService.streamChat(request).collect { event ->
+            homeOrchestrator.streamChat(request).collect { event ->
                 when (event) {
                     is ChatStreamEvent.Delta -> {
                         // 处理 streaming token，实时去重

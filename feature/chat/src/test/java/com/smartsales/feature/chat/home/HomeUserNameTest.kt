@@ -8,6 +8,7 @@ package com.smartsales.feature.chat.home
 import com.smartsales.feature.chat.core.AiChatService
 import com.smartsales.feature.chat.core.ChatRequest
 import com.smartsales.feature.chat.core.ChatStreamEvent
+import com.smartsales.feature.chat.home.orchestrator.HomeOrchestrator
 import com.smartsales.feature.chat.core.QuickSkillCatalog
 import com.smartsales.feature.chat.core.QuickSkillDefinition
 import com.smartsales.feature.chat.core.QuickSkillId
@@ -95,7 +96,7 @@ class HomeUserNameTest {
 
     private fun buildViewModel(profileRepo: UserProfileRepository): HomeScreenViewModel {
         return HomeScreenViewModel(
-            aiChatService = object : AiChatService {
+            homeOrchestrator = object : HomeOrchestrator {
                 override fun streamChat(request: ChatRequest): Flow<ChatStreamEvent> = flowOf()
             },
             aiSessionRepository = object : AiSessionRepository {

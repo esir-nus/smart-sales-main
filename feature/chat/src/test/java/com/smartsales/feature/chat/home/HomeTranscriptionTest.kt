@@ -7,11 +7,12 @@ package com.smartsales.feature.chat.home
 
 import com.smartsales.core.util.Result
 import com.smartsales.feature.chat.core.AiChatService
-import com.smartsales.feature.chat.core.ChatRequest
-import com.smartsales.feature.chat.core.ChatStreamEvent
 import com.smartsales.feature.chat.core.QuickSkillCatalog
 import com.smartsales.feature.chat.core.QuickSkillDefinition
 import com.smartsales.feature.chat.core.QuickSkillId
+import com.smartsales.feature.chat.core.ChatRequest
+import com.smartsales.feature.chat.core.ChatStreamEvent
+import com.smartsales.feature.chat.home.orchestrator.HomeOrchestrator
 import com.smartsales.feature.chat.history.ChatMessageEntity
 import com.smartsales.feature.chat.AiSessionSummary
 import com.smartsales.feature.chat.AiSessionRepository as SessionRepository
@@ -54,13 +55,15 @@ class HomeTranscriptionTest {
     private val dispatcher = UnconfinedTestDispatcher()
     private lateinit var transcriptionCoordinator: FakeTranscriptionCoordinator
     private lateinit var viewModel: HomeScreenViewModel
+    private lateinit var aiChatService: FakeAiChatService
 
     @Before
     fun setup() {
         Dispatchers.setMain(dispatcher)
         transcriptionCoordinator = FakeTranscriptionCoordinator()
+        aiChatService = FakeAiChatService()
         viewModel = HomeScreenViewModel(
-            aiChatService = FakeAiChatService(),
+            homeOrchestrator = FakeHomeOrchestrator(aiChatService),
             aiSessionRepository = FakeAiSessionRepository(),
             deviceConnectionManager = FakeDeviceConnectionManager(),
             mediaSyncCoordinator = FakeMediaSyncCoordinator(),
@@ -126,6 +129,13 @@ class HomeTranscriptionTest {
 
     private class FakeAiChatService : AiChatService {
         override fun streamChat(request: ChatRequest): Flow<ChatStreamEvent> = flowOf()
+    }
+
+    private class FakeHomeOrchestrator(
+        private val delegate: AiChatService
+    ) : HomeOrchestrator {
+        override fun streamChat(request: ChatRequest): Flow<ChatStreamEvent> =
+            delegate.streamChat(request)
     }
 
     private class FakeUserProfileRepository : com.smartsales.feature.usercenter.data.UserProfileRepository {

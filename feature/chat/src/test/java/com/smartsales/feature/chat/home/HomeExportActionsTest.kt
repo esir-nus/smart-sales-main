@@ -15,6 +15,7 @@ import com.smartsales.feature.chat.home.ChatMessageRole
 import com.smartsales.feature.chat.core.AiChatService
 import com.smartsales.feature.chat.core.ChatRequest
 import com.smartsales.feature.chat.core.ChatStreamEvent
+import com.smartsales.feature.chat.home.orchestrator.HomeOrchestrator
 import com.smartsales.feature.chat.core.DefaultQuickSkillCatalog
 import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.history.ChatHistoryRepository
@@ -56,15 +57,17 @@ class HomeExportActionsTest {
     private lateinit var exportManager: RecordingExportManager
     private lateinit var shareHandler: RecordingShareHandler
     private lateinit var viewModel: HomeScreenViewModel
+    private lateinit var homeOrchestrator: HomeOrchestrator
 
     @Before
     fun setup() {
         Dispatchers.setMain(dispatcher)
         aiChatService = RecordingAiChatService()
+        homeOrchestrator = RecordingHomeOrchestrator(aiChatService)
         exportManager = RecordingExportManager()
         shareHandler = RecordingShareHandler()
         viewModel = HomeScreenViewModel(
-            aiChatService = aiChatService,
+            homeOrchestrator = homeOrchestrator,
             aiSessionRepository = object : AiSessionRepository {
                 override suspend fun loadOlderMessages(currentTopMessageId: String?): List<ChatMessageUi> = emptyList()
             },
@@ -208,6 +211,13 @@ class HomeExportActionsTest {
                 emit(ChatStreamEvent.Completed("分析结果"))
             }
         }
+    }
+
+    private class RecordingHomeOrchestrator(
+        private val delegate: AiChatService
+    ) : HomeOrchestrator {
+        override fun streamChat(request: ChatRequest): Flow<ChatStreamEvent> =
+            delegate.streamChat(request)
     }
 
     private class RecordingExportManager : ExportManager {

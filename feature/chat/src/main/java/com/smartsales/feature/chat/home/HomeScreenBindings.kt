@@ -15,6 +15,8 @@ import com.smartsales.feature.chat.core.ChatRole
 import com.smartsales.feature.chat.core.ChatStreamEvent
 import com.smartsales.feature.chat.core.DefaultQuickSkillCatalog
 import com.smartsales.feature.chat.core.QuickSkillCatalog
+import com.smartsales.feature.chat.home.orchestrator.HomeOrchestrator
+import com.smartsales.feature.chat.home.orchestrator.HomeOrchestratorImpl
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -197,6 +199,10 @@ abstract class HomeScreenBindingsModule {
     @Binds
     @Singleton
     abstract fun bindHomeSessionRepository(impl: InMemoryHomeSessionRepository): AiSessionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindHomeOrchestrator(impl: HomeOrchestratorImpl): HomeOrchestrator
 }
 
 @Module

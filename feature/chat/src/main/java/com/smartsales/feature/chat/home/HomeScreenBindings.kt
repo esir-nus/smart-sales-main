@@ -153,7 +153,7 @@ class DelegatingHomeAiChatService @Inject constructor(
             builder.appendLine()
         }
         builder.append("最新问题：${request.userMessage}")
-        // SMART_ANALYSIS 使用专门的 prompt，普通聊天使用不同的格式
+        // 根据模式追加提示：GENERAL_CHAT 与 SMART_ANALYSIS 各自定制
         if (request.quickSkillId == null) {
             builder.appendLine()
             builder.appendLine()
@@ -192,6 +192,34 @@ class DelegatingHomeAiChatService @Inject constructor(
                 builder.appendLine()
                 builder.append("重要：不要重复前面的内容，每个编号只写一次，不要累积重复。")
             }
+        } else if (request.quickSkillId == "SMART_ANALYSIS") {
+            builder.appendLine()
+            builder.appendLine()
+            builder.appendLine("你是销售分析助手。基于“内容主体”和“用户目标”做深入分析，输出以下 Markdown 段落：")
+            builder.appendLine("## 客户画像 / 场景理解")
+            builder.appendLine("- 概括主体角色、公司、城市（未知则写“未知客户”）")
+            builder.appendLine("## 需求与目标")
+            builder.appendLine("- 1-3 条需求/痛点 + 用户目标")
+            builder.appendLine("## 分析与建议")
+            builder.appendLine("- 3-5 条基于主体内容的解读与行动建议")
+            builder.appendLine("## 总结（含核心洞察 + 精准一句话）")
+            builder.appendLine("- 核心洞察 1-2 条")
+            builder.appendLine("- 精准一句话（≤15 字）")
+            builder.appendLine()
+            builder.appendLine("在上述段落后，追加一个 ```json 块，字段与 GENERAL_CHAT 相同：")
+            builder.appendLine("{")
+            builder.appendLine("  \"main_person\": \"<客户名>\",")
+            builder.appendLine("  \"short_summary\": \"<2-3 句总结>\",")
+            builder.appendLine("  \"summary_title_6chars\": \"<≤6 字标题>\",")
+            builder.appendLine("  \"location\": \"<城市，可为空>\",")
+            builder.appendLine("  \"highlights\": [\"要点1\", \"要点2\"],")
+            builder.appendLine("  \"actionable_tips\": [\"建议1\", \"建议2\"],")
+            builder.appendLine("  \"summary\": {")
+            builder.appendLine("    \"core_insight\": \"<一句核心洞察>\",")
+            builder.appendLine("    \"sharp_line\": \"<一句精炼话术>\"")
+            builder.appendLine("  }")
+            builder.appendLine("}")
+            builder.appendLine("不要输出 ID/编号，名称简短，避免敏感/不安全内容。")
         }
         return builder.toString()
     }

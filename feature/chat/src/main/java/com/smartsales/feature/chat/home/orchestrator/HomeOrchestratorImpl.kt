@@ -12,6 +12,7 @@ import com.smartsales.core.metahub.SessionStage
 import com.smartsales.feature.chat.core.AiChatService
 import com.smartsales.feature.chat.core.ChatRequest
 import com.smartsales.feature.chat.core.ChatStreamEvent
+import com.smartsales.feature.chat.core.QuickSkillId
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -29,7 +30,7 @@ class HomeOrchestratorImpl @Inject constructor(
     override fun streamChat(request: ChatRequest): Flow<ChatStreamEvent> {
         return flow {
             aiChatService.streamChat(request).collect { event ->
-                if (event is ChatStreamEvent.Completed && request.quickSkillId == null) {
+                if (event is ChatStreamEvent.Completed && shouldParseMetadata(request)) {
                     runCatching { maybeUpsertSessionMetadata(request, event.fullText) }
                 }
                 emit(event)
@@ -42,11 +43,35 @@ class HomeOrchestratorImpl @Inject constructor(
         assistantText: String
     ) {
         val jsonBlock = extractJsonBlock(assistantText) ?: return
-        val metadata = parseSessionMetadata(
+        val parsed = parseSessionMetadata(
             sessionId = request.sessionId,
             jsonText = jsonBlock
         ) ?: return
-        metaHub.upsertSession(metadata)
+        val merged = mergeWithExisting(request.sessionId, parsed)
+        metaHub.upsertSession(merged)
+    }
+
+    private suspend fun mergeWithExisting(
+        sessionId: String,
+        parsed: SessionMetadata
+    ): SessionMetadata {
+        val existing = metaHub.getSession(sessionId)
+        return SessionMetadata(
+            sessionId = sessionId,
+            mainPerson = parsed.mainPerson ?: existing?.mainPerson,
+            shortSummary = parsed.shortSummary ?: existing?.shortSummary,
+            summaryTitle6Chars = parsed.summaryTitle6Chars ?: existing?.summaryTitle6Chars,
+            location = parsed.location ?: existing?.location,
+            stage = parsed.stage ?: existing?.stage,
+            riskLevel = parsed.riskLevel ?: existing?.riskLevel,
+            tags = (existing?.tags.orEmpty() + parsed.tags).filter { it.isNotBlank() }.toSet(),
+            lastUpdatedAt = System.currentTimeMillis()
+        )
+    }
+
+    private fun shouldParseMetadata(request: ChatRequest): Boolean {
+        val mode = request.quickSkillId
+        return mode == null || mode == QuickSkillId.SMART_ANALYSIS.name
     }
 
     private fun extractJsonBlock(text: String): String? {

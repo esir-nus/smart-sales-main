@@ -2,6 +2,7 @@ package com.smartsales.feature.chat.home
 
 import android.net.Uri
 import android.util.Log
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -95,6 +97,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.smartsales.feature.chat.BuildConfig
 import com.smartsales.feature.chat.core.QuickSkillId
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -190,6 +193,7 @@ fun HomeScreenRoute(
         onLoadMoreHistory = viewModel::onLoadMoreHistory,
         onProfileClicked = viewModel::onTapProfile,
         onNewChatClicked = viewModel::onNewChatClicked,
+        onToggleDebugMetadata = viewModel::onToggleDebugMetadata,
         onSessionSelected = viewModel::setSession,
         chatErrorMessage = state.chatErrorMessage,
         onPickAudioFile = viewModel::onAudioFilePicked,
@@ -222,6 +226,7 @@ fun HomeScreen(
     onLoadMoreHistory: () -> Unit,
     onProfileClicked: () -> Unit,
     onNewChatClicked: () -> Unit = {},
+    onToggleDebugMetadata: () -> Unit = {},
     onSessionSelected: (String) -> Unit = {},
     chatErrorMessage: String? = null,
     exportInProgress: Boolean,
@@ -279,7 +284,7 @@ fun HomeScreen(
             }
             quick.copy(label = customLabel)
         }
-    val debugHudEnabled = CHAT_DEBUG_HUD_ENABLED && state.showDebugMetadata
+    val debugHudEnabled = BuildConfig.DEBUG && state.showDebugMetadata
     val showScrollToLatest = remember { mutableStateOf(false) }
     LaunchedEffect(listState, state.chatMessages.size, state.isLoadingHistory) {
         snapshotFlow {
@@ -664,6 +669,9 @@ object HomeScreenTestTags {
     const val NEW_CHAT_BUTTON = "home_new_chat_button"
     const val EXPORT_PDF = "home_export_pdf"
     const val EXPORT_CSV = "home_export_csv"
+    const val QUICK_SKILL_ANALYSIS_CHIP = "home_quick_skill_analysis_chip"
+    const val QUICK_SKILL_EXPORT_PDF_CHIP = "home_quick_skill_export_pdf_chip"
+    const val QUICK_SKILL_EXPORT_CSV_CHIP = "home_quick_skill_export_csv_chip"
     const val SESSION_TITLE = "home_session_title"
     const val USER_MESSAGE = "home_user_message"
     const val ASSISTANT_MESSAGE = "home_assistant_message"
@@ -717,7 +725,7 @@ private fun HomeTopBar(
             ) {
                 Icon(Icons.Filled.Menu, contentDescription = "历史会话")
             }
-            if (CHAT_DEBUG_HUD_ENABLED) {
+            if (BuildConfig.DEBUG) {
                 IconButton(
                     onClick = onToggleDebugMetadata,
                     modifier = Modifier.testTag("debug_toggle_metadata")
@@ -1326,15 +1334,17 @@ private fun QuickSkillRow(
     skills: List<QuickSkillUi>,
     selectedSkillId: QuickSkillId?,
     enabled: Boolean,
-    onQuickSkillSelected: (QuickSkillId) -> Unit
+    onQuickSkillSelected: (QuickSkillId) -> Unit,
+    compact: Boolean = false,
+    extraTestTag: ((QuickSkillId) -> String?)? = null
 ) {
     if (skills.isEmpty()) return
     LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(horizontal = 6.dp)
+        horizontalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 10.dp),
+        contentPadding = PaddingValues(horizontal = if (compact) 0.dp else 6.dp)
     ) {
         items(skills, key = { it.id }) { skill ->
-            val skillTag = "home_quick_skill_${skill.id}"
+            val skillTag = extraTestTag?.invoke(skill.id) ?: "home_quick_skill_${skill.id}"
             val isSelected = skill.id == selectedSkillId
             val colors = AssistChipDefaults.assistChipColors(
                 containerColor = if (isSelected) {

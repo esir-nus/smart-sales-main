@@ -85,6 +85,16 @@ data class QuickSkillUi(
     val isRecommended: Boolean = false
 )
 
+/** 调试 HUD 展示的会话元信息快照。 */
+data class DebugSessionMetadata(
+    val sessionId: String,
+    val title: String,
+    val mainPerson: String? = null,
+    val shortSummary: String? = null,
+    val summaryTitle6Chars: String? = null,
+    val notes: List<String> = emptyList()
+)
+
 /** UI 模型：设备横幅的轻量快照。 */
 data class DeviceSnapshotUi(
     val deviceName: String? = null,
@@ -158,7 +168,9 @@ data class HomeUiState(
     val userName: String = "用户",
     val exportInProgress: Boolean = false,
     val showWelcomeHero: Boolean = true,
-    val isSmartAnalysisMode: Boolean = false
+    val isSmartAnalysisMode: Boolean = false,
+    val showDebugMetadata: Boolean = false,
+    val debugSessionMetadata: DebugSessionMetadata? = null
 )
 
 /** 外部依赖（除 AiChatService 外保留原有 stub）。 */
@@ -218,6 +230,7 @@ class HomeScreenViewModel @Inject constructor(
         if (_uiState.value.isBusy) return
         if (_uiState.value.isSmartAnalysisMode) {
             handleSmartAnalysisSend(content)
+            refreshDebugMetadataIfNeeded()
             return
         }
         if (content.isEmpty()) return
@@ -241,11 +254,13 @@ class HomeScreenViewModel @Inject constructor(
                 val response = getGreetingResponse(content)
                 appendAssistantMessage(content = response)
             }
+            refreshDebugMetadataIfNeeded()
             return
         }
         sendMessageInternal(
             messageText = content
         )
+        refreshDebugMetadataIfNeeded()
     }
 
     private fun handleSmartAnalysisSend(rawInput: String) {
@@ -259,6 +274,7 @@ class HomeScreenViewModel @Inject constructor(
                 content = "当前对话内容太少，我没法做有价值的智能分析。\n建议先粘贴一段对话、邮件或会议记录，然后再点击「智能分析」。"
             )
             _uiState.update { it.copy(isSmartAnalysisMode = false, selectedSkill = null, inputText = "") }
+            refreshDebugMetadataIfNeeded()
             return
         }
         val analysisGoal = if (!isEmptyGoal && !isLowInfo) goal else "通用分析"
@@ -290,6 +306,7 @@ class HomeScreenViewModel @Inject constructor(
                 }.trim()
             }
         )
+        refreshDebugMetadataIfNeeded()
     }
 
     fun onSmartAnalysisClicked() {
@@ -338,6 +355,42 @@ class HomeScreenViewModel @Inject constructor(
                     )
                 }
             }
+        }
+    }
+
+    fun onToggleDebugMetadata() {
+        _uiState.update { state ->
+            val toggled = !state.showDebugMetadata
+            val snapshot = if (toggled) buildDebugSessionMetadataSnapshot(state) else null
+            state.copy(
+                showDebugMetadata = toggled,
+                debugSessionMetadata = snapshot
+            )
+        }
+    }
+
+    private fun buildDebugSessionMetadataSnapshot(state: HomeUiState = _uiState.value): DebugSessionMetadata {
+        val notes = buildList {
+            add("messages=${state.chatMessages.size}")
+            add("isStreaming=${state.isStreaming}")
+            add("isSmartAnalysisMode=${state.isSmartAnalysisMode}")
+            add("exportInProgress=${state.exportInProgress}")
+            add("selectedSkill=${state.selectedSkill?.id ?: "none"}")
+        }
+        return DebugSessionMetadata(
+            sessionId = sessionId,
+            title = state.currentSession.title,
+            mainPerson = null,
+            shortSummary = latestAnalysisMarkdown?.lineSequence()?.firstOrNull()?.take(80),
+            summaryTitle6Chars = state.currentSession.title.take(6),
+            notes = notes
+        )
+    }
+
+    private fun refreshDebugMetadataIfNeeded() {
+        if (!_uiState.value.showDebugMetadata) return
+        _uiState.update { state ->
+            state.copy(debugSessionMetadata = buildDebugSessionMetadataSnapshot(state))
         }
     }
 
@@ -393,7 +446,7 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     private fun extractPersonNameForFileName(): String {
-        val name = _uiState.value.userName?.trim().orEmpty()
+        val name = _uiState.value.userName.trim()
         if (name.isNotEmpty()) return name
         return "客户"
     }
@@ -1010,6 +1063,7 @@ class HomeScreenViewModel @Inject constructor(
             }
             state.copy(chatMessages = updated)
         }
+        refreshDebugMetadataIfNeeded()
         if (persistAfterUpdate) {
             persistMessagesAsync()
         }
@@ -1033,6 +1087,7 @@ class HomeScreenViewModel @Inject constructor(
         viewModelScope.launch {
             updateSessionSummary(message.content)
         }
+        refreshDebugMetadataIfNeeded()
     }
 
     private fun buildChatRequest(

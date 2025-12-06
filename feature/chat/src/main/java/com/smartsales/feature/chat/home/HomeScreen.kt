@@ -250,7 +250,8 @@ fun HomeScreen(
     historySessions: List<SessionListItemUi> = emptyList(),
     onHistorySessionSelected: (String) -> Unit = {},
     onToggleDebugMetadata: () -> Unit = {},
-    onDismissKeyboard: () -> Unit = {}
+    onDismissKeyboard: () -> Unit = {},
+    onInputFocusChanged: (Boolean) -> Unit = {}
 ) {
     Log.i("HomeScreen", "HomeScreen composed - entering function")
     val refreshingState = remember { mutableStateOf(false) }
@@ -376,7 +377,10 @@ fun HomeScreen(
                     onQuickSkillSelected = onQuickSkillSelected,
                     onPickAudio = { audioPicker.launch(arrayOf("audio/*")) },
                     onPickImage = { imagePicker.launch(arrayOf("image/*")) },
-                    onInputFocusChanged = { focused -> isInputFocused = focused }
+                    onInputFocusChanged = { focused ->
+                        isInputFocused = focused       // 本地状态，用于内部 UI
+                        onInputFocusChanged(focused)   // 向上汇报，让 shell 禁用/启用手势
+                    }
                 )
             }
         ) { innerPadding ->

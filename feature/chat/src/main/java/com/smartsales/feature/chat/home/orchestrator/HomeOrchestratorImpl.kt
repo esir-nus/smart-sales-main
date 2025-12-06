@@ -44,12 +44,13 @@ class HomeOrchestratorImpl @Inject constructor(
         request: ChatRequest,
         assistantText: String
     ) {
-        val jsonBlock = extractJsonBlock(assistantText) ?: return
-        val parsed = parseSessionMetadata(
+        // 直接在完整 markdown 文本上做鲁棒解析，而不是依赖 JSON 反序列化一定成功
+        val parsed = parseSessionMetadataFromText(
             sessionId = request.sessionId,
-            jsonText = jsonBlock,
+            rawText = assistantText,
             source = resolveAnalysisSource(request)
         ) ?: return
+
         val merged = mergeWithExisting(request.sessionId, parsed)
         runCatching { metaHub.upsertSession(merged) }
     }
@@ -58,24 +59,31 @@ class HomeOrchestratorImpl @Inject constructor(
         sessionId: String,
         parsed: SessionMetadata
     ): SessionMetadata {
+        // 从 MetaHub 读取已有的会话元数据
         val existing = metaHub.getSession(sessionId)
+
+        // 使用 SessionMetadata.mergeWith 做"非空优先新值"的合并：
+        // - 如果没有 existing，就直接用 parsed
+        // - 如果有 existing，就让 existing.mergeWith(parsed)，保证新分析结果覆盖旧值
         return existing?.mergeWith(parsed) ?: parsed
     }
 
     private fun shouldParseMetadata(request: ChatRequest): Boolean {
-        val mode = request.quickSkillId
-        return mode == null || mode == QuickSkillId.SMART_ANALYSIS.name
+        val skillId = request.quickSkillId ?: return false
+        return skillId == QuickSkillId.SMART_ANALYSIS.name
     }
 
     private fun extractJsonBlock(text: String): String? {
-        val fencedRegex = Regex("```json\\s*(\\{[\\s\\S]*?})\\s*```", RegexOption.IGNORE_CASE)
-        fencedRegex.find(text)?.let { match ->
-            return match.groupValues.getOrNull(1)?.trim()
-        }
-        val anyFence = Regex("```\\s*(\\{[\\s\\S]*?})\\s*```")
-        anyFence.find(text)?.let { match ->
-            return match.groupValues.getOrNull(1)?.trim()
-        }
+        return firstJsonCodeBlock(text) ?: extractBareJsonObject(text)
+    }
+
+    private fun firstJsonCodeBlock(text: String): String? {
+        // pattern like ```json\n...\n``` or ```\n...\n```
+        val regex = Regex("```(?:json)?\\s*([\\s\\S]*?)```", RegexOption.MULTILINE)
+        return regex.find(text)?.groupValues?.getOrNull(1)?.trim()
+    }
+
+    private fun extractBareJsonObject(text: String): String? {
         val start = text.indexOf('{')
         if (start == -1) return null
         var depth = 0
@@ -93,24 +101,53 @@ class HomeOrchestratorImpl @Inject constructor(
         return null
     }
 
-    private fun parseSessionMetadata(
+    private fun findStringField(text: String, field: String): String? {
+        // 匹配："field": "value"
+        val pattern = Regex(""""$field"\s*:\s*"([^"]*)"""")
+        val match = pattern.find(text) ?: return null
+        val value = match.groupValues.getOrNull(1)?.trim()
+        return value?.takeIf { it.isNotBlank() }
+    }
+
+    private fun findStringListField(text: String, field: String): List<String> {
+        // 匹配："field": ["a", "b", ...]
+        val arrayPattern = Regex(""""$field"\s*:\s*\[(.*?)]""", RegexOption.DOT_MATCHES_ALL)
+        val arrayMatch = arrayPattern.find(text) ?: return emptyList()
+        val inner = arrayMatch.groupValues.getOrNull(1) ?: return emptyList()
+
+        val elementPattern = Regex(""""([^"]*)"""")
+        return elementPattern.findAll(inner)
+            .map { it.groupValues.getOrNull(1)?.trim().orEmpty() }
+            .filter { it.isNotBlank() }
+            .toList()
+    }
+
+    private fun parseSessionMetadataFromText(
         sessionId: String,
-        jsonText: String,
+        rawText: String,
         source: AnalysisSource?
     ): SessionMetadata? {
-        val obj = runCatching { JSONObject(jsonText) }.getOrElse { return null }
-        val mainPerson = obj.optString("main_person").takeIf { it.isNotBlank() }
-            ?: obj.optString("mainPerson").takeIf { it.isNotBlank() }
-        val shortSummary = obj.optString("short_summary").takeIf { it.isNotBlank() }
-        val summaryTitle = obj.optString("summary_title_6chars").takeIf { it.isNotBlank() }
-        val location = obj.optString("location").takeIf { it.isNotBlank() }
-        val stage = obj.optString("stage").takeIf { it.isNotBlank() }?.let { toStage(it) }
-        val risk = obj.optString("risk_level").takeIf { it.isNotBlank() }?.let { toRisk(it) }
-        val highlights = obj.optJSONArray("highlights")?.toStringList().orEmpty()
-        val actionable = obj.optJSONArray("actionable_tips")?.toStringList().orEmpty()
-        val crmRows = obj.optJSONArray("crm_rows")?.toCrmRows().orEmpty()
+        // 先尝试从第一个 fenced JSON 里找，如果失败再在整段文本里兜底
+        val jsonSlice = firstJsonCodeBlock(rawText) ?: extractBareJsonObject(rawText) ?: rawText
+
+        val mainPerson =
+            findStringField(jsonSlice, "main_person")
+                ?: findStringField(jsonSlice, "mainPerson")
+
+        val shortSummary = findStringField(jsonSlice, "short_summary")
+        val summaryTitle = findStringField(jsonSlice, "summary_title_6chars")
+        val location = findStringField(jsonSlice, "location")
+
+        val stage = findStringField(jsonSlice, "stage")?.let { toStage(it) }
+        val risk = findStringField(jsonSlice, "risk_level")?.let { toRisk(it) }
+
+        val highlights = findStringListField(jsonSlice, "highlights")
+        val actionable = findStringListField(jsonSlice, "actionable_tips")
+        val crmRows = emptyList<CrmRow>() // 先不支持复杂嵌套结构，后续再扩展
+
         val tags = (highlights + actionable).filter { it.isNotBlank() }.toSet()
 
+        // 如果完全解析不到任何有用字段，就视为无效结果
         if (mainPerson == null &&
             shortSummary == null &&
             summaryTitle == null &&
@@ -120,6 +157,8 @@ class HomeOrchestratorImpl @Inject constructor(
         ) {
             return null
         }
+
+        val now = System.currentTimeMillis()
         return SessionMetadata(
             sessionId = sessionId,
             mainPerson = mainPerson,
@@ -129,9 +168,9 @@ class HomeOrchestratorImpl @Inject constructor(
             stage = stage,
             riskLevel = risk,
             tags = tags,
-            lastUpdatedAt = System.currentTimeMillis(),
+            lastUpdatedAt = now,
             latestMajorAnalysisMessageId = null,
-            latestMajorAnalysisAt = System.currentTimeMillis(),
+            latestMajorAnalysisAt = now,
             latestMajorAnalysisSource = source,
             crmRows = crmRows
         )

@@ -13,6 +13,7 @@ import androidx.compose.animation.with
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -39,6 +41,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AddPhotoAlternate
@@ -90,11 +93,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.input.pointer.consume
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.feature.chat.BuildConfig
@@ -132,6 +139,12 @@ fun HomeScreenRoute(
     val snackbarHostState = remember { SnackbarHostState() }
     // 抽屉开关保留在 Route 层，避免影响 ViewModel 状态
     var showHistoryPanel by rememberSaveable { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val dismissKeyboard: () -> Unit = {
+        focusManager.clearFocus()
+        keyboardController?.hide()
+    }
 
     // Snackbar 展示来自 ViewModel 的一次性提醒
     LaunchedEffect(state.snackbarMessage) {
@@ -206,7 +219,8 @@ fun HomeScreenRoute(
         onHistorySessionSelected = { sessionId ->
             viewModel.setSession(sessionId, allowHero = false)
             showHistoryPanel = false
-        }
+        },
+        onDismissKeyboard = dismissKeyboard
     )
 }
 
@@ -237,7 +251,8 @@ fun HomeScreen(
     onToggleHistoryPanel: () -> Unit = {},
     onDismissHistoryPanel: () -> Unit = {},
     historySessions: List<SessionListItemUi> = emptyList(),
-    onHistorySessionSelected: (String) -> Unit = {}
+    onHistorySessionSelected: (String) -> Unit = {},
+    onDismissKeyboard: () -> Unit = {}
 ) {
     Log.i("HomeScreen", "HomeScreen composed - entering function")
     val refreshingState = remember { mutableStateOf(false) }
@@ -312,6 +327,22 @@ fun HomeScreen(
             listState.scrollToItem(state.chatMessages.lastIndex)
         }
     }
+    var isInputFocused by rememberSaveable { mutableStateOf(false) }
+    val dragDismissModifier = if (isInputFocused) {
+        Modifier.pointerInput(isInputFocused) {
+            detectVerticalDragGestures(
+                onVerticalDragStart = { change ->
+                    change.consume()
+                    onDismissKeyboard()
+                },
+                onVerticalDrag = { change, _ ->
+                    change.consume()
+                }
+            )
+        }
+    } else {
+        Modifier
+    }
 
     Box(
         modifier = modifier
@@ -343,7 +374,9 @@ fun HomeScreen(
                     onInputChanged = onInputChanged,
                     onSendClicked = onSendClicked,
                     onPickAudio = { audioPicker.launch(arrayOf("audio/*")) },
-                    onPickImage = { imagePicker.launch(arrayOf("image/*")) }
+                    onPickImage = { imagePicker.launch(arrayOf("image/*")) },
+                    onInputFocusChanged = { focused -> isInputFocused = focused },
+                    modifier = Modifier.imePadding()
                 )
             }
         ) { innerPadding ->
@@ -351,6 +384,7 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
+                    .imePadding()
                     .pullRefresh(pullRefreshState)
             ) {
                 Column(
@@ -362,6 +396,7 @@ fun HomeScreen(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
+                            .then(dragDismissModifier)
                     ) {
                         AnimatedContent(
                             targetState = state.chatMessages.isEmpty(),
@@ -1146,10 +1181,15 @@ private fun HomeInputArea(
     onInputChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
     onPickAudio: () -> Unit,
-    onPickImage: () -> Unit
+    onPickImage: () -> Unit,
+    onInputFocusChanged: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var uploadMenuExpanded by rememberSaveable { mutableStateOf(false) }
-    Surface(tonalElevation = 4.dp) {
+    Surface(
+        tonalElevation = 4.dp,
+        modifier = modifier
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1197,6 +1237,7 @@ private fun HomeInputArea(
                     onValueChange = onInputChanged,
                     modifier = Modifier
                         .weight(1f)
+                        .onFocusChanged { onInputFocusChanged(it.isFocused) }
                         .testTag(HomeScreenTestTags.INPUT_FIELD),
                     placeholder = {
                         val hint = if (isSmartAnalysisMode) {

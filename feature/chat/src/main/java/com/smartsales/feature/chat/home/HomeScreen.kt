@@ -352,18 +352,19 @@ fun HomeScreen(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 HomeTopBar(
+                    title = state.currentSession.title,
                     onProfileClick = onProfileClicked,
                     deviceSnapshot = state.deviceSnapshot,
                     onHistoryClick = onToggleHistoryPanel,
                     showDebugMetadata = state.showDebugMetadata,
-                    onToggleDebugMetadata = { onToggleDebugMetadata() }
+                    onToggleDebugMetadata = { onToggleDebugMetadata() },
+                    onNewChatClick = onNewChatClicked
                 )
             },
             bottomBar = {
                 HomeInputArea(
                     quickSkills = allowedSkills,
                     selectedSkill = state.selectedSkill,
-                    showQuickSkills = state.chatMessages.isNotEmpty(),
                     enabled = !state.isBusy,
                     busy = state.isBusy,
                     inputValue = state.inputText,
@@ -386,14 +387,6 @@ fun HomeScreen(
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    EntryCards(
-                        deviceSnapshot = state.deviceSnapshot,
-                        audioSummary = state.audioSummary,
-                        onDeviceClick = onDeviceBannerClicked,
-                        onAudioClick = onAudioSummaryClicked,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -417,58 +410,60 @@ fun HomeScreen(
                                     onSkillSelected = onQuickSkillSelected
                                 )
                             } else {
-                                Box(
+                                Column(
                                     modifier = Modifier
                                         .fillMaxSize()
                                 ) {
-                                    val hasActiveChat = state.chatMessages.isNotEmpty()
-                                LazyColumn(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .then(dragDismissModifier)
-                                        .testTag(HomeScreenTestTags.LIST),
+                                    QuickSkillRow(
+                                        skills = allowedSkills,
+                                        selectedSkillId = state.selectedSkill?.id,
+                                        enabled = !state.isBusy,
+                                        onQuickSkillSelected = onQuickSkillSelected
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    LazyColumn(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .then(dragDismissModifier)
+                                            .testTag(HomeScreenTestTags.LIST),
                                         state = listState,
                                         verticalArrangement = Arrangement.spacedBy(12.dp),
                                         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
                                         userScrollEnabled = true
                                     ) {
-                                        if (!hasActiveChat) {
-                                            item("welcome_spacer") { Spacer(modifier = Modifier.height(8.dp)) }
-                                        } else {
-                                            if (state.isLoadingHistory) {
-                                                item("history-loading") {
-                                                    Text(
-                                                        text = "加载历史记录...",
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .padding(vertical = 8.dp)
-                                                    )
-                                                }
-                                            }
-                                            itemsIndexed(state.chatMessages, key = { _, item -> item.id }) { index, message ->
-                                                val isTranscriptSummary = message.role == ChatMessageRole.ASSISTANT &&
-                                                    message.content.contains("通话分析")
-                                                val tagModifier = if (message.role == ChatMessageRole.ASSISTANT &&
-                                                    (index == state.chatMessages.lastIndex || isTranscriptSummary)
-                                                ) {
-                                                    Modifier.testTag(HomeScreenTestTags.ASSISTANT_MESSAGE)
-                                                } else {
-                                                    Modifier
-                                                }
-                                                MessageBubble(
-                                                    message = message,
-                                                    alignEnd = message.role == ChatMessageRole.USER,
-                                                    modifier = tagModifier,
-                                                    onCopyAssistant = { content ->
-                                                        clipboardManager.setText(AnnotatedString(content))
-                                                        coroutineScope.launch {
-                                                            snackbarHostState.showSnackbar("已复制到剪贴板")
-                                                        }
-                                                    }
+                                        if (state.isLoadingHistory) {
+                                            item("history-loading") {
+                                                Text(
+                                                    text = "加载历史记录...",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(vertical = 8.dp)
                                                 )
                                             }
+                                        }
+                                        itemsIndexed(state.chatMessages, key = { _, item -> item.id }) { index, message ->
+                                            val isTranscriptSummary = message.role == ChatMessageRole.ASSISTANT &&
+                                                message.content.contains("通话分析")
+                                            val tagModifier = if (message.role == ChatMessageRole.ASSISTANT &&
+                                                (index == state.chatMessages.lastIndex || isTranscriptSummary)
+                                            ) {
+                                                Modifier.testTag(HomeScreenTestTags.ASSISTANT_MESSAGE)
+                                            } else {
+                                                Modifier
+                                            }
+                                            MessageBubble(
+                                                message = message,
+                                                alignEnd = message.role == ChatMessageRole.USER,
+                                                modifier = tagModifier,
+                                                onCopyAssistant = { content ->
+                                                    clipboardManager.setText(AnnotatedString(content))
+                                                    coroutineScope.launch {
+                                                        snackbarHostState.showSnackbar("已复制到剪贴板")
+                                                    }
+                                                }
+                                            )
                                         }
                                         if (state.chatMessages.lastOrNull()?.isStreaming == true) {
                                             item("typing-indicator") {
@@ -704,15 +699,18 @@ object HomeScreenTestTags {
     const val HISTORY_EMPTY = "home_history_empty"
     const val HISTORY_ITEM_PREFIX = "home_history_item_"
     const val HERO = "home_hero"
+    const val DEBUG_HUD_PANEL = "debug_metadata_hud"
 }
 
 @Composable
 private fun HomeTopBar(
+    title: String,
     onProfileClick: () -> Unit,
     deviceSnapshot: DeviceSnapshotUi?,
     onHistoryClick: () -> Unit,
     showDebugMetadata: Boolean,
-    onToggleDebugMetadata: () -> Unit
+    onToggleDebugMetadata: () -> Unit,
+    onNewChatClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -721,10 +719,23 @@ private fun HomeTopBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = "AI 助手",
-            style = MaterialTheme.typography.titleLarge
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            IconButton(
+                onClick = onHistoryClick,
+                modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_TOGGLE)
+            ) {
+                Icon(Icons.Filled.Menu, contentDescription = "历史记录")
+            }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (deviceSnapshot?.connectionState == DeviceConnectionStateUi.CONNECTED) {
                 AssistChip(
@@ -737,19 +748,27 @@ private fun HomeTopBar(
                     )
                 )
             }
-            IconButton(
-                onClick = onHistoryClick,
-                modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_TOGGLE)
-            ) {
-                Icon(Icons.Filled.History, contentDescription = "历史记录")
-            }
             if (CHAT_DEBUG_HUD_ENABLED) {
-                TextButton(
+                IconButton(
                     onClick = onToggleDebugMetadata,
                     modifier = Modifier.testTag("debug_toggle_metadata")
                 ) {
-                    Text(text = if (showDebugMetadata) "关闭调试 HUD" else "开启调试 HUD")
+                    Icon(
+                        imageVector = Icons.Filled.Circle,
+                        tint = if (showDebugMetadata) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        contentDescription = if (showDebugMetadata) "关闭调试 HUD" else "开启调试 HUD"
+                    )
                 }
+            }
+            IconButton(
+                onClick = onNewChatClick,
+                modifier = Modifier.testTag(HomeScreenTestTags.NEW_CHAT_BUTTON)
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = "新建对话")
             }
             IconButton(
                 onClick = onProfileClick,
@@ -831,56 +850,110 @@ private fun EntryCard(
 @Composable
 private fun DebugSessionMetadataHud(
     metadata: DebugSessionMetadata,
+    onToggleDebugMetadata: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    val clipboardManager = LocalClipboardManager.current
+    val scrollState = rememberScrollState()
+    val configuration = LocalConfiguration.current
+    val hudText = remember(metadata) {
+        buildString {
+            appendLine("sessionId = ${metadata.sessionId}")
+            appendLine("title = ${metadata.title}")
+            appendLine("mainPerson = ${metadata.mainPerson ?: "null"}")
+            appendLine("shortSummary = ${metadata.shortSummary ?: "null"}")
+            appendLine("title6 = ${metadata.summaryTitle6Chars ?: "null"}")
+            if (CHAT_DEBUG_HUD_ENABLED && metadata.notes.isNotEmpty()) {
+                appendLine("notes:")
+                metadata.notes.forEach { note ->
+                    appendLine("- $note")
+                }
+            }
+        }
+    }
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
-                shape = MaterialTheme.shapes.medium
-            )
-            .padding(horizontal = 14.dp, vertical = 10.dp)
-            .testTag("debug_metadata_hud"),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+            .heightIn(max = configuration.screenHeightDp.dp * 0.5f)
+            .testTag(HomeScreenTestTags.DEBUG_HUD_PANEL),
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = 8.dp,
+        shadowElevation = 12.dp,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.96f)
     ) {
-        Text(
-            text = "DEBUG_METADATA",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.secondary
-        )
-        Text(
-            text = "sessionId = ${metadata.sessionId}",
-            style = MaterialTheme.typography.labelSmall
-        )
-        Text(
-            text = "title = ${metadata.title}",
-            style = MaterialTheme.typography.labelSmall
-        )
-        Text(
-            text = "mainPerson = ${metadata.mainPerson ?: "null"}",
-            style = MaterialTheme.typography.labelSmall
-        )
-        Text(
-            text = "shortSummary = ${metadata.shortSummary ?: "null"}",
-            style = MaterialTheme.typography.labelSmall
-        )
-        Text(
-            text = "title6 = ${metadata.summaryTitle6Chars ?: "null"}",
-            style = MaterialTheme.typography.labelSmall
-        )
-        if (CHAT_DEBUG_HUD_ENABLED && metadata.notes.isNotEmpty()) {
-            Text(
-                text = "notes:",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary
-            )
-            metadata.notes.forEach { note ->
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = "- $note",
+                    text = "DEBUG_METADATA",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.secondary
                 )
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = { clipboardManager.setText(AnnotatedString(hudText)) }) {
+                        Icon(
+                            imageVector = Icons.Filled.ContentCopy,
+                            contentDescription = "复制"
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "复制")
+                    }
+                    IconButton(onClick = onToggleDebugMetadata) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = "关闭调试 HUD"
+                        )
+                    }
+                }
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "sessionId = ${metadata.sessionId}",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Text(
+                    text = "title = ${metadata.title}",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Text(
+                    text = "mainPerson = ${metadata.mainPerson ?: "null"}",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Text(
+                    text = "shortSummary = ${metadata.shortSummary ?: "null"}",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Text(
+                    text = "title6 = ${metadata.summaryTitle6Chars ?: "null"}",
+                    style = MaterialTheme.typography.labelSmall
+                )
+                if (CHAT_DEBUG_HUD_ENABLED && metadata.notes.isNotEmpty()) {
+                    Text(
+                        text = "notes:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    metadata.notes.forEach { note ->
+                        Text(
+                            text = "- $note",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }
@@ -1116,7 +1189,6 @@ private fun EmptySessionHint(onNewChatClicked: () -> Unit) {
 private fun HomeInputArea(
     quickSkills: List<QuickSkillUi>,
     selectedSkill: QuickSkillUi?,
-    showQuickSkills: Boolean,
     enabled: Boolean,
     busy: Boolean,
     inputValue: String,
@@ -1137,14 +1209,6 @@ private fun HomeInputArea(
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            if (showQuickSkills) {
-                QuickSkillRow(
-                    skills = quickSkills,
-                    selectedSkillId = selectedSkill?.id,
-                    enabled = enabled && !busy,
-                    onQuickSkillSelected = onQuickSkillSelected
-                )
-            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth(),

@@ -115,10 +115,12 @@ abstract class AiCoreModule {
         @Singleton
         fun provideTranscriptOrchestrator(
             metaHub: MetaHub,
-            dispatchers: DispatcherProvider
+            dispatchers: DispatcherProvider,
+            aiChatService: AiChatService
         ): TranscriptOrchestrator = RealTranscriptOrchestrator(
             metaHub = metaHub,
-            dispatchers = dispatchers
+            dispatchers = dispatchers,
+            aiChatService = aiChatService
         )
 
         @Provides

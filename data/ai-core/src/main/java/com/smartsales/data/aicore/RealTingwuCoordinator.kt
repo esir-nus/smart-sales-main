@@ -364,13 +364,14 @@ class RealTingwuCoordinator @Inject constructor(
                     logVerbose {
                         "拉取成功：jobId=$jobId text=$textLength requestId=${response.requestId}"
                     }
-                    val diarizedSegments = buildDiarizedSegments(data.transcription)
-                    val speakerLabels = buildSpeakerLabels(data.transcription, diarizedSegments)
-                    val markdown = buildMarkdown(data.transcription, diarizedSegments, speakerLabels)
+                    val transcription = data.transcription
+                    val diarizedSegments = buildDiarizedSegments(transcription)
+                    val speakerLabels = buildSpeakerLabels(transcription, diarizedSegments)
+                    val markdown = buildMarkdown(transcription, diarizedSegments, speakerLabels)
                     AiCoreLogger.d(TAG, "转写 markdown 生成成功：jobId=$jobId markdown长度=${markdown.length}")
                     val chapters = chaptersUrl?.let { fetchChaptersSafe(it, jobId) }
                     val artifacts = data.toArtifacts(
-                        transcriptionUrl = data.transcription?.url,
+                        transcriptionUrl = transcription.url,
                         autoChaptersUrl = extractAutoChaptersUrl(data.resultLinks),
                         extraResultUrls = data.resultLinks.orEmpty(),
                         chapters = chapters,

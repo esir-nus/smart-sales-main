@@ -223,6 +223,22 @@ class HomeExportActionsTest {
     }
 
     @Test
+    fun `when metahub has analysis but vm cache empty it hints and skips auto run`() = runTest(dispatcher) {
+        metaHub.session = SessionMetadata(
+            sessionId = "session-1",
+            latestMajorAnalysisMessageId = "m1",
+            lastUpdatedAt = 1L
+        )
+
+        viewModel.onExportPdfClicked()
+        advanceUntilIdle()
+
+        assertEquals(0, aiChatService.callCount)
+        assertEquals(null, exportOrchestrator.lastFormat)
+        assertTrue(viewModel.uiState.value.snackbarMessage?.contains("分析记录") == true)
+    }
+
+    @Test
     fun `low information input skips ai call and hints only once`() = runTest(dispatcher) {
         viewModel.onInputChanged("是")
         viewModel.onSendMessage()
@@ -277,14 +293,18 @@ class HomeExportActionsTest {
     private class RecordingExportOrchestrator : ExportOrchestrator {
         var lastPdfMarkdown: String? = null
         var lastFormat: ExportFormat? = null
+        var pdfCallCount = 0
+        var csvCallCount = 0
         override suspend fun exportPdf(sessionId: String, markdown: String): Result<ExportResult> {
             lastPdfMarkdown = markdown
             lastFormat = ExportFormat.PDF
+            pdfCallCount += 1
             return Result.Success(ExportResult("demo.pdf", "application/pdf", ByteArray(0)))
         }
 
         override suspend fun exportCsv(sessionId: String): Result<ExportResult> {
             lastFormat = ExportFormat.CSV
+            csvCallCount += 1
             return Result.Success(ExportResult("demo.csv", "text/csv", ByteArray(0)))
         }
     }
@@ -300,8 +320,11 @@ class HomeExportActionsTest {
     }
 
     private class FakeMetaHub : MetaHub {
-        override suspend fun upsertSession(metadata: SessionMetadata) {}
-        override suspend fun getSession(sessionId: String): SessionMetadata? = null
+        var session: SessionMetadata? = null
+        override suspend fun upsertSession(metadata: SessionMetadata) {
+            session = metadata
+        }
+        override suspend fun getSession(sessionId: String): SessionMetadata? = session
         override suspend fun upsertTranscript(metadata: TranscriptMetadata) {}
         override suspend fun getTranscriptBySession(sessionId: String): TranscriptMetadata? = null
         override suspend fun upsertExport(metadata: ExportMetadata) {}

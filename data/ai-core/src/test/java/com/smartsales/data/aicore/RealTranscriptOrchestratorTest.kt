@@ -201,6 +201,70 @@ class RealTranscriptOrchestratorTest {
         assertEquals(0f, result?.speakerMap?.get("spk_2")?.confidence)
     }
 
+    @Test
+    fun `parses fenced json with leading text and ignores unknown keys`() = runTest(dispatcher) {
+        val metaHub = InMemoryMetaHub()
+        val ai = RecordingAiChatService(
+            """
+            文本开头
+            ```json
+            {
+              "speaker_map": {
+                "spk_a": {"display_name": "顾客", "role": "客户", "confidence": 0.95}
+              },
+              "main_person": "顾客",
+              "extra_field": "ignored"
+            }
+            ```
+            结尾文本
+            """.trimIndent()
+        )
+        val orchestrator = RealTranscriptOrchestrator(metaHub, dispatchers, ai)
+
+        val result = orchestrator.inferTranscriptMetadata(
+            TranscriptMetadataRequest(
+                transcriptId = "t-6",
+                sessionId = "s-6",
+                diarizedSegments = listOf(DiarizedSegment("spk_a", 0, 0, 1_000, "你好")),
+                speakerLabels = emptyMap()
+            )
+        )
+        advanceUntilIdle()
+
+        assertEquals("顾客", result?.speakerMap?.get("spk_a")?.displayName)
+        assertEquals("顾客", metaHub.getSession("s-6")?.mainPerson)
+    }
+
+    @Test
+    fun `recovers when json contains unknown fields`() = runTest(dispatcher) {
+        val metaHub = InMemoryMetaHub()
+        val ai = RecordingAiChatService(
+            """
+            {
+              "speaker_map": {
+                "spk_x": {"display_name": "客户X", "role": "other", "confidence": 0.5}
+              },
+              "location": "上海",
+              "unknown_block": {"foo": "bar"}
+            }
+            """.trimIndent()
+        )
+        val orchestrator = RealTranscriptOrchestrator(metaHub, dispatchers, ai)
+
+        val result = orchestrator.inferTranscriptMetadata(
+            TranscriptMetadataRequest(
+                transcriptId = "t-7",
+                sessionId = "s-7",
+                diarizedSegments = listOf(DiarizedSegment("spk_x", 0, 0, 1_000, "hi")),
+                speakerLabels = emptyMap()
+            )
+        )
+        advanceUntilIdle()
+
+        assertEquals("客户X", result?.speakerMap?.get("spk_x")?.displayName)
+        assertEquals("上海", result?.location)
+    }
+
     private class RecordingAiChatService(
         private val responseText: String,
         private val history: MutableList<AiChatRequest> = mutableListOf()

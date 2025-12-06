@@ -73,6 +73,58 @@ class HomeOrchestratorImplTest {
         assertTrue(stored?.tags?.contains("报价讨论") == true)
     }
 
+    @Test
+    fun `uses first json block when multiple fenced blocks exist`() = runTest(dispatcher) {
+        val metaHub = RecordingMetaHub()
+        val aiChatService = CompletedAiChatService(
+            """
+            ```json
+            { "main_person": "客户一", "summary_title_6chars": "标题一" }
+            ```
+            无关文本
+            ```json
+            { "main_person": "客户二" }
+            ```
+            """.trimIndent()
+        )
+        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub)
+
+        orchestrator.streamChat(
+            ChatRequest(
+                sessionId = "s-first",
+                userMessage = "hi",
+                quickSkillId = QuickSkillId.SMART_ANALYSIS.name
+            )
+        ).collect { /* no-op */ }
+
+        assertEquals("客户一", metaHub.lastSession?.mainPerson)
+        assertEquals("标题一", metaHub.lastSession?.summaryTitle6Chars)
+    }
+
+    @Test
+    fun `parses minimal metadata even when optional blocks missing`() = runTest(dispatcher) {
+        val metaHub = RecordingMetaHub()
+        val aiChatService = CompletedAiChatService(
+            """
+            结果如下：
+            ```json
+            { "main_person": "王总" }
+            ```
+            """.trimIndent()
+        )
+        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub)
+
+        orchestrator.streamChat(
+            ChatRequest(
+                sessionId = "s-min",
+                userMessage = "hi",
+                quickSkillId = QuickSkillId.SMART_ANALYSIS.name
+            )
+        ).collect { /* no-op */ }
+
+        assertEquals("王总", metaHub.lastSession?.mainPerson)
+    }
+
     private class CompletedAiChatService(
         private val response: String
     ) : AiChatService {

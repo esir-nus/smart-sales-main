@@ -399,11 +399,13 @@ private fun OverlayScaffold(
     showSnackbar: (String) -> Unit
 ) {
     val designTokens = AppDesignTokens.current()
+    var disableOverlayGestures by remember { mutableStateOf(false) }
     Box(modifier = Modifier.fillMaxSize()) {
         VerticalOverlayLayout(
             currentOverlay = currentOverlay,
             onOverlayChange = onOverlayChange,
             backgroundColor = designTokens.appBackground,
+            disableOverlayGestures = disableOverlayGestures,
             home = {
                 Box(
                     modifier = Modifier
@@ -429,7 +431,8 @@ private fun OverlayScaffold(
                             onNavigateToAudioFiles = { onOverlayChange(HomeOverlay.Audio) },
                             onNavigateToUserCenter = { setPage(TestHomePage.UserCenter) },
                             onNavigateToChatHistory = { setPage(TestHomePage.ChatHistory) },
-                            onDeviceSnapshotChanged = onDeviceSnapshotChanged
+                            onDeviceSnapshotChanged = onDeviceSnapshotChanged,
+                            onInputFocusChanged = { focused -> disableOverlayGestures = focused }
                         )
                     }
                 }
@@ -488,6 +491,7 @@ private fun DraggableOverlayStack(
     onSelectHome: () -> Unit,
     onSelectAudio: () -> Unit,
     showTags: Boolean,
+    disableOverlayGestures: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
@@ -529,8 +533,9 @@ private fun DraggableOverlayStack(
             .fillMaxHeight()
             .draggable(
                 state = dragState,
+                enabled = !disableOverlayGestures,
                 orientation = Orientation.Vertical,
-                onDragStopped = { velocity -> settle(velocity) }
+                onDragStopped = { velocity -> if (!disableOverlayGestures) settle(velocity) }
             )
             .testTag(AiFeatureTestTags.OVERLAY_STACK),
         color = Color.Transparent,
@@ -549,21 +554,30 @@ private fun DraggableOverlayStack(
                 label = "音频",
                 overlay = HomeOverlay.Audio,
                 currentOffset = offset.value,
-                onClick = onSelectAudio,
+                onClick = {
+                    if (!disableOverlayGestures) onSelectAudio()
+                },
+                enabled = !disableOverlayGestures,
                 tag = if (showTags) AiFeatureTestTags.OVERLAY_AUDIO_HANDLE else null
             )
             OverlayCard(
                 label = "Home",
                 overlay = HomeOverlay.Home,
                 currentOffset = offset.value,
-                onClick = onSelectHome,
+                onClick = {
+                    if (!disableOverlayGestures) onSelectHome()
+                },
+                enabled = !disableOverlayGestures,
                 tag = if (showTags) AiFeatureTestTags.OVERLAY_HOME else null
             )
             OverlayCard(
                 label = "设备",
                 overlay = HomeOverlay.Device,
                 currentOffset = offset.value,
-                onClick = onSelectDevice,
+                onClick = {
+                    if (!disableOverlayGestures) onSelectDevice()
+                },
+                enabled = !disableOverlayGestures,
                 tag = if (showTags) AiFeatureTestTags.OVERLAY_DEVICE_HANDLE else null
             )
         }
@@ -575,6 +589,7 @@ private fun VerticalOverlayLayout(
     currentOverlay: HomeOverlay,
     onOverlayChange: (HomeOverlay) -> Unit,
     backgroundColor: Color,
+    disableOverlayGestures: Boolean = false,
     home: @Composable () -> Unit,
     audio: @Composable () -> Unit,
     device: @Composable () -> Unit
@@ -604,6 +619,7 @@ private fun VerticalOverlayLayout(
         }
 
         val dragState = rememberDraggableState { delta ->
+            if (disableOverlayGestures) return@rememberDraggableState
             val next = (offset.value + delta).coerceIn(deviceAnchor, audioAnchor)
             scope.launch { offset.snapTo(next) }
         }
@@ -626,8 +642,9 @@ private fun VerticalOverlayLayout(
                 .fillMaxSize()
                 .draggable(
                     state = dragState,
+                    enabled = !disableOverlayGestures,
                     orientation = Orientation.Vertical,
-                    onDragStopped = { velocity -> settle(velocity) }
+                    onDragStopped = { velocity -> if (!disableOverlayGestures) settle(velocity) }
                 )
         ) {
             val stackOffset = offset.value
@@ -645,7 +662,11 @@ private fun VerticalOverlayLayout(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(Color.Black.copy(alpha = 0.35f))
-                        .clickable { onOverlayChange(HomeOverlay.Home) }
+                        .clickable(enabled = !disableOverlayGestures) {
+                            if (!disableOverlayGestures) {
+                                onOverlayChange(HomeOverlay.Home)
+                            }
+                        }
                         .testTag(AiFeatureTestTags.OVERLAY_BACKDROP)
                 )
             }
@@ -673,6 +694,7 @@ private fun OverlayCard(
     overlay: HomeOverlay,
     currentOffset: Float,
     onClick: () -> Unit,
+    enabled: Boolean,
     tag: String?
 ) {
     val designTokens = AppDesignTokens.current()
@@ -701,6 +723,7 @@ private fun OverlayCard(
         ),
         shape = MaterialTheme.shapes.medium,
         elevation = CardDefaults.cardElevation(elevation.coerceAtMost(4.dp)),
+        enabled = enabled,
         onClick = onClick,
         interactionSource = interactionSource
     ) {

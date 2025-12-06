@@ -11,6 +11,8 @@ import com.smartsales.data.aicore.tingwu.TingwuResultResponse
 import com.smartsales.data.aicore.tingwu.TingwuStatusData
 import com.smartsales.data.aicore.tingwu.TingwuStatusResponse
 import com.smartsales.data.aicore.tingwu.TingwuTranscription
+import com.smartsales.core.metahub.SpeakerMeta
+import com.smartsales.core.metahub.TranscriptMetadata
 import com.smartsales.data.aicore.tingwu.TingwuTaskParameters
 import com.smartsales.data.aicore.tingwu.TingwuSummarizationParameters
 import com.smartsales.data.aicore.tingwu.TingwuTranscriptSegment
@@ -601,6 +603,157 @@ class RealTingwuCoordinatorTest {
         advanceUntilIdle()
         val completed = coordinator.observeJob("job-1").first { it is TingwuJobState.Completed } as TingwuJobState.Completed
         assertTrue(completed.transcriptMarkdown.contains("Link 模式"))
+    }
+
+    @Test
+    fun refineSpeakerLabels_mergesMetadataAndSetsForce() = runTest(dispatcher) {
+        val api = FakeTingwuApi()
+        api.enqueueStatus(statusResponse(status = "PROCESSING", progress = 30))
+        api.enqueueStatus(statusResponse(status = "SUCCEEDED", progress = 100))
+        api.resultData = TingwuResultResponse(
+            requestId = "req-result",
+            code = "0",
+            message = "Success",
+            data = TingwuResultData(
+                taskId = "job-1",
+                transcription = TingwuTranscription(
+                    text = "",
+                    segments = listOf(
+                        TingwuTranscriptSegment(id = 1, start = 0.0, end = 1.0, text = "你好", speaker = "spk_1"),
+                        TingwuTranscriptSegment(id = 2, start = 1.0, end = 2.0, text = "欢迎", speaker = "spk_2")
+                    ),
+                    speakers = listOf(
+                        TingwuSpeaker(id = "spk_1", name = "客户"),
+                        TingwuSpeaker(id = "spk_2", name = "销售")
+                    ),
+                    language = "zh",
+                    duration = 2.0,
+                    url = "https://example.com/transcription.json"
+                ),
+                resultLinks = emptyMap(),
+                outputMp3Path = null,
+                outputMp4Path = null,
+                outputThumbnailPath = null,
+                outputSpectrumPath = null
+            )
+        )
+        val orchestrator = RecordingTranscriptOrchestrator(
+            result = TranscriptMetadata(
+                transcriptId = "job-1",
+                sessionId = "s-merge",
+                speakerMap = mapOf(
+                    "spk_1" to SpeakerMeta(displayName = "老板", role = null, confidence = 0.9f),
+                    "spk_2" to SpeakerMeta(displayName = "销售主管", role = null, confidence = 0.4f)
+                )
+            )
+        )
+        val coordinator = RealTingwuCoordinator(
+            dispatchers = dispatchers,
+            api = api,
+            credentialsProvider = credentialsProvider,
+            signedUrlProvider = signedUrlProvider,
+            transcriptOrchestrator = orchestrator,
+            optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
+        )
+
+        val submit = coordinator.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav",
+                sessionId = "s-merge"
+            )
+        )
+        assertTrue(submit is Result.Success)
+        val jobId = (submit as Result.Success).data
+        advanceTimeBy(20)
+        advanceUntilIdle()
+
+        val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
+        val request = orchestrator.lastRequest
+        assertEquals("s-merge", request?.sessionId)
+        assertEquals(true, request?.force)
+        assertEquals(2, request?.diarizedSegments?.size)
+        assertEquals(mapOf("spk_1" to "客户", "spk_2" to "销售"), request?.speakerLabels)
+        val labels = completed.artifacts?.speakerLabels
+        assertEquals("老板", labels?.get("spk_1"))
+        assertEquals("销售", labels?.get("spk_2"))
+        assertEquals(1, orchestrator.callCount)
+    }
+
+    @Test
+    fun refineSpeakerLabels_whenInferenceFails_keepsFallbackLabels() = runTest(dispatcher) {
+        val api = FakeTingwuApi()
+        api.enqueueStatus(statusResponse(status = "PROCESSING", progress = 30))
+        api.enqueueStatus(statusResponse(status = "SUCCEEDED", progress = 100))
+        api.resultData = TingwuResultResponse(
+            requestId = "req-result",
+            code = "0",
+            message = "Success",
+            data = TingwuResultData(
+                taskId = "job-1",
+                transcription = TingwuTranscription(
+                    text = "",
+                    segments = listOf(
+                        TingwuTranscriptSegment(id = 1, start = 0.0, end = 1.0, text = "你好", speaker = "spk_1"),
+                        TingwuTranscriptSegment(id = 2, start = 1.0, end = 2.0, text = "欢迎", speaker = "spk_2")
+                    ),
+                    speakers = listOf(
+                        TingwuSpeaker(id = "spk_1", name = "客户"),
+                        TingwuSpeaker(id = "spk_2", name = "销售")
+                    ),
+                    language = "zh",
+                    duration = 2.0,
+                    url = "https://example.com/transcription.json"
+                ),
+                resultLinks = emptyMap(),
+                outputMp3Path = null,
+                outputMp4Path = null,
+                outputThumbnailPath = null,
+                outputSpectrumPath = null
+            )
+        )
+        val orchestrator = RecordingTranscriptOrchestrator(throwable = IllegalStateException("llm fail"))
+        val coordinator = RealTingwuCoordinator(
+            dispatchers = dispatchers,
+            api = api,
+            credentialsProvider = credentialsProvider,
+            signedUrlProvider = signedUrlProvider,
+            transcriptOrchestrator = orchestrator,
+            optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
+        )
+
+        val submit = coordinator.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav",
+                sessionId = "s-fail"
+            )
+        )
+        assertTrue(submit is Result.Success)
+        val jobId = (submit as Result.Success).data
+        advanceTimeBy(20)
+        advanceUntilIdle()
+
+        val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
+        val labels = completed.artifacts?.speakerLabels
+        assertEquals(mapOf("spk_1" to "客户", "spk_2" to "销售"), labels)
+        assertEquals(1, orchestrator.callCount)
+        assertEquals(true, orchestrator.lastRequest?.force)
+    }
+
+    private class RecordingTranscriptOrchestrator(
+        var result: TranscriptMetadata? = null,
+        var throwable: Throwable? = null
+    ) : TranscriptOrchestrator {
+        var lastRequest: TranscriptMetadataRequest? = null
+        var callCount: Int = 0
+
+        override suspend fun inferTranscriptMetadata(request: TranscriptMetadataRequest): TranscriptMetadata? {
+            callCount++
+            lastRequest = request
+            throwable?.let { throw it }
+            return result
+        }
     }
 
     private class FakeTingwuApi : TingwuApi {

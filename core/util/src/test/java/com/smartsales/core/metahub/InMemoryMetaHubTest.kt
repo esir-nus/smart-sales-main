@@ -14,7 +14,7 @@ class InMemoryMetaHubTest {
     private val metaHub = InMemoryMetaHub()
 
     @Test
-    fun upsertSession_overwritesExisting() = runTest {
+    fun upsertSession_mergesWithExistingPreservingNonNullFields() = runTest {
         val first = SessionMetadata(
             sessionId = "session-1",
             mainPerson = "客户A",
@@ -24,14 +24,46 @@ class InMemoryMetaHubTest {
             stage = SessionStage.DISCOVERY,
             riskLevel = RiskLevel.LOW,
             tags = setOf("初访"),
+            crmRows = listOf(CrmRow(client = "A", owner = "张三")),
             lastUpdatedAt = 1L
         )
-        val updated = first.copy(mainPerson = "客户B", tags = setOf("复访"), lastUpdatedAt = 2L)
+        val updated = SessionMetadata(
+            sessionId = "session-1",
+            mainPerson = null, // 应保留旧值
+            shortSummary = "复访摘要",
+            summaryTitle6Chars = null,
+            location = "上海",
+            stage = SessionStage.NEGOTIATION,
+            riskLevel = RiskLevel.MEDIUM,
+            tags = setOf("复访", ""),
+            crmRows = listOf(
+                CrmRow(client = "B", owner = "李四"),
+                CrmRow(client = "A", owner = "张三") // 重复，应被去重
+            ),
+            lastUpdatedAt = 2L
+        )
 
         metaHub.upsertSession(first)
         metaHub.upsertSession(updated)
 
-        assertEquals(updated, metaHub.getSession("session-1"))
+        val merged = metaHub.getSession("session-1")
+        // 非空保留旧值
+        assertEquals("客户A", merged?.mainPerson)
+        // 非空覆盖
+        assertEquals("复访摘要", merged?.shortSummary)
+        assertEquals(SessionStage.NEGOTIATION, merged?.stage)
+        // tags 合并去重
+        assertEquals(setOf("初访", "复访"), merged?.tags)
+        // crmRows 合并去重
+        assertEquals(
+            listOf(
+                CrmRow(client = "A", owner = "张三"),
+                CrmRow(client = "B", owner = "李四")
+            ),
+            merged?.crmRows
+        )
+        // 时间取较大值
+        assertEquals(2L, merged?.lastUpdatedAt)
     }
 
     @Test

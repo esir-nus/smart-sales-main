@@ -216,6 +216,8 @@ class HomeScreenViewModel @Inject constructor(
     private var sessionId: String = DEFAULT_SESSION_ID
     private var latestSessionSummaries: List<AiSessionSummary> = emptyList()
     private var hasShownLowInfoHint: Boolean = false
+    // 低信息智能分析提示是否已经出现过
+    private var hasShownLowInfoSmartAnalysisHint: Boolean = false
     private var hasShownAnalysisExportHint: Boolean = false
     private var transcriptionJob: Job? = null
     private var latestAnalysisMarkdown: String? = null
@@ -257,9 +259,13 @@ class HomeScreenViewModel @Inject constructor(
         val bucket = classifyUserInput(goal.ifBlank { _uiState.value.inputText }, _uiState.value.chatMessages)
         val target = findSmartAnalysisPrimaryContent(goal)
         if (target == null) {
-            appendAssistantMessage(
-                content = "当前对话内容太少，我没法做有价值的智能分析。\n建议先粘贴一段对话、邮件或会议记录，然后再点击「智能分析」。"
-            )
+            // 仅第一次给出提示，之后静默失败（不再刷屏）
+            if (!hasShownLowInfoSmartAnalysisHint) {
+                hasShownLowInfoSmartAnalysisHint = true
+                appendAssistantMessage(
+                    content = "当前对话内容太少，我没法做有价值的智能分析。\n建议先粘贴一段对话、邮件或会议记录，然后再点击「智能分析」。"
+                )
+            }
             _uiState.update { it.copy(isSmartAnalysisMode = false, selectedSkill = null, inputText = "") }
             return
         }
@@ -2195,7 +2201,9 @@ class HomeScreenViewModel @Inject constructor(
                         "title6" to merged.summaryTitle6Chars
                     )
                 )
-                updateTitleFromMetadata(merged)
+                viewModelScope.launch {
+                    updateTitleFromMetadata(merged)
+                }
             }
             .onFailure {
                 warnLog(
@@ -2262,7 +2270,9 @@ class HomeScreenViewModel @Inject constructor(
                         "shortSummary" to merged.shortSummary
                     )
                 )
-                updateTitleFromMetadata(merged)
+                viewModelScope.launch {
+                    updateTitleFromMetadata(merged)
+                }
             }
             .onFailure {
                 warnLog(
@@ -2461,64 +2471,19 @@ class HomeScreenViewModel @Inject constructor(
         return "${date}_${person}_${title}"
     }
 
-    private fun isPlaceholderTitle(title: String): Boolean {
-        if (title.isBlank()) return true
-        if (title == DEFAULT_SESSION_TITLE) return true
-        if (title == "通话分析") return true
-        if (title.startsWith("通话分析 –")) return true
-        return false
-    }
-
-    private suspend fun maybeApplySuggestedTitle(
-        meta: SessionMetadata?,
-        existingSummary: AiSessionSummary? = null,
-        fallbackTitleProvider: ((createdAt: Long, summary: AiSessionSummary) -> String?)? = null
-    ) {
-        val summary = existingSummary ?: sessionRepository.findById(sessionId) ?: return
-        if (!isPlaceholderTitle(summary.title)) return
-        val createdAt = (summary.updatedAtMillis.takeIf { it > 0 } ?: meta?.lastUpdatedAt)
-            ?: System.currentTimeMillis()
-        val candidate = meta?.let { buildTitleFromMetadata(it, createdAt) }?.takeIf { it.isNotBlank() }
-            ?: fallbackTitleProvider?.invoke(createdAt, summary)?.takeIf { !it.isNullOrBlank() }
-        if (candidate.isNullOrBlank() || candidate == summary.title) return
-
-        runCatching {
-            sessionRepository.updateTitle(sessionId, candidate)
-            applySessionList()
-            _uiState.update { state ->
-                val updatedCurrent = if (state.currentSession.id == sessionId) {
-                    state.currentSession.copy(title = candidate)
-                } else {
-                    state.currentSession
-                }
-                state.copy(currentSession = updatedCurrent)
-            }
-            debugLog(
-                event = "session_title_updated",
-                data = mapOf("sessionId" to sessionId, "title" to candidate)
-            )
-        }.onFailure {
-            warnLog(
-                event = "session_title_update_failed",
-                data = mapOf("sessionId" to sessionId, "title" to candidate),
-                throwable = it
-            )
-            appendDebugNote("sessionTitleUpdateFailed")
-        }
-    }
-
     private suspend fun maybeGenerateSessionTitle(request: ChatRequest, assistantText: String) {
         if (!request.isFirstAssistantReply) return
         if (request.quickSkillId != null) return
         val existingSummary = sessionRepository.findById(sessionId)
+        if (existingSummary != null && existingSummary.title != DEFAULT_SESSION_TITLE) return
         val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-        val fallbackTitleProvider: (Long, AiSessionSummary) -> String? = { createdAt, _ ->
-            val firstUserMessage = _uiState.value.chatMessages
-                .firstOrNull { it.role == ChatMessageRole.USER }
-                ?.content
-            if (firstUserMessage.isNullOrBlank()) {
-                null
-            } else {
+        val createdAt = existingSummary?.updatedAtMillis ?: System.currentTimeMillis()
+        val title = meta?.let { buildTitleFromMetadata(it, createdAt) }
+            ?: run {
+                val firstUserMessage = _uiState.value.chatMessages
+                    .firstOrNull { it.role == ChatMessageRole.USER }
+                    ?.content
+                    ?: return
                 sessionTitleResolver.resolveTitle(
                     sessionId = sessionId,
                     updatedAtMillis = createdAt,
@@ -2526,17 +2491,47 @@ class HomeScreenViewModel @Inject constructor(
                     firstAssistantMessage = assistantText
                 )
             }
+        sessionRepository.updateTitle(sessionId, title)
+        applySessionList()
+        _uiState.update { state ->
+            val updatedCurrent = if (state.currentSession.id == sessionId) {
+                state.currentSession.copy(title = title)
+            } else {
+                state.currentSession
+            }
+            state.copy(currentSession = updatedCurrent)
         }
-        maybeApplySuggestedTitle(
-            meta = meta,
-            existingSummary = existingSummary,
-            fallbackTitleProvider = fallbackTitleProvider
-        )
         updateDebugSessionMetadata(meta)
     }
 
     private suspend fun updateTitleFromMetadata(meta: SessionMetadata) {
-        maybeApplySuggestedTitle(meta = meta)
+        val existingSummary = sessionRepository.findById(sessionId)
+        if (existingSummary != null && existingSummary.title != DEFAULT_SESSION_TITLE) return
+        val createdAt = existingSummary?.updatedAtMillis ?: meta.lastUpdatedAt
+        val title = buildTitleFromMetadata(meta, createdAt)
+        try {
+            sessionRepository.updateTitle(sessionId, title)
+            applySessionList()
+            _uiState.update { state ->
+                val updatedCurrent = if (state.currentSession.id == sessionId) {
+                    state.currentSession.copy(title = title)
+                } else {
+                    state.currentSession
+                }
+                state.copy(currentSession = updatedCurrent)
+            }
+            debugLog(
+                event = "session_title_updated_from_metadata",
+                data = mapOf("sessionId" to sessionId, "title" to title)
+            )
+        } catch (it: Throwable) {
+            warnLog(
+                event = "session_title_update_failed",
+                data = mapOf("sessionId" to sessionId, "title" to title),
+                throwable = it
+            )
+            appendDebugNote("sessionTitleUpdateFailed")
+        }
     }
 
     private fun saveImageToCache(uri: Uri): File {

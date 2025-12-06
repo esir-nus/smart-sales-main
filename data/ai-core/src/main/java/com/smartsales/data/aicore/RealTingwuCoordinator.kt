@@ -7,6 +7,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.annotations.SerializedName
 import com.smartsales.core.metahub.SpeakerMeta
+import com.smartsales.core.metahub.TranscriptMetadata
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.LogTags
 import com.smartsales.core.util.Result
@@ -281,19 +282,11 @@ class RealTingwuCoordinator @Inject constructor(
                                     chapters = it
                                 )
                             }
-                            val transcriptMeta = runCatching {
-                                transcriptOrchestrator.inferTranscriptMetadata(
-                                    TranscriptMetadataRequest(
-                                        transcriptId = jobId,
-                                        sessionId = jobContext[jobId]?.sessionId,
-                                        diarizedSegments = transcriptResult.diarizedSegments.orEmpty(),
-                                        speakerLabels = mergedArtifacts?.speakerLabels ?: emptyMap()
-                                    )
-                                )
-                            }.getOrElse { error ->
-                                AiCoreLogger.w(TAG, "写入转写元数据失败：${error.message}")
-                                null
-                            }
+                            val transcriptMeta = refineSpeakerLabels(
+                                transcriptId = jobId,
+                                diarizedSegments = transcriptResult.diarizedSegments.orEmpty(),
+                                speakerLabels = mergedArtifacts?.speakerLabels.orEmpty()
+                            )
                             val mergedSpeakerLabels = mergeSpeakerLabels(
                                 base = mergedArtifacts?.speakerLabels.orEmpty(),
                                 incoming = transcriptMeta?.speakerMap.orEmpty()
@@ -951,6 +944,23 @@ class RealTingwuCoordinator @Inject constructor(
             labels[id] = fromName ?: fromConfig ?: fallback
         }
         return labels
+    }
+
+    private suspend fun refineSpeakerLabels(
+        transcriptId: String,
+        diarizedSegments: List<DiarizedSegment>,
+        speakerLabels: Map<String, String>,
+    ): TranscriptMetadata? {
+        val request = TranscriptMetadataRequest(
+            transcriptId = transcriptId,
+            sessionId = jobContext[transcriptId]?.sessionId,
+            diarizedSegments = diarizedSegments,
+            speakerLabels = speakerLabels,
+            force = true
+        )
+        return runCatching { transcriptOrchestrator.inferTranscriptMetadata(request) }
+            .onFailure { AiCoreLogger.w(TAG, "写入转写元数据失败：${it.message}") }
+            .getOrNull()
     }
 
     private fun mergeSpeakerLabels(

@@ -388,6 +388,14 @@ fun HomeScreen(
                                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
                                     userScrollEnabled = true
                                 ) {
+                                    if (state.currentSession.isTranscription) {
+                                        item("transcription-header") {
+                                            SessionHeader(
+                                                session = state.currentSession
+                                            )
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                        }
+                                    }
                                     if (state.isLoadingHistory) {
                                         item("history-loading") {
                                             Text(
@@ -1285,8 +1293,7 @@ private fun AttachmentRow(
 
 @Composable
 private fun SessionHeader(
-    session: CurrentSessionUi,
-    onNewChatClicked: () -> Unit
+    session: CurrentSessionUi
 ) {
     Row(
         modifier = Modifier
@@ -1301,13 +1308,6 @@ private fun SessionHeader(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.weight(1f)
         ) {
-                Text(
-                    text = session.title,
-                    modifier = Modifier.testTag(HomeScreenTestTags.SESSION_TITLE),
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
             if (session.isTranscription) {
                 AssistChip(
                     onClick = {},
@@ -1317,13 +1317,20 @@ private fun SessionHeader(
                         labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 )
+                Text(
+                    text = "AI 已为你加载录音并生成通话分析结果。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Text(
+                    text = session.title,
+                    modifier = Modifier.testTag(HomeScreenTestTags.SESSION_TITLE),
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
-        }
-        TextButton(
-            onClick = onNewChatClicked,
-            modifier = Modifier.testTag(HomeScreenTestTags.NEW_CHAT_BUTTON)
-        ) {
-            Text(text = "新建对话")
         }
     }
 }

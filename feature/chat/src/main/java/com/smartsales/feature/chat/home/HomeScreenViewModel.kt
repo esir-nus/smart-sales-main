@@ -55,6 +55,7 @@ import kotlinx.coroutines.withContext
 
 private const val DEFAULT_SESSION_ID = "home-session"
 private const val DEFAULT_SESSION_TITLE = "新的聊天"
+private const val TRANSCRIPTION_TITLE_PREFIX = "通话分析"
 private const val LONG_CONTENT_THRESHOLD = 240
 private const val CONTEXT_LENGTH_LIMIT = 800
 private const val CONTEXT_MESSAGE_LIMIT = 5
@@ -208,6 +209,7 @@ class HomeScreenViewModel @Inject constructor(
     private var hasShownAnalysisExportHint: Boolean = false
     private var transcriptionJob: Job? = null
     private var latestAnalysisMarkdown: String? = null
+    private val transcriptionSessionIds = mutableSetOf<String>()
 
     init {
         // 从 catalog 加载快捷技能到状态
@@ -339,6 +341,71 @@ class HomeScreenViewModel @Inject constructor(
                 inputText = state.inputText
             )
         }
+    }
+
+    private fun formatSmartAnalysisForTranscription(raw: String): String {
+        val lines = raw.lines()
+        val highlights = mutableListOf<String>()
+        val actions = mutableListOf<String>()
+        val others = mutableListOf<String>()
+        var current: MutableList<String>? = null
+
+        fun addLine(target: MutableList<String>, text: String) {
+            val trimmed = text.removePrefix("- ").removePrefix("• ").removePrefix("· ").trim()
+            if (trimmed.isNotEmpty() && trimmed !in target) {
+                target += trimmed
+            }
+        }
+
+        lines.forEach { line ->
+            val trimmed = line.trim()
+            if (trimmed.isEmpty()) return@forEach
+            val lower = trimmed.lowercase(Locale.getDefault())
+            when {
+                lower.contains("highlight") || trimmed.contains("亮点") -> {
+                    current = highlights
+                    return@forEach
+                }
+                lower.contains("actionable") || trimmed.contains("建议") || trimmed.contains("行动") -> {
+                    current = actions
+                    return@forEach
+                }
+                trimmed.startsWith("- ") || trimmed.startsWith("• ") || trimmed.startsWith("· ") -> {
+                    when (current) {
+                        highlights -> addLine(highlights, trimmed)
+                        actions -> addLine(actions, trimmed)
+                        else -> addLine(others, trimmed)
+                    }
+                }
+                else -> {
+                    if (current != null) {
+                        addLine(current!!, trimmed)
+                    } else {
+                        others += trimmed
+                    }
+                }
+            }
+        }
+
+        val hasSections = highlights.isNotEmpty() || actions.isNotEmpty()
+        if (!hasSections) return raw
+
+        val builder = StringBuilder()
+        builder.appendLine("智能分析结果概要：").appendLine()
+        if (highlights.isNotEmpty()) {
+            highlights.forEach { item -> builder.appendLine("· $item") }
+            builder.appendLine()
+        }
+        if (actions.isNotEmpty()) {
+            builder.appendLine("建议行动：")
+            actions.forEach { item -> builder.appendLine("· $item") }
+            builder.appendLine()
+        }
+        if (others.isNotEmpty()) {
+            others.forEach { item -> builder.appendLine(item) }
+            builder.appendLine()
+        }
+        return builder.toString().trimEnd()
     }
             QuickSkillId.EXPORT_PDF -> {
                 onExportPdfClicked()
@@ -656,9 +723,10 @@ class HomeScreenViewModel @Inject constructor(
         viewModelScope.launch {
             val transcript = request.transcriptMarkdown ?: request.transcriptPreview
             val targetSessionId = request.sessionId ?: "session-${UUID.randomUUID()}"
-            val title = "通话分析 – ${request.fileName}".take(40)
+            val title = deriveTranscriptionTitle(request.fileName)
             val existing = chatHistoryRepository.loadLatestSession(targetSessionId)
             this@HomeScreenViewModel.sessionId = targetSessionId
+            transcriptionSessionIds += targetSessionId
             hasShownLowInfoHint = false
             hasShownAnalysisExportHint = false
             ensureSessionSummary(targetSessionId, title)
@@ -795,12 +863,18 @@ class HomeScreenViewModel @Inject constructor(
                 _uiState.update { it.copy(showWelcomeHero = false) }
             }
             val summary = ensureSessionSummary(sessionId, titleOverride)
+            val shouldMarkTranscription = isTranscription ||
+                transcriptionSessionIds.contains(sessionId) ||
+                summary.title.startsWith(TRANSCRIPTION_TITLE_PREFIX)
+            if (shouldMarkTranscription) {
+                transcriptionSessionIds += sessionId
+            }
             _uiState.update {
                 it.copy(
                     currentSession = CurrentSessionUi(
                         id = sessionId,
                         title = summary.title,
-                        isTranscription = isTranscription
+                        isTranscription = shouldMarkTranscription
                     ),
                     showWelcomeHero = if (allowHero) it.showWelcomeHero else false
                 )
@@ -883,13 +957,15 @@ class HomeScreenViewModel @Inject constructor(
 
     private fun applySessionList() {
         val mapped = latestSessionSummaries.map { summary ->
+            val isTranscriptionSession = transcriptionSessionIds.contains(summary.id) ||
+                summary.title.startsWith(TRANSCRIPTION_TITLE_PREFIX)
             SessionListItemUi(
                 id = summary.id,
                 title = summary.title,
                 lastMessagePreview = summary.lastMessagePreview,
                 updatedAtMillis = summary.updatedAtMillis,
                 isCurrent = summary.id == sessionId,
-                isTranscription = summary.title.startsWith("通话分析 –")
+                isTranscription = isTranscriptionSession
             )
         }
         _uiState.update { it.copy(sessionList = mapped) }
@@ -1003,6 +1079,8 @@ class HomeScreenViewModel @Inject constructor(
     ) {
         val isSmartAnalysis = request.quickSkillId == "SMART_ANALYSIS"
         val streamingDeduplicator = StreamingDeduplicator(isSmartAnalysis)
+        val isCurrentTranscription = _uiState.value.currentSession.isTranscription ||
+            transcriptionSessionIds.contains(sessionId)
 
         viewModelScope.launch {
             homeOrchestrator.streamChat(request).collect { event ->
@@ -1020,7 +1098,12 @@ class HomeScreenViewModel @Inject constructor(
                     is ChatStreamEvent.Completed -> {
                         // 完成：关闭 streaming，最终清理和去重
                         val sanitized = sanitizeAssistantOutput(event.fullText, isSmartAnalysis)
-                        val cleaned = onCompletedTransform?.invoke(sanitized) ?: sanitized
+                        val formatted = if (isSmartAnalysis && isCurrentTranscription) {
+                            formatSmartAnalysisForTranscription(sanitized)
+                        } else {
+                            sanitized
+                        }
+                        val cleaned = onCompletedTransform?.invoke(formatted) ?: formatted
                         updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
                             msg.copy(content = cleaned, isStreaming = false)
                         }
@@ -2237,6 +2320,18 @@ class HomeScreenViewModel @Inject constructor(
                 append("已加载录音 ").append(fileName).append(" 的转写内容。以下为通话文本，结合上下文回答用户问题：\n")
                 append(transcript)
             }
+        }
+
+        internal fun deriveTranscriptionTitle(fileName: String): String {
+            val base = TRANSCRIPTION_TITLE_PREFIX
+            val noExt = fileName.substringBeforeLast('.', fileName)
+            val cleaned = noExt
+                .replace(Regex("(?i)-?local-audio-?"), "")
+                .replace(Regex("\\d{6,}"), "")
+                .replace(Regex("[-_]{2,}"), "-")
+                .trim('-', '_', ' ')
+            val suffix = cleaned.take(24).trim()
+            return if (suffix.isNotBlank()) "$base – $suffix" else base
         }
 
         internal fun deriveUserName(profile: UserProfile): String {

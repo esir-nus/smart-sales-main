@@ -69,6 +69,7 @@ class HomeExportActionsTest {
     private lateinit var viewModel: HomeScreenViewModel
     private lateinit var homeOrchestrator: HomeOrchestrator
     private val appContext = TestContext()
+    private lateinit var metaHub: FakeMetaHub
 
     @Before
     fun setup() {
@@ -77,6 +78,7 @@ class HomeExportActionsTest {
         homeOrchestrator = RecordingHomeOrchestrator(aiChatService)
         exportOrchestrator = RecordingExportOrchestrator()
         shareHandler = RecordingShareHandler()
+        metaHub = FakeMetaHub()
         viewModel = HomeScreenViewModel(
             appContext = appContext,
             homeOrchestrator = homeOrchestrator,
@@ -137,12 +139,13 @@ class HomeExportActionsTest {
                 override suspend fun findById(id: String): AiSessionSummary? = null
                 override suspend fun updateTitle(id: String, newTitle: String) {}
             },
-            sessionTitleResolver = SessionTitleResolver(FakeMetaHub()),
+            sessionTitleResolver = SessionTitleResolver(metaHub),
             userProfileRepository = object : UserProfileRepository {
                 override suspend fun load(): UserProfile = UserProfile("测试", "test@example.com", false)
                 override suspend fun save(profile: UserProfile) {}
                 override suspend fun clear() {}
             },
+            metaHub = metaHub,
             exportOrchestrator = exportOrchestrator,
             shareHandler = shareHandler
         )
@@ -204,6 +207,22 @@ class HomeExportActionsTest {
     }
 
     @Test
+    fun `second export reuses cached analysis without rerun`() = runTest(dispatcher) {
+        viewModel.onInputChanged("请帮我总结汽车行业的市场趋势和风险要点")
+        viewModel.onSmartAnalysisClicked()
+        advanceUntilIdle()
+
+        val callsAfterAnalysis = aiChatService.callCount
+
+        viewModel.onExportPdfClicked()
+        advanceUntilIdle()
+        viewModel.onExportPdfClicked()
+        advanceUntilIdle()
+
+        assertEquals(callsAfterAnalysis, aiChatService.callCount)
+    }
+
+    @Test
     fun `low information input skips ai call and hints only once`() = runTest(dispatcher) {
         viewModel.onInputChanged("是")
         viewModel.onSendMessage()
@@ -238,7 +257,9 @@ class HomeExportActionsTest {
 
     private class RecordingAiChatService : AiChatService {
         var lastRequest: ChatRequest? = null
+        var callCount: Int = 0
         override fun streamChat(request: ChatRequest): Flow<ChatStreamEvent> {
+            callCount += 1
             lastRequest = request
             return flow {
                 emit(ChatStreamEvent.Completed("分析结果"))

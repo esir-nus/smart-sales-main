@@ -69,6 +69,7 @@ class HomeSessionListViewModelTest {
     private lateinit var fakeHistoryRepository: FakeChatHistoryRepository
     private lateinit var aiChatService: FakeAiChatService
     private val appContext = TestContext()
+    private lateinit var metaHub: FakeMetaHub
 
     @Before
     fun setup() {
@@ -76,6 +77,7 @@ class HomeSessionListViewModelTest {
         sessionRepository = FakeSessionRepository()
         fakeHistoryRepository = FakeChatHistoryRepository()
         aiChatService = FakeAiChatService()
+        metaHub = FakeMetaHub()
         viewModel = HomeScreenViewModel(
             appContext = appContext,
             homeOrchestrator = FakeHomeOrchestrator(aiChatService),
@@ -98,8 +100,9 @@ class HomeSessionListViewModelTest {
             quickSkillCatalog = FakeQuickSkillCatalog(),
             chatHistoryRepository = fakeHistoryRepository,
             sessionRepository = sessionRepository,
-            sessionTitleResolver = SessionTitleResolver(FakeMetaHub()),
+            sessionTitleResolver = SessionTitleResolver(metaHub),
             userProfileRepository = FakeUserProfileRepository(),
+            metaHub = metaHub,
             exportOrchestrator = FakeExportOrchestrator(),
             shareHandler = FakeShareHandler()
         )

@@ -66,12 +66,14 @@ class HomeTranscriptionTest {
     private lateinit var viewModel: HomeScreenViewModel
     private lateinit var aiChatService: FakeAiChatService
     private val appContext = TestContext()
+    private lateinit var metaHub: FakeMetaHub
 
     @Before
     fun setup() {
         Dispatchers.setMain(dispatcher)
         transcriptionCoordinator = FakeTranscriptionCoordinator()
         aiChatService = FakeAiChatService()
+        metaHub = FakeMetaHub()
         viewModel = HomeScreenViewModel(
             appContext = appContext,
             homeOrchestrator = FakeHomeOrchestrator(aiChatService),
@@ -93,8 +95,9 @@ class HomeTranscriptionTest {
             quickSkillCatalog = FakeQuickSkillCatalog(),
             chatHistoryRepository = FakeChatHistoryRepository(),
             sessionRepository = FakeSessionRepository(),
-            sessionTitleResolver = SessionTitleResolver(FakeMetaHub()),
+            sessionTitleResolver = SessionTitleResolver(metaHub),
             userProfileRepository = FakeUserProfileRepository(),
+            metaHub = metaHub,
             exportOrchestrator = FakeExportOrchestrator(),
             shareHandler = FakeShareHandler()
         )

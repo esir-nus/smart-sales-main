@@ -1,7 +1,8 @@
 package com.smartsales.feature.chat.home
 
-import android.content.Context
 import android.net.Uri
+import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.core.util.Result
@@ -34,6 +35,9 @@ import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.feature.usercenter.UserProfile
 import com.smartsales.data.aicore.ExportFormat
 import com.smartsales.data.aicore.ExportOrchestrator
+import com.smartsales.core.metahub.MetaHub
+import com.smartsales.core.metahub.SessionMetadata
+import com.smartsales.feature.chat.home.CHAT_DEBUG_HUD_ENABLED
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -55,10 +59,14 @@ import kotlinx.coroutines.withContext
 
 private const val DEFAULT_SESSION_ID = "home-session"
 private const val DEFAULT_SESSION_TITLE = "新的聊天"
-private const val TRANSCRIPTION_TITLE_PREFIX = "通话分析"
 private const val LONG_CONTENT_THRESHOLD = 240
 private const val CONTEXT_LENGTH_LIMIT = 800
 private const val CONTEXT_MESSAGE_LIMIT = 5
+private const val ANALYSIS_CONTENT_LIMIT = 2400
+private const val TAG = "HomeScreenVM"
+
+private enum class InputBucket { NOISE, SHORT_RELEVANT, RICH }
+private data class AnalysisTarget(val content: String, val source: String)
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreenViewModel.kt
 // 模块：:feature:chat
@@ -84,16 +92,6 @@ data class QuickSkillUi(
     val label: String,
     val description: String? = null,
     val isRecommended: Boolean = false
-)
-
-/** 调试 HUD 展示的会话元信息快照。 */
-data class DebugSessionMetadata(
-    val sessionId: String,
-    val title: String,
-    val mainPerson: String? = null,
-    val shortSummary: String? = null,
-    val summaryTitle6Chars: String? = null,
-    val notes: List<String> = emptyList()
 )
 
 /** UI 模型：设备横幅的轻量快照。 */
@@ -142,6 +140,15 @@ data class SessionListItemUi(
     val updatedAtMillis: Long,
     val isCurrent: Boolean,
     val isTranscription: Boolean
+)
+
+data class DebugSessionMetadata(
+    val sessionId: String,
+    val title: String,
+    val mainPerson: String? = null,
+    val shortSummary: String? = null,
+    val summaryTitle6Chars: String? = null,
+    val notes: List<String> = emptyList()
 )
 
 /** Home 页的不可变 UI 状态。 */
@@ -195,7 +202,8 @@ class HomeScreenViewModel @Inject constructor(
     private val sessionTitleResolver: SessionTitleResolver,
     private val userProfileRepository: UserProfileRepository,
     private val exportOrchestrator: ExportOrchestrator,
-    private val shareHandler: ChatShareHandler
+    private val shareHandler: ChatShareHandler,
+    private val metaHub: MetaHub
 ) : ViewModel() {
 
     private val quickSkillDefinitions = quickSkillCatalog.homeQuickSkills()
@@ -209,8 +217,8 @@ class HomeScreenViewModel @Inject constructor(
     private var hasShownAnalysisExportHint: Boolean = false
     private var transcriptionJob: Job? = null
     private var latestAnalysisMarkdown: String? = null
-    private var pendingExportFormat: ExportFormat? = null
-    private val transcriptionSessionIds = mutableSetOf<String>()
+    private var latestAnalysisMessageId: String? = null
+    private var pendingExportAfterAnalysis: ExportFormat? = null
 
     init {
         // 从 catalog 加载快捷技能到状态
@@ -233,59 +241,43 @@ class HomeScreenViewModel @Inject constructor(
         if (_uiState.value.isBusy) return
         if (_uiState.value.isSmartAnalysisMode) {
             handleSmartAnalysisSend(content)
-            refreshDebugMetadataIfNeeded()
             return
         }
         if (content.isEmpty()) return
-        if (isLowInformationReply(content)) {
-            val userMessage = createUserMessage(content)
-            _uiState.update { state ->
-                state.copy(
-                    chatMessages = state.chatMessages + userMessage,
-                    inputText = "",
-                    chatErrorMessage = null,
-                    showWelcomeHero = false,
-                    snackbarMessage = null
-                )
-            }
-            persistMessagesAsync()
-            viewModelScope.launch {
-                updateSessionSummary(userMessage.content)
-            }
-            if (!hasShownLowInfoHint) {
-                hasShownLowInfoHint = true
-                val response = getGreetingResponse(content)
-                appendAssistantMessage(content = response)
-            }
-            refreshDebugMetadataIfNeeded()
-            return
-        }
         sendMessageInternal(
             messageText = content
         )
-        refreshDebugMetadataIfNeeded()
     }
 
     private fun handleSmartAnalysisSend(rawInput: String) {
         if (_uiState.value.isSending) return
         val goal = rawInput.trim()
-        val isEmptyGoal = goal.isEmpty()
-        val isLowInfo = if (isEmptyGoal) false else isLowInfoAnalysisInput(goal)
-        val (mainContent, contextContent) = findLatestLongContent()
-        if (mainContent == null) {
+        val bucket = classifyUserInput(goal.ifBlank { _uiState.value.inputText }, _uiState.value.chatMessages)
+        val target = findSmartAnalysisPrimaryContent(goal)
+        if (target == null) {
             appendAssistantMessage(
                 content = "当前对话内容太少，我没法做有价值的智能分析。\n建议先粘贴一段对话、邮件或会议记录，然后再点击「智能分析」。"
             )
             _uiState.update { it.copy(isSmartAnalysisMode = false, selectedSkill = null, inputText = "") }
-            refreshDebugMetadataIfNeeded()
             return
         }
-        val analysisGoal = if (!isEmptyGoal && !isLowInfo) goal else "通用分析"
-        val preface = if (isEmptyGoal || isLowInfo) {
-            "（提示）你没有额外说明分析目标，我将基于最近的一段对话内容做通用智能分析。"
+        val isLowInfoGoal = goal.isNotBlank() && isLowInfoAnalysisInput(goal)
+        val analysisGoal = if (goal.isNotBlank() && !isLowInfoGoal) goal else "通用分析"
+        val hasCustomGoal = goal.isNotBlank() && !isLowInfoGoal
+        val preface = if (goal.isBlank() || isLowInfoGoal || bucket == InputBucket.NOISE) {
+            "提示：你没有额外说明分析目标，我会基于最近的一段对话或内容做通用智能分析。"
         } else null
+        debugLog(
+            event = "smart_analysis_request_start",
+            data = mapOf(
+                "sessionId" to sessionId,
+                "bucket" to bucket.name,
+                "primarySource" to target.source
+            )
+        )
+        val contextContent = findContextForAnalysis(target.content)
         val userMessage = buildSmartAnalysisUserMessage(
-            mainContent = mainContent,
+            mainContent = target.content,
             context = contextContent,
             goal = analysisGoal
         )
@@ -293,12 +285,11 @@ class HomeScreenViewModel @Inject constructor(
         sendMessageInternal(
             messageText = userMessage,
             skillOverride = QuickSkillId.SMART_ANALYSIS,
-            userDisplayText = if (!isEmptyGoal && !isLowInfo) {
+            userDisplayText = if (hasCustomGoal) {
                 "智能分析：${goal.take(60)}"
             } else {
                 "智能分析（通用）"
             },
-            onCompleted = { summary -> handleSmartAnalysisCompleted(summary) },
             onCompletedTransform = { body ->
                 buildString {
                     append("智能分析结果\n\n")
@@ -309,7 +300,6 @@ class HomeScreenViewModel @Inject constructor(
                 }.trim()
             }
         )
-        refreshDebugMetadataIfNeeded()
     }
 
     fun onSmartAnalysisClicked() {
@@ -334,15 +324,15 @@ class HomeScreenViewModel @Inject constructor(
         when (skillId) {
             QuickSkillId.SMART_ANALYSIS -> {
                 if (_uiState.value.isBusy) return
-                _uiState.update { state ->
-                    val toggled = !state.isSmartAnalysisMode
-                    state.copy(
-                        isSmartAnalysisMode = toggled,
-                        selectedSkill = if (toggled) definition.toUiModel() else null,
-                        inputText = state.inputText
-                    )
-                }
-            }
+        _uiState.update { state ->
+            val toggled = !state.isSmartAnalysisMode
+            state.copy(
+                isSmartAnalysisMode = toggled,
+                selectedSkill = if (toggled) definition.toUiModel() else null,
+                inputText = state.inputText
+            )
+        }
+    }
             QuickSkillId.EXPORT_PDF -> {
                 onExportPdfClicked()
             }
@@ -361,197 +351,68 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
-    private fun formatSmartAnalysisForTranscription(raw: String): String {
-        val lines = raw.lines()
-        val highlights = mutableListOf<String>()
-        val actions = mutableListOf<String>()
-        val others = mutableListOf<String>()
-        var current: MutableList<String>? = null
-
-        fun addLine(target: MutableList<String>, text: String) {
-            val trimmed = text.removePrefix("- ").removePrefix("• ").removePrefix("· ").trim()
-            if (trimmed.isNotEmpty() && trimmed !in target) {
-                target += trimmed
-            }
-        }
-
-        lines.forEach { line ->
-            val trimmed = line.trim()
-            if (trimmed.isEmpty()) return@forEach
-            val lower = trimmed.lowercase(Locale.getDefault())
-            when {
-                lower.contains("highlight") || trimmed.contains("亮点") -> {
-                    current = highlights
-                    return@forEach
-                }
-                lower.contains("actionable") || trimmed.contains("建议") || trimmed.contains("行动") -> {
-                    current = actions
-                    return@forEach
-                }
-                trimmed.startsWith("- ") || trimmed.startsWith("• ") || trimmed.startsWith("· ") -> {
-                    when (current) {
-                        highlights -> addLine(highlights, trimmed)
-                        actions -> addLine(actions, trimmed)
-                        else -> addLine(others, trimmed)
-                    }
-                }
-                else -> {
-                    if (current != null) {
-                        addLine(current!!, trimmed)
-                    } else {
-                        others += trimmed
-                    }
-                }
-            }
-        }
-
-        val hasSections = highlights.isNotEmpty() || actions.isNotEmpty()
-        if (!hasSections) return raw
-
-        val builder = StringBuilder()
-        builder.appendLine("智能分析结果概要：").appendLine()
-        if (highlights.isNotEmpty()) {
-            highlights.forEach { item -> builder.appendLine("· $item") }
-            builder.appendLine()
-        }
-        if (actions.isNotEmpty()) {
-            builder.appendLine("建议行动：")
-            actions.forEach { item -> builder.appendLine("· $item") }
-            builder.appendLine()
-        }
-        if (others.isNotEmpty()) {
-            others.forEach { item -> builder.appendLine(item) }
-            builder.appendLine()
-        }
-        return builder.toString().trimEnd()
-    }
-
-    fun onToggleDebugMetadata() {
-        _uiState.update { state ->
-            val toggled = !state.showDebugMetadata
-            val snapshot = if (toggled) buildDebugSessionMetadataSnapshot(state) else null
-            state.copy(
-                showDebugMetadata = toggled,
-                debugSessionMetadata = snapshot
-            )
-        }
-    }
-
-    private fun buildDebugSessionMetadataSnapshot(state: HomeUiState = _uiState.value): DebugSessionMetadata {
-        val notes = buildList {
-            add("messages=${state.chatMessages.size}")
-            add("isStreaming=${state.isStreaming}")
-            add("isSmartAnalysisMode=${state.isSmartAnalysisMode}")
-            add("exportInProgress=${state.exportInProgress}")
-            add("selectedSkill=${state.selectedSkill?.id ?: "none"}")
-        }
-        return DebugSessionMetadata(
-            sessionId = sessionId,
-            title = state.currentSession.title,
-            mainPerson = null,
-            shortSummary = latestAnalysisMarkdown?.lineSequence()?.firstOrNull()?.take(80),
-            summaryTitle6Chars = state.currentSession.title.take(6),
-            notes = notes
-        )
-    }
-
-    private fun refreshDebugMetadataIfNeeded() {
-        if (!_uiState.value.showDebugMetadata) return
-        _uiState.update { state ->
-            state.copy(debugSessionMetadata = buildDebugSessionMetadataSnapshot(state))
-        }
-    }
-
     private fun exportMarkdown(format: ExportFormat) {
         if (_uiState.value.exportInProgress) return
-        viewModelScope.launch {
-            val existingAnalysis = latestAnalysisMarkdown
-            if (existingAnalysis != null) {
-                performExport(format = format, markdown = existingAnalysis)
-                return@launch
-            }
-            val (mainContent, contextContent) = findLatestLongContent()
+        val analysis = latestAnalysisMarkdown
+        if (analysis.isNullOrBlank()) {
+            val (mainContent, context) = findLatestLongContent()
             if (mainContent == null) {
-                _uiState.update {
-                    it.copy(
-                        exportInProgress = false,
-                        snackbarMessage = "当前对话内容太少，无法生成可导出的分析"
-                    )
-                }
-                return@launch
+                performExport(format)
+                return
             }
-            if (_uiState.value.isBusy) {
-                _uiState.update {
-                    it.copy(
-                        snackbarMessage = "正在生成回复，请稍后再尝试导出",
-                        exportInProgress = false
-                    )
-                }
-                return@launch
-            }
-            pendingExportFormat = format
+            pendingExportAfterAnalysis = format
             _uiState.update { it.copy(exportInProgress = true, chatErrorMessage = null) }
-            val autoMessage = buildSmartAnalysisUserMessage(
+            val autoGoal = "导出前自动分析"
+            val userMessage = buildSmartAnalysisUserMessage(
                 mainContent = mainContent,
-                context = contextContent,
-                goal = "导出前自动分析"
+                context = context,
+                goal = autoGoal
             )
             sendMessageInternal(
-                messageText = autoMessage,
+                messageText = userMessage,
                 skillOverride = QuickSkillId.SMART_ANALYSIS,
                 userDisplayText = "智能分析（导出前自动生成）",
-                onCompleted = { summary ->
-                    handleSmartAnalysisCompleted(summary)
-                    val target = pendingExportFormat
-                    pendingExportFormat = null
-                    viewModelScope.launch {
-                        performExport(format = target ?: format, markdown = summary)
-                    }
-                },
+                onCompleted = {},
                 onCompletedTransform = { body ->
                     buildString {
                         append("智能分析结果\n\n")
                         append(body.trim())
                     }.trim()
-                }
+                },
+                isAutoAnalysis = true
             )
+            return
         }
+        performExport(format)
     }
 
-    private suspend fun performExport(
-        format: ExportFormat,
-        markdown: String? = null
-    ) {
-        val content = markdown ?: latestAnalysisMarkdown ?: buildTranscriptMarkdown(_uiState.value.chatMessages)
-        if (format == ExportFormat.PDF && content.isBlank()) {
-            pendingExportFormat = null
+    private fun performExport(format: ExportFormat) {
+        val markdown = latestAnalysisMarkdown ?: buildTranscriptMarkdown(_uiState.value.chatMessages)
+        if (markdown.isBlank()) {
             _uiState.update { it.copy(exportInProgress = false, snackbarMessage = "暂无可导出的内容") }
             return
         }
         _uiState.update { it.copy(exportInProgress = true, chatErrorMessage = null) }
-        val exportResult = when (format) {
-            ExportFormat.PDF -> exportOrchestrator.exportPdf(sessionId, content)
-            ExportFormat.CSV -> exportOrchestrator.exportCsv(sessionId)
-        }
-        when (exportResult) {
-            is Result.Success -> {
-                when (val share = shareHandler.shareExport(exportResult.data)) {
-                    is Result.Success -> _uiState.update { it.copy(exportInProgress = false) }
-                    is Result.Error -> _uiState.update {
-                        it.copy(
-                            exportInProgress = false,
-                            chatErrorMessage = share.throwable.message ?: "分享失败"
-                        )
+        viewModelScope.launch {
+            when (val result = exportOrchestrator.exportMarkdown(sessionId, markdown, format)) {
+                is Result.Success -> {
+                    when (val share = shareHandler.shareExport(result.data)) {
+                        is Result.Success -> _uiState.update { it.copy(exportInProgress = false) }
+                        is Result.Error -> _uiState.update {
+                            it.copy(
+                                exportInProgress = false,
+                                chatErrorMessage = share.throwable.message ?: "分享失败"
+                            )
+                        }
                     }
                 }
-            }
-
-            is Result.Error -> {
-                _uiState.update {
-                    it.copy(
-                        exportInProgress = false,
-                        chatErrorMessage = exportResult.throwable.message ?: "导出失败"
-                    )
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            exportInProgress = false,
+                            chatErrorMessage = result.throwable.message ?: "导出失败"
+                        )
+                    }
                 }
             }
         }
@@ -669,8 +530,7 @@ class HomeScreenViewModel @Inject constructor(
             when (val submit = transcriptionCoordinator.submitTranscription(
                 audioAssetName = stored.displayName,
                 language = "zh-CN",
-                uploadPayload = uploadPayload,
-                sessionId = sessionId
+                uploadPayload = uploadPayload
             )) {
                 is Result.Success -> {
                     _uiState.update { it.copy(isInputBusy = false, isBusy = false, snackbarMessage = "音频已上传，正在转写…") }
@@ -741,11 +601,10 @@ class HomeScreenViewModel @Inject constructor(
     fun onTranscriptionRequested(request: TranscriptionChatRequest) {
         viewModelScope.launch {
             val transcript = request.transcriptMarkdown ?: request.transcriptPreview
-            val targetSessionId = request.sessionId ?: this@HomeScreenViewModel.sessionId
-            val title = deriveTranscriptionTitle(request.fileName)
+            val targetSessionId = request.sessionId ?: "session-${UUID.randomUUID()}"
+            val title = "通话分析 – ${request.fileName}".take(40)
             val existing = chatHistoryRepository.loadLatestSession(targetSessionId)
             this@HomeScreenViewModel.sessionId = targetSessionId
-            transcriptionSessionIds += targetSessionId
             hasShownLowInfoHint = false
             hasShownAnalysisExportHint = false
             ensureSessionSummary(targetSessionId, title)
@@ -862,6 +721,55 @@ class HomeScreenViewModel @Inject constructor(
         _uiState.update { it.copy(navigationRequest = null) }
     }
 
+    fun toggleDebugMetadata() {
+        val newValue = !_uiState.value.showDebugMetadata
+        _uiState.update { it.copy(showDebugMetadata = newValue) }
+        if (newValue) {
+            // 打开时刷新一次 MetaHub，关闭时保留现有数据即可
+            refreshDebugSessionMetadata()
+        }
+    }
+
+    private fun updateDebugSessionMetadata(
+        meta: SessionMetadata?,
+        extraNotes: List<String> = emptyList()
+    ) {
+        val title = _uiState.value.currentSession.title
+        val existingNotes = _uiState.value.debugSessionMetadata
+            ?.takeIf { it.sessionId == sessionId }
+            ?.notes
+            .orEmpty()
+        val mergedNotes = (existingNotes + extraNotes).distinct()
+        val debug = DebugSessionMetadata(
+            sessionId = sessionId,
+            title = title,
+            mainPerson = meta?.mainPerson,
+            shortSummary = meta?.shortSummary,
+            summaryTitle6Chars = meta?.summaryTitle6Chars,
+            notes = mergedNotes
+        )
+        _uiState.update { it.copy(debugSessionMetadata = debug) }
+    }
+
+    private fun refreshDebugSessionMetadata() {
+        viewModelScope.launch {
+            val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
+            updateDebugSessionMetadata(meta)
+        }
+    }
+
+    private fun appendDebugNote(note: String) {
+        if (!CHAT_DEBUG_HUD_ENABLED) return
+        val currentDebug = _uiState.value.debugSessionMetadata
+        val updated = currentDebug?.copy(notes = (currentDebug.notes + note).distinct())
+            ?: DebugSessionMetadata(
+                sessionId = sessionId,
+                title = _uiState.value.currentSession.title,
+                notes = listOf(note)
+            )
+        _uiState.update { it.copy(debugSessionMetadata = updated) }
+    }
+
     fun setSession(
         sessionId: String,
         titleOverride: String? = null,
@@ -882,22 +790,17 @@ class HomeScreenViewModel @Inject constructor(
                 _uiState.update { it.copy(showWelcomeHero = false) }
             }
             val summary = ensureSessionSummary(sessionId, titleOverride)
-            val shouldMarkTranscription = isTranscription ||
-                transcriptionSessionIds.contains(sessionId) ||
-                summary.title.startsWith(TRANSCRIPTION_TITLE_PREFIX)
-            if (shouldMarkTranscription) {
-                transcriptionSessionIds += sessionId
-            }
             _uiState.update {
                 it.copy(
                     currentSession = CurrentSessionUi(
                         id = sessionId,
                         title = summary.title,
-                        isTranscription = shouldMarkTranscription
+                        isTranscription = isTranscription
                     ),
                     showWelcomeHero = if (allowHero) it.showWelcomeHero else false
                 )
             }
+            refreshDebugSessionMetadata()
         }
     }
 
@@ -926,6 +829,7 @@ class HomeScreenViewModel @Inject constructor(
                     showWelcomeHero = true
                 )
             }
+            updateDebugSessionMetadata(null)
             chatHistoryRepository.saveMessages(newSessionId, emptyList())
             applySessionList()
         }
@@ -976,15 +880,13 @@ class HomeScreenViewModel @Inject constructor(
 
     private fun applySessionList() {
         val mapped = latestSessionSummaries.map { summary ->
-            val isTranscriptionSession = transcriptionSessionIds.contains(summary.id) ||
-                summary.title.startsWith(TRANSCRIPTION_TITLE_PREFIX)
             SessionListItemUi(
                 id = summary.id,
                 title = summary.title,
                 lastMessagePreview = summary.lastMessagePreview,
                 updatedAtMillis = summary.updatedAtMillis,
                 isCurrent = summary.id == sessionId,
-                isTranscription = isTranscriptionSession
+                isTranscription = summary.title.startsWith("通话分析 –")
             )
         }
         _uiState.update { it.copy(sessionList = mapped) }
@@ -1037,7 +939,8 @@ class HomeScreenViewModel @Inject constructor(
         skillOverride: QuickSkillId? = null,
         userDisplayText: String? = null,
         onCompleted: (String) -> Unit = {},
-        onCompletedTransform: ((String) -> String)? = null
+        onCompletedTransform: ((String) -> String)? = null,
+        isAutoAnalysis: Boolean = false
     ) {
         val content = messageText.trim()
         if (content.isEmpty() || _uiState.value.isBusy) return
@@ -1046,8 +949,46 @@ class HomeScreenViewModel @Inject constructor(
             quickSkillDefinitionsById[id]
         }
         val quickSkillId = quickSkill?.id
+        if (quickSkillId == null) {
+            when (classifyUserInput(content, _uiState.value.chatMessages)) {
+                InputBucket.NOISE -> {
+                    _uiState.update {
+                        it.copy(
+                            inputText = "",
+                            isSending = false,
+                            isStreaming = false,
+                            isInputBusy = false,
+                            isBusy = false,
+                            snackbarMessage = null,
+                            chatErrorMessage = null,
+                            showWelcomeHero = false
+                        )
+                    }
+                    appendAssistantMessage(
+                        content = "我主要帮你分析销售对话、邮件或会议纪要。请粘贴一段对话、邮件，或描述你与客户的沟通场景，我再帮你分析。"
+                    )
+                    return
+                }
+
+                InputBucket.SHORT_RELEVANT,
+                InputBucket.RICH -> Unit
+            }
+        }
         val userMessage = createUserMessage(userDisplayText ?: content)
         val assistantPlaceholder = createAssistantPlaceholder()
+        // 先在旧消息列表上判断是否已有助手回复，避免占位气泡干扰
+        val hadAssistantReplyBefore = _uiState.value.chatMessages.any { it.role == ChatMessageRole.ASSISTANT }
+        val isFirstAssistantReply = !hadAssistantReplyBefore
+        debugLog(
+            event = "chat_request_start",
+            data = mapOf(
+                "sessionId" to sessionId,
+                "mode" to (quickSkillId ?: "GENERAL_CHAT"),
+                "isFirstReply" to isFirstAssistantReply,
+                "inputLength" to content.length,
+                "isAutoAnalysis" to isAutoAnalysis
+            )
+        )
         val audioContext = when {
             quickSkill?.requiresAudioContext == true -> {
                 buildAudioContextSummary() ?: run {
@@ -1078,11 +1019,13 @@ class HomeScreenViewModel @Inject constructor(
         viewModelScope.launch {
             updateSessionSummary(userMessage.content)
         }
-        val request = buildChatRequest(content, quickSkillId, newState.chatMessages, audioContext)
-        val isFirstAssistantReply =
-            newState.chatMessages.none { it.role == ChatMessageRole.ASSISTANT }
+        val request = buildChatRequest(content, quickSkillId, newState.chatMessages, audioContext, isAutoAnalysis)
+        val enrichedRequest = request.copy(
+            isFirstAssistantReply = isFirstAssistantReply,
+            analysisMessageId = if (quickSkillId == QuickSkillId.SMART_ANALYSIS) assistantPlaceholder.id else request.analysisMessageId
+        )
         startStreamingResponse(
-            request = request.copy(isFirstAssistantReply = isFirstAssistantReply),
+            request = enrichedRequest,
             assistantId = assistantPlaceholder.id,
             onCompleted = onCompleted,
             onCompletedTransform = onCompletedTransform
@@ -1097,32 +1040,43 @@ class HomeScreenViewModel @Inject constructor(
         onCompletedTransform: ((String) -> String)? = null
     ) {
         val isSmartAnalysis = request.quickSkillId == "SMART_ANALYSIS"
-        val streamingDeduplicator = StreamingDeduplicator(isSmartAnalysis)
-        val isCurrentTranscription = _uiState.value.currentSession.isTranscription ||
-            transcriptionSessionIds.contains(sessionId)
+        val streamingDeduplicator = StreamingDeduplicator()
 
         viewModelScope.launch {
             homeOrchestrator.streamChat(request).collect { event ->
                 when (event) {
                     is ChatStreamEvent.Delta -> {
                         // 处理 streaming token，实时去重
-                        // 每个 Delta 都进行累积检测和清理，不只在异常情况
                         updateAssistantMessage(assistantId) { msg ->
-                            val newContent = msg.content + event.token
-                            // 每个 Delta 都进行累积检测和清理
-                            val cleaned = streamingDeduplicator.processDelta(newContent)
-                            msg.copy(content = cleaned)
+                            val updated = streamingDeduplicator.mergeSnapshot(msg.content, event.token)
+                            msg.copy(content = updated)
                         }
                     }
                     is ChatStreamEvent.Completed -> {
                         // 完成：关闭 streaming，最终清理和去重
-                        val sanitized = sanitizeAssistantOutput(event.fullText, isSmartAnalysis)
-                        val formatted = if (isSmartAnalysis && isCurrentTranscription) {
-                            formatSmartAnalysisForTranscription(sanitized)
-                        } else {
-                            sanitized
+                        val rawFullText = event.fullText
+                        val shouldParseSessionMetadata =
+                            request.quickSkillId == null && request.isFirstAssistantReply
+                        if (shouldParseSessionMetadata) {
+                            handleGeneralChatMetadata(rawFullText)
                         }
-                        val cleaned = onCompletedTransform?.invoke(formatted) ?: formatted
+                        if (isSmartAnalysis) {
+                            handleSmartAnalysisMetadata(rawFullText)
+                        }
+                        val sanitized = sanitizeAssistantOutput(rawFullText, isSmartAnalysis)
+                        val cleaned = onCompletedTransform?.invoke(sanitized) ?: sanitized
+                        if (isSmartAnalysis) {
+                            onAnalysisCompleted(cleaned, assistantId)
+                        }
+                        debugLog(
+                            event = "chat_stream_completed",
+                            data = mapOf(
+                                "sessionId" to sessionId,
+                                "mode" to (request.quickSkillId ?: "GENERAL_CHAT"),
+                                "isFirstReply" to request.isFirstAssistantReply,
+                                "assistantTextLength" to cleaned.length
+                            )
+                        )
                         updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
                             msg.copy(content = cleaned, isStreaming = false)
                         }
@@ -1136,18 +1090,25 @@ class HomeScreenViewModel @Inject constructor(
                     }
                     is ChatStreamEvent.Error -> {
                         // 错误：标记消息失败并弹出提示
-                        val shouldResetExport = pendingExportFormat != null
-                        pendingExportFormat = null
+                        warnLog(
+                            event = "chat_stream_error",
+                            data = mapOf(
+                                "sessionId" to sessionId,
+                                "mode" to (request.quickSkillId ?: "GENERAL_CHAT")
+                            ),
+                            throwable = event.throwable
+                        )
                         updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
                             msg.copy(hasError = true, isStreaming = false)
                         }
+                        pendingExportAfterAnalysis = null
                         _uiState.update {
                             it.copy(
                                 isSending = false,
                                 isStreaming = false,
                                 isInputBusy = false,
                                 isBusy = false,
-                                exportInProgress = if (shouldResetExport) false else it.exportInProgress,
+                                exportInProgress = false,
                                 chatErrorMessage = event.throwable.message ?: "AI 回复失败"
                             )
                         }
@@ -1168,7 +1129,6 @@ class HomeScreenViewModel @Inject constructor(
             }
             state.copy(chatMessages = updated)
         }
-        refreshDebugMetadataIfNeeded()
         if (persistAfterUpdate) {
             persistMessagesAsync()
         }
@@ -1192,14 +1152,14 @@ class HomeScreenViewModel @Inject constructor(
         viewModelScope.launch {
             updateSessionSummary(message.content)
         }
-        refreshDebugMetadataIfNeeded()
     }
 
     private fun buildChatRequest(
         userMessage: String,
         skillId: QuickSkillId?,
         historySource: List<ChatMessageUi>,
-        audioContext: AudioContextSummary?
+        audioContext: AudioContextSummary?,
+        isAutoAnalysis: Boolean
     ): ChatRequest {
         val history = historySource.map { ui ->
             ChatHistoryItem(
@@ -1212,7 +1172,8 @@ class HomeScreenViewModel @Inject constructor(
             userMessage = userMessage,
             quickSkillId = mapSkillToMode(skillId),
             audioContextSummary = audioContext,
-            history = history
+            history = history,
+            isAutoAnalysis = isAutoAnalysis
         )
     }
 
@@ -1245,46 +1206,28 @@ class HomeScreenViewModel @Inject constructor(
     private fun latestUserContent(): String? =
         _uiState.value.chatMessages.lastOrNull { it.role == ChatMessageRole.USER }?.content?.trim()
 
-    private fun isAnalyzable(text: String?): Boolean {
-        if (text.isNullOrBlank()) return false
-        val normalized = text.trim()
-        val len = normalized.length
-        if (len < 12) return false
-        val stripped = normalized.replace(Regex("[\\p{Punct}\\s]+"), "")
-        if (stripped.length < 8) return false
-        val stopwords = setOf("的", "了", "嗯", "啊", "哦", "好", "好的", "ok", "OK", "是", "对", "嗯嗯", "行", "可以")
-        if (stopwords.contains(stripped.lowercase(Locale.getDefault()))) return false
-        return true
-    }
-
-    private fun isLowInformationReply(text: String): Boolean {
+    private fun classifyUserInput(
+        text: String,
+        history: List<ChatMessageUi>
+    ): InputBucket {
         val trimmed = text.trim()
-        if (trimmed.isEmpty()) return true
+        if (trimmed.isEmpty()) return InputBucket.NOISE
         val normalized = trimmed.lowercase(Locale.getDefault())
-        
-        // 常见问候语和确认词
-        val greetingTokens = setOf(
-            "你好", "您好", "hello", "hi", "hey", "嗨",
-            "你是谁", "你是谁？", "who are you", "who are you?",
-            "早上好", "下午好", "晚上好", "good morning", "good afternoon", "good evening"
-        )
-        if (greetingTokens.contains(normalized)) return true
-        
-        val ackTokens = setOf("是", "好", "好的", "嗯", "嗯嗯", "ok", "行", "可以", "可以的", "收到")
-        if (ackTokens.contains(normalized)) return true
-        
-        if (normalized.length < 2) return true
-        
-        // 2-3 个字符的简单输入
-        if (normalized.length <= 3) {
-            val stripped = normalized.replace(Regex("[的呢啊呀哦！!？?。，、,.~·\\s]+"), "")
-            if (stripped.isEmpty()) return true
-            if (stripped.all { it in listOf('的', '呢', '啊', '呀', '哦') }) return true
-            // 如果去除标点后只剩 1-2 个字符，很可能是低信息输入
-            if (stripped.length <= 2) return true
+        val keywords = listOf("客户", "会议", "报价", "合同", "跟进", "电话", "录音", "邮件", "沟通", "销售")
+        val hasKeyword = keywords.any { normalized.contains(it) }
+        val hasLongHistory = history.any { it.content.length >= LONG_CONTENT_THRESHOLD }
+        val hasTranscript = history.any { it.role == ChatMessageRole.ASSISTANT && it.content.contains("通话分析") }
+        if (normalized.length <= 4 && !hasKeyword) {
+            return InputBucket.NOISE
         }
-        
-        return false
+        if (normalized.length <= 8 && !hasKeyword && !hasLongHistory) {
+            return InputBucket.NOISE
+        }
+        if (trimmed.length >= LONG_CONTENT_THRESHOLD || hasLongHistory || hasTranscript) {
+            return InputBucket.RICH
+        }
+        if (hasKeyword) return InputBucket.SHORT_RELEVANT
+        return InputBucket.SHORT_RELEVANT
     }
 
     private fun isLowInfoAnalysisInput(text: String): Boolean {
@@ -1459,13 +1402,18 @@ class HomeScreenViewModel @Inject constructor(
         value = transform(value)
     }
 
-    private fun handleSmartAnalysisCompleted(summary: String) {
+    private fun onAnalysisCompleted(summary: String, messageId: String) {
         latestAnalysisMarkdown = summary
+        latestAnalysisMessageId = messageId
         if (!hasShownAnalysisExportHint) {
             hasShownAnalysisExportHint = true
             appendAssistantMessage(
                 content = "智能分析完成，如需分享可直接导出 PDF 或 CSV。"
             )
+        }
+        pendingExportAfterAnalysis?.let { format ->
+            pendingExportAfterAnalysis = null
+            performExport(format)
         }
     }
 
@@ -1492,14 +1440,46 @@ class HomeScreenViewModel @Inject constructor(
         return primary to contextChunks.asReversed().joinToString("\n")
     }
 
+    private fun findSmartAnalysisPrimaryContent(currentInput: String): AnalysisTarget? {
+        val trimmed = currentInput.trim()
+        if (trimmed.length >= LONG_CONTENT_THRESHOLD) {
+            return AnalysisTarget(trimmed, "user_input")
+        }
+        val messages = _uiState.value.chatMessages.asReversed()
+        val transcript = messages.firstOrNull { msg ->
+            msg.role == ChatMessageRole.ASSISTANT &&
+                msg.content.length >= LONG_CONTENT_THRESHOLD &&
+                (msg.content.contains("转写") || msg.content.contains("通话") || msg.content.contains("录音"))
+        }
+        if (transcript != null) return AnalysisTarget(transcript.content, "transcript")
+        val longHistory = messages.firstOrNull { it.content.length >= LONG_CONTENT_THRESHOLD }
+        return longHistory?.let { AnalysisTarget(it.content, "history_long") }
+    }
+
+    private fun findContextForAnalysis(primaryContent: String): String? {
+        val messages = _uiState.value.chatMessages.asReversed()
+        val contextChunks = mutableListOf<String>()
+        var contextLength = 0
+        messages.forEach { msg ->
+            val text = msg.content.trim()
+            if (text.isEmpty() || text == primaryContent) return@forEach
+            if (contextChunks.size >= CONTEXT_MESSAGE_LIMIT || contextLength >= CONTEXT_LENGTH_LIMIT) return@forEach
+            val toAdd = text.take(CONTEXT_LENGTH_LIMIT - contextLength)
+            contextChunks += toAdd
+            contextLength += toAdd.length
+        }
+        return contextChunks.asReversed().joinToString("\n").takeIf { it.isNotBlank() }
+    }
+
     private fun buildSmartAnalysisUserMessage(
         mainContent: String,
         context: String?,
         goal: String
     ): String {
+        val cappedContent = mainContent.trim().take(ANALYSIS_CONTENT_LIMIT)
         val builder = StringBuilder()
         builder.appendLine("分析目标：").appendLine(goal.trim()).appendLine()
-        builder.appendLine("主体内容：").appendLine(mainContent.trim()).appendLine()
+        builder.appendLine("主体内容（供重点分析）：").appendLine(cappedContent).appendLine()
         context?.takeIf { it.isNotBlank() }?.let {
             builder.appendLine("最近上下文：").appendLine(it.trim()).appendLine()
         }
@@ -1508,8 +1488,11 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     private fun sanitizeAssistantOutput(raw: String, isSmartAnalysis: Boolean = false): String {
+        // 预处理：先剥离 JSON block（元数据仅供 MetaHub 使用，不展示给用户）
+        val withoutJson = stripJsonBlocks(raw)
+
         // 第一步：修复编号混乱（如 "11)1)"、"2)1)" 等）
-        val fixedNumbering = fixNumberingIssues(raw)
+        val fixedNumbering = fixNumberingIssues(withoutJson)
         
         // 第二步：检测并清理内容累积模式（更激进的清理）
         // 使用字符级别的检测，确保彻底清理
@@ -1533,6 +1516,12 @@ class HomeScreenViewModel @Inject constructor(
                 if (result.lastOrNull()?.isNotBlank() == true) {
                     result.add("")
                 }
+                return@forEach
+            }
+
+            // 粗略过滤明显的标签段（这些应作为元数据存在，而非直接展示）
+            val lower = trimmed.lowercase(Locale.getDefault())
+            if (lower.startsWith("标签：") || lower.startsWith("tags:")) {
                 return@forEach
             }
             
@@ -1610,7 +1599,154 @@ class HomeScreenViewModel @Inject constructor(
             result.add(trimmed)
         }
         
-        return result.dropWhile { it.isBlank() }.joinToString("\n").trimEnd()
+        val normalizedLines = result.dropWhile { it.isBlank() }
+
+        // 段落级去重：以空行分段，避免整段重复出现
+        val paragraphs = mutableListOf<String>()
+        val buffer = StringBuilder()
+        for (line in normalizedLines) {
+            if (line.isBlank()) {
+                if (buffer.isNotEmpty()) {
+                    paragraphs += buffer.toString().trimEnd()
+                    buffer.clear()
+                }
+            } else {
+                if (buffer.isNotEmpty()) buffer.append('\n')
+                buffer.append(line)
+            }
+        }
+        if (buffer.isNotEmpty()) {
+            paragraphs += buffer.toString().trimEnd()
+        }
+
+        val seenParas = mutableSetOf<String>()
+        val uniqueParas = mutableListOf<String>()
+        for (para in paragraphs) {
+            val norm = para.lowercase(Locale.getDefault())
+                .replace(Regex("\\s+"), "")
+            if (seenParas.add(norm)) {
+                uniqueParas += para
+            }
+        }
+
+        val joined = uniqueParas.joinToString("\n\n").trimEnd()
+        return dedupeNumberedLists(joined)
+    }
+
+    /**
+     * 针对编号列表块的去重：保留最后一块，移除重复的整段列表。
+     */
+    private fun dedupeNumberedLists(text: String): String {
+        val lines = text.lines()
+        val numRegex = Regex("^(\\d+)[\\.)）]\\s*(.*)$")
+
+        data class Block(val start: Int, val end: Int, val lines: List<String>, val key: String)
+
+        val blocks = mutableListOf<Block>()
+        var index = 0
+        while (index < lines.size) {
+            val match = numRegex.matchEntire(lines[index].trim())
+            if (match == null) {
+                index++
+                continue
+            }
+            val start = index
+            val blockLines = mutableListOf<String>()
+            while (index < lines.size) {
+                val innerMatch = numRegex.matchEntire(lines[index].trim()) ?: break
+                blockLines += lines[index]
+                index++
+            }
+            val key = blockLines.joinToString("|") { line ->
+                val body = numRegex.matchEntire(line.trim())?.groupValues?.get(2).orEmpty()
+                body.lowercase(Locale.getDefault())
+                    .replace(Regex("\\s+"), "")
+                    .replace(Regex("[\\p{Punct}]"), "")
+            }
+            blocks += Block(start = start, end = index - 1, lines = blockLines, key = key)
+        }
+
+        // 同一 signature 仅保留最后一块
+        val keepByKey = mutableMapOf<String, Block>()
+        for (block in blocks) {
+            keepByKey[block.key] = block
+        }
+        val keepBlocks = keepByKey.values.toSet()
+
+        val output = mutableListOf<String>()
+        var i = 0
+        var blockCursor = 0
+        while (i < lines.size) {
+            val block = blocks.getOrNull(blockCursor)
+            if (block != null && i == block.start) {
+                if (block in keepBlocks) {
+                    output.addAll(block.lines)
+                }
+                i = block.end + 1
+                blockCursor++
+            } else {
+                val line = lines[i]
+                if (line.isBlank() && output.lastOrNull().isNullOrBlank()) {
+                    i++
+                    continue
+                }
+                output += line
+                i++
+            }
+        }
+
+        // 去掉末尾空行
+        while (output.lastOrNull()?.isBlank() == true) {
+            output.removeAt(output.lastIndex)
+        }
+
+        return output.joinToString("\n")
+    }
+
+    /**
+     * 剥离助手回复中的 JSON block，仅保留适合用户阅读的自然语言部分。
+     * 支持 ```json fenced 块与裸 JSON 对象。
+     */
+    private fun stripJsonBlocks(text: String): String {
+        var result = text
+
+        // 1) 去掉 ```json fenced 区块
+        val fencedJsonRegex = Regex("```json[\\s\\S]*?```", RegexOption.IGNORE_CASE)
+        result = result.replace(fencedJsonRegex, "").trim()
+
+        // 2) 如果整段就是一个 JSON 对象，直接视为纯元数据，返回空
+        val trimmed = result.trim()
+        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+            return ""
+        }
+
+        // 3) 如果文本中尾部包含一个顶层 JSON，对用户价值不大，只保留 JSON 之前/之后的自然语言
+        val start = trimmed.indexOf('{')
+        if (start >= 0) {
+            var depth = 0
+            var endIndex = -1
+            for (i in start until trimmed.length) {
+                when (trimmed[i]) {
+                    '{' -> depth++
+                    '}' -> {
+                        depth--
+                        if (depth == 0) {
+                            endIndex = i
+                            break
+                        }
+                    }
+                }
+            }
+            if (endIndex > start) {
+                val beforeJson = trimmed.substring(0, start).trimEnd()
+                val afterJson = trimmed.substring(endIndex + 1).trimStart()
+                result = listOf(beforeJson, afterJson)
+                    .filter { it.isNotBlank() }
+                    .joinToString("\n\n")
+            }
+        }
+
+        return result
     }
     
     /**
@@ -1967,6 +2103,172 @@ class HomeScreenViewModel @Inject constructor(
         return withoutNumbers.lowercase(Locale.getDefault())
             .replace(Regex("[\\p{Punct}\\s]+"), "")
     }
+
+    private suspend fun handleGeneralChatMetadata(rawFullText: String) {
+        val jsonText = extractLastJsonBlock(rawFullText)
+        if (jsonText.isNullOrBlank()) {
+            debugLog(
+                event = "metadata_parse_skipped",
+                data = mapOf("sessionId" to sessionId, "reason" to "no_json_found")
+            )
+            return
+        }
+        val metadata = parseGeneralChatMetadata(jsonText)
+        if (metadata == null) {
+            warnLog(
+                event = "general_chat_metadata_parse_failed",
+                data = mapOf("sessionId" to sessionId, "reason" to "json_parse_null")
+            )
+            appendDebugNote("generalChatMetadataParseFailed")
+            return
+        }
+        val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
+        val merged = metadata.toSessionMetadata(sessionId, existing)
+        debugLog(
+            event = "general_chat_metadata_parsed",
+            data = mapOf(
+                "sessionId" to sessionId,
+                "mainPerson" to merged.mainPerson,
+                "shortSummary" to merged.shortSummary,
+                "title6" to merged.summaryTitle6Chars
+            )
+        )
+        runCatching { metaHub.upsertSession(merged) }
+            .onSuccess {
+                debugLog(
+                    event = "session_metadata_upsert",
+                    data = mapOf(
+                        "sessionId" to sessionId,
+                        "mainPerson" to merged.mainPerson,
+                        "shortSummary" to merged.shortSummary,
+                        "title6" to merged.summaryTitle6Chars
+                    )
+                )
+                updateTitleFromMetadata(merged)
+            }
+            .onFailure {
+                warnLog(
+                    event = "metahub_upsert_failed",
+                    data = mapOf(
+                        "sessionId" to sessionId,
+                        "target" to "session"
+                    ),
+                    throwable = it
+                )
+                appendDebugNote("sessionMetaUpsertFailed")
+            }
+        updateDebugSessionMetadata(merged)
+    }
+
+    private fun parseGeneralChatMetadata(jsonText: String): GeneralChatMetadata? = runCatching {
+        val obj = org.json.JSONObject(jsonText)
+        val highlights = obj.optJSONArray("highlights")?.let { array ->
+            (0 until array.length()).mapNotNull { idx -> array.optString(idx).takeIf { it.isNotBlank() } }
+        } ?: emptyList()
+        val actionable = obj.optJSONArray("actionable_tips")?.let { array ->
+            (0 until array.length()).mapNotNull { idx -> array.optString(idx).takeIf { it.isNotBlank() } }
+        } ?: emptyList()
+        val summaryObj = obj.optJSONObject("summary")
+        GeneralChatMetadata(
+            mainPerson = obj.optString("main_person").takeIf { it.isNotBlank() },
+            shortSummary = obj.optString("short_summary").takeIf { it.isNotBlank() },
+            summaryTitle6Chars = obj.optString("summary_title_6chars").takeIf { it.isNotBlank() }?.take(6),
+            location = obj.optString("location").takeIf { it.isNotBlank() },
+            highlights = highlights,
+            actionableTips = actionable,
+            summary = summaryObj?.let {
+                GeneralChatMetadata.SummaryBlock(
+                    coreInsight = it.optString("core_insight").takeIf { v -> v.isNotBlank() },
+                    sharpLine = it.optString("sharp_line").takeIf { v -> v.isNotBlank() }
+                )
+            }
+        )
+    }.getOrNull()
+
+    private suspend fun handleSmartAnalysisMetadata(rawFullText: String) {
+        val jsonText = extractLastJsonBlock(rawFullText)
+        if (jsonText.isNullOrBlank()) {
+            debugLog(
+                event = "smart_analysis_metadata_skipped",
+                data = mapOf("sessionId" to sessionId, "reason" to "no_json_found")
+            )
+            return
+        }
+        val metadata = parseSmartAnalysisMetadata(jsonText)
+        if (metadata == null) {
+            warnLog(
+                event = "smart_analysis_metadata_parse_failed",
+                data = mapOf("sessionId" to sessionId, "reason" to "json_parse_null")
+            )
+            appendDebugNote("smartAnalysisMetadataParseFailed")
+            return
+        }
+        val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
+        val merged = metadata.toSessionMetadata(sessionId, existing)
+        debugLog(
+            event = "smart_analysis_metadata_parsed",
+            data = mapOf(
+                "sessionId" to sessionId,
+                "mainPerson" to merged.mainPerson,
+                "shortSummary" to merged.shortSummary,
+                "title6" to merged.summaryTitle6Chars
+            )
+        )
+        runCatching { metaHub.upsertSession(merged) }
+            .onSuccess {
+                debugLog(
+                    event = "smart_analysis_meta_upsert",
+                    data = mapOf(
+                        "sessionId" to sessionId,
+                        "mainPerson" to merged.mainPerson,
+                        "shortSummary" to merged.shortSummary
+                    )
+                )
+                updateTitleFromMetadata(merged)
+            }
+            .onFailure {
+                warnLog(
+                    event = "smart_analysis_meta_upsert_failed",
+                    data = mapOf("sessionId" to sessionId),
+                    throwable = it
+                )
+                appendDebugNote("smartAnalysisMetaUpsertFailed")
+            }
+        updateDebugSessionMetadata(merged)
+    }
+
+    private fun parseSmartAnalysisMetadata(jsonText: String): SmartAnalysisMetadata? = runCatching {
+        val obj = org.json.JSONObject(jsonText)
+        val highlights = obj.optJSONArray("highlights")?.let { array ->
+            (0 until array.length()).mapNotNull { idx -> array.optString(idx).takeIf { it.isNotBlank() } }
+        } ?: emptyList()
+        val actionable = obj.optJSONArray("actionable_tips")?.let { array ->
+            (0 until array.length()).mapNotNull { idx -> array.optString(idx).takeIf { it.isNotBlank() } }
+        } ?: emptyList()
+        SmartAnalysisMetadata(
+            mainPerson = obj.optString("main_person").takeIf { it.isNotBlank() },
+            shortSummary = obj.optString("short_summary").takeIf { it.isNotBlank() },
+            summaryTitle6Chars = obj.optString("summary_title_6chars").takeIf { it.isNotBlank() }?.take(6),
+            location = obj.optString("location").takeIf { it.isNotBlank() },
+            stage = obj.optString("stage").takeIf { it.isNotBlank() },
+            riskLevel = obj.optString("risk_level").takeIf { it.isNotBlank() },
+            highlights = highlights,
+            actionableTips = actionable
+        )
+    }.getOrNull()
+
+    private fun extractLastJsonBlock(text: String): String? {
+        val fenced = Regex("```json\\s*([\\s\\S]*?)```", RegexOption.IGNORE_CASE)
+            .findAll(text)
+            .lastOrNull()?.groupValues?.getOrNull(1)?.trim()
+        if (!fenced.isNullOrBlank()) return fenced
+        val anyFence = Regex("```\\s*([\\s\\S]*?)```")
+            .findAll(text)
+            .lastOrNull()?.groupValues?.getOrNull(1)?.trim()
+        if (!anyFence.isNullOrBlank()) return anyFence
+        val trimmed = text.trim()
+        return if (trimmed.startsWith("{") && trimmed.endsWith("}")) trimmed else null
+    }
     
     /**
      * 根据问候语内容返回友好的回复
@@ -2016,315 +2318,45 @@ class HomeScreenViewModel @Inject constructor(
      * 流式去重器，在流式过程中实时去重，避免用户看到重复内容
      * 使用增量处理：只处理新增的内容，而不是重新处理整个累积内容
      */
-    private class StreamingDeduplicator(private val isSmartAnalysis: Boolean) {
-        private val seenHeadings = mutableSetOf<String>()
-        private val seenSentences = mutableSetOf<String>()
-        private var lastProcessedLength = 0
-        private var lastProcessedContent = ""
-        
-        fun processDelta(newContent: String): String {
-            // 如果新内容长度没有增加，说明可能是重复处理，直接返回上次结果
-            if (newContent.length <= lastProcessedLength) {
-                return lastProcessedContent
-            }
-            
-            // 只处理新增的部分（增量）
-            val newPart = newContent.substring(lastProcessedLength)
-            lastProcessedLength = newContent.length
-            
-            // 如果新增部分为空，返回上次结果
-            if (newPart.isEmpty()) {
-                return lastProcessedContent
-            }
-            
-            // 检测异常累积：如果新内容包含大量重复的句子，可能是 LLM 重复输出
-            val lines = newContent.lines()
-            // 降低阈值：行数 > 5 就触发清理
-            if (lines.size > 5) {
-                // 如果行数过多，可能是异常累积，进行清理
-                val cleaned = cleanAccumulatedContent(newContent)
-                lastProcessedContent = cleaned
-                return cleaned
-            }
-            
-            // 实时累积检测：只要有 2 行就检查累积模式
-            if (lines.size >= 2) {
-                var hasAccumulation = false
-                
-                // 检查渐进式累积模式：A, B, A B C
-                for (i in 1 until lines.size) {
-                    val current = lines[i].trim()
-                    val currentNormalized = normalizeSentence(current)
-                    
-                    // 检查当前行是否包含前面任何一行的内容
-                    for (j in 0 until i) {
-                        val previous = lines[j].trim()
-                        val previousNormalized = normalizeSentence(previous)
-                        
-                        // 如果前一行足够长，且当前行包含它，可能是累积
-                        if (previousNormalized.length > 8 && currentNormalized.contains(previousNormalized)) {
-                            hasAccumulation = true
-                            break
-                        }
-                    }
-                    
-                    if (hasAccumulation) break
-                }
-                
-                // 检查字符级别的累积：如果当前行的大部分字符都来自前面的行
-                if (!hasAccumulation && lines.size >= 2) {
-                    val lastLine = lines.last().trim()
-                    val lastNormalized = normalizeSentence(lastLine)
-                    
-                    // 检查最后一行是否包含前面所有行的主要内容
-                    var totalPreviousLength = 0
-                    var matchedLength = 0
-                    for (i in 0 until lines.size - 1) {
-                        val prevNormalized = normalizeSentence(lines[i].trim())
-                        if (prevNormalized.length > 8) {
-                            totalPreviousLength += prevNormalized.length
-                            if (lastNormalized.contains(prevNormalized)) {
-                                matchedLength += prevNormalized.length
-                            }
-                        }
-                    }
-                    
-                    // 如果匹配的内容超过前面总内容的 50%，可能是累积
-                    if (totalPreviousLength > 0 && matchedLength.toDouble() / totalPreviousLength > 0.5) {
-                        hasAccumulation = true
-                    }
-                }
-                
-                if (hasAccumulation) {
-                    // 触发清理
-                    val cleaned = cleanAccumulatedContent(newContent)
-                    lastProcessedContent = cleaned
-                    return cleaned
-                }
-            }
-            
-            // 处理新增内容，检测重复
-            val result = StringBuilder(lastProcessedContent)
-            val newLines = newPart.split('\n')
-            
-            for (line in newLines) {
-                val trimmed = line.trim()
-                if (trimmed.isEmpty()) {
-                    if (result.isNotEmpty() && !result.endsWith('\n')) {
-                        result.append('\n')
-                    }
-                    continue
-                }
-                
-                // 检测标题重复
-                val heading = detectHeading(trimmed)
-                if (heading != null) {
-                    if (seenHeadings.contains(heading)) {
-                        // 跳过重复标题
-                        continue
-                    }
-                    seenHeadings += heading
-                    if (result.isNotEmpty() && !result.endsWith('\n')) {
-                        result.append('\n')
-                    }
-                    result.append(heading)
-                    result.append('\n')
-                    continue
-                }
-                
-                // 检测句子重复（归一化后比较）
-                val normalized = normalizeSentence(trimmed)
-                if (seenSentences.contains(normalized)) {
-                    // 跳过重复句子
-                    continue
-                }
-                
-                // 检测内容累积模式：如果一行包含前面见过的长句子，可能是累积重复
-                val isAccumulated = seenSentences.any { existing ->
-                    existing.length > 10 && trimmed.contains(existing)
-                }
-                if (isAccumulated) {
-                    // 跳过累积重复的行
-                    continue
-                }
-                
-                seenSentences += normalized
-                if (result.isNotEmpty() && !result.endsWith('\n')) {
-                    result.append('\n')
-                }
-                result.append(line)
-            }
-            
-            val processed = result.toString()
-            lastProcessedContent = processed
-            return processed
+    private class StreamingDeduplicator {
+        fun mergeSnapshot(previous: String, snapshot: String): String {
+            if (previous.isEmpty()) return snapshot
+            if (snapshot.isEmpty()) return previous
+            if (snapshot.startsWith(previous)) return snapshot
+            if (previous.startsWith(snapshot)) return previous
+
+            val overlap = findOverlap(previous, snapshot)
+            return previous + snapshot.drop(overlap)
         }
-        
-        /**
-         * 清理累积的重复内容（更激进的清理策略）
-         * 使用字符级别的检测和智能提取新内容
-         */
-        private fun cleanAccumulatedContent(content: String): String {
-            val lines = content.lines()
-            val result = mutableListOf<String>()
-            val seenNormalized = mutableSetOf<String>()
-            val seenOriginal = mutableListOf<String>() // 保存原始文本用于精确匹配
-            
-            for (line in lines) {
-                val trimmed = line.trim()
-                if (trimmed.isEmpty()) {
-                    if (result.lastOrNull()?.isNotBlank() == true) {
-                        result.add("")
-                    }
-                    continue
-                }
-                
-                // 检测渐进式累积模式：编号) 文本编号) 文本编号) 文本
-                val numberPattern = Regex("\\d+[)）]")
-                val numberMatches = numberPattern.findAll(trimmed).toList()
-                
-                var isProgressiveAccumulation = false
-                if (numberMatches.size >= 2) {
-                    var previousText = ""
-                    for (i in 0 until numberMatches.size - 1) {
-                        val start = numberMatches[i].range.last + 1
-                        val end = numberMatches[i + 1].range.first
-                        val currentText = trimmed.substring(start, end).trim()
-                        if (previousText.isNotEmpty() && currentText.contains(previousText)) {
-                            isProgressiveAccumulation = true
-                            break
-                        }
-                        previousText = currentText
-                    }
-                }
-                
-                if (isProgressiveAccumulation) {
-                    // 渐进式累积：只保留最后一个编号及其后的内容
-                    val lastMatch = numberMatches.last()
-                    val newContent = trimmed.substring(lastMatch.range.first).trim()
-                    if (newContent.isNotEmpty()) {
-                        val normalized = normalizeSentence(newContent)
-                        if (!seenNormalized.contains(normalized)) {
-                            seenNormalized += normalized
-                            seenOriginal += newContent
-                            result.add(newContent)
-                        }
-                    }
-                    continue
-                }
-                
-                val normalized = normalizeSentence(trimmed)
-                // 如果归一化后的内容已见过，跳过
-                if (seenNormalized.contains(normalized)) {
-                    continue
-                }
-                
-                // 检查是否是累积模式（包含前面见过的长句子）
-                var accumulatedCount = 0
-                var totalRepeatedLength = 0
-                var newContent = trimmed
-                var removedAny = false
-                
-                // 使用原始文本进行精确匹配和移除
-                for (existingOriginal in seenOriginal) {
-                    if (existingOriginal.length > 15) {
-                        // 尝试在原始文本中找到并移除重复部分
-                        val existingNormalized = normalizeSentence(existingOriginal)
-                        if (normalized.contains(existingNormalized)) {
-                            accumulatedCount++
-                            totalRepeatedLength += existingNormalized.length
-                            
-                            // 尝试移除重复的原始文本
-                            val index = trimmed.indexOf(existingOriginal)
-                            if (index >= 0) {
-                                newContent = (trimmed.substring(0, index) + trimmed.substring(index + existingOriginal.length)).trim()
-                                removedAny = true
-                            } else {
-                                // 如果精确匹配失败，尝试移除归一化后的匹配部分
-                                val normalizedIndex = normalized.indexOf(existingNormalized)
-                                if (normalizedIndex >= 0) {
-                                    // 找到对应的原始位置并移除
-                                    val charIndex = findCharIndexInOriginal(trimmed, normalizedIndex)
-                                    if (charIndex >= 0) {
-                                        val endIndex = minOf(charIndex + existingOriginal.length, trimmed.length)
-                                        newContent = (trimmed.substring(0, charIndex) + trimmed.substring(endIndex)).trim()
-                                        removedAny = true
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // 计算重复内容的比例
-                val repetitionRatio = if (normalized.isNotEmpty()) {
-                    totalRepeatedLength.toDouble() / normalized.length
-                } else {
-                    0.0
-                }
-                
-                // 更激进的清理：如果包含 1 个或以上的前面句子，或者重复比例 > 30%
-                if (accumulatedCount >= 1 || repetitionRatio > 0.3) {
-                    // 如果成功提取了新内容，保留；否则跳过
-                    if (removedAny && newContent.length > 5 && newContent.length < trimmed.length * 0.8) {
-                        val newNormalized = normalizeSentence(newContent)
-                        if (!seenNormalized.contains(newNormalized)) {
-                            seenNormalized += newNormalized
-                            seenOriginal += newContent
-                            result.add(newContent)
-                        }
-                    }
-                    continue
-                }
-                
-                seenNormalized += normalized
-                seenOriginal += trimmed
-                result.add(line)
-            }
-            
-            return result.joinToString("\n").trimEnd()
-        }
-        
-        /**
-         * 在原始文本中找到归一化索引对应的字符位置
-         */
-        private fun findCharIndexInOriginal(original: String, normalizedIndex: Int): Int {
-            var normalizedCount = 0
-            for (i in original.indices) {
-                val char = original[i]
-                if (!char.isWhitespace() && !Regex("[\\p{Punct}]").matches(char.toString())) {
-                    normalizedCount++
-                    if (normalizedCount > normalizedIndex) {
-                        return i
-                    }
+
+        private fun findOverlap(a: String, b: String): Int {
+            val max = minOf(a.length, b.length)
+            for (len in max downTo 1) {
+                if (a.endsWith(b.substring(0, len))) {
+                    return len
                 }
             }
-            return -1
+            return 0
         }
-        
-        /**
-         * 归一化句子用于比较（去除标点、空格、编号等）
-         */
-        private fun normalizeSentence(sentence: String): String {
-            // 移除编号模式（如 "1)"、"2)核心洞察："等）
-            val withoutNumbers = sentence.replace(Regex("^\\d+[)）]\\s*"), "")
-                .replace(Regex("\\d+[)）]\\s*"), "")
-            
-            // 归一化：转小写，去除标点和多余空格
-            return withoutNumbers.lowercase(Locale.getDefault())
-                .replace(Regex("[\\p{Punct}\\s]+"), "")
-        }
-        
-        private fun detectHeading(line: String): String? {
-            val trimmed = line.trim()
-            return when {
-                Regex("^结构化洞察[：:：]?\\s*$").matches(trimmed) -> "结构化洞察："
-                Regex("^下一步行动[：:：]?\\s*$").matches(trimmed) -> "下一步行动："
-                trimmed == "结构化洞察" -> "结构化洞察："
-                trimmed == "下一步行动" -> "下一步行动："
-                else -> null
-            }
-        }
+    }
+
+    private fun debugLog(event: String, data: Map<String, Any?> = emptyMap()) {
+        if (!CHAT_DEBUG_HUD_ENABLED) return
+        Log.d(TAG, formatLog(event, data))
+    }
+
+    private fun warnLog(
+        event: String,
+        data: Map<String, Any?> = emptyMap(),
+        throwable: Throwable? = null
+    ) {
+        Log.w(TAG, formatLog(event, data), throwable)
+    }
+
+    private fun formatLog(event: String, data: Map<String, Any?>): String {
+        if (data.isEmpty()) return "event=$event"
+        val payload = data.entries.joinToString(", ") { entry -> "${entry.key}=${entry.value}" }
+        return "event=$event, $payload"
     }
 
     companion object {
@@ -2342,18 +2374,6 @@ class HomeScreenViewModel @Inject constructor(
                 append("已加载录音 ").append(fileName).append(" 的转写内容。以下为通话文本，结合上下文回答用户问题：\n")
                 append(transcript)
             }
-        }
-
-        internal fun deriveTranscriptionTitle(fileName: String): String {
-            val base = TRANSCRIPTION_TITLE_PREFIX
-            val noExt = fileName.substringBeforeLast('.', fileName)
-            val cleaned = noExt
-                .replace(Regex("(?i)-?local-audio-?"), "")
-                .replace(Regex("\\d{6,}"), "")
-                .replace(Regex("[-_]{2,}"), "-")
-                .trim('-', '_', ' ')
-            val suffix = cleaned.take(24).trim()
-            return if (suffix.isNotBlank()) "$base – $suffix" else base
         }
 
         internal fun deriveUserName(profile: UserProfile): String {
@@ -2396,23 +2416,74 @@ class HomeScreenViewModel @Inject constructor(
         sessionRepository.upsert(summary)
     }
 
+    private fun buildTitleFromMetadata(meta: SessionMetadata, updatedAt: Long): String {
+        val date = SimpleDateFormat("MM/dd", Locale.CHINA).format(Date(updatedAt))
+        val person = meta.mainPerson?.takeIf { it.isNotBlank() } ?: "未知客户"
+        val title = meta.summaryTitle6Chars?.takeIf { it.isNotBlank() }?.take(6) ?: "销售咨询"
+        return "${date}_${person}_${title}"
+    }
+
     private suspend fun maybeGenerateSessionTitle(request: ChatRequest, assistantText: String) {
         if (!request.isFirstAssistantReply) return
-        val existing = sessionRepository.findById(sessionId)
-        if (existing != null && existing.title != DEFAULT_SESSION_TITLE) return
-        val firstUserMessage = _uiState.value.chatMessages
-            .firstOrNull { it.role == ChatMessageRole.USER }
-            ?.content
-            ?: return
-        val createdAt = existing?.updatedAtMillis ?: System.currentTimeMillis()
-        val title = sessionTitleResolver.resolveTitle(
-            sessionId = sessionId,
-            updatedAtMillis = createdAt,
-            firstUserMessage = firstUserMessage,
-            firstAssistantMessage = assistantText
-        )
+        if (request.quickSkillId != null) return
+        val existingSummary = sessionRepository.findById(sessionId)
+        if (existingSummary != null && existingSummary.title != DEFAULT_SESSION_TITLE) return
+        val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
+        val createdAt = existingSummary?.updatedAtMillis ?: System.currentTimeMillis()
+        val title = meta?.let { buildTitleFromMetadata(it, createdAt) }
+            ?: run {
+                val firstUserMessage = _uiState.value.chatMessages
+                    .firstOrNull { it.role == ChatMessageRole.USER }
+                    ?.content
+                    ?: return
+                sessionTitleResolver.resolveTitle(
+                    sessionId = sessionId,
+                    updatedAtMillis = createdAt,
+                    firstUserMessage = firstUserMessage,
+                    firstAssistantMessage = assistantText
+                )
+            }
         sessionRepository.updateTitle(sessionId, title)
         applySessionList()
+        _uiState.update { state ->
+            val updatedCurrent = if (state.currentSession.id == sessionId) {
+                state.currentSession.copy(title = title)
+            } else {
+                state.currentSession
+            }
+            state.copy(currentSession = updatedCurrent)
+        }
+        updateDebugSessionMetadata(meta)
+    }
+
+    private suspend fun updateTitleFromMetadata(meta: SessionMetadata) {
+        val existingSummary = sessionRepository.findById(sessionId)
+        if (existingSummary != null && existingSummary.title != DEFAULT_SESSION_TITLE) return
+        val createdAt = existingSummary?.updatedAtMillis ?: meta.lastUpdatedAt
+        val title = buildTitleFromMetadata(meta, createdAt)
+        runCatching {
+            sessionRepository.updateTitle(sessionId, title)
+            applySessionList()
+            _uiState.update { state ->
+                val updatedCurrent = if (state.currentSession.id == sessionId) {
+                    state.currentSession.copy(title = title)
+                } else {
+                    state.currentSession
+                }
+                state.copy(currentSession = updatedCurrent)
+            }
+            debugLog(
+                event = "session_title_updated_from_metadata",
+                data = mapOf("sessionId" to sessionId, "title" to title)
+            )
+        }.onFailure {
+            warnLog(
+                event = "session_title_update_failed",
+                data = mapOf("sessionId" to sessionId, "title" to title),
+                throwable = it
+            )
+            appendDebugNote("sessionTitleUpdateFailed")
+        }
     }
 
     private fun saveImageToCache(uri: Uri): File {

@@ -83,5 +83,6 @@ enum class SpeakerRole {
 
 enum class TranscriptSource {
     TINGWU,
+    TINGWU_LLM,
     UNKNOWN
 }

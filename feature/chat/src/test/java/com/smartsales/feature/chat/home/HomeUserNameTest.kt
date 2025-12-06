@@ -105,6 +105,7 @@ class HomeUserNameTest {
 
     private fun buildViewModel(profileRepo: UserProfileRepository): HomeScreenViewModel {
         val ctx = TestContext()
+        val metaHub = FakeMetaHub()
         return HomeScreenViewModel(
             appContext = ctx,
             homeOrchestrator = object : HomeOrchestrator {
@@ -192,8 +193,9 @@ class HomeUserNameTest {
                 override suspend fun findById(id: String): AiSessionSummary? = null
                 override suspend fun updateTitle(id: String, newTitle: String) {}
             },
-            sessionTitleResolver = SessionTitleResolver(FakeMetaHub()),
+            sessionTitleResolver = SessionTitleResolver(metaHub),
             userProfileRepository = profileRepo,
+            metaHub = metaHub,
             exportOrchestrator = object : ExportOrchestrator {
                 override suspend fun exportPdf(
                     sessionId: String,

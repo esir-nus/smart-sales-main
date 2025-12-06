@@ -1435,7 +1435,7 @@ class HomeScreenViewModel @Inject constructor(
     private fun onAnalysisCompleted(summary: String, messageId: String, isAutoAnalysis: Boolean) {
         latestAnalysisMarkdown = summary
         latestAnalysisMessageId = messageId
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             val now = System.currentTimeMillis()
             val source = if (isAutoAnalysis) {
                 AnalysisSource.SMART_ANALYSIS_AUTO
@@ -1448,13 +1448,13 @@ class HomeScreenViewModel @Inject constructor(
                 latestMajorAnalysisAt = now,
                 latestMajorAnalysisSource = source
             )
-            runCatching { metaHub.upsertSession(delta) }
-                .onFailure {
+            runCatching { withContext(Dispatchers.IO) { metaHub.upsertSession(delta) } }
+                .onFailure { error ->
                     debugLog(
                         event = "meta_upsert_latest_analysis_failed",
                         data = mapOf(
                             "sessionId" to sessionId,
-                            "error" to (it.message ?: "unknown")
+                            "error" to (error.message ?: "unknown")
                         )
                     )
                 }

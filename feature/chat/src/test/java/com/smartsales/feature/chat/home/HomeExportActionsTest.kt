@@ -35,6 +35,7 @@ import com.smartsales.feature.usercenter.data.UserProfileRepository
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
@@ -249,6 +250,7 @@ class HomeExportActionsTest {
         viewModel.onSendMessage()
         advanceUntilIdle()
 
+        waitForMetaHubUpdate()
         val saved = metaHub.session!!
         assertEquals("罗总", saved.mainPerson)
         assertNotNull(saved.latestMajorAnalysisMessageId)
@@ -258,15 +260,19 @@ class HomeExportActionsTest {
 
     @Test
     fun `auto analysis persists marker to metahub with auto source`() = runTest(dispatcher) {
-        val longInput = "自动分析触发内容".repeat(20)
+        metaHub.session = SessionMetadata(sessionId = "home-session")
+        val longInput = "自动分析触发内容".repeat(40)
         viewModel.onInputChanged(longInput)
         viewModel.onSendMessage()
         advanceUntilIdle()
 
         viewModel.onExportPdfClicked()
         advanceUntilIdle()
+        waitForMetaHubUpdate()
 
+        assertEquals(2, aiChatService.callCount)
         val saved = metaHub.session!!
+        println("auto analysis saved meta=$saved")
         assertNotNull(saved.latestMajorAnalysisMessageId)
         assertEquals(AnalysisSource.SMART_ANALYSIS_AUTO, saved.latestMajorAnalysisSource)
         assertTrue((saved.latestMajorAnalysisAt ?: 0L) > 0L)
@@ -286,6 +292,13 @@ class HomeExportActionsTest {
         assertEquals(0, aiChatService.callCount)
         assertEquals(null, exportOrchestrator.lastFormat)
         assertTrue(viewModel.uiState.value.snackbarMessage?.contains("历史分析") == true)
+    }
+
+    private suspend fun waitForMetaHubUpdate() {
+        repeat(20) {
+            if (metaHub.session?.latestMajorAnalysisMessageId != null) return
+            delay(10)
+        }
     }
 
     @Test

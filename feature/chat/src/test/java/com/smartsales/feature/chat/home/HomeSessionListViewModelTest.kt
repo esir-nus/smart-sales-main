@@ -14,8 +14,6 @@ import com.smartsales.feature.chat.core.ChatStreamEvent
 import com.smartsales.feature.chat.core.QuickSkillCatalog
 import com.smartsales.feature.chat.core.QuickSkillDefinition
 import com.smartsales.feature.chat.core.QuickSkillId
-import com.smartsales.feature.chat.core.ChatRequest
-import com.smartsales.feature.chat.core.ChatStreamEvent
 import com.smartsales.feature.chat.home.orchestrator.HomeOrchestrator
 import com.smartsales.feature.chat.title.SessionTitleResolver
 import com.smartsales.feature.chat.history.ChatHistoryRepository
@@ -33,6 +31,10 @@ import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
 import com.smartsales.feature.chat.home.TranscriptionChatRequest
+import com.smartsales.feature.media.audiofiles.AudioStorageRepository
+import com.smartsales.feature.media.audiofiles.StoredAudio
+import com.smartsales.feature.chat.testutil.TestContext
+import android.net.Uri
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -66,6 +68,7 @@ class HomeSessionListViewModelTest {
     private lateinit var viewModel: HomeScreenViewModel
     private lateinit var fakeHistoryRepository: FakeChatHistoryRepository
     private lateinit var aiChatService: FakeAiChatService
+    private val appContext = TestContext()
 
     @Before
     fun setup() {
@@ -74,11 +77,24 @@ class HomeSessionListViewModelTest {
         fakeHistoryRepository = FakeChatHistoryRepository()
         aiChatService = FakeAiChatService()
         viewModel = HomeScreenViewModel(
+            appContext = appContext,
             homeOrchestrator = FakeHomeOrchestrator(aiChatService),
-            aiSessionRepository = FakeAiSessionRepository(),
+            aiSessionRepository = FakeHomeSessionMessageRepository(),
             deviceConnectionManager = FakeDeviceConnectionManager(),
             mediaSyncCoordinator = FakeMediaSyncCoordinator(),
             transcriptionCoordinator = FakeTranscriptionCoordinator(),
+            audioStorageRepository = object : AudioStorageRepository {
+                override val audios: Flow<List<StoredAudio>> = MutableStateFlow(emptyList())
+                override suspend fun importFromDevice(baseUrl: String, file: com.smartsales.feature.media.devicemanager.DeviceMediaFile): StoredAudio {
+                    throw UnsupportedOperationException()
+                }
+
+                override suspend fun importFromPhone(uri: android.net.Uri): StoredAudio {
+                    throw UnsupportedOperationException()
+                }
+
+                override suspend fun delete(audioId: String) {}
+            },
             quickSkillCatalog = FakeQuickSkillCatalog(),
             chatHistoryRepository = fakeHistoryRepository,
             sessionRepository = sessionRepository,
@@ -169,7 +185,7 @@ class HomeSessionListViewModelTest {
         override fun streamChat(request: ChatRequest): Flow<ChatStreamEvent> = flowOf()
     }
 
-    private class FakeAiSessionRepository : com.smartsales.feature.chat.home.AiSessionRepository {
+    private class FakeHomeSessionMessageRepository : com.smartsales.feature.chat.home.AiSessionRepository {
         override suspend fun loadOlderMessages(currentTopMessageId: String?): List<ChatMessageUi> =
             emptyList()
     }
@@ -193,6 +209,14 @@ class HomeSessionListViewModelTest {
         }
 
         override suspend fun findById(id: String): AiSessionSummary? = sessions[id]
+
+        override suspend fun updateTitle(id: String, newTitle: String) {
+            sessions[id]?.let { existing ->
+                val updated = existing.copy(title = newTitle)
+                sessions[id] = updated
+                summaries.value = sessions.values.toList()
+            }
+        }
     }
 
     private class FakeDeviceConnectionManager : DeviceConnectionManager {

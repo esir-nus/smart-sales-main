@@ -31,10 +31,14 @@ import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.ExportResult
 import com.smartsales.feature.chat.ChatShareHandler
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import com.smartsales.feature.media.audiofiles.AudioStorageRepository
+import com.smartsales.feature.media.audiofiles.StoredAudio
+import android.net.Uri
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import com.smartsales.feature.chat.testutil.TestContext
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -100,7 +104,9 @@ class HomeUserNameTest {
     }
 
     private fun buildViewModel(profileRepo: UserProfileRepository): HomeScreenViewModel {
+        val ctx = TestContext()
         return HomeScreenViewModel(
+            appContext = ctx,
             homeOrchestrator = object : HomeOrchestrator {
                 override fun streamChat(request: ChatRequest): Flow<ChatStreamEvent> = flowOf()
             },
@@ -122,6 +128,9 @@ class HomeUserNameTest {
 
                 override suspend fun queryNetworkStatus(): com.smartsales.core.util.Result<com.smartsales.feature.connectivity.DeviceNetworkStatus> =
                     com.smartsales.core.util.Result.Error(UnsupportedOperationException())
+
+                override fun scheduleAutoReconnectIfNeeded() {}
+                override fun forceReconnectNow() {}
             },
             mediaSyncCoordinator = object : MediaSyncCoordinator {
                 override val state: MutableStateFlow<MediaSyncState> = MutableStateFlow(
@@ -142,6 +151,18 @@ class HomeUserNameTest {
                 )
 
                 override suspend fun triggerSync(): com.smartsales.core.util.Result<Unit> = com.smartsales.core.util.Result.Success(Unit)
+            },
+            audioStorageRepository = object : AudioStorageRepository {
+                override val audios: Flow<List<StoredAudio>> = MutableStateFlow(emptyList())
+                override suspend fun importFromDevice(baseUrl: String, file: com.smartsales.feature.media.devicemanager.DeviceMediaFile): StoredAudio {
+                    throw UnsupportedOperationException()
+                }
+
+                override suspend fun importFromPhone(uri: android.net.Uri): StoredAudio {
+                    throw UnsupportedOperationException()
+                }
+
+                override suspend fun delete(audioId: String) {}
             },
             transcriptionCoordinator = object : AudioTranscriptionCoordinator {
                 override suspend fun uploadAudio(file: java.io.File): com.smartsales.core.util.Result<AudioUploadPayload> =
@@ -169,6 +190,7 @@ class HomeUserNameTest {
                 override suspend fun upsert(summary: AiSessionSummary) {}
                 override suspend fun delete(id: String) {}
                 override suspend fun findById(id: String): AiSessionSummary? = null
+                override suspend fun updateTitle(id: String, newTitle: String) {}
             },
             sessionTitleResolver = SessionTitleResolver(FakeMetaHub()),
             userProfileRepository = profileRepo,

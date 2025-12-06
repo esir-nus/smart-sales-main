@@ -27,9 +27,8 @@ fun AudioFilesShell(
     ) {
         AudioFilesRoute(
             modifier = Modifier.fillMaxSize(),
-            onAskAiAboutTranscript = { recordingId, fileName, jobId, preview, full ->
+            onAskAiAboutTranscript = { recordingId, fileName, jobId, sessionId, preview, full ->
                 val resolvedJobId = jobId ?: "transcription-$recordingId"
-                val sessionId = "session-$resolvedJobId"
                 homeViewModel.onTranscriptionRequested(
                     TranscriptionChatRequest(
                         jobId = resolvedJobId,

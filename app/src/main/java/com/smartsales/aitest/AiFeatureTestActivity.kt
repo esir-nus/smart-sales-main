@@ -206,7 +206,7 @@ private fun AiFeatureTestApp(
         audioFilesViewModel.events.collect { event ->
             when (event) {
                 is AudioFilesEvent.TranscriptReady -> {
-                    val sessionId = "session-${event.jobId}"
+                    val sessionId = event.sessionId
                     homeViewModel.onTranscriptionRequested(
                         TranscriptionChatRequest(
                             jobId = event.jobId,
@@ -338,20 +338,20 @@ private fun AiFeatureTestApp(
                                 .fillMaxSize()
                                 .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES),
                             viewModel = audioFilesViewModel,
-                            onAskAiAboutTranscript = { recordingId, fileName, jobId, preview, full ->
+                            onAskAiAboutTranscript = { recordingId, fileName, jobId, sessionId, preview, full ->
                                 val resolvedJobId = jobId ?: "transcription-$recordingId"
-                                val sessionId = "session-$resolvedJobId"
+                                val resolvedSessionId = sessionId ?: "session-$resolvedJobId"
                                 homeViewModel.onTranscriptionRequested(
                                     TranscriptionChatRequest(
                                         jobId = resolvedJobId,
                                         fileName = fileName,
                                         recordingId = recordingId,
-                                        sessionId = sessionId,
+                                        sessionId = resolvedSessionId,
                                         transcriptPreview = preview,
                                         transcriptMarkdown = full
                                     )
                                 )
-                                pendingSessionId = sessionId
+                                pendingSessionId = resolvedSessionId
                                 setPage(TestHomePage.Home)
                             }
                         )
@@ -444,15 +444,15 @@ private fun OverlayScaffold(
                     AudioFilesRoute(
                         modifier = Modifier.fillMaxSize(),
                         viewModel = audioFilesViewModel,
-                        onAskAiAboutTranscript = { recordingId, fileName, jobId, preview, full ->
+                        onAskAiAboutTranscript = { recordingId, fileName, jobId, sessionId, preview, full ->
                             val resolvedJobId = jobId ?: "transcription-$recordingId"
-                            val sessionId = "session-$resolvedJobId"
+                            val resolvedSessionId = sessionId ?: "session-$resolvedJobId"
                             homeViewModel.onTranscriptionRequested(
                                 TranscriptionChatRequest(
                                     jobId = resolvedJobId,
                                     fileName = fileName,
                                     recordingId = recordingId,
-                                    sessionId = sessionId,
+                                    sessionId = resolvedSessionId,
                                     transcriptPreview = preview,
                                     transcriptMarkdown = full
                                 )

@@ -54,6 +54,10 @@ import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.TranscriptMetadata
 import com.smartsales.core.metahub.ExportMetadata
 import com.smartsales.core.metahub.TokenUsage
+import android.net.Uri
+import com.smartsales.feature.media.audiofiles.AudioStorageRepository
+import com.smartsales.feature.media.audiofiles.StoredAudio
+import com.smartsales.feature.chat.testutil.TestContext
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeExportActionsTest {
@@ -64,6 +68,7 @@ class HomeExportActionsTest {
     private lateinit var shareHandler: RecordingShareHandler
     private lateinit var viewModel: HomeScreenViewModel
     private lateinit var homeOrchestrator: HomeOrchestrator
+    private val appContext = TestContext()
 
     @Before
     fun setup() {
@@ -73,6 +78,7 @@ class HomeExportActionsTest {
         exportOrchestrator = RecordingExportOrchestrator()
         shareHandler = RecordingShareHandler()
         viewModel = HomeScreenViewModel(
+            appContext = appContext,
             homeOrchestrator = homeOrchestrator,
             aiSessionRepository = object : AiSessionRepository {
                 override suspend fun loadOlderMessages(currentTopMessageId: String?): List<ChatMessageUi> = emptyList()
@@ -87,6 +93,8 @@ class HomeExportActionsTest {
                 override fun forgetDevice() = Unit
                 override suspend fun requestHotspotCredentials(): Result<WifiCredentials> = Result.Error(UnsupportedOperationException())
                 override suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus> = Result.Error(UnsupportedOperationException())
+                override fun scheduleAutoReconnectIfNeeded() {}
+                override fun forceReconnectNow() {}
             },
             mediaSyncCoordinator = object : MediaSyncCoordinator {
                 override val state: MutableStateFlow<MediaSyncState> = MutableStateFlow(MediaSyncState())
@@ -104,6 +112,18 @@ class HomeExportActionsTest {
 
                 override fun observeJob(jobId: String): Flow<AudioTranscriptionJobState> = flowOf(AudioTranscriptionJobState.Idle)
             },
+            audioStorageRepository = object : AudioStorageRepository {
+                override val audios: Flow<List<StoredAudio>> = MutableStateFlow(emptyList())
+                override suspend fun importFromDevice(baseUrl: String, file: com.smartsales.feature.media.devicemanager.DeviceMediaFile): StoredAudio {
+                    throw UnsupportedOperationException()
+                }
+
+                override suspend fun importFromPhone(uri: android.net.Uri): StoredAudio {
+                    throw UnsupportedOperationException()
+                }
+
+                override suspend fun delete(audioId: String) {}
+            },
             quickSkillCatalog = DefaultQuickSkillCatalog(),
             chatHistoryRepository = object : ChatHistoryRepository {
                 override suspend fun loadLatestSession(sessionId: String): List<ChatMessageEntity> = emptyList()
@@ -115,6 +135,7 @@ class HomeExportActionsTest {
                 override suspend fun upsert(summary: AiSessionSummary) {}
                 override suspend fun delete(id: String) {}
                 override suspend fun findById(id: String): AiSessionSummary? = null
+                override suspend fun updateTitle(id: String, newTitle: String) {}
             },
             sessionTitleResolver = SessionTitleResolver(FakeMetaHub()),
             userProfileRepository = object : UserProfileRepository {

@@ -7,8 +7,8 @@ import com.smartsales.data.aicore.AiChatResponse
 import com.smartsales.data.aicore.AiChatService
 import com.smartsales.data.aicore.AiCoreException
 import com.smartsales.data.aicore.ExportFormat
-import com.smartsales.data.aicore.ExportManager
 import com.smartsales.data.aicore.ExportResult
+import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.TingwuCoordinator
 import com.smartsales.data.aicore.TingwuJobState
 import com.smartsales.data.aicore.TingwuRequest
@@ -47,7 +47,7 @@ interface ChatController {
 @Singleton
 class DefaultChatController @Inject constructor(
     private val chatService: AiChatService,
-    private val exportManager: ExportManager,
+    private val exportOrchestrator: ExportOrchestrator,
     private val tingwuCoordinator: TingwuCoordinator,
     private val sessionRepository: AiSessionRepository,
     private val dispatchers: DispatcherProvider,
@@ -193,7 +193,11 @@ class DefaultChatController @Inject constructor(
             return
         }
         _state.update { it.copy(exportState = ChatExportState.InProgress(format)) }
-        when (val result = exportManager.exportMarkdown(markdown, format)) {
+        val exportResult = when (format) {
+            ExportFormat.PDF -> exportOrchestrator.exportPdf(sessionId, markdown)
+            ExportFormat.CSV -> exportOrchestrator.exportCsv(sessionId)
+        }
+        when (val result = exportResult) {
             is Result.Success -> {
                 _state.update {
                     it.copy(exportState = ChatExportState.Completed(result.data))

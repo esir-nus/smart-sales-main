@@ -15,6 +15,8 @@ import com.smartsales.feature.media.MediaSyncState
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
 import com.smartsales.feature.media.audiofiles.DeviceHttpEndpointProvider
+import com.smartsales.feature.media.audiofiles.AudioStorageRepository
+import com.smartsales.feature.media.audiofiles.StoredAudio
 import com.smartsales.feature.media.devicemanager.DeviceMediaFile
 import com.smartsales.feature.media.devicemanager.DeviceMediaGateway
 import com.smartsales.feature.media.devicemanager.DeviceUploadSource
@@ -50,6 +52,7 @@ class AudioFilesViewModelTest {
     private lateinit var syncCoordinator: FakeMediaSyncCoordinator
     private lateinit var endpointProvider: FakeDeviceHttpEndpointProvider
     private lateinit var transcriptionCoordinator: FakeTranscriptionCoordinator
+    private lateinit var audioStorageRepository: FakeAudioStorageRepository
     private lateinit var viewModel: AudioFilesViewModel
 
     @Before
@@ -59,11 +62,13 @@ class AudioFilesViewModelTest {
         syncCoordinator = FakeMediaSyncCoordinator()
         endpointProvider = FakeDeviceHttpEndpointProvider()
         transcriptionCoordinator = FakeTranscriptionCoordinator()
+        audioStorageRepository = FakeAudioStorageRepository()
         viewModel = AudioFilesViewModel(
             mediaGateway = gateway,
             mediaSyncCoordinator = syncCoordinator,
             transcriptionCoordinator = transcriptionCoordinator,
             endpointProvider = endpointProvider,
+            audioStorageRepository = audioStorageRepository,
             dispatchers = FakeDispatcherProvider(dispatcher)
         )
     }
@@ -202,6 +207,19 @@ class AudioFilesViewModelTest {
     }
 
     @Test
+    fun `ignore duplicate transcribe while in progress`() = runTest(dispatcher) {
+        gateway.files = listOf(DeviceMediaFile("dup.mp3", 1, "audio/mpeg", 10L, "m", "d"))
+        endpointProvider.emit("http://10.0.0.14:8000")
+        advanceUntilIdle()
+
+        viewModel.onTranscribeClicked("dup.mp3")
+        viewModel.onTranscribeClicked("dup.mp3")
+        advanceUntilIdle()
+
+        assertEquals(1, transcriptionCoordinator.submitCalls)
+    }
+
+    @Test
     fun `onTranscriptClicked ignores non done recordings`() = runTest(dispatcher) {
         gateway.files = listOf(
             DeviceMediaFile("voice3.mp3", 1, "audio/mpeg", 10L, "m3", "d3")
@@ -230,6 +248,9 @@ class AudioFilesViewModelTest {
         assertEquals(file.name, transcriptionCoordinator.lastUploadedFile?.name)
         assertEquals(TranscriptionStatus.IN_PROGRESS, viewModel.uiState.value.recordings.first().transcriptionStatus)
         assertEquals("task-1", viewModel.uiState.value.tingwuTaskIds["clip.mp3"])
+        val boundSession = viewModel.uiState.value.sessionIds["clip.mp3"]
+        assertTrue(boundSession?.startsWith("session-clip.mp3") == true)
+        assertEquals(boundSession, transcriptionCoordinator.lastSessionId)
     }
 
     @Test
@@ -298,6 +319,8 @@ class AudioFilesViewModelTest {
         assertEquals("clip5.mp3", ready?.recordingId)
         assertEquals("task-1", ready?.jobId)
         assertEquals("转写完成", ready?.fullTranscriptMarkdown)
+        assertTrue(ready?.sessionId?.startsWith("session-clip5") == true)
+        assertEquals(ready?.sessionId, viewModel.uiState.value.sessionIds["clip5.mp3"])
         collectJob.cancel()
     }
 
@@ -329,6 +352,7 @@ class AudioFilesViewModelTest {
 
         assertEquals(TranscriptionStatus.ERROR, viewModel.uiState.value.recordings.first().transcriptionStatus)
         assertTrue(viewModel.uiState.value.tingwuTaskIds.isEmpty())
+        assertTrue(viewModel.uiState.value.sessionIds.isEmpty())
         assertEquals("no download", viewModel.uiState.value.errorMessage)
     }
 
@@ -409,6 +433,8 @@ class AudioFilesViewModelTest {
         var submitResult: Result<String> = Result.Success("task-1")
         var lastUploadedFile: File? = null
         var lastSubmitAssetName: String? = null
+        var lastSessionId: String? = null
+        var submitCalls: Int = 0
         private val jobStates = mutableMapOf<String, MutableStateFlow<AudioTranscriptionJobState>>()
 
         override suspend fun uploadAudio(file: File): Result<AudioUploadPayload> {
@@ -423,6 +449,8 @@ class AudioFilesViewModelTest {
             sessionId: String?
         ): Result<String> {
             lastSubmitAssetName = audioAssetName
+            lastSessionId = sessionId
+            submitCalls++
             return submitResult
         }
 
@@ -434,5 +462,20 @@ class AudioFilesViewModelTest {
             val flow = jobStates.getOrPut(jobId) { MutableStateFlow<AudioTranscriptionJobState>(AudioTranscriptionJobState.Idle) }
             flow.value = state
         }
+    }
+
+    private class FakeAudioStorageRepository : AudioStorageRepository {
+        private val _audios = MutableStateFlow<List<StoredAudio>>(emptyList())
+        override val audios: Flow<List<StoredAudio>> = _audios.asStateFlow()
+
+        override suspend fun importFromDevice(baseUrl: String, file: DeviceMediaFile): StoredAudio {
+            throw UnsupportedOperationException()
+        }
+
+        override suspend fun importFromPhone(uri: android.net.Uri): StoredAudio {
+            throw UnsupportedOperationException()
+        }
+
+        override suspend fun delete(audioId: String) {}
     }
 }

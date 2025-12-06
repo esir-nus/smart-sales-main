@@ -21,8 +21,8 @@ import com.google.gson.Gson
 import java.io.File
 import java.util.Optional
 import java.util.concurrent.ConcurrentLinkedQueue
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -182,6 +182,7 @@ class RealTingwuCoordinatorTest {
             api = api,
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,
+            transcriptOrchestrator = transcriptOrchestrator,
             optionalConfig = Optional.empty()
         )
 

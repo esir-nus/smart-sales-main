@@ -53,7 +53,7 @@ class RoomAiSessionRepositoryTest {
     private class InMemoryDao : AiSessionDao {
         private val flow = MutableStateFlow<List<AiSessionEntity>>(emptyList())
 
-        override fun observeSummaries(limit: Int): MutableStateFlow<List<AiSessionEntity>> = flow
+        override fun observeSummaries(limit: Int): kotlinx.coroutines.flow.Flow<List<AiSessionEntity>> = flow
 
         override suspend fun upsert(entity: AiSessionEntity) {
             flow.value = flow.value.filterNot { it.id == entity.id } + entity
@@ -65,5 +65,16 @@ class RoomAiSessionRepositoryTest {
 
         override suspend fun findById(sessionId: String): AiSessionEntity? =
             flow.value.firstOrNull { it.id == sessionId }
+
+        override suspend fun updateTitle(sessionId: String, newTitle: String) {
+            val current = flow.value.firstOrNull { it.id == sessionId } ?: return
+            flow.value = flow.value.map { entity ->
+                if (entity.id == sessionId) {
+                    entity.copy(title = newTitle)
+                } else {
+                    entity
+                }
+            }
+        }
     }
 }

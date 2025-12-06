@@ -50,6 +50,7 @@ class AudioFilesViewModel @Inject constructor(
 
     private var currentBaseUrl: String? = null
     private var playingId: String? = null
+    private val jobSessionIds = mutableMapOf<String, String>()
     private val recordingSources = mutableMapOf<String, DeviceMediaFile>()
     private var deviceUiItems: List<AudioRecordingUi> = emptyList()
     private val storedAudios = mutableMapOf<String, StoredAudio>()
@@ -108,11 +109,20 @@ class AudioFilesViewModel @Inject constructor(
     }
 
     fun onTranscribeClicked(id: String) {
+        val recording = _uiState.value.recordings.find { it.id == id }
+        if (recording?.transcriptionStatus == TranscriptionStatus.IN_PROGRESS) {
+            emitError("处理中…")
+            return
+        }
         val stored = storedAudios[id]
         val deviceFile = recordingSources[id]
         if (stored == null && deviceFile == null) {
             markRecordingStatus(id, TranscriptionStatus.ERROR)
             return emitError("未找到音频文件")
+        }
+        val sessionId = "session-${id}-${System.currentTimeMillis()}"
+        _uiState.update { state ->
+            state.copy(sessionIds = state.sessionIds + (id to sessionId))
         }
         viewModelScope.launch(dispatchers.io) {
             markRecordingStatus(id, TranscriptionStatus.IN_PROGRESS)
@@ -122,6 +132,7 @@ class AudioFilesViewModel @Inject constructor(
                     if (path.isNullOrBlank()) {
                         markRecordingStatus(id, TranscriptionStatus.ERROR)
                         emitError("找不到本地音频路径")
+                        clearSessionBinding(id)
                         return@launch
                     }
                     java.io.File(path)
@@ -131,11 +142,13 @@ class AudioFilesViewModel @Inject constructor(
                     val base = currentBaseUrl ?: run {
                         markRecordingStatus(id, TranscriptionStatus.ERROR)
                         emitError("设备未连接")
+                        clearSessionBinding(id)
                         return@launch
                     }
                     val device = deviceFile ?: run {
                         markRecordingStatus(id, TranscriptionStatus.ERROR)
                         emitError("未找到音频文件")
+                        clearSessionBinding(id)
                         return@launch
                     }
                     when (val download = mediaGateway.downloadFile(base, device)) {
@@ -143,6 +156,7 @@ class AudioFilesViewModel @Inject constructor(
                         is Result.Error -> {
                             markRecordingStatus(id, TranscriptionStatus.ERROR)
                             emitError(download.throwable.message)
+                            clearSessionBinding(id)
                             return@launch
                         }
                     }
@@ -153,6 +167,7 @@ class AudioFilesViewModel @Inject constructor(
                 is Result.Error -> {
                     markRecordingStatus(id, TranscriptionStatus.ERROR)
                     emitError(upload.throwable.message)
+                    clearSessionBinding(id)
                     return@launch
                 }
             }
@@ -161,11 +176,12 @@ class AudioFilesViewModel @Inject constructor(
                     audioAssetName = deviceFile?.name ?: stored?.displayName ?: id,
                     language = DEFAULT_TINGWU_LANGUAGE,
                     uploadPayload = uploadPayload,
-                    sessionId = null
+                    sessionId = sessionId
                 )
             ) {
                 is Result.Success -> {
                     val taskId = submit.data
+                    jobSessionIds[taskId] = sessionId
                     _uiState.update { state ->
                         state.copy(
                             recordings = state.recordings.map { recording ->
@@ -173,6 +189,7 @@ class AudioFilesViewModel @Inject constructor(
                                     recording.copy(transcriptionStatus = TranscriptionStatus.IN_PROGRESS)
                                 } else recording
                             },
+                            sessionIds = state.sessionIds + (id to sessionId),
                             transcriptPreviewRecording = null,
                             tingwuTaskIds = state.tingwuTaskIds + (id to taskId)
                         )
@@ -183,6 +200,7 @@ class AudioFilesViewModel @Inject constructor(
                 is Result.Error -> {
                     markRecordingStatus(id, TranscriptionStatus.ERROR)
                     emitError(submit.throwable.message)
+                    clearSessionBinding(id)
                 }
             }
         }
@@ -293,6 +311,7 @@ class AudioFilesViewModel @Inject constructor(
                     val retainedIds = deviceUiItems.map { it.id } + storedAudios.keys
                     it.copy(
                         transcriptPreviewRecording = null,
+                        sessionIds = it.sessionIds.filterKeys { key -> retainedIds.contains(key) },
                         tingwuTaskIds = it.tingwuTaskIds.filterKeys { key -> retainedIds.contains(key) },
                         isLoading = false,
                         errorMessage = null,
@@ -327,6 +346,15 @@ class AudioFilesViewModel @Inject constructor(
         }
     }
 
+    private fun clearSessionBinding(id: String) {
+        _uiState.update { state ->
+            state.copy(
+                sessionIds = state.sessionIds - id,
+                tingwuTaskIds = state.tingwuTaskIds - id
+            )
+        }
+    }
+
     private fun observeJob(recordingId: String, jobId: String) {
         if (observingJobs.contains(jobId)) return
         observingJobs.add(jobId)
@@ -352,29 +380,38 @@ class AudioFilesViewModel @Inject constructor(
                                             chapters = state.chapters,
                                             smartSummary = state.smartSummary
                                         )
-                                    } else recording
+                                    } else {
+                                        recording
+                                    }
                                 }
                             )
                         }
                         val fileName = recordingSources[recordingId]?.name ?: recordingId
+                        val sessionId = jobSessionIds[jobId]
+                            ?: _uiState.value.sessionIds[recordingId]
+                            ?: "session-$jobId"
                         val transcript = state.transcriptMarkdown
-                    if (transcript.isNotBlank()) {
-                        _events.tryEmit(
-                            AudioFilesEvent.TranscriptReady(
-                                recordingId = recordingId,
-                                fileName = storedAudios[recordingId]?.displayName ?: fileName,
-                                jobId = jobId,
-                                transcriptPreview = preview,
-                                fullTranscriptMarkdown = transcript,
-                                transcriptionUrl = state.transcriptionUrl
-                            )
+                        if (transcript.isNotBlank()) {
+                            _events.tryEmit(
+                                AudioFilesEvent.TranscriptReady(
+                                    recordingId = recordingId,
+                                    fileName = storedAudios[recordingId]?.displayName ?: fileName,
+                                    jobId = jobId,
+                                    sessionId = sessionId,
+                                    transcriptPreview = preview,
+                                    fullTranscriptMarkdown = transcript,
+                                    transcriptionUrl = state.transcriptionUrl
+                                )
                             )
                         }
+                        jobSessionIds.remove(jobId)
                         observingJobs.remove(jobId)
                     }
 
                     is com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState.Failed -> {
                         markRecordingStatus(recordingId, TranscriptionStatus.ERROR)
+                        clearSessionBinding(recordingId)
+                        jobSessionIds.remove(jobId)
                         observingJobs.remove(jobId)
                     }
 
@@ -519,6 +556,7 @@ sealed interface AudioFilesEvent {
         val recordingId: String,
         val fileName: String,
         val jobId: String,
+        val sessionId: String,
         val transcriptPreview: String?,
         val fullTranscriptMarkdown: String?,
         val transcriptionUrl: String?

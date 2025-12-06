@@ -5,9 +5,9 @@ package com.smartsales.core.metahub
 // 说明：验证内存版元数据中心的基础读写行为
 // 作者：创建于 2025-12-04
 
-import kotlin.test.assertEquals
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
+import org.junit.Assert.assertEquals
 
 class InMemoryMetaHubTest {
 

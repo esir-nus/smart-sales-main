@@ -1,6 +1,5 @@
 package com.smartsales.feature.chat.history
 
-import com.smartsales.feature.chat.AiSessionRepository
 import com.smartsales.feature.chat.AiSessionSummary
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -209,7 +208,7 @@ class ChatHistoryViewModelTest {
         pinned = pinned
     )
 
-    private class FakeAiSessionRepository : AiSessionRepository {
+    private class FakeAiSessionRepository : com.smartsales.feature.chat.AiSessionRepository {
         private val state = MutableStateFlow<List<AiSessionSummary>>(emptyList())
         var shouldFail: Boolean = false
 
@@ -236,6 +235,13 @@ class ChatHistoryViewModelTest {
 
         override suspend fun findById(id: String): AiSessionSummary? =
             state.value.firstOrNull { it.id == id }
+
+        override suspend fun updateTitle(id: String, newTitle: String) {
+            val existing = state.value.firstOrNull { it.id == id } ?: return
+            state.value = state.value.map { summary ->
+                if (summary.id == id) summary.copy(title = newTitle) else summary
+            }
+        }
     }
 
     private class FakeChatHistoryRepository : ChatHistoryRepository {

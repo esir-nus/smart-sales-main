@@ -29,6 +29,11 @@ import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
 import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.ExportResult
+import com.smartsales.feature.media.audiofiles.AudioStorageRepository
+import com.smartsales.feature.media.audiofiles.StoredAudio
+import android.net.Uri
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import com.smartsales.feature.chat.title.SessionTitleResolver
 import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.SessionMetadata
@@ -39,8 +44,7 @@ import com.smartsales.feature.chat.ChatShareHandler
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.smartsales.feature.chat.testutil.TestContext
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -61,6 +65,7 @@ class HomeTranscriptionTest {
     private lateinit var transcriptionCoordinator: FakeTranscriptionCoordinator
     private lateinit var viewModel: HomeScreenViewModel
     private lateinit var aiChatService: FakeAiChatService
+    private val appContext = TestContext()
 
     @Before
     fun setup() {
@@ -68,11 +73,23 @@ class HomeTranscriptionTest {
         transcriptionCoordinator = FakeTranscriptionCoordinator()
         aiChatService = FakeAiChatService()
         viewModel = HomeScreenViewModel(
+            appContext = appContext,
             homeOrchestrator = FakeHomeOrchestrator(aiChatService),
-            aiSessionRepository = FakeAiSessionRepository(),
+            aiSessionRepository = FakeChatMessageRepository(),
             deviceConnectionManager = FakeDeviceConnectionManager(),
             mediaSyncCoordinator = FakeMediaSyncCoordinator(),
             transcriptionCoordinator = transcriptionCoordinator,
+            audioStorageRepository = object : AudioStorageRepository {
+                override val audios: Flow<List<StoredAudio>> = MutableStateFlow(emptyList())
+                override suspend fun importFromDevice(baseUrl: String, file: com.smartsales.feature.media.devicemanager.DeviceMediaFile): StoredAudio {
+                    throw UnsupportedOperationException()
+                }
+                override suspend fun importFromPhone(uri: android.net.Uri): StoredAudio {
+                    throw UnsupportedOperationException()
+                }
+
+                override suspend fun delete(audioId: String) {}
+            },
             quickSkillCatalog = FakeQuickSkillCatalog(),
             chatHistoryRepository = FakeChatHistoryRepository(),
             sessionRepository = FakeSessionRepository(),
@@ -160,7 +177,7 @@ class HomeTranscriptionTest {
         }
     }
 
-    private class FakeAiSessionRepository : AiSessionRepository {
+    private class FakeChatMessageRepository : com.smartsales.feature.chat.home.AiSessionRepository {
         override suspend fun loadOlderMessages(currentTopMessageId: String?): List<ChatMessageUi> =
             emptyList()
     }
@@ -181,6 +198,14 @@ class HomeTranscriptionTest {
         }
 
         override suspend fun findById(id: String): AiSessionSummary? = sessions[id]
+
+        override suspend fun updateTitle(id: String, newTitle: String) {
+            sessions[id]?.let { existing ->
+                val updated = existing.copy(title = newTitle)
+                sessions[id] = updated
+                summaries.value = sessions.values.toList()
+            }
+        }
     }
 
     private class FakeDeviceConnectionManager : DeviceConnectionManager {

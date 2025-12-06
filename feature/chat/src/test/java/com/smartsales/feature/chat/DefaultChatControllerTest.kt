@@ -5,8 +5,8 @@ import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.ExportFormat
 import com.smartsales.data.aicore.ExportResult
 import com.smartsales.data.aicore.FakeAiChatService
-import com.smartsales.data.aicore.FakeExportManager
 import com.smartsales.data.aicore.FakeTingwuCoordinator
+import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.TingwuRequest
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -25,9 +25,10 @@ class DefaultChatControllerTest {
     private val dispatcher = StandardTestDispatcher()
     private val dispatcherProvider = FakeDispatcherProvider(dispatcher)
     private val shareHandler = RecordingShareHandler()
+    private val exportOrchestrator = FakeExportOrchestrator()
     private val controller = DefaultChatController(
         chatService = FakeAiChatService(dispatcherProvider),
-        exportManager = FakeExportManager(dispatcherProvider),
+        exportOrchestrator = exportOrchestrator,
         tingwuCoordinator = FakeTingwuCoordinator(dispatcherProvider),
         sessionRepository = InMemoryAiSessionRepository(),
         dispatchers = dispatcherProvider,
@@ -112,5 +113,21 @@ class DefaultChatControllerTest {
             sharedResult = result
             return Result.Success(Unit)
         }
+    }
+
+    private class FakeExportOrchestrator : ExportOrchestrator {
+        var nextResult: Result<ExportResult> = Result.Success(
+            ExportResult(
+                fileName = "demo.pdf",
+                mimeType = "application/pdf",
+                payload = byteArrayOf(1, 2, 3)
+            )
+        )
+
+        override suspend fun exportPdf(sessionId: String, markdown: String): Result<ExportResult> =
+            nextResult
+
+        override suspend fun exportCsv(sessionId: String): Result<ExportResult> =
+            nextResult
     }
 }

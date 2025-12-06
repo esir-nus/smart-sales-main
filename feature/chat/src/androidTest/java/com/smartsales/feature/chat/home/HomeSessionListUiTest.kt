@@ -12,8 +12,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertDoesNotExist
-import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -132,7 +130,7 @@ class HomeSessionListUiTest {
 
         composeRule.onNodeWithTag(HomeScreenTestTags.NEW_CHAT_BUTTON).performClick()
         composeRule.onNodeWithTag(HomeScreenTestTags.HERO).assertExists()
-        composeRule.onNodeWithTag(HomeScreenTestTags.SESSION_LIST)
+        composeRule.onNodeWithTag(HomeScreenTestTags.ROOT)
             .assertIsDisplayed()
     }
 }

@@ -56,13 +56,13 @@ class HomeScrollToBottomTest {
     }
 
     @Test
-    fun deviceBanner_staysVisibleWhileScrollingLongList() {
+    fun scrollButton_visibleWhileScrollingLongList() {
         setHomeContent(messageCount = 30)
         scrollToText("消息 29")
 
         scrollToText("消息 5")
 
-        composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_BANNER).assertIsDisplayed()
+        composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_BANNER).assertDoesNotExist()
         composeRule.onNodeWithTag(HomeScreenTestTags.SCROLL_TO_LATEST).assertIsDisplayed()
     }
 
@@ -85,15 +85,15 @@ class HomeScrollToBottomTest {
     fun scrollButton_neverAppearsForShortList() {
         setHomeContent(messageCount = 2)
 
-        composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_BANNER).assertIsDisplayed()
+        composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_BANNER).assertDoesNotExist()
         composeRule.onNodeWithTag(HomeScreenTestTags.SCROLL_TO_LATEST).assertDoesNotExist()
     }
 
     @Test
-    fun deviceBanner_visibleWhenListEmpty() {
+    fun scrollButton_absentWhenListEmpty() {
         setHomeContent(messageCount = 0)
 
-        composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_BANNER).assertIsDisplayed()
+        composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_BANNER).assertDoesNotExist()
         composeRule.onNodeWithTag(HomeScreenTestTags.SCROLL_TO_LATEST).assertDoesNotExist()
     }
 

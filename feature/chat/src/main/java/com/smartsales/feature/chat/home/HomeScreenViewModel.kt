@@ -5,8 +5,6 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.smartsales.core.metahub.RiskLevel
-import com.smartsales.core.metahub.SessionStage
 import com.smartsales.core.util.Result
 import com.smartsales.feature.chat.core.AudioContextSummary
 import com.smartsales.feature.chat.core.ChatHistoryItem
@@ -356,96 +354,90 @@ class HomeScreenViewModel @Inject constructor(
     private fun exportMarkdown(format: ExportFormat) {
         if (_uiState.value.exportInProgress) return
         viewModelScope.launch {
+            // 检查 MetaHub 分析状态
             val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
             val hasMetaAnalysis = meta?.latestMajorAnalysisMessageId != null
-            val existingAnalysis = latestAnalysisMarkdown
-            if (!existingAnalysis.isNullOrBlank()) {
-                performExport(format, existingAnalysis)
-                return@launch
-            }
-            if (hasMetaAnalysis) {
-                pendingExportAfterAnalysis = null
-                _uiState.update {
-                    it.copy(
-                        exportInProgress = false,
-                        snackbarMessage = it.snackbarMessage
-                            ?: "已检测到分析记录，请先生成分析内容后再导出"
-                    )
-                }
-                return@launch
-            }
-            val (mainContent, context) = findLatestLongContent()
-            if (mainContent == null) {
-                _uiState.update {
-                    it.copy(
-                        exportInProgress = false,
-                        snackbarMessage = "当前对话内容太少，无法生成可导出的分析"
-                    )
-                }
-                return@launch
-            }
-            pendingExportAfterAnalysis = format
-            _uiState.update { it.copy(exportInProgress = true, chatErrorMessage = null) }
-            if (hasMetaAnalysis && _uiState.value.snackbarMessage == null) {
-                _uiState.update { it.copy(snackbarMessage = "已检测到分析记录，正在重新生成导出内容…") }
-            }
-            val autoGoal = if (hasMetaAnalysis) {
-                "补全导出文本（MetaHub 已记录分析）"
-            } else {
-                "导出前自动分析"
-            }
-            val userMessage = buildSmartAnalysisUserMessage(
-                mainContent = mainContent,
-                context = context,
-                goal = autoGoal
-            )
-            sendMessageInternal(
-                messageText = userMessage,
-                skillOverride = QuickSkillId.SMART_ANALYSIS,
-                userDisplayText = "智能分析（导出前自动生成）",
-                onCompleted = {},
-                onCompletedTransform = { body ->
-                    buildString {
-                        append("智能分析结果\n\n")
-                        append(body.trim())
-                    }.trim()
-                },
-                isAutoAnalysis = true
-            )
-        }
-    }
+            val cachedAnalysis = latestAnalysisMarkdown
 
-    private fun performExport(format: ExportFormat, markdownOverride: String? = null) {
-        viewModelScope.launch {
-            val markdown = markdownOverride ?: latestAnalysisMarkdown ?: buildTranscriptMarkdown(_uiState.value.chatMessages)
-            if (format == ExportFormat.PDF && markdown.isBlank()) {
-                _uiState.update { it.copy(exportInProgress = false, snackbarMessage = "暂无可导出的内容") }
-                return@launch
-            }
-            _uiState.update { it.copy(exportInProgress = true, chatErrorMessage = null) }
-            val result = when (format) {
-                ExportFormat.PDF -> exportOrchestrator.exportPdf(sessionId, markdown)
-                ExportFormat.CSV -> exportOrchestrator.exportCsv(sessionId)
-            }
-            when (result) {
-                is Result.Success -> {
-                    when (val share = shareHandler.shareExport(result.data)) {
-                        is Result.Success -> _uiState.update { it.copy(exportInProgress = false) }
-                        is Result.Error -> _uiState.update {
-                            it.copy(
-                                exportInProgress = false,
-                                chatErrorMessage = share.throwable.message ?: "分享失败"
-                            )
-                        }
-                    }
+            when {
+                !cachedAnalysis.isNullOrBlank() -> {
+                    // 直接导出：使用缓存分析 markdown
+                    performExport(format, markdownOverride = cachedAnalysis)
                 }
-                is Result.Error -> {
+                hasMetaAnalysis -> {
+                    // MetaHub 认为有分析，但 VM 没有缓存文本
+                    // 不自动重跑，给轻量提示 + 退回
                     _uiState.update {
                         it.copy(
                             exportInProgress = false,
-                            chatErrorMessage = result.throwable.message ?: "导出失败"
+                            snackbarMessage = "检测到历史分析记录，如需导出，请重新运行一次智能分析。"
                         )
                     }
+                    // 可选：退回到对话导出（逐字稿），或直接 return
+                    return@launch
+                }
+                else -> {
+                    // 没有任何分析记录，走现有 "自动 SMART_ANALYSIS 然后导出" 路径
+                    val (mainContent, context) = findLatestLongContent()
+                    if (mainContent == null) {
+                        performExport(format, markdownOverride = null)
+                        return@launch
+                    }
+                    pendingExportAfterAnalysis = format
+                    _uiState.update { it.copy(exportInProgress = true, chatErrorMessage = null) }
+                    val autoGoal = "导出前自动分析"
+                    val userMessage = buildSmartAnalysisUserMessage(
+                        mainContent = mainContent,
+                        context = context,
+                        goal = autoGoal
+                    )
+                    sendMessageInternal(
+                        messageText = userMessage,
+                        skillOverride = QuickSkillId.SMART_ANALYSIS,
+                        userDisplayText = "智能分析（导出前自动生成）",
+                        onCompleted = {},
+                        onCompletedTransform = { body ->
+                            buildString {
+                                append("智能分析结果\n\n")
+                                append(body.trim())
+                            }.trim()
+                        },
+                        isAutoAnalysis = true
+                    )
+                }
+            }
+        }
+    }
+
+    private suspend fun performExport(format: ExportFormat, markdownOverride: String? = null) {
+        val markdown = markdownOverride ?: latestAnalysisMarkdown ?: buildTranscriptMarkdown(_uiState.value.chatMessages)
+        if (format == ExportFormat.PDF && markdown.isBlank()) {
+            _uiState.update { it.copy(exportInProgress = false, snackbarMessage = "暂无可导出的内容") }
+            return
+        }
+        _uiState.update { it.copy(exportInProgress = true, chatErrorMessage = null) }
+        val result = when (format) {
+            ExportFormat.PDF -> exportOrchestrator.exportPdf(sessionId, markdown)
+            ExportFormat.CSV -> exportOrchestrator.exportCsv(sessionId)
+        }
+        when (result) {
+            is Result.Success -> {
+                when (val share = shareHandler.shareExport(result.data)) {
+                    is Result.Success -> _uiState.update { it.copy(exportInProgress = false) }
+                    is Result.Error -> _uiState.update {
+                        it.copy(
+                            exportInProgress = false,
+                            chatErrorMessage = share.throwable.message ?: "分享失败"
+                        )
+                    }
+                }
+            }
+            is Result.Error -> {
+                _uiState.update {
+                    it.copy(
+                        exportInProgress = false,
+                        chatErrorMessage = result.throwable.message ?: "导出失败"
+                    )
                 }
             }
         }
@@ -1052,7 +1044,7 @@ class HomeScreenViewModel @Inject constructor(
         viewModelScope.launch {
             updateSessionSummary(userMessage.content)
         }
-        val request = buildChatRequest(content, quickSkillId, newState.chatMessages, audioContext)
+        val request = buildChatRequest(content, quickSkillId, newState.chatMessages, audioContext, isAutoAnalysis)
         val enrichedRequest = request.copy(
             isFirstAssistantReply = isFirstAssistantReply
         )
@@ -1089,16 +1081,17 @@ class HomeScreenViewModel @Inject constructor(
                         val rawFullText = event.fullText
                         val shouldParseSessionMetadata =
                             request.quickSkillId == null && request.isFirstAssistantReply
-                        if (shouldParseSessionMetadata) {
-                            handleGeneralChatMetadata(rawFullText)
-                        }
-                        if (isSmartAnalysis) {
-                            handleSmartAnalysisMetadata(rawFullText)
-                        }
                         val sanitized = sanitizeAssistantOutput(rawFullText, isSmartAnalysis)
                         val cleaned = onCompletedTransform?.invoke(sanitized) ?: sanitized
                         if (isSmartAnalysis) {
                             onAnalysisCompleted(cleaned, assistantId)
+                        }
+                        if (shouldParseSessionMetadata || isSmartAnalysis) {
+                            val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
+                            if (meta != null) {
+                                updateTitleFromMetadata(meta)
+                                updateDebugSessionMetadata(meta)
+                            }
                         }
                         debugLog(
                             event = "chat_stream_completed",
@@ -1190,7 +1183,8 @@ class HomeScreenViewModel @Inject constructor(
         userMessage: String,
         skillId: QuickSkillId?,
         historySource: List<ChatMessageUi>,
-        audioContext: AudioContextSummary?
+        audioContext: AudioContextSummary?,
+        isAutoAnalysis: Boolean
     ): ChatRequest {
         val history = historySource.map { ui ->
             ChatHistoryItem(
@@ -1443,7 +1437,9 @@ class HomeScreenViewModel @Inject constructor(
         }
         pendingExportAfterAnalysis?.let { format ->
             pendingExportAfterAnalysis = null
-            performExport(format)
+            viewModelScope.launch {
+                performExport(format, markdownOverride = summary)
+            }
         }
     }
 
@@ -2134,246 +2130,6 @@ class HomeScreenViewModel @Inject constructor(
             .replace(Regex("[\\p{Punct}\\s]+"), "")
     }
 
-    private suspend fun handleGeneralChatMetadata(rawFullText: String) {
-        val jsonText = extractLastJsonBlock(rawFullText)
-        if (jsonText.isNullOrBlank()) {
-            debugLog(
-                event = "metadata_parse_skipped",
-                data = mapOf("sessionId" to sessionId, "reason" to "no_json_found")
-            )
-            return
-        }
-        val metadata = parseGeneralChatMetadata(jsonText)
-        if (metadata == null) {
-            warnLog(
-                event = "general_chat_metadata_parse_failed",
-                data = mapOf("sessionId" to sessionId, "reason" to "json_parse_null")
-            )
-            appendDebugNote("generalChatMetadataParseFailed")
-            return
-        }
-        val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-        val merged = metadata.toSessionMetadata(sessionId, existing)
-        debugLog(
-            event = "general_chat_metadata_parsed",
-            data = mapOf(
-                "sessionId" to sessionId,
-                "mainPerson" to merged.mainPerson,
-                "shortSummary" to merged.shortSummary,
-                "title6" to merged.summaryTitle6Chars
-            )
-        )
-        runCatching { metaHub.upsertSession(merged) }
-            .onSuccess {
-                debugLog(
-                    event = "session_metadata_upsert",
-                    data = mapOf(
-                        "sessionId" to sessionId,
-                        "mainPerson" to merged.mainPerson,
-                        "shortSummary" to merged.shortSummary,
-                        "title6" to merged.summaryTitle6Chars
-                    )
-                )
-                updateTitleFromMetadata(merged)
-            }
-            .onFailure {
-                warnLog(
-                    event = "metahub_upsert_failed",
-                    data = mapOf(
-                        "sessionId" to sessionId,
-                        "target" to "session"
-                    ),
-                    throwable = it
-                )
-                appendDebugNote("sessionMetaUpsertFailed")
-            }
-        updateDebugSessionMetadata(merged)
-    }
-
-    private fun parseGeneralChatMetadata(jsonText: String): GeneralChatMetadata? = runCatching {
-        val obj = org.json.JSONObject(jsonText)
-        val highlights = obj.optJSONArray("highlights")?.let { array ->
-            (0 until array.length()).mapNotNull { idx -> array.optString(idx).takeIf { it.isNotBlank() } }
-        } ?: emptyList()
-        val actionable = obj.optJSONArray("actionable_tips")?.let { array ->
-            (0 until array.length()).mapNotNull { idx -> array.optString(idx).takeIf { it.isNotBlank() } }
-        } ?: emptyList()
-        val summaryObj = obj.optJSONObject("summary")
-        GeneralChatMetadata(
-            mainPerson = obj.optString("main_person").takeIf { it.isNotBlank() },
-            shortSummary = obj.optString("short_summary").takeIf { it.isNotBlank() },
-            summaryTitle6Chars = obj.optString("summary_title_6chars").takeIf { it.isNotBlank() }?.take(6),
-            location = obj.optString("location").takeIf { it.isNotBlank() },
-            highlights = highlights,
-            actionableTips = actionable,
-            summary = summaryObj?.let {
-                GeneralChatMetadata.SummaryBlock(
-                    coreInsight = it.optString("core_insight").takeIf { v -> v.isNotBlank() },
-                    sharpLine = it.optString("sharp_line").takeIf { v -> v.isNotBlank() }
-                )
-            }
-        )
-    }.getOrNull()
-
-    private suspend fun handleSmartAnalysisMetadata(rawFullText: String) {
-        val jsonText = extractLastJsonBlock(rawFullText)
-        if (jsonText.isNullOrBlank()) {
-            debugLog(
-                event = "smart_analysis_metadata_skipped",
-                data = mapOf("sessionId" to sessionId, "reason" to "no_json_found")
-            )
-            return
-        }
-        val metadata = parseSmartAnalysisMetadata(jsonText)
-        if (metadata == null) {
-            warnLog(
-                event = "smart_analysis_metadata_parse_failed",
-                data = mapOf("sessionId" to sessionId, "reason" to "json_parse_null")
-            )
-            appendDebugNote("smartAnalysisMetadataParseFailed")
-            return
-        }
-        val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-        val merged = metadata.toSessionMetadata(sessionId, existing)
-        debugLog(
-            event = "smart_analysis_metadata_parsed",
-            data = mapOf(
-                "sessionId" to sessionId,
-                "mainPerson" to merged.mainPerson,
-                "shortSummary" to merged.shortSummary,
-                "title6" to merged.summaryTitle6Chars
-            )
-        )
-        runCatching { metaHub.upsertSession(merged) }
-            .onSuccess {
-                debugLog(
-                    event = "smart_analysis_meta_upsert",
-                    data = mapOf(
-                        "sessionId" to sessionId,
-                        "mainPerson" to merged.mainPerson,
-                        "shortSummary" to merged.shortSummary
-                    )
-                )
-                updateTitleFromMetadata(merged)
-            }
-            .onFailure {
-                warnLog(
-                    event = "smart_analysis_meta_upsert_failed",
-                    data = mapOf("sessionId" to sessionId),
-                    throwable = it
-                )
-                appendDebugNote("smartAnalysisMetaUpsertFailed")
-            }
-        updateDebugSessionMetadata(merged)
-    }
-
-    private fun parseSmartAnalysisMetadata(jsonText: String): SmartAnalysisMetadata? = runCatching {
-        val obj = org.json.JSONObject(jsonText)
-        val highlights = obj.optJSONArray("highlights")?.let { array ->
-            (0 until array.length()).mapNotNull { idx -> array.optString(idx).takeIf { it.isNotBlank() } }
-        } ?: emptyList()
-        val actionable = obj.optJSONArray("actionable_tips")?.let { array ->
-            (0 until array.length()).mapNotNull { idx -> array.optString(idx).takeIf { it.isNotBlank() } }
-        } ?: emptyList()
-        SmartAnalysisMetadata(
-            mainPerson = obj.optString("main_person").takeIf { it.isNotBlank() },
-            shortSummary = obj.optString("short_summary").takeIf { it.isNotBlank() },
-            summaryTitle6Chars = obj.optString("summary_title_6chars").takeIf { it.isNotBlank() }?.take(6),
-            location = obj.optString("location").takeIf { it.isNotBlank() },
-            stage = obj.optString("stage").takeIf { it.isNotBlank() },
-            riskLevel = obj.optString("risk_level").takeIf { it.isNotBlank() },
-            highlights = highlights,
-            actionableTips = actionable
-        )
-    }.getOrNull()
-
-    private data class GeneralChatMetadata(
-        val mainPerson: String?,
-        val shortSummary: String?,
-        val summaryTitle6Chars: String?,
-        val location: String?,
-        val highlights: List<String>,
-        val actionableTips: List<String>,
-        val summary: SummaryBlock?
-    ) {
-        data class SummaryBlock(
-            val coreInsight: String?,
-            val sharpLine: String?
-        )
-
-        fun toSessionMetadata(sessionId: String, existing: SessionMetadata?): SessionMetadata {
-            val tags = (highlights + actionableTips).filter { it.isNotBlank() }.toSet()
-            val base = SessionMetadata(
-                sessionId = sessionId,
-                mainPerson = mainPerson,
-                shortSummary = shortSummary,
-                summaryTitle6Chars = summaryTitle6Chars,
-                location = location,
-                tags = tags,
-                lastUpdatedAt = System.currentTimeMillis()
-            )
-            return existing?.mergeWith(base) ?: base
-        }
-    }
-
-    private data class SmartAnalysisMetadata(
-        val mainPerson: String?,
-        val shortSummary: String?,
-        val summaryTitle6Chars: String?,
-        val location: String?,
-        val stage: String?,
-        val riskLevel: String?,
-        val highlights: List<String>,
-        val actionableTips: List<String>
-    ) {
-        fun toSessionMetadata(sessionId: String, existing: SessionMetadata?): SessionMetadata {
-            val tags = (highlights + actionableTips).filter { it.isNotBlank() }.toSet()
-            val base = SessionMetadata(
-                sessionId = sessionId,
-                mainPerson = mainPerson,
-                shortSummary = shortSummary,
-                summaryTitle6Chars = summaryTitle6Chars,
-                location = location,
-                stage = stage?.let { value ->
-                    when (value.trim().uppercase(Locale.getDefault())) {
-                        "DISCOVERY" -> SessionStage.DISCOVERY
-                        "NEGOTIATION" -> SessionStage.NEGOTIATION
-                        "PROPOSAL" -> SessionStage.PROPOSAL
-                        "CLOSING" -> SessionStage.CLOSING
-                        "POST_SALE", "POSTSALE", "POST-SALE" -> SessionStage.POST_SALE
-                        "UNKNOWN" -> SessionStage.UNKNOWN
-                        else -> null
-                    }
-                },
-                riskLevel = riskLevel?.let { value ->
-                    when (value.trim().uppercase(Locale.getDefault())) {
-                        "LOW" -> RiskLevel.LOW
-                        "MEDIUM" -> RiskLevel.MEDIUM
-                        "HIGH" -> RiskLevel.HIGH
-                        "UNKNOWN" -> RiskLevel.UNKNOWN
-                        else -> null
-                    }
-                },
-                tags = tags,
-                lastUpdatedAt = System.currentTimeMillis()
-            )
-            return existing?.mergeWith(base) ?: base
-        }
-    }
-
-    private fun extractLastJsonBlock(text: String): String? {
-        val fenced = Regex("```json\\s*([\\s\\S]*?)```", RegexOption.IGNORE_CASE)
-            .findAll(text)
-            .lastOrNull()?.groupValues?.getOrNull(1)?.trim()
-        if (!fenced.isNullOrBlank()) return fenced
-        val anyFence = Regex("```\\s*([\\s\\S]*?)```")
-            .findAll(text)
-            .lastOrNull()?.groupValues?.getOrNull(1)?.trim()
-        if (!anyFence.isNullOrBlank()) return anyFence
-        val trimmed = text.trim()
-        return if (trimmed.startsWith("{") && trimmed.endsWith("}")) trimmed else null
-    }
-    
     /**
      * 根据问候语内容返回友好的回复
      */

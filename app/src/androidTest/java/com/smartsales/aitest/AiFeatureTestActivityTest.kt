@@ -7,10 +7,8 @@ package com.smartsales.aitest
 
 import android.Manifest
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
@@ -77,7 +75,7 @@ class AiFeatureTestActivityTest {
     fun quickSkillTap_setsModeWithoutCreatingMessages() {
         waitForPage(AiFeatureTestTags.PAGE_HOME)
 
-        tapQuickSkill(QuickSkillId.SUMMARIZE_LAST_MEETING)
+        tapQuickSkill(QuickSkillId.SMART_ANALYSIS)
 
         composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertIsDisplayed()
         // 不应触发导航或额外气泡标签
@@ -89,7 +87,7 @@ class AiFeatureTestActivityTest {
     fun quickSkillTap_showsNoSkillBubble() {
         waitForPage(AiFeatureTestTags.PAGE_HOME)
 
-        tapQuickSkill(QuickSkillId.SUMMARIZE_LAST_MEETING)
+        tapQuickSkill(QuickSkillId.SMART_ANALYSIS)
 
         // 新 UX 不生成技能气泡，也不离开 Home
         composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertExists()
@@ -99,7 +97,7 @@ class AiFeatureTestActivityTest {
     fun quickSkill_sendUsesModeWithoutSkillBubble() {
         waitForPage(AiFeatureTestTags.PAGE_HOME)
 
-        tapQuickSkill(QuickSkillId.SUMMARIZE_LAST_MEETING)
+        tapQuickSkill(QuickSkillId.SMART_ANALYSIS)
         composeRule.onNodeWithTag(HomeScreenTestTags.INPUT_FIELD, useUnmergedTree = true)
             .performTextClearance()
         composeRule.onNodeWithTag(HomeScreenTestTags.INPUT_FIELD, useUnmergedTree = true)
@@ -116,12 +114,12 @@ class AiFeatureTestActivityTest {
     fun exportButtons_doNotNavigateAway() {
         waitForPage(AiFeatureTestTags.PAGE_HOME)
 
-        composeRule.onNodeWithTag(HomeScreenTestTags.EXPORT_PDF, useUnmergedTree = true)
+        composeRule.onNodeWithTag("home_quick_skill_${QuickSkillId.EXPORT_PDF.name}", useUnmergedTree = true)
             .assertIsDisplayed()
             .performClick()
         composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertIsDisplayed()
 
-        composeRule.onNodeWithTag(HomeScreenTestTags.EXPORT_CSV, useUnmergedTree = true)
+        composeRule.onNodeWithTag("home_quick_skill_${QuickSkillId.EXPORT_CSV.name}", useUnmergedTree = true)
             .assertIsDisplayed()
             .performClick()
         composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertIsDisplayed()

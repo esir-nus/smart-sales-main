@@ -158,12 +158,18 @@ class HomeExportActionsTest {
 
     @Test
     fun `smart analysis uses quick skill and appends assistant message`() = runTest(dispatcher) {
-        viewModel.onInputChanged("请帮我总结汽车行业的市场趋势和风险要点")
+        val longInput = "请帮我总结汽车行业的市场趋势和风险要点。".repeat(15)
+        viewModel.onInputChanged(longInput)
         viewModel.onSmartAnalysisClicked()
+        viewModel.onSendMessage()
         advanceUntilIdle()
 
-        assertEquals("SUMMARY", aiChatService.lastRequest?.quickSkillId)
-        assertTrue(viewModel.uiState.value.chatMessages.any { it.role == ChatMessageRole.ASSISTANT && !it.isStreaming })
+        assertEquals("SMART_ANALYSIS", aiChatService.lastRequest?.quickSkillId)
+        assertTrue(
+            viewModel.uiState.value.chatMessages.any {
+                it.role == ChatMessageRole.ASSISTANT && !it.isStreaming
+            }
+        )
     }
 
     @Test
@@ -180,22 +186,26 @@ class HomeExportActionsTest {
 
     @Test
     fun `export pdf uses analysis markdown and shares`() = runTest(dispatcher) {
-        viewModel.onInputChanged("请帮我总结汽车行业的市场趋势和风险要点")
+        val longInput = "请帮我总结汽车行业的市场趋势和风险要点。".repeat(15)
+        viewModel.onInputChanged(longInput)
         viewModel.onSmartAnalysisClicked()
+        viewModel.onSendMessage()
         advanceUntilIdle()
 
         viewModel.onExportPdfClicked()
         advanceUntilIdle()
 
-        assertEquals("分析结果", exportOrchestrator.lastPdfMarkdown)
+        assertEquals("智能分析结果\n\n分析结果", exportOrchestrator.lastPdfMarkdown)
         assertTrue(shareHandler.shared)
         assertTrue(!viewModel.uiState.value.exportInProgress)
     }
 
     @Test
     fun `export csv uses analysis markdown and shares`() = runTest(dispatcher) {
-        viewModel.onInputChanged("请帮我总结汽车行业的市场趋势和风险要点")
+        val longInput = "请帮我总结汽车行业的市场趋势和风险要点。".repeat(15)
+        viewModel.onInputChanged(longInput)
         viewModel.onSmartAnalysisClicked()
+        viewModel.onSendMessage()
         advanceUntilIdle()
 
         viewModel.onExportCsvClicked()
@@ -208,8 +218,10 @@ class HomeExportActionsTest {
 
     @Test
     fun `second export reuses cached analysis without rerun`() = runTest(dispatcher) {
-        viewModel.onInputChanged("请帮我总结汽车行业的市场趋势和风险要点")
+        val longInput = "请帮我总结汽车行业的市场趋势和风险要点。".repeat(15)
+        viewModel.onInputChanged(longInput)
         viewModel.onSmartAnalysisClicked()
+        viewModel.onSendMessage()
         advanceUntilIdle()
 
         val callsAfterAnalysis = aiChatService.callCount
@@ -225,7 +237,7 @@ class HomeExportActionsTest {
     @Test
     fun `when metahub has analysis but vm cache empty it hints and skips auto run`() = runTest(dispatcher) {
         metaHub.session = SessionMetadata(
-            sessionId = "session-1",
+            sessionId = "home-session",
             latestMajorAnalysisMessageId = "m1",
             lastUpdatedAt = 1L
         )
@@ -235,7 +247,7 @@ class HomeExportActionsTest {
 
         assertEquals(0, aiChatService.callCount)
         assertEquals(null, exportOrchestrator.lastFormat)
-        assertTrue(viewModel.uiState.value.snackbarMessage?.contains("分析记录") == true)
+        assertTrue(viewModel.uiState.value.snackbarMessage?.contains("历史分析记录") == true)
     }
 
     @Test

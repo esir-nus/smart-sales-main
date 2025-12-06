@@ -41,7 +41,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.AudioFile
-import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Close
@@ -73,7 +74,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -85,10 +85,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -194,7 +196,7 @@ fun HomeScreenRoute(
         onPickImageFile = viewModel::onImagePicked,
         modifier = modifier,
         showHistoryPanel = showHistoryPanel,
-        onToggleHistoryPanel = { viewModel.onOpenDrawer() },
+        onToggleHistoryPanel = { showHistoryPanel = true },
         onDismissHistoryPanel = { showHistoryPanel = false },
         historySessions = state.sessionList.take(10),
         onHistorySessionSelected = { sessionId ->
@@ -277,6 +279,7 @@ fun HomeScreen(
             }
             quick.copy(label = customLabel)
         }
+    val debugHudEnabled = CHAT_DEBUG_HUD_ENABLED && state.showDebugMetadata
     val showScrollToLatest = remember { mutableStateOf(false) }
     LaunchedEffect(listState, state.chatMessages.size, state.isLoadingHistory) {
         snapshotFlow {
@@ -317,22 +320,23 @@ fun HomeScreen(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 HomeTopBar(
+                    title = state.currentSession.title,
                     onProfileClick = onProfileClicked,
                     deviceSnapshot = state.deviceSnapshot,
-                    onHistoryClick = onToggleHistoryPanel
+                    onHistoryClick = onToggleHistoryPanel,
+                    onNewChatClicked = onNewChatClicked,
+                    showDebugMetadata = state.showDebugMetadata,
+                    onToggleDebugMetadata = onToggleDebugMetadata
                 )
             },
             bottomBar = {
                 HomeInputArea(
-                    quickSkills = allowedSkills,
-                    selectedSkill = state.selectedSkill,
-                    showQuickSkills = state.chatMessages.isNotEmpty(),
                     enabled = !state.isBusy,
                     busy = state.isBusy,
                     inputValue = state.inputText,
+                    isSmartAnalysisMode = state.isSmartAnalysisMode,
                     onInputChanged = onInputChanged,
                     onSendClicked = onSendClicked,
-                    onQuickSkillSelected = onQuickSkillSelected,
                     onPickAudio = { audioPicker.launch(arrayOf("audio/*")) },
                     onPickImage = { imagePicker.launch(arrayOf("image/*")) }
                 )
@@ -344,41 +348,41 @@ fun HomeScreen(
                     .padding(innerPadding)
                     .pullRefresh(pullRefreshState)
             ) {
-                AnimatedContent(
-                    targetState = state.chatMessages.isEmpty(),
-                    transitionSpec = {
-                        (fadeIn() + slideInVertically { it / 8 }) with
-                            (fadeOut() + slideOutVertically { -it / 8 })
-                    },
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 16.dp),
-                    label = "feature_home_empty_transition"
-                ) { empty ->
-                    if (empty) {
-                        EmptyStateContent(
-                            userName = state.userName,
-                            skills = allowedSkills,
-                            onSkillSelected = onQuickSkillSelected
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                        ) {
-                            val hasActiveChat = state.chatMessages.isNotEmpty()
-                            LazyColumn(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .testTag(HomeScreenTestTags.LIST),
-                                state = listState,
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
-                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
-                                userScrollEnabled = true
-                            ) {
-                                if (!hasActiveChat) {
-                                    item("welcome_spacer") { Spacer(modifier = Modifier.height(8.dp)) }
-                                } else {
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                    ) {
+                        AnimatedContent(
+                            targetState = state.chatMessages.isEmpty(),
+                            transitionSpec = {
+                                (fadeIn() + slideInVertically { it / 8 }) with
+                                    (fadeOut() + slideOutVertically { -it / 8 })
+                            },
+                            modifier = Modifier.fillMaxSize(),
+                            label = "feature_home_empty_transition"
+                        ) { empty ->
+                            if (empty) {
+                                EmptyStateContent(
+                                    userName = state.userName,
+                                    skills = allowedSkills,
+                                    onSkillSelected = onQuickSkillSelected
+                                )
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .testTag(HomeScreenTestTags.LIST),
+                                    state = listState,
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
+                                    userScrollEnabled = true
+                                ) {
                                     if (state.isLoadingHistory) {
                                         item("history-loading") {
                                             Text(
@@ -401,44 +405,44 @@ fun HomeScreen(
                                         } else {
                                             Modifier
                                         }
-                                    MessageBubble(
-                                        message = message,
-                                        alignEnd = message.role == ChatMessageRole.USER,
-                                        modifier = tagModifier,
-                                        onCopyAssistant = { content ->
-                                            clipboardManager.setText(AnnotatedString(content))
-                                            coroutineScope.launch {
-                                                snackbarHostState.showSnackbar("已复制到剪贴板")
+                                        MessageBubble(
+                                            message = message,
+                                            alignEnd = message.role == ChatMessageRole.USER,
+                                            modifier = tagModifier,
+                                            onCopyAssistant = { content ->
+                                                clipboardManager.setText(AnnotatedString(content))
+                                                coroutineScope.launch {
+                                                    snackbarHostState.showSnackbar("已复制到剪贴板")
+                                                }
                                             }
-                                        }
-                                    )
-                                }
-                                if (state.chatMessages.lastOrNull()?.isStreaming == true) {
-                                    item("typing-indicator") {
-                                        AssistantTypingBubble()
+                                        )
                                     }
-                                }
-                                item("chat-bottom-pad") {
-                                    Spacer(modifier = Modifier.height(72.dp))
+                                    if (state.chatMessages.lastOrNull()?.isStreaming == true) {
+                                        item("typing-indicator") {
+                                            AssistantTypingBubble()
+                                        }
+                                    }
                                 }
                             }
                         }
-                            if (showScrollToLatest.value) {
-                                ScrollToLatestButton(
-                                    modifier = Modifier
-                                        .align(Alignment.BottomEnd)
-                                        .padding(16.dp),
-                                    onClick = {
-                                        val lastIndex = state.chatMessages.lastIndex
-                                        if (lastIndex >= 0) {
-                                            coroutineScope.launch {
-                                                listState.animateScrollToItem(lastIndex)
-                                            }
-                                        }
-                                    }
-                                )
+                    }
+                    if (state.chatMessages.isNotEmpty()) {
+                        QuickSkillRow(
+                            skills = allowedSkills,
+                            selectedSkillId = state.selectedSkill?.id,
+                            enabled = !state.isBusy,
+                            onQuickSkillSelected = onQuickSkillSelected,
+                            compact = true,
+                            extraTestTag = { id ->
+                                when (id) {
+                                    QuickSkillId.SMART_ANALYSIS -> HomeScreenTestTags.QUICK_SKILL_ANALYSIS_CHIP
+                                    QuickSkillId.EXPORT_PDF -> HomeScreenTestTags.QUICK_SKILL_EXPORT_PDF_CHIP
+                                    QuickSkillId.EXPORT_CSV -> HomeScreenTestTags.QUICK_SKILL_EXPORT_CSV_CHIP
+                                    else -> null
+                                }
                             }
-                        }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
                 PullRefreshIndicator(
@@ -475,18 +479,26 @@ fun HomeScreen(
                         }
                     )
                 }
-            if (showHistoryPanel) {
-                HistoryPanel(
-                    sessions = historySessions,
-                    currentSessionId = state.currentSession.id,
-                    onDismiss = onDismissHistoryPanel,
-                    onSessionSelected = onHistorySessionSelected,
-                    modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_PANEL)
-                )
+                if (debugHudEnabled && state.debugSessionMetadata != null) {
+                    DebugSessionMetadataHud(
+                        metadata = state.debugSessionMetadata,
+                        onClose = onToggleDebugMetadata,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(horizontal = 12.dp, vertical = 12.dp)
+                    )
+                }
+                if (showHistoryPanel) {
+                    HistoryPanel(
+                        sessions = historySessions,
+                        currentSessionId = state.currentSession.id,
+                        onDismiss = onDismissHistoryPanel,
+                        onSessionSelected = onHistorySessionSelected
+                    )
+                }
             }
         }
     }
-}
 }
 
 @Composable
@@ -549,12 +561,22 @@ private fun EmptyStateContent(
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface
         )
+        Spacer(modifier = Modifier.height(20.dp))
         QuickSkillRow(
             skills = skills,
             selectedSkillId = null,
             enabled = true,
-            onQuickSkillSelected = onSkillSelected
+            onQuickSkillSelected = onSkillSelected,
+            extraTestTag = { id ->
+                when (id) {
+                    QuickSkillId.SMART_ANALYSIS -> HomeScreenTestTags.QUICK_SKILL_ANALYSIS_CHIP
+                    QuickSkillId.EXPORT_PDF -> HomeScreenTestTags.QUICK_SKILL_EXPORT_PDF_CHIP
+                    QuickSkillId.EXPORT_CSV -> HomeScreenTestTags.QUICK_SKILL_EXPORT_CSV_CHIP
+                    else -> null
+                }
+            }
         )
+        Spacer(modifier = Modifier.height(24.dp))
         Divider(modifier = Modifier.fillMaxWidth())
     }
 }
@@ -658,9 +680,13 @@ object HomeScreenTestTags {
 
 @Composable
 private fun HomeTopBar(
+    title: String,
     onProfileClick: () -> Unit,
     deviceSnapshot: DeviceSnapshotUi?,
-    onHistoryClick: () -> Unit
+    onHistoryClick: () -> Unit,
+    onNewChatClicked: () -> Unit,
+    showDebugMetadata: Boolean,
+    onToggleDebugMetadata: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -670,7 +696,7 @@ private fun HomeTopBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "AI 助手",
+            text = title,
             style = MaterialTheme.typography.titleLarge
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -689,7 +715,28 @@ private fun HomeTopBar(
                 onClick = onHistoryClick,
                 modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_TOGGLE)
             ) {
-                Icon(Icons.Filled.History, contentDescription = "历史记录")
+                Icon(Icons.Filled.Menu, contentDescription = "历史会话")
+            }
+            if (CHAT_DEBUG_HUD_ENABLED) {
+                IconButton(
+                    onClick = onToggleDebugMetadata,
+                    modifier = Modifier.testTag("debug_toggle_metadata")
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .background(
+                                color = if (showDebugMetadata) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                shape = CircleShape
+                            )
+                    )
+                }
+            }
+            IconButton(
+                onClick = onNewChatClicked,
+                modifier = Modifier.testTag(HomeScreenTestTags.NEW_CHAT_BUTTON)
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = "新建对话")
             }
             IconButton(
                 onClick = onProfileClick,
@@ -762,6 +809,88 @@ private fun EntryCard(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
+        }
+    }
+}
+
+@Composable
+private fun DebugSessionMetadataHud(
+    metadata: DebugSessionMetadata,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val configuration = LocalConfiguration.current
+    val clipboardManager = LocalClipboardManager.current
+    val scrollState = rememberScrollState()
+    val maxHeight = (configuration.screenHeightDp.dp * 0.5f)
+    val hudText = buildString {
+        appendLine("sessionId = ${metadata.sessionId}")
+        appendLine("title = ${metadata.title}")
+        appendLine("mainPerson = ${metadata.mainPerson ?: "null"}")
+        appendLine("shortSummary = ${metadata.shortSummary ?: "null"}")
+        appendLine("title6 = ${metadata.summaryTitle6Chars ?: "null"}")
+        if (metadata.notes.isNotEmpty()) {
+            appendLine("notes:")
+            metadata.notes.forEach { note -> appendLine("- $note") }
+        }
+    }.trimEnd()
+    val hudLines = hudText.lines().filter { it.isNotBlank() }
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(max = maxHeight)
+            .testTag("debug_metadata_hud"),
+        shape = MaterialTheme.shapes.large,
+        tonalElevation = 6.dp,
+        shadowElevation = 8.dp,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.96f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "DEBUG_METADATA",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                TextButton(
+                    onClick = { clipboardManager.setText(AnnotatedString(hudText)) }
+                ) {
+                    Text(text = "复制")
+                }
+                IconButton(onClick = onClose) {
+                    Icon(Icons.Filled.Close, contentDescription = "关闭调试 HUD")
+                }
+            }
+            Divider()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+                    .verticalScroll(scrollState)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    hudLines.forEach { line ->
+                        Text(
+                            text = line,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -994,15 +1123,12 @@ private fun EmptySessionHint(onNewChatClicked: () -> Unit) {
 
 @Composable
 private fun HomeInputArea(
-    quickSkills: List<QuickSkillUi>,
-    selectedSkill: QuickSkillUi?,
-    showQuickSkills: Boolean,
     enabled: Boolean,
     busy: Boolean,
     inputValue: String,
+    isSmartAnalysisMode: Boolean,
     onInputChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
-    onQuickSkillSelected: (QuickSkillId) -> Unit,
     onPickAudio: () -> Unit,
     onPickImage: () -> Unit
 ) {
@@ -1015,14 +1141,6 @@ private fun HomeInputArea(
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            if (showQuickSkills) {
-                QuickSkillRow(
-                    skills = quickSkills,
-                    selectedSkillId = selectedSkill?.id,
-                    enabled = enabled && !busy,
-                    onQuickSkillSelected = onQuickSkillSelected
-                )
-            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth(),
@@ -1064,7 +1182,14 @@ private fun HomeInputArea(
                     modifier = Modifier
                         .weight(1f)
                         .testTag(HomeScreenTestTags.INPUT_FIELD),
-                    placeholder = { Text(text = "上传文件或输入消息...") },
+                    placeholder = {
+                        val hint = if (isSmartAnalysisMode) {
+                            "说明你想分析什么（默认分析最近的一段长内容）"
+                        } else {
+                            "上传文件或输入消息..."
+                        }
+                        Text(text = hint)
+                    },
                     shape = MaterialTheme.shapes.large,
                     enabled = enabled,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -1274,6 +1399,7 @@ private fun HistoryPanel(
     onSessionSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    BackHandler(onBack = onDismiss)
     // 侧边抽屉：覆盖在右侧，点击遮罩即可关闭
     Box(modifier = modifier.fillMaxSize()) {
         Box(

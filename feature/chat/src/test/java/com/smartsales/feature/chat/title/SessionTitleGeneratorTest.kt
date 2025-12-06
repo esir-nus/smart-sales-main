@@ -19,7 +19,7 @@ class SessionTitleGeneratorTest {
             firstUserMessage = "罗总，中国区奥迪主管。展会项目",
             firstAssistantMessage = null
         )
-        assertEquals("11/14_罗总_展会项目", title)
+        assertEquals("12/24_罗总_展会项目", title)
     }
 
     @Test
@@ -29,7 +29,7 @@ class SessionTitleGeneratorTest {
             firstUserMessage = "给阿里巴巴写一封报价跟进邮件",
             firstAssistantMessage = null
         )
-        assertEquals("11/14_阿里巴巴_报价跟进邮件", title)
+        assertEquals("12/24_阿里巴巴_报价跟进邮件", title)
     }
 
     @Test
@@ -39,6 +39,6 @@ class SessionTitleGeneratorTest {
             firstUserMessage = "帮我优化一下销售话术",
             firstAssistantMessage = null
         )
-        assertEquals("11/14_未知客户_销售话术优化", title)
+        assertEquals("12/24_未知客户_销售话术优化", title)
     }
 }

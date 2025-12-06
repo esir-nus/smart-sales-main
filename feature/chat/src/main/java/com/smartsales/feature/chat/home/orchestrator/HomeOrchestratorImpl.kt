@@ -100,6 +100,7 @@ class HomeOrchestratorImpl @Inject constructor(
     ): SessionMetadata? {
         val obj = runCatching { JSONObject(jsonText) }.getOrElse { return null }
         val mainPerson = obj.optString("main_person").takeIf { it.isNotBlank() }
+            ?: obj.optString("mainPerson").takeIf { it.isNotBlank() }
         val shortSummary = obj.optString("short_summary").takeIf { it.isNotBlank() }
         val summaryTitle = obj.optString("summary_title_6chars").takeIf { it.isNotBlank() }
         val location = obj.optString("location").takeIf { it.isNotBlank() }

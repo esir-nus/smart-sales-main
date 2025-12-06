@@ -13,14 +13,19 @@ object SessionTitleGenerator {
     private val dateFormatter = SimpleDateFormat("MM/dd", Locale.getDefault())
     private val honorificPattern = Regex("([\\p{IsHan}]{1})(总|经理|老师|总监|老板)")
     private val companyPattern = Regex("给([\\p{IsHan}A-Za-z0-9]{2,})公司|为([\\p{IsHan}A-Za-z0-9]{2,})做|和([\\p{IsHan}A-Za-z0-9]{2,})[客户|伙伴|合作]")
+    private val companyWritePattern = Regex("给([\\p{IsHan}A-Za-z0-9]{2,})写")
     private val summaryKeywords = listOf(
         "会议纪要" to "会议纪要",
         "纪要" to "会议纪要",
+        "展会项目" to "展会项目",
         "展会" to "展会项目",
-        "报价" to "报价跟进",
+        "报价跟进邮件" to "报价跟进邮件",
+        "报价跟进" to "报价跟进",
         "跟进邮件" to "跟进邮件",
+        "报价" to "报价跟进",
         "邮件" to "跟进邮件",
         "异议" to "客户异议处理",
+        "销售话术优化" to "销售话术优化",
         "话术" to "销售话术优化",
         "方案" to "方案优化",
         "总结" to "销售咨询",
@@ -46,6 +51,10 @@ object SessionTitleGenerator {
             val surname = match.groupValues[1]
             val honorific = match.groupValues[2]
             return "$surname$honorific"
+        }
+        companyWritePattern.find(text)?.let { match ->
+            val candidate = match.groupValues.getOrNull(1)?.trim().orEmpty()
+            if (candidate.isNotBlank()) return candidate
         }
         companyPattern.find(text)?.let { match ->
             for (i in 1..3) {

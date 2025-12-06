@@ -14,6 +14,17 @@ This document is the single source of truth for every API/protocol that the Andr
 
 ## Cloud AI & Export Interfaces
 
+### App 内 Orchestrator 合约（Kotlin API）
+- **HomeOrchestrator**
+  - `fun streamChat(request: ChatRequest): Flow<ChatStreamEvent>` – 唯一 LLM 入口，用 Completed 事件解析 JSON block 写 `SessionMetadata`；Delta/Completed 文本原样透传给 VM。
+  - 返回的 `SessionMetadata` 中 `summary_title_6chars`/`short_summary`/`main_person` 只作为**标题建议**，由客户端判断当前标题是否为占位值（如“新的聊天”“通话分析 – 文件名”）再决定是否写回 `AiSessionSummary.title`。
+- **TranscriptOrchestrator**
+  - `suspend fun inferTranscriptMetadata(request: TranscriptMetadataRequest): TranscriptMetadata?` – 仅由 `RealTingwuCoordinator` 调用，负责 LLM 推断说话人/会话元数据并 `mergeWith` 写入 MetaHub。请求字段：`transcriptId`, `sessionId`, `diarizedSegments`, `speakerLabels`, `createdAt`(默认 now), `force`(默认 false)。
+- **ExportOrchestrator**
+  - `suspend fun exportPdf(sessionId: String, markdown: String)` / `suspend fun exportCsv(sessionId: String)` – LLM-free；从 MetaHub 取 SessionMetadata 构造文件名，PDF 用传入 markdown，CSV 用 `crmRows`。
+
+LLM 只出现在 `HomeOrchestratorImpl` 与 `RealTranscriptOrchestrator`；`RealExportOrchestrator`、`RealTingwuCoordinator`、各 VM 均为 LLM-free。
+
 ### DashScope Text Generation (HTTP)
 - **Contract (HTTP)**:
   - Endpoint `POST https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation`. Body matches `DashscopeRequest { apiKey, model, temperature(default 0.3), messages[] }`, where `messages` is the ordered conversation (`system` prompt assembled from skill tags, `user` prompt containing the question, optional Tingwu markdown, and attachment manifest).

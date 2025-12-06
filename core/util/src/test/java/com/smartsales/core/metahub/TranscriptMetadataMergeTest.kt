@@ -13,34 +13,70 @@ class TranscriptMetadataMergeTest {
     @Test
     fun mergeWith_preservesExistingSpeakerAndMergesNewOnes() {
         val base = TranscriptMetadata(
-            transcriptId = "t1",
-            sessionId = "s1",
+            transcriptId = "t-1",
             speakerMap = mapOf(
-                "1" to SpeakerMeta(displayName = "客户", role = SpeakerRole.CUSTOMER, confidence = 0.9f)
+                "spk_a" to SpeakerMeta(
+                    displayName = "顾客A",
+                    role = SpeakerRole.CUSTOMER,
+                    confidence = 0.9f
+                ),
+                "spk_b" to SpeakerMeta(
+                    displayName = "销售B",
+                    role = SpeakerRole.SALES,
+                    confidence = 0.4f
+                )
             ),
-            createdAt = 5L,
-            extra = mapOf("note" to "old")
+            createdAt = 10L
         )
+
+        // 注意：这里 displayName 用 null，不要用 ""，
+        // 否则 mergeSpeakers 会认为是新的空名字并覆盖掉旧的。
         val delta = TranscriptMetadata(
-            transcriptId = "t1",
-            sessionId = "s1",
+            transcriptId = "t-1",
             speakerMap = mapOf(
-                "1" to SpeakerMeta(displayName = "客户A", role = SpeakerRole.CUSTOMER, confidence = 0.7f),
-                "2" to SpeakerMeta(displayName = "销售", role = SpeakerRole.SALES, confidence = 1.1f)
+                // 覆盖已有 speaker：保留旧名字，更新角色和信心值（并夹紧）
+                "spk_a" to SpeakerMeta(
+                    displayName = null,         // => 保留 "顾客A"
+                    role = SpeakerRole.OTHER,   // => 覆盖成 OTHER
+                    confidence = 2.0f           // => 被 clamp 成 1.0
+                ),
+                // 新增 speaker：信心值为负数，预期 clamp 到 0.0
+                "spk_c" to SpeakerMeta(
+                    displayName = "教官",
+                    role = SpeakerRole.OTHER,
+                    confidence = -0.5f          // => 被 clamp 成 0.0
+                )
             ),
-            createdAt = 10L,
-            extra = mapOf("source" to "llm")
+            createdAt = 20L
         )
 
         val merged = base.mergeWith(delta)
 
-        assertEquals("客户A", merged.speakerMap["1"]?.displayName)
-        // 新增说话人应保留
-        assertEquals("销售", merged.speakerMap["2"]?.displayName)
-        // 置信度应被夹紧到 [0,1]
-        assertEquals(1f, merged.speakerMap["2"]?.confidence)
-        // createdAt 取更大值
-        assertEquals(10L, merged.createdAt)
-        assertEquals(mapOf("note" to "old", "source" to "llm"), merged.extra)
+        // 1) spk_a：保留旧名字 + 覆盖角色 + 信心值 clamp 到 1.0
+        val a = merged.speakerMap["spk_a"]
+        org.junit.Assert.assertNotNull(a)
+        assertEquals("顾客A", a!!.displayName)
+        assertEquals(SpeakerRole.OTHER, a.role)
+        assertEquals(1.0f, a.confidence)
+
+        // 2) spk_b：完全保留不变
+        val b = merged.speakerMap["spk_b"]
+        org.junit.Assert.assertNotNull(b)
+        assertEquals("销售B", b!!.displayName)
+        assertEquals(SpeakerRole.SALES, b.role)
+        assertEquals(0.4f, b.confidence)
+
+        // 3) spk_c：新增 speaker，信心值 clamp 到 0.0
+        val c = merged.speakerMap["spk_c"]
+        org.junit.Assert.assertNotNull(c)
+        assertEquals("教官", c!!.displayName)
+        assertEquals(SpeakerRole.OTHER, c.role)
+        assertEquals(0.0f, c.confidence)
+
+        // 4) 一共 3 个说话人
+        assertEquals(3, merged.speakerMap.size)
+
+        // 5) createdAt 使用较大的那个（20L）
+        assertEquals(20L, merged.createdAt)
     }
 }

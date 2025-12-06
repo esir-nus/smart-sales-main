@@ -50,16 +50,21 @@ data class TranscriptMetadata(
         val mutable = current.toMutableMap()
         incoming.forEach { (id, meta) ->
             val existing = mutable[id]
-            mutable[id] = if (existing == null) {
+            val merged = if (existing == null) {
+                // 新增 speaker：直接采用 incoming 的字段
                 meta
             } else {
-                val confidence = meta.confidence ?: existing.confidence
+                // 已有 speaker：非空字段覆盖
                 SpeakerMeta(
                     displayName = meta.displayName ?: existing.displayName,
                     role = meta.role ?: existing.role,
-                    confidence = confidence?.coerceIn(0f, 1f)
+                    confidence = meta.confidence ?: existing.confidence
                 )
             }
+            // ✅ 统一在这里 clamp，保证所有 speaker 的 confidence ∈ [0, 1]
+            mutable[id] = merged.copy(
+                confidence = merged.confidence?.coerceIn(0f, 1f)
+            )
         }
         return mutable
     }

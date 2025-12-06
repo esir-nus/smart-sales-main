@@ -5,6 +5,8 @@ package com.smartsales.feature.chat.home.orchestrator
 // 说明：Home 层 Orchestrator 实现，当前直通聊天服务并写入会话元数据
 // 作者：创建于 2025-12-04
 
+import com.smartsales.core.metahub.AnalysisSource
+import com.smartsales.core.metahub.CrmRow
 import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.RiskLevel
 import com.smartsales.core.metahub.SessionMetadata
@@ -45,10 +47,11 @@ class HomeOrchestratorImpl @Inject constructor(
         val jsonBlock = extractJsonBlock(assistantText) ?: return
         val parsed = parseSessionMetadata(
             sessionId = request.sessionId,
-            jsonText = jsonBlock
+            jsonText = jsonBlock,
+            source = resolveAnalysisSource(request)
         ) ?: return
         val merged = mergeWithExisting(request.sessionId, parsed)
-        metaHub.upsertSession(merged)
+        runCatching { metaHub.upsertSession(merged) }
     }
 
     private suspend fun mergeWithExisting(
@@ -56,17 +59,7 @@ class HomeOrchestratorImpl @Inject constructor(
         parsed: SessionMetadata
     ): SessionMetadata {
         val existing = metaHub.getSession(sessionId)
-        return SessionMetadata(
-            sessionId = sessionId,
-            mainPerson = parsed.mainPerson ?: existing?.mainPerson,
-            shortSummary = parsed.shortSummary ?: existing?.shortSummary,
-            summaryTitle6Chars = parsed.summaryTitle6Chars ?: existing?.summaryTitle6Chars,
-            location = parsed.location ?: existing?.location,
-            stage = parsed.stage ?: existing?.stage,
-            riskLevel = parsed.riskLevel ?: existing?.riskLevel,
-            tags = (existing?.tags.orEmpty() + parsed.tags).filter { it.isNotBlank() }.toSet(),
-            lastUpdatedAt = System.currentTimeMillis()
-        )
+        return existing?.mergeWith(parsed) ?: parsed
     }
 
     private fun shouldParseMetadata(request: ChatRequest): Boolean {
@@ -102,7 +95,8 @@ class HomeOrchestratorImpl @Inject constructor(
 
     private fun parseSessionMetadata(
         sessionId: String,
-        jsonText: String
+        jsonText: String,
+        source: AnalysisSource?
     ): SessionMetadata? {
         val obj = runCatching { JSONObject(jsonText) }.getOrElse { return null }
         val mainPerson = obj.optString("main_person").takeIf { it.isNotBlank() }
@@ -113,9 +107,16 @@ class HomeOrchestratorImpl @Inject constructor(
         val risk = obj.optString("risk_level").takeIf { it.isNotBlank() }?.let { toRisk(it) }
         val highlights = obj.optJSONArray("highlights")?.toStringList().orEmpty()
         val actionable = obj.optJSONArray("actionable_tips")?.toStringList().orEmpty()
+        val crmRows = obj.optJSONArray("crm_rows")?.toCrmRows().orEmpty()
         val tags = (highlights + actionable).filter { it.isNotBlank() }.toSet()
 
-        if (mainPerson == null && shortSummary == null && summaryTitle == null && location == null) {
+        if (mainPerson == null &&
+            shortSummary == null &&
+            summaryTitle == null &&
+            location == null &&
+            crmRows.isEmpty() &&
+            tags.isEmpty()
+        ) {
             return null
         }
         return SessionMetadata(
@@ -127,7 +128,11 @@ class HomeOrchestratorImpl @Inject constructor(
             stage = stage,
             riskLevel = risk,
             tags = tags,
-            lastUpdatedAt = System.currentTimeMillis()
+            lastUpdatedAt = System.currentTimeMillis(),
+            latestMajorAnalysisMessageId = null,
+            latestMajorAnalysisAt = System.currentTimeMillis(),
+            latestMajorAnalysisSource = source,
+            crmRows = crmRows
         )
     }
 
@@ -137,6 +142,23 @@ class HomeOrchestratorImpl @Inject constructor(
             optString(i)?.takeIf { it.isNotBlank() }?.let { list.add(it) }
         }
         return list
+    }
+
+    private fun JSONArray.toCrmRows(): List<CrmRow> {
+        val rows = mutableListOf<CrmRow>()
+        for (i in 0 until length()) {
+            val obj = optJSONObject(i) ?: continue
+            val row = CrmRow(
+                client = obj.optString("client"),
+                region = obj.optString("region"),
+                stage = obj.optString("stage"),
+                progress = obj.optString("progress"),
+                nextStep = obj.optString("next_step"),
+                owner = obj.optString("owner")
+            )
+            rows += row
+        }
+        return rows
     }
 
     private fun toStage(value: String): SessionStage? = when (value.uppercase(Locale.getDefault())) {
@@ -155,5 +177,14 @@ class HomeOrchestratorImpl @Inject constructor(
         "HIGH" -> RiskLevel.HIGH
         "UNKNOWN" -> RiskLevel.UNKNOWN
         else -> null
+    }
+
+    private fun resolveAnalysisSource(request: ChatRequest): AnalysisSource? {
+        val mode = request.quickSkillId
+        return when {
+            mode == QuickSkillId.SMART_ANALYSIS.name -> AnalysisSource.SMART_ANALYSIS_USER
+            mode == null && request.isFirstAssistantReply -> AnalysisSource.GENERAL_FIRST_REPLY
+            else -> null
+        }
     }
 }

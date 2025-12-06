@@ -6,6 +6,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.annotations.SerializedName
+import com.smartsales.core.metahub.SpeakerMeta
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.LogTags
 import com.smartsales.core.util.Result
@@ -23,6 +24,7 @@ import com.smartsales.data.aicore.tingwu.TingwuTranscriptSegment
 import com.smartsales.data.aicore.tingwu.TingwuTranscriptionParameters
 import com.smartsales.data.aicore.tingwu.TingwuDiarizationParameters
 import com.smartsales.data.aicore.tingwu.TingwuSummarizationParameters
+import com.smartsales.data.aicore.TranscriptMetadataRequest
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -59,6 +61,7 @@ class RealTingwuCoordinator @Inject constructor(
     private val api: TingwuApi,
     private val credentialsProvider: TingwuCredentialsProvider,
     private val signedUrlProvider: OssSignedUrlProvider,
+    private val transcriptOrchestrator: TranscriptOrchestrator,
     optionalConfig: Optional<AiCoreConfig>
 ) : TingwuCoordinator {
 
@@ -66,6 +69,7 @@ class RealTingwuCoordinator @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + dispatchers.default)
     private val jobStates = ConcurrentHashMap<String, MutableStateFlow<TingwuJobState>>()
     private val pollingJobs = ConcurrentHashMap<String, Job>()
+    private val jobContext = ConcurrentHashMap<String, TingwuRequest>()
     private val timeFormatter = DecimalFormat("00")
     private val speakerDisplayConfig: SpeakerDisplayConfig = config.speakerDisplayConfig
     private val verboseLogging = config.tingwuVerboseLogging
@@ -150,6 +154,7 @@ class RealTingwuCoordinator @Inject constructor(
                     progressPercent = SUBMITTED_PROGRESS,
                     statusLabel = "SUBMITTED"
                 )
+                jobContext[taskId] = request
                 startPolling(taskId)
                 AiCoreLogger.d(TAG, "Tingwu 任务创建成功：jobId=$taskId")
                 taskId
@@ -276,11 +281,31 @@ class RealTingwuCoordinator @Inject constructor(
                                     chapters = it
                                 )
                             }
+                            val transcriptMeta = runCatching {
+                                transcriptOrchestrator.inferTranscriptMetadata(
+                                    TranscriptMetadataRequest(
+                                        transcriptId = jobId,
+                                        sessionId = jobContext[jobId]?.sessionId,
+                                        diarizedSegments = transcriptResult.diarizedSegments.orEmpty(),
+                                        speakerLabels = mergedArtifacts?.speakerLabels ?: emptyMap()
+                                    )
+                                )
+                            }.getOrElse { error ->
+                                AiCoreLogger.w(TAG, "写入转写元数据失败：${error.message}")
+                                null
+                            }
+                            val mergedSpeakerLabels = mergeSpeakerLabels(
+                                base = mergedArtifacts?.speakerLabels.orEmpty(),
+                                incoming = transcriptMeta?.speakerMap.orEmpty()
+                            )
+                            val artifactsWithMetadata = mergedArtifacts?.copy(
+                                speakerLabels = mergedSpeakerLabels
+                            ) ?: mergedArtifacts
                             AiCoreLogger.d(TAG, "转写结果拉取成功：jobId=$jobId markdown长度=${transcriptResult.markdown.length}")
                             flow.value = TingwuJobState.Completed(
                                 jobId = jobId,
                                 transcriptMarkdown = transcriptResult.markdown,
-                                artifacts = mergedArtifacts,
+                                artifacts = artifactsWithMetadata,
                                 statusLabel = normalizedStatus
                             )
                             false
@@ -303,6 +328,7 @@ class RealTingwuCoordinator @Inject constructor(
                 }
             } finally {
                 pollingJobs.remove(jobId)
+                jobContext.remove(jobId)
             }
         }
         pollingJobs[jobId] = job
@@ -924,6 +950,25 @@ class RealTingwuCoordinator @Inject constructor(
             labels[id] = fromName ?: fromConfig ?: fallback
         }
         return labels
+    }
+
+    private fun mergeSpeakerLabels(
+        base: Map<String, String>,
+        incoming: Map<String, SpeakerMeta>,
+        minConfidence: Float = 0.6f
+    ): Map<String, String> {
+        if (incoming.isEmpty()) return base
+        val merged = LinkedHashMap(base)
+        incoming.forEach { (id, meta) ->
+            val name = meta.displayName?.takeIf { it.isNotBlank() }
+            val confidence = meta.confidence ?: 0f
+            if (name != null && confidence >= minConfidence) {
+                merged[id] = name
+            } else if (name != null && !merged.containsKey(id)) {
+                merged[id] = name
+            }
+        }
+        return merged
     }
 
     private fun formatTime(value: Double?): String {

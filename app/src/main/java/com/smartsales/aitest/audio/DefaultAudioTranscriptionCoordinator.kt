@@ -42,12 +42,14 @@ class DefaultAudioTranscriptionCoordinator @Inject constructor(
         audioAssetName: String,
         language: String,
         uploadPayload: AudioUploadPayload,
+        sessionId: String?,
     ): Result<String> {
         val request = TingwuRequest(
             audioAssetName = audioAssetName,
             language = language,
             ossObjectKey = uploadPayload.objectKey,
             fileUrl = uploadPayload.presignedUrl,
+            sessionId = sessionId
         )
         return tingwuCoordinator.submit(request)
     }

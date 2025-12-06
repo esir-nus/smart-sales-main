@@ -2,12 +2,12 @@ package com.smartsales.feature.chat.home
 
 // 文件：feature/chat/src/test/java/com/smartsales/feature/chat/home/HomeExportActionsTest.kt
 // 模块：:feature:chat
-// 说明：验证 Home 智能分析与导出 PDF 走现有 AI 与 ExportManager 流程
+// 说明：验证 Home 智能分析与导出 PDF 走现有 AI 与 ExportOrchestrator 流程
 // 作者：创建于 2025-12-01
 
 import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.ExportFormat
-import com.smartsales.data.aicore.ExportManager
+import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.ExportResult
 import com.smartsales.feature.chat.ChatShareHandler
 import com.smartsales.feature.chat.AiSessionSummary
@@ -60,7 +60,7 @@ class HomeExportActionsTest {
 
     private val dispatcher = UnconfinedTestDispatcher()
     private lateinit var aiChatService: RecordingAiChatService
-    private lateinit var exportManager: RecordingExportManager
+    private lateinit var exportOrchestrator: RecordingExportOrchestrator
     private lateinit var shareHandler: RecordingShareHandler
     private lateinit var viewModel: HomeScreenViewModel
     private lateinit var homeOrchestrator: HomeOrchestrator
@@ -70,7 +70,7 @@ class HomeExportActionsTest {
         Dispatchers.setMain(dispatcher)
         aiChatService = RecordingAiChatService()
         homeOrchestrator = RecordingHomeOrchestrator(aiChatService)
-        exportManager = RecordingExportManager()
+        exportOrchestrator = RecordingExportOrchestrator()
         shareHandler = RecordingShareHandler()
         viewModel = HomeScreenViewModel(
             homeOrchestrator = homeOrchestrator,
@@ -94,7 +94,12 @@ class HomeExportActionsTest {
             },
             transcriptionCoordinator = object : AudioTranscriptionCoordinator {
                 override suspend fun uploadAudio(file: File): Result<AudioUploadPayload> = Result.Error(UnsupportedOperationException())
-                override suspend fun submitTranscription(audioAssetName: String, language: String, uploadPayload: AudioUploadPayload): Result<String> =
+                override suspend fun submitTranscription(
+                    audioAssetName: String,
+                    language: String,
+                    uploadPayload: AudioUploadPayload,
+                    sessionId: String?
+                ): Result<String> =
                     Result.Error(UnsupportedOperationException())
 
                 override fun observeJob(jobId: String): Flow<AudioTranscriptionJobState> = flowOf(AudioTranscriptionJobState.Idle)
@@ -117,7 +122,7 @@ class HomeExportActionsTest {
                 override suspend fun save(profile: UserProfile) {}
                 override suspend fun clear() {}
             },
-            exportManager = exportManager,
+            exportOrchestrator = exportOrchestrator,
             shareHandler = shareHandler
         )
     }
@@ -158,7 +163,7 @@ class HomeExportActionsTest {
         viewModel.onExportPdfClicked()
         advanceUntilIdle()
 
-        assertEquals("分析结果", exportManager.lastMarkdown)
+        assertEquals("分析结果", exportOrchestrator.lastPdfMarkdown)
         assertTrue(shareHandler.shared)
         assertTrue(!viewModel.uiState.value.exportInProgress)
     }
@@ -172,7 +177,7 @@ class HomeExportActionsTest {
         viewModel.onExportCsvClicked()
         advanceUntilIdle()
 
-        assertEquals(ExportFormat.CSV, exportManager.lastFormat)
+        assertEquals(ExportFormat.CSV, exportOrchestrator.lastFormat)
         assertTrue(shareHandler.shared)
         assertTrue(!viewModel.uiState.value.exportInProgress)
     }
@@ -227,17 +232,18 @@ class HomeExportActionsTest {
             delegate.streamChat(request)
     }
 
-    private class RecordingExportManager : ExportManager {
-        var lastMarkdown: String? = null
+    private class RecordingExportOrchestrator : ExportOrchestrator {
+        var lastPdfMarkdown: String? = null
         var lastFormat: ExportFormat? = null
-        override suspend fun exportMarkdown(
-            markdown: String,
-            format: ExportFormat,
-            suggestedFileName: String?
-        ): Result<ExportResult> {
-            lastMarkdown = markdown
-            lastFormat = format
+        override suspend fun exportPdf(sessionId: String, markdown: String): Result<ExportResult> {
+            lastPdfMarkdown = markdown
+            lastFormat = ExportFormat.PDF
             return Result.Success(ExportResult("demo.pdf", "application/pdf", ByteArray(0)))
+        }
+
+        override suspend fun exportCsv(sessionId: String): Result<ExportResult> {
+            lastFormat = ExportFormat.CSV
+            return Result.Success(ExportResult("demo.csv", "text/csv", ByteArray(0)))
         }
     }
 

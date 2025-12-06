@@ -22,7 +22,8 @@ data class TingwuRequest(
     val language: String = "zh-CN",
     val ossObjectKey: String? = null,
     val fileUrl: String? = null,
-    val diarizationEnabled: Boolean = true
+    val diarizationEnabled: Boolean = true,
+    val sessionId: String? = null
 )
 
 data class TingwuJobArtifacts(

@@ -27,8 +27,7 @@ import com.smartsales.feature.media.MediaSyncState
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
-import com.smartsales.data.aicore.ExportManager
-import com.smartsales.data.aicore.ExportFormat
+import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.ExportResult
 import com.smartsales.feature.chat.title.SessionTitleResolver
 import com.smartsales.core.metahub.MetaHub
@@ -79,7 +78,7 @@ class HomeTranscriptionTest {
             sessionRepository = FakeSessionRepository(),
             sessionTitleResolver = SessionTitleResolver(FakeMetaHub()),
             userProfileRepository = FakeUserProfileRepository(),
-            exportManager = FakeExportManager(),
+            exportOrchestrator = FakeExportOrchestrator(),
             shareHandler = FakeShareHandler()
         )
     }
@@ -245,20 +244,20 @@ class HomeTranscriptionTest {
         override suspend fun submitTranscription(
             audioAssetName: String,
             language: String,
-            uploadPayload: AudioUploadPayload
+            uploadPayload: AudioUploadPayload,
+            sessionId: String?
         ): Result<String> = Result.Success("job-ignored")
 
         override fun observeJob(jobId: String): Flow<AudioTranscriptionJobState> =
             jobs.getOrPut(jobId) { MutableStateFlow(AudioTranscriptionJobState.Idle) }
     }
 
-    private class FakeExportManager : ExportManager {
-        override suspend fun exportMarkdown(
-            markdown: String,
-            format: ExportFormat,
-            suggestedFileName: String?
-        ): Result<ExportResult> =
+    private class FakeExportOrchestrator : ExportOrchestrator {
+        override suspend fun exportPdf(sessionId: String, markdown: String): Result<ExportResult> =
             Result.Success(ExportResult("demo.pdf", "application/pdf", ByteArray(0)))
+
+        override suspend fun exportCsv(sessionId: String): Result<ExportResult> =
+            Result.Success(ExportResult("demo.csv", "text/csv", ByteArray(0)))
     }
 
     private class FakeShareHandler : ChatShareHandler {

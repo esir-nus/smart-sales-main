@@ -10,14 +10,65 @@ package com.smartsales.core.metahub
  */
 data class SessionMetadata(
     val sessionId: String,
-    val mainPerson: String?,
-    val shortSummary: String?,
-    val summaryTitle6Chars: String?,
-    val location: String?,
-    val stage: SessionStage?,
-    val riskLevel: RiskLevel?,
+    val mainPerson: String? = null,
+    val shortSummary: String? = null,
+    val summaryTitle6Chars: String? = null,
+    val location: String? = null,
+    val stage: SessionStage? = null,
+    val riskLevel: RiskLevel? = null,
     val tags: Set<String> = emptySet(),
-    val lastUpdatedAt: Long
+    val lastUpdatedAt: Long = System.currentTimeMillis(),
+    val latestMajorAnalysisMessageId: String? = null,
+    val latestMajorAnalysisAt: Long? = null,
+    val latestMajorAnalysisSource: AnalysisSource? = null,
+    val crmRows: List<CrmRow> = emptyList()
+) {
+    /**
+     * 非空合并：仅用新值覆盖旧值，tags/CrmRows 合并去重。
+     */
+    fun mergeWith(other: SessionMetadata): SessionMetadata = SessionMetadata(
+        sessionId = sessionId,
+        mainPerson = other.mainPerson ?: mainPerson,
+        shortSummary = other.shortSummary ?: shortSummary,
+        summaryTitle6Chars = other.summaryTitle6Chars ?: summaryTitle6Chars,
+        location = other.location ?: location,
+        stage = other.stage ?: stage,
+        riskLevel = other.riskLevel ?: riskLevel,
+        tags = (tags + other.tags).filter { it.isNotBlank() }.toSet(),
+        lastUpdatedAt = maxOf(lastUpdatedAt, other.lastUpdatedAt),
+        latestMajorAnalysisMessageId = other.latestMajorAnalysisMessageId ?: latestMajorAnalysisMessageId,
+        latestMajorAnalysisAt = other.latestMajorAnalysisAt ?: latestMajorAnalysisAt,
+        latestMajorAnalysisSource = other.latestMajorAnalysisSource ?: latestMajorAnalysisSource,
+        crmRows = mergeCrmRows(crmRows, other.crmRows)
+    )
+
+    private fun mergeCrmRows(oldRows: List<CrmRow>, newRows: List<CrmRow>): List<CrmRow> {
+        if (newRows.isEmpty()) return oldRows
+        if (oldRows.isEmpty()) return newRows
+        val combined = (oldRows + newRows).filter { it.client.isNotBlank() || it.owner.isNotBlank() }
+        return combined.distinctBy { it.client.trim() + "|" + it.owner.trim() }
+    }
+}
+
+/**
+ * 分析来源，标记最新重大分析的触发渠道。
+ */
+enum class AnalysisSource {
+    GENERAL_FIRST_REPLY,
+    SMART_ANALYSIS_USER,
+    SMART_ANALYSIS_AUTO
+}
+
+/**
+ * CRM 行，导出 CSV 及 UI 列表使用。
+ */
+data class CrmRow(
+    val client: String = "",
+    val region: String = "",
+    val stage: String = "",
+    val progress: String = "",
+    val nextStep: String = "",
+    val owner: String = ""
 )
 
 /**

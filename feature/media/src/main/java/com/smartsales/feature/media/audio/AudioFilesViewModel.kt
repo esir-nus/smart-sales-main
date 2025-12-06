@@ -160,7 +160,8 @@ class AudioFilesViewModel @Inject constructor(
                 val submit = transcriptionCoordinator.submitTranscription(
                     audioAssetName = deviceFile?.name ?: stored?.displayName ?: id,
                     language = DEFAULT_TINGWU_LANGUAGE,
-                    uploadPayload = uploadPayload
+                    uploadPayload = uploadPayload,
+                    sessionId = null
                 )
             ) {
                 is Result.Success -> {

@@ -28,8 +28,7 @@ import com.smartsales.feature.chat.AiSessionRepository as SessionRepository
 import com.smartsales.feature.chat.AiSessionSummary
 import com.smartsales.feature.usercenter.UserProfile
 import com.smartsales.feature.usercenter.data.UserProfileRepository
-import com.smartsales.data.aicore.ExportFormat
-import com.smartsales.data.aicore.ExportManager
+import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.ExportResult
 import com.smartsales.feature.chat.ChatShareHandler
 import kotlinx.coroutines.Dispatchers
@@ -151,7 +150,8 @@ class HomeUserNameTest {
                 override suspend fun submitTranscription(
                     audioAssetName: String,
                     language: String,
-                    uploadPayload: AudioUploadPayload
+                    uploadPayload: AudioUploadPayload,
+                    sessionId: String?
                 ): com.smartsales.core.util.Result<String> = com.smartsales.core.util.Result.Error(UnsupportedOperationException())
 
                 override fun observeJob(jobId: String): Flow<AudioTranscriptionJobState> = flowOf(AudioTranscriptionJobState.Idle)
@@ -172,14 +172,18 @@ class HomeUserNameTest {
             },
             sessionTitleResolver = SessionTitleResolver(FakeMetaHub()),
             userProfileRepository = profileRepo,
-            exportManager = object : ExportManager {
-                override suspend fun exportMarkdown(
-                    markdown: String,
-                    format: ExportFormat,
-                    suggestedFileName: String?
+            exportOrchestrator = object : ExportOrchestrator {
+                override suspend fun exportPdf(
+                    sessionId: String,
+                    markdown: String
                 ): com.smartsales.core.util.Result<ExportResult> =
                     com.smartsales.core.util.Result.Success(
                         ExportResult("demo.pdf", "application/pdf", ByteArray(0))
+                    )
+
+                override suspend fun exportCsv(sessionId: String): com.smartsales.core.util.Result<ExportResult> =
+                    com.smartsales.core.util.Result.Success(
+                        ExportResult("demo.csv", "text/csv", ByteArray(0))
                     )
             },
             shareHandler = object : ChatShareHandler {

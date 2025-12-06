@@ -419,7 +419,8 @@ class AudioFilesViewModelTest {
         override suspend fun submitTranscription(
             audioAssetName: String,
             language: String,
-            uploadPayload: AudioUploadPayload
+            uploadPayload: AudioUploadPayload,
+            sessionId: String?
         ): Result<String> {
             lastSubmitAssetName = audioAssetName
             return submitResult

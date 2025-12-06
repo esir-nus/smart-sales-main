@@ -28,7 +28,9 @@ class InMemoryMetaHub : MetaHub {
 
     override suspend fun upsertSession(metadata: SessionMetadata) {
         sessionMutex.withLock {
-            sessionStore[metadata.sessionId] = metadata
+            val existing = sessionStore[metadata.sessionId]
+            val merged = existing?.mergeWith(metadata) ?: metadata
+            sessionStore[metadata.sessionId] = merged
         }
     }
 
@@ -37,9 +39,13 @@ class InMemoryMetaHub : MetaHub {
 
     override suspend fun upsertTranscript(metadata: TranscriptMetadata) {
         transcriptMutex.withLock {
-            transcriptStoreById[metadata.transcriptId] = metadata
-            metadata.sessionId?.let { sessionId ->
-                transcriptStoreBySession[sessionId] = metadata
+            val existing = transcriptStoreById[metadata.transcriptId]
+            val merged = existing?.mergeWith(metadata) ?: metadata
+            transcriptStoreById[metadata.transcriptId] = merged
+            merged.sessionId?.let { sessionId ->
+                val existingBySession = transcriptStoreBySession[sessionId]
+                val mergedSession = existingBySession?.mergeWith(merged) ?: merged
+                transcriptStoreBySession[sessionId] = mergedSession
             }
         }
     }

@@ -15,6 +15,8 @@ import com.smartsales.data.aicore.tingwu.TingwuTaskParameters
 import com.smartsales.data.aicore.tingwu.TingwuSummarizationParameters
 import com.smartsales.data.aicore.tingwu.TingwuTranscriptSegment
 import com.smartsales.data.aicore.tingwu.TingwuSpeaker
+import com.smartsales.data.aicore.TranscriptMetadataRequest
+import com.smartsales.data.aicore.TranscriptOrchestrator
 import com.google.gson.Gson
 import java.io.File
 import java.util.Optional
@@ -58,6 +60,9 @@ class RealTingwuCoordinatorTest {
         override suspend fun generate(objectKey: String, expiresInSeconds: Long): Result<String> =
             Result.Success("https://oss.example.com/$objectKey?exp=$expiresInSeconds")
     }
+    private val transcriptOrchestrator = object : TranscriptOrchestrator {
+        override suspend fun inferTranscriptMetadata(request: TranscriptMetadataRequest) = null
+    }
     @Test
     fun submit_emitsCompletedTranscript() = runTest(dispatcher) {
         val api = FakeTingwuApi()
@@ -92,6 +97,7 @@ class RealTingwuCoordinatorTest {
             api = api,
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,
+            transcriptOrchestrator = transcriptOrchestrator,
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     tingwuPollIntervalMillis = 10,
@@ -125,6 +131,7 @@ class RealTingwuCoordinatorTest {
             api = api,
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,
+            transcriptOrchestrator = transcriptOrchestrator,
             optionalConfig = Optional.empty()
         )
 
@@ -231,6 +238,7 @@ class RealTingwuCoordinatorTest {
             api = api,
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,
+            transcriptOrchestrator = transcriptOrchestrator,
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     tingwuPollIntervalMillis = 10,
@@ -301,6 +309,7 @@ class RealTingwuCoordinatorTest {
             api = api,
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,
+            transcriptOrchestrator = transcriptOrchestrator,
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     tingwuPollIntervalMillis = 10,
@@ -384,6 +393,7 @@ class RealTingwuCoordinatorTest {
             api = api,
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,
+            transcriptOrchestrator = transcriptOrchestrator,
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     tingwuPollIntervalMillis = 10,
@@ -440,6 +450,7 @@ class RealTingwuCoordinatorTest {
             api = api,
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,
+            transcriptOrchestrator = transcriptOrchestrator,
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     tingwuPollIntervalMillis = 10,
@@ -479,6 +490,7 @@ class RealTingwuCoordinatorTest {
             api = api,
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,
+            transcriptOrchestrator = transcriptOrchestrator,
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     tingwuPollIntervalMillis = 10,
@@ -519,6 +531,7 @@ class RealTingwuCoordinatorTest {
                 )
             },
             signedUrlProvider = signedUrlProvider,
+            transcriptOrchestrator = transcriptOrchestrator,
             optionalConfig = Optional.empty()
         )
 
@@ -573,6 +586,7 @@ class RealTingwuCoordinatorTest {
             api = api,
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,
+            transcriptOrchestrator = transcriptOrchestrator,
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10))
         )
         val submitResult = coordinator.submit(

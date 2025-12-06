@@ -1,5 +1,6 @@
 package com.smartsales.data.aicore
 
+import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.util.DefaultDispatcherProvider
 import com.smartsales.core.util.DispatcherProvider
 import dagger.Binds
@@ -95,6 +96,30 @@ abstract class AiCoreModule {
             val preferFake = optionalConfig.orElse(AiCoreConfig()).preferFakeExport
             return if (preferFake) fake else real
         }
+
+        @Provides
+        @Singleton
+        fun provideExportOrchestrator(
+            metaHub: MetaHub,
+            exportManager: ExportManager,
+            exportFileStore: ExportFileStore,
+            dispatchers: DispatcherProvider
+        ): ExportOrchestrator = RealExportOrchestrator(
+            metaHub = metaHub,
+            exportManager = exportManager,
+            exportFileStore = exportFileStore,
+            dispatchers = dispatchers
+        )
+
+        @Provides
+        @Singleton
+        fun provideTranscriptOrchestrator(
+            metaHub: MetaHub,
+            dispatchers: DispatcherProvider
+        ): TranscriptOrchestrator = RealTranscriptOrchestrator(
+            metaHub = metaHub,
+            dispatchers = dispatchers
+        )
 
         @Provides
         @Singleton

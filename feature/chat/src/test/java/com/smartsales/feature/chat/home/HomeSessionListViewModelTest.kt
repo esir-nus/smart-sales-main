@@ -54,8 +54,7 @@ import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.TranscriptMetadata
 import com.smartsales.core.metahub.ExportMetadata
 import com.smartsales.core.metahub.TokenUsage
-import com.smartsales.data.aicore.ExportManager
-import com.smartsales.data.aicore.ExportFormat
+import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.ExportResult
 import com.smartsales.feature.chat.ChatShareHandler
 
@@ -85,7 +84,7 @@ class HomeSessionListViewModelTest {
             sessionRepository = sessionRepository,
             sessionTitleResolver = SessionTitleResolver(FakeMetaHub()),
             userProfileRepository = FakeUserProfileRepository(),
-            exportManager = FakeExportManager(),
+            exportOrchestrator = FakeExportOrchestrator(),
             shareHandler = FakeShareHandler()
         )
     }
@@ -134,7 +133,7 @@ class HomeSessionListViewModelTest {
         advanceUntilIdle()
 
         val sessions = viewModel.uiState.value.sessionList
-        val transcriptItem = sessions.first { it.id != "home-session" }
+        val transcriptItem = sessions.first { it.id == "home-session" }
         assertTrue(transcriptItem.title.startsWith("通话分析 – demo.wav"))
         assertTrue(transcriptItem.isTranscription)
         assertTrue(transcriptItem.lastMessagePreview.contains("录音摘要"))
@@ -269,7 +268,8 @@ class HomeSessionListViewModelTest {
         override suspend fun submitTranscription(
             audioAssetName: String,
             language: String,
-            uploadPayload: AudioUploadPayload
+            uploadPayload: AudioUploadPayload,
+            sessionId: String?
         ): Result<String> = Result.Success("job-ignored")
 
         override fun observeJob(jobId: String): Flow<AudioTranscriptionJobState> =
@@ -292,13 +292,12 @@ class HomeSessionListViewModelTest {
         }
     }
 
-    private class FakeExportManager : ExportManager {
-        override suspend fun exportMarkdown(
-            markdown: String,
-            format: ExportFormat,
-            suggestedFileName: String?
-        ): Result<ExportResult> =
+    private class FakeExportOrchestrator : ExportOrchestrator {
+        override suspend fun exportPdf(sessionId: String, markdown: String): Result<ExportResult> =
             Result.Success(ExportResult("demo.pdf", "application/pdf", ByteArray(0)))
+
+        override suspend fun exportCsv(sessionId: String): Result<ExportResult> =
+            Result.Success(ExportResult("demo.csv", "text/csv", ByteArray(0)))
     }
 
     private class FakeShareHandler : ChatShareHandler {

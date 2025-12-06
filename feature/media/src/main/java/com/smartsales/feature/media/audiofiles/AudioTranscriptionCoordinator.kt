@@ -21,6 +21,7 @@ interface AudioTranscriptionCoordinator {
         audioAssetName: String,
         language: String,
         uploadPayload: AudioUploadPayload,
+        sessionId: String? = null,
     ): Result<String>
 
     fun observeJob(jobId: String): Flow<AudioTranscriptionJobState>

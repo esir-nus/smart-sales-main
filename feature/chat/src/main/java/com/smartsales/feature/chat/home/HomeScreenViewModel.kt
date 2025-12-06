@@ -1,7 +1,7 @@
 package com.smartsales.feature.chat.home
 
-import android.net.Uri
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.core.util.Result
@@ -33,7 +33,7 @@ import com.smartsales.feature.media.MediaSyncState
 import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.feature.usercenter.UserProfile
 import com.smartsales.data.aicore.ExportFormat
-import com.smartsales.data.aicore.ExportManager
+import com.smartsales.data.aicore.ExportOrchestrator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -194,7 +194,7 @@ class HomeScreenViewModel @Inject constructor(
     private val sessionRepository: SessionRepository,
     private val sessionTitleResolver: SessionTitleResolver,
     private val userProfileRepository: UserProfileRepository,
-    private val exportManager: ExportManager,
+    private val exportOrchestrator: ExportOrchestrator,
     private val shareHandler: ChatShareHandler
 ) : ViewModel() {
 
@@ -209,6 +209,7 @@ class HomeScreenViewModel @Inject constructor(
     private var hasShownAnalysisExportHint: Boolean = false
     private var transcriptionJob: Job? = null
     private var latestAnalysisMarkdown: String? = null
+    private var pendingExportFormat: ExportFormat? = null
     private val transcriptionSessionIds = mutableSetOf<String>()
 
     init {
@@ -333,13 +334,30 @@ class HomeScreenViewModel @Inject constructor(
         when (skillId) {
             QuickSkillId.SMART_ANALYSIS -> {
                 if (_uiState.value.isBusy) return
-        _uiState.update { state ->
-            val toggled = !state.isSmartAnalysisMode
-            state.copy(
-                isSmartAnalysisMode = toggled,
-                selectedSkill = if (toggled) definition.toUiModel() else null,
-                inputText = state.inputText
-            )
+                _uiState.update { state ->
+                    val toggled = !state.isSmartAnalysisMode
+                    state.copy(
+                        isSmartAnalysisMode = toggled,
+                        selectedSkill = if (toggled) definition.toUiModel() else null,
+                        inputText = state.inputText
+                    )
+                }
+            }
+            QuickSkillId.EXPORT_PDF -> {
+                onExportPdfClicked()
+            }
+            QuickSkillId.EXPORT_CSV -> {
+                onExportCsvClicked()
+            }
+            else -> {
+                _uiState.update { state ->
+                    state.copy(
+                        selectedSkill = definition.toUiModel(),
+                        inputText = definition.defaultPrompt,
+                        chatErrorMessage = null
+                    )
+                }
+            }
         }
     }
 
@@ -407,23 +425,6 @@ class HomeScreenViewModel @Inject constructor(
         }
         return builder.toString().trimEnd()
     }
-            QuickSkillId.EXPORT_PDF -> {
-                onExportPdfClicked()
-            }
-            QuickSkillId.EXPORT_CSV -> {
-                onExportCsvClicked()
-            }
-            else -> {
-                _uiState.update { state ->
-                    state.copy(
-                        selectedSkill = definition.toUiModel(),
-                        inputText = definition.defaultPrompt,
-                        chatErrorMessage = null
-                    )
-                }
-            }
-        }
-    }
 
     fun onToggleDebugMetadata() {
         _uiState.update { state ->
@@ -463,80 +464,97 @@ class HomeScreenViewModel @Inject constructor(
 
     private fun exportMarkdown(format: ExportFormat) {
         if (_uiState.value.exportInProgress) return
-        val markdown = latestAnalysisMarkdown ?: buildTranscriptMarkdown(_uiState.value.chatMessages)
-        if (markdown.isBlank()) {
-            _uiState.update { it.copy(snackbarMessage = "暂无可导出的内容") }
+        viewModelScope.launch {
+            val existingAnalysis = latestAnalysisMarkdown
+            if (existingAnalysis != null) {
+                performExport(format = format, markdown = existingAnalysis)
+                return@launch
+            }
+            val (mainContent, contextContent) = findLatestLongContent()
+            if (mainContent == null) {
+                _uiState.update {
+                    it.copy(
+                        exportInProgress = false,
+                        snackbarMessage = "当前对话内容太少，无法生成可导出的分析"
+                    )
+                }
+                return@launch
+            }
+            if (_uiState.value.isBusy) {
+                _uiState.update {
+                    it.copy(
+                        snackbarMessage = "正在生成回复，请稍后再尝试导出",
+                        exportInProgress = false
+                    )
+                }
+                return@launch
+            }
+            pendingExportFormat = format
+            _uiState.update { it.copy(exportInProgress = true, chatErrorMessage = null) }
+            val autoMessage = buildSmartAnalysisUserMessage(
+                mainContent = mainContent,
+                context = contextContent,
+                goal = "导出前自动分析"
+            )
+            sendMessageInternal(
+                messageText = autoMessage,
+                skillOverride = QuickSkillId.SMART_ANALYSIS,
+                userDisplayText = "智能分析（导出前自动生成）",
+                onCompleted = { summary ->
+                    handleSmartAnalysisCompleted(summary)
+                    val target = pendingExportFormat
+                    pendingExportFormat = null
+                    viewModelScope.launch {
+                        performExport(format = target ?: format, markdown = summary)
+                    }
+                },
+                onCompletedTransform = { body ->
+                    buildString {
+                        append("智能分析结果\n\n")
+                        append(body.trim())
+                    }.trim()
+                }
+            )
+        }
+    }
+
+    private suspend fun performExport(
+        format: ExportFormat,
+        markdown: String? = null
+    ) {
+        val content = markdown ?: latestAnalysisMarkdown ?: buildTranscriptMarkdown(_uiState.value.chatMessages)
+        if (format == ExportFormat.PDF && content.isBlank()) {
+            pendingExportFormat = null
+            _uiState.update { it.copy(exportInProgress = false, snackbarMessage = "暂无可导出的内容") }
             return
         }
-        val suggestedFileName = generateExportFileName()
         _uiState.update { it.copy(exportInProgress = true, chatErrorMessage = null) }
-        viewModelScope.launch {
-            when (val result = exportManager.exportMarkdown(markdown, format, suggestedFileName)) {
-                is Result.Success -> {
-                    when (val share = shareHandler.shareExport(result.data)) {
-                        is Result.Success -> _uiState.update { it.copy(exportInProgress = false) }
-                        is Result.Error -> _uiState.update {
-                            it.copy(
-                                exportInProgress = false,
-                                chatErrorMessage = share.throwable.message ?: "分享失败"
-                            )
-                        }
-                    }
-                }
-
-                is Result.Error -> {
-                    _uiState.update {
+        val exportResult = when (format) {
+            ExportFormat.PDF -> exportOrchestrator.exportPdf(sessionId, content)
+            ExportFormat.CSV -> exportOrchestrator.exportCsv(sessionId)
+        }
+        when (exportResult) {
+            is Result.Success -> {
+                when (val share = shareHandler.shareExport(exportResult.data)) {
+                    is Result.Success -> _uiState.update { it.copy(exportInProgress = false) }
+                    is Result.Error -> _uiState.update {
                         it.copy(
                             exportInProgress = false,
-                            chatErrorMessage = result.throwable.message ?: "导出失败"
+                            chatErrorMessage = share.throwable.message ?: "分享失败"
                         )
                     }
                 }
             }
-        }
-    }
 
-    /**
-     * 生成导出文件名，格式为：YYYY年MM月DD日_相关人名_简短总结
-     * 扩展名由 ExportManager 负责追加。
-     */
-    private fun generateExportFileName(): String {
-        val datePart = formatDateForFileName()
-        val personPart = extractPersonNameForFileName()
-        val summaryPart = generateShortSummaryForFileName()
-        return "${datePart}_${personPart}_$summaryPart"
-    }
-
-    private fun formatDateForFileName(): String {
-        val formatter = SimpleDateFormat("yyyy年MM月dd日", Locale.CHINA)
-        return formatter.format(Date())
-    }
-
-    private fun extractPersonNameForFileName(): String {
-        val name = _uiState.value.userName.trim()
-        if (name.isNotEmpty()) return name
-        return "客户"
-    }
-
-    private fun generateShortSummaryForFileName(): String {
-        // 1. 优先使用最新分析内容的首行
-        latestAnalysisMarkdown
-            ?.lineSequence()
-            ?.firstOrNull { it.isNotBlank() }
-            ?.let { return it.trim().take(20) }
-
-        // 2. 其次使用首条用户消息内容
-        val firstUserMessage = _uiState.value.chatMessages
-            .firstOrNull { it.role == ChatMessageRole.USER }
-        if (firstUserMessage != null) {
-            val content = firstUserMessage.content.trim()
-            if (content.isNotEmpty()) {
-                return content.take(20)
+            is Result.Error -> {
+                _uiState.update {
+                    it.copy(
+                        exportInProgress = false,
+                        chatErrorMessage = exportResult.throwable.message ?: "导出失败"
+                    )
+                }
             }
         }
-
-        // 3. 兜底文案
-        return "对话记录"
     }
 
     fun onLoadMoreHistory() {
@@ -651,7 +669,8 @@ class HomeScreenViewModel @Inject constructor(
             when (val submit = transcriptionCoordinator.submitTranscription(
                 audioAssetName = stored.displayName,
                 language = "zh-CN",
-                uploadPayload = uploadPayload
+                uploadPayload = uploadPayload,
+                sessionId = sessionId
             )) {
                 is Result.Success -> {
                     _uiState.update { it.copy(isInputBusy = false, isBusy = false, snackbarMessage = "音频已上传，正在转写…") }
@@ -722,7 +741,7 @@ class HomeScreenViewModel @Inject constructor(
     fun onTranscriptionRequested(request: TranscriptionChatRequest) {
         viewModelScope.launch {
             val transcript = request.transcriptMarkdown ?: request.transcriptPreview
-            val targetSessionId = request.sessionId ?: "session-${UUID.randomUUID()}"
+            val targetSessionId = request.sessionId ?: this@HomeScreenViewModel.sessionId
             val title = deriveTranscriptionTitle(request.fileName)
             val existing = chatHistoryRepository.loadLatestSession(targetSessionId)
             this@HomeScreenViewModel.sessionId = targetSessionId
@@ -1117,6 +1136,8 @@ class HomeScreenViewModel @Inject constructor(
                     }
                     is ChatStreamEvent.Error -> {
                         // 错误：标记消息失败并弹出提示
+                        val shouldResetExport = pendingExportFormat != null
+                        pendingExportFormat = null
                         updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
                             msg.copy(hasError = true, isStreaming = false)
                         }
@@ -1126,6 +1147,7 @@ class HomeScreenViewModel @Inject constructor(
                                 isStreaming = false,
                                 isInputBusy = false,
                                 isBusy = false,
+                                exportInProgress = if (shouldResetExport) false else it.exportInProgress,
                                 chatErrorMessage = event.throwable.message ?: "AI 回复失败"
                             )
                         }

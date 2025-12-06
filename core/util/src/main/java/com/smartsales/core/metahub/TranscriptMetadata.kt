@@ -10,11 +10,60 @@ package com.smartsales.core.metahub
  */
 data class TranscriptMetadata(
     val transcriptId: String,
-    val sessionId: String?,
-    val speakerMap: Map<String, SpeakerMeta>,
-    val source: TranscriptSource,
-    val createdAt: Long
-)
+    val sessionId: String? = null,
+    val speakerMap: Map<String, SpeakerMeta> = emptyMap(),
+    val source: TranscriptSource = TranscriptSource.UNKNOWN,
+    val createdAt: Long = System.currentTimeMillis(),
+    val diarizedSegmentsCount: Int? = null,
+    val mainPerson: String? = null,
+    val shortSummary: String? = null,
+    val summaryTitle6Chars: String? = null,
+    val location: String? = null,
+    val stage: SessionStage? = null,
+    val riskLevel: RiskLevel? = null,
+    val extra: Map<String, Any?> = emptyMap()
+) {
+    /**
+     * 非空合并：speakerMap 以高置信度/非空覆盖，其他字段仅用新值覆盖旧值。
+     */
+    fun mergeWith(other: TranscriptMetadata): TranscriptMetadata = TranscriptMetadata(
+        transcriptId = transcriptId,
+        sessionId = other.sessionId ?: sessionId,
+        speakerMap = mergeSpeakers(speakerMap, other.speakerMap),
+        source = other.source.takeIf { it != TranscriptSource.UNKNOWN } ?: source,
+        createdAt = maxOf(createdAt, other.createdAt),
+        diarizedSegmentsCount = other.diarizedSegmentsCount ?: diarizedSegmentsCount,
+        mainPerson = other.mainPerson ?: mainPerson,
+        shortSummary = other.shortSummary ?: shortSummary,
+        summaryTitle6Chars = other.summaryTitle6Chars ?: summaryTitle6Chars,
+        location = other.location ?: location,
+        stage = other.stage ?: stage,
+        riskLevel = other.riskLevel ?: riskLevel,
+        extra = extra + other.extra
+    )
+
+    private fun mergeSpeakers(
+        current: Map<String, SpeakerMeta>,
+        incoming: Map<String, SpeakerMeta>
+    ): Map<String, SpeakerMeta> {
+        if (incoming.isEmpty()) return current
+        val mutable = current.toMutableMap()
+        incoming.forEach { (id, meta) ->
+            val existing = mutable[id]
+            mutable[id] = if (existing == null) {
+                meta
+            } else {
+                val confidence = meta.confidence ?: existing.confidence
+                SpeakerMeta(
+                    displayName = meta.displayName ?: existing.displayName,
+                    role = meta.role ?: existing.role,
+                    confidence = confidence?.coerceIn(0f, 1f)
+                )
+            }
+        }
+        return mutable
+    }
+}
 
 /**
  * 说话人元数据，描述展示名和角色。

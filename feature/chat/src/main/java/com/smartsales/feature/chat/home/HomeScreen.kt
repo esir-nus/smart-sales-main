@@ -44,7 +44,6 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
@@ -88,9 +87,11 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -296,7 +297,6 @@ fun HomeScreen(
             }
             quick.copy(label = customLabel)
         }
-    val showScrollToLatest = remember { mutableStateOf(false) }
     LaunchedEffect(listState, state.chatMessages.size, state.isLoadingHistory) {
         snapshotFlow {
             listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
@@ -308,15 +308,7 @@ fun HomeScreen(
     }
     LaunchedEffect(listState, state.chatMessages.size) {
         snapshotFlow { listState.layoutInfo }
-            .collect { layoutInfo ->
-                val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index
-                val lastMessageIndex = state.chatMessages.lastIndex.takeIf { it >= 0 }
-                showScrollToLatest.value = when {
-                    lastMessageIndex == null -> false
-                    lastVisibleIndex == null -> false
-                    else -> lastVisibleIndex < lastMessageIndex
-                }
-            }
+            .collect { _ -> }
     }
     LaunchedEffect(state.currentSession.id, state.chatMessages.size) {
         if (state.chatMessages.isNotEmpty()) {
@@ -325,21 +317,19 @@ fun HomeScreen(
     }
 
     var isInputFocused by rememberSaveable { mutableStateOf(false) }
-    val dragDismissModifier = Modifier.pointerInput(Unit) {
-        var typingAtStart = false
-        var dismissedInGesture = false
-        detectVerticalDragGestures(
-            onDragStart = {
-                typingAtStart = isInputFocused
-                dismissedInGesture = false
-            },
-            onVerticalDrag = { _, dragAmount ->
-                if (typingAtStart && !dismissedInGesture && dragAmount > 0f) {
-                    onDismissKeyboard()
-                    dismissedInGesture = true
+    val dismissKeyboardOnDrag = if (isInputFocused) {
+        Modifier.nestedScroll(
+            object : NestedScrollConnection {
+                override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                    if (source == NestedScrollSource.Drag && available.y > 0f) {
+                        onDismissKeyboard()
+                    }
+                    return Offset.Zero
                 }
             }
         )
+    } else {
+        Modifier
     }
 
     Box(
@@ -426,7 +416,7 @@ fun HomeScreen(
                                 LazyColumn(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .then(dragDismissModifier)
+                                        .then(dismissKeyboardOnDrag)
                                         .testTag(HomeScreenTestTags.LIST),
                                         state = listState,
                                         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -503,21 +493,6 @@ fun HomeScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
-                }
-                if (showScrollToLatest.value) {
-                    ScrollToLatestButton(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(16.dp),
-                        onClick = {
-                            val lastIndex = state.chatMessages.lastIndex
-                            if (lastIndex >= 0) {
-                                coroutineScope.launch {
-                                    listState.animateScrollToItem(lastIndex)
-                                }
-                            }
-                        }
-                    )
                 }
                 if (debugHudEnabled && state.debugSessionMetadata != null) {
                     DebugSessionMetadataHud(
@@ -1371,27 +1346,6 @@ private fun QuickSkillRow(
                 },
                 // 快捷技能作为快捷填充，无需额外气泡
                 colors = colors
-            )
-        }
-    }
-}
-
-@Composable
-private fun ScrollToLatestButton(
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Surface(
-        modifier = modifier.testTag(HomeScreenTestTags.SCROLL_TO_LATEST),
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.primaryContainer,
-        tonalElevation = 6.dp
-    ) {
-        IconButton(onClick = onClick) {
-            Icon(
-                imageVector = Icons.Filled.KeyboardArrowDown,
-                contentDescription = "回到底部",
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
     }

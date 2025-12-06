@@ -35,6 +35,7 @@ import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.feature.usercenter.UserProfile
 import com.smartsales.data.aicore.ExportFormat
 import com.smartsales.data.aicore.ExportOrchestrator
+import com.smartsales.core.metahub.AnalysisSource
 import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.feature.chat.home.CHAT_DEBUG_HUD_ENABLED
@@ -354,58 +355,51 @@ class HomeScreenViewModel @Inject constructor(
     private fun exportMarkdown(format: ExportFormat) {
         if (_uiState.value.exportInProgress) return
         viewModelScope.launch {
-            // 检查 MetaHub 分析状态
+            val cachedAnalysis = latestAnalysisMarkdown
+            if (!cachedAnalysis.isNullOrBlank()) {
+                performExport(format, markdownOverride = cachedAnalysis)
+                return@launch
+            }
+
             val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
             val hasMetaAnalysis = meta?.latestMajorAnalysisMessageId != null
-            val cachedAnalysis = latestAnalysisMarkdown
-
-            when {
-                !cachedAnalysis.isNullOrBlank() -> {
-                    // 直接导出：使用缓存分析 markdown
-                    performExport(format, markdownOverride = cachedAnalysis)
-                }
-                hasMetaAnalysis -> {
-                    // MetaHub 认为有分析，但 VM 没有缓存文本
-                    // 不自动重跑，给轻量提示 + 退回
-                    _uiState.update {
-                        it.copy(
-                            exportInProgress = false,
-                            snackbarMessage = "检测到历史分析记录，如需导出，请重新运行一次智能分析。"
-                        )
-                    }
-                    // 可选：退回到对话导出（逐字稿），或直接 return
-                    return@launch
-                }
-                else -> {
-                    // 没有任何分析记录，走现有 "自动 SMART_ANALYSIS 然后导出" 路径
-                    val (mainContent, context) = findLatestLongContent()
-                    if (mainContent == null) {
-                        performExport(format, markdownOverride = null)
-                        return@launch
-                    }
-                    pendingExportAfterAnalysis = format
-                    _uiState.update { it.copy(exportInProgress = true, chatErrorMessage = null) }
-                    val autoGoal = "导出前自动分析"
-                    val userMessage = buildSmartAnalysisUserMessage(
-                        mainContent = mainContent,
-                        context = context,
-                        goal = autoGoal
-                    )
-                    sendMessageInternal(
-                        messageText = userMessage,
-                        skillOverride = QuickSkillId.SMART_ANALYSIS,
-                        userDisplayText = "智能分析（导出前自动生成）",
-                        onCompleted = {},
-                        onCompletedTransform = { body ->
-                            buildString {
-                                append("智能分析结果\n\n")
-                                append(body.trim())
-                            }.trim()
-                        },
-                        isAutoAnalysis = true
+            if (hasMetaAnalysis) {
+                _uiState.update {
+                    it.copy(
+                        exportInProgress = false,
+                        snackbarMessage = "已存在历史分析结果，本次导出建议先刷新分析。"
                     )
                 }
+                return@launch
             }
+
+            val (mainContent, context) = findLatestLongContent()
+            if (mainContent == null) {
+                performExport(format, markdownOverride = null)
+                return@launch
+            }
+
+            pendingExportAfterAnalysis = format
+            _uiState.update { it.copy(exportInProgress = true, chatErrorMessage = null) }
+            val autoGoal = "导出前自动分析"
+            val userMessage = buildSmartAnalysisUserMessage(
+                mainContent = mainContent,
+                context = context,
+                goal = autoGoal
+            )
+            sendMessageInternal(
+                messageText = userMessage,
+                skillOverride = QuickSkillId.SMART_ANALYSIS,
+                userDisplayText = "智能分析（导出前自动生成）",
+                onCompleted = {},
+                onCompletedTransform = { body ->
+                    buildString {
+                        append("智能分析结果\n\n")
+                        append(body.trim())
+                    }.trim()
+                },
+                isAutoAnalysis = true
+            )
         }
     }
 
@@ -977,6 +971,7 @@ class HomeScreenViewModel @Inject constructor(
         if (quickSkillId == null) {
             when (classifyUserInput(content, _uiState.value.chatMessages)) {
                 InputBucket.NOISE -> {
+                    val lowInfoHint = "我主要帮你分析销售对话、邮件或会议纪要。请粘贴一段对话、邮件，或描述你与客户的沟通场景，我再帮你分析。"
                     _uiState.update {
                         it.copy(
                             inputText = "",
@@ -989,9 +984,14 @@ class HomeScreenViewModel @Inject constructor(
                             showWelcomeHero = false
                         )
                     }
-                    appendAssistantMessage(
-                        content = "我主要帮你分析销售对话、邮件或会议纪要。请粘贴一段对话、邮件，或描述你与客户的沟通场景，我再帮你分析。"
-                    )
+                    if (hasShownLowInfoHint || _uiState.value.chatMessages.any { msg ->
+                            msg.role == ChatMessageRole.ASSISTANT && msg.content == lowInfoHint
+                        }
+                    ) {
+                        return
+                    }
+                    hasShownLowInfoHint = true
+                    appendAssistantMessage(content = lowInfoHint)
                     return
                 }
 
@@ -1052,7 +1052,8 @@ class HomeScreenViewModel @Inject constructor(
             request = enrichedRequest,
             assistantId = assistantPlaceholder.id,
             onCompleted = onCompleted,
-            onCompletedTransform = onCompletedTransform
+            onCompletedTransform = onCompletedTransform,
+            isAutoAnalysis = isAutoAnalysis
         )
     }
 
@@ -1061,7 +1062,8 @@ class HomeScreenViewModel @Inject constructor(
         request: ChatRequest,
         assistantId: String,
         onCompleted: (String) -> Unit = {},
-        onCompletedTransform: ((String) -> String)? = null
+        onCompletedTransform: ((String) -> String)? = null,
+        isAutoAnalysis: Boolean = false
     ) {
         val isSmartAnalysis = request.quickSkillId == "SMART_ANALYSIS"
         val streamingDeduplicator = StreamingDeduplicator()
@@ -1084,7 +1086,11 @@ class HomeScreenViewModel @Inject constructor(
                         val sanitized = sanitizeAssistantOutput(rawFullText, isSmartAnalysis)
                         val cleaned = onCompletedTransform?.invoke(sanitized) ?: sanitized
                         if (isSmartAnalysis) {
-                            onAnalysisCompleted(cleaned, assistantId)
+                            onAnalysisCompleted(
+                                summary = cleaned,
+                                messageId = assistantId,
+                                isAutoAnalysis = isAutoAnalysis
+                            )
                         }
                         if (shouldParseSessionMetadata || isSmartAnalysis) {
                             val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
@@ -1184,7 +1190,7 @@ class HomeScreenViewModel @Inject constructor(
         skillId: QuickSkillId?,
         historySource: List<ChatMessageUi>,
         audioContext: AudioContextSummary?,
-        isAutoAnalysis: Boolean
+        _isAutoAnalysis: Boolean
     ): ChatRequest {
         val history = historySource.map { ui ->
             ChatHistoryItem(
@@ -1426,9 +1432,33 @@ class HomeScreenViewModel @Inject constructor(
         value = transform(value)
     }
 
-    private fun onAnalysisCompleted(summary: String, messageId: String) {
+    private fun onAnalysisCompleted(summary: String, messageId: String, isAutoAnalysis: Boolean) {
         latestAnalysisMarkdown = summary
         latestAnalysisMessageId = messageId
+        viewModelScope.launch(Dispatchers.IO) {
+            val now = System.currentTimeMillis()
+            val source = if (isAutoAnalysis) {
+                AnalysisSource.SMART_ANALYSIS_AUTO
+            } else {
+                AnalysisSource.SMART_ANALYSIS_USER
+            }
+            val delta = SessionMetadata(
+                sessionId = sessionId,
+                latestMajorAnalysisMessageId = messageId,
+                latestMajorAnalysisAt = now,
+                latestMajorAnalysisSource = source
+            )
+            runCatching { metaHub.upsertSession(delta) }
+                .onFailure {
+                    debugLog(
+                        event = "meta_upsert_latest_analysis_failed",
+                        data = mapOf(
+                            "sessionId" to sessionId,
+                            "error" to (it.message ?: "unknown")
+                        )
+                    )
+                }
+        }
         if (!hasShownAnalysisExportHint) {
             hasShownAnalysisExportHint = true
             appendAssistantMessage(
@@ -2202,7 +2232,7 @@ class HomeScreenViewModel @Inject constructor(
 
     private fun debugLog(event: String, data: Map<String, Any?> = emptyMap()) {
         if (!CHAT_DEBUG_HUD_ENABLED) return
-        Log.d(TAG, formatLog(event, data))
+        runCatching { Log.d(TAG, formatLog(event, data)) }
     }
 
     private fun warnLog(
@@ -2210,7 +2240,7 @@ class HomeScreenViewModel @Inject constructor(
         data: Map<String, Any?> = emptyMap(),
         throwable: Throwable? = null
     ) {
-        Log.w(TAG, formatLog(event, data), throwable)
+        runCatching { Log.w(TAG, formatLog(event, data), throwable) }
     }
 
     private fun formatLog(event: String, data: Map<String, Any?>): String {

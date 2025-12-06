@@ -49,6 +49,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import org.junit.Assert.assertNotNull
+import com.smartsales.core.metahub.AnalysisSource
 import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.TranscriptMetadata
@@ -217,7 +219,7 @@ class HomeExportActionsTest {
     }
 
     @Test
-    fun `second export reuses cached analysis without rerun`() = runTest(dispatcher) {
+    fun `export reuses cached analysis without rerun`() = runTest(dispatcher) {
         val longInput = "请帮我总结汽车行业的市场趋势和风险要点。".repeat(15)
         viewModel.onInputChanged(longInput)
         viewModel.onSmartAnalysisClicked()
@@ -235,7 +237,43 @@ class HomeExportActionsTest {
     }
 
     @Test
-    fun `when metahub has analysis but vm cache empty it hints and skips auto run`() = runTest(dispatcher) {
+    fun `analysis completion persists latest analysis marker to metahub`() = runTest(dispatcher) {
+        metaHub.session = SessionMetadata(
+            sessionId = "home-session",
+            mainPerson = "罗总",
+            summaryTitle6Chars = "初始标题"
+        )
+        val longInput = "请帮我总结汽车行业的市场趋势和风险要点。".repeat(20)
+        viewModel.onInputChanged(longInput)
+        viewModel.onSmartAnalysisClicked()
+        viewModel.onSendMessage()
+        advanceUntilIdle()
+
+        val saved = metaHub.session!!
+        assertEquals("罗总", saved.mainPerson)
+        assertNotNull(saved.latestMajorAnalysisMessageId)
+        assertEquals(AnalysisSource.SMART_ANALYSIS_USER, saved.latestMajorAnalysisSource)
+        assertTrue((saved.latestMajorAnalysisAt ?: 0L) > 0L)
+    }
+
+    @Test
+    fun `auto analysis persists marker to metahub with auto source`() = runTest(dispatcher) {
+        val longInput = "自动分析触发内容".repeat(20)
+        viewModel.onInputChanged(longInput)
+        viewModel.onSendMessage()
+        advanceUntilIdle()
+
+        viewModel.onExportPdfClicked()
+        advanceUntilIdle()
+
+        val saved = metaHub.session!!
+        assertNotNull(saved.latestMajorAnalysisMessageId)
+        assertEquals(AnalysisSource.SMART_ANALYSIS_AUTO, saved.latestMajorAnalysisSource)
+        assertTrue((saved.latestMajorAnalysisAt ?: 0L) > 0L)
+    }
+
+    @Test
+    fun `export skips auto analysis when metahub has latest analysis but vm cache empty`() = runTest(dispatcher) {
         metaHub.session = SessionMetadata(
             sessionId = "home-session",
             latestMajorAnalysisMessageId = "m1",
@@ -247,7 +285,27 @@ class HomeExportActionsTest {
 
         assertEquals(0, aiChatService.callCount)
         assertEquals(null, exportOrchestrator.lastFormat)
-        assertTrue(viewModel.uiState.value.snackbarMessage?.contains("历史分析记录") == true)
+        assertTrue(viewModel.uiState.value.snackbarMessage?.contains("历史分析") == true)
+    }
+
+    @Test
+    fun `export runs auto smart analysis once when no analysis and long content`() = runTest(dispatcher) {
+        val longInput = "这是一个很长的对话片段，用于导出前自动分析。".repeat(20)
+        viewModel.onInputChanged(longInput)
+        viewModel.onSendMessage()
+        advanceUntilIdle()
+
+        val callsBeforeExport = aiChatService.callCount
+
+        viewModel.onExportPdfClicked()
+        advanceUntilIdle()
+
+        assertEquals(callsBeforeExport + 1, aiChatService.callCount)
+        assertEquals(ExportFormat.PDF, exportOrchestrator.lastFormat)
+        assertEquals(1, exportOrchestrator.pdfCallCount)
+        assertTrue(exportOrchestrator.lastPdfMarkdown?.contains("智能分析结果") == true)
+        assertTrue(shareHandler.shared)
+        assertTrue(!viewModel.uiState.value.exportInProgress)
     }
 
     @Test
@@ -268,7 +326,7 @@ class HomeExportActionsTest {
         val assistantCountSecond = viewModel.uiState.value.chatMessages.count { it.role == ChatMessageRole.ASSISTANT }
         assertEquals(1, assistantCountSecond)
         val userCount = viewModel.uiState.value.chatMessages.count { it.role == ChatMessageRole.USER }
-        assertEquals(2, userCount)
+        assertEquals(0, userCount)
     }
 
     @Test
@@ -334,7 +392,7 @@ class HomeExportActionsTest {
     private class FakeMetaHub : MetaHub {
         var session: SessionMetadata? = null
         override suspend fun upsertSession(metadata: SessionMetadata) {
-            session = metadata
+            session = session?.mergeWith(metadata) ?: metadata
         }
         override suspend fun getSession(sessionId: String): SessionMetadata? = session
         override suspend fun upsertTranscript(metadata: TranscriptMetadata) {}

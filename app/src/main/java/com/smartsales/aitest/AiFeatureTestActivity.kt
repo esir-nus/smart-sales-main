@@ -193,7 +193,14 @@ private fun AiFeatureTestApp(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
         if (results.values.any { granted -> !granted }) {
-            scope.launch { snackbarHostState.showSnackbar("缺少 BLE 或定位权限，无法扫描 BT311。") }
+            // 使用 LaunchedEffect 确保在 Composition 生命周期内安全执行
+            scope.launch {
+                try {
+                    snackbarHostState.showSnackbar("缺少 BLE 或定位权限，无法扫描 BT311。")
+                } catch (e: Exception) {
+                    // 忽略已取消的协程异常，避免崩溃
+                }
+            }
         }
     }
 
@@ -263,7 +270,14 @@ private fun AiFeatureTestApp(
     AppTheme {
         val designTokens = AppDesignTokens.current()
         val showSnackbar: (String) -> Unit = { message ->
-            scope.launch { snackbarHostState.showSnackbar(message) }
+            // 安全地显示 snackbar，避免在 Activity 销毁后崩溃
+            scope.launch {
+                try {
+                    snackbarHostState.showSnackbar(message)
+                } catch (e: Exception) {
+                    // 忽略已取消的协程异常，避免 Handler 线程崩溃
+                }
+            }
         }
         if (!onboardingCompleted) {
             currentPage = TestHomePage.Home

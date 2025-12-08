@@ -7,18 +7,20 @@
 >
 > * **Screen / flows under audit:**
 >   e.g. “Home chat shell, title pipeline, HUD, and history drawer.”
-> * **Operation mode:** **INSPECT and REPORT only. No file modifications. No fix suggestions.**
+> * **Operation mode:** **INSPECT and REPORT only. No file modifications. No fix suggestions.** You may explain why something is wrong, but do not describe how to change the code.
 >
 > ### Sources of truth (read these first, every time)
 >
 > Treat these as the **only** authoritative UX sources, with this priority:
 >
-> 1. `docs/assistant-ux-contract.md` – highest priority for UI/UX structure and behavior.
+> 1. `docs/ux-contract.md` – highest priority for UI/UX structure and behavior.
 > 2. `docs/Orchestrator-MetadataHub-Mvp-V3.md` – orchestration + metadata + title pipeline rules.
-> 3. `api-contracts.md` – any UI-visible behavior implied by API contracts.
-> 4. `style-guide.md` – visual/styling principles only; do **not** override behavior from the UX contract.
+> 3. `docs/api-contracts.md` – any UI-visible behavior implied by API contracts.
+> 4. `docs/style-guide.md` – visual/styling principles only; do **not** override behavior from the UX contract.
 >
-> Legacy React UI, old UX docs, and archived projects are **not** sources of truth. They may be used only as vague inspiration if explicitly referenced, never to overrule the contract above.
+> (`docs/assistant-ux-contract-legacy.md` and React `/ui` are archive/reference only.)
+>
+> Also consult `AGENTS.md` and `role-contract.md` only for agent responsibilities and testing/tagging discipline, not as UX sources.
 >
 > ### Step 1 – Extract UX rules from docs
 >
@@ -98,6 +100,6 @@
 >
 > * Do **not** propose or describe code changes in this audit.
 > * Do **not** silently ignore discrepancies; every broken rule must surface as MISMATCH or UNKNOWN.
-> * Always treat `assistant-ux-contract.md` + `Orchestrator-MetadataHub-Mvp-V3.md` as the final word when they conflict with existing code.
+> * Always treat `ux-contract.md` + `Orchestrator-MetadataHub-Mvp-V3.md` as the final word when they conflict with existing code.
 
 ---

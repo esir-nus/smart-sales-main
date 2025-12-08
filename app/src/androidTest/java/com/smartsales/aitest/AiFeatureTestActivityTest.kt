@@ -8,6 +8,7 @@ package com.smartsales.aitest
 import android.Manifest
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertDoesNotExist
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -153,6 +154,40 @@ class AiFeatureTestActivityTest {
             .assertIsDisplayed()
         assertZeroNodes(HomeScreenTestTags.DEVICE_ENTRY)
         assertZeroNodes(HomeScreenTestTags.AUDIO_ENTRY)
+    }
+
+    @Test
+    fun topBarTitleBindsAndNewChatResetsHero() {
+        waitForHomeRendered()
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.SESSION_TITLE, useUnmergedTree = true)
+            .assertTextContains("新的聊天", substring = true)
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.INPUT_FIELD, useUnmergedTree = true)
+            .performTextInput("hi")
+        composeRule.onNodeWithTag(HomeScreenTestTags.SEND_BUTTON, useUnmergedTree = true)
+            .performClick()
+
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithTag(HomeScreenTestTags.HERO, useUnmergedTree = true)
+                .fetchSemanticsNodes().isEmpty()
+        }
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.NEW_CHAT_BUTTON, useUnmergedTree = true)
+            .assertIsDisplayed()
+            .performClick()
+
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithTag(HomeScreenTestTags.HERO, useUnmergedTree = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.SESSION_TITLE, useUnmergedTree = true)
+            .assertTextContains("新的聊天", substring = true)
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.HISTORY_TOGGLE, useUnmergedTree = true)
+            .performClick()
+        waitForAnyTag(composeRule, HomeScreenTestTags.HISTORY_PANEL, ChatHistoryTestTags.PAGE)
     }
 
     @Test

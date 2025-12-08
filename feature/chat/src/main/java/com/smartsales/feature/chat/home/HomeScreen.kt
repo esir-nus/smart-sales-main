@@ -402,19 +402,21 @@ fun HomeScreen(
                         .fillMaxSize()
                         .testTag(HomeScreenTestTags.ROOT),
                     snackbarHost = { SnackbarHost(snackbarHostState) },
-                    topBar = {
-                        HomeTopBar(
-                            onProfileClick = onProfileClicked,
-                            deviceSnapshot = state.deviceSnapshot,
-                            onHistoryClick = {
-                                onDismissKeyboard()
-                                onToggleHistoryPanel()
-                            },
-                            hudEnabled = hudEnabled,
-                            showDebugMetadata = state.showDebugMetadata,
-                            onToggleDebugMetadata = { onToggleDebugMetadata() }
-                        )
+            topBar = {
+                HomeTopBar(
+                    title = state.currentSession.title,
+                    onProfileClick = onProfileClicked,
+                    deviceSnapshot = state.deviceSnapshot,
+                    onHistoryClick = {
+                        onDismissKeyboard()
+                        onToggleHistoryPanel()
                     },
+                    onNewChatClick = onNewChatClicked,
+                    hudEnabled = hudEnabled,
+                    showDebugMetadata = state.showDebugMetadata,
+                    onToggleDebugMetadata = { onToggleDebugMetadata() }
+                )
+            },
                     bottomBar = {
                         val inputEnabled = !chatBusy && !state.isInputBusy
                         HomeInputArea(
@@ -794,9 +796,11 @@ object HomeScreenTestTags {
 
 @Composable
 private fun HomeTopBar(
+    title: String,
     onProfileClick: () -> Unit,
     deviceSnapshot: DeviceSnapshotUi?,
     onHistoryClick: () -> Unit,
+    onNewChatClick: () -> Unit,
     hudEnabled: Boolean,
     showDebugMetadata: Boolean,
     onToggleDebugMetadata: () -> Unit
@@ -805,56 +809,65 @@ private fun HomeTopBar(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        IconButton(
+            onClick = onHistoryClick,
+            modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_TOGGLE)
+        ) {
+            Icon(Icons.Filled.History, contentDescription = "历史记录")
+        }
         Text(
-            text = "AI 助手",
-            style = MaterialTheme.typography.titleLarge
+            text = title,
+            modifier = Modifier
+                .weight(1f)
+                .testTag(HomeScreenTestTags.SESSION_TITLE),
+            style = MaterialTheme.typography.titleLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (deviceSnapshot?.connectionState == DeviceConnectionStateUi.CONNECTED) {
-                AssistChip(
-                    onClick = {},
-                    enabled = false,
-                    label = { Text(text = "设备已连接") },
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        labelColor = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
+        if (deviceSnapshot?.connectionState == DeviceConnectionStateUi.CONNECTED) {
+            AssistChip(
+                onClick = {},
+                enabled = false,
+                label = { Text(text = "设备已连接") },
+                colors = AssistChipDefaults.assistChipColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            )
+        }
+        if (hudEnabled) {
+            IconButton(
+                onClick = onToggleDebugMetadata,
+                modifier = Modifier.testTag(HomeScreenTestTags.DEBUG_HUD_TOGGLE)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .background(
+                            color = if (showDebugMetadata) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            shape = CircleShape
+                        )
                 )
             }
-            IconButton(
-                onClick = onHistoryClick,
-                modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_TOGGLE)
-            ) {
-                Icon(Icons.Filled.History, contentDescription = "历史记录")
-            }
-            if (hudEnabled) {
-                IconButton(
-                    onClick = onToggleDebugMetadata,
-                    modifier = Modifier.testTag(HomeScreenTestTags.DEBUG_HUD_TOGGLE)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(14.dp)
-                            .background(
-                                color = if (showDebugMetadata) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                                shape = CircleShape
-                            )
-                    )
-                }
-            }
-            IconButton(
-                onClick = onProfileClick,
-                modifier = Modifier.testTag(HomeScreenTestTags.PROFILE_BUTTON)
-            ) {
-                Icon(Icons.Filled.Person, contentDescription = "个人中心")
-            }
+        }
+        IconButton(
+            onClick = onNewChatClick,
+            modifier = Modifier.testTag(HomeScreenTestTags.NEW_CHAT_BUTTON)
+        ) {
+            Icon(imageVector = Icons.Outlined.Add, contentDescription = "新建对话")
+        }
+        IconButton(
+            onClick = onProfileClick,
+            modifier = Modifier.testTag(HomeScreenTestTags.PROFILE_BUTTON)
+        ) {
+            Icon(Icons.Filled.Person, contentDescription = "个人中心")
         }
     }
 }

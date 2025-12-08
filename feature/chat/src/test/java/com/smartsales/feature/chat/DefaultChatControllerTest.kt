@@ -124,10 +124,10 @@ class DefaultChatControllerTest {
             )
         )
 
-        override suspend fun exportPdf(sessionId: String, markdown: String): Result<ExportResult> =
+        override suspend fun exportPdf(sessionId: String, markdown: String, userName: String?): Result<ExportResult> =
             nextResult
 
-        override suspend fun exportCsv(sessionId: String): Result<ExportResult> =
+        override suspend fun exportCsv(sessionId: String, userName: String?): Result<ExportResult> =
             nextResult
     }
 }

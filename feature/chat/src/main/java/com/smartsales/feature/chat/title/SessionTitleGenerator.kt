@@ -8,6 +8,7 @@ package com.smartsales.feature.chat.title
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.smartsales.core.metahub.SessionTitlePolicy
 
 object SessionTitleGenerator {
     private val dateFormatter = SimpleDateFormat("MM/dd", Locale.getDefault())
@@ -40,9 +41,9 @@ object SessionTitleGenerator {
         val datePart = dateFormatter.format(Date(updatedAtMillis))
         val majorName = extractMajorName(firstUserMessage) ?: extractMajorName(firstAssistantMessage ?: "")
         val summary = extractSummary(firstUserMessage) ?: extractSummary(firstAssistantMessage ?: "")
-        val safeName = majorName ?: "未知客户"
-        val safeSummary = summary ?: "销售咨询"
-        return "${datePart}_${safeName}_${safeSummary}"
+        val safeName = SessionTitlePolicy.resolvePerson(majorName)
+        val safeSummary = SessionTitlePolicy.resolveSummary(summary)
+        return "${safeName}_${safeSummary}_${datePart}"
     }
 
     private fun extractMajorName(text: String): String? {

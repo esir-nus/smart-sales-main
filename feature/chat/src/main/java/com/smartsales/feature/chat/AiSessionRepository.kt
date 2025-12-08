@@ -17,6 +17,7 @@ data class AiSessionSummary(
     val title: String,
     val lastMessagePreview: String,
     val updatedAtMillis: Long,
+    val isTranscription: Boolean = false,
     val pinned: Boolean = false
 )
 

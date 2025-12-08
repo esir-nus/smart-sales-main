@@ -199,13 +199,14 @@ class HomeUserNameTest {
             exportOrchestrator = object : ExportOrchestrator {
                 override suspend fun exportPdf(
                     sessionId: String,
-                    markdown: String
+                    markdown: String,
+                    userName: String?
                 ): com.smartsales.core.util.Result<ExportResult> =
                     com.smartsales.core.util.Result.Success(
                         ExportResult("demo.pdf", "application/pdf", ByteArray(0))
                     )
 
-                override suspend fun exportCsv(sessionId: String): com.smartsales.core.util.Result<ExportResult> =
+                override suspend fun exportCsv(sessionId: String, userName: String?): com.smartsales.core.util.Result<ExportResult> =
                     com.smartsales.core.util.Result.Success(
                         ExportResult("demo.csv", "text/csv", ByteArray(0))
                     )

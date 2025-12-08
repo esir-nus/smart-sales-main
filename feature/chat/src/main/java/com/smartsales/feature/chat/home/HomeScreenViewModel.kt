@@ -39,6 +39,7 @@ import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.SessionStage
 import com.smartsales.core.metahub.RiskLevel
+import com.smartsales.core.metahub.SessionTitlePolicy
 import com.smartsales.core.metahub.AnalysisSource
 import com.smartsales.feature.chat.home.CHAT_DEBUG_HUD_ENABLED
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -61,7 +62,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val DEFAULT_SESSION_ID = "home-session"
-private const val DEFAULT_SESSION_TITLE = "新的聊天"
+private const val DEFAULT_SESSION_TITLE = SessionTitlePolicy.PLACEHOLDER_TITLE
 private const val LONG_CONTENT_THRESHOLD = 240
 private const val CONTEXT_LENGTH_LIMIT = 800
 private const val CONTEXT_MESSAGE_LIMIT = 5
@@ -173,7 +174,7 @@ data class HomeUiState(
     val sessionList: List<SessionListItemUi> = emptyList(),
     val currentSession: CurrentSessionUi = CurrentSessionUi(
         id = DEFAULT_SESSION_ID,
-        title = "新的聊天",
+        title = DEFAULT_SESSION_TITLE,
         isTranscription = false
     ),
     val userName: String = "用户",
@@ -448,8 +449,8 @@ class HomeScreenViewModel @Inject constructor(
         }
         _uiState.update { it.copy(exportInProgress = true, chatErrorMessage = null) }
         val result = when (format) {
-            ExportFormat.PDF -> exportOrchestrator.exportPdf(sessionId, markdown)
-            ExportFormat.CSV -> exportOrchestrator.exportCsv(sessionId)
+            ExportFormat.PDF -> exportOrchestrator.exportPdf(sessionId, markdown, _uiState.value.userName)
+            ExportFormat.CSV -> exportOrchestrator.exportCsv(sessionId, _uiState.value.userName)
         }
         when (result) {
             is Result.Success -> {
@@ -659,29 +660,30 @@ class HomeScreenViewModel @Inject constructor(
             val transcript = request.transcriptMarkdown ?: request.transcriptPreview
             val targetSessionId = request.sessionId ?: DEFAULT_SESSION_ID
             val existing = sessionRepository.findById(targetSessionId)
-            
-            val fallbackTitle = existing?.title ?: "通话分析"
-            val fileName = request.fileName?.takeIf { it.isNotBlank() }
-            val newTitle = if (fileName != null) {
-                "通话分析 – $fileName"
-            } else {
-                fallbackTitle
+
+            val baseTitle = when {
+                existing?.title?.let { SessionTitlePolicy.isPlaceholder(it) } == true -> DEFAULT_SESSION_TITLE
+                existing?.title != null -> existing.title
+                else -> DEFAULT_SESSION_TITLE
             }
-            
+            val newTitle = baseTitle
+
             val preview = extractTranscriptPreview(request.transcriptMarkdown)
-            
+
             val updated = (existing ?: AiSessionSummary(
                 id = targetSessionId,
                 title = newTitle,
                 updatedAtMillis = System.currentTimeMillis(),
                 lastMessagePreview = preview,
+                isTranscription = true,
                 pinned = false
             )).copy(
                 title = newTitle,
                 lastMessagePreview = preview,
-                updatedAtMillis = System.currentTimeMillis()
+                updatedAtMillis = System.currentTimeMillis(),
+                isTranscription = true
             )
-            
+
             sessionRepository.upsert(updated)
             
             val existingHistory = chatHistoryRepository.loadLatestSession(targetSessionId)
@@ -693,7 +695,7 @@ class HomeScreenViewModel @Inject constructor(
                     currentSession = CurrentSessionUi(
                         id = targetSessionId,
                         title = newTitle,
-                        isTranscription = true
+                        isTranscription = updated.isTranscription
                     ),
                     chatMessages = existingHistory.map { item -> item.toUiModel() },
                     isLoadingHistory = false,
@@ -879,13 +881,13 @@ class HomeScreenViewModel @Inject constructor(
             if (!allowHero) {
                 _uiState.update { it.copy(showWelcomeHero = false) }
             }
-            val summary = ensureSessionSummary(sessionId, titleOverride)
+            val summary = ensureSessionSummary(sessionId, titleOverride, isTranscription)
             _uiState.update {
                 it.copy(
                     currentSession = CurrentSessionUi(
                         id = sessionId,
                         title = summary.title,
-                        isTranscription = isTranscription
+                        isTranscription = summary.isTranscription || isTranscription
                     ),
                     showWelcomeHero = if (allowHero) it.showWelcomeHero else false
                 )
@@ -906,7 +908,7 @@ class HomeScreenViewModel @Inject constructor(
             hasShownLowInfoHint = false
             hasShownAnalysisExportHint = false
             _uiState.update { it.copy(isSmartAnalysisMode = false, selectedSkill = null) }
-            val summary = ensureSessionSummary(newSessionId, titleOverride = "新的聊天")
+            val summary = ensureSessionSummary(newSessionId, titleOverride = DEFAULT_SESSION_TITLE, isTranscription = false)
             _uiState.update {
                 it.copy(
                     currentSession = CurrentSessionUi(
@@ -976,7 +978,8 @@ class HomeScreenViewModel @Inject constructor(
                 lastMessagePreview = summary.lastMessagePreview,
                 updatedAtMillis = summary.updatedAtMillis,
                 isCurrent = summary.id == sessionId,
-                isTranscription = summary.title.startsWith("通话分析 –")
+                isTranscription = summary.isTranscription ||
+                    summary.title.startsWith(SessionTitlePolicy.LEGACY_TRANSCRIPTION_PREFIX)
             )
         }
         _uiState.update { it.copy(sessionList = mapped) }
@@ -2508,16 +2511,25 @@ class HomeScreenViewModel @Inject constructor(
 
     private suspend fun ensureSessionSummary(
         sessionId: String,
-        titleOverride: String? = null
+        titleOverride: String? = null,
+        isTranscription: Boolean = false
     ): AiSessionSummary {
         val existing = sessionRepository.findById(sessionId)
-        val title = titleOverride ?: existing?.title ?: DEFAULT_SESSION_TITLE
+        val resolvedTitle = when {
+            titleOverride != null -> titleOverride
+            existing?.title?.let { SessionTitlePolicy.isPlaceholder(it) } == true -> DEFAULT_SESSION_TITLE
+            else -> existing?.title ?: DEFAULT_SESSION_TITLE
+        }
+        val resolvedIsTranscription = existing?.isTranscription
+            ?: isTranscription
+            || (existing?.title?.startsWith(SessionTitlePolicy.LEGACY_TRANSCRIPTION_PREFIX) == true)
         val preview = existing?.lastMessagePreview ?: ""
         val summary = AiSessionSummary(
             id = sessionId,
-            title = title,
+            title = resolvedTitle,
             lastMessagePreview = preview,
             updatedAtMillis = existing?.updatedAtMillis ?: System.currentTimeMillis(),
+            isTranscription = resolvedIsTranscription,
             pinned = existing?.pinned ?: false
         )
         sessionRepository.upsert(summary)
@@ -2531,26 +2543,25 @@ class HomeScreenViewModel @Inject constructor(
             title = existing?.title ?: _uiState.value.currentSession.title,
             lastMessagePreview = lastPreview,
             updatedAtMillis = System.currentTimeMillis(),
+            isTranscription = existing?.isTranscription ?: _uiState.value.currentSession.isTranscription,
             pinned = existing?.pinned ?: false
         )
         sessionRepository.upsert(summary)
     }
 
     private fun buildTitleFromMetadata(meta: SessionMetadata, updatedAt: Long): String {
-        val date = SimpleDateFormat("MM/dd", Locale.CHINA).format(Date(updatedAt))
-        val person = meta.mainPerson?.takeIf { it.isNotBlank() } ?: "未知客户"
-        val title = meta.summaryTitle6Chars?.takeIf { it.isNotBlank() }?.take(6) ?: "销售咨询"
-        return "${date}_${person}_${title}"
+        return SessionTitlePolicy.buildSuggestedTitle(meta, updatedAt)
+            ?: SessionTitlePolicy.PLACEHOLDER_TITLE
     }
 
     private suspend fun maybeGenerateSessionTitle(request: ChatRequest, assistantText: String) {
         if (!request.isFirstAssistantReply) return
         if (request.quickSkillId != null) return
         val existingSummary = sessionRepository.findById(sessionId)
-        if (existingSummary != null && existingSummary.title != DEFAULT_SESSION_TITLE) return
+        if (existingSummary != null && !SessionTitlePolicy.isPlaceholder(existingSummary.title)) return
         val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
         val createdAt = existingSummary?.updatedAtMillis ?: System.currentTimeMillis()
-        val title = meta?.let { buildTitleFromMetadata(it, createdAt) }
+        val title = SessionTitlePolicy.buildSuggestedTitle(meta, createdAt)
             ?: run {
                 val firstUserMessage = _uiState.value.chatMessages
                     .firstOrNull { it.role == ChatMessageRole.USER }
@@ -2578,9 +2589,9 @@ class HomeScreenViewModel @Inject constructor(
 
     private suspend fun updateTitleFromMetadata(meta: SessionMetadata) {
         val existingSummary = sessionRepository.findById(sessionId)
-        if (existingSummary != null && existingSummary.title != DEFAULT_SESSION_TITLE) return
+        if (existingSummary != null && !SessionTitlePolicy.isPlaceholder(existingSummary.title)) return
         val createdAt = existingSummary?.updatedAtMillis ?: meta.lastUpdatedAt
-        val title = buildTitleFromMetadata(meta, createdAt)
+        val title = SessionTitlePolicy.buildSuggestedTitle(meta, createdAt) ?: return
         try {
             sessionRepository.updateTitle(sessionId, title)
             applySessionList()

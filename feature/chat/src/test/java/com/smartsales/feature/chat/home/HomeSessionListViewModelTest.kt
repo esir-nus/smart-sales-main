@@ -59,6 +59,7 @@ import com.smartsales.core.metahub.TokenUsage
 import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.ExportResult
 import com.smartsales.feature.chat.ChatShareHandler
+import com.smartsales.core.metahub.SessionTitlePolicy
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeSessionListViewModelTest {
@@ -125,7 +126,8 @@ class HomeSessionListViewModelTest {
             id = "call-session",
             title = "通话分析 – 客户A",
             lastMessagePreview = "结论",
-            updatedAtMillis = Long.MAX_VALUE
+            updatedAtMillis = Long.MAX_VALUE,
+            isTranscription = true
         )
         sessionRepository.upsert(manual)
         sessionRepository.upsert(transcript)
@@ -153,7 +155,7 @@ class HomeSessionListViewModelTest {
 
         val sessions = viewModel.uiState.value.sessionList
         val transcriptItem = sessions.first { it.id == "home-session" }
-        assertTrue(transcriptItem.title.startsWith("通话分析 – demo.wav"))
+        assertEquals(SessionTitlePolicy.PLACEHOLDER_TITLE, transcriptItem.title)
         assertTrue(transcriptItem.isTranscription)
         assertTrue(transcriptItem.lastMessagePreview.contains("录音摘要"))
     }
@@ -320,10 +322,10 @@ class HomeSessionListViewModelTest {
     }
 
     private class FakeExportOrchestrator : ExportOrchestrator {
-        override suspend fun exportPdf(sessionId: String, markdown: String): Result<ExportResult> =
+        override suspend fun exportPdf(sessionId: String, markdown: String, userName: String?): Result<ExportResult> =
             Result.Success(ExportResult("demo.pdf", "application/pdf", ByteArray(0)))
 
-        override suspend fun exportCsv(sessionId: String): Result<ExportResult> =
+        override suspend fun exportCsv(sessionId: String, userName: String?): Result<ExportResult> =
             Result.Success(ExportResult("demo.csv", "text/csv", ByteArray(0)))
     }
 

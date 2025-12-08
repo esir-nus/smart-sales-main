@@ -14,7 +14,7 @@ class ExportOrchestratorContractTest {
     @Test
     fun `export orchestrator exposes only pdf and csv`() {
         val declared = ExportOrchestrator::class.java.declaredMethods
-            .filterNot { it.isSynthetic }
+            .filterNot { it.isSynthetic || it.name.contains("\$default") }
             .map { it.name }
             .toSet()
         val expected = setOf("exportPdf", "exportCsv")

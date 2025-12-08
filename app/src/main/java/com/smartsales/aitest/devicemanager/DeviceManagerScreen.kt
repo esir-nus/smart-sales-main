@@ -97,7 +97,6 @@ import kotlinx.coroutines.flow.collectLatest
 fun DeviceManagerRoute(
     modifier: Modifier = Modifier,
     onNavigateToDeviceSetup: () -> Unit = {},
-    showTopBar: Boolean = true,
     viewModelOverride: DeviceManagerViewModel? = null
 ) {
     val viewModel: DeviceManagerViewModel = viewModelOverride ?: hiltViewModel()
@@ -129,8 +128,7 @@ fun DeviceManagerRoute(
         onBaseUrlChange = viewModel::onBaseUrlChanged,
         onUseAutoBaseUrl = viewModel::onUseAutoBaseUrl,
         onClearError = viewModel::onClearError,
-        modifier = modifier.testTag(DeviceManagerRouteTestTags.ROOT),
-        showTopBar = showTopBar
+        modifier = modifier.testTag(DeviceManagerRouteTestTags.ROOT)
     )
 }
 
@@ -152,8 +150,7 @@ fun DeviceManagerScreen(
     showCloseButton: Boolean = false,
     onCloseRequested: () -> Unit = {},
     onBack: (() -> Unit)? = null,
-    modifier: Modifier = Modifier,
-    showTopBar: Boolean = true
+    modifier: Modifier = Modifier
 ) {
     val navigationIcon: @Composable () -> Unit = if (onBack != null) {
         {
@@ -171,15 +168,11 @@ fun DeviceManagerScreen(
         modifier = modifier
             .fillMaxSize()
             .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER),
-        topBar = if (showTopBar) {
-            {
-                TopAppBar(
-                    title = { Text(text = "设备管理") },
-                    navigationIcon = navigationIcon
-                )
-            }
-        } else {
-            {}
+        topBar = {
+            TopAppBar(
+                title = { Text(text = "设备管理") },
+                navigationIcon = navigationIcon
+            )
         }
     ) { innerPadding ->
         DeviceManagerContent(

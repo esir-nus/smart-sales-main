@@ -474,52 +474,13 @@ private fun OverlayScaffold(
                         .fillMaxSize()
                         .testTag(AiFeatureTestTags.OVERLAY_DEVICE_LAYER)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(0.9f),
-                            tonalElevation = 8.dp,
-                            shadowElevation = 12.dp,
-                            shape = RoundedCornerShape(topEnd = 20.dp, bottomEnd = 20.dp),
-                            color = MaterialTheme.colorScheme.surface
-                        ) {
-                            Column(
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "设备管理",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    IconButton(onClick = { onOverlayChange(HomeOverlay.Home) }) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Close,
-                                            contentDescription = "关闭设备管理"
-                                        )
-                                    }
-                                }
-                                Divider()
-                                DeviceManagerRoute(
-                                    modifier = Modifier.fillMaxSize(),
-                                    showTopBar = false,
-                                    onNavigateToDeviceSetup = {
-                                        setPage(TestHomePage.DeviceSetup)
-                                        onOverlayChange(HomeOverlay.Home)
-                                    }
-                                )
-                            }
+                    DeviceManagerRoute(
+                        modifier = Modifier.fillMaxSize(),
+                        onNavigateToDeviceSetup = {
+                            setPage(TestHomePage.DeviceSetup)
+                            onOverlayChange(HomeOverlay.Home)
                         }
-                    }
+                    )
                 }
             }
         )

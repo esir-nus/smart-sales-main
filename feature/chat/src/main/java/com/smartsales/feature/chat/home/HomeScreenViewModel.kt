@@ -1503,10 +1503,9 @@ class HomeScreenViewModel @Inject constructor(
 
     private fun loadUserProfile() {
         viewModelScope.launch {
-            runCatching { userProfileRepository.load() }
-                .onSuccess { profile ->
-                    _uiState.update { it.copy(userName = deriveUserName(profile)) }
-                }
+            userProfileRepository.profileFlow.collect { profile ->
+                _uiState.update { it.copy(userName = deriveUserName(profile)) }
+            }
         }
     }
 

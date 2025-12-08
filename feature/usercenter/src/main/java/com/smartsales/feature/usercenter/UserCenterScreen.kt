@@ -2,7 +2,7 @@ package com.smartsales.feature.usercenter
 
 // 文件：feature/usercenter/src/main/java/com/smartsales/feature/usercenter/UserCenterScreen.kt
 // 模块：:feature:usercenter
-// 说明：用户中心 Compose 界面
+// 说明：用户中心 Compose 界面，支持编辑个人信息
 // 作者：创建于 2025-11-30
 
 import androidx.compose.foundation.background
@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Devices
 import androidx.compose.material.icons.outlined.KeyboardArrowRight
@@ -31,6 +29,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,8 +47,10 @@ fun UserCenterScreen(
     uiState: UserCenterUiState,
     onDeviceManagerClick: () -> Unit,
     onPrivacyClick: () -> Unit,
-    onLoginClick: () -> Unit,
-    onLogoutClick: () -> Unit,
+    onDisplayNameChange: (String) -> Unit,
+    onRoleChange: (String) -> Unit,
+    onIndustryChange: (String) -> Unit,
+    onSave: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -66,57 +67,48 @@ fun UserCenterScreen(
         ) {
             ProfileHeader(
                 displayName = uiState.displayName,
-                email = uiState.email,
-                organization = uiState.organization,
                 role = uiState.role,
-                phone = uiState.phone,
-                isGuest = uiState.isGuest,
+                industry = uiState.industry,
                 isLoading = uiState.isLoading,
                 errorMessage = uiState.errorMessage,
-                onLoginClick = onLoginClick
+                onDisplayNameChange = onDisplayNameChange,
+                onRoleChange = onRoleChange,
+                onIndustryChange = onIndustryChange,
+                onSave = onSave
             )
             ShortcutMenuCard(
                 onOpenDeviceManager = onDeviceManagerClick,
                 onOpenPrivacy = onPrivacyClick,
                 versionText = uiState.appVersion
             )
-            if (uiState.canLogout) {
-                DangerRow(
-                    title = "退出登录",
-                    icon = Icons.Default.Logout,
-                    onClick = onLogoutClick,
-                    modifier = Modifier.testTag(UserCenterTestTags.ROW_LOGOUT)
-                )
-            }
         }
     }
 }
 
 object UserCenterTestTags {
     const val ROOT = "user_center_screen_root"
-    const val HEADER_NAME = "user_center_header_name"
-    const val HEADER_EMAIL = "user_center_header_email"
-    const val BUTTON_LOGIN = "user_center_button_login"
     const val ROW_DEVICE_MANAGER = "user_center_row_device_manager"
     const val ROW_PRIVACY = "user_center_row_privacy"
     const val ROW_ABOUT = "user_center_row_about"
-    const val ROW_LOGOUT = "user_center_row_logout"
+    const val FIELD_NAME = "user_center_field_name"
+    const val FIELD_ROLE = "user_center_field_role"
+    const val FIELD_INDUSTRY = "user_center_field_industry"
+    const val BUTTON_SAVE = "user_center_button_save"
 }
 
 @Composable
 private fun ProfileHeader(
     displayName: String,
-    email: String,
-    organization: String?,
-    role: String?,
-    phone: String?,
-    isGuest: Boolean,
+    role: String,
+    industry: String,
     isLoading: Boolean,
     errorMessage: String?,
-    onLoginClick: () -> Unit
+    onDisplayNameChange: (String) -> Unit,
+    onRoleChange: (String) -> Unit,
+    onIndustryChange: (String) -> Unit,
+    onSave: () -> Unit
 ) {
-    val resolvedName = if (isGuest) "访客用户" else displayName.ifBlank { "访客用户" }
-    val resolvedEmail = if (isGuest) "请登录以管理账户" else email.ifBlank { "邮箱未填写" }
+    val resolvedName = displayName.ifBlank { "SmartSales 用户" }
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
@@ -152,28 +144,29 @@ private fun ProfileHeader(
                         color = MaterialTheme.colorScheme.error
                     )
                 }
-                Text(
-                    text = resolvedName,
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    modifier = Modifier.testTag(UserCenterTestTags.HEADER_NAME)
+                EditableField(
+                    label = "姓名",
+                    value = resolvedName,
+                    onValueChange = onDisplayNameChange,
+                    testTag = UserCenterTestTags.FIELD_NAME
                 )
-                Text(
-                    text = resolvedEmail,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.testTag(UserCenterTestTags.HEADER_EMAIL)
+                EditableField(
+                    label = "职位/角色",
+                    value = role,
+                    onValueChange = onRoleChange,
+                    testTag = UserCenterTestTags.FIELD_ROLE
                 )
-                InfoRow(label = "机构", value = organization)
-                InfoRow(label = "角色", value = role)
-                InfoRow(label = "电话", value = phone)
-                if (isGuest) {
-                    OutlinedButton(
-                        onClick = onLoginClick,
-                        modifier = Modifier.testTag(UserCenterTestTags.BUTTON_LOGIN)
-                    ) {
-                        Text(text = "登录")
-                    }
+                EditableField(
+                    label = "行业",
+                    value = industry,
+                    onValueChange = onIndustryChange,
+                    testTag = UserCenterTestTags.FIELD_INDUSTRY
+                )
+                OutlinedButton(
+                    onClick = onSave,
+                    modifier = Modifier.testTag(UserCenterTestTags.BUTTON_SAVE)
+                ) {
+                    Text(text = "保存")
                 }
             }
         }
@@ -219,32 +212,15 @@ private fun ShortcutMenuCard(
                 onClick = onOpenPrivacy,
                 modifier = Modifier.testTag(UserCenterTestTags.ROW_PRIVACY)
             )
+            HorizontalDivider()
             ShortcutRow(
                 title = "关于",
-                subtitle = "版本 $versionText",
+                subtitle = versionText.ifBlank { "版本信息" },
                 icon = Icons.Filled.Info,
                 onClick = {},
                 modifier = Modifier.testTag(UserCenterTestTags.ROW_ABOUT)
             )
         }
-    }
-}
-
-@Composable
-private fun InfoRow(
-    label: String,
-    value: String?
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(
-            text = value?.takeIf { it.isNotBlank() } ?: "未填写",
-            style = MaterialTheme.typography.bodyMedium
-        )
     }
 }
 
@@ -259,28 +235,25 @@ private fun ShortcutRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+            .clickable { onClick() }
+            .padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = title, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(text = title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
         Icon(
             imageVector = Icons.Outlined.KeyboardArrowRight,
@@ -291,29 +264,28 @@ private fun ShortcutRow(
 }
 
 @Composable
-private fun DangerRow(
-    title: String,
-    icon: ImageVector,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+private fun EditableField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    testTag: String
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.error
-        )
         Text(
-            text = title,
-            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-            color = MaterialTheme.colorScheme.error
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(testTag)
         )
     }
 }

@@ -9,69 +9,68 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.with
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.with
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.AudioFile
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.DeviceHub
-import androidx.compose.material.icons.filled.BluetoothConnected
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.DeviceHub
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AudioFile
-import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.rememberDrawerState
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -80,10 +79,10 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -92,29 +91,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Color
-import com.smartsales.feature.chat.home.CHAT_DEBUG_HUD_ENABLED
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.history.ChatHistoryTestTags
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -220,10 +214,6 @@ fun HomeScreenRoute(
     chatErrorMessage = state.chatErrorMessage,
     onPickAudioFile = viewModel::onAudioFilePicked,
     onPickImageFile = viewModel::onImagePicked,
-    onDeviceClicked = {
-        dismissKeyboard()
-        onNavigateToDeviceManager()
-    },
     modifier = modifier,
     showHistoryPanel = showHistoryPanel,
         onToggleHistoryPanel = { showHistoryPanel = true },
@@ -263,7 +253,6 @@ fun HomeScreen(
     exportInProgress: Boolean,
     onPickAudioFile: (Uri) -> Unit = {},
     onPickImageFile: (Uri) -> Unit = {},
-    onDeviceClicked: () -> Unit = {},
     modifier: Modifier = Modifier,
     showHistoryPanel: Boolean = false,
     onToggleHistoryPanel: () -> Unit = {},
@@ -393,8 +382,10 @@ fun HomeScreen(
                 HistoryDrawerContent(
                     sessions = historySessions,
                     currentSessionId = state.currentSession.id,
+                    // TODO(hardware): 接入真实设备状态后更新此处占位卡片
+                    deviceSnapshot = state.deviceSnapshot,
                     onSessionSelected = onHistorySessionSelected,
-                    onClose = onDismissHistoryPanel
+                    onUserCenterClick = onProfileClicked
                 )
             }
         },
@@ -409,23 +400,20 @@ fun HomeScreen(
                         .fillMaxSize()
                         .testTag(HomeScreenTestTags.ROOT),
                     snackbarHost = { SnackbarHost(snackbarHostState) },
-            topBar = {
+                    topBar = {
+                        // TODO(hardware): 后续接入真实设备状态，填充顶栏指示器文案
                         HomeTopBar(
                             title = state.currentSession.title,
-                            onProfileClick = onProfileClicked,
                             deviceSnapshot = state.deviceSnapshot,
                             onHistoryClick = {
                                 onDismissKeyboard()
                                 onToggleHistoryPanel()
+                                coroutineScope.launch { drawerState.open() }
                             },
-                            onDeviceClick = {
-                                onDismissKeyboard()
-                                onDeviceClicked()
-                            },
-                    onNewChatClick = onNewChatClicked,
-                    hudEnabled = hudEnabled,
-                    showDebugMetadata = state.showDebugMetadata,
-                    onToggleDebugMetadata = { onToggleDebugMetadata() }
+                            onNewChatClick = onNewChatClicked,
+                            hudEnabled = hudEnabled,
+                            showDebugMetadata = state.showDebugMetadata,
+                            onToggleDebugMetadata = { onToggleDebugMetadata() }
                 )
                     },
                     bottomBar = {
@@ -797,29 +785,29 @@ object HomeScreenTestTags {
     const val HISTORY_PANEL = "home_history_panel"
     const val HISTORY_EMPTY = "home_history_empty"
     const val HISTORY_ITEM_PREFIX = "home_history_item_"
+    const val HISTORY_USER_CENTER = "home_history_user_center"
     const val HERO = "home_hero"
     const val DEBUG_HUD_PANEL = "debug_hud_panel"
     const val DEBUG_HUD_TOGGLE = "debug_toggle_metadata"
     const val DEBUG_HUD_SCRIM = "debug_hud_scrim"
     const val DEBUG_HUD_CLOSE = "debug_hud_close"
     const val DEBUG_HUD_COPY = "debug_hud_copy"
-    const val DEVICE_TOGGLE = "home_device_toggle"
+    const val HOME_DEVICE_INDICATOR = "home_device_indicator"
+    const val HISTORY_DEVICE_STATUS = "home_history_device_status"
 }
 
 @Composable
 private fun HomeTopBar(
     title: String,
-    onProfileClick: () -> Unit,
     deviceSnapshot: DeviceSnapshotUi?,
     onHistoryClick: () -> Unit,
-    onDeviceClick: () -> Unit,
     onNewChatClick: () -> Unit,
     hudEnabled: Boolean,
     showDebugMetadata: Boolean,
     onToggleDebugMetadata: () -> Unit
 ) {
     Row(
-        modifier = Modifier
+            modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -829,8 +817,9 @@ private fun HomeTopBar(
             onClick = onHistoryClick,
             modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_TOGGLE)
         ) {
-            Icon(Icons.Filled.History, contentDescription = "历史记录")
+            Icon(Icons.Filled.Menu, contentDescription = "历史记录")
         }
+        DeviceStatusIndicator(snapshot = deviceSnapshot)
         Text(
             text = title,
             modifier = Modifier
@@ -840,17 +829,6 @@ private fun HomeTopBar(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-        IconButton(
-            onClick = onDeviceClick,
-            modifier = Modifier.testTag(HomeScreenTestTags.DEVICE_TOGGLE)
-        ) {
-            val icon = when (deviceSnapshot?.connectionState) {
-                DeviceConnectionStateUi.CONNECTED -> Icons.Filled.DeviceHub
-                DeviceConnectionStateUi.CONNECTING, DeviceConnectionStateUi.WAITING_FOR_NETWORK -> Icons.Filled.BluetoothConnected
-                else -> Icons.Filled.DeviceHub
-            }
-            Icon(imageVector = icon, contentDescription = "设备管理")
-        }
         if (hudEnabled) {
             IconButton(
                 onClick = onToggleDebugMetadata,
@@ -876,11 +854,86 @@ private fun HomeTopBar(
         ) {
             Icon(imageVector = Icons.Outlined.Add, contentDescription = "新建对话")
         }
-        IconButton(
-            onClick = onProfileClick,
-            modifier = Modifier.testTag(HomeScreenTestTags.PROFILE_BUTTON)
+    }
+}
+
+@Suppress("UnusedParameter")
+@Composable
+private fun DeviceStatusIndicator(snapshot: DeviceSnapshotUi?) {
+    Surface(
+        modifier = Modifier
+            .testTag(HomeScreenTestTags.HOME_DEVICE_INDICATOR),
+        shape = RoundedCornerShape(14.dp),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Filled.Person, contentDescription = "个人中心")
+            Icon(
+                imageVector = Icons.Filled.DeviceHub,
+                contentDescription = "设备状态",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                text = "设备状态",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Suppress("UnusedParameter")
+@Composable
+private fun HistoryDeviceStatus(snapshot: DeviceSnapshotUi?) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .testTag(HomeScreenTestTags.HISTORY_DEVICE_STATUS),
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 1.dp,
+        shadowElevation = 0.dp,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.DeviceHub,
+                    contentDescription = "设备状态",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = "设备状态",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Text(
+                text = "设备状态将在硬件接入后展示",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "硬件上线后将在此显示连接、电量与存储信息",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -1522,8 +1575,9 @@ private fun ScrollToLatestButton(
 private fun HistoryDrawerContent(
     sessions: List<SessionListItemUi>,
     currentSessionId: String,
+    deviceSnapshot: DeviceSnapshotUi?,
     onSessionSelected: (String) -> Unit,
-    onClose: () -> Unit
+    onUserCenterClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -1531,35 +1585,24 @@ private fun HistoryDrawerContent(
             .testTag(ChatHistoryTestTags.PAGE),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "历史会话",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            IconButton(onClick = onClose) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "关闭"
+        HistoryDeviceStatus(snapshot = deviceSnapshot)
+        if (sessions.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = true)
+            ) {
+                Text(
+                    text = "暂无历史会话，先开始一次对话吧。",
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .testTag(HomeScreenTestTags.HISTORY_EMPTY),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
-        if (sessions.isEmpty()) {
-            Text(
-                text = "暂无历史会话，先开始一次对话吧。",
-                modifier = Modifier
-                    .padding(horizontal = 12.dp)
-                    .testTag(HomeScreenTestTags.HISTORY_EMPTY),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         } else {
             LazyColumn(
+                modifier = Modifier.weight(1f, fill = true),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
             ) {
@@ -1611,6 +1654,46 @@ private fun HistoryDrawerContent(
                     }
                 }
             }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        HistoryUserCenter(onClick = onUserCenterClick)
+    }
+}
+
+@Composable
+private fun HistoryUserCenter(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .testTag(HomeScreenTestTags.HISTORY_USER_CENTER),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            tonalElevation = 0.dp
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Person,
+                contentDescription = "个人中心",
+                modifier = Modifier.padding(8.dp),
+                tint = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = "个人中心",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "查看账号设置与偏好",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

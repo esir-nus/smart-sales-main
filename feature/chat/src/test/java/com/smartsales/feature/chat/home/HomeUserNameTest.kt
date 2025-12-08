@@ -237,13 +237,17 @@ class HomeUserNameTest {
     private class FakeUserProfileRepository(
         private var profile: UserProfile
     ) : UserProfileRepository {
-        override suspend fun load(): UserProfile = profile
+        private val state = kotlinx.coroutines.flow.MutableStateFlow(profile)
+        override val profileFlow = state
+        override suspend fun load(): UserProfile = state.value
         override suspend fun save(profile: UserProfile) {
             this.profile = profile
+            state.value = profile
         }
 
         override suspend fun clear() {
             profile = UserProfile("", "", true)
+            state.value = profile
         }
     }
 }

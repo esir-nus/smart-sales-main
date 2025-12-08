@@ -20,8 +20,7 @@ fun UserCenterRoute(
     modifier: Modifier = Modifier,
     onLogout: () -> Unit = {},
     onOpenDeviceManager: () -> Unit = {},
-    onOpenPrivacy: () -> Unit = {},
-    onOpenGeneral: () -> Unit = {}
+    onOpenPrivacy: () -> Unit = {}
 ) {
     val viewModel: UserCenterViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -42,8 +41,10 @@ fun UserCenterRoute(
         uiState = uiState,
         onDeviceManagerClick = viewModel::onDeviceManagerClick,
         onPrivacyClick = viewModel::onPrivacyClick,
-        onLoginClick = viewModel::onLoginClick,
-        onLogoutClick = viewModel::onLogoutClick,
+        onDisplayNameChange = viewModel::onDisplayNameChange,
+        onRoleChange = viewModel::onRoleChange,
+        onIndustryChange = viewModel::onIndustryChange,
+        onSave = viewModel::onSaveProfile,
         modifier = modifier
     )
 }

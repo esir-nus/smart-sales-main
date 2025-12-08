@@ -19,7 +19,6 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -42,7 +41,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Pause
@@ -127,6 +125,12 @@ import androidx.compose.material3.Divider
 import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.math.roundToInt
+import com.smartsales.aitest.onboarding.OnboardingGateViewModel
+import com.smartsales.aitest.onboarding.OnboardingPersonalInfoScreen
+import com.smartsales.aitest.onboarding.OnboardingTestTags
+import com.smartsales.aitest.onboarding.OnboardingUiState
+import com.smartsales.aitest.onboarding.OnboardingViewModel
+import com.smartsales.aitest.onboarding.OnboardingWelcomeScreen
 
 @AndroidEntryPoint
 class AiFeatureTestActivity : ComponentActivity() {
@@ -251,140 +255,185 @@ private fun AiFeatureTestApp(
         }
     }
 
+    val onboardingGateViewModel: OnboardingGateViewModel = hiltViewModel()
+    val onboardingCompleted by onboardingGateViewModel.completed.collectAsState()
+    val onboardingViewModel: OnboardingViewModel = hiltViewModel()
+    val onboardingUiState by onboardingViewModel.uiState.collectAsState()
+
     AppTheme {
         val designTokens = AppDesignTokens.current()
         val showSnackbar: (String) -> Unit = { message ->
             scope.launch { snackbarHostState.showSnackbar(message) }
         }
-        Scaffold(
-            containerColor = designTokens.appBackground,
-            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-            topBar = {
-                if (currentPage != TestHomePage.Home) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.surface,
-                        shadowElevation = 1.dp
-                    ) {
-                        Column {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp)
-                                    .padding(horizontal = 16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = titleForPage(currentPage),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Spacer(modifier = Modifier.weight(1f))
+        if (!onboardingCompleted) {
+            currentPage = TestHomePage.Home
+            overlayState = HomeOverlay.Home
+            OnboardingHost(
+                uiState = onboardingUiState,
+                onDisplayNameChange = onboardingViewModel::onDisplayNameChange,
+                onRoleChange = onboardingViewModel::onRoleChange,
+                onIndustryChange = onboardingViewModel::onIndustryChange,
+                onSubmit = {
+                    onboardingViewModel.onSubmit {
+                        currentPage = TestHomePage.Home
+                    }
+                }
+            )
+        } else {
+            Scaffold(
+                containerColor = designTokens.appBackground,
+                snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+                topBar = {
+                    if (currentPage != TestHomePage.Home) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface,
+                            shadowElevation = 1.dp
+                        ) {
+                            Column {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(56.dp)
+                                        .padding(horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = titleForPage(currentPage),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
                             }
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
                         }
                     }
                 }
-            }
-        ) { innerPadding ->
-            Surface(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                color = designTokens.appBackground
-            ) {
-                Box(
+            ) { innerPadding ->
+                Surface(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 8.dp, vertical = 10.dp)
+                        .padding(innerPadding),
+                    color = designTokens.appBackground
                 ) {
-                    when (currentPage) {
-                        TestHomePage.Home -> OverlayScaffold(
-                            currentOverlay = overlayState,
-                            onOverlayChange = { overlayState = it },
-                            mediaServerClient = mediaServerClient,
-                            homeViewModel = homeViewModel,
-                            audioFilesViewModel = audioFilesViewModel,
-                            setPage = ::setPage,
-                            goHome = goHome,
-                            pendingSessionId = pendingSessionId,
-                            onPendingSessionConsumed = { pendingSessionId = null },
-                            latestDeviceSnapshot = latestDeviceSnapshot,
-                            onDeviceSnapshotChanged = { latestDeviceSnapshot = it },
-                            showSnackbar = showSnackbar
-                        )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 8.dp, vertical = 10.dp)
+                    ) {
+                        when (currentPage) {
+                            TestHomePage.Home -> OverlayScaffold(
+                                currentOverlay = overlayState,
+                                onOverlayChange = { overlayState = it },
+                                mediaServerClient = mediaServerClient,
+                                homeViewModel = homeViewModel,
+                                audioFilesViewModel = audioFilesViewModel,
+                                setPage = ::setPage,
+                                goHome = goHome,
+                                pendingSessionId = pendingSessionId,
+                                onPendingSessionConsumed = { pendingSessionId = null },
+                                latestDeviceSnapshot = latestDeviceSnapshot,
+                                onDeviceSnapshotChanged = { latestDeviceSnapshot = it },
+                                showSnackbar = showSnackbar
+                            )
 
-                        TestHomePage.WifiBleTester -> WifiBleTesterRoute(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .testTag(AiFeatureTestTags.PAGE_WIFI),
-                            mediaServerClient = mediaServerClient,
-                            onShowMessage = showSnackbar
-                        )
+                            TestHomePage.WifiBleTester -> WifiBleTesterRoute(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .testTag(AiFeatureTestTags.PAGE_WIFI),
+                                mediaServerClient = mediaServerClient,
+                                onShowMessage = showSnackbar
+                            )
 
-                        TestHomePage.DeviceManager -> DeviceManagerRoute(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER),
-                            onNavigateToDeviceSetup = { setPage(TestHomePage.DeviceSetup) }
-                        )
+                            TestHomePage.DeviceManager -> DeviceManagerRoute(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER),
+                                onNavigateToDeviceSetup = { setPage(TestHomePage.DeviceSetup) }
+                            )
 
-                        TestHomePage.DeviceSetup -> DeviceSetupRoute(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .testTag(AiFeatureTestTags.PAGE_DEVICE_SETUP),
-                            onCompleted = { setPage(TestHomePage.DeviceManager) },
-                            onBackToHome = { goHome() }
-                        )
+                            TestHomePage.DeviceSetup -> DeviceSetupRoute(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .testTag(AiFeatureTestTags.PAGE_DEVICE_SETUP),
+                                onCompleted = { setPage(TestHomePage.DeviceManager) },
+                                onBackToHome = { goHome() }
+                            )
 
-                        TestHomePage.AudioFiles -> AudioFilesRoute(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES),
-                            viewModel = audioFilesViewModel,
-                            onAskAiAboutTranscript = { recordingId, fileName, jobId, sessionId, preview, full ->
-                                val resolvedJobId = jobId ?: "transcription-$recordingId"
-                                val resolvedSessionId = sessionId ?: "session-$resolvedJobId"
-                                homeViewModel.onTranscriptionRequested(
-                                    TranscriptionChatRequest(
-                                        jobId = resolvedJobId,
-                                        fileName = fileName,
-                                        recordingId = recordingId,
-                                        sessionId = resolvedSessionId,
-                                        transcriptPreview = preview,
-                                        transcriptMarkdown = full
+                            TestHomePage.AudioFiles -> AudioFilesRoute(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES),
+                                viewModel = audioFilesViewModel,
+                                onAskAiAboutTranscript = { recordingId, fileName, jobId, sessionId, preview, full ->
+                                    val resolvedJobId = jobId ?: "transcription-$recordingId"
+                                    val resolvedSessionId = sessionId ?: "session-$resolvedJobId"
+                                    homeViewModel.onTranscriptionRequested(
+                                        TranscriptionChatRequest(
+                                            jobId = resolvedJobId,
+                                            fileName = fileName,
+                                            recordingId = recordingId,
+                                            sessionId = resolvedSessionId,
+                                            transcriptPreview = preview,
+                                            transcriptMarkdown = full
+                                        )
                                     )
-                                )
-                                pendingSessionId = resolvedSessionId
-                                setPage(TestHomePage.Home)
-                            }
-                        )
+                                    pendingSessionId = resolvedSessionId
+                                    setPage(TestHomePage.Home)
+                                }
+                            )
 
-                        TestHomePage.ChatHistory -> ChatHistoryRoute(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .testTag(AiFeatureTestTags.PAGE_CHAT_HISTORY),
-                            onBackClick = { goHome() },
-                            onSessionSelected = { sessionId ->
-                                pendingSessionId = sessionId
-                                goHome()
-                            }
-                        )
+                            TestHomePage.ChatHistory -> ChatHistoryRoute(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .testTag(AiFeatureTestTags.PAGE_CHAT_HISTORY),
+                                onBackClick = { goHome() },
+                                onSessionSelected = { sessionId ->
+                                    pendingSessionId = sessionId
+                                    goHome()
+                                }
+                            )
 
-                        TestHomePage.UserCenter -> UserCenterRoute(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .testTag(AiFeatureTestTags.PAGE_USER_CENTER),
-                            onLogout = { goHome() },
-                            onOpenDeviceManager = { setPage(TestHomePage.DeviceManager) },
-                            onOpenPrivacy = { goHome() },
-                            onOpenGeneral = { goHome() }
-                        )
+                            TestHomePage.UserCenter -> UserCenterRoute(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .testTag(AiFeatureTestTags.PAGE_USER_CENTER),
+                                onLogout = { goHome() },
+                                onOpenDeviceManager = { setPage(TestHomePage.DeviceManager) },
+                                onOpenPrivacy = { goHome() }
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
+
+@Composable
+private fun OnboardingHost(
+    uiState: OnboardingUiState,
+    onDisplayNameChange: (String) -> Unit,
+    onRoleChange: (String) -> Unit,
+    onIndustryChange: (String) -> Unit,
+    onSubmit: () -> Unit
+) {
+    var step by rememberSaveable { mutableStateOf(OnboardingStep.Welcome) }
+    when (step) {
+        OnboardingStep.Welcome -> OnboardingWelcomeScreen(onStart = {
+            step = OnboardingStep.PersonalInfo
+        })
+        OnboardingStep.PersonalInfo -> OnboardingPersonalInfoScreen(
+            state = uiState,
+            onDisplayNameChange = onDisplayNameChange,
+            onRoleChange = onRoleChange,
+            onIndustryChange = onIndustryChange,
+            onSave = onSubmit
+        )
+    }
+}
+
+private enum class OnboardingStep { Welcome, PersonalInfo }
 
 @Composable
 private fun OverlayScaffold(
@@ -487,6 +536,8 @@ private fun OverlayScaffold(
     }
 }
 
+private const val OVERLAY_PEEK_THRESHOLD_FRACTION = 0.15f
+
 @Composable
 private fun DraggableOverlayStack(
     currentOverlay: HomeOverlay,
@@ -503,7 +554,7 @@ private fun DraggableOverlayStack(
     val dragRangePx = with(density) { 240.dp.toPx() }
     val offset = remember { Animatable(overlayToPosition(currentOverlay)) }
     val target = overlayToPosition(currentOverlay)
-    val dragEnabled = !disableOverlayGestures && currentOverlay != HomeOverlay.Home
+    val dragEnabled = !disableOverlayGestures
 
     LaunchedEffect(target) {
         offset.animateTo(
@@ -525,10 +576,19 @@ private fun DraggableOverlayStack(
             adjusted < -0.25f -> HomeOverlay.Audio
             else -> HomeOverlay.Home
         }
-        when (destination) {
-            HomeOverlay.Device -> onSelectDevice()
-            HomeOverlay.Audio -> onSelectAudio()
-            HomeOverlay.Home -> onSelectHome()
+        if (destination == currentOverlay) {
+            scope.launch {
+                offset.animateTo(
+                    targetValue = overlayToPosition(currentOverlay),
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                )
+            }
+        } else {
+            when (destination) {
+                HomeOverlay.Device -> onSelectDevice()
+                HomeOverlay.Audio -> onSelectAudio()
+                HomeOverlay.Home -> onSelectHome()
+            }
         }
     }
 
@@ -611,7 +671,7 @@ private fun VerticalOverlayLayout(
         val audioAnchor = heightPx * openFraction
         val homeAnchor = 0f
         val deviceAnchor = -heightPx * openFraction
-        val dragEnabled = !disableOverlayGestures && currentOverlay != HomeOverlay.Home
+        val dragEnabled = !disableOverlayGestures
         val offset = remember(heightPx) {
             Animatable(overlayToAnchor(currentOverlay, heightPx, openFraction))
         }
@@ -632,15 +692,27 @@ private fun VerticalOverlayLayout(
 
         fun settle(velocity: Float) {
             val projection = offset.value + velocity * 0.05f
-            val anchors = listOf(
-                audioAnchor to HomeOverlay.Audio,
-                homeAnchor to HomeOverlay.Home,
-                deviceAnchor to HomeOverlay.Device
-            )
-            val destination = anchors.minBy { (anchor, _) ->
-                kotlin.math.abs(projection - anchor)
-            }.second
-            onOverlayChange(destination)
+            val threshold = heightPx * OVERLAY_PEEK_THRESHOLD_FRACTION
+            val destination = when {
+                projection > threshold -> HomeOverlay.Audio
+                projection < -threshold -> HomeOverlay.Device
+                else -> HomeOverlay.Home
+            }
+            val destinationAnchor = when (destination) {
+                HomeOverlay.Audio -> audioAnchor
+                HomeOverlay.Home -> homeAnchor
+                HomeOverlay.Device -> deviceAnchor
+            }
+            if (destination == currentOverlay) {
+                scope.launch {
+                    offset.animateTo(
+                        targetValue = destinationAnchor,
+                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                    )
+                }
+            } else {
+                onOverlayChange(destination)
+            }
         }
 
         Box(

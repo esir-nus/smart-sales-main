@@ -22,6 +22,13 @@ import com.smartsales.feature.chat.history.ChatHistoryTestTags
 import com.smartsales.feature.media.audio.AudioFilesTestTags
 import com.smartsales.feature.usercenter.UserCenterTestTags
 import com.smartsales.aitest.TestHomePage
+import com.smartsales.feature.usercenter.data.PersistentOnboardingStateRepository
+import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Before
+import org.junit.After
+import com.smartsales.feature.usercenter.data.PersistentOnboardingStateRepository
+import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Before
 import org.junit.rules.RuleChain
 import org.junit.rules.TestRule
 import org.junit.Rule
@@ -40,6 +47,17 @@ class NavigationSmokeTest {
 
     @get:Rule
     val ruleChain: TestRule = RuleChain.outerRule(permissionRule).around(composeRule)
+
+    @Before
+    fun bypassOnboarding() {
+        PersistentOnboardingStateRepository.testOverrideCompleted = true
+        clearOnboardingPrefs()
+    }
+
+    @After
+    fun tearDown() {
+        PersistentOnboardingStateRepository.testOverrideCompleted = null
+    }
 
     @Test
     fun launchesHomeOverlayByDefault() {
@@ -77,11 +95,14 @@ class NavigationSmokeTest {
     }
 
     @Test
-    fun profileNavigatesToUserCenter() {
+    fun historyDrawer_navigatesToUserCenter() {
         goHome()
-        composeRule.onNodeWithTag(HomeScreenTestTags.PROFILE_BUTTON, useUnmergedTree = true).performClick()
+        composeRule.onNodeWithTag(HomeScreenTestTags.HISTORY_TOGGLE, useUnmergedTree = true).performClick()
+        waitForAnyTag(composeRule, HomeScreenTestTags.HISTORY_PANEL, ChatHistoryTestTags.PAGE)
+        composeRule.onNodeWithTag(HomeScreenTestTags.HISTORY_USER_CENTER, useUnmergedTree = true)
+            .assertIsDisplayed()
+            .performClick()
         waitForAnyTag(composeRule, UserCenterTestTags.ROOT, AiFeatureTestTags.PAGE_USER_CENTER)
-        composeRule.onNodeWithText("设备管理", substring = true, useUnmergedTree = true).assertIsDisplayed()
 
         composeRule.activityRule.scenario.onActivity {
             it.onBackPressedDispatcher.onBackPressed()
@@ -141,4 +162,12 @@ class NavigationSmokeTest {
         hasTag(AiFeatureTestTags.PAGE_DEVICE_SETUP) ||
         hasTag(AiFeatureTestTags.PAGE_AUDIO_FILES) ||
         hasTag(AiFeatureTestTags.PAGE_WIFI)
+
+    private fun clearOnboardingPrefs() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        context.getSharedPreferences("onboarding_state_prefs", android.content.Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .apply()
+    }
 }

@@ -165,18 +165,21 @@ class HomeTranscriptionTest {
     }
 
     private class FakeUserProfileRepository : com.smartsales.feature.usercenter.data.UserProfileRepository {
-        private var profile = com.smartsales.feature.usercenter.UserProfile(
-            displayName = "测试用户",
-            email = "user@example.com",
-            isGuest = false
+        private val state = kotlinx.coroutines.flow.MutableStateFlow(
+            com.smartsales.feature.usercenter.UserProfile(
+                displayName = "测试用户",
+                email = "user@example.com",
+                isGuest = false
+            )
         )
-        override suspend fun load(): com.smartsales.feature.usercenter.UserProfile = profile
+        override val profileFlow = state
+        override suspend fun load(): com.smartsales.feature.usercenter.UserProfile = state.value
         override suspend fun save(profile: com.smartsales.feature.usercenter.UserProfile) {
-            this.profile = profile
+            state.value = profile
         }
 
         override suspend fun clear() {
-            profile = com.smartsales.feature.usercenter.UserProfile("", "", true)
+            state.value = com.smartsales.feature.usercenter.UserProfile("", "", true)
         }
     }
 

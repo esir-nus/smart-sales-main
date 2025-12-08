@@ -7,11 +7,12 @@ package com.smartsales.feature.usercenter
 
 data class UserCenterUiState(
     val displayName: String = "",
+    val role: String = "",
+    val industry: String = "",
     val email: String = "",
     val isGuest: Boolean = true,
     val canLogout: Boolean = false,
     val organization: String? = null,
-    val role: String? = null,
     val phone: String? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
@@ -32,5 +33,6 @@ data class UserProfile(
     val isGuest: Boolean,
     val organization: String? = null,
     val role: String? = null,
+    val industry: String? = null,
     val phone: String? = null
 )

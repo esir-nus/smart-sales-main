@@ -32,7 +32,7 @@ All agents must follow that document as the authoritative behavior contract.
    - 注释和文档用简体中文。
    - 句子要短。少用长句和复杂结构。
    - 变量命名清晰。表达真实含义。
-   - 重要代码块必须添加简短中文注释，方便其他开发者快速理解。
+   - All重要代码块必须添加简短中文注释，方便其他开发者快速理解。
 
 3. **不要偷懒，始终完整阅读相关文件**
    - 在修改一个文件前，应读完整个文件。

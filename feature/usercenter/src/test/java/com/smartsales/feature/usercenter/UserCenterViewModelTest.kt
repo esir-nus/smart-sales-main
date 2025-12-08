@@ -7,7 +7,8 @@ package com.smartsales.feature.usercenter
 
 import com.smartsales.core.test.FakeDispatcherProvider
 import com.smartsales.feature.usercenter.data.UserProfileRepository
-import java.util.concurrent.atomic.AtomicReference
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
@@ -52,7 +53,6 @@ class UserCenterViewModelTest {
         advanceUntilIdle()
         val state = viewModel.uiState.value
         assertEquals("Tester", state.displayName)
-        assertEquals("tester@example.com", state.email)
         assertFalse(state.isGuest)
         assertTrue(state.canLogout)
     }
@@ -70,22 +70,26 @@ class UserCenterViewModelTest {
     }
 
     private class FakeUserProfileRepository : UserProfileRepository {
-        private val store = AtomicReference(
+        private val store = MutableStateFlow(
             UserProfile(
                 displayName = "Tester",
-                email = "tester@example.com",
-                isGuest = false
+                email = "",
+                isGuest = false,
+                role = "销售",
+                industry = "汽车"
             )
         )
 
-        override suspend fun load(): UserProfile = store.get()
+        override val profileFlow = store.asStateFlow()
+
+        override suspend fun load(): UserProfile = store.value
 
         override suspend fun save(profile: UserProfile) {
-            store.set(profile)
+            store.value = profile
         }
 
         override suspend fun clear() {
-            store.set(UserProfile(displayName = "", email = "", isGuest = true))
+            store.value = UserProfile(displayName = "", email = "", isGuest = true)
         }
     }
 }

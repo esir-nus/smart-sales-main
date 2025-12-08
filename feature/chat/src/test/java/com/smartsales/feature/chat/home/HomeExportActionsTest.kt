@@ -144,7 +144,9 @@ class HomeExportActionsTest {
             },
             sessionTitleResolver = SessionTitleResolver(metaHub),
             userProfileRepository = object : UserProfileRepository {
-                override suspend fun load(): UserProfile = UserProfile("测试", "test@example.com", false)
+                private val state = MutableStateFlow(UserProfile("测试", "test@example.com", false))
+                override val profileFlow = state
+                override suspend fun load(): UserProfile = state.value
                 override suspend fun save(profile: UserProfile) {}
                 override suspend fun clear() {}
             },

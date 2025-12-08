@@ -9,12 +9,17 @@ import android.Manifest
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
 import com.smartsales.aitest.testing.waitForAnyTag
@@ -24,6 +29,10 @@ import com.smartsales.aitest.TestHomePage
 import com.smartsales.feature.media.audio.AudioFilesTestTags
 import com.smartsales.feature.chat.history.ChatHistoryTestTags
 import com.smartsales.feature.chat.home.chatDebugHudOverride
+import androidx.compose.ui.geometry.Offset
+import androidx.test.platform.app.InstrumentationRegistry
+import com.smartsales.feature.usercenter.data.PersistentOnboardingStateRepository
+import org.junit.Before
 import org.junit.rules.RuleChain
 import org.junit.rules.TestRule
 import org.junit.Rule
@@ -45,9 +54,16 @@ class AiFeatureTestActivityTest {
     @get:Rule
     val ruleChain: TestRule = RuleChain.outerRule(permissionRule).around(composeRule)
 
+    @Before
+    fun bypassOnboarding() {
+        PersistentOnboardingStateRepository.testOverrideCompleted = true
+        clearOnboardingPrefs()
+    }
+
     @After
     fun tearDown() {
         chatDebugHudOverride = null
+        PersistentOnboardingStateRepository.testOverrideCompleted = null
     }
 
     @Test
@@ -191,22 +207,195 @@ class AiFeatureTestActivityTest {
     }
 
     @Test
-    fun deviceIcon_opensOverlayAndCloses() {
+    fun historyToggle_opensAndClosesDrawer() {
         waitForHomeRendered()
 
-        composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_TOGGLE, useUnmergedTree = true)
+        composeRule.onNodeWithTag(HomeScreenTestTags.HISTORY_TOGGLE, useUnmergedTree = true)
             .assertIsDisplayed()
             .performClick()
 
-        waitForAnyTag(composeRule, AiFeatureTestTags.PAGE_DEVICE_MANAGER, AiFeatureTestTags.OVERLAY_DEVICE_LAYER)
+        waitForAnyTag(composeRule, HomeScreenTestTags.HISTORY_PANEL, ChatHistoryTestTags.PAGE)
 
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_BACKDROP, useUnmergedTree = true)
-            .performClick()
+        composeRule.activityRule.scenario.onActivity {
+            it.onBackPressedDispatcher.onBackPressed()
+        }
 
         composeRule.waitUntil(timeoutMillis = 5_000) {
-            composeRule.onAllNodesWithTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER, useUnmergedTree = true)
+            composeRule.onAllNodesWithTag(HomeScreenTestTags.HISTORY_PANEL, useUnmergedTree = true)
                 .fetchSemanticsNodes().isEmpty()
         }
+
+        // 再次打开验证可靠性
+        composeRule.onNodeWithTag(HomeScreenTestTags.HISTORY_TOGGLE, useUnmergedTree = true)
+            .performClick()
+        waitForAnyTag(composeRule, HomeScreenTestTags.HISTORY_PANEL, ChatHistoryTestTags.PAGE)
+        composeRule.activityRule.scenario.onActivity {
+            it.onBackPressedDispatcher.onBackPressed()
+        }
+    }
+
+    @Test
+    fun swipeDown_opensAudioOverlay_andBackCloses() {
+        waitForHomeRendered()
+
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_HOME_LAYER, useUnmergedTree = true)
+            .performTouchInput { swipeDown() }
+
+        waitForAnyTag(composeRule, AiFeatureTestTags.OVERLAY_BACKDROP, AiFeatureTestTags.PAGE_AUDIO_FILES)
+        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_AUDIO_FILES, useUnmergedTree = true)
+            .assertIsDisplayed()
+
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO_LAYER, useUnmergedTree = true)
+            .performTouchInput { swipeUp() }
+
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithTag(AiFeatureTestTags.OVERLAY_BACKDROP, useUnmergedTree = true)
+                .fetchSemanticsNodes().isEmpty()
+        }
+    }
+
+    @Test
+    fun smallDragDown_doesNotOpenAudioOverlay() {
+        waitForHomeRendered()
+
+        dragByFraction(tag = AiFeatureTestTags.OVERLAY_HOME_LAYER, fraction = 0.10f, direction = 1f)
+        composeRule.waitForIdle()
+
+        composeRule.onAllNodesWithTag(AiFeatureTestTags.OVERLAY_BACKDROP, useUnmergedTree = true)
+            .assertCountEquals(0)
+        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_AUDIO_FILES, useUnmergedTree = true)
+            .assertIsNotDisplayed()
+    }
+
+    @Test
+    fun mediumDragDown_opensAudioOverlay() {
+        waitForHomeRendered()
+
+        dragByFraction(tag = AiFeatureTestTags.OVERLAY_HOME_LAYER, fraction = 0.30f, direction = 1f)
+        waitForAnyTag(composeRule, AiFeatureTestTags.OVERLAY_BACKDROP, AiFeatureTestTags.PAGE_AUDIO_FILES)
+        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_AUDIO_FILES, useUnmergedTree = true)
+            .assertIsDisplayed()
+
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_AUDIO_LAYER, useUnmergedTree = true)
+            .performTouchInput { swipeUp() }
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithTag(AiFeatureTestTags.OVERLAY_BACKDROP, useUnmergedTree = true)
+                .fetchSemanticsNodes().isEmpty()
+        }
+    }
+
+    @Test
+    fun swipeUp_opensDeviceOverlay_andDownReturnsHome() {
+        waitForHomeRendered()
+
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_HOME_LAYER, useUnmergedTree = true)
+            .performTouchInput { swipeUp() }
+
+        waitForAnyTag(composeRule, AiFeatureTestTags.OVERLAY_BACKDROP, AiFeatureTestTags.PAGE_DEVICE_MANAGER)
+        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER, useUnmergedTree = true)
+            .assertIsDisplayed()
+
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE_LAYER, useUnmergedTree = true)
+            .performTouchInput { swipeDown() }
+
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithTag(AiFeatureTestTags.OVERLAY_BACKDROP, useUnmergedTree = true)
+                .fetchSemanticsNodes().isEmpty()
+        }
+    }
+
+    @Test
+    fun smallDragUp_doesNotOpenDeviceOverlay() {
+        waitForHomeRendered()
+
+        dragByFraction(tag = AiFeatureTestTags.OVERLAY_HOME_LAYER, fraction = 0.10f, direction = -1f)
+        composeRule.waitForIdle()
+
+        composeRule.onAllNodesWithTag(AiFeatureTestTags.OVERLAY_BACKDROP, useUnmergedTree = true)
+            .assertCountEquals(0)
+        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER, useUnmergedTree = true)
+            .assertIsNotDisplayed()
+    }
+
+    @Test
+    fun mediumDragUp_opensDeviceOverlay() {
+        waitForHomeRendered()
+
+        dragByFraction(tag = AiFeatureTestTags.OVERLAY_HOME_LAYER, fraction = 0.30f, direction = -1f)
+        waitForAnyTag(composeRule, AiFeatureTestTags.OVERLAY_BACKDROP, AiFeatureTestTags.PAGE_DEVICE_MANAGER)
+        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER, useUnmergedTree = true)
+            .assertIsDisplayed()
+
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_DEVICE_LAYER, useUnmergedTree = true)
+            .performTouchInput { swipeDown() }
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithTag(AiFeatureTestTags.OVERLAY_BACKDROP, useUnmergedTree = true)
+                .fetchSemanticsNodes().isEmpty()
+        }
+    }
+
+    @Test
+    fun imeBlocksOverlayGestures() {
+        waitForHomeRendered()
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.INPUT_FIELD, useUnmergedTree = true)
+            .performClick()
+            .performTextInput("typing")
+
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_HOME_LAYER, useUnmergedTree = true)
+            .performTouchInput { swipeDown() }
+
+        composeRule.waitForIdle()
+        composeRule.onAllNodesWithTag(AiFeatureTestTags.OVERLAY_BACKDROP, useUnmergedTree = true)
+            .assertCountEquals(0)
+    }
+
+    @Test
+    fun deviceIndicator_isDisplayOnly() {
+        waitForHomeRendered()
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.HOME_DEVICE_INDICATOR, useUnmergedTree = true)
+            .assertIsDisplayed()
+            .performClick()
+
+        composeRule.onNodeWithText("设备状态", useUnmergedTree = true).assertExists()
+        composeRule.waitForIdle()
+        composeRule.onAllNodesWithTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER, useUnmergedTree = true)
+            .assertCountEquals(0)
+    }
+
+    @Test
+    fun historyDrawer_showsDeviceStatusCard() {
+        waitForHomeRendered()
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.HISTORY_TOGGLE, useUnmergedTree = true)
+            .performClick()
+
+        waitForAnyTag(composeRule, HomeScreenTestTags.HISTORY_PANEL, ChatHistoryTestTags.PAGE)
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.HISTORY_DEVICE_STATUS, useUnmergedTree = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithText("设备状态将在硬件接入后展示", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun historyDrawer_userCenterNavigates() {
+        waitForHomeRendered()
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.HISTORY_TOGGLE, useUnmergedTree = true)
+            .performClick()
+        waitForAnyTag(composeRule, HomeScreenTestTags.HISTORY_PANEL, ChatHistoryTestTags.PAGE)
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.HISTORY_USER_CENTER, useUnmergedTree = true)
+            .assertIsDisplayed()
+            .performClick()
+
+        waitForAnyTag(composeRule, AiFeatureTestTags.PAGE_USER_CENTER)
+
+        composeRule.activityRule.scenario.onActivity {
+            it.onBackPressedDispatcher.onBackPressed()
+        }
+        waitForHomeRendered()
     }
 
     @Test
@@ -354,5 +543,23 @@ class AiFeatureTestActivityTest {
         composeRule.waitUntil(timeoutMillis = 2_000) {
             composeRule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isEmpty()
         }
+    }
+
+    private fun dragByFraction(tag: String, fraction: Float, direction: Float) {
+        composeRule.onNodeWithTag(tag, useUnmergedTree = true).performTouchInput {
+            val delta = size.height * fraction * direction
+            val start = center
+            down(start)
+            moveBy(Offset(0f, delta))
+            up()
+        }
+    }
+
+    private fun clearOnboardingPrefs() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        context.getSharedPreferences("onboarding_state_prefs", android.content.Context.MODE_PRIVATE)
+            .edit()
+            .clear()
+            .apply()
     }
 }

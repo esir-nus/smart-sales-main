@@ -33,22 +33,15 @@ class UserCenterViewModel @Inject constructor(
     val events: SharedFlow<UserCenterEvent> = _events.asSharedFlow()
 
     init {
-        loadUser()
+        observeProfile()
     }
 
-    private fun loadUser() {
+    private fun observeProfile() {
         viewModelScope.launch(dispatchers.io) {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            runCatching { repository.load() }
-                .onSuccess { profile -> applyProfile(profile, loadingDone = true) }
-                .onFailure { error ->
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            errorMessage = error.message ?: "用户信息加载失败"
-                        )
-                    }
-                }
+            repository.profileFlow.collect { profile ->
+                applyProfile(profile, loadingDone = true)
+            }
         }
     }
 
@@ -56,11 +49,12 @@ class UserCenterViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 displayName = profile.displayName,
+                role = profile.role.orEmpty(),
+                industry = profile.industry.orEmpty(),
                 email = profile.email,
                 isGuest = profile.isGuest,
                 canLogout = !profile.isGuest,
                 organization = profile.organization,
-                role = profile.role,
                 phone = profile.phone,
                 isLoading = !loadingDone,
                 errorMessage = null
@@ -80,17 +74,34 @@ class UserCenterViewModel @Inject constructor(
         }
     }
 
-    fun onLoginClick() {
-        if (!_uiState.value.isGuest) return
+    fun onDisplayNameChange(value: String) {
+        _uiState.update { it.copy(displayName = value) }
+    }
+
+    fun onRoleChange(value: String) {
+        _uiState.update { it.copy(role = value) }
+    }
+
+    fun onIndustryChange(value: String) {
+        _uiState.update { it.copy(industry = value) }
+    }
+
+    fun onSaveProfile() {
+        val current = _uiState.value
         viewModelScope.launch(dispatchers.io) {
             val profile = UserProfile(
-                displayName = "SmartSales 用户",
-                email = "user@example.com",
-                isGuest = false
+                displayName = current.displayName,
+                email = current.email,
+                isGuest = false,
+                organization = current.organization,
+                role = current.role,
+                industry = current.industry,
+                phone = current.phone
             )
-            repository.save(profile)
-            applyProfile(profile)
-            _events.emit(UserCenterEvent.Login)
+            runCatching { repository.save(profile) }
+                .onFailure { error ->
+                    _uiState.update { it.copy(errorMessage = error.message ?: "保存失败") }
+                }
         }
     }
 

@@ -253,7 +253,11 @@ class HomeStreamingDedupTest {
     }
 
     private class FakeUserProfileRepository : UserProfileRepository {
-        override suspend fun load(): UserProfile = UserProfile("Tester", "tester@example.com", false)
+        private val state = kotlinx.coroutines.flow.MutableStateFlow(
+            UserProfile("Tester", "tester@example.com", false)
+        )
+        override val profileFlow = state
+        override suspend fun load(): UserProfile = state.value
         override suspend fun save(profile: UserProfile) {}
         override suspend fun clear() {}
     }

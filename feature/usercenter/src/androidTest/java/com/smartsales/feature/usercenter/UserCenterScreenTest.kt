@@ -8,11 +8,9 @@ package com.smartsales.feature.usercenter
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.test.onAllNodesWithTag
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
@@ -22,82 +20,63 @@ class UserCenterScreenTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun loggedIn_showsProfileAndLogout() {
-        setContent(
-            state = UserCenterUiState(
-                displayName = "测试用户",
-                email = "tester@example.com",
-                isGuest = false,
-                canLogout = true
-            )
-        )
-
-        composeRule.onNodeWithTag(UserCenterTestTags.HEADER_NAME, useUnmergedTree = true)
-            .assertIsDisplayed()
-        composeRule.onNodeWithTag(UserCenterTestTags.HEADER_EMAIL, useUnmergedTree = true)
-            .assertIsDisplayed()
-        composeRule.onNodeWithTag(UserCenterTestTags.ROW_LOGOUT, useUnmergedTree = true)
-            .assertIsDisplayed()
-    }
-
-    @Test
-    fun guest_showsLoginButtonAndHidesLogout() {
-        setContent(
-            state = UserCenterUiState(
-                displayName = "",
-                email = "",
-                isGuest = true,
-                canLogout = false
-            )
-        )
-
-        composeRule.onNodeWithText("访客用户", substring = true, useUnmergedTree = true)
-            .assertIsDisplayed()
-        composeRule.onNodeWithText("请登录以管理账户", substring = true, useUnmergedTree = true)
-            .assertIsDisplayed()
-        composeRule.onNodeWithTag(UserCenterTestTags.BUTTON_LOGIN, useUnmergedTree = true)
-            .assertIsDisplayed()
-        composeRule.onAllNodesWithTag(UserCenterTestTags.ROW_LOGOUT, useUnmergedTree = true)
-            .fetchSemanticsNodes().isEmpty()
-    }
-
-    @Test
     fun deviceManagerRow_triggersCallback() {
-        var clicked = false
+        var clicked = 0
         setContent(
             state = UserCenterUiState(
                 displayName = "测试用户",
-                email = "tester@example.com",
-                isGuest = false,
-                canLogout = true
+                role = "销售",
+                industry = "汽车",
+                isGuest = false
             ),
-            onDeviceManagerClick = { clicked = true }
+            onDeviceManagerClick = { clicked += 1 }
         )
 
         composeRule.onNodeWithTag(UserCenterTestTags.ROW_DEVICE_MANAGER, useUnmergedTree = true)
             .performClick()
-        assertTrue(clicked)
+        assertEquals(1, clicked)
+    }
+
+    @Test
+    fun fields_render_and_saveButtonVisible() {
+        setContent(
+            state = UserCenterUiState(
+                displayName = "李雷",
+                role = "销售经理",
+                industry = "制造业",
+                isGuest = false
+            )
+        )
+
+        composeRule.onNodeWithTag(UserCenterTestTags.FIELD_NAME, useUnmergedTree = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(UserCenterTestTags.FIELD_ROLE, useUnmergedTree = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(UserCenterTestTags.FIELD_INDUSTRY, useUnmergedTree = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(UserCenterTestTags.BUTTON_SAVE, useUnmergedTree = true)
+            .assertIsDisplayed()
     }
 
     private fun setContent(
         state: UserCenterUiState,
         onDeviceManagerClick: () -> Unit = {},
-        onSubscriptionClick: () -> Unit = {},
         onPrivacyClick: () -> Unit = {},
-        onGeneralClick: () -> Unit = {},
-        onLoginClick: () -> Unit = {},
-        onLogoutClick: () -> Unit = {}
+        onDisplayNameChange: (String) -> Unit = {},
+        onRoleChange: (String) -> Unit = {},
+        onIndustryChange: (String) -> Unit = {},
+        onSave: () -> Unit = {}
     ) {
         composeRule.setContent {
             MaterialTheme {
                 UserCenterScreen(
                     uiState = state,
                     onDeviceManagerClick = onDeviceManagerClick,
-                    onSubscriptionClick = onSubscriptionClick,
                     onPrivacyClick = onPrivacyClick,
-                    onGeneralSettingsClick = onGeneralClick,
-                    onLoginClick = onLoginClick,
-                    onLogoutClick = onLogoutClick
+                    onDisplayNameChange = onDisplayNameChange,
+                    onRoleChange = onRoleChange,
+                    onIndustryChange = onIndustryChange,
+                    onSave = onSave
                 )
             }
         }

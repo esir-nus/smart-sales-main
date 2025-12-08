@@ -6,7 +6,7 @@
 > * React web prototype (`/ui` – Tailwind-based)
 > * Android Compose implementation
 >
-> The React `/ui` is the **visual spec**. Android should match it using design tokens and theming.
+> The React `/ui` is the **visual spec**. Android should match it using design tokens and theming. 交互与布局规范请参见 `docs/ux-contract.md`（UX 来源高于本文件），本文件仅覆盖颜色/字体/间距等视觉要素。
 
 ---
 

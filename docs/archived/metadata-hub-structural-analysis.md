@@ -1,7 +1,13 @@
+> **⚠️ ARCHIVED / OUTDATED**  
+> This document has been archived as it contains outdated information.  
+> It is kept for historical reference only.
+
+---
+
 # 元数据中心结构分析报告
 
 > **分析日期**: 2025-01-XX  
-> **目的**: 为设计“元数据中心”（metadata hub）提供代码库结构参考  
+> **目的**: 为设计"元数据中心"（metadata hub）提供代码库结构参考  
 > **范围**: 仅分析，不修改代码
 
 ---

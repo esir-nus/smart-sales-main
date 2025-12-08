@@ -11,6 +11,12 @@
 * If the message is about **exact code / diffs / implementation** → it’s **Codex** work.
 * **Operator** is the only one who runs commands, applies patches, and commits.
 
+**UX 与数据规范优先级（供三方参考）**：
+1. `docs/ux-contract.md` – 交互与布局的唯一来源。
+2. `docs/plans/Orchestrator-MetadataHub-Mvp-V3.md` – 推理、MetaHub 流程与标题/分析元数据。
+3. `docs/style-guide.md` – 视觉规范。
+4. `docs/api-contracts.md` – API 与数据模型。
+
 ---
 
 ## 2. Roles

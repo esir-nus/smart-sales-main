@@ -1,3 +1,9 @@
+> **⚠️ ARCHIVED / OUTDATED**  
+> This document has been archived as it contains outdated information.  
+> It is kept for historical reference only.
+
+---
+
 React→Compose 对齐进度
 =====================
 

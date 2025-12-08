@@ -6,6 +6,8 @@ This document is the single source of truth for every API/protocol that the Andr
 2. **Android binding** – which Kotlin classes talk to the interface and how.  
 3. **Code location** – module plus file path so anyone can open the implementation quickly.
 
+> UI 交互与布局规范请参见 `docs/ux-contract.md`；本文件只描述接口与数据形状，不定义页面布局。
+
 ## Quick Start (for clients)
 - DashScope：`POST https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation`，Header `Authorization: Bearer <DASHSCOPE_API_KEY>`，超时约 10s+，重试 300ms 递增。
 - Tingwu：`https://<region>.aliyuncs.com/openapi/tingwu/v2/`，需 ROA 签名头（`x-acs-*`，`x-tingwu-app-key`）；浏览器需走后端代理，勿暴露密钥。

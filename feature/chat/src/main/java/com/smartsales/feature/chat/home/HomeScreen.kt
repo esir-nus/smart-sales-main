@@ -43,8 +43,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.AudioFile
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Close
@@ -53,12 +52,18 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AudioFile
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -86,7 +91,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -250,8 +254,21 @@ fun HomeScreen(
     onInputFocusChanged: (Boolean) -> Unit = {}
 ) {
     Log.i("HomeScreen", "HomeScreen composed - entering function")
+    val refreshingState = remember { mutableStateOf(false) }
+    LaunchedEffect(state.deviceSnapshot, state.audioSummary) {
+        refreshingState.value = false
+    }
     val coroutineScope = rememberCoroutineScope()
     val clipboardManager = LocalClipboardManager.current
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = refreshingState.value,
+        onRefresh = {
+            if (!refreshingState.value) {
+                refreshingState.value = true
+                onRefreshDeviceAndAudio()
+            }
+        }
+    )
     val audioPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -331,6 +348,7 @@ fun HomeScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
+            .testTag(HomeScreenTestTags.PAGE_HOME)
     ) {
         Scaffold(
             modifier = Modifier
@@ -339,12 +357,11 @@ fun HomeScreen(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 HomeTopBar(
-                    title = state.currentSession.title,
                     onProfileClick = onProfileClicked,
+                    deviceSnapshot = state.deviceSnapshot,
                     onHistoryClick = onToggleHistoryPanel,
                     showDebugMetadata = state.showDebugMetadata,
-                    onToggleDebugMetadata = { onToggleDebugMetadata() },
-                    onNewChatClick = onNewChatClicked
+                    onToggleDebugMetadata = { onToggleDebugMetadata() }
                 )
             },
             bottomBar = {
@@ -372,10 +389,19 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
+                    .pullRefresh(pullRefreshState)
             ) {
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
+                    EntryCards(
+                        deviceSnapshot = state.deviceSnapshot,
+                        audioSummary = state.audioSummary,
+                        onDeviceClick = onDeviceBannerClicked,
+                        onAudioClick = onAudioSummaryClicked,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -463,14 +489,19 @@ fun HomeScreen(
                                     }
                                 }
                             }
+                        }
+                    }
                 }
-            }
-        }
-        chatErrorMessage?.let { message ->
-            SnackbarHost(
-                hostState = remember { SnackbarHostState() },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
+                PullRefreshIndicator(
+                    refreshing = refreshingState.value,
+                    state = pullRefreshState,
+                    modifier = Modifier.align(Alignment.TopCenter)
+                )
+                chatErrorMessage?.let { message ->
+                    SnackbarHost(
+                        hostState = remember { SnackbarHostState() },
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
                             .padding(bottom = 96.dp)
                     ) {
                         Text(
@@ -498,8 +529,6 @@ fun HomeScreen(
                 if (debugHudEnabled && state.debugSessionMetadata != null) {
                     DebugSessionMetadataHud(
                         metadata = state.debugSessionMetadata,
-                        onCopy = { content -> clipboardManager.setText(AnnotatedString(content)) },
-                        onClose = onToggleDebugMetadata,
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(start = 12.dp, end = 12.dp, bottom = 96.dp)
@@ -654,6 +683,7 @@ object HomeScreenTestTags {
     const val ROOT = "home_screen_root"
     // 兼容旧测试
     const val PAGE = ROOT
+    const val PAGE_HOME = "page_home"
     const val DEVICE_ENTRY = "home_device_entry"
     const val AUDIO_ENTRY = "home_audio_entry"
     const val SESSION_HEADER = "home_session_header"
@@ -683,17 +713,15 @@ object HomeScreenTestTags {
     const val HISTORY_EMPTY = "home_history_empty"
     const val HISTORY_ITEM_PREFIX = "home_history_item_"
     const val HERO = "home_hero"
-    const val DEBUG_HUD_PANEL = "DEBUG_HUD_PANEL"
 }
 
 @Composable
 private fun HomeTopBar(
-    title: String,
     onProfileClick: () -> Unit,
+    deviceSnapshot: DeviceSnapshotUi?,
     onHistoryClick: () -> Unit,
     showDebugMetadata: Boolean,
-    onToggleDebugMetadata: () -> Unit,
-    onNewChatClick: () -> Unit
+    onToggleDebugMetadata: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -702,50 +730,35 @@ private fun HomeTopBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(
-            onClick = onHistoryClick,
-            modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_TOGGLE)
-        ) {
-            Icon(Icons.Filled.Menu, contentDescription = "历史会话")
-        }
         Text(
-            text = title.ifBlank { "新的聊天" },
-            style = MaterialTheme.typography.titleLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 12.dp)
-                .testTag(HomeScreenTestTags.SESSION_TITLE)
+            text = "AI 助手",
+            style = MaterialTheme.typography.titleLarge
         )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (deviceSnapshot?.connectionState == DeviceConnectionStateUi.CONNECTED) {
+                AssistChip(
+                    onClick = {},
+                    enabled = false,
+                    label = { Text(text = "设备已连接") },
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                )
+            }
+            IconButton(
+                onClick = onHistoryClick,
+                modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_TOGGLE)
+            ) {
+                Icon(Icons.Filled.History, contentDescription = "历史记录")
+            }
             if (CHAT_DEBUG_HUD_ENABLED) {
-                IconButton(
+                TextButton(
                     onClick = onToggleDebugMetadata,
                     modifier = Modifier.testTag("debug_toggle_metadata")
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(14.dp)
-                            .background(
-                                color = if (showDebugMetadata) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                                shape = CircleShape
-                            )
-                    )
+                    Text(text = if (showDebugMetadata) "关闭调试 HUD" else "开启调试 HUD")
                 }
-            }
-            IconButton(
-                onClick = onNewChatClick,
-                modifier = Modifier.testTag(HomeScreenTestTags.NEW_CHAT_BUTTON)
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = "新建对话")
             }
             IconButton(
                 onClick = onProfileClick,
@@ -758,84 +771,114 @@ private fun HomeTopBar(
 }
 
 @Composable
-private fun DebugSessionMetadataHud(
-    metadata: DebugSessionMetadata,
-    onCopy: (String) -> Unit,
-    onClose: () -> Unit,
+private fun EntryCards(
+    deviceSnapshot: DeviceSnapshotUi?,
+    audioSummary: AudioSummaryUi?,
+    onDeviceClick: () -> Unit,
+    onAudioClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val scrollState = rememberScrollState()
-    val screenHalfHeight = LocalConfiguration.current.screenHeightDp.dp * 0.5f
-    val hudText = remember(metadata) {
-        buildString {
-            appendLine("DEBUG_METADATA")
-            appendLine("sessionId = ${metadata.sessionId}")
-            appendLine("title = ${metadata.title}")
-            appendLine("mainPerson = ${metadata.mainPerson ?: "null"}")
-            appendLine("shortSummary = ${metadata.shortSummary ?: "null"}")
-            appendLine("title6 = ${metadata.summaryTitle6Chars ?: "null"}")
-            if (metadata.notes.isNotEmpty()) {
-                appendLine("notes:")
-                metadata.notes.forEach { appendLine("- $it") }
-            }
-        }.trimEnd()
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        EntryCard(
+            title = "设备管理",
+            subtitle = deviceSnapshot?.statusText ?: "查看设备文件与连接状态",
+            supporting = deviceSnapshot?.deviceName ?: "点击进入设备管理",
+            onClick = onDeviceClick,
+            testTag = HomeScreenTestTags.DEVICE_ENTRY
+        )
+        EntryCard(
+            title = "音频库",
+            subtitle = audioSummary?.headline ?: "同步录音并查看转写",
+            supporting = audioSummary?.detail ?: "上传或查看最近转写内容",
+            onClick = onAudioClick,
+            testTag = HomeScreenTestTags.AUDIO_ENTRY
+        )
     }
-    Surface(
-        modifier = modifier
+}
+
+@Composable
+private fun EntryCard(
+    title: String,
+    subtitle: String,
+    supporting: String,
+    onClick: () -> Unit,
+    testTag: String
+) {
+    Card(
+        modifier = Modifier
             .fillMaxWidth()
-            .heightIn(max = screenHalfHeight)
-            .testTag(HomeScreenTestTags.DEBUG_HUD_PANEL),
-        tonalElevation = 4.dp,
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.96f)
+            .clickable(onClick = onClick)
+            .testTag(testTag),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(scrollState)
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+            modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "DEBUG_METADATA",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    TextButton(onClick = { onCopy(hudText) }) {
-                        Text(text = "复制")
-                    }
-                    IconButton(onClick = onClose) {
-                        Icon(imageVector = Icons.Filled.Close, contentDescription = "关闭 HUD")
-                    }
-                }
-            }
+            Text(text = title, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = supporting,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun DebugSessionMetadataHud(
+    metadata: DebugSessionMetadata,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
+                shape = MaterialTheme.shapes.medium
+            )
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+            .testTag("debug_metadata_hud"),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
         Text(
-                text = "sessionId = ${metadata.sessionId}",
-                style = MaterialTheme.typography.labelSmall
-            )
-            Text(
-                text = "title = ${metadata.title}",
-                style = MaterialTheme.typography.labelSmall
-            )
-            Text(
-                text = "mainPerson = ${metadata.mainPerson ?: "null"}",
-                style = MaterialTheme.typography.labelSmall
-            )
-            Text(
-                text = "shortSummary = ${metadata.shortSummary ?: "null"}",
-                style = MaterialTheme.typography.labelSmall
-            )
-            Text(
-                text = "title6 = ${metadata.summaryTitle6Chars ?: "null"}",
-                style = MaterialTheme.typography.labelSmall
-            )
-            if (CHAT_DEBUG_HUD_ENABLED && metadata.notes.isNotEmpty()) {
+            text = "DEBUG_METADATA",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.secondary
+        )
+        Text(
+            text = "sessionId = ${metadata.sessionId}",
+            style = MaterialTheme.typography.labelSmall
+        )
+        Text(
+            text = "title = ${metadata.title}",
+            style = MaterialTheme.typography.labelSmall
+        )
+        Text(
+            text = "mainPerson = ${metadata.mainPerson ?: "null"}",
+            style = MaterialTheme.typography.labelSmall
+        )
+        Text(
+            text = "shortSummary = ${metadata.shortSummary ?: "null"}",
+            style = MaterialTheme.typography.labelSmall
+        )
+        Text(
+            text = "title6 = ${metadata.summaryTitle6Chars ?: "null"}",
+            style = MaterialTheme.typography.labelSmall
+        )
+        if (CHAT_DEBUG_HUD_ENABLED && metadata.notes.isNotEmpty()) {
             Text(
                 text = "notes:",
                 style = MaterialTheme.typography.labelSmall,
@@ -848,7 +891,6 @@ private fun DebugSessionMetadataHud(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
         }
     }
 }
@@ -1417,14 +1459,11 @@ private fun HistoryPanel(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
-                    val sortedSessions = remember(sessions) {
-                        sessions.sortedByDescending { it.updatedAtMillis }
-                    }
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         contentPadding = PaddingValues(vertical = 4.dp)
                     ) {
-                        items(items = sortedSessions, key = { it.id }) { session ->
+                        items(items = sessions, key = { it.id }) { session ->
                             val isCurrent = session.id == currentSessionId
                             Surface(
                                 modifier = Modifier

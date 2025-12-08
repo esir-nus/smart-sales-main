@@ -1,3 +1,9 @@
+> **⚠️ ARCHIVED / OUTDATED**  
+> This document has been archived as it contains outdated information.  
+> It is kept for historical reference only.
+
+---
+
 当前垂直 Overlay（AiFeatureTestActivity → VerticalOverlayShell）调整顺序与策略
 
 1) 侧边抽屉（左→右，Hamburger）

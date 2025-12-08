@@ -19,6 +19,7 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -41,6 +42,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Pause
@@ -514,13 +516,52 @@ private fun OverlayScaffold(
                         .fillMaxSize()
                         .testTag(AiFeatureTestTags.OVERLAY_DEVICE_LAYER)
                 ) {
-                    DeviceManagerRoute(
-                        modifier = Modifier.fillMaxSize(),
-                        onNavigateToDeviceSetup = {
-                            setPage(TestHomePage.DeviceSetup)
-                            onOverlayChange(HomeOverlay.Home)
+                    Row(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(0.9f),
+                            tonalElevation = 8.dp,
+                            shadowElevation = 12.dp,
+                            shape = RoundedCornerShape(topEnd = 20.dp, bottomEnd = 20.dp),
+                            color = MaterialTheme.colorScheme.surface
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "设备管理",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    IconButton(onClick = { onOverlayChange(HomeOverlay.Home) }) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Close,
+                                            contentDescription = "关闭设备管理"
+                                        )
+                                    }
+                                }
+                                Divider()
+                                DeviceManagerRoute(
+                                    modifier = Modifier.fillMaxSize(),
+                                    showTopBar = false,
+                                    onNavigateToDeviceSetup = {
+                                        setPage(TestHomePage.DeviceSetup)
+                                        onOverlayChange(HomeOverlay.Home)
+                                    }
+                                )
+                            }
                         }
-                    )
+                    }
                 }
             }
         )
@@ -543,6 +584,7 @@ private fun DraggableOverlayStack(
     val dragRangePx = with(density) { 240.dp.toPx() }
     val offset = remember { Animatable(overlayToPosition(currentOverlay)) }
     val target = overlayToPosition(currentOverlay)
+    val dragEnabled = !disableOverlayGestures && currentOverlay != HomeOverlay.Home
 
     LaunchedEffect(target) {
         offset.animateTo(
@@ -552,6 +594,7 @@ private fun DraggableOverlayStack(
     }
 
     val dragState = rememberDraggableState { delta ->
+        if (!dragEnabled) return@rememberDraggableState
         val next = (offset.value + delta / dragRangePx).coerceIn(-1f, 1f)
         scope.launch { offset.snapTo(next) }
     }
@@ -576,9 +619,9 @@ private fun DraggableOverlayStack(
             .fillMaxHeight()
             .draggable(
                 state = dragState,
-                enabled = !disableOverlayGestures,
+                enabled = dragEnabled,
                 orientation = Orientation.Vertical,
-                onDragStopped = { velocity -> if (!disableOverlayGestures) settle(velocity) }
+                onDragStopped = { velocity -> if (dragEnabled) settle(velocity) }
             )
             .testTag(AiFeatureTestTags.OVERLAY_STACK),
         color = Color.Transparent,
@@ -649,6 +692,7 @@ private fun VerticalOverlayLayout(
         val audioAnchor = heightPx * openFraction
         val homeAnchor = 0f
         val deviceAnchor = -heightPx * openFraction
+        val dragEnabled = !disableOverlayGestures && currentOverlay != HomeOverlay.Home
         val offset = remember(heightPx) {
             Animatable(overlayToAnchor(currentOverlay, heightPx, openFraction))
         }
@@ -662,7 +706,7 @@ private fun VerticalOverlayLayout(
         }
 
         val dragState = rememberDraggableState { delta ->
-            if (disableOverlayGestures) return@rememberDraggableState
+            if (!dragEnabled) return@rememberDraggableState
             val next = (offset.value + delta).coerceIn(deviceAnchor, audioAnchor)
             scope.launch { offset.snapTo(next) }
         }
@@ -685,9 +729,9 @@ private fun VerticalOverlayLayout(
                 .fillMaxSize()
                 .draggable(
                     state = dragState,
-                    enabled = !disableOverlayGestures,
+                    enabled = dragEnabled,
                     orientation = Orientation.Vertical,
-                    onDragStopped = { velocity -> if (!disableOverlayGestures) settle(velocity) }
+                    onDragStopped = { velocity -> if (dragEnabled) settle(velocity) }
                 )
         ) {
             val stackOffset = offset.value

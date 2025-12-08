@@ -49,6 +49,8 @@ import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.DeviceHub
+import androidx.compose.material.icons.filled.BluetoothConnected
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.outlined.Add
@@ -216,13 +218,17 @@ fun HomeScreenRoute(
     onNewChatClicked = viewModel::onNewChatClicked,
     onSessionSelected = viewModel::setSession,
     chatErrorMessage = state.chatErrorMessage,
-    onPickAudioFile = viewModel::onAudioFilePicked,
-    onPickImageFile = viewModel::onImagePicked,
-    onAudioClicked = {
-        dismissKeyboard()
-        onNavigateToAudioFiles()
-    },
-    modifier = modifier,
+        onPickAudioFile = viewModel::onAudioFilePicked,
+        onPickImageFile = viewModel::onImagePicked,
+        onAudioClicked = {
+            dismissKeyboard()
+            onNavigateToAudioFiles()
+        },
+        onDeviceClicked = {
+            dismissKeyboard()
+            onNavigateToDeviceManager()
+        },
+        modifier = modifier,
     showHistoryPanel = showHistoryPanel,
         onToggleHistoryPanel = { showHistoryPanel = true },
         onDismissHistoryPanel = { showHistoryPanel = false },
@@ -262,6 +268,7 @@ fun HomeScreen(
     onPickAudioFile: (Uri) -> Unit = {},
     onPickImageFile: (Uri) -> Unit = {},
     onAudioClicked: () -> Unit = {},
+    onDeviceClicked: () -> Unit = {},
     modifier: Modifier = Modifier,
     showHistoryPanel: Boolean = false,
     onToggleHistoryPanel: () -> Unit = {},
@@ -418,13 +425,17 @@ fun HomeScreen(
                             },
                             onAudioClick = {
                                 onDismissKeyboard()
-                                onAudioClicked()
-                            },
-                            onNewChatClick = onNewChatClicked,
-                            hudEnabled = hudEnabled,
-                            showDebugMetadata = state.showDebugMetadata,
-                            onToggleDebugMetadata = { onToggleDebugMetadata() }
-                        )
+                            onAudioClicked()
+                        },
+                    onDeviceClick = {
+                        onDismissKeyboard()
+                        onDeviceClicked()
+                    },
+                    onNewChatClick = onNewChatClicked,
+                    hudEnabled = hudEnabled,
+                    showDebugMetadata = state.showDebugMetadata,
+                    onToggleDebugMetadata = { onToggleDebugMetadata() }
+                )
                     },
                     bottomBar = {
                         val inputEnabled = !chatBusy && !state.isInputBusy
@@ -802,6 +813,7 @@ object HomeScreenTestTags {
     const val DEBUG_HUD_CLOSE = "debug_hud_close"
     const val DEBUG_HUD_COPY = "debug_hud_copy"
     const val AUDIO_TOGGLE = "home_audio_toggle"
+    const val DEVICE_TOGGLE = "home_device_toggle"
 }
 
 @Composable
@@ -811,6 +823,7 @@ private fun HomeTopBar(
     deviceSnapshot: DeviceSnapshotUi?,
     onHistoryClick: () -> Unit,
     onAudioClick: () -> Unit,
+    onDeviceClick: () -> Unit,
     onNewChatClick: () -> Unit,
     hudEnabled: Boolean,
     showDebugMetadata: Boolean,
@@ -829,6 +842,12 @@ private fun HomeTopBar(
         ) {
             Icon(Icons.Filled.History, contentDescription = "历史记录")
         }
+        IconButton(
+            onClick = onAudioClick,
+            modifier = Modifier.testTag(HomeScreenTestTags.AUDIO_TOGGLE)
+        ) {
+            Icon(imageVector = Icons.Filled.AudioFile, contentDescription = "音频库")
+        }
         Text(
             text = title,
             modifier = Modifier
@@ -838,22 +857,16 @@ private fun HomeTopBar(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-        if (deviceSnapshot?.connectionState == DeviceConnectionStateUi.CONNECTED) {
-            AssistChip(
-                onClick = {},
-                enabled = false,
-                label = { Text(text = "设备已连接") },
-                colors = AssistChipDefaults.assistChipColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    labelColor = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-            )
-        }
         IconButton(
-            onClick = onAudioClick,
-            modifier = Modifier.testTag(HomeScreenTestTags.AUDIO_TOGGLE)
+            onClick = onDeviceClick,
+            modifier = Modifier.testTag(HomeScreenTestTags.DEVICE_TOGGLE)
         ) {
-            Icon(imageVector = Icons.Filled.AudioFile, contentDescription = "音频库")
+            val icon = when (deviceSnapshot?.connectionState) {
+                DeviceConnectionStateUi.CONNECTED -> Icons.Filled.DeviceHub
+                DeviceConnectionStateUi.CONNECTING, DeviceConnectionStateUi.WAITING_FOR_NETWORK -> Icons.Filled.BluetoothConnected
+                else -> Icons.Filled.DeviceHub
+            }
+            Icon(imageVector = icon, contentDescription = "设备管理")
         }
         if (hudEnabled) {
             IconButton(

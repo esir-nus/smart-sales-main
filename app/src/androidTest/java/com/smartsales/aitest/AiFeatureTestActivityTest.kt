@@ -210,6 +210,25 @@ class AiFeatureTestActivityTest {
     }
 
     @Test
+    fun deviceIcon_opensOverlayAndCloses() {
+        waitForHomeRendered()
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.DEVICE_TOGGLE, useUnmergedTree = true)
+            .assertIsDisplayed()
+            .performClick()
+
+        waitForAnyTag(composeRule, AiFeatureTestTags.PAGE_DEVICE_MANAGER, AiFeatureTestTags.OVERLAY_DEVICE_LAYER)
+
+        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_BACKDROP, useUnmergedTree = true)
+            .performClick()
+
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER, useUnmergedTree = true)
+                .fetchSemanticsNodes().isEmpty()
+        }
+    }
+
+    @Test
     fun exportButtons_doNotNavigateAway() {
         waitForPage(AiFeatureTestTags.PAGE_HOME)
 

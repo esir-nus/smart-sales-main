@@ -26,6 +26,19 @@ class RoomAiSessionRepository(
                     )
             }
 
+    override suspend fun createNewChatSession(): AiSessionSummary {
+        val summary = AiSessionSummary(
+            id = "session-${java.util.UUID.randomUUID()}",
+            title = com.smartsales.core.metahub.SessionTitlePolicy.newChatPlaceholder(),
+            lastMessagePreview = "",
+            updatedAtMillis = System.currentTimeMillis(),
+            isTranscription = false,
+            pinned = false
+        )
+        upsert(summary)
+        return summary
+    }
+
     override suspend fun upsert(summary: AiSessionSummary) {
         withContext(dispatchers.io) {
             dao.upsert(summary.toEntity())

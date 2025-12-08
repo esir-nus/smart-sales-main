@@ -27,6 +27,7 @@ interface AiSessionRepository {
     suspend fun delete(id: String)
     suspend fun findById(id: String): AiSessionSummary?
     suspend fun updateTitle(id: String, newTitle: String)
+    suspend fun createNewChatSession(): AiSessionSummary
 }
 
 @Singleton
@@ -34,6 +35,19 @@ class InMemoryAiSessionRepository @Inject constructor() : AiSessionRepository {
     private val mutex = Mutex()
     private val internal = MutableStateFlow<List<AiSessionSummary>>(emptyList())
     override val summaries: Flow<List<AiSessionSummary>> = internal.asStateFlow()
+
+    override suspend fun createNewChatSession(): AiSessionSummary {
+        val summary = AiSessionSummary(
+            id = "session-${java.util.UUID.randomUUID()}",
+            title = com.smartsales.core.metahub.SessionTitlePolicy.newChatPlaceholder(),
+            lastMessagePreview = "",
+            updatedAtMillis = System.currentTimeMillis(),
+            isTranscription = false,
+            pinned = false
+        )
+        upsert(summary)
+        return summary
+    }
 
     override suspend fun upsert(summary: AiSessionSummary) {
         mutex.withLock {

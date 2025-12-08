@@ -137,6 +137,16 @@ class HomeExportActionsTest {
             },
             sessionRepository = object : com.smartsales.feature.chat.AiSessionRepository {
                 override val summaries: MutableStateFlow<List<AiSessionSummary>> = MutableStateFlow(emptyList())
+                override suspend fun createNewChatSession(): AiSessionSummary {
+                    val summary = AiSessionSummary(
+                        id = "session-1",
+                        title = com.smartsales.core.metahub.SessionTitlePolicy.newChatPlaceholder(),
+                        lastMessagePreview = "",
+                        updatedAtMillis = 0L
+                    )
+                    upsert(summary)
+                    return summary
+                }
                 override suspend fun upsert(summary: AiSessionSummary) {}
                 override suspend fun delete(id: String) {}
                 override suspend fun findById(id: String): AiSessionSummary? = null

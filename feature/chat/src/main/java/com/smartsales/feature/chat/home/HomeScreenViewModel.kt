@@ -218,6 +218,7 @@ class HomeScreenViewModel @Inject constructor(
     private var latestMediaSyncState: MediaSyncState? = null
     private var sessionId: String = DEFAULT_SESSION_ID
     private var latestSessionSummaries: List<AiSessionSummary> = emptyList()
+    private var initialSessionPrepared: Boolean = false
     private var hasShownLowInfoHint: Boolean = false
     // 低信息智能分析提示是否已经出现过
     private var hasShownLowInfoSmartAnalysisHint: Boolean = false
@@ -231,11 +232,11 @@ class HomeScreenViewModel @Inject constructor(
         // 从 catalog 加载快捷技能到状态
         val skills = quickSkillDefinitions.map { it.toUiModel() }
         _uiState.update { it.copy(quickSkills = skills) }
-        setSession(DEFAULT_SESSION_ID)
         observeDeviceConnection()
         observeMediaSync()
         observeSessions()
         loadUserProfile()
+        viewModelScope.launch { prepareInitialSession() }
     }
 
     fun onInputChanged(text: String) {
@@ -902,18 +903,17 @@ class HomeScreenViewModel @Inject constructor(
 
     fun onNewChatClicked() {
         viewModelScope.launch {
-            val newSessionId = "session-${UUID.randomUUID()}"
-            sessionId = newSessionId
+            val newSession = sessionRepository.createNewChatSession()
+            sessionId = newSession.id
             latestAnalysisMarkdown = null
             hasShownLowInfoHint = false
             hasShownAnalysisExportHint = false
             _uiState.update { it.copy(isSmartAnalysisMode = false, selectedSkill = null) }
-            val summary = ensureSessionSummary(newSessionId, titleOverride = DEFAULT_SESSION_TITLE, isTranscription = false)
             _uiState.update {
                 it.copy(
                     currentSession = CurrentSessionUi(
-                        id = newSessionId,
-                        title = summary.title,
+                        id = newSession.id,
+                        title = newSession.title,
                         isTranscription = false
                     ),
                     chatMessages = emptyList(),
@@ -922,7 +922,7 @@ class HomeScreenViewModel @Inject constructor(
                 )
             }
             updateDebugSessionMetadata(null)
-            chatHistoryRepository.saveMessages(newSessionId, emptyList())
+            chatHistoryRepository.saveMessages(newSession.id, emptyList())
             applySessionList()
         }
     }
@@ -2585,6 +2585,30 @@ class HomeScreenViewModel @Inject constructor(
             state.copy(currentSession = updatedCurrent)
         }
         updateDebugSessionMetadata(meta)
+    }
+
+    private suspend fun prepareInitialSession() {
+        if (initialSessionPrepared) return
+        initialSessionPrepared = true
+        val newSession = sessionRepository.createNewChatSession()
+        sessionId = newSession.id
+        latestSessionSummaries =
+            (latestSessionSummaries.filterNot { it.id == newSession.id } + newSession)
+        applySessionList()
+        chatHistoryRepository.saveMessages(newSession.id, emptyList())
+        _uiState.update {
+            it.copy(
+                currentSession = CurrentSessionUi(
+                    id = newSession.id,
+                    title = newSession.title,
+                    isTranscription = newSession.isTranscription
+                ),
+                chatMessages = emptyList(),
+                isLoadingHistory = false,
+                showWelcomeHero = true
+            )
+        }
+        updateDebugSessionMetadata(null)
     }
 
     private suspend fun enforcePlaceholderForHeroIfNeeded() {

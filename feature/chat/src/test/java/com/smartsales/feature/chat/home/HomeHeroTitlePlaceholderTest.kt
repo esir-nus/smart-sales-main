@@ -93,7 +93,9 @@ class HomeHeroTitlePlaceholderTest {
         assertTrue(state.chatMessages.isEmpty())
         assertTrue(SessionTitlePolicy.isPlaceholder(state.currentSession.title))
         assertEquals(SessionTitlePolicy.PLACEHOLDER_TITLE, state.currentSession.title)
-        assertEquals(SessionTitlePolicy.PLACEHOLDER_TITLE, sessionRepo.findById("home-session")?.title)
+        assertTrue(state.currentSession.id != "home-session")
+        // 历史会话仍保留原始标题
+        assertEquals("罗总_报价跟进_12/08", sessionRepo.findById("home-session")?.title)
     }
 
     private fun buildViewModel(sessionRepo: SessionRepository): HomeScreenViewModel {
@@ -231,6 +233,17 @@ class HomeHeroTitlePlaceholderTest {
     ) : SessionRepository {
         private val mutex = Mutex()
         override val summaries: MutableStateFlow<List<AiSessionSummary>> = MutableStateFlow(initial)
+
+        override suspend fun createNewChatSession(): AiSessionSummary {
+            val summary = AiSessionSummary(
+                id = "session-${summaries.value.size}",
+                title = SessionTitlePolicy.newChatPlaceholder(),
+                lastMessagePreview = "",
+                updatedAtMillis = 0L
+            )
+            upsert(summary)
+            return summary
+        }
 
         override suspend fun upsert(summary: AiSessionSummary) {
             mutex.withLock {

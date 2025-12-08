@@ -232,6 +232,17 @@ class HomeStreamingDedupTest {
         private val sessions = mutableMapOf<String, AiSessionSummary>()
         override val summaries: MutableStateFlow<List<AiSessionSummary>> = MutableStateFlow(emptyList())
 
+        override suspend fun createNewChatSession(): AiSessionSummary {
+            val summary = AiSessionSummary(
+                id = "session-${sessions.size}",
+                title = com.smartsales.core.metahub.SessionTitlePolicy.newChatPlaceholder(),
+                lastMessagePreview = "",
+                updatedAtMillis = 0L
+            )
+            upsert(summary)
+            return summary
+        }
+
         override suspend fun upsert(summary: AiSessionSummary) {
             sessions[summary.id] = summary
             summaries.value = sessions.values.toList()

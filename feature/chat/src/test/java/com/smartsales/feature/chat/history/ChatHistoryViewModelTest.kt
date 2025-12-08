@@ -222,6 +222,17 @@ class ChatHistoryViewModelTest {
             emitAll(state)
         }
 
+        override suspend fun createNewChatSession(): AiSessionSummary {
+            val summary = AiSessionSummary(
+                id = "session-${state.value.size}",
+                title = com.smartsales.core.metahub.SessionTitlePolicy.newChatPlaceholder(),
+                lastMessagePreview = "",
+                updatedAtMillis = 0L
+            )
+            upsert(summary)
+            return summary
+        }
+
         override suspend fun upsert(summary: AiSessionSummary) {
             val filtered = state.value.filterNot { it.id == summary.id }
             state.value = (filtered + summary).sortedWith(

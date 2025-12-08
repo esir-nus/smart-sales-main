@@ -112,7 +112,7 @@ import java.util.Locale
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreen.kt
 // 模块：:feature:chat
-// 说明：Home 层 Compose UI，渲染设备/音频提示、聊天记录、快捷技能与输入框
+// 说明：Home 层 Compose UI，仅渲染聊天欢迎区、消息列表、快捷技能与输入框
 // 作者：创建于 2025-11-20
 
 @Composable

@@ -123,6 +123,39 @@ class AiFeatureTestActivityTest {
     }
 
     @Test
+    fun homeEmptySession_showsHeroAndQuickSkills_onlyChatUi() {
+        waitForHomeRendered()
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.HERO, useUnmergedTree = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag("home_quick_skill_${QuickSkillId.SMART_ANALYSIS.name}", useUnmergedTree = true)
+            .assertIsDisplayed()
+
+        assertZeroNodes(HomeScreenTestTags.DEVICE_ENTRY)
+        assertZeroNodes(HomeScreenTestTags.AUDIO_ENTRY)
+    }
+
+    @Test
+    fun heroHidesAfterFirstMessage_andDoesNotReturn() {
+        waitForHomeRendered()
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.INPUT_FIELD, useUnmergedTree = true)
+            .performTextInput("hi there")
+        composeRule.onNodeWithTag(HomeScreenTestTags.SEND_BUTTON, useUnmergedTree = true)
+            .performClick()
+
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithTag(HomeScreenTestTags.HERO, useUnmergedTree = true)
+                .fetchSemanticsNodes().isEmpty()
+        }
+
+        composeRule.onNodeWithTag("home_quick_skill_${QuickSkillId.SMART_ANALYSIS.name}", useUnmergedTree = true)
+            .assertIsDisplayed()
+        assertZeroNodes(HomeScreenTestTags.DEVICE_ENTRY)
+        assertZeroNodes(HomeScreenTestTags.AUDIO_ENTRY)
+    }
+
+    @Test
     fun exportButtons_doNotNavigateAway() {
         waitForPage(AiFeatureTestTags.PAGE_HOME)
 
@@ -260,6 +293,12 @@ class AiFeatureTestActivityTest {
     private fun assertSingleTag(tag: String) {
         composeRule.waitUntil(timeoutMillis = 5_000) {
             composeRule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().size == 1
+        }
+    }
+
+    private fun assertZeroNodes(tag: String) {
+        composeRule.waitUntil(timeoutMillis = 2_000) {
+            composeRule.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isEmpty()
         }
     }
 }

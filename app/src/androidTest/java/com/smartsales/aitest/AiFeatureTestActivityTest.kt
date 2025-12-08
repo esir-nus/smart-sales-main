@@ -7,6 +7,7 @@ package com.smartsales.aitest
 
 import android.Manifest
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -21,11 +22,14 @@ import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.aitest.TestHomePage
 import com.smartsales.feature.media.audio.AudioFilesTestTags
 import com.smartsales.feature.chat.history.ChatHistoryTestTags
+import com.smartsales.feature.chat.home.chatDebugHudOverride
 import org.junit.rules.RuleChain
 import org.junit.rules.TestRule
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.junit.After
+import org.junit.Assert.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 class AiFeatureTestActivityTest {
@@ -39,6 +43,11 @@ class AiFeatureTestActivityTest {
 
     @get:Rule
     val ruleChain: TestRule = RuleChain.outerRule(permissionRule).around(composeRule)
+
+    @After
+    fun tearDown() {
+        chatDebugHudOverride = null
+    }
 
     @Test
     fun defaultTab_isHome() {
@@ -167,6 +176,39 @@ class AiFeatureTestActivityTest {
             it.onBackPressedDispatcher.onBackPressed()
         }
         waitForHomeRendered()
+    }
+
+    @Test
+    fun debugHud_toggleShowsAndHidesPanel_whenEnabled() {
+        chatDebugHudOverride = true
+        waitForHomeRendered()
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.DEBUG_HUD_TOGGLE, useUnmergedTree = true)
+            .assertIsDisplayed()
+            .performClick()
+
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(HomeScreenTestTags.DEBUG_HUD_PANEL, useUnmergedTree = true)
+            .assertIsDisplayed()
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.DEBUG_HUD_CLOSE, useUnmergedTree = true)
+            .performClick()
+
+        composeRule.onNodeWithTag(HomeScreenTestTags.DEBUG_HUD_PANEL, useUnmergedTree = true)
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun debugHud_iconHidden_whenDisabled() {
+        chatDebugHudOverride = false
+        waitForHomeRendered()
+
+        val toggleCount = composeRule.onAllNodesWithTag(HomeScreenTestTags.DEBUG_HUD_TOGGLE, useUnmergedTree = true)
+            .fetchSemanticsNodes().size
+        val panelCount = composeRule.onAllNodesWithTag(HomeScreenTestTags.DEBUG_HUD_PANEL, useUnmergedTree = true)
+            .fetchSemanticsNodes().size
+        assertTrue(toggleCount == 0)
+        assertTrue(panelCount == 0)
     }
 
     private fun goHome() {

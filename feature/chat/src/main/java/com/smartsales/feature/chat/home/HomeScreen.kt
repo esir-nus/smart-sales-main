@@ -98,6 +98,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 import com.smartsales.feature.chat.home.CHAT_DEBUG_HUD_ENABLED
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -517,21 +518,24 @@ fun HomeScreen(
                         }
                     )
                 }
-                if (showDebugPanel && state.debugSessionMetadata != null) {
+                if (hudEnabled && showDebugPanel && state.debugSessionMetadata != null) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.3f))
+                            .background(Color.Black.copy(alpha = 0.3f))
                             .clickable(
                                 indication = null,
                                 interactionSource = remember { MutableInteractionSource() }
                             ) {
                                 onToggleDebugMetadata()
                             }
+                            .testTag(HomeScreenTestTags.DEBUG_HUD_SCRIM)
                     )
                     DebugSessionMetadataHud(
                         metadata = state.debugSessionMetadata,
-                        onClose = onToggleDebugMetadata,
+                        onClose = {
+                            onToggleDebugMetadata()
+                        },
                         onCopy = { text ->
                             runCatching {
                                 clipboardManager.setText(AnnotatedString(text))
@@ -736,6 +740,10 @@ object HomeScreenTestTags {
     const val HISTORY_ITEM_PREFIX = "home_history_item_"
     const val HERO = "home_hero"
     const val DEBUG_HUD_PANEL = "debug_hud_panel"
+    const val DEBUG_HUD_TOGGLE = "debug_toggle_metadata"
+    const val DEBUG_HUD_SCRIM = "debug_hud_scrim"
+    const val DEBUG_HUD_CLOSE = "debug_hud_close"
+    const val DEBUG_HUD_COPY = "debug_hud_copy"
 }
 
 @Composable
@@ -779,7 +787,7 @@ private fun HomeTopBar(
             if (hudEnabled) {
                 IconButton(
                     onClick = onToggleDebugMetadata,
-                    modifier = Modifier.testTag("debug_toggle_metadata")
+                    modifier = Modifier.testTag(HomeScreenTestTags.DEBUG_HUD_TOGGLE)
                 ) {
                     Box(
                         modifier = Modifier
@@ -833,14 +841,16 @@ private fun DebugSessionMetadataHud(
             .heightIn(max = screenHalfHeight)
             .testTag(HomeScreenTestTags.DEBUG_HUD_PANEL),
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        tonalElevation = 6.dp
+        tonalElevation = 8.dp,
+        shadowElevation = 12.dp,
+        color = MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -853,10 +863,16 @@ private fun DebugSessionMetadataHud(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = { onCopy(hudText) }) {
+                    TextButton(
+                        onClick = { onCopy(hudText) },
+                        modifier = Modifier.testTag(HomeScreenTestTags.DEBUG_HUD_COPY)
+                    ) {
                         Text(text = "复制")
                     }
-                    IconButton(onClick = onClose) {
+                    IconButton(
+                        onClick = onClose,
+                        modifier = Modifier.testTag(HomeScreenTestTags.DEBUG_HUD_CLOSE)
+                    ) {
                         Icon(imageVector = Icons.Filled.Close, contentDescription = "关闭 HUD")
                     }
                 }

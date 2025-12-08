@@ -20,6 +20,7 @@ import com.smartsales.feature.media.audio.AudioFilesViewModel
 fun AudioFilesRoute(
     modifier: Modifier = Modifier,
     viewModel: AudioFilesViewModel = hiltViewModel(),
+    showTopBar: Boolean = true,
     onAskAiAboutTranscript: (recordingId: String, fileName: String, jobId: String?, sessionId: String?, preview: String?, fullTranscript: String?) -> Unit = { _, _, _, _, _, _ -> }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -52,6 +53,7 @@ fun AudioFilesRoute(
         },
         onTranscriptDismissed = viewModel::onTranscriptDismissed,
         onErrorDismissed = viewModel::onErrorDismissed,
-        modifier = modifier
+        modifier = modifier,
+        showTopBar = showTopBar
     )
 }

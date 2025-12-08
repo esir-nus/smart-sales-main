@@ -213,13 +213,17 @@ fun HomeScreenRoute(
         exportInProgress = state.exportInProgress,
         onLoadMoreHistory = viewModel::onLoadMoreHistory,
         onProfileClicked = viewModel::onTapProfile,
-        onNewChatClicked = viewModel::onNewChatClicked,
-        onSessionSelected = viewModel::setSession,
-        chatErrorMessage = state.chatErrorMessage,
-        onPickAudioFile = viewModel::onAudioFilePicked,
-        onPickImageFile = viewModel::onImagePicked,
-        modifier = modifier,
-        showHistoryPanel = showHistoryPanel,
+    onNewChatClicked = viewModel::onNewChatClicked,
+    onSessionSelected = viewModel::setSession,
+    chatErrorMessage = state.chatErrorMessage,
+    onPickAudioFile = viewModel::onAudioFilePicked,
+    onPickImageFile = viewModel::onImagePicked,
+    onAudioClicked = {
+        dismissKeyboard()
+        onNavigateToAudioFiles()
+    },
+    modifier = modifier,
+    showHistoryPanel = showHistoryPanel,
         onToggleHistoryPanel = { showHistoryPanel = true },
         onDismissHistoryPanel = { showHistoryPanel = false },
         historySessions = state.sessionList.take(10),
@@ -257,6 +261,7 @@ fun HomeScreen(
     exportInProgress: Boolean,
     onPickAudioFile: (Uri) -> Unit = {},
     onPickImageFile: (Uri) -> Unit = {},
+    onAudioClicked: () -> Unit = {},
     modifier: Modifier = Modifier,
     showHistoryPanel: Boolean = false,
     onToggleHistoryPanel: () -> Unit = {},
@@ -403,20 +408,24 @@ fun HomeScreen(
                         .testTag(HomeScreenTestTags.ROOT),
                     snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
-                HomeTopBar(
-                    title = state.currentSession.title,
-                    onProfileClick = onProfileClicked,
-                    deviceSnapshot = state.deviceSnapshot,
-                    onHistoryClick = {
-                        onDismissKeyboard()
-                        onToggleHistoryPanel()
+                        HomeTopBar(
+                            title = state.currentSession.title,
+                            onProfileClick = onProfileClicked,
+                            deviceSnapshot = state.deviceSnapshot,
+                            onHistoryClick = {
+                                onDismissKeyboard()
+                                onToggleHistoryPanel()
+                            },
+                            onAudioClick = {
+                                onDismissKeyboard()
+                                onAudioClicked()
+                            },
+                            onNewChatClick = onNewChatClicked,
+                            hudEnabled = hudEnabled,
+                            showDebugMetadata = state.showDebugMetadata,
+                            onToggleDebugMetadata = { onToggleDebugMetadata() }
+                        )
                     },
-                    onNewChatClick = onNewChatClicked,
-                    hudEnabled = hudEnabled,
-                    showDebugMetadata = state.showDebugMetadata,
-                    onToggleDebugMetadata = { onToggleDebugMetadata() }
-                )
-            },
                     bottomBar = {
                         val inputEnabled = !chatBusy && !state.isInputBusy
                         HomeInputArea(
@@ -792,6 +801,7 @@ object HomeScreenTestTags {
     const val DEBUG_HUD_SCRIM = "debug_hud_scrim"
     const val DEBUG_HUD_CLOSE = "debug_hud_close"
     const val DEBUG_HUD_COPY = "debug_hud_copy"
+    const val AUDIO_TOGGLE = "home_audio_toggle"
 }
 
 @Composable
@@ -800,6 +810,7 @@ private fun HomeTopBar(
     onProfileClick: () -> Unit,
     deviceSnapshot: DeviceSnapshotUi?,
     onHistoryClick: () -> Unit,
+    onAudioClick: () -> Unit,
     onNewChatClick: () -> Unit,
     hudEnabled: Boolean,
     showDebugMetadata: Boolean,
@@ -837,6 +848,12 @@ private fun HomeTopBar(
                     labelColor = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             )
+        }
+        IconButton(
+            onClick = onAudioClick,
+            modifier = Modifier.testTag(HomeScreenTestTags.AUDIO_TOGGLE)
+        ) {
+            Icon(imageVector = Icons.Filled.AudioFile, contentDescription = "音频库")
         }
         if (hudEnabled) {
             IconButton(

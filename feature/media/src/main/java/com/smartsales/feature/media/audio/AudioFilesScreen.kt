@@ -84,7 +84,8 @@ fun AudioFilesScreen(
     onAskAiClicked: (AudioRecordingUi) -> Unit,
     onTranscriptDismissed: () -> Unit,
     onErrorDismissed: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showTopBar: Boolean = true
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val designTokens = AppDesignTokens.current()
@@ -97,22 +98,26 @@ fun AudioFilesScreen(
             .fillMaxSize()
             .testTag(AudioFilesTestTags.ROOT),
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text(text = "录音文件") },
-                actions = {
-                    IconButton(
-                        onClick = onSyncClicked,
-                        enabled = !uiState.isSyncing,
-                        modifier = Modifier.testTag(AudioFilesTestTags.SYNC_BUTTON)
-                    ) {
-                        Icon(Icons.Default.Upload, contentDescription = "同步")
+        topBar = if (showTopBar) {
+            {
+                TopAppBar(
+                    title = { Text(text = "录音文件") },
+                    actions = {
+                        IconButton(
+                            onClick = onSyncClicked,
+                            enabled = !uiState.isSyncing,
+                            modifier = Modifier.testTag(AudioFilesTestTags.SYNC_BUTTON)
+                        ) {
+                            Icon(Icons.Default.Upload, contentDescription = "同步")
+                        }
+                        IconButton(onClick = onRefresh, enabled = !uiState.isSyncing) {
+                            Icon(Icons.Default.Refresh, contentDescription = "刷新")
+                        }
                     }
-                    IconButton(onClick = onRefresh, enabled = !uiState.isSyncing) {
-                        Icon(Icons.Default.Refresh, contentDescription = "刷新")
-                    }
-                }
-            )
+                )
+            }
+        } else {
+            {}
         }
     ) { innerPadding ->
         Box(

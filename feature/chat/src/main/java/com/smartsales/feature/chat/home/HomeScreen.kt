@@ -29,13 +29,16 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -80,6 +83,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.focus.onFocusChanged
@@ -261,7 +265,8 @@ fun HomeScreen(
     }
 
     val listState = rememberLazyListState()
-    val debugHudEnabled = CHAT_DEBUG_HUD_ENABLED && state.showDebugMetadata
+    val hudEnabled = CHAT_DEBUG_HUD_ENABLED
+    val showDebugPanel = hudEnabled && state.showDebugMetadata
     val emptySkillOrder = listOf(
         QuickSkillId.SMART_ANALYSIS,
         QuickSkillId.EXPORT_PDF,
@@ -340,6 +345,7 @@ fun HomeScreen(
                     onProfileClick = onProfileClicked,
                     deviceSnapshot = state.deviceSnapshot,
                     onHistoryClick = onToggleHistoryPanel,
+                    hudEnabled = hudEnabled,
                     showDebugMetadata = state.showDebugMetadata,
                     onToggleDebugMetadata = { onToggleDebugMetadata() }
                 )
@@ -492,12 +498,37 @@ fun HomeScreen(
                         }
                     )
                 }
-                if (debugHudEnabled && state.debugSessionMetadata != null) {
+                if (showDebugPanel && state.debugSessionMetadata != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.3f))
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() }
+                            ) {
+                                onToggleDebugMetadata()
+                            }
+                    )
                     DebugSessionMetadataHud(
                         metadata = state.debugSessionMetadata,
+                        onClose = onToggleDebugMetadata,
+                        onCopy = { text ->
+                            runCatching {
+                                clipboardManager.setText(AnnotatedString(text))
+                            }.onSuccess {
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("已复制调试信息")
+                                }
+                            }.onFailure {
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("复制失败，请稍后重试")
+                                }
+                            }
+                        },
                         modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(start = 12.dp, end = 12.dp, bottom = 96.dp)
+                            .align(Alignment.BottomCenter)
+                            .padding(horizontal = 12.dp, vertical = 12.dp)
                     )
                 }
                 if (showHistoryPanel) {
@@ -683,6 +714,7 @@ object HomeScreenTestTags {
     const val HISTORY_EMPTY = "home_history_empty"
     const val HISTORY_ITEM_PREFIX = "home_history_item_"
     const val HERO = "home_hero"
+    const val DEBUG_HUD_PANEL = "debug_hud_panel"
 }
 
 @Composable
@@ -690,6 +722,7 @@ private fun HomeTopBar(
     onProfileClick: () -> Unit,
     deviceSnapshot: DeviceSnapshotUi?,
     onHistoryClick: () -> Unit,
+    hudEnabled: Boolean,
     showDebugMetadata: Boolean,
     onToggleDebugMetadata: () -> Unit
 ) {
@@ -722,12 +755,23 @@ private fun HomeTopBar(
             ) {
                 Icon(Icons.Filled.History, contentDescription = "历史记录")
             }
-            if (CHAT_DEBUG_HUD_ENABLED) {
-                TextButton(
+            if (hudEnabled) {
+                IconButton(
                     onClick = onToggleDebugMetadata,
                     modifier = Modifier.testTag("debug_toggle_metadata")
                 ) {
-                    Text(text = if (showDebugMetadata) "关闭调试 HUD" else "开启调试 HUD")
+                    Box(
+                        modifier = Modifier
+                            .size(14.dp)
+                            .background(
+                                color = if (showDebugMetadata) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                                shape = CircleShape
+                            )
+                    )
                 }
             }
             IconButton(
@@ -743,58 +787,95 @@ private fun HomeTopBar(
 @Composable
 private fun DebugSessionMetadataHud(
     metadata: DebugSessionMetadata,
+    onClose: () -> Unit,
+    onCopy: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    val screenHalfHeight = LocalConfiguration.current.screenHeightDp.dp * 0.5f
+    val scrollState = rememberScrollState()
+    val hudText = remember(metadata) {
+        buildString {
+            appendLine("sessionId: ${metadata.sessionId}")
+            appendLine("title: ${metadata.title}")
+            appendLine("mainPerson: ${metadata.mainPerson ?: "-"}")
+            appendLine("shortSummary: ${metadata.shortSummary ?: "-"}")
+            appendLine("title6: ${metadata.summaryTitle6Chars ?: "-"}")
+            if (metadata.notes.isNotEmpty()) {
+                appendLine("notes:")
+                metadata.notes.forEach { appendLine("- $it") }
+            }
+        }.trimEnd()
+    }
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
-                shape = MaterialTheme.shapes.medium
-            )
-            .padding(horizontal = 14.dp, vertical = 10.dp)
-            .testTag("debug_metadata_hud"),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+            .heightIn(max = screenHalfHeight)
+            .testTag(HomeScreenTestTags.DEBUG_HUD_PANEL),
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        tonalElevation = 6.dp
     ) {
-        Text(
-            text = "DEBUG_METADATA",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.secondary
-        )
-        Text(
-            text = "sessionId = ${metadata.sessionId}",
-            style = MaterialTheme.typography.labelSmall
-        )
-        Text(
-            text = "title = ${metadata.title}",
-            style = MaterialTheme.typography.labelSmall
-        )
-        Text(
-            text = "mainPerson = ${metadata.mainPerson ?: "null"}",
-            style = MaterialTheme.typography.labelSmall
-        )
-        Text(
-            text = "shortSummary = ${metadata.shortSummary ?: "null"}",
-            style = MaterialTheme.typography.labelSmall
-        )
-        Text(
-            text = "title6 = ${metadata.summaryTitle6Chars ?: "null"}",
-            style = MaterialTheme.typography.labelSmall
-        )
-        if (CHAT_DEBUG_HUD_ENABLED && metadata.notes.isNotEmpty()) {
-            Text(
-                text = "notes:",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary
-            )
-            metadata.notes.forEach { note ->
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = "- $note",
+                    text = "调试信息",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { onCopy(hudText) }) {
+                        Text(text = "复制")
+                    }
+                    IconButton(onClick = onClose) {
+                        Icon(imageVector = Icons.Filled.Close, contentDescription = "关闭 HUD")
+                    }
+                }
+            }
+            DebugField(label = "sessionId", value = metadata.sessionId)
+            DebugField(label = "title", value = metadata.title)
+            DebugField(label = "mainPerson", value = metadata.mainPerson ?: "-")
+            DebugField(label = "shortSummary", value = metadata.shortSummary ?: "-")
+            DebugField(label = "title6", value = metadata.summaryTitle6Chars ?: "-")
+            if (metadata.notes.isNotEmpty()) {
+                Text(
+                    text = "notes",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                metadata.notes.forEach { note ->
+                    Text(
+                        text = "- $note",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun DebugField(label: String, value: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 

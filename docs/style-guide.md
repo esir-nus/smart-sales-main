@@ -359,6 +359,7 @@ Visual behavior shared by all drawers; specific flows in `ux-contract.md`.
   * Header row: `SectionTitle` + optional filter/actions.
   * Content: `LazyColumn` with list items.
   * Empty state text: `Body` + `TextMuted` centered or top-aligned.
+  * History drawer uses全高列布局，顶部为设备状态占位卡片，底部为个人中心入口，两者均使用 `SurfaceCard` 样式并与抽屉宽度对齐。
 
 ### 6.7 Lists & Rows
 

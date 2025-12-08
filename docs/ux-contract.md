@@ -113,20 +113,19 @@ Left → right:
 1. **Hamburger icon**
 
    * Opens **history drawer**.
-   * Keeps history test tag (e.g. `HomeScreenTestTags.HISTORY_TOGGLE`).
+   * Tag: `HISTORY_TOGGLE`.
 
-2. **Session title**
+2. **Device status indicator（占位）**
+
+   * Tag: `HOME_DEVICE_INDICATOR`.
+   * 当前版本中，设备指示器仅作为占位显示「设备状态」，不展示实时连接/电量/存储信息，也不作为导航入口（点击无效，不跳转 Device Manager）。
+   * Future: 待硬件侧 SDK 接入后，在不改变位置与标签的前提下，将展示真实设备连接/电量状态。
+
+3. **Session title**
 
    * Binds to `CurrentSessionUi.title`.
    * Single line, ellipsis overflow.
    * Uses `HomeScreenTestTags.SESSION_TITLE`.
-
-3. **Device connection indicator**
-
-   * Small icon/chip, non-invasive:
-
-     * States: Connected / Connecting / Disconnected.
-   * Tap may navigate to Device Manager (when implemented).
 
 4. **HUD dot (optional, debug only)**
 
@@ -137,11 +136,9 @@ Left → right:
 5. **“+” new chat icon**
 
    * Starts a **fresh chat session** (see Session Titles).
-   * Uses `home_new_chat_button` tag.
+   * Uses `home_new_chat_button` tag (`NEW_CHAT_BUTTON` in code).
 
-6. **Profile / avatar**
-
-   * Opens User Center (can be placeholder).
+**Note:** 顶部栏不再包含 Profile/用户头像；User Center 入口位于历史抽屉底部的独立行。
 
 ### 4.2 Behavior
 
@@ -208,33 +205,36 @@ Left → right:
 
 ### 5.3 History Drawer Content & Visuals
 
-* History drawer slides **from the left** (see Drawers).
+* History drawer slides **from the left** as a `ModalNavigationDrawer` (see Drawers).
 
 * Trigger:
 
   * Tap hamburger icon.
   * Swipe from left edge beyond open threshold.
 
-* Header:
+* Content order（top → bottom）:
 
-  * Title: “历史会话”.
-  * Close icon at top-right of drawer.
+  * **Device status card（占位）**
+    * Tag: `HISTORY_DEVICE_STATUS`.
+    * 位置：抽屉最上方。
+    * 当前仅显示占位文案 “设备状态”，不展示实时设备数值，也不提供跳转。
+    * Future: 待硬件侧接入后，将在此展示真实设备连接、电量、存储等信息，标签与位置保持不变。
 
-* Items:
+  * **Session list / empty state**
+    * 排序：先按 pinned（置顶会话在前），再在各自分组内按 `updatedAtMillis` 降序。
+    * 展示：会话标题（与 Home 同源的标题管线）、最后一条消息预览（单行）、时间戳（按 style guide）。
+    * Tags：`HISTORY_ITEM_PREFIX`（列表项），`HISTORY_EMPTY`（空态文案）。
 
-  * Sorted by `updatedAtMillis` (desc, newest first).
-  * Each card shows:
-
-    * Session title (same logic as Home).
-    * Last message preview (single line).
-    * Time stamp (formatted per style guide).
+  * **User Center（底部入口）**
+    * 独立行位于抽屉底部，包含人物图标 + 文案（如“个人中心”）。
+    * Tag: `HISTORY_USER_CENTER`.
+    * 点击进入现有 User Center / Profile 页面。
+    * 顶部栏不再提供 Profile/头像按钮，此处为 Home 进入 User Center 的规范入口。
 
 * Layout & style:
 
-  * Visual structure follows the provided reference screenshot:
-
-    * Light background, card-like items.
-    * Space between recent groups (7 days / 30 days etc.) – these sections are allowed but optional until specified.
+  * 采用全高列布局，背景为卡片风格。
+  * 可选的分组间距（7 天 / 30 天等）可保留。
 
 ### 5.4 Export Filename Pattern
 
@@ -413,15 +413,13 @@ For all drawers:
 
 * **Small drag → peek**
 
-  * Short drag moves the drawer slightly (peek state).
-  * If user releases within this small range, drawer **snaps back** to its original state.
+  * A drag of 0–15% of the drawer width is treated as a peek.
+  * When the finger is released within this range, the drawer **snaps back** to its previous state.
 
 * **Threshold → commit**
 
-  * Drag beyond a defined threshold (in distance and/or velocity):
-
-    * From closed, dragging open: on release, drawer snaps **fully open**.
-    * From open, dragging closed: on release, drawer snaps **fully closed**.
+  * Once progress passes ≈15% of the drawer width, releasing the finger causes the drawer to auto-complete to fully open or fully closed (depending on direction), without requiring a full travel swipe.
+  * This applies both when opening from closed and when closing from open.
   * No half-open resting positions.
 
 * **Backdrop**
@@ -430,31 +428,24 @@ For all drawers:
 
 ### 10.2 History Drawer Specifics
 
-* **Side**: from the **left edge**.
-* **Open**:
-
-  * Tap hamburger icon in top bar.
-  * Swipe from left beyond open threshold.
-* **Close**:
-
-  * Tap backdrop.
-  * Drag left beyond close threshold.
-  * Tap close icon in drawer header.
+* Horizontal drag from the left edge controls the drawer:
+  * Drag progress 0–15% of drawer width → peek; on release, snaps back to previous state (closed or open).
+  * Drag progress ≥ 15% → on release, commits and snaps fully open (dragging in) or fully closed (dragging back).
+* Backdrop tap closes the drawer if it is open.
+* gesturesEnabled is false while IME is focused: no drawer drag while typing, but tapping the hamburger still opens/closes the drawer.
 
 History layout is described in **5.3**.
 
 ### 10.3 Audio & Device Overlays
 
 * Triggered by explicit UI actions (buttons / icons).
+* Vertical overlay stack gestures（Home center, Audio down, Device up）:
+  * Vertical drag 0–15% of screen height → peek, return to previous overlay on release.
+  * Vertical drag ≥ 15% → on release, commit to switching overlay（Home ↔ Audio ↔ Device）.
+  * As with the drawer, overlay drag gestures are disabled while IME is focused; explicit navigation/handles still work once the keyboard is dismissed.
 * While IME is open (typing):
-
-  * Drawer **gestures** (drag handles, swipe) are disabled.
+  * Drawer/overlay **gestures** (drag handles, swipe) are disabled.
   * Exact behavior for explicit taps can be decided later; if changed, update this doc.
-
----
-
-## 11. HUD & Debug Metadata
-
 * HUD is **debug-only** and controlled by configuration (e.g. `CHAT_DEBUG_HUD_ENABLED`).
 
 **Trigger:**

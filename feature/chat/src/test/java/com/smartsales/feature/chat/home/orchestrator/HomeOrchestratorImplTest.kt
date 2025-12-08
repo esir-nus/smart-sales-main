@@ -74,7 +74,7 @@ class HomeOrchestratorImplTest {
     }
 
     @Test
-    fun `uses first json block when multiple fenced blocks exist`() = runTest(dispatcher) {
+    fun `uses last json block when multiple fenced blocks exist`() = runTest(dispatcher) {
         val metaHub = RecordingMetaHub()
         val aiChatService = CompletedAiChatService(
             """
@@ -83,7 +83,7 @@ class HomeOrchestratorImplTest {
             ```
             无关文本
             ```json
-            { "main_person": "客户二" }
+            { "main_person": "客户二", "summary_title_6chars": "标题二" }
             ```
             """.trimIndent()
         )
@@ -97,8 +97,8 @@ class HomeOrchestratorImplTest {
             )
         ).collect { /* no-op */ }
 
-        assertEquals("客户一", metaHub.lastSession?.mainPerson)
-        assertEquals("标题一", metaHub.lastSession?.summaryTitle6Chars)
+        assertEquals("客户二", metaHub.lastSession?.mainPerson)
+        assertEquals("标题二", metaHub.lastSession?.summaryTitle6Chars)
     }
 
     @Test
@@ -123,6 +123,80 @@ class HomeOrchestratorImplTest {
         ).collect { /* no-op */ }
 
         assertEquals("王总", metaHub.lastSession?.mainPerson)
+    }
+
+    @Test
+    fun `smart analysis cleaner removes progressive scaffolding and renumbers list`() = runTest(dispatcher) {
+        val messy = """
+            ###### 客## 客户## 客户画像
+            客户对产品有兴趣
+            客户对产品有兴趣，询问价格和交付周期。
+            1) 初步介绍
+            3) 提供报价
+            4) 跟进确认
+            ```json
+            {
+              "short_summary": "短版本",
+              "short_summary": "长版本",
+              "highlights": ["a"],
+              "highlights": ["a","b"],
+              "summary": {
+                "core_insight": "短",
+                "core_insight": "长"
+              }
+            }
+            ```
+        """.trimIndent()
+        val aiChatService = CompletedAiChatService(messy)
+        val orchestrator = HomeOrchestratorImpl(aiChatService, RecordingMetaHub())
+
+        val events = mutableListOf<ChatStreamEvent>()
+        orchestrator.streamChat(
+            ChatRequest(
+                sessionId = "clean-1",
+                userMessage = "go",
+                quickSkillId = QuickSkillId.SMART_ANALYSIS.name
+            )
+        ).collect { events.add(it) }
+
+        val completed = events.first() as ChatStreamEvent.Completed
+        val cleaned = completed.fullText
+        assertTrue(cleaned.contains("客户对产品有兴趣，询问价格和交付周期。"))
+        assertTrue(!cleaned.contains("###### 客"))
+        assertTrue(cleaned.contains("1) 初步介绍"))
+        assertTrue(cleaned.contains("2) 提供报价"))
+        assertTrue(cleaned.contains("3) 跟进确认"))
+        // JSON 块保留但去重，只有最终版本
+        assertTrue(cleaned.contains("\"short_summary\": \"长版本\""))
+        assertTrue(!cleaned.contains("\"short_summary\": \"短版本\""))
+        assertTrue(cleaned.contains("\"highlights\": ["))
+    }
+
+    @Test
+    fun `metadata parser prefers last value when duplicates present`() = runTest(dispatcher) {
+        val metaHub = RecordingMetaHub()
+        val aiChatService = CompletedAiChatService(
+            """
+            ```json
+            { "short_summary": "短版本", "highlights": ["a"] }
+            ```
+            ```json
+            { "short_summary": "长版本", "highlights": ["a","b"] }
+            ```
+            """.trimIndent()
+        )
+        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub)
+
+        orchestrator.streamChat(
+            ChatRequest(
+                sessionId = "dup",
+                userMessage = "hi",
+                quickSkillId = QuickSkillId.SMART_ANALYSIS.name
+            )
+        ).collect { /* no-op */ }
+
+        assertEquals("长版本", metaHub.lastSession?.shortSummary)
+        assertEquals(listOf("a", "b").toSet(), metaHub.lastSession?.tags)
     }
 
     private class CompletedAiChatService(

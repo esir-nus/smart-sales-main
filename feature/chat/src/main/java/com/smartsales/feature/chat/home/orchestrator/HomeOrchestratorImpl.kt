@@ -34,8 +34,11 @@ class HomeOrchestratorImpl @Inject constructor(
             aiChatService.streamChat(request).collect { event ->
                 if (event is ChatStreamEvent.Completed && shouldParseMetadata(request)) {
                     runCatching { maybeUpsertSessionMetadata(request, event.fullText) }
+                    val cleaned = cleanSmartAnalysisOutput(event.fullText)
+                    emit(ChatStreamEvent.Completed(cleaned))
+                } else {
+                    emit(event)
                 }
-                emit(event)
             }
         }
     }
@@ -80,7 +83,7 @@ class HomeOrchestratorImpl @Inject constructor(
     private fun firstJsonCodeBlock(text: String): String? {
         // pattern like ```json\n...\n``` or ```\n...\n```
         val regex = Regex("```(?:json)?\\s*([\\s\\S]*?)```", RegexOption.MULTILINE)
-        return regex.find(text)?.groupValues?.getOrNull(1)?.trim()
+        return regex.findAll(text).lastOrNull()?.groupValues?.getOrNull(1)?.trim()
     }
 
     private fun extractBareJsonObject(text: String): String? {
@@ -104,7 +107,7 @@ class HomeOrchestratorImpl @Inject constructor(
     private fun findStringField(text: String, field: String): String? {
         // 匹配："field": "value"
         val pattern = Regex(""""$field"\s*:\s*"([^"]*)"""")
-        val match = pattern.find(text) ?: return null
+        val match = pattern.findAll(text).lastOrNull() ?: return null
         val value = match.groupValues.getOrNull(1)?.trim()
         return value?.takeIf { it.isNotBlank() }
     }
@@ -112,7 +115,7 @@ class HomeOrchestratorImpl @Inject constructor(
     private fun findStringListField(text: String, field: String): List<String> {
         // 匹配："field": ["a", "b", ...]
         val arrayPattern = Regex(""""$field"\s*:\s*\[(.*?)]""", RegexOption.DOT_MATCHES_ALL)
-        val arrayMatch = arrayPattern.find(text) ?: return emptyList()
+        val arrayMatch = arrayPattern.findAll(text).lastOrNull() ?: return emptyList()
         val inner = arrayMatch.groupValues.getOrNull(1) ?: return emptyList()
 
         val elementPattern = Regex(""""([^"]*)"""")
@@ -226,5 +229,120 @@ class HomeOrchestratorImpl @Inject constructor(
             mode == null && request.isFirstAssistantReply -> AnalysisSource.GENERAL_FIRST_REPLY
             else -> null
         }
+    }
+
+    private fun cleanSmartAnalysisOutput(raw: String): String {
+        val fencedJson = firstJsonCodeBlock(raw)
+        val markdownPart = fencedJson
+            ?.let { raw.substringBeforeLast("```json").trimEnd() }
+            ?: raw
+        val collapsed = collapseProgressiveLines(markdownPart)
+            .filterNot { isTemplateEcho(it) }
+        val renumbered = renumberNumberedBlocks(collapsed)
+        val markdown = renumbered.joinToString("\n").trimEnd()
+        val cleanedJson = fencedJson?.let { buildCleanJsonSlice(raw) }
+        return if (cleanedJson.isNullOrBlank()) {
+            markdown
+        } else {
+            listOf(markdown, "```json", cleanedJson, "```")
+                .filter { it.isNotBlank() }
+                .joinToString("\n\n")
+                .trimEnd()
+        }
+    }
+
+    private fun collapseProgressiveLines(markdown: String): List<String> {
+        val lines = markdown.lines()
+        if (lines.isEmpty()) return emptyList()
+        val result = mutableListOf<String>()
+        var index = 0
+        while (index < lines.size) {
+            val current = lines[index]
+            if (current.isBlank()) {
+                result.add(current)
+                index++
+                continue
+            }
+            var candidate = current
+            var nextIndex = index + 1
+            while (nextIndex < lines.size) {
+                val next = lines[nextIndex]
+                if (next.isBlank()) break
+                val trimmed = candidate.trim()
+                val nextTrim = next.trim()
+                if (nextTrim.startsWith(trimmed) && nextTrim.length > trimmed.length) {
+                    candidate = next
+                    nextIndex++
+                } else {
+                    break
+                }
+            }
+            result.add(candidate)
+            index = nextIndex
+        }
+        return result
+    }
+
+    private fun isTemplateEcho(line: String): Boolean {
+        val compact = line.trim().replace(" ", "")
+        if (compact.isEmpty()) return false
+        if (compact.contains("角色/公司/城市")) return true
+        if (compact.endsWith("##客户画像") || compact.endsWith("#会话概要")) return true
+        if (compact.contains("客##客户##客户画像")) return true
+        return false
+    }
+
+    private fun renumberNumberedBlocks(lines: List<String>): List<String> {
+        val pattern = Regex("^\\s*\\d+[).、]")
+        val result = mutableListOf<String>()
+        var counter = 1
+        var inBlock = false
+        for (line in lines) {
+            if (pattern.containsMatchIn(line)) {
+                if (!inBlock) {
+                    counter = 1
+                    inBlock = true
+                }
+                val renamed = line.replace(pattern) { match ->
+                    val firstDigit = match.value.first { it.isDigit() }
+                    val suffix = match.value.substringAfter(firstDigit)
+                    "${counter++}${suffix}"
+                }
+                result.add(renamed)
+            } else {
+                inBlock = false
+                result.add(line)
+            }
+        }
+        return result
+    }
+
+    private fun buildCleanJsonSlice(raw: String): String? {
+        val slice = firstJsonCodeBlock(raw) ?: extractBareJsonObject(raw) ?: return null
+        val mainPerson = findStringField(slice, "main_person")
+            ?: findStringField(slice, "mainPerson")
+        val shortSummary = findStringField(slice, "short_summary")
+        val summaryTitle = findStringField(slice, "summary_title_6chars")
+        val location = findStringField(slice, "location")
+        val highlights = findStringListField(slice, "highlights")
+        val actionable = findStringListField(slice, "actionable_tips")
+        val coreInsight = findStringField(slice, "core_insight")
+        val sharpLine = findStringField(slice, "sharp_line")
+
+        val summaryObj = JSONObject()
+        coreInsight?.takeIf { it.isNotBlank() }?.let { summaryObj.put("core_insight", it) }
+        sharpLine?.takeIf { it.isNotBlank() }?.let { summaryObj.put("sharp_line", it) }
+
+        val obj = JSONObject()
+        mainPerson?.takeIf { it.isNotBlank() }?.let { obj.put("main_person", it) }
+        shortSummary?.takeIf { it.isNotBlank() }?.let { obj.put("short_summary", it) }
+        summaryTitle?.takeIf { it.isNotBlank() }?.let { obj.put("summary_title_6chars", it) }
+        location?.let { obj.put("location", it) }
+        if (highlights.isNotEmpty()) obj.put("highlights", JSONArray(highlights))
+        if (actionable.isNotEmpty()) obj.put("actionable_tips", JSONArray(actionable))
+        if (summaryObj.length() > 0) obj.put("summary", summaryObj)
+
+        if (obj.length() == 0) return null
+        return obj.toString(2)
     }
 }

@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -86,6 +87,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -344,7 +346,10 @@ fun HomeScreen(
                 HomeTopBar(
                     onProfileClick = onProfileClicked,
                     deviceSnapshot = state.deviceSnapshot,
-                    onHistoryClick = onToggleHistoryPanel,
+                    onHistoryClick = {
+                        onDismissKeyboard()
+                        onToggleHistoryPanel()
+                    },
                     hudEnabled = hudEnabled,
                     showDebugMetadata = state.showDebugMetadata,
                     onToggleDebugMetadata = { onToggleDebugMetadata() }
@@ -360,7 +365,10 @@ fun HomeScreen(
                     inputValue = state.inputText,
                     isSmartAnalysisMode = state.isSmartAnalysisMode,
                     onInputChanged = onInputChanged,
-                    onSendClicked = onSendClicked,
+                    onSendClicked = {
+                        onSendClicked()
+                        onDismissKeyboard()
+                    },
                     onQuickSkillSelected = onQuickSkillSelected,
                     onPickAudio = { audioPicker.launch(arrayOf("audio/*")) },
                     onPickImage = { imagePicker.launch(arrayOf("image/*")) },
@@ -375,6 +383,10 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
+                    .pointerInput(isInputFocused) {
+                        if (!isInputFocused) return@pointerInput
+                        detectTapGestures(onTap = { onDismissKeyboard() })
+                    }
             ) {
                 Column(
                     modifier = Modifier.fillMaxSize()
@@ -1127,6 +1139,7 @@ private fun HomeInputArea(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
+                .imePadding()
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {

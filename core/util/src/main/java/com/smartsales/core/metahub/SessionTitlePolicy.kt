@@ -30,6 +30,8 @@ object SessionTitlePolicy {
         val date: String
     )
 
+    fun newChatPlaceholder(): String = PLACEHOLDER_TITLE
+
     fun isPlaceholder(title: String?): Boolean {
         val trimmed = title?.trim().orEmpty()
         if (trimmed.isEmpty()) return true

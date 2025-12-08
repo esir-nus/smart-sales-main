@@ -1015,6 +1015,7 @@ class HomeScreenViewModel @Inject constructor(
                 }
             } else {
                 _uiState.update { it.copy(isLoadingHistory = false, showWelcomeHero = true) }
+                enforcePlaceholderForHeroIfNeeded()
             }
         }
     }
@@ -2584,6 +2585,21 @@ class HomeScreenViewModel @Inject constructor(
             state.copy(currentSession = updatedCurrent)
         }
         updateDebugSessionMetadata(meta)
+    }
+
+    private suspend fun enforcePlaceholderForHeroIfNeeded() {
+        val state = _uiState.value
+        if (!state.showWelcomeHero || state.chatMessages.isNotEmpty()) return
+        if (SessionTitlePolicy.isPlaceholder(state.currentSession.title)) return
+        val placeholder = SessionTitlePolicy.newChatPlaceholder()
+        sessionRepository.updateTitle(sessionId, placeholder)
+        latestSessionSummaries = latestSessionSummaries.map { summary ->
+            if (summary.id == sessionId) summary.copy(title = placeholder) else summary
+        }
+        applySessionList()
+        _uiState.update {
+            it.copy(currentSession = it.currentSession.copy(title = placeholder))
+        }
     }
 
     private suspend fun updateTitleFromMetadata(meta: SessionMetadata) {

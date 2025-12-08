@@ -690,7 +690,8 @@ class HomeScreenViewModel @Inject constructor(
                 _uiState.update { state ->
                     state.copy(
                         chatMessages = state.chatMessages + contextMessage,
-                        snackbarMessage = null
+                        snackbarMessage = null,
+                        showWelcomeHero = false
                     )
                 }
                 persistMessagesAsync()
@@ -703,7 +704,10 @@ class HomeScreenViewModel @Inject constructor(
                 timestampMillis = System.currentTimeMillis()
             )
             _uiState.update { state ->
-                state.copy(chatMessages = state.chatMessages + introMessage)
+                state.copy(
+                    chatMessages = state.chatMessages + introMessage,
+                    showWelcomeHero = false
+                )
             }
             persistMessagesAsync()
             if (transcript.isNullOrBlank()) {
@@ -715,7 +719,13 @@ class HomeScreenViewModel @Inject constructor(
                     timestampMillis = System.currentTimeMillis(),
                     isStreaming = true
                 )
-                _uiState.update { it.copy(chatMessages = _uiState.value.chatMessages + introMessage, snackbarMessage = null) }
+                _uiState.update {
+                    it.copy(
+                        chatMessages = _uiState.value.chatMessages + introMessage,
+                        snackbarMessage = null,
+                        showWelcomeHero = false
+                    )
+                }
                 persistMessagesAsync()
                 transcriptionJob?.cancel()
                 transcriptionJob = launch {
@@ -980,7 +990,7 @@ class HomeScreenViewModel @Inject constructor(
                     updateSessionSummary(preview)
                 }
             } else {
-                _uiState.update { it.copy(isLoadingHistory = false) }
+                _uiState.update { it.copy(isLoadingHistory = false, showWelcomeHero = true) }
             }
         }
     }
@@ -1230,7 +1240,12 @@ class HomeScreenViewModel @Inject constructor(
             isStreaming = isStreaming,
             hasError = hasError
         )
-        _uiState.update { it.copy(chatMessages = it.chatMessages + message) }
+        _uiState.update {
+            it.copy(
+                chatMessages = it.chatMessages + message,
+                showWelcomeHero = false
+            )
+        }
         persistMessagesAsync()
         viewModelScope.launch {
             updateSessionSummary(message.content)

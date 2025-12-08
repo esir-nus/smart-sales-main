@@ -29,8 +29,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -52,14 +50,9 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AudioFile
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.pullrefresh.PullRefreshIndicator
-import androidx.compose.material.pullrefresh.pullRefresh
-import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -254,21 +247,8 @@ fun HomeScreen(
     onInputFocusChanged: (Boolean) -> Unit = {}
 ) {
     Log.i("HomeScreen", "HomeScreen composed - entering function")
-    val refreshingState = remember { mutableStateOf(false) }
-    LaunchedEffect(state.deviceSnapshot, state.audioSummary) {
-        refreshingState.value = false
-    }
     val coroutineScope = rememberCoroutineScope()
     val clipboardManager = LocalClipboardManager.current
-    val pullRefreshState = rememberPullRefreshState(
-        refreshing = refreshingState.value,
-        onRefresh = {
-            if (!refreshingState.value) {
-                refreshingState.value = true
-                onRefreshDeviceAndAudio()
-            }
-        }
-    )
     val audioPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -389,26 +369,17 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .pullRefresh(pullRefreshState)
             ) {
                 Column(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    EntryCards(
-                        deviceSnapshot = state.deviceSnapshot,
-                        audioSummary = state.audioSummary,
-                        onDeviceClick = onDeviceBannerClicked,
-                        onAudioClick = onAudioSummaryClicked,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
                     ) {
                         AnimatedContent(
-                            targetState = state.chatMessages.isEmpty(),
+                            targetState = state.chatMessages.isEmpty() && state.showWelcomeHero,
                             transitionSpec = {
                                 (fadeIn() + slideInVertically { it / 8 }) with
                                     (fadeOut() + slideOutVertically { -it / 8 })
@@ -492,11 +463,6 @@ fun HomeScreen(
                         }
                     }
                 }
-                PullRefreshIndicator(
-                    refreshing = refreshingState.value,
-                    state = pullRefreshState,
-                    modifier = Modifier.align(Alignment.TopCenter)
-                )
                 chatErrorMessage?.let { message ->
                     SnackbarHost(
                         hostState = remember { SnackbarHostState() },
@@ -553,67 +519,71 @@ private fun EmptyStateContent(
     skills: List<QuickSkillUi>,
     onSkillSelected: (QuickSkillId) -> Unit
 ) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+            .padding(horizontal = 16.dp, vertical = 24.dp)
+            .testTag(HomeScreenTestTags.HERO)
     ) {
         Column(
+            modifier = Modifier.align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "LOGO",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "你好，$userName",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "我是您的销售助手",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text(
+                    text = "我可以帮您：",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "• 分析用户画像、意图、痛点。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "• 生成 PDF、CSV 文档及思维导图。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             Text(
-                text = "LOGO",
+                text = "让我们开始吧",
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = "你好，$userName",
-                style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            Text(
-                text = "我是您的销售助手",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
+            QuickSkillRow(
+                skills = skills,
+                selectedSkillId = null,
+                enabled = true,
+                onQuickSkillSelected = onSkillSelected
             )
+            Divider(modifier = Modifier.fillMaxWidth())
         }
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-            horizontalAlignment = Alignment.Start
-        ) {
-            Text(
-                text = "我可以帮您：",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "• 分析用户画像、意图、痛点。",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = "• 生成 PDF、CSV 文档及思维导图。",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Text(
-            text = "让我们开始吧",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        QuickSkillRow(
-            skills = skills,
-            selectedSkillId = null,
-            enabled = true,
-            onQuickSkillSelected = onSkillSelected
-        )
-        Divider(modifier = Modifier.fillMaxWidth())
     }
 }
 
@@ -766,73 +736,6 @@ private fun HomeTopBar(
             ) {
                 Icon(Icons.Filled.Person, contentDescription = "个人中心")
             }
-        }
-    }
-}
-
-@Composable
-private fun EntryCards(
-    deviceSnapshot: DeviceSnapshotUi?,
-    audioSummary: AudioSummaryUi?,
-    onDeviceClick: () -> Unit,
-    onAudioClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        EntryCard(
-            title = "设备管理",
-            subtitle = deviceSnapshot?.statusText ?: "查看设备文件与连接状态",
-            supporting = deviceSnapshot?.deviceName ?: "点击进入设备管理",
-            onClick = onDeviceClick,
-            testTag = HomeScreenTestTags.DEVICE_ENTRY
-        )
-        EntryCard(
-            title = "音频库",
-            subtitle = audioSummary?.headline ?: "同步录音并查看转写",
-            supporting = audioSummary?.detail ?: "上传或查看最近转写内容",
-            onClick = onAudioClick,
-            testTag = HomeScreenTestTags.AUDIO_ENTRY
-        )
-    }
-}
-
-@Composable
-private fun EntryCard(
-    title: String,
-    subtitle: String,
-    supporting: String,
-    onClick: () -> Unit,
-    testTag: String
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .testTag(testTag),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(text = title, style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = supporting,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
         }
     }
 }

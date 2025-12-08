@@ -81,6 +81,9 @@ class AiFeatureTestActivityTest {
         // 不应触发导航或额外气泡标签
         composeRule.onAllNodesWithTag(AiFeatureTestTags.PAGE_AUDIO_FILES, useUnmergedTree = true)
             .fetchSemanticsNodes().isEmpty()
+        // 也不应生成用户消息
+        composeRule.onAllNodesWithTag(HomeScreenTestTags.USER_MESSAGE, useUnmergedTree = true)
+            .fetchSemanticsNodes().isEmpty()
     }
 
     @Test

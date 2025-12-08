@@ -181,7 +181,8 @@ data class HomeUiState(
     val showWelcomeHero: Boolean = true,
     val isSmartAnalysisMode: Boolean = false,
     val showDebugMetadata: Boolean = false,
-    val debugSessionMetadata: DebugSessionMetadata? = null
+    val debugSessionMetadata: DebugSessionMetadata? = null,
+    val isInputFocused: Boolean = false
 )
 
 /** 外部依赖（除 AiChatService 外保留原有 stub）。 */
@@ -240,17 +241,42 @@ class HomeScreenViewModel @Inject constructor(
         _uiState.update { it.copy(inputText = text) }
     }
 
+    fun onInputFocusChanged(focused: Boolean) {
+        _uiState.update { it.copy(isInputFocused = focused) }
+    }
+
     fun onSendMessage() {
-        val rawInput = _uiState.value.inputText
+        val state = _uiState.value
+        if (state.isSending) return
+        val selectedSkill = state.selectedSkill?.id
+        when (selectedSkill) {
+            QuickSkillId.EXPORT_PDF -> {
+                onExportPdfClicked()
+                return
+            }
+            QuickSkillId.EXPORT_CSV -> {
+                onExportCsvClicked()
+                return
+            }
+            else -> Unit
+        }
+        val rawInput = state.inputText
         val content = rawInput.trim()
-        if (_uiState.value.isBusy) return
         if (_uiState.value.isSmartAnalysisMode) {
             handleSmartAnalysisSend(content)
             return
         }
-        if (content.isEmpty()) return
+        val resolvedInput = when {
+            content.isNotEmpty() -> content
+            selectedSkill != null -> {
+                quickSkillDefinitionsById[selectedSkill]?.defaultPrompt?.takeIf { it.isNotBlank() }
+            }
+            else -> null
+        }
+        if (resolvedInput.isNullOrBlank()) return
         sendMessageInternal(
-            messageText = content
+            messageText = resolvedInput,
+            skillOverride = selectedSkill
         )
     }
 
@@ -326,6 +352,7 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     fun onSelectQuickSkill(skillId: QuickSkillId) {
+        if (_uiState.value.isSending || _uiState.value.isStreaming) return
         val definition = quickSkillDefinitionsById[skillId]
         if (definition == null) {
             _uiState.update { it.copy(snackbarMessage = "无法识别的快捷技能") }
@@ -333,26 +360,20 @@ class HomeScreenViewModel @Inject constructor(
         }
         when (skillId) {
             QuickSkillId.SMART_ANALYSIS -> {
-                if (_uiState.value.isBusy) return
-        _uiState.update { state ->
-            val toggled = !state.isSmartAnalysisMode
-            state.copy(
-                isSmartAnalysisMode = toggled,
-                selectedSkill = if (toggled) definition.toUiModel() else null,
-                inputText = state.inputText
-            )
-        }
-    }
-            QuickSkillId.EXPORT_PDF -> {
-                onExportPdfClicked()
-            }
-            QuickSkillId.EXPORT_CSV -> {
-                onExportCsvClicked()
+                _uiState.update { state ->
+                    val toggled = !state.isSmartAnalysisMode
+                    state.copy(
+                        isSmartAnalysisMode = toggled,
+                        selectedSkill = if (toggled) definition.toUiModel() else null,
+                        inputText = state.inputText
+                    )
+                }
             }
             else -> {
                 _uiState.update { state ->
                     state.copy(
                         selectedSkill = definition.toUiModel(),
+                        isSmartAnalysisMode = false,
                         inputText = definition.defaultPrompt,
                         chatErrorMessage = null
                     )
@@ -1012,7 +1033,7 @@ class HomeScreenViewModel @Inject constructor(
         isAutoAnalysis: Boolean = false
     ) {
         val content = messageText.trim()
-        if (content.isEmpty() || _uiState.value.isBusy) return
+        if (content.isEmpty() || _uiState.value.isSending || _uiState.value.isStreaming) return
         _uiState.update { it.copy(chatErrorMessage = null) }
         val quickSkill = (skillOverride ?: _uiState.value.selectedSkill?.id)?.let { id ->
             quickSkillDefinitionsById[id]

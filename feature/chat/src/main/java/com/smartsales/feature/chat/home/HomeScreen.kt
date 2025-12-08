@@ -40,6 +40,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -153,6 +154,9 @@ fun HomeScreenRoute(
 
     // 监听导航请求并通过回调交给宿主 Activity
     LaunchedEffect(state.navigationRequest) {
+        if (state.navigationRequest != null) {
+            dismissKeyboard()
+        }
         when (state.navigationRequest) {
             HomeNavigationRequest.DeviceManager -> onNavigateToDeviceManager()
             HomeNavigationRequest.DeviceSetup -> onNavigateToDeviceSetup()
@@ -217,7 +221,10 @@ fun HomeScreenRoute(
         },
         onToggleDebugMetadata = viewModel::toggleDebugMetadata,
         onDismissKeyboard = dismissKeyboard,
-        onInputFocusChanged = onInputFocusChanged
+        onInputFocusChanged = { focused ->
+            viewModel.onInputFocusChanged(focused)
+            onInputFocusChanged(focused)
+        }
     )
 }
 
@@ -286,6 +293,7 @@ fun HomeScreen(
             }
             quick.copy(label = customLabel)
         }
+    val chatBusy = state.isSending || state.isStreaming
     val showScrollToLatest = remember { mutableStateOf(false) }
     LaunchedEffect(listState, state.chatMessages.size, state.isLoadingHistory) {
         snapshotFlow {
@@ -314,13 +322,12 @@ fun HomeScreen(
         }
     }
 
-    var isInputFocused by rememberSaveable { mutableStateOf(false) }
-    val dragDismissModifier = Modifier.pointerInput(Unit) {
+    val dragDismissModifier = Modifier.pointerInput(state.isInputFocused) {
         var typingAtStart = false
         var dismissedInGesture = false
         detectVerticalDragGestures(
             onDragStart = {
-                typingAtStart = isInputFocused
+                typingAtStart = state.isInputFocused
                 dismissedInGesture = false
             },
             onVerticalDrag = { _, dragAmount ->
@@ -356,12 +363,13 @@ fun HomeScreen(
                 )
             },
             bottomBar = {
+                val inputEnabled = !chatBusy && !state.isInputBusy
                 HomeInputArea(
                     quickSkills = allowedSkills,
                     selectedSkill = state.selectedSkill,
-                    showQuickSkills = state.chatMessages.isNotEmpty(),
-                    enabled = !state.isBusy,
-                    busy = state.isBusy,
+                    showQuickSkills = !state.showWelcomeHero,
+                    enabled = inputEnabled,
+                    busy = chatBusy,
                     inputValue = state.inputText,
                     isSmartAnalysisMode = state.isSmartAnalysisMode,
                     onInputChanged = onInputChanged,
@@ -372,10 +380,7 @@ fun HomeScreen(
                     onQuickSkillSelected = onQuickSkillSelected,
                     onPickAudio = { audioPicker.launch(arrayOf("audio/*")) },
                     onPickImage = { imagePicker.launch(arrayOf("image/*")) },
-                    onInputFocusChanged = { focused ->
-                        isInputFocused = focused       // 本地状态，用于内部 UI
-                        onInputFocusChanged(focused)   // 向上汇报，让 shell 禁用/启用手势
-                    }
+                    onInputFocusChanged = onInputFocusChanged
                 )
             }
         ) { innerPadding ->
@@ -383,8 +388,8 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .pointerInput(isInputFocused) {
-                        if (!isInputFocused) return@pointerInput
+                    .pointerInput(state.isInputFocused) {
+                        if (!state.isInputFocused) return@pointerInput
                         detectTapGestures(onTap = { onDismissKeyboard() })
                     }
             ) {
@@ -395,6 +400,7 @@ fun HomeScreen(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
+                            .then(dragDismissModifier)
                     ) {
                         AnimatedContent(
                             targetState = state.chatMessages.isEmpty() && state.showWelcomeHero,
@@ -411,6 +417,8 @@ fun HomeScreen(
                                 EmptyStateContent(
                                     userName = state.userName,
                                     skills = allowedSkills,
+                                    selectedSkillId = state.selectedSkill?.id,
+                                    enabled = !chatBusy && !state.isInputBusy,
                                     onSkillSelected = onQuickSkillSelected
                                 )
                             } else {
@@ -422,7 +430,6 @@ fun HomeScreen(
                                 LazyColumn(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .then(dragDismissModifier)
                                         .testTag(HomeScreenTestTags.LIST),
                                         state = listState,
                                         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -560,6 +567,8 @@ fun HomeScreen(
 private fun EmptyStateContent(
     userName: String,
     skills: List<QuickSkillUi>,
+    selectedSkillId: QuickSkillId?,
+    enabled: Boolean,
     onSkillSelected: (QuickSkillId) -> Unit
 ) {
     Box(
@@ -621,8 +630,8 @@ private fun EmptyStateContent(
             )
             QuickSkillRow(
                 skills = skills,
-                selectedSkillId = null,
-                enabled = true,
+                selectedSkillId = selectedSkillId,
+                enabled = enabled,
                 onQuickSkillSelected = onSkillSelected
             )
             Divider(modifier = Modifier.fillMaxWidth())
@@ -1134,15 +1143,26 @@ private fun HomeInputArea(
     onInputFocusChanged: (Boolean) -> Unit
 ) {
     var uploadMenuExpanded by rememberSaveable { mutableStateOf(false) }
-    Surface(tonalElevation = 4.dp) {
+    val canSend = enabled && !busy && (
+        inputValue.isNotBlank() || selectedSkill != null
+        )
+    Surface(
+        tonalElevation = 6.dp,
+        shadowElevation = 6.dp,
+        shape = RoundedCornerShape(20.dp)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .imePadding()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                thickness = 1.dp
+            )
             if (showQuickSkills) {
                 QuickSkillRow(
                     skills = quickSkills,
@@ -1214,7 +1234,7 @@ private fun HomeInputArea(
                 )
                 TextButton(
                     onClick = onSendClicked,
-                    enabled = inputValue.isNotBlank() && enabled && !busy,
+                    enabled = canSend,
                     modifier = Modifier.testTag(HomeScreenTestTags.SEND_BUTTON)
                 ) {
                     Icon(Icons.AutoMirrored.Filled.Send, contentDescription = if (busy) "发送中" else "发送")
@@ -1341,8 +1361,8 @@ private fun QuickSkillRow(
 ) {
     if (skills.isEmpty()) return
     LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(horizontal = 6.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(horizontal = 8.dp)
     ) {
         items(skills, key = { it.id }) { skill ->
             val skillTag = "home_quick_skill_${skill.id}"
@@ -1375,7 +1395,15 @@ private fun QuickSkillRow(
                     )
                 },
                 // 快捷技能作为快捷填充，无需额外气泡
-                colors = colors
+                colors = colors,
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                    }
+                )
             )
         }
     }

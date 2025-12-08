@@ -191,25 +191,6 @@ class AiFeatureTestActivityTest {
     }
 
     @Test
-    fun audioIcon_opensOverlayAndCloses() {
-        waitForHomeRendered()
-
-        composeRule.onNodeWithTag(HomeScreenTestTags.AUDIO_TOGGLE, useUnmergedTree = true)
-            .assertIsDisplayed()
-            .performClick()
-
-        waitForAnyTag(composeRule, AiFeatureTestTags.PAGE_AUDIO_FILES, AiFeatureTestTags.OVERLAY_AUDIO_LAYER)
-
-        composeRule.onNodeWithTag(AiFeatureTestTags.OVERLAY_BACKDROP, useUnmergedTree = true)
-            .performClick()
-
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-            composeRule.onAllNodesWithTag(AiFeatureTestTags.PAGE_AUDIO_FILES, useUnmergedTree = true)
-                .fetchSemanticsNodes().isEmpty()
-        }
-    }
-
-    @Test
     fun deviceIcon_opensOverlayAndCloses() {
         waitForHomeRendered()
 

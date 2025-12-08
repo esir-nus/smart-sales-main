@@ -211,24 +211,20 @@ fun HomeScreenRoute(
         onAudioSummaryClicked = viewModel::onTapAudioSummary,
         onRefreshDeviceAndAudio = viewModel::onRefreshDeviceAndAudio,
         onExportPdfClicked = viewModel::onExportPdfClicked,
-        onExportCsvClicked = viewModel::onExportCsvClicked,
-        exportInProgress = state.exportInProgress,
-        onLoadMoreHistory = viewModel::onLoadMoreHistory,
-        onProfileClicked = viewModel::onTapProfile,
+    onExportCsvClicked = viewModel::onExportCsvClicked,
+    exportInProgress = state.exportInProgress,
+    onLoadMoreHistory = viewModel::onLoadMoreHistory,
+    onProfileClicked = viewModel::onTapProfile,
     onNewChatClicked = viewModel::onNewChatClicked,
     onSessionSelected = viewModel::setSession,
     chatErrorMessage = state.chatErrorMessage,
-        onPickAudioFile = viewModel::onAudioFilePicked,
-        onPickImageFile = viewModel::onImagePicked,
-        onAudioClicked = {
-            dismissKeyboard()
-            onNavigateToAudioFiles()
-        },
-        onDeviceClicked = {
-            dismissKeyboard()
-            onNavigateToDeviceManager()
-        },
-        modifier = modifier,
+    onPickAudioFile = viewModel::onAudioFilePicked,
+    onPickImageFile = viewModel::onImagePicked,
+    onDeviceClicked = {
+        dismissKeyboard()
+        onNavigateToDeviceManager()
+    },
+    modifier = modifier,
     showHistoryPanel = showHistoryPanel,
         onToggleHistoryPanel = { showHistoryPanel = true },
         onDismissHistoryPanel = { showHistoryPanel = false },
@@ -267,7 +263,6 @@ fun HomeScreen(
     exportInProgress: Boolean,
     onPickAudioFile: (Uri) -> Unit = {},
     onPickImageFile: (Uri) -> Unit = {},
-    onAudioClicked: () -> Unit = {},
     onDeviceClicked: () -> Unit = {},
     modifier: Modifier = Modifier,
     showHistoryPanel: Boolean = false,
@@ -423,14 +418,10 @@ fun HomeScreen(
                                 onDismissKeyboard()
                                 onToggleHistoryPanel()
                             },
-                            onAudioClick = {
+                            onDeviceClick = {
                                 onDismissKeyboard()
-                            onAudioClicked()
-                        },
-                    onDeviceClick = {
-                        onDismissKeyboard()
-                        onDeviceClicked()
-                    },
+                                onDeviceClicked()
+                            },
                     onNewChatClick = onNewChatClicked,
                     hudEnabled = hudEnabled,
                     showDebugMetadata = state.showDebugMetadata,
@@ -812,7 +803,6 @@ object HomeScreenTestTags {
     const val DEBUG_HUD_SCRIM = "debug_hud_scrim"
     const val DEBUG_HUD_CLOSE = "debug_hud_close"
     const val DEBUG_HUD_COPY = "debug_hud_copy"
-    const val AUDIO_TOGGLE = "home_audio_toggle"
     const val DEVICE_TOGGLE = "home_device_toggle"
 }
 
@@ -822,7 +812,6 @@ private fun HomeTopBar(
     onProfileClick: () -> Unit,
     deviceSnapshot: DeviceSnapshotUi?,
     onHistoryClick: () -> Unit,
-    onAudioClick: () -> Unit,
     onDeviceClick: () -> Unit,
     onNewChatClick: () -> Unit,
     hudEnabled: Boolean,
@@ -841,12 +830,6 @@ private fun HomeTopBar(
             modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_TOGGLE)
         ) {
             Icon(Icons.Filled.History, contentDescription = "历史记录")
-        }
-        IconButton(
-            onClick = onAudioClick,
-            modifier = Modifier.testTag(HomeScreenTestTags.AUDIO_TOGGLE)
-        ) {
-            Icon(imageVector = Icons.Filled.AudioFile, contentDescription = "音频库")
         }
         Text(
             text = title,

@@ -447,67 +447,25 @@ private fun OverlayScaffold(
                         .testTag(AiFeatureTestTags.OVERLAY_AUDIO_LAYER)
                         .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize(),
-                        horizontalArrangement = Arrangement.Start
-                    ) {
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(0.9f),
-                            tonalElevation = 8.dp,
-                            shadowElevation = 12.dp,
-                            shape = RoundedCornerShape(topEnd = 20.dp, bottomEnd = 20.dp),
-                            color = MaterialTheme.colorScheme.surface
-                        ) {
-                            Column(
-                                modifier = Modifier.fillMaxSize(),
-                                verticalArrangement = Arrangement.Top
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "音频库",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    IconButton(onClick = { onOverlayChange(HomeOverlay.Home) }) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Close,
-                                            contentDescription = "关闭音频库"
-                                        )
-                                    }
-                                }
-                                Divider()
-                                AudioFilesRoute(
-                                    modifier = Modifier.fillMaxSize(),
-                                    viewModel = audioFilesViewModel,
-                                    showTopBar = false,
-                                    onAskAiAboutTranscript = { recordingId, fileName, jobId, sessionId, preview, full ->
-                                        val resolvedJobId = jobId ?: "transcription-$recordingId"
-                                        val resolvedSessionId = sessionId ?: "session-$resolvedJobId"
-                                        homeViewModel.onTranscriptionRequested(
-                                            TranscriptionChatRequest(
-                                                jobId = resolvedJobId,
-                                                fileName = fileName,
-                                                recordingId = recordingId,
-                                                sessionId = resolvedSessionId,
-                                                transcriptPreview = preview,
-                                                transcriptMarkdown = full
-                                            )
-                                        )
-                                        onOverlayChange(HomeOverlay.Home)
-                                    }
+                    AudioFilesRoute(
+                        modifier = Modifier.fillMaxSize(),
+                        viewModel = audioFilesViewModel,
+                        onAskAiAboutTranscript = { recordingId, fileName, jobId, sessionId, preview, full ->
+                            val resolvedJobId = jobId ?: "transcription-$recordingId"
+                            val resolvedSessionId = sessionId ?: "session-$resolvedJobId"
+                            homeViewModel.onTranscriptionRequested(
+                                TranscriptionChatRequest(
+                                    jobId = resolvedJobId,
+                                    fileName = fileName,
+                                    recordingId = recordingId,
+                                    sessionId = resolvedSessionId,
+                                    transcriptPreview = preview,
+                                    transcriptMarkdown = full
                                 )
-                            }
+                            )
+                            onOverlayChange(HomeOverlay.Home)
                         }
-                    }
+                    )
                 }
             },
             device = {

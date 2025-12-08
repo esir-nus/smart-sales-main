@@ -58,6 +58,7 @@ import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -65,6 +66,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -77,6 +81,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -103,9 +108,11 @@ import com.smartsales.feature.chat.home.CHAT_DEBUG_HUD_ENABLED
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.feature.chat.core.QuickSkillId
+import com.smartsales.feature.chat.history.ChatHistoryTestTags
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -260,6 +267,29 @@ fun HomeScreen(
     onDismissKeyboard: () -> Unit = {},
     onInputFocusChanged: (Boolean) -> Unit = {}
 ) {
+    val drawerState = rememberDrawerState(
+        initialValue = if (showHistoryPanel) DrawerValue.Open else DrawerValue.Closed
+    )
+    LaunchedEffect(showHistoryPanel) {
+        if (showHistoryPanel) {
+            drawerState.open()
+        } else {
+            drawerState.close()
+        }
+    }
+    LaunchedEffect(drawerState) {
+        snapshotFlow { drawerState.currentValue }
+            .collectLatest { value ->
+                when (value) {
+                    DrawerValue.Open -> if (!showHistoryPanel) onToggleHistoryPanel()
+                    DrawerValue.Closed -> if (showHistoryPanel) onDismissHistoryPanel()
+                }
+            }
+    }
+    BackHandler(enabled = showHistoryPanel) {
+        onDismissHistoryPanel()
+    }
+
     Log.i("HomeScreen", "HomeScreen composed - entering function")
     val coroutineScope = rememberCoroutineScope()
     val clipboardManager = LocalClipboardManager.current
@@ -340,231 +370,247 @@ fun HomeScreen(
         )
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .testTag(HomeScreenTestTags.PAGE_HOME)
-    ) {
-        Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .testTag(HomeScreenTestTags.ROOT),
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            topBar = {
-                HomeTopBar(
-                    onProfileClick = onProfileClicked,
-                    deviceSnapshot = state.deviceSnapshot,
-                    onHistoryClick = {
-                        onDismissKeyboard()
-                        onToggleHistoryPanel()
-                    },
-                    hudEnabled = hudEnabled,
-                    showDebugMetadata = state.showDebugMetadata,
-                    onToggleDebugMetadata = { onToggleDebugMetadata() }
-                )
-            },
-            bottomBar = {
-                val inputEnabled = !chatBusy && !state.isInputBusy
-                HomeInputArea(
-                    quickSkills = allowedSkills,
-                    selectedSkill = state.selectedSkill,
-                    showQuickSkills = !state.showWelcomeHero,
-                    enabled = inputEnabled,
-                    busy = chatBusy,
-                    inputValue = state.inputText,
-                    isSmartAnalysisMode = state.isSmartAnalysisMode,
-                    onInputChanged = onInputChanged,
-                    onSendClicked = {
-                        onSendClicked()
-                        onDismissKeyboard()
-                    },
-                    onQuickSkillSelected = onQuickSkillSelected,
-                    onPickAudio = { audioPicker.launch(arrayOf("audio/*")) },
-                    onPickImage = { imagePicker.launch(arrayOf("image/*")) },
-                    onInputFocusChanged = onInputFocusChanged
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        gesturesEnabled = !state.isInputFocused,
+        scrimColor = Color.Black.copy(alpha = 0.35f),
+        drawerContent = {
+            ModalDrawerSheet(
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+                    .fillMaxHeight()
+                    .testTag(HomeScreenTestTags.HISTORY_PANEL),
+                drawerShape = RoundedCornerShape(topEnd = 20.dp, bottomEnd = 20.dp),
+                drawerContainerColor = MaterialTheme.colorScheme.surface
+            ) {
+                HistoryDrawerContent(
+                    sessions = historySessions,
+                    currentSessionId = state.currentSession.id,
+                    onSessionSelected = onHistorySessionSelected,
+                    onClose = onDismissHistoryPanel
                 )
             }
-        ) { innerPadding ->
+        },
+        content = {
             Box(
-                modifier = Modifier
+                modifier = modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
-                    .pointerInput(state.isInputFocused) {
-                        if (!state.isInputFocused) return@pointerInput
-                        detectTapGestures(onTap = { onDismissKeyboard() })
-                    }
+                    .testTag(HomeScreenTestTags.PAGE_HOME)
             ) {
-                Column(
-                    modifier = Modifier.fillMaxSize()
-                ) {
+                Scaffold(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag(HomeScreenTestTags.ROOT),
+                    snackbarHost = { SnackbarHost(snackbarHostState) },
+                    topBar = {
+                        HomeTopBar(
+                            onProfileClick = onProfileClicked,
+                            deviceSnapshot = state.deviceSnapshot,
+                            onHistoryClick = {
+                                onDismissKeyboard()
+                                onToggleHistoryPanel()
+                            },
+                            hudEnabled = hudEnabled,
+                            showDebugMetadata = state.showDebugMetadata,
+                            onToggleDebugMetadata = { onToggleDebugMetadata() }
+                        )
+                    },
+                    bottomBar = {
+                        val inputEnabled = !chatBusy && !state.isInputBusy
+                        HomeInputArea(
+                            quickSkills = allowedSkills,
+                            selectedSkill = state.selectedSkill,
+                            showQuickSkills = !state.showWelcomeHero,
+                            enabled = inputEnabled,
+                            busy = chatBusy,
+                            inputValue = state.inputText,
+                            isSmartAnalysisMode = state.isSmartAnalysisMode,
+                            onInputChanged = onInputChanged,
+                            onSendClicked = {
+                                onSendClicked()
+                                onDismissKeyboard()
+                            },
+                            onQuickSkillSelected = onQuickSkillSelected,
+                            onPickAudio = { audioPicker.launch(arrayOf("audio/*")) },
+                            onPickImage = { imagePicker.launch(arrayOf("image/*")) },
+                            onInputFocusChanged = onInputFocusChanged
+                        )
+                    }
+                ) { innerPadding ->
                     Box(
                         modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .then(dragDismissModifier)
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                            .pointerInput(state.isInputFocused) {
+                                if (!state.isInputFocused) return@pointerInput
+                                detectTapGestures(onTap = { onDismissKeyboard() })
+                            }
                     ) {
-                        AnimatedContent(
-                            targetState = state.chatMessages.isEmpty() && state.showWelcomeHero,
-                            transitionSpec = {
-                                (fadeIn() + slideInVertically { it / 8 }) with
-                                    (fadeOut() + slideOutVertically { -it / 8 })
-                            },
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 16.dp),
-                            label = "feature_home_empty_transition"
-                        ) { empty ->
-                            if (empty) {
-                                EmptyStateContent(
-                                    userName = state.userName,
-                                    skills = allowedSkills,
-                                    selectedSkillId = state.selectedSkill?.id,
-                                    enabled = !chatBusy && !state.isInputBusy,
-                                    onSkillSelected = onQuickSkillSelected
-                                )
-                            } else {
-                                Box(
+                        Column(
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth()
+                                    .then(dragDismissModifier)
+                            ) {
+                                AnimatedContent(
+                                    targetState = state.chatMessages.isEmpty() && state.showWelcomeHero,
+                                    transitionSpec = {
+                                        (fadeIn() + slideInVertically { it / 8 }) with
+                                            (fadeOut() + slideOutVertically { -it / 8 })
+                                    },
                                     modifier = Modifier
                                         .fillMaxSize()
-                                ) {
-                                    val hasActiveChat = state.chatMessages.isNotEmpty()
-                                LazyColumn(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .testTag(HomeScreenTestTags.LIST),
-                                        state = listState,
-                                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
-                                        userScrollEnabled = true
-                                    ) {
-                                        if (!hasActiveChat) {
-                                            item("welcome_spacer") { Spacer(modifier = Modifier.height(8.dp)) }
-                                        } else {
-                                            if (state.isLoadingHistory) {
-                                                item("history-loading") {
-                                                    Text(
-                                                        text = "加载历史记录...",
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .padding(vertical = 8.dp)
-                                                    )
-                                                }
-                                            }
-                                            itemsIndexed(state.chatMessages, key = { _, item -> item.id }) { index, message ->
-                                                val isTranscriptSummary = message.role == ChatMessageRole.ASSISTANT &&
-                                                    message.content.contains("通话分析")
-                                                val tagModifier = if (message.role == ChatMessageRole.ASSISTANT &&
-                                                    (index == state.chatMessages.lastIndex || isTranscriptSummary)
-                                                ) {
-                                                    Modifier.testTag(HomeScreenTestTags.ASSISTANT_MESSAGE)
+                                        .padding(horizontal = 16.dp),
+                                    label = "feature_home_empty_transition"
+                                ) { empty ->
+                                    if (empty) {
+                                        EmptyStateContent(
+                                            userName = state.userName,
+                                            skills = allowedSkills,
+                                            selectedSkillId = state.selectedSkill?.id,
+                                            enabled = !chatBusy && !state.isInputBusy,
+                                            onSkillSelected = onQuickSkillSelected
+                                        )
+                                    } else {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                        ) {
+                                            val hasActiveChat = state.chatMessages.isNotEmpty()
+                                        LazyColumn(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .testTag(HomeScreenTestTags.LIST),
+                                                state = listState,
+                                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
+                                                userScrollEnabled = true
+                                            ) {
+                                                if (!hasActiveChat) {
+                                                    item("welcome_spacer") { Spacer(modifier = Modifier.height(8.dp)) }
                                                 } else {
-                                                    Modifier
-                                                }
-                                                MessageBubble(
-                                                    message = message,
-                                                    alignEnd = message.role == ChatMessageRole.USER,
-                                                    modifier = tagModifier,
-                                                    onCopyAssistant = { content ->
-                                                        clipboardManager.setText(AnnotatedString(content))
-                                                        coroutineScope.launch {
-                                                            snackbarHostState.showSnackbar("已复制到剪贴板")
+                                                    if (state.isLoadingHistory) {
+                                                        item("history-loading") {
+                                                            Text(
+                                                                text = "加载历史记录...",
+                                                                style = MaterialTheme.typography.bodySmall,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                modifier = Modifier
+                                                                    .fillMaxWidth()
+                                                                    .padding(vertical = 8.dp)
+                                                            )
                                                         }
                                                     }
-                                                )
+                                                    itemsIndexed(state.chatMessages, key = { _, item -> item.id }) { index, message ->
+                                                        val isTranscriptSummary = message.role == ChatMessageRole.ASSISTANT &&
+                                                            message.content.contains("通话分析")
+                                                        val tagModifier = if (message.role == ChatMessageRole.ASSISTANT &&
+                                                            (index == state.chatMessages.lastIndex || isTranscriptSummary)
+                                                        ) {
+                                                            Modifier.testTag(HomeScreenTestTags.ASSISTANT_MESSAGE)
+                                                        } else {
+                                                            Modifier
+                                                        }
+                                                        MessageBubble(
+                                                            message = message,
+                                                            alignEnd = message.role == ChatMessageRole.USER,
+                                                            modifier = tagModifier,
+                                                            onCopyAssistant = { content ->
+                                                                clipboardManager.setText(AnnotatedString(content))
+                                                                coroutineScope.launch {
+                                                                    snackbarHostState.showSnackbar("已复制到剪贴板")
+                                                                }
+                                                            }
+                                                        )
+                                                    }
+                                                }
+                                                if (state.chatMessages.lastOrNull()?.isStreaming == true) {
+                                                    item("typing-indicator") {
+                                                        AssistantTypingBubble()
+                                                    }
+                                                }
+                                                item("chat-bottom-pad") {
+                                                    Spacer(modifier = Modifier.height(72.dp))
+                                                }
                                             }
-                                        }
-                                        if (state.chatMessages.lastOrNull()?.isStreaming == true) {
-                                            item("typing-indicator") {
-                                                AssistantTypingBubble()
-                                            }
-                                        }
-                                        item("chat-bottom-pad") {
-                                            Spacer(modifier = Modifier.height(72.dp))
                                         }
                                     }
                                 }
                             }
                         }
-                    }
-                }
-                chatErrorMessage?.let { message ->
-                    SnackbarHost(
-                        hostState = remember { SnackbarHostState() },
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 96.dp)
-                    ) {
-                        Text(
-                            text = message,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-                if (showScrollToLatest.value) {
-                    ScrollToLatestButton(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(16.dp),
-                        onClick = {
-                            val lastIndex = state.chatMessages.lastIndex
-                            if (lastIndex >= 0) {
-                                coroutineScope.launch {
-                                    listState.animateScrollToItem(lastIndex)
-                                }
+                        chatErrorMessage?.let { message ->
+                            SnackbarHost(
+                                hostState = remember { SnackbarHostState() },
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(bottom = 96.dp)
+                            ) {
+                                Text(
+                                    text = message,
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
                             }
                         }
-                    )
-                }
-                if (hudEnabled && showDebugPanel && state.debugSessionMetadata != null) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.3f))
-                            .clickable(
-                                indication = null,
-                                interactionSource = remember { MutableInteractionSource() }
-                            ) {
-                                onToggleDebugMetadata()
-                            }
-                            .testTag(HomeScreenTestTags.DEBUG_HUD_SCRIM)
-                    )
-                    DebugSessionMetadataHud(
-                        metadata = state.debugSessionMetadata,
-                        onClose = {
-                            onToggleDebugMetadata()
-                        },
-                        onCopy = { text ->
-                            runCatching {
-                                clipboardManager.setText(AnnotatedString(text))
-                            }.onSuccess {
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("已复制调试信息")
+                        if (showScrollToLatest.value) {
+                            ScrollToLatestButton(
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(16.dp),
+                                onClick = {
+                                    val lastIndex = state.chatMessages.lastIndex
+                                    if (lastIndex >= 0) {
+                                        coroutineScope.launch {
+                                            listState.animateScrollToItem(lastIndex)
+                                        }
+                                    }
                                 }
-                            }.onFailure {
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar("复制失败，请稍后重试")
-                                }
-                            }
-                        },
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(horizontal = 12.dp, vertical = 12.dp)
-                    )
-                }
-                if (showHistoryPanel) {
-                    HistoryPanel(
-                        sessions = historySessions,
-                        currentSessionId = state.currentSession.id,
-                        onDismiss = onDismissHistoryPanel,
-                        onSessionSelected = onHistorySessionSelected
-                    )
+                            )
+                        }
+                        if (hudEnabled && showDebugPanel && state.debugSessionMetadata != null) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.3f))
+                                    .clickable(
+                                        indication = null,
+                                        interactionSource = remember { MutableInteractionSource() }
+                                    ) {
+                                        onToggleDebugMetadata()
+                                    }
+                                    .testTag(HomeScreenTestTags.DEBUG_HUD_SCRIM)
+                            )
+                            DebugSessionMetadataHud(
+                                metadata = state.debugSessionMetadata,
+                                onClose = {
+                                    onToggleDebugMetadata()
+                                },
+                                onCopy = { text ->
+                                    runCatching {
+                                        clipboardManager.setText(AnnotatedString(text))
+                                    }.onSuccess {
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("已复制调试信息")
+                                        }
+                                    }.onFailure {
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar("复制失败，请稍后重试")
+                                        }
+                                    }
+                                },
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(horizontal = 12.dp, vertical = 12.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
-    }
+    )
 }
 
 @Composable
@@ -1447,103 +1493,94 @@ private fun ScrollToLatestButton(
 }
 
 @Composable
-private fun HistoryPanel(
+private fun HistoryDrawerContent(
     sessions: List<SessionListItemUi>,
     currentSessionId: String,
-    onDismiss: () -> Unit,
     onSessionSelected: (String) -> Unit,
-    modifier: Modifier = Modifier
+    onClose: () -> Unit
 ) {
-    // 按返回键时优先关闭历史抽屉，而不是直接退出 Activity
-    BackHandler(onBack = onDismiss)
-
-    // 侧边抽屉：覆盖在右侧，点击遮罩即可关闭
-    Box(modifier = modifier.fillMaxSize()) {
-        Box(
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag(ChatHistoryTestTags.PAGE),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(
             modifier = Modifier
-                .fillMaxSize()
-                .clickable(onClick = onDismiss)
-        )
-        Surface(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .width(320.dp)
-                .fillMaxHeight()
-                .testTag(HomeScreenTestTags.HISTORY_PANEL),
-            tonalElevation = 6.dp,
-            shadowElevation = 8.dp,
-            color = MaterialTheme.colorScheme.surface
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
+            Text(
+                text = "历史会话",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            IconButton(onClick = onClose) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "关闭"
+                )
+            }
+        }
+        if (sessions.isEmpty()) {
+            Text(
+                text = "暂无历史会话，先开始一次对话吧。",
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(horizontal = 12.dp)
+                    .testTag(HomeScreenTestTags.HISTORY_EMPTY),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(text = "历史会话", style = MaterialTheme.typography.titleMedium)
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.Filled.Close,
-                            contentDescription = "关闭"
-                        )
-                    }
-                }
-                if (sessions.isEmpty()) {
-                    Text(
-                        text = "暂无历史会话，先开始一次对话吧。",
-                        modifier = Modifier.testTag(HomeScreenTestTags.HISTORY_EMPTY),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(vertical = 4.dp)
-                    ) {
-                        items(items = sessions, key = { it.id }) { session ->
-                            val isCurrent = session.id == currentSessionId
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onSessionSelected(session.id) }
-                                    .testTag("${HomeScreenTestTags.HISTORY_ITEM_PREFIX}${session.id}"),
-                                color = if (isCurrent) {
-                                    MaterialTheme.colorScheme.primaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceVariant
-                                },
-                                tonalElevation = if (isCurrent) 4.dp else 1.dp
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Text(
-                                        text = session.title,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    if (session.lastMessagePreview.isNotBlank()) {
-                                        Text(
-                                            text = session.lastMessagePreview,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Text(
-                                        text = formatSessionTime(session.updatedAtMillis),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
+                items(items = sessions, key = { it.id }) { session ->
+                    val isCurrent = session.id == currentSessionId
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSessionSelected(session.id) }
+                            .testTag("${HomeScreenTestTags.HISTORY_ITEM_PREFIX}${session.id}"),
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = if (isCurrent) 4.dp else 1.dp,
+                        border = BorderStroke(
+                            width = 1.dp,
+                            color = if (isCurrent) {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                            } else {
+                                MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
                             }
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = session.title,
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            if (session.lastMessagePreview.isNotBlank()) {
+                                Text(
+                                    text = session.lastMessagePreview,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                text = formatSessionTime(session.updatedAtMillis),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }

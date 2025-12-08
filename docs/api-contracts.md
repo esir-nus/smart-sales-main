@@ -24,6 +24,10 @@ This document is the single source of truth for every API/protocol that the Andr
   - `suspend fun inferTranscriptMetadata(request: TranscriptMetadataRequest): TranscriptMetadata?` – 仅由 `RealTingwuCoordinator` 调用，负责 LLM 推断说话人/会话元数据并 `mergeWith` 写入 MetaHub。请求字段：`transcriptId`, `sessionId`, `diarizedSegments`, `speakerLabels`, `createdAt`(默认 now), `force`(默认 false)。
 - **ExportOrchestrator**
   - `suspend fun exportPdf(sessionId: String, markdown: String, userName: String? = null)` / `suspend fun exportCsv(sessionId: String, userName: String? = null)` – LLM-free；从 MetaHub 取 SessionMetadata + 用户名构造文件名，PDF 用传入 markdown，CSV 用 `crmRows`。
+  - `userName` 参数来源：
+    * 来自 `UserProfile.displayName`（持久化 profile，由 onboarding / User Center 收集）。
+    * 缺失时回退到安全默认值（如 "用户" / "SmartSales 用户"）。
+  - 文件名模式：`<Username>_<major person>_<summary6>_<yyyyMMdd_HHmmss>.<ext>`，其中 `<Username>` 是用户在 onboarding / User Center 中收集的用户 profile 名称。
 
 LLM 只出现在 `HomeOrchestratorImpl` 与 `RealTranscriptOrchestrator`；`RealExportOrchestrator`、`RealTingwuCoordinator`、各 VM 均为 LLM-free。
 

@@ -231,6 +231,35 @@ Left → right:
     * 点击进入现有 User Center / Profile 页面。
     * 顶部栏不再提供 Profile/头像按钮，此处为 Home 进入 User Center 的规范入口。
 
+### 5.5 User Center
+
+**Entry point:**
+
+* The only canonical entry is via history drawer footer (`HISTORY_USER_CENTER` tag).
+* No top-bar avatar/Profile icon exists in Home top bar.
+
+**User Center content:**
+
+* **Profile editing:**
+  * Shows and allows editing: name (displayName, required), role/position (optional), industry (optional).
+  * Changes are saved to the same `UserProfileRepository` used by onboarding and Home.
+  * Saved profile data is immediately reflected in Home greeting and export filenames.
+
+* **Navigation rows:**
+  * Device Manager link – navigates to Device Manager overlay.
+  * Privacy/About links (optional placeholders) – reserved for future features.
+
+**Profile fields:**
+
+* **displayName (required):**
+  * Used for Home greeting ("你好，{userName}").
+  * Used as `<Username>` component in export filenames.
+  * Falls back to "用户" or "SmartSales 用户" if empty.
+
+* **role / industry (optional):**
+  * Must be persisted and editable in User Center.
+  * Considered MetaHub context fields that Orchestrator/LLM can use to improve CRM/summaries later, but are not mandatory for all current flows.
+
 * Layout & style:
 
   * 采用全高列布局，背景为卡片风格。
@@ -363,37 +392,43 @@ Current quick skills:
 
 ## 9. Onboarding Flow
 
-On first install / first open:
+On first install / first open, the app shows a minimal onboarding sequence before entering Home:
 
-1. **Welcome**
+### 9.1 Current Shipping Onboarding
 
-   * Short explanation of what the assistant does.
+**Step 1: Welcome**
 
-2. **Personal Info**
+* Short explanation of what the assistant does.
+* CTA button "开始使用" to proceed.
 
-   * Collect:
+**Step 2: Personal Info**
 
-     * Display name
-     * Role/position
-     * Industry
-   * Stored for:
+* Collect:
+  * **姓名（必填）** – Display name (required).
+  * **职位/角色（可选）** – Role/position (optional).
+  * **行业（可选）** – Industry (optional).
+* Stored for:
+  * Personalized greetings ("你好，{userName}").
+  * Export filename `<Username>` component.
+  * MetaHub context (better summaries and CRM inferences when available).
 
-     * Personalized greetings.
-     * Export filename `<Username>` component.
-     * MetaHub context (better summaries and CRM inferences).
+**Step 3: Enter Home Chat**
 
-3. **Device + Wi-Fi Setup (via BLE)**
+* Once personal info is saved and `hasCompletedOnboarding` is marked `true`, all future launches go straight to Home.
+* Onboarding completion state is persisted and checked on app startup.
 
-   * UI asks for:
+### 9.2 Device & Wi-Fi Setup (Future Extension)
 
-     * **Wi-Fi name** (as shown in system Wi-Fi list; label it “Wi-Fi 名称”, not “SSID”).
-     * **Wi-Fi password** (“Wi-Fi 密码”).
-   * This pair is sent via BLE to the device.
-   * Device joins the same network.
+Device pairing + Wi-Fi 配网 are handled by the existing Device Manager / 配网 flow and are **not blocked behind the onboarding gate** in the current version.
 
-4. **Return to Home Chat**
+* Users can access device setup via:
+  * Device Manager overlay (from Home top bar device indicator).
+  * User Center → Device Manager link.
+* Future UX may re-introduce tighter coupling between onboarding and device setup, but for now it is explicitly out of the mandatory onboarding sequence.
 
-   * Once device is connected, user is taken to Home and can start chatting.
+### 9.3 Testing
+
+Automated UI tests may bypass onboarding by overriding the onboarding completion flag (e.g. `OnboardingStateRepository.testOverrideCompleted`). This is considered allowed per contract and does not affect production behavior.
 
 User center and subscription areas are **allowed to be placeholders** but navigation hooks should exist.
 
@@ -528,7 +563,6 @@ Future versions must extend this section when file manager UX is implemented.
 
 The following areas are **intentionally open** and must be specified here once designed:
 
-* Detailed User Center layout and flows.
 * Subscription / billing UX.
 * Full CRM view / contact management screens.
 * Advanced analytics dashboards.

@@ -157,6 +157,30 @@
 
 ## 3. 数据模型 & merge 语义
 
+### 3.0 UserProfile（全局用户元数据）
+
+**UserProfile** 是应用全局的用户元数据，由 onboarding / User Center 收集并持久化存储。
+
+**关键字段：**
+
+* `displayName: String`（必填）
+  * 规范用途：
+    * 导出文件名中的 `<Username>` 组件。
+    * Home 问候语 / UI 个性化（"你好，{userName}"）。
+  * 缺失时回退到安全默认值（如 "用户" / "SmartSales 用户"）。
+
+* `role: String?`（可选）
+* `industry: String?`（可选）
+  * 可选上下文提示字段：
+    * Orchestrator 可以在 prompt 和 CRM 输出中包含这些字段（当可用时）。
+    * 管道必须能在这些字段缺失或为空时正常工作，不应因缺少这些字段而中断。
+
+**使用指南：**
+
+* Orchestrator 和 LLM 管道**应该**在可用时利用 `role` 和 `industry` 来改进上下文和 CRM 推断。
+* 当前实现中，并非所有现有元数据管道都已使用这些字段；这是能力/指导原则，而非强制要求。
+* `displayName` 是唯一强制字段，必须用于导出文件名和问候语。
+
 ### 3.1 SessionMetadata（会话级）
 
 关键字段（不全列，列关键部分）：

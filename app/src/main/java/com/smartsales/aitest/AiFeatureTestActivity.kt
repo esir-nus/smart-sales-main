@@ -14,6 +14,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
@@ -78,6 +81,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -157,7 +161,9 @@ private fun AiFeatureTestApp(
     val context = LocalContext.current
     val mediaServerClient = remember { MediaServerClient(context) }
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycle = lifecycleOwner.lifecycle
+    val scope = lifecycleOwner.lifecycleScope
     val homeViewModel: HomeScreenViewModel = hiltViewModel()
     val audioFilesViewModel: AudioFilesViewModel = hiltViewModel()
     var currentPage by rememberSaveable { mutableStateOf(TestHomePage.Home) }
@@ -193,7 +199,11 @@ private fun AiFeatureTestApp(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
         if (results.values.any { granted -> !granted }) {
-            // 使用 LaunchedEffect 确保在 Composition 生命周期内安全执行
+            // 使用 lifecycle state guard 防止在 Activity 销毁后更新 UI
+            if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                Log.w("AiFeatureTestActivity", "忽略 snackbar：Activity 已销毁")
+                return@rememberLauncherForActivityResult
+            }
             scope.launch {
                 try {
                     snackbarHostState.showSnackbar("缺少 BLE 或定位权限，无法扫描 BT311。")
@@ -270,13 +280,17 @@ private fun AiFeatureTestApp(
     AppTheme {
         val designTokens = AppDesignTokens.current()
         val showSnackbar: (String) -> Unit = { message ->
-            // 安全地显示 snackbar，避免在 Activity 销毁后崩溃
-            scope.launch {
-                try {
-                    snackbarHostState.showSnackbar(message)
-                } catch (e: Exception) {
-                    // 忽略已取消的协程异常，避免 Handler 线程崩溃
+            // 使用 lifecycle state guard 防止在 Activity 销毁后更新 UI
+            if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                scope.launch {
+                    try {
+                        snackbarHostState.showSnackbar(message)
+                    } catch (e: Exception) {
+                        // 忽略已取消的协程异常，避免 Handler 线程崩溃
+                    }
                 }
+            } else {
+                Log.w("AiFeatureTestActivity", "忽略 snackbar：Activity 已销毁 - $message")
             }
         }
         if (!onboardingCompleted) {

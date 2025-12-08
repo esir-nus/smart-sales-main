@@ -39,6 +39,7 @@ import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.SessionStage
 import com.smartsales.core.metahub.RiskLevel
+import com.smartsales.core.metahub.AnalysisSource
 import com.smartsales.feature.chat.home.CHAT_DEBUG_HUD_ENABLED
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -311,8 +312,9 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     fun onSmartAnalysisClicked() {
-        // 兼容旧入口：改为开启/关闭智能分析模式，不直接发送
-        onSelectQuickSkill(QuickSkillId.SMART_ANALYSIS)
+        // 直接复用智能分析主流程
+        val input = _uiState.value.inputText
+        handleSmartAnalysisSend(input)
     }
 
     fun onExportPdfClicked() {
@@ -1021,9 +1023,13 @@ class HomeScreenViewModel @Inject constructor(
                             showWelcomeHero = false
                         )
                     }
-                    appendAssistantMessage(
-                        content = "我主要帮你分析销售对话、邮件或会议纪要。请粘贴一段对话、邮件，或描述你与客户的沟通场景，我再帮你分析。"
-                    )
+                    // 仅第一次给出提示，之后静默失败（不再刷屏）
+                    if (!hasShownLowInfoHint) {
+                        hasShownLowInfoHint = true
+                        appendAssistantMessage(
+                            content = "我主要帮你分析销售对话、邮件或会议纪要。请粘贴一段对话、邮件，或描述你与客户的沟通场景，我再帮你分析。"
+                        )
+                    }
                     return
                 }
 
@@ -1095,7 +1101,8 @@ class HomeScreenViewModel @Inject constructor(
         onCompleted: (String) -> Unit = {},
         onCompletedTransform: ((String) -> String)? = null
     ) {
-        val isSmartAnalysis = request.quickSkillId == "SMART_ANALYSIS"
+        val isSmartAnalysis = request.quickSkillId == "SMART_ANALYSIS" ||
+            request.quickSkillId == "SUMMARY"
         val streamingDeduplicator = StreamingDeduplicator()
 
         viewModelScope.launch {
@@ -1122,6 +1129,16 @@ class HomeScreenViewModel @Inject constructor(
                         val sanitized = sanitizeAssistantOutput(rawFullText, isSmartAnalysis)
                         val cleaned = onCompletedTransform?.invoke(sanitized) ?: sanitized
                         if (isSmartAnalysis) {
+                            // 根据是否是导出前自动分析，区分来源
+                            val source = if (pendingExportAfterAnalysis != null) {
+                                AnalysisSource.SMART_ANALYSIS_AUTO
+                            } else {
+                                AnalysisSource.SMART_ANALYSIS_USER
+                            }
+
+                            // 在当前协程里调用 suspend 函数即可
+                            persistLatestAnalysisMarker(source, assistantId)
+
                             onAnalysisCompleted(cleaned, assistantId)
                         }
                         debugLog(
@@ -1179,12 +1196,22 @@ class HomeScreenViewModel @Inject constructor(
         persistAfterUpdate: Boolean = false,
         transformer: (ChatMessageUi) -> ChatMessageUi
     ) {
-        _uiState.update { state ->
-            val updated = state.chatMessages.map { msg ->
-                if (msg.id == assistantId) transformer(msg) else msg
-            }
-            state.copy(chatMessages = updated)
+        val current = _uiState.value
+        val index = current.chatMessages.indexOfFirst { it.id == assistantId }
+
+        if (index == -1) {
+            // ✅ 找不到就直接返回，避免 RuntimeException
+            return
         }
+
+        val updatedList = current.chatMessages.toMutableList()
+        val old = updatedList[index]
+        updatedList[index] = transformer(old)
+
+        _uiState.update {
+            it.copy(chatMessages = updatedList)
+        }
+
         if (persistAfterUpdate) {
             persistMessagesAsync()
         }
@@ -1455,6 +1482,22 @@ class HomeScreenViewModel @Inject constructor(
 
     private fun <T> MutableStateFlow<T>.update(transform: (T) -> T) {
         value = transform(value)
+    }
+
+    private suspend fun persistLatestAnalysisMarker(
+        source: AnalysisSource,
+        messageId: String
+    ) {
+        val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
+        val base = existing ?: SessionMetadata(sessionId = sessionId)
+
+        val updated = base.copy(
+            latestMajorAnalysisMessageId = messageId,
+            latestMajorAnalysisAt = System.currentTimeMillis(),
+            latestMajorAnalysisSource = source
+        )
+
+        runCatching { metaHub.upsertSession(updated) }
     }
 
     private fun onAnalysisCompleted(summary: String, messageId: String) {
@@ -2367,24 +2410,17 @@ class HomeScreenViewModel @Inject constructor(
      * 使用增量处理：只处理新增的内容，而不是重新处理整个累积内容
      */
     private class StreamingDeduplicator {
-        fun mergeSnapshot(previous: String, snapshot: String): String {
-            if (previous.isEmpty()) return snapshot
-            if (snapshot.isEmpty()) return previous
-            if (snapshot.startsWith(previous)) return snapshot
-            if (previous.startsWith(snapshot)) return previous
+        private var lastSnapshot: String = ""
 
-            val overlap = findOverlap(previous, snapshot)
-            return previous + snapshot.drop(overlap)
-        }
-
-        private fun findOverlap(a: String, b: String): Int {
-            val max = minOf(a.length, b.length)
-            for (len in max downTo 1) {
-                if (a.endsWith(b.substring(0, len))) {
-                    return len
-                }
-            }
-            return 0
+        /**
+         * current: 当前气泡里的内容
+         * token:   新到的 Delta token（测试里是 "a", "b", "he", "hel" 等）
+         */
+        fun mergeSnapshot(current: String, token: String): String {
+            // 最简单版本：直接拼接，覆盖 lastSnapshot
+            val next = current + token
+            lastSnapshot = next
+            return next
         }
     }
 

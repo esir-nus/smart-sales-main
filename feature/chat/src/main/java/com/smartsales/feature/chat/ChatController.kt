@@ -193,7 +193,8 @@ class DefaultChatController @Inject constructor(
             return
         }
         _state.update { it.copy(exportState = ChatExportState.InProgress(format)) }
-        val currentTitle = _state.value.title ?: buildTitle(System.currentTimeMillis())
+        // 标题由当前会话或 MetaHub 决定，这里仅用时间占位生成导出文件名
+        val currentTitle = buildTitle(System.currentTimeMillis())
         val exportResult = when (format) {
             ExportFormat.PDF -> exportOrchestrator.exportPdf(sessionId, markdown, currentTitle, null)
             ExportFormat.CSV -> exportOrchestrator.exportCsv(sessionId, currentTitle, null)

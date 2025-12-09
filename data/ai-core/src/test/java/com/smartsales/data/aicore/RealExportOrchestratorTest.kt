@@ -26,7 +26,6 @@ class RealExportOrchestratorTest {
         override val main = dispatcher
         override val io = dispatcher
         override val default = dispatcher
-        override val unconfined = dispatcher
     }
 
     @Test

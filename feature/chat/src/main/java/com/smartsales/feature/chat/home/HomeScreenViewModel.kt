@@ -86,7 +86,8 @@ data class ChatMessageUi(
     val content: String,
     val timestampMillis: Long,
     val isStreaming: Boolean = false,
-    val hasError: Boolean = false
+    val hasError: Boolean = false,
+    val isSmartAnalysis: Boolean = false
 )
 
 /** 区分用户与助手消息（Home 层级）。 */
@@ -190,6 +191,7 @@ data class HomeUiState(
     val isSmartAnalysisMode: Boolean = false,
     val showDebugMetadata: Boolean = false,
     val debugSessionMetadata: DebugSessionMetadata? = null,
+    val smartReasoningText: String? = null,
     val isInputFocused: Boolean = false
 )
 
@@ -849,6 +851,7 @@ class HomeScreenViewModel @Inject constructor(
         val tags = meta?.tags?.filter { it.isNotBlank() }?.sorted().orEmpty()
         val latestSourceLabel = meta?.latestMajorAnalysisSource?.let { formatAnalysisSource(it) }
         val latestAtLabel = meta?.latestMajorAnalysisAt?.let { formatAnalysisTime(it) }
+        val reasoning = buildSmartReasoningStrip(meta)
         val debug = DebugSessionMetadata(
             sessionId = sessionId,
             title = title,
@@ -862,7 +865,21 @@ class HomeScreenViewModel @Inject constructor(
             latestAtLabel = latestAtLabel,
             notes = mergedNotes
         )
-        _uiState.update { it.copy(debugSessionMetadata = debug) }
+        val messageId = meta?.latestMajorAnalysisMessageId
+        _uiState.update {
+            val updatedMessages = if (messageId != null) {
+                it.chatMessages.map { msg ->
+                    if (msg.id == messageId) msg.copy(isSmartAnalysis = true) else msg
+                }
+            } else {
+                it.chatMessages
+            }
+            it.copy(
+                debugSessionMetadata = debug,
+                smartReasoningText = reasoning,
+                chatMessages = updatedMessages
+            )
+        }
     }
 
     private fun refreshDebugSessionMetadata() {
@@ -1094,8 +1111,12 @@ class HomeScreenViewModel @Inject constructor(
             }
         }
         val userMessage = createUserMessage(userDisplayText ?: content)
-        val assistantPlaceholder = if (quickSkillId == QuickSkillId.SMART_ANALYSIS) {
-            createAssistantPlaceholder(content = SMART_PLACEHOLDER_TEXT)
+        val isSmartAnalysis = quickSkillId == QuickSkillId.SMART_ANALYSIS
+        val assistantPlaceholder = if (isSmartAnalysis) {
+            createAssistantPlaceholder(
+                content = SMART_PLACEHOLDER_TEXT,
+                isSmartAnalysis = true
+            )
         } else {
             createAssistantPlaceholder()
         }
@@ -1364,12 +1385,16 @@ class HomeScreenViewModel @Inject constructor(
         timestampMillis = System.currentTimeMillis()
     )
 
-    private fun createAssistantPlaceholder(content: String = ""): ChatMessageUi = ChatMessageUi(
+    private fun createAssistantPlaceholder(
+        content: String = "",
+        isSmartAnalysis: Boolean = false
+    ): ChatMessageUi = ChatMessageUi(
         id = nextMessageId(),
         role = ChatMessageRole.ASSISTANT,
         content = content,
         timestampMillis = System.currentTimeMillis(),
-        isStreaming = true
+        isStreaming = true,
+        isSmartAnalysis = isSmartAnalysis
     )
 
     private fun latestUserContent(): String? =
@@ -1544,6 +1569,15 @@ class HomeScreenViewModel @Inject constructor(
         return formatter.format(Date(timestamp))
     }
 
+    private fun buildSmartReasoningStrip(meta: SessionMetadata?): String? =
+        ReasoningStripFormatter.build(
+            metadata = meta,
+            formatStage = ::formatStage,
+            formatRisk = ::formatRisk,
+            formatSource = ::formatAnalysisSource,
+            formatTime = ::formatAnalysisTime
+        )
+
     private fun formatAnalysisTime(timestamp: Long): String {
         val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
         return formatter.format(Date(timestamp))
@@ -1612,17 +1646,19 @@ class HomeScreenViewModel @Inject constructor(
         )
 
         runCatching { metaHub.upsertSession(updated) }
+            .onSuccess { updateDebugSessionMetadata(updated) }
     }
 
     private fun onAnalysisCompleted(summary: String, messageId: String) {
         latestAnalysisMarkdown = summary
         latestAnalysisMessageId = messageId
+
         if (!hasShownAnalysisExportHint) {
             hasShownAnalysisExportHint = true
-            appendAssistantMessage(
-                content = "智能分析完成，如需分享可直接导出 PDF 或 CSV。"
-            )
+            // 导出提示改为非对话层面的 UI（例如顶部 banner / icon 提示），
+            // 不再插入额外的对话气泡，避免打断会话流和影响"单条智能分析卡片"结构。
         }
+
         pendingExportAfterAnalysis?.let { format ->
             pendingExportAfterAnalysis = null
             viewModelScope.launch {

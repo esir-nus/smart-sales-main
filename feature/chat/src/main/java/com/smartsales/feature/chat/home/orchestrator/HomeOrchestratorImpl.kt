@@ -169,7 +169,7 @@ class HomeOrchestratorImpl @Inject constructor(
 
         val hasContent =
             listOf(mainPerson, shortSummary, summaryTitle, location, coreInsight, sharpLine)
-                .any { !it.isNullOrBlank() } ||
+            .any { !it.isNullOrBlank() } ||
             highlights.isNotEmpty() ||
             actionable.isNotEmpty() ||
             stage != null ||

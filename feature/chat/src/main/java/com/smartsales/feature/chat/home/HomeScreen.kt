@@ -515,10 +515,16 @@ fun HomeScreen(
                                                         } else {
                                                             Modifier
                                                         }
+                                                        val alignEnd = message.role == ChatMessageRole.USER
                                                         MessageBubble(
                                                             message = message,
-                                                            alignEnd = message.role == ChatMessageRole.USER,
+                                                            alignEnd = alignEnd,
                                                             modifier = tagModifier,
+                                                            reasoningText = if (!alignEnd && message.isSmartAnalysis) {
+                                                                state.smartReasoningText
+                                                            } else {
+                                                                null
+                                                            },
                                                             onCopyAssistant = { content ->
                                                                 clipboardManager.setText(AnnotatedString(content))
                                                                 coroutineScope.launch {
@@ -1141,6 +1147,7 @@ private fun MessageBubble(
     message: ChatMessageUi,
     alignEnd: Boolean,
     modifier: Modifier = Modifier,
+    reasoningText: String? = null,
     onCopyAssistant: (String) -> Unit = {}
 ) {
     Box(
@@ -1200,6 +1207,14 @@ private fun MessageBubble(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                if (!alignEnd && !message.hasError && !reasoningText.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = reasoningText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 if (message.hasError) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(

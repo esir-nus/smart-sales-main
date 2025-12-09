@@ -31,6 +31,7 @@ data class ChatSessionUi(
     val title: String,
     val lastMessagePreview: String?,
     val updatedAt: Long,
+    val isTitleUserEdited: Boolean = false,
     val pinned: Boolean
 )
 
@@ -105,7 +106,7 @@ class ChatHistoryViewModel @Inject constructor(
                 _uiState.update { it.copy(errorMessage = "会话不存在") }
                 return@launch
             }
-            val updated = session.copy(title = newTitle)
+            val updated = session.copy(title = newTitle, isTitleUserEdited = true)
             safeUpsert(updated)
         }
     }
@@ -244,6 +245,7 @@ class ChatHistoryViewModel @Inject constructor(
                 title = it.title,
                 lastMessagePreview = it.lastMessagePreview,
                 updatedAt = it.updatedAtMillis,
+                isTitleUserEdited = it.isTitleUserEdited,
                 pinned = it.pinned
             )
         }
@@ -253,6 +255,7 @@ class ChatHistoryViewModel @Inject constructor(
         title = title,
         lastMessagePreview = lastMessagePreview ?: "",
         updatedAtMillis = updatedAt,
+        isTitleUserEdited = isTitleUserEdited,
         pinned = pinned
     )
 

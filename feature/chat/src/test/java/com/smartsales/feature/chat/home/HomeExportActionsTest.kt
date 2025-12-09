@@ -150,7 +150,7 @@ class HomeExportActionsTest {
                 override suspend fun upsert(summary: AiSessionSummary) {}
                 override suspend fun delete(id: String) {}
                 override suspend fun findById(id: String): AiSessionSummary? = null
-                override suspend fun updateTitle(id: String, newTitle: String) {}
+                override suspend fun updateTitle(id: String, newTitle: String, isUserEdited: Boolean) {}
             },
             sessionTitleResolver = SessionTitleResolver(metaHub),
             userProfileRepository = object : UserProfileRepository {

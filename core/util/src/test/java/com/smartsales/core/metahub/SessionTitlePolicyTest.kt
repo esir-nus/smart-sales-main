@@ -5,8 +5,6 @@ package com.smartsales.core.metahub
 // 说明：验证会话标题与导出文件名的格式与占位规则
 // 作者：创建于 2025-12-09
 
-import java.text.SimpleDateFormat
-import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -29,11 +27,15 @@ class SessionTitlePolicyTest {
             mainPerson = "罗总",
             summaryTitle6Chars = "展会跟进"
         )
-        val dateMillis = SimpleDateFormat("yyyy-MM-dd", Locale.CHINA)
-            .parse("2025-12-09")!!
-            .time
-        val title = SessionTitlePolicy.buildSuggestedTitle(meta, dateMillis)
-        assertEquals("罗总_展会跟进_12/09", title)
+        val title = SessionTitlePolicy.buildSuggestedTitle(meta, System.currentTimeMillis())
+        assertEquals("罗总 - 展会跟进", title)
+    }
+
+    @Test
+    fun buildSuggestedTitle_returnsNullWhenNoMetadata() {
+        val meta = SessionMetadata(sessionId = "empty")
+        val title = SessionTitlePolicy.buildSuggestedTitle(meta, System.currentTimeMillis())
+        assertEquals(null, title)
     }
 
     @Test

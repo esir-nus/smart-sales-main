@@ -12,7 +12,7 @@ import java.util.Locale
 /**
  * 标题规则：
  * - 占位标题：新的聊天 / 旧版通话分析前缀，允许一次自动改名。
- * - 正式标题：<主要人物>_<6字摘要>_<MM/dd>。
+ * - 正式标题：基于元数据生成短标题，优先「主要人物 - 6 字摘要」，其次摘要或人物。
  * - 导出文件名：<用户名>_<主要人物>_<6字摘要>_<yyyyMMdd_HHmmss>.<ext>
  */
 object SessionTitlePolicy {
@@ -21,14 +21,8 @@ object SessionTitlePolicy {
     private const val FALLBACK_PERSON: String = "未知联系人"
     private const val FALLBACK_SUMMARY: String = "销售咨询"
     private const val FALLBACK_USER: String = "用户"
-    private val titleFormatter = SimpleDateFormat("MM/dd", Locale.CHINA)
+    private const val SUMMARY_LIMIT = 8
     private val exportFormatter = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.CHINA)
-
-    data class TitleParts(
-        val person: String,
-        val summary: String,
-        val date: String
-    )
 
     fun newChatPlaceholder(): String = PLACEHOLDER_TITLE
 
@@ -42,32 +36,39 @@ object SessionTitlePolicy {
         return false
     }
 
-    fun resolvePerson(raw: String?): String {
+    fun resolvePerson(raw: String?): String? {
         val candidate = raw?.trim().orEmpty()
-        return candidate.takeIf { it.isNotBlank() } ?: FALLBACK_PERSON
+        return candidate.takeIf { it.isNotBlank() }
     }
 
-    fun resolveSummary(raw: String?): String {
+    fun resolveSummary(raw: String?): String? {
         val candidate = raw?.trim().orEmpty()
-        return candidate.takeIf { it.isNotBlank() }?.take(6) ?: FALLBACK_SUMMARY
+        return candidate.takeIf { it.isNotBlank() }?.take(SUMMARY_LIMIT)
     }
 
-    fun buildTitleParts(
-        meta: SessionMetadata?,
-        updatedAtMillis: Long
-    ): TitleParts? {
+    fun fallbackPerson(): String = FALLBACK_PERSON
+    fun fallbackSummary(): String = FALLBACK_SUMMARY
+
+    private fun buildTitleParts(
+        meta: SessionMetadata?
+    ): Pair<String?, String?>? {
         meta ?: return null
         val person = resolvePerson(meta.mainPerson)
         val summary = resolveSummary(meta.summaryTitle6Chars ?: meta.shortSummary)
-        val date = titleFormatter.format(Date(updatedAtMillis))
-        return TitleParts(person = person, summary = summary, date = date)
+        return person to summary
     }
 
     fun buildSuggestedTitle(
         meta: SessionMetadata?,
-        updatedAtMillis: Long
-    ): String? = buildTitleParts(meta, updatedAtMillis)?.let { parts ->
-        "${parts.person}_${parts.summary}_${parts.date}"
+        @Suppress("UNUSED_PARAMETER") updatedAtMillis: Long
+    ): String? = buildTitleParts(meta)?.let { (person, summary) ->
+        // 统一自动命名策略：仅在有元数据时生成短标题，避免用占位符或日期拼接长标题
+        when {
+            person != null && summary != null -> "$person - $summary"
+            summary != null -> summary
+            person != null -> person
+            else -> null
+        }
     }
 
     fun buildExportBaseName(
@@ -75,14 +76,11 @@ object SessionTitlePolicy {
         meta: SessionMetadata?
     ): String {
         val now = System.currentTimeMillis()
-        val parts = buildTitleParts(meta, meta?.lastUpdatedAt ?: now)
-            ?: TitleParts(
-                person = FALLBACK_PERSON,
-                summary = FALLBACK_SUMMARY,
-                date = titleFormatter.format(Date(now))
-            )
+        val parts = buildTitleParts(meta)
+            ?: (FALLBACK_PERSON to FALLBACK_SUMMARY)
         val user = userName?.takeIf { it.isNotBlank() } ?: FALLBACK_USER
         val timestamp = exportFormatter.format(Date(now))
-        return listOf(user, parts.person, parts.summary, timestamp).joinToString("_")
+        return listOf(user, parts.first ?: FALLBACK_PERSON, parts.second ?: FALLBACK_SUMMARY, timestamp)
+            .joinToString("_")
     }
 }

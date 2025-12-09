@@ -2514,6 +2514,7 @@ class HomeScreenViewModel @Inject constructor(
         if (!request.isFirstAssistantReply) return
         if (request.quickSkillId != null) return
         val existingSummary = sessionRepository.findById(sessionId)
+        if (existingSummary?.isTitleUserEdited == true) return
         if (existingSummary != null && !SessionTitlePolicy.isPlaceholder(existingSummary.title)) return
         val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
         val createdAt = existingSummary?.updatedAtMillis ?: System.currentTimeMillis()
@@ -2570,6 +2571,8 @@ class HomeScreenViewModel @Inject constructor(
     private suspend fun enforcePlaceholderForHeroIfNeeded() {
         val state = _uiState.value
         if (!state.showWelcomeHero || state.chatMessages.isNotEmpty()) return
+        val existing = sessionRepository.findById(sessionId)
+        if (existing?.isTitleUserEdited == true) return
         if (SessionTitlePolicy.isPlaceholder(state.currentSession.title)) return
         val placeholder = SessionTitlePolicy.newChatPlaceholder()
         sessionRepository.updateTitle(sessionId, placeholder)
@@ -2584,6 +2587,7 @@ class HomeScreenViewModel @Inject constructor(
 
     private suspend fun updateTitleFromMetadata(meta: SessionMetadata) {
         val existingSummary = sessionRepository.findById(sessionId)
+        if (existingSummary?.isTitleUserEdited == true) return
         if (existingSummary != null && !SessionTitlePolicy.isPlaceholder(existingSummary.title)) return
         val createdAt = existingSummary?.updatedAtMillis ?: meta.lastUpdatedAt
         val title = SessionTitlePolicy.buildSuggestedTitle(meta, createdAt) ?: return

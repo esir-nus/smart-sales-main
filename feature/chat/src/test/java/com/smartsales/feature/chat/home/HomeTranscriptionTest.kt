@@ -216,9 +216,12 @@ class HomeTranscriptionTest {
 
         override suspend fun findById(id: String): AiSessionSummary? = sessions[id]
 
-        override suspend fun updateTitle(id: String, newTitle: String) {
+        override suspend fun updateTitle(id: String, newTitle: String, isUserEdited: Boolean) {
             sessions[id]?.let { existing ->
-                val updated = existing.copy(title = newTitle)
+                val updated = existing.copy(
+                    title = newTitle,
+                    isTitleUserEdited = existing.isTitleUserEdited || isUserEdited
+                )
                 sessions[id] = updated
                 summaries.value = sessions.values.toList()
             }

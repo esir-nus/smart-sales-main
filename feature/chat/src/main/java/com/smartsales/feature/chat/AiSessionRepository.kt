@@ -17,6 +17,7 @@ data class AiSessionSummary(
     val title: String,
     val lastMessagePreview: String,
     val updatedAtMillis: Long,
+    val isTitleUserEdited: Boolean = false, // 用户手动改名后锁定标题
     val isTranscription: Boolean = false,
     val pinned: Boolean = false
 )
@@ -26,7 +27,7 @@ interface AiSessionRepository {
     suspend fun upsert(summary: AiSessionSummary)
     suspend fun delete(id: String)
     suspend fun findById(id: String): AiSessionSummary?
-    suspend fun updateTitle(id: String, newTitle: String)
+    suspend fun updateTitle(id: String, newTitle: String, isUserEdited: Boolean = false)
     suspend fun createNewChatSession(): AiSessionSummary
 }
 
@@ -42,6 +43,7 @@ class InMemoryAiSessionRepository @Inject constructor() : AiSessionRepository {
             title = com.smartsales.core.metahub.SessionTitlePolicy.newChatPlaceholder(),
             lastMessagePreview = "",
             updatedAtMillis = System.currentTimeMillis(),
+            isTitleUserEdited = false,
             isTranscription = false,
             pinned = false
         )
@@ -71,11 +73,16 @@ class InMemoryAiSessionRepository @Inject constructor() : AiSessionRepository {
         it.id == id
     }
 
-    override suspend fun updateTitle(id: String, newTitle: String) {
+    override suspend fun updateTitle(id: String, newTitle: String, isUserEdited: Boolean) {
         mutex.withLock {
             internal.update { existing ->
                 existing.map { summary ->
-                    if (summary.id == id) summary.copy(title = newTitle) else summary
+                    if (summary.id == id) {
+                        val edited = summary.isTitleUserEdited || isUserEdited
+                        summary.copy(title = newTitle, isTitleUserEdited = edited)
+                    } else {
+                        summary
+                    }
                 }
             }
         }

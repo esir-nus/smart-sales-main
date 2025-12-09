@@ -262,10 +262,15 @@ class HomeHeroTitlePlaceholderTest {
 
         override suspend fun findById(id: String): AiSessionSummary? = summaries.value.firstOrNull { it.id == id }
 
-        override suspend fun updateTitle(id: String, newTitle: String) {
+        override suspend fun updateTitle(id: String, newTitle: String, isUserEdited: Boolean) {
             mutex.withLock {
                 summaries.value = summaries.value.map { summary ->
-                    if (summary.id == id) summary.copy(title = newTitle) else summary
+                    if (summary.id == id) {
+                        summary.copy(
+                            title = newTitle,
+                            isTitleUserEdited = summary.isTitleUserEdited || isUserEdited
+                        )
+                    } else summary
                 }
             }
         }

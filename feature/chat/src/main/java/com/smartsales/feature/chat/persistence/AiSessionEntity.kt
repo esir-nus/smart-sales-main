@@ -19,6 +19,8 @@ data class AiSessionEntity(
     val preview: String,
     @ColumnInfo(name = "updated_at")
     val updatedAtMillis: Long,
+    @ColumnInfo(name = "is_title_user_edited", defaultValue = "0")
+    val isTitleUserEdited: Boolean = false,
     @ColumnInfo(name = "pinned", defaultValue = "0")
     val pinned: Boolean = false
 )

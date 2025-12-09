@@ -66,11 +66,14 @@ class RoomAiSessionRepositoryTest {
         override suspend fun findById(sessionId: String): AiSessionEntity? =
             flow.value.firstOrNull { it.id == sessionId }
 
-        override suspend fun updateTitle(sessionId: String, newTitle: String) {
+        override suspend fun updateTitle(sessionId: String, newTitle: String, isUserEdited: Boolean) {
             val current = flow.value.firstOrNull { it.id == sessionId } ?: return
             flow.value = flow.value.map { entity ->
                 if (entity.id == sessionId) {
-                    entity.copy(title = newTitle)
+                    entity.copy(
+                        title = newTitle,
+                        isTitleUserEdited = current.isTitleUserEdited || isUserEdited
+                    )
                 } else {
                     entity
                 }

@@ -255,9 +255,12 @@ class HomeStreamingDedupTest {
 
         override suspend fun findById(id: String): AiSessionSummary? = sessions[id]
 
-        override suspend fun updateTitle(id: String, newTitle: String) {
+        override suspend fun updateTitle(id: String, newTitle: String, isUserEdited: Boolean) {
             sessions[id]?.let { existing ->
-                sessions[id] = existing.copy(title = newTitle)
+                sessions[id] = existing.copy(
+                    title = newTitle,
+                    isTitleUserEdited = existing.isTitleUserEdited || isUserEdited
+                )
                 summaries.value = sessions.values.toList()
             }
         }

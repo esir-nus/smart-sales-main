@@ -32,6 +32,7 @@ class RoomAiSessionRepository(
             title = com.smartsales.core.metahub.SessionTitlePolicy.newChatPlaceholder(),
             lastMessagePreview = "",
             updatedAtMillis = System.currentTimeMillis(),
+            isTitleUserEdited = false,
             isTranscription = false,
             pinned = false
         )
@@ -55,9 +56,9 @@ class RoomAiSessionRepository(
         dao.findById(id)?.toSummary()
     }
 
-    override suspend fun updateTitle(id: String, newTitle: String) {
+    override suspend fun updateTitle(id: String, newTitle: String, isUserEdited: Boolean) {
         withContext(dispatchers.io) {
-            dao.updateTitle(id, newTitle)
+            dao.updateTitle(id, newTitle, isUserEdited)
         }
     }
 
@@ -66,6 +67,7 @@ class RoomAiSessionRepository(
         title = title,
         lastMessagePreview = preview,
         updatedAtMillis = updatedAtMillis,
+        isTitleUserEdited = isTitleUserEdited,
         pinned = pinned
     )
 
@@ -74,6 +76,7 @@ class RoomAiSessionRepository(
         title = title,
         preview = lastMessagePreview,
         updatedAtMillis = updatedAtMillis,
+        isTitleUserEdited = isTitleUserEdited,
         pinned = pinned
     )
 }

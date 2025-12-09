@@ -248,10 +248,13 @@ class ChatHistoryViewModelTest {
         override suspend fun findById(id: String): AiSessionSummary? =
             state.value.firstOrNull { it.id == id }
 
-        override suspend fun updateTitle(id: String, newTitle: String) {
+        override suspend fun updateTitle(id: String, newTitle: String, isUserEdited: Boolean) {
             val existing = state.value.firstOrNull { it.id == id } ?: return
             state.value = state.value.map { summary ->
-                if (summary.id == id) summary.copy(title = newTitle) else summary
+                if (summary.id == id) {
+                    val edited = existing.isTitleUserEdited || isUserEdited
+                    summary.copy(title = newTitle, isTitleUserEdited = edited)
+                } else summary
             }
         }
     }

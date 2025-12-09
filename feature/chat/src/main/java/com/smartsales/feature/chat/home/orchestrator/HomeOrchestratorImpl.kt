@@ -118,11 +118,22 @@ class HomeOrchestratorImpl @Inject constructor(
     // SMART_ANALYSIS JSON 解析：只取最后一个有效 JSON 对象
     private fun parseSmartAnalysisPayload(rawText: String): ParsedSmartAnalysis? {
         val jsonObject = extractLastSmartJson(rawText) ?: return null
-        val summary = jsonObject.optJSONObject("summary")
+
+        // Replace optJSONObject("summary") with a safer string-based parse
+        val summaryObj = runCatching {
+            val rawSummary = jsonObject.optString("summary")
+            if (!rawSummary.isNullOrBlank() && rawSummary.trim().startsWith("{")) {
+                JSONObject(rawSummary)
+            } else {
+                null
+            }
+        }.getOrNull()
 
         val mainPerson = jsonObject.optString("main_person").takeIf { it.isNotBlank() }
         val shortSummary = jsonObject.optString("short_summary").takeIf { it.isNotBlank() }
-        val summaryTitle = jsonObject.optString("summary_title_6chars").takeIf { it.isNotBlank() }?.take(6)
+        val summaryTitle = jsonObject.optString("summary_title_6chars")
+            .takeIf { it.isNotBlank() }
+            ?.take(6)
         val location = jsonObject.optString("location").takeIf { it.isNotBlank() }
 
         val stage = jsonObject.optString("stage").takeIf { it.isNotBlank() }?.let { toStage(it) }
@@ -130,17 +141,21 @@ class HomeOrchestratorImpl @Inject constructor(
 
         val highlights = jsonObject.optJSONArray("highlights")?.toStringList().orEmpty()
         val actionable = jsonObject.optJSONArray("actionable_tips")?.toStringList().orEmpty()
-        val coreInsight = jsonObject.optString("core_insight").takeIf { it.isNotBlank() }
-            ?: summary?.optString("core_insight")?.takeIf { it.isNotBlank() }
-        val sharpLine = jsonObject.optString("sharp_line").takeIf { it.isNotBlank() }
-            ?: summary?.optString("sharp_line")?.takeIf { it.isNotBlank() }
 
-        val hasContent = listOf(mainPerson, shortSummary, summaryTitle, location, coreInsight, sharpLine)
-            .any { !it.isNullOrBlank() } ||
+        val coreInsight = jsonObject.optString("core_insight").takeIf { it.isNotBlank() }
+            ?: summaryObj?.optString("core_insight")?.takeIf { it.isNotBlank() }
+
+        val sharpLine = jsonObject.optString("sharp_line").takeIf { it.isNotBlank() }
+            ?: summaryObj?.optString("sharp_line")?.takeIf { it.isNotBlank() }
+
+        val hasContent =
+            listOf(mainPerson, shortSummary, summaryTitle, location, coreInsight, sharpLine)
+                .any { !it.isNullOrBlank() } ||
             highlights.isNotEmpty() ||
             actionable.isNotEmpty() ||
             stage != null ||
             risk != null
+
         if (!hasContent) return null
 
         return ParsedSmartAnalysis(

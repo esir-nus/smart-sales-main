@@ -26,11 +26,14 @@ import com.smartsales.feature.connectivity.DeviceNetworkStatus
 import com.smartsales.feature.connectivity.WifiCredentials
 import com.smartsales.feature.media.MediaSyncCoordinator
 import com.smartsales.feature.media.MediaSyncState
+import com.smartsales.feature.media.audiofiles.AudioOrigin
 import com.smartsales.feature.media.audiofiles.AudioStorageRepository
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
 import com.smartsales.feature.media.audiofiles.StoredAudio
+import com.smartsales.feature.media.devicemanager.DeviceMediaFile
+import android.net.Uri
 import com.smartsales.feature.usercenter.UserProfile
 import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.data.aicore.ExportOrchestrator
@@ -224,11 +227,34 @@ class HomeSmartStreamingViewModelTest {
 
     private class FakeAudioStorageRepository : AudioStorageRepository {
         override val audios: Flow<List<StoredAudio>> = flowOf(emptyList())
-        override suspend fun importFromDevice(baseUrl: String, objectKey: String): Result<StoredAudio> =
-            Result.Error(UnsupportedOperationException())
+        
+        override suspend fun importFromDevice(baseUrl: String, file: DeviceMediaFile): StoredAudio {
+            return StoredAudio(
+                id = "fake-device",
+                displayName = file.name,
+                sizeBytes = 0L,
+                durationMillis = null,
+                timestampMillis = System.currentTimeMillis(),
+                origin = AudioOrigin.DEVICE,
+                localUri = Uri.parse("file://fake-device")
+            )
+        }
 
-        override suspend fun importFromPhone(uri: android.net.Uri): Result<StoredAudio> =
-            Result.Error(UnsupportedOperationException())
+        override suspend fun importFromPhone(uri: Uri): StoredAudio {
+            return StoredAudio(
+                id = "fake-phone",
+                displayName = "fake-phone-audio",
+                sizeBytes = 0L,
+                durationMillis = null,
+                timestampMillis = System.currentTimeMillis(),
+                origin = AudioOrigin.PHONE,
+                localUri = uri
+            )
+        }
+
+        override suspend fun delete(audioId: String) {
+            // no-op
+        }
     }
 
     private class FakeChatHistoryRepository : ChatHistoryRepository {
@@ -272,7 +298,7 @@ class HomeSmartStreamingViewModelTest {
 
         override suspend fun findById(id: String): AiSessionSummary? = sessions[id]
 
-        override suspend fun updateTitle(id: String, newTitle: String) {
+        override suspend fun updateTitle(id: String, newTitle: String, isUserEdited: Boolean) {
             sessions[id]?.let { existing ->
                 sessions[id] = existing.copy(title = newTitle)
                 summaries.value = sessions.values.toList()

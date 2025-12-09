@@ -155,23 +155,14 @@ class DelegatingHomeAiChatService @Inject constructor(
         builder.append("最新问题：${request.userMessage}")
         // 根据模式追加提示：GENERAL_CHAT 与 SMART_ANALYSIS 各自定制
         if (request.quickSkillId == null) {
-            // GENERAL 首条回复：轻量对话回答 + 可选 JSON 元数据，不再使用 SMART 的长篇 Markdown 模板
+            // GENERAL 首条回复：轻量对话回答 + 可选 JSON 尾巴（单个对象），避免长模板导致过度结构化
             builder.appendLine()
             builder.appendLine()
             if (request.isFirstAssistantReply) {
                 builder.appendLine("你是销售助手。先用简洁、友好的口吻直接回答用户的问题，不要套用长篇报告或多段 Markdown 模板。")
-                builder.appendLine("如果你能提炼关键信息，可以在回答末尾额外补充一个 JSON 对象（单个即可，可选），使用 ```json 包裹，字段示例：")
-                builder.appendLine("{")
-                builder.appendLine("  \"main_person\": \"<主要客户称呼，未知写“未知客户”>\",")
-                builder.appendLine("  \"short_summary\": \"<2-3 句话总结本次交流>\",")
-                builder.appendLine("  \"summary_title_6chars\": \"<不超过6个汉字的标题，可选>\",")
-                builder.appendLine("  \"location\": \"<城市或地区，可为空>\",")
-                builder.appendLine("  \"highlights\": [\"要点1\", \"要点2\"],")
-                builder.appendLine("  \"actionable_tips\": [\"建议1\", \"建议2\"],")
-                builder.appendLine("  \"core_insight\": \"<一句核心洞察，可选>\",")
-                builder.appendLine("  \"sharp_line\": \"<一句精炼话术，可选>\"")
-                builder.appendLine("}")
-                builder.appendLine("JSON 可选且只输出一次，不要在正文提及 JSON 存在；若无法识别字段，可省略该 JSON。")
+                builder.appendLine("如识别出会话关键信息，可在回答末尾追加一个可选的 JSON 对象（只输出一次，放在最后一行，不要附加说明或 Markdown）。示例：")
+                builder.appendLine("{\"main_person\":\"罗总（客户）\",\"short_summary\":\"首次到店试驾沟通\",\"summary_title_6chars\":\"罗总试驾\",\"location\":\"上海\",\"highlights\":[\"首次沟通\",\"有购买意向\"],\"actionable_tips\":[\"安排试驾反馈\",\"准备报价\"],\"core_insight\":\"关注价格与交付确定性\",\"sharp_line\":\"价格透明、交付准时\"}")
+                builder.appendLine("字段含义：main_person=主要客户称呼（未知写“未知客户”）；short_summary=一句话概述；summary_title_6chars=≤6汉字标题；location=城市；highlights/actionable_tips/core_insight/sharp_line=要点、建议与话术。无法提取结构化信息时可以不输出 JSON。")
             } else {
                 builder.appendLine("请按下面格式回复（总长不超过 200 字）：")
                 builder.appendLine("1) 用 1-2 句话复述用户问题；如信息不足，直接说明需要更多细节")

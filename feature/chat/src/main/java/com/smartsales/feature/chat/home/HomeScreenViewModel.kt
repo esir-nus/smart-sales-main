@@ -66,6 +66,7 @@ private const val CONTEXT_LENGTH_LIMIT = 800
 private const val CONTEXT_MESSAGE_LIMIT = 5
 private const val ANALYSIS_CONTENT_LIMIT = 2400
 private const val TAG = "HomeScreenVM"
+private const val SMART_PLACEHOLDER_TEXT = "正在智能分析当前会话内容…"
 private const val SMART_ANALYSIS_FAILURE_TEXT = "本次智能分析暂时不可用，请稍后重试。"
 
 private enum class InputBucket { NOISE, SHORT_RELEVANT, RICH }
@@ -1072,7 +1073,11 @@ class HomeScreenViewModel @Inject constructor(
             }
         }
         val userMessage = createUserMessage(userDisplayText ?: content)
-        val assistantPlaceholder = createAssistantPlaceholder()
+        val assistantPlaceholder = if (quickSkillId == QuickSkillId.SMART_ANALYSIS) {
+            createAssistantPlaceholder(content = SMART_PLACEHOLDER_TEXT)
+        } else {
+            createAssistantPlaceholder()
+        }
         // 先在旧消息列表上判断是否已有助手回复，避免占位气泡干扰
         val hadAssistantReplyBefore = _uiState.value.chatMessages.any { it.role == ChatMessageRole.ASSISTANT }
         val isFirstAssistantReply = !hadAssistantReplyBefore
@@ -1135,14 +1140,13 @@ class HomeScreenViewModel @Inject constructor(
         onCompleted: (String) -> Unit = {},
         onCompletedTransform: ((String) -> String)? = null
     ) {
-        val isSmartAnalysis = request.quickSkillId == "SMART_ANALYSIS" ||
-            request.quickSkillId == "SUMMARY"
+        val isSmartAnalysis = request.quickSkillId == "SMART_ANALYSIS"
         val streamingDeduplicator = StreamingDeduplicator()
 
         if (isSmartAnalysis) {
             // 本地占位提示，避免流式展示脏文本
             updateAssistantMessage(assistantId) { msg ->
-                msg.copy(content = "正在智能分析…", isStreaming = true)
+                msg.copy(content = SMART_PLACEHOLDER_TEXT, isStreaming = true)
             }
         }
 
@@ -1216,8 +1220,20 @@ class HomeScreenViewModel @Inject constructor(
                             ),
                             throwable = event.throwable
                         )
-                        updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
-                            msg.copy(hasError = true, isStreaming = false)
+                        if (isSmartAnalysis) {
+                            val errorText = event.throwable.message?.takeIf { it.isNotBlank() }
+                                ?: SMART_ANALYSIS_FAILURE_TEXT
+                            updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
+                                msg.copy(
+                                    content = errorText,
+                                    hasError = true,
+                                    isStreaming = false
+                                )
+                            }
+                        } else {
+                            updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
+                                msg.copy(hasError = true, isStreaming = false)
+                            }
                         }
                         pendingExportAfterAnalysis = null
                         _uiState.update {
@@ -1327,10 +1343,10 @@ class HomeScreenViewModel @Inject constructor(
         timestampMillis = System.currentTimeMillis()
     )
 
-    private fun createAssistantPlaceholder(): ChatMessageUi = ChatMessageUi(
+    private fun createAssistantPlaceholder(content: String = ""): ChatMessageUi = ChatMessageUi(
         id = nextMessageId(),
         role = ChatMessageRole.ASSISTANT,
-        content = "",
+        content = content,
         timestampMillis = System.currentTimeMillis(),
         isStreaming = true
     )

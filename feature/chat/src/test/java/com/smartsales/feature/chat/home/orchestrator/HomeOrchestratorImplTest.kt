@@ -206,6 +206,55 @@ class HomeOrchestratorImplTest {
     }
 
     @Test
+    fun `malformed json returns failure and skips meta updates`() = runTest(dispatcher) {
+        val metaHub = RecordingMetaHub()
+        val aiChatService = CompletedAiChatService("{ \"main_person\": \"客户\"") // 缺失大括号导致解析失败
+        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub)
+
+        val events = mutableListOf<ChatStreamEvent>()
+        orchestrator.streamChat(
+            ChatRequest(
+                sessionId = "broken",
+                userMessage = "go",
+                quickSkillId = QuickSkillId.SMART_ANALYSIS.name
+            )
+        ).collect { events.add(it) }
+
+        val completed = events.first() as ChatStreamEvent.Completed
+        assertEquals("本次智能分析暂时不可用，请稍后重试。", completed.fullText)
+        assertEquals(null, metaHub.lastSession)
+    }
+
+    @Test
+    fun `markdown omits empty sections and hides json braces`() = runTest(dispatcher) {
+        val metaHub = RecordingMetaHub()
+        val aiChatService = CompletedAiChatService(
+            """
+            ```json
+            { "sharp_line": "一句话话术" }
+            ```
+            """.trimIndent()
+        )
+        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub)
+
+        val events = mutableListOf<ChatStreamEvent>()
+        orchestrator.streamChat(
+            ChatRequest(
+                sessionId = "omit",
+                userMessage = "go",
+                quickSkillId = QuickSkillId.SMART_ANALYSIS.name
+            )
+        ).collect { events.add(it) }
+
+        val text = (events.first() as ChatStreamEvent.Completed).fullText
+        assertFalse(text.contains("{"))
+        assertFalse(text.contains("}"))
+        assertFalse(text.contains("需求与痛点"))
+        assertFalse(text.contains("建议与行动"))
+        assertTrue(text.contains("## 一句话话术"))
+    }
+
+    @Test
     fun `returns friendly failure markdown when json is missing`() = runTest(dispatcher) {
         val metaHub = RecordingMetaHub()
         val aiChatService = CompletedAiChatService("没有生成结构化结果")
@@ -263,12 +312,18 @@ class HomeOrchestratorImplTest {
             sessionId = "merge",
             mainPerson = "初始客户",
             shortSummary = "旧摘要",
+            summaryTitle6Chars = "旧标题",
+            stage = com.smartsales.core.metahub.SessionStage.NEGOTIATION,
+            riskLevel = com.smartsales.core.metahub.RiskLevel.HIGH,
             tags = setOf("旧标签")
         )
         val aiChatService = CompletedAiChatService(
             """
             ```json
-            { "actionable_tips": ["新增行动"] }
+            {
+              "summary_title_6chars": "新标题",
+              "actionable_tips": ["新增行动"]
+            }
             ```
             """.trimIndent()
         )
@@ -285,8 +340,12 @@ class HomeOrchestratorImplTest {
         val saved = metaHub.lastSession!!
         assertEquals("初始客户", saved.mainPerson)
         assertEquals("旧摘要", saved.shortSummary)
+        assertEquals("新标题", saved.summaryTitle6Chars)
+        assertEquals(com.smartsales.core.metahub.SessionStage.NEGOTIATION, saved.stage)
+        assertEquals(com.smartsales.core.metahub.RiskLevel.HIGH, saved.riskLevel)
         assertTrue(saved.tags.contains("新增行动"))
         assertEquals(AnalysisSource.SMART_ANALYSIS_USER, saved.latestMajorAnalysisSource)
+        assertTrue(saved.latestMajorAnalysisAt != null)
     }
 
     private class CompletedAiChatService(

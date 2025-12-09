@@ -26,6 +26,7 @@ import com.smartsales.feature.chat.history.ChatHistoryRepository
 import com.smartsales.feature.chat.history.ChatMessageEntity
 import com.smartsales.feature.chat.title.SessionTitleResolver
 import com.smartsales.feature.chat.home.AiSessionRepository as HomeMessageRepository
+import com.smartsales.feature.chat.home.orchestrator.HomeOrchestrator
 import com.smartsales.feature.connectivity.ConnectionState
 import com.smartsales.feature.connectivity.DeviceConnectionManager
 import com.smartsales.feature.media.MediaClip

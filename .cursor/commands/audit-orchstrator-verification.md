@@ -1,146 +1,129 @@
-About **how to use that big audit prompt**, think of it *not* as something you paste back into me, but as a **manual checklist + script for you** to run locally.
+Mode: Orchestrator–MetaHub Refactor – General Audit (Read-Only, No Code Changes)
 
-Here’s how to use it effectively:
+You are my “Orchestrator” brain for the SmartSales Android app. Your job right now is to **audit**, not to edit code.
 
----
+### Scope for this audit
 
-## 1. Save it in your repo
+Current focus:
+- <describe the current thing I care about, e.g. “end-to-end SMART_ANALYSIS behavior (text + audio)” or “MetaHub + title pipeline for SMART + GENERAL + Tingwu”>
 
-1. Create a file like:
+If I don’t give more detail, assume scope = “overall Orchestrator–MetaHub V4 behavior across GENERAL chat, SMART_ANALYSIS, and Tingwu”.
 
-   * `docs/plans/T-orch-V3-Final-Verification.md`
-2. Paste the whole audit prompt into that file.
+### Sources of truth
 
-This turns it into an *official checklist* for Orchestrator + MetaHub changes.
+Treat these as the **only** specs, with this priority:
 
----
+1. `docs/Orchestrator-MetadataHub-V4.md`  ← primary spec for Orchestrator + MetaHub.
+2. `docs/ux-contract.md`                  ← UX behavior (especially SMART_ANALYSIS UI).
+3. `docs/api-contracts.md`                ← HomeOrchestrator / MetaHub / Export / etc.
+4. `docs/tingwu-doc.md`                   ← Tingwu behavior + relationship to V4.
+5. `docs/style-guide.md` / `docs/AGENTS.md` / `docs/role-contract.md` ← process, style, and how you should behave.
 
-## 2. When should you use it?
+**Archived only:**
+- `docs/Orchestrator-MetadataHub-Mvp-V3.md` is **historical**. Never treat it as a spec; only use it to understand how things used to work.
 
-Use it **every time** you:
+### What I want from this audit
 
-* Touch:
+Stay in **READ-ONLY** mode:
 
-  * `HomeOrchestratorImpl`
-  * `RealTranscriptOrchestrator`
-  * `RealTingwuCoordinator`
-  * `ExportOrchestrator`
-  * `SessionMetadata` / `TranscriptMetadata` / `InMemoryMetaHub`
-  * `HomeScreenViewModel` streaming / export / audio upload
-* Or you think you might have impacted:
+- **Do not** propose code patches.
+- **Do not** describe how to change code.
+- Only describe how the current behavior (as far as you can infer) lines up or diverges from the V4 spec.
 
-  * SMART_ANALYSIS behavior
-  * export behavior
-  * Tingwu transcript → Chat wiring
-  * speaker-role inference
-
-Basically: any “orchestrator / MetaHub / transcript / export” change → run this checklist.
+Follow this structure:
 
 ---
 
-## 3. How to actually run it (step-by-step)
+## 1. Restate the scope
 
-### Step 1 – Run the test commands from the prompt
-
-In your project root, run these **exact commands** in a terminal:
-
-```bash
-# MetaHub / merge semantics
-./gradlew :core:util:test \
-  --tests "com.smartsales.core.metahub.InMemoryMetaHubTest" \
-  --tests "com.smartsales.core.metahub.SessionMetadataMergeTest" \
-  --tests "com.smartsales.core.metahub.TranscriptMetadataMergeTest"
-
-# Orchestrator + Tingwu
-./gradlew :data:ai-core:testDebugUnitTest \
-  --tests "com.smartsales.data.aicore.RealTranscriptOrchestratorTest" \
-  --tests "com.smartsales.data.aicore.RealTingwuCoordinatorTest" \
-  --tests "com.smartsales.data.aicore.ExportOrchestratorContractTest"
-
-# Home export, streaming dedup, transcription binding
-./gradlew :feature:chat:testDebugUnitTest \
-  --tests "com.smartsales.feature.chat.home.HomeExportActionsTest" \
-  --tests "com.smartsales.feature.chat.home.HomeStreamingDedupTest" \
-  --tests "com.smartsales.feature.chat.home.HomeTranscriptionTest"
-```
-
-**How to use the results:**
-
-* If everything is **green** → good, go to Step 2.
-* If something fails:
-
-  * Fix the code or tests.
-  * Re-run the same command(s) until they pass.
-  * Only then go to Step 2.
-
-You don’t need Codex for this — this is just your normal local Gradle.
+In 2–3 bullets, restate what you’re auditing in your own words, so I can see you understood the focus.
 
 ---
 
-### Step 2 – Walk through the checklist sections (A–F)
+## 2. V4 rules (from docs)
 
-Open the markdown file with the audit prompt and go section by section:
+From the docs above, extract the concrete rules that apply to **this scope only**.
 
-* **A. LLM boundaries**
-  In IDE, search for `AiChatService` and confirm:
+- 5–15 bullets max.
+- Focus on *behavior*, not implementation details, for these areas (as applicable):
 
-  * Only `HomeOrchestratorImpl` and `RealTranscriptOrchestrator` depend on it.
-  * `RealExportOrchestrator`, `RealTingwuCoordinator`, `HomeScreenViewModel`, `MetaHub` are LLM-free.
+  - LLM responsibilities (what it should / should NOT output, especially for SMART_ANALYSIS).
+  - Orchestrator responsibilities (JSON parsing, `SessionMetadata`, formatting Markdown, writing MetaHub).
+  - ViewModel / UI responsibilities (streaming vs placeholder, what gets rendered, what must NOT be shown).
+  - MetaHub responsibilities (which fields must be stored, last-major-analysis markers, title/export behavior).
+  - Tingwu / transcript responsibilities (what it does now and how it should integrate with MetaHub/SMART).
+  - Any title / HUD / export behaviors that are driven by MetaHub for this scope.
 
-* **B. MetaHub models & merge semantics**
-  Open `SessionMetadata.kt`, `TranscriptMetadata.kt`, `InMemoryMetaHub.kt`:
+Call this section:
 
-  * Ensure `mergeWith` matches the rules (non-null override, tag union, CRM merge, confidence clamp).
-  * Confirm `upsertSession`/`upsertTranscript` both use `mergeWith`.
-
-* **C. HomeOrchestrator + HomeScreenViewModel**
-
-  * Confirm JSON is only parsed in `HomeOrchestratorImpl`.
-  * In `HomeScreenViewModel`, check that `metaHub` is only used to **read** (`getSession`), not parse JSON.
-
-* **D. SMART_ANALYSIS & export**
-
-  * Check `exportMarkdown` in the VM:
-
-    * Enough content → analysis allowed.
-    * Too short content → only hint, no analysis request.
-  * `onAnalysisCompleted` writes `latestMajorAnalysis*` into MetaHub.
-  * `ExportOrchestrator`:
-
-    * `exportPdf(sessionId, markdown)`
-    * `exportCsv(sessionId)` from CRM rows only, no LLM.
-
-* **E. TranscriptOrchestrator + Tingwu**
-
-  * Verify the parameter list of `TranscriptMetadataRequest` calls in `RealTingwuCoordinator`.
-  * Confirm confidence-threshold behavior and fail-soft behavior (no crashes).
-
-* **F. Audio upload & session binding**
-
-  * Home upload reuses current `sessionId` → Tingwu → back into same chat.
-  * Audio Sync screen is the only place allowed to spin up a **new** session for a transcript.
-
-For each subsection A–F, mentally mark it as ✅ / ⚠️ / ❌.
-If you hit ⚠️ or ❌, fix the code, go back to **Step 1**, and loop again.
+> **V4 rules (from docs)**
 
 ---
 
-## 4. How to “close” a T-orch task using this
+## 3. Current behavior vs V4 (conceptual)
 
-Once:
+Based on the docs + your knowledge of typical Android project layouts (and, when you later instruct Codex, the actual repo), infer where the key logic *likely* lives:
 
-1. All three Gradle commands are ✅ green, and
-2. All checklist sections A–F are truly satisfied,
+- Prompt building (e.g. HomeScreenBindings).
+- Orchestrator implementation (e.g. HomeOrchestratorImpl).
+- ViewModels/UI (HomeScreenViewModel, HomeScreen, overlays).
+- MetaHub integration (SessionMetadata, title policy, export orchestrator).
+- Tingwu coordinators / transcript orchestrator.
 
-you can write in your commit / PR / internal doc something like:
+You do **not** edit these; just reason about them.
 
-> **T-orch-V3 guardrails reverified**
->
-> * All orchestrator + MetaHub tests passing
-> * LLM boundaries intact (only HomeOrchestratorImpl & RealTranscriptOrchestrator hit AiChatService)
-> * MetaHub merge semantics verified via Session/Transcript tests
-> * Home streaming dedup & export behavior tested
-> * Tingwu transcript → Chat sessionId & speaker roles checked
+For each V4 rule from section 2, classify it:
 
-That’s how this prompt is meant to be used:
-👉 **as a repeatable manual “final boss” checklist for orchestrator/MetaHub work**
+- `OK – ...` = behavior clearly matches V4.
+- `MISMATCH – ...` = behavior diverges from V4 (old V3 behavior, leaking JSON, wrong owner of responsibility, etc.).
+- `UNKNOWN – ...` = not enough info to be sure (or depends on code paths you can’t see from docs alone).
+
+When you say **MISMATCH**, be explicit about **which layer is doing the wrong job**, e.g.:
+
+- “LLM still emits Markdown + JSON instead of JSON-only.”
+- “Orchestrator passes through raw text instead of formatting Markdown.”
+- “ViewModel still streams SMART_ANALYSIS deltas instead of showing a placeholder.”
+- “Tingwu summary is not written into SessionMetadata at all.”
+
+Call this section:
+
+> **Findings by rule**
+
+Use bullets like:
+
+- `**OK – [short label] – brief explanation**`
+- `**MISMATCH – [short label] – explanation of divergence**`
+- `**UNKNOWN – [short label] – what’s missing / unclear**`
+
+---
+
+## 4. Likely causes of visible issues (if applicable)
+
+Only if I’ve been complaining about visible problems (e.g. first-round SMART_ANALYSIS verbosity, duplicated scaffolding, wrong titles, crashing on audio analysis):
+
+- Tie specific **MISMATCH** items to what I experience.
+- For each symptom, give 1–3 bullets like:
+
+  - “Symptom: first SMART_ANALYSIS reply is super verbose and full of scaffolding.”
+    - Likely cause: SMART pipeline still streams raw deltas into the bubble (VM behavior) while the V4 spec says ‘placeholder + final Markdown only’ (Orchestrator formatted).
+    - Layer mismatch: VM doing presentation of raw LLM instead of relying solely on Orchestrator output.
+
+Call this section (if needed):
+
+> **Likely causes of current visible issues**
+
+---
+
+## 5. Audit summary
+
+Finish with a short summary:
+
+- Total rules checked and counts for OK / MISMATCH / UNKNOWN.
+- A 3–5 bullet “so what”:
+
+  - Which mismatches are **architectural** (wrong layer doing the job).
+  - Which are **prompt-level** vs **orchestrator-level** vs **UI-level**.
+  - Which areas are most important to fix next to get closer to V4 (e.g. “stop streaming SMART_ANALYSIS deltas” or “move SMART parsing from VM to orchestrator”).
+
+**Important:**  
+This audit is **analysis-only**. Do **not** describe concrete code changes, new functions, or patches here. We’ll do “doc sync” and “Codex implementation prompts” as separate steps later.

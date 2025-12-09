@@ -56,7 +56,8 @@ data class SessionMetadata(
 enum class AnalysisSource {
     GENERAL_FIRST_REPLY,
     SMART_ANALYSIS_USER,
-    SMART_ANALYSIS_AUTO
+    SMART_ANALYSIS_AUTO,
+    TINGWU
 }
 
 /**

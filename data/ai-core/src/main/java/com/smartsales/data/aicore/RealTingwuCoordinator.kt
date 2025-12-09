@@ -6,6 +6,8 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.annotations.SerializedName
+import com.smartsales.core.metahub.AnalysisSource
+import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.SpeakerMeta
 import com.smartsales.core.metahub.TranscriptMetadata
 import com.smartsales.core.util.DispatcherProvider
@@ -63,6 +65,7 @@ class RealTingwuCoordinator @Inject constructor(
     private val credentialsProvider: TingwuCredentialsProvider,
     private val signedUrlProvider: OssSignedUrlProvider,
     private val transcriptOrchestrator: TranscriptOrchestrator,
+    private val metaHub: MetaHub,
     optionalConfig: Optional<AiCoreConfig>
 ) : TingwuCoordinator {
 
@@ -294,6 +297,12 @@ class RealTingwuCoordinator @Inject constructor(
                             val artifactsWithMetadata = mergedArtifacts?.copy(
                                 speakerLabels = mergedSpeakerLabels
                             ) ?: mergedArtifacts
+                            upsertSessionMetadataFromTingwu(
+                                jobId = jobId,
+                                artifacts = artifactsWithMetadata,
+                                transcriptMeta = transcriptMeta,
+                                chapters = transcriptResult.chapters
+                            )
                             AiCoreLogger.d(TAG, "转写结果拉取成功：jobId=$jobId markdown长度=${transcriptResult.markdown.length}")
                             flow.value = TingwuJobState.Completed(
                                 jobId = jobId,
@@ -325,6 +334,49 @@ class RealTingwuCoordinator @Inject constructor(
             }
         }
         pollingJobs[jobId] = job
+    }
+
+    // 将 Tingwu 转写产出的摘要/标签写入 MetaHub，标记最新分析来源。
+    private suspend fun upsertSessionMetadataFromTingwu(
+        jobId: String,
+        artifacts: TingwuJobArtifacts?,
+        transcriptMeta: TranscriptMetadata?,
+        chapters: List<TingwuChapter>?
+    ) {
+        val sessionId = jobContext[jobId]?.sessionId ?: return
+        val smartSummary = artifacts?.smartSummary
+        val chapterTitle = (artifacts?.chapters ?: chapters).orEmpty().firstOrNull()?.title
+        val summary = smartSummary?.summary
+            ?: transcriptMeta?.shortSummary
+            ?: chapterTitle
+        val titleHint = chapterTitle ?: transcriptMeta?.summaryTitle6Chars
+        val mainPerson = transcriptMeta?.mainPerson
+        val tags = buildSet {
+            smartSummary?.keyPoints?.forEach { add(it) }
+            smartSummary?.actionItems?.forEach { add(it) }
+        }.filter { it.isNotBlank() }.toSet().takeIf { it.isNotEmpty() }
+        val input = TingwuMetadataInput(
+            sessionId = sessionId,
+            callSummary = summary,
+            shortTitleHint = titleHint,
+            mainPersonName = mainPerson,
+            tags = tags,
+            completedAt = System.currentTimeMillis()
+        )
+        val patch = TingwuSessionMetadataMapper.toMetadataPatch(input) ?: return
+        val patchWithSource = patch.copy(
+            latestMajorAnalysisSource = AnalysisSource.TINGWU,
+            latestMajorAnalysisAt = input.completedAt,
+            lastUpdatedAt = maxOf(patch.lastUpdatedAt, input.completedAt)
+        )
+        val merged = runCatching { metaHub.getSession(sessionId) }.getOrNull()
+            ?.mergeWith(patchWithSource) ?: patchWithSource
+        runCatching {
+            // Tingwu 转写完成后，将摘要等信息写入 MetaHub，标记为通话转写来源。
+            metaHub.upsertSession(merged)
+        }.onFailure {
+            AiCoreLogger.w(TAG, "Tingwu 元数据写入 MetaHub 失败：${it.message}")
+        }
     }
 
     private suspend fun fetchTranscript(

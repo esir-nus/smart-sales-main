@@ -19,7 +19,7 @@
 
 * For visuals (colors, typography, spacing, component shapes) see `style-guide.md`.
 
-* For reasoning, metadata, and analysis flows see `Orchestrator-MetadataHub-Mvp-V3.md`.
+* For reasoning, metadata, and analysis flows see `Orchestrator-MetadataHub-V4.md`.
 
 * For APIs and data models see `api-contracts.md`.
 
@@ -585,4 +585,4 @@ For all such features:
 ---
 
 This contract now supersedes the previous UX contract.
-Any UX work on the Assistant must respect this document, plus `style-guide.md` and `Orchestrator-MetadataHub-Mvp-V3.md`.
+Any UX work on the Assistant must respect this document, plus `style-guide.md` and `Orchestrator-MetadataHub-V4.md`.

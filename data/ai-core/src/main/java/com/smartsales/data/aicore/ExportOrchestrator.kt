@@ -262,6 +262,7 @@ class RealExportOrchestrator @Inject constructor(
         AnalysisSource.SMART_ANALYSIS_USER,
         AnalysisSource.SMART_ANALYSIS_AUTO -> "来自智能分析"
         AnalysisSource.GENERAL_FIRST_REPLY -> "来自首次回复"
+        AnalysisSource.TINGWU -> "来自通话转写"
     }
 
     private fun formatAnalysisTime(timestamp: Long): String {

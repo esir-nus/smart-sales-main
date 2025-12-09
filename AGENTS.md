@@ -11,10 +11,10 @@ This project uses a fixed multi-agent workflow:
 The full rules and invocation protocol are defined in **`role-contract.md`**.  
 All agents must follow that document as the authoritative behavior contract.
 
-- **Orchestrator / MetaHub 合约来源**：`docs/plans/Orchestrator-MetadataHub-Mvp-V3.md` 是编排与 MetaHub 的最新权威规范，涉及标题生成、分析标记、导出、转写等逻辑时必须以此为准。
+- **Orchestrator / MetaHub 合约来源**：`docs/Orchestrator-MetadataHub-V4.md` 是编排与 MetaHub 的最新权威规范；`docs/plans/Orchestrator-MetadataHub-Mvp-V3.md` 仅作历史参考。
 - **UX 合约来源优先级**：
   1. `docs/ux-contract.md`（唯一现行 UX 真实来源，交互/布局/流程）
-  2. `docs/plans/Orchestrator-MetadataHub-Mvp-V3.md`（推理与元数据）
+  2. `docs/Orchestrator-MetadataHub-V4.md`（推理与元数据，V4 为现行规范；V3 仅历史参考）
   3. `docs/style-guide.md`（视觉规范）
   4. 现有 Android 实现与测试
   5. 归档的 React/UI 仅作历史参考；`assistant-ux-contract.md` 已归档，请勿作为现行规范。

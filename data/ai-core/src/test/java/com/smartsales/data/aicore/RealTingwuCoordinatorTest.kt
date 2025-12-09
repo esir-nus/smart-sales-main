@@ -11,6 +11,8 @@ import com.smartsales.data.aicore.tingwu.TingwuResultResponse
 import com.smartsales.data.aicore.tingwu.TingwuStatusData
 import com.smartsales.data.aicore.tingwu.TingwuStatusResponse
 import com.smartsales.data.aicore.tingwu.TingwuTranscription
+import com.smartsales.core.metahub.AnalysisSource
+import com.smartsales.core.metahub.InMemoryMetaHub
 import com.smartsales.core.metahub.SpeakerMeta
 import com.smartsales.core.metahub.TranscriptMetadata
 import com.smartsales.data.aicore.tingwu.TingwuTaskParameters
@@ -100,6 +102,7 @@ class RealTingwuCoordinatorTest {
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
+            metaHub = InMemoryMetaHub(),
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     tingwuPollIntervalMillis = 10,
@@ -134,6 +137,7 @@ class RealTingwuCoordinatorTest {
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
+            metaHub = InMemoryMetaHub(),
             optionalConfig = Optional.empty()
         )
 
@@ -185,6 +189,7 @@ class RealTingwuCoordinatorTest {
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
+            metaHub = InMemoryMetaHub(),
             optionalConfig = Optional.empty()
         )
 
@@ -242,6 +247,7 @@ class RealTingwuCoordinatorTest {
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
+            metaHub = InMemoryMetaHub(),
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     tingwuPollIntervalMillis = 10,
@@ -313,6 +319,7 @@ class RealTingwuCoordinatorTest {
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
+            metaHub = InMemoryMetaHub(),
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     tingwuPollIntervalMillis = 10,
@@ -397,6 +404,7 @@ class RealTingwuCoordinatorTest {
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
+            metaHub = InMemoryMetaHub(),
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     tingwuPollIntervalMillis = 10,
@@ -421,6 +429,90 @@ class RealTingwuCoordinatorTest {
         assertEquals("会议概览", summary?.summary)
         assertEquals(listOf("要点1"), summary?.keyPoints)
         assertEquals(listOf("行动A"), summary?.actionItems)
+    }
+
+    @Test
+    fun completedJob_writesSessionMetadataWithTingwuSource() = runTest(dispatcher) {
+        val summaryFile = createTempFile(suffix = ".json").toFile().apply {
+            writeText(
+                """
+                {
+                  "Summary":"会议概览",
+                  "KeyPoints":["要点1"],
+                  "ActionItems":["行动A"]
+                }
+                """.trimIndent()
+            )
+        }
+        val summaryUrl = summaryFile.toURI().toURL().toString()
+        val api = FakeTingwuApi()
+        api.enqueueStatus(
+            statusResponse(
+                status = "SUCCEEDED",
+                progress = 100,
+                resultLinks = mapOf(
+                    "Transcription" to "https://example.com/transcription.json",
+                    "Summarization" to summaryUrl
+                )
+            )
+        )
+        api.resultData = TingwuResultResponse(
+            requestId = "req-result",
+            code = "0",
+            message = "Success",
+            data = TingwuResultData(
+                taskId = "job-meta",
+                transcription = TingwuTranscription(
+                    text = "正文",
+                    segments = null,
+                    speakers = null,
+                    language = "zh",
+                    duration = 10.0,
+                    url = "https://example.com/transcription.json"
+                ),
+                resultLinks = mapOf(
+                    "Transcription" to "https://example.com/transcription.json",
+                    "Summarization" to summaryUrl
+                ),
+                outputMp3Path = null,
+                outputMp4Path = null,
+                outputThumbnailPath = null,
+                outputSpectrumPath = null
+            )
+        )
+        val metaHub = InMemoryMetaHub()
+        val coordinator = RealTingwuCoordinator(
+            dispatchers = dispatchers,
+            api = api,
+            credentialsProvider = credentialsProvider,
+            signedUrlProvider = signedUrlProvider,
+            transcriptOrchestrator = transcriptOrchestrator,
+            metaHub = metaHub,
+            optionalConfig = Optional.of(
+                AiCoreConfig(
+                    tingwuPollIntervalMillis = 10,
+                    tingwuPollTimeoutMillis = 200
+                )
+            )
+        )
+
+        val result = coordinator.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav",
+                sessionId = "session-meta"
+            )
+        )
+        assertTrue(result is Result.Success)
+        advanceTimeBy(20)
+        advanceUntilIdle()
+
+        val saved = metaHub.getSession("session-meta")
+        assertEquals("会议概览", saved?.shortSummary)
+        assertEquals("会议概览", saved?.summaryTitle6Chars)
+        assertEquals(AnalysisSource.TINGWU, saved?.latestMajorAnalysisSource)
+        assertTrue((saved?.latestMajorAnalysisAt ?: 0) > 0)
+        assertTrue(saved?.tags?.contains("要点1") == true)
     }
 
     @Test
@@ -454,6 +546,7 @@ class RealTingwuCoordinatorTest {
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
+            metaHub = InMemoryMetaHub(),
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     tingwuPollIntervalMillis = 10,
@@ -494,6 +587,7 @@ class RealTingwuCoordinatorTest {
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
+            metaHub = InMemoryMetaHub(),
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     tingwuPollIntervalMillis = 10,
@@ -535,6 +629,7 @@ class RealTingwuCoordinatorTest {
             },
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
+            metaHub = InMemoryMetaHub(),
             optionalConfig = Optional.empty()
         )
 
@@ -590,6 +685,7 @@ class RealTingwuCoordinatorTest {
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
+            metaHub = InMemoryMetaHub(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10))
         )
         val submitResult = coordinator.submit(
@@ -653,6 +749,7 @@ class RealTingwuCoordinatorTest {
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = orchestrator,
+            metaHub = InMemoryMetaHub(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -719,6 +816,7 @@ class RealTingwuCoordinatorTest {
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = orchestrator,
+            metaHub = InMemoryMetaHub(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 

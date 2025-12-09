@@ -11,5 +11,6 @@ data class TranscriptionChatRequest(
     val recordingId: String? = null,
     val sessionId: String? = null,
     val transcriptPreview: String? = null,
-    val transcriptMarkdown: String? = null
+    val transcriptMarkdown: String? = null,
+    val isFromCache: Boolean = false
 )

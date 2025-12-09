@@ -720,39 +720,56 @@ class HomeScreenViewModel @Inject constructor(
                 )
             }
             existingHistory.lastOrNull()?.content?.let { updateSessionSummary(it) }
-            if (!transcript.isNullOrBlank() && existingHistory.isEmpty()) {
-                val contextMessage = ChatMessageUi(
-                    id = nextMessageId(),
-                    role = ChatMessageRole.ASSISTANT,
-                    content = buildTranscriptContext(request.fileName, transcript),
-                    timestampMillis = System.currentTimeMillis()
-                )
+            if (!transcript.isNullOrBlank()) {
+                // Tingwu 结果复用：缓存命中时不重复“转写完成/逐字稿”，仅提示一次或直接给逐字稿
+                val messages = mutableListOf<ChatMessageUi>()
+                val noticeText = if (request.isFromCache) {
+                    "已为你加载历史转写，可以直接总结要点或生成跟进话术。"
+                } else {
+                    "通话分析 · 已为你加载录音 ${request.fileName} 的转写内容，可以直接总结要点或生成跟进话术。"
+                }
+                val existingContents = _uiState.value.chatMessages.map { it.content }
+                if (!existingContents.contains(noticeText)) {
+                    messages += ChatMessageUi(
+                        id = nextMessageId(),
+                        role = ChatMessageRole.ASSISTANT,
+                        content = noticeText,
+                        timestampMillis = System.currentTimeMillis()
+                    )
+                }
+                if (!existingContents.contains(transcript)) {
+                    messages += ChatMessageUi(
+                        id = nextMessageId(),
+                        role = ChatMessageRole.ASSISTANT,
+                        content = transcript,
+                        timestampMillis = System.currentTimeMillis()
+                    )
+                }
                 _uiState.update { state ->
                     state.copy(
-                        chatMessages = state.chatMessages + contextMessage,
+                        chatMessages = state.chatMessages + messages,
                         snackbarMessage = null,
                         showWelcomeHero = false
                     )
                 }
                 persistMessagesAsync()
-                updateSessionSummary(contextMessage.content)
-            }
-            val introMessage = ChatMessageUi(
-                id = nextMessageId(),
-                role = ChatMessageRole.ASSISTANT,
-                content = "通话分析 · 已为你加载录音 ${request.fileName} 的转写内容，我可以帮你总结对话、提炼要点或生成跟进话术。",
-                timestampMillis = System.currentTimeMillis()
-            )
-            _uiState.update { state ->
-                state.copy(
-                    chatMessages = state.chatMessages + introMessage,
-                    showWelcomeHero = false
+                updateSessionSummary(transcript)
+            } else {
+                val introNotice = ChatMessageUi(
+                    id = nextMessageId(),
+                    role = ChatMessageRole.ASSISTANT,
+                    content = "通话分析 · 已为你加载录音 ${request.fileName} 的转写内容，我可以帮你总结对话、提炼要点或生成跟进话术。",
+                    timestampMillis = System.currentTimeMillis()
                 )
-            }
-            persistMessagesAsync()
-            if (transcript.isNullOrBlank()) {
+                _uiState.update { state ->
+                    state.copy(
+                        chatMessages = state.chatMessages + introNotice,
+                        showWelcomeHero = false
+                    )
+                }
+                persistMessagesAsync()
                 val introId = nextMessageId()
-                val introMessage = ChatMessageUi(
+                val progressMessage = ChatMessageUi(
                     id = introId,
                     role = ChatMessageRole.ASSISTANT,
                     content = "正在转写音频文件 ${request.fileName} ...",
@@ -761,7 +778,7 @@ class HomeScreenViewModel @Inject constructor(
                 )
                 _uiState.update {
                     it.copy(
-                        chatMessages = _uiState.value.chatMessages + introMessage,
+                        chatMessages = _uiState.value.chatMessages + progressMessage,
                         snackbarMessage = null,
                         showWelcomeHero = false
                     )

@@ -238,7 +238,8 @@ private fun AiFeatureTestApp(
                             recordingId = event.recordingId,
                             sessionId = sessionId,
                             transcriptPreview = event.transcriptPreview,
-                            transcriptMarkdown = event.fullTranscriptMarkdown
+                            transcriptMarkdown = event.fullTranscriptMarkdown,
+                            isFromCache = event.isFromCache
                         )
                     )
                     pendingSessionId = sessionId

@@ -321,6 +321,42 @@ class AudioFilesViewModelTest {
         assertEquals("转写完成", ready?.fullTranscriptMarkdown)
         assertTrue(ready?.sessionId?.startsWith("session-clip5") == true)
         assertEquals(ready?.sessionId, viewModel.uiState.value.sessionIds["clip5.mp3"])
+        assertEquals(false, ready?.isFromCache)
+        collectJob.cancel()
+    }
+
+    @Test
+    fun `reuse completed transcript emits cache event without re-submitting`() = runTest(dispatcher) {
+        val file = DeviceMediaFile("reuse.mp3", 1, "audio/mpeg", 10L, "m", "d")
+        gateway.files = listOf(file)
+        endpointProvider.emit("http://10.0.0.15:8000")
+        advanceUntilIdle()
+
+        val received = mutableListOf<AudioFilesEvent>()
+        val collectJob = backgroundScope.launch {
+            viewModel.events.collect { received += it }
+        }
+
+        viewModel.onTranscribeClicked("reuse.mp3")
+        transcriptionCoordinator.emitState(
+            "task-1",
+            AudioTranscriptionJobState.Completed(
+                jobId = "task-1",
+                transcriptMarkdown = "首轮转写",
+                transcriptionUrl = "https://example.com/transcription.json"
+            )
+        )
+        advanceUntilIdle()
+        val submitCallsAfterFirst = transcriptionCoordinator.submitCalls
+
+        viewModel.onTranscribeClicked("reuse.mp3")
+        advanceUntilIdle()
+
+        // 第二次点击应复用缓存，不再提交 Tingwu
+        assertEquals(submitCallsAfterFirst, transcriptionCoordinator.submitCalls)
+        val lastReady = received.filterIsInstance<AudioFilesEvent.TranscriptReady>().lastOrNull()
+        assertEquals(true, lastReady?.isFromCache)
+        assertEquals("首轮转写", lastReady?.fullTranscriptMarkdown)
         collectJob.cancel()
     }
 

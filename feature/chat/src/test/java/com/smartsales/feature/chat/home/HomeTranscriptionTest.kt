@@ -53,6 +53,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
 import org.junit.Before
@@ -149,8 +150,28 @@ class HomeTranscriptionTest {
         advanceUntilIdle()
 
         val messages = viewModel.uiState.value.chatMessages
-        assertTrue(messages.any { it.content.contains("通话分析") && it.content.contains("call-1.wav") })
-        assertTrue(messages.any { it.content.contains("已加载录音") && it.content.contains("要点") })
+        assertTrue(messages.any { it.content.contains("通话分析 · 已为你加载录音") && it.content.contains("call-1.wav") })
+        assertTrue(messages.any { it.content.contains("## 内容") && it.content.contains("要点") })
+    }
+
+    @Test
+    fun `cached transcript shows compact notice without duplicates`() = runTest(dispatcher) {
+        viewModel.onTranscriptionRequested(
+            TranscriptionChatRequest(
+                jobId = "job-cache",
+                fileName = "cached.wav",
+                transcriptMarkdown = "缓存逐字稿",
+                isFromCache = true
+            )
+        )
+
+        advanceUntilIdle()
+
+        val messages = viewModel.uiState.value.chatMessages
+        assertTrue(messages.any { it.content.contains("历史转写") })
+        val transcriptCount = messages.count { it.content.contains("缓存逐字稿") }
+        assertEquals(1, transcriptCount)
+        assertFalse(messages.any { it.content.contains("转写完成：cached.wav") })
     }
 
     private class FakeAiChatService : AiChatService {

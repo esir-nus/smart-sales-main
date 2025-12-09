@@ -155,14 +155,24 @@ class DelegatingHomeAiChatService @Inject constructor(
         builder.append("最新问题：${request.userMessage}")
         // 根据模式追加提示：GENERAL_CHAT 与 SMART_ANALYSIS 各自定制
         if (request.quickSkillId == null) {
-            // GENERAL 首条回复：轻量对话回答 + 可选 JSON 尾巴（单个对象），避免长模板导致过度结构化
+            // GENERAL 首条回复：控制在 2-4 句，末尾可选单个 JSON 对象；明确禁止多次重复和多轮 JSON 草稿。
             builder.appendLine()
             builder.appendLine()
             if (request.isFirstAssistantReply) {
-                builder.appendLine("你是销售助手。先用简洁、友好的口吻直接回答用户的问题，避免重复同一句话或客户姓名多次出现，不要套用长篇报告或多段 Markdown 模板。")
-                builder.appendLine("如识别出会话关键信息，可在回答末尾追加一个可选的 JSON 对象（只输出一次，放在最后一行，不要附加说明或 Markdown）。示例：")
-                builder.appendLine("{\"main_person\":\"罗总（客户）\",\"short_summary\":\"首次到店试驾沟通\",\"summary_title_6chars\":\"罗总试驾\",\"location\":\"上海\",\"highlights\":[\"首次沟通\",\"有购买意向\"],\"actionable_tips\":[\"安排试驾反馈\",\"准备报价\"],\"core_insight\":\"关注价格与交付确定性\",\"sharp_line\":\"价格透明、交付准时\"}")
-                builder.appendLine("字段含义：main_person=本次会话最重要的客户/外部联系人称呼（无法判断写“未知客户”，不要写自己或同事/老板）；short_summary=一句话概述；summary_title_6chars=≤6汉字标题；location=城市；highlights/actionable_tips/core_insight/sharp_line=要点、建议与话术。无法提取结构化信息时可以不输出 JSON。")
+                builder.appendLine("你是销售助手。先用简洁、友好的口吻直接回答用户的问题，控制在 2-4 句，不要写长篇报告或多段 Markdown 模板。")
+                builder.appendLine("避免重复同一句话，也不要把客户称呼（例如“罗总”）连续提到超过 2 次。")
+                builder.appendLine()
+                builder.appendLine("如果你能提炼关键信息，可以在回答结束后追加一个可选的 JSON 对象（只输出一次）。JSON 规则：")
+                builder.appendLine("1）JSON 必须放在最后一行；")
+                builder.appendLine("2）JSON 前面是自然语言回复，中间用换行分隔；")
+                builder.appendLine("3）不要输出中间过程或错误的 JSON，如果拿不准就完全不要输出 JSON；")
+                builder.appendLine("4）JSON 对象外不要再加 Markdown 或额外说明。")
+                builder.appendLine()
+                builder.appendLine("正确形态示例（示意，不要逐字照抄）：")
+                builder.appendLine("自然语言示例：")
+                builder.appendLine("罗总，您好！我们可以为您提供多款机械臂方案。为方便推荐，请先告诉我预算区间和预计采购数量。")
+                builder.appendLine("紧接着在下一行输出 JSON 示例：")
+                builder.appendLine("{\"main_person\":\"罗总（客户）\",\"short_summary\":\"罗总咨询大规模采购机械臂\",\"summary_title_6chars\":\"罗总采购\",\"location\":\"上海\",\"highlights\":[\"大规模采购需求\"],\"actionable_tips\":[\"询问数量和预算\"],\"core_insight\":\"客户有明确采购意向\",\"sharp_line\":\"快速响应并提供定制方案\"}")
             } else {
                 builder.appendLine("请按下面格式回复（总长不超过 200 字）：")
                 builder.appendLine("1) 用 1-2 句话复述用户问题；如信息不足，直接说明需要更多细节")

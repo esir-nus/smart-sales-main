@@ -111,8 +111,40 @@ class AudioFilesViewModel @Inject constructor(
     fun onTranscribeClicked(id: String) {
         val recording = _uiState.value.recordings.find { it.id == id }
         if (recording?.transcriptionStatus == TranscriptionStatus.IN_PROGRESS) {
+            // 已有任务在跑，直接复用现有 Flow，避免重复提交 Tingwu
+            val existingJob = _uiState.value.tingwuTaskIds[id]
+            if (existingJob != null) {
+                observeJob(id, existingJob)
+            }
             emitError("处理中…")
             return
+        }
+        // 同一录音若已完成转写，直接复用历史结果，不再重复触发 Tingwu 提交
+        if (recording?.transcriptionStatus == TranscriptionStatus.DONE) {
+            val transcript = recording.fullTranscriptMarkdown ?: recording.transcriptPreview
+            if (!transcript.isNullOrBlank()) {
+                val sessionId = _uiState.value.sessionIds[id] ?: "session-$id"
+                val jobId = _uiState.value.tingwuTaskIds[id] ?: "tingwu-cache-$id"
+                _uiState.update { state ->
+                    state.copy(
+                        sessionIds = state.sessionIds + (id to sessionId),
+                        tingwuTaskIds = state.tingwuTaskIds + (id to jobId)
+                    )
+                }
+                _events.tryEmit(
+                    AudioFilesEvent.TranscriptReady(
+                        recordingId = id,
+                        fileName = recording.fileName,
+                        jobId = jobId,
+                        sessionId = sessionId,
+                        transcriptPreview = recording.transcriptPreview ?: transcript.take(MAX_PREVIEW_LENGTH),
+                        fullTranscriptMarkdown = recording.fullTranscriptMarkdown ?: transcript,
+                        transcriptionUrl = recording.transcriptionUrl,
+                        isFromCache = true
+                    )
+                )
+                return
+            }
         }
         val stored = storedAudios[id]
         val deviceFile = recordingSources[id]
@@ -559,6 +591,7 @@ sealed interface AudioFilesEvent {
         val sessionId: String,
         val transcriptPreview: String?,
         val fullTranscriptMarkdown: String?,
-        val transcriptionUrl: String?
+        val transcriptionUrl: String?,
+        val isFromCache: Boolean = false
     ) : AudioFilesEvent
 }

@@ -560,7 +560,10 @@ class HomeScreenViewModel @Inject constructor(
         _uiState.update { it.copy(navigationRequest = HomeNavigationRequest.AudioFiles) }
     }
 
-    /** 处理用户上传的本地音频，保存到本地并提交 Tingwu 转写。 */
+    /**
+     * 处理用户上传的本地音频，保存到本地并提交 Tingwu 转写。
+     * 复用当前聊天 sessionId，避免为每次音频上传创建新会话。
+     */
     fun onAudioFilePicked(uri: Uri) {
         viewModelScope.launch {
             _uiState.update { it.copy(isInputBusy = true, isBusy = true, snackbarMessage = null, showWelcomeHero = false) }
@@ -603,7 +606,8 @@ class HomeScreenViewModel @Inject constructor(
             when (val submit = transcriptionCoordinator.submitTranscription(
                 audioAssetName = stored.displayName,
                 language = "zh-CN",
-                uploadPayload = uploadPayload
+                uploadPayload = uploadPayload,
+                sessionId = sessionId
             )) {
                 is Result.Success -> {
                     _uiState.update { it.copy(isInputBusy = false, isBusy = false, snackbarMessage = "音频已上传，正在转写…") }
@@ -611,7 +615,8 @@ class HomeScreenViewModel @Inject constructor(
                         TranscriptionChatRequest(
                             jobId = submit.data,
                             fileName = stored.displayName,
-                            recordingId = stored.id
+                            recordingId = stored.id,
+                            sessionId = sessionId
                         )
                     )
                 }

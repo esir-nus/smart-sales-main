@@ -31,10 +31,10 @@ From `assistant-ux-contract.md`, `style-guide.md`, `Orchestrator-MetadataHub-Mvp
 **MISMATCH – `HomeScreen.kt:731-734`:** Title text is hard-coded `"AI 助手"` instead of bound to `state.currentSession.title`.
 
 ```kotlin
-Text(
+        Text(
     text = "AI 助手",  // Should be: state.currentSession.title
-    style = MaterialTheme.typography.titleLarge
-)
+            style = MaterialTheme.typography.titleLarge
+        )
 ```
 
 **OK:** Left icon is a hamburger (`Icons.Filled.History`) that toggles the history drawer. Test tag `HISTORY_TOGGLE` is present (line 749).
@@ -52,10 +52,10 @@ Text(
 ```kotlin
 Column(modifier = Modifier.fillMaxSize()) {
     EntryCards(  // Should NOT be here
-        deviceSnapshot = state.deviceSnapshot,
-        audioSummary = state.audioSummary,
+                        deviceSnapshot = state.deviceSnapshot,
+                        audioSummary = state.audioSummary,
         ...
-    )
+                    )
     Spacer(modifier = Modifier.height(8.dp))
     Box(...) { /* chat list / empty state */ }
 }

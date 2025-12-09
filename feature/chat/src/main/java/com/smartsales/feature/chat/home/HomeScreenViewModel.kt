@@ -232,6 +232,8 @@ class HomeScreenViewModel @Inject constructor(
     private var hasShownLowInfoSmartAnalysisHint: Boolean = false
     private var hasShownAnalysisExportHint: Boolean = false
     private var transcriptionJob: Job? = null
+    // GENERAL 首条回复元数据尝试次数（最多 3 次，首个非空胜出）
+    private var generalMetadataAttempts: Int = 0
     private var latestAnalysisMarkdown: String? = null
     private var latestAnalysisMessageId: String? = null
     private var pendingExportAfterAnalysis: ExportFormat? = null
@@ -245,6 +247,7 @@ class HomeScreenViewModel @Inject constructor(
         observeSessions()
         loadUserProfile()
         viewModelScope.launch { prepareInitialSession() }
+        generalMetadataAttempts = 0
     }
 
     fun onInputChanged(text: String) {
@@ -701,6 +704,7 @@ class HomeScreenViewModel @Inject constructor(
             
             val existingHistory = chatHistoryRepository.loadLatestSession(targetSessionId)
             this@HomeScreenViewModel.sessionId = targetSessionId
+            generalMetadataAttempts = 0
             hasShownLowInfoHint = false
             hasShownAnalysisExportHint = false
             _uiState.update {
@@ -922,6 +926,7 @@ class HomeScreenViewModel @Inject constructor(
         viewModelScope.launch {
             if (sessionId != this@HomeScreenViewModel.sessionId) {
                 this@HomeScreenViewModel.sessionId = sessionId
+                generalMetadataAttempts = 0
                 latestAnalysisMarkdown = null
                 hasShownLowInfoHint = false
                 hasShownAnalysisExportHint = false
@@ -955,6 +960,7 @@ class HomeScreenViewModel @Inject constructor(
         viewModelScope.launch {
             val newSession = sessionRepository.createNewChatSession()
             sessionId = newSession.id
+            generalMetadataAttempts = 0
             latestAnalysisMarkdown = null
             hasShownLowInfoHint = false
             hasShownAnalysisExportHint = false
@@ -1218,12 +1224,19 @@ class HomeScreenViewModel @Inject constructor(
                     is ChatStreamEvent.Completed -> {
                         // 完成：关闭 streaming，最终清理和去重
                         val rawFullText = event.fullText
-                        val shouldParseSessionMetadata =
-                            request.quickSkillId == null && request.isFirstAssistantReply
-                        if (shouldParseSessionMetadata) {
-                            handleGeneralChatMetadata(rawFullText)
+                        val isGeneralChat = request.quickSkillId == null
+                        // GENERAL 首条回复：最多尝试 3 次解析 JSON；首个非空即锁定，第 3 次仍为空则走兜底元数据
+                        if (isGeneralChat && generalMetadataAttempts < 3) {
+                            val shouldForceFallback = generalMetadataAttempts >= 2
+                            when (handleGeneralChatMetadata(rawFullText, shouldForceFallback)) {
+                                GeneralMetadataResult.SUCCESS,
+                                GeneralMetadataResult.FALLBACK -> generalMetadataAttempts = 3
+                                GeneralMetadataResult.NO_METADATA -> generalMetadataAttempts += 1
+                                GeneralMetadataResult.SKIPPED -> generalMetadataAttempts = 3
+                            }
                         }
-                        val sanitized = if (isSmartAnalysis) rawFullText else sanitizeAssistantOutput(rawFullText, isSmartAnalysis)
+                        val strippedForUi = if (isSmartAnalysis) rawFullText else stripTrailingJsonFromGeneralReply(rawFullText)
+                        val sanitized = if (isSmartAnalysis) rawFullText else sanitizeAssistantOutput(strippedForUi, isSmartAnalysis)
                         // SMART_ANALYSIS 已由 Orchestrator 生成最终 Markdown，这里直接透传
                         val cleaned = if (isSmartAnalysis) {
                             sanitized
@@ -2336,37 +2349,37 @@ class HomeScreenViewModel @Inject constructor(
             .replace(Regex("[\\p{Punct}\\s]+"), "")
     }
 
-    private suspend fun handleGeneralChatMetadata(rawFullText: String) {
-        val jsonText = extractLastJsonBlock(rawFullText)
-        if (jsonText.isNullOrBlank()) {
-            debugLog(
-                event = "metadata_parse_skipped",
-                data = mapOf("sessionId" to sessionId, "reason" to "no_json_found")
-            )
-            return
+    private suspend fun handleGeneralChatMetadata(
+        rawFullText: String,
+        forceFallback: Boolean
+    ): GeneralMetadataResult {
+        val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
+        if (existing?.latestMajorAnalysisSource == AnalysisSource.GENERAL_FIRST_REPLY) {
+            return GeneralMetadataResult.SKIPPED
         }
-        val metadata = parseGeneralChatMetadata(jsonText, sessionId)
-        if (metadata == null || !metadata.hasMeaningfulGeneralFields()) {
-            warnLog(
-                event = "general_chat_metadata_parse_failed",
-                data = mapOf("sessionId" to sessionId, "reason" to "json_parse_null")
-            )
-            appendDebugNote("generalChatMetadataParseFailed")
-            return
+        val jsonBlock = findLastJsonBlock(rawFullText)
+        val metadata = jsonBlock?.text?.let { parseGeneralChatMetadata(it, sessionId) }
+        val meaningful = metadata?.hasMeaningfulGeneralFields() == true
+        val patch = when {
+            meaningful -> metadata!!
+            forceFallback -> buildGeneralFallbackMetadata(existing)
+            else -> null
         }
-        val patch = metadata.copy(
+        if (patch == null) {
+            return GeneralMetadataResult.NO_METADATA
+        }
+        val merged = (existing?.mergeWith(patch) ?: patch).copy(
             latestMajorAnalysisSource = AnalysisSource.GENERAL_FIRST_REPLY,
             latestMajorAnalysisAt = System.currentTimeMillis()
         )
-        val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-        val merged = existing?.mergeWith(patch) ?: patch
         debugLog(
             event = "general_chat_metadata_parsed",
             data = mapOf(
                 "sessionId" to sessionId,
                 "mainPerson" to merged.mainPerson,
                 "shortSummary" to merged.shortSummary,
-                "title6" to merged.summaryTitle6Chars
+                "title6" to merged.summaryTitle6Chars,
+                "fallback" to (!meaningful && forceFallback)
             )
         )
         runCatching { metaHub.upsertSession(merged) }
@@ -2382,6 +2395,9 @@ class HomeScreenViewModel @Inject constructor(
                 )
                 viewModelScope.launch {
                     updateTitleFromMetadata(merged)
+                    merged.shortSummary?.takeIf { it.isNotBlank() }?.let { summary ->
+                        updateSessionSummary(summary)
+                    }
                 }
             }
             .onFailure {
@@ -2396,7 +2412,12 @@ class HomeScreenViewModel @Inject constructor(
                 appendDebugNote("sessionMetaUpsertFailed")
             }
         updateDebugSessionMetadata(merged)
+        return if (meaningful) GeneralMetadataResult.SUCCESS else GeneralMetadataResult.FALLBACK
     }
+
+    private enum class GeneralMetadataResult { SUCCESS, NO_METADATA, FALLBACK, SKIPPED }
+
+    private data class JsonBlock(val text: String, val startIndex: Int)
 
     // TODO: Replace with Orchestrator-MetadataHub V2 spec metadata types when available
     private fun parseGeneralChatMetadata(jsonText: String, sessionId: String): SessionMetadata? = runCatching {
@@ -2412,18 +2433,22 @@ class HomeScreenViewModel @Inject constructor(
         )
     }.getOrNull()
 
-    private fun extractLastJsonBlock(text: String): String? {
+    private fun findLastJsonBlock(text: String): JsonBlock? {
         // 优先提取 fenced JSON（```json ... ```），否则尝试抓取末尾裸 JSON 对象
-        val fenced = Regex("```json\\s*([\\s\\S]*?)```", RegexOption.IGNORE_CASE)
-            .findAll(text)
-            .lastOrNull()?.groupValues?.getOrNull(1)?.trim()
-        if (!fenced.isNullOrBlank()) return fenced
-        val anyFence = Regex("```\\s*([\\s\\S]*?)```")
-            .findAll(text)
-            .lastOrNull()?.groupValues?.getOrNull(1)?.trim()
-        if (!anyFence.isNullOrBlank()) return anyFence
-        val trimmed = text.trim()
-        if (trimmed.startsWith("{") && trimmed.endsWith("}")) return trimmed
+        val fencedRegex = Regex("```json\\s*([\\s\\S]*?)```", RegexOption.IGNORE_CASE)
+        val fenced = fencedRegex.findAll(text).lastOrNull()
+        val fencedContent = fenced?.groupValues?.getOrNull(1)?.trim()
+        if (!fencedContent.isNullOrBlank() && fencedContent.startsWith("{") && fencedContent.endsWith("}")) {
+            return JsonBlock(fencedContent, fenced.range.first)
+        }
+        val anyFenceRegex = Regex("```\\s*([\\s\\S]*?)```")
+        val anyFence = anyFenceRegex.findAll(text).lastOrNull()
+        val anyContent = anyFence?.groupValues?.getOrNull(1)?.trim()
+        if (!anyContent.isNullOrBlank() && anyContent.startsWith("{") && anyContent.endsWith("}")) {
+            return JsonBlock(anyContent, anyFence.range.first)
+        }
+        val trimmed = text.trimEnd()
+        if (trimmed.startsWith("{") && trimmed.endsWith("}")) return JsonBlock(trimmed, text.lastIndexOf('{'))
 
         // 从末尾向前寻找最后一对完整的大括号，确保 JSON 位于文本末尾
         fun findMatchingEnd(content: String, start: Int): Int {
@@ -2440,13 +2465,14 @@ class HomeScreenViewModel @Inject constructor(
             return -1
         }
 
-        var start = trimmed.lastIndexOf('{')
+        var start = text.lastIndexOf('{')
         while (start >= 0) {
-            val end = findMatchingEnd(trimmed, start)
-            if (end > start && trimmed.substring(end + 1).trim().isEmpty()) {
-                return trimmed.substring(start, end + 1)
+            val end = findMatchingEnd(text, start)
+            if (end > start && text.substring(end + 1).trim().isEmpty()) {
+                val block = text.substring(start, end + 1)
+                return JsonBlock(block, start)
             }
-            start = trimmed.lastIndexOf('{', start - 1)
+            start = text.lastIndexOf('{', start - 1)
         }
         return null
     }
@@ -2456,6 +2482,30 @@ class HomeScreenViewModel @Inject constructor(
             !shortSummary.isNullOrBlank() ||
             !summaryTitle6Chars.isNullOrBlank() ||
             !location.isNullOrBlank()
+
+    private fun buildGeneralFallbackMetadata(existing: SessionMetadata?): SessionMetadata {
+        val firstUserMessage = _uiState.value.chatMessages.firstOrNull { it.role == ChatMessageRole.USER }
+            ?.content
+            ?.takeIf { it.isNotBlank() }
+        val shortSummary = listOfNotNull(
+            existing?.shortSummary?.takeIf { it.isNotBlank() },
+            firstUserMessage?.take(12)
+        ).firstOrNull() ?: "闲聊对话"
+        val summary6 = shortSummary.take(6)
+        return SessionMetadata(
+            sessionId = sessionId,
+            mainPerson = "未知客户",
+            shortSummary = shortSummary,
+            summaryTitle6Chars = summary6
+        )
+    }
+
+    private fun stripTrailingJsonFromGeneralReply(fullText: String): String {
+        val jsonBlock = findLastJsonBlock(fullText) ?: return fullText
+        val isValidJson = runCatching { org.json.JSONObject(jsonBlock.text) }.isSuccess
+        if (!isValidJson) return fullText
+        return fullText.substring(0, jsonBlock.startIndex).trimEnd()
+    }
     
     /**
      * 根据问候语内容返回友好的回复
@@ -2650,6 +2700,7 @@ class HomeScreenViewModel @Inject constructor(
         initialSessionPrepared = true
         val newSession = sessionRepository.createNewChatSession()
         sessionId = newSession.id
+        generalMetadataAttempts = 0
         latestSessionSummaries =
             (latestSessionSummaries.filterNot { it.id == newSession.id } + newSession)
         applySessionList()

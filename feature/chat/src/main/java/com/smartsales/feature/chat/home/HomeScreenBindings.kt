@@ -159,10 +159,10 @@ class DelegatingHomeAiChatService @Inject constructor(
             builder.appendLine()
             builder.appendLine()
             if (request.isFirstAssistantReply) {
-                builder.appendLine("你是销售助手。先用简洁、友好的口吻直接回答用户的问题，不要套用长篇报告或多段 Markdown 模板。")
+                builder.appendLine("你是销售助手。先用简洁、友好的口吻直接回答用户的问题，避免重复同一句话或客户姓名多次出现，不要套用长篇报告或多段 Markdown 模板。")
                 builder.appendLine("如识别出会话关键信息，可在回答末尾追加一个可选的 JSON 对象（只输出一次，放在最后一行，不要附加说明或 Markdown）。示例：")
                 builder.appendLine("{\"main_person\":\"罗总（客户）\",\"short_summary\":\"首次到店试驾沟通\",\"summary_title_6chars\":\"罗总试驾\",\"location\":\"上海\",\"highlights\":[\"首次沟通\",\"有购买意向\"],\"actionable_tips\":[\"安排试驾反馈\",\"准备报价\"],\"core_insight\":\"关注价格与交付确定性\",\"sharp_line\":\"价格透明、交付准时\"}")
-                builder.appendLine("字段含义：main_person=主要客户称呼（未知写“未知客户”）；short_summary=一句话概述；summary_title_6chars=≤6汉字标题；location=城市；highlights/actionable_tips/core_insight/sharp_line=要点、建议与话术。无法提取结构化信息时可以不输出 JSON。")
+                builder.appendLine("字段含义：main_person=本次会话最重要的客户/外部联系人称呼（无法判断写“未知客户”，不要写自己或同事/老板）；short_summary=一句话概述；summary_title_6chars=≤6汉字标题；location=城市；highlights/actionable_tips/core_insight/sharp_line=要点、建议与话术。无法提取结构化信息时可以不输出 JSON。")
             } else {
                 builder.appendLine("请按下面格式回复（总长不超过 200 字）：")
                 builder.appendLine("1) 用 1-2 句话复述用户问题；如信息不足，直接说明需要更多细节")
@@ -178,7 +178,7 @@ class DelegatingHomeAiChatService @Inject constructor(
             builder.appendLine()
             builder.appendLine("你是 SmartSales 的销售分析助手。只能输出一个 JSON 对象，不要输出 Markdown、解释或多版本草稿。")
             builder.appendLine("JSON 字段：")
-            builder.appendLine("- main_person: string，主要客户名称，未知用 \"未知客户\"。")
+            builder.appendLine("- main_person: string，本次会话最重要的客户/外部联系人称呼，未知用 \"未知客户\"，不要写你自己或内部同事/老板。")
             builder.appendLine("- short_summary: string，2–3 句中文总结。")
             builder.appendLine("- summary_title_6chars: string，≤6 个汉字的标题。")
             builder.appendLine("- location: string，可为空。")

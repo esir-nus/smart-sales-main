@@ -128,6 +128,100 @@ class HomeGeneralMetadataFlowTest {
         assertTrue(title!!.contains("罗总"))
     }
 
+    @Test
+    fun `second general reply with json still updates metadata and title`() = runTest(dispatcher) {
+        val jsonTail =
+            """{"main_person":"李总","short_summary":"补充了预算范围","summary_title_6chars":"预算沟通"}"""
+        orchestrator.enqueue(ChatStreamEvent.Completed("好的，我再想想。")) // 第一次无 JSON
+
+        viewModel.onInputChanged("客户打招呼")
+        viewModel.onSendMessage()
+        advanceUntilIdle()
+
+        orchestrator.enqueue(ChatStreamEvent.Completed("这是补充信息。\n$jsonTail"))
+        viewModel.onInputChanged("客户补充预算信息")
+        viewModel.onSendMessage()
+        advanceUntilIdle()
+
+        val sessionId = viewModel.uiState.value.currentSession.id
+        val stored = metaHub.getSession(sessionId)
+        assertNotNull(stored)
+        stored!!
+        assertEquals("李总", stored.mainPerson)
+        assertEquals(AnalysisSource.GENERAL_FIRST_REPLY, stored.latestMajorAnalysisSource)
+
+        val title = sessionRepository.findById(sessionId)?.title
+        assertNotNull(title)
+        assertFalse(SessionTitlePolicy.isPlaceholder(title))
+    }
+
+    @Test
+    fun `third general reply triggers fallback when no json`() = runTest(dispatcher) {
+        orchestrator.enqueue(ChatStreamEvent.Completed("好的，已收到。"))
+        viewModel.onInputChanged("客户询问价格和交期")
+        viewModel.onSendMessage()
+        advanceUntilIdle()
+
+        orchestrator.enqueue(ChatStreamEvent.Completed("再确认一下。"))
+        viewModel.onInputChanged("客户补充需要发样品")
+        viewModel.onSendMessage()
+        advanceUntilIdle()
+
+        orchestrator.enqueue(ChatStreamEvent.Completed("我会再跟进。"))
+        viewModel.onInputChanged("客户再次沟通")
+        viewModel.onSendMessage()
+        advanceUntilIdle()
+
+        val sessionId = viewModel.uiState.value.currentSession.id
+        val stored = metaHub.getSession(sessionId)
+        assertNotNull(stored)
+        stored!!
+        assertEquals("未知客户", stored.mainPerson)
+        assertEquals(AnalysisSource.GENERAL_FIRST_REPLY, stored.latestMajorAnalysisSource)
+        assertNotNull(stored.latestMajorAnalysisAt)
+        assertFalse(stored.shortSummary.isNullOrBlank())
+
+        val title = sessionRepository.findById(sessionId)?.title
+        assertNotNull(title)
+        assertFalse(SessionTitlePolicy.isPlaceholder(title))
+    }
+
+    @Test
+    fun `general bubble hides json tail`() = runTest(dispatcher) {
+        val jsonTail =
+            """{"main_person":"罗总","short_summary":"首次到店沟通","summary_title_6chars":"罗总首沟"}"""
+        orchestrator.enqueue(ChatStreamEvent.Completed("这里是自然语言内容。\n$jsonTail"))
+
+        viewModel.onInputChanged("客户生成总结")
+        viewModel.onSendMessage()
+        advanceUntilIdle()
+
+        val assistant = viewModel.uiState.value.chatMessages.lastOrNull { it.role == ChatMessageRole.ASSISTANT }
+        assertNotNull(assistant)
+        assistant!!
+        assertFalse(assistant.content.contains("{"))
+        assertFalse(assistant.content.contains("main_person"))
+        assertTrue(assistant.content.contains("自然语言内容"))
+    }
+
+    @Test
+    fun `history snippet prefers short summary when available`() = runTest(dispatcher) {
+        val sessionId = viewModel.uiState.value.currentSession.id
+        sessionRepository.upsert(
+            com.smartsales.feature.chat.AiSessionSummary(
+                id = sessionId,
+                title = SessionTitlePolicy.PLACEHOLDER_TITLE,
+                lastMessagePreview = "会议讨论采购事项",
+                updatedAtMillis = System.currentTimeMillis()
+            )
+        )
+        advanceUntilIdle()
+
+        val item = viewModel.uiState.value.sessionList.firstOrNull { it.id == sessionId }
+        assertNotNull(item)
+        assertEquals("会议讨论采购事项", item?.lastMessagePreview)
+    }
+
     private class QueueingHomeOrchestrator : HomeOrchestrator {
         private val queue: ArrayDeque<List<ChatStreamEvent>> = ArrayDeque()
 

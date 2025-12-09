@@ -152,6 +152,11 @@ data class DebugSessionMetadata(
     val mainPerson: String? = null,
     val shortSummary: String? = null,
     val summaryTitle6Chars: String? = null,
+    val stageLabel: String? = null,
+    val riskLabel: String? = null,
+    val tags: List<String> = emptyList(),
+    val latestSourceLabel: String? = null,
+    val latestAtLabel: String? = null,
     val notes: List<String> = emptyList()
 )
 
@@ -836,12 +841,22 @@ class HomeScreenViewModel @Inject constructor(
             ?.notes
             .orEmpty()
         val mergedNotes = (existingNotes + extraNotes).distinct()
+        val stageLabel = meta?.stage?.let { formatStage(it) }
+        val riskLabel = meta?.riskLevel?.let { formatRisk(it) }
+        val tags = meta?.tags?.filter { it.isNotBlank() }?.sorted().orEmpty()
+        val latestSourceLabel = meta?.latestMajorAnalysisSource?.let { formatAnalysisSource(it) }
+        val latestAtLabel = meta?.latestMajorAnalysisAt?.let { formatAnalysisTime(it) }
         val debug = DebugSessionMetadata(
             sessionId = sessionId,
             title = title,
             mainPerson = meta?.mainPerson,
             shortSummary = meta?.shortSummary,
             summaryTitle6Chars = meta?.summaryTitle6Chars,
+            stageLabel = stageLabel,
+            riskLabel = riskLabel,
+            tags = tags,
+            latestSourceLabel = latestSourceLabel,
+            latestAtLabel = latestAtLabel,
             notes = mergedNotes
         )
         _uiState.update { it.copy(debugSessionMetadata = debug) }
@@ -1524,6 +1539,33 @@ class HomeScreenViewModel @Inject constructor(
     private fun formatSyncTime(timestamp: Long): String {
         val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
         return formatter.format(Date(timestamp))
+    }
+
+    private fun formatAnalysisTime(timestamp: Long): String {
+        val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+        return formatter.format(Date(timestamp))
+    }
+
+    private fun formatStage(stage: SessionStage): String = when (stage) {
+        SessionStage.DISCOVERY -> "探索阶段"
+        SessionStage.NEGOTIATION -> "谈判阶段"
+        SessionStage.PROPOSAL -> "方案阶段"
+        SessionStage.CLOSING -> "成交推进"
+        SessionStage.POST_SALE -> "售后阶段"
+        SessionStage.UNKNOWN -> "未知阶段"
+    }
+
+    private fun formatRisk(risk: RiskLevel): String = when (risk) {
+        RiskLevel.LOW -> "低风险"
+        RiskLevel.MEDIUM -> "中风险"
+        RiskLevel.HIGH -> "高风险"
+        RiskLevel.UNKNOWN -> "风险未知"
+    }
+
+    private fun formatAnalysisSource(source: AnalysisSource): String = when (source) {
+        AnalysisSource.SMART_ANALYSIS_USER,
+        AnalysisSource.SMART_ANALYSIS_AUTO -> "来自智能分析"
+        AnalysisSource.GENERAL_FIRST_REPLY -> "来自首次回复"
     }
 
     override fun onCleared() {

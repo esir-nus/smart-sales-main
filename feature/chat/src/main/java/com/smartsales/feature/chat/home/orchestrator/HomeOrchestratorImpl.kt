@@ -24,6 +24,9 @@ import org.json.JSONObject
 
 private const val SMART_ANALYSIS_FAILURE_MESSAGE = "本次智能分析暂时不可用，请稍后重试。"
 
+private val SHORT_SUMMARY_REGEX =
+    Regex("\"short_summary\"\\s*:\\s*\"([^\"]+)\"")
+
 private data class SmartAnalysisResult(
     val markdown: String,
     val metadata: SessionMetadata?
@@ -130,7 +133,23 @@ class HomeOrchestratorImpl @Inject constructor(
         }.getOrNull()
 
         val mainPerson = jsonObject.optString("main_person").takeIf { it.isNotBlank() }
-        val shortSummary = jsonObject.optString("short_summary").takeIf { it.isNotBlank() }
+
+        // 1. 先从 JSON 里拿一份（保留现有逻辑作为 fallback）
+        val shortSummaryFromJson = jsonObject.optString("short_summary")
+            .takeIf { it.isNotBlank() }
+
+        // 2. 再直接从原始文本里找最后一个 "short_summary": "..."
+        val shortSummaryFromText = SHORT_SUMMARY_REGEX
+            .findAll(rawText)
+            .lastOrNull()
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.takeIf { it.isNotBlank() }
+
+        // 3. 优先使用"原始文本中的最后一个"，否则退回 JSON 的解析结果
+        val shortSummary = (shortSummaryFromText ?: shortSummaryFromJson)
+            ?.takeIf { it.isNotBlank() }
+
         val summaryTitle = jsonObject.optString("summary_title_6chars")
             .takeIf { it.isNotBlank() }
             ?.take(6)

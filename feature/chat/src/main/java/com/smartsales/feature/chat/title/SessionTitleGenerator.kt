@@ -42,7 +42,7 @@ object SessionTitleGenerator {
         val datePart = dateFormatter.format(Date(updatedAtMillis))
         val majorName = extractMajorName(firstUserMessage) ?: extractMajorName(firstAssistantMessage ?: "")
         val summary = extractSummary(firstUserMessage) ?: extractSummary(firstAssistantMessage ?: "")
-        val safeName = SessionTitlePolicy.resolvePerson(majorName)
+        val safeName = SessionTitlePolicy.resolvePerson(majorName) ?: "未知客户"
         val safeSummary = SessionTitlePolicy.resolveSummary(summary)
         return "${datePart}_${safeName}_${safeSummary}"
     }

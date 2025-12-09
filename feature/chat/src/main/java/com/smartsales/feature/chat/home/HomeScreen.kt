@@ -954,6 +954,11 @@ private fun DebugSessionMetadataHud(
             appendLine("mainPerson: ${metadata.mainPerson ?: "-"}")
             appendLine("shortSummary: ${metadata.shortSummary ?: "-"}")
             appendLine("title6: ${metadata.summaryTitle6Chars ?: "-"}")
+            appendLine("stage: ${metadata.stageLabel ?: "-"}")
+            appendLine("risk: ${metadata.riskLabel ?: "-"}")
+            appendLine("tags: ${metadata.tags.joinToString().ifBlank { "-" }}")
+            appendLine("latestSource: ${metadata.latestSourceLabel ?: "-"}")
+            appendLine("latestAt: ${metadata.latestAtLabel ?: "-"}")
             if (metadata.notes.isNotEmpty()) {
                 appendLine("notes:")
                 metadata.notes.forEach { appendLine("- $it") }
@@ -1007,6 +1012,11 @@ private fun DebugSessionMetadataHud(
             DebugField(label = "mainPerson", value = metadata.mainPerson ?: "-")
             DebugField(label = "shortSummary", value = metadata.shortSummary ?: "-")
             DebugField(label = "title6", value = metadata.summaryTitle6Chars ?: "-")
+            DebugField(label = "stage", value = metadata.stageLabel ?: "-")
+            DebugField(label = "risk", value = metadata.riskLabel ?: "-")
+            DebugField(label = "tags", value = metadata.tags.joinToString().ifBlank { "-" })
+            DebugField(label = "latestSource", value = metadata.latestSourceLabel ?: "-")
+            DebugField(label = "latestAt", value = metadata.latestAtLabel ?: "-")
             if (metadata.notes.isNotEmpty()) {
                 Text(
                     text = "notes",

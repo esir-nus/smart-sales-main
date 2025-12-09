@@ -170,6 +170,9 @@ class HomeOrchestratorImplTest {
 
         val completed = events.first() as ChatStreamEvent.Completed
         val cleaned = completed.fullText
+        println("=== ACTUAL CLEANED TEXT ===")
+        println(cleaned)
+        println("=== END CLEANED TEXT ===")
         assertTrue(cleaned.contains("长版本"))
         assertFalse(cleaned.contains("######"))
         assertTrue(cleaned.contains("## 会话概要"))

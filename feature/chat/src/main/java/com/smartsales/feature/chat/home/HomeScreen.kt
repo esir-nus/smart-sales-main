@@ -1514,12 +1514,12 @@ private fun QuickSkillRow(
                 } else {
                     MaterialTheme.colorScheme.surfaceVariant
                 },
-                labelColor = if (isSelected) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else if (skill.isRecommended) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurface
+                labelColor = when {
+                    isSelected -> MaterialTheme.colorScheme.onPrimaryContainer
+                    // 智能分析未选中时保持中性色，避免误导
+                    skill.id == QuickSkillId.SMART_ANALYSIS -> MaterialTheme.colorScheme.onSurface
+                    skill.isRecommended -> MaterialTheme.colorScheme.primary
+                    else -> MaterialTheme.colorScheme.onSurface
                 }
             )
             AssistChip(

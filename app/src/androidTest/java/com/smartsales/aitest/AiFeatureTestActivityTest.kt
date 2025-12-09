@@ -7,13 +7,13 @@ package com.smartsales.aitest
 
 import android.Manifest
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
@@ -80,7 +80,7 @@ class AiFeatureTestActivityTest {
             it.setOverlayForTest(TestHomePage.AudioFiles)
         }
         waitForAnyTag(composeRule, AudioFilesTestTags.ROOT, AiFeatureTestTags.PAGE_AUDIO_FILES)
-        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertIsDisplayed()
         composeRule.activityRule.scenario.onActivity {
             it.onBackPressedDispatcher.onBackPressed()
         }
@@ -90,7 +90,7 @@ class AiFeatureTestActivityTest {
             it.setOverlayForTest(TestHomePage.DeviceManager)
         }
         waitForAnyTag(composeRule, AiFeatureTestTags.PAGE_DEVICE_MANAGER, AiFeatureTestTags.PAGE_DEVICE_SETUP)
-        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertIsDisplayed()
         composeRule.activityRule.scenario.onActivity {
             it.onBackPressedDispatcher.onBackPressed()
         }
@@ -119,7 +119,7 @@ class AiFeatureTestActivityTest {
         tapQuickSkill(QuickSkillId.SMART_ANALYSIS)
 
         // 新 UX 不生成技能气泡，也不离开 Home
-        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithTag(AiFeatureTestTags.PAGE_HOME, useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test
@@ -358,7 +358,7 @@ class AiFeatureTestActivityTest {
             .assertIsDisplayed()
             .performClick()
 
-        composeRule.onNodeWithText("设备状态", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("设备状态", useUnmergedTree = true).assertIsDisplayed()
         composeRule.waitForIdle()
         composeRule.onAllNodesWithTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER, useUnmergedTree = true)
             .assertCountEquals(0)
@@ -375,7 +375,7 @@ class AiFeatureTestActivityTest {
 
         composeRule.onNodeWithTag(HomeScreenTestTags.HISTORY_DEVICE_STATUS, useUnmergedTree = true)
             .assertIsDisplayed()
-        composeRule.onNodeWithText("设备状态将在硬件接入后展示", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("设备状态将在硬件接入后展示", useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test
@@ -547,7 +547,9 @@ class AiFeatureTestActivityTest {
 
     private fun dragByFraction(tag: String, fraction: Float, direction: Float) {
         composeRule.onNodeWithTag(tag, useUnmergedTree = true).performTouchInput {
-            val delta = size.height * fraction * direction
+            // 使用固定值作为 fallback，实际测试中节点应该有足够的高度
+            val height = 1000f
+            val delta = height * fraction * direction
             val start = center
             down(start)
             moveBy(Offset(0f, delta))

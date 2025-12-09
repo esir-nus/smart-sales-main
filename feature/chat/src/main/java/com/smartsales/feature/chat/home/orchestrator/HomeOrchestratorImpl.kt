@@ -20,9 +20,19 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.collect
-import org.json.JSONArray
-import org.json.JSONObject
+
+private data class SmartAnalysisResult(
+    val markdown: String,
+    val metadata: SessionMetadata?
+)
+
+private data class ParsedSmartAnalysis(
+    val metadata: SessionMetadata,
+    val highlights: List<String>,
+    val actionableTips: List<String>,
+    val coreInsight: String?,
+    val sharpLine: String?
+)
 
 @Singleton
 class HomeOrchestratorImpl @Inject constructor(
@@ -33,9 +43,9 @@ class HomeOrchestratorImpl @Inject constructor(
         return flow {
             aiChatService.streamChat(request).collect { event ->
                 if (event is ChatStreamEvent.Completed && shouldParseMetadata(request)) {
-                    runCatching { maybeUpsertSessionMetadata(request, event.fullText) }
-                    val cleaned = cleanSmartAnalysisOutput(event.fullText)
-                    emit(ChatStreamEvent.Completed(cleaned))
+                    val result = buildSmartAnalysisResult(request, event.fullText)
+                    result.metadata?.let { runCatching { metaHub.upsertSession(it) } }
+                    emit(ChatStreamEvent.Completed(result.markdown))
                 } else {
                     emit(event)
                 }
@@ -43,19 +53,29 @@ class HomeOrchestratorImpl @Inject constructor(
         }
     }
 
-    private suspend fun maybeUpsertSessionMetadata(
+    private suspend fun buildSmartAnalysisResult(
         request: ChatRequest,
         assistantText: String
-    ) {
-        // 直接在完整 markdown 文本上做鲁棒解析，而不是依赖 JSON 反序列化一定成功
-        val parsed = parseSessionMetadataFromText(
+    ): SmartAnalysisResult {
+        val parsed = parseSmartAnalysisPayload(
             sessionId = request.sessionId,
             rawText = assistantText,
             source = resolveAnalysisSource(request)
-        ) ?: return
-
-        val merged = mergeWithExisting(request.sessionId, parsed)
-        runCatching { metaHub.upsertSession(merged) }
+        )
+        val mergedMeta = parsed?.metadata?.let { mergeWithExisting(request.sessionId, it) }
+        val markdown = if (parsed != null && mergedMeta != null) {
+            buildSmartAnalysisMarkdown(
+                meta = mergedMeta,
+                highlights = parsed.highlights,
+                actionableTips = parsed.actionableTips,
+                coreInsight = parsed.coreInsight,
+                sharpLine = parsed.sharpLine,
+                fallbackRawText = assistantText
+            )
+        } else {
+            cleanSmartAnalysisOutput(assistantText)
+        }
+        return SmartAnalysisResult(markdown = markdown, metadata = mergedMeta)
     }
 
     private suspend fun mergeWithExisting(
@@ -125,12 +145,12 @@ class HomeOrchestratorImpl @Inject constructor(
             .toList()
     }
 
-    private fun parseSessionMetadataFromText(
+    private fun parseSmartAnalysisPayload(
         sessionId: String,
         rawText: String,
         source: AnalysisSource?
-    ): SessionMetadata? {
-        // 先尝试从第一个 fenced JSON 里找，如果失败再在整段文本里兜底
+    ): ParsedSmartAnalysis? {
+        // 先尝试从最后一个 fenced JSON 里找，如果失败再在整段文本里兜底
         val jsonSlice = firstJsonCodeBlock(rawText) ?: extractBareJsonObject(rawText) ?: rawText
 
         val mainPerson =
@@ -146,6 +166,8 @@ class HomeOrchestratorImpl @Inject constructor(
 
         val highlights = findStringListField(jsonSlice, "highlights")
         val actionable = findStringListField(jsonSlice, "actionable_tips")
+        val coreInsight = findStringField(jsonSlice, "core_insight")
+        val sharpLine = findStringField(jsonSlice, "sharp_line")
         val crmRows = emptyList<CrmRow>() // 先不支持复杂嵌套结构，后续再扩展
 
         val tags = (highlights + actionable).filter { it.isNotBlank() }.toSet()
@@ -155,14 +177,15 @@ class HomeOrchestratorImpl @Inject constructor(
             shortSummary == null &&
             summaryTitle == null &&
             location == null &&
-            crmRows.isEmpty() &&
-            tags.isEmpty()
+            tags.isEmpty() &&
+            coreInsight.isNullOrBlank() &&
+            sharpLine.isNullOrBlank()
         ) {
             return null
         }
 
         val now = System.currentTimeMillis()
-        return SessionMetadata(
+        val metadata = SessionMetadata(
             sessionId = sessionId,
             mainPerson = mainPerson,
             shortSummary = shortSummary,
@@ -177,31 +200,13 @@ class HomeOrchestratorImpl @Inject constructor(
             latestMajorAnalysisSource = source,
             crmRows = crmRows
         )
-    }
-
-    private fun JSONArray.toStringList(): List<String> {
-        val list = mutableListOf<String>()
-        for (i in 0 until length()) {
-            optString(i)?.takeIf { it.isNotBlank() }?.let { list.add(it) }
-        }
-        return list
-    }
-
-    private fun JSONArray.toCrmRows(): List<CrmRow> {
-        val rows = mutableListOf<CrmRow>()
-        for (i in 0 until length()) {
-            val obj = optJSONObject(i) ?: continue
-            val row = CrmRow(
-                client = obj.optString("client"),
-                region = obj.optString("region"),
-                stage = obj.optString("stage"),
-                progress = obj.optString("progress"),
-                nextStep = obj.optString("next_step"),
-                owner = obj.optString("owner")
-            )
-            rows += row
-        }
-        return rows
+        return ParsedSmartAnalysis(
+            metadata = metadata,
+            highlights = highlights,
+            actionableTips = actionable,
+            coreInsight = coreInsight,
+            sharpLine = sharpLine
+        )
     }
 
     private fun toStage(value: String): SessionStage? = when (value.uppercase(Locale.getDefault())) {
@@ -231,6 +236,54 @@ class HomeOrchestratorImpl @Inject constructor(
         }
     }
 
+    private fun buildSmartAnalysisMarkdown(
+        meta: SessionMetadata,
+        highlights: List<String>,
+        actionableTips: List<String>,
+        coreInsight: String?,
+        sharpLine: String?,
+        fallbackRawText: String?
+    ): String {
+        val sb = StringBuilder()
+        sb.appendLine("智能分析结果（根据最近对话自动生成）")
+        meta.shortSummary?.takeIf { it.isNotBlank() }?.let {
+            sb.appendLine().appendLine("### 会话概要").appendLine("- $it")
+        }
+        val personaLines = mutableListOf<String>()
+        meta.mainPerson?.takeIf { it.isNotBlank() }?.let { personaLines.add("主要联系人：$it") }
+        meta.location?.takeIf { it.isNotBlank() }?.let { personaLines.add("所在地：$it") }
+        if (personaLines.isNotEmpty()) {
+            sb.appendLine().appendLine("### 客户画像与意图")
+            personaLines.forEach { line -> sb.appendLine("- $line") }
+        }
+        if (highlights.isNotEmpty()) {
+            sb.appendLine().appendLine("### 需求与痛点")
+            highlights.take(5).forEach { sb.appendLine("- $it") }
+        }
+        meta.riskLevel?.let {
+            sb.appendLine().appendLine("### 机会与风险").appendLine("- 风险等级：${it.name}")
+        }
+        if (actionableTips.isNotEmpty()) {
+            sb.appendLine().appendLine("### 建议与下一步行动")
+            actionableTips.take(5).forEachIndexed { index, tip ->
+                sb.appendLine("${index + 1}) $tip")
+            }
+        }
+        coreInsight?.takeIf { it.isNotBlank() }?.let {
+            sb.appendLine().appendLine("### 核心洞察").appendLine("- $it")
+        }
+        sharpLine?.takeIf { it.isNotBlank() }?.let {
+            sb.appendLine().appendLine("### 关键话术").appendLine("- $it")
+        }
+        val built = sb.toString().trimEnd()
+        if (built.isNotBlank()) return renumberNumberedBlocks(built.lines()).joinToString("\n")
+
+        val fallback = fallbackRawText.orEmpty()
+        if (fallback.isBlank()) return "暂无可用的智能分析结果，请稍后重试。"
+        val cleaned = cleanSmartAnalysisOutput(fallback)
+        return if (cleaned.isNotBlank()) cleaned else "暂无可用的智能分析结果，请稍后重试。"
+    }
+
     private fun cleanSmartAnalysisOutput(raw: String): String {
         val fencedJson = firstJsonCodeBlock(raw)
         val markdownPart = fencedJson
@@ -239,16 +292,7 @@ class HomeOrchestratorImpl @Inject constructor(
         val collapsed = collapseProgressiveLines(markdownPart)
             .filterNot { isTemplateEcho(it) }
         val renumbered = renumberNumberedBlocks(collapsed)
-        val markdown = renumbered.joinToString("\n").trimEnd()
-        val cleanedJson = fencedJson?.let { buildCleanJsonSlice(raw) }
-        return if (cleanedJson.isNullOrBlank()) {
-            markdown
-        } else {
-            listOf(markdown, "```json", cleanedJson, "```")
-                .filter { it.isNotBlank() }
-                .joinToString("\n\n")
-                .trimEnd()
-        }
+        return renumbered.joinToString("\n").trimEnd()
     }
 
     private fun collapseProgressiveLines(markdown: String): List<String> {
@@ -317,32 +361,4 @@ class HomeOrchestratorImpl @Inject constructor(
         return result
     }
 
-    private fun buildCleanJsonSlice(raw: String): String? {
-        val slice = firstJsonCodeBlock(raw) ?: extractBareJsonObject(raw) ?: return null
-        val mainPerson = findStringField(slice, "main_person")
-            ?: findStringField(slice, "mainPerson")
-        val shortSummary = findStringField(slice, "short_summary")
-        val summaryTitle = findStringField(slice, "summary_title_6chars")
-        val location = findStringField(slice, "location")
-        val highlights = findStringListField(slice, "highlights")
-        val actionable = findStringListField(slice, "actionable_tips")
-        val coreInsight = findStringField(slice, "core_insight")
-        val sharpLine = findStringField(slice, "sharp_line")
-
-        val summaryObj = JSONObject()
-        coreInsight?.takeIf { it.isNotBlank() }?.let { summaryObj.put("core_insight", it) }
-        sharpLine?.takeIf { it.isNotBlank() }?.let { summaryObj.put("sharp_line", it) }
-
-        val obj = JSONObject()
-        mainPerson?.takeIf { it.isNotBlank() }?.let { obj.put("main_person", it) }
-        shortSummary?.takeIf { it.isNotBlank() }?.let { obj.put("short_summary", it) }
-        summaryTitle?.takeIf { it.isNotBlank() }?.let { obj.put("summary_title_6chars", it) }
-        location?.let { obj.put("location", it) }
-        if (highlights.isNotEmpty()) obj.put("highlights", JSONArray(highlights))
-        if (actionable.isNotEmpty()) obj.put("actionable_tips", JSONArray(actionable))
-        if (summaryObj.length() > 0) obj.put("summary", summaryObj)
-
-        if (obj.length() == 0) return null
-        return obj.toString(2)
-    }
 }

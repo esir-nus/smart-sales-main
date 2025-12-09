@@ -26,9 +26,6 @@ import com.smartsales.feature.usercenter.data.PersistentOnboardingStateRepositor
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Before
 import org.junit.After
-import com.smartsales.feature.usercenter.data.PersistentOnboardingStateRepository
-import androidx.test.platform.app.InstrumentationRegistry
-import org.junit.Before
 import org.junit.rules.RuleChain
 import org.junit.rules.TestRule
 import org.junit.Rule

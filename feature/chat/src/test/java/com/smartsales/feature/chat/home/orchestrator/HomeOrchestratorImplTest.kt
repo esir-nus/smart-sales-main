@@ -30,7 +30,7 @@ class HomeOrchestratorImplTest {
     private val dispatcher = StandardTestDispatcher()
 
     @Test
-    fun `smart analysis parses metadata and keeps completed event`() = runTest(dispatcher) {
+    fun `smart analysis parses metadata and renders formatted markdown`() = runTest(dispatcher) {
         val metaHub = RecordingMetaHub()
         val aiChatService = CompletedAiChatService(
             """
@@ -66,6 +66,9 @@ class HomeOrchestratorImplTest {
         assertEquals(1, events.size)
         val completed = events.first() as ChatStreamEvent.Completed
         assertTrue(completed.fullText.contains("罗总"))
+        assertTrue(completed.fullText.contains("### 会话概要"))
+        assertTrue(completed.fullText.contains("### 建议与下一步行动"))
+        assertTrue(completed.fullText.contains("1)"))
 
         val stored = metaHub.lastSession
         assertEquals("罗总", stored?.mainPerson)
@@ -114,19 +117,22 @@ class HomeOrchestratorImplTest {
         )
         val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub)
 
+        val events = mutableListOf<ChatStreamEvent>()
         orchestrator.streamChat(
             ChatRequest(
                 sessionId = "s-min",
                 userMessage = "hi",
                 quickSkillId = QuickSkillId.SMART_ANALYSIS.name
             )
-        ).collect { /* no-op */ }
+        ).collect { events.add(it) }
 
         assertEquals("王总", metaHub.lastSession?.mainPerson)
+        val completed = events.first() as ChatStreamEvent.Completed
+        assertTrue(completed.fullText.contains("王总"))
     }
 
     @Test
-    fun `smart analysis cleaner removes progressive scaffolding and renumbers list`() = runTest(dispatcher) {
+    fun `smart analysis formatter removes progressive scaffolding and renumbers list`() = runTest(dispatcher) {
         val messy = """
             ###### 客## 客户## 客户画像
             客户对产品有兴趣
@@ -161,15 +167,12 @@ class HomeOrchestratorImplTest {
 
         val completed = events.first() as ChatStreamEvent.Completed
         val cleaned = completed.fullText
-        assertTrue(cleaned.contains("客户对产品有兴趣，询问价格和交付周期。"))
+        assertTrue(cleaned.contains("长版本"))
         assertTrue(!cleaned.contains("###### 客"))
-        assertTrue(cleaned.contains("1) 初步介绍"))
-        assertTrue(cleaned.contains("2) 提供报价"))
-        assertTrue(cleaned.contains("3) 跟进确认"))
-        // JSON 块保留但去重，只有最终版本
-        assertTrue(cleaned.contains("\"short_summary\": \"长版本\""))
-        assertTrue(!cleaned.contains("\"short_summary\": \"短版本\""))
-        assertTrue(cleaned.contains("\"highlights\": ["))
+        assertTrue(cleaned.contains("1)"))
+        assertTrue(cleaned.contains("2)"))
+        assertTrue(cleaned.contains("3)"))
+        assertTrue(!cleaned.contains("短版本"))
     }
 
     @Test

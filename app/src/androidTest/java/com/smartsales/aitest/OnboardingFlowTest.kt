@@ -7,6 +7,7 @@ package com.smartsales.aitest
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -52,15 +53,22 @@ class OnboardingFlowTest {
         // personal info
         composeRule.onNodeWithTag(OnboardingTestTags.PERSONAL, useUnmergedTree = true)
             .assertIsDisplayed()
-        composeRule.onNodeWithTag(OnboardingTestTags.FIELD_NAME, useUnmergedTree = true)
-            .performTextClearance()
-            .performTextInput("张三")
-        composeRule.onNodeWithTag(OnboardingTestTags.FIELD_ROLE, useUnmergedTree = true)
-            .performTextClearance()
-            .performTextInput("销售顾问")
-        composeRule.onNodeWithTag(OnboardingTestTags.FIELD_INDUSTRY, useUnmergedTree = true)
-            .performTextClearance()
-            .performTextInput("汽车")
+
+        // 姓名
+        val nameField = composeRule.onNodeWithTag(OnboardingTestTags.FIELD_NAME, useUnmergedTree = true)
+        nameField.performTextClearance()
+        nameField.performTextInput("张三")
+
+        // 角色
+        val roleField = composeRule.onNodeWithTag(OnboardingTestTags.FIELD_ROLE, useUnmergedTree = true)
+        roleField.performTextClearance()
+        roleField.performTextInput("销售顾问")
+
+        // 行业
+        val industryField = composeRule.onNodeWithTag(OnboardingTestTags.FIELD_INDUSTRY, useUnmergedTree = true)
+        industryField.performTextClearance()
+        industryField.performTextInput("汽车")
+
         composeRule.onNodeWithTag(OnboardingTestTags.BUTTON_SAVE, useUnmergedTree = true)
             .performClick()
 

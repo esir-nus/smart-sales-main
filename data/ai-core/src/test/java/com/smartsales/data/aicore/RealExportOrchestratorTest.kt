@@ -9,6 +9,7 @@ import com.smartsales.core.metahub.ExportMetadata
 import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.TokenUsage
+import com.smartsales.core.metahub.AnalysisSource
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -17,6 +18,8 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RealExportOrchestratorTest {
@@ -29,12 +32,16 @@ class RealExportOrchestratorTest {
     }
 
     @Test
-    fun exportPdf_usesUserAndMetadataForFileName() = runTest(dispatcher) {
+    fun exportPdf_usesSmartMetadataForFileName() = runTest(dispatcher) {
+        val fixedTimestamp = 1700000000000L
+        val formatter = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.CHINA)
         val metaHub = RecordingMetaHub().apply {
             session = SessionMetadata(
                 sessionId = "s1",
                 mainPerson = "王总",
-                summaryTitle6Chars = "季度回顾"
+                summaryTitle6Chars = "季度回顾",
+                latestMajorAnalysisSource = AnalysisSource.SMART_ANALYSIS_USER,
+                latestMajorAnalysisAt = fixedTimestamp
             )
         }
         val exportManager = RecordingExportManager()
@@ -51,7 +58,8 @@ class RealExportOrchestratorTest {
 
         assertTrue(result is Result.Success)
         val suggested = exportManager.lastSuggestedFileName
-        assertTrue(suggested?.contains("Alice_王总_季度回顾") == true)
+        val expectedTimestamp = formatter.format(fixedTimestamp)
+        assertEquals("王总_季度回顾_$expectedTimestamp", suggested)
         val fileName = (result as Result.Success).data.fileName
         assertTrue(fileName.endsWith(".pdf"))
         assertTrue(fileName.contains("王总_季度回顾"))
@@ -60,6 +68,26 @@ class RealExportOrchestratorTest {
         assertTrue(rendered.contains("## 会话概要"))
         assertTrue(rendered.contains("客户/主对象：王总"))
         assertTrue(rendered.contains("会话摘要：季度回顾"))
+    }
+
+    @Test
+    fun exportCsv_usesPlaceholdersWhenMetadataMissing() = runTest(dispatcher) {
+        val exportManager = RecordingExportManager()
+        val orchestrator = RealExportOrchestrator(
+            metaHub = RecordingMetaHub(),
+            exportManager = exportManager,
+            exportFileStore = object : ExportFileStore {
+                override fun persist(fileName: String, payload: ByteArray, mimeType: String): String = ""
+            },
+            dispatchers = dispatchers
+        )
+
+        val result = orchestrator.exportCsv("s-empty", sessionTitle = null, userName = null)
+
+        assertTrue(result is Result.Success)
+        val fileName = (result as Result.Success).data.fileName
+        assertTrue(fileName.endsWith(".csv"))
+        assertTrue(fileName.startsWith("未知客户_未命名会话_"))
     }
 
     private class RecordingExportManager : ExportManager {

@@ -10,7 +10,7 @@ import com.smartsales.core.metahub.ExportMetadata
 import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.SessionMetadataLabelProvider
-import com.smartsales.core.metahub.SessionTitlePolicy
+import com.smartsales.core.metahub.AnalysisSource
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.AiCoreErrorReason.IO
@@ -74,7 +74,7 @@ class RealExportOrchestrator @Inject constructor(
             return@withContext Result.Error(IllegalArgumentException("导出内容为空"))
         }
         val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-        val context = buildExportContext(userName, sessionTitle, meta)
+        val context = buildExportContext(meta)
         val pdfBody = buildPdfBody(markdown, context)
         when (val result = exportManager.exportMarkdown(pdfBody, ExportFormat.PDF, context.fileNameBase)) {
             is Result.Success -> {
@@ -94,7 +94,7 @@ class RealExportOrchestrator @Inject constructor(
         withContext(dispatchers.io) {
             val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
             val csvText = buildCsv(meta?.crmRows.orEmpty())
-            val context = buildExportContext(userName, sessionTitle, meta)
+            val context = buildExportContext(meta)
             val fileName = "${context.fileNameBase}.csv"
             val payload = csvText.toByteArray(Charsets.UTF_8)
             val result = runCatching {
@@ -178,27 +178,25 @@ class RealExportOrchestrator @Inject constructor(
     }
 
     private fun buildExportContext(
-        userName: String?,
-        sessionTitle: String?,
-        meta: SessionMetadata?
+        meta: SessionMetadata?,
+        exportTimestamp: Long = System.currentTimeMillis()
     ): ExportContext {
-        // 文件名基于用户/会话标题/MetaHub 元数据生成，避免暴露内部 ID 或 JSON
-        val person = meta?.mainPerson?.takeIf { it.isNotBlank() }
-        val resolvedTitle = sessionTitle?.takeIf { it.isNotBlank() && !SessionTitlePolicy.isPlaceholder(it) }
+        // 文件名仅依赖 SMART 元数据与时间戳，忽略会话标题与用户名
+        val person = meta?.mainPerson?.takeIf { it.isNotBlank() } ?: "未知客户"
         val summary = when {
-            resolvedTitle != null -> resolvedTitle
-            !meta?.summaryTitle6Chars.isNullOrBlank() -> meta!!.summaryTitle6Chars
-            !meta?.shortSummary.isNullOrBlank() -> meta!!.shortSummary?.take(12)
+            !meta?.summaryTitle6Chars.isNullOrBlank() -> meta!!.summaryTitle6Chars!!
+            !meta?.shortSummary.isNullOrBlank() -> meta!!.shortSummary!!.take(8)
+            else -> "未命名会话"
+        }
+        val smartTimestamp = when (meta?.latestMajorAnalysisSource) {
+            AnalysisSource.SMART_ANALYSIS_USER,
+            AnalysisSource.SMART_ANALYSIS_AUTO -> meta.latestMajorAnalysisAt
             else -> null
         }
-        val timestamp = timestampFormatter.format(Date(System.currentTimeMillis()))
-        val parts = mutableListOf<String>()
-        userName?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
-        person?.let { parts.add(it) }
-        summary?.let { if (!parts.contains(it)) parts.add(it) }
-        parts.add(timestamp)
-        val joined = parts.filter { it.isNotBlank() }.joinToString("_")
-        val baseName = sanitizeFileName(joined).ifBlank { "session_$timestamp" }
+        val timestampMillis = smartTimestamp ?: exportTimestamp
+        val timestamp = timestampFormatter.format(Date(timestampMillis))
+        val baseName = sanitizeFileName("${person}_${summary}_$timestamp")
+
         val stageLabel = meta?.stage?.let { SessionMetadataLabelProvider.stageLabel(it) }
         val riskLabel = meta?.riskLevel?.let { SessionMetadataLabelProvider.riskLabel(it) }
         val tagsLabel = meta?.tags
@@ -214,13 +212,19 @@ class RealExportOrchestrator @Inject constructor(
             }
         val sourceLabel = meta?.latestMajorAnalysisSource
             ?.let { SessionMetadataLabelProvider.sourceLabel(it) }
-        val timeLabel = meta?.latestMajorAnalysisAt
-            ?.let { SessionMetadataLabelProvider.timeLabel(it) }
-            ?.takeIf { it.isNotBlank() }
+        val timeLabel = SessionMetadataLabelProvider
+            .timeLabel(timestampMillis)
+            .takeIf { it.isNotBlank() }
+        val headerPerson = meta?.mainPerson?.takeIf { it.isNotBlank() } ?: person
+        val headerSummary = when {
+            !meta?.summaryTitle6Chars.isNullOrBlank() -> meta!!.summaryTitle6Chars
+            !meta?.shortSummary.isNullOrBlank() -> meta!!.shortSummary
+            else -> summary
+        }
         return ExportContext(
             fileNameBase = baseName,
-            headerMainPerson = person,
-            headerSummary = summary ?: meta?.shortSummary?.takeIf { it.isNotBlank() },
+            headerMainPerson = headerPerson,
+            headerSummary = headerSummary,
             headerStageLabel = stageLabel,
             headerRiskLabel = riskLabel,
             headerTagsLabel = tagsLabel,

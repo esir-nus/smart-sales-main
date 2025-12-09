@@ -232,8 +232,8 @@ class HomeScreenViewModel @Inject constructor(
     private var hasShownLowInfoSmartAnalysisHint: Boolean = false
     private var hasShownAnalysisExportHint: Boolean = false
     private var transcriptionJob: Job? = null
-    // GENERAL 首条回复元数据尝试次数（最多 3 次，首个非空胜出）
-    private var generalMetadataAttempts: Int = 0
+    // 标记当前会话是否已处理首条助手回复，用于“首条决定标题”规则
+    private var firstAssistantProcessed: Boolean = false
     private var latestAnalysisMarkdown: String? = null
     private var latestAnalysisMessageId: String? = null
     private var pendingExportAfterAnalysis: ExportFormat? = null
@@ -247,7 +247,7 @@ class HomeScreenViewModel @Inject constructor(
         observeSessions()
         loadUserProfile()
         viewModelScope.launch { prepareInitialSession() }
-        generalMetadataAttempts = 0
+        firstAssistantProcessed = false
     }
 
     fun onInputChanged(text: String) {
@@ -704,7 +704,7 @@ class HomeScreenViewModel @Inject constructor(
             
             val existingHistory = chatHistoryRepository.loadLatestSession(targetSessionId)
             this@HomeScreenViewModel.sessionId = targetSessionId
-            generalMetadataAttempts = 0
+            firstAssistantProcessed = false
             hasShownLowInfoHint = false
             hasShownAnalysisExportHint = false
             _uiState.update {
@@ -926,7 +926,7 @@ class HomeScreenViewModel @Inject constructor(
         viewModelScope.launch {
             if (sessionId != this@HomeScreenViewModel.sessionId) {
                 this@HomeScreenViewModel.sessionId = sessionId
-                generalMetadataAttempts = 0
+                firstAssistantProcessed = false
                 latestAnalysisMarkdown = null
                 hasShownLowInfoHint = false
                 hasShownAnalysisExportHint = false
@@ -960,7 +960,7 @@ class HomeScreenViewModel @Inject constructor(
         viewModelScope.launch {
             val newSession = sessionRepository.createNewChatSession()
             sessionId = newSession.id
-            generalMetadataAttempts = 0
+            firstAssistantProcessed = false
             latestAnalysisMarkdown = null
             hasShownLowInfoHint = false
             hasShownAnalysisExportHint = false
@@ -1225,16 +1225,9 @@ class HomeScreenViewModel @Inject constructor(
                         // 完成：关闭 streaming，最终清理和去重
                         val rawFullText = event.fullText
                         val isGeneralChat = request.quickSkillId == null
-                        // GENERAL 首条回复：最多尝试 3 次解析 JSON；首个非空即锁定，第 3 次仍为空则走兜底元数据
-                        if (isGeneralChat && generalMetadataAttempts < 3) {
-                            val shouldForceFallback = generalMetadataAttempts >= 2
-                            when (handleGeneralChatMetadata(rawFullText, shouldForceFallback)) {
-                                GeneralMetadataResult.SUCCESS,
-                                GeneralMetadataResult.FALLBACK -> generalMetadataAttempts = 3
-                                GeneralMetadataResult.NO_METADATA -> generalMetadataAttempts += 1
-                                GeneralMetadataResult.SKIPPED -> generalMetadataAttempts = 3
-                            }
-                        }
+                        val isFirstAssistant = request.isFirstAssistantReply && !firstAssistantProcessed
+                        val generalMeta = if (isGeneralChat) handleGeneralChatMetadata(rawFullText) else null
+                        val latestMeta = generalMeta ?: runCatching { metaHub.getSession(sessionId) }.getOrNull()
                         val strippedForUi = if (isSmartAnalysis) rawFullText else stripTrailingJsonFromGeneralReply(rawFullText)
                         val sanitized = if (isSmartAnalysis) rawFullText else sanitizeAssistantOutput(strippedForUi, isSmartAnalysis)
                         // SMART_ANALYSIS 已由 Orchestrator 生成最终 Markdown，这里直接透传
@@ -1271,10 +1264,15 @@ class HomeScreenViewModel @Inject constructor(
                         }
                         onCompleted(cleaned)
                         _uiState.update { it.copy(isSending = false, isStreaming = false, isInputBusy = false, isBusy = false) }
+                        if (isFirstAssistant) {
+                            // 自动标题仅在首条助手回复时尝试，后续 GENERAL/SMART 仅更新元数据不再改名
+                            firstAssistantProcessed = true
+                            maybeGenerateSessionTitle(latestMeta)
+                        }
+                        val previewText = latestMeta?.shortSummary?.takeIf { it.isNotBlank() } ?: cleaned
                         viewModelScope.launch {
-                            updateSessionSummary(cleaned)
+                            updateSessionSummary(previewText)
                             applySessionList()
-                            maybeGenerateSessionTitle(request, cleaned)
                         }
                     }
                     is ChatStreamEvent.Error -> {
@@ -2350,72 +2348,29 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     private suspend fun handleGeneralChatMetadata(
-        rawFullText: String,
-        forceFallback: Boolean
-    ): GeneralMetadataResult {
-        val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-        if (existing?.latestMajorAnalysisSource == AnalysisSource.GENERAL_FIRST_REPLY) {
-            return GeneralMetadataResult.SKIPPED
-        }
-        val jsonBlock = findLastJsonBlock(rawFullText)
-        val metadata = jsonBlock?.text?.let { parseGeneralChatMetadata(it, sessionId) }
-        val meaningful = metadata?.hasMeaningfulGeneralFields() == true
-        val patch = when {
-            meaningful -> metadata!!
-            forceFallback -> buildGeneralFallbackMetadata(existing)
-            else -> null
-        }
-        if (patch == null) {
-            return GeneralMetadataResult.NO_METADATA
-        }
-        val merged = (existing?.mergeWith(patch) ?: patch).copy(
+        rawFullText: String
+    ): SessionMetadata? {
+        val jsonBlock = findLastJsonBlock(rawFullText) ?: return null
+        val metadata = parseGeneralChatMetadata(jsonBlock.text, sessionId)
+        if (metadata == null || !metadata.hasMeaningfulGeneralFields()) return null
+        val patch = metadata.copy(
             latestMajorAnalysisSource = AnalysisSource.GENERAL_FIRST_REPLY,
             latestMajorAnalysisAt = System.currentTimeMillis()
         )
-        debugLog(
-            event = "general_chat_metadata_parsed",
-            data = mapOf(
-                "sessionId" to sessionId,
-                "mainPerson" to merged.mainPerson,
-                "shortSummary" to merged.shortSummary,
-                "title6" to merged.summaryTitle6Chars,
-                "fallback" to (!meaningful && forceFallback)
-            )
-        )
+        val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
+        val merged = existing?.mergeWith(patch) ?: patch
         runCatching { metaHub.upsertSession(merged) }
-            .onSuccess {
-                debugLog(
-                    event = "session_metadata_upsert",
-                    data = mapOf(
-                        "sessionId" to sessionId,
-                        "mainPerson" to merged.mainPerson,
-                        "shortSummary" to merged.shortSummary,
-                        "title6" to merged.summaryTitle6Chars
-                    )
-                )
-                viewModelScope.launch {
-                    updateTitleFromMetadata(merged)
-                    merged.shortSummary?.takeIf { it.isNotBlank() }?.let { summary ->
-                        updateSessionSummary(summary)
-                    }
-                }
-            }
+            .onSuccess { updateDebugSessionMetadata(merged) }
             .onFailure {
                 warnLog(
                     event = "metahub_upsert_failed",
-                    data = mapOf(
-                        "sessionId" to sessionId,
-                        "target" to "session"
-                    ),
+                    data = mapOf("sessionId" to sessionId, "target" to "session"),
                     throwable = it
                 )
                 appendDebugNote("sessionMetaUpsertFailed")
             }
-        updateDebugSessionMetadata(merged)
-        return if (meaningful) GeneralMetadataResult.SUCCESS else GeneralMetadataResult.FALLBACK
+        return merged
     }
-
-    private enum class GeneralMetadataResult { SUCCESS, NO_METADATA, FALLBACK, SKIPPED }
 
     private data class JsonBlock(val text: String, val startIndex: Int)
 
@@ -2439,13 +2394,15 @@ class HomeScreenViewModel @Inject constructor(
         val fenced = fencedRegex.findAll(text).lastOrNull()
         val fencedContent = fenced?.groupValues?.getOrNull(1)?.trim()
         if (!fencedContent.isNullOrBlank() && fencedContent.startsWith("{") && fencedContent.endsWith("}")) {
-            return JsonBlock(fencedContent, fenced.range.first)
+            val braceStart = text.indexOf('{', fenced.range.first)
+            return JsonBlock(fencedContent, if (braceStart >= 0) braceStart else fenced.range.first)
         }
         val anyFenceRegex = Regex("```\\s*([\\s\\S]*?)```")
         val anyFence = anyFenceRegex.findAll(text).lastOrNull()
         val anyContent = anyFence?.groupValues?.getOrNull(1)?.trim()
         if (!anyContent.isNullOrBlank() && anyContent.startsWith("{") && anyContent.endsWith("}")) {
-            return JsonBlock(anyContent, anyFence.range.first)
+            val braceStart = text.indexOf('{', anyFence.range.first)
+            return JsonBlock(anyContent, if (braceStart >= 0) braceStart else anyFence.range.first)
         }
         val trimmed = text.trimEnd()
         if (trimmed.startsWith("{") && trimmed.endsWith("}")) return JsonBlock(trimmed, text.lastIndexOf('{'))
@@ -2482,23 +2439,6 @@ class HomeScreenViewModel @Inject constructor(
             !shortSummary.isNullOrBlank() ||
             !summaryTitle6Chars.isNullOrBlank() ||
             !location.isNullOrBlank()
-
-    private fun buildGeneralFallbackMetadata(existing: SessionMetadata?): SessionMetadata {
-        val firstUserMessage = _uiState.value.chatMessages.firstOrNull { it.role == ChatMessageRole.USER }
-            ?.content
-            ?.takeIf { it.isNotBlank() }
-        val shortSummary = listOfNotNull(
-            existing?.shortSummary?.takeIf { it.isNotBlank() },
-            firstUserMessage?.take(12)
-        ).firstOrNull() ?: "闲聊对话"
-        val summary6 = shortSummary.take(6)
-        return SessionMetadata(
-            sessionId = sessionId,
-            mainPerson = "未知客户",
-            shortSummary = shortSummary,
-            summaryTitle6Chars = summary6
-        )
-    }
 
     private fun stripTrailingJsonFromGeneralReply(fullText: String): String {
         val jsonBlock = findLastJsonBlock(fullText) ?: return fullText
@@ -2656,32 +2596,20 @@ class HomeScreenViewModel @Inject constructor(
         sessionRepository.upsert(summary)
     }
 
-    private fun buildTitleFromMetadata(meta: SessionMetadata, updatedAt: Long): String {
-        return SessionTitlePolicy.buildSuggestedTitle(meta, updatedAt)
-            ?: SessionTitlePolicy.PLACEHOLDER_TITLE
+    private fun canBuildTitleFrom(meta: SessionMetadata?): Boolean {
+        if (meta == null) return false
+        val hasName = !meta.mainPerson.isNullOrBlank()
+        val hasSummary = !meta.summaryTitle6Chars.isNullOrBlank() || !meta.shortSummary.isNullOrBlank()
+        return hasName && hasSummary
     }
 
-    private suspend fun maybeGenerateSessionTitle(request: ChatRequest, assistantText: String) {
-        if (!request.isFirstAssistantReply) return
-        if (request.quickSkillId != null) return
+    private suspend fun maybeGenerateSessionTitle(meta: SessionMetadata?) {
         val existingSummary = sessionRepository.findById(sessionId)
         if (existingSummary?.isTitleUserEdited == true) return
         if (existingSummary != null && !SessionTitlePolicy.isPlaceholder(existingSummary.title)) return
-        val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-        val createdAt = existingSummary?.updatedAtMillis ?: System.currentTimeMillis()
-        val title = SessionTitlePolicy.buildSuggestedTitle(meta, createdAt)
-            ?: run {
-                val firstUserMessage = _uiState.value.chatMessages
-                    .firstOrNull { it.role == ChatMessageRole.USER }
-                    ?.content
-                    ?: return
-                sessionTitleResolver.resolveTitle(
-                    sessionId = sessionId,
-                    updatedAtMillis = createdAt,
-                    firstUserMessage = firstUserMessage,
-                    firstAssistantMessage = assistantText
-                )
-            }
+        if (!canBuildTitleFrom(meta)) return
+        val createdAt = existingSummary?.updatedAtMillis ?: meta?.lastUpdatedAt ?: System.currentTimeMillis()
+        val title = SessionTitlePolicy.buildSuggestedTitle(meta, createdAt) ?: return
         sessionRepository.updateTitle(sessionId, title)
         applySessionList()
         _uiState.update { state ->
@@ -2700,7 +2628,7 @@ class HomeScreenViewModel @Inject constructor(
         initialSessionPrepared = true
         val newSession = sessionRepository.createNewChatSession()
         sessionId = newSession.id
-        generalMetadataAttempts = 0
+        firstAssistantProcessed = false
         latestSessionSummaries =
             (latestSessionSummaries.filterNot { it.id == newSession.id } + newSession)
         applySessionList()
@@ -2734,37 +2662,6 @@ class HomeScreenViewModel @Inject constructor(
         applySessionList()
         _uiState.update {
             it.copy(currentSession = it.currentSession.copy(title = placeholder))
-        }
-    }
-
-    private suspend fun updateTitleFromMetadata(meta: SessionMetadata) {
-        val existingSummary = sessionRepository.findById(sessionId)
-        if (existingSummary?.isTitleUserEdited == true) return
-        if (existingSummary != null && !SessionTitlePolicy.isPlaceholder(existingSummary.title)) return
-        val createdAt = existingSummary?.updatedAtMillis ?: meta.lastUpdatedAt
-        val title = SessionTitlePolicy.buildSuggestedTitle(meta, createdAt) ?: return
-        try {
-            sessionRepository.updateTitle(sessionId, title)
-            applySessionList()
-            _uiState.update { state ->
-                val updatedCurrent = if (state.currentSession.id == sessionId) {
-                    state.currentSession.copy(title = title)
-                } else {
-                    state.currentSession
-                }
-                state.copy(currentSession = updatedCurrent)
-            }
-            debugLog(
-                event = "session_title_updated_from_metadata",
-                data = mapOf("sessionId" to sessionId, "title" to title)
-            )
-        } catch (it: Throwable) {
-            warnLog(
-                event = "session_title_update_failed",
-                data = mapOf("sessionId" to sessionId, "title" to title),
-                throwable = it
-            )
-            appendDebugNote("sessionTitleUpdateFailed")
         }
     }
 

@@ -6,6 +6,7 @@ package com.smartsales.feature.chat.home.orchestrator
 // 作者：创建于 2025-12-04
 
 import com.smartsales.core.metahub.ExportMetadata
+import com.smartsales.core.metahub.AnalysisSource
 import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.TokenUsage
@@ -15,6 +16,7 @@ import com.smartsales.feature.chat.core.ChatRequest
 import com.smartsales.feature.chat.core.ChatStreamEvent
 import com.smartsales.feature.chat.core.QuickSkillId
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -66,9 +68,10 @@ class HomeOrchestratorImplTest {
         assertEquals(1, events.size)
         val completed = events.first() as ChatStreamEvent.Completed
         assertTrue(completed.fullText.contains("罗总"))
-        assertTrue(completed.fullText.contains("### 会话概要"))
-        assertTrue(completed.fullText.contains("### 建议与下一步行动"))
-        assertTrue(completed.fullText.contains("1)"))
+        assertTrue(completed.fullText.contains("## 会话概要"))
+        assertTrue(completed.fullText.contains("## 建议与行动"))
+        assertTrue(completed.fullText.contains("1."))
+        assertFalse(completed.fullText.contains("{"))
 
         val stored = metaHub.lastSession
         assertEquals("罗总", stored?.mainPerson)
@@ -168,11 +171,11 @@ class HomeOrchestratorImplTest {
         val completed = events.first() as ChatStreamEvent.Completed
         val cleaned = completed.fullText
         assertTrue(cleaned.contains("长版本"))
-        assertTrue(!cleaned.contains("###### 客"))
-        assertTrue(cleaned.contains("1)"))
-        assertTrue(cleaned.contains("2)"))
-        assertTrue(cleaned.contains("3)"))
-        assertTrue(!cleaned.contains("短版本"))
+        assertFalse(cleaned.contains("######"))
+        assertTrue(cleaned.contains("## 会话概要"))
+        assertTrue(cleaned.contains("## 核心洞察"))
+        assertFalse(cleaned.contains("短版本"))
+        assertFalse(cleaned.contains("{"))
     }
 
     @Test
@@ -200,6 +203,90 @@ class HomeOrchestratorImplTest {
 
         assertEquals("长版本", metaHub.lastSession?.shortSummary)
         assertEquals(listOf("a", "b").toSet(), metaHub.lastSession?.tags)
+    }
+
+    @Test
+    fun `returns friendly failure markdown when json is missing`() = runTest(dispatcher) {
+        val metaHub = RecordingMetaHub()
+        val aiChatService = CompletedAiChatService("没有生成结构化结果")
+        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub)
+
+        val events = mutableListOf<ChatStreamEvent>()
+        orchestrator.streamChat(
+            ChatRequest(
+                sessionId = "no-json",
+                userMessage = "go",
+                quickSkillId = QuickSkillId.SMART_ANALYSIS.name
+            )
+        ).collect { events.add(it) }
+
+        val completed = events.first() as ChatStreamEvent.Completed
+        assertEquals("本次智能分析暂时不可用，请稍后重试。", completed.fullText)
+        assertEquals(null, metaHub.lastSession)
+    }
+
+    @Test
+    fun `actionable tips are renumbered locally`() = runTest(dispatcher) {
+        val metaHub = RecordingMetaHub()
+        val aiChatService = CompletedAiChatService(
+            """
+            ```json
+            {
+              "main_person": "林总",
+              "actionable_tips": ["跟进报价", "安排试驾", "回访决策人"]
+            }
+            ```
+            """.trimIndent()
+        )
+        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub)
+
+        val events = mutableListOf<ChatStreamEvent>()
+        orchestrator.streamChat(
+            ChatRequest(
+                sessionId = "tips",
+                userMessage = "go",
+                quickSkillId = QuickSkillId.SMART_ANALYSIS.name
+            )
+        ).collect { events.add(it) }
+
+        val completed = events.first() as ChatStreamEvent.Completed
+        val numbered = completed.fullText.lines()
+            .map { it.trim() }
+            .filter { it.matches(Regex("^\\d+\\.\\s.+")) }
+        assertEquals(listOf("1. 跟进报价", "2. 安排试驾", "3. 回访决策人"), numbered)
+    }
+
+    @Test
+    fun `partial smart analysis keeps existing metadata and adds tags`() = runTest(dispatcher) {
+        val metaHub = RecordingMetaHub()
+        metaHub.lastSession = SessionMetadata(
+            sessionId = "merge",
+            mainPerson = "初始客户",
+            shortSummary = "旧摘要",
+            tags = setOf("旧标签")
+        )
+        val aiChatService = CompletedAiChatService(
+            """
+            ```json
+            { "actionable_tips": ["新增行动"] }
+            ```
+            """.trimIndent()
+        )
+        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub)
+
+        orchestrator.streamChat(
+            ChatRequest(
+                sessionId = "merge",
+                userMessage = "go",
+                quickSkillId = QuickSkillId.SMART_ANALYSIS.name
+            )
+        ).collect { /* no-op */ }
+
+        val saved = metaHub.lastSession!!
+        assertEquals("初始客户", saved.mainPerson)
+        assertEquals("旧摘要", saved.shortSummary)
+        assertTrue(saved.tags.contains("新增行动"))
+        assertEquals(AnalysisSource.SMART_ANALYSIS_USER, saved.latestMajorAnalysisSource)
     }
 
     private class CompletedAiChatService(

@@ -37,8 +37,6 @@ import com.smartsales.data.aicore.ExportFormat
 import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.SessionMetadata
-import com.smartsales.core.metahub.SessionStage
-import com.smartsales.core.metahub.RiskLevel
 import com.smartsales.core.metahub.SessionTitlePolicy
 import com.smartsales.core.metahub.AnalysisSource
 import com.smartsales.feature.chat.home.CHAT_DEBUG_HUD_ENABLED
@@ -68,6 +66,7 @@ private const val CONTEXT_LENGTH_LIMIT = 800
 private const val CONTEXT_MESSAGE_LIMIT = 5
 private const val ANALYSIS_CONTENT_LIMIT = 2400
 private const val TAG = "HomeScreenVM"
+private const val SMART_ANALYSIS_FAILURE_TEXT = "本次智能分析暂时不可用，请稍后重试。"
 
 private enum class InputBucket { NOISE, SHORT_RELEVANT, RICH }
 private data class AnalysisTarget(val content: String, val source: String)
@@ -1140,14 +1139,22 @@ class HomeScreenViewModel @Inject constructor(
             request.quickSkillId == "SUMMARY"
         val streamingDeduplicator = StreamingDeduplicator()
 
+        if (isSmartAnalysis) {
+            // 本地占位提示，避免流式展示脏文本
+            updateAssistantMessage(assistantId) { msg ->
+                msg.copy(content = "正在智能分析…", isStreaming = true)
+            }
+        }
+
         viewModelScope.launch {
             homeOrchestrator.streamChat(request).collect { event ->
                 when (event) {
                     is ChatStreamEvent.Delta -> {
-                        // 处理 streaming token，实时去重
-                        updateAssistantMessage(assistantId) { msg ->
-                            val updated = streamingDeduplicator.mergeSnapshot(msg.content, event.token)
-                            msg.copy(content = updated)
+                        if (!isSmartAnalysis) {
+                            updateAssistantMessage(assistantId) { msg ->
+                                val updated = streamingDeduplicator.mergeSnapshot(msg.content, event.token)
+                                msg.copy(content = updated)
+                            }
                         }
                     }
                     is ChatStreamEvent.Completed -> {
@@ -1158,23 +1165,26 @@ class HomeScreenViewModel @Inject constructor(
                         if (shouldParseSessionMetadata) {
                             handleGeneralChatMetadata(rawFullText)
                         }
-                        if (isSmartAnalysis) {
-                            handleSmartAnalysisMetadata(rawFullText)
+                        val sanitized = if (isSmartAnalysis) rawFullText else sanitizeAssistantOutput(rawFullText, isSmartAnalysis)
+                        // SMART_ANALYSIS 已由 Orchestrator 生成最终 Markdown，这里直接透传
+                        val cleaned = if (isSmartAnalysis) {
+                            sanitized
+                        } else {
+                            onCompletedTransform?.invoke(sanitized) ?: sanitized
                         }
-                        val sanitized = sanitizeAssistantOutput(rawFullText, isSmartAnalysis)
-                        val cleaned = onCompletedTransform?.invoke(sanitized) ?: sanitized
-                        if (isSmartAnalysis) {
+                        val isSmartFailure = isSmartAnalysis && cleaned.trim() == SMART_ANALYSIS_FAILURE_TEXT
+                        if (isSmartAnalysis && !isSmartFailure) {
                             // 根据是否是导出前自动分析，区分来源
                             val source = if (pendingExportAfterAnalysis != null) {
                                 AnalysisSource.SMART_ANALYSIS_AUTO
                             } else {
                                 AnalysisSource.SMART_ANALYSIS_USER
                             }
-
-                            // 在当前协程里调用 suspend 函数即可
                             persistLatestAnalysisMarker(source, assistantId)
-
                             onAnalysisCompleted(cleaned, assistantId)
+                        } else if (isSmartAnalysis && isSmartFailure) {
+                            pendingExportAfterAnalysis = null
+                            _uiState.update { it.copy(exportInProgress = false) }
                         }
                         debugLog(
                             event = "chat_stream_completed",
@@ -2310,80 +2320,6 @@ class HomeScreenViewModel @Inject constructor(
             shortSummary = obj.optString("short_summary").takeIf { it.isNotBlank() },
             summaryTitle6Chars = obj.optString("summary_title_6chars").takeIf { it.isNotBlank() }?.take(6),
             location = obj.optString("location").takeIf { it.isNotBlank() }
-        )
-    }.getOrNull()
-
-    private suspend fun handleSmartAnalysisMetadata(rawFullText: String) {
-        val jsonText = extractLastJsonBlock(rawFullText)
-        if (jsonText.isNullOrBlank()) {
-            debugLog(
-                event = "smart_analysis_metadata_skipped",
-                data = mapOf("sessionId" to sessionId, "reason" to "no_json_found")
-            )
-            return
-        }
-        val metadata = parseSmartAnalysisMetadata(jsonText, sessionId)
-        if (metadata == null) {
-            warnLog(
-                event = "smart_analysis_metadata_parse_failed",
-                data = mapOf("sessionId" to sessionId, "reason" to "json_parse_null")
-            )
-            appendDebugNote("smartAnalysisMetadataParseFailed")
-            return
-        }
-        val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-        val merged = existing?.mergeWith(metadata) ?: metadata
-        debugLog(
-            event = "smart_analysis_metadata_parsed",
-            data = mapOf(
-                "sessionId" to sessionId,
-                "mainPerson" to merged.mainPerson,
-                "shortSummary" to merged.shortSummary,
-                "title6" to merged.summaryTitle6Chars
-            )
-        )
-        runCatching { metaHub.upsertSession(merged) }
-            .onSuccess {
-                debugLog(
-                    event = "smart_analysis_meta_upsert",
-                    data = mapOf(
-                        "sessionId" to sessionId,
-                        "mainPerson" to merged.mainPerson,
-                        "shortSummary" to merged.shortSummary
-                    )
-                )
-                viewModelScope.launch {
-                    updateTitleFromMetadata(merged)
-                }
-            }
-            .onFailure {
-                warnLog(
-                    event = "smart_analysis_meta_upsert_failed",
-                    data = mapOf("sessionId" to sessionId),
-                    throwable = it
-                )
-                appendDebugNote("smartAnalysisMetaUpsertFailed")
-            }
-        updateDebugSessionMetadata(merged)
-    }
-
-    // TODO: Replace with Orchestrator-MetadataHub V2 spec metadata types when available
-    private fun parseSmartAnalysisMetadata(jsonText: String, sessionId: String): SessionMetadata? = runCatching {
-        val obj = org.json.JSONObject(jsonText)
-        val stageStr = obj.optString("stage").takeIf { it.isNotBlank() }
-        val riskStr = obj.optString("risk_level").takeIf { it.isNotBlank() }
-        SessionMetadata(
-            sessionId = sessionId,
-            mainPerson = obj.optString("main_person").takeIf { it.isNotBlank() },
-            shortSummary = obj.optString("short_summary").takeIf { it.isNotBlank() },
-            summaryTitle6Chars = obj.optString("summary_title_6chars").takeIf { it.isNotBlank() }?.take(6),
-            location = obj.optString("location").takeIf { it.isNotBlank() },
-            stage = stageStr?.let { 
-                try { SessionStage.valueOf(it.uppercase()) } catch (e: IllegalArgumentException) { null }
-            },
-            riskLevel = riskStr?.let {
-                try { RiskLevel.valueOf(it.uppercase()) } catch (e: IllegalArgumentException) { null }
-            }
         )
     }.getOrNull()
 

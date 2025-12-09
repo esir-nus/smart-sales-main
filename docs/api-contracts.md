@@ -20,6 +20,7 @@ This document is the single source of truth for every API/protocol that the Andr
 - **HomeOrchestrator**
   - `fun streamChat(request: ChatRequest): Flow<ChatStreamEvent>` – 唯一 LLM 入口，用 Completed 事件解析 JSON block 写 `SessionMetadata`；Delta/Completed 文本原样透传给 VM。
   - 返回的 `SessionMetadata` 中 `summary_title_6chars`/`short_summary`/`main_person` 只作为**标题建议**，由客户端判断当前标题是否为占位值（如“新的聊天”“通话分析 – 文件名”）再决定是否写回 `AiSessionSummary.title`。
+  - **V4 追加（SMART_ANALYSIS）**：LLM 仅输出单个 JSON 对象（字段：`main_person`、`short_summary`、`summary_title_6chars`、`location`、`highlights`、`actionable_tips`、`core_insight`、`sharp_line`、可选 `stage`/`risk_level`）。Orchestrator 解析 JSON → 写 MetaHub → 本地拼 Markdown 给 UI；UI 不展示 JSON。
 - **TranscriptOrchestrator**
   - `suspend fun inferTranscriptMetadata(request: TranscriptMetadataRequest): TranscriptMetadata?` – 仅由 `RealTingwuCoordinator` 调用，负责 LLM 推断说话人/会话元数据并 `mergeWith` 写入 MetaHub。请求字段：`transcriptId`, `sessionId`, `diarizedSegments`, `speakerLabels`, `createdAt`(默认 now), `force`(默认 false)。
 - **ExportOrchestrator**

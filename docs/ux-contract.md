@@ -359,15 +359,14 @@ Current quick skills:
 
 ### 7.2 Smart Analysis Output
 
-* SMART_ANALYSIS responses must be rendered as **human-readable markdown**:
+* SMART_ANALYSIS 流程（快捷技能 & “分析一下”）：
+  * 发送后先显示本地占位气泡（例如“正在智能分析…”），不流式展示 LLM 增量。
+  * 完成时只展示 Orchestrator 本地拼好的 Markdown：概要 / 客户画像与意图 / 需求与痛点 / 机会与风险 / 建议与行动（编号 1..n）/ 核心洞察 / 关键话术。
+  * 不展示 JSON / prompt 骨架；若解析失败，显示简短中文提示或清理后的可读文本。
 
-  * No raw JSON keys like `"highlights"`, `"actionable_tips"` in user-visible text.
-  * Orchestrator already provides structured summaries; UI shows headings, lists, etc.
-
-* This analysis markdown is:
-
-  * The canonical text for **on-screen display**.
-  * The input for **PDF export** (no re-analysis).
+* 该 Markdown：
+  * 是屏幕展示的唯一文案。
+  * 是 PDF 导出的来源（不重复分析）。
 
 ---
 

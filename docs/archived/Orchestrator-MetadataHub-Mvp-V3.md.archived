@@ -1,3 +1,6 @@
+# ⚠️ 已归档
+
+此文件仅作为历史参考，当前的交互与布局规范请查看 **`docs/Orchestrator-MetadataHub-V4.md`**。新的 `ux-contract.md` 已成为唯一的真实来源，任何新增或修改的体验都必须以其为准。
 # Orchestrator-MetaHub-V3 规范
 
 > **Status：** 已与当前实现/测试对齐（2025-12-06，覆盖 MetaHub merge、TranscriptOrchestrator、Home 导出/流式/转写）。
@@ -54,6 +57,21 @@
      * 未来可以做“分析新旧度”等逻辑。
 
 5. **转写 / 说话人命名流规范化**
+
+---
+
+## V4 – SMART_ANALYSIS & Tingwu integration（草案）
+
+> V3 仍是已落地的基线，V4 是正在推进的改进方向；细则见 `docs/Orchestrator-MetadataHub-V4.md`。
+
+核心差异：
+
+* SMART_ANALYSIS：LLM 仅输出 JSON 对象（main_person、short_summary、summary_title_6chars、location、highlights、actionable_tips、core_insight、sharp_line、stage/risk）。Orchestrator 解析 JSON → 写 MetaHub → 本地拼 Markdown 段落给 UI，用户不再看到 LLM 原始模板/JSON。
+* UI：SMART_ANALYSIS 显示本地占位（“正在智能分析…”），完成后只展示 Orchestrator 拼好的 Markdown，不流式展示 LLM 增量。
+* GENERAL：保持 V3 行为（可选 JSON，直接展示模型文本，若有 JSON 则写 MetaHub）。
+* Tingwu：当前流程不改；未来可将 Tingwu summary/chapters 作为 MetaHub 补充来源，SMART_ANALYSIS 仍单独运行销售视角的 JSON-only 分析。
+
+详见：`docs/Orchestrator-MetadataHub-V4.md`。
 
    * Tingwu 调用只在 `RealTingwuCoordinator` 内发生；
    * 说话人角色命名只在 `TranscriptOrchestrator` 内调用 LLM；

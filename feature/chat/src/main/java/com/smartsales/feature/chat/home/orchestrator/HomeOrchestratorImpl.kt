@@ -6,7 +6,6 @@ package com.smartsales.feature.chat.home.orchestrator
 // 作者：创建于 2025-12-04
 
 import com.smartsales.core.metahub.AnalysisSource
-import com.smartsales.core.metahub.CrmRow
 import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.RiskLevel
 import com.smartsales.core.metahub.SessionMetadata
@@ -20,6 +19,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import org.json.JSONArray
+import org.json.JSONObject
+
+private const val SMART_ANALYSIS_FAILURE_MESSAGE = "本次智能分析暂时不可用，请稍后重试。"
 
 private data class SmartAnalysisResult(
     val markdown: String,
@@ -27,7 +30,12 @@ private data class SmartAnalysisResult(
 )
 
 private data class ParsedSmartAnalysis(
-    val metadata: SessionMetadata,
+    val mainPerson: String?,
+    val shortSummary: String?,
+    val summaryTitle6Chars: String?,
+    val location: String?,
+    val stage: SessionStage?,
+    val riskLevel: RiskLevel?,
     val highlights: List<String>,
     val actionableTips: List<String>,
     val coreInsight: String?,
@@ -57,24 +65,18 @@ class HomeOrchestratorImpl @Inject constructor(
         request: ChatRequest,
         assistantText: String
     ): SmartAnalysisResult {
-        val parsed = parseSmartAnalysisPayload(
+        val parsed = parseSmartAnalysisPayload(rawText = assistantText)
+            ?: return SmartAnalysisResult(
+                markdown = SMART_ANALYSIS_FAILURE_MESSAGE,
+                metadata = null
+            )
+        val metadata = buildSmartAnalysisMetadata(
             sessionId = request.sessionId,
-            rawText = assistantText,
+            parsed = parsed,
             source = resolveAnalysisSource(request)
         )
-        val mergedMeta = parsed?.metadata?.let { mergeWithExisting(request.sessionId, it) }
-        val markdown = if (parsed != null && mergedMeta != null) {
-            buildSmartAnalysisMarkdown(
-                meta = mergedMeta,
-                highlights = parsed.highlights,
-                actionableTips = parsed.actionableTips,
-                coreInsight = parsed.coreInsight,
-                sharpLine = parsed.sharpLine,
-                fallbackRawText = assistantText
-            )
-        } else {
-            cleanSmartAnalysisOutput(assistantText)
-        }
+        val mergedMeta = mergeWithExisting(request.sessionId, metadata)
+        val markdown = buildSmartAnalysisMarkdown(parsed)
         return SmartAnalysisResult(markdown = markdown, metadata = mergedMeta)
     }
 
@@ -91,122 +93,111 @@ class HomeOrchestratorImpl @Inject constructor(
         return existing?.mergeWith(parsed) ?: parsed
     }
 
+    private fun buildSmartAnalysisMetadata(
+        sessionId: String,
+        parsed: ParsedSmartAnalysis,
+        source: AnalysisSource?
+    ): SessionMetadata {
+        val tags = (parsed.highlights + parsed.actionableTips)
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .toSet()
+        val now = System.currentTimeMillis()
+        return SessionMetadata(
+            sessionId = sessionId,
+            mainPerson = parsed.mainPerson,
+            shortSummary = parsed.shortSummary,
+            summaryTitle6Chars = parsed.summaryTitle6Chars,
+            location = parsed.location,
+            stage = parsed.stage,
+            riskLevel = parsed.riskLevel,
+            tags = tags,
+            lastUpdatedAt = now,
+            latestMajorAnalysisMessageId = null,
+            latestMajorAnalysisAt = now,
+            latestMajorAnalysisSource = source,
+            crmRows = emptyList()
+        )
+    }
+
     private fun shouldParseMetadata(request: ChatRequest): Boolean {
         val skillId = request.quickSkillId ?: return false
         return skillId == QuickSkillId.SMART_ANALYSIS.name
     }
 
-    private fun extractJsonBlock(text: String): String? {
-        return firstJsonCodeBlock(text) ?: extractBareJsonObject(text)
-    }
+    // SMART_ANALYSIS JSON 解析：只取最后一个有效 JSON 对象
+    private fun parseSmartAnalysisPayload(rawText: String): ParsedSmartAnalysis? {
+        val jsonObject = extractLastSmartJson(rawText) ?: return null
+        val summary = jsonObject.optJSONObject("summary")
 
-    private fun firstJsonCodeBlock(text: String): String? {
-        // pattern like ```json\n...\n``` or ```\n...\n```
-        val regex = Regex("```(?:json)?\\s*([\\s\\S]*?)```", RegexOption.MULTILINE)
-        return regex.findAll(text).lastOrNull()?.groupValues?.getOrNull(1)?.trim()
-    }
+        val mainPerson = jsonObject.optString("main_person").takeIf { it.isNotBlank() }
+        val shortSummary = jsonObject.optString("short_summary").takeIf { it.isNotBlank() }
+        val summaryTitle = jsonObject.optString("summary_title_6chars").takeIf { it.isNotBlank() }?.take(6)
+        val location = jsonObject.optString("location").takeIf { it.isNotBlank() }
 
-    private fun extractBareJsonObject(text: String): String? {
-        val start = text.indexOf('{')
-        if (start == -1) return null
-        var depth = 0
-        for (i in start until text.length) {
-            when (text[i]) {
-                '{' -> depth++
-                '}' -> {
-                    depth--
-                    if (depth == 0) {
-                        return text.substring(start, i + 1).trim()
-                    }
-                }
-            }
-        }
-        return null
-    }
+        val stage = jsonObject.optString("stage").takeIf { it.isNotBlank() }?.let { toStage(it) }
+        val risk = jsonObject.optString("risk_level").takeIf { it.isNotBlank() }?.let { toRisk(it) }
 
-    private fun findStringField(text: String, field: String): String? {
-        // 匹配："field": "value"
-        val pattern = Regex(""""$field"\s*:\s*"([^"]*)"""")
-        val match = pattern.findAll(text).lastOrNull() ?: return null
-        val value = match.groupValues.getOrNull(1)?.trim()
-        return value?.takeIf { it.isNotBlank() }
-    }
+        val highlights = jsonObject.optJSONArray("highlights")?.toStringList().orEmpty()
+        val actionable = jsonObject.optJSONArray("actionable_tips")?.toStringList().orEmpty()
+        val coreInsight = jsonObject.optString("core_insight").takeIf { it.isNotBlank() }
+            ?: summary?.optString("core_insight")?.takeIf { it.isNotBlank() }
+        val sharpLine = jsonObject.optString("sharp_line").takeIf { it.isNotBlank() }
+            ?: summary?.optString("sharp_line")?.takeIf { it.isNotBlank() }
 
-    private fun findStringListField(text: String, field: String): List<String> {
-        // 匹配："field": ["a", "b", ...]
-        val arrayPattern = Regex(""""$field"\s*:\s*\[(.*?)]""", RegexOption.DOT_MATCHES_ALL)
-        val arrayMatch = arrayPattern.findAll(text).lastOrNull() ?: return emptyList()
-        val inner = arrayMatch.groupValues.getOrNull(1) ?: return emptyList()
+        val hasContent = listOf(mainPerson, shortSummary, summaryTitle, location, coreInsight, sharpLine)
+            .any { !it.isNullOrBlank() } ||
+            highlights.isNotEmpty() ||
+            actionable.isNotEmpty() ||
+            stage != null ||
+            risk != null
+        if (!hasContent) return null
 
-        val elementPattern = Regex(""""([^"]*)"""")
-        return elementPattern.findAll(inner)
-            .map { it.groupValues.getOrNull(1)?.trim().orEmpty() }
-            .filter { it.isNotBlank() }
-            .toList()
-    }
-
-    private fun parseSmartAnalysisPayload(
-        sessionId: String,
-        rawText: String,
-        source: AnalysisSource?
-    ): ParsedSmartAnalysis? {
-        // 先尝试从最后一个 fenced JSON 里找，如果失败再在整段文本里兜底
-        val jsonSlice = firstJsonCodeBlock(rawText) ?: extractBareJsonObject(rawText) ?: rawText
-
-        val mainPerson =
-            findStringField(jsonSlice, "main_person")
-                ?: findStringField(jsonSlice, "mainPerson")
-
-        val shortSummary = findStringField(jsonSlice, "short_summary")
-        val summaryTitle = findStringField(jsonSlice, "summary_title_6chars")
-        val location = findStringField(jsonSlice, "location")
-
-        val stage = findStringField(jsonSlice, "stage")?.let { toStage(it) }
-        val risk = findStringField(jsonSlice, "risk_level")?.let { toRisk(it) }
-
-        val highlights = findStringListField(jsonSlice, "highlights")
-        val actionable = findStringListField(jsonSlice, "actionable_tips")
-        val coreInsight = findStringField(jsonSlice, "core_insight")
-        val sharpLine = findStringField(jsonSlice, "sharp_line")
-        val crmRows = emptyList<CrmRow>() // 先不支持复杂嵌套结构，后续再扩展
-
-        val tags = (highlights + actionable).filter { it.isNotBlank() }.toSet()
-
-        // 如果完全解析不到任何有用字段，就视为无效结果
-        if (mainPerson == null &&
-            shortSummary == null &&
-            summaryTitle == null &&
-            location == null &&
-            tags.isEmpty() &&
-            coreInsight.isNullOrBlank() &&
-            sharpLine.isNullOrBlank()
-        ) {
-            return null
-        }
-
-        val now = System.currentTimeMillis()
-        val metadata = SessionMetadata(
-            sessionId = sessionId,
+        return ParsedSmartAnalysis(
             mainPerson = mainPerson,
             shortSummary = shortSummary,
             summaryTitle6Chars = summaryTitle,
             location = location,
             stage = stage,
             riskLevel = risk,
-            tags = tags,
-            lastUpdatedAt = now,
-            latestMajorAnalysisMessageId = null,
-            latestMajorAnalysisAt = now,
-            latestMajorAnalysisSource = source,
-            crmRows = crmRows
-        )
-        return ParsedSmartAnalysis(
-            metadata = metadata,
             highlights = highlights,
             actionableTips = actionable,
             coreInsight = coreInsight,
             sharpLine = sharpLine
         )
+    }
+
+    private fun extractLastSmartJson(text: String): JSONObject? {
+        val candidates = mutableListOf<String>()
+        val fenced = Regex("```(?:json)?\\s*([\\s\\S]*?)```", RegexOption.IGNORE_CASE)
+        fenced.findAll(text).forEach { match ->
+            match.groupValues.getOrNull(1)?.trim()?.takeIf { it.isNotBlank() }?.let { candidates.add(it) }
+        }
+        candidates.addAll(collectTopLevelJsonSlices(text))
+        for (slice in candidates.asReversed()) {
+            val obj = runCatching { JSONObject(slice) }.getOrNull()
+            if (obj != null) return obj
+        }
+        return null
+    }
+
+    private fun collectTopLevelJsonSlices(text: String): List<String> {
+        val startStack = ArrayDeque<Int>()
+        val ranges = mutableListOf<IntRange>()
+        text.forEachIndexed { index, ch ->
+            when (ch) {
+                '{' -> startStack.addLast(index)
+                '}' -> if (startStack.isNotEmpty()) {
+                    val start = startStack.removeLast()
+                    if (startStack.isEmpty()) {
+                        ranges.add(start..index)
+                    }
+                }
+            }
+        }
+        return ranges.map { range ->
+            text.substring(range.first, range.last + 1).trim()
+        }
     }
 
     private fun toStage(value: String): SessionStage? = when (value.uppercase(Locale.getDefault())) {
@@ -227,6 +218,22 @@ class HomeOrchestratorImpl @Inject constructor(
         else -> null
     }
 
+    private fun formatStage(stage: SessionStage): String = when (stage) {
+        SessionStage.DISCOVERY -> "探索"
+        SessionStage.NEGOTIATION -> "谈判"
+        SessionStage.PROPOSAL -> "方案/报价"
+        SessionStage.CLOSING -> "成交推进"
+        SessionStage.POST_SALE -> "售后"
+        SessionStage.UNKNOWN -> "未知阶段"
+    }
+
+    private fun formatRisk(risk: RiskLevel): String = when (risk) {
+        RiskLevel.LOW -> "低"
+        RiskLevel.MEDIUM -> "中"
+        RiskLevel.HIGH -> "高"
+        RiskLevel.UNKNOWN -> "未知"
+    }
+
     private fun resolveAnalysisSource(request: ChatRequest): AnalysisSource? {
         val mode = request.quickSkillId
         return when {
@@ -236,129 +243,73 @@ class HomeOrchestratorImpl @Inject constructor(
         }
     }
 
-    private fun buildSmartAnalysisMarkdown(
-        meta: SessionMetadata,
-        highlights: List<String>,
-        actionableTips: List<String>,
-        coreInsight: String?,
-        sharpLine: String?,
-        fallbackRawText: String?
-    ): String {
+    private fun buildSmartAnalysisMarkdown(parsed: ParsedSmartAnalysis): String {
+        // SMART_ANALYSIS 最终 Markdown 生成：完全由本地控制，避免 LLM 模板污染
         val sb = StringBuilder()
-        sb.appendLine("智能分析结果（根据最近对话自动生成）")
-        meta.shortSummary?.takeIf { it.isNotBlank() }?.let {
-            sb.appendLine().appendLine("### 会话概要").appendLine("- $it")
+        parsed.shortSummary?.takeIf { it.isNotBlank() }?.let { summary ->
+            sb.appendLine("## 会话概要")
+            sb.appendLine("- ${summary.trim()}")
+            sb.appendLine()
         }
+
         val personaLines = mutableListOf<String>()
-        meta.mainPerson?.takeIf { it.isNotBlank() }?.let { personaLines.add("主要联系人：$it") }
-        meta.location?.takeIf { it.isNotBlank() }?.let { personaLines.add("所在地：$it") }
+        parsed.mainPerson?.takeIf { it.isNotBlank() }?.let { personaLines.add("- 主要联系人：${it.trim()}") }
+        parsed.location?.takeIf { it.isNotBlank() }?.let { personaLines.add("- 所在地：${it.trim()}") }
         if (personaLines.isNotEmpty()) {
-            sb.appendLine().appendLine("### 客户画像与意图")
-            personaLines.forEach { line -> sb.appendLine("- $line") }
+            sb.appendLine("## 客户画像与意图")
+            personaLines.forEach { line -> sb.appendLine(line) }
+            sb.appendLine()
         }
-        if (highlights.isNotEmpty()) {
-            sb.appendLine().appendLine("### 需求与痛点")
-            highlights.take(5).forEach { sb.appendLine("- $it") }
-        }
-        meta.riskLevel?.let {
-            sb.appendLine().appendLine("### 机会与风险").appendLine("- 风险等级：${it.name}")
-        }
-        if (actionableTips.isNotEmpty()) {
-            sb.appendLine().appendLine("### 建议与下一步行动")
-            actionableTips.take(5).forEachIndexed { index, tip ->
-                sb.appendLine("${index + 1}) $tip")
-            }
-        }
-        coreInsight?.takeIf { it.isNotBlank() }?.let {
-            sb.appendLine().appendLine("### 核心洞察").appendLine("- $it")
-        }
-        sharpLine?.takeIf { it.isNotBlank() }?.let {
-            sb.appendLine().appendLine("### 关键话术").appendLine("- $it")
-        }
-        val built = sb.toString().trimEnd()
-        if (built.isNotBlank()) return renumberNumberedBlocks(built.lines()).joinToString("\n")
 
-        val fallback = fallbackRawText.orEmpty()
-        if (fallback.isBlank()) return "暂无可用的智能分析结果，请稍后重试。"
-        val cleaned = cleanSmartAnalysisOutput(fallback)
-        return if (cleaned.isNotBlank()) cleaned else "暂无可用的智能分析结果，请稍后重试。"
-    }
-
-    private fun cleanSmartAnalysisOutput(raw: String): String {
-        val fencedJson = firstJsonCodeBlock(raw)
-        val markdownPart = fencedJson
-            ?.let { raw.substringBeforeLast("```json").trimEnd() }
-            ?: raw
-        val collapsed = collapseProgressiveLines(markdownPart)
-            .filterNot { isTemplateEcho(it) }
-        val renumbered = renumberNumberedBlocks(collapsed)
-        return renumbered.joinToString("\n").trimEnd()
-    }
-
-    private fun collapseProgressiveLines(markdown: String): List<String> {
-        val lines = markdown.lines()
-        if (lines.isEmpty()) return emptyList()
-        val result = mutableListOf<String>()
-        var index = 0
-        while (index < lines.size) {
-            val current = lines[index]
-            if (current.isBlank()) {
-                result.add(current)
-                index++
-                continue
-            }
-            var candidate = current
-            var nextIndex = index + 1
-            while (nextIndex < lines.size) {
-                val next = lines[nextIndex]
-                if (next.isBlank()) break
-                val trimmed = candidate.trim()
-                val nextTrim = next.trim()
-                if (nextTrim.startsWith(trimmed) && nextTrim.length > trimmed.length) {
-                    candidate = next
-                    nextIndex++
-                } else {
-                    break
+        if (parsed.highlights.isNotEmpty()) {
+            sb.appendLine("## 需求与痛点")
+            parsed.highlights.forEach { highlight ->
+                if (highlight.isNotBlank()) {
+                    sb.appendLine("- ${highlight.trim()}")
                 }
             }
-            result.add(candidate)
-            index = nextIndex
+            sb.appendLine()
         }
-        return result
-    }
 
-    private fun isTemplateEcho(line: String): Boolean {
-        val compact = line.trim().replace(" ", "")
-        if (compact.isEmpty()) return false
-        if (compact.contains("角色/公司/城市")) return true
-        if (compact.endsWith("##客户画像") || compact.endsWith("#会话概要")) return true
-        if (compact.contains("客##客户##客户画像")) return true
-        return false
-    }
+        val riskLines = mutableListOf<String>()
+        parsed.stage?.let { riskLines.add("- 销售阶段：${formatStage(it)}") }
+        parsed.riskLevel?.let { riskLines.add("- 风险等级：${formatRisk(it)}") }
+        if (riskLines.isNotEmpty()) {
+            sb.appendLine("## 机会与风险")
+            riskLines.forEach { line -> sb.appendLine(line) }
+            sb.appendLine()
+        }
 
-    private fun renumberNumberedBlocks(lines: List<String>): List<String> {
-        val pattern = Regex("^\\s*\\d+[).、]")
-        val result = mutableListOf<String>()
-        var counter = 1
-        var inBlock = false
-        for (line in lines) {
-            if (pattern.containsMatchIn(line)) {
-                if (!inBlock) {
-                    counter = 1
-                    inBlock = true
+        if (parsed.actionableTips.isNotEmpty()) {
+            sb.appendLine("## 建议与行动")
+            parsed.actionableTips.forEachIndexed { index, tip ->
+                if (tip.isNotBlank()) {
+                    sb.appendLine("${index + 1}. ${tip.trim()}")
                 }
-                val renamed = line.replace(pattern) { match ->
-                    val firstDigit = match.value.first { it.isDigit() }
-                    val suffix = match.value.substringAfter(firstDigit)
-                    "${counter++}${suffix}"
-                }
-                result.add(renamed)
-            } else {
-                inBlock = false
-                result.add(line)
             }
+            sb.appendLine()
         }
-        return result
+
+        parsed.coreInsight?.takeIf { it.isNotBlank() }?.let { insight ->
+            sb.appendLine("## 核心洞察")
+            sb.appendLine("- ${insight.trim()}")
+            sb.appendLine()
+        }
+
+        parsed.sharpLine?.takeIf { it.isNotBlank() }?.let { line ->
+            sb.appendLine("## 一句话话术")
+            sb.appendLine("- ${line.trim()}")
+            sb.appendLine()
+        }
+
+        return sb.toString().trimEnd().ifBlank { SMART_ANALYSIS_FAILURE_MESSAGE }
     }
 
+    private fun JSONArray.toStringList(): List<String> {
+        val list = mutableListOf<String>()
+        for (i in 0 until length()) {
+            optString(i)?.takeIf { it.isNotBlank() }?.let { list.add(it.trim()) }
+        }
+        return list
+    }
 }

@@ -193,9 +193,10 @@ class DefaultChatController @Inject constructor(
             return
         }
         _state.update { it.copy(exportState = ChatExportState.InProgress(format)) }
+        val currentTitle = _state.value.title ?: buildTitle(System.currentTimeMillis())
         val exportResult = when (format) {
-            ExportFormat.PDF -> exportOrchestrator.exportPdf(sessionId, markdown, null)
-            ExportFormat.CSV -> exportOrchestrator.exportCsv(sessionId, null)
+            ExportFormat.PDF -> exportOrchestrator.exportPdf(sessionId, markdown, currentTitle, null)
+            ExportFormat.CSV -> exportOrchestrator.exportCsv(sessionId, currentTitle, null)
         }
         when (val result = exportResult) {
             is Result.Success -> {

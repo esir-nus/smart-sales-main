@@ -214,10 +214,15 @@ class HomeHeroTitlePlaceholderTest {
                 override suspend fun exportPdf(
                     sessionId: String,
                     markdown: String,
+                    sessionTitle: String?,
                     userName: String?
                 ): Result<ExportResult> = Result.Success(ExportResult("demo.pdf", "application/pdf", ByteArray(0)))
 
-                override suspend fun exportCsv(sessionId: String, userName: String?): Result<ExportResult> =
+                override suspend fun exportCsv(
+                    sessionId: String,
+                    sessionTitle: String?,
+                    userName: String?
+                ): Result<ExportResult> =
                     Result.Success(ExportResult("demo.csv", "text/csv", ByteArray(0)))
             },
             shareHandler = object : ChatShareHandler {

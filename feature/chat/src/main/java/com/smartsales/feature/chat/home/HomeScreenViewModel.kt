@@ -39,6 +39,8 @@ import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.SessionTitlePolicy
 import com.smartsales.core.metahub.AnalysisSource
+import com.smartsales.core.metahub.SessionStage
+import com.smartsales.core.metahub.RiskLevel
 import com.smartsales.feature.chat.home.CHAT_DEBUG_HUD_ENABLED
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -457,9 +459,10 @@ class HomeScreenViewModel @Inject constructor(
             return
         }
         _uiState.update { it.copy(exportInProgress = true, chatErrorMessage = null) }
+        val sessionTitle = _uiState.value.currentSession.title
         val result = when (format) {
-            ExportFormat.PDF -> exportOrchestrator.exportPdf(sessionId, markdown, _uiState.value.userName)
-            ExportFormat.CSV -> exportOrchestrator.exportCsv(sessionId, _uiState.value.userName)
+            ExportFormat.PDF -> exportOrchestrator.exportPdf(sessionId, markdown, sessionTitle, _uiState.value.userName)
+            ExportFormat.CSV -> exportOrchestrator.exportCsv(sessionId, sessionTitle, _uiState.value.userName)
         }
         when (result) {
             is Result.Success -> {

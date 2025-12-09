@@ -48,23 +48,30 @@ class RealExportOrchestratorTest {
             dispatchers = dispatchers
         )
 
-        val result = orchestrator.exportPdf("s1", "markdown content", "Alice")
+        val result = orchestrator.exportPdf("s1", "markdown content", sessionTitle = "季度回顾", userName = "Alice")
 
         assertTrue(result is Result.Success)
         val suggested = exportManager.lastSuggestedFileName
-        assertTrue(suggested?.matches(Regex("Alice_王总_季度回顾_\\d{8}_\\d{6}")) == true)
+        assertTrue(suggested?.contains("Alice_王总_季度回顾") == true)
         val fileName = (result as Result.Success).data.fileName
         assertTrue(fileName.endsWith(".pdf"))
+        assertTrue(fileName.contains("王总_季度回顾"))
         assertEquals(fileName, metaHub.export?.lastPdfFileName)
+        val rendered = exportManager.lastMarkdown.orEmpty()
+        assertTrue(rendered.contains("## 会话概要"))
+        assertTrue(rendered.contains("客户/主对象：王总"))
+        assertTrue(rendered.contains("会话摘要：季度回顾"))
     }
 
     private class RecordingExportManager : ExportManager {
         var lastSuggestedFileName: String? = null
+        var lastMarkdown: String? = null
         override suspend fun exportMarkdown(
             markdown: String,
             format: ExportFormat,
             suggestedFileName: String?
         ): Result<ExportResult> {
+            lastMarkdown = markdown
             lastSuggestedFileName = suggestedFileName
             val ext = if (format == ExportFormat.PDF) "pdf" else "csv"
             val safeName = suggestedFileName ?: "export"

@@ -60,14 +60,23 @@ private class RecordingExportOrchestrator : ExportOrchestrator {
     var lastFormat: ExportFormat? = null
     var pdfCallCount = 0
     var csvCallCount = 0
-    override suspend fun exportPdf(sessionId: String, markdown: String, userName: String?): Result<ExportResult> {
+    override suspend fun exportPdf(
+        sessionId: String,
+        markdown: String,
+        sessionTitle: String?,
+        userName: String?
+    ): Result<ExportResult> {
         lastPdfMarkdown = markdown
         lastFormat = ExportFormat.PDF
         pdfCallCount += 1
         return Result.Success(ExportResult("demo.pdf", "application/pdf", ByteArray(0)))
     }
 
-    override suspend fun exportCsv(sessionId: String, userName: String?): Result<ExportResult> {
+    override suspend fun exportCsv(
+        sessionId: String,
+        sessionTitle: String?,
+        userName: String?
+    ): Result<ExportResult> {
         lastFormat = ExportFormat.CSV
         csvCallCount += 1
         return Result.Success(ExportResult("demo.csv", "text/csv", ByteArray(0)))
@@ -528,9 +537,10 @@ private suspend fun performExport(format: ExportFormat, markdownOverride: String
         return
     }
     _uiState.update { it.copy(exportInProgress = true, chatErrorMessage = null) }
+    val sessionTitle = _uiState.value.currentSession.title
     val result = when (format) {
-        ExportFormat.PDF -> exportOrchestrator.exportPdf(sessionId, markdown, _uiState.value.userName)
-        ExportFormat.CSV -> exportOrchestrator.exportCsv(sessionId, _uiState.value.userName)
+        ExportFormat.PDF -> exportOrchestrator.exportPdf(sessionId, markdown, sessionTitle, _uiState.value.userName)
+        ExportFormat.CSV -> exportOrchestrator.exportCsv(sessionId, sessionTitle, _uiState.value.userName)
     }
     when (result) {
         is Result.Success -> {
@@ -888,4 +898,3 @@ private fun extractSummary(text: String): String? {
 
 3. **`derive_title_generic_when_vague`**: 
    - 期望：模糊信息时使用通用 fallback（"未知客户" + 场景关键词）
-

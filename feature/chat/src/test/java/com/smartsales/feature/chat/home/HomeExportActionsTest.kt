@@ -390,14 +390,23 @@ class HomeExportActionsTest {
         var lastFormat: ExportFormat? = null
         var pdfCallCount = 0
         var csvCallCount = 0
-        override suspend fun exportPdf(sessionId: String, markdown: String, userName: String?): Result<ExportResult> {
+        override suspend fun exportPdf(
+            sessionId: String,
+            markdown: String,
+            sessionTitle: String?,
+            userName: String?
+        ): Result<ExportResult> {
             lastPdfMarkdown = markdown
             lastFormat = ExportFormat.PDF
             pdfCallCount += 1
             return Result.Success(ExportResult("demo.pdf", "application/pdf", ByteArray(0)))
         }
 
-        override suspend fun exportCsv(sessionId: String, userName: String?): Result<ExportResult> {
+        override suspend fun exportCsv(
+            sessionId: String,
+            sessionTitle: String?,
+            userName: String?
+        ): Result<ExportResult> {
             lastFormat = ExportFormat.CSV
             csvCallCount += 1
             return Result.Success(ExportResult("demo.csv", "text/csv", ByteArray(0)))

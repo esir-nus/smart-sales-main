@@ -357,7 +357,16 @@ Current quick skills:
   * We **do not** rely on “通话分析 – {fileName}” as a permanent title.
     That string is considered a temporary placeholder only, if used at all.
 
-### 7.2 Smart Analysis Output
+### 7.2 GENERAL vs SMART 行为对比
+
+* GENERAL：
+  * 按普通助手对话流式展示 Delta → Completed，自然语言为主。
+  * 首条回复末尾可有隐藏的 JSON 元数据块，仅供内部解析写入 MetaHub，UI 不展示 JSON。
+* SMART_ANALYSIS：
+  * 不流式展示 token，发送后先显示“智能分析中…”占位气泡。
+  * 完成时一次性替换为 Orchestrator 基于元数据拼好的分析 Markdown 卡片。
+
+### 7.3 Smart Analysis Output
 
 * SMART_ANALYSIS 流程（快捷技能 & “分析一下”）：
   * 发送后先显示本地占位气泡（例如“正在智能分析…”），不流式展示 LLM 增量。

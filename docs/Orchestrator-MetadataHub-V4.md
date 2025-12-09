@@ -61,15 +61,13 @@ For GENERAL chat first replies:
 
 * ✅ **Lightweight guidance only**:
 
-  * At most 1–3 sentences of natural-language constraints, e.g.:
-
-    * “Answer the user’s question in clear concise Chinese.”
-    * “If possible, append a small JSON at the end summarizing the main person and key points.”
+  * 保持简短的自然语言约束（短段落即可，避免长篇），可附带 **一个精简的 JSON 示例 + 简短字段说明**，提示可选的元数据格式。
+  * 示例意图：在对话回答后，如能识别元数据，可追加一个小型 JSON；不要把 JSON 说明写成大纲或多页模板。
 
 * ✅ **JSON instructions must be short**:
 
   * Only describe field names and meanings.
-  * Do **not** embed a full JSON skeleton or multi-line boilerplate.
+  * Do **not** embed a full JSON skeleton or multi-line boilerplate beyond a compact example.
 
 * ❌ **Forbidden**:
 
@@ -82,6 +80,7 @@ For GENERAL chat first replies:
     * `## Section` + more detail
     * `## Section` + even more detail…
   * Pasting a full JSON template (with all fields and placeholder text) into the prompt for the model to “copy & fill”.
+  * 在 GENERAL prompt 中加入类似 SMART 的多分节分析骨架（例如完整的「客户画像 / 需求 / 机会与风险 / 建议与行动 / 核心洞察」模板）。
 
 > Design principle:
 > The first GENERAL assistant reply should **look like a human answer**,
@@ -125,6 +124,7 @@ For GENERAL chat first replies:
 
 * Only for the **first** GENERAL assistant reply:
 
+  * **Responsibility**: ViewModel extracts JSON and writes to MetaHub (unlike SMART_ANALYSIS which is handled by Orchestrator).
   * Extract the **last** JSON block from the raw assistant text:
 
     * Last fenced or bare JSON object.
@@ -140,6 +140,13 @@ For GENERAL chat first replies:
     * If the current title is a placeholder, allow **one-time auto rename**.
 
 * UI continues to display the cleaned natural-language text; **JSON is never shown**.
+
+> **Note**: GENERAL metadata parsing is handled by ViewModel (e.g., `handleGeneralChatMetadata`) rather than Orchestrator. This differs from SMART_ANALYSIS where Orchestrator owns all JSON parsing and MetaHub writes. This separation is intentional: GENERAL is lightweight and optional, while SMART_ANALYSIS requires strict JSON-only output and centralized formatting.
+>
+> 当前责任分层：
+> * SMART_ANALYSIS：LLM 仅出 JSON，由 Home Orchestrator 解析 → 写入 MetaHub → 本地拼 Markdown，UI 只展示 Markdown。
+> * GENERAL 首条回复：可选 JSON 尾巴由 Home 层 ViewModel 的元数据 helper（如 `handleGeneralChatMetadata`）解析并写入 MetaHub，UI 不展示 JSON。
+> * 如需进一步下沉，可在未来把 GENERAL 首条回复的 JSON 解析迁移到 Orchestrator，但 V4 不强制。
 
 ---
 
@@ -447,6 +454,7 @@ Behavior:
 5. 实现现状提示：
 
    * 当前 ViewModel 仍在 SMART_ANALYSIS Completed 文本上尝试再解析元数据（若无 JSON 将跳过），MetaHub 入库以 Orchestrator 解析为准。
-   * GENERAL 首条回复仍有历史 scaffold，后续应按 V4“轻量提示”收敛。
+   * GENERAL 首条回复仍有历史 scaffold，后续应按 V4"轻量提示"收敛。
+   * GENERAL 元数据解析职责：ViewModel 负责（`handleGeneralChatMetadata`），与 SMART_ANALYSIS（Orchestrator 负责）分离。此设计是故意的：GENERAL 是轻量且可选的，SMART_ANALYSIS 需要严格的 JSON-only 输出和集中格式化。
 
 ---

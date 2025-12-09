@@ -8,6 +8,7 @@ package com.smartsales.feature.chat.home
 import com.smartsales.core.metahub.AnalysisSource
 import com.smartsales.core.metahub.RiskLevel
 import com.smartsales.core.metahub.SessionMetadata
+import com.smartsales.core.metahub.SessionMetadataLabelProvider
 import com.smartsales.core.metahub.SessionStage
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -15,13 +16,7 @@ import org.junit.Test
 
 class ReasoningStripFormatterTest {
 
-    private fun build(meta: SessionMetadata?) = ReasoningStripFormatter.build(
-        metadata = meta,
-        formatStage = { "阶段-${it.name}" },
-        formatRisk = { "风险-${it.name}" },
-        formatSource = { "来源-${it.name}" },
-        formatTime = { "时间-$it" }
-    )
+    private fun build(meta: SessionMetadata?) = ReasoningStripFormatter.build(metadata = meta)
 
     @Test
     fun build_whenMetadataNull_returnsNull() {
@@ -38,7 +33,7 @@ class ReasoningStripFormatterTest {
         )
         val text = build(meta)
         requireNotNull(text)
-        assertTrue(text.contains("阶段 阶段-DISCOVERY"))
+        assertTrue(text.contains("阶段 探索阶段"))
         assertTrue(text.contains("风险 未标注"))
         assertTrue(text.contains("标签 无标签"))
         assertTrue(text.contains("来源 未知来源"))
@@ -54,11 +49,13 @@ class ReasoningStripFormatterTest {
             latestMajorAnalysisSource = AnalysisSource.SMART_ANALYSIS_USER,
             latestMajorAnalysisAt = 1700000000000L
         )
+        val expectedTags = SessionMetadataLabelProvider.tagsLabel(meta.tags)
+        val expectedTime = SessionMetadataLabelProvider.timeLabel(meta.latestMajorAnalysisAt)
         val text = build(meta)
         requireNotNull(text)
-        assertTrue(text.contains("阶段 阶段-NEGOTIATION"))
-        assertTrue(text.contains("风险 风险-HIGH"))
-        assertTrue(text.contains("试驾、报价、跟进"))
-        assertTrue(text.contains("来源 来源-SMART_ANALYSIS_USER（时间-1700000000000）"))
+        assertTrue(text.contains("阶段 谈判阶段"))
+        assertTrue(text.contains("风险 高风险"))
+        assertTrue(text.contains(expectedTags))
+        assertTrue(text.contains("来源 来自智能分析（$expectedTime）"))
     }
 }

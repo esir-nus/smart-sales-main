@@ -39,8 +39,7 @@ import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.SessionTitlePolicy
 import com.smartsales.core.metahub.AnalysisSource
-import com.smartsales.core.metahub.SessionStage
-import com.smartsales.core.metahub.RiskLevel
+import com.smartsales.core.metahub.SessionMetadataLabelProvider
 import com.smartsales.feature.chat.home.CHAT_DEBUG_HUD_ENABLED
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -157,7 +156,7 @@ data class DebugSessionMetadata(
     val summaryTitle6Chars: String? = null,
     val stageLabel: String? = null,
     val riskLabel: String? = null,
-    val tags: List<String> = emptyList(),
+    val tagsLabel: String? = null,
     val latestSourceLabel: String? = null,
     val latestAtLabel: String? = null,
     val notes: List<String> = emptyList()
@@ -846,11 +845,24 @@ class HomeScreenViewModel @Inject constructor(
             ?.notes
             .orEmpty()
         val mergedNotes = (existingNotes + extraNotes).distinct()
-        val stageLabel = meta?.stage?.let { formatStage(it) }
-        val riskLabel = meta?.riskLevel?.let { formatRisk(it) }
-        val tags = meta?.tags?.filter { it.isNotBlank() }?.sorted().orEmpty()
-        val latestSourceLabel = meta?.latestMajorAnalysisSource?.let { formatAnalysisSource(it) }
-        val latestAtLabel = meta?.latestMajorAnalysisAt?.let { formatAnalysisTime(it) }
+        val stageLabel = meta?.stage?.let { SessionMetadataLabelProvider.stageLabel(it) }
+        val riskLabel = meta?.riskLevel?.let { SessionMetadataLabelProvider.riskLabel(it) }
+        val tagsLabel = meta?.tags
+            ?.takeIf { it.isNotEmpty() }
+            ?.let {
+                SessionMetadataLabelProvider.tagsLabel(
+                    tags = it,
+                    limit = Int.MAX_VALUE,
+                    delimiter = "、",
+                    maxLength = Int.MAX_VALUE,
+                    sort = true
+                )
+            }
+        val latestSourceLabel = meta?.latestMajorAnalysisSource
+            ?.let { SessionMetadataLabelProvider.sourceLabel(it) }
+        val latestAtLabel = SessionMetadataLabelProvider
+            .timeLabel(meta?.latestMajorAnalysisAt)
+            .takeIf { it.isNotBlank() }
         val reasoning = buildSmartReasoningStrip(meta)
         val debug = DebugSessionMetadata(
             sessionId = sessionId,
@@ -860,7 +872,7 @@ class HomeScreenViewModel @Inject constructor(
             summaryTitle6Chars = meta?.summaryTitle6Chars,
             stageLabel = stageLabel,
             riskLabel = riskLabel,
-            tags = tags,
+            tagsLabel = tagsLabel,
             latestSourceLabel = latestSourceLabel,
             latestAtLabel = latestAtLabel,
             notes = mergedNotes
@@ -1572,39 +1584,8 @@ class HomeScreenViewModel @Inject constructor(
     private fun buildSmartReasoningStrip(meta: SessionMetadata?): String? =
         ReasoningStripFormatter.build(
             metadata = meta,
-            formatStage = ::formatStage,
-            formatRisk = ::formatRisk,
-            formatSource = ::formatAnalysisSource,
-            formatTime = ::formatAnalysisTime
+            labelProvider = SessionMetadataLabelProvider
         )
-
-    private fun formatAnalysisTime(timestamp: Long): String {
-        val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-        return formatter.format(Date(timestamp))
-    }
-
-    private fun formatStage(stage: SessionStage): String = when (stage) {
-        SessionStage.DISCOVERY -> "探索阶段"
-        SessionStage.NEGOTIATION -> "谈判阶段"
-        SessionStage.PROPOSAL -> "方案阶段"
-        SessionStage.CLOSING -> "成交推进"
-        SessionStage.POST_SALE -> "售后阶段"
-        SessionStage.UNKNOWN -> "未知阶段"
-    }
-
-    private fun formatRisk(risk: RiskLevel): String = when (risk) {
-        RiskLevel.LOW -> "低风险"
-        RiskLevel.MEDIUM -> "中风险"
-        RiskLevel.HIGH -> "高风险"
-        RiskLevel.UNKNOWN -> "风险未知"
-    }
-
-    private fun formatAnalysisSource(source: AnalysisSource): String = when (source) {
-        AnalysisSource.SMART_ANALYSIS_USER,
-        AnalysisSource.SMART_ANALYSIS_AUTO -> "来自智能分析"
-        AnalysisSource.GENERAL_FIRST_REPLY -> "来自首次回复"
-        AnalysisSource.TINGWU -> "来自通话转写"
-    }
 
     override fun onCleared() {
         super.onCleared()

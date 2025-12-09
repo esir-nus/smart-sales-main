@@ -8,10 +8,8 @@ package com.smartsales.data.aicore
 import com.smartsales.core.metahub.CrmRow
 import com.smartsales.core.metahub.ExportMetadata
 import com.smartsales.core.metahub.MetaHub
-import com.smartsales.core.metahub.AnalysisSource
-import com.smartsales.core.metahub.RiskLevel
 import com.smartsales.core.metahub.SessionMetadata
-import com.smartsales.core.metahub.SessionStage
+import com.smartsales.core.metahub.SessionMetadataLabelProvider
 import com.smartsales.core.metahub.SessionTitlePolicy
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
@@ -52,7 +50,7 @@ data class ExportContext(
     val headerSummary: String?,
     val headerStageLabel: String?,
     val headerRiskLabel: String?,
-    val headerTags: List<String>,
+    val headerTagsLabel: String?,
     val headerSourceLabel: String?,
     val headerTimeLabel: String?
 )
@@ -201,18 +199,31 @@ class RealExportOrchestrator @Inject constructor(
         parts.add(timestamp)
         val joined = parts.filter { it.isNotBlank() }.joinToString("_")
         val baseName = sanitizeFileName(joined).ifBlank { "session_$timestamp" }
-        val stageLabel = meta?.stage?.let { formatStage(it) }
-        val riskLabel = meta?.riskLevel?.let { formatRisk(it) }
-        val tags = meta?.tags?.filter { it.isNotBlank() }?.sorted().orEmpty()
-        val sourceLabel = meta?.latestMajorAnalysisSource?.let { formatAnalysisSource(it) }
-        val timeLabel = meta?.latestMajorAnalysisAt?.let { formatAnalysisTime(it) }
+        val stageLabel = meta?.stage?.let { SessionMetadataLabelProvider.stageLabel(it) }
+        val riskLabel = meta?.riskLevel?.let { SessionMetadataLabelProvider.riskLabel(it) }
+        val tagsLabel = meta?.tags
+            ?.takeIf { it.isNotEmpty() }
+            ?.let {
+                SessionMetadataLabelProvider.tagsLabel(
+                    tags = it,
+                    limit = Int.MAX_VALUE,
+                    delimiter = "，",
+                    maxLength = Int.MAX_VALUE,
+                    sort = true
+                )
+            }
+        val sourceLabel = meta?.latestMajorAnalysisSource
+            ?.let { SessionMetadataLabelProvider.sourceLabel(it) }
+        val timeLabel = meta?.latestMajorAnalysisAt
+            ?.let { SessionMetadataLabelProvider.timeLabel(it) }
+            ?.takeIf { it.isNotBlank() }
         return ExportContext(
             fileNameBase = baseName,
             headerMainPerson = person,
             headerSummary = summary ?: meta?.shortSummary?.takeIf { it.isNotBlank() },
             headerStageLabel = stageLabel,
             headerRiskLabel = riskLabel,
-            headerTags = tags,
+            headerTagsLabel = tagsLabel,
             headerSourceLabel = sourceLabel,
             headerTimeLabel = timeLabel
         )
@@ -224,9 +235,9 @@ class RealExportOrchestrator @Inject constructor(
         context.headerSummary?.let { lines += "- 会话摘要：$it" }
         context.headerStageLabel?.let { lines += "- 阶段：$it" }
         context.headerRiskLabel?.let { lines += "- 风险：$it" }
-        if (context.headerTags.isNotEmpty()) {
-            lines += "- 标签：${context.headerTags.joinToString("，")}"
-        }
+        context.headerTagsLabel
+            ?.takeIf { it.isNotBlank() }
+            ?.let { lines += "- 标签：$it" }
         val sourceTime = listOfNotNull(context.headerSourceLabel, context.headerTimeLabel)
             .filter { it.isNotBlank() }
             .joinToString(" · ")
@@ -240,33 +251,5 @@ class RealExportOrchestrator @Inject constructor(
             append("\n")
             append(markdown.trim())
         }.trim()
-    }
-
-    private fun formatStage(stage: SessionStage): String = when (stage) {
-        SessionStage.DISCOVERY -> "探索阶段"
-        SessionStage.NEGOTIATION -> "谈判阶段"
-        SessionStage.PROPOSAL -> "方案阶段"
-        SessionStage.CLOSING -> "成交推进"
-        SessionStage.POST_SALE -> "售后阶段"
-        SessionStage.UNKNOWN -> "未知阶段"
-    }
-
-    private fun formatRisk(riskLevel: RiskLevel): String = when (riskLevel) {
-        RiskLevel.LOW -> "低风险"
-        RiskLevel.MEDIUM -> "中风险"
-        RiskLevel.HIGH -> "高风险"
-        RiskLevel.UNKNOWN -> "风险未知"
-    }
-
-    private fun formatAnalysisSource(source: AnalysisSource): String = when (source) {
-        AnalysisSource.SMART_ANALYSIS_USER,
-        AnalysisSource.SMART_ANALYSIS_AUTO -> "来自智能分析"
-        AnalysisSource.GENERAL_FIRST_REPLY -> "来自首次回复"
-        AnalysisSource.TINGWU -> "来自通话转写"
-    }
-
-    private fun formatAnalysisTime(timestamp: Long): String {
-        val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.CHINA)
-        return formatter.format(Date(timestamp))
     }
 }

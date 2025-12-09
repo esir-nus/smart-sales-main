@@ -43,7 +43,7 @@ object SessionTitleGenerator {
         val summary = extractSummary(firstUserMessage) ?: extractSummary(firstAssistantMessage ?: "")
         val safeName = SessionTitlePolicy.resolvePerson(majorName)
         val safeSummary = SessionTitlePolicy.resolveSummary(summary)
-        return "${safeName}_${safeSummary}_${datePart}"
+        return "${datePart}_${safeName}_${safeSummary}"
     }
 
     private fun extractMajorName(text: String): String? {

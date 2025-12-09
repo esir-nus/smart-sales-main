@@ -329,7 +329,6 @@ class HomeScreenViewModel @Inject constructor(
             },
             onCompletedTransform = { body ->
                 buildString {
-                    append("智能分析结果\n\n")
                     preface?.let {
                         append(it.trim()).append("\n\n")
                     }
@@ -384,6 +383,12 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
+    private fun wrapSmartAnalysisForExport(body: String): String =
+        buildString {
+            append("智能分析结果\n\n")
+            append(body.trim())
+        }.trim()
+
     private fun exportMarkdown(format: ExportFormat) {
         if (_uiState.value.exportInProgress) return
         viewModelScope.launch {
@@ -395,7 +400,8 @@ class HomeScreenViewModel @Inject constructor(
             when {
                 !cachedAnalysis.isNullOrBlank() -> {
                     // 直接导出：使用缓存分析 markdown
-                    performExport(format, markdownOverride = cachedAnalysis)
+                    val markdown = wrapSmartAnalysisForExport(cachedAnalysis)
+                    performExport(format, markdownOverride = markdown)
                 }
                 hasMetaAnalysis -> {
                     // MetaHub 认为有分析，但 VM 没有缓存文本
@@ -430,10 +436,7 @@ class HomeScreenViewModel @Inject constructor(
                         userDisplayText = "智能分析（导出前自动生成）",
                         onCompleted = {},
                         onCompletedTransform = { body ->
-                            buildString {
-                                append("智能分析结果\n\n")
-                                append(body.trim())
-                            }.trim()
+                            body.trim()
                         },
                         isAutoAnalysis = true
                     )
@@ -1577,7 +1580,8 @@ class HomeScreenViewModel @Inject constructor(
         pendingExportAfterAnalysis?.let { format ->
             pendingExportAfterAnalysis = null
             viewModelScope.launch {
-                performExport(format, markdownOverride = summary)
+                val markdown = wrapSmartAnalysisForExport(summary)
+                performExport(format, markdownOverride = markdown)
             }
         }
     }

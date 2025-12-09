@@ -70,55 +70,45 @@ class HomeOrchestratorImpl @Inject constructor(
                 markdown = SMART_ANALYSIS_FAILURE_MESSAGE,
                 metadata = null
             )
-        val metadata = buildSmartAnalysisMetadata(
+        val source = resolveAnalysisSource(request)
+        val mergedMeta = buildMergedMetadata(
             sessionId = request.sessionId,
             parsed = parsed,
-            source = resolveAnalysisSource(request)
+            source = source
         )
-        val mergedMeta = mergeWithExisting(request.sessionId, metadata)
         val markdown = buildSmartAnalysisMarkdown(parsed)
         return SmartAnalysisResult(markdown = markdown, metadata = mergedMeta)
     }
 
-    private suspend fun mergeWithExisting(
-        sessionId: String,
-        parsed: SessionMetadata
-    ): SessionMetadata {
-        // 从 MetaHub 读取已有的会话元数据
-        val existing = metaHub.getSession(sessionId)
-
-        // 使用 SessionMetadata.mergeWith 做"非空优先新值"的合并：
-        // - 如果没有 existing，就直接用 parsed
-        // - 如果有 existing，就让 existing.mergeWith(parsed)，保证新分析结果覆盖旧值
-        return existing?.mergeWith(parsed) ?: parsed
-    }
-
-    private fun buildSmartAnalysisMetadata(
+    private suspend fun buildMergedMetadata(
         sessionId: String,
         parsed: ParsedSmartAnalysis,
         source: AnalysisSource?
     ): SessionMetadata {
-        val tags = (parsed.highlights + parsed.actionableTips)
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .toSet()
+        val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
+        val base = existing ?: SessionMetadata(sessionId = sessionId)
+
+        val newTags = buildSet {
+            addAll(base.tags)
+            addAll(parsed.highlights.filter { it.isNotBlank() })
+            addAll(parsed.actionableTips.filter { it.isNotBlank() })
+        }
+
         val now = System.currentTimeMillis()
-        return SessionMetadata(
-            sessionId = sessionId,
-            mainPerson = parsed.mainPerson,
-            shortSummary = parsed.shortSummary,
-            summaryTitle6Chars = parsed.summaryTitle6Chars,
-            location = parsed.location,
-            stage = parsed.stage,
-            riskLevel = parsed.riskLevel,
-            tags = tags,
-            lastUpdatedAt = now,
-            latestMajorAnalysisMessageId = null,
-            latestMajorAnalysisAt = now,
+        return base.copy(
+            mainPerson = parsed.mainPerson ?: base.mainPerson,
+            shortSummary = parsed.shortSummary ?: base.shortSummary,
+            summaryTitle6Chars = parsed.summaryTitle6Chars ?: base.summaryTitle6Chars,
+            location = parsed.location ?: base.location,
+            stage = parsed.stage ?: base.stage,
+            riskLevel = parsed.riskLevel ?: base.riskLevel,
+            tags = newTags,
             latestMajorAnalysisSource = source,
-            crmRows = emptyList()
+            latestMajorAnalysisAt = now,
+            lastUpdatedAt = now
         )
     }
+
 
     private fun shouldParseMetadata(request: ChatRequest): Boolean {
         val skillId = request.quickSkillId ?: return false

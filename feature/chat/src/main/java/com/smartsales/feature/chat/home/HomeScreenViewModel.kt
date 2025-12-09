@@ -2346,7 +2346,7 @@ class HomeScreenViewModel @Inject constructor(
             return
         }
         val metadata = parseGeneralChatMetadata(jsonText, sessionId)
-        if (metadata == null) {
+        if (metadata == null || !metadata.hasMeaningfulGeneralFields()) {
             warnLog(
                 event = "general_chat_metadata_parse_failed",
                 data = mapOf("sessionId" to sessionId, "reason" to "json_parse_null")
@@ -2354,8 +2354,12 @@ class HomeScreenViewModel @Inject constructor(
             appendDebugNote("generalChatMetadataParseFailed")
             return
         }
+        val patch = metadata.copy(
+            latestMajorAnalysisSource = AnalysisSource.GENERAL_FIRST_REPLY,
+            latestMajorAnalysisAt = System.currentTimeMillis()
+        )
         val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-        val merged = existing?.mergeWith(metadata) ?: metadata
+        val merged = existing?.mergeWith(patch) ?: patch
         debugLog(
             event = "general_chat_metadata_parsed",
             data = mapOf(
@@ -2397,16 +2401,19 @@ class HomeScreenViewModel @Inject constructor(
     // TODO: Replace with Orchestrator-MetadataHub V2 spec metadata types when available
     private fun parseGeneralChatMetadata(jsonText: String, sessionId: String): SessionMetadata? = runCatching {
         val obj = org.json.JSONObject(jsonText)
+        val summary6 = obj.optString("summary_title_6chars").takeIf { it.isNotBlank() }?.take(6)
+        val summary8 = obj.optString("summary_title_8chars").takeIf { it.isNotBlank() }?.take(8)
         SessionMetadata(
             sessionId = sessionId,
             mainPerson = obj.optString("main_person").takeIf { it.isNotBlank() },
             shortSummary = obj.optString("short_summary").takeIf { it.isNotBlank() },
-            summaryTitle6Chars = obj.optString("summary_title_6chars").takeIf { it.isNotBlank() }?.take(6),
+            summaryTitle6Chars = summary6 ?: summary8?.take(6),
             location = obj.optString("location").takeIf { it.isNotBlank() }
         )
     }.getOrNull()
 
     private fun extractLastJsonBlock(text: String): String? {
+        // 优先提取 fenced JSON（```json ... ```），否则尝试抓取末尾裸 JSON 对象
         val fenced = Regex("```json\\s*([\\s\\S]*?)```", RegexOption.IGNORE_CASE)
             .findAll(text)
             .lastOrNull()?.groupValues?.getOrNull(1)?.trim()
@@ -2416,8 +2423,39 @@ class HomeScreenViewModel @Inject constructor(
             .lastOrNull()?.groupValues?.getOrNull(1)?.trim()
         if (!anyFence.isNullOrBlank()) return anyFence
         val trimmed = text.trim()
-        return if (trimmed.startsWith("{") && trimmed.endsWith("}")) trimmed else null
+        if (trimmed.startsWith("{") && trimmed.endsWith("}")) return trimmed
+
+        // 从末尾向前寻找最后一对完整的大括号，确保 JSON 位于文本末尾
+        fun findMatchingEnd(content: String, start: Int): Int {
+            var depth = 0
+            for (i in start until content.length) {
+                when (content[i]) {
+                    '{' -> depth++
+                    '}' -> {
+                        depth--
+                        if (depth == 0) return i
+                    }
+                }
+            }
+            return -1
+        }
+
+        var start = trimmed.lastIndexOf('{')
+        while (start >= 0) {
+            val end = findMatchingEnd(trimmed, start)
+            if (end > start && trimmed.substring(end + 1).trim().isEmpty()) {
+                return trimmed.substring(start, end + 1)
+            }
+            start = trimmed.lastIndexOf('{', start - 1)
+        }
+        return null
     }
+
+    private fun SessionMetadata.hasMeaningfulGeneralFields(): Boolean =
+        !mainPerson.isNullOrBlank() ||
+            !shortSummary.isNullOrBlank() ||
+            !summaryTitle6Chars.isNullOrBlank() ||
+            !location.isNullOrBlank()
     
     /**
      * 根据问候语内容返回友好的回复

@@ -373,6 +373,19 @@ Current quick skills:
   * 不流式展示 token，发送后先显示“智能分析中…”占位气泡。
   * 完成时一次性替换为 Orchestrator 基于元数据拼好的分析 Markdown 卡片。
 
+### GENERAL 聊天首条回复的状态机
+
+- **状态 A：噪音/问候**
+  - 示例：hello、表情、纯数字/乱码。
+  - 行为：输出极简自我介绍 + 能力说明 + 引导粘贴真实销售对话/纪要；不做深入分析；仍可输出占位 JSON（未知客户/未命名会话/信息不足）。
+- **状态 B：模糊但有销售味道的短语**
+  - 示例：`罗总 机械臂采购 合同`、`王总 奥迪 产线扩张`。
+  - 行为：明确提示信息不足，列出 2–4 个必问关键信息，给 1–2 句澄清话术；JSON 可保守填写（short_summary 描述“信息不足，有采购线索”，main_person/summary_title_6chars 允许占位）。
+- **状态 C：富文本/完整上下文**
+  - 示例：粘贴多轮聊天、电话纪要、长邮件。
+  - 行为：1 段简洁总括 + 2–4 条关注点/机会/风险/行动；可提示“使用智能分析获取完整结构化摘要”；尽量输出完整 JSON 提炼核心元数据。
+- 规则：无论哪种状态，只在本会话的**第一条助手回复**尝试 GENERAL JSON 尾巴，用于命名/摘要；后续 GENERAL 回复仅用于对话，不再负责重命名。深度结构化销售分析由 SMART_ANALYSIS 负责。
+
 ### 7.3 Smart Analysis Output
 
 * SMART_ANALYSIS 流程（快捷技能 & “分析一下”）：
@@ -399,6 +412,14 @@ Current quick skills:
   - 列表编号：
     - 可以使用无序列表（`-`）或有序列表，但最终展示时编号必须是连续的 1..n。
     - 不允许出现明显错误编号（例如 `1 3 4 4`）或流式累积痕迹（如 `11)1)`）。
+
+### 全局 System Prompt 与 Persona 映射
+
+- System prompt 由三块组成：
+  1) Persona 块：来自 Onboarding 的角色/行业/渠道/经验/口吻，只影响表达风格和示例形式。
+  2) 行为块：定义 GENERAL 三种输入状态的处理策略，要求首条 GENERAL 回复尝试 JSON 尾巴并说明其用途。
+  3) 安全/约束块：禁止编造未给出的具体数字/预算/地点，强调长度与重复约束等。
+- UI/交互以本 UX 合同 + V4 为准；system prompt 是 LLM 行为约束，需与本文件约定的 persona 与状态机保持一致。
 
 ---
 
@@ -442,6 +463,15 @@ On first install / first open, the app shows a minimal onboarding sequence befor
   * Personalized greetings ("你好，{userName}").
   * Export filename `<Username>` component.
   * MetaHub context (better summaries and CRM inferences when available).
+
+### Onboarding 收集的销售画像字段
+
+- 销售岗位/角色（单选）：如销售新人、客户经理、大客户经理、解决方案顾问、售前工程师等。
+- 所属行业（单选+“其他”）：如汽车、制造、软件、医疗、教育、金融等。
+- 主要沟通渠道（单选）：微信+电话、邮件为主、线下会议为主或混合。
+- 经验水平（单选）：新手（<1 年）、有经验（1–5 年）、资深（>5 年）。
+- 表达风格偏好（单选）：偏正式商务、偏口语/和同事聊天感。
+- 这些字段写入用户 profile，用于构造 LLM system prompt 的 persona 块，影响 GENERAL/SMART 的语气与示例风格，不改变 UI 结构。
 
 **Step 3: Enter Home Chat**
 

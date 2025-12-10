@@ -71,8 +71,20 @@
     * GENERAL → streamed.
     * SMART_ANALYSIS → **not** streamed; only final text.
   * Showing local placeholders (“Analyzing…”) and replacing them on completion.
-  * Rendering the final text from the Orchestrator.
+* Rendering the final text from the Orchestrator.
 * Does **not** parse complex JSON templates and **never** shows raw JSON to the user.
+
+### 用户画像（Persona）输入来源
+
+- Persona 来自用户 Profile/Onboarding，仅作为 system prompt 的上下文配置，不写入 `SessionMetadata`：
+  - 岗位/职位：销售新人、客户经理、大客户经理、解决方案顾问等。
+  - 所属行业：汽车、制造、软件、医疗等。
+  - 主要沟通渠道：微信+电话、邮件为主、线下会议为主等。
+  - 经验水平：新手、2–5 年、资深。
+  - 表达风格偏好：偏正式商务、偏口语。
+- 作用：
+  - 用于构造 LLM persona/system prompt，影响 GENERAL/SMART 的语气、示例话术风格。
+  - **不改变** JSON schema、本地 Orchestrator 逻辑或 MetaHub 字段结构，视为“上下文配置”而非“会话业务元数据”。
 
 ---
 
@@ -385,6 +397,12 @@ Key fields for these pipelines:
   * If the current title is a placeholder:
 
     * Allow a **single** auto-rename based on the new metadata.
+* 会话的**第一条助手回复（GENERAL）**应尽量在尾部输出一个 JSON 对象，用于命名与摘要；信息不足时可用占位值：
+  * `main_person`: `"未知客户"`
+  * `short_summary`: `"信息不足，需要补充细节"`
+  * `summary_title_6chars`: `"未命名会话"`
+  * `location`: `"未知"`
+* JSON 仍遵守 V4 约束：最多一个对象，只能在最后一行，之后不再有自然语言，用户看不到；纯问候/噪音场景也可用占位 JSON 触发一次性自动命名。若确实无法判断，可不输出，但对首条回复产品期望**优先尝试占位 JSON**。
 
 #### SMART_ANALYSIS
 
@@ -401,6 +419,19 @@ Key fields for these pipelines:
   * Update `latestMajorAnalysis*` to reflect this analysis’ time & source.
 
 ---
+
+### 重命名与深度分析的元数据边界
+
+- **重命名/列表摘要元数据**：
+  - 主要来自 `GENERAL_FIRST_REPLY` 的 JSON。
+  - 提供 `mainPerson`、`shortSummary`、`summaryTitle6Chars`，即使是占位值（未知客户/未命名会话）也可接受。
+  - 用途：占位标题 → 一次性自动改名；历史列表 snippet。
+- **深度销售分析元数据**：
+  - 主要来自 SMART_ANALYSIS、Tingwu 等路径，包含 stage/risk/highlights/actionable_tips 等。
+  - 用于分析依据、HUD/调试面板、导出头部信息、后续自动化分析。
+- **合并策略**：
+  - `GENERAL_FIRST_REPLY` 负责“早期命名 + snippet”，SMART/Tingwu 负责“后续深度分析”。
+  - 后者不应无意义覆盖前者命名字段，除非策略明确允许。
 
 ## 3. Error & Fallback Behavior
 

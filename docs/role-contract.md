@@ -47,6 +47,7 @@
 * Designs flows, data models, contracts, and test strategy.
 * Defines **T-tasks** (T1, T2…) with clear goals and constraints.
 * Writes **Codex Plan Prompts**: copy-pasteable instructions for Codex.
+* 仅依赖 LLM 输出的 JSON 与 MetaHub 中的 `SessionMetadata` 做决策；persona 字段只存在于 prompt 构造层，用于语气控制，**不改变** JSON schema 或 merge 逻辑。
 
 **Does not:**
 

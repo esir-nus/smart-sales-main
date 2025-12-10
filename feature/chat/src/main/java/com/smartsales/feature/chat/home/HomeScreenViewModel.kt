@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.core.util.Result
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.smartsales.feature.chat.core.AudioContextSummary
 import com.smartsales.feature.chat.core.ChatHistoryItem
 import com.smartsales.feature.chat.core.ChatRequest
@@ -42,7 +43,6 @@ import com.smartsales.core.metahub.AnalysisSource
 import com.smartsales.core.metahub.SessionMetadataLabelProvider
 import com.smartsales.feature.chat.home.CHAT_DEBUG_HUD_ENABLED
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -1256,7 +1256,8 @@ class HomeScreenViewModel @Inject constructor(
                         val cleaned = if (isSmartAnalysis) {
                             sanitized
                         } else {
-                            onCompletedTransform?.invoke(sanitized) ?: sanitized
+                            val base = onCompletedTransform?.invoke(sanitized) ?: sanitized
+                            applyGeneralOutputGuards(base)
                         }
                         val isSmartFailure = isSmartAnalysis && cleaned.trim() == SMART_ANALYSIS_FAILURE_TEXT
                         if (isSmartAnalysis && !isSmartFailure) {
@@ -2513,25 +2514,6 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
     
-    /**
-     * 流式去重器，在流式过程中实时去重，避免用户看到重复内容
-     * 使用增量处理：只处理新增的内容，而不是重新处理整个累积内容
-     */
-    private class StreamingDeduplicator {
-        private var lastSnapshot: String = ""
-
-        /**
-         * current: 当前气泡里的内容
-         * token:   新到的 Delta token（测试里是 "a", "b", "he", "hel" 等）
-         */
-        fun mergeSnapshot(current: String, token: String): String {
-            // 最简单版本：直接拼接，覆盖 lastSnapshot
-            val next = current + token
-            lastSnapshot = next
-            return next
-        }
-    }
-
     private fun debugLog(event: String, data: Map<String, Any?> = emptyMap()) {
         if (!CHAT_DEBUG_HUD_ENABLED) return
         Log.d(TAG, formatLog(event, data))

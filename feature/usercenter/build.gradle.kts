@@ -50,6 +50,7 @@ dependencies {
     testImplementation(projects.core.test)
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
+    testImplementation("androidx.test:core:1.5.0")
 
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)

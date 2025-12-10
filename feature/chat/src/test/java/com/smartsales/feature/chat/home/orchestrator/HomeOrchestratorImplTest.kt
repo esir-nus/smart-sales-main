@@ -135,7 +135,6 @@ class HomeOrchestratorImplTest {
         assertTrue(completed.fullText.contains("王总"))
     }
 
-    @Ignore("TODO[orchestrator-v4]: messy SMART_ANALYSIS payload currently falls back to failure message; formatter not applied yet.")
     @Test
     fun `smart analysis formatter removes progressive scaffolding and renumbers list`() = runTest(dispatcher) {
         val messy = """
@@ -172,12 +171,12 @@ class HomeOrchestratorImplTest {
 
         val completed = events.first() as ChatStreamEvent.Completed
         val cleaned = completed.fullText
-        assertTrue(cleaned.contains("长版本"))
-        assertFalse(cleaned.contains("######"))
-        assertTrue(cleaned.contains("## 会话概要"))
-        assertTrue(cleaned.contains("## 核心洞察"))
-        assertFalse(cleaned.contains("短版本"))
-        assertFalse(cleaned.contains("{"))
+        assertTrue("cleaned: $cleaned", cleaned.contains("长版本"))
+        assertFalse("cleaned: $cleaned", cleaned.contains("######"))
+        assertTrue("cleaned: $cleaned", cleaned.contains("## 会话概要"))
+        assertTrue("cleaned: $cleaned", cleaned.contains("## 核心洞察"))
+        assertFalse("cleaned: $cleaned", cleaned.contains("短版本"))
+        assertFalse("cleaned: $cleaned", cleaned.contains("{"))
     }
 
     @Test

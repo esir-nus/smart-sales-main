@@ -120,7 +120,7 @@ class HomeOrchestratorImpl @Inject constructor(
 
     // SMART_ANALYSIS JSON 解析：只取最后一个有效 JSON 对象
     private fun parseSmartAnalysisPayload(rawText: String): ParsedSmartAnalysis? {
-        val jsonObject = extractLastSmartJson(rawText) ?: return null
+        val jsonObject = extractLastSmartJson(rawText) ?: return parseSmartFromText(rawText)
 
         // Replace optJSONObject("summary") with a safer string-based parse
         val summaryObj = runCatching {
@@ -188,6 +188,51 @@ class HomeOrchestratorImpl @Inject constructor(
             actionableTips = actionable,
             coreInsight = coreInsight,
             sharpLine = sharpLine
+        )
+    }
+
+    /**
+     * 极端情况下（LLM 输出含噪，无法直接解析 JSON）尝试从文本模式提取核心字段，
+     * 仅用于避免错误地走“暂时不可用”兜底。
+     */
+    private fun parseSmartFromText(rawText: String): ParsedSmartAnalysis? {
+        val shortSummary = SHORT_SUMMARY_REGEX.findAll(rawText)
+            .lastOrNull()
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.takeIf { it.isNotBlank() }
+
+        val coreInsight = Regex("\"core_insight\"\\s*:\\s*\"([^\"]+)\"")
+            .findAll(rawText)
+            .lastOrNull()
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.takeIf { it.isNotBlank() }
+
+        val highlights = Regex("\"highlights\"\\s*:\\s*\\[(.*?)]", RegexOption.DOT_MATCHES_ALL)
+            .findAll(rawText)
+            .lastOrNull()
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.split(",")
+            ?.map { it.replace("\"", "").trim() }
+            ?.filter { it.isNotBlank() }
+            ?: emptyList()
+
+        val hasContent = !shortSummary.isNullOrBlank() || !coreInsight.isNullOrBlank() || highlights.isNotEmpty()
+        if (!hasContent) return null
+
+        return ParsedSmartAnalysis(
+            mainPerson = null,
+            shortSummary = shortSummary,
+            summaryTitle6Chars = null,
+            location = null,
+            stage = null,
+            riskLevel = null,
+            highlights = highlights,
+            actionableTips = emptyList(),
+            coreInsight = coreInsight,
+            sharpLine = null
         )
     }
 

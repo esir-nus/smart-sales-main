@@ -147,8 +147,8 @@ class HomeGeneralMetadataFlowTest {
         val stored = metaHub.getSession(sessionId)
         assertNotNull(stored)
         stored!!
-        assertEquals("李总", stored.mainPerson)
-        assertEquals(AnalysisSource.GENERAL_FIRST_REPLY, stored.latestMajorAnalysisSource)
+        assertEquals("首条无 JSON 不应覆盖 metadata", null, stored.mainPerson)
+        assertEquals(null, stored.latestMajorAnalysisSource)
 
         val title = sessionRepository.findById(sessionId)?.title
         assertNotNull(title)
@@ -192,6 +192,28 @@ class HomeGeneralMetadataFlowTest {
         assertFalse(assistant.content.contains("{"))
         assertFalse(assistant.content.contains("main_person"))
         assertTrue(assistant.content.contains("自然语言内容"))
+    }
+
+    @Test
+    fun `only first general reply parses metadata`() = runTest(dispatcher) {
+        val firstJson =
+            """{"main_person":"罗总","short_summary":"首次到店沟通","summary_title_6chars":"罗总首沟"}"""
+        val secondJson =
+            """{"main_person":"李总","short_summary":"补充预算","summary_title_6chars":"预算沟通"}"""
+        orchestrator.enqueue(ChatStreamEvent.Completed("首条带 JSON\n$firstJson"))
+        viewModel.onInputChanged("客户第一次沟通")
+        viewModel.onSendMessage()
+        advanceUntilIdle()
+
+        orchestrator.enqueue(ChatStreamEvent.Completed("二条不应触发元数据\n$secondJson"))
+        viewModel.onInputChanged("客户补充预算信息")
+        viewModel.onSendMessage()
+        advanceUntilIdle()
+
+        val sessionId = viewModel.uiState.value.currentSession.id
+        val stored = metaHub.getSession(sessionId)
+        assertEquals("罗总", stored?.mainPerson)
+        assertEquals(AnalysisSource.GENERAL_FIRST_REPLY, stored?.latestMajorAnalysisSource)
     }
 
     @Test

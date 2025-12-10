@@ -18,7 +18,7 @@ object HomeScreenBindings {
             SystemPromptContext(
                 persona = persona,
                 quickSkillId = request.quickSkillId,
-                isFirstGeneralAssistantReply = isFirstGeneralAssistantReply
+                isFirstGeneralAssistantReply = request.quickSkillId == null && isFirstGeneralAssistantReply
             )
         )
         builder.appendLine(systemPrompt)

@@ -1206,11 +1206,8 @@ class HomeScreenViewModel @Inject constructor(
             updateSessionSummary(userMessage.content)
         }
         val request = buildChatRequest(content, quickSkillId, newState.chatMessages, audioContext, isAutoAnalysis)
-        val enrichedRequest = request.copy(
-            isFirstAssistantReply = isFirstAssistantReply
-        )
         startStreamingResponse(
-            request = enrichedRequest,
+            request = request,
             assistantId = assistantPlaceholder.id,
             onCompleted = onCompleted,
             onCompletedTransform = onCompletedTransform
@@ -1250,7 +1247,7 @@ class HomeScreenViewModel @Inject constructor(
                         val rawFullText = event.fullText
                         val isGeneralChat = request.quickSkillId == null
                         val isFirstAssistant = request.isFirstAssistantReply && !firstAssistantProcessed
-                        val generalMeta = if (isGeneralChat) handleGeneralChatMetadata(rawFullText) else null
+                        val generalMeta = if (isGeneralChat && isFirstAssistant) handleGeneralChatMetadata(rawFullText) else null
                         val latestMeta = generalMeta ?: runCatching { metaHub.getSession(sessionId) }.getOrNull()
                         val strippedForUi = if (isSmartAnalysis) rawFullText else stripTrailingJsonFromGeneralReply(rawFullText)
                         val sanitized = if (isSmartAnalysis) rawFullText else sanitizeAssistantOutput(strippedForUi, isSmartAnalysis)
@@ -1411,7 +1408,8 @@ class HomeScreenViewModel @Inject constructor(
             userMessage = userMessage,
             quickSkillId = mapSkillToMode(skillId),
             audioContextSummary = audioContext,
-            history = history
+            history = history,
+            isFirstAssistantReply = !firstAssistantProcessed
         )
     }
 

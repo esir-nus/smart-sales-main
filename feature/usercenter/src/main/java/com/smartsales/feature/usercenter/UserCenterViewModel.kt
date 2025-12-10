@@ -8,6 +8,7 @@ package com.smartsales.feature.usercenter
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.core.util.DispatcherProvider
+import com.smartsales.feature.usercenter.SalesPersona
 import com.smartsales.feature.usercenter.data.UserProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -46,11 +47,15 @@ class UserCenterViewModel @Inject constructor(
     }
 
     private fun applyProfile(profile: UserProfile, loadingDone: Boolean = false) {
+        val persona = profile.salesPersona
         _uiState.update {
             it.copy(
                 displayName = profile.displayName,
-                role = profile.role.orEmpty(),
-                industry = profile.industry.orEmpty(),
+                role = (persona?.role ?: profile.role).orEmpty(),
+                industry = (persona?.industry ?: profile.industry).orEmpty(),
+                mainChannel = persona?.mainChannel.orEmpty(),
+                experienceLevel = persona?.experienceLevel.orEmpty(),
+                stylePreference = persona?.stylePreference.orEmpty(),
                 email = profile.email,
                 isGuest = profile.isGuest,
                 canLogout = !profile.isGuest,
@@ -86,9 +91,28 @@ class UserCenterViewModel @Inject constructor(
         _uiState.update { it.copy(industry = value) }
     }
 
+    fun onMainChannelChange(value: String) {
+        _uiState.update { it.copy(mainChannel = value) }
+    }
+
+    fun onExperienceLevelChange(value: String) {
+        _uiState.update { it.copy(experienceLevel = value) }
+    }
+
+    fun onStylePreferenceChange(value: String) {
+        _uiState.update { it.copy(stylePreference = value) }
+    }
+
     fun onSaveProfile() {
         val current = _uiState.value
         viewModelScope.launch(dispatchers.io) {
+            val persona = SalesPersona(
+                role = current.role.trim().ifBlank { null },
+                industry = current.industry.trim().ifBlank { null },
+                mainChannel = current.mainChannel.trim().ifBlank { null },
+                experienceLevel = current.experienceLevel.trim().ifBlank { null },
+                stylePreference = current.stylePreference.trim().ifBlank { null }
+            )
             val profile = UserProfile(
                 displayName = current.displayName,
                 email = current.email,
@@ -96,7 +120,8 @@ class UserCenterViewModel @Inject constructor(
                 organization = current.organization,
                 role = current.role,
                 industry = current.industry,
-                phone = current.phone
+                phone = current.phone,
+                salesPersona = persona
             )
             runCatching { repository.save(profile) }
                 .onFailure { error ->

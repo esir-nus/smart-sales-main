@@ -27,6 +27,9 @@ class UserCenterScreenTest {
                 displayName = "测试用户",
                 role = "销售",
                 industry = "汽车",
+                mainChannel = "微信+电话",
+                experienceLevel = "1-5 年",
+                stylePreference = "偏口语",
                 isGuest = false
             ),
             onDeviceManagerClick = { clicked += 1 }
@@ -44,6 +47,9 @@ class UserCenterScreenTest {
                 displayName = "李雷",
                 role = "销售经理",
                 industry = "制造业",
+                mainChannel = "邮件为主",
+                experienceLevel = "资深",
+                stylePreference = "偏正式",
                 isGuest = false
             )
         )
@@ -53,6 +59,12 @@ class UserCenterScreenTest {
         composeRule.onNodeWithTag(UserCenterTestTags.FIELD_ROLE, useUnmergedTree = true)
             .assertIsDisplayed()
         composeRule.onNodeWithTag(UserCenterTestTags.FIELD_INDUSTRY, useUnmergedTree = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(UserCenterTestTags.FIELD_MAIN_CHANNEL, useUnmergedTree = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(UserCenterTestTags.FIELD_EXPERIENCE, useUnmergedTree = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(UserCenterTestTags.FIELD_STYLE, useUnmergedTree = true)
             .assertIsDisplayed()
         composeRule.onNodeWithTag(UserCenterTestTags.BUTTON_SAVE, useUnmergedTree = true)
             .assertIsDisplayed()
@@ -65,6 +77,9 @@ class UserCenterScreenTest {
         onDisplayNameChange: (String) -> Unit = {},
         onRoleChange: (String) -> Unit = {},
         onIndustryChange: (String) -> Unit = {},
+        onMainChannelChange: (String) -> Unit = {},
+        onExperienceLevelChange: (String) -> Unit = {},
+        onStylePreferenceChange: (String) -> Unit = {},
         onSave: () -> Unit = {}
     ) {
         composeRule.setContent {
@@ -76,6 +91,9 @@ class UserCenterScreenTest {
                     onDisplayNameChange = onDisplayNameChange,
                     onRoleChange = onRoleChange,
                     onIndustryChange = onIndustryChange,
+                    onMainChannelChange = onMainChannelChange,
+                    onExperienceLevelChange = onExperienceLevelChange,
+                    onStylePreferenceChange = onStylePreferenceChange,
                     onSave = onSave
                 )
             }

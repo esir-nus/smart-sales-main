@@ -1,13 +1,13 @@
 
-# Orchestrator–MetaHub V4 规范（v4.1.0）
+# Orchestrator–MetaHub V4 规范（v4.3.0）
 
 > **状态 / Status**  
 > - 当前唯一有效规范（Active spec）。  
 > - V3 文档已归档，仅作历史参考，不得作为实现依据。  
 >
 > **文档版本 / Doc version**  
-> - Version: 4.1.0  
-> - Last updated: 2025-12-10
+> - Version: 4.3.0  
+> - Last updated: 2025-12-11
 
 > **Goal**
 >
@@ -85,6 +85,10 @@
 - 作用：
   - 用于构造 LLM persona/system prompt，影响 GENERAL/SMART 的语气、示例话术风格。
   - **不改变** JSON schema、本地 Orchestrator 逻辑或 MetaHub 字段结构，视为“上下文配置”而非“会话业务元数据”。
+- Persona（SalesPersona）来源：
+  - 由 Onboarding / 用户中心采集并存储在 Profile；
+  - Profile → MetaHub 同步出一份 UserMetadata（用户级画像）供分析使用；
+  - Orchestrator 只消费 LLM JSON & SessionMetadata，不写入或修改 Persona/UserMetadata。
 
 ---
 
@@ -178,6 +182,8 @@ For GENERAL chat first replies:
     * Build `SessionMetadata` and `upsert` into MetaHub.
     * If the current title is a placeholder, allow **one-time auto rename**.
 
+> **约束**：GENERAL 首条回复的 JSON schema **只描述会话/客户相关信息**，不包含销售用户的 Persona 字段（role / industry / experience 等）。这些 Persona 字段来自 Onboarding / 用户中心，不由 LLM 填写。
+
 * UI continues to display the cleaned natural-language text; **JSON is never shown**.
 
 > **Note**: GENERAL metadata parsing is handled by ViewModel (e.g., `handleGeneralChatMetadata`) rather than Orchestrator. This differs from SMART_ANALYSIS where Orchestrator owns all JSON parsing and MetaHub writes. This separation is intentional: GENERAL is lightweight and optional, while SMART_ANALYSIS requires strict JSON-only output and centralized formatting.
@@ -252,6 +258,8 @@ For SMART_ANALYSIS, the prompt must ensure:
 
 > For the LLM, SMART_ANALYSIS =
 > “Take this content and turn it into one structured JSON object. Nothing else.”
+
+> **约束**：SMART_ANALYSIS 的 JSON schema **只描述会话/客户相关信息**，不包含销售用户的 Persona 字段（role / industry / experience 等）。这些 Persona 字段来自 Onboarding / 用户中心，不由 LLM 填写。
 
 #### (2) Request construction
 
@@ -383,6 +391,37 @@ Key fields for these pipelines:
 * `latestMajorAnalysisMessageId`
 * `latestMajorAnalysisAt`
 * `latestMajorAnalysisSource` ∈ { `SMART_ANALYSIS_USER`, `SMART_ANALYSIS_AUTO`, `GENERAL_FIRST_REPLY`, … }
+
+### 用户级元数据（UserMetadata / SalesUserMeta）
+
+除了会话级的 SessionMetadata 以外，MetaHub 还维护一份**用户级画像**：
+
+- 粒度：按 userId 存储，1 个销售用户对应 1 条记录；
+- 字段来源：来自 Onboarding / 用户中心表单，而不是 LLM；
+- 代表含义：销售角色画像（SalesPersona），例如：
+  - `role`：销售顾问 / 客户经理 / 大客户经理 / ……
+  - `industry`：所在行业（汽车 / SaaS / 制造 / ……）
+  - `mainChannel`：主要沟通渠道（电话 / 微信+线下 / 邮件 / ……）
+  - `experienceLevel`：经验层级（新手 / 有一定经验 / 资深）
+  - `stylePreference`：表达风格偏好（偏正式 / 偏口语）
+
+**注意：**
+
+- UserMetadata 是 Profile / Onboarding 的镜像，用于分析与导出；
+- LLM 不负责生成或修改 UserMetadata；
+- UserMetadata 与 SessionMetadata 分层存储，不混表、不混 schema。
+
+#### 数据来源与职责边界补充
+
+- **UserMetadata（用户级）**
+  - 来源：Onboarding / 用户中心 → Profile 服务；
+  - 同步：由 Profile → MetaHub 的一条单向同步链路（非 LLM）；
+  - 用途：人群分析、分群运营、导出报表中拼接“销售画像”信息。
+
+- **SessionMetadata（会话级）**
+  - 来源：LLM JSON（SMART_ANALYSIS / GENERAL_FIRST_REPLY / 将来 Tingwu）；
+  - 只描述**本次会话 / 录音对应的客户场景**；
+  - 不包含销售本人角色画像字段。
 
 ### Write rules
 
@@ -556,6 +595,10 @@ Behavior:
 > - 本附录仅用于追溯“为什么当时这么改”，**不具备规范约束力**。  
 > - 在推导当前行为时，请只以正文章节为准；除非用户明确询问历史行为，否则不需要阅读本附录。
 
+### v4.3.0（2025-12-11）
+
+- 扩展 MetaHub 为双切片架构（SessionMetadata + UserMetadata）。UserMetadata 由 Profile/Onboarding 同步而来，用于分析与导出；LLM JSON schema 明确不包含 Persona 字段。
+
 ### v4.1.0（2025-12-10）
 
 - **Persona / POV 调整**
@@ -572,5 +615,11 @@ Behavior:
 
 - 初版 V4 规范：定义 JSON-only SMART_ANALYSIS、MetaHub SessionMetadata 结构、HomeOrchestrator 责任，以及与 V3 的职责切换。
 - 明确 V3 文档归档，仅作历史背景参考。
+
+### v4.2.0（2025-12-10）
+
+- Persona 输入来源：明确来自 Onboarding/Profile，仅用于 system prompt，非 SessionMetadata。
+- GENERAL 首条回复：首条助手回复鼓励输出占位 JSON 尾巴（未知客户/未命名会话等），用于一次性自动命名；重申单行单对象约束。
+- 元数据边界：区分 `GENERAL_FIRST_REPLY`（早期命名+snippet）与 SMART/Tingwu（深度分析），避免无意义覆盖。
 
 ---

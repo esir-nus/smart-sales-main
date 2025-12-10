@@ -31,6 +31,9 @@ object OnboardingTestTags {
     const val FIELD_NAME = "onboarding_field_name"
     const val FIELD_ROLE = "onboarding_field_role"
     const val FIELD_INDUSTRY = "onboarding_field_industry"
+    const val FIELD_MAIN_CHANNEL = "onboarding_field_main_channel"
+    const val FIELD_EXPERIENCE = "onboarding_field_experience"
+    const val FIELD_STYLE = "onboarding_field_style"
     const val BUTTON_SAVE = "onboarding_button_save"
     const val ERROR = "onboarding_error"
 }
@@ -80,6 +83,9 @@ fun OnboardingPersonalInfoScreen(
     onDisplayNameChange: (String) -> Unit,
     onRoleChange: (String) -> Unit,
     onIndustryChange: (String) -> Unit,
+    onMainChannelChange: (String) -> Unit,
+    onExperienceLevelChange: (String) -> Unit,
+    onStylePreferenceChange: (String) -> Unit,
     onSave: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -130,6 +136,33 @@ fun OnboardingPersonalInfoScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag(OnboardingTestTags.FIELD_INDUSTRY)
+            )
+            OutlinedTextField(
+                value = state.mainChannel,
+                onValueChange = onMainChannelChange,
+                label = { Text("主要沟通渠道") },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(OnboardingTestTags.FIELD_MAIN_CHANNEL)
+            )
+            OutlinedTextField(
+                value = state.experienceLevel,
+                onValueChange = onExperienceLevelChange,
+                label = { Text("经验水平") },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(OnboardingTestTags.FIELD_EXPERIENCE)
+            )
+            OutlinedTextField(
+                value = state.stylePreference,
+                onValueChange = onStylePreferenceChange,
+                label = { Text("表达风格偏好") },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(OnboardingTestTags.FIELD_STYLE)
             )
             if (state.errorMessage != null) {
                 Text(

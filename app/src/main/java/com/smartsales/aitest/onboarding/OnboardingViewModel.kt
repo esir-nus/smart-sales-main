@@ -23,6 +23,9 @@ data class OnboardingUiState(
     val displayName: String = "",
     val role: String = "",
     val industry: String = "",
+    val mainChannel: String = "",
+    val experienceLevel: String = "",
+    val stylePreference: String = "",
     val errorMessage: String? = null,
     val isSaving: Boolean = false,
     val completed: Boolean = false
@@ -53,8 +56,11 @@ class OnboardingViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             displayName = profile.displayName,
-                            role = profile.role.orEmpty(),
-                            industry = profile.industry.orEmpty()
+                            role = (profile.salesPersona?.role ?: profile.role).orEmpty(),
+                            industry = (profile.salesPersona?.industry ?: profile.industry).orEmpty(),
+                            mainChannel = profile.salesPersona?.mainChannel.orEmpty(),
+                            experienceLevel = profile.salesPersona?.experienceLevel.orEmpty(),
+                            stylePreference = profile.salesPersona?.stylePreference.orEmpty()
                         )
                     }
                 }
@@ -73,6 +79,18 @@ class OnboardingViewModel @Inject constructor(
         _uiState.update { it.copy(industry = value) }
     }
 
+    fun onMainChannelChange(value: String) {
+        _uiState.update { it.copy(mainChannel = value) }
+    }
+
+    fun onExperienceLevelChange(value: String) {
+        _uiState.update { it.copy(experienceLevel = value) }
+    }
+
+    fun onStylePreferenceChange(value: String) {
+        _uiState.update { it.copy(stylePreference = value) }
+    }
+
     fun onSubmit(onCompleted: () -> Unit) {
         val current = _uiState.value
         if (current.displayName.isBlank()) {
@@ -81,12 +99,20 @@ class OnboardingViewModel @Inject constructor(
         }
         viewModelScope.launch(dispatchers.io) {
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }
+            val persona = com.smartsales.feature.usercenter.SalesPersona(
+                role = current.role.trim().ifBlank { null },
+                industry = current.industry.trim().ifBlank { null },
+                mainChannel = current.mainChannel.trim().ifBlank { null },
+                experienceLevel = current.experienceLevel.trim().ifBlank { null },
+                stylePreference = current.stylePreference.trim().ifBlank { null }
+            )
             val profile = UserProfile(
                 displayName = current.displayName.trim(),
                 email = "",
                 isGuest = false,
-                role = current.role.trim().ifBlank { null },
-                industry = current.industry.trim().ifBlank { null }
+                role = persona.role,
+                industry = persona.industry,
+                salesPersona = persona
             )
             runCatching {
                 profileRepository.save(profile)

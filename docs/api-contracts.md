@@ -1,8 +1,8 @@
-# API 合约说明（v1.1.0）
+# API 合约说明（v1.2.0）
 
 > **文档版本 / Doc version**  
-> - Version: 1.1.0  
-> - Last updated: 2025-12-10
+> - Version: 1.2.0  
+> - Last updated: 2025-12-11
 >
 > **规则：** 每次 doc-sync 修改本文件，必须同步更新顶部版本号 + 附录 A 变更记录。
 
@@ -40,6 +40,38 @@ This document is the single source of truth for every API/protocol that the Andr
   - 文件名模式：`<Username>_<major person>_<summary6>_<yyyyMMdd_HHmmss>.<ext>`，其中 `<Username>` 是用户在 onboarding / User Center 中收集的用户 profile 名称。
 
 LLM 只出现在 `HomeOrchestratorImpl` 与 `RealTranscriptOrchestrator`；`RealExportOrchestrator`、`RealTingwuCoordinator`、各 VM 均为 LLM-free。
+
+### MetaHub 用户级画像接口（UserMetadata）
+
+为方便分析与导出，MetaHub 提供用户级画像的只读接口，例如：
+
+- Kotlin 数据模型（示意）：
+
+  ```kotlin
+  data class UserMetadata(
+      val userId: String,
+      val role: String?,
+      val industry: String?,
+      val mainChannel: String?,
+      val experienceLevel: String?,
+      val stylePreference: String?,
+      val segmentCode: String? // 可选：规则计算的分群标签
+  )
+  ```
+
+- Repository 示例接口：
+
+  ```kotlin
+  interface MetaHubRepository {
+      suspend fun getUserMetadata(userId: String): UserMetadata?
+      // … 现有 SessionMetadata 相关接口不变
+  }
+  ```
+
+**约束：**
+
+- UserMetadata 由 Profile / Onboarding / 用户中心同步而来，不是 LLM 的输出；
+- SessionMetadata 的接口与 schema 不变，继续只描述单次会话。
 
 ### DashScope Text Generation (HTTP)
 - **Contract (HTTP)**:

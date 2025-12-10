@@ -302,6 +302,9 @@ private fun AiFeatureTestApp(
                 onDisplayNameChange = onboardingViewModel::onDisplayNameChange,
                 onRoleChange = onboardingViewModel::onRoleChange,
                 onIndustryChange = onboardingViewModel::onIndustryChange,
+                onMainChannelChange = onboardingViewModel::onMainChannelChange,
+                onExperienceLevelChange = onboardingViewModel::onExperienceLevelChange,
+                onStylePreferenceChange = onboardingViewModel::onStylePreferenceChange,
                 onSubmit = {
                     onboardingViewModel.onSubmit {
                         currentPage = TestHomePage.Home
@@ -445,6 +448,9 @@ private fun OnboardingHost(
     onDisplayNameChange: (String) -> Unit,
     onRoleChange: (String) -> Unit,
     onIndustryChange: (String) -> Unit,
+    onMainChannelChange: (String) -> Unit,
+    onExperienceLevelChange: (String) -> Unit,
+    onStylePreferenceChange: (String) -> Unit,
     onSubmit: () -> Unit
 ) {
     var step by rememberSaveable { mutableStateOf(OnboardingStep.Welcome) }
@@ -457,6 +463,9 @@ private fun OnboardingHost(
             onDisplayNameChange = onDisplayNameChange,
             onRoleChange = onRoleChange,
             onIndustryChange = onIndustryChange,
+            onMainChannelChange = onMainChannelChange,
+            onExperienceLevelChange = onExperienceLevelChange,
+            onStylePreferenceChange = onStylePreferenceChange,
             onSave = onSubmit
         )
     }

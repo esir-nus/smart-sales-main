@@ -13,9 +13,10 @@
 
 **UX 与数据规范优先级（供三方参考）**：
 1. `docs/ux-contract.md` – 交互与布局的唯一来源。
-2. `docs/plans/Orchestrator-MetadataHub-Mvp-V3.md` – 推理、MetaHub 流程与标题/分析元数据。
-3. `docs/style-guide.md` – 视觉规范。
-4. `docs/api-contracts.md` – API 与数据模型。
+2. `docs/Orchestrator-MetadataHub-V4.md` – 推理与元数据现行规范（V4 为唯一有效规范，V3 已归档仅作背景）。
+3. `docs/api-contracts.md` – API 与数据模型。
+4. `docs/style-guide.md` – 视觉规范。
+
 
 ---
 
@@ -47,7 +48,6 @@
 * Designs flows, data models, contracts, and test strategy.
 * Defines **T-tasks** (T1, T2…) with clear goals and constraints.
 * Writes **Codex Plan Prompts**: copy-pasteable instructions for Codex.
-* 仅依赖 LLM 输出的 JSON 与 MetaHub 中的 `SessionMetadata` 做决策；persona 字段只存在于 prompt 构造层，用于语气控制，**不改变** JSON schema 或 merge 逻辑。
 
 **Does not:**
 

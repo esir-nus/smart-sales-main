@@ -1,8 +1,8 @@
-# UX 合同说明（v1.1.0）
+# UX 合同说明（v1.2.0）
 
 > **文档版本 / Doc version**  
-> - Version: 1.1.0  
-> - Last updated: 2025-12-10
+> - Version: 1.2.0  
+> - Last updated: 2025-12-11
 
 > **规则：** 每次 doc-sync 修改本文件，必须同步更新顶部版本号 + 附录 A 变更记录。
 
@@ -266,6 +266,15 @@ Left → right:
 * **role / industry (optional):**
   * Must be persisted and editable in User Center.
   * Considered MetaHub context fields that Orchestrator/LLM can use to improve CRM/summaries later, but are not mandatory for all current flows.
+
+#### 用户中心中的销售画像编辑
+
+- Onboarding 只是**首次**采集 SalesPersona；
+- 用户中心的“个人资料 / 销售画像”页面可以修改相同字段（角色 / 行业 / 主要渠道 / 经验 / 风格）；
+- 修改后：
+  - 后续 Home 智能聊天、SMART 分析、Tingwu 总结都会使用**最新的 Persona** 构造 system prompt；
+  - Profile 服务会将最新 Persona 同步到 MetaHub 的 UserMetadata，用于后续人群分析与导出；
+  - 既不回写历史 SessionMetadata，也不会由 LLM 修改 Persona。
 
 * Layout & style:
 
@@ -646,6 +655,10 @@ Any UX work on the Assistant must respect this document, plus `style-guide.md` a
 
 > ⚠️ 本附录仅用于追溯 UX 文案/规则的演进，**不作为实现依据**。实际行为以正文为准。
 
+### v1.2.0（2025-12-11）
+
+- 扩展用户中心销售画像编辑说明：Onboarding 仅为首次采集，用户中心可修改 Persona 字段；修改后影响后续 AI 行为并同步到 MetaHub UserMetadata。
+
 ### v1.1.0（2025-12-10）
 
 - 补充 SMART 分析卡片的语气与长度规范（助手→销售顾问视角、一屏内可读、每节 2–3 条要点）。
@@ -654,3 +667,9 @@ Any UX work on the Assistant must respect this document, plus `style-guide.md` a
 ### v1.0.0
 
 - 初版 UX 合同，定义 Home 布局、会话标题、快捷技能、历史抽屉等核心交互。
+
+### v1.1.1（2025-12-10）
+
+- Onboarding 增补销售画像字段（角色/行业/渠道/经验/口吻），用于 persona prompt。
+- GENERAL 首条回复状态机：噪音/模糊/富文本三类输入的响应与占位 JSON 尾巴要求。
+- 新增全局 System Prompt 组成：persona 块、行为块（GENERAL 状态机+JSON 尾巴）、安全/约束块。

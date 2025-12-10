@@ -9,6 +9,9 @@ data class UserCenterUiState(
     val displayName: String = "",
     val role: String = "",
     val industry: String = "",
+    val mainChannel: String = "",
+    val experienceLevel: String = "",
+    val stylePreference: String = "",
     val email: String = "",
     val isGuest: Boolean = true,
     val canLogout: Boolean = false,
@@ -34,5 +37,14 @@ data class UserProfile(
     val organization: String? = null,
     val role: String? = null,
     val industry: String? = null,
-    val phone: String? = null
+    val phone: String? = null,
+    val salesPersona: SalesPersona? = null
+)
+
+data class SalesPersona(
+    val role: String? = null,
+    val industry: String? = null,
+    val mainChannel: String? = null,
+    val experienceLevel: String? = null,
+    val stylePreference: String? = null
 )

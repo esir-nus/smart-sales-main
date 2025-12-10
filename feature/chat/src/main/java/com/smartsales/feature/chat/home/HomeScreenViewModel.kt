@@ -34,6 +34,7 @@ import com.smartsales.feature.media.MediaSyncCoordinator
 import com.smartsales.feature.media.MediaSyncState
 import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.feature.usercenter.UserProfile
+import com.smartsales.feature.usercenter.SalesPersona
 import com.smartsales.data.aicore.ExportFormat
 import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.core.metahub.MetaHub
@@ -191,7 +192,8 @@ data class HomeUiState(
     val showDebugMetadata: Boolean = false,
     val debugSessionMetadata: DebugSessionMetadata? = null,
     val smartReasoningText: String? = null,
-    val isInputFocused: Boolean = false
+    val isInputFocused: Boolean = false,
+    val salesPersona: SalesPersona? = null
 )
 
 /** 外部依赖（除 AiChatService 外保留原有 stub）。 */
@@ -1629,7 +1631,7 @@ class HomeScreenViewModel @Inject constructor(
     private fun loadUserProfile() {
         viewModelScope.launch {
             userProfileRepository.profileFlow.collect { profile ->
-                _uiState.update { it.copy(userName = deriveUserName(profile)) }
+                _uiState.update { it.copy(userName = deriveUserName(profile), salesPersona = profile.salesPersona) }
             }
         }
     }

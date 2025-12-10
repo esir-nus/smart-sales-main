@@ -50,6 +50,9 @@ fun UserCenterScreen(
     onDisplayNameChange: (String) -> Unit,
     onRoleChange: (String) -> Unit,
     onIndustryChange: (String) -> Unit,
+    onMainChannelChange: (String) -> Unit,
+    onExperienceLevelChange: (String) -> Unit,
+    onStylePreferenceChange: (String) -> Unit,
     onSave: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -69,11 +72,17 @@ fun UserCenterScreen(
                 displayName = uiState.displayName,
                 role = uiState.role,
                 industry = uiState.industry,
+                mainChannel = uiState.mainChannel,
+                experienceLevel = uiState.experienceLevel,
+                stylePreference = uiState.stylePreference,
                 isLoading = uiState.isLoading,
                 errorMessage = uiState.errorMessage,
                 onDisplayNameChange = onDisplayNameChange,
                 onRoleChange = onRoleChange,
                 onIndustryChange = onIndustryChange,
+                onMainChannelChange = onMainChannelChange,
+                onExperienceLevelChange = onExperienceLevelChange,
+                onStylePreferenceChange = onStylePreferenceChange,
                 onSave = onSave
             )
             ShortcutMenuCard(
@@ -93,6 +102,9 @@ object UserCenterTestTags {
     const val FIELD_NAME = "user_center_field_name"
     const val FIELD_ROLE = "user_center_field_role"
     const val FIELD_INDUSTRY = "user_center_field_industry"
+    const val FIELD_MAIN_CHANNEL = "user_center_field_main_channel"
+    const val FIELD_EXPERIENCE = "user_center_field_experience"
+    const val FIELD_STYLE = "user_center_field_style"
     const val BUTTON_SAVE = "user_center_button_save"
 }
 
@@ -101,11 +113,17 @@ private fun ProfileHeader(
     displayName: String,
     role: String,
     industry: String,
+    mainChannel: String,
+    experienceLevel: String,
+    stylePreference: String,
     isLoading: Boolean,
     errorMessage: String?,
     onDisplayNameChange: (String) -> Unit,
     onRoleChange: (String) -> Unit,
     onIndustryChange: (String) -> Unit,
+    onMainChannelChange: (String) -> Unit,
+    onExperienceLevelChange: (String) -> Unit,
+    onStylePreferenceChange: (String) -> Unit,
     onSave: () -> Unit
 ) {
     val resolvedName = displayName.ifBlank { "SmartSales 用户" }
@@ -161,6 +179,24 @@ private fun ProfileHeader(
                     value = industry,
                     onValueChange = onIndustryChange,
                     testTag = UserCenterTestTags.FIELD_INDUSTRY
+                )
+                EditableField(
+                    label = "主要沟通渠道",
+                    value = mainChannel,
+                    onValueChange = onMainChannelChange,
+                    testTag = UserCenterTestTags.FIELD_MAIN_CHANNEL
+                )
+                EditableField(
+                    label = "经验水平",
+                    value = experienceLevel,
+                    onValueChange = onExperienceLevelChange,
+                    testTag = UserCenterTestTags.FIELD_EXPERIENCE
+                )
+                EditableField(
+                    label = "表达风格偏好",
+                    value = stylePreference,
+                    onValueChange = onStylePreferenceChange,
+                    testTag = UserCenterTestTags.FIELD_STYLE
                 )
                 OutlinedButton(
                     onClick = onSave,

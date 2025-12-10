@@ -425,7 +425,7 @@ Before shipping a screen, verify:
 
 1. **Doc precedence**
 
-   * Behavior / layout matches `docs/ux-contract.md` and `Orchestrator-MetadataHub-Mvp-V3.md`.
+   * Behavior / layout matches `docs/ux-contract.md` 和 `docs/Orchestrator-MetadataHub-V4.md`（V3 已归档，仅背景参考）。
    * This style guide has been used **only** for visuals.
    * React `/ui` was used as reference, not as the behavioral source of truth.
 

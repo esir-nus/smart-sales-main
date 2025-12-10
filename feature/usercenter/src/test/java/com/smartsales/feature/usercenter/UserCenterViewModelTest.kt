@@ -25,6 +25,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import com.smartsales.feature.usercenter.SalesPersona
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class UserCenterViewModelTest {
@@ -53,6 +54,9 @@ class UserCenterViewModelTest {
         advanceUntilIdle()
         val state = viewModel.uiState.value
         assertEquals("Tester", state.displayName)
+        assertEquals("微信+电话", state.mainChannel)
+        assertEquals("1-5 年", state.experienceLevel)
+        assertEquals("偏口语", state.stylePreference)
         assertFalse(state.isGuest)
         assertTrue(state.canLogout)
     }
@@ -69,14 +73,39 @@ class UserCenterViewModelTest {
         assertTrue(viewModel.uiState.value.isGuest)
     }
 
+    @Test
+    fun `saveProfile writes persona fields`() = runTest(dispatcher) {
+        advanceUntilIdle()
+        viewModel.onRoleChange("大客户经理")
+        viewModel.onIndustryChange("制造业")
+        viewModel.onMainChannelChange("邮件为主")
+        viewModel.onExperienceLevelChange("资深")
+        viewModel.onStylePreferenceChange("偏正式")
+
+        viewModel.onSaveProfile()
+        advanceUntilIdle()
+
+        val saved = repository.store.value.salesPersona!!
+        assertEquals("邮件为主", saved.mainChannel)
+        assertEquals("资深", saved.experienceLevel)
+        assertEquals("偏正式", saved.stylePreference)
+    }
+
     private class FakeUserProfileRepository : UserProfileRepository {
-        private val store = MutableStateFlow(
+        val store = MutableStateFlow(
             UserProfile(
                 displayName = "Tester",
                 email = "",
                 isGuest = false,
                 role = "销售",
-                industry = "汽车"
+                industry = "汽车",
+                salesPersona = SalesPersona(
+                    role = "销售",
+                    industry = "汽车",
+                    mainChannel = "微信+电话",
+                    experienceLevel = "1-5 年",
+                    stylePreference = "偏口语"
+                )
             )
         )
 

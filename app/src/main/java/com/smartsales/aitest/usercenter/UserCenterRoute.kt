@@ -44,6 +44,9 @@ fun UserCenterRoute(
         onDisplayNameChange = viewModel::onDisplayNameChange,
         onRoleChange = viewModel::onRoleChange,
         onIndustryChange = viewModel::onIndustryChange,
+        onMainChannelChange = viewModel::onMainChannelChange,
+        onExperienceLevelChange = viewModel::onExperienceLevelChange,
+        onStylePreferenceChange = viewModel::onStylePreferenceChange,
         onSave = viewModel::onSaveProfile,
         modifier = modifier
     )

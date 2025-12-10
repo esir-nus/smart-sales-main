@@ -80,7 +80,8 @@ class HomeOrchestratorImpl @Inject constructor(
             source = source
         )
         val markdown = buildSmartAnalysisMarkdown(parsed)
-        return SmartAnalysisResult(markdown = markdown, metadata = mergedMeta)
+        val postProcessed = postProcessSmartMarkdown(markdown)
+        return SmartAnalysisResult(markdown = postProcessed, metadata = mergedMeta)
     }
 
     private suspend fun buildMergedMetadata(
@@ -317,7 +318,7 @@ class HomeOrchestratorImpl @Inject constructor(
         val sb = StringBuilder()
         parsed.shortSummary?.takeIf { it.isNotBlank() }?.let { summary ->
             sb.appendLine("## 会话概要")
-            sb.appendLine("- ${summary.trim()}")
+            sb.appendLine("- ${normalizePov(summary)}")
             sb.appendLine()
         }
 
@@ -334,7 +335,7 @@ class HomeOrchestratorImpl @Inject constructor(
             sb.appendLine("## 需求与痛点")
             parsed.highlights.forEach { highlight ->
                 if (highlight.isNotBlank()) {
-                    sb.appendLine("- ${highlight.trim()}")
+                    sb.appendLine("- ${normalizePov(highlight)}")
                 }
             }
             sb.appendLine()
@@ -353,7 +354,7 @@ class HomeOrchestratorImpl @Inject constructor(
             sb.appendLine("## 建议与行动")
             parsed.actionableTips.forEachIndexed { index, tip ->
                 if (tip.isNotBlank()) {
-                    sb.appendLine("${index + 1}. ${tip.trim()}")
+                    sb.appendLine("${index + 1}. ${normalizePov(tip)}")
                 }
             }
             sb.appendLine()
@@ -361,17 +362,176 @@ class HomeOrchestratorImpl @Inject constructor(
 
         parsed.coreInsight?.takeIf { it.isNotBlank() }?.let { insight ->
             sb.appendLine("## 核心洞察")
-            sb.appendLine("- ${insight.trim()}")
+            sb.appendLine("- ${normalizePov(insight)}")
             sb.appendLine()
         }
 
         parsed.sharpLine?.takeIf { it.isNotBlank() }?.let { line ->
             sb.appendLine("## 一句话话术")
-            sb.appendLine("- ${line.trim()}")
+            sb.appendLine("- ${normalizePov(line)}")
             sb.appendLine()
         }
 
         return sb.toString().trimEnd().ifBlank { SMART_ANALYSIS_FAILURE_MESSAGE }
+    }
+
+    /**
+     * SMART_ANALYSIS Markdown 后处理：确保卡片简短、去重、编号规范并隐藏空节。
+     * 规则来源：V4.1.0 SMART 分析卡片长度与去重规范。
+     */
+    private fun postProcessSmartMarkdown(markdown: String): String {
+        if (markdown == SMART_ANALYSIS_FAILURE_MESSAGE) return markdown
+        val sections = mutableListOf<Section>()
+        var current: Section? = null
+        markdown.lines().forEach { line ->
+            val trimmed = line.trim()
+            if (trimmed.startsWith("## ")) {
+                val section = Section(title = trimmed.removePrefix("## ").trim())
+                sections.add(section)
+                current = section
+            } else if (current != null) {
+                current?.lines?.add(line)
+            }
+        }
+
+        val globalSeen = mutableSetOf<String>()
+        val processed = sections.mapNotNull { section ->
+            val cleaned = processSection(section, globalSeen)
+            cleaned
+        }
+
+        val builder = StringBuilder()
+        processed.forEachIndexed { index, section ->
+            if (section.lines.isEmpty()) return@forEachIndexed
+            builder.appendLine("## ${section.title}")
+            section.lines.forEach { builder.appendLine(it) }
+            if (index != processed.lastIndex) builder.appendLine()
+        }
+
+        return builder.toString().trimEnd()
+    }
+
+    private fun processSection(
+        section: Section,
+        globalSeen: MutableSet<String>
+    ): Section? {
+        val maxBullets = 5
+        val bullets = mutableListOf<String>()
+        val paragraphs = mutableListOf<String>()
+        val seenLocal = mutableSetOf<String>()
+
+        section.lines.forEach { rawLine ->
+            val trimmed = rawLine.trim()
+            if (trimmed.isEmpty()) return@forEach
+            val bulletContent = extractBulletContent(trimmed)
+            if (bulletContent != null) {
+                val normalized = normalizeSentence(bulletContent)
+                if (normalized.isEmpty()) return@forEach
+                if (isMeaninglessContent(bulletContent)) return@forEach
+                if (seenLocal.contains(normalized)) return@forEach
+                if (globalSeen.contains(normalized)) return@forEach
+                bullets.add(bulletContent)
+                seenLocal.add(normalized)
+                globalSeen.add(normalized)
+                return@forEach
+            }
+
+            val normalized = normalizeSentence(trimmed)
+            if (normalized.isEmpty()) return@forEach
+            if (isMeaninglessContent(trimmed)) return@forEach
+            if (seenLocal.contains(normalized)) return@forEach
+            if (globalSeen.contains(normalized)) return@forEach
+            paragraphs.add(trimmed)
+            seenLocal.add(normalized)
+            globalSeen.add(normalized)
+        }
+
+        val cappedBullets = bullets.take(maxBullets)
+        val hasContent = cappedBullets.isNotEmpty() || paragraphs.isNotEmpty()
+        if (!hasContent) return null
+
+        val outputLines = mutableListOf<String>()
+        // 段落先输出，确保概要类文本保留
+        paragraphs.forEach { outputLines.add(it) }
+        if (section.title.contains("建议与行动")) {
+            cappedBullets.forEachIndexed { index, bullet ->
+                outputLines.add("${index + 1}. ${stripBulletPrefix(bullet)}")
+            }
+        } else {
+            cappedBullets.forEach { outputLines.add("- ${stripBulletPrefix(it)}") }
+        }
+        return Section(title = section.title, lines = outputLines)
+    }
+
+    private fun extractBulletContent(line: String): String? {
+        val trimmed = line.trim()
+        if (trimmed.startsWith("-")) {
+            return trimmed.removePrefix("-").trim()
+        }
+        val numbered = Regex("^\\d+[\\.)）]*\\s*(.+)$")
+        val match = numbered.find(trimmed)
+        if (match != null) return match.groupValues[1].trim()
+        return null
+    }
+
+    private fun stripBulletPrefix(text: String): String {
+        var result = text.trim()
+        val prefixRegex = Regex("^\\d+[\\.)）]*\\s*")
+        while (prefixRegex.containsMatchIn(result)) {
+            result = result.replaceFirst(prefixRegex, "").trim()
+        }
+        return result
+    }
+
+    private fun normalizeSentence(sentence: String): String {
+        return sentence.lowercase(Locale.getDefault())
+            .replace(Regex("[\\p{Punct}\\s]+"), "")
+    }
+
+    private fun isMeaninglessContent(text: String): Boolean {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return true
+        val lower = trimmed.lowercase(Locale.getDefault())
+        val meaningless = listOf("暂无", "无特别", "无明显", "无显著", "无特别补充", "无补充")
+        return meaningless.any { lower.contains(it) }
+    }
+
+    private data class Section(
+        val title: String,
+        val lines: MutableList<String> = mutableListOf()
+    )
+
+    /**
+     * POV 规范转换：将明显以"我"开头的销售口吻替换为"你"，确保 Markdown 卡片语气保持"AI 助手→销售顾问"视角，而非"我=销售本人"。
+     * 
+     * 目的：在生成概要/要点/建议/洞察/话术时，对 LLM 可能输出的第一人称内容进行轻量转换，
+     * 避免出现"我向客户…"、"我会…"、"我将…"等不符合助手身份的表达。
+     * 
+     * 转换规则：
+     * - 优先匹配常见短语（我在/我向/我给/我将/我会/我需要）
+     * - 其他以"我"开头的句子统一转换为"你"
+     * - 保持原文本的其他内容不变
+     */
+    private fun normalizePov(text: String): String {
+        val trimmed = text.trim()
+        val lower = trimmed.lowercase(Locale.getDefault())
+        val replacements = listOf(
+            "我在" to "你在",
+            "我向" to "你向",
+            "我给" to "你给",
+            "我将" to "你将",
+            "我会" to "你会",
+            "我需要" to "你需要"
+        )
+        replacements.forEach { (prefix, target) ->
+            if (lower.startsWith(prefix)) {
+                return target + trimmed.removePrefix(prefix)
+            }
+        }
+        if (lower.startsWith("我")) {
+            return "你" + trimmed.drop(1)
+        }
+        return trimmed
     }
 
     private fun JSONArray.toStringList(): List<String> {

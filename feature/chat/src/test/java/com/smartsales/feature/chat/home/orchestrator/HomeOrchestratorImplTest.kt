@@ -180,6 +180,92 @@ class HomeOrchestratorImplTest {
     }
 
     @Test
+    fun `smart markdown normalizes salesperson first person to assistant voice`() = runTest(dispatcher) {
+        val aiChatService = CompletedAiChatService(
+            """
+            ```json
+            {
+              "short_summary": "我向客户介绍了新方案并确认预算",
+              "highlights": ["我解答了客户的疑问", "我将提供详细报价"],
+              "actionable_tips": ["我会安排后续技术评估"],
+              "core_insight": "我需要跟进报价",
+              "sharp_line": "我会尽快回复"
+            }
+            ```
+            """.trimIndent()
+        )
+        val orchestrator = HomeOrchestratorImpl(aiChatService, RecordingMetaHub())
+
+        val events = mutableListOf<ChatStreamEvent>()
+        orchestrator.streamChat(
+            ChatRequest(
+                sessionId = "pov",
+                userMessage = "smart",
+                quickSkillId = QuickSkillId.SMART_ANALYSIS.name
+            )
+        ).collect { events.add(it) }
+
+        val cleaned = (events.first() as ChatStreamEvent.Completed).fullText
+        // 确保不会输出"我向.../我会..."等第一人称
+        assertFalse("should not contain 我向: $cleaned", cleaned.contains("我向"))
+        assertFalse("should not contain 我会: $cleaned", cleaned.contains("我会"))
+        assertFalse("should not contain 我将: $cleaned", cleaned.contains("我将"))
+        assertFalse("should not contain 我需要: $cleaned", cleaned.contains("我需要"))
+        // 验证已转换为"你"视角
+        assertTrue("should contain 你向: $cleaned", cleaned.contains("你向客户"))
+        assertTrue("should contain 你解答了: $cleaned", cleaned.contains("你解答了"))
+        assertTrue("should contain 你会安排: $cleaned", cleaned.contains("你会安排"))
+        assertTrue("should contain 你将提供: $cleaned", cleaned.contains("你将提供"))
+    }
+
+    @Test
+    fun `POV validation ensures no first person in final markdown`() = runTest(dispatcher) {
+        // 测试从包含各种"我…"开头的 SMART JSON 到最终 Markdown 的人称规范
+        val aiChatService = CompletedAiChatService(
+            """
+            ```json
+            {
+              "short_summary": "我在会议中向客户展示了产品优势",
+              "highlights": ["我给客户提供了详细报价", "我在沟通中明确了交付周期"],
+              "actionable_tips": ["我会跟进客户反馈", "我将安排技术演示"],
+              "core_insight": "我需要在价格和交付之间找到平衡",
+              "sharp_line": "我会尽快给出最终方案"
+            }
+            ```
+            """.trimIndent()
+        )
+        val orchestrator = HomeOrchestratorImpl(aiChatService, RecordingMetaHub())
+
+        val events = mutableListOf<ChatStreamEvent>()
+        orchestrator.streamChat(
+            ChatRequest(
+                sessionId = "pov-validation",
+                userMessage = "analyze",
+                quickSkillId = QuickSkillId.SMART_ANALYSIS.name
+            )
+        ).collect { events.add(it) }
+
+        val markdown = (events.first() as ChatStreamEvent.Completed).fullText
+        // 确保最终 Markdown 中不会出现任何第一人称表达
+        assertFalse("should not contain 我向: $markdown", markdown.contains("我向"))
+        assertFalse("should not contain 我会: $markdown", markdown.contains("我会"))
+        assertFalse("should not contain 我将: $markdown", markdown.contains("我将"))
+        assertFalse("should not contain 我需要: $markdown", markdown.contains("我需要"))
+        assertFalse("should not contain 我在: $markdown", markdown.contains("我在"))
+        assertFalse("should not contain 我给: $markdown", markdown.contains("我给"))
+        // 验证所有"我"开头的内容都已转换为"你"视角
+        assertTrue("should contain 你在: $markdown", markdown.contains("你在"))
+        assertTrue("should contain 你给: $markdown", markdown.contains("你给"))
+        assertTrue("should contain 你会: $markdown", markdown.contains("你会"))
+        assertTrue("should contain 你将: $markdown", markdown.contains("你将"))
+        assertTrue("should contain 你需要: $markdown", markdown.contains("你需要"))
+        // 验证具体转换结果
+        assertTrue("should contain converted summary: $markdown", markdown.contains("你在会议中向客户展示了产品优势"))
+        assertTrue("should contain converted highlight: $markdown", markdown.contains("你给客户提供了详细报价"))
+        assertTrue("should contain converted tip: $markdown", markdown.contains("你会跟进客户反馈"))
+    }
+
+    @Test
     fun `metadata parser prefers last value when duplicates present`() = runTest(dispatcher) {
         val metaHub = RecordingMetaHub()
         val aiChatService = CompletedAiChatService(
@@ -349,6 +435,117 @@ class HomeOrchestratorImplTest {
         assertTrue(saved.latestMajorAnalysisAt != null)
     }
 
+    @Test
+    fun `smart markdown caps bullets and dedupes per section`() = runTest(dispatcher) {
+        val aiChatService = CompletedAiChatService(
+            """
+            ```json
+            {
+              "short_summary": "本次沟通主要聚焦价格和交付",
+              "highlights": [
+                "客户关心价格",
+                "客户关心价格",
+                "价格敏感度高",
+                "价格敏感度高",
+                "预算有限",
+                "预算有限",
+                "交付周期紧张",
+                "交付周期紧张"
+              ],
+              "actionable_tips": [
+                "1) 提升进店转化",
+                "3) 提升成交率",
+                "4)4) 重复编号"
+              ]
+            }
+            ```
+            """.trimIndent()
+        )
+        val orchestrator = HomeOrchestratorImpl(aiChatService, RecordingMetaHub())
+
+        val events = mutableListOf<ChatStreamEvent>()
+        orchestrator.streamChat(
+            ChatRequest(
+                sessionId = "dedupe",
+                userMessage = "go",
+                quickSkillId = QuickSkillId.SMART_ANALYSIS.name
+            )
+        ).collect { events.add(it) }
+
+        val markdown = (events.first() as ChatStreamEvent.Completed).fullText
+        val painPoints = extractSectionLines(markdown, "需求与痛点")
+        val bullets = painPoints.filter { it.trim().startsWith("-") }
+        assertTrue("too many bullets: ${bullets.size}", bullets.size <= 5)
+        val normalized = bullets.map { line ->
+            line.removePrefix("-").trim().lowercase().replace(Regex("[\\p{Punct}\\s]+"), "")
+        }
+        assertEquals("duplicates still exist: $bullets", normalized.toSet().size, normalized.size)
+    }
+
+    @Test
+    fun `smart markdown normalizes messy numbering`() = runTest(dispatcher) {
+        val aiChatService = CompletedAiChatService(
+            """
+            ```json
+            {
+              "short_summary": "概要",
+              "highlights": ["痛点一"],
+              "actionable_tips": [
+                "1) 提升进店转化",
+                "3) 提升成交率",
+                "4)4) 重复编号"
+              ]
+            }
+            ```
+            """.trimIndent()
+        )
+        val orchestrator = HomeOrchestratorImpl(aiChatService, RecordingMetaHub())
+
+        val events = mutableListOf<ChatStreamEvent>()
+        orchestrator.streamChat(
+            ChatRequest(
+                sessionId = "numbering",
+                userMessage = "go",
+                quickSkillId = QuickSkillId.SMART_ANALYSIS.name
+            )
+        ).collect { events.add(it) }
+
+        val markdown = (events.first() as ChatStreamEvent.Completed).fullText
+        val tips = extractSectionLines(markdown, "建议与行动")
+        val numbered = tips.filter { it.trim().matches(Regex("^\\d+\\.\\s.+")) }
+        assertEquals(listOf("1. 提升进店转化", "2. 提升成交率", "3. 重复编号"), numbered)
+    }
+
+    @Test
+    fun `smart markdown hides empty sections`() = runTest(dispatcher) {
+        val aiChatService = CompletedAiChatService(
+            """
+            ```json
+            {
+              "short_summary": "只保留概要",
+              "highlights": ["暂无", "无明显"],
+              "actionable_tips": []
+            }
+            ```
+            """.trimIndent()
+        )
+        val orchestrator = HomeOrchestratorImpl(aiChatService, RecordingMetaHub())
+
+        val events = mutableListOf<ChatStreamEvent>()
+        orchestrator.streamChat(
+            ChatRequest(
+                sessionId = "empty-section",
+                userMessage = "go",
+                quickSkillId = QuickSkillId.SMART_ANALYSIS.name
+            )
+        ).collect { events.add(it) }
+
+        val markdown = (events.first() as ChatStreamEvent.Completed).fullText
+        assertTrue(markdown.contains("## 会话概要"))
+        assertFalse(markdown.contains("需求与痛点"))
+        assertFalse(markdown.contains("建议与行动"))
+    }
+
     private class CompletedAiChatService(
         private val response: String
     ) : AiChatService {
@@ -369,5 +566,22 @@ class HomeOrchestratorImplTest {
         override suspend fun upsertExport(metadata: ExportMetadata) {}
         override suspend fun getExport(sessionId: String): ExportMetadata? = null
         override suspend fun logUsage(usage: TokenUsage) {}
+    }
+
+    private fun extractSectionLines(markdown: String, heading: String): List<String> {
+        val lines = markdown.lines()
+        val collected = mutableListOf<String>()
+        var capture = false
+        lines.forEach { line ->
+            val trimmed = line.trim()
+            if (trimmed.startsWith("## ")) {
+                capture = trimmed == "## $heading"
+                return@forEach
+            }
+            if (capture) {
+                collected.add(line)
+            }
+        }
+        return collected.filter { it.isNotBlank() }
     }
 }

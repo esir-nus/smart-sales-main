@@ -1,4 +1,12 @@
-# API Contracts for SmartSales
+# API 合约说明（v1.1.0）
+
+> **文档版本 / Doc version**  
+> - Version: 1.1.0  
+> - Last updated: 2025-12-10
+>
+> **规则：** 每次 doc-sync 修改本文件，必须同步更新顶部版本号 + 附录 A 变更记录。
+
+## API Contracts for SmartSales
 
 This document is the single source of truth for every API/protocol that the Android app touches. Each entry below records three things and future edits must keep the same structure:
 
@@ -21,6 +29,7 @@ This document is the single source of truth for every API/protocol that the Andr
   - `fun streamChat(request: ChatRequest): Flow<ChatStreamEvent>` – 唯一 LLM 入口，用 Completed 事件解析 JSON block 写 `SessionMetadata`；Delta/Completed 文本原样透传给 VM。
   - 返回的 `SessionMetadata` 中 `summary_title_6chars`/`short_summary`/`main_person` 只作为**标题建议**，由客户端判断当前标题是否为占位值（如“新的聊天”“通话分析 – 文件名”）再决定是否写回 `AiSessionSummary.title`。
   - **V4 追加（SMART_ANALYSIS）**：LLM 仅输出单个 JSON 对象（字段：`main_person`、`short_summary`、`summary_title_6chars`、`location`、`highlights`、`actionable_tips`、`core_insight`、`sharp_line`、可选 `stage`/`risk_level`）。Orchestrator 解析 JSON → 写 MetaHub → 本地拼 Markdown 给 UI；UI 不展示 JSON。
+  - SMART_ANALYSIS 模式下 `ChatStreamEvent.Completed.fullText` 必须是已去重、编号规范、长度受控的分析卡片；ViewModel 只负责占位/替换/错误提示，不对 SMART 文本做复杂清理（GENERAL 仍在 VM 做轻量 `sanitizeAssistantOutput`）。
 - **TranscriptOrchestrator**
   - `suspend fun inferTranscriptMetadata(request: TranscriptMetadataRequest): TranscriptMetadata?` – 仅由 `RealTingwuCoordinator` 调用，负责 LLM 推断说话人/会话元数据并 `mergeWith` 写入 MetaHub。请求字段：`transcriptId`, `sessionId`, `diarizedSegments`, `speakerLabels`, `createdAt`(默认 now), `force`(默认 false)。
 - **ExportOrchestrator**
@@ -174,3 +183,18 @@ LLM 只出现在 `HomeOrchestratorImpl` 与 `RealTranscriptOrchestrator`；`Real
   - `:app/app/src/main/java/com/smartsales/aitest/MediaServerClient.kt`
   - `:app/app/src/main/java/com/smartsales/aitest/WifiBleTesterPage.kt`
   - `:app/app/src/main/java/com/smartsales/aitest/ConnectivityControlViewModel.kt`
+
+---
+
+## 附录 A：变更记录（仅供追溯，非规范）
+
+> ⚠️ 本附录用于追溯 API 合约修改历史，**不替代正文约束力**。
+
+### v1.1.0（2025-12-10）
+
+- 明确 HomeOrchestrator 在 SMART_ANALYSIS 模式下输出已去重/编号规范、长度受控的分析卡文本，ViewModel 不再对 SMART 文本做复杂清理。
+- 区分 GENERAL 与 SMART 模式的清理职责：GENERAL 在 ViewModel 中轻量 `sanitizeAssistantOutput`，SMART 清理在 Orchestrator。
+
+### v1.0.0
+
+- 初版 API 合约说明，定义 DashScope / Tingwu / OSS / HomeOrchestrator / ExportOrchestrator 等接口职责与路径。

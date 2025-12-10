@@ -1,6 +1,13 @@
----
 
-# Orchestrator–MetaHub V4.1 (Spec)
+# Orchestrator–MetaHub V4 规范（v4.1.0）
+
+> **状态 / Status**  
+> - 当前唯一有效规范（Active spec）。  
+> - V3 文档已归档，仅作历史参考，不得作为实现依据。  
+>
+> **文档版本 / Doc version**  
+> - Version: 4.1.0  
+> - Last updated: 2025-12-10
 
 > **Goal**
 >
@@ -12,6 +19,26 @@
 >   * **UI/ViewModel handles streaming & placeholders**
 >
 > V3 stays as historical reference; this document **overrides V3 wherever they conflict about SMART_ANALYSIS**.
+
+---
+
+## 0.x 文档版本与适用范围
+
+本节说明“V4 规范”的版本号含义，避免 Codex / Orchestrator 混淆历史行为。
+
+- **主版本（4）**：表示 Orchestrator–MetaHub V4 代。只要主版本仍为 4，就不回退到 V3 行为。
+- **次版本（4.M）**：表示行为/合约级别变更，例如：
+  - 新增/调整 SMART_ANALYSIS JSON 字段或语气规范；
+  - 重新定义 HomeOrchestrator、MetaHub、ExportOrchestrator 的职责边界；
+  - 修改 UI 必须遵守的流转规则（如占位气泡、错误文案）。
+- **补丁版本（4.M.m）**：仅文档澄清、示例补充、排版/术语统一，不改变行为。
+
+工程协作约定：
+
+- Orchestrator / Codex 在实现时以**当前文件顶部的版本号**为准，忽略 V3 及更早文档。
+- 若实现时发现行为与本规范不一致，优先认定为“实现待修复”，而非“V4 规范只是建议”。
+- 历史变更详情参见文末《附录 A：变更记录（仅供追溯，不具备约束力）》。
+- **规则**：每次 doc-sync 修改本文件，必须同步更新顶部版本号 + 附录 A 变更记录。
 
 ---
 
@@ -182,6 +209,29 @@ For SMART_ANALYSIS, the prompt must ensure:
     * `stage`: string
     * `risk_level`: string
 
+### SMART_ANALYSIS 人设与视角（Persona & POV）
+
+- 系统人设：**AI 销售助手**，面向销售同学复盘与客户的对话/邮件/会议，不扮演真实销售本人。
+- 视角约定：
+  - 优先使用**第二人称 + 角色名**：`你作为销售顾问… / 你在本次对话中…`
+  - 也可以使用**第三人称**：`销售顾问在本次通话中向客户介绍了…`
+  - **禁止**用第一人称“我”来扮演销售本人（例如：`我在电话里向客户介绍了…`，其中“我”指销售）。
+- SMART_ANALYSIS 输出的是**对对话的分析报告卡片**，而不是销售本人写的复盘日记，更不是继续和客户聊天。
+
+字段口吻（在 JSON 字段说明中遵守）：
+
+- `short_summary`：1–2 句总结，语气为 AI 帮销售复盘，例如：`你本次与张总主要沟通了…` 或 `销售顾问向客户介绍了…`，不要写成销售第一人称经历。
+- `highlights`：亮点要点数组，通常 2–4 条，每条 1 句描述销售做得好的地方，例如：`你及时捕捉到客户关心的…`；不要写成“我向客户展示了…”.
+- `actionable_tips`：后续建议数组，通常 2–4 条，每条 1 句，用建议口吻对销售说话，例如：`建议：后续可以安排一次试驾…`。
+- `core_insight` / `sharp_line`：保持助理视角或中立描述，避免“我=销售”。
+
+#### Conciseness & no duplication
+
+- `short_summary`：1–2 句，优先说明“这次沟通主要解决了什么 / 下一步要做什么”，不要复述整段对话。
+- `highlights` / `actionable_tips` 等数组字段：每个数组建议 2–3 条，要点最多不超过 5 条；每条尽量 1 句，说清一个点即可。
+- 避免在不同字段之间重复同一条信息（例如同一“亮点”不要同时出现在 `highlights` 和 `actionable_tips` 中）。
+- 不要输出长篇段落或包含二级小标题的 Markdown 文本；结构由 Orchestrator 在本地拼装。
+
 * Prompt may include **short comments** explaining each field, but must **not**:
 
   * Output multiple JSON documents.
@@ -280,6 +330,16 @@ In `HomeOrchestratorImpl.streamChat` for SMART_ANALYSIS:
 
    * Only render sections that have content.
    * **Do not** render empty headings or placeholder labels.
+
+#### SMART Markdown hygiene（仅 SMART_ANALYSIS）
+
+- SMART 模式下，Orchestrator 负责将单个 JSON 对象转换为**可阅读的分析卡片**，而不是原样把 LLM 的长文塞给 UI。
+- 建议（可用简单 heuristics 实现）：
+  - 每个分节（需求与痛点 / 机会与风险 / 建议与行动等）默认展示 2–3 条要点，最多不超过 5 条。
+  - 对明显重复或高度相似的要点做去重；同一条 insight 不要在多个分节重复出现。
+  - 规范编号：若分节使用有序列表，最终渲染为连续的 `1, 2, 3...`；避免 `1 3 4 4`、`11)1)` 等累积痕迹。
+  - 若某个分节没有任何有意义内容，则整节隐藏（不渲染空标题）。
+- 这些清理逻辑属于 Orchestrator 责任层，不应该放到 ViewModel / UI 中。
 
 7. Return this Markdown as a `ChatStreamEvent.Completed(text = markdown)` to the ViewModel.
 
@@ -456,5 +516,30 @@ Behavior:
    * 当前 ViewModel 仍在 SMART_ANALYSIS Completed 文本上尝试再解析元数据（若无 JSON 将跳过），MetaHub 入库以 Orchestrator 解析为准。
    * GENERAL 首条回复仍有历史 scaffold，后续应按 V4"轻量提示"收敛。
    * GENERAL 元数据解析职责：ViewModel 负责（`handleGeneralChatMetadata`），与 SMART_ANALYSIS（Orchestrator 负责）分离。此设计是故意的：GENERAL 是轻量且可选的，SMART_ANALYSIS 需要严格的 JSON-only 输出和集中格式化。
+
+---
+
+## 附录 A：变更记录（仅供追溯，非规范）
+
+> ⚠️ **说明（给 Orchestrator / Codex）**  
+> - 本附录仅用于追溯“为什么当时这么改”，**不具备规范约束力**。  
+> - 在推导当前行为时，请只以正文章节为准；除非用户明确询问历史行为，否则不需要阅读本附录。
+
+### v4.1.0（2025-12-10）
+
+- **Persona / POV 调整**
+  - 明确 SMART_ANALYSIS 人设为「AI 销售助手」，面向销售同学复盘，不扮演真实销售本人。
+  - JSON 字段与 Markdown 示例统一使用“你/销售顾问”或第三人称描述，禁止“我=销售”视角。
+- **SMART 卡片长度与去重规则**
+  - 增加对每个分节的推荐长度（每节 2–3 条要点，最多 5 条）。
+  - 明确 Orchestrator 负责去重、编号修复与隐藏空分节，ViewModel 不对 SMART 文本做复杂清理。
+- **实现层指引补充**
+  - 约定 SMART_ANALYSIS 的 `ChatStreamEvent.Completed.fullText` 必须是已清理好的分析卡，GENERAL 继续使用 `sanitizeAssistantOutput`。
+  - 对 GENERAL / SMART 清理职责分别划归 ViewModel / Orchestrator。
+
+### v4.0.0（2025-xx-xx）
+
+- 初版 V4 规范：定义 JSON-only SMART_ANALYSIS、MetaHub SessionMetadata 结构、HomeOrchestrator 责任，以及与 V3 的职责切换。
+- 明确 V3 文档归档，仅作历史背景参考。
 
 ---

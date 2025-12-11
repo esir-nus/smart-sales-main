@@ -184,6 +184,7 @@ class HomeStreamingDedupTest {
         val assistant = viewModel.uiState.value.chatMessages.first { it.role == ChatMessageRole.ASSISTANT }
         assertEquals("这里是可见内容", assistant.content.trim())
         assertTrue(assistant.rawContent?.contains("<Metadata>") == true)
+        assertTrue(assistant.rawContent?.contains("<Visible2User>") == true)
     }
 
     @Test

@@ -308,12 +308,10 @@ class HomeScreenViewModel @Inject constructor(
         val bucket = classifyUserInput(goal.ifBlank { _uiState.value.inputText }, _uiState.value.chatMessages)
         val target = findSmartAnalysisPrimaryContent(goal)
         if (target == null) {
-            // 仅第一次给出提示，之后静默失败（不再刷屏）
             if (!hasShownLowInfoSmartAnalysisHint) {
                 hasShownLowInfoSmartAnalysisHint = true
-                appendAssistantMessage(
-                    content = "当前对话内容太少，我没法做有价值的智能分析。\n建议先粘贴一段对话、邮件或会议记录，然后再点击「智能分析」。"
-                )
+                // 低信息直接提示 UI，不生成助手气泡
+                _uiState.update { it.copy(snackbarMessage = "当前内容太少，无法智能分析，请先粘贴对话或纪要再试。") }
             }
             _uiState.update { it.copy(isSmartAnalysisMode = false, selectedSkill = null, inputText = "") }
             return
@@ -1166,35 +1164,6 @@ class HomeScreenViewModel @Inject constructor(
             quickSkillDefinitionsById[id]
         }
         val quickSkillId = quickSkill?.id
-        if (quickSkillId == null) {
-            when (classifyUserInput(content, _uiState.value.chatMessages)) {
-                InputBucket.NOISE -> {
-                    _uiState.update {
-                        it.copy(
-                            inputText = "",
-                            isSending = false,
-                            isStreaming = false,
-                            isInputBusy = false,
-                            isBusy = false,
-                            snackbarMessage = null,
-                            chatErrorMessage = null,
-                            showWelcomeHero = false
-                        )
-                    }
-                    // 仅第一次给出提示，之后静默失败（不再刷屏）
-                    if (!hasShownLowInfoHint) {
-                        hasShownLowInfoHint = true
-                        appendAssistantMessage(
-                            content = "我主要帮你分析销售对话、邮件或会议纪要。请粘贴一段对话、邮件，或描述你与客户的沟通场景，我再帮你分析。"
-                        )
-                    }
-                    return
-                }
-
-                InputBucket.SHORT_RELEVANT,
-                InputBucket.RICH -> Unit
-            }
-        }
         val userMessage = createUserMessage(userDisplayText ?: content)
         val isSmartAnalysis = quickSkillId == QuickSkillId.SMART_ANALYSIS
         val assistantPlaceholder = if (isSmartAnalysis) {
@@ -1295,39 +1264,30 @@ class HomeScreenViewModel @Inject constructor(
                         // 完成：关闭 streaming，最终清理和去重
                         val rawFullText = event.fullText
                         val isGeneralChat = request.quickSkillId == null
-                        val isFirstAssistant = request.isFirstAssistantReply && !firstAssistantProcessed
+                        val isFirstGeneralReply = isGeneralChat && request.isFirstAssistantReply && !firstAssistantProcessed
+                        
+                        // 首条 GENERAL 回复处理开始时，无条件标记为已处理（确保后续回复不会被当作首条）
+                        if (isGeneralChat && isFirstGeneralReply) {
+                            firstAssistantProcessed = true
+                        }
                         
                         // 提取 GENERAL 的 channels（Visible2User 和 Metadata）
                         val channels = if (isGeneralChat) extractGeneralChannels(rawFullText) else GeneralChannels(null, null, null)
                         val metadataJson = channels.metadataJson
                         
                         // 仅首条 GENERAL 回复允许解析并写入元数据
-                        val generalMeta = if (isGeneralChat && isFirstAssistant) {
-                            // 优先使用 <Metadata> 标签内的 JSON，否则回退到 JSON tail（兼容旧格式）
-                            val jsonToParse = if (!metadataJson.isNullOrBlank()) {
-                                metadataJson
-                            } else {
-                                findLastJsonBlock(rawFullText)?.text
-                            }
-                            if (!jsonToParse.isNullOrBlank()) {
-                                handleGeneralChatMetadata(jsonToParse)
-                            } else {
-                                null
-                            }
+                        val generalMeta = if (isFirstGeneralReply) {
+                            handleGeneralChatMetadata(rawFullText, metadataJson)
                         } else {
                             null
                         }
                         
-                        // 首条 GENERAL 回复处理完成后，无条件标记为已处理
-                        if (isGeneralChat && isFirstAssistant) {
-                            firstAssistantProcessed = true
-                        }
-                        
                         val latestMeta = generalMeta ?: runCatching { metaHub.getSession(sessionId) }.getOrNull()
+                        
+                        // <Visible2User> 驱动显示，rawContent 保留原始文本（含标签）
                         val visibleText = channels.visibleText
-                        val fallbackRaw = if (isSmartAnalysis) rawFullText else stripTrailingJsonFromGeneralReply(rawFullText)
-                        val baseText = visibleText ?: fallbackRaw
-                        val sanitized = if (isSmartAnalysis) rawFullText else sanitizeAssistantOutput(baseText, isSmartAnalysis)
+                        val displaySource = visibleText ?: rawFullText
+                        val sanitized = if (isSmartAnalysis) rawFullText else sanitizeAssistantOutput(displaySource, isSmartAnalysis)
                         // SMART_ANALYSIS 已由 Orchestrator 生成最终 Markdown，这里直接透传
                         val cleaned = if (isSmartAnalysis) {
                             sanitized
@@ -1362,14 +1322,14 @@ class HomeScreenViewModel @Inject constructor(
                             val display = displayAssistantText(raw = rawFullText, sanitized = cleaned)
                             msg.copy(
                                 content = display,
-                                rawContent = rawFullText,
+                                rawContent = rawFullText, // 保留原始文本（含所有标签）
                                 sanitizedContent = cleaned,
                                 isStreaming = false
                             )
                         }
                         onCompleted(cleaned)
                         _uiState.update { it.copy(isSending = false, isStreaming = false, isInputBusy = false, isBusy = false) }
-                        if (isFirstAssistant) {
+                        if (isFirstGeneralReply) {
                             // 自动标题仅在首条助手回复时尝试，优先 Rename 渠道，缺失时回退元数据
                             maybeResolveSessionTitle(latestMeta, channels.renameCandidate)
                         }
@@ -2619,12 +2579,23 @@ class HomeScreenViewModel @Inject constructor(
             .replace(Regex("[\\p{Punct}\\s]+"), "")
     }
 
+    /**
+     * 处理 GENERAL 首条回复的元数据：
+     * - 优先尝试 <Metadata> 标签内的 JSON，失败则回退到末尾 JSON 块（兼容旧格式）
+     * - 仅当存在有效字段时写入 MetaHub
+     */
     private suspend fun handleGeneralChatMetadata(
-        metadataJson: String
+        rawFullText: String,
+        metadataJson: String?
     ): SessionMetadata? {
-        // 解析传入的 metadata JSON
-        val metadata = parseGeneralChatMetadata(metadataJson, sessionId)
-        if (metadata == null || !metadata.hasMeaningfulGeneralFields()) return null
+        val candidates = buildList {
+            metadataJson?.takeIf { it.isNotBlank() }?.let { add(it) }
+            findLastJsonBlock(rawFullText)?.text?.let { tail ->
+                if (tail != metadataJson) add(tail)
+            }
+        }
+        val parsed = candidates.firstNotNullOfOrNull { parseGeneralChatMetadata(it, sessionId) }
+        val metadata = parsed?.takeIf { it.hasMeaningfulGeneralFields() } ?: return null
         val patch = metadata.copy(
             latestMajorAnalysisSource = AnalysisSource.GENERAL_FIRST_REPLY,
             latestMajorAnalysisAt = System.currentTimeMillis()

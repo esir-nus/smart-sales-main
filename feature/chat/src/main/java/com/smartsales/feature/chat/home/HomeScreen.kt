@@ -92,9 +92,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
@@ -105,6 +106,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.history.ChatHistoryTestTags
 import kotlinx.coroutines.delay
@@ -225,6 +230,13 @@ fun HomeScreenRoute(
             viewModel.setSession(sessionId, allowHero = false)
             showHistoryPanel = false
         },
+        onHistorySessionLongPress = viewModel::onHistorySessionLongPress,
+        onHistoryActionPinToggle = viewModel::onHistorySessionPinToggle,
+        onHistoryActionRenameStart = viewModel::onHistoryActionRenameStart,
+        onHistoryActionRenameConfirm = { sessionId, title -> viewModel.onHistorySessionRenameConfirmed(sessionId, title) },
+        onHistoryActionDelete = viewModel::onHistorySessionDelete,
+        onHistoryActionDismiss = viewModel::onHistoryActionDismiss,
+        onHistoryRenameTextChange = viewModel::onHistoryRenameTextChange,
         onToggleDebugMetadata = viewModel::toggleDebugMetadata,
         onToggleRawAssistantOutput = viewModel::setShowRawAssistantOutput,
         onDismissKeyboard = dismissKeyboard,
@@ -233,9 +245,87 @@ fun HomeScreenRoute(
             onInputFocusChanged(focused)
         }
     )
+
+    val actionSession = state.historyActionSession
+    if (actionSession != null) {
+        ModalBottomSheet(
+            onDismissRequest = onHistoryActionDismiss,
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SheetAction(
+                    label = if (actionSession.pinned) "取消置顶" else "置顶会话",
+                    onClick = { onHistoryActionPinToggle(actionSession.id) }
+                )
+                SheetAction(
+                    label = "重命名",
+                    onClick = { onHistoryActionRenameStart() }
+                )
+                SheetAction(
+                    label = "删除",
+                    onClick = { onHistoryActionDelete(actionSession.id) }
+                )
+                HorizontalDivider()
+                SheetAction(
+                    label = "取消",
+                    onClick = onHistoryActionDismiss
+                )
+            }
+        }
+    }
+
+    if (state.showHistoryRenameDialog && actionSession != null) {
+        AlertDialog(
+            onDismissRequest = onHistoryActionDismiss,
+            title = { Text(text = "重命名会话") },
+            text = {
+                OutlinedTextField(
+                    value = state.historyRenameText,
+                    onValueChange = onHistoryRenameTextChange,
+                    label = { Text(text = "标题") },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onHistoryActionRenameConfirm(actionSession.id, state.historyRenameText)
+                        onHistoryActionDismiss()
+                    },
+                    enabled = state.historyRenameText.isNotBlank()
+                ) {
+                    Text(text = "保存标题")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onHistoryActionDismiss) {
+                    Text(text = "取消")
+                }
+            }
+        )
+    }
 }
 
-@OptIn(ExperimentalMaterialApi::class, ExperimentalAnimationApi::class)
+@Composable
+private fun SheetAction(label: String, onClick: () -> Unit) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterialApi::class, ExperimentalAnimationApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     state: HomeUiState,
@@ -262,6 +352,13 @@ fun HomeScreen(
     onDismissHistoryPanel: () -> Unit = {},
     historySessions: List<SessionListItemUi> = emptyList(),
     onHistorySessionSelected: (String) -> Unit = {},
+    onHistorySessionLongPress: (String) -> Unit = {},
+    onHistoryActionPinToggle: (String) -> Unit = {},
+    onHistoryActionRenameStart: () -> Unit = {},
+    onHistoryActionRenameConfirm: (String, String) -> Unit = { _, _ -> },
+    onHistoryActionDelete: (String) -> Unit = {},
+    onHistoryActionDismiss: () -> Unit = {},
+    onHistoryRenameTextChange: (String) -> Unit = {},
     onToggleDebugMetadata: () -> Unit = {},
     onToggleRawAssistantOutput: (Boolean) -> Unit = {},
     onDismissKeyboard: () -> Unit = {},
@@ -389,6 +486,7 @@ fun HomeScreen(
                     // TODO(hardware): 接入真实设备状态后更新此处占位卡片
                     deviceSnapshot = state.deviceSnapshot,
                     onSessionSelected = onHistorySessionSelected,
+                    onSessionLongPress = onHistorySessionLongPress,
                     onUserCenterClick = onProfileClicked
                 )
             }
@@ -1637,11 +1735,13 @@ private fun ScrollToLatestButton(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun HistoryDrawerContent(
     sessions: List<SessionListItemUi>,
     currentSessionId: String,
     deviceSnapshot: DeviceSnapshotUi?,
     onSessionSelected: (String) -> Unit,
+    onSessionLongPress: (String) -> Unit,
     onUserCenterClick: () -> Unit
 ) {
     Column(
@@ -1676,7 +1776,10 @@ private fun HistoryDrawerContent(
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onSessionSelected(session.id) }
+                            .combinedClickable(
+                                onClick = { onSessionSelected(session.id) },
+                                onLongClick = { onSessionLongPress(session.id) }
+                            )
                             .testTag("${HomeScreenTestTags.HISTORY_ITEM_PREFIX}${session.id}"),
                         color = MaterialTheme.colorScheme.surface,
                         tonalElevation = if (isCurrent) 4.dp else 1.dp,

@@ -186,6 +186,50 @@ class HomeSessionListViewModelTest {
         assertTrue(ids.size >= 3) // 包含默认会话
     }
 
+    @Test
+    fun `history pin toggle moves session to top`() = runTest(dispatcher) {
+        val second = sessionRepository.createNewChatSession()
+        sessionRepository.upsert(
+            second.copy(
+                updatedAtMillis = sessionRepository.summaries.value.first().updatedAtMillis - 10
+            )
+        )
+        advanceUntilIdle()
+
+        viewModel.onHistorySessionPinToggle(second.id)
+        advanceUntilIdle()
+
+        val sessions = viewModel.uiState.value.sessionList
+        assertEquals(second.id, sessions.first().id)
+        assertTrue(sessionRepository.findById(second.id)?.pinned == true)
+    }
+
+    @Test
+    fun `history rename sets user edited flag`() = runTest(dispatcher) {
+        val currentId = viewModel.uiState.value.currentSession.id
+        viewModel.onHistorySessionRenameConfirmed(currentId, "手动改名")
+        advanceUntilIdle()
+
+        val updated = sessionRepository.findById(currentId)
+        assertEquals("手动改名", updated?.title)
+        assertTrue(updated?.isTitleUserEdited == true)
+    }
+
+    @Test
+    fun `history delete switches away from removed current session`() = runTest(dispatcher) {
+        val originalId = viewModel.uiState.value.currentSession.id
+        val other = sessionRepository.createNewChatSession()
+        sessionRepository.upsert(other)
+        advanceUntilIdle()
+
+        viewModel.onHistorySessionDelete(originalId)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.currentSession.id != originalId)
+        assertTrue(state.sessionList.none { it.id == originalId })
+    }
+
     private class FakeAiChatService : AiChatService {
         override fun streamChat(request: ChatRequest): Flow<ChatStreamEvent> = flowOf()
     }

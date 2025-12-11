@@ -200,7 +200,10 @@ data class HomeUiState(
     val smartReasoningText: String? = null,
     val isInputFocused: Boolean = false,
     val salesPersona: SalesPersona? = null,
-    val showRawAssistantOutput: Boolean = false
+    val showRawAssistantOutput: Boolean = false,
+    val historyActionSession: SessionListItemUi? = null,
+    val showHistoryRenameDialog: Boolean = false,
+    val historyRenameText: String = ""
 )
 
 /** 外部依赖（除 AiChatService 外保留原有 stub）。 */
@@ -1021,6 +1024,118 @@ class HomeScreenViewModel @Inject constructor(
         _uiState.update { it.copy(quickSkills = skills) }
     }
 
+    fun onHistorySessionLongPress(sessionId: String) {
+        val target = _uiState.value.sessionList.firstOrNull { it.id == sessionId } ?: return
+        _uiState.update {
+            it.copy(
+                historyActionSession = target,
+                showHistoryRenameDialog = false,
+                historyRenameText = target.title
+            )
+        }
+    }
+
+    fun onHistoryActionDismiss() {
+        _uiState.update {
+            it.copy(
+                historyActionSession = null,
+                showHistoryRenameDialog = false,
+                historyRenameText = ""
+            )
+        }
+    }
+
+    fun onHistoryActionRenameStart() {
+        val target = _uiState.value.historyActionSession ?: return
+        _uiState.update {
+            it.copy(
+                showHistoryRenameDialog = true,
+                historyRenameText = target.title
+            )
+        }
+    }
+
+    fun onHistoryRenameTextChange(text: String) {
+        _uiState.update { it.copy(historyRenameText = text) }
+    }
+
+    fun onHistorySessionPinToggle(sessionId: String) {
+        viewModelScope.launch {
+            val existing = sessionRepository.findById(sessionId) ?: return@launch
+            val toggled = existing.copy(pinned = !existing.pinned)
+            sessionRepository.upsert(toggled)
+            latestSessionSummaries = latestSessionSummaries.map { summary ->
+                if (summary.id == sessionId) toggled else summary
+            }
+            applySessionList()
+            _uiState.update { state ->
+                val current = state.currentSession
+                val updatedCurrent = if (current.id == sessionId) {
+                    current.copy()
+                } else current
+                state.copy(currentSession = updatedCurrent)
+            }
+            onHistoryActionDismiss()
+        }
+    }
+
+    fun onHistorySessionRenameConfirmed(sessionId: String, newTitle: String) {
+        val trimmed = newTitle.trim()
+        if (trimmed.isEmpty()) return
+        viewModelScope.launch {
+            sessionRepository.updateTitle(sessionId, trimmed, isUserEdited = true)
+            latestSessionSummaries = latestSessionSummaries.map { summary ->
+                if (summary.id == sessionId) {
+                    summary.copy(title = trimmed, isTitleUserEdited = true)
+                } else summary
+            }
+            applySessionList()
+            _uiState.update { state ->
+                val current = state.currentSession
+                val updatedCurrent = if (current.id == sessionId) {
+                    current.copy(title = trimmed)
+                } else current
+                state.copy(
+                    currentSession = updatedCurrent,
+                    historyActionSession = state.historyActionSession?.takeIf { it.id == sessionId }?.copy(title = trimmed),
+                    showHistoryRenameDialog = false,
+                    historyRenameText = ""
+                )
+            }
+        }
+    }
+
+    fun onHistorySessionDelete(sessionId: String) {
+        viewModelScope.launch {
+            runCatching { sessionRepository.delete(sessionId) }
+            runCatching { chatHistoryRepository.deleteSession(sessionId) }
+            latestSessionSummaries = latestSessionSummaries.filterNot { it.id == sessionId }
+            applySessionList()
+            val deletedCurrent = sessionId == this@HomeScreenViewModel.sessionId
+            onHistoryActionDismiss()
+            if (deletedCurrent) {
+                val next = latestSessionSummaries.firstOrNull()
+                    ?: sessionRepository.createNewChatSession().also { created ->
+                        latestSessionSummaries = latestSessionSummaries + created
+                    }
+                this@HomeScreenViewModel.sessionId = next.id
+                firstAssistantProcessed = false
+                _uiState.update {
+                    it.copy(
+                        currentSession = CurrentSessionUi(
+                            id = next.id,
+                            title = next.title,
+                            isTranscription = next.isTranscription
+                        ),
+                        chatMessages = emptyList(),
+                        showWelcomeHero = true
+                    )
+                }
+                loadSession(next.id)
+            }
+        }
+    }
+
     fun onNewChatClicked() {
         viewModelScope.launch {
             val newSession = sessionRepository.createNewChatSession()
@@ -1103,7 +1218,15 @@ class HomeScreenViewModel @Inject constructor(
                     summary.title.startsWith(SessionTitlePolicy.LEGACY_TRANSCRIPTION_PREFIX)
             )
         }
-        _uiState.update { it.copy(sessionList = mapped) }
+        _uiState.update { state ->
+            val updatedActionSession = state.historyActionSession?.let { current ->
+                mapped.firstOrNull { it.id == current.id }
+            }
+            state.copy(
+                sessionList = mapped,
+                historyActionSession = updatedActionSession
+            )
+        }
     }
 
     private fun applyAudioSummary(syncState: MediaSyncState) {

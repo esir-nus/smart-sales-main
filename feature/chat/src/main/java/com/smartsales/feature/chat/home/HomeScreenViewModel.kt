@@ -1295,8 +1295,10 @@ class HomeScreenViewModel @Inject constructor(
                         val isFirstAssistant = request.isFirstAssistantReply && !firstAssistantProcessed
                         val generalMeta = if (isGeneralChat && isFirstAssistant) handleGeneralChatMetadata(rawFullText) else null
                         val latestMeta = generalMeta ?: runCatching { metaHub.getSession(sessionId) }.getOrNull()
-                        val rawDisplay = if (isSmartAnalysis) rawFullText else stripTrailingJsonFromGeneralReply(rawFullText)
-                        val sanitized = if (isSmartAnalysis) rawFullText else sanitizeAssistantOutput(rawDisplay, isSmartAnalysis)
+                        val visibleText = if (isSmartAnalysis) null else extractVisible2User(rawFullText)
+                        val fallbackRaw = if (isSmartAnalysis) rawFullText else stripTrailingJsonFromGeneralReply(rawFullText)
+                        val baseText = visibleText ?: fallbackRaw
+                        val sanitized = if (isSmartAnalysis) rawFullText else sanitizeAssistantOutput(baseText, isSmartAnalysis)
                         // SMART_ANALYSIS 已由 Orchestrator 生成最终 Markdown，这里直接透传
                         val cleaned = if (isSmartAnalysis) {
                             sanitized
@@ -1514,6 +1516,20 @@ class HomeScreenViewModel @Inject constructor(
     ): String {
         val rawCandidate = if (shouldShowRaw()) raw else null
         return rawCandidate ?: sanitized ?: raw.orEmpty()
+    }
+
+    /** 提取 <Visible2User> 内部文本，若不存在则返回 null。 */
+    private fun extractVisible2User(raw: String): String? {
+        val regex = Regex("<\\s*Visible2User\\s*>([\\s\\S]*?)<\\s*/\\s*Visible2User\\s*>", RegexOption.IGNORE_CASE)
+        val match = regex.find(raw) ?: return null
+        return match.groupValues.getOrNull(1)?.trim()?.takeIf { it.isNotBlank() }
+    }
+
+    /** 提取 <Metadata> 包裹的 JSON 文本，若不存在则返回 null。 */
+    private fun extractMetadataJson(raw: String): String? {
+        val regex = Regex("<\\s*Metadata\\s*>([\\s\\S]*?)<\\s*/\\s*Metadata\\s*>", RegexOption.IGNORE_CASE)
+        val match = regex.find(raw) ?: return null
+        return match.groupValues.getOrNull(1)?.trim()?.takeIf { it.isNotBlank() }
     }
 
     private fun applyAssistantDisplay(
@@ -1855,9 +1871,11 @@ class HomeScreenViewModel @Inject constructor(
 
         // 第三步：剥离可能泄露的规则标题/提示语，仅针对 GENERAL
         val echoCleaned = if (isSmartAnalysis) cleanedAccumulation else stripPromptEchoSections(cleanedAccumulation)
+        // 同时去掉未消费的标签，避免 GENERAL fallback 时展示标签
+        val tagCleaned = if (isSmartAnalysis) echoCleaned else stripTagContainers(echoCleaned)
         
         // 第四步：标准去重处理
-        val lines = echoCleaned.lines()
+        val lines = tagCleaned.lines()
         val result = mutableListOf<String>()
         val seenHeadings = mutableSetOf<String>()
         val seenBulletsByHeading = mutableMapOf<String, MutableSet<String>>()
@@ -2086,6 +2104,22 @@ class HomeScreenViewModel @Inject constructor(
             output += line
         }
         return output.dropWhile { it.isBlank() }.joinToString("\n").trim()
+    }
+
+    /**
+     * 去掉未消费的标签容器（Visible2User/Metadata/Reasoning/DocReference），仅保留其内部文本。
+     * 用于 GENERAL fallback 场景，避免标签本身出现在展示文本。
+     */
+    private fun stripTagContainers(text: String): String {
+        var result = text
+        val tags = listOf("Visible2User", "Metadata", "Reasoning", "DocReference")
+        tags.forEach { tag ->
+            val regex = Regex("<\\s*$tag\\s*>([\\s\\S]*?)<\\s*/\\s*$tag\\s*>", RegexOption.IGNORE_CASE)
+            result = regex.replace(result) { matchResult ->
+                matchResult.groupValues.getOrNull(1) ?: ""
+            }
+        }
+        return result
     }
 
     /**
@@ -2512,8 +2546,12 @@ class HomeScreenViewModel @Inject constructor(
     private suspend fun handleGeneralChatMetadata(
         rawFullText: String
     ): SessionMetadata? {
-        val jsonBlock = findLastJsonBlock(rawFullText) ?: return null
-        val metadata = parseGeneralChatMetadata(jsonBlock.text, sessionId)
+        // 优先解析 <Metadata> 标签内的 JSON；缺失或解析失败时回退到“最后一个 JSON 对象”
+        val tagJson = extractMetadataJson(rawFullText)
+        val tagMeta = tagJson?.let { parseGeneralChatMetadata(it, sessionId) }
+        val jsonBlock = if (tagMeta == null) findLastJsonBlock(rawFullText) else null
+        val fallbackMeta = jsonBlock?.let { parseGeneralChatMetadata(it.text, sessionId) }
+        val metadata = tagMeta ?: fallbackMeta
         if (metadata == null || !metadata.hasMeaningfulGeneralFields()) return null
         val patch = metadata.copy(
             latestMajorAnalysisSource = AnalysisSource.GENERAL_FIRST_REPLY,

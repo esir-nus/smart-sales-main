@@ -169,6 +169,24 @@ class HomeStreamingDedupTest {
     }
 
     @Test
+    fun `visible2user tag drives display while raw keeps tags`() = runTest(dispatcher) {
+        val raw = """
+            <Visible2User>这里是可见内容</Visible2User>
+            <Metadata>{"main_person":"罗总"}</Metadata>
+            <Reasoning>内部思考</Reasoning>
+        """.trimIndent()
+        orchestrator.enqueue(ChatStreamEvent.Completed(raw))
+
+        viewModel.onInputChanged("生成总结")
+        viewModel.onSendMessage()
+        advanceUntilIdle()
+
+        val assistant = viewModel.uiState.value.chatMessages.first { it.role == ChatMessageRole.ASSISTANT }
+        assertEquals("这里是可见内容", assistant.content.trim())
+        assertTrue(assistant.rawContent?.contains("<Metadata>") == true)
+    }
+
+    @Test
     fun `multiple rounds keep one assistant bubble per turn`() = runTest(dispatcher) {
         orchestrator.enqueue(
             ChatStreamEvent.Delta("hi"),

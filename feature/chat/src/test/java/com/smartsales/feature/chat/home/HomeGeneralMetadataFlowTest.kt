@@ -177,6 +177,48 @@ class HomeGeneralMetadataFlowTest {
     }
 
     @Test
+    fun `metadata tag is preferred over trailing json`() = runTest(dispatcher) {
+        val tagged = """
+            <Visible2User>这条只展示给用户</Visible2User>
+            <Metadata>{"main_person":"李总","short_summary":"带标签元数据","summary_title_6chars":"李总标签"}</Metadata>
+        """.trimIndent()
+        orchestrator.enqueue(ChatStreamEvent.Completed(tagged))
+
+        viewModel.onInputChanged("客户询问方案")
+        viewModel.onSendMessage()
+        advanceUntilIdle()
+
+        val sessionId = viewModel.uiState.value.currentSession.id
+        val stored = metaHub.getSession(sessionId)
+        assertNotNull(stored)
+        stored!!
+        assertEquals("李总", stored.mainPerson)
+        assertEquals("带标签元数据", stored.shortSummary)
+        assertEquals("李总标签", stored.summaryTitle6Chars)
+    }
+
+    @Test
+    fun `invalid metadata tag falls back to last json`() = runTest(dispatcher) {
+        val text = """
+            <Visible2User>请参考</Visible2User>
+            <Metadata>{invalid-json}</Metadata>
+            {"main_person":"赵总","short_summary":"尾部元数据"}
+        """.trimIndent()
+        orchestrator.enqueue(ChatStreamEvent.Completed(text))
+
+        viewModel.onInputChanged("客户追加信息")
+        viewModel.onSendMessage()
+        advanceUntilIdle()
+
+        val sessionId = viewModel.uiState.value.currentSession.id
+        val stored = metaHub.getSession(sessionId)
+        assertNotNull(stored)
+        stored!!
+        assertEquals("赵总", stored.mainPerson)
+        assertEquals("尾部元数据", stored.shortSummary)
+    }
+
+    @Test
     fun `general bubble hides json tail`() = runTest(dispatcher) {
         val jsonTail =
             """{"main_person":"罗总","short_summary":"首次到店沟通","summary_title_6chars":"罗总首沟"}"""

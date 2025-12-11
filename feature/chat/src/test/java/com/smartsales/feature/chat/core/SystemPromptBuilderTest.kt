@@ -34,6 +34,8 @@ class SystemPromptBuilderTest {
         assertTrue(prompt.contains("经验水平：中级"))
         assertTrue(prompt.contains("表达风格：跳跃"))
         assertFalse(prompt.contains("你所在的行业"))
+        assertTrue(prompt.contains("<Visible2User>"))
+        assertTrue(prompt.contains("<Metadata>"))
     }
 
     @Test

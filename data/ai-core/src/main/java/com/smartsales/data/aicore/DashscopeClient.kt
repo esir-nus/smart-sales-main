@@ -25,7 +25,7 @@ data class DashscopeRequest(
     val model: String,
     val messages: List<DashscopeMessage>,
     val temperature: Float = 0.3f,
-    val incrementalOutput: Boolean = false
+    val incrementalOutput: Boolean = true
 )
 
 data class DashscopeCompletion(

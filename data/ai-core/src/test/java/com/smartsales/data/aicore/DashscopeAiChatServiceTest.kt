@@ -118,6 +118,31 @@ class DashscopeAiChatServiceTest {
         assertTrue(events.last() is AiChatStreamEvent.Completed)
     }
 
+    @Test
+    fun `streamMessage concatenates incremental chunks and sets incremental flag`() = runTest(dispatcher) {
+        val streamingClient = RecordingDashscopeClient()
+        val streamingService = DashscopeAiChatService(
+            dispatchers = FakeDispatcherProvider(dispatcher),
+            dashscopeClient = streamingClient,
+            credentialsProvider = FakeCredentialsProvider(apiKey = "key", model = "qwen"),
+            optionalConfig = Optional.of(
+                AiCoreConfig(
+                    preferFakeAiChat = false,
+                    dashscopeEnableStreaming = true
+                )
+            )
+        )
+        streamingClient.streamChunks = listOf("你", "好", "呀")
+
+        val events = streamingService.streamMessage(
+            AiChatRequest(prompt = "流式增量")
+        ).toList()
+
+        val completed = events.filterIsInstance<AiChatStreamEvent.Completed>().first()
+        assertEquals("你好呀", completed.response.displayText)
+        assertEquals(true, streamingClient.lastRequest?.incrementalOutput)
+    }
+
     private fun <T> Result<T>.assertSuccess(): T =
         when (this) {
             is Result.Success -> data

@@ -48,6 +48,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -138,6 +140,32 @@ class HomeStreamingDedupTest {
         viewModel.setShowRawAssistantOutput(false)
         val sanitizedDisplay = viewModel.uiState.value.chatMessages.first { it.role == ChatMessageRole.ASSISTANT }.content
         assertEquals(sanitized, sanitizedDisplay)
+    }
+
+    @Test
+    fun `general output strips prompt echo and duplicate clauses`() = runTest(dispatcher) {
+        val raw = """
+            # 你的销售画像（供模型理解，不需要给用户复述）
+            - 岗位：销售
+            ## 输入摘要
+            - 用户提问
+            历史对话：
+            用户：之前问过价格
+            最新问题：请跟进客户。
+            请跟进客户。请跟进客户。
+        """.trimIndent()
+        orchestrator.enqueue(ChatStreamEvent.Completed(raw))
+
+        viewModel.onInputChanged("请跟进客户")
+        viewModel.onSendMessage()
+        advanceUntilIdle()
+
+        val assistant = viewModel.uiState.value.chatMessages.first { it.role == ChatMessageRole.ASSISTANT }
+        assertFalse(assistant.content.contains("输入摘要"))
+        assertFalse(assistant.content.contains("历史对话"))
+        assertFalse(assistant.content.contains("最新问题"))
+        assertEquals("请跟进客户。", assistant.content.trim())
+        assertTrue(assistant.rawContent?.contains("你的销售画像") == true)
     }
 
     @Test

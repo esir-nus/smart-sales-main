@@ -48,6 +48,7 @@ object SystemPromptBuilder {
             appendLine("- 主要沟通渠道：$channel")
             appendLine("- 经验水平：$experience")
             appendLine("- 表达风格：$style")
+            appendLine("- 回答时无需复述以上画像或标题")
         }.trim()
     }
 
@@ -55,8 +56,9 @@ object SystemPromptBuilder {
         if (!isFirstAssistant) {
             return """
             ## 行为（GENERAL 后续回复）
-            - 用简短中文回应当前问题，遵守 persona 语气；不输出 JSON。
-            - 重点回答用户提问，避免长篇或重复。
+            - 用简短中文直接回答当前问题，遵守 persona 语气，不输出 JSON。
+            - 回答区禁止复述规则/标题/“历史对话”“最新问题”等提示语。
+            - 避免重复同一句或同一要点。
             """.trimIndent()
         }
         return """
@@ -66,6 +68,8 @@ object SystemPromptBuilder {
           * 状态B：模糊但有销售味道 → 提 2–4 个澄清问题 + 需要补充的关键信息点，可附 1–2 句澄清话术；JSON 尾巴可用保守/占位值。
           * 状态C：富文本/完整上下文 → 2–3 句总结 + 2–4 条要点/下一步；尽量输出完整 JSON 尾巴。
         - JSON 尾巴规则（仅本次首条回复）：最多一个 JSON 对象，放在最后一行，之后不再有文字；字段仅限会话级（main_person/short_summary/summary_title_6chars/location/stage/risk_level/highlights/actionable_tips/core_insight/sharp_line），不含 persona。
+        - 回答区禁止复述规则/标题/“历史对话”“最新问题”等提示语，避免输出上述规则中的小节标题。
+        - 简短、信息密集，避免同一句或同一要点重复。
         """.trimIndent()
     }
 
@@ -82,5 +86,6 @@ object SystemPromptBuilder {
         - 你是销售助手，对“你”（销售顾问）说话，禁止假装自己是销售本人（不要写“我刚跟客户通话”）。
         - 不编造未给出的金额/折扣/地点/姓名/时间点；信息缺失时直接说明并提示应补充什么。
         - 用简短、信息密集的中文，避免重复同一句或同一要点；遵守 persona 的语气偏好。
+        - 回答区不应包含本规则或“历史对话/最新问题”等提示语。
     """.trimIndent()
 }

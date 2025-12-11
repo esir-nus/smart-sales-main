@@ -1277,12 +1277,13 @@ class HomeScreenViewModel @Inject constructor(
                     is ChatStreamEvent.Delta -> {
                         if (!isSmartAnalysis) {
                             updateAssistantMessage(assistantId) { msg ->
-                                val base = msg.rawContent ?: msg.content
-                                val rawUpdated = streamingDeduplicator.mergeSnapshot(base, event.token)
-                                val display = displayAssistantText(raw = rawUpdated, sanitized = msg.sanitizedContent ?: rawUpdated)
+                                val merged = streamingDeduplicator.mergeSnapshot(
+                                    current = msg.content,
+                                    incoming = event.token
+                                )
                                 msg.copy(
-                                    content = display,
-                                    rawContent = rawUpdated
+                                    content = merged,
+                                    isStreaming = true
                                 )
                             }
                         }
@@ -1327,10 +1328,10 @@ class HomeScreenViewModel @Inject constructor(
                             )
                         )
                         updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
-                            val display = displayAssistantText(raw = rawDisplay, sanitized = cleaned)
+                            val display = displayAssistantText(raw = rawFullText, sanitized = cleaned)
                             msg.copy(
                                 content = display,
-                                rawContent = rawDisplay,
+                                rawContent = rawFullText,
                                 sanitizedContent = cleaned,
                                 isStreaming = false
                             )
@@ -1850,9 +1851,12 @@ class HomeScreenViewModel @Inject constructor(
         // 第二步：检测并清理内容累积模式（更激进的清理）
         // 使用字符级别的检测，确保彻底清理
         val cleanedAccumulation = cleanAccumulatedContentWithCharLevelDetection(fixedNumbering)
+
+        // 第三步：剥离可能泄露的规则标题/提示语，仅针对 GENERAL
+        val echoCleaned = if (isSmartAnalysis) cleanedAccumulation else stripPromptEchoSections(cleanedAccumulation)
         
-        // 第三步：标准去重处理
-        val lines = cleanedAccumulation.lines()
+        // 第四步：标准去重处理
+        val lines = echoCleaned.lines()
         val result = mutableListOf<String>()
         val seenHeadings = mutableSetOf<String>()
         val seenBulletsByHeading = mutableMapOf<String, MutableSet<String>>()
@@ -1983,7 +1987,8 @@ class HomeScreenViewModel @Inject constructor(
         }
 
         val joined = uniqueParas.joinToString("\n\n").trimEnd()
-        return dedupeNumberedLists(joined)
+        val normalized = dedupeNumberedLists(joined)
+        return if (isSmartAnalysis) normalized else collapseDuplicateClauses(normalized)
     }
 
     /**
@@ -2054,6 +2059,52 @@ class HomeScreenViewModel @Inject constructor(
         }
 
         return output.joinToString("\n")
+    }
+
+    /**
+     * 去除模型可能回显的规则/提示语块，避免在 GENERAL 气泡里出现「历史对话」「最新问题」等标题。
+     */
+    private fun stripPromptEchoSections(text: String): String {
+        val markers = listOf(
+            "# 你的销售画像",
+            "## 输入摘要",
+            "## 行为（GENERAL",
+            "## 行为（SMART",
+            "## 安全与口吻",
+            "历史对话：",
+            "最新问题："
+        )
+        val personaBullets = listOf("岗位：", "行业：", "主要沟通渠道：", "经验水平：", "表达风格：")
+        val lines = text.lines()
+        val output = mutableListOf<String>()
+        for (line in lines) {
+            val trimmed = line.trim()
+            val hit = markers.any { marker -> trimmed.startsWith(marker) } ||
+                personaBullets.any { bullet -> trimmed.startsWith("- $bullet") }
+            if (hit) continue
+            output += line
+        }
+        return output.dropWhile { it.isBlank() }.joinToString("\n").trim()
+    }
+
+    /**
+     * 轻量句子去重：针对 GENERAL，将完全相同的句子/短语仅保留一次，避免短答复自我重复。
+     */
+    private fun collapseDuplicateClauses(text: String): String {
+        if (text.isBlank()) return text
+        val segments = text.split(Regex("(?<=[。！？!?；;\\n])"))
+        val seen = mutableSetOf<String>()
+        val kept = mutableListOf<String>()
+        segments.forEach { seg ->
+            val trimmed = seg.trim()
+            if (trimmed.isEmpty()) return@forEach
+            val key = normalizeSentence(trimmed)
+            if (key.isEmpty()) return@forEach
+            if (seen.add(key)) {
+                kept += trimmed
+            }
+        }
+        return kept.joinToString("\n").trim()
     }
 
     /**

@@ -4,6 +4,7 @@
 > **更新时间**: 2025-12-11  
 > **适用范围**: 中国大陆版（北京地域）  
 > **文档目的**: 作为开发时的权威参考文档（Source of Truth）
+> **当前版本**: v1.1.0（对齐 Orchestrator-MetaHub v4.4.0：增量流式 + 标签化输出信道）
 
 ## 目录索引
 
@@ -616,9 +617,19 @@ curl -X POST https://dashscope.aliyuncs.com/api/v1/apps/YOUR_APP_ID/completion \
 
 （待补充流式输出相关文档和示例）
 
+- Home 聊天默认使用 `incremental_output=true`，DashScope 返回的每个 chunk 视为纯增量 delta，客户端按顺序追加得到完整文本。
+- 标签化输出：模型可在聚合后的文本中包含 `<Visible2User>` / `<Metadata>` / `<Reasoning>` / `<DocReference>`，DashScope 仅负责生成带标签的文本，解析与消费由 Orchestrator / MetaHub / ViewModel 完成（详见 Orchestrator-MetaHub v4.4.0）。
+- 深度思考/推理内容可放在 `<Reasoning>`，默认不展示给用户；UI 只展示 `<Visible2User>`。
+
 **相关文档**：
 - [调用智能体应用-流式输出](https://help.aliyun.com/zh/model-studio/call-single-agent-application#30619780ddy93)
 - [调用工作流应用-流式输出](https://help.aliyun.com/zh/model-studio/invoke-workflow-application#6e644d5a7b3ia)
+
+### 标签化输出信道
+
+- DashScope 侧：按 prompt 生成可能包含 `<Visible2User>` / `<Metadata>` / `<Reasoning>` / `<DocReference>` 的文本，不负责解析或分发。
+- 应用侧（Orchestrator / MetaHub / ViewModel）：负责聚合流式文本后解析标签，UI 仅展示 `<Visible2User>`，元数据解析优先 `<Metadata>`。
+- 标签语义与 Orchestrator-MetaHub-V4.md v4.4.0 一致，DashScope SDK/参数无需变更。
 
 ## 知识库检索
 
@@ -785,9 +796,11 @@ curl -X POST https://ep-2zei6917b47eed******.dashscope.cn-beijing.privatelink.al
 - [Prompt工程](https://help.aliyun.com/zh/model-studio/prompt-engineering) - 关于应用内Prompt辅助工具的使用
 - [10分钟给网站添加AI助手](https://help.aliyun.com/zh/model-studio/add-ai-assistant-to-website) - 在前端生产环境下使用
 
+### 变更记录
+- v1.1.0（2025-12-11）：对齐 Orchestrator-MetaHub v4.4.0，明确默认 `incremental_output=true`、流式 delta 追加，以及标签化输出信道（<Visible2User>/<Metadata>/<Reasoning>/<DocReference>）；DashScope 仅生成带标签文本，解析由应用侧负责。
+
 ---
 
 **文档来源**: [阿里云 DashScope API 参考](https://help.aliyun.com/zh/model-studio/dashscope-api-reference)  
 **最后更新**: 2025-12-11  
 **维护说明**: 本文档作为开发时的权威参考，应定期与官方文档同步更新
-

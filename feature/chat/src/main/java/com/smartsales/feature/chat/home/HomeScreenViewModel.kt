@@ -29,6 +29,9 @@ import com.smartsales.feature.chat.BuildConfig
 import com.smartsales.feature.chat.history.toEntity
 import com.smartsales.feature.chat.history.toUiModel
 import com.smartsales.feature.chat.title.SessionTitleResolver
+import com.smartsales.feature.chat.title.TitleCandidate
+import com.smartsales.feature.chat.title.TitleResolver
+import com.smartsales.feature.chat.title.TitleSource
 import com.smartsales.feature.chat.AiSessionRepository as SessionRepository
 import com.smartsales.feature.chat.AiSessionSummary
 import com.smartsales.feature.connectivity.ConnectionState
@@ -1293,9 +1296,35 @@ class HomeScreenViewModel @Inject constructor(
                         val rawFullText = event.fullText
                         val isGeneralChat = request.quickSkillId == null
                         val isFirstAssistant = request.isFirstAssistantReply && !firstAssistantProcessed
-                        val generalMeta = if (isGeneralChat && isFirstAssistant) handleGeneralChatMetadata(rawFullText) else null
+                        
+                        // 提取 GENERAL 的 channels（Visible2User 和 Metadata）
+                        val channels = if (isGeneralChat) extractGeneralChannels(rawFullText) else GeneralChannels(null, null, null)
+                        val metadataJson = channels.metadataJson
+                        
+                        // 仅首条 GENERAL 回复允许解析并写入元数据
+                        val generalMeta = if (isGeneralChat && isFirstAssistant) {
+                            // 优先使用 <Metadata> 标签内的 JSON，否则回退到 JSON tail（兼容旧格式）
+                            val jsonToParse = if (!metadataJson.isNullOrBlank()) {
+                                metadataJson
+                            } else {
+                                findLastJsonBlock(rawFullText)?.text
+                            }
+                            if (!jsonToParse.isNullOrBlank()) {
+                                handleGeneralChatMetadata(jsonToParse)
+                            } else {
+                                null
+                            }
+                        } else {
+                            null
+                        }
+                        
+                        // 首条 GENERAL 回复处理完成后，无条件标记为已处理
+                        if (isGeneralChat && isFirstAssistant) {
+                            firstAssistantProcessed = true
+                        }
+                        
                         val latestMeta = generalMeta ?: runCatching { metaHub.getSession(sessionId) }.getOrNull()
-                        val visibleText = if (isSmartAnalysis) null else extractVisible2User(rawFullText)
+                        val visibleText = channels.visibleText
                         val fallbackRaw = if (isSmartAnalysis) rawFullText else stripTrailingJsonFromGeneralReply(rawFullText)
                         val baseText = visibleText ?: fallbackRaw
                         val sanitized = if (isSmartAnalysis) rawFullText else sanitizeAssistantOutput(baseText, isSmartAnalysis)
@@ -1341,9 +1370,8 @@ class HomeScreenViewModel @Inject constructor(
                         onCompleted(cleaned)
                         _uiState.update { it.copy(isSending = false, isStreaming = false, isInputBusy = false, isBusy = false) }
                         if (isFirstAssistant) {
-                            // 自动标题仅在首条助手回复时尝试，后续 GENERAL/SMART 仅更新元数据不再改名
-                            firstAssistantProcessed = true
-                            maybeGenerateSessionTitle(latestMeta)
+                            // 自动标题仅在首条助手回复时尝试，优先 Rename 渠道，缺失时回退元数据
+                            maybeResolveSessionTitle(latestMeta, channels.renameCandidate)
                         }
                         val previewText = latestMeta?.shortSummary?.takeIf { it.isNotBlank() } ?: cleaned
                         viewModelScope.launch {
@@ -1530,6 +1558,42 @@ class HomeScreenViewModel @Inject constructor(
         val regex = Regex("<\\s*Metadata\\s*>([\\s\\S]*?)<\\s*/\\s*Metadata\\s*>", RegexOption.IGNORE_CASE)
         val match = regex.find(raw) ?: return null
         return match.groupValues.getOrNull(1)?.trim()?.takeIf { it.isNotBlank() }
+    }
+
+    /** GENERAL 回复的 channels 数据（Visible2User 和 Metadata） */
+    private data class GeneralChannels(
+        val visibleText: String?,
+        val metadataJson: String?,
+        val renameCandidate: TitleCandidate?
+    )
+
+    /** 提取 GENERAL 回复中的 channels */
+    private fun extractGeneralChannels(raw: String): GeneralChannels {
+        val visibleText = extractVisible2User(raw)
+        val metadataJson = extractMetadataJson(raw)
+        val rename = parseRenameCandidate(raw, TitleSource.GENERAL)
+        return GeneralChannels(
+            visibleText = visibleText,
+            metadataJson = metadataJson,
+            renameCandidate = rename
+        )
+    }
+
+    /** 解析 <Rename> 标签，提取 Name 与 Title6，供自动改名使用。 */
+    private fun parseRenameCandidate(raw: String, source: TitleSource): TitleCandidate? {
+        val blockRegex = Regex("<\\s*Rename\\s*>([\\s\\S]*?)<\\s*/\\s*Rename\\s*>", RegexOption.IGNORE_CASE)
+        val block = blockRegex.find(raw)?.groupValues?.getOrNull(1)?.trim() ?: return null
+        val nameRegex = Regex("<\\s*Name\\s*>([\\s\\S]*?)<\\s*/\\s*Name\\s*>", RegexOption.IGNORE_CASE)
+        val titleRegex = Regex("<\\s*Title6\\s*>([\\s\\S]*?)<\\s*/\\s*Title6\\s*>", RegexOption.IGNORE_CASE)
+        val name = nameRegex.find(block)?.groupValues?.getOrNull(1)?.trim()
+        val title6 = titleRegex.find(block)?.groupValues?.getOrNull(1)?.trim()
+        if (name.isNullOrBlank() && title6.isNullOrBlank()) return null
+        return TitleCandidate(
+            name = name?.takeIf { it.isNotBlank() },
+            title6 = title6?.takeIf { it.isNotBlank() },
+            source = source,
+            createdAt = System.currentTimeMillis()
+        )
     }
 
     private fun applyAssistantDisplay(
@@ -1859,8 +1923,15 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     private fun sanitizeAssistantOutput(raw: String, isSmartAnalysis: Boolean = false): String {
+        // 去掉 channel 标签但保留其内容（用于 fallback 模式）
+        val withoutTags = raw
+            .replace("<Visible2User>", "")
+            .replace("</Visible2User>", "")
+            .replace("<Metadata>", "")
+            .replace("</Metadata>", "")
+        
         // 预处理：先剥离 JSON block（元数据仅供 MetaHub 使用，不展示给用户）
-        val withoutJson = stripJsonBlocks(raw)
+        val withoutJson = stripJsonBlocks(withoutTags)
 
         // 第一步：修复编号混乱（如 "11)1)"、"2)1)" 等）
         val fixedNumbering = fixNumberingIssues(withoutJson)
@@ -2094,12 +2165,17 @@ class HomeScreenViewModel @Inject constructor(
             "最新问题："
         )
         val personaBullets = listOf("岗位：", "行业：", "主要沟通渠道：", "经验水平：", "表达风格：")
+        val echoPrefixes = listOf(
+            "- 用户",
+            "用户："
+        )
         val lines = text.lines()
         val output = mutableListOf<String>()
         for (line in lines) {
             val trimmed = line.trim()
             val hit = markers.any { marker -> trimmed.startsWith(marker) } ||
-                personaBullets.any { bullet -> trimmed.startsWith("- $bullet") }
+                personaBullets.any { bullet -> trimmed.startsWith("- $bullet") } ||
+                echoPrefixes.any { prefix -> trimmed.startsWith(prefix) }
             if (hit) continue
             output += line
         }
@@ -2544,14 +2620,10 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     private suspend fun handleGeneralChatMetadata(
-        rawFullText: String
+        metadataJson: String
     ): SessionMetadata? {
-        // 优先解析 <Metadata> 标签内的 JSON；缺失或解析失败时回退到“最后一个 JSON 对象”
-        val tagJson = extractMetadataJson(rawFullText)
-        val tagMeta = tagJson?.let { parseGeneralChatMetadata(it, sessionId) }
-        val jsonBlock = if (tagMeta == null) findLastJsonBlock(rawFullText) else null
-        val fallbackMeta = jsonBlock?.let { parseGeneralChatMetadata(it.text, sessionId) }
-        val metadata = tagMeta ?: fallbackMeta
+        // 解析传入的 metadata JSON
+        val metadata = parseGeneralChatMetadata(metadataJson, sessionId)
         if (metadata == null || !metadata.hasMeaningfulGeneralFields()) return null
         val patch = metadata.copy(
             latestMajorAnalysisSource = AnalysisSource.GENERAL_FIRST_REPLY,
@@ -2777,31 +2849,23 @@ class HomeScreenViewModel @Inject constructor(
         sessionRepository.upsert(summary)
     }
 
-    private fun canBuildTitleFrom(meta: SessionMetadata?): Boolean {
-        if (meta == null) return false
-        val hasName = !meta.mainPerson.isNullOrBlank()
-        val hasSummary = !meta.summaryTitle6Chars.isNullOrBlank() || !meta.shortSummary.isNullOrBlank()
-        return hasName && hasSummary
-    }
-
-    private suspend fun maybeGenerateSessionTitle(meta: SessionMetadata?) {
+    private suspend fun maybeResolveSessionTitle(
+        meta: SessionMetadata?,
+        candidate: TitleCandidate?
+    ) {
         val existingSummary = sessionRepository.findById(sessionId)
-        if (existingSummary?.isTitleUserEdited == true) return
-        if (existingSummary != null && !SessionTitlePolicy.isPlaceholder(existingSummary.title)) return
-        if (!canBuildTitleFrom(meta)) return
-        val createdAt = existingSummary?.updatedAtMillis ?: meta?.lastUpdatedAt ?: System.currentTimeMillis()
-        val title = SessionTitlePolicy.buildSuggestedTitle(meta, createdAt) ?: return
-        sessionRepository.updateTitle(sessionId, title)
+        val resolved = TitleResolver.resolveTitle(existingSummary, candidate, meta)
+        if (resolved.isNullOrBlank()) return
+        sessionRepository.updateTitle(sessionId, resolved)
         applySessionList()
         _uiState.update { state ->
             val updatedCurrent = if (state.currentSession.id == sessionId) {
-                state.currentSession.copy(title = title)
+                state.currentSession.copy(title = resolved)
             } else {
                 state.currentSession
             }
             state.copy(currentSession = updatedCurrent)
         }
-        updateDebugSessionMetadata(meta)
     }
 
     private suspend fun prepareInitialSession() {

@@ -529,6 +529,7 @@ fun HomeScreen(
                                                             } else {
                                                                 null
                                                             },
+                                                            showRawAssistantOutput = state.showRawAssistantOutput,
                                                             onCopyAssistant = { content ->
                                                                 clipboardManager.setText(AnnotatedString(content))
                                                                 coroutineScope.launch {
@@ -1179,7 +1180,8 @@ private fun MessageBubble(
     alignEnd: Boolean,
     modifier: Modifier = Modifier,
     reasoningText: String? = null,
-    onCopyAssistant: (String) -> Unit = {}
+    onCopyAssistant: (String) -> Unit = {},
+    showRawAssistantOutput: Boolean = false
 ) {
     Box(
         modifier = Modifier
@@ -1233,11 +1235,18 @@ private fun MessageBubble(
                         }
                     }
                 }
-                Text(
-                    text = message.content,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                val renderMarkdown = !alignEnd && !message.isSmartAnalysis && !message.hasError && !showRawAssistantOutput
+                if (renderMarkdown) {
+                    MarkdownMessageText(
+                        text = message.content
+                    )
+                } else {
+                    Text(
+                        text = message.content,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
                 if (!alignEnd && !message.hasError && !reasoningText.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(

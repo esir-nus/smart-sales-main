@@ -31,7 +31,8 @@ data class ChatRequest(
     val quickSkillId: String? = null,
     val audioContextSummary: AudioContextSummary? = null,
     val history: List<ChatHistoryItem> = emptyList(),
-    val isFirstAssistantReply: Boolean = false
+    val isFirstAssistantReply: Boolean = false,
+    val persona: com.smartsales.feature.usercenter.SalesPersona? = null
 )
 
 /** Streaming 事件模型：token 增量、完成、错误。 */

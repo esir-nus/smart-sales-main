@@ -1466,7 +1466,8 @@ class HomeScreenViewModel @Inject constructor(
             quickSkillId = mapSkillToMode(skillId),
             audioContextSummary = audioContext,
             history = history,
-            isFirstAssistantReply = !firstAssistantProcessed
+            isFirstAssistantReply = !firstAssistantProcessed,
+            persona = _uiState.value.salesPersona
         )
     }
 

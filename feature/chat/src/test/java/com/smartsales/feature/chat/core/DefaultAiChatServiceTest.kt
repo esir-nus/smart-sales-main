@@ -44,11 +44,22 @@ class DefaultAiChatServiceTest {
             ChatRequest(
                 sessionId = "s-123",
                 userMessage = "你好",
-                history = listOf(ChatHistoryItem(ChatRole.USER, "历史问题"))
+                history = listOf(ChatHistoryItem(ChatRole.USER, "历史问题")),
+                persona = com.smartsales.feature.usercenter.SalesPersona(
+                    role = "经理",
+                    industry = "汽车",
+                    mainChannel = "微信",
+                    experienceLevel = "中级",
+                    stylePreference = "跳跃"
+                )
             )
         ).toList()
 
-        assertTrue(fake.lastRequest?.prompt?.contains("历史对话：") == true)
+        val prompt = fake.lastRequest?.prompt.orEmpty()
+        assertTrue(prompt.contains("历史对话："))
+        assertTrue(prompt.contains("岗位：经理"))
+        assertTrue(prompt.contains("行业：汽车"))
+        assertFalse(prompt.contains("你所在的行业"))
         assertTrue(events.first() is ChatStreamEvent.Delta)
         val completed = events.filterIsInstance<ChatStreamEvent.Completed>().first()
         assertEquals("structured-markdown", completed.fullText)

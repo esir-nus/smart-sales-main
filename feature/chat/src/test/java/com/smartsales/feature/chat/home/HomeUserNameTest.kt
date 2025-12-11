@@ -47,6 +47,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
 import com.smartsales.core.metahub.MetaHub
@@ -54,6 +55,7 @@ import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.TranscriptMetadata
 import com.smartsales.core.metahub.ExportMetadata
 import com.smartsales.core.metahub.TokenUsage
+import com.smartsales.feature.usercenter.SalesPersona
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeUserNameTest {
@@ -101,6 +103,34 @@ class HomeUserNameTest {
         advanceUntilIdle()
 
         assertEquals("用户", vm.uiState.value.userName)
+    }
+
+    @Test
+    fun `sales persona propagates to home state`() = runTest(dispatcher) {
+        val initial = UserProfile(
+            displayName = "小李",
+            email = "xiao.li@example.com",
+            isGuest = false,
+            salesPersona = SalesPersona(
+                role = "经理",
+                industry = "汽车",
+                mainChannel = "微信",
+                experienceLevel = "中级",
+                stylePreference = "跳跃"
+            )
+        )
+        val profileRepo = FakeUserProfileRepository(initial)
+        val vm = buildViewModel(profileRepo)
+        advanceUntilIdle()
+
+        val persona = vm.uiState.value.salesPersona
+        assertNotNull(persona)
+        requireNotNull(persona)
+        assertEquals("经理", persona.role)
+        assertEquals("汽车", persona.industry)
+        assertEquals("微信", persona.mainChannel)
+        assertEquals("中级", persona.experienceLevel)
+        assertEquals("跳跃", persona.stylePreference)
     }
 
     private fun buildViewModel(profileRepo: UserProfileRepository): HomeScreenViewModel {

@@ -76,7 +76,9 @@ data class TingwuTaskParameters(
     @SerializedName("Transcription") val transcription: TingwuTranscriptionParameters? = null,
     @SerializedName("TranslationEnabled") val translationEnabled: Boolean? = null,
     @SerializedName("SummarizationEnabled") val summarizationEnabled: Boolean? = null,
-    @SerializedName("Summarization") val summarization: TingwuSummarizationParameters? = null
+    @SerializedName("Summarization") val summarization: TingwuSummarizationParameters? = null,
+    @SerializedName("CustomPromptEnabled") val customPromptEnabled: Boolean? = null,
+    @SerializedName("CustomPrompt") val customPrompt: TingwuCustomPrompt? = null
 )
 
 data class TingwuTranscriptSegment(
@@ -130,6 +132,17 @@ data class TingwuDiarizationParameters(
 
 data class TingwuSummarizationParameters(
     @SerializedName("Types") val types: List<String>
+)
+
+data class TingwuCustomPrompt(
+    @SerializedName("Contents") val contents: List<TingwuCustomPromptContent>
+)
+
+data class TingwuCustomPromptContent(
+    @SerializedName("Name") val name: String,
+    @SerializedName("Prompt") val prompt: String,
+    @SerializedName("Model") val model: String? = null,
+    @SerializedName("TransType") val transType: String? = null
 )
 
 data class TingwuTranscription(

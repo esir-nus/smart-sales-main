@@ -160,6 +160,37 @@ class RealTingwuCoordinatorTest {
     }
 
     @Test
+    fun createTask_includesCustomPromptWhenEnabled() = runTest(dispatcher) {
+        val api = FakeTingwuApi()
+        val coordinator = RealTingwuCoordinator(
+            dispatchers = dispatchers,
+            api = api,
+            credentialsProvider = credentialsProvider,
+            signedUrlProvider = signedUrlProvider,
+            transcriptOrchestrator = transcriptOrchestrator,
+            metaHub = InMemoryMetaHub(),
+            optionalConfig = Optional.empty()
+        )
+
+        coordinator.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav",
+                customPromptEnabled = true,
+                customPromptName = "speaker-role-inference-v1",
+                customPromptText = "PROMPT_BODY"
+            )
+        )
+
+        val request = api.lastCreateRequest
+        val json = Gson().toJson(request)
+        assertTrue(json.contains("\"CustomPromptEnabled\":true"))
+        assertTrue(json.contains("\"Name\":\"speaker-role-inference-v1\""))
+        assertTrue(json.contains("\"Prompt\":\"PROMPT_BODY\""))
+        assertTrue(json.contains("\"Model\":\"tingwu-turbo\""))
+    }
+
+    @Test
     fun createTask_whenSummarizationDisabled_omitsSummarizationTypes() {
         val request = TingwuCreateTaskRequest(
             appKey = "demo",
@@ -837,6 +868,62 @@ class RealTingwuCoordinatorTest {
         assertEquals(mapOf("spk_1" to "客户", "spk_2" to "销售"), labels)
         assertEquals(1, orchestrator.callCount)
         assertEquals(true, orchestrator.lastRequest?.force)
+    }
+
+    @Test
+    fun resultLinks_includeCustomPromptUrl() = runTest(dispatcher) {
+        val api = FakeTingwuApi()
+        api.enqueueStatus(statusResponse(status = "PROCESSING", progress = 30))
+        api.enqueueStatus(
+            statusResponse(
+                status = "SUCCEEDED",
+                progress = 100,
+                resultLinks = mapOf("CustomPrompt" to "https://example.com/custom_prompt")
+            )
+        )
+        api.resultData = TingwuResultResponse(
+            requestId = "req-result",
+            code = "0",
+            message = "Success",
+            data = TingwuResultData(
+                taskId = "job-1",
+                transcription = TingwuTranscription(
+                    text = "你好",
+                    segments = emptyList(),
+                    speakers = emptyList(),
+                    language = "zh",
+                    duration = 1.0
+                ),
+                resultLinks = mapOf("CustomPrompt" to "https://example.com/custom_prompt"),
+                outputMp3Path = null,
+                outputMp4Path = null,
+                outputThumbnailPath = null,
+                outputSpectrumPath = null
+            )
+        )
+        val coordinator = RealTingwuCoordinator(
+            dispatchers = dispatchers,
+            api = api,
+            credentialsProvider = credentialsProvider,
+            signedUrlProvider = signedUrlProvider,
+            transcriptOrchestrator = transcriptOrchestrator,
+            metaHub = InMemoryMetaHub(),
+            optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
+        )
+
+        val submit = coordinator.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav"
+            )
+        )
+        assertTrue(submit is Result.Success)
+        val jobId = (submit as Result.Success).data
+        advanceTimeBy(20)
+        advanceUntilIdle()
+
+        val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
+        assertEquals("https://example.com/custom_prompt", completed.artifacts?.customPromptUrl)
     }
 
     private class RecordingTranscriptOrchestrator(

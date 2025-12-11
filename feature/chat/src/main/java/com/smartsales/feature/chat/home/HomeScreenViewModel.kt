@@ -152,7 +152,8 @@ data class SessionListItemUi(
     val lastMessagePreview: String,
     val updatedAtMillis: Long,
     val isCurrent: Boolean,
-    val isTranscription: Boolean
+    val isTranscription: Boolean,
+    val pinned: Boolean = false
 )
 
 data class DebugSessionMetadata(
@@ -1215,7 +1216,8 @@ class HomeScreenViewModel @Inject constructor(
                 updatedAtMillis = summary.updatedAtMillis,
                 isCurrent = summary.id == sessionId,
                 isTranscription = summary.isTranscription ||
-                    summary.title.startsWith(SessionTitlePolicy.LEGACY_TRANSCRIPTION_PREFIX)
+                    summary.title.startsWith(SessionTitlePolicy.LEGACY_TRANSCRIPTION_PREFIX),
+                pinned = summary.pinned
             )
         }
         _uiState.update { state ->

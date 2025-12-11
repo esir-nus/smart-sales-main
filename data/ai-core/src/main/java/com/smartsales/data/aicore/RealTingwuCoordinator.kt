@@ -28,6 +28,8 @@ import com.smartsales.data.aicore.tingwu.TingwuTranscriptionParameters
 import com.smartsales.data.aicore.tingwu.TingwuDiarizationParameters
 import com.smartsales.data.aicore.tingwu.TingwuSummarizationParameters
 import com.smartsales.data.aicore.TranscriptMetadataRequest
+import com.smartsales.data.aicore.tingwu.TingwuCustomPrompt
+import com.smartsales.data.aicore.tingwu.TingwuCustomPromptContent
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -104,6 +106,20 @@ class RealTingwuCoordinator @Inject constructor(
             } else {
                 null
             }
+            val customPromptContent = if (
+                request.customPromptEnabled &&
+                !request.customPromptName.isNullOrBlank() &&
+                !request.customPromptText.isNullOrBlank()
+            ) {
+                TingwuCustomPromptContent(
+                    name = request.customPromptName,
+                    prompt = request.customPromptText,
+                    model = "tingwu-turbo",
+                    transType = "default"
+                )
+            } else {
+                null
+            }
             logVerbose {
                 "创建 Tingwu 任务：taskKey=$taskKey fileUrl=$resolvedUrl lang=$requestedLanguage source=$sourceLanguage model=$model diarizationEnabled=${request.diarizationEnabled} speakerCount=${diarizationParameters?.speakerCount}"
             }
@@ -125,7 +141,9 @@ class RealTingwuCoordinator @Inject constructor(
                             summarizationEnabled = true,
                             summarization = TingwuSummarizationParameters(
                                 types = listOf("Paragraph")
-                            )
+                            ),
+                            customPromptEnabled = customPromptContent?.let { true },
+                            customPrompt = customPromptContent?.let { TingwuCustomPrompt(contents = listOf(it)) }
                         )
                     )
                 )
@@ -282,7 +300,8 @@ class RealTingwuCoordinator @Inject constructor(
                             ) ?: artifacts ?: transcriptResult.chapters?.let {
                                 TingwuJobArtifacts(
                                     autoChaptersUrl = extractAutoChaptersUrl(data.resultLinks),
-                                    chapters = it
+                                    chapters = it,
+                                    customPromptUrl = data.resultLinks?.get(CUSTOM_PROMPT_KEY)
                                 )
                             }
                             val transcriptMeta = refineSpeakerLabels(
@@ -418,6 +437,7 @@ class RealTingwuCoordinator @Inject constructor(
                     val artifacts = data.toArtifacts(
                         transcriptionUrl = transcription.url,
                         autoChaptersUrl = extractAutoChaptersUrl(data.resultLinks),
+                        customPromptUrl = data.resultLinks?.get(CUSTOM_PROMPT_KEY),
                         extraResultUrls = data.resultLinks.orEmpty(),
                         chapters = chapters,
                         smartSummary = fetchSmartSummarySafe(data.resultLinks, jobId),
@@ -474,6 +494,7 @@ class RealTingwuCoordinator @Inject constructor(
             artifacts = fallbackArtifacts?.copy(
                 transcriptionUrl = signedUrl,
                 autoChaptersUrl = fallbackArtifacts.autoChaptersUrl,
+                customPromptUrl = resultLinks?.get(CUSTOM_PROMPT_KEY) ?: fallbackArtifacts.customPromptUrl,
                 extraResultUrls = fallbackArtifacts.extraResultUrls,
                 chapters = chapters ?: fallbackArtifacts.chapters,
                 smartSummary = smartSummary ?: fallbackArtifacts.smartSummary,
@@ -1101,13 +1122,15 @@ class RealTingwuCoordinator @Inject constructor(
             mp4 = outputMp4Path,
             thumb = outputThumbnailPath,
             spectrum = outputSpectrumPath,
-            links = resultLinks
+            links = resultLinks,
+            customPromptUrl = resultLinks?.get(CUSTOM_PROMPT_KEY)
         )
 
     private fun TingwuResultData.toArtifacts(
         fallbackArtifacts: TingwuJobArtifacts? = null,
         transcriptionUrl: String? = null,
         autoChaptersUrl: String? = null,
+        customPromptUrl: String? = null,
         extraResultUrls: Map<String, String> = emptyMap(),
         chapters: List<TingwuChapter>? = null,
         smartSummary: TingwuSmartSummary? = null,
@@ -1122,6 +1145,7 @@ class RealTingwuCoordinator @Inject constructor(
             links = resultLinks ?: fallbackArtifacts?.resultLinks?.associate { it.label to it.url },
             transcriptionUrl = transcriptionUrl ?: fallbackArtifacts?.transcriptionUrl,
             autoChaptersUrl = autoChaptersUrl ?: fallbackArtifacts?.autoChaptersUrl,
+            customPromptUrl = customPromptUrl ?: fallbackArtifacts?.customPromptUrl,
             extraResultUrls = if (extraResultUrls.isNotEmpty()) extraResultUrls else fallbackArtifacts?.extraResultUrls.orEmpty(),
             chapters = chapters ?: fallbackArtifacts?.chapters,
             smartSummary = smartSummary ?: fallbackArtifacts?.smartSummary,
@@ -1137,6 +1161,7 @@ class RealTingwuCoordinator @Inject constructor(
         links: Map<String, String>?,
         transcriptionUrl: String? = null,
         autoChaptersUrl: String? = null,
+        customPromptUrl: String? = null,
         extraResultUrls: Map<String, String> = emptyMap(),
         chapters: List<TingwuChapter>? = null,
         smartSummary: TingwuSmartSummary? = null,
@@ -1151,6 +1176,7 @@ class RealTingwuCoordinator @Inject constructor(
             links.isNullOrEmpty() &&
             transcriptionUrl.isNullOrBlank() &&
             autoChaptersUrl.isNullOrBlank() &&
+            customPromptUrl.isNullOrBlank() &&
             extraResultUrls.isEmpty() &&
             chapters.isNullOrEmpty() &&
             smartSummary == null &&
@@ -1171,6 +1197,7 @@ class RealTingwuCoordinator @Inject constructor(
             resultLinks = resultLinks,
             transcriptionUrl = transcriptionUrl,
             autoChaptersUrl = autoChaptersUrl,
+            customPromptUrl = customPromptUrl ?: links?.get(CUSTOM_PROMPT_KEY),
             extraResultUrls = extraResultUrls,
             chapters = chapters,
             smartSummary = smartSummary,
@@ -1332,6 +1359,7 @@ class RealTingwuCoordinator @Inject constructor(
         private const val DEFAULT_LANGUAGE = "zh-CN"
         private const val DEFAULT_SOURCE_LANGUAGE = "cn"
         private const val SUBMITTED_PROGRESS = 1
+        private const val CUSTOM_PROMPT_KEY = "CustomPrompt"
         private const val MAX_SUBTITLE_GAP_MS = 2_000L
         private const val MAX_SUBTITLE_DURATION_MS = 10_000L
         private const val MAX_SUBTITLE_TEXT_LENGTH = 100

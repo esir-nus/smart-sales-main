@@ -93,7 +93,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -107,6 +106,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -125,6 +127,7 @@ import com.smartsales.feature.chat.BuildConfig
 // 说明：Home 层 Compose UI，仅渲染聊天欢迎区、消息列表、快捷技能与输入框
 // 作者：创建于 2025-11-20
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreenRoute(
     modifier: Modifier = Modifier,
@@ -249,7 +252,7 @@ fun HomeScreenRoute(
     val actionSession = state.historyActionSession
     if (actionSession != null) {
         ModalBottomSheet(
-            onDismissRequest = onHistoryActionDismiss,
+            onDismissRequest = viewModel::onHistoryActionDismiss,
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ) {
             Column(
@@ -260,20 +263,20 @@ fun HomeScreenRoute(
             ) {
                 SheetAction(
                     label = if (actionSession.pinned) "取消置顶" else "置顶会话",
-                    onClick = { onHistoryActionPinToggle(actionSession.id) }
+                    onClick = { viewModel.onHistorySessionPinToggle(actionSession.id) }
                 )
                 SheetAction(
                     label = "重命名",
-                    onClick = { onHistoryActionRenameStart() }
+                    onClick = { viewModel.onHistoryActionRenameStart() }
                 )
                 SheetAction(
                     label = "删除",
-                    onClick = { onHistoryActionDelete(actionSession.id) }
+                    onClick = { viewModel.onHistorySessionDelete(actionSession.id) }
                 )
                 HorizontalDivider()
                 SheetAction(
                     label = "取消",
-                    onClick = onHistoryActionDismiss
+                    onClick = viewModel::onHistoryActionDismiss
                 )
             }
         }
@@ -281,12 +284,12 @@ fun HomeScreenRoute(
 
     if (state.showHistoryRenameDialog && actionSession != null) {
         AlertDialog(
-            onDismissRequest = onHistoryActionDismiss,
+            onDismissRequest = viewModel::onHistoryActionDismiss,
             title = { Text(text = "重命名会话") },
             text = {
                 OutlinedTextField(
                     value = state.historyRenameText,
-                    onValueChange = onHistoryRenameTextChange,
+                    onValueChange = viewModel::onHistoryRenameTextChange,
                     label = { Text(text = "标题") },
                     singleLine = true
                 )
@@ -294,8 +297,8 @@ fun HomeScreenRoute(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        onHistoryActionRenameConfirm(actionSession.id, state.historyRenameText)
-                        onHistoryActionDismiss()
+                        viewModel.onHistorySessionRenameConfirmed(actionSession.id, state.historyRenameText)
+                        viewModel.onHistoryActionDismiss()
                     },
                     enabled = state.historyRenameText.isNotBlank()
                 ) {
@@ -303,7 +306,7 @@ fun HomeScreenRoute(
                 }
             },
             dismissButton = {
-                TextButton(onClick = onHistoryActionDismiss) {
+                TextButton(onClick = viewModel::onHistoryActionDismiss) {
                     Text(text = "取消")
                 }
             }
@@ -325,7 +328,12 @@ private fun SheetAction(label: String, onClick: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterialApi::class, ExperimentalAnimationApi::class, ExperimentalFoundationApi::class)
+@OptIn(
+    ExperimentalMaterialApi::class,
+    ExperimentalAnimationApi::class,
+    ExperimentalFoundationApi::class,
+    ExperimentalMaterial3Api::class
+)
 @Composable
 fun HomeScreen(
     state: HomeUiState,

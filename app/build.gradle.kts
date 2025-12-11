@@ -110,6 +110,7 @@ dependencies {
     androidTestImplementation(libs.androidx.test.espresso)
     androidTestImplementation(libs.androidx.test.rules)
     androidTestImplementation(libs.hilt.android)
+    androidTestImplementation(libs.hilt.android.testing)
     kaptAndroidTest(libs.hilt.compiler)
     debugImplementation(libs.compose.ui.test.manifest)
 }

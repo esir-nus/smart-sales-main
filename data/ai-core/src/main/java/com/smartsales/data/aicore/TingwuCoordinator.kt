@@ -23,7 +23,10 @@ data class TingwuRequest(
     val ossObjectKey: String? = null,
     val fileUrl: String? = null,
     val diarizationEnabled: Boolean = true,
-    val sessionId: String? = null
+    val sessionId: String? = null,
+    val customPromptEnabled: Boolean = false,
+    val customPromptName: String? = null,
+    val customPromptText: String? = null
 )
 
 data class TingwuJobArtifacts(
@@ -34,6 +37,7 @@ data class TingwuJobArtifacts(
     val resultLinks: List<TingwuResultLink> = emptyList(),
     val transcriptionUrl: String? = null,
     val autoChaptersUrl: String? = null,
+    val customPromptUrl: String? = null,
     val extraResultUrls: Map<String, String> = emptyMap(),
     val chapters: List<TingwuChapter>? = null,
     val smartSummary: TingwuSmartSummary? = null,

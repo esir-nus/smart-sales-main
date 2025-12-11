@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class Screen(
@@ -22,6 +23,7 @@ sealed class Screen(
     data object Device : Screen("device_manager", "设备", Icons.Filled.Devices)
     data object User : Screen("user_center", "我的", Icons.Filled.Person)
     data object ChatHistory : Screen("chat_history", "聊天记录", Icons.Filled.Chat)
+    data object DebugStream : Screen("debug_llm_stream", "流式调试", Icons.Filled.Tune)
 
     companion object {
         val items = listOf(Home, Audio, Device, User)

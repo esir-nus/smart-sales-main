@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.smartsales.aitest.BuildConfig
 import com.smartsales.aitest.ui.components.ProfileHeaderCard
 import com.smartsales.aitest.ui.components.SettingsMenuItem
 import com.smartsales.aitest.ui.screens.user.model.SubscriptionTierUi
@@ -47,7 +48,8 @@ import com.smartsales.aitest.ui.screens.user.model.label
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserCenterScreen(
-    onOpenDeviceManager: () -> Unit = {}
+    onOpenDeviceManager: () -> Unit = {},
+    onOpenDebugStream: () -> Unit = {}
 ) {
     var userProfile by remember {
         mutableStateOf(
@@ -69,38 +71,58 @@ fun UserCenterScreen(
         SettingsItemData(
             icon = Icons.Filled.Devices,
             title = "设备管理",
-            subtitle = "管理连接的设备和文件"
+            subtitle = "管理连接的设备和文件",
+            onClick = onOpenDeviceManager
         ),
         SettingsItemData(
             icon = Icons.Filled.ManageAccounts,
             title = "订阅管理",
-            subtitle = userProfile.subscriptionTier.label()
+            subtitle = userProfile.subscriptionTier.label(),
+            onClick = { /* TODO: 订阅管理 */ }
         )
     )
     val privacyItems = listOf(
         SettingsItemData(
             icon = Icons.Filled.PrivacyTip,
             title = "隐私设置",
-            subtitle = "管理数据和权限"
+            subtitle = "管理数据和权限",
+            onClick = { /* TODO: 隐私与安全设置 */ }
         ),
         SettingsItemData(
             icon = Icons.Filled.Security,
             title = "账号安全",
-            subtitle = "密码和验证设置"
+            subtitle = "密码和验证设置",
+            onClick = { /* TODO: 账号安全设置 */ }
         )
     )
-    val generalItems = listOf(
-        SettingsItemData(
-            icon = Icons.Filled.Settings,
-            title = "常规设置",
-            subtitle = "语言、通知等"
-        ),
-        SettingsItemData(
-            icon = Icons.Filled.Info,
-            title = "关于应用",
-            subtitle = "版本 1.0.0"
+    val generalItems = buildList {
+        add(
+            SettingsItemData(
+                icon = Icons.Filled.Settings,
+                title = "常规设置",
+                subtitle = "语言、通知等",
+                onClick = { /* TODO: 通用设置 */ }
+            )
         )
-    )
+        add(
+            SettingsItemData(
+                icon = Icons.Filled.Info,
+                title = "关于应用",
+                subtitle = "版本 1.0.0",
+                onClick = { /* TODO: 通用设置 */ }
+            )
+        )
+        if (BuildConfig.DEBUG) {
+            add(
+                SettingsItemData(
+                    icon = Icons.Filled.Info,
+                    title = "DashScope 流式调试（开发）",
+                    subtitle = "查看 incremental_output chunk",
+                    onClick = onOpenDebugStream
+                )
+            )
+        }
+    }
 
     Scaffold(
         topBar = { TopAppBar(title = { Text(text = "用户中心") }) }
@@ -151,7 +173,7 @@ fun UserCenterScreen(
                     icon = item.icon,
                     title = item.title,
                     subtitle = item.subtitle,
-                    onClick = { /* TODO: 通用设置 */ },
+                    onClick = item.onClick,
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
             }
@@ -210,5 +232,6 @@ private fun SectionHeader(text: String) {
 private data class SettingsItemData(
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
     val title: String,
-    val subtitle: String?
+    val subtitle: String?,
+    val onClick: () -> Unit
 )

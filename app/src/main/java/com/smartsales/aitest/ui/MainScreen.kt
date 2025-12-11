@@ -27,6 +27,7 @@ import com.smartsales.aitest.ui.screens.audio.AudioFilesShell
 import com.smartsales.aitest.ui.screens.device.DeviceManagerShell
 import com.smartsales.aitest.ui.screens.home.HomeScreen
 import com.smartsales.aitest.ui.screens.user.UserCenterScreen
+import com.smartsales.aitest.ui.screens.debug.DebugDashscopeStreamScreen
 import com.smartsales.feature.chat.home.HomeScreenViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.smartsales.feature.media.devicemanager.DeviceManagerViewModel
@@ -109,6 +110,9 @@ fun MainScreen() {
                             launchSingleTop = true
                             restoreState = true
                         }
+                    },
+                    onOpenDebugStream = {
+                        navController.navigate(Screen.DebugStream.route)
                     }
                 )
             }
@@ -119,6 +123,9 @@ fun MainScreen() {
                     homeViewModel = homeViewModel,
                     onBack = { navController.popBackStack() }
                 )
+            }
+            composable(Screen.DebugStream.route) {
+                DebugDashscopeStreamScreen(onBack = { navController.popBackStack() })
             }
         }
     }

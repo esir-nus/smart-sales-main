@@ -1,7 +1,7 @@
 // 文件：data/ai-core/src/main/java/com/smartsales/data/aicore/DashscopeClient.kt
 // 模块：:data:ai-core
 // 说明：抽象 DashScope 调用客户端并为后续 streaming 做准备
-// 作者：创建于 2025-11-16
+// 作者：创建于 2025-12-11
 package com.smartsales.data.aicore
 
 import com.alibaba.dashscope.aigc.generation.Generation
@@ -24,7 +24,8 @@ data class DashscopeRequest(
     val apiKey: String,
     val model: String,
     val messages: List<DashscopeMessage>,
-    val temperature: Float = 0.3f
+    val temperature: Float = 0.3f,
+    val incrementalOutput: Boolean = false
 )
 
 data class DashscopeCompletion(
@@ -93,6 +94,7 @@ class DefaultDashscopeClient @Inject constructor() : DashscopeClient {
             .messages(messages)
             .temperature(request.temperature)
             .resultFormat(GenerationParam.ResultFormat.MESSAGE)
+            .incrementalOutput(request.incrementalOutput)
             .build()
     }
 

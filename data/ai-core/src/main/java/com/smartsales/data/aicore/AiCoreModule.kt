@@ -3,6 +3,8 @@ package com.smartsales.data.aicore
 import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.util.DefaultDispatcherProvider
 import com.smartsales.core.util.DispatcherProvider
+import com.smartsales.data.aicore.debug.DashscopeDebugClient
+import com.smartsales.data.aicore.debug.DashscopeDebugClientImpl
 import dagger.Binds
 import dagger.BindsOptionalOf
 import dagger.Module
@@ -16,7 +18,7 @@ import okhttp3.EventListener
 // 文件：data/ai-core/src/main/java/com/smartsales/data/aicore/AiCoreModule.kt
 // 模块：:data:ai-core
 // 说明：提供AI核心模块的Hilt依赖绑定和工厂
-// 作者：创建于 2025-11-16
+// 作者：创建于 2025-12-11
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class AiCoreModule {
@@ -59,6 +61,12 @@ abstract class AiCoreModule {
     abstract fun bindOssSignedUrlProvider(
         impl: RealOssSignedUrlProvider
     ): OssSignedUrlProvider
+
+    @Binds
+    @Singleton
+    abstract fun bindDashscopeDebugClient(
+        impl: DashscopeDebugClientImpl
+    ): DashscopeDebugClient
 
     @BindsOptionalOf
     abstract fun optionalAiCoreConfig(): AiCoreConfig

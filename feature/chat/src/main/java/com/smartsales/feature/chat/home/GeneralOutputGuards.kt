@@ -49,6 +49,7 @@ private fun splitSentences(text: String): List<String> {
 internal fun normalizeSentenceForGuard(sentence: String): String {
     return sentence.lowercase(Locale.getDefault())
         .replace(Regex("\\s+"), "")
-        .replace(Regex("[\\p{Punct}]"), "")
+        // 去掉英文和常见中文标点，让"预算有限，需给到折扣"和"预算有限需给到折扣"归一
+        .replace(Regex("[\\p{Punct}，。！？；：、]"), "")
         .trim()
 }

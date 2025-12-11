@@ -37,18 +37,29 @@ internal class StreamingDeduplicator {
 
     /**
      * 提取新增内容：
-     * - 优先使用“新文本前缀 == 旧文本”判断；
+     * - 优先使用"新文本前缀 == 旧文本"判断；
      * - 否则按最长公共前缀切分，过短则视为重置直接返回新文本。
      */
     internal fun extractDelta(newContent: String, lastContent: String): Delta {
         if (lastContent.isEmpty()) return Delta(newContent, isReset = false)
+
+        // 1) Very small chunks after we already have content:视为增量 token，直接追加
+        if (newContent.length <= MAX_TOKEN_CHUNK) {
+            return Delta(newContent, isReset = false)
+        }
+
+        // 2) 累计快照：新文本以前缀包含旧文本
         if (newContent.startsWith(lastContent)) {
             return Delta(newContent.substring(lastContent.length), isReset = false)
         }
+
+        // 3) 较长公共前缀：认为是"修订版"，只追加后缀
         val lcp = longestCommonPrefix(newContent, lastContent)
         if (lcp >= MIN_PREFIX_LENGTH) {
             return Delta(newContent.substring(lcp), isReset = false)
         }
+
+        // 4) 否则视为重置
         return Delta(newContent, isReset = true)
     }
 
@@ -63,6 +74,8 @@ internal class StreamingDeduplicator {
 
     companion object {
         private const val MIN_PREFIX_LENGTH = 4
+        // "很短"的 chunk，当上游已输出内容时视为纯增量 token
+        private const val MAX_TOKEN_CHUNK = 3
     }
 
     internal data class Delta(

@@ -8,6 +8,7 @@ package com.smartsales.feature.chat.home
 import android.net.Uri
 import com.smartsales.core.metahub.AnalysisSource
 import com.smartsales.core.metahub.InMemoryMetaHub
+import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.SessionTitlePolicy
 import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.ExportOrchestrator
@@ -22,6 +23,9 @@ import com.smartsales.feature.chat.history.ChatHistoryRepository
 import com.smartsales.feature.chat.history.ChatMessageEntity
 import com.smartsales.feature.chat.home.orchestrator.HomeOrchestrator
 import com.smartsales.feature.chat.title.SessionTitleResolver
+import com.smartsales.feature.chat.title.TitleCandidate
+import com.smartsales.feature.chat.title.TitleResolver
+import com.smartsales.feature.chat.title.TitleSource
 import com.smartsales.feature.connectivity.BlePeripheral
 import com.smartsales.feature.connectivity.ConnectionState
 import com.smartsales.feature.connectivity.DeviceConnectionManager
@@ -57,6 +61,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -256,6 +261,33 @@ class HomeGeneralMetadataFlowTest {
         val stored = metaHub.getSession(sessionId)
         assertEquals("罗总", stored?.mainPerson)
         assertEquals(AnalysisSource.GENERAL_FIRST_REPLY, stored?.latestMajorAnalysisSource)
+    }
+
+    @Test
+    fun `manual rename flag survives session summary refresh`() = runTest(dispatcher) {
+        advanceUntilIdle()
+        val sessionId = viewModel.uiState.value.currentSession.id
+
+        sessionRepository.updateTitle(sessionId, "自定义标题", isUserEdited = true)
+        advanceUntilIdle()
+
+        orchestrator.enqueue(ChatStreamEvent.Completed("助手回复"))
+        viewModel.onInputChanged("用户提问")
+        viewModel.onSendMessage()
+        advanceUntilIdle()
+
+        val stored = sessionRepository.findById(sessionId)
+        assertNotNull(stored)
+        assertTrue(stored!!.isTitleUserEdited)
+
+        val candidate = TitleCandidate(
+            name = "李总",
+            title6 = "预算沟通",
+            source = TitleSource.GENERAL,
+            createdAt = System.currentTimeMillis()
+        )
+        val resolved = TitleResolver.resolveTitle(stored, candidate, SessionMetadata(sessionId))
+        assertNull(resolved)
     }
 
     @Test

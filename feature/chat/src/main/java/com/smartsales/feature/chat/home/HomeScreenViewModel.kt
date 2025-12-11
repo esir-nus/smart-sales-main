@@ -2800,6 +2800,7 @@ class HomeScreenViewModel @Inject constructor(
             title = resolvedTitle,
             lastMessagePreview = preview,
             updatedAtMillis = existing?.updatedAtMillis ?: System.currentTimeMillis(),
+            isTitleUserEdited = existing?.isTitleUserEdited ?: false,
             isTranscription = resolvedIsTranscription,
             pinned = existing?.pinned ?: false
         )
@@ -2814,6 +2815,7 @@ class HomeScreenViewModel @Inject constructor(
             title = existing?.title ?: _uiState.value.currentSession.title,
             lastMessagePreview = lastPreview,
             updatedAtMillis = System.currentTimeMillis(),
+            isTitleUserEdited = existing?.isTitleUserEdited ?: false,
             isTranscription = existing?.isTranscription ?: _uiState.value.currentSession.isTranscription,
             pinned = existing?.pinned ?: false
         )

@@ -80,6 +80,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -112,6 +113,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.smartsales.feature.chat.BuildConfig
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreen.kt
 // 模块：:feature:chat
@@ -224,6 +226,7 @@ fun HomeScreenRoute(
             showHistoryPanel = false
         },
         onToggleDebugMetadata = viewModel::toggleDebugMetadata,
+        onToggleRawAssistantOutput = viewModel::setShowRawAssistantOutput,
         onDismissKeyboard = dismissKeyboard,
         onInputFocusChanged = { focused ->
             viewModel.onInputFocusChanged(focused)
@@ -260,6 +263,7 @@ fun HomeScreen(
     historySessions: List<SessionListItemUi> = emptyList(),
     onHistorySessionSelected: (String) -> Unit = {},
     onToggleDebugMetadata: () -> Unit = {},
+    onToggleRawAssistantOutput: (Boolean) -> Unit = {},
     onDismissKeyboard: () -> Unit = {},
     onInputFocusChanged: (Boolean) -> Unit = {}
 ) {
@@ -608,6 +612,8 @@ fun HomeScreen(
                                         }
                                     }
                                 },
+                                showRawAssistantOutput = state.showRawAssistantOutput,
+                                onToggleRawAssistantOutput = onToggleRawAssistantOutput,
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
                                     .padding(horizontal = 12.dp, vertical = 12.dp)
@@ -949,6 +955,8 @@ private fun DebugSessionMetadataHud(
     metadata: DebugSessionMetadata,
     onClose: () -> Unit,
     onCopy: (String) -> Unit,
+    showRawAssistantOutput: Boolean,
+    onToggleRawAssistantOutput: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val screenHalfHeight = LocalConfiguration.current.screenHeightDp.dp * 0.5f
@@ -1011,6 +1019,29 @@ private fun DebugSessionMetadataHud(
                     ) {
                         Icon(imageVector = Icons.Filled.Close, contentDescription = "关闭 HUD")
                     }
+                }
+            }
+            if (BuildConfig.DEBUG) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "显示原始助手回复（仅调试）",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "切换后气泡显示原始模型文本，不影响元数据或正式体验。",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = showRawAssistantOutput,
+                        onCheckedChange = onToggleRawAssistantOutput
+                    )
                 }
             }
             DebugField(label = "sessionId", value = metadata.sessionId)

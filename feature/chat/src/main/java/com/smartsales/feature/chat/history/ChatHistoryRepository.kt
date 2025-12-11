@@ -66,7 +66,7 @@ fun ChatMessageUi.toEntity(sessionId: String): ChatMessageEntity = ChatMessageEn
     id = id,
     sessionId = sessionId,
     role = role.name,
-    content = content,
+    content = sanitizedContent ?: content,
     timestampMillis = timestampMillis
 )
 
@@ -77,6 +77,8 @@ fun ChatMessageEntity.toUiModel(): ChatMessageUi = ChatMessageUi(
         else -> ChatMessageRole.ASSISTANT
     },
     content = content,
+    rawContent = content,
+    sanitizedContent = content,
     timestampMillis = timestampMillis,
     isStreaming = false,
     hasError = false

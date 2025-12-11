@@ -17,6 +17,15 @@ import com.smartsales.feature.chat.core.QuickSkillDefinition
 import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.home.orchestrator.HomeOrchestrator
 import com.smartsales.feature.chat.history.ChatHistoryRepository
+import com.smartsales.data.aicore.ExportFormat
+import com.smartsales.data.aicore.ExportOrchestrator
+import com.smartsales.core.metahub.MetaHub
+import com.smartsales.core.metahub.SessionMetadata
+import com.smartsales.core.metahub.SessionTitlePolicy
+import com.smartsales.core.metahub.AnalysisSource
+import com.smartsales.core.metahub.SessionMetadataLabelProvider
+import com.smartsales.feature.chat.home.CHAT_DEBUG_HUD_ENABLED
+import com.smartsales.feature.chat.BuildConfig
 import com.smartsales.feature.chat.history.toEntity
 import com.smartsales.feature.chat.history.toUiModel
 import com.smartsales.feature.chat.title.SessionTitleResolver
@@ -35,14 +44,6 @@ import com.smartsales.feature.media.MediaSyncState
 import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.feature.usercenter.UserProfile
 import com.smartsales.feature.usercenter.SalesPersona
-import com.smartsales.data.aicore.ExportFormat
-import com.smartsales.data.aicore.ExportOrchestrator
-import com.smartsales.core.metahub.MetaHub
-import com.smartsales.core.metahub.SessionMetadata
-import com.smartsales.core.metahub.SessionTitlePolicy
-import com.smartsales.core.metahub.AnalysisSource
-import com.smartsales.core.metahub.SessionMetadataLabelProvider
-import com.smartsales.feature.chat.home.CHAT_DEBUG_HUD_ENABLED
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
 import java.io.IOException
@@ -84,6 +85,8 @@ data class ChatMessageUi(
     val id: String = UUID.randomUUID().toString(),
     val role: ChatMessageRole,
     val content: String,
+    val rawContent: String? = null,
+    val sanitizedContent: String? = null,
     val timestampMillis: Long,
     val isStreaming: Boolean = false,
     val hasError: Boolean = false,
@@ -193,7 +196,8 @@ data class HomeUiState(
     val debugSessionMetadata: DebugSessionMetadata? = null,
     val smartReasoningText: String? = null,
     val isInputFocused: Boolean = false,
-    val salesPersona: SalesPersona? = null
+    val salesPersona: SalesPersona? = null,
+    val showRawAssistantOutput: Boolean = false
 )
 
 /** 外部依赖（除 AiChatService 外保留原有 stub）。 */
@@ -656,6 +660,8 @@ class HomeScreenViewModel @Inject constructor(
                 id = placeholderId,
                 role = ChatMessageRole.ASSISTANT,
                 content = "已上传图片：${saved.name}，正在分析…",
+                rawContent = "已上传图片：${saved.name}，正在分析…",
+                sanitizedContent = "已上传图片：${saved.name}，正在分析…",
                 timestampMillis = System.currentTimeMillis(),
                 isStreaming = true
             )
@@ -669,8 +675,12 @@ class HomeScreenViewModel @Inject constructor(
             // TODO: 接入 DashScope 图像分析，当前为占位分析
             delay(800)
             updateAssistantMessage(placeholderId, persistAfterUpdate = true) { msg ->
+                val raw = "图片分析占位：${saved.name}。图像解析接口接入后将提供详细描述。"
+                val display = displayAssistantText(raw = raw, sanitized = raw)
                 msg.copy(
-                    content = "图片分析占位：${saved.name}。图像解析接口接入后将提供详细描述。",
+                    content = display,
+                    rawContent = raw,
+                    sanitizedContent = raw,
                     isStreaming = false
                 )
             }
@@ -741,6 +751,8 @@ class HomeScreenViewModel @Inject constructor(
                         id = nextMessageId(),
                         role = ChatMessageRole.ASSISTANT,
                         content = noticeText,
+                        rawContent = noticeText,
+                        sanitizedContent = noticeText,
                         timestampMillis = System.currentTimeMillis()
                     )
                 }
@@ -749,6 +761,8 @@ class HomeScreenViewModel @Inject constructor(
                         id = nextMessageId(),
                         role = ChatMessageRole.ASSISTANT,
                         content = transcript,
+                        rawContent = transcript,
+                        sanitizedContent = transcript,
                         timestampMillis = System.currentTimeMillis()
                     )
                 }
@@ -766,6 +780,8 @@ class HomeScreenViewModel @Inject constructor(
                     id = nextMessageId(),
                     role = ChatMessageRole.ASSISTANT,
                     content = "通话分析 · 已为你加载录音 ${request.fileName} 的转写内容，我可以帮你总结对话、提炼要点或生成跟进话术。",
+                    rawContent = "通话分析 · 已为你加载录音 ${request.fileName} 的转写内容，我可以帮你总结对话、提炼要点或生成跟进话术。",
+                    sanitizedContent = "通话分析 · 已为你加载录音 ${request.fileName} 的转写内容，我可以帮你总结对话、提炼要点或生成跟进话术。",
                     timestampMillis = System.currentTimeMillis()
                 )
                 _uiState.update { state ->
@@ -780,6 +796,8 @@ class HomeScreenViewModel @Inject constructor(
                     id = introId,
                     role = ChatMessageRole.ASSISTANT,
                     content = "正在转写音频文件 ${request.fileName} ...",
+                    rawContent = "正在转写音频文件 ${request.fileName} ...",
+                    sanitizedContent = "正在转写音频文件 ${request.fileName} ...",
                     timestampMillis = System.currentTimeMillis(),
                     isStreaming = true
                 )
@@ -797,16 +815,24 @@ class HomeScreenViewModel @Inject constructor(
                         when (state) {
                             AudioTranscriptionJobState.Idle -> Unit
                             is AudioTranscriptionJobState.InProgress -> updateAssistantMessage(introId) { msg ->
+                                val raw = "正在转写音频文件 ${request.fileName} ... ${state.progressPercent}%"
+                                val display = displayAssistantText(raw = raw, sanitized = raw)
                                 msg.copy(
-                                    content = "正在转写音频文件 ${request.fileName} ... ${state.progressPercent}%",
+                                    content = display,
+                                    rawContent = raw,
+                                    sanitizedContent = raw,
                                     isStreaming = true
                                 )
                             }
 
                             is AudioTranscriptionJobState.Completed -> {
                                 updateAssistantMessage(introId, persistAfterUpdate = true) { msg ->
+                                    val raw = "转写完成：${request.fileName}"
+                                    val display = displayAssistantText(raw = raw, sanitized = raw)
                                     msg.copy(
-                                        content = "转写完成：${request.fileName}",
+                                        content = display,
+                                        rawContent = raw,
+                                        sanitizedContent = raw,
                                         isStreaming = false
                                     )
                                 }
@@ -816,8 +842,12 @@ class HomeScreenViewModel @Inject constructor(
                             is AudioTranscriptionJobState.Failed -> {
                                 val reason = state.reason.ifBlank { "转写失败" }
                                 updateAssistantMessage(introId, persistAfterUpdate = true) { msg ->
+                                    val raw = "转写失败：$reason"
+                                    val display = displayAssistantText(raw = raw, sanitized = raw)
                                     msg.copy(
-                                        content = "转写失败：$reason",
+                                        content = display,
+                                        rawContent = raw,
+                                        sanitizedContent = raw,
                                         isStreaming = false,
                                         hasError = true
                                     )
@@ -860,6 +890,16 @@ class HomeScreenViewModel @Inject constructor(
         if (newValue) {
             // 打开时刷新一次 MetaHub，关闭时保留现有数据即可
             refreshDebugSessionMetadata()
+        }
+    }
+
+    fun setShowRawAssistantOutput(showRaw: Boolean) {
+        val displayList = applyAssistantDisplay(_uiState.value.chatMessages, showRaw)
+        _uiState.update {
+            it.copy(
+                showRawAssistantOutput = if (BuildConfig.DEBUG) showRaw else false,
+                chatMessages = displayList
+            )
         }
     }
 
@@ -1237,8 +1277,13 @@ class HomeScreenViewModel @Inject constructor(
                     is ChatStreamEvent.Delta -> {
                         if (!isSmartAnalysis) {
                             updateAssistantMessage(assistantId) { msg ->
-                                val updated = streamingDeduplicator.mergeSnapshot(msg.content, event.token)
-                                msg.copy(content = updated)
+                                val base = msg.rawContent ?: msg.content
+                                val rawUpdated = streamingDeduplicator.mergeSnapshot(base, event.token)
+                                val display = displayAssistantText(raw = rawUpdated, sanitized = msg.sanitizedContent ?: rawUpdated)
+                                msg.copy(
+                                    content = display,
+                                    rawContent = rawUpdated
+                                )
                             }
                         }
                     }
@@ -1249,8 +1294,8 @@ class HomeScreenViewModel @Inject constructor(
                         val isFirstAssistant = request.isFirstAssistantReply && !firstAssistantProcessed
                         val generalMeta = if (isGeneralChat && isFirstAssistant) handleGeneralChatMetadata(rawFullText) else null
                         val latestMeta = generalMeta ?: runCatching { metaHub.getSession(sessionId) }.getOrNull()
-                        val strippedForUi = if (isSmartAnalysis) rawFullText else stripTrailingJsonFromGeneralReply(rawFullText)
-                        val sanitized = if (isSmartAnalysis) rawFullText else sanitizeAssistantOutput(strippedForUi, isSmartAnalysis)
+                        val rawDisplay = if (isSmartAnalysis) rawFullText else stripTrailingJsonFromGeneralReply(rawFullText)
+                        val sanitized = if (isSmartAnalysis) rawFullText else sanitizeAssistantOutput(rawDisplay, isSmartAnalysis)
                         // SMART_ANALYSIS 已由 Orchestrator 生成最终 Markdown，这里直接透传
                         val cleaned = if (isSmartAnalysis) {
                             sanitized
@@ -1282,7 +1327,13 @@ class HomeScreenViewModel @Inject constructor(
                             )
                         )
                         updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
-                            msg.copy(content = cleaned, isStreaming = false)
+                            val display = displayAssistantText(raw = rawDisplay, sanitized = cleaned)
+                            msg.copy(
+                                content = display,
+                                rawContent = rawDisplay,
+                                sanitizedContent = cleaned,
+                                isStreaming = false
+                            )
                         }
                         onCompleted(cleaned)
                         _uiState.update { it.copy(isSending = false, isStreaming = false, isInputBusy = false, isBusy = false) }
@@ -1313,6 +1364,8 @@ class HomeScreenViewModel @Inject constructor(
                             updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
                                 msg.copy(
                                     content = errorText,
+                                    rawContent = errorText,
+                                    sanitizedContent = errorText,
                                     hasError = true,
                                     isStreaming = false
                                 )
@@ -1370,10 +1423,13 @@ class HomeScreenViewModel @Inject constructor(
         isStreaming: Boolean = false,
         hasError: Boolean = false
     ) {
+        val display = displayAssistantText(raw = content, sanitized = content)
         val message = ChatMessageUi(
             id = nextMessageId(),
             role = ChatMessageRole.ASSISTANT,
-            content = content,
+            content = display,
+            rawContent = content,
+            sanitizedContent = content,
             timestampMillis = System.currentTimeMillis(),
             isStreaming = isStreaming,
             hasError = hasError
@@ -1386,7 +1442,7 @@ class HomeScreenViewModel @Inject constructor(
         }
         persistMessagesAsync()
         viewModelScope.launch {
-            updateSessionSummary(message.content)
+            updateSessionSummary(message.sanitizedContent ?: message.content)
         }
     }
 
@@ -1400,7 +1456,7 @@ class HomeScreenViewModel @Inject constructor(
         val history = historySource.map { ui ->
             ChatHistoryItem(
                 role = if (ui.role == ChatMessageRole.USER) ChatRole.USER else ChatRole.ASSISTANT,
-                content = ui.content
+                content = ui.sanitizedContent ?: ui.content
             )
         }
         return ChatRequest(
@@ -1419,7 +1475,8 @@ class HomeScreenViewModel @Inject constructor(
         builder.append("# 对话记录\n\n")
         messages.forEach { msg ->
             val role = if (msg.role == ChatMessageRole.USER) "用户" else "助手"
-            builder.append("- **$role**：${msg.content}\n")
+            val text = msg.sanitizedContent ?: msg.content
+            builder.append("- **$role**：$text\n")
         }
         return builder.toString()
     }
@@ -1428,6 +1485,8 @@ class HomeScreenViewModel @Inject constructor(
         id = nextMessageId(),
         role = ChatMessageRole.USER,
         content = content,
+        rawContent = content,
+        sanitizedContent = content,
         timestampMillis = System.currentTimeMillis()
     )
 
@@ -1438,10 +1497,38 @@ class HomeScreenViewModel @Inject constructor(
         id = nextMessageId(),
         role = ChatMessageRole.ASSISTANT,
         content = content,
+        rawContent = content,
+        sanitizedContent = content,
         timestampMillis = System.currentTimeMillis(),
         isStreaming = true,
         isSmartAnalysis = isSmartAnalysis
     )
+
+    private fun shouldShowRaw(): Boolean = BuildConfig.DEBUG && _uiState.value.showRawAssistantOutput
+
+    private fun displayAssistantText(
+        raw: String?,
+        sanitized: String?
+    ): String {
+        val rawCandidate = if (shouldShowRaw()) raw else null
+        return rawCandidate ?: sanitized ?: raw.orEmpty()
+    }
+
+    private fun applyAssistantDisplay(
+        messages: List<ChatMessageUi>,
+        showRaw: Boolean
+    ): List<ChatMessageUi> {
+        val allowRaw = BuildConfig.DEBUG && showRaw
+        return messages.map { msg ->
+            if (msg.role != ChatMessageRole.ASSISTANT) return@map msg
+            val display = if (allowRaw) {
+                msg.rawContent ?: msg.content
+            } else {
+                msg.sanitizedContent ?: msg.content
+            }
+            msg.copy(content = display)
+        }
+    }
 
     private fun latestUserContent(): String? =
         _uiState.value.chatMessages.lastOrNull { it.role == ChatMessageRole.USER }?.content?.trim()

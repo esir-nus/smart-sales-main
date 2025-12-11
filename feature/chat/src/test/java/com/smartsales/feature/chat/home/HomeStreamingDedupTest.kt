@@ -119,6 +119,28 @@ class HomeStreamingDedupTest {
     }
 
     @Test
+    fun `debug toggle switches between sanitized and raw assistant text`() = runTest(dispatcher) {
+        val rawReply = "重复重复重复"
+        orchestrator.enqueue(ChatStreamEvent.Completed(rawReply))
+
+        viewModel.onInputChanged("客户询问产品报价")
+        viewModel.onSendMessage()
+        advanceUntilIdle()
+
+        val assistant = viewModel.uiState.value.chatMessages.first { it.role == ChatMessageRole.ASSISTANT }
+        val raw = assistant.rawContent
+        val sanitized = assistant.sanitizedContent ?: assistant.content
+
+        viewModel.setShowRawAssistantOutput(true)
+        val rawDisplay = viewModel.uiState.value.chatMessages.first { it.role == ChatMessageRole.ASSISTANT }.content
+        assertEquals(raw, rawDisplay)
+
+        viewModel.setShowRawAssistantOutput(false)
+        val sanitizedDisplay = viewModel.uiState.value.chatMessages.first { it.role == ChatMessageRole.ASSISTANT }.content
+        assertEquals(sanitized, sanitizedDisplay)
+    }
+
+    @Test
     fun `multiple rounds keep one assistant bubble per turn`() = runTest(dispatcher) {
         orchestrator.enqueue(
             ChatStreamEvent.Delta("hi"),

@@ -6,6 +6,7 @@ package com.smartsales.data.aicore
 
 import com.smartsales.core.test.FakeDispatcherProvider
 import com.smartsales.core.util.Result
+import com.smartsales.data.aicore.params.AiParaSettings
 import java.io.IOException
 import java.util.Optional
 import kotlinx.coroutines.flow.Flow
@@ -53,6 +54,9 @@ class DashscopeAiChatServiceTest {
         assertEquals("助手结论", result.displayText)
         assertTrue(result.structuredMarkdown!!.startsWith("助手结论"))
         assertTrue(result.structuredMarkdown!!.contains("## 输入摘要"))
+        val lastRequest = dashscopeClient.lastRequest
+        assertEquals(AiParaSettings.dashScope.temperature.toFloat(), lastRequest?.temperature)
+        assertEquals(AiParaSettings.dashScope.incrementalOutput, lastRequest?.incrementalOutput)
     }
 
     @Test

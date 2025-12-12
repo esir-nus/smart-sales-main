@@ -103,25 +103,21 @@ class RealTingwuCoordinator @Inject constructor(
             val sourceLanguage = mapSourceLanguage(requestedLanguage)
             val model = config.tingwuModelOverride?.takeIf { it.isNotBlank() } ?: credentials.model
             val defaultCustomPrompt = tingwuSettings.customPrompt.contents.firstOrNull()
-            val customPromptContent = if (request.customPromptEnabled) {
-                val resolvedName = request.customPromptName?.takeIf { it.isNotBlank() }
-                    ?: defaultCustomPrompt?.name
-                val resolvedPrompt = request.customPromptText?.takeIf { it.isNotBlank() }
-                    ?: defaultCustomPrompt?.prompt
-                if (resolvedName != null && resolvedPrompt != null) {
-                    TingwuCustomPromptContent(
-                        name = resolvedName,
-                        prompt = resolvedPrompt,
-                        model = defaultCustomPrompt?.model,
-                        transType = defaultCustomPrompt?.transType
-                    )
-                } else {
-                    null
-                }
+            val resolvedName = request.customPromptName?.takeIf { it.isNotBlank() }
+                ?: defaultCustomPrompt?.name
+            val resolvedPrompt = request.customPromptText?.takeIf { it.isNotBlank() }
+                ?: defaultCustomPrompt?.prompt
+            val customPromptContent = if (resolvedName != null && resolvedPrompt != null) {
+                TingwuCustomPromptContent(
+                    name = resolvedName,
+                    prompt = resolvedPrompt,
+                    model = defaultCustomPrompt?.model,
+                    transType = defaultCustomPrompt?.transType
+                )
             } else {
                 null
             }
-            val customPromptEnabled: Boolean? = if (customPromptContent != null && tingwuSettings.customPrompt.enabled) {
+            val customPromptEnabled: Boolean? = if (tingwuSettings.customPrompt.enabled && customPromptContent != null) {
                 true
             } else {
                 null

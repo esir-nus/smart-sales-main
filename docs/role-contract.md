@@ -67,13 +67,15 @@
 
 * Message starts with `Codex:` and contains a **Plan Prompt** from Orchestrator.
 
-**Two-phase protocol (must follow):**
+**Two-phase protocol (strict, no skipping)**
 
 1. **Phase 1 – Self-evaluation & plan (no new code)**
 
    * Summarize understanding of the task.
    * List files to touch and why.
    * Give a numbered implementation plan (high-level; no fresh code).
+   * Orchestrator must state the prompt expects an evidence-based, read-only self-eval for cross-examination.
+   * Codex must label the reply as “self-eval, awaiting unlock,” and must not include implementation or scope changes.
 
 2. **Phase 2 – Implementation (only after unlock)**
 
@@ -82,12 +84,14 @@
    * Provide concrete diffs / code blocks that follow the plan.
    * Keep changes minimal and localized.
    * Remind Operator which tests / Gradle commands to run.
+   * Orchestrator, when unlocking, should give an explicit unlock command (optionally brief guardrails), not a re-stated plan or new scope.
 
 **Does not:**
 
 * Design new features or change task scope.
 * Modify tests unless the Plan Prompt explicitly allows it.
 * Skip Phase 1 and jump straight to code.
+* Orchestrator must not bypass Phase 1 with Phase 2 content; Codex must not include implementation beyond evidence + plan in Phase 1.
 
 ---
 
@@ -113,6 +117,15 @@
    * Returns code / diffs. Operator applies them, runs tests, and decides the next T-task.
 
 ---
+
+## Tingwu work: No-Invention Guardrails
+
+- MUST treat `docs/source-repo.json` (schema: `docs/source-repo.schema.json`) as the wiring source of truth for Tingwu request/response keys; keys are case-sensitive.
+- MUST ground every new Tingwu feature in (1) the exact request/response fields recorded in the registry, and (2) an existing working implementation pattern already in the repo（Transcription、Summarization、CustomPrompt）。
+- DO NOT invent parameter names, nested JSON structures, result keys, DTO fields, placeholder/fake diarization or segment logic, or any behaviors not backed by Tingwu returned JSON.
+- If a field/key is not found in the registry or cannot be mapped to current code, mark it as UNKNOWN, stop, and report where you searched; do not approximate or guess the schema.
+- Evidence workflow（严格）：任何 Tingwu 功能实现必须先写“Evidence Table”，包含：文档键名（保持大小写）、请求模型位置（文件+类）、结果解析位置（文件+类）、制品映射位置（文件+类）、需要补的测试。缺少此表则实现视为无效。
+- Use the registry template and validated patterns in `docs/source-repo.json` to wire Tingwu features; guardrails cannot be bypassed.
 
 ## 4. Hard Red Lines
 

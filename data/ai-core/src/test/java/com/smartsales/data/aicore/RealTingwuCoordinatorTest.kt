@@ -185,7 +185,7 @@ class RealTingwuCoordinatorTest {
             TingwuRequest(
                 audioAssetName = "demo.wav",
                 fileUrl = "https://oss.example.com/demo.wav",
-                customPromptEnabled = true,
+                customPromptEnabled = false,
                 customPromptName = "",
                 customPromptText = ""
             )

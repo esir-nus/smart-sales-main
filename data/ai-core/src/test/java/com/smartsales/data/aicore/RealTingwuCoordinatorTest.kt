@@ -184,16 +184,18 @@ class RealTingwuCoordinatorTest {
                 audioAssetName = "demo.wav",
                 fileUrl = "https://oss.example.com/demo.wav",
                 customPromptEnabled = true,
-                customPromptName = "speaker-role-inference-v1",
-                customPromptText = "PROMPT_BODY"
+                customPromptName = "",
+                customPromptText = ""
             )
         )
 
         val request = api.lastCreateRequest
         val json = Gson().toJson(request)
         assertTrue(json.contains("\"CustomPromptEnabled\":true"))
-        assertTrue(json.contains("\"Name\":\"speaker-role-inference-v1\""))
-        assertTrue(json.contains("\"Prompt\":\"PROMPT_BODY\""))
+        assertTrue(json.contains("\"Name\":\"speaker-role-relabel-v1\""))
+        assertTrue(json.contains("SpeakerId \\\"1\\\" -> Dad").not()) // JSON escapes, use substring match
+        assertTrue(json.contains("Dad"))
+        assertTrue(json.contains("Son"))
         assertTrue(json.contains("\"Model\":\"tingwu-turbo\""))
     }
 

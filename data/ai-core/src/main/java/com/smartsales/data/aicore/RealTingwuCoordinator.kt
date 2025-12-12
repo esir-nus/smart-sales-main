@@ -100,14 +100,21 @@ class RealTingwuCoordinator @Inject constructor(
             val requestedLanguage = request.language.ifBlank { DEFAULT_LANGUAGE }
             val sourceLanguage = mapSourceLanguage(requestedLanguage)
             val model = config.tingwuModelOverride?.takeIf { it.isNotBlank() } ?: credentials.model
-            val customPromptContent = if (
-                request.customPromptEnabled &&
-                !request.customPromptName.isNullOrBlank() &&
-                !request.customPromptText.isNullOrBlank()
-            ) {
+            val defaultPrompt = """
+                输入是一份包含段落和 SpeakerId 的转写文本。仅重命名发言人：
+                - SpeakerId "1" -> Dad
+                - SpeakerId "2" -> Son
+                - 其他 SpeakerId 保持不变
+                不要猜测或新增角色，不要改动时间戳/顺序/文本，仅修改显示的发言人名称。
+            """.trimIndent()
+            val customPromptContent = if (request.customPromptEnabled) {
+                val resolvedName = request.customPromptName?.takeIf { it.isNotBlank() }
+                    ?: "speaker-role-relabel-v1"
+                val resolvedPrompt = request.customPromptText?.takeIf { it.isNotBlank() }
+                    ?: defaultPrompt
                 TingwuCustomPromptContent(
-                    name = request.customPromptName,
-                    prompt = request.customPromptText,
+                    name = resolvedName,
+                    prompt = resolvedPrompt,
                     model = "tingwu-turbo",
                     transType = "default"
                 )

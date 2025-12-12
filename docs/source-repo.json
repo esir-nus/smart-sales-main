@@ -1,60 +1,54 @@
 {
+  "$schema": "./source-repo.schema.json",
   "version": "source-repo.v1",
+  "doc": {
+    "id": "source-repo",
+    "purpose": "implementation_reference_registry",
+    "audience": ["ai_agent", "human_reviewer"],
+    "scope": ["repo_practices", "wire_patterns", "dto_keys", "test_evidence"],
+    "nonGoals": ["product_spec", "ux_spec", "role_rules", "business_logic_explanation"],
+    "trustModel": {
+      "rule": "Claims must be backed by evidence entries (codeRefs/testRefs) on the recorded commit.",
+      "evidenceRequiredFor": ["validated", "repo.mode", "repo.provenance"]
+    }
+  },
   "generatedFrom": {
     "repoRoot": "/home/cslh-frank/main_app",
-    "branch": "dashscope-playground",
-    "commit": "15bf5a7f64748eb883d8b188f369d59665b54b15",
-    "generatedAt": "2025-12-12T10:17:00+08:00"
+    "branch": "<FILL_BY_GENERATOR>",
+    "commit": "<FILL_BY_GENERATOR>",
+    "generatedAt": "<FILL_BY_GENERATOR_ISO8601_WITH_TZ>"
   },
   "index": {
     "areas": [
       {
         "id": "tingwu.createTask",
         "jsonPointer": "/tingwu/createTask",
-        "keywords": [
-          "CreateTask",
-          "Parameters",
-          "TranscriptionEnabled",
-          "SummarizationEnabled",
-          "CustomPromptEnabled"
-        ]
+        "keywords": ["CreateTask", "Parameters", "Transcription", "Summarization", "CustomPrompt"]
       },
       {
         "id": "tingwu.getTaskInfo",
         "jsonPointer": "/tingwu/getTaskInfo",
-        "keywords": [
-          "GetTaskInfo",
-          "Result",
-          "Transcription",
-          "Summarization",
-          "CustomPrompt"
-        ]
+        "keywords": ["GetTaskInfo", "Result", "Transcription", "Summarization", "CustomPrompt"]
+      },
+      {
+        "id": "tingwu.transcriptionParsing",
+        "jsonPointer": "/tingwu/transcriptionParsing",
+        "keywords": ["Transcription JSON", "segments", "speakerId", "timestamps", "DiarizedSegment"]
       },
       {
         "id": "tingwu.artifacts",
         "jsonPointer": "/tingwu/artifacts",
-        "keywords": [
-          "TingwuJobArtifacts",
-          "customPromptUrl",
-          "summarizationUrl"
-        ]
+        "keywords": ["TingwuJobArtifacts", "transcriptionUrl", "customPromptUrl", "smartSummary", "diarizedSegments"]
       },
       {
         "id": "tingwu.tests",
         "jsonPointer": "/tingwu/tests",
-        "keywords": [
-          "CreateTask",
-          "Result mapping",
-          "artifact url"
-        ]
+        "keywords": ["CreateTask payload", "Result mapping", "Artifact propagation"]
       },
       {
-        "id": "dashscope.stub",
+        "id": "dashscope",
         "jsonPointer": "/dashscope",
-        "keywords": [
-          "stub",
-          "next update"
-        ]
+        "keywords": ["stub", "next update"]
       }
     ],
     "symbols": [
@@ -62,100 +56,149 @@
         "name": "RealTingwuCoordinator.submit",
         "file": "data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt",
         "kind": "function",
-        "searchTerms": [
-          "fun submit(",
-          "createTranscriptionTask"
-        ]
+        "searchTerms": ["fun submit(", "TingwuCreateTaskRequest", "Parameters"]
+      },
+      {
+        "name": "RealTingwuCoordinator.poll/getTaskInfo mapping",
+        "file": "data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt",
+        "kind": "function_or_block",
+        "searchTerms": ["GetTaskInfo", "Result", "resultLinks", "toArtifacts", "buildArtifacts"]
       },
       {
         "name": "TingwuCreateTaskRequest",
         "file": "data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/TingwuApi.kt",
         "kind": "class",
-        "searchTerms": [
-          "data class TingwuCreateTaskRequest"
-        ]
+        "searchTerms": ["data class TingwuCreateTaskRequest"]
       },
       {
         "name": "TingwuTaskParameters",
         "file": "data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/TingwuApi.kt",
         "kind": "class",
-        "searchTerms": [
-          "data class TingwuTaskParameters"
-        ]
+        "searchTerms": ["data class TingwuTaskParameters"]
       },
       {
         "name": "TingwuStatusData",
         "file": "data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/TingwuApi.kt",
         "kind": "class",
-        "searchTerms": [
-          "data class TingwuStatusData"
-        ]
-      },
-      {
-        "name": "TingwuResultData",
-        "file": "data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/TingwuApi.kt",
-        "kind": "class",
-        "searchTerms": [
-          "data class TingwuResultData"
-        ]
+        "searchTerms": ["data class TingwuStatusData", "@SerializedName(\"Result\")"]
       },
       {
         "name": "TingwuJobArtifacts",
         "file": "data/ai-core/src/main/java/com/smartsales/data/aicore/TingwuCoordinator.kt",
         "kind": "class",
-        "searchTerms": [
-          "data class TingwuJobArtifacts"
-        ]
+        "searchTerms": ["data class TingwuJobArtifacts"]
       },
       {
         "name": "DiarizedSegment",
         "file": "data/ai-core/src/main/java/com/smartsales/data/aicore/TingwuCoordinator.kt",
         "kind": "class",
-        "searchTerms": [
-          "data class DiarizedSegment"
-        ]
-      },
-      {
-        "name": "buildSpeakerLabels",
-        "file": "data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt",
-        "kind": "function",
-        "searchTerms": [
-          "fun buildSpeakerLabels"
-        ]
+        "searchTerms": ["data class DiarizedSegment"]
       },
       {
         "name": "buildMarkdown",
         "file": "data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt",
         "kind": "function",
-        "searchTerms": [
-          "fun buildMarkdown"
-        ]
+        "searchTerms": ["fun buildMarkdown", "speakerLabels", "diarizedSegments"]
       }
     ]
   },
   "tingwu": {
-    "validated": {
-      "requestEnabledFlags": [
-        "SummarizationEnabled",
-        "CustomPromptEnabled",
-        "DiarizationEnabled"
+    "featureRegistry": {
+      "features": [
+        {
+          "id": "transcription",
+          "service": {
+            "toggleable": true,
+            "enableFlag": "TranscriptionEnabled",
+            "configBlock": "Transcription",
+            "resultKey": "Transcription"
+          },
+          "repo": {
+            "mode": "honors_flag",
+            "provenance": "service_transcription_json",
+            "notes": "Production diarizedSegments MUST be derived by parsing Result.Transcription JSON. No local synthesis in production."
+          },
+          "evidence": {
+            "codeRefs": [],
+            "testRefs": []
+          }
+        },
+        {
+          "id": "diarization",
+          "service": {
+            "toggleable": true,
+            "configPath": "/Parameters/Transcription/DiarizationEnabled",
+            "configBlock": "Transcription.Diarization",
+            "notes": "Diarization (speaker attribution) is a Tingwu transcription capability; if enabled, speaker attribution should appear in Transcription JSON output."
+          },
+          "repo": {
+            "mode": "honors_flag",
+            "provenance": "service_transcription_json",
+            "notes": "Diarization accuracy is a service concern. Repo must treat diarization as a hint; any higher-level correction should be done via CustomPrompt output or post-processing layers, but diarizedSegments remain service-derived."
+          },
+          "verification": {
+            "requiredToClaimServiceBacked": [
+              "Download a real Result.Transcription JSON",
+              "Identify the exact JSON fields that carry speaker attribution + timestamps",
+              "Prove parser maps them into DiarizedSegment.speakerId/speakerIndex/startMs/endMs/text",
+              "Prove no production code path creates DiarizedSegment without reading Transcription JSON"
+            ]
+          },
+          "evidence": {
+            "codeRefs": [],
+            "testRefs": []
+          }
+        },
+        {
+          "id": "summarization",
+          "service": {
+            "toggleable": true,
+            "enableFlag": "SummarizationEnabled",
+            "configBlock": "Summarization",
+            "resultKey": "Summarization"
+          },
+          "repo": {
+            "mode": "forced_on",
+            "forcedValue": true,
+            "provenance": "service_result_url",
+            "notes": "Repo always enables summarization in CreateTask (quick default). Parsing is done by downloading Result.Summarization URL and extracting smartSummary."
+          },
+          "evidence": {
+            "codeRefs": [],
+            "testRefs": []
+          }
+        },
+        {
+          "id": "customPrompt",
+          "service": {
+            "toggleable": true,
+            "enableFlag": "CustomPromptEnabled",
+            "configBlock": "CustomPrompt",
+            "resultKey": "CustomPrompt",
+            "constraints": {
+              "placeholderRequired": "{Transcription}",
+              "maxContents": 3
+            }
+          },
+          "repo": {
+            "mode": "forced_on",
+            "forcedValue": true,
+            "provenance": "service_result_url",
+            "defaults": {
+              "name": "speaker-role-inference-v1",
+              "model": "tingwu-turbo",
+              "transType": "default"
+            },
+            "notes": "Repo always attaches one built-in CustomPrompt (quick experiment default). Result.CustomPrompt URL is downloaded as raw JSON/text; no schema enforcement at Tingwu layer."
+          },
+          "evidence": {
+            "codeRefs": [],
+            "testRefs": []
+          }
+        }
       ],
-      "requestBlocks": [
-        "Transcription",
-        "Summarization",
-        "CustomPrompt"
-      ],
-      "resultKeys": [
-        "Transcription",
-        "AutoChapters",
-        "Summarization",
-        "CustomPrompt"
-      ]
-    },
-    "presentInCodeUnvalidated": {
-      "requestEnabledFlags": [],
-      "requestBlocks": [],
-      "resultKeys": []
+      "modes": ["honors_flag", "forced_on", "forced_off", "not_wired", "unknown"],
+      "provenanceKinds": ["service_transcription_json", "service_result_url", "local_synthesized", "unknown"]
     },
     "createTask": {
       "requestBuilder": {
@@ -168,83 +211,35 @@
         }
       },
       "parametersKeys": {
-        "enabledFlags": [
-          "SummarizationEnabled",
-          "CustomPromptEnabled",
-          "DiarizationEnabled"
-        ],
-        "blocks": [
-          "Transcription",
-          "Summarization",
-          "CustomPrompt"
-        ]
-      },
-      "customPrompt": {
-        "name": "speaker-role-inference-v1",
-        "model": "tingwu-turbo",
-        "transType": "default",
-        "placeholder": "{Transcription}"
+        "enabledFlags": ["TranscriptionEnabled", "SummarizationEnabled", "CustomPromptEnabled"],
+        "blocks": ["Transcription", "Summarization", "CustomPrompt"]
       }
     },
     "getTaskInfo": {
-      "responseTypes": [
-        {
-          "file": "data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/TingwuApi.kt",
-          "type": "TingwuStatusData",
-          "notes": "Result field serialized as Map<String, String> via resultLinks"
-        },
-        {
-          "file": "data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/TingwuApi.kt",
-          "type": "TingwuResultData",
-          "notes": "Result field serialized as Map<String, String> via resultLinks"
-        }
-      ],
       "resultRepresentation": {
         "kind": "map",
-        "details": "Result stored as Map<String, String> (resultLinks) in both status and result responses"
+        "mapType": "Map<String, String>",
+        "notes": "Result is represented as a string map (resultLinks). Keys mirror Tingwu Result.* names."
       },
-      "resultKeyToArtifactField": [
-        {
-          "resultKey": "Transcription",
-          "artifactField": "transcriptionUrl",
-          "mappingLocations": [
-            {
-              "file": "data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt",
-              "symbol": "fetchTranscript"
-            }
-          ]
+      "resultKeysValidatedInRepo": ["Transcription", "Summarization", "CustomPrompt", "AutoChapters"]
+    },
+    "transcriptionParsing": {
+      "contract": {
+        "diarizedSegmentsSource": "Result.Transcription JSON download",
+        "noLocalSynthesisInProduction": true
+      },
+      "mapping": {
+        "targetType": "DiarizedSegment",
+        "requiredFields": ["speakerId", "speakerIndex", "startMs", "endMs", "text"],
+        "sourceJsonFields": {
+          "speakerId": "<MUST_BE_FILLED_FROM_REAL_TRANSCRIPTION_JSON>",
+          "speakerIndex": "<MUST_BE_FILLED_FROM_REAL_TRANSCRIPTION_JSON>",
+          "startMs": "<MUST_BE_FILLED_FROM_REAL_TRANSCRIPTION_JSON>",
+          "endMs": "<MUST_BE_FILLED_FROM_REAL_TRANSCRIPTION_JSON>",
+          "text": "<MUST_BE_FILLED_FROM_REAL_TRANSCRIPTION_JSON>"
         },
-        {
-          "resultKey": "AutoChapters",
-          "artifactField": "autoChaptersUrl",
-          "mappingLocations": [
-            {
-              "file": "data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt",
-              "symbol": "extractAutoChaptersUrl"
-            }
-          ]
-        },
-        {
-          "resultKey": "Summarization",
-          "artifactField": "smartSummary",
-          "mappingLocations": [
-            {
-              "file": "data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt",
-              "symbol": "fetchSmartSummarySafe"
-            }
-          ]
-        },
-        {
-          "resultKey": "CustomPrompt",
-          "artifactField": "customPromptUrl",
-          "mappingLocations": [
-            {
-              "file": "data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt",
-              "symbol": "buildArtifacts"
-            }
-          ]
-        }
-      ]
+        "notes": "Fill sourceJsonFields only after verifying the real Tingwu Transcription JSON structure on this branch."
+      }
     },
     "artifacts": {
       "type": {
@@ -252,160 +247,25 @@
         "type": "TingwuJobArtifacts"
       },
       "fields": [
-        {
-          "name": "outputMp3Path",
-          "type": "String?",
-          "notes": ""
-        },
-        {
-          "name": "outputMp4Path",
-          "type": "String?",
-          "notes": ""
-        },
-        {
-          "name": "outputThumbnailPath",
-          "type": "String?",
-          "notes": ""
-        },
-        {
-          "name": "outputSpectrumPath",
-          "type": "String?",
-          "notes": ""
-        },
-        {
-          "name": "resultLinks",
-          "type": "List<TingwuResultLink>",
-          "notes": "labels mirror Result map entries"
-        },
-        {
-          "name": "transcriptionUrl",
-          "type": "String?",
-          "notes": ""
-        },
-        {
-          "name": "autoChaptersUrl",
-          "type": "String?",
-          "notes": ""
-        },
-        {
-          "name": "customPromptUrl",
-          "type": "String?",
-          "notes": ""
-        },
-        {
-          "name": "extraResultUrls",
-          "type": "Map<String, String>",
-          "notes": ""
-        },
-        {
-          "name": "chapters",
-          "type": "List<TingwuChapter>?",
-          "notes": ""
-        },
-        {
-          "name": "smartSummary",
-          "type": "TingwuSmartSummary?",
-          "notes": ""
-        },
-        {
-          "name": "diarizedSegments",
-          "type": "List<DiarizedSegment>?",
-          "notes": ""
-        },
-        {
-          "name": "speakerLabels",
-          "type": "Map<String, String>",
-          "notes": ""
-        }
-      ],
-      "speakerLabelingAndMarkdown": {
-        "diarizedSegmentType": {
-          "file": "data/ai-core/src/main/java/com/smartsales/data/aicore/TingwuCoordinator.kt",
-          "type": "DiarizedSegment"
-        },
-        "buildSpeakerLabels": {
-          "file": "data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt",
-          "symbol": "buildSpeakerLabels"
-        },
-        "buildMarkdown": {
-          "file": "data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt",
-          "symbol": "buildMarkdown"
-        },
-        "notes": "Markdown uses diarizedSegments with time ranges; speaker labels prefer TingwuSpeaker.name fallback to 发言人 N"
-      }
-    },
-    "tests": {
-      "requestSerializationOrAssertions": [
-        {
-          "file": "data/ai-core/src/test/java/com/smartsales/data/aicore/RealTingwuCoordinatorTest.kt",
-          "testName": "createTask_enablesSummarization",
-          "covers": [
-            "SummarizationEnabled=true",
-            "Summarization.Types=[\"Paragraph\"]",
-            "DiarizationEnabled default true with SpeakerCount=2"
-          ]
-        },
-        {
-          "file": "data/ai-core/src/test/java/com/smartsales/data/aicore/RealTingwuCoordinatorTest.kt",
-          "testName": "createTask_includesCustomPromptWhenEnabled",
-          "covers": [
-            "CustomPromptEnabled=true",
-            "CustomPrompt.Contents Name/Prompt/Model"
-          ]
-        },
-        {
-          "file": "data/ai-core/src/test/java/com/smartsales/data/aicore/RealTingwuCoordinatorTest.kt",
-          "testName": "createTask_respectsDiarizationFlag",
-          "covers": [
-            "DiarizationEnabled=false omits Diarization block"
-          ]
-        },
-        {
-          "file": "data/ai-core/src/test/java/com/smartsales/data/aicore/RealTingwuCoordinatorTest.kt",
-          "testName": "createTask_whenSummarizationDisabled_omitsSummarizationTypes",
-          "covers": [
-            "SummarizationEnabled=false omits Summarization block"
-          ]
-        }
-      ],
-      "resultMappingAssertions": [
-        {
-          "file": "data/ai-core/src/test/java/com/smartsales/data/aicore/RealTingwuCoordinatorTest.kt",
-          "testName": "submit_emitsCompletedTranscript",
-          "covers": [
-            "Result.Transcription to artifacts.transcriptionUrl",
-            "Result.AutoChapters to artifacts.autoChaptersUrl"
-          ]
-        },
-        {
-          "file": "data/ai-core/src/test/java/com/smartsales/data/aicore/RealTingwuCoordinatorTest.kt",
-          "testName": "completedJob_withSummarizationLink_emitsSmartSummary",
-          "covers": [
-            "Result.Summarization parsed into smartSummary"
-          ]
-        },
-        {
-          "file": "data/ai-core/src/test/java/com/smartsales/data/aicore/RealTingwuCoordinatorTest.kt",
-          "testName": "resultLinks_includeCustomPromptUrl",
-          "covers": [
-            "Result.CustomPrompt to artifacts.customPromptUrl"
-          ]
-        }
+        { "name": "transcriptionUrl", "type": "String?", "notes": "Result.Transcription URL" },
+        { "name": "customPromptUrl", "type": "String?", "notes": "Result.CustomPrompt URL" },
+        { "name": "autoChaptersUrl", "type": "String?", "notes": "Result.AutoChapters URL" },
+        { "name": "smartSummary", "type": "TingwuSmartSummary?", "notes": "Parsed from Result.Summarization URL" },
+        { "name": "diarizedSegments", "type": "List<DiarizedSegment>?", "notes": "Parsed from Transcription JSON (service-backed)" },
+        { "name": "speakerLabels", "type": "Map<String, String>", "notes": "Derived from speakerId ordering; must not hardcode 客户/销售 defaults" }
       ]
     },
-    "unknownOrUnverified": [
-      {
-        "topic": "TranscriptionEnabled flag not emitted in CreateTask payload",
-        "whatWasSearched": [
-          "TranscriptionEnabled",
-          "transcriptionEnabled"
-        ],
-        "whyUnverified": "No serialized field found in DTOs or request builder; Transcription is always included via TingwuTranscriptionParameters without an enable flag."
-      }
-    ]
+    "tests": {
+      "policy": {
+        "validatedMeans": "A claim is 'validated' only if a unit test asserts it explicitly (payload substring or mapping assertion) AND production code path is the one under test.",
+        "antiFootgun": "Tests may synthesize diarizedSegments as fixtures; such tests do NOT validate Tingwu diarization service behavior."
+      },
+      "requestSerializationOrAssertions": [],
+      "resultMappingAssertions": []
+    }
   },
   "dashscope": {
     "status": "stub_for_next_update",
-    "notes": "DashScope mapping will be added in a later update."
+    "notes": "DashScope registry will be added after Tingwu registry stabilizes."
   }
 }

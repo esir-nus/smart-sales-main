@@ -26,6 +26,7 @@ import java.io.File
 import java.util.Optional
 import java.util.concurrent.ConcurrentLinkedQueue
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -319,7 +320,73 @@ class RealTingwuCoordinatorTest {
     }
 
     @Test
-    fun plainTextTranscription_producesSyntheticSubtitleSegments() = runTest(dispatcher) {
+    fun diarizedSegments_withoutSpeakerNames_useNeutralLabels() = runTest(dispatcher) {
+        val api = FakeTingwuApi()
+        api.enqueueStatus(statusResponse(status = "PROCESSING", progress = 30))
+        api.enqueueStatus(statusResponse(status = "SUCCEEDED", progress = 100))
+        api.resultData = TingwuResultResponse(
+            requestId = "req-result",
+            code = "0",
+            message = "Success",
+            data = TingwuResultData(
+                taskId = "job-1",
+                transcription = TingwuTranscription(
+                    text = "",
+                    segments = listOf(
+                        TingwuTranscriptSegment(id = 1, start = 0.0, end = 1.2, text = "你好", speaker = "spk_1"),
+                        TingwuTranscriptSegment(id = 2, start = 1.3, end = 2.4, text = "欢迎光临", speaker = "spk_2")
+                    ),
+                    speakers = listOf(
+                        TingwuSpeaker(id = "spk_1", name = null),
+                        TingwuSpeaker(id = "spk_2", name = "")
+                    ),
+                    language = "zh",
+                    duration = 3.0,
+                    url = "https://example.com/transcription.json"
+                ),
+                resultLinks = emptyMap(),
+                outputMp3Path = null,
+                outputMp4Path = null,
+                outputThumbnailPath = null,
+                outputSpectrumPath = null
+            )
+        )
+        val coordinator = RealTingwuCoordinator(
+            dispatchers = dispatchers,
+            api = api,
+            credentialsProvider = credentialsProvider,
+            signedUrlProvider = signedUrlProvider,
+            transcriptOrchestrator = transcriptOrchestrator,
+            metaHub = InMemoryMetaHub(),
+            optionalConfig = Optional.of(
+                AiCoreConfig(
+                    tingwuPollIntervalMillis = 10,
+                    tingwuPollTimeoutMillis = 200
+                )
+            )
+        )
+
+        val result = coordinator.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav"
+            )
+        )
+        assertTrue(result is Result.Success)
+        val jobId = (result as Result.Success).data
+        advanceTimeBy(20)
+        advanceUntilIdle()
+
+        val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
+        val lines = completed.transcriptMarkdown.lines().filter { it.startsWith("- ") }
+        assertTrue(lines.any { it.contains("发言人 1") })
+        assertTrue(lines.any { it.contains("发言人 2") })
+        val labels = completed.artifacts?.speakerLabels
+        assertEquals(mapOf("spk_1" to "发言人 1", "spk_2" to "发言人 2"), labels)
+    }
+
+    @Test
+    fun plainTextTranscription_rendersNonDiarizedTranscript_withoutSyntheticSpeakers() = runTest(dispatcher) {
         val api = FakeTingwuApi()
         api.enqueueStatus(statusResponse(status = "PROCESSING", progress = 30))
         api.enqueueStatus(statusResponse(status = "SUCCEEDED", progress = 100))
@@ -371,12 +438,12 @@ class RealTingwuCoordinatorTest {
         advanceUntilIdle()
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
-        val bullets = completed.transcriptMarkdown.lines().filter { it.startsWith("- ") }
-        // 纯文本应被拆分成多个字幕行，并带有时间戳
-        assertTrue(bullets.size >= 2)
-        assertTrue(bullets.all { Regex("\\[\\d{2}:\\d{2}(?:\\s-\\s\\d{2}:\\d{2})?]").containsMatchIn(it) })
+        val markdown = completed.transcriptMarkdown
+        assertTrue(markdown.contains("逐字稿（无说话人分离数据）"))
+        assertTrue(markdown.contains("你好罗总。这是今天的试驾安排。"))
+        assertFalse(markdown.contains("发言人"))
         val diarized = completed.artifacts?.diarizedSegments
-        assertTrue(diarized != null && diarized.size >= 2)
+        assertTrue(diarized.isNullOrEmpty())
     }
 
     @Test

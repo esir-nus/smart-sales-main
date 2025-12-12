@@ -879,7 +879,12 @@ class RealTingwuCoordinator @Inject constructor(
             }
             return builder.toString().trimEnd()
         }
-        transcription?.text?.takeIf { it.isNotBlank() }?.let { return it.trim() }
+        transcription?.text?.takeIf { it.isNotBlank() }?.let { raw ->
+            return buildString {
+                append("## 逐字稿（无说话人分离数据）\n")
+                append(raw.trim())
+            }
+        }
         val builder = StringBuilder()
         val segments = transcription?.segments.orEmpty()
         if (segments.isEmpty()) {
@@ -923,38 +928,21 @@ class RealTingwuCoordinator @Inject constructor(
             speakerOrder[speaker.id] = index + 1
         }
         var nextIndex = speakerOrder.size + 1
-        fun resolveSpeaker(idRaw: String?): Pair<String, Int> {
-            val key = idRaw?.takeIf { it.isNotBlank() } ?: "spk_default"
+        fun resolveSpeaker(idRaw: String): Pair<String, Int> {
+            val key = idRaw.trim()
             val idx = speakerOrder.getOrPut(key) { nextIndex++ }
             return key to idx
         }
         val sortedSegments = transcription.segments.orEmpty()
-            .filter { !it.text.isNullOrBlank() }
+            .filter { !it.text.isNullOrBlank() && !it.speaker.isNullOrBlank() }
             .sortedBy { it.start ?: 0.0 }
-
-        // 当返回中没有结构化 Segments，但存在纯文本时，按句号拆分为伪字幕行。
-        if (sortedSegments.isEmpty() && rawText.isNotBlank()) {
-            val sentences = splitIntoSentences(normalizedText)
-            if (sentences.isNotEmpty()) {
-                var cursorMs = SYNTHETIC_SENTENCE_GAP_MS
-                return sentences.map { sentence ->
-                    val text = sentence.trim()
-                    val startMs = cursorMs
-                    cursorMs += SYNTHETIC_SENTENCE_GAP_MS
-                    DiarizedSegment(
-                        speakerId = "spk_default",
-                        speakerIndex = 1,
-                        startMs = startMs,
-                        endMs = startMs,
-                        text = text
-                    )
-                }
-            }
+        if (sortedSegments.isEmpty()) {
+            return emptyList()
         }
 
         val baseStartSeconds = sortedSegments.minOfOrNull { it.start ?: 0.0 }?.coerceAtLeast(0.0) ?: 0.0
         val diarized = sortedSegments.map { segment ->
-            val (speakerId, speakerIndex) = resolveSpeaker(segment.speaker)
+            val (speakerId, speakerIndex) = resolveSpeaker(segment.speaker!!)
             val rawStart = (segment.start ?: 0.0) - baseStartSeconds
             val rawEnd = (segment.end ?: segment.start ?: 0.0) - baseStartSeconds
             val startMs = (rawStart * 1000).toLong()
@@ -982,16 +970,6 @@ class RealTingwuCoordinator @Inject constructor(
             } else {
                 merged += segment
             }
-        }
-        if (merged.isEmpty()) {
-            val fallbackText = transcription.text?.takeIf { it.isNotBlank() } ?: return emptyList()
-            merged += DiarizedSegment(
-                speakerId = "spk_default",
-                speakerIndex = 1,
-                startMs = 0,
-                endMs = 0,
-                text = fallbackText.trim()
-            )
         }
         return merged
     }
@@ -1363,7 +1341,6 @@ class RealTingwuCoordinator @Inject constructor(
         private const val MAX_SUBTITLE_GAP_MS = 2_000L
         private const val MAX_SUBTITLE_DURATION_MS = 10_000L
         private const val MAX_SUBTITLE_TEXT_LENGTH = 100
-        private const val SYNTHETIC_SENTENCE_GAP_MS = 3_000L
         private val SENTENCE_DELIMITERS = setOf('。', '？', '！', '.', '!', '?')
     }
 }

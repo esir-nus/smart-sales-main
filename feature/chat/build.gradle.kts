@@ -59,6 +59,7 @@ dependencies {
     implementation(platform(libs.compose.bom))
     implementation("androidx.compose.material:material")
     implementation(libs.bundles.compose.ui)
+    implementation(libs.gson)
     implementation(libs.compose.material3)
     implementation(libs.compose.material.icons.extended)
     implementation(libs.compose.foundation)

@@ -1417,48 +1417,133 @@ class RealTingwuCoordinator @Inject constructor(
             val json = JsonParser.parseString(raw)
             if (!json.isJsonObject) return@runCatching null
             val obj = json.asJsonObject
-            val sections = linkedMapOf<String, List<String>>()
-            fun extractList(key: String): List<String> {
-                val element = obj.get(key) ?: return emptyList()
-                return when {
-                    element.isJsonArray -> element.asJsonArray.mapNotNull { it.asStringOrNull() }.filter { it.isNotBlank() }
-                    element.isJsonPrimitive && element.asJsonPrimitive.isString -> listOf(element.asString)
-                    else -> emptyList()
-                }
-            }
-            val paragraph = extractList("Paragraph")
-            val conversational = extractList("Conversational")
-            val qa = extractList("QuestionsAnswering")
-            if (paragraph.isEmpty() && conversational.isEmpty() && qa.isEmpty()) null
+            val summaryObj = obj.getAsJsonObject("Summarization") ?: obj
+            val paragraphTitle = summaryObj.getPrimitiveString("ParagraphTitle")
+            val paragraphSummary = summaryObj.getPrimitiveString("ParagraphSummary")
+            val conversational = summaryObj.getAsJsonArray("ConversationalSummary")
+                ?.mapNotNull { element ->
+                    element.asJsonObjectOrNull()?.let { item ->
+                        val speaker = item.getPrimitiveString("SpeakerName")
+                            ?: item.getPrimitiveString("SpeakerId")
+                        val summary = item.getPrimitiveString("Summary")
+                        if (summary.isNullOrBlank()) null else speaker to summary
+                    }
+                }.orEmpty()
+            val qa = summaryObj.getAsJsonArray("QuestionsAnsweringSummary")
+                ?.mapNotNull { element ->
+                    element.asJsonObjectOrNull()?.let { item ->
+                        val q = item.getPrimitiveString("Question")?.takeIf { it.isNotBlank() }
+                        val a = item.getPrimitiveString("Answer")?.takeIf { it.isNotBlank() }
+                        if (q == null && a == null) null else q to a
+                    }
+                }.orEmpty()
+            if (
+                paragraphTitle.isNullOrBlank() &&
+                paragraphSummary.isNullOrBlank() &&
+                conversational.isEmpty() &&
+                qa.isEmpty()
+            ) null
             else {
-                sections["摘要（Paragraph）"] = paragraph
-                sections["发言人总结（Conversational）"] = conversational
-                sections["问答回顾（QuestionsAnswering）"] = qa
                 buildString {
-                    sections.forEach { (title, items) ->
-                        if (items.isNotEmpty()) {
-                            appendLine("### $title")
-                            items.forEach { appendLine("- $it") }
-                            appendLine()
+                    if (!paragraphTitle.isNullOrBlank() || !paragraphSummary.isNullOrBlank()) {
+                        appendLine("### 段落摘要")
+                        paragraphTitle?.let { appendLine("**$it**") }
+                        paragraphSummary?.let { appendLine(it) }
+                        appendLine()
+                    }
+                    if (conversational.isNotEmpty()) {
+                        appendLine("### 发言人总结")
+                        conversational.forEach { (speaker, summary) ->
+                            val label = speaker ?: "说话人"
+                            appendLine("- **$label**：$summary")
                         }
+                        appendLine()
+                    }
+                    if (qa.isNotEmpty()) {
+                        appendLine("### 问答回顾")
+                        qa.forEach { (q, a) ->
+                            q?.let { appendLine("- **Q：** $it") }
+                            a?.let { appendLine("  **A：** $it") }
+                        }
+                        appendLine()
                     }
                 }.trim()
             }
         }.getOrNull()
-        // 避免展示原始 JSON，解析失败返回空
         return parsed
     }
 
-    private fun buildChaptersText(artifacts: TingwuJobArtifacts?): String? {
-        val chapters = artifacts?.chapters ?: return null
-        if (chapters.isEmpty()) return null
+    private fun buildChaptersText(
+        artifacts: TingwuJobArtifacts?,
+        resultLinks: Map<String, String>?
+    ): String? {
+        val parsedChapters = artifacts?.chapters
+        val chapters = if (!parsedChapters.isNullOrEmpty()) {
+            parsedChapters.map {
+                ChapterDisplay(
+                    startMs = it.startMs ?: 0,
+                    headline = it.title,
+                    summary = null
+                )
+            }
+        } else {
+            fetchAutoChapters(resultLinks)
+        }
+        if (chapters.isNullOrEmpty()) return null
         return buildString {
             chapters.forEach { chapter ->
                 val start = formatTimeMs(chapter.startMs ?: 0)
-                appendLine("- [$start] ${chapter.title}")
+                appendLine("- [$start] ${chapter.headline}")
+                chapter.summary?.takeIf { it.isNotBlank() }?.let { appendLine("  - $it") }
             }
         }.trim()
     }
+
+    private fun fetchAutoChapters(resultLinks: Map<String, String>?): List<ChapterDisplay>? {
+        val url = resultLinks?.entries
+            ?.firstOrNull { it.key.equals("AutoChapters", ignoreCase = true) }
+            ?.value
+            ?.takeIf { it.isNotBlank() }
+            ?: return null
+        val raw = artifactFetcher.fetchText(url) ?: return null
+        return runCatching {
+            val root = JsonParser.parseString(raw)
+            val arr = when {
+                root.isJsonObject -> root.asJsonObject.getAsJsonArray("AutoChapters")
+                root.isJsonArray -> root.asJsonArray
+                else -> null
+            } ?: return@runCatching null
+            arr.mapNotNull { element ->
+                val obj = element.asJsonObjectOrNull() ?: return@mapNotNull null
+                val headline = obj.getPrimitiveString("Headline") ?: obj.getPrimitiveString("Title")
+                val summary = obj.getPrimitiveString("Summary")
+                val start = obj.get("Start")?.asLongOrNull()
+                    ?: obj.get("StartTime")?.asLongOrNull()
+                    ?: obj.get("StartMs")?.asLongOrNull()
+                if (headline.isNullOrBlank()) null
+                else ChapterDisplay(startMs = start ?: 0, headline = headline, summary = summary)
+            }.takeIf { it.isNotEmpty() }
+        }.getOrNull()
+    }
+
+    private fun normalizeStageDirection(text: String?): String? {
+        val raw = text?.trim().orEmpty()
+        if (raw.isBlank()) return null
+        val stage = "[开场寒暄：双方互致问候]"
+        val hasStage = raw.contains(stage)
+        val body = if (hasStage) raw.replace(stage, "").trim() else raw
+        val builder = StringBuilder()
+        if (hasStage) builder.appendLine(stage)
+        if (body.isNotBlank()) builder.append(body.trim())
+        val result = builder.toString().trim()
+        return result.ifBlank { null }
+    }
+
+    private data class ChapterDisplay(
+        val startMs: Long?,
+        val headline: String,
+        val summary: String?
+    )
 
     private data class TranscriptResult(
         val markdown: String,
@@ -1473,32 +1558,23 @@ class RealTingwuCoordinator @Inject constructor(
         resultLinks: Map<String, String>?
     ): String {
         val builder = StringBuilder()
-        
-        val customPromptText = artifacts?.customPromptUrl?.let { fetchCustomPromptResult(it) }
+        val customPromptText = normalizeStageDirection(
+            artifacts?.customPromptUrl?.let { fetchCustomPromptResult(it) }
+        ) ?: "自定义转写暂无可用内容"
         val summarizationText = fetchSummarizationText(resultLinks)
-        val chaptersText = buildChaptersText(artifacts)
-        
-        // If CustomPrompt exists, it replaces the regular transcript
-        // Otherwise, include transcript markdown first (most important content)
-        if (!customPromptText.isNullOrBlank()) {
-            builder.appendLine("## 自定义转写（CustomPrompt）")
-            builder.appendLine(customPromptText.trim()).appendLine()
-        } else if (transcriptMarkdown.isNotBlank()) {
-            builder.appendLine(transcriptMarkdown.trimEnd())
-            builder.appendLine()
-        }
-        
-        if (!summarizationText.isNullOrBlank()) {
-            builder.appendLine("## 摘要（Summarization）")
-            builder.appendLine(summarizationText.trim()).appendLine()
-        }
-        if (!chaptersText.isNullOrBlank()) {
-            builder.appendLine("## 章节（AutoChapters）")
-            builder.appendLine(chaptersText.trim()).appendLine()
-        }
-        if (builder.isEmpty()) {
-            return "转写结果暂无可用内容"
-        }
+            ?: "摘要暂无可用内容"
+        val chaptersText = buildChaptersText(artifacts, resultLinks)
+            ?: "章节暂无可用内容"
+
+        builder.appendLine("## 自定义转写（CustomPrompt）")
+        builder.appendLine(customPromptText.trim()).appendLine()
+
+        builder.appendLine("## 摘要（Summarization）")
+        builder.appendLine(summarizationText.trim()).appendLine()
+
+        builder.appendLine("## 章节（AutoChapters）")
+        builder.appendLine(chaptersText.trim()).appendLine()
+
         return builder.toString().trimEnd()
     }
 
@@ -1554,6 +1630,19 @@ private fun JsonObject.getPrimitiveString(key: String): String? =
 
 private fun JsonObject.getPrimitiveNumber(key: String): Number? =
     this.get(key)?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isNumber }?.asNumber
+
+private fun JsonElement.asJsonObjectOrNull(): JsonObject? =
+    takeIf { it.isJsonObject }?.asJsonObject
+
+private fun JsonElement.asLongOrNull(): Long? {
+    return runCatching {
+        when {
+            isJsonPrimitive && this.asJsonPrimitive.isNumber -> this.asLong
+            isJsonPrimitive && this.asJsonPrimitive.isString -> this.asJsonPrimitive.asString.toLongOrNull()
+            else -> null
+        }
+    }.getOrNull()
+}
 
 private fun toMillis(number: Number): Long {
     val value = number.toDouble()

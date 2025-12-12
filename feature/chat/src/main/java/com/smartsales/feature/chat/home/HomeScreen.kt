@@ -99,8 +99,10 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -115,6 +117,8 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.history.ChatHistoryTestTags
 import com.smartsales.data.aicore.debug.TingwuTraceSnapshot
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -122,11 +126,11 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import com.smartsales.feature.chat.BuildConfig
-import androidx.compose.ui.platform.LocalUriHandler
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreen.kt
 // 模块：:feature:chat
@@ -1215,7 +1219,7 @@ private fun DebugSessionMetadataHud(
                             previewState = result
                         }
                     },
-                    promptExtractor = { extractEffectivePrompt(trace?.lastCreateTaskRequestJson) }
+                    promptExtractor = { extractEffectivePrompt(tingwuTrace?.lastCreateTaskRequestJson) }
                 )
             }
         }
@@ -1474,6 +1478,11 @@ private fun formatMillis(value: Long): String {
     return formatter.format(Date(value))
 }
 
+private fun JsonObject.getPrimitiveString(key: String): String? {
+    val element = this.get(key) ?: return null
+    return if (element.isJsonPrimitive) element.asString else null
+}
+
 private data class EffectivePromptInfo(
     val name: String?,
     val model: String?,
@@ -1491,7 +1500,8 @@ private fun extractEffectivePrompt(requestJson: String?): EffectivePromptInfo? {
     val parameters = json.asJsonObject.getAsJsonObject("Parameters") ?: return null
     val customPromptObj = parameters.getAsJsonObject("CustomPrompt") ?: return null
     val contents = customPromptObj.getAsJsonArray("Contents") ?: return null
-    val first = contents.firstOrNull()?.asJsonObject ?: return null
+    if (contents.size() == 0) return null
+    val first = contents[0].asJsonObject
     val name = first.getPrimitiveString("Name")
     val model = first.getPrimitiveString("Model")
     val transType = first.getPrimitiveString("TransType")
@@ -1516,7 +1526,7 @@ private fun sha256Short(text: String): String {
         val md = MessageDigest.getInstance("SHA-256")
         val digest = md.digest(text.toByteArray(Charsets.UTF_8))
         digest.joinToString("") { "%02x".format(it) }.take(8)
-    }.getOrNull()
+    }.getOrElse { "--------" }
 }
 
 @Composable

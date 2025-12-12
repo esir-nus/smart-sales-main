@@ -1136,8 +1136,228 @@ class RealTingwuCoordinatorTest {
         advanceUntilIdle()
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
+        assertTrue(completed.transcriptMarkdown.contains("摘要暂无可用内容"))
         assertFalse(completed.transcriptMarkdown.contains("{"))
         assertFalse(completed.transcriptMarkdown.contains("raw1"))
+    }
+
+    @Test
+    fun summarization_schemaRendersMarkdown() = runTest(dispatcher) {
+        val api = FakeTingwuApi()
+        api.enqueueStatus(statusResponse(status = "PROCESSING", progress = 30))
+        api.enqueueStatus(
+            statusResponse(
+                status = "SUCCEEDED",
+                progress = 100,
+                resultLinks = mapOf("Summarization" to "https://example.com/summarization")
+            )
+        )
+        val fetcher = object : TingwuArtifactFetcher {
+            override fun fetchText(url: String, timeoutMs: Int, maxChars: Int): String? {
+                return """
+                    {
+                      "TaskId":"job-1",
+                      "Summarization":{
+                        "ParagraphTitle":"标题一",
+                        "ParagraphSummary":"段落摘要内容",
+                        "ConversationalSummary":[{"SpeakerId":"spk1","Summary":"发言人总结1"}],
+                        "QuestionsAnsweringSummary":[{"Question":"问什么","Answer":"答这个"}]
+                      }
+                    }
+                """.trimIndent()
+            }
+        }
+        api.resultData = TingwuResultResponse(
+            requestId = "req-result",
+            code = "0",
+            message = "Success",
+            data = TingwuResultData(
+                taskId = "job-1",
+                transcription = TingwuTranscription(
+                    text = "正文",
+                    segments = null,
+                    speakers = null,
+                    language = "zh",
+                    duration = 1.0
+                ),
+                resultLinks = mapOf("Summarization" to "https://example.com/summarization"),
+                outputMp3Path = null,
+                outputMp4Path = null,
+                outputThumbnailPath = null,
+                outputSpectrumPath = null
+            )
+        )
+        val coordinator = RealTingwuCoordinator(
+            dispatchers = dispatchers,
+            api = api,
+            credentialsProvider = credentialsProvider,
+            signedUrlProvider = signedUrlProvider,
+            transcriptOrchestrator = transcriptOrchestrator,
+            metaHub = InMemoryMetaHub(),
+            tingwuTraceStore = traceStore,
+            artifactFetcher = fetcher,
+            optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
+        )
+
+        val submit = coordinator.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav"
+            )
+        )
+        assertTrue(submit is Result.Success)
+        val jobId = (submit as Result.Success).data
+        advanceTimeBy(20)
+        advanceUntilIdle()
+
+        val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
+        val markdown = completed.transcriptMarkdown
+        assertTrue(markdown.contains("## 摘要（Summarization）"))
+        assertTrue(markdown.contains("段落摘要"))
+        assertTrue(markdown.contains("发言人总结"))
+        assertTrue(markdown.contains("问答回顾"))
+        assertFalse(markdown.contains("{"))
+    }
+
+    @Test
+    fun autoChapters_schemaRendersMarkdown() = runTest(dispatcher) {
+        val api = FakeTingwuApi()
+        api.enqueueStatus(statusResponse(status = "PROCESSING", progress = 30))
+        api.enqueueStatus(
+            statusResponse(
+                status = "SUCCEEDED",
+                progress = 100,
+                resultLinks = mapOf("AutoChapters" to "https://example.com/autochapters")
+            )
+        )
+        val fetcher = object : TingwuArtifactFetcher {
+            override fun fetchText(url: String, timeoutMs: Int, maxChars: Int): String? {
+                return """
+                    {
+                      "TaskId":"job-1",
+                      "AutoChapters":[
+                        {"Id":1,"Start":4480,"Headline":"新手摩托车选择","Summary":"概览说明"}
+                      ]
+                    }
+                """.trimIndent()
+            }
+        }
+        api.resultData = TingwuResultResponse(
+            requestId = "req-result",
+            code = "0",
+            message = "Success",
+            data = TingwuResultData(
+                taskId = "job-1",
+                transcription = TingwuTranscription(
+                    text = "正文",
+                    segments = null,
+                    speakers = null,
+                    language = "zh",
+                    duration = 1.0
+                ),
+                resultLinks = mapOf("AutoChapters" to "https://example.com/autochapters"),
+                outputMp3Path = null,
+                outputMp4Path = null,
+                outputThumbnailPath = null,
+                outputSpectrumPath = null
+            )
+        )
+        val coordinator = RealTingwuCoordinator(
+            dispatchers = dispatchers,
+            api = api,
+            credentialsProvider = credentialsProvider,
+            signedUrlProvider = signedUrlProvider,
+            transcriptOrchestrator = transcriptOrchestrator,
+            metaHub = InMemoryMetaHub(),
+            tingwuTraceStore = traceStore,
+            artifactFetcher = fetcher,
+            optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
+        )
+
+        val submit = coordinator.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav"
+            )
+        )
+        assertTrue(submit is Result.Success)
+        val jobId = (submit as Result.Success).data
+        advanceTimeBy(20)
+        advanceUntilIdle()
+
+        val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
+        val markdown = completed.transcriptMarkdown
+        assertTrue(markdown.contains("## 章节（AutoChapters）"))
+        assertTrue(markdown.contains("[00:04]"))
+        assertTrue(markdown.contains("新手摩托车选择"))
+        assertTrue(markdown.contains("概览说明"))
+    }
+
+    @Test
+    fun customPrompt_stageDirectionMovesToTopOnce() = runTest(dispatcher) {
+        val api = FakeTingwuApi()
+        api.enqueueStatus(statusResponse(status = "PROCESSING", progress = 30))
+        api.enqueueStatus(
+            statusResponse(
+                status = "SUCCEEDED",
+                progress = 100,
+                resultLinks = mapOf("CustomPrompt" to "https://example.com/custom_prompt")
+            )
+        )
+        val fetcher = object : TingwuArtifactFetcher {
+            override fun fetchText(url: String, timeoutMs: Int, maxChars: Int): String? {
+                return "[开场寒暄：双方互致问候]\n正文第一行\n[开场寒暄：双方互致问候]\n正文第二行"
+            }
+        }
+        api.resultData = TingwuResultResponse(
+            requestId = "req-result",
+            code = "0",
+            message = "Success",
+            data = TingwuResultData(
+                taskId = "job-1",
+                transcription = TingwuTranscription(
+                    text = "正文",
+                    segments = null,
+                    speakers = null,
+                    language = "zh",
+                    duration = 1.0
+                ),
+                resultLinks = mapOf("CustomPrompt" to "https://example.com/custom_prompt"),
+                outputMp3Path = null,
+                outputMp4Path = null,
+                outputThumbnailPath = null,
+                outputSpectrumPath = null
+            )
+        )
+        val coordinator = RealTingwuCoordinator(
+            dispatchers = dispatchers,
+            api = api,
+            credentialsProvider = credentialsProvider,
+            signedUrlProvider = signedUrlProvider,
+            transcriptOrchestrator = transcriptOrchestrator,
+            metaHub = InMemoryMetaHub(),
+            tingwuTraceStore = traceStore,
+            artifactFetcher = fetcher,
+            optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
+        )
+
+        val submit = coordinator.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav"
+            )
+        )
+        assertTrue(submit is Result.Success)
+        val jobId = (submit as Result.Success).data
+        advanceTimeBy(20)
+        advanceUntilIdle()
+
+        val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
+        val markdown = completed.transcriptMarkdown
+        val stage = "[开场寒暄：双方互致问候]"
+        assertTrue(markdown.contains(stage))
+        assertEquals(1, Regex("\\[开场寒暄：双方互致问候]").findAll(markdown).count())
+        assertTrue(markdown.trim().lines().first().contains(stage))
     }
 
     private class RecordingTranscriptOrchestrator(

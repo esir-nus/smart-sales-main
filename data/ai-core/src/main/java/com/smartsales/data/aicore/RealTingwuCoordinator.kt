@@ -135,15 +135,23 @@ class RealTingwuCoordinator @Inject constructor(
                         parameters = TingwuTaskParameters(
                             transcription = TingwuTranscriptionParameters(
                                 diarizationEnabled = request.diarizationEnabled,
-                                diarization = diarizationParameters,
+                                diarization = TingwuDiarizationParameters(
+                                    speakerCount = 0,
+                                    outputLevel = 1
+                                ),
                                 model = model
                             ),
                             summarizationEnabled = true,
                             summarization = TingwuSummarizationParameters(
-                                types = listOf("Paragraph")
+                                types = listOf("Paragraph", "Conversational", "QuestionsAnswering")
                             ),
+                            autoChaptersEnabled = true,
+                            pptExtractionEnabled = true,
                             customPromptEnabled = customPromptContent?.let { true },
-                            customPrompt = customPromptContent?.let { TingwuCustomPrompt(contents = listOf(it)) }
+                            customPrompt = customPromptContent?.let { TingwuCustomPrompt(contents = listOf(it)) },
+                            transcoding = TingwuTranscodingParameters(
+                                targetAudioFormat = "mp3"
+                            )
                         )
                     )
                 )
@@ -847,17 +855,10 @@ class RealTingwuCoordinator @Inject constructor(
         if (diarizedSegments.isNotEmpty()) {
             val sorted = diarizedSegments.sortedBy { it.startMs }
             val builder = StringBuilder()
-            val uniqueSpeakerIds = sorted.mapNotNull { it.speakerId }.toSet()
-            val isSingleSpeaker = uniqueSpeakerIds.size <= 1
-            val hideLabelWhenSingle = speakerDisplayConfig.hideLabelWhenSingleSpeaker
             builder.append("## 逐字稿\n")
             sorted.forEach { segment ->
-                val label = when {
-                    isSingleSpeaker && hideLabelWhenSingle -> null
-                    else -> {
-                        val rawId = segment.speakerId
-                        speakerLabels[rawId] ?: "发言人 ${segment.speakerIndex}"
-                    }
+                val label = segment.speakerId?.let { id ->
+                    speakerLabels[id]?.takeIf { it.isNotBlank() } ?: id
                 }
                 val begin = formatTimeMs(segment.startMs)
                 val end = formatTimeMs(segment.endMs)
@@ -872,9 +873,7 @@ class RealTingwuCoordinator @Inject constructor(
                     }
                     builder.append("] ")
                 }
-                label?.let { nonNullLabel ->
-                    builder.append(nonNullLabel).append("：")
-                }
+                label?.let { builder.append(it).append("：") }
                 builder.append(segment.text.ifBlank { "（空白）" }).append("\n")
             }
             return builder.toString().trimEnd()
@@ -885,29 +884,27 @@ class RealTingwuCoordinator @Inject constructor(
                 append(raw.trim())
             }
         }
-        val builder = StringBuilder()
         val segments = transcription?.segments.orEmpty()
         if (segments.isEmpty()) {
-            builder.append("暂无可用的转写结果。")
-        } else {
-            builder.append("## 逐字稿\n")
+            return "暂无可用的转写结果。"
+        }
+        return buildString {
+            append("## 逐字稿\n")
             segments.forEach { segment ->
-                val speaker = segment.speaker?.ifBlank { "发言人" } ?: "发言人"
                 val begin = formatTime(segment.start)
                 val end = formatTime(segment.end)
                 val content = segment.text?.trim().orEmpty()
-                builder.append("- ")
-                    .append(speaker)
-                    .append(" [")
-                    .append(begin)
-                    .append(" - ")
-                    .append(end)
-                    .append("]：")
-                    .append(content.ifBlank { "（空白）" })
-                    .append("\n")
+                append("- ")
+                if (!begin.isNullOrBlank() || !end.isNullOrBlank()) {
+                    append("[")
+                    append(begin)
+                    append(" - ")
+                    append(end)
+                    append("] ")
+                }
+                append(content.ifBlank { "（空白）" }).append("\n")
             }
-        }
-        return builder.toString().trim()
+        }.trimEnd()
     }
 
     private fun buildDiarizedSegments(transcription: TingwuTranscription?): List<DiarizedSegment> {
@@ -988,11 +985,10 @@ class RealTingwuCoordinator @Inject constructor(
         if (speakerIdsInOrder.isEmpty()) return emptyMap()
         val speakersById = transcription.speakers.orEmpty().associateBy { it.id }
         val labels = LinkedHashMap<String, String>()
-        speakerIdsInOrder.forEachIndexed { index, id ->
+        speakerIdsInOrder.forEach { id ->
             val fromName = speakersById[id]?.name?.takeIf { it.isNotBlank() }
-            val fromConfig = speakerDisplayConfig.defaultLabelsByIndex.getOrNull(index)
-            val fallback = "发言人 ${index + 1}"
-            labels[id] = fromName ?: fromConfig ?: fallback
+            val fallback = id
+            labels[id] = fromName ?: fallback
         }
         return labels
     }

@@ -8,11 +8,11 @@ package com.smartsales.data.aicore
 /**
  * 说话人展示配置，用于将 Tingwu 返回的 SpeakerId 映射为更友好的角色名称。
  *
- * @param defaultLabelsByIndex 按索引顺序给出的默认角色名，例如 ["客户", "销售"]。
+ * @param defaultLabelsByIndex 按索引顺序给出的默认角色名，例如 ["客户", "销售"]。调试用途，生产不应依赖此角色默认值。
  * @param hideLabelWhenSingleSpeaker 当只有一个说话人时，是否隐藏标签，仅展示时间 + 文本。
  */
 data class SpeakerDisplayConfig(
-    val defaultLabelsByIndex: List<String> = listOf("客户", "销售"),
+    val defaultLabelsByIndex: List<String> = emptyList(),
     val hideLabelWhenSingleSpeaker: Boolean = true,
 )
 

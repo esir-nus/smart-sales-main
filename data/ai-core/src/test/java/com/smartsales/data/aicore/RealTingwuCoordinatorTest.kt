@@ -151,13 +151,19 @@ class RealTingwuCoordinatorTest {
 
         val request = api.lastCreateRequest
         assertEquals(true, request?.parameters?.summarizationEnabled)
-        assertEquals(listOf("Paragraph"), request?.parameters?.summarization?.types)
+        assertEquals(
+            listOf("Paragraph", "Conversational", "QuestionsAnswering"),
+            request?.parameters?.summarization?.types
+        )
         val json = Gson().toJson(request)
         assertTrue(json.contains("\"SummarizationEnabled\":true"))
-        assertTrue(json.contains("\"Summarization\":{\"Types\":[\"Paragraph\"]}"))
+        assertTrue(json.contains("\"Summarization\":{\"Types\":[\"Paragraph\",\"Conversational\",\"QuestionsAnswering\"]}"))
         assertTrue(json.contains("\"DiarizationEnabled\":true"))
-        // 默认开启说话人分离时，应显式下发 SpeakerCount=2
-        assertTrue(json.contains("\"Diarization\":{\"SpeakerCount\":2}"))
+        assertTrue(json.contains("\"SpeakerCount\":0"))
+        assertTrue(json.contains("\"OutputLevel\":1"))
+        assertTrue(json.contains("\"AutoChaptersEnabled\":true"))
+        assertTrue(json.contains("\"PptExtractionEnabled\":true"))
+        assertTrue(json.contains("\"Transcoding\":{\"TargetAudioFormat\":\"mp3\"}"))
     }
 
     @Test

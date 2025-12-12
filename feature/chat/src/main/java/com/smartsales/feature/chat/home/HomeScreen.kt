@@ -114,6 +114,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.history.ChatHistoryTestTags
+import com.smartsales.data.aicore.debug.TingwuTraceSnapshot
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -1126,32 +1127,32 @@ private fun DebugSessionMetadataHud(
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "调试信息",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(
-                        onClick = { onCopy(hudText) },
-                        modifier = Modifier.testTag(HomeScreenTestTags.DEBUG_HUD_COPY)
-                    ) {
-                        Text(text = "复制")
-                    }
-                    IconButton(
-                        onClick = onClose,
-                        modifier = Modifier.testTag(HomeScreenTestTags.DEBUG_HUD_CLOSE)
-                    ) {
-                        Icon(imageVector = Icons.Filled.Close, contentDescription = "关闭 HUD")
-                    }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "调试信息",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(
+                    onClick = { onCopy(hudText) },
+                    modifier = Modifier.testTag(HomeScreenTestTags.DEBUG_HUD_COPY)
+                ) {
+                    Text(text = "复制")
+                }
+                IconButton(
+                    onClick = onClose,
+                    modifier = Modifier.testTag(HomeScreenTestTags.DEBUG_HUD_CLOSE)
+                ) {
+                    Icon(imageVector = Icons.Filled.Close, contentDescription = "关闭 HUD")
                 }
             }
-            if (BuildConfig.DEBUG) {
+        }
+        if (BuildConfig.DEBUG) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -1213,7 +1214,8 @@ private fun DebugSessionMetadataHud(
                             }
                             previewState = result
                         }
-                    }
+                    },
+                    promptExtractor = { extractEffectivePrompt(trace?.lastCreateTaskRequestJson) }
                 )
             }
         }
@@ -1251,7 +1253,8 @@ private fun TingwuTraceSection(
     onRefresh: () -> Unit,
     onCopy: (String) -> Unit,
     onCopyPreview: (String) -> Unit,
-    onFetchPreview: (String, String) -> Unit
+    onFetchPreview: (String, String) -> Unit,
+    promptExtractor: () -> EffectivePromptInfo?
 ) {
     val uriHandler = LocalUriHandler.current
     Column(
@@ -1279,6 +1282,50 @@ private fun TingwuTraceSection(
         }
         DebugField(label = "taskId", value = trace.lastTaskId ?: "-")
         DebugField(label = "updatedAt", value = formatMillis(trace.updatedAtMs))
+        promptExtractor()?.let { info ->
+            Text(
+                text = "CustomPrompt（Effective）",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            DebugField(label = "Name", value = info.name ?: "-")
+            DebugField(label = "Model", value = info.model ?: "-")
+            DebugField(label = "TransType", value = info.transType ?: "-")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "长度: ${info.length}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                info.hash?.let { hash ->
+                    Text(
+                        text = "Hash: $hash",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                info.source?.let { src ->
+                    Text(
+                        text = "来源: $src",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Text(
+                text = info.prompt ?: "-",
+                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    .padding(8.dp)
+            )
+            TextButton(onClick = { info.prompt?.let { onCopy(it) } }) { Text(text = "复制 Prompt") }
+        }
         DebugJsonBlock(label = "CreateTask 请求", json = trace.lastCreateTaskRequestJson, onCopy = onCopy)
         DebugJsonBlock(label = "CreateTask 响应", json = trace.lastCreateTaskResponseJson, onCopy = onCopy)
         DebugJsonBlock(label = "GetTaskInfo 最近一次响应", json = trace.lastGetTaskInfoResponseJson, onCopy = onCopy)
@@ -1425,6 +1472,51 @@ private fun formatMillis(value: Long): String {
     if (value <= 0) return "-"
     val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
     return formatter.format(Date(value))
+}
+
+private data class EffectivePromptInfo(
+    val name: String?,
+    val model: String?,
+    val transType: String?,
+    val prompt: String?,
+    val length: Int,
+    val hash: String?,
+    val source: String?
+)
+
+private fun extractEffectivePrompt(requestJson: String?): EffectivePromptInfo? {
+    if (requestJson.isNullOrBlank()) return null
+    val json = runCatching { JsonParser.parseString(requestJson) }.getOrNull() ?: return null
+    if (!json.isJsonObject) return null
+    val parameters = json.asJsonObject.getAsJsonObject("Parameters") ?: return null
+    val customPromptObj = parameters.getAsJsonObject("CustomPrompt") ?: return null
+    val contents = customPromptObj.getAsJsonArray("Contents") ?: return null
+    val first = contents.firstOrNull()?.asJsonObject ?: return null
+    val name = first.getPrimitiveString("Name")
+    val model = first.getPrimitiveString("Model")
+    val transType = first.getPrimitiveString("TransType")
+    val prompt = first.getPrimitiveString("Prompt")
+    val length = prompt?.length ?: 0
+    val hash = prompt?.let { sha256Short(it) }
+    val enabled = parameters.get("CustomPromptEnabled")?.asBoolean ?: false
+    val source = if (enabled) "AiParaSettings 默认或请求覆盖" else "未启用"
+    return EffectivePromptInfo(
+        name = name,
+        model = model,
+        transType = transType,
+        prompt = prompt,
+        length = length,
+        hash = hash,
+        source = source
+    )
+}
+
+private fun sha256Short(text: String): String {
+    return runCatching {
+        val md = MessageDigest.getInstance("SHA-256")
+        val digest = md.digest(text.toByteArray(Charsets.UTF_8))
+        digest.joinToString("") { "%02x".format(it) }.take(8)
+    }.getOrNull()
 }
 
 @Composable

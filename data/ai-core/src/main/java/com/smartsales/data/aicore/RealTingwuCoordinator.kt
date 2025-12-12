@@ -1390,15 +1390,20 @@ class RealTingwuCoordinator @Inject constructor(
 
     private fun fetchCustomPromptResult(url: String): String? {
         val raw = artifactFetcher.fetchText(url) ?: return null
-        return runCatching {
+        val trimmed = raw.trim()
+        val parsed = runCatching {
             val json = JsonParser.parseString(raw)
-            if (!json.isJsonObject) return@runCatching raw
+            if (!json.isJsonObject) return@runCatching null
             val obj = json.asJsonObject
             val array = obj.getAsJsonArray("CustomPrompt")
             val first = array?.firstOrNull()?.asJsonObject
             val result = first?.getPrimitiveString("Result")
-            result?.takeIf { it.isNotBlank() } ?: raw
-        }.getOrElse { raw }
+            result?.takeIf { it.isNotBlank() }
+        }.getOrNull()
+        if (!parsed.isNullOrBlank()) return parsed
+        // 避免在气泡展示原始 JSON
+        if (trimmed.startsWith("{") || trimmed.startsWith("[")) return null
+        return trimmed.takeIf { it.isNotBlank() }
     }
 
     private fun fetchSummarizationText(resultLinks: Map<String, String>?): String? {
@@ -1440,7 +1445,8 @@ class RealTingwuCoordinator @Inject constructor(
                 }.trim()
             }
         }.getOrNull()
-        return parsed ?: raw
+        // 避免展示原始 JSON，解析失败返回空
+        return parsed
     }
 
     private fun buildChaptersText(artifacts: TingwuJobArtifacts?): String? {
@@ -1482,8 +1488,9 @@ class RealTingwuCoordinator @Inject constructor(
             builder.appendLine("## 章节（AutoChapters）")
             builder.appendLine(chaptersText.trim()).appendLine()
         }
-        builder.appendLine("## 逐字稿（原始）")
-        builder.appendLine(transcriptMarkdown.trim())
+        if (builder.isEmpty()) {
+            return "转写结果暂无可用内容"
+        }
         return builder.toString().trimEnd()
     }
 

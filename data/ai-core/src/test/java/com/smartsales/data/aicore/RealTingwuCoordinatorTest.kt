@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNotNull
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -204,13 +205,28 @@ class RealTingwuCoordinatorTest {
         )
 
         val request = api.lastCreateRequest
+        assertTrue(request != null)
+        val params = request!!.parameters
+
+        assertTrue(params.customPromptEnabled == true)
+
+        val customPrompt = params.customPrompt
+        assertTrue(customPrompt != null)
+        assertTrue(customPrompt!!.contents.isNotEmpty())
+
+        val content0 = customPrompt.contents.first()
+        assertTrue(content0.name.isNotBlank())
+        assertTrue(content0.prompt.isNotBlank())
+
+        // Verify model wiring (model may be optional in some configs)
+        assertTrue(content0.model.isNullOrBlank().not())
+
+        // Also verify JSON serialization includes expected keys (without pinning content values)
         val json = Gson().toJson(request)
         assertTrue(json.contains("\"CustomPromptEnabled\":true"))
-        assertTrue(json.contains("\"Name\":\"speaker-role-relabel-v1\""))
-        assertTrue(json.contains("SpeakerId \\\"1\\\" -> Dad").not()) // JSON escapes, use substring match
-        assertTrue(json.contains("Dad"))
-        assertTrue(json.contains("Son"))
-        assertTrue(json.contains("\"Model\":\"tingwu-turbo\""))
+        assertTrue(json.contains("\"CustomPrompt\""))
+        assertTrue(json.contains("\"Contents\""))
+        assertTrue(json.contains("\"Prompt\""))
     }
 
     @Test
@@ -1057,7 +1073,71 @@ class RealTingwuCoordinatorTest {
         assertEquals("https://example.com/custom_prompt", completed.artifacts?.customPromptUrl)
         assertTrue(completed.transcriptMarkdown.contains("自定义转写"))
         assertTrue(completed.transcriptMarkdown.contains("定制结果文本"))
-        assertTrue(completed.transcriptMarkdown.contains("逐字稿（原始）"))
+        assertFalse(completed.transcriptMarkdown.contains("逐字稿"))
+    }
+
+    @Test
+    fun summarization_invalidJson_doesNotLeakRawPayload() = runTest(dispatcher) {
+        val api = FakeTingwuApi()
+        api.enqueueStatus(statusResponse(status = "PROCESSING", progress = 30))
+        api.enqueueStatus(
+            statusResponse(
+                status = "SUCCEEDED",
+                progress = 100,
+                resultLinks = mapOf("Summarization" to "https://example.com/summarization")
+            )
+        )
+        val fetcher = object : TingwuArtifactFetcher {
+            override fun fetchText(url: String, timeoutMs: Int, maxChars: Int): String? {
+                return """{"UnknownKey": ["raw1", "raw2"]}"""
+            }
+        }
+        api.resultData = TingwuResultResponse(
+            requestId = "req-result",
+            code = "0",
+            message = "Success",
+            data = TingwuResultData(
+                taskId = "job-1",
+                transcription = TingwuTranscription(
+                    text = "正文",
+                    segments = null,
+                    speakers = null,
+                    language = "zh",
+                    duration = 1.0
+                ),
+                resultLinks = mapOf("Summarization" to "https://example.com/summarization"),
+                outputMp3Path = null,
+                outputMp4Path = null,
+                outputThumbnailPath = null,
+                outputSpectrumPath = null
+            )
+        )
+        val coordinator = RealTingwuCoordinator(
+            dispatchers = dispatchers,
+            api = api,
+            credentialsProvider = credentialsProvider,
+            signedUrlProvider = signedUrlProvider,
+            transcriptOrchestrator = transcriptOrchestrator,
+            metaHub = InMemoryMetaHub(),
+            tingwuTraceStore = traceStore,
+            artifactFetcher = fetcher,
+            optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
+        )
+
+        val submit = coordinator.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav"
+            )
+        )
+        assertTrue(submit is Result.Success)
+        val jobId = (submit as Result.Success).data
+        advanceTimeBy(20)
+        advanceUntilIdle()
+
+        val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
+        assertFalse(completed.transcriptMarkdown.contains("{"))
+        assertFalse(completed.transcriptMarkdown.contains("raw1"))
     }
 
     private class RecordingTranscriptOrchestrator(

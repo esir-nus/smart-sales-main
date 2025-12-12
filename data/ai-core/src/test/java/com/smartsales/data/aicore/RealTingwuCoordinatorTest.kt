@@ -160,7 +160,7 @@ class RealTingwuCoordinatorTest {
         assertTrue(json.contains("\"Summarization\":{\"Types\":[\"Paragraph\",\"Conversational\",\"QuestionsAnswering\"]}"))
         assertTrue(json.contains("\"DiarizationEnabled\":true"))
         assertTrue(json.contains("\"SpeakerCount\":0"))
-        assertTrue(json.contains("\"OutputLevel\":1"))
+        assertTrue(json.contains("\"OutputLevel\":2"))
         assertTrue(json.contains("\"AutoChaptersEnabled\":true"))
         assertTrue(json.contains("\"PptExtractionEnabled\":true"))
         assertTrue(json.contains("\"Transcoding\":{\"TargetAudioFormat\":\"mp3\"}"))
@@ -385,10 +385,15 @@ class RealTingwuCoordinatorTest {
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
         val lines = completed.transcriptMarkdown.lines().filter { it.startsWith("- ") }
-        assertTrue(lines.any { it.contains("发言人 1") })
-        assertTrue(lines.any { it.contains("发言人 2") })
+        assertTrue(lines.any { it.contains("spk_1") })
+        assertTrue(lines.any { it.contains("spk_2") })
         val labels = completed.artifacts?.speakerLabels
-        assertEquals(mapOf("spk_1" to "发言人 1", "spk_2" to "发言人 2"), labels)
+        assertEquals(mapOf("spk_1" to "spk_1", "spk_2" to "spk_2"), labels)
+        lines.forEach { line ->
+            assertFalse(line.contains("客户"))
+            assertFalse(line.contains("销售"))
+            assertFalse(line.contains("发言人"))
+        }
     }
 
     @Test

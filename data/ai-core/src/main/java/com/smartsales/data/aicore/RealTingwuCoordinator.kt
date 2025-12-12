@@ -27,6 +27,7 @@ import com.smartsales.data.aicore.tingwu.TingwuTranscriptSegment
 import com.smartsales.data.aicore.tingwu.TingwuTranscriptionParameters
 import com.smartsales.data.aicore.tingwu.TingwuDiarizationParameters
 import com.smartsales.data.aicore.tingwu.TingwuSummarizationParameters
+import com.smartsales.data.aicore.tingwu.TingwuTranscodingParameters
 import com.smartsales.data.aicore.TranscriptMetadataRequest
 import com.smartsales.data.aicore.tingwu.TingwuCustomPrompt
 import com.smartsales.data.aicore.tingwu.TingwuCustomPromptContent
@@ -99,13 +100,6 @@ class RealTingwuCoordinator @Inject constructor(
             val requestedLanguage = request.language.ifBlank { DEFAULT_LANGUAGE }
             val sourceLanguage = mapSourceLanguage(requestedLanguage)
             val model = config.tingwuModelOverride?.takeIf { it.isNotBlank() } ?: credentials.model
-            val diarizationParameters = if (request.diarizationEnabled) {
-                TingwuDiarizationParameters(
-                    speakerCount = 2
-                )
-            } else {
-                null
-            }
             val customPromptContent = if (
                 request.customPromptEnabled &&
                 !request.customPromptName.isNullOrBlank() &&
@@ -121,7 +115,7 @@ class RealTingwuCoordinator @Inject constructor(
                 null
             }
             logVerbose {
-                "创建 Tingwu 任务：taskKey=$taskKey fileUrl=$resolvedUrl lang=$requestedLanguage source=$sourceLanguage model=$model diarizationEnabled=${request.diarizationEnabled} speakerCount=${diarizationParameters?.speakerCount}"
+                "创建 Tingwu 任务：taskKey=$taskKey fileUrl=$resolvedUrl lang=$requestedLanguage source=$sourceLanguage model=$model diarizationEnabled=${request.diarizationEnabled}"
             }
             runCatching {
                 val response = api.createTranscriptionTask(
@@ -135,10 +129,14 @@ class RealTingwuCoordinator @Inject constructor(
                         parameters = TingwuTaskParameters(
                             transcription = TingwuTranscriptionParameters(
                                 diarizationEnabled = request.diarizationEnabled,
-                                diarization = TingwuDiarizationParameters(
-                                    speakerCount = 0,
-                                    outputLevel = 1
-                                ),
+                                diarization = if (request.diarizationEnabled) {
+                                    TingwuDiarizationParameters(
+                                        speakerCount = 0,
+                                        outputLevel = 1
+                                    )
+                                } else {
+                                    null
+                                },
                                 model = model
                             ),
                             summarizationEnabled = true,

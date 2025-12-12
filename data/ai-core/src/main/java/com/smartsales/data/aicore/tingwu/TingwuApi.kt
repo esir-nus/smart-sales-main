@@ -78,7 +78,13 @@ data class TingwuTaskParameters(
     @SerializedName("SummarizationEnabled") val summarizationEnabled: Boolean? = null,
     @SerializedName("Summarization") val summarization: TingwuSummarizationParameters? = null,
     @SerializedName("CustomPromptEnabled") val customPromptEnabled: Boolean? = null,
-    @SerializedName("CustomPrompt") val customPrompt: TingwuCustomPrompt? = null
+    @SerializedName("CustomPrompt") val customPrompt: TingwuCustomPrompt? = null,
+    // 是否启用自动章节生成
+    @SerializedName("AutoChaptersEnabled") val autoChaptersEnabled: Boolean? = null,
+    // 是否启用 PPT 提取
+    @SerializedName("PptExtractionEnabled") val pptExtractionEnabled: Boolean? = null,
+    // 转码参数（我们使用 "mp3" 格式）
+    @SerializedName("Transcoding") val transcoding: TingwuTranscodingParameters? = null
 )
 
 data class TingwuTranscriptSegment(
@@ -127,11 +133,18 @@ data class TingwuTranscriptionParameters(
 )
 
 data class TingwuDiarizationParameters(
-    @SerializedName("SpeakerCount") val speakerCount: Int? = null
+    @SerializedName("SpeakerCount") val speakerCount: Int? = null,
+    // 说话人分离输出级别（默认 1 为句子级别）
+    @SerializedName("OutputLevel") val outputLevel: Int? = null
 )
 
 data class TingwuSummarizationParameters(
     @SerializedName("Types") val types: List<String>
+)
+
+data class TingwuTranscodingParameters(
+    // 转码目标音频格式（我们使用 "mp3"）
+    @SerializedName("TargetAudioFormat") val targetAudioFormat: String
 )
 
 data class TingwuCustomPrompt(

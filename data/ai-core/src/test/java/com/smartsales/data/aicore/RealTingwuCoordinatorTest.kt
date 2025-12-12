@@ -160,8 +160,10 @@ class RealTingwuCoordinatorTest {
         assertTrue(json.contains("\"Summarization\":{\"Types\":[\"Paragraph\",\"Conversational\",\"QuestionsAnswering\"]}"))
         assertTrue(json.contains("\"DiarizationEnabled\":true"))
         assertTrue(json.contains("\"SpeakerCount\":0"))
-        assertTrue(json.contains("\"OutputLevel\":2"))
+        assertTrue(json.contains("\"OutputLevel\":1"))
+        assertTrue(json.contains("\"AudioEventDetectionEnabled\":true"))
         assertTrue(json.contains("\"AutoChaptersEnabled\":true"))
+        assertTrue(json.contains("\"TextPolishEnabled\":true"))
         assertTrue(json.contains("\"PptExtractionEnabled\":true"))
         assertTrue(json.contains("\"Transcoding\":{\"TargetAudioFormat\":\"mp3\"}"))
     }

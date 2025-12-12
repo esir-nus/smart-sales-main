@@ -84,7 +84,9 @@ data class TingwuTaskParameters(
     // 是否启用 PPT 提取
     @SerializedName("PptExtractionEnabled") val pptExtractionEnabled: Boolean? = null,
     // 转码参数（我们使用 "mp3" 格式）
-    @SerializedName("Transcoding") val transcoding: TingwuTranscodingParameters? = null
+    @SerializedName("Transcoding") val transcoding: TingwuTranscodingParameters? = null,
+    // 文本润色开关
+    @SerializedName("TextPolishEnabled") val textPolishEnabled: Boolean? = null
 )
 
 data class TingwuTranscriptSegment(
@@ -129,6 +131,8 @@ data class TingwuResultData(
 data class TingwuTranscriptionParameters(
     @SerializedName("DiarizationEnabled") val diarizationEnabled: Boolean? = null,
     @SerializedName("Diarization") val diarization: TingwuDiarizationParameters? = null,
+    // 音频事件检测开关
+    @SerializedName("AudioEventDetectionEnabled") val audioEventDetectionEnabled: Boolean? = null,
     @SerializedName("Model") val model: String? = null
 )
 

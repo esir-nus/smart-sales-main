@@ -144,6 +144,7 @@ class RealTingwuCoordinator @Inject constructor(
                                 } else {
                                     null
                                 },
+                                audioEventDetectionEnabled = true,
                                 model = model
                             ),
                             summarizationEnabled = true,
@@ -151,6 +152,7 @@ class RealTingwuCoordinator @Inject constructor(
                                 types = listOf("Paragraph", "Conversational", "QuestionsAnswering")
                             ),
                             autoChaptersEnabled = true,
+                            textPolishEnabled = true,
                             pptExtractionEnabled = true,
                             customPromptEnabled = customPromptContent?.let { true },
                             customPrompt = customPromptContent?.let { TingwuCustomPrompt(contents = listOf(it)) },

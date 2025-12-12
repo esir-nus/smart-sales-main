@@ -22,6 +22,8 @@ import com.smartsales.data.aicore.tingwu.TingwuSpeaker
 import com.smartsales.data.aicore.TranscriptMetadataRequest
 import com.smartsales.data.aicore.TranscriptOrchestrator
 import com.google.gson.Gson
+import com.smartsales.data.aicore.debug.TingwuTraceStore
+import com.smartsales.data.aicore.tingwu.TingwuArtifactFetcher
 import java.io.File
 import java.util.Optional
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -50,6 +52,10 @@ class RealTingwuCoordinatorTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val dispatchers = FakeDispatcherProvider(dispatcher)
+    private val traceStore = TingwuTraceStore()
+    private val noopFetcher = object : TingwuArtifactFetcher {
+        override fun fetchText(url: String, timeoutMs: Int, maxChars: Int): String? = null
+    }
     private val credentialsProvider = object : TingwuCredentialsProvider {
         override fun obtain(): TingwuCredentials = TingwuCredentials(
             apiKey = "demo-api-key",
@@ -104,6 +110,8 @@ class RealTingwuCoordinatorTest {
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = InMemoryMetaHub(),
+            tingwuTraceStore = traceStore,
+            artifactFetcher = noopFetcher,
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     tingwuPollIntervalMillis = 10,
@@ -139,6 +147,8 @@ class RealTingwuCoordinatorTest {
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = InMemoryMetaHub(),
+            tingwuTraceStore = traceStore,
+            artifactFetcher = noopFetcher,
             optionalConfig = Optional.empty()
         )
 
@@ -178,6 +188,8 @@ class RealTingwuCoordinatorTest {
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = InMemoryMetaHub(),
+            tingwuTraceStore = traceStore,
+            artifactFetcher = noopFetcher,
             optionalConfig = Optional.empty()
         )
 
@@ -232,6 +244,8 @@ class RealTingwuCoordinatorTest {
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = InMemoryMetaHub(),
+            tingwuTraceStore = traceStore,
+            artifactFetcher = noopFetcher,
             optionalConfig = Optional.empty()
         )
 
@@ -290,6 +304,8 @@ class RealTingwuCoordinatorTest {
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = InMemoryMetaHub(),
+            tingwuTraceStore = traceStore,
+            artifactFetcher = noopFetcher,
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     tingwuPollIntervalMillis = 10,
@@ -368,6 +384,8 @@ class RealTingwuCoordinatorTest {
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = InMemoryMetaHub(),
+            tingwuTraceStore = traceStore,
+            artifactFetcher = noopFetcher,
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     tingwuPollIntervalMillis = 10,
@@ -433,6 +451,8 @@ class RealTingwuCoordinatorTest {
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = InMemoryMetaHub(),
+            tingwuTraceStore = traceStore,
+            artifactFetcher = noopFetcher,
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     tingwuPollIntervalMillis = 10,
@@ -518,6 +538,8 @@ class RealTingwuCoordinatorTest {
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = InMemoryMetaHub(),
+            tingwuTraceStore = traceStore,
+            artifactFetcher = noopFetcher,
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     tingwuPollIntervalMillis = 10,
@@ -601,6 +623,8 @@ class RealTingwuCoordinatorTest {
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = metaHub,
+            tingwuTraceStore = traceStore,
+            artifactFetcher = noopFetcher,
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     tingwuPollIntervalMillis = 10,
@@ -660,6 +684,8 @@ class RealTingwuCoordinatorTest {
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = InMemoryMetaHub(),
+            tingwuTraceStore = traceStore,
+            artifactFetcher = noopFetcher,
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     tingwuPollIntervalMillis = 10,
@@ -701,6 +727,8 @@ class RealTingwuCoordinatorTest {
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = InMemoryMetaHub(),
+            tingwuTraceStore = traceStore,
+            artifactFetcher = noopFetcher,
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     tingwuPollIntervalMillis = 10,
@@ -743,6 +771,8 @@ class RealTingwuCoordinatorTest {
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = InMemoryMetaHub(),
+            tingwuTraceStore = traceStore,
+            artifactFetcher = noopFetcher,
             optionalConfig = Optional.empty()
         )
 
@@ -799,6 +829,8 @@ class RealTingwuCoordinatorTest {
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = InMemoryMetaHub(),
+            tingwuTraceStore = traceStore,
+            artifactFetcher = noopFetcher,
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10))
         )
         val submitResult = coordinator.submit(
@@ -863,6 +895,8 @@ class RealTingwuCoordinatorTest {
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = orchestrator,
             metaHub = InMemoryMetaHub(),
+            tingwuTraceStore = traceStore,
+            artifactFetcher = noopFetcher,
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -930,6 +964,8 @@ class RealTingwuCoordinatorTest {
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = orchestrator,
             metaHub = InMemoryMetaHub(),
+            tingwuTraceStore = traceStore,
+            artifactFetcher = noopFetcher,
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -963,6 +999,17 @@ class RealTingwuCoordinatorTest {
                 resultLinks = mapOf("CustomPrompt" to "https://example.com/custom_prompt")
             )
         )
+        val fetcher = object : TingwuArtifactFetcher {
+            override fun fetchText(url: String, timeoutMs: Int, maxChars: Int): String? {
+                return """
+                    {
+                      "CustomPrompt": [
+                        {"Name": "demo", "Result": "定制结果文本", "Truncated": false}
+                      ]
+                    }
+                """.trimIndent()
+            }
+        }
         api.resultData = TingwuResultResponse(
             requestId = "req-result",
             code = "0",
@@ -990,6 +1037,8 @@ class RealTingwuCoordinatorTest {
             signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = InMemoryMetaHub(),
+            tingwuTraceStore = traceStore,
+            artifactFetcher = fetcher,
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1006,6 +1055,9 @@ class RealTingwuCoordinatorTest {
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
         assertEquals("https://example.com/custom_prompt", completed.artifacts?.customPromptUrl)
+        assertTrue(completed.transcriptMarkdown.contains("自定义转写"))
+        assertTrue(completed.transcriptMarkdown.contains("定制结果文本"))
+        assertTrue(completed.transcriptMarkdown.contains("逐字稿（原始）"))
     }
 
     private class RecordingTranscriptOrchestrator(

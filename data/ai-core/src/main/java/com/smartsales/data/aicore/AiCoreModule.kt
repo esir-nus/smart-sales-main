@@ -40,6 +40,12 @@ abstract class AiCoreModule {
 
     @Binds
     @Singleton
+    abstract fun bindTingwuArtifactFetcher(
+        impl: com.smartsales.data.aicore.tingwu.RealTingwuArtifactFetcher
+    ): com.smartsales.data.aicore.tingwu.TingwuArtifactFetcher
+
+    @Binds
+    @Singleton
     abstract fun bindExportFileStore(
         impl: AndroidExportFileStore
     ): ExportFileStore

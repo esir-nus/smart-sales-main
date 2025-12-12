@@ -33,6 +33,7 @@ import com.smartsales.data.aicore.tingwu.TingwuCustomPrompt
 import com.smartsales.data.aicore.tingwu.TingwuCustomPromptContent
 import com.smartsales.data.aicore.params.AiParaSettings
 import com.smartsales.data.aicore.debug.TingwuTraceStore
+import com.smartsales.data.aicore.tingwu.TingwuArtifactFetcher
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -72,6 +73,7 @@ class RealTingwuCoordinator @Inject constructor(
     private val transcriptOrchestrator: TranscriptOrchestrator,
     private val metaHub: MetaHub,
     private val tingwuTraceStore: TingwuTraceStore,
+    private val artifactFetcher: TingwuArtifactFetcher,
     optionalConfig: Optional<AiCoreConfig>
 ) : TingwuCoordinator {
 
@@ -347,24 +349,29 @@ class RealTingwuCoordinator @Inject constructor(
                             } else {
                                 AiCoreLogger.w(TAG, "Result 字段为空，将尝试 /transcription 接口")
                             }
-                            val transcriptResult = try {
-                                fetchTranscript(
-                                    jobId = jobId,
-                                    resultLinks = data.resultLinks,
-                                    fallbackArtifacts = artifacts
-                                )
-                            } catch (error: Throwable) {
-                                if (error is CancellationException) throw error
-                                val mapped = mapError(error)
-                                AiCoreLogger.e(TAG, "拉取转写结果失败：${mapped.message}", mapped)
-                                flow.value = TingwuJobState.Failed(jobId, mapped)
-                                return@launch
-                            }
-                            val mergedArtifacts = (transcriptResult.artifacts ?: artifacts)?.copy(
-                                chapters = transcriptResult.chapters ?: transcriptResult.artifacts?.chapters
-                                    ?: artifacts?.chapters,
-                                autoChaptersUrl = transcriptResult.artifacts?.autoChaptersUrl
-                                    ?: artifacts?.autoChaptersUrl
+                    val transcriptResult = try {
+                        fetchTranscript(
+                            jobId = jobId,
+                            resultLinks = data.resultLinks,
+                            fallbackArtifacts = artifacts
+                        )
+                    } catch (error: Throwable) {
+                        if (error is CancellationException) throw error
+                        val mapped = mapError(error)
+                        AiCoreLogger.e(TAG, "拉取转写结果失败：${mapped.message}", mapped)
+                        flow.value = TingwuJobState.Failed(jobId, mapped)
+                        return@launch
+                    }
+                    val composedMarkdown = composeFinalMarkdown(
+                        transcriptMarkdown = transcriptResult.markdown,
+                        artifacts = transcriptResult.artifacts ?: artifacts,
+                        resultLinks = data.resultLinks
+                    )
+                    val mergedArtifacts = (transcriptResult.artifacts ?: artifacts)?.copy(
+                        chapters = transcriptResult.chapters ?: transcriptResult.artifacts?.chapters
+                            ?: artifacts?.chapters,
+                        autoChaptersUrl = transcriptResult.artifacts?.autoChaptersUrl
+                            ?: artifacts?.autoChaptersUrl
                             ) ?: artifacts ?: transcriptResult.chapters?.let {
                                 TingwuJobArtifacts(
                                     autoChaptersUrl = extractAutoChaptersUrl(data.resultLinks),
@@ -393,7 +400,7 @@ class RealTingwuCoordinator @Inject constructor(
                             AiCoreLogger.d(TAG, "转写结果拉取成功：jobId=$jobId markdown长度=${transcriptResult.markdown.length}")
                             flow.value = TingwuJobState.Completed(
                                 jobId = jobId,
-                                transcriptMarkdown = transcriptResult.markdown,
+                                transcriptMarkdown = composedMarkdown,
                                 artifacts = artifactsWithMetadata,
                                 statusLabel = normalizedStatus
                             )
@@ -1381,12 +1388,104 @@ class RealTingwuCoordinator @Inject constructor(
         }
     }
 
+    private fun fetchCustomPromptResult(url: String): String? {
+        val raw = artifactFetcher.fetchText(url) ?: return null
+        return runCatching {
+            val json = JsonParser.parseString(raw)
+            if (!json.isJsonObject) return@runCatching raw
+            val obj = json.asJsonObject
+            val array = obj.getAsJsonArray("CustomPrompt")
+            val first = array?.firstOrNull()?.asJsonObject
+            val result = first?.getPrimitiveString("Result")
+            result?.takeIf { it.isNotBlank() } ?: raw
+        }.getOrElse { raw }
+    }
+
+    private fun fetchSummarizationText(resultLinks: Map<String, String>?): String? {
+        val url = resultLinks?.entries
+            ?.firstOrNull { it.key.equals("Summarization", ignoreCase = true) }
+            ?.value
+            ?.takeIf { it.isNotBlank() }
+            ?: return null
+        val raw = artifactFetcher.fetchText(url) ?: return null
+        val parsed = runCatching {
+            val json = JsonParser.parseString(raw)
+            if (!json.isJsonObject) return@runCatching null
+            val obj = json.asJsonObject
+            val sections = linkedMapOf<String, List<String>>()
+            fun extractList(key: String): List<String> {
+                val element = obj.get(key) ?: return emptyList()
+                return when {
+                    element.isJsonArray -> element.asJsonArray.mapNotNull { it.asStringOrNull() }.filter { it.isNotBlank() }
+                    element.isJsonPrimitive && element.asJsonPrimitive.isString -> listOf(element.asString)
+                    else -> emptyList()
+                }
+            }
+            val paragraph = extractList("Paragraph")
+            val conversational = extractList("Conversational")
+            val qa = extractList("QuestionsAnswering")
+            if (paragraph.isEmpty() && conversational.isEmpty() && qa.isEmpty()) null
+            else {
+                sections["摘要（Paragraph）"] = paragraph
+                sections["发言人总结（Conversational）"] = conversational
+                sections["问答回顾（QuestionsAnswering）"] = qa
+                buildString {
+                    sections.forEach { (title, items) ->
+                        if (items.isNotEmpty()) {
+                            appendLine("### $title")
+                            items.forEach { appendLine("- $it") }
+                            appendLine()
+                        }
+                    }
+                }.trim()
+            }
+        }.getOrNull()
+        return parsed ?: raw
+    }
+
+    private fun buildChaptersText(artifacts: TingwuJobArtifacts?): String? {
+        val chapters = artifacts?.chapters ?: return null
+        if (chapters.isEmpty()) return null
+        return buildString {
+            chapters.forEach { chapter ->
+                val start = formatTimeMs(chapter.startMs ?: 0)
+                appendLine("- [$start] ${chapter.title}")
+            }
+        }.trim()
+    }
+
     private data class TranscriptResult(
         val markdown: String,
         val artifacts: TingwuJobArtifacts?,
         val chapters: List<TingwuChapter>?,
         val diarizedSegments: List<DiarizedSegment>?
     )
+
+    private fun composeFinalMarkdown(
+        transcriptMarkdown: String,
+        artifacts: TingwuJobArtifacts?,
+        resultLinks: Map<String, String>?
+    ): String {
+        val builder = StringBuilder()
+        val customPromptText = artifacts?.customPromptUrl?.let { fetchCustomPromptResult(it) }
+        val summarizationText = fetchSummarizationText(resultLinks)
+        val chaptersText = buildChaptersText(artifacts)
+        if (!customPromptText.isNullOrBlank()) {
+            builder.appendLine("## 自定义转写（CustomPrompt）")
+            builder.appendLine(customPromptText.trim()).appendLine()
+        }
+        if (!summarizationText.isNullOrBlank()) {
+            builder.appendLine("## 摘要（Summarization）")
+            builder.appendLine(summarizationText.trim()).appendLine()
+        }
+        if (!chaptersText.isNullOrBlank()) {
+            builder.appendLine("## 章节（AutoChapters）")
+            builder.appendLine(chaptersText.trim()).appendLine()
+        }
+        builder.appendLine("## 逐字稿（原始）")
+        builder.appendLine(transcriptMarkdown.trim())
+        return builder.toString().trimEnd()
+    }
 
     companion object {
         private val TAG = "${LogTags.AI_CORE}/Tingwu"

@@ -976,16 +976,16 @@ class RealTingwuCoordinator @Inject constructor(
 
     private fun buildDiarizedSegments(transcription: TingwuTranscription?): List<DiarizedSegment> {
         if (transcription == null) return emptyList()
-        // 若文本本身已经是 Markdown / 段落结构，则直接交给上层渲染，不再强行拆分为逐字字幕。
-        val rawText = transcription.text.orEmpty()
-        val normalizedText = rawText.replace("\r\n", "\n")
-        val looksPreFormatted = normalizedText.contains("\n- ") ||
-            normalizedText.trimStart().startsWith("#") ||
-            normalizedText.contains("\n\n")
+        
+        val segments = transcription.segments.orEmpty()
+        val hasUsableSegments = segments.any { !it.text.isNullOrBlank() && !it.speaker.isNullOrBlank() }
 
-        if (looksPreFormatted) {
+        if (!hasUsableSegments) {
+            // No diarized material; let caller fall back to transcription.text or "暂无可用..."
             return emptyList()
         }
+
+        // If we have usable segments, do NOT disable diarization just because text looks formatted.
 
         val speakerOrder = LinkedHashMap<String, Int>()
         transcription.speakers?.forEachIndexed { index, speaker ->
@@ -1473,13 +1473,21 @@ class RealTingwuCoordinator @Inject constructor(
         resultLinks: Map<String, String>?
     ): String {
         val builder = StringBuilder()
+        
         val customPromptText = artifacts?.customPromptUrl?.let { fetchCustomPromptResult(it) }
         val summarizationText = fetchSummarizationText(resultLinks)
         val chaptersText = buildChaptersText(artifacts)
+        
+        // If CustomPrompt exists, it replaces the regular transcript
+        // Otherwise, include transcript markdown first (most important content)
         if (!customPromptText.isNullOrBlank()) {
             builder.appendLine("## 自定义转写（CustomPrompt）")
             builder.appendLine(customPromptText.trim()).appendLine()
+        } else if (transcriptMarkdown.isNotBlank()) {
+            builder.appendLine(transcriptMarkdown.trimEnd())
+            builder.appendLine()
         }
+        
         if (!summarizationText.isNullOrBlank()) {
             builder.appendLine("## 摘要（Summarization）")
             builder.appendLine(summarizationText.trim()).appendLine()

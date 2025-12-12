@@ -31,6 +31,7 @@ import com.smartsales.data.aicore.tingwu.TingwuTranscodingParameters
 import com.smartsales.data.aicore.TranscriptMetadataRequest
 import com.smartsales.data.aicore.tingwu.TingwuCustomPrompt
 import com.smartsales.data.aicore.tingwu.TingwuCustomPromptContent
+import com.smartsales.data.aicore.params.AiParaSettings
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -73,6 +74,7 @@ class RealTingwuCoordinator @Inject constructor(
 ) : TingwuCoordinator {
 
     private val config = optionalConfig.orElse(AiCoreConfig())
+    private val tingwuSettings = AiParaSettings.tingwu
     private val scope = CoroutineScope(SupervisorJob() + dispatchers.default)
     private val jobStates = ConcurrentHashMap<String, MutableStateFlow<TingwuJobState>>()
     private val pollingJobs = ConcurrentHashMap<String, Job>()
@@ -100,24 +102,27 @@ class RealTingwuCoordinator @Inject constructor(
             val requestedLanguage = request.language.ifBlank { DEFAULT_LANGUAGE }
             val sourceLanguage = mapSourceLanguage(requestedLanguage)
             val model = config.tingwuModelOverride?.takeIf { it.isNotBlank() } ?: credentials.model
-            val defaultPrompt = """
-                输入是一份包含段落和 SpeakerId 的转写文本。仅重命名发言人：
-                - SpeakerId "1" -> Dad
-                - SpeakerId "2" -> Son
-                - 其他 SpeakerId 保持不变
-                不要猜测或新增角色，不要改动时间戳/顺序/文本，仅修改显示的发言人名称。
-            """.trimIndent()
+            val defaultCustomPrompt = tingwuSettings.customPrompt.contents.firstOrNull()
             val customPromptContent = if (request.customPromptEnabled) {
                 val resolvedName = request.customPromptName?.takeIf { it.isNotBlank() }
-                    ?: "speaker-role-relabel-v1"
+                    ?: defaultCustomPrompt?.name
                 val resolvedPrompt = request.customPromptText?.takeIf { it.isNotBlank() }
-                    ?: defaultPrompt
-                TingwuCustomPromptContent(
-                    name = resolvedName,
-                    prompt = resolvedPrompt,
-                    model = "tingwu-turbo",
-                    transType = "default"
-                )
+                    ?: defaultCustomPrompt?.prompt
+                if (resolvedName != null && resolvedPrompt != null) {
+                    TingwuCustomPromptContent(
+                        name = resolvedName,
+                        prompt = resolvedPrompt,
+                        model = defaultCustomPrompt?.model,
+                        transType = defaultCustomPrompt?.transType
+                    )
+                } else {
+                    null
+                }
+            } else {
+                null
+            }
+            val customPromptEnabled: Boolean? = if (customPromptContent != null && tingwuSettings.customPrompt.enabled) {
+                true
             } else {
                 null
             }
@@ -125,6 +130,15 @@ class RealTingwuCoordinator @Inject constructor(
                 "创建 Tingwu 任务：taskKey=$taskKey fileUrl=$resolvedUrl lang=$requestedLanguage source=$sourceLanguage model=$model diarizationEnabled=${request.diarizationEnabled}"
             }
             runCatching {
+                val diarizationEnabled = request.diarizationEnabled && tingwuSettings.transcription.diarizationEnabled
+                val diarizationParameters = if (diarizationEnabled) {
+                    TingwuDiarizationParameters(
+                        speakerCount = tingwuSettings.transcription.diarizationSpeakerCount,
+                        outputLevel = tingwuSettings.transcription.diarizationOutputLevel
+                    )
+                } else {
+                    null
+                }
                 val response = api.createTranscriptionTask(
                     body = TingwuCreateTaskRequest(
                         appKey = credentials.appKey,
@@ -135,29 +149,22 @@ class RealTingwuCoordinator @Inject constructor(
                         ),
                         parameters = TingwuTaskParameters(
                             transcription = TingwuTranscriptionParameters(
-                                diarizationEnabled = request.diarizationEnabled,
-                                diarization = if (request.diarizationEnabled) {
-                                    TingwuDiarizationParameters(
-                                        speakerCount = 0,
-                                        outputLevel = 1
-                                    )
-                                } else {
-                                    null
-                                },
-                                audioEventDetectionEnabled = true,
+                                diarizationEnabled = diarizationEnabled,
+                                diarization = diarizationParameters,
+                                audioEventDetectionEnabled = tingwuSettings.transcription.audioEventDetectionEnabled,
                                 model = model
                             ),
-                            summarizationEnabled = true,
+                            summarizationEnabled = tingwuSettings.summarization.enabled,
                             summarization = TingwuSummarizationParameters(
-                                types = listOf("Paragraph", "Conversational", "QuestionsAnswering")
+                                types = tingwuSettings.summarization.types
                             ),
-                            autoChaptersEnabled = true,
-                            textPolishEnabled = true,
-                            pptExtractionEnabled = true,
-                            customPromptEnabled = customPromptContent?.let { true },
-                            customPrompt = customPromptContent?.let { TingwuCustomPrompt(contents = listOf(it)) },
+                            autoChaptersEnabled = tingwuSettings.autoChaptersEnabled,
+                            textPolishEnabled = tingwuSettings.textPolishEnabled,
+                            pptExtractionEnabled = tingwuSettings.pptExtractionEnabled,
+                            customPromptEnabled = customPromptEnabled,
+                            customPrompt = customPromptEnabled?.let { TingwuCustomPrompt(contents = listOf(customPromptContent!!)) },
                             transcoding = TingwuTranscodingParameters(
-                                targetAudioFormat = "mp3"
+                                targetAudioFormat = tingwuSettings.transcoding.targetAudioFormat
                             )
                         )
                     )

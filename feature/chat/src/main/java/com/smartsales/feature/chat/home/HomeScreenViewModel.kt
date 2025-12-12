@@ -47,6 +47,8 @@ import com.smartsales.feature.media.MediaSyncState
 import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.feature.usercenter.UserProfile
 import com.smartsales.feature.usercenter.SalesPersona
+import com.smartsales.data.aicore.debug.TingwuTraceStore
+import com.smartsales.data.aicore.debug.TingwuTraceSnapshot
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
 import java.io.IOException
@@ -198,6 +200,7 @@ data class HomeUiState(
     val isSmartAnalysisMode: Boolean = false,
     val showDebugMetadata: Boolean = false,
     val debugSessionMetadata: DebugSessionMetadata? = null,
+    val tingwuTrace: TingwuTraceSnapshot? = null,
     val smartReasoningText: String? = null,
     val isInputFocused: Boolean = false,
     val salesPersona: SalesPersona? = null,
@@ -229,7 +232,8 @@ class HomeScreenViewModel @Inject constructor(
     private val userProfileRepository: UserProfileRepository,
     private val exportOrchestrator: ExportOrchestrator,
     private val shareHandler: ChatShareHandler,
-    private val metaHub: MetaHub
+    private val metaHub: MetaHub,
+    private val tingwuTraceStore: TingwuTraceStore
 ) : ViewModel() {
 
     private val quickSkillDefinitions = quickSkillCatalog.homeQuickSkills()
@@ -906,6 +910,11 @@ class HomeScreenViewModel @Inject constructor(
                 chatMessages = displayList
             )
         }
+    }
+
+    fun refreshTingwuTrace() {
+        if (!CHAT_DEBUG_HUD_ENABLED) return
+        _uiState.update { it.copy(tingwuTrace = tingwuTraceStore.getSnapshot()) }
     }
 
     private fun updateDebugSessionMetadata(

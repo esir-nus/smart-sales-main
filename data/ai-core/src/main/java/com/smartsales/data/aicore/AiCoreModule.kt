@@ -67,6 +67,8 @@ abstract class AiCoreModule {
     abstract fun bindDashscopeDebugClient(
         impl: DashscopeDebugClientImpl
     ): DashscopeDebugClient
+    // Tingwu 调试痕迹存储
+    // 仅调试 HUD 使用，生产逻辑不依赖
 
     @BindsOptionalOf
     abstract fun optionalAiCoreConfig(): AiCoreConfig

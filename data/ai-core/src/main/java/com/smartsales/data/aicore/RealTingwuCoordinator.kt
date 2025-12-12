@@ -32,6 +32,7 @@ import com.smartsales.data.aicore.TranscriptMetadataRequest
 import com.smartsales.data.aicore.tingwu.TingwuCustomPrompt
 import com.smartsales.data.aicore.tingwu.TingwuCustomPromptContent
 import com.smartsales.data.aicore.params.AiParaSettings
+import com.smartsales.data.aicore.debug.TingwuTraceStore
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -70,6 +71,7 @@ class RealTingwuCoordinator @Inject constructor(
     private val signedUrlProvider: OssSignedUrlProvider,
     private val transcriptOrchestrator: TranscriptOrchestrator,
     private val metaHub: MetaHub,
+    private val tingwuTraceStore: TingwuTraceStore,
     optionalConfig: Optional<AiCoreConfig>
 ) : TingwuCoordinator {
 
@@ -165,6 +167,41 @@ class RealTingwuCoordinator @Inject constructor(
                         )
                     )
                 )
+                runCatching {
+                    tingwuTraceStore.record(
+                        taskId = taskKey,
+                        createRequestJson = gson.toJson(
+                            TingwuCreateTaskRequest(
+                                appKey = credentials.appKey,
+                                input = TingwuTaskInput(
+                                    sourceLanguage = sourceLanguage,
+                                    taskKey = taskKey,
+                                    fileUrl = resolvedUrl
+                                ),
+                                parameters = TingwuTaskParameters(
+                                    transcription = TingwuTranscriptionParameters(
+                                        diarizationEnabled = diarizationEnabled,
+                                        diarization = diarizationParameters,
+                                        audioEventDetectionEnabled = tingwuSettings.transcription.audioEventDetectionEnabled,
+                                        model = model
+                                    ),
+                                    summarizationEnabled = tingwuSettings.summarization.enabled,
+                                    summarization = TingwuSummarizationParameters(
+                                        types = tingwuSettings.summarization.types
+                                    ),
+                                    autoChaptersEnabled = tingwuSettings.autoChaptersEnabled,
+                                    textPolishEnabled = tingwuSettings.textPolishEnabled,
+                                    pptExtractionEnabled = tingwuSettings.pptExtractionEnabled,
+                                    customPromptEnabled = customPromptEnabled,
+                                    customPrompt = customPromptEnabled?.let { TingwuCustomPrompt(contents = listOf(customPromptContent!!)) },
+                                    transcoding = TingwuTranscodingParameters(
+                                        targetAudioFormat = tingwuSettings.transcoding.targetAudioFormat
+                                    )
+                                )
+                            )
+                        )
+                    )
+                }
                 val data = requireData(
                     code = response.code,
                     message = response.message,
@@ -187,6 +224,12 @@ class RealTingwuCoordinator @Inject constructor(
                 }
                 logVerbose {
                     "Tingwu 任务响应：taskId=$taskId status=${data.taskStatus} requestId=${response.requestId}"
+                }
+                runCatching {
+                    tingwuTraceStore.record(
+                        taskId = taskId,
+                        createResponseJson = gson.toJson(response)
+                    )
                 }
                 val flow = getOrCreateJobFlow(taskId)
                 flow.value = TingwuJobState.InProgress(
@@ -260,6 +303,13 @@ class RealTingwuCoordinator @Inject constructor(
                     } catch (error: AiCoreException) {
                         flow.value = TingwuJobState.Failed(jobId, error)
                         return@launch
+                    }
+                    runCatching {
+                        tingwuTraceStore.record(
+                            taskId = jobId,
+                            getTaskInfoJson = gson.toJson(response),
+                            resultUrls = data.resultLinks.orEmpty()
+                        )
                     }
                     logVerbose {
                         "轮询结果：jobId=$jobId status=${data.taskStatus} progress=${data.taskProgress} requestId=${response.requestId}"

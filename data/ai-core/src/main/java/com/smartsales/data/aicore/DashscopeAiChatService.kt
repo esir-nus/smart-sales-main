@@ -8,7 +8,7 @@ import com.alibaba.dashscope.exception.ApiException
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.LogTags
 import com.smartsales.core.util.Result
-import com.smartsales.data.aicore.params.AiParaSettings
+import com.smartsales.data.aicore.params.AiParaSettingsProvider
 import java.io.IOException
 import java.util.Optional
 import javax.inject.Inject
@@ -26,6 +26,7 @@ class DashscopeAiChatService @Inject constructor(
     private val dispatchers: DispatcherProvider,
     private val dashscopeClient: DashscopeClient,
     private val credentialsProvider: DashscopeCredentialsProvider,
+    private val aiParaSettingsProvider: AiParaSettingsProvider,
     optionalConfig: Optional<AiCoreConfig>
 ) : AiChatService {
 
@@ -118,7 +119,7 @@ class DashscopeAiChatService @Inject constructor(
         request: AiChatRequest,
         credentials: DashscopeCredentials
     ): DashscopeRequest {
-        val dashScopeSettings = AiParaSettings.dashScope
+        val dashScopeSettings = aiParaSettingsProvider.snapshot().dashScope
         return DashscopeRequest(
             apiKey = credentials.apiKey,
             model = credentials.model,

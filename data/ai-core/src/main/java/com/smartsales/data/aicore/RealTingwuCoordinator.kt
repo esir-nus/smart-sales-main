@@ -31,7 +31,7 @@ import com.smartsales.data.aicore.tingwu.TingwuTranscodingParameters
 import com.smartsales.data.aicore.TranscriptMetadataRequest
 import com.smartsales.data.aicore.tingwu.TingwuCustomPrompt
 import com.smartsales.data.aicore.tingwu.TingwuCustomPromptContent
-import com.smartsales.data.aicore.params.AiParaSettings
+import com.smartsales.data.aicore.params.AiParaSettingsProvider
 import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.tingwu.TingwuArtifactFetcher
 import com.smartsales.data.aicore.posttingwu.EnhancerInput
@@ -80,11 +80,12 @@ class RealTingwuCoordinator @Inject constructor(
     private val tingwuTraceStore: TingwuTraceStore,
     private val artifactFetcher: TingwuArtifactFetcher,
     private val postTingwuTranscriptEnhancer: PostTingwuTranscriptEnhancer,
+    private val aiParaSettingsProvider: AiParaSettingsProvider,
     optionalConfig: Optional<AiCoreConfig>
 ) : TingwuCoordinator {
 
     private val config = optionalConfig.orElse(AiCoreConfig())
-    private val tingwuSettings get() = AiParaSettings.tingwu
+    private val tingwuSettings get() = aiParaSettingsProvider.snapshot().tingwu
     private val scope = CoroutineScope(SupervisorJob() + dispatchers.default)
     private val jobStates = ConcurrentHashMap<String, MutableStateFlow<TingwuJobState>>()
     private val pollingJobs = ConcurrentHashMap<String, Job>()
@@ -368,11 +369,6 @@ class RealTingwuCoordinator @Inject constructor(
                         flow.value = TingwuJobState.Failed(jobId, mapped)
                         return@launch
                     }
-                    val composedMarkdown = composeFinalMarkdown(
-                        transcriptMarkdown = transcriptResult.markdown,
-                        artifacts = transcriptResult.artifacts ?: artifacts,
-                        resultLinks = data.resultLinks
-                    )
                     val mergedArtifacts = (transcriptResult.artifacts ?: artifacts)?.copy(
                         chapters = transcriptResult.chapters ?: transcriptResult.artifacts?.chapters
                             ?: artifacts?.chapters,
@@ -406,7 +402,7 @@ class RealTingwuCoordinator @Inject constructor(
                             AiCoreLogger.d(TAG, "转写结果拉取成功：jobId=$jobId markdown长度=${transcriptResult.markdown.length}")
                             flow.value = TingwuJobState.Completed(
                                 jobId = jobId,
-                                transcriptMarkdown = composedMarkdown,
+                                transcriptMarkdown = transcriptResult.markdown,
                                 artifacts = artifactsWithMetadata,
                                 statusLabel = normalizedStatus
                             )
@@ -1581,6 +1577,7 @@ class RealTingwuCoordinator @Inject constructor(
     ): String {
         val settings = tingwuSettings.postTingwuEnhancer
         if (!settings.enabled) return fallback
+        // 注意：增强仅基于转写 JSON（含时间戳/说话人），不使用 CustomPrompt 输出
         val utterances = buildEnhancerUtterances(diarizedSegments, transcription)
         if (utterances.isEmpty()) return fallback
         val output = runCatching {
@@ -1635,6 +1632,9 @@ class RealTingwuCoordinator @Inject constructor(
         return emptyList()
     }
 
+    /**
+     * 仅调试/后续扩展使用，当前气泡不再拼接自定义转写或摘要。
+     */
     private fun composeFinalMarkdown(
         transcriptMarkdown: String,
         artifacts: TingwuJobArtifacts?,

@@ -6,7 +6,8 @@ package com.smartsales.data.aicore
 
 import com.smartsales.core.test.FakeDispatcherProvider
 import com.smartsales.core.util.Result
-import com.smartsales.data.aicore.params.AiParaSettings
+import com.smartsales.data.aicore.params.AiParaSettingsProvider
+import com.smartsales.data.aicore.params.AiParaSettingsSnapshot
 import java.io.IOException
 import java.util.Optional
 import kotlinx.coroutines.flow.Flow
@@ -32,6 +33,7 @@ class DashscopeAiChatServiceTest {
             dispatchers = FakeDispatcherProvider(dispatcher),
             dashscopeClient = dashscopeClient,
             credentialsProvider = FakeCredentialsProvider(apiKey = "key", model = "qwen-turbo"),
+            aiParaSettingsProvider = FakeAiParaSettingsProvider(),
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     preferFakeAiChat = false,
@@ -55,8 +57,9 @@ class DashscopeAiChatServiceTest {
         assertTrue(result.structuredMarkdown!!.startsWith("助手结论"))
         assertTrue(result.structuredMarkdown!!.contains("## 输入摘要"))
         val lastRequest = dashscopeClient.lastRequest
-        assertEquals(AiParaSettings.dashScope.temperature.toFloat(), lastRequest?.temperature)
-        assertEquals(AiParaSettings.dashScope.incrementalOutput, lastRequest?.incrementalOutput)
+        val snapshot = FakeAiParaSettingsProvider().snapshot()
+        assertEquals(snapshot.dashScope.temperature.toFloat(), lastRequest?.temperature)
+        assertEquals(snapshot.dashScope.incrementalOutput, lastRequest?.incrementalOutput)
     }
 
     @Test
@@ -88,6 +91,7 @@ class DashscopeAiChatServiceTest {
             dispatchers = FakeDispatcherProvider(dispatcher),
             dashscopeClient = dashscopeClient,
             credentialsProvider = FakeCredentialsProvider(apiKey = "", model = "qwen-turbo"),
+            aiParaSettingsProvider = FakeAiParaSettingsProvider(),
             optionalConfig = Optional.empty()
         )
 
@@ -105,6 +109,7 @@ class DashscopeAiChatServiceTest {
             dispatchers = FakeDispatcherProvider(dispatcher),
             dashscopeClient = streamingClient,
             credentialsProvider = FakeCredentialsProvider(apiKey = "key", model = "qwen"),
+            aiParaSettingsProvider = FakeAiParaSettingsProvider(),
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     preferFakeAiChat = false,
@@ -129,6 +134,7 @@ class DashscopeAiChatServiceTest {
             dispatchers = FakeDispatcherProvider(dispatcher),
             dashscopeClient = streamingClient,
             credentialsProvider = FakeCredentialsProvider(apiKey = "key", model = "qwen"),
+            aiParaSettingsProvider = FakeAiParaSettingsProvider(),
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     preferFakeAiChat = false,
@@ -187,5 +193,11 @@ class DashscopeAiChatServiceTest {
                 emit(DashscopeStreamEvent.Completed)
             }
         }
+    }
+
+    private class FakeAiParaSettingsProvider(
+        private val snapshot: AiParaSettingsSnapshot = AiParaSettingsSnapshot()
+    ) : AiParaSettingsProvider {
+        override fun snapshot(): AiParaSettingsSnapshot = snapshot
     }
 }

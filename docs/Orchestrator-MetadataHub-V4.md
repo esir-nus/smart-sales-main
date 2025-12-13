@@ -14,6 +14,7 @@
   - `<DocReference> ... </DocReference>`：引用/证据列表，供深度分析或导出，默认不展示。
 - UI / ViewModel 只消费 `<Visible2User>` 渲染气泡；其他标签仅由 Orchestrator / MetaHub / 调试 HUD 使用。
 - 兼容：若模型暂未严格产出标签，仍可回退到“尾部 JSON + 轻量 sanitize”逻辑。
+- Tingwu 逐字稿气泡：仅展示 PostTingwu TranscriptEnhancer 产出的转写（或原始回退）；CustomPrompt 输出不参与气泡增强。
 
 ### Orchestrator
 - 解析 LLM 输出，优先解析标签，合并元数据后写入 MetaHub。

@@ -7,6 +7,8 @@ import com.smartsales.data.aicore.debug.DashscopeDebugClient
 import com.smartsales.data.aicore.debug.DashscopeDebugClientImpl
 import com.smartsales.data.aicore.posttingwu.PostTingwuTranscriptEnhancer
 import com.smartsales.data.aicore.posttingwu.RealPostTingwuTranscriptEnhancer
+import com.smartsales.data.aicore.params.AiParaSettingsProvider
+import com.smartsales.data.aicore.params.DefaultAiParaSettingsProvider
 import dagger.Binds
 import dagger.BindsOptionalOf
 import dagger.Module
@@ -81,6 +83,12 @@ abstract class AiCoreModule {
     abstract fun bindPostTingwuTranscriptEnhancer(
         impl: RealPostTingwuTranscriptEnhancer
     ): PostTingwuTranscriptEnhancer
+
+    @Binds
+    @Singleton
+    abstract fun bindAiParaSettingsProvider(
+        impl: DefaultAiParaSettingsProvider
+    ): AiParaSettingsProvider
     // Tingwu 调试痕迹存储
     // 仅调试 HUD 使用，生产逻辑不依赖
 

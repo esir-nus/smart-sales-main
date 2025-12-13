@@ -13,7 +13,7 @@ import com.smartsales.data.aicore.AiChatRequest
 import com.smartsales.data.aicore.AiChatService
 import com.smartsales.data.aicore.AiCoreLogger
 import com.smartsales.data.aicore.AiCoreConfig
-import com.smartsales.data.aicore.params.AiParaSettings
+import com.smartsales.data.aicore.params.AiParaSettingsProvider
 import java.util.Optional
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -28,13 +28,14 @@ class RealPostTingwuTranscriptEnhancer @Inject constructor(
     private val dispatchers: DispatcherProvider,
     private val aiChatService: AiChatService,
     private val gson: Gson,
+    private val aiParaSettingsProvider: AiParaSettingsProvider,
     optionalConfig: Optional<AiCoreConfig>
 ) : PostTingwuTranscriptEnhancer {
 
     private val config = optionalConfig.orElse(AiCoreConfig())
 
     override suspend fun enhance(input: EnhancerInput): EnhancerOutput? = withContext(dispatchers.io) {
-        val settings = AiParaSettings.tingwu.postTingwuEnhancer
+        val settings = aiParaSettingsProvider.snapshot().tingwu.postTingwuEnhancer
         if (!settings.enabled) return@withContext null
         val truncated = truncate(input, settings.maxUtterances, settings.maxChars)
         if (truncated.utterances.isEmpty()) return@withContext null

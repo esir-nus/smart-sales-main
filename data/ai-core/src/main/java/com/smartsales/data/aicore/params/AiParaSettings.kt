@@ -1,16 +1,24 @@
-package com.smartsales.data.aicore.params
-
 // 文件：data/ai-core/src/main/java/com/smartsales/data/aicore/params/AiParaSettings.kt
 // 模块：:data:ai-core
-// 说明：集中管理 AI 请求参数（Tingwu / DashScope），便于统一调优与测试
-// 作者：创建于 2025-12-12
+// 说明：提供 AI 参数快照与注入式 Provider，避免全局可变状态
+// 作者：创建于 2025-12-13
+package com.smartsales.data.aicore.params
 
-object AiParaSettings {
-    /**
-     * 允许测试按需覆盖配置，默认保持静态常量。
-     */
-    var tingwu: TingwuSettings = TingwuSettings()
-    var dashScope: DashScopeSettings = DashScopeSettings()
+import javax.inject.Inject
+import javax.inject.Singleton
+
+data class AiParaSettingsSnapshot(
+    val tingwu: TingwuSettings = TingwuSettings(),
+    val dashScope: DashScopeSettings = DashScopeSettings()
+)
+
+interface AiParaSettingsProvider {
+    fun snapshot(): AiParaSettingsSnapshot
+}
+
+@Singleton
+class DefaultAiParaSettingsProvider @Inject constructor() : AiParaSettingsProvider {
+    override fun snapshot(): AiParaSettingsSnapshot = AiParaSettingsSnapshot()
 }
 
 data class TingwuSettings(

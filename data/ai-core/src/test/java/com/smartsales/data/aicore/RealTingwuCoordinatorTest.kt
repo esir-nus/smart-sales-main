@@ -23,7 +23,8 @@ import com.smartsales.data.aicore.TranscriptMetadataRequest
 import com.smartsales.data.aicore.TranscriptOrchestrator
 import com.google.gson.Gson
 import com.smartsales.data.aicore.debug.TingwuTraceStore
-import com.smartsales.data.aicore.params.AiParaSettings
+import com.smartsales.data.aicore.params.AiParaSettingsProvider
+import com.smartsales.data.aicore.params.AiParaSettingsSnapshot
 import com.smartsales.data.aicore.params.PostTingwuEnhancerSettings
 import com.smartsales.data.aicore.posttingwu.EnhancerInput
 import com.smartsales.data.aicore.posttingwu.EnhancerOutput
@@ -86,11 +87,13 @@ class RealTingwuCoordinatorTest {
     private val noopEnhancer = object : PostTingwuTranscriptEnhancer {
         override suspend fun enhance(input: com.smartsales.data.aicore.posttingwu.EnhancerInput) = null
     }
+    private val defaultSettingsProvider = FakeAiParaSettingsProvider()
 
     private fun newCoordinator(
         api: TingwuApi,
         optionalConfig: Optional<AiCoreConfig> = Optional.empty(),
         enhancer: PostTingwuTranscriptEnhancer = noopEnhancer,
+        settingsProvider: AiParaSettingsProvider = defaultSettingsProvider,
         metaHub: com.smartsales.core.metahub.MetaHub = InMemoryMetaHub()
     ): RealTingwuCoordinator = RealTingwuCoordinator(
         dispatchers = dispatchers,
@@ -102,6 +105,7 @@ class RealTingwuCoordinatorTest {
         tingwuTraceStore = traceStore,
         artifactFetcher = noopFetcher,
         postTingwuTranscriptEnhancer = enhancer,
+        aiParaSettingsProvider = settingsProvider,
         optionalConfig = optionalConfig
     )
     @Test
@@ -734,6 +738,7 @@ class RealTingwuCoordinatorTest {
             tingwuTraceStore = traceStore,
             artifactFetcher = noopFetcher,
             postTingwuTranscriptEnhancer = noopEnhancer,
+            aiParaSettingsProvider = defaultSettingsProvider,
             optionalConfig = Optional.empty()
         )
 
@@ -852,6 +857,7 @@ class RealTingwuCoordinatorTest {
             tingwuTraceStore = traceStore,
             artifactFetcher = noopFetcher,
             postTingwuTranscriptEnhancer = noopEnhancer,
+            aiParaSettingsProvider = defaultSettingsProvider,
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -922,6 +928,7 @@ class RealTingwuCoordinatorTest {
             tingwuTraceStore = traceStore,
             artifactFetcher = noopFetcher,
             postTingwuTranscriptEnhancer = noopEnhancer,
+            aiParaSettingsProvider = defaultSettingsProvider,
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -996,6 +1003,7 @@ class RealTingwuCoordinatorTest {
             tingwuTraceStore = traceStore,
             artifactFetcher = fetcher,
             postTingwuTranscriptEnhancer = noopEnhancer,
+            aiParaSettingsProvider = defaultSettingsProvider,
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1012,9 +1020,9 @@ class RealTingwuCoordinatorTest {
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
         assertEquals("https://example.com/custom_prompt", completed.artifacts?.customPromptUrl)
-        assertTrue(completed.transcriptMarkdown.contains("自定义转写"))
-        assertTrue(completed.transcriptMarkdown.contains("定制结果文本"))
         assertTrue(completed.transcriptMarkdown.contains("逐字稿"))
+        assertFalse(completed.transcriptMarkdown.contains("自定义转写"))
+        assertFalse(completed.transcriptMarkdown.contains("定制结果文本"))
     }
 
     @Test
@@ -1063,6 +1071,7 @@ class RealTingwuCoordinatorTest {
             tingwuTraceStore = traceStore,
             artifactFetcher = fetcher,
             postTingwuTranscriptEnhancer = noopEnhancer,
+            aiParaSettingsProvider = defaultSettingsProvider,
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1078,9 +1087,9 @@ class RealTingwuCoordinatorTest {
         advanceUntilIdle()
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
-        assertTrue(completed.transcriptMarkdown.contains("摘要暂无可用内容"))
+        assertTrue(completed.transcriptMarkdown.contains("逐字稿"))
+        assertFalse(completed.transcriptMarkdown.contains("摘要"))
         assertFalse(completed.transcriptMarkdown.contains("{"))
-        assertFalse(completed.transcriptMarkdown.contains("raw1"))
     }
 
     @Test
@@ -1139,6 +1148,7 @@ class RealTingwuCoordinatorTest {
             tingwuTraceStore = traceStore,
             artifactFetcher = fetcher,
             postTingwuTranscriptEnhancer = noopEnhancer,
+            aiParaSettingsProvider = defaultSettingsProvider,
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1155,11 +1165,9 @@ class RealTingwuCoordinatorTest {
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
         val markdown = completed.transcriptMarkdown
-        assertTrue(markdown.contains("## 摘要（Summarization）"))
-        assertTrue(markdown.contains("段落摘要"))
-        assertTrue(markdown.contains("发言人总结"))
-        assertTrue(markdown.contains("问答回顾"))
-        assertFalse(markdown.contains("{"))
+        assertTrue(markdown.contains("逐字稿"))
+        assertFalse(markdown.contains("摘要（Summarization）"))
+        assertFalse(markdown.contains("发言人总结"))
     }
 
     @Test
@@ -1215,6 +1223,7 @@ class RealTingwuCoordinatorTest {
             tingwuTraceStore = traceStore,
             artifactFetcher = fetcher,
             postTingwuTranscriptEnhancer = noopEnhancer,
+            aiParaSettingsProvider = defaultSettingsProvider,
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1231,10 +1240,8 @@ class RealTingwuCoordinatorTest {
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
         val markdown = completed.transcriptMarkdown
-        assertTrue(markdown.contains("## 章节（AutoChapters）"))
-        assertTrue(markdown.contains("[00:04]"))
-        assertTrue(markdown.contains("新手摩托车选择"))
-        assertTrue(markdown.contains("概览说明"))
+        assertTrue(markdown.contains("逐字稿"))
+        assertFalse(markdown.contains("章节（AutoChapters）"))
     }
 
     @Test
@@ -1283,6 +1290,7 @@ class RealTingwuCoordinatorTest {
             tingwuTraceStore = traceStore,
             artifactFetcher = fetcher,
             postTingwuTranscriptEnhancer = noopEnhancer,
+            aiParaSettingsProvider = defaultSettingsProvider,
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1299,8 +1307,8 @@ class RealTingwuCoordinatorTest {
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
         val markdown = completed.transcriptMarkdown
-        assertTrue(markdown.contains("## 自定义转写（CustomPrompt）"))
         assertTrue(markdown.contains("逐字稿"))
+        assertFalse(markdown.contains("自定义转写"))
     }
 
     private class RecordingTranscriptOrchestrator(
@@ -1428,154 +1436,224 @@ class RealTingwuCoordinatorTest {
     }
 
     @Test
-    fun enhancerEnabled_appliesSplitAndKeepsOrdering() = runTest(dispatcher) {
-        val originalSettings = AiParaSettings.tingwu
-        AiParaSettings.tingwu = originalSettings.copy(
-            postTingwuEnhancer = PostTingwuEnhancerSettings(enabled = true)
-        )
-        try {
-            val api = FakeTingwuApi()
-            api.enqueueStatus(statusResponse(status = "PROCESSING", progress = 30))
-            api.enqueueStatus(statusResponse(status = "SUCCEEDED", progress = 100))
-            api.resultData = TingwuResultResponse(
-                requestId = "req-result",
-                code = "0",
-                message = "Success",
-                data = TingwuResultData(
-                    taskId = "job-1",
-                    transcription = TingwuTranscription(
-                        text = "",
-                        segments = listOf(
-                            TingwuTranscriptSegment(id = 1, start = 0.0, end = 1.0, text = "开场介绍", speaker = "spk_1"),
-                            TingwuTranscriptSegment(id = 2, start = 1.0, end = 2.0, text = "补充需求", speaker = "spk_2")
-                        ),
-                        speakers = listOf(
-                            TingwuSpeaker(id = "spk_1", name = "销售"),
-                            TingwuSpeaker(id = "spk_2", name = "客户")
-                        ),
-                        language = "zh",
-                        duration = 3.0,
-                        url = "https://example.com/transcription.json"
+    fun transcriptBubble_doesNotIncludeCustomPromptOrSummarySections() = runTest(dispatcher) {
+        val api = FakeTingwuApi()
+        api.enqueueStatus(statusResponse(status = "PROCESSING", progress = 30))
+        api.enqueueStatus(statusResponse(status = "SUCCEEDED", progress = 100))
+        api.resultData = TingwuResultResponse(
+            requestId = "req-result",
+            code = "0",
+            message = "Success",
+            data = TingwuResultData(
+                taskId = "job-1",
+                transcription = TingwuTranscription(
+                    text = "你好",
+                    segments = listOf(
+                        TingwuTranscriptSegment(id = 1, start = 0.0, end = 1.0, text = "你好", speaker = "spk_1")
                     ),
-                    resultLinks = emptyMap(),
-                    outputMp3Path = null,
-                    outputMp4Path = null,
-                    outputThumbnailPath = null,
-                    outputSpectrumPath = null
-                )
-            )
-            val enhancer = object : PostTingwuTranscriptEnhancer {
-                override suspend fun enhance(input: EnhancerInput): EnhancerOutput = EnhancerOutput(
-                    speakerRoster = listOf(SpeakerLabel("spk_1", "销售顾问", 0.9)),
-                    utteranceEdits = listOf(
-                        UtteranceEdit(
-                            index = 0,
-                            split = listOf(
-                                SplitLine("销售顾问", "开场介绍"),
-                                SplitLine("客户", "补充需求")
-                            ),
-                            confidence = 0.9
-                        )
-                    )
-                )
-            }
-            val coordinator = newCoordinator(
-                api = api,
-                optionalConfig = Optional.of(
-                    AiCoreConfig(
-                        tingwuPollIntervalMillis = 10,
-                        tingwuPollTimeoutMillis = 200
-                    )
+                    speakers = listOf(TingwuSpeaker(id = "spk_1", name = "客户")),
+                    language = "zh",
+                    duration = 1.0
                 ),
-                enhancer = enhancer
+                resultLinks = mapOf(
+                    "CustomPrompt" to "https://example.com/custom_prompt",
+                    "Summarization" to "https://example.com/summarization",
+                    "AutoChapters" to "https://example.com/autochapters"
+                ),
+                outputMp3Path = null,
+                outputMp4Path = null,
+                outputThumbnailPath = null,
+                outputSpectrumPath = null
             )
-
-            val submit = coordinator.submit(
-                TingwuRequest(
-                    audioAssetName = "demo.wav",
-                    fileUrl = "https://oss.example.com/demo.wav"
+        )
+        val coordinator = newCoordinator(
+            api = api,
+            optionalConfig = Optional.of(
+                AiCoreConfig(
+                    tingwuPollIntervalMillis = 10,
+                    tingwuPollTimeoutMillis = 200
                 )
             )
-            assertTrue(submit is Result.Success)
-            val jobId = (submit as Result.Success).data
-            advanceTimeBy(20)
-            advanceUntilIdle()
+        )
 
-            val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
-            val lines = completed.transcriptMarkdown.lines()
-            assertTrue(lines.any { it.startsWith("- [00:00] 销售顾问：开场介绍") })
-            assertTrue(lines.any { it.trimStart().startsWith("客户：补充需求") && !it.contains("[") })
-        } finally {
-            AiParaSettings.tingwu = originalSettings
+        val submit = coordinator.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav"
+            )
+        )
+        assertTrue(submit is Result.Success)
+        val jobId = (submit as Result.Success).data
+        advanceTimeBy(20)
+        advanceUntilIdle()
+
+        val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
+        val markdown = completed.transcriptMarkdown
+        assertTrue(markdown.contains("逐字稿"))
+        assertFalse(markdown.contains("自定义转写"))
+        assertFalse(markdown.contains("Summarization"))
+        assertFalse(markdown.contains("AutoChapters"))
+    }
+
+    @Test
+    fun enhancerEnabled_appliesSplitAndKeepsOrdering() = runTest(dispatcher) {
+        val settingsProvider = FakeAiParaSettingsProvider(
+            AiParaSettingsSnapshot(
+                tingwu = AiParaSettingsSnapshot().tingwu.copy(
+                    postTingwuEnhancer = PostTingwuEnhancerSettings(enabled = true)
+                )
+            )
+        )
+        val api = FakeTingwuApi()
+        api.enqueueStatus(statusResponse(status = "PROCESSING", progress = 30))
+        api.enqueueStatus(statusResponse(status = "SUCCEEDED", progress = 100))
+        api.resultData = TingwuResultResponse(
+            requestId = "req-result",
+            code = "0",
+            message = "Success",
+            data = TingwuResultData(
+                taskId = "job-1",
+                transcription = TingwuTranscription(
+                    text = "",
+                    segments = listOf(
+                        TingwuTranscriptSegment(id = 1, start = 0.0, end = 1.0, text = "开场介绍", speaker = "spk_1"),
+                        TingwuTranscriptSegment(id = 2, start = 1.0, end = 2.0, text = "补充需求", speaker = "spk_2")
+                    ),
+                    speakers = listOf(
+                        TingwuSpeaker(id = "spk_1", name = "销售"),
+                        TingwuSpeaker(id = "spk_2", name = "客户")
+                    ),
+                    language = "zh",
+                    duration = 3.0,
+                    url = "https://example.com/transcription.json"
+                ),
+                resultLinks = emptyMap(),
+                outputMp3Path = null,
+                outputMp4Path = null,
+                outputThumbnailPath = null,
+                outputSpectrumPath = null
+            )
+        )
+        val enhancer = object : PostTingwuTranscriptEnhancer {
+            override suspend fun enhance(input: EnhancerInput): EnhancerOutput = EnhancerOutput(
+                speakerRoster = listOf(SpeakerLabel("spk_1", "销售顾问", 0.9)),
+                utteranceEdits = listOf(
+                    UtteranceEdit(
+                        index = 0,
+                        split = listOf(
+                            SplitLine("销售顾问", "开场介绍"),
+                            SplitLine("客户", "补充需求")
+                        ),
+                        confidence = 0.9
+                    )
+                )
+            )
         }
+        val coordinator = newCoordinator(
+            api = api,
+            optionalConfig = Optional.of(
+                AiCoreConfig(
+                    tingwuPollIntervalMillis = 10,
+                    tingwuPollTimeoutMillis = 200
+                )
+            ),
+            enhancer = enhancer,
+            settingsProvider = settingsProvider
+        )
+
+        val submit = coordinator.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav"
+            )
+        )
+        assertTrue(submit is Result.Success)
+        val jobId = (submit as Result.Success).data
+        advanceTimeBy(20)
+        advanceUntilIdle()
+
+        val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
+        val lines = completed.transcriptMarkdown.lines()
+        assertTrue(lines.any { it.startsWith("- [00:00] 销售顾问：开场介绍") })
+        assertTrue(lines.any { it.trimStart().startsWith("客户：补充需求") && !it.contains("[") })
     }
 
     @Test
     fun enhancerFailure_fallsBackToRawMarkdown() = runTest(dispatcher) {
-        val originalSettings = AiParaSettings.tingwu
-        AiParaSettings.tingwu = originalSettings.copy(
-            postTingwuEnhancer = PostTingwuEnhancerSettings(enabled = true)
+        val settingsProvider = FakeAiParaSettingsProvider(
+            AiParaSettingsSnapshot(
+                tingwu = AiParaSettingsSnapshot().tingwu.copy(
+                    postTingwuEnhancer = PostTingwuEnhancerSettings(enabled = true)
+                )
+            )
         )
-        try {
-            val api = FakeTingwuApi()
-            api.enqueueStatus(statusResponse(status = "PROCESSING", progress = 30))
-            api.enqueueStatus(statusResponse(status = "SUCCEEDED", progress = 100))
-            api.resultData = TingwuResultResponse(
-                requestId = "req-result",
-                code = "0",
-                message = "Success",
-                data = TingwuResultData(
-                    taskId = "job-1",
-                    transcription = TingwuTranscription(
-                        text = "",
-                        segments = listOf(
-                            TingwuTranscriptSegment(id = 1, start = 0.0, end = 1.0, text = "原始内容", speaker = "spk_1")
-                        ),
-                        speakers = listOf(TingwuSpeaker(id = "spk_1", name = "客户")),
-                        language = "zh",
-                        duration = 2.0,
-                        url = "https://example.com/transcription.json"
+        val api = FakeTingwuApi()
+        api.enqueueStatus(statusResponse(status = "PROCESSING", progress = 30))
+        api.enqueueStatus(statusResponse(status = "SUCCEEDED", progress = 100))
+        api.resultData = TingwuResultResponse(
+            requestId = "req-result",
+            code = "0",
+            message = "Success",
+            data = TingwuResultData(
+                taskId = "job-1",
+                transcription = TingwuTranscription(
+                    text = "",
+                    segments = listOf(
+                        TingwuTranscriptSegment(id = 1, start = 0.0, end = 1.0, text = "原始内容", speaker = "spk_1")
                     ),
-                    resultLinks = emptyMap(),
-                    outputMp3Path = null,
-                    outputMp4Path = null,
-                    outputThumbnailPath = null,
-                    outputSpectrumPath = null
-                )
-            )
-            val enhancer = object : PostTingwuTranscriptEnhancer {
-                override suspend fun enhance(input: EnhancerInput): EnhancerOutput? {
-                    throw IllegalStateException("boom")
-                }
-            }
-            val coordinator = newCoordinator(
-                api = api,
-                optionalConfig = Optional.of(
-                    AiCoreConfig(
-                        tingwuPollIntervalMillis = 10,
-                        tingwuPollTimeoutMillis = 200
-                    )
+                    speakers = listOf(TingwuSpeaker(id = "spk_1", name = "客户")),
+                    language = "zh",
+                    duration = 2.0,
+                    url = "https://example.com/transcription.json"
                 ),
-                enhancer = enhancer
+                resultLinks = emptyMap(),
+                outputMp3Path = null,
+                outputMp4Path = null,
+                outputThumbnailPath = null,
+                outputSpectrumPath = null
             )
-
-            val submit = coordinator.submit(
-                TingwuRequest(
-                    audioAssetName = "demo.wav",
-                    fileUrl = "https://oss.example.com/demo.wav"
-                )
-            )
-            assertTrue(submit is Result.Success)
-            val jobId = (submit as Result.Success).data
-            advanceTimeBy(20)
-            advanceUntilIdle()
-
-            val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
-            assertTrue(completed.transcriptMarkdown.contains("原始内容"))
-            assertTrue(completed.transcriptMarkdown.contains("客户"))
-        } finally {
-            AiParaSettings.tingwu = originalSettings
+        )
+        val enhancer = object : PostTingwuTranscriptEnhancer {
+            override suspend fun enhance(input: EnhancerInput): EnhancerOutput? {
+                throw IllegalStateException("boom")
+            }
         }
+        val coordinator = newCoordinator(
+            api = api,
+            optionalConfig = Optional.of(
+                AiCoreConfig(
+                    tingwuPollIntervalMillis = 10,
+                    tingwuPollTimeoutMillis = 200
+                )
+            ),
+            enhancer = enhancer,
+            settingsProvider = settingsProvider
+        )
+
+        val submit = coordinator.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav"
+            )
+        )
+        assertTrue(submit is Result.Success)
+        val jobId = (submit as Result.Success).data
+        advanceTimeBy(20)
+        advanceUntilIdle()
+
+        val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
+        assertTrue(completed.transcriptMarkdown.contains("原始内容"))
+        assertTrue(completed.transcriptMarkdown.contains("客户"))
+    }
+
+    private class FakeAiParaSettingsProvider(
+        private var snapshot: AiParaSettingsSnapshot = AiParaSettingsSnapshot()
+    ) : AiParaSettingsProvider {
+        fun override(snapshot: AiParaSettingsSnapshot) {
+            this.snapshot = snapshot
+        }
+
+        override fun snapshot(): AiParaSettingsSnapshot = snapshot
     }
 }
 

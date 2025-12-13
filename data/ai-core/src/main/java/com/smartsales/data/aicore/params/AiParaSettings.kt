@@ -5,12 +5,12 @@ package com.smartsales.data.aicore.params
 // 说明：集中管理 AI 请求参数（Tingwu / DashScope），便于统一调优与测试
 // 作者：创建于 2025-12-12
 
-/**
- * 总入口：集中管理各 vendor 的默认参数。
- */
 object AiParaSettings {
-    val tingwu: TingwuSettings = TingwuSettings()
-    val dashScope: DashScopeSettings = DashScopeSettings()
+    /**
+     * 允许测试按需覆盖配置，默认保持静态常量。
+     */
+    var tingwu: TingwuSettings = TingwuSettings()
+    var dashScope: DashScopeSettings = DashScopeSettings()
 }
 
 data class TingwuSettings(
@@ -21,7 +21,8 @@ data class TingwuSettings(
     val pptExtractionEnabled: Boolean = true,
     val textPolishEnabled: Boolean = true,
     val customPrompt: TingwuCustomPromptSettings = TingwuCustomPromptSettings(),
-    val transcoding: TingwuTranscodingSettings = TingwuTranscodingSettings()
+    val transcoding: TingwuTranscodingSettings = TingwuTranscodingSettings(),
+    val postTingwuEnhancer: PostTingwuEnhancerSettings = PostTingwuEnhancerSettings()
 )
 
 data class TingwuTranscriptionSettings(
@@ -42,13 +43,11 @@ data class TingwuCustomPromptSettings(
         TingwuCustomPromptContentSettings(
             name = "speaker-role-relabel-v1",
             prompt = """
-                输入是一份包含段落和 SpeakerId 的转写文本。仅重命名发言人：
-                - SpeakerId "1" -> Dad
-                - SpeakerId "2" -> Son
-                - 其他 SpeakerId 保持不变
-                不要猜测或新增角色，不要改动时间戳/顺序/文本，仅修改显示的发言人名称。
-            """.trimIndent(),
-            model = "tingwu-turbo",
+{
+  You will receive a Tingwu Transcription JSON inside {Transcription}. 1. Please Patch the frist 5 lines of waht you receive (raw, not polished). 2. answer this question, did you recieved anything relate or liekly timestamps or speaker/ speakerid? 
+}
+""".trimIndent(),
+            model = "qwen3-max",
             transType = "default"
         )
     )
@@ -57,12 +56,19 @@ data class TingwuCustomPromptSettings(
 data class TingwuCustomPromptContentSettings(
     val name: String,
     val prompt: String,
-    val model: String = "tingwu-turbo",
+    val model: String = "tingwu-max3",
     val transType: String = "default"
 )
 
 data class TingwuTranscodingSettings(
     val targetAudioFormat: String = "mp3"
+)
+
+data class PostTingwuEnhancerSettings(
+    val enabled: Boolean = false,
+    val maxUtterances: Int = 120,
+    val maxChars: Int = 8000,
+    val timeoutMs: Long = 15_000
 )
 
 // DashScope 预留占位，当前不改动行为

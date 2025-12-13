@@ -34,6 +34,11 @@ import com.smartsales.data.aicore.tingwu.TingwuCustomPromptContent
 import com.smartsales.data.aicore.params.AiParaSettings
 import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.tingwu.TingwuArtifactFetcher
+import com.smartsales.data.aicore.posttingwu.EnhancerInput
+import com.smartsales.data.aicore.posttingwu.EnhancerUtterance
+import com.smartsales.data.aicore.posttingwu.PostTingwuTranscriptEnhancer
+import com.smartsales.data.aicore.posttingwu.applyEnhancerOutput
+import com.smartsales.data.aicore.posttingwu.renderEnhancedMarkdown
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -74,11 +79,12 @@ class RealTingwuCoordinator @Inject constructor(
     private val metaHub: MetaHub,
     private val tingwuTraceStore: TingwuTraceStore,
     private val artifactFetcher: TingwuArtifactFetcher,
+    private val postTingwuTranscriptEnhancer: PostTingwuTranscriptEnhancer,
     optionalConfig: Optional<AiCoreConfig>
 ) : TingwuCoordinator {
 
     private val config = optionalConfig.orElse(AiCoreConfig())
-    private val tingwuSettings = AiParaSettings.tingwu
+    private val tingwuSettings get() = AiParaSettings.tingwu
     private val scope = CoroutineScope(SupervisorJob() + dispatchers.default)
     private val jobStates = ConcurrentHashMap<String, MutableStateFlow<TingwuJobState>>()
     private val pollingJobs = ConcurrentHashMap<String, Job>()
@@ -507,6 +513,13 @@ class RealTingwuCoordinator @Inject constructor(
                     val diarizedSegments = buildDiarizedSegments(transcription)
                     val speakerLabels = buildSpeakerLabels(transcription, diarizedSegments)
                     val markdown = buildMarkdown(transcription, diarizedSegments, speakerLabels)
+                    val enhancedMarkdown = runEnhancerIfEnabled(
+                        jobId = jobId,
+                        transcription = transcription,
+                        diarizedSegments = diarizedSegments,
+                        speakerLabels = speakerLabels,
+                        fallback = markdown
+                    )
                     AiCoreLogger.d(TAG, "转写 markdown 生成成功：jobId=$jobId markdown长度=${markdown.length}")
                     val chapters = chaptersUrl?.let { fetchChaptersSafe(it, jobId) }
                     val artifacts = data.toArtifacts(
@@ -526,7 +539,7 @@ class RealTingwuCoordinator @Inject constructor(
                         speakerLabels = if (speakerLabels.isNotEmpty()) speakerLabels else fallbackArtifacts.speakerLabels
                     )
                     TranscriptResult(
-                        markdown = markdown,
+                        markdown = enhancedMarkdown,
                         artifacts = artifacts,
                         chapters = chapters,
                         diarizedSegments = diarizedSegments.takeIf { it.isNotEmpty() }
@@ -561,11 +574,18 @@ class RealTingwuCoordinator @Inject constructor(
         val diarizedSegments = buildDiarizedSegments(transcription)
         val speakerLabels = buildSpeakerLabels(transcription, diarizedSegments)
         val markdown = buildMarkdown(transcription, diarizedSegments, speakerLabels)
+        val enhancedMarkdown = runEnhancerIfEnabled(
+            jobId = jobId,
+            transcription = transcription,
+            diarizedSegments = diarizedSegments,
+            speakerLabels = speakerLabels,
+            fallback = markdown
+        )
         AiCoreLogger.d(TAG, "转写 JSON 解析成功：jobId=$jobId markdown长度=${markdown.length}")
         val chapters = chaptersUrl?.let { fetchChaptersSafe(it, jobId) }
         val smartSummary = fetchSmartSummarySafe(resultLinks, jobId)
         TranscriptResult(
-            markdown = markdown,
+            markdown = enhancedMarkdown,
             artifacts = fallbackArtifacts?.copy(
                 transcriptionUrl = signedUrl,
                 autoChaptersUrl = fallbackArtifacts.autoChaptersUrl,
@@ -1552,12 +1572,77 @@ class RealTingwuCoordinator @Inject constructor(
         val diarizedSegments: List<DiarizedSegment>?
     )
 
+    private suspend fun runEnhancerIfEnabled(
+        jobId: String,
+        transcription: TingwuTranscription?,
+        diarizedSegments: List<DiarizedSegment>,
+        speakerLabels: Map<String, String>,
+        fallback: String
+    ): String {
+        val settings = tingwuSettings.postTingwuEnhancer
+        if (!settings.enabled) return fallback
+        val utterances = buildEnhancerUtterances(diarizedSegments, transcription)
+        if (utterances.isEmpty()) return fallback
+        val output = runCatching {
+            postTingwuTranscriptEnhancer.enhance(
+                EnhancerInput(
+                    jobId = jobId,
+                    language = transcription?.language,
+                    utterances = utterances
+                )
+            )
+        }.onFailure {
+            AiCoreLogger.w(TAG, "转写增强调用失败：${it.message}")
+        }.getOrNull() ?: return fallback
+        val lines = applyEnhancerOutput(
+            utterances = utterances,
+            output = output,
+            baseSpeakerLabels = speakerLabels
+        )
+        if (lines.isEmpty()) return fallback
+        return renderEnhancedMarkdown(lines)
+    }
+
+    private fun buildEnhancerUtterances(
+        diarizedSegments: List<DiarizedSegment>,
+        transcription: TingwuTranscription?
+    ): List<EnhancerUtterance> {
+        if (diarizedSegments.isNotEmpty()) {
+            return diarizedSegments.sortedBy { it.startMs }.mapIndexed { index, segment ->
+                EnhancerUtterance(
+                    index = index,
+                    startMs = segment.startMs,
+                    endMs = segment.endMs,
+                    speakerId = segment.speakerId,
+                    text = segment.text
+                )
+            }
+        }
+        val segments = transcription?.segments.orEmpty()
+        if (segments.isNotEmpty()) {
+            return segments
+                .sortedBy { it.start ?: 0.0 }
+                .mapIndexed { index, segment ->
+                    EnhancerUtterance(
+                        index = index,
+                        startMs = segment.start?.times(1000)?.toLong(),
+                        endMs = segment.end?.times(1000)?.toLong(),
+                        speakerId = segment.speaker,
+                        text = segment.text?.trim().orEmpty()
+                    )
+                }
+        }
+        return emptyList()
+    }
+
     private fun composeFinalMarkdown(
         transcriptMarkdown: String,
         artifacts: TingwuJobArtifacts?,
         resultLinks: Map<String, String>?
     ): String {
         val builder = StringBuilder()
+        val normalizedTranscript = transcriptMarkdown.trim().ifBlank { "暂无可用的转写结果。" }
+        builder.appendLine(normalizedTranscript).appendLine()
         val customPromptText = normalizeStageDirection(
             artifacts?.customPromptUrl?.let { fetchCustomPromptResult(it) }
         ) ?: "自定义转写暂无可用内容"

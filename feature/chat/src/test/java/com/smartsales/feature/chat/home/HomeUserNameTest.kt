@@ -30,6 +30,7 @@ import com.smartsales.feature.usercenter.UserProfile
 import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.ExportResult
+import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.feature.chat.ChatShareHandler
 import com.smartsales.feature.media.audiofiles.AudioStorageRepository
 import com.smartsales.feature.media.audiofiles.StoredAudio
@@ -265,7 +266,8 @@ class HomeUserNameTest {
 
                 override suspend fun shareExport(result: ExportResult): com.smartsales.core.util.Result<Unit> =
                     com.smartsales.core.util.Result.Success(Unit)
-            }
+            },
+            xfyunTraceStore = XfyunTraceStore()
         )
     }
 

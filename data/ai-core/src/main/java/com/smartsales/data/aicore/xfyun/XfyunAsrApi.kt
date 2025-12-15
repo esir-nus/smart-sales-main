@@ -11,6 +11,7 @@ import com.smartsales.data.aicore.AiCoreErrorReason
 import com.smartsales.data.aicore.AiCoreErrorSource
 import com.smartsales.data.aicore.AiCoreException
 import com.smartsales.data.aicore.AiCoreLogger
+import com.smartsales.data.aicore.debug.XfyunTraceStore
 import java.io.File
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -72,6 +73,7 @@ internal data class XfyunGetResultResult(
 class XfyunAsrApi @Inject constructor(
     private val httpClient: XfyunHttpClient,
     private val configProvider: XfyunConfigProvider,
+    private val traceStore: XfyunTraceStore,
 ) {
 
     private val gson = Gson()
@@ -102,6 +104,13 @@ class XfyunAsrApi @Inject constructor(
                 tsSeconds = nowTsSeconds(),
                 strategy = attempt.paramStrategy
             )
+            // 重要：记录真正发送的 query 参数（已在 store 内部脱敏）
+            traceStore.recordUploadAttempt(
+                baseUrl = credentials.baseUrl,
+                uploadParams = params,
+                roleType = roleType,
+                roleNum = roleNum
+            )
             val sig = signature.sign(params, encodeKeys = attempt.encodeKeysInSignature)
             val request = Request.Builder()
                 .url(buildUrl(credentials.baseUrl, API_UPLOAD, params))
@@ -109,22 +118,59 @@ class XfyunAsrApi @Inject constructor(
                 .header(SIGNATURE_HEADER, sig)
                 .post(file.asRequestBody(OCTET_STREAM_MEDIA_TYPE))
                 .build()
-            val json = try {
-                executeJson(request)
+            val raw = try {
+                executeRaw(request)
             } catch (e: AiCoreException) {
+                traceStore.recordFailure(desc = e.message)
                 throw e
             } catch (t: Throwable) {
-                throw mapNetworkError("upload", t)
+                val mapped = mapNetworkError("upload", t)
+                traceStore.recordFailure(desc = mapped.message)
+                throw mapped
+            }
+            if (!raw.isSuccessful) {
+                traceStore.recordFailure(
+                    httpCode = raw.httpCode,
+                    desc = "讯飞 upload HTTP 错误(${raw.httpCode})",
+                    payloadSnippet = raw.body
+                )
+                throw AiCoreException(
+                    source = AiCoreErrorSource.XFYUN,
+                    reason = AiCoreErrorReason.REMOTE,
+                    message = "讯飞 HTTP 错误(${raw.httpCode})：${raw.body.take(3000)}"
+                )
+            }
+            val json = try {
+                parseJson(raw.body)
+            } catch (e: AiCoreException) {
+                traceStore.recordFailure(
+                    httpCode = raw.httpCode,
+                    desc = e.message,
+                    payloadSnippet = raw.body
+                )
+                throw e
             }
             val code = json.getPrimitiveString("code")
             if (code == SUCCESS_CODE) {
                 val content = json.getAsJsonObject("content")
                 val orderId = content?.getPrimitiveString("orderId")?.takeIf { it.isNotBlank() }
-                    ?: throw AiCoreException(
-                        source = AiCoreErrorSource.XFYUN,
-                        reason = AiCoreErrorReason.REMOTE,
-                        message = "讯飞 upload 响应缺少 orderId"
-                    )
+                    ?: run {
+                        traceStore.recordFailure(
+                            httpCode = raw.httpCode,
+                            desc = "讯飞 upload 响应缺少 orderId",
+                            payloadSnippet = raw.body
+                        )
+                        throw AiCoreException(
+                            source = AiCoreErrorSource.XFYUN,
+                            reason = AiCoreErrorReason.REMOTE,
+                            message = "讯飞 upload 响应缺少 orderId"
+                        )
+                    }
+                traceStore.recordUploadResult(
+                    orderId = orderId,
+                    httpCode = raw.httpCode,
+                    payloadSnippet = raw.body
+                )
                 val estimate = content.getPrimitiveLong("taskEstimateTime")
                 AiCoreLogger.d(TAG, "XFyun upload 成功：attempt=${attempt.label}")
                 return XfyunUploadResult(
@@ -136,6 +182,13 @@ class XfyunAsrApi @Inject constructor(
 
             val desc = json.getPrimitiveString("descInfo") ?: "未知错误"
             val normalizedCode = code ?: "UNKNOWN"
+            traceStore.recordUploadResult(
+                orderId = null,
+                httpCode = raw.httpCode,
+                payloadSnippet = raw.body,
+                serverCode = normalizedCode,
+                serverDesc = desc
+            )
             val mapped = AiCoreException(
                 source = AiCoreErrorSource.XFYUN,
                 reason = AiCoreErrorReason.REMOTE,
@@ -181,12 +234,37 @@ class XfyunAsrApi @Inject constructor(
                 .header(SIGNATURE_HEADER, sig)
                 .post("{}".toRequestBody(JSON_MEDIA_TYPE))
                 .build()
-            val json = try {
-                executeJson(request)
+            val raw = try {
+                executeRaw(request)
             } catch (e: AiCoreException) {
+                traceStore.recordFailure(desc = e.message)
                 throw e
             } catch (t: Throwable) {
-                throw mapNetworkError("getResult", t)
+                val mapped = mapNetworkError("getResult", t)
+                traceStore.recordFailure(desc = mapped.message)
+                throw mapped
+            }
+            if (!raw.isSuccessful) {
+                traceStore.recordFailure(
+                    httpCode = raw.httpCode,
+                    desc = "讯飞 getResult HTTP 错误(${raw.httpCode})",
+                    payloadSnippet = raw.body
+                )
+                throw AiCoreException(
+                    source = AiCoreErrorSource.XFYUN,
+                    reason = AiCoreErrorReason.REMOTE,
+                    message = "讯飞 HTTP 错误(${raw.httpCode})：${raw.body.take(3000)}"
+                )
+            }
+            val json = try {
+                parseJson(raw.body)
+            } catch (e: AiCoreException) {
+                traceStore.recordFailure(
+                    httpCode = raw.httpCode,
+                    desc = e.message,
+                    payloadSnippet = raw.body
+                )
+                throw e
             }
             val code = json.getPrimitiveString("code")
             if (code == SUCCESS_CODE) {
@@ -196,6 +274,13 @@ class XfyunAsrApi @Inject constructor(
                 val failType = orderInfo?.getPrimitiveInt("failType")
                 val estimate = content?.getPrimitiveLong("taskEstimateTime")
                 val orderResult = content?.getPrimitiveString("orderResult")
+                traceStore.recordPoll(
+                    status = status,
+                    failType = failType,
+                    httpCode = raw.httpCode,
+                    payloadSnippet = raw.body,
+                    resultType = resultType
+                )
                 return XfyunGetResultResult(
                     status = status,
                     failType = failType,
@@ -207,6 +292,12 @@ class XfyunAsrApi @Inject constructor(
 
             val desc = json.getPrimitiveString("descInfo") ?: "未知错误"
             val normalizedCode = code ?: "UNKNOWN"
+            traceStore.recordFailure(
+                httpCode = raw.httpCode,
+                serverCode = normalizedCode,
+                desc = desc,
+                payloadSnippet = raw.body
+            )
             val mapped = AiCoreException(
                 source = AiCoreErrorSource.XFYUN,
                 reason = AiCoreErrorReason.REMOTE,
@@ -286,7 +377,7 @@ class XfyunAsrApi @Inject constructor(
         }
     }
 
-    private fun executeJson(request: Request): JsonObject {
+    private fun executeRaw(request: Request): HttpRawResponse {
         httpClient.client.newCall(request).execute().use { response ->
             val body = response.body?.string()?.takeIf { it.isNotBlank() }
                 ?: throw AiCoreException(
@@ -294,24 +385,24 @@ class XfyunAsrApi @Inject constructor(
                     reason = AiCoreErrorReason.REMOTE,
                     message = "讯飞响应为空(HTTP ${response.code})"
                 )
-            if (!response.isSuccessful) {
+            return HttpRawResponse(
+                httpCode = response.code,
+                body = body,
+                isSuccessful = response.isSuccessful
+            )
+        }
+    }
+
+    private fun parseJson(body: String): JsonObject =
+        runCatching { gson.fromJson(body, JsonObject::class.java) }
+            .recoverCatching { JsonParser.parseString(body).asJsonObject }
+            .getOrElse {
                 throw AiCoreException(
                     source = AiCoreErrorSource.XFYUN,
                     reason = AiCoreErrorReason.REMOTE,
-                    message = "讯飞 HTTP 错误(${response.code})：${body.take(3000)}"
+                    message = "讯飞响应 JSON 解析失败：${it.message}"
                 )
             }
-            return runCatching { gson.fromJson(body, JsonObject::class.java) }
-                .recoverCatching { JsonParser.parseString(body).asJsonObject }
-                .getOrElse {
-                    throw AiCoreException(
-                        source = AiCoreErrorSource.XFYUN,
-                        reason = AiCoreErrorReason.REMOTE,
-                        message = "讯飞响应 JSON 解析失败：${it.message}"
-                    )
-                }
-        }
-    }
 
     private fun buildUrl(baseUrl: String, path: String, params: Map<String, String>): String {
         val normalized = baseUrl.trimEnd('/')
@@ -333,6 +424,12 @@ class XfyunAsrApi @Inject constructor(
             cause = throwable
         )
     }
+
+    private data class HttpRawResponse(
+        val httpCode: Int,
+        val body: String,
+        val isSuccessful: Boolean,
+    )
 
     private fun nowTsSeconds(): String = (System.currentTimeMillis() / 1000).toString()
 

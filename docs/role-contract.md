@@ -127,11 +127,5 @@
 - Evidence workflow（严格）：任何 Tingwu 功能实现必须先写“Evidence Table”，包含：文档键名（保持大小写）、请求模型位置（文件+类）、结果解析位置（文件+类）、制品映射位置（文件+类）、需要补的测试。缺少此表则实现视为无效。
 - Use the registry template and validated patterns in `docs/source-repo.json` to wire Tingwu features; guardrails cannot be bypassed.
 
-## 4. Hard Red Lines
-
-* Orchestrator **never** ships repo-ready implementation code.
-* Codex **never** redefines the problem or silently expands scope.
-* Codex **must** do Phase 1 before Phase 2.
-* Tests are part of the spec: Codex only edits them if the Plan Prompt says it can.
 
 ---

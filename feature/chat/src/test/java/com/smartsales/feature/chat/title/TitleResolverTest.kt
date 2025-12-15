@@ -18,6 +18,7 @@ class TitleResolverTest {
         val summary = AiSessionSummary(
             id = "s1",
             title = "新的聊天",
+            lastMessagePreview = "",
             updatedAtMillis = System.currentTimeMillis(),
             isTranscription = false,
             isTitleUserEdited = false,
@@ -39,6 +40,7 @@ class TitleResolverTest {
         val summary = AiSessionSummary(
             id = "s1",
             title = "自定义标题",
+            lastMessagePreview = "",
             updatedAtMillis = System.currentTimeMillis(),
             isTranscription = false,
             isTitleUserEdited = true,
@@ -60,6 +62,7 @@ class TitleResolverTest {
         val summary = AiSessionSummary(
             id = "s1",
             title = "新的聊天",
+            lastMessagePreview = "",
             updatedAtMillis = System.currentTimeMillis(),
             isTranscription = false,
             isTitleUserEdited = false,

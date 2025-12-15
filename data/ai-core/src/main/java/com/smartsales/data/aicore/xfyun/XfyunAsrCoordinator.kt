@@ -10,6 +10,7 @@ import com.smartsales.data.aicore.AiCoreErrorReason
 import com.smartsales.data.aicore.AiCoreErrorSource
 import com.smartsales.data.aicore.AiCoreException
 import com.smartsales.data.aicore.AiCoreLogger
+import com.smartsales.data.aicore.debug.XfyunTraceStore
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -46,6 +47,7 @@ class XfyunAsrCoordinator @Inject constructor(
     private val api: XfyunAsrApi,
     private val configProvider: XfyunConfigProvider,
     private val parser: XfyunOrderResultParser,
+    private val traceStore: XfyunTraceStore,
 ) {
 
     private val jobContextByOrderId = ConcurrentHashMap<String, JobContext>()
@@ -98,16 +100,19 @@ class XfyunAsrCoordinator @Inject constructor(
     fun observeJob(jobId: String): Flow<XfyunAsrJobState> = flow {
         val orderId = parseOrderId(jobId)
         if (orderId.isBlank()) {
+            traceStore.recordFailure(desc = "无效的任务ID")
             emit(XfyunAsrJobState.Failed(jobId = jobId, reason = "无效的任务ID"))
             return@flow
         }
         val context = jobContextByOrderId[orderId]
         if (context == null) {
+            traceStore.recordFailure(desc = "任务上下文缺失")
             emit(XfyunAsrJobState.Failed(jobId = jobId, reason = "任务上下文缺失，请重新提交"))
             return@flow
         }
         val start = System.currentTimeMillis()
         val deadline = start + POLL_TIMEOUT_MS
+        var pollCount = 0
 
         emit(XfyunAsrJobState.InProgress(jobId = jobId, progressPercent = 5, statusLabel = "已提交"))
 
@@ -124,6 +129,7 @@ class XfyunAsrCoordinator @Inject constructor(
                 }
             }.getOrElse { throwable ->
                 val mapped = mapError(throwable)
+                traceStore.recordFailure(desc = mapped.message)
                 emit(
                     XfyunAsrJobState.Failed(
                         jobId = jobId,
@@ -135,10 +141,19 @@ class XfyunAsrCoordinator @Inject constructor(
             }
 
             context.preferredAttempt = result.attemptUsed
+            pollCount += 1
+            traceStore.recordPollProgress(
+                pollCount = pollCount,
+                elapsedMs = (System.currentTimeMillis() - start).coerceAtLeast(0L)
+            )
             val status = result.status
             when (status) {
                 4 -> {
                     val markdown = parser.toTranscriptMarkdown(result.orderResult)
+                    // 重要：用于 HUD 判断是否返回了 rl（说话人标签）
+                    traceStore.recordSuccess(
+                        resultHasRoleLabels = markdown.contains("- 发言人 ")
+                    )
                     emit(XfyunAsrJobState.Completed(jobId = jobId, transcriptMarkdown = markdown))
                     jobContextByOrderId.remove(orderId)
                     return@flow
@@ -184,6 +199,7 @@ class XfyunAsrCoordinator @Inject constructor(
         }
 
         emit(XfyunAsrJobState.Failed(jobId = jobId, reason = "讯飞转写超时，请稍后重试"))
+        traceStore.recordFailure(desc = "讯飞转写超时")
         jobContextByOrderId.remove(orderId)
     }
 

@@ -1,3 +1,8 @@
+// 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreen.kt
+// 模块：:feature:chat
+// 说明：Home 页面 Compose UI（包含 Debug HUD）
+// 作者：创建于 2025-12-15
+
 package com.smartsales.feature.chat.home
 
 import android.net.Uri
@@ -99,10 +104,8 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -116,17 +119,12 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.history.ChatHistoryTestTags
-import com.smartsales.data.aicore.debug.TingwuTraceSnapshot
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
+import com.smartsales.data.aicore.debug.XfyunDebugInfoFormatter
+import com.smartsales.data.aicore.debug.XfyunFailTypeHints
+import com.smartsales.data.aicore.debug.XfyunTraceSnapshot
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.Dispatchers
-import java.net.HttpURLConnection
-import java.net.URL
-import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -251,7 +249,7 @@ fun HomeScreenRoute(
         onHistoryActionDismiss = viewModel::onHistoryActionDismiss,
         onHistoryRenameTextChange = viewModel::onHistoryRenameTextChange,
         onToggleDebugMetadata = viewModel::toggleDebugMetadata,
-        onRefreshTingwuTrace = viewModel::refreshTingwuTrace,
+        onRefreshXfyunTrace = viewModel::refreshXfyunTrace,
         onToggleRawAssistantOutput = viewModel::setShowRawAssistantOutput,
         onDismissKeyboard = dismissKeyboard,
         onInputFocusChanged = { focused ->
@@ -379,7 +377,7 @@ fun HomeScreen(
     onHistoryActionDismiss: () -> Unit = {},
     onHistoryRenameTextChange: (String) -> Unit = {},
     onToggleDebugMetadata: () -> Unit = {},
-    onRefreshTingwuTrace: () -> Unit = {},
+    onRefreshXfyunTrace: () -> Unit = {},
     onToggleRawAssistantOutput: (Boolean) -> Unit = {},
     onDismissKeyboard: () -> Unit = {},
     onInputFocusChanged: (Boolean) -> Unit = {}
@@ -701,7 +699,7 @@ fun HomeScreen(
                             )
                         }
                         if (hudEnabled && showDebugPanel && state.debugSessionMetadata != null) {
-                            LaunchedEffect(showDebugPanel) { onRefreshTingwuTrace() }
+                            LaunchedEffect(showDebugPanel) { onRefreshXfyunTrace() }
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -716,8 +714,8 @@ fun HomeScreen(
                             )
                             DebugSessionMetadataHud(
                                 metadata = state.debugSessionMetadata,
-                                tingwuTrace = state.tingwuTrace,
-                                onRefreshTingwu = onRefreshTingwuTrace,
+                                xfyunTrace = state.xfyunTrace,
+                                onRefreshXfyun = onRefreshXfyunTrace,
                                 onClose = {
                                     onToggleDebugMetadata()
                                 },
@@ -738,15 +736,7 @@ fun HomeScreen(
                                 onToggleRawAssistantOutput = onToggleRawAssistantOutput,
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
-                                    .padding(horizontal = 12.dp, vertical = 12.dp),
-                                onCopyPreview = { text ->
-                                    runCatching { clipboardManager.setText(AnnotatedString(text)) }
-                                        .onSuccess {
-                                            coroutineScope.launch {
-                                                snackbarHostState.showSnackbar("已复制")
-                                            }
-                                        }
-                                }
+                                    .padding(horizontal = 12.dp, vertical = 12.dp)
                             )
                         }
                     }
@@ -1083,19 +1073,16 @@ private fun HistoryDeviceStatus(snapshot: DeviceSnapshotUi?) {
 @Composable
 private fun DebugSessionMetadataHud(
     metadata: DebugSessionMetadata,
-    tingwuTrace: TingwuTraceSnapshot?,
-    onRefreshTingwu: () -> Unit,
+    xfyunTrace: XfyunTraceSnapshot?,
+    onRefreshXfyun: () -> Unit,
     onClose: () -> Unit,
     onCopy: (String) -> Unit,
     showRawAssistantOutput: Boolean,
     onToggleRawAssistantOutput: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    onCopyPreview: (String) -> Unit
 ) {
     val screenHalfHeight = LocalConfiguration.current.screenHeightDp.dp * 0.5f
     val scrollState = rememberScrollState()
-    val coroutineScope = rememberCoroutineScope()
-    var previewState by remember { mutableStateOf<TingwuPreviewUi?>(null) }
     val hudText = remember(metadata) {
         buildString {
             appendLine("sessionId: ${metadata.sessionId}")
@@ -1204,22 +1191,10 @@ private fun DebugSessionMetadataHud(
                 }
             }
             if (CHAT_DEBUG_HUD_ENABLED) {
-                TingwuTraceSection(
-                    trace = tingwuTrace,
-                    previewState = previewState,
-                    onRefresh = onRefreshTingwu,
-                    onCopy = onCopy,
-                    onCopyPreview = onCopyPreview,
-                    onFetchPreview = { key, url ->
-                        previewState = TingwuPreviewUi(key = key, loading = true)
-                        coroutineScope.launch {
-                            val result = runCatching { fetchPreview(key, url) }.getOrElse { error ->
-                                TingwuPreviewUi(key = key, content = "", truncated = false, error = error.message ?: "未知错误", loading = false)
-                            }
-                            previewState = result
-                        }
-                    },
-                    promptExtractor = { extractEffectivePrompt(tingwuTrace?.lastCreateTaskRequestJson) }
+                XfyunTraceSection(
+                    trace = xfyunTrace,
+                    onRefresh = onRefreshXfyun,
+                    onCopy = onCopy
                 )
             }
         }
@@ -1242,25 +1217,12 @@ private fun DebugField(label: String, value: String) {
     }
 }
 
-private data class TingwuPreviewUi(
-    val key: String,
-    val content: String = "",
-    val truncated: Boolean = false,
-    val error: String? = null,
-    val loading: Boolean = false
-)
-
 @Composable
-private fun TingwuTraceSection(
-    trace: TingwuTraceSnapshot?,
-    previewState: TingwuPreviewUi?,
+private fun XfyunTraceSection(
+    trace: XfyunTraceSnapshot?,
     onRefresh: () -> Unit,
     onCopy: (String) -> Unit,
-    onCopyPreview: (String) -> Unit,
-    onFetchPreview: (String, String) -> Unit,
-    promptExtractor: () -> EffectivePromptInfo?
 ) {
-    val uriHandler = LocalUriHandler.current
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxWidth()
@@ -1271,137 +1233,102 @@ private fun TingwuTraceSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Tingwu 调试",
+                text = "XFyun 调试",
                 style = MaterialTheme.typography.titleMedium
             )
-            TextButton(onClick = onRefresh) { Text(text = "刷新") }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = onRefresh) { Text(text = "刷新") }
+                if (trace != null) {
+                    TextButton(onClick = { onCopy(XfyunDebugInfoFormatter.format(trace)) }) {
+                        Text(text = "复制")
+                    }
+                }
+            }
         }
         if (trace == null) {
             Text(
-                text = "暂无 Tingwu 调用记录",
+                text = "暂无 XFyun 调用记录",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             return
         }
-        DebugField(label = "taskId", value = trace.lastTaskId ?: "-")
-        DebugField(label = "updatedAt", value = formatMillis(trace.updatedAtMs))
-        promptExtractor()?.let { info ->
+
+        DebugField(label = "provider", value = trace.provider)
+        DebugField(label = "baseUrl", value = trace.baseUrl.ifBlank { "-" })
+        DebugField(label = "orderId", value = trace.orderId ?: "-")
+        DebugField(label = "resultType", value = trace.resultType ?: "-")
+        DebugField(label = "roleType", value = trace.roleType?.toString() ?: "-")
+        DebugField(label = "roleNum", value = trace.roleNum?.toString() ?: "-")
+        DebugField(
+            label = "角色分离",
+            value = if (trace.roleType == 1) "已开启(roleType=1)" else "未开启(roleType=${trace.roleType ?: 0})"
+        )
+        trace.resultHasRoleLabels?.let { hasRole ->
+            DebugField(label = "结果含 rl", value = if (hasRole) "是" else "否")
+        }
+
+        DebugField(label = "pollCount", value = trace.pollCount.toString())
+        DebugField(label = "elapsed", value = formatElapsed(trace.elapsedMs))
+        DebugField(label = "lastHttpCode", value = trace.lastHttpCode?.toString() ?: "-")
+        trace.lastErrorCode?.let { DebugField(label = "lastErrorCode", value = it) }
+        trace.lastFailType?.let { DebugField(label = "lastFailType", value = it.toString()) }
+        trace.lastFailDesc?.let { DebugField(label = "lastFailDesc", value = it) }
+        XfyunFailTypeHints.hint(trace.lastFailType, trace.resultType)?.let { hint ->
             Text(
-                text = "CustomPrompt（Effective）",
+                text = hint,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        if (trace.uploadParams.isNotEmpty()) {
+            DebugJsonBlock(
+                label = "upload 参数（已脱敏）",
+                json = formatParams(trace.uploadParams),
+                onCopy = onCopy
+            )
+        }
+
+        if (trace.pollTimeline.isNotEmpty()) {
+            Text(
+                text = "轮询时间线（最近）",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            DebugField(label = "Name", value = info.name ?: "-")
-            DebugField(label = "Model", value = info.model ?: "-")
-            DebugField(label = "TransType", value = info.transType ?: "-")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "长度: ${info.length}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                info.hash?.let { hash ->
+            trace.pollTimeline
+                .takeLast(10)
+                .asReversed()
+                .forEach { entry ->
                     Text(
-                        text = "Hash: $hash",
+                        text = "- ${formatMillis(entry.tsMs)} status=${entry.status ?: "-"} failType=${entry.failType ?: "-"} http=${entry.httpCode ?: "-"}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-                info.source?.let { src ->
-                    Text(
-                        text = "来源: $src",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            Text(
-                text = info.prompt ?: "-",
-                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                    .padding(8.dp)
-            )
-            TextButton(onClick = { info.prompt?.let { onCopy(it) } }) { Text(text = "复制 Prompt") }
         }
-        DebugJsonBlock(label = "CreateTask 请求", json = trace.lastCreateTaskRequestJson, onCopy = onCopy)
-        DebugJsonBlock(label = "CreateTask 响应", json = trace.lastCreateTaskResponseJson, onCopy = onCopy)
-        DebugJsonBlock(label = "GetTaskInfo 最近一次响应", json = trace.lastGetTaskInfoResponseJson, onCopy = onCopy)
-        if (trace.lastResultUrls.isNotEmpty()) {
-            Text(
-                text = "Result URLs",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                trace.lastResultUrls.forEach { (key, url) ->
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = "$key: ${url.take(120)}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TextButton(onClick = { runCatching { uriHandler.openUri(url) } }) {
-                                Text(text = "打开")
-                            }
-                            TextButton(onClick = { onCopy(url) }) {
-                                Text(text = "复制")
-                            }
-                            TextButton(onClick = { onFetchPreview(key, url) }) {
-                                Text(text = "预览")
-                            }
-                        }
-                        if (previewState != null && previewState.key == key) {
-                            when {
-                                previewState.loading -> Text(
-                                    text = "加载预览中…",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                previewState.error != null -> Text(
-                                    text = "预览失败：${previewState.error}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                                else -> {
-                                    if (previewState.truncated) {
-                                        Text(
-                                            text = "已截断到 20000 字符",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Text(
-                                        text = previewState.content,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .background(
-                                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                                shape = RoundedCornerShape(8.dp)
-                                            )
-                                            .padding(8.dp)
-                                    )
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        TextButton(onClick = { onCopyPreview(previewState.content) }) {
-                                            Text(text = "复制预览")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+
+        DebugJsonBlock(label = "最近一次响应（截断）", json = trace.rawPayloadSnippet, onCopy = onCopy)
+    }
+}
+
+private fun formatElapsed(valueMs: Long): String {
+    if (valueMs <= 0) return "-"
+    val totalSeconds = valueMs / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "${minutes}m${seconds}s"
+}
+
+private fun formatParams(params: Map<String, String>): String {
+    if (params.isEmpty()) return "{}"
+    return buildString {
+        appendLine("{")
+        params.entries.forEachIndexed { index, (key, value) ->
+            val comma = if (index == params.size - 1) "" else ","
+            appendLine("  \"$key\": \"$value\"$comma")
         }
+        append("}")
     }
 }
 
@@ -1453,80 +1380,10 @@ private fun DebugJsonBlock(
     }
 }
 
-private suspend fun fetchPreview(key: String, url: String): TingwuPreviewUi =
-    withContext(Dispatchers.IO) {
-        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 10_000
-            readTimeout = 10_000
-        }
-        connection.inputStream.use { stream ->
-            val payload = stream.bufferedReader().use { it.readText() }
-            val truncated = payload.length > 20_000
-            val content = if (truncated) payload.take(20_000) else payload
-            TingwuPreviewUi(
-                key = key,
-                content = content,
-                truncated = truncated,
-                loading = false
-            )
-        }
-    }
-
 private fun formatMillis(value: Long): String {
     if (value <= 0) return "-"
     val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
     return formatter.format(Date(value))
-}
-
-private fun JsonObject.getPrimitiveString(key: String): String? {
-    val element = this.get(key) ?: return null
-    return if (element.isJsonPrimitive) element.asString else null
-}
-
-private data class EffectivePromptInfo(
-    val name: String?,
-    val model: String?,
-    val transType: String?,
-    val prompt: String?,
-    val length: Int,
-    val hash: String?,
-    val source: String?
-)
-
-private fun extractEffectivePrompt(requestJson: String?): EffectivePromptInfo? {
-    if (requestJson.isNullOrBlank()) return null
-    val json = runCatching { JsonParser.parseString(requestJson) }.getOrNull() ?: return null
-    if (!json.isJsonObject) return null
-    val parameters = json.asJsonObject.getAsJsonObject("Parameters") ?: return null
-    val customPromptObj = parameters.getAsJsonObject("CustomPrompt") ?: return null
-    val contents = customPromptObj.getAsJsonArray("Contents") ?: return null
-    if (contents.size() == 0) return null
-    val first = contents[0].asJsonObject
-    val name = first.getPrimitiveString("Name")
-    val model = first.getPrimitiveString("Model")
-    val transType = first.getPrimitiveString("TransType")
-    val prompt = first.getPrimitiveString("Prompt")
-    val length = prompt?.length ?: 0
-    val hash = prompt?.let { sha256Short(it) }
-    val enabled = parameters.get("CustomPromptEnabled")?.asBoolean ?: false
-    val source = if (enabled) "AiParaSettings 默认或请求覆盖" else "未启用"
-    return EffectivePromptInfo(
-        name = name,
-        model = model,
-        transType = transType,
-        prompt = prompt,
-        length = length,
-        hash = hash,
-        source = source
-    )
-}
-
-private fun sha256Short(text: String): String {
-    return runCatching {
-        val md = MessageDigest.getInstance("SHA-256")
-        val digest = md.digest(text.toByteArray(Charsets.UTF_8))
-        digest.joinToString("") { "%02x".format(it) }.take(8)
-    }.getOrElse { "--------" }
 }
 
 @Composable

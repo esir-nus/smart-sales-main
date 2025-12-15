@@ -9,6 +9,7 @@ import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.ExportFormat
 import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.ExportResult
+import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.feature.chat.ChatShareHandler
 import com.smartsales.feature.chat.AiSessionSummary
 import com.smartsales.feature.chat.home.ChatMessageRole
@@ -162,7 +163,8 @@ class HomeExportActionsTest {
             },
             metaHub = metaHub,
             exportOrchestrator = exportOrchestrator,
-            shareHandler = shareHandler
+            shareHandler = shareHandler,
+            xfyunTraceStore = XfyunTraceStore()
         )
     }
 

@@ -37,6 +37,7 @@ import android.net.Uri
 import com.smartsales.feature.usercenter.UserProfile
 import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.data.aicore.ExportOrchestrator
+import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.feature.chat.testutil.TestContext
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -83,7 +84,8 @@ class HomeSmartStreamingViewModelTest {
             userProfileRepository = FakeUserProfileRepository(),
             metaHub = metaHub,
             exportOrchestrator = FakeExportOrchestrator(),
-            shareHandler = FakeShareHandler()
+            shareHandler = FakeShareHandler(),
+            xfyunTraceStore = XfyunTraceStore()
         )
     }
 

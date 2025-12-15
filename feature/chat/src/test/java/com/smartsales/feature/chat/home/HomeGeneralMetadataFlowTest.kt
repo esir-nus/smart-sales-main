@@ -13,6 +13,7 @@ import com.smartsales.core.metahub.SessionTitlePolicy
 import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.ExportResult
+import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.feature.chat.ChatShareHandler
 import com.smartsales.feature.chat.InMemoryAiSessionRepository
 import com.smartsales.feature.chat.core.ChatRequest
@@ -96,7 +97,8 @@ class HomeGeneralMetadataFlowTest {
             userProfileRepository = FakeUserProfileRepository(),
             metaHub = metaHub,
             exportOrchestrator = FakeExportOrchestrator(),
-            shareHandler = FakeShareHandler()
+            shareHandler = FakeShareHandler(),
+            xfyunTraceStore = XfyunTraceStore()
         )
     }
 
@@ -134,7 +136,7 @@ class HomeGeneralMetadataFlowTest {
     }
 
     @Test
-    fun `second general reply with json still updates metadata and title`() = runTest(dispatcher) {
+    fun `second general reply json is ignored when first reply has no metadata`() = runTest(dispatcher) {
         val jsonTail =
             """{"main_person":"李总","short_summary":"补充了预算范围","summary_title_6chars":"预算沟通"}"""
         orchestrator.enqueue(ChatStreamEvent.Completed("好的，我再想想。")) // 第一次无 JSON
@@ -150,10 +152,7 @@ class HomeGeneralMetadataFlowTest {
 
         val sessionId = viewModel.uiState.value.currentSession.id
         val stored = metaHub.getSession(sessionId)
-        assertNotNull(stored)
-        stored!!
-        assertEquals("首条无 JSON 不应覆盖 metadata", null, stored.mainPerson)
-        assertEquals(null, stored.latestMajorAnalysisSource)
+        assertNull("首条无 JSON 且仅首条解析规则下，不应写入元数据", stored)
 
         val title = sessionRepository.findById(sessionId)?.title
         assertNotNull(title)

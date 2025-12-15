@@ -15,6 +15,7 @@ import com.smartsales.core.metahub.TranscriptMetadata
 import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.ExportResult
+import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.feature.chat.AiSessionRepository as SessionRepository
 import com.smartsales.feature.chat.AiSessionSummary
 import com.smartsales.feature.chat.ChatShareHandler
@@ -230,7 +231,8 @@ class HomeHeroTitlePlaceholderTest {
                 override suspend fun copyAssistantReply(text: String): Result<Unit> = Result.Success(Unit)
                 override suspend fun shareExport(result: ExportResult): Result<Unit> = Result.Success(Unit)
             },
-            metaHub = metaHub
+            metaHub = metaHub,
+            xfyunTraceStore = XfyunTraceStore()
         )
     }
 

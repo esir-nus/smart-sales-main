@@ -29,6 +29,7 @@ import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
 import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.ExportResult
+import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.feature.media.audiofiles.AudioStorageRepository
 import com.smartsales.feature.media.audiofiles.StoredAudio
 import android.net.Uri
@@ -100,7 +101,8 @@ class HomeTranscriptionTest {
             userProfileRepository = FakeUserProfileRepository(),
             metaHub = metaHub,
             exportOrchestrator = FakeExportOrchestrator(),
-            shareHandler = FakeShareHandler()
+            shareHandler = FakeShareHandler(),
+            xfyunTraceStore = XfyunTraceStore()
         )
     }
 

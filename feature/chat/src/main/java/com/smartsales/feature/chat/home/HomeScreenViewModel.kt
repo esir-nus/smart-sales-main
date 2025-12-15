@@ -1,3 +1,8 @@
+// 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreenViewModel.kt
+// 模块：:feature:chat
+// 说明：Home 页面状态与交互 ViewModel
+// 作者：创建于 2025-12-15
+
 package com.smartsales.feature.chat.home
 
 import android.net.Uri
@@ -28,6 +33,8 @@ import com.smartsales.feature.chat.home.CHAT_DEBUG_HUD_ENABLED
 import com.smartsales.feature.chat.BuildConfig
 import com.smartsales.feature.chat.history.toEntity
 import com.smartsales.feature.chat.history.toUiModel
+import com.smartsales.data.aicore.debug.XfyunTraceSnapshot
+import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.feature.chat.title.SessionTitleResolver
 import com.smartsales.feature.chat.title.TitleCandidate
 import com.smartsales.feature.chat.title.TitleResolver
@@ -47,8 +54,6 @@ import com.smartsales.feature.media.MediaSyncState
 import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.feature.usercenter.UserProfile
 import com.smartsales.feature.usercenter.SalesPersona
-import com.smartsales.data.aicore.debug.TingwuTraceStore
-import com.smartsales.data.aicore.debug.TingwuTraceSnapshot
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
 import java.io.IOException
@@ -200,7 +205,7 @@ data class HomeUiState(
     val isSmartAnalysisMode: Boolean = false,
     val showDebugMetadata: Boolean = false,
     val debugSessionMetadata: DebugSessionMetadata? = null,
-    val tingwuTrace: TingwuTraceSnapshot? = null,
+    val xfyunTrace: XfyunTraceSnapshot? = null,
     val smartReasoningText: String? = null,
     val isInputFocused: Boolean = false,
     val salesPersona: SalesPersona? = null,
@@ -233,7 +238,7 @@ class HomeScreenViewModel @Inject constructor(
     private val exportOrchestrator: ExportOrchestrator,
     private val shareHandler: ChatShareHandler,
     private val metaHub: MetaHub,
-    private val tingwuTraceStore: TingwuTraceStore
+    private val xfyunTraceStore: XfyunTraceStore
 ) : ViewModel() {
 
     private val quickSkillDefinitions = quickSkillCatalog.homeQuickSkills()
@@ -304,6 +309,11 @@ class HomeScreenViewModel @Inject constructor(
             else -> null
         }
         if (resolvedInput.isNullOrBlank()) return
+        // 低信息输入：不调用模型，避免无意义消耗与噪声对话
+        if (selectedSkill == null && isLowInfoGeneralChatInput(resolvedInput)) {
+            handleLowInfoGeneralChatInput()
+            return
+        }
         sendMessageInternal(
             messageText = resolvedInput,
             skillOverride = selectedSkill
@@ -318,8 +328,8 @@ class HomeScreenViewModel @Inject constructor(
         if (target == null) {
             if (!hasShownLowInfoSmartAnalysisHint) {
                 hasShownLowInfoSmartAnalysisHint = true
-                // 低信息直接提示 UI，不生成助手气泡
-                _uiState.update { it.copy(snackbarMessage = "当前内容太少，无法智能分析，请先粘贴对话或纪要再试。") }
+                // 低信息：用助手气泡提示一次，避免触发模型调用
+                appendAssistantMessage("内容太少，无法智能分析，请先粘贴对话或纪要再试。")
             }
             _uiState.update { it.copy(isSmartAnalysisMode = false, selectedSkill = null, inputText = "") }
             return
@@ -912,9 +922,9 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
-    fun refreshTingwuTrace() {
+    fun refreshXfyunTrace() {
         if (!CHAT_DEBUG_HUD_ENABLED) return
-        _uiState.update { it.copy(tingwuTrace = tingwuTraceStore.getSnapshot()) }
+        _uiState.update { it.copy(xfyunTrace = xfyunTraceStore.getSnapshot()) }
     }
 
     private fun updateDebugSessionMetadata(
@@ -1748,6 +1758,21 @@ class HomeScreenViewModel @Inject constructor(
             return true
         }
         return false
+    }
+
+    private fun isLowInfoGeneralChatInput(text: String): Boolean {
+        val normalized = text.trim().lowercase(Locale.getDefault())
+        if (normalized.isBlank()) return true
+        val acknowledgements = setOf("是", "好的", "好", "嗯", "嗯嗯", "ok", "okay", "收到")
+        return acknowledgements.contains(normalized)
+    }
+
+    private fun handleLowInfoGeneralChatInput() {
+        // 清空输入框，避免用户反复点击发送同一段内容
+        _uiState.update { it.copy(inputText = "") }
+        if (hasShownLowInfoHint) return
+        hasShownLowInfoHint = true
+        appendAssistantMessage("内容太少，我还无法理解你的需求。你可以补充：客户背景、问题、你的目标。")
     }
 
     /** 根据已订阅的媒体同步状态构建轻量音频上下文，仅供聊天请求使用。 */

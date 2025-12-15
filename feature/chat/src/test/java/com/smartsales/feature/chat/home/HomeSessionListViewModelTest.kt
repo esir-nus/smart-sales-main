@@ -58,6 +58,7 @@ import com.smartsales.core.metahub.ExportMetadata
 import com.smartsales.core.metahub.TokenUsage
 import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.ExportResult
+import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.feature.chat.ChatShareHandler
 import com.smartsales.core.metahub.SessionTitlePolicy
 
@@ -105,7 +106,8 @@ class HomeSessionListViewModelTest {
             userProfileRepository = FakeUserProfileRepository(),
             metaHub = metaHub,
             exportOrchestrator = FakeExportOrchestrator(),
-            shareHandler = FakeShareHandler()
+            shareHandler = FakeShareHandler(),
+            xfyunTraceStore = XfyunTraceStore()
         )
     }
 

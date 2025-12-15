@@ -8,7 +8,8 @@ enum class AiCoreErrorSource {
     DASH_SCOPE,
     TINGWU,
     EXPORT,
-    OSS
+    OSS,
+    XFYUN,
 }
 
 enum class AiCoreErrorReason {

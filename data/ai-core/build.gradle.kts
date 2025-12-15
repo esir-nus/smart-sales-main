@@ -38,6 +38,13 @@ val ossAccessKeyId = localProperties.getProperty("OSS_ACCESS_KEY_ID", "")
 val ossAccessKeySecret = localProperties.getProperty("OSS_ACCESS_KEY_SECRET", "")
 val ossBucketName = localProperties.getProperty("OSS_BUCKET_NAME", "")
 val ossEndpoint = localProperties.getProperty("OSS_ENDPOINT", "https://oss-cn-beijing.aliyuncs.com")
+val xfyunAppId = localProperties.getProperty("XFYUN_APP_ID", "")
+val xfyunAccessKeyId = localProperties.getProperty("XFYUN_ACCESS_KEY_ID", "")
+val xfyunAccessKeySecret = localProperties.getProperty("XFYUN_ACCESS_KEY_SECRET", "")
+val xfyunBaseUrl = localProperties.getProperty(
+    "XFYUN_BASE_URL",
+    "https://office-api-ist-dx.iflyaisol.com"
+)
 
 android {
     namespace = "com.smartsales.data.aicore"
@@ -70,6 +77,14 @@ android {
         buildConfigField("String", "OSS_ACCESS_KEY_SECRET", "\"${ossAccessKeySecret.escapeForBuildConfig()}\"")
         buildConfigField("String", "OSS_BUCKET_NAME", "\"${ossBucketName.escapeForBuildConfig()}\"")
         buildConfigField("String", "OSS_ENDPOINT", "\"${ossEndpoint.escapeForBuildConfig()}\"")
+        buildConfigField("String", "XFYUN_APP_ID", "\"${xfyunAppId.escapeForBuildConfig()}\"")
+        buildConfigField("String", "XFYUN_ACCESS_KEY_ID", "\"${xfyunAccessKeyId.escapeForBuildConfig()}\"")
+        buildConfigField(
+            "String",
+            "XFYUN_ACCESS_KEY_SECRET",
+            "\"${xfyunAccessKeySecret.escapeForBuildConfig()}\""
+        )
+        buildConfigField("String", "XFYUN_BASE_URL", "\"${xfyunBaseUrl.escapeForBuildConfig()}\"")
     }
 
     buildFeatures {

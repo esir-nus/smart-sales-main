@@ -110,41 +110,33 @@ class AudioFilesViewModel @Inject constructor(
 
     fun onTranscribeClicked(id: String) {
         val recording = _uiState.value.recordings.find { it.id == id }
+        // 若已有转写内容，优先复用缓存，避免重复提交与重复观察
+        val cachedTranscript = recording?.fullTranscriptMarkdown ?: recording?.transcriptPreview
+        if (!cachedTranscript.isNullOrBlank()) {
+            val existingJob = _uiState.value.tingwuTaskIds[id]
+            if (existingJob != null) {
+                // 复用已完成任务，确保事件从统一的 observeJob 路径发出
+                observeJob(id, existingJob, isFromCache = true)
+            } else {
+                emitTranscriptFromCache(
+                    recordingId = id,
+                    fileName = recording?.fileName ?: id,
+                    transcript = cachedTranscript,
+                    transcriptPreview = recording?.transcriptPreview,
+                    fullTranscriptMarkdown = recording?.fullTranscriptMarkdown,
+                    transcriptionUrl = recording?.transcriptionUrl
+                )
+            }
+            return
+        }
         if (recording?.transcriptionStatus == TranscriptionStatus.IN_PROGRESS) {
             // 已有任务在跑，直接复用现有 Flow，避免重复提交 Tingwu
             val existingJob = _uiState.value.tingwuTaskIds[id]
             if (existingJob != null) {
-                observeJob(id, existingJob)
+                observeJob(id, existingJob, isFromCache = true)
             }
             emitError("处理中…")
             return
-        }
-        // 同一录音若已完成转写，直接复用历史结果，不再重复触发 Tingwu 提交
-        if (recording?.transcriptionStatus == TranscriptionStatus.DONE) {
-            val transcript = recording.fullTranscriptMarkdown ?: recording.transcriptPreview
-            if (!transcript.isNullOrBlank()) {
-                val sessionId = _uiState.value.sessionIds[id] ?: "session-$id"
-                val jobId = _uiState.value.tingwuTaskIds[id] ?: "tingwu-cache-$id"
-                _uiState.update { state ->
-                    state.copy(
-                        sessionIds = state.sessionIds + (id to sessionId),
-                        tingwuTaskIds = state.tingwuTaskIds + (id to jobId)
-                    )
-                }
-                _events.tryEmit(
-                    AudioFilesEvent.TranscriptReady(
-                        recordingId = id,
-                        fileName = recording.fileName,
-                        jobId = jobId,
-                        sessionId = sessionId,
-                        transcriptPreview = recording.transcriptPreview ?: transcript.take(MAX_PREVIEW_LENGTH),
-                        fullTranscriptMarkdown = recording.fullTranscriptMarkdown ?: transcript,
-                        transcriptionUrl = recording.transcriptionUrl,
-                        isFromCache = true
-                    )
-                )
-                return
-            }
         }
         val stored = storedAudios[id]
         val deviceFile = recordingSources[id]
@@ -153,11 +145,17 @@ class AudioFilesViewModel @Inject constructor(
             return emitError("未找到音频文件")
         }
         val sessionId = "session-${id}-${System.currentTimeMillis()}"
+        // 先同步标记处理中，避免短时间重复点击导致重复提交
         _uiState.update { state ->
-            state.copy(sessionIds = state.sessionIds + (id to sessionId))
+            state.copy(
+                recordings = state.recordings.map { item ->
+                    if (item.id == id) item.copy(transcriptionStatus = TranscriptionStatus.IN_PROGRESS) else item
+                },
+                sessionIds = state.sessionIds + (id to sessionId),
+                transcriptPreviewRecording = null
+            )
         }
         viewModelScope.launch(dispatchers.io) {
-            markRecordingStatus(id, TranscriptionStatus.IN_PROGRESS)
             val localFile = when {
                 stored != null -> {
                     val path = stored.localUri.path
@@ -236,6 +234,36 @@ class AudioFilesViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun emitTranscriptFromCache(
+        recordingId: String,
+        fileName: String,
+        transcript: String,
+        transcriptPreview: String?,
+        fullTranscriptMarkdown: String?,
+        transcriptionUrl: String?
+    ) {
+        val sessionId = _uiState.value.sessionIds[recordingId] ?: "session-$recordingId"
+        val jobId = _uiState.value.tingwuTaskIds[recordingId] ?: "tingwu-cache-$recordingId"
+        _uiState.update { state ->
+            state.copy(
+                sessionIds = state.sessionIds + (recordingId to sessionId),
+                tingwuTaskIds = state.tingwuTaskIds + (recordingId to jobId)
+            )
+        }
+        _events.tryEmit(
+            AudioFilesEvent.TranscriptReady(
+                recordingId = recordingId,
+                fileName = fileName,
+                jobId = jobId,
+                sessionId = sessionId,
+                transcriptPreview = transcriptPreview ?: transcript.take(MAX_PREVIEW_LENGTH),
+                fullTranscriptMarkdown = fullTranscriptMarkdown ?: transcript,
+                transcriptionUrl = transcriptionUrl,
+                isFromCache = true
+            )
+        )
     }
 
     fun onTranscriptClicked(id: String) {
@@ -387,7 +415,11 @@ class AudioFilesViewModel @Inject constructor(
         }
     }
 
-    private fun observeJob(recordingId: String, jobId: String) {
+    private fun observeJob(
+        recordingId: String,
+        jobId: String,
+        isFromCache: Boolean = false
+    ) {
         if (observingJobs.contains(jobId)) return
         observingJobs.add(jobId)
         viewModelScope.launch(dispatchers.default) {
@@ -432,7 +464,8 @@ class AudioFilesViewModel @Inject constructor(
                                     sessionId = sessionId,
                                     transcriptPreview = preview,
                                     fullTranscriptMarkdown = transcript,
-                                    transcriptionUrl = state.transcriptionUrl
+                                    transcriptionUrl = state.transcriptionUrl,
+                                    isFromCache = isFromCache
                                 )
                             )
                         }

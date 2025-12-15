@@ -1,0 +1,250 @@
+// 文件：data/ai-core/src/main/java/com/smartsales/data/aicore/xfyun/XfyunAsrCoordinator.kt
+// 模块：:data:ai-core
+// 说明：提供讯飞 ASR 的提交与轮询协调器（最小闭环：upload→poll→markdown）
+// 作者：创建于 2025-12-15
+package com.smartsales.data.aicore.xfyun
+
+import com.smartsales.core.util.DispatcherProvider
+import com.smartsales.core.util.Result
+import com.smartsales.data.aicore.AiCoreErrorReason
+import com.smartsales.data.aicore.AiCoreErrorSource
+import com.smartsales.data.aicore.AiCoreException
+import com.smartsales.data.aicore.AiCoreLogger
+import java.io.File
+import java.util.concurrent.ConcurrentHashMap
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.withContext
+
+sealed interface XfyunAsrJobState {
+    data object Idle : XfyunAsrJobState
+
+    data class InProgress(
+        val jobId: String,
+        val progressPercent: Int,
+        val statusLabel: String? = null,
+    ) : XfyunAsrJobState
+
+    data class Completed(
+        val jobId: String,
+        val transcriptMarkdown: String,
+    ) : XfyunAsrJobState
+
+    data class Failed(
+        val jobId: String,
+        val reason: String,
+        val errorCode: String? = null,
+    ) : XfyunAsrJobState
+}
+
+@Singleton
+class XfyunAsrCoordinator @Inject constructor(
+    private val dispatchers: DispatcherProvider,
+    private val api: XfyunAsrApi,
+    private val configProvider: XfyunConfigProvider,
+    private val parser: XfyunOrderResultParser,
+) {
+
+    private val jobContextByOrderId = ConcurrentHashMap<String, JobContext>()
+
+    suspend fun submitTranscription(
+        file: File,
+        language: String,
+        roleType: Int,
+        roleNum: Int,
+        durationMs: Long?,
+    ): Result<String> = withContext(dispatchers.io) {
+        val credentials = configProvider.credentials()
+        validateCredentials(credentials)?.let { return@withContext Result.Error(it) }
+        if (!file.exists() || !file.canRead()) {
+            return@withContext Result.Error(
+                AiCoreException(
+                    source = AiCoreErrorSource.XFYUN,
+                    reason = AiCoreErrorReason.IO,
+                    message = "音频文件不存在或不可读：${file.absolutePath}"
+                )
+            )
+        }
+
+        // 重要：signatureRandom 需在 upload 与 getResult 之间保持一致。
+        val signatureRandom = XfyunIdFactory.random16()
+        val normalizedLanguage = normalizeLanguage(language)
+        val context = JobContext(signatureRandom = signatureRandom)
+        runCatching {
+            val upload = api.upload(
+                file = file,
+                language = normalizedLanguage,
+                roleType = roleType,
+                roleNum = roleNum,
+                durationMs = durationMs,
+                signatureRandom = signatureRandom,
+                preferredAttempt = context.preferredAttempt
+            )
+            context.preferredAttempt = upload.attemptUsed
+            val jobId = buildJobId(upload.orderId)
+            jobContextByOrderId[upload.orderId] = context
+            AiCoreLogger.d(TAG, "XFyun submit 成功：jobId=$jobId")
+            Result.Success(jobId)
+        }.getOrElse {
+            val mapped = mapError(it)
+            AiCoreLogger.e(TAG, "XFyun submit 失败：${mapped.message}", mapped)
+            Result.Error(mapped)
+        }
+    }
+
+    fun observeJob(jobId: String): Flow<XfyunAsrJobState> = flow {
+        val orderId = parseOrderId(jobId)
+        if (orderId.isBlank()) {
+            emit(XfyunAsrJobState.Failed(jobId = jobId, reason = "无效的任务ID"))
+            return@flow
+        }
+        val context = jobContextByOrderId[orderId]
+        if (context == null) {
+            emit(XfyunAsrJobState.Failed(jobId = jobId, reason = "任务上下文缺失，请重新提交"))
+            return@flow
+        }
+        val start = System.currentTimeMillis()
+        val deadline = start + POLL_TIMEOUT_MS
+
+        emit(XfyunAsrJobState.InProgress(jobId = jobId, progressPercent = 5, statusLabel = "已提交"))
+
+        while (System.currentTimeMillis() < deadline) {
+            val progress = computeProgressPercent(start, deadline)
+            val result = runCatching {
+                withContext(dispatchers.io) {
+                    api.getResult(
+                        orderId = orderId,
+                        signatureRandom = context.signatureRandom,
+                        resultType = RESULT_TYPE,
+                        preferredAttempt = context.preferredAttempt
+                    )
+                }
+            }.getOrElse { throwable ->
+                val mapped = mapError(throwable)
+                emit(
+                    XfyunAsrJobState.Failed(
+                        jobId = jobId,
+                        reason = mapped.message ?: "查询失败",
+                    )
+                )
+                jobContextByOrderId.remove(orderId)
+                return@flow
+            }
+
+            context.preferredAttempt = result.attemptUsed
+            val status = result.status
+            when (status) {
+                4 -> {
+                    val markdown = parser.toTranscriptMarkdown(result.orderResult)
+                    emit(XfyunAsrJobState.Completed(jobId = jobId, transcriptMarkdown = markdown))
+                    jobContextByOrderId.remove(orderId)
+                    return@flow
+                }
+
+                3, 0, null -> {
+                    emit(
+                        XfyunAsrJobState.InProgress(
+                            jobId = jobId,
+                            progressPercent = progress,
+                            statusLabel = "处理中…"
+                        )
+                    )
+                }
+
+                -1 -> {
+                    val failType = result.failType?.toString() ?: "未知"
+                    emit(
+                        XfyunAsrJobState.Failed(
+                            jobId = jobId,
+                            reason = "讯飞转写失败（failType=$failType）",
+                            errorCode = failType
+                        )
+                    )
+                    jobContextByOrderId.remove(orderId)
+                    return@flow
+                }
+
+                else -> {
+                    emit(
+                        XfyunAsrJobState.Failed(
+                            jobId = jobId,
+                            reason = "讯飞转写异常（status=$status）",
+                            errorCode = status.toString()
+                        )
+                    )
+                    jobContextByOrderId.remove(orderId)
+                    return@flow
+                }
+            }
+
+            delay(POLL_INTERVAL_MS)
+        }
+
+        emit(XfyunAsrJobState.Failed(jobId = jobId, reason = "讯飞转写超时，请稍后重试"))
+        jobContextByOrderId.remove(orderId)
+    }
+
+    private fun validateCredentials(credentials: XfyunCredentials): AiCoreException? {
+        val missing = when {
+            credentials.appId.isBlank() -> "XFYUN_APP_ID"
+            credentials.accessKeyId.isBlank() -> "XFYUN_ACCESS_KEY_ID"
+            credentials.accessKeySecret.isBlank() -> "XFYUN_ACCESS_KEY_SECRET"
+            else -> null
+        }
+        return missing?.let {
+            AiCoreException(
+                source = AiCoreErrorSource.XFYUN,
+                reason = AiCoreErrorReason.MISSING_CREDENTIALS,
+                message = "讯飞配置缺失（$it）",
+                suggestion = "请在 local.properties 填写 $it"
+            )
+        }
+    }
+
+    private fun normalizeLanguage(raw: String): String {
+        // 讯飞当前文档仅接受 autodialect / autominor；上层可能传 zh-CN，这里做最小映射。
+        val trimmed = raw.trim()
+        return when (trimmed) {
+            "autodialect", "autominor" -> trimmed
+            else -> "autodialect"
+        }
+    }
+
+    private fun computeProgressPercent(start: Long, deadline: Long): Int {
+        val total = (deadline - start).coerceAtLeast(1)
+        val elapsed = (System.currentTimeMillis() - start).coerceAtLeast(0)
+        val ratio = (elapsed.toDouble() / total.toDouble()).coerceIn(0.0, 1.0)
+        return (5 + ratio * 90).toInt().coerceIn(5, 95)
+    }
+
+    private fun mapError(error: Throwable): AiCoreException = when (error) {
+        is AiCoreException -> error
+        else -> AiCoreException(
+            source = AiCoreErrorSource.XFYUN,
+            reason = AiCoreErrorReason.UNKNOWN,
+            message = error.message ?: "讯飞未知错误",
+            cause = error
+        )
+    }
+
+    private fun buildJobId(orderId: String): String = "${JOB_PREFIX}$orderId"
+
+    private fun parseOrderId(jobId: String): String =
+        jobId.removePrefix(JOB_PREFIX).trim()
+
+    private data class JobContext(
+        val signatureRandom: String,
+        var preferredAttempt: XfyunRequestAttempt? = null,
+    )
+
+    private companion object {
+        private const val JOB_PREFIX = "xfyun-"
+        private const val RESULT_TYPE = "transfer,predict"
+        private const val POLL_INTERVAL_MS = 5_000L
+        private const val POLL_TIMEOUT_MS = 600_000L
+        private const val TAG = "SmartSalesAi/XFyunCoordinator"
+    }
+}

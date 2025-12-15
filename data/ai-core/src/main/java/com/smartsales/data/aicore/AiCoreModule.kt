@@ -1,5 +1,6 @@
 package com.smartsales.data.aicore
 
+import com.google.gson.Gson
 import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.util.DefaultDispatcherProvider
 import com.smartsales.core.util.DispatcherProvider
@@ -96,6 +97,11 @@ abstract class AiCoreModule {
     abstract fun optionalAiCoreConfig(): AiCoreConfig
 
     companion object {
+        // 提供统一 Gson 实例，供转写解析与增强使用
+        @Provides
+        @Singleton
+        fun provideGson(): Gson = Gson()
+
         @Provides
         @Singleton
         fun provideAiChatService(

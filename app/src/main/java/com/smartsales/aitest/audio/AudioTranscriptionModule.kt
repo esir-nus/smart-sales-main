@@ -21,7 +21,7 @@ import dagger.hilt.components.SingletonComponent
 interface AudioTranscriptionModule {
     @Binds
     fun bindAudioTranscriptionCoordinator(
-        impl: DefaultAudioTranscriptionCoordinator,
+        impl: SwitchableAudioTranscriptionCoordinator,
     ): AudioTranscriptionCoordinator
 
     @Binds

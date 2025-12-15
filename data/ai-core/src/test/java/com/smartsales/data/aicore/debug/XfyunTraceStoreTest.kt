@@ -23,6 +23,7 @@ class XfyunTraceStoreTest {
                 "signature" to "should-not-store",
                 "accessKeySecret" to "should-not-store",
                 "fileName" to "demo.wav",
+                "resultType" to "transfer",
             ),
             roleType = 1,
             roleNum = 0,
@@ -35,6 +36,8 @@ class XfyunTraceStoreTest {
         assertEquals("abcd…mnop", params["accessKeyId"])
         assertFalse(params.containsKey("signature"))
         assertFalse(params.containsKey("accessKeySecret"))
+        assertEquals("transfer", params["resultType"])
+        assertTrue(snapshot.resultTypeAttempts.any { it.phase == "upload" && it.resultType == "transfer" })
     }
 
     @Test
@@ -58,6 +61,14 @@ class XfyunTraceStoreTest {
             uploadParams = mapOf(
                 "accessKeyId" to "abcd…wxyz",
                 "fileName" to "demo.wav",
+            ),
+            resultTypeAttempts = listOf(
+                XfyunTraceSnapshot.ResultTypeAttempt(
+                    tsMs = 1L,
+                    phase = "getResult",
+                    resultType = "transfer",
+                    downgradedBecauseFailType11 = false,
+                )
             ),
             orderId = "order-123",
             resultType = "transfer,predict",
@@ -84,8 +95,30 @@ class XfyunTraceStoreTest {
         assertTrue(text.contains("\"provider\": \"XFyun\""))
         assertTrue(text.contains("\"baseUrl\": \"https://example.com\""))
         assertTrue(text.contains("\"orderId\": \"order-123\""))
+        assertTrue(text.contains("\"downgradedBecauseFailType11\": false"))
+        assertTrue(text.contains("\"resultTypeAttempts\":"))
         assertFalse(text.contains("accessKeySecret"))
         assertFalse(text.contains("\"signature\""))
     }
-}
 
+    @Test
+    fun `recordResultTypeAttempt sets downgrade flag`() {
+        val store = XfyunTraceStore()
+        store.recordUploadAttempt(
+            baseUrl = "https://example.com",
+            uploadParams = mapOf("resultType" to "transfer"),
+            roleType = 1,
+            roleNum = 0,
+        )
+        store.recordResultTypeAttempt(
+            phase = "getResult",
+            resultType = "transfer",
+            downgradedBecauseFailType11 = true,
+        )
+
+        val snapshot = store.getSnapshot()
+        assertNotNull(snapshot)
+        assertTrue(snapshot!!.downgradedBecauseFailType11)
+        assertTrue(snapshot.resultTypeAttempts.any { it.downgradedBecauseFailType11 })
+    }
+}

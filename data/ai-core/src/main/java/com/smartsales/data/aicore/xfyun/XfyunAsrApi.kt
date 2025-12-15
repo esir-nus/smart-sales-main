@@ -83,6 +83,7 @@ class XfyunAsrApi @Inject constructor(
         language: String,
         roleType: Int,
         roleNum: Int,
+        resultType: String,
         durationMs: Long?,
         signatureRandom: String,
         preferredAttempt: XfyunRequestAttempt?,
@@ -98,6 +99,7 @@ class XfyunAsrApi @Inject constructor(
                 language = language,
                 roleType = roleType,
                 roleNum = roleNum,
+                resultType = resultType,
                 durationMs = durationMs,
                 signatureRandom = signatureRandom,
                 dateTime = nowLocalTimeWithTz(),
@@ -322,6 +324,7 @@ class XfyunAsrApi @Inject constructor(
         language: String,
         roleType: Int,
         roleNum: Int,
+        resultType: String,
         durationMs: Long?,
         signatureRandom: String,
         dateTime: String,
@@ -340,6 +343,7 @@ class XfyunAsrApi @Inject constructor(
             "ts" to tsSeconds,
             "roleType" to roleType.toString(),
             "roleNum" to roleNum.toString(),
+            "resultType" to resultType,
         )
         durationMs?.takeIf { it > 0 }?.let { params["duration"] = it.toString() }
 

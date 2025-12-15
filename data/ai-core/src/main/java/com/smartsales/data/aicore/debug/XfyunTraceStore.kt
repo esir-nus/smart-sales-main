@@ -15,6 +15,8 @@ data class XfyunTraceSnapshot(
     val uploadParams: Map<String, String> = emptyMap(),
     val orderId: String? = null,
     val resultType: String? = null,
+    val resultTypeAttempts: List<ResultTypeAttempt> = emptyList(),
+    val downgradedBecauseFailType11: Boolean = false,
     val roleType: Int? = null,
     val roleNum: Int? = null,
     val resultHasRoleLabels: Boolean? = null,
@@ -28,6 +30,13 @@ data class XfyunTraceSnapshot(
     val rawPayloadSnippet: String? = null,
     val updatedAtMs: Long = 0L,
 ) {
+    data class ResultTypeAttempt(
+        val tsMs: Long,
+        val phase: String,
+        val resultType: String,
+        val downgradedBecauseFailType11: Boolean,
+    )
+
     data class PollEntry(
         val tsMs: Long,
         val status: Int?,
@@ -48,10 +57,24 @@ class XfyunTraceStore @Inject constructor() {
         roleNum: Int?,
     ) {
         val now = System.currentTimeMillis()
+        val redactedParams = redactParams(uploadParams)
         synchronized(this) {
+            val uploadResultType = redactedParams["resultType"]?.takeIf { it.isNotBlank() }
             snapshot = XfyunTraceSnapshot(
                 baseUrl = baseUrl,
-                uploadParams = redactParams(uploadParams),
+                uploadParams = redactedParams,
+                resultTypeAttempts = buildList {
+                    uploadResultType?.let { value ->
+                        add(
+                            XfyunTraceSnapshot.ResultTypeAttempt(
+                                tsMs = now,
+                                phase = "upload",
+                                resultType = value,
+                                downgradedBecauseFailType11 = false
+                            )
+                        )
+                    }
+                },
                 roleType = roleType,
                 roleNum = roleNum,
                 updatedAtMs = now
@@ -103,6 +126,28 @@ class XfyunTraceStore @Inject constructor() {
                 lastFailType = failType,
                 rawPayloadSnippet = sanitizePayloadSnippet(payloadSnippet),
                 updatedAtMs = System.currentTimeMillis()
+            )
+        }
+    }
+
+    fun recordResultTypeAttempt(
+        phase: String,
+        resultType: String,
+        downgradedBecauseFailType11: Boolean,
+    ) {
+        update { current ->
+            val now = System.currentTimeMillis()
+            val entry = XfyunTraceSnapshot.ResultTypeAttempt(
+                tsMs = now,
+                phase = phase,
+                resultType = resultType,
+                downgradedBecauseFailType11 = downgradedBecauseFailType11
+            )
+            val attempts = (current.resultTypeAttempts + entry).takeLast(MAX_RESULT_TYPE_ATTEMPTS)
+            current.copy(
+                resultTypeAttempts = attempts,
+                downgradedBecauseFailType11 = current.downgradedBecauseFailType11 || downgradedBecauseFailType11,
+                updatedAtMs = now
             )
         }
     }
@@ -207,6 +252,7 @@ class XfyunTraceStore @Inject constructor() {
 
     private companion object {
         private const val MAX_POLL_ENTRIES = 30
+        private const val MAX_RESULT_TYPE_ATTEMPTS = 10
         private const val PAYLOAD_MAX_CHARS = 8_000
         private val SECRET_KEYS = listOf(
             "accessKeySecret",
@@ -231,6 +277,7 @@ object XfyunDebugInfoFormatter {
             appendLine("  \"baseUrl\": \"${snapshot.baseUrl}\",")
             appendLine("  \"orderId\": ${snapshot.orderId?.let { "\"$it\"" } ?: "null"},")
             appendLine("  \"resultType\": ${snapshot.resultType?.let { "\"$it\"" } ?: "null"},")
+            appendLine("  \"downgradedBecauseFailType11\": ${snapshot.downgradedBecauseFailType11},")
             appendLine("  \"roleType\": ${snapshot.roleType ?: "null"},")
             appendLine("  \"roleNum\": ${snapshot.roleNum ?: "null"},")
             appendLine("  \"resultHasRoleLabels\": ${snapshot.resultHasRoleLabels ?: "null"},")
@@ -241,6 +288,7 @@ object XfyunDebugInfoFormatter {
             appendLine("  \"lastFailType\": ${snapshot.lastFailType ?: "null"},")
             appendLine("  \"lastFailDesc\": ${snapshot.lastFailDesc?.let { "\"${escape(it)}\"" } ?: "null"},")
             appendLine("  \"uploadParams\": ${formatMap(snapshot.uploadParams)},")
+            appendLine("  \"resultTypeAttempts\": ${formatResultTypeAttempts(snapshot.resultTypeAttempts)},")
             appendLine("  \"pollTimeline\": ${formatTimeline(snapshot.pollTimeline)},")
             appendLine("  \"rawPayloadSnippet\": ${snapshot.rawPayloadSnippet?.let { "\"${escape(it)}\"" } ?: "null"},")
             appendLine("  \"updatedAtMs\": ${snapshot.updatedAtMs}")
@@ -274,6 +322,20 @@ object XfyunDebugInfoFormatter {
         }
     }
 
+    private fun formatResultTypeAttempts(entries: List<XfyunTraceSnapshot.ResultTypeAttempt>): String {
+        if (entries.isEmpty()) return "[]"
+        return buildString {
+            append("[")
+            entries.forEachIndexed { index, entry ->
+                val comma = if (index == entries.size - 1) "" else ","
+                append(
+                    "\n    {\"tsMs\": ${entry.tsMs}, \"phase\": \"${escape(entry.phase)}\", \"resultType\": \"${escape(entry.resultType)}\", \"downgradedBecauseFailType11\": ${entry.downgradedBecauseFailType11}}$comma"
+                )
+            }
+            append("\n  ]")
+        }
+    }
+
     private fun escape(value: String): String =
         value.replace("\\", "\\\\")
             .replace("\"", "\\\"")
@@ -290,8 +352,8 @@ object XfyunFailTypeHints {
         val value = failType ?: return null
         return when (value) {
             11 -> {
-                val rt = resultType?.takeIf { it.isNotBlank() } ?: "predict/translate"
-                "failType=11：upload 创建任务时未开启能力；resultType=$rt（predict 需要质检能力，translate 需要翻译能力）"
+                val rt = resultType?.takeIf { it.isNotBlank() } ?: "transfer"
+                "failType=11：账号未开通对应能力；resultType=$rt（predict 需质检能力，translate 需翻译能力）。建议仅使用 transfer。"
             }
             else -> null
         }

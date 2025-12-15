@@ -1257,7 +1257,11 @@ private fun XfyunTraceSection(
         DebugField(label = "provider", value = trace.provider)
         DebugField(label = "baseUrl", value = trace.baseUrl.ifBlank { "-" })
         DebugField(label = "orderId", value = trace.orderId ?: "-")
-        DebugField(label = "resultType", value = trace.resultType ?: "-")
+        DebugField(label = "resultType(当前)", value = trace.resultType ?: "-")
+        DebugField(
+            label = "降级重试",
+            value = if (trace.downgradedBecauseFailType11) "是（failType=11→transfer）" else "否"
+        )
         DebugField(label = "roleType", value = trace.roleType?.toString() ?: "-")
         DebugField(label = "roleNum", value = trace.roleNum?.toString() ?: "-")
         DebugField(
@@ -1280,6 +1284,25 @@ private fun XfyunTraceSection(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+
+        if (trace.resultTypeAttempts.isNotEmpty()) {
+            Text(
+                text = "resultType 尝试（最近）",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            trace.resultTypeAttempts
+                .asReversed()
+                .take(6)
+                .forEach { entry ->
+                    val suffix = if (entry.downgradedBecauseFailType11) " (downgrade)" else ""
+                    Text(
+                        text = "- ${formatMillis(entry.tsMs)} ${entry.phase}: ${entry.resultType}$suffix",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
         }
 
         if (trace.uploadParams.isNotEmpty()) {

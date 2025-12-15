@@ -5,7 +5,7 @@ package com.smartsales.tingwutest
 // 说明：存放 Tingwu Playground 自定义 Prompt 文本
 // 作者：创建于 2025-12-11
 object TingwuCustomPrompts {
-    const val SPEAKER_ROLE_INFERENCE_V1: String = """
+    val SPEAKER_ROLE_INFERENCE_V1: String = """
 你是一名资深「销售对话还原与角色识别」专家。
 
 下面是一段通义听悟生成的逐字稿文本 {Transcription} 。逐字稿中每一行通常包含时间戳、发言人编号（例如「发言人 1」「发言人 2」）以及发言内容，但这些编号和分句可能存在以下问题：

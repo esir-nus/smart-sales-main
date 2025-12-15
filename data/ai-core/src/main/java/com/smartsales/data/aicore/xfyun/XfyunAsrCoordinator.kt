@@ -74,13 +74,14 @@ class XfyunAsrCoordinator @Inject constructor(
         // 重要：signatureRandom 需在 upload 与 getResult 之间保持一致。
         val signatureRandom = XfyunIdFactory.random16()
         val normalizedLanguage = normalizeLanguage(language)
-        val context = JobContext(signatureRandom = signatureRandom)
+        val context = JobContext(signatureRandom = signatureRandom, resultType = RESULT_TYPE_TRANSFER)
         runCatching {
             val upload = api.upload(
                 file = file,
                 language = normalizedLanguage,
                 roleType = roleType,
                 roleNum = roleNum,
+                resultType = context.resultType,
                 durationMs = durationMs,
                 signatureRandom = signatureRandom,
                 preferredAttempt = context.preferredAttempt
@@ -115,15 +116,21 @@ class XfyunAsrCoordinator @Inject constructor(
         var pollCount = 0
 
         emit(XfyunAsrJobState.InProgress(jobId = jobId, progressPercent = 5, statusLabel = "已提交"))
+        // 记录首次查询使用的 resultType，避免在轮询中重复写入
+        traceStore.recordResultTypeAttempt(
+            phase = "getResult",
+            resultType = context.resultType,
+            downgradedBecauseFailType11 = false
+        )
 
         while (System.currentTimeMillis() < deadline) {
             val progress = computeProgressPercent(start, deadline)
-            val result = runCatching {
+            var result = runCatching {
                 withContext(dispatchers.io) {
                     api.getResult(
                         orderId = orderId,
                         signatureRandom = context.signatureRandom,
-                        resultType = RESULT_TYPE,
+                        resultType = context.resultType,
                         preferredAttempt = context.preferredAttempt
                     )
                 }
@@ -138,6 +145,44 @@ class XfyunAsrCoordinator @Inject constructor(
                 )
                 jobContextByOrderId.remove(orderId)
                 return@flow
+            }
+
+            // 兼容：如果账号未开通 predict/translate 等能力（failType=11），自动降级到 transfer 重新查询一次
+            if (!context.downgradedBecauseFailType11 &&
+                XfyunResultTypePolicy.shouldDowngradeOnFailType11(
+                    status = result.status,
+                    failType = result.failType,
+                    resultType = context.resultType
+                )
+            ) {
+                context.downgradedBecauseFailType11 = true
+                context.resultType = RESULT_TYPE_TRANSFER
+                traceStore.recordResultTypeAttempt(
+                    phase = "getResult",
+                    resultType = context.resultType,
+                    downgradedBecauseFailType11 = true
+                )
+                result = runCatching {
+                    withContext(dispatchers.io) {
+                        api.getResult(
+                            orderId = orderId,
+                            signatureRandom = context.signatureRandom,
+                            resultType = context.resultType,
+                            preferredAttempt = context.preferredAttempt
+                        )
+                    }
+                }.getOrElse { throwable ->
+                    val mapped = mapError(throwable)
+                    traceStore.recordFailure(desc = mapped.message)
+                    emit(
+                        XfyunAsrJobState.Failed(
+                            jobId = jobId,
+                            reason = mapped.message ?: "查询失败",
+                        )
+                    )
+                    jobContextByOrderId.remove(orderId)
+                    return@flow
+                }
             }
 
             context.preferredAttempt = result.attemptUsed
@@ -253,12 +298,14 @@ class XfyunAsrCoordinator @Inject constructor(
 
     private data class JobContext(
         val signatureRandom: String,
+        var resultType: String,
         var preferredAttempt: XfyunRequestAttempt? = null,
+        var downgradedBecauseFailType11: Boolean = false,
     )
 
     private companion object {
         private const val JOB_PREFIX = "xfyun-"
-        private const val RESULT_TYPE = "transfer,predict"
+        private const val RESULT_TYPE_TRANSFER = "transfer"
         private const val POLL_INTERVAL_MS = 5_000L
         private const val POLL_TIMEOUT_MS = 600_000L
         private const val TAG = "SmartSalesAi/XFyunCoordinator"

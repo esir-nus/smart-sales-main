@@ -3,4 +3,6 @@
 <!-- 说明：限定 FileProvider 可共享的缓存目录 -->
 <paths>
     <cache-path name="chat_exports" path="chat/exports/" />
+    <!-- 重要：仅允许分享 app 私有 filesDir/xfyun_raw/ 下的讯飞 raw dump 文件 -->
+    <files-path name="xfyun_raw_dumps" path="xfyun_raw/" />
 </paths>

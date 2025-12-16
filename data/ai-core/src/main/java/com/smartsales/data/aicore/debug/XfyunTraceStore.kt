@@ -14,6 +14,10 @@ data class XfyunTraceSnapshot(
     val baseUrl: String = "",
     val uploadParams: Map<String, String> = emptyMap(),
     val orderId: String? = null,
+    // 重要：本地落盘的 raw 响应信息（仅存路径/大小，不存原文；避免 HUD 泄露大段 JSON）。
+    val rawDumpPath: String? = null,
+    val rawDumpBytes: Long? = null,
+    val rawDumpSavedAtMs: Long? = null,
     val resultType: String? = null,
     val resultTypeAttempts: List<ResultTypeAttempt> = emptyList(),
     val downgradedBecauseFailType11: Boolean = false,
@@ -96,6 +100,23 @@ class XfyunTraceStore @Inject constructor() {
                 lastErrorCode = serverCode,
                 lastFailDesc = serverDesc,
                 rawPayloadSnippet = sanitizePayloadSnippet(payloadSnippet),
+                updatedAtMs = System.currentTimeMillis()
+            )
+        }
+    }
+
+    fun recordRawDump(
+        orderId: String?,
+        filePath: String,
+        bytes: Long,
+        savedAtMs: Long,
+    ) {
+        update { current ->
+            current.copy(
+                orderId = orderId ?: current.orderId,
+                rawDumpPath = filePath,
+                rawDumpBytes = bytes,
+                rawDumpSavedAtMs = savedAtMs,
                 updatedAtMs = System.currentTimeMillis()
             )
         }
@@ -276,6 +297,9 @@ object XfyunDebugInfoFormatter {
             appendLine("  \"provider\": \"${snapshot.provider}\",")
             appendLine("  \"baseUrl\": \"${snapshot.baseUrl}\",")
             appendLine("  \"orderId\": ${snapshot.orderId?.let { "\"$it\"" } ?: "null"},")
+            appendLine("  \"rawDumpPath\": ${snapshot.rawDumpPath?.let { "\"${escape(it)}\"" } ?: "null"},")
+            appendLine("  \"rawDumpBytes\": ${snapshot.rawDumpBytes ?: "null"},")
+            appendLine("  \"rawDumpSavedAtMs\": ${snapshot.rawDumpSavedAtMs ?: "null"},")
             appendLine("  \"resultType\": ${snapshot.resultType?.let { "\"$it\"" } ?: "null"},")
             appendLine("  \"downgradedBecauseFailType11\": ${snapshot.downgradedBecauseFailType11},")
             appendLine("  \"roleType\": ${snapshot.roleType ?: "null"},")
@@ -290,7 +314,6 @@ object XfyunDebugInfoFormatter {
             appendLine("  \"uploadParams\": ${formatMap(snapshot.uploadParams)},")
             appendLine("  \"resultTypeAttempts\": ${formatResultTypeAttempts(snapshot.resultTypeAttempts)},")
             appendLine("  \"pollTimeline\": ${formatTimeline(snapshot.pollTimeline)},")
-            appendLine("  \"rawPayloadSnippet\": ${snapshot.rawPayloadSnippet?.let { "\"${escape(it)}\"" } ?: "null"},")
             appendLine("  \"updatedAtMs\": ${snapshot.updatedAtMs}")
             append("}")
         }

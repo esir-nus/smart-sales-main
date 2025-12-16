@@ -78,6 +78,7 @@ class XfyunAsrApi @Inject constructor(
     private val configProvider: XfyunConfigProvider,
     private val traceStore: XfyunTraceStore,
     private val aiParaSettingsProvider: AiParaSettingsProvider,
+    private val rawResponseDumper: XfyunRawResponseDumper,
 ) {
 
     private val gson = Gson()
@@ -252,6 +253,20 @@ class XfyunAsrApi @Inject constructor(
                 traceStore.recordFailure(desc = mapped.message)
                 throw mapped
             }
+
+            // 重要：保存 getResult 的原始响应体（raw body），用于线下排查；失败不影响正常轮询/解析。
+            runCatching {
+                val dump = rawResponseDumper.dumpRawXfyunResponse(orderId = orderId, rawJson = raw.body)
+                traceStore.recordRawDump(
+                    orderId = dump.orderId ?: orderId,
+                    filePath = dump.filePath,
+                    bytes = dump.bytes,
+                    savedAtMs = dump.savedAtMillis,
+                )
+            }.onFailure { throwable ->
+                AiCoreLogger.d(TAG, "XFyun raw dump 失败：${throwable.message}")
+            }
+
             if (!raw.isSuccessful) {
                 traceStore.recordFailure(
                     httpCode = raw.httpCode,

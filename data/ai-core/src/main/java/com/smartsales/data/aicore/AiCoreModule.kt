@@ -16,6 +16,8 @@ import com.smartsales.data.aicore.params.DefaultAiParaSettingsProvider
 import com.smartsales.data.aicore.params.InMemoryAiParaSettingsRepository
 import com.smartsales.data.aicore.posttingwu.PostTingwuTranscriptEnhancer
 import com.smartsales.data.aicore.posttingwu.RealPostTingwuTranscriptEnhancer
+import com.smartsales.data.aicore.xfyun.DefaultXfyunRawDumpDirectoryProvider
+import com.smartsales.data.aicore.xfyun.XfyunRawDumpDirectoryProvider
 import dagger.Binds
 import dagger.BindsOptionalOf
 import dagger.Module
@@ -98,6 +100,12 @@ abstract class AiCoreModule {
     abstract fun bindAiParaSettingsRepository(
         impl: InMemoryAiParaSettingsRepository,
     ): AiParaSettingsRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindXfyunRawDumpDirectoryProvider(
+        impl: DefaultXfyunRawDumpDirectoryProvider,
+    ): XfyunRawDumpDirectoryProvider
     // Tingwu 调试痕迹存储
     // 仅调试 HUD 使用，生产逻辑不依赖
 

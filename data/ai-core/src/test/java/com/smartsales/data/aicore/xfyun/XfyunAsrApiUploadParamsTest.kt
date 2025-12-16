@@ -9,6 +9,7 @@ import com.smartsales.data.aicore.params.AiParaSettingsProvider
 import com.smartsales.data.aicore.params.AiParaSettingsSnapshot
 import com.smartsales.data.aicore.params.XfyunUploadSettings
 import java.io.File
+import java.nio.file.Files
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
@@ -17,6 +18,7 @@ class XfyunAsrApiUploadParamsTest {
 
     @Test
     fun buildUploadParams_containsDocUploadParams() {
+        val dumpDir = Files.createTempDirectory("xfyun_raw_dump").toFile().apply { deleteOnExit() }
         val temp = File.createTempFile("xfyun", ".wav").apply {
             writeBytes(byteArrayOf(1, 2, 3, 4))
             deleteOnExit()
@@ -31,7 +33,12 @@ class XfyunAsrApiUploadParamsTest {
             traceStore = XfyunTraceStore(),
             aiParaSettingsProvider = object : AiParaSettingsProvider {
                 override fun snapshot(): AiParaSettingsSnapshot = AiParaSettingsSnapshot()
-            }
+            },
+            rawResponseDumper = XfyunRawResponseDumper(
+                directoryProvider = object : XfyunRawDumpDirectoryProvider {
+                    override fun directory(): File = dumpDir
+                }
+            ),
         )
 
         val method = XfyunAsrApi::class.java.getDeclaredMethod(
@@ -97,6 +104,7 @@ class XfyunAsrApiUploadParamsTest {
 
     @Test
     fun buildUploadParams_omitsBlankPd() {
+        val dumpDir = Files.createTempDirectory("xfyun_raw_dump").toFile().apply { deleteOnExit() }
         val temp = File.createTempFile("xfyun", ".wav").apply {
             writeBytes(byteArrayOf(1, 2, 3, 4))
             deleteOnExit()
@@ -111,7 +119,12 @@ class XfyunAsrApiUploadParamsTest {
             traceStore = XfyunTraceStore(),
             aiParaSettingsProvider = object : AiParaSettingsProvider {
                 override fun snapshot(): AiParaSettingsSnapshot = AiParaSettingsSnapshot()
-            }
+            },
+            rawResponseDumper = XfyunRawResponseDumper(
+                directoryProvider = object : XfyunRawDumpDirectoryProvider {
+                    override fun directory(): File = dumpDir
+                }
+            ),
         )
 
         val method = XfyunAsrApi::class.java.getDeclaredMethod(

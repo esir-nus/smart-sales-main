@@ -5,8 +5,11 @@
 
 package com.smartsales.feature.chat.home
 
+import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
+import androidx.core.content.FileProvider
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -102,6 +105,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
@@ -118,6 +122,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import com.smartsales.feature.chat.core.QuickSkillId
+import java.io.File
 import com.smartsales.feature.chat.history.ChatHistoryTestTags
 import com.smartsales.data.aicore.debug.XfyunDebugInfoFormatter
 import com.smartsales.data.aicore.debug.XfyunFailTypeHints
@@ -1223,6 +1228,9 @@ private fun XfyunTraceSection(
     onRefresh: () -> Unit,
     onCopy: (String) -> Unit,
 ) {
+    val context = LocalContext.current
+    var confirmShare by remember { mutableStateOf(false) }
+
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxWidth()
@@ -1242,6 +1250,21 @@ private fun XfyunTraceSection(
                     TextButton(onClick = { onCopy(XfyunDebugInfoFormatter.format(trace)) }) {
                         Text(text = "复制")
                     }
+                    val rawDumpPath = trace.rawDumpPath
+                    if (!rawDumpPath.isNullOrBlank()) {
+                        TextButton(
+                            onClick = {
+                                val file = File(rawDumpPath)
+                                if (!file.exists() || !file.isFile) {
+                                    Toast.makeText(context, "dump 文件不存在，无法分享", Toast.LENGTH_SHORT).show()
+                                    return@TextButton
+                                }
+                                confirmShare = true
+                            }
+                        ) {
+                            Text(text = "分享")
+                        }
+                    }
                 }
             }
         }
@@ -1257,6 +1280,16 @@ private fun XfyunTraceSection(
         DebugField(label = "provider", value = trace.provider)
         DebugField(label = "baseUrl", value = trace.baseUrl.ifBlank { "-" })
         DebugField(label = "orderId", value = trace.orderId ?: "-")
+        DebugField(
+            label = "rawDump",
+            value = trace.rawDumpPath?.let { path ->
+                val bytes = trace.rawDumpBytes?.toString() ?: "-"
+                "$path (${bytes} bytes)"
+            } ?: "-"
+        )
+        trace.rawDumpSavedAtMs?.takeIf { it > 0 }?.let { savedAt ->
+            DebugField(label = "rawDumpSavedAt", value = formatMillis(savedAt))
+        }
         DebugField(label = "resultType(当前)", value = trace.resultType ?: "-")
         DebugField(
             label = "降级重试",
@@ -1331,7 +1364,59 @@ private fun XfyunTraceSection(
                 }
         }
 
-        DebugJsonBlock(label = "最近一次响应（截断）", json = trace.rawPayloadSnippet, onCopy = onCopy)
+        // 重要：HUD 不展示任何 raw JSON 响应片段；排查请以本地 raw dump 文件为准。
+    }
+
+    if (trace != null && confirmShare) {
+        AlertDialog(
+            onDismissRequest = { confirmShare = false },
+            title = { Text(text = "分享 XFyun 原始返回") },
+            text = {
+                Text(text = "将导出并分享 XFyun 原始返回 JSON，可能包含转写文本。是否继续？")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirmShare = false
+                        val path = trace.rawDumpPath
+                        if (path.isNullOrBlank()) {
+                            Toast.makeText(context, "暂无可分享的 dump 文件", Toast.LENGTH_SHORT).show()
+                            return@TextButton
+                        }
+                        val file = File(path)
+                        if (!file.exists() || !file.isFile) {
+                            Toast.makeText(context, "dump 文件不存在，无法分享", Toast.LENGTH_SHORT).show()
+                            return@TextButton
+                        }
+                        runCatching {
+                            // 重要：
+                            // - 使用 FileProvider 生成 content:// Uri，避免 file:// 在新系统上被拦截崩溃。
+                            // - 授予临时读权限，便于微信等第三方 App 读取文件内容。
+                            val authority = "${context.packageName}.chatfileprovider"
+                            val uri = FileProvider.getUriForFile(context, authority, file)
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "application/json"
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            val chooser = Intent.createChooser(intent, "分享 ${file.name}").apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(chooser)
+                        }.onFailure { throwable ->
+                            Toast.makeText(context, throwable.message ?: "分享失败", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                ) {
+                    Text(text = "继续")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmShare = false }) {
+                    Text(text = "取消")
+                }
+            }
+        )
     }
 }
 

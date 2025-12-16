@@ -14,18 +14,21 @@ class InMemoryAiParaSettingsRepositoryTest {
     @Test
     fun update_updatesSnapshot() = runTest {
         val repo = InMemoryAiParaSettingsRepository()
-        assertEquals(TRANSCRIPTION_PROVIDER_XFYUN, repo.snapshot().transcriptionProvider)
-        assertEquals(true, repo.snapshot().xfyunEngSmoothproc)
+        assertEquals(TRANSCRIPTION_PROVIDER_XFYUN, repo.snapshot().transcription.provider)
+        assertEquals(true, repo.snapshot().transcription.xfyun.upload.engSmoothProc)
 
         repo.update {
             it.copy(
-                transcriptionProvider = TRANSCRIPTION_PROVIDER_TINGWU,
-                xfyunEngSmoothproc = false,
+                transcription = it.transcription.copy(
+                    provider = TRANSCRIPTION_PROVIDER_TINGWU,
+                    xfyun = it.transcription.xfyun.copy(
+                        upload = it.transcription.xfyun.upload.copy(engSmoothProc = false)
+                    )
+                ),
             )
         }
 
-        assertEquals(TRANSCRIPTION_PROVIDER_TINGWU, repo.snapshot().transcriptionProvider)
-        assertFalse(repo.snapshot().xfyunEngSmoothproc)
+        assertEquals(TRANSCRIPTION_PROVIDER_TINGWU, repo.snapshot().transcription.provider)
+        assertFalse(repo.snapshot().transcription.xfyun.upload.engSmoothProc)
     }
 }
-

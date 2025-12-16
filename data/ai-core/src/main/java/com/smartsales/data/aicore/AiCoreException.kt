@@ -17,6 +17,8 @@ enum class AiCoreErrorReason {
     NETWORK,
     TIMEOUT,
     REMOTE,
+    // 本地能力/开关不支持（例如：未开通 translate/predict 能力时禁止发起请求）
+    UNSUPPORTED_CAPABILITY,
     IO,
     UNKNOWN
 }

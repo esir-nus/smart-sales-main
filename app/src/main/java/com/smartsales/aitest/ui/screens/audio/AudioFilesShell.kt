@@ -40,7 +40,7 @@ fun AudioFilesShell(
     val settingsViewModel: AiParaSettingsViewModel = hiltViewModel()
     val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
     val provider = TranscriptionProvider.entries.firstOrNull {
-        it.name == settings.transcriptionProvider.trim().uppercase(Locale.US)
+        it.name == settings.transcription.provider.trim().uppercase(Locale.US)
     } ?: TranscriptionProvider.XFYUN
 
     Column(
@@ -88,12 +88,13 @@ fun AudioFilesShell(
                 modifier = Modifier.padding(end = 8.dp)
             )
             FilterChip(
-                selected = settings.xfyunEngSmoothproc,
+                selected = settings.transcription.xfyun.upload.engSmoothProc,
                 onClick = {
-                    settingsViewModel.setXfyunEngSmoothproc(!settings.xfyunEngSmoothproc)
+                    val currentEnabled = settings.transcription.xfyun.upload.engSmoothProc
+                    settingsViewModel.setXfyunEngSmoothproc(!currentEnabled)
                 },
                 label = { Text("eng_smoothproc") },
-                leadingIcon = if (settings.xfyunEngSmoothproc) {
+                leadingIcon = if (settings.transcription.xfyun.upload.engSmoothProc) {
                     { Icon(Icons.Default.Check, contentDescription = null) }
                 } else null
             )

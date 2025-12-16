@@ -15,7 +15,8 @@ class XfyunConfigProvider @Inject constructor(
 ) {
 
     fun credentials(): XfyunCredentials {
-        val overrideBaseUrl = aiParaSettingsProvider.snapshot().xfyunBaseUrlOverride.trim()
+        // 重要：baseUrlOverride 只用于调试与灰度，避免线上误配。
+        val overrideBaseUrl = aiParaSettingsProvider.snapshot().transcription.xfyun.baseUrlOverride.trim()
         val baseUrl = overrideBaseUrl.takeIf { it.isNotBlank() }
             ?: BuildConfig.XFYUN_BASE_URL.takeIf { it.isNotBlank() }
             ?: DEFAULT_BASE_URL

@@ -19,19 +19,52 @@ class AiParaSettingsViewModel @Inject constructor(
     val settings: StateFlow<com.smartsales.data.aicore.params.AiParaSettingsSnapshot> = repository.flow
 
     fun setTranscriptionProvider(provider: TranscriptionProvider) {
-        repository.update { it.copy(transcriptionProvider = provider.name) }
+        repository.update { current ->
+            current.copy(
+                transcription = current.transcription.copy(provider = provider.name)
+            )
+        }
     }
 
     fun setXfyunEngSmoothproc(enabled: Boolean) {
-        repository.update { it.copy(xfyunEngSmoothproc = enabled) }
+        repository.update { current ->
+            val transcription = current.transcription
+            val xfyun = transcription.xfyun
+            current.copy(
+                transcription = transcription.copy(
+                    xfyun = xfyun.copy(
+                        upload = xfyun.upload.copy(engSmoothProc = enabled)
+                    )
+                )
+            )
+        }
     }
 
     fun setXfyunRoleType(value: Int) {
-        repository.update { it.copy(xfyunRoleType = value) }
+        repository.update { current ->
+            val transcription = current.transcription
+            val xfyun = transcription.xfyun
+            current.copy(
+                transcription = transcription.copy(
+                    xfyun = xfyun.copy(
+                        upload = xfyun.upload.copy(roleType = value)
+                    )
+                )
+            )
+        }
     }
 
     fun setXfyunRoleNum(value: Int) {
-        repository.update { it.copy(xfyunRoleNum = value) }
+        repository.update { current ->
+            val transcription = current.transcription
+            val xfyun = transcription.xfyun
+            current.copy(
+                transcription = transcription.copy(
+                    xfyun = xfyun.copy(
+                        upload = xfyun.upload.copy(roleNum = value)
+                    )
+                )
+            )
+        }
     }
 }
-

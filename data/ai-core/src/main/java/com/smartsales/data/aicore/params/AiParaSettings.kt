@@ -4,6 +4,9 @@
 // 作者：创建于 2025-12-13
 package com.smartsales.data.aicore.params
 
+import com.smartsales.data.aicore.AiCoreErrorReason
+import com.smartsales.data.aicore.AiCoreErrorSource
+import com.smartsales.data.aicore.AiCoreException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,14 +17,101 @@ import javax.inject.Singleton
 data class AiParaSettingsSnapshot(
     val tingwu: TingwuSettings = TingwuSettings(),
     val dashScope: DashScopeSettings = DashScopeSettings(),
-    // 转写相关运行时开关（MVP：内存态，可被测试壳实时修改）
-    val transcriptionProvider: String = TRANSCRIPTION_PROVIDER_XFYUN,
-    val xfyunRoleType: Int = 1,
-    val xfyunRoleNum: Int = 0,
-    val xfyunEngSmoothproc: Boolean = true,
-    val xfyunBaseUrlOverride: String = "",
-    // 预留：当前仅支持 SIGNATURE，后续如需 token 再扩展
-    val xfyunAuthMode: String = XFYUN_AUTH_MODE_SIGNATURE,
+    // 重要：第三方能力开关统一入口（避免散落在 app/feature 内部造成“看起来切了但实际没生效”）。
+    val transcription: TranscriptionSettings = TranscriptionSettings(),
+)
+
+/**
+ * 说明：转写相关运行时开关（MVP：内存态，可被测试壳实时修改）。
+ */
+data class TranscriptionSettings(
+    val provider: String = TRANSCRIPTION_PROVIDER_XFYUN,
+    // 重要：这是客户端可控的 query 参数集合；会进入签名/URL/HUD，必须一致。
+    val xfyun: XfyunAsrSettings = XfyunAsrSettings(),
+)
+
+/**
+ * 说明：讯飞 ASR 参数总入口。
+ * 重要：这是客户端可控的 query 参数集合；会进入签名/URL/HUD，必须一致。
+ */
+data class XfyunAsrSettings(
+    val baseUrlOverride: String = "",
+    val authMode: String = XFYUN_AUTH_MODE_SIGNATURE,
+    val upload: XfyunUploadSettings = XfyunUploadSettings(),
+    val result: XfyunResultSettings = XfyunResultSettings(),
+    // 能力开关：默认全部关闭，避免误触发 failType=11。
+    val capabilities: XfyunCapabilities = XfyunCapabilities(),
+)
+
+/**
+ * 说明：/v2/upload 的可控参数（排除密钥/签名）。
+ * 重要：这是客户端可控的 query 参数集合；会进入签名/URL/HUD，必须一致。
+ */
+data class XfyunUploadSettings(
+    // 文档参数：language（autodialect/autominor）
+    val language: String = "autodialect",
+    // 文档参数：pd（领域个性化；为空则不传）
+    val pd: String = "",
+    // 文档参数：roleType/roleNum（角色分离；MVP 不开放 roleType=3 声纹）
+    val roleType: Int = 1,
+    val roleNum: Int = 0,
+    // 文档参数：顺滑/口语规整/远近场模式
+    val engSmoothProc: Boolean = true,
+    val engColloqProc: Boolean = false,
+    val engVadMdn: Int = 1,
+    // 文档参数：audioMode（本项目固定走 fileStream，不走 urlLink）
+    val audioMode: String = XFYUN_AUDIO_MODE_FILE_STREAM,
+)
+
+/**
+ * 说明：resultType 相关开关（MVP：默认只允许 transfer）。
+ */
+data class XfyunResultSettings(
+    val resultType: XfyunResultType = XfyunResultType.TRANSFER,
+) {
+    /**
+     * 说明：
+     * - Option 1：默认仅转写(transfer)，避免触发 failType=11。
+     * - translate/predict/analysis 如未明确开通能力，必须在发请求前阻断（不要“试试看”）。
+     */
+    fun resolveApiValueOrThrow(capabilities: XfyunCapabilities): String {
+        return when (resultType) {
+            XfyunResultType.TRANSFER -> "transfer"
+            XfyunResultType.TRANSLATE -> {
+                if (!capabilities.allowTranslate) throw unsupported("translate")
+                "translate"
+            }
+            XfyunResultType.PREDICT -> {
+                if (!capabilities.allowPredict) throw unsupported("predict")
+                "predict"
+            }
+            XfyunResultType.ANALYSIS -> {
+                if (!capabilities.allowAnalysis) throw unsupported("analysis")
+                "analysis"
+            }
+        }
+    }
+
+    private fun unsupported(type: String): AiCoreException =
+        AiCoreException(
+            source = AiCoreErrorSource.XFYUN,
+            reason = AiCoreErrorReason.UNSUPPORTED_CAPABILITY,
+            message = "讯飞账号未开通 $type 能力，为避免触发 failType=11 已阻止请求",
+            suggestion = "请先在讯飞控制台确认开通该能力，再打开对应 capability 开关"
+        )
+}
+
+enum class XfyunResultType {
+    TRANSFER,
+    TRANSLATE,
+    PREDICT,
+    ANALYSIS,
+}
+
+data class XfyunCapabilities(
+    val allowTranslate: Boolean = false,
+    val allowPredict: Boolean = false,
+    val allowAnalysis: Boolean = false,
 )
 
 interface AiParaSettingsProvider {
@@ -129,3 +219,7 @@ const val TRANSCRIPTION_PROVIDER_XFYUN: String = "XFYUN"
 const val TRANSCRIPTION_PROVIDER_TINGWU: String = "TINGWU"
 
 const val XFYUN_AUTH_MODE_SIGNATURE: String = "SIGNATURE"
+
+// 文档参数：audioMode
+const val XFYUN_AUDIO_MODE_FILE_STREAM: String = "fileStream"
+const val XFYUN_AUDIO_MODE_URL_LINK: String = "urlLink"

@@ -11,6 +11,7 @@ import com.smartsales.data.aicore.AiCoreErrorSource
 import com.smartsales.data.aicore.AiCoreException
 import com.smartsales.data.aicore.AiCoreLogger
 import com.smartsales.data.aicore.debug.XfyunTraceStore
+import com.smartsales.data.aicore.params.AiParaSettingsProvider
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -48,6 +49,7 @@ class XfyunAsrCoordinator @Inject constructor(
     private val configProvider: XfyunConfigProvider,
     private val parser: XfyunOrderResultParser,
     private val traceStore: XfyunTraceStore,
+    private val aiParaSettingsProvider: AiParaSettingsProvider,
 ) {
 
     private val jobContextByOrderId = ConcurrentHashMap<String, JobContext>()
@@ -55,9 +57,6 @@ class XfyunAsrCoordinator @Inject constructor(
     suspend fun submitTranscription(
         file: File,
         language: String,
-        roleType: Int,
-        roleNum: Int,
-        engSmoothproc: Boolean,
         durationMs: Long?,
     ): Result<String> = withContext(dispatchers.io) {
         val credentials = configProvider.credentials()
@@ -72,18 +71,27 @@ class XfyunAsrCoordinator @Inject constructor(
             )
         }
 
+        // 重要：
+        // - Option 1：默认仅允许 transfer。
+        // - translate/predict 未开通能力时会触发 failType=11，因此必须在发请求前阻断。
+        val xfyunSettings = aiParaSettingsProvider.snapshot().transcription.xfyun
+        val resolvedResultType = runCatching {
+            xfyunSettings.result.resolveApiValueOrThrow(xfyunSettings.capabilities)
+        }.getOrElse { throwable ->
+            val mapped = mapError(throwable)
+            traceStore.recordFailure(desc = mapped.message)
+            return@withContext Result.Error(mapped)
+        }
+
         // 重要：signatureRandom 需在 upload 与 getResult 之间保持一致。
         val signatureRandom = XfyunIdFactory.random16()
         val normalizedLanguage = normalizeLanguage(language)
-        val context = JobContext(signatureRandom = signatureRandom, resultType = RESULT_TYPE_TRANSFER)
+        val context = JobContext(signatureRandom = signatureRandom, resultType = resolvedResultType)
         runCatching {
             val upload = api.upload(
                 file = file,
-                language = normalizedLanguage,
-                roleType = roleType,
-                roleNum = roleNum,
-                engSmoothproc = engSmoothproc,
                 resultType = context.resultType,
+                requestedLanguage = normalizedLanguage,
                 durationMs = durationMs,
                 signatureRandom = signatureRandom,
                 preferredAttempt = context.preferredAttempt

@@ -42,7 +42,7 @@ class SwitchableAudioTranscriptionCoordinator @Inject constructor(
         delegate().observeJob(jobId)
 
     private fun delegate(): AudioTranscriptionCoordinator =
-        when (aiParaSettingsProvider.snapshot().transcriptionProvider.trim().uppercase(Locale.US)) {
+        when (aiParaSettingsProvider.snapshot().transcription.provider.trim().uppercase(Locale.US)) {
             TRANSCRIPTION_PROVIDER_TINGWU -> tingwuDelegate
             else -> xfyunDelegate
         }

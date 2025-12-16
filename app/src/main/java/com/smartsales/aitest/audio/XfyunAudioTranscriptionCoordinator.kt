@@ -9,7 +9,6 @@ import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.AiCoreErrorReason
 import com.smartsales.data.aicore.AiCoreErrorSource
 import com.smartsales.data.aicore.AiCoreException
-import com.smartsales.data.aicore.params.AiParaSettingsProvider
 import com.smartsales.data.aicore.xfyun.XfyunAsrCoordinator
 import com.smartsales.data.aicore.xfyun.XfyunAsrJobState
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
@@ -27,7 +26,6 @@ import kotlinx.coroutines.flow.map
 @Singleton
 class XfyunAudioTranscriptionCoordinator @Inject constructor(
     private val xfyunAsrCoordinator: XfyunAsrCoordinator,
-    private val aiParaSettingsProvider: AiParaSettingsProvider,
 ) : AudioTranscriptionCoordinator {
 
     private val pendingUploads = ConcurrentHashMap<String, PendingUpload>()
@@ -68,16 +66,12 @@ class XfyunAudioTranscriptionCoordinator @Inject constructor(
                     reason = AiCoreErrorReason.IO,
                     message = "本地音频上下文丢失，请重新选择并提交转写"
                 )
-            )
+        )
 
-        // 重要：转写参数以 AiParaSettings 为唯一来源，避免多处硬编码导致“看起来开了但实际没生效”。
-        val settings = aiParaSettingsProvider.snapshot()
+        // 重要：讯飞转写参数由 AiParaSettings 统一管理，这里只负责把本地文件提交给协调器。
         return xfyunAsrCoordinator.submitTranscription(
             file = pending.file,
             language = language,
-            roleType = settings.xfyunRoleType,
-            roleNum = settings.xfyunRoleNum,
-            engSmoothproc = settings.xfyunEngSmoothproc,
             durationMs = pending.durationMs,
         )
     }

@@ -12,6 +12,9 @@ import com.smartsales.data.aicore.AiCoreErrorSource
 import com.smartsales.data.aicore.AiCoreException
 import com.smartsales.data.aicore.AiCoreLogger
 import com.smartsales.data.aicore.debug.XfyunTraceStore
+import com.smartsales.data.aicore.params.AiParaSettingsProvider
+import com.smartsales.data.aicore.params.XfyunUploadSettings
+import com.smartsales.data.aicore.params.XFYUN_AUDIO_MODE_FILE_STREAM
 import java.io.File
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -74,22 +77,25 @@ class XfyunAsrApi @Inject constructor(
     private val httpClient: XfyunHttpClient,
     private val configProvider: XfyunConfigProvider,
     private val traceStore: XfyunTraceStore,
+    private val aiParaSettingsProvider: AiParaSettingsProvider,
 ) {
 
     private val gson = Gson()
 
     internal fun upload(
         file: File,
-        language: String,
-        roleType: Int,
-        roleNum: Int,
-        engSmoothproc: Boolean,
         resultType: String,
+        requestedLanguage: String,
         durationMs: Long?,
         signatureRandom: String,
         preferredAttempt: XfyunRequestAttempt?,
     ): XfyunUploadResult {
         val credentials = configProvider.credentials()
+        // 重要：upload 的 query 参数来自 AiParaSettings，并会参与签名/URL/HUD，必须同源。
+        val uploadSettings = aiParaSettingsProvider.snapshot().transcription.xfyun.upload
+        val effectiveLanguage = normalizeLanguage(uploadSettings.language.ifBlank { requestedLanguage })
+        val roleType = uploadSettings.roleType
+        val roleNum = uploadSettings.roleNum
         val signature = XfyunSignature(credentials.accessKeySecret)
         val attempts = XfyunRequestAttempt.ordered(preferredAttempt)
         var lastFailure: AiCoreException? = null
@@ -97,10 +103,8 @@ class XfyunAsrApi @Inject constructor(
             val params = buildUploadParams(
                 credentials = credentials,
                 file = file,
-                language = language,
-                roleType = roleType,
-                roleNum = roleNum,
-                engSmoothproc = engSmoothproc,
+                uploadSettings = uploadSettings,
+                language = effectiveLanguage,
                 resultType = resultType,
                 durationMs = durationMs,
                 signatureRandom = signatureRandom,
@@ -324,9 +328,7 @@ class XfyunAsrApi @Inject constructor(
         credentials: XfyunCredentials,
         file: File,
         language: String,
-        roleType: Int,
-        roleNum: Int,
-        engSmoothproc: Boolean,
+        uploadSettings: XfyunUploadSettings,
         resultType: String,
         durationMs: Long?,
         signatureRandom: String,
@@ -334,7 +336,9 @@ class XfyunAsrApi @Inject constructor(
         tsSeconds: String,
         strategy: XfyunParamStrategy,
     ): Map<String, String> {
-        // 重要：这些字段会参与签名，务必与 URL query 完全一致。
+        // 重要：
+        // - 这些字段会参与签名，务必与 URL query 完全一致。
+        // - 这份 params map 是唯一真相：签名 baseString / URL query / HUD trace 必须同源，否则必炸鉴权。
         val params = linkedMapOf(
             "appId" to credentials.appId,
             "accessKeyId" to credentials.accessKeyId,
@@ -344,12 +348,19 @@ class XfyunAsrApi @Inject constructor(
             "fileName" to file.name,
             "language" to language,
             "ts" to tsSeconds,
-            "roleType" to roleType.toString(),
-            "roleNum" to roleNum.toString(),
+            // 文档参数：roleType/roleNum（角色分离）
+            "roleType" to uploadSettings.roleType.toString(),
+            "roleNum" to uploadSettings.roleNum.toString(),
+            // 文档参数：audioMode（本项目固定走 fileStream）
+            "audioMode" to uploadSettings.audioMode.trim().ifBlank { XFYUN_AUDIO_MODE_FILE_STREAM },
             "resultType" to resultType,
-            // 顺滑开关：需参与签名；开关值以调用方传入为准（来自 AiParaSettings）。
-            "eng_smoothproc" to if (engSmoothproc) "true" else "false",
+            // 文档参数：顺滑/口语规整/远近场模式（均需参与签名）
+            "eng_smoothproc" to if (uploadSettings.engSmoothProc) "true" else "false",
+            "eng_colloqproc" to if (uploadSettings.engColloqProc) "true" else "false",
+            "eng_vad_mdn" to uploadSettings.engVadMdn.toString(),
         )
+        // 文档参数：pd（领域个性化；空值不能参与签名，也不能出现在最终 URL 中）
+        uploadSettings.pd.trim().takeIf { it.isNotBlank() }?.let { params["pd"] = it }
         durationMs?.takeIf { it > 0 }?.let { params["duration"] = it.toString() }
 
         // 预留兼容点：当前 Strategy 主要用于 getResult；upload 参数保持统一，避免不必要的差异。
@@ -447,6 +458,15 @@ class XfyunAsrApi @Inject constructor(
         val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.US)
         sdf.timeZone = TimeZone.getDefault()
         return sdf.format(Date())
+    }
+
+    private fun normalizeLanguage(raw: String): String {
+        // 讯飞文档：language 仅接受 autodialect / autominor；其它值统一回退为 autodialect。
+        val trimmed = raw.trim()
+        return when (trimmed) {
+            "autodialect", "autominor" -> trimmed
+            else -> "autodialect"
+        }
     }
 
     private fun shouldRetryWithDifferentStrategy(code: String): Boolean =

@@ -1,7 +1,7 @@
-# UX 合约（对齐 Orchestrator-MetadataHub v4.4.0）
+# UX 合约（对齐 Orchestrator-MetadataHub V5.0.0）
 
 ## 版本说明
-- 与 Orchestrator-MetadataHub-V4.md v4.4.0 对齐：GENERAL 聊天采用标签化输出信道，UI 仅展示 `<Visible2User>`；标签缺失时允许按既有 sanitize 轻量清理。
+- 与 Orchestrator-MetadataHub-V5.md V5.0.0 对齐：GENERAL 聊天采用标签化输出信道，UI 仅展示 `<Visible2User>`；标签缺失时允许按既有 sanitize 轻量清理。
 
 ## 7.2 GENERAL vs SMART 行为对比
 
@@ -10,7 +10,7 @@
   - LLM 输出可包含标签：
     - `<Visible2User>...</Visible2User>`：用户可见文本。
     - `<Metadata>{...}</Metadata>`：可选 JSON 元数据，仅用于命名/摘要与 MetaHub。
-  - UI 只展示 `<Visible2User>`，绝不展示 `<Metadata>` JSON 或内部标签；若模型暂未严格产出标签，ViewModel 按 V4 既有规则从整段文本轻量清理（去掉 scaffold / JSON 尾巴）后展示。
+  - UI 只展示 `<Visible2User>`，绝不展示 `<Metadata>` JSON 或内部标签；若模型暂未严格产出标签，ViewModel 按 V5 既有规则从整段文本轻量清理（去掉 scaffold / JSON 尾巴）后展示。
 - SMART：
   - 不流式展示内容，Completed 后由 Orchestrator 生成 Markdown 卡片；UI 不直接消费 JSON。
 

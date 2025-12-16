@@ -1,3 +1,9 @@
+# ⚠️ 已归档（ARCHIVED）
+>
+> 状态：ARCHIVED  
+> 本文档为历史规范 V4（v4.4.0），已被 `docs/Orchestrator-MetadataHub-V5.md`（CURRENT）取代。  
+> 请以 V5 为唯一现行规范；V4 仅用于追溯历史与审计对照。
+
 # Orchestrator–MetaHub 规范（V4）
 
 当前规范版本：v4.4.0（标签化输出信道：<Visible2User> / <Metadata> / <Reasoning> / <DocReference>）

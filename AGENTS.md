@@ -11,15 +11,32 @@ This project uses a fixed multi-agent workflow:
 The full rules and invocation protocol are defined in **`role-contract.md`**.  
 All agents must follow that document as the authoritative behavior contract.
 
-- **Orchestrator / MetaHub 合约来源**：`docs/Orchestrator-MetadataHub-V4.md` 是编排与 MetaHub 的最新权威规范；`docs/plans/Orchestrator-MetadataHub-Mvp-V3.md` 仅作历史参考。
+- **Orchestrator / MetaHub 合约来源**：`docs/Orchestrator-MetadataHub-V5.md` 是编排与 MetaHub 的最新权威规范（CURRENT）；`docs/Orchestrator-MetadataHub-V4.md` 已归档（ARCHIVED），仅作历史参考。
 - **UX 合约来源优先级**：
   1. `docs/ux-contract.md`（唯一现行 UX 真实来源，交互/布局/流程）
-  2. `docs/Orchestrator-MetadataHub-V4.md`（推理与元数据，V4 为现行规范；V3 仅历史参考）
+  2. `docs/Orchestrator-MetadataHub-V5.md`（推理与元数据，V5 为现行规范；V4/V3 仅历史参考）
   3. `docs/style-guide.md`（视觉规范）
   4. 现有 Android 实现与测试
   5. 归档的 React/UI 仅作历史参考；`assistant-ux-contract.md` 已归档，请勿作为现行规范。
 
 ---
+
+## 文档版本与纪律（Versioning & Doc Discipline）
+
+1. **现行规范**
+   - CURRENT：`docs/Orchestrator-MetadataHub-V5.md`
+   - ARCHIVED：`docs/Orchestrator-MetadataHub-V4.md`
+
+2. **XFyun-first（文档口径）**
+   - 讯飞 REST 的唯一权威来源：`docs/xfyun-asr-rest-api.md`
+   - 禁止在其它文档复制其参数大表（只能“链接 + 结论摘要”）
+
+3. **能力护栏（必须一致）**
+   - 当前仅允许 `transfer`；`translate/predict/analysis` 默认禁用，禁止“先发请求试试看”（避免 `failType=11` 等失败）
+
+4. **Tingwu 与 OSS 的位置**
+   - Tingwu：legacy/deprecated，仅遗留维护（不做文档默认路径）
+   - OSS：保留为未来扩展工具箱（异步/分发/大文件/多提供方），不强制参与当前 XFyun file-stream 上传链路
 
 ## 核心行为要求（对 Codex）
 

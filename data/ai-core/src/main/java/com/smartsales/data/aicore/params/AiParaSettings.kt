@@ -53,13 +53,13 @@ data class XfyunAsrSettings(
  * - 仲裁输出必须是“封闭动作 JSON”，禁止自由改写，避免引入不可追溯的文本变化。
  */
 data class PostXfyunSettings(
-    val enabled: Boolean = false,
+    val enabled: Boolean = true,
     // 判定可疑边界：gapMs <= threshold 才会触发仲裁（单位毫秒）。
     val suspiciousGapThresholdMs: Long = 200L,
     // 低于该置信度的仲裁结果一律回退为 NONE（不改动文本）。
     val confidenceThreshold: Double = 0.85,
     // 每份逐字稿最多修复次数，避免无限调用与过度修改；设置为 0 等同关闭。
-    val maxRepairsPerTranscript: Int = 0,
+    val maxRepairsPerTranscript: Int = 5,
     // 重要：LLM 仲裁 Prompt 模板（仅输入前后两行 + boundaryMark，不允许输入 raw JSON）。
     val promptTemplate: String = DEFAULT_POST_XFYUN_PROMPT_TEMPLATE,
 )

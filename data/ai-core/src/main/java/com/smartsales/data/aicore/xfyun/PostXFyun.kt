@@ -12,6 +12,7 @@ import com.smartsales.data.aicore.AiChatRequest
 import com.smartsales.data.aicore.AiChatService
 import com.smartsales.data.aicore.params.AiParaSettingsProvider
 import com.smartsales.data.aicore.params.PostXfyunSettings
+import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.withContext
@@ -40,6 +41,40 @@ data class PostXFyunRepair(
 data class PostXFyunResult(
     val polishedMarkdown: String,
     val repairs: List<PostXFyunRepair>,
+    val debugInfo: PostXFyunDebugInfo? = null,
+)
+
+data class PostXFyunDebugInfo(
+    val settings: PostXFyunSettingsDebug,
+    val suspiciousBoundaries: List<PostXFyunSuspiciousBoundary>,
+    val decisions: List<PostXFyunDecisionDebug>,
+)
+
+data class PostXFyunSettingsDebug(
+    val enabled: Boolean,
+    val maxRepairsPerTranscript: Int,
+    val suspiciousGapThresholdMs: Long,
+    val confidenceThreshold: Double,
+    val promptLength: Int,
+    val promptPreview: String,
+    val promptSha256: String? = null,
+)
+
+data class PostXFyunSuspiciousBoundary(
+    val boundaryIndex: Int,
+    val gapMs: Long,
+    val prevSpeakerId: String?,
+    val nextSpeakerId: String?,
+    val prevExcerpt: String,
+    val nextExcerpt: String,
+)
+
+data class PostXFyunDecisionDebug(
+    val boundaryIndex: Int,
+    val action: PostXFyunAction,
+    val span: String,
+    val confidence: Double,
+    val reason: String?,
 )
 
 /**
@@ -60,70 +95,101 @@ class PostXFyun @Inject constructor(
         segments: List<XfyunTranscriptSegment>,
     ): PostXFyunResult = withContext(dispatchers.io) {
         val settings = aiParaSettingsProvider.snapshot().transcription.xfyun.postXfyun
-        if (!settings.enabled || settings.maxRepairsPerTranscript <= 0) {
-            return@withContext PostXFyunResult(originalMarkdown, emptyList())
-        }
-        val bulletLines = originalMarkdown.lineSequence()
-            .filter { it.startsWith("- ") }
-            .toList()
-        if (bulletLines.size < 2 || segments.size < 2) {
-            return@withContext PostXFyunResult(originalMarkdown, emptyList())
-        }
-        // 重要：仅对“带说话人标签”的逐行转写生效；纯文本模式不做修复。
-        if (!bulletLines.first().contains("发言人")) {
-            return@withContext PostXFyunResult(originalMarkdown, emptyList())
-        }
-
-        val candidates = buildCandidates(
-            lines = bulletLines,
-            segments = segments,
-            gapThresholdMs = settings.suspiciousGapThresholdMs,
-        )
-        if (candidates.isEmpty()) {
-            return@withContext PostXFyunResult(originalMarkdown, emptyList())
-        }
-
-        val mutable = bulletLines.toMutableList()
-        val repairs = mutableListOf<PostXFyunRepair>()
-        for (candidate in candidates) {
-            if (repairs.size >= settings.maxRepairsPerTranscript) break
-            val index = candidate.boundaryIndex
-            if (index !in 0 until (mutable.size - 1)) continue
-
-            val prevLine = mutable[index]
-            val nextLine = mutable[index + 1]
-            val decision = arbitrate(
-                prevLine = prevLine,
-                nextLine = nextLine,
-                boundaryMark = candidate.boundaryMark,
-                settings = settings,
+        val settingsDebug = settings.toDebug()
+        val fallback = PostXFyunResult(
+            polishedMarkdown = originalMarkdown,
+            repairs = emptyList(),
+            debugInfo = PostXFyunDebugInfo(
+                settings = settingsDebug,
+                suspiciousBoundaries = emptyList(),
+                decisions = emptyList(),
             )
-            if (decision.action == PostXFyunAction.NONE) continue
-            if (decision.confidence < settings.confidenceThreshold) continue
+        )
+        // 重要：PostXFyun 属于“可选增强”，任何异常都必须回退原始渲染（同时保留 debug 信息用于排查）。
+        runCatching {
+            if (!settings.enabled || settings.maxRepairsPerTranscript <= 0) {
+                return@runCatching fallback
+            }
+            val bulletLines = originalMarkdown.lineSequence()
+                .filter { it.startsWith("- ") }
+                .toList()
+            if (bulletLines.size < 2 || segments.size < 2) {
+                return@runCatching fallback
+            }
+            // 重要：仅对“带说话人标签”的逐行转写生效；纯文本模式不做修复。
+            if (!bulletLines.first().contains("发言人")) {
+                return@runCatching fallback
+            }
 
-            val applied = applyDecision(
-                boundaryIndex = index,
-                prevLine = prevLine,
-                nextLine = nextLine,
-                decision = decision,
-                candidate = candidate,
-            ) ?: continue
+            val candidates = buildCandidates(
+                lines = bulletLines,
+                segments = segments,
+                gapThresholdMs = settings.suspiciousGapThresholdMs,
+            )
 
-            mutable[index] = applied.afterPrevLine
-            mutable[index + 1] = applied.afterNextLine
-            repairs += applied
-        }
+            val mutable = bulletLines.toMutableList()
+            val repairs = mutableListOf<PostXFyunRepair>()
+            val suspicious = mutableListOf<PostXFyunSuspiciousBoundary>()
+            val decisions = mutableListOf<PostXFyunDecisionDebug>()
+            for (candidate in candidates) {
+                val index = candidate.boundaryIndex
+                if (index !in 0 until (mutable.size - 1)) continue
 
-        if (repairs.isEmpty()) {
-            return@withContext PostXFyunResult(originalMarkdown, emptyList())
-        }
+                val prevLine = mutable[index]
+                val nextLine = mutable[index + 1]
+                suspicious += PostXFyunSuspiciousBoundary(
+                    boundaryIndex = index,
+                    gapMs = candidate.gapMs,
+                    prevSpeakerId = candidate.prevSpeakerId,
+                    nextSpeakerId = candidate.nextSpeakerId,
+                    prevExcerpt = excerptTail(splitLine(prevLine).text, 16),
+                    nextExcerpt = excerptHead(splitLine(nextLine).text, 16),
+                )
+                val decision = arbitrate(
+                    prevLine = prevLine,
+                    nextLine = nextLine,
+                    boundaryMark = candidate.boundaryMark,
+                    settings = settings,
+                )
+                decisions += PostXFyunDecisionDebug(
+                    boundaryIndex = index,
+                    action = decision.action,
+                    span = decision.span,
+                    confidence = decision.confidence,
+                    reason = decision.reason,
+                )
+                if (decision.action == PostXFyunAction.NONE) continue
+                if (decision.confidence < settings.confidenceThreshold) continue
+                if (repairs.size >= settings.maxRepairsPerTranscript) continue
 
-        val header = originalMarkdown.lineSequence().firstOrNull { it.startsWith("## ") } ?: "## 讯飞转写"
-        val polished = buildString {
-            appendLine(header)
-            mutable.forEach { appendLine(it) }
-        }.trimEnd()
-        PostXFyunResult(polishedMarkdown = polished, repairs = repairs)
+                val applied = applyDecision(
+                    boundaryIndex = index,
+                    prevLine = prevLine,
+                    nextLine = nextLine,
+                    decision = decision,
+                    candidate = candidate,
+                ) ?: continue
+
+                mutable[index] = applied.afterPrevLine
+                mutable[index + 1] = applied.afterNextLine
+                repairs += applied
+            }
+
+            val header = originalMarkdown.lineSequence().firstOrNull { it.startsWith("## ") } ?: "## 讯飞转写"
+            val polished = if (repairs.isEmpty()) originalMarkdown else buildString {
+                appendLine(header)
+                mutable.forEach { appendLine(it) }
+            }.trimEnd()
+            PostXFyunResult(
+                polishedMarkdown = polished,
+                repairs = repairs,
+                debugInfo = PostXFyunDebugInfo(
+                    settings = settingsDebug,
+                    suspiciousBoundaries = suspicious,
+                    decisions = decisions,
+                )
+            )
+        }.getOrElse { fallback }
     }
 
     private data class Candidate(
@@ -300,6 +366,18 @@ class PostXFyun @Inject constructor(
         return core to text.drop(core.length)
     }
 
+    private fun excerptHead(text: String, maxChars: Int): String {
+        val trimmed = text.trim()
+        if (trimmed.isBlank()) return ""
+        return trimmed.take(maxChars)
+    }
+
+    private fun excerptTail(text: String, maxChars: Int): String {
+        val trimmed = text.trim()
+        if (trimmed.isBlank()) return ""
+        return trimmed.takeLast(maxChars)
+    }
+
     private fun dedupeBoundaryPunctuation(prevText: String, nextText: String): Pair<String, String> {
         val prevCore = prevText.trimEnd()
         val nextCore = nextText.trimStart()
@@ -340,7 +418,32 @@ class PostXFyun @Inject constructor(
 
     private fun isPunctuation(ch: Char): Boolean = ch in PUNCTUATIONS
 
+    private fun PostXfyunSettings.toDebug(): PostXFyunSettingsDebug {
+        val template = promptTemplate
+        val preview = template.trim().take(PROMPT_PREVIEW_CHARS)
+        return PostXFyunSettingsDebug(
+            enabled = enabled,
+            maxRepairsPerTranscript = maxRepairsPerTranscript,
+            suspiciousGapThresholdMs = suspiciousGapThresholdMs,
+            confidenceThreshold = confidenceThreshold,
+            promptLength = template.length,
+            promptPreview = preview,
+            promptSha256 = sha256Hex(template),
+        )
+    }
+
+    private fun sha256Hex(text: String): String {
+        val bytes = MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8))
+        val sb = StringBuilder(bytes.size * 2)
+        for (b in bytes) {
+            sb.append(((b.toInt() shr 4) and 0x0F).toString(16))
+            sb.append((b.toInt() and 0x0F).toString(16))
+        }
+        return sb.toString()
+    }
+
     private companion object {
         private val PUNCTUATIONS = setOf('。', '！', '？', '!', '?', '，', ',', '、', '；', ';', '：', ':', '…')
+        private const val PROMPT_PREVIEW_CHARS = 120
     }
 }

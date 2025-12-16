@@ -34,6 +34,12 @@ data class XfyunTraceSnapshot(
     val rawPayloadSnippet: String? = null,
     // 重要：PostXFyun 的修复审计（仅内存态），用于定位“跨说话人边界分词漂移”问题。
     val postXfyunRepairs: List<PostXfyunRepair> = emptyList(),
+    // 重要：
+    // - 用于验证 PostXFyun 是否启用、是否产生可疑边界、LLM 是否总是返回 NONE，避免误判为“未生效”。
+    // - 仅保存最新一次逐字稿的调试数据（覆盖式写入），不落盘、不输出 raw HTTP JSON。
+    val postXfyunSettings: PostXfyunSettingsDebug? = null,
+    val postXfyunSuspicious: List<PostXfyunSuspiciousBoundary> = emptyList(),
+    val postXfyunDecisions: List<PostXfyunDecisionDebug> = emptyList(),
     val updatedAtMs: Long = 0L,
 ) {
     data class ResultTypeAttempt(
@@ -62,6 +68,33 @@ data class XfyunTraceSnapshot(
         val beforeNextLine: String,
         val afterPrevLine: String,
         val afterNextLine: String,
+    )
+
+    data class PostXfyunSettingsDebug(
+        val enabled: Boolean,
+        val maxRepairsPerTranscript: Int,
+        val suspiciousGapThresholdMs: Long,
+        val confidenceThreshold: Double,
+        val promptLength: Int,
+        val promptPreview: String,
+        val promptSha256: String? = null,
+    )
+
+    data class PostXfyunSuspiciousBoundary(
+        val boundaryIndex: Int,
+        val gapMs: Long,
+        val prevSpeakerId: String?,
+        val nextSpeakerId: String?,
+        val prevExcerpt: String,
+        val nextExcerpt: String,
+    )
+
+    data class PostXfyunDecisionDebug(
+        val boundaryIndex: Int,
+        val action: String,
+        val span: String,
+        val confidence: Double,
+        val reason: String?,
     )
 }
 
@@ -240,6 +273,33 @@ class XfyunTraceStore @Inject constructor() {
         }
     }
 
+    fun recordPostXfyunSettings(debug: XfyunTraceSnapshot.PostXfyunSettingsDebug) {
+        update { current ->
+            current.copy(
+                postXfyunSettings = debug,
+                updatedAtMs = System.currentTimeMillis()
+            )
+        }
+    }
+
+    fun recordPostXfyunSuspicious(boundaries: List<XfyunTraceSnapshot.PostXfyunSuspiciousBoundary>) {
+        update { current ->
+            current.copy(
+                postXfyunSuspicious = boundaries,
+                updatedAtMs = System.currentTimeMillis()
+            )
+        }
+    }
+
+    fun recordPostXfyunDecisions(decisions: List<XfyunTraceSnapshot.PostXfyunDecisionDebug>) {
+        update { current ->
+            current.copy(
+                postXfyunDecisions = decisions,
+                updatedAtMs = System.currentTimeMillis()
+            )
+        }
+    }
+
     fun getSnapshot(): XfyunTraceSnapshot? = snapshot
 
     private inline fun update(block: (XfyunTraceSnapshot) -> XfyunTraceSnapshot) {
@@ -340,6 +400,13 @@ object XfyunDebugInfoFormatter {
             appendLine("  \"uploadParams\": ${formatMap(snapshot.uploadParams)},")
             appendLine("  \"resultTypeAttempts\": ${formatResultTypeAttempts(snapshot.resultTypeAttempts)},")
             appendLine("  \"pollTimeline\": ${formatTimeline(snapshot.pollTimeline)},")
+            appendLine("  \"postXfyunSettings\": ${formatPostXfyunSettings(snapshot.postXfyunSettings)},")
+            appendLine("  \"postXfyunSuspiciousCount\": ${snapshot.postXfyunSuspicious.size},")
+            appendLine("  \"postXfyunSuspicious\": ${formatPostXfyunSuspicious(snapshot.postXfyunSuspicious)},")
+            appendLine("  \"postXfyunDecisionsCount\": ${snapshot.postXfyunDecisions.size},")
+            appendLine("  \"postXfyunDecisions\": ${formatPostXfyunDecisions(snapshot.postXfyunDecisions)},")
+            appendLine("  \"postXfyunRepairsCount\": ${snapshot.postXfyunRepairs.size},")
+            appendLine("  \"postXfyunRepairs\": ${formatPostXfyunRepairs(snapshot.postXfyunRepairs)},")
             appendLine("  \"updatedAtMs\": ${snapshot.updatedAtMs}")
             append("}")
         }
@@ -380,6 +447,81 @@ object XfyunDebugInfoFormatter {
                 append(
                     "\n    {\"tsMs\": ${entry.tsMs}, \"phase\": \"${escape(entry.phase)}\", \"resultType\": \"${escape(entry.resultType)}\", \"downgradedBecauseFailType11\": ${entry.downgradedBecauseFailType11}}$comma"
                 )
+            }
+            append("\n  ]")
+        }
+    }
+
+    private fun formatPostXfyunSettings(settings: XfyunTraceSnapshot.PostXfyunSettingsDebug?): String {
+        if (settings == null) return "null"
+        return buildString {
+            append("{")
+            append("\n    \"enabled\": ${settings.enabled},")
+            append("\n    \"maxRepairsPerTranscript\": ${settings.maxRepairsPerTranscript},")
+            append("\n    \"suspiciousGapThresholdMs\": ${settings.suspiciousGapThresholdMs},")
+            append("\n    \"confidenceThreshold\": ${settings.confidenceThreshold},")
+            append("\n    \"promptLength\": ${settings.promptLength},")
+            append("\n    \"promptPreview\": \"${escape(settings.promptPreview)}\",")
+            append("\n    \"promptSha256\": ${settings.promptSha256?.let { "\"${escape(it)}\"" } ?: "null"}")
+            append("\n  }")
+        }
+    }
+
+    private fun formatPostXfyunSuspicious(entries: List<XfyunTraceSnapshot.PostXfyunSuspiciousBoundary>): String {
+        if (entries.isEmpty()) return "[]"
+        val limited = entries.take(10)
+        return buildString {
+            append("[")
+            limited.forEachIndexed { index, entry ->
+                val comma = if (index == limited.size - 1) "" else ","
+                append(
+                    "\n    {\"boundaryIndex\": ${entry.boundaryIndex}, \"gapMs\": ${entry.gapMs}, " +
+                        "\"prevSpeakerId\": ${entry.prevSpeakerId?.let { "\"${escape(it)}\"" } ?: "null"}, " +
+                        "\"nextSpeakerId\": ${entry.nextSpeakerId?.let { "\"${escape(it)}\"" } ?: "null"}, " +
+                        "\"prevExcerpt\": \"${escape(entry.prevExcerpt)}\", \"nextExcerpt\": \"${escape(entry.nextExcerpt)}\"}$comma"
+                )
+            }
+            if (entries.size > limited.size) {
+                append("\n    {\"truncated\": true, \"shown\": ${limited.size}, \"total\": ${entries.size}}")
+            }
+            append("\n  ]")
+        }
+    }
+
+    private fun formatPostXfyunDecisions(entries: List<XfyunTraceSnapshot.PostXfyunDecisionDebug>): String {
+        if (entries.isEmpty()) return "[]"
+        val limited = entries.take(10)
+        return buildString {
+            append("[")
+            limited.forEachIndexed { index, entry ->
+                val comma = if (index == limited.size - 1) "" else ","
+                append(
+                    "\n    {\"boundaryIndex\": ${entry.boundaryIndex}, \"action\": \"${escape(entry.action)}\", " +
+                        "\"span\": \"${escape(entry.span)}\", \"confidence\": ${entry.confidence}, " +
+                        "\"reason\": ${entry.reason?.let { "\"${escape(it)}\"" } ?: "null"}}$comma"
+                )
+            }
+            if (entries.size > limited.size) {
+                append("\n    {\"truncated\": true, \"shown\": ${limited.size}, \"total\": ${entries.size}}")
+            }
+            append("\n  ]")
+        }
+    }
+
+    private fun formatPostXfyunRepairs(entries: List<XfyunTraceSnapshot.PostXfyunRepair>): String {
+        if (entries.isEmpty()) return "[]"
+        val limited = entries.take(10)
+        return buildString {
+            append("[")
+            limited.forEachIndexed { index, entry ->
+                val comma = if (index == limited.size - 1) "" else ","
+                append(
+                    "\n    {\"boundaryIndex\": ${entry.boundaryIndex}, \"action\": \"${escape(entry.action)}\", " +
+                        "\"span\": \"${escape(entry.span)}\", \"confidence\": ${entry.confidence}, \"gapMs\": ${entry.gapMs}}$comma"
+                )
+            }
+            if (entries.size > limited.size) {
+                append("\n    {\"truncated\": true, \"shown\": ${limited.size}, \"total\": ${entries.size}}")
             }
             append("\n  ]")
         }

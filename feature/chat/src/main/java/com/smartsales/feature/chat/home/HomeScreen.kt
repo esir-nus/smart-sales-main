@@ -1364,6 +1364,87 @@ private fun XfyunTraceSection(
                 }
         }
 
+        // --- PostXFyun 可观测性（设置 / 可疑边界 / 仲裁结果）---
+        trace.postXfyunSettings?.let { settings ->
+            Text(
+                text = "PostXFyun Settings",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            DebugField(label = "postXfyun.enabled", value = if (settings.enabled) "true" else "false")
+            DebugField(label = "postXfyun.maxRepairs", value = settings.maxRepairsPerTranscript.toString())
+            DebugField(label = "postXfyun.gapThresholdMs", value = settings.suspiciousGapThresholdMs.toString())
+            DebugField(label = "postXfyun.confidenceThreshold", value = settings.confidenceThreshold.toString())
+            DebugField(label = "postXfyun.promptLength", value = settings.promptLength.toString())
+            DebugField(
+                label = "postXfyun.promptPreview",
+                value = settings.promptPreview
+                    .replace("\r", "")
+                    .replace("\n", "\\n")
+                    .ifBlank { "-" }
+            )
+            DebugField(label = "postXfyun.promptSha256", value = settings.promptSha256 ?: "-")
+        }
+
+        if (trace.postXfyunSuspicious.isNotEmpty()) {
+            Text(
+                text = "PostXFyun Suspicious Boundaries (${trace.postXfyunSuspicious.size})",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            trace.postXfyunSuspicious.take(10).forEach { item ->
+                val speakers = listOfNotNull(item.prevSpeakerId, item.nextSpeakerId).joinToString("→").ifBlank { "-" }
+                Text(
+                    text = "- #${item.boundaryIndex} gap=${item.gapMs}ms spk=$speakers prev=\"${item.prevExcerpt}\" next=\"${item.nextExcerpt}\"",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            if (trace.postXfyunSuspicious.size > 10) {
+                Text(
+                    text = "…已截断，仅展示前 10 条",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            Text(
+                text = "PostXFyun Suspicious Boundaries (0)",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        if (trace.postXfyunDecisions.isNotEmpty()) {
+            Text(
+                text = "PostXFyun Arbitration Decisions (${trace.postXfyunDecisions.size})",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            trace.postXfyunDecisions.take(10).forEach { item ->
+                Text(
+                    text = "- #${item.boundaryIndex} ${item.action} span=\"${item.span}\" conf=${item.confidence} reason=${item.reason ?: "-"}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            if (trace.postXfyunDecisions.size > 10) {
+                Text(
+                    text = "…已截断，仅展示前 10 条",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            Text(
+                text = "PostXFyun Arbitration Decisions (0)",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        DebugField(label = "postXfyun.repairsCount", value = trace.postXfyunRepairs.size.toString())
+
         // 重要：HUD 不展示任何 raw JSON 响应片段；排查请以本地 raw dump 文件为准。
     }
 

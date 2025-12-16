@@ -158,6 +158,48 @@ class PostXFyunTest {
     }
 
     @Test
+    fun `debug info is populated even when LLM returns NONE`() = runTest(dispatcher) {
+        val service = FakeArbitrationService(
+            json = """{"action":"NONE","span":"","confidence":0.99,"reason":"无需修复"}"""
+        )
+        val template = "TEMPLATE-XYZ"
+        val post = PostXFyun(
+            dispatchers = dispatchers,
+            aiChatService = service,
+            aiParaSettingsProvider = provider(
+                PostXfyunSettings(
+                    enabled = true,
+                    maxRepairsPerTranscript = 1,
+                    confidenceThreshold = 0.8,
+                    suspiciousGapThresholdMs = 200L,
+                    promptTemplate = template,
+                )
+            )
+        )
+        val markdown = """
+            ## 讯飞转写
+            - 发言人 1：好的罗
+            - 发言人 2：总我们继续
+        """.trimIndent()
+        val segments = listOf(
+            XfyunTranscriptSegment(roleId = "1", startMs = 0, endMs = 1000, text = "好的罗"),
+            XfyunTranscriptSegment(roleId = "2", startMs = 1100, endMs = 2000, text = "总我们继续"),
+        )
+
+        val result = post.polish(markdown, segments)
+
+        assertEquals(markdown, result.polishedMarkdown)
+        assertTrue(result.repairs.isEmpty())
+
+        val debug = requireNotNull(result.debugInfo)
+        assertEquals(template.length, debug.settings.promptLength)
+        assertTrue(debug.settings.promptPreview.startsWith("TEMPLATE-"))
+        assertEquals(1, debug.suspiciousBoundaries.size)
+        assertEquals(1, debug.decisions.size)
+        assertEquals(PostXFyunAction.NONE, debug.decisions.first().action)
+    }
+
+    @Test
     fun `invalid span or low confidence must fallback to NONE`() = runTest(dispatcher) {
         val service = FakeArbitrationService(
             json = """{"action":"MOVE_HEAD_TO_PREV","span":"X","confidence":0.2,"reason":"低置信度"}"""

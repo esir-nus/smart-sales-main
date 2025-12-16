@@ -207,6 +207,7 @@ class XfyunAsrCoordinator @Inject constructor(
             when (status) {
                 4 -> {
                     val parsed = parser.parseTranscript(result.orderResult)
+                    // 重要：用于验证 PostXFyun 是否启用/是否产生可疑边界/LLM 是否总是返回 NONE，避免误判为“未生效”。
                     val postResult = runCatching {
                         postXFyun.polish(
                             originalMarkdown = parsed.markdown,
@@ -215,6 +216,42 @@ class XfyunAsrCoordinator @Inject constructor(
                     }.getOrElse {
                         // 重要：后处理属于“可选增强”，任何失败都必须回退原始渲染，不影响主流程。
                         PostXFyunResult(polishedMarkdown = parsed.markdown, repairs = emptyList())
+                    }
+                    postResult.debugInfo?.let { debugInfo ->
+                        traceStore.recordPostXfyunSettings(
+                            XfyunTraceSnapshot.PostXfyunSettingsDebug(
+                                enabled = debugInfo.settings.enabled,
+                                maxRepairsPerTranscript = debugInfo.settings.maxRepairsPerTranscript,
+                                suspiciousGapThresholdMs = debugInfo.settings.suspiciousGapThresholdMs,
+                                confidenceThreshold = debugInfo.settings.confidenceThreshold,
+                                promptLength = debugInfo.settings.promptLength,
+                                promptPreview = debugInfo.settings.promptPreview,
+                                promptSha256 = debugInfo.settings.promptSha256,
+                            )
+                        )
+                        traceStore.recordPostXfyunSuspicious(
+                            debugInfo.suspiciousBoundaries.map { boundary ->
+                                XfyunTraceSnapshot.PostXfyunSuspiciousBoundary(
+                                    boundaryIndex = boundary.boundaryIndex,
+                                    gapMs = boundary.gapMs,
+                                    prevSpeakerId = boundary.prevSpeakerId,
+                                    nextSpeakerId = boundary.nextSpeakerId,
+                                    prevExcerpt = boundary.prevExcerpt,
+                                    nextExcerpt = boundary.nextExcerpt,
+                                )
+                            }
+                        )
+                        traceStore.recordPostXfyunDecisions(
+                            debugInfo.decisions.map { decision ->
+                                XfyunTraceSnapshot.PostXfyunDecisionDebug(
+                                    boundaryIndex = decision.boundaryIndex,
+                                    action = decision.action.name,
+                                    span = decision.span,
+                                    confidence = decision.confidence,
+                                    reason = decision.reason,
+                                )
+                            }
+                        )
                     }
                     if (postResult.repairs.isNotEmpty()) {
                         val mapped = postResult.repairs.map { repair ->

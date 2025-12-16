@@ -124,6 +124,40 @@ class PostXFyunTest {
     }
 
     @Test
+    fun `same speaker boundary is eligible when gap within threshold`() = runTest(dispatcher) {
+        val service = FakeArbitrationService(
+            json = """{"action":"MOVE_HEAD_TO_PREV","span":"总","confidence":0.92,"reason":"同说话人也可能切分漂移"}"""
+        )
+        val post = PostXFyun(
+            dispatchers = dispatchers,
+            aiChatService = service,
+            aiParaSettingsProvider = provider(
+                PostXfyunSettings(
+                    enabled = true,
+                    maxRepairsPerTranscript = 3,
+                    confidenceThreshold = 0.8,
+                    suspiciousGapThresholdMs = 200L,
+                )
+            )
+        )
+        val markdown = """
+            ## 讯飞转写
+            - 发言人 1：好的罗
+            - 发言人 1：总我们继续
+        """.trimIndent()
+        val segments = listOf(
+            XfyunTranscriptSegment(roleId = "1", startMs = 0, endMs = 1000, text = "好的罗"),
+            XfyunTranscriptSegment(roleId = "1", startMs = 1100, endMs = 2000, text = "总我们继续"),
+        )
+
+        val result = post.polish(markdown, segments)
+
+        assertTrue(result.polishedMarkdown.contains("- 发言人 1：好的罗总"))
+        assertTrue(result.polishedMarkdown.contains("- 发言人 1：我们继续"))
+        assertEquals(1, result.repairs.size)
+    }
+
+    @Test
     fun `invalid span or low confidence must fallback to NONE`() = runTest(dispatcher) {
         val service = FakeArbitrationService(
             json = """{"action":"MOVE_HEAD_TO_PREV","span":"X","confidence":0.2,"reason":"低置信度"}"""
@@ -183,4 +217,3 @@ class PostXFyunTest {
         }
     }
 }
-

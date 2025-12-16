@@ -145,18 +145,19 @@ class PostXFyun @Inject constructor(
         for (i in 0 until (limit - 1)) {
             val prevSeg = segments[i]
             val nextSeg = segments[i + 1]
-            val prevSpeaker = prevSeg.roleId?.trim()
-            val nextSpeaker = nextSeg.roleId?.trim()
-            if (prevSpeaker.isNullOrBlank() || nextSpeaker.isNullOrBlank()) continue
-            if (prevSpeaker == nextSpeaker) continue
             val gapMs = computeGapMs(prevSeg.endMs, nextSeg.startMs) ?: continue
             if (gapMs > gapThresholdMs) continue
 
-            val prevText = splitLine(lines[i]).text
-            val nextText = splitLine(lines[i + 1]).text
-            if (!looksLikeSplitTokenDrift(prevText, nextText, gapMs)) continue
-
-            val mark = "gapMs=$gapMs, prevSpeaker=$prevSpeaker, nextSpeaker=$nextSpeaker"
+            // 重要：候选边界只用 gap 阈值来确定（确定性、可复现），是否需要修复交给 LLM 做封闭动作仲裁。
+            // - 不区分同/不同说话人：同说话人也可能出现轻微切分漂移。
+            // - 不做字形/标点/英文数字启发式：避免规则过拟合导致“该修不修 / 不该修乱修”的不可控。
+            val prevSpeaker = prevSeg.roleId?.trim()?.takeIf { it.isNotBlank() }
+            val nextSpeaker = nextSeg.roleId?.trim()?.takeIf { it.isNotBlank() }
+            val mark = buildString {
+                append("〔suspicious〕 gapMs=").append(gapMs)
+                append(", prevSpeaker=").append(prevSpeaker ?: "?")
+                append(", nextSpeaker=").append(nextSpeaker ?: "?")
+            }
             result += Candidate(
                 boundaryIndex = i,
                 gapMs = gapMs,
@@ -172,32 +173,6 @@ class PostXFyun @Inject constructor(
         val end = prevEndMs ?: return null
         val start = nextStartMs ?: return null
         return (start - end).coerceAtLeast(0L)
-    }
-
-    private fun looksLikeSplitTokenDrift(prevTextRaw: String, nextTextRaw: String, gapMs: Long): Boolean {
-        // 重要：gap-based + token-shape 的确定性筛选，宁可多标记一些，再交给 LLM 做封闭动作仲裁。
-        if (gapMs < 0) return false
-        val prev = prevTextRaw.trimEnd()
-        val next = nextTextRaw.trimStart()
-        if (prev.isBlank() || next.isBlank()) return false
-
-        val prevLast = prev.last()
-        val nextFirst = next.first()
-        if (!isWordish(prevLast) || !isWordish(nextFirst)) return false
-        if (isTerminalPunctuation(prevLast) || isLeadingPunctuation(nextFirst)) return false
-
-        val alnumTail = prev.takeLastWhile { it.isLetterOrDigit() }
-        val prevHasShortAlnumTail = alnumTail.length in 1..2
-        val nextStartsWithAlnum = nextFirst.isLetterOrDigit()
-        val nextStartsWithCjk = isCjk(nextFirst)
-        val prevEndsWithCjk = isCjk(prevLast)
-
-        // “续写特征”：
-        // - prev 尾部是 1~2 位字母数字（6/d、A1/B2）；
-        // - 或 prev/next 都是“字母数字/中文”，且 gap 极小（跨说话人边界像同一句被切开）。
-        return prevHasShortAlnumTail ||
-            nextStartsWithAlnum ||
-            (prevEndsWithCjk && nextStartsWithCjk)
     }
 
     private data class Decision(
@@ -363,26 +338,9 @@ class PostXFyun @Inject constructor(
     private fun JsonObject.getDouble(key: String): Double? =
         get(key)?.takeIf { it.isJsonPrimitive }?.asDouble
 
-    private fun isWordish(ch: Char): Boolean = ch.isLetterOrDigit() || isCjk(ch)
-
-    private fun isCjk(ch: Char): Boolean {
-        val block = Character.UnicodeBlock.of(ch)
-        return block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS ||
-            block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A ||
-            block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_B ||
-            block == Character.UnicodeBlock.CJK_COMPATIBILITY_IDEOGRAPHS
-    }
-
     private fun isPunctuation(ch: Char): Boolean = ch in PUNCTUATIONS
-
-    private fun isTerminalPunctuation(ch: Char): Boolean = ch in TERMINAL_PUNCTUATIONS
-
-    private fun isLeadingPunctuation(ch: Char): Boolean = ch in LEADING_PUNCTUATIONS
 
     private companion object {
         private val PUNCTUATIONS = setOf('。', '！', '？', '!', '?', '，', ',', '、', '；', ';', '：', ':', '…')
-        private val TERMINAL_PUNCTUATIONS = setOf('。', '！', '？', '!', '?', '…')
-        private val LEADING_PUNCTUATIONS = setOf('。', '！', '？', '!', '?', '，', ',', '、', '；', ';', '：', ':', '…')
     }
 }
-

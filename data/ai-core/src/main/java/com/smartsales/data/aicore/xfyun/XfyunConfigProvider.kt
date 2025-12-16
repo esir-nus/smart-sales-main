@@ -5,14 +5,20 @@
 package com.smartsales.data.aicore.xfyun
 
 import com.smartsales.data.aicore.BuildConfig
+import com.smartsales.data.aicore.params.AiParaSettingsProvider
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class XfyunConfigProvider @Inject constructor() {
+class XfyunConfigProvider @Inject constructor(
+    private val aiParaSettingsProvider: AiParaSettingsProvider,
+) {
 
     fun credentials(): XfyunCredentials {
-        val baseUrl = BuildConfig.XFYUN_BASE_URL.takeIf { it.isNotBlank() } ?: DEFAULT_BASE_URL
+        val overrideBaseUrl = aiParaSettingsProvider.snapshot().xfyunBaseUrlOverride.trim()
+        val baseUrl = overrideBaseUrl.takeIf { it.isNotBlank() }
+            ?: BuildConfig.XFYUN_BASE_URL.takeIf { it.isNotBlank() }
+            ?: DEFAULT_BASE_URL
         return XfyunCredentials(
             appId = BuildConfig.XFYUN_APP_ID,
             accessKeyId = BuildConfig.XFYUN_ACCESS_KEY_ID,
@@ -25,4 +31,3 @@ class XfyunConfigProvider @Inject constructor() {
         const val DEFAULT_BASE_URL: String = "https://office-api-ist-dx.iflyaisol.com"
     }
 }
-

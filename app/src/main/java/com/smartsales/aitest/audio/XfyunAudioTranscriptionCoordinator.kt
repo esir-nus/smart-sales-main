@@ -9,6 +9,7 @@ import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.AiCoreErrorReason
 import com.smartsales.data.aicore.AiCoreErrorSource
 import com.smartsales.data.aicore.AiCoreException
+import com.smartsales.data.aicore.params.AiParaSettingsProvider
 import com.smartsales.data.aicore.xfyun.XfyunAsrCoordinator
 import com.smartsales.data.aicore.xfyun.XfyunAsrJobState
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.map
 @Singleton
 class XfyunAudioTranscriptionCoordinator @Inject constructor(
     private val xfyunAsrCoordinator: XfyunAsrCoordinator,
+    private val aiParaSettingsProvider: AiParaSettingsProvider,
 ) : AudioTranscriptionCoordinator {
 
     private val pendingUploads = ConcurrentHashMap<String, PendingUpload>()
@@ -68,13 +70,15 @@ class XfyunAudioTranscriptionCoordinator @Inject constructor(
                 )
             )
 
-        // 重要：roleType=1 表示开启“通用角色分离”，对应本项目 diarization 目标。
+        // 重要：转写参数以 AiParaSettings 为唯一来源，避免多处硬编码导致“看起来开了但实际没生效”。
+        val settings = aiParaSettingsProvider.snapshot()
         return xfyunAsrCoordinator.submitTranscription(
             file = pending.file,
             language = language,
-            roleType = ROLE_TYPE_GENERIC_DIARIZATION,
-            roleNum = ROLE_NUM_UNKNOWN,
-            durationMs = pending.durationMs
+            roleType = settings.xfyunRoleType,
+            roleNum = settings.xfyunRoleNum,
+            engSmoothproc = settings.xfyunEngSmoothproc,
+            durationMs = pending.durationMs,
         )
     }
 
@@ -117,8 +121,5 @@ class XfyunAudioTranscriptionCoordinator @Inject constructor(
 
     private companion object {
         private val SUPPORTED_EXTENSIONS = setOf("wav", "mp3")
-        private const val ROLE_TYPE_GENERIC_DIARIZATION = 1
-        private const val ROLE_NUM_UNKNOWN = 0
     }
 }
-

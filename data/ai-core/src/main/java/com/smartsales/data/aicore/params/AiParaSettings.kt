@@ -4,21 +4,60 @@
 // 作者：创建于 2025-12-13
 package com.smartsales.data.aicore.params
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 import javax.inject.Singleton
 
 data class AiParaSettingsSnapshot(
     val tingwu: TingwuSettings = TingwuSettings(),
-    val dashScope: DashScopeSettings = DashScopeSettings()
+    val dashScope: DashScopeSettings = DashScopeSettings(),
+    // 转写相关运行时开关（MVP：内存态，可被测试壳实时修改）
+    val transcriptionProvider: String = TRANSCRIPTION_PROVIDER_XFYUN,
+    val xfyunRoleType: Int = 1,
+    val xfyunRoleNum: Int = 0,
+    val xfyunEngSmoothproc: Boolean = true,
+    val xfyunBaseUrlOverride: String = "",
+    // 预留：当前仅支持 SIGNATURE，后续如需 token 再扩展
+    val xfyunAuthMode: String = XFYUN_AUTH_MODE_SIGNATURE,
 )
 
 interface AiParaSettingsProvider {
     fun snapshot(): AiParaSettingsSnapshot
 }
 
+/**
+ * 说明：
+ * - MVP：仅内存态，满足运行时切换与单元测试。
+ * - 后续如需持久化，再替换为 DataStore/SharedPreferences 实现。
+ */
+interface AiParaSettingsRepository {
+    val flow: StateFlow<AiParaSettingsSnapshot>
+    fun snapshot(): AiParaSettingsSnapshot
+    fun update(transform: (AiParaSettingsSnapshot) -> AiParaSettingsSnapshot)
+}
+
 @Singleton
-class DefaultAiParaSettingsProvider @Inject constructor() : AiParaSettingsProvider {
-    override fun snapshot(): AiParaSettingsSnapshot = AiParaSettingsSnapshot()
+class InMemoryAiParaSettingsRepository @Inject constructor() : AiParaSettingsRepository {
+    private val state = MutableStateFlow(AiParaSettingsSnapshot())
+
+    override val flow: StateFlow<AiParaSettingsSnapshot> = state.asStateFlow()
+
+    override fun snapshot(): AiParaSettingsSnapshot = state.value
+
+    override fun update(transform: (AiParaSettingsSnapshot) -> AiParaSettingsSnapshot) {
+        // 重要：以原子方式更新快照，避免并发写入丢失。
+        state.update(transform)
+    }
+}
+
+@Singleton
+class DefaultAiParaSettingsProvider @Inject constructor(
+    private val repository: AiParaSettingsRepository,
+) : AiParaSettingsProvider {
+    override fun snapshot(): AiParaSettingsSnapshot = repository.snapshot()
 }
 
 data class TingwuSettings(
@@ -84,3 +123,9 @@ data class DashScopeSettings(
     val temperature: Double = 0.3,
     val incrementalOutput: Boolean = true
 )
+
+// 重要：该常量位于 :data:ai-core，避免依赖 app 层 enum。
+const val TRANSCRIPTION_PROVIDER_XFYUN: String = "XFYUN"
+const val TRANSCRIPTION_PROVIDER_TINGWU: String = "TINGWU"
+
+const val XFYUN_AUTH_MODE_SIGNATURE: String = "SIGNATURE"

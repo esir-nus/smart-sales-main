@@ -83,6 +83,7 @@ class XfyunAsrApi @Inject constructor(
         language: String,
         roleType: Int,
         roleNum: Int,
+        engSmoothproc: Boolean,
         resultType: String,
         durationMs: Long?,
         signatureRandom: String,
@@ -99,6 +100,7 @@ class XfyunAsrApi @Inject constructor(
                 language = language,
                 roleType = roleType,
                 roleNum = roleNum,
+                engSmoothproc = engSmoothproc,
                 resultType = resultType,
                 durationMs = durationMs,
                 signatureRandom = signatureRandom,
@@ -324,6 +326,7 @@ class XfyunAsrApi @Inject constructor(
         language: String,
         roleType: Int,
         roleNum: Int,
+        engSmoothproc: Boolean,
         resultType: String,
         durationMs: Long?,
         signatureRandom: String,
@@ -344,8 +347,8 @@ class XfyunAsrApi @Inject constructor(
             "roleType" to roleType.toString(),
             "roleNum" to roleNum.toString(),
             "resultType" to resultType,
-            // 顺滑开关：明确传 true，避免不同账号/默认值差异导致分句体验不一致（需参与签名）
-            "eng_smoothproc" to "true",
+            // 顺滑开关：需参与签名；开关值以调用方传入为准（来自 AiParaSettings）。
+            "eng_smoothproc" to if (engSmoothproc) "true" else "false",
         )
         durationMs?.takeIf { it > 0 }?.let { params["duration"] = it.toString() }
 

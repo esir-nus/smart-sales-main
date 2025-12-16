@@ -57,6 +57,7 @@ class XfyunAsrCoordinator @Inject constructor(
         language: String,
         roleType: Int,
         roleNum: Int,
+        engSmoothproc: Boolean,
         durationMs: Long?,
     ): Result<String> = withContext(dispatchers.io) {
         val credentials = configProvider.credentials()
@@ -81,6 +82,7 @@ class XfyunAsrCoordinator @Inject constructor(
                 language = normalizedLanguage,
                 roleType = roleType,
                 roleNum = roleNum,
+                engSmoothproc = engSmoothproc,
                 resultType = context.resultType,
                 durationMs = durationMs,
                 signatureRandom = signatureRandom,

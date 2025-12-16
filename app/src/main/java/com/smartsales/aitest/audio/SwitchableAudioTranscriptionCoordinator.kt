@@ -5,10 +5,13 @@
 package com.smartsales.aitest.audio
 
 import com.smartsales.core.util.Result
+import com.smartsales.data.aicore.params.AiParaSettingsProvider
+import com.smartsales.data.aicore.params.TRANSCRIPTION_PROVIDER_TINGWU
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
 import java.io.File
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -17,6 +20,7 @@ import kotlinx.coroutines.flow.Flow
 class SwitchableAudioTranscriptionCoordinator @Inject constructor(
     private val tingwuDelegate: DefaultAudioTranscriptionCoordinator,
     private val xfyunDelegate: XfyunAudioTranscriptionCoordinator,
+    private val aiParaSettingsProvider: AiParaSettingsProvider,
 ) : AudioTranscriptionCoordinator {
 
     override suspend fun uploadAudio(file: File): Result<AudioUploadPayload> =
@@ -38,9 +42,8 @@ class SwitchableAudioTranscriptionCoordinator @Inject constructor(
         delegate().observeJob(jobId)
 
     private fun delegate(): AudioTranscriptionCoordinator =
-        when (TranscriptionProviderSettings.current) {
-            TranscriptionProvider.TINGWU -> tingwuDelegate
-            TranscriptionProvider.XFYUN -> xfyunDelegate
+        when (aiParaSettingsProvider.snapshot().transcriptionProvider.trim().uppercase(Locale.US)) {
+            TRANSCRIPTION_PROVIDER_TINGWU -> tingwuDelegate
+            else -> xfyunDelegate
         }
 }
-

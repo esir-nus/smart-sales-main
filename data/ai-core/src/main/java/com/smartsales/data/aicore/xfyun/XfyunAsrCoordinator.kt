@@ -10,6 +10,7 @@ import com.smartsales.data.aicore.AiCoreErrorReason
 import com.smartsales.data.aicore.AiCoreErrorSource
 import com.smartsales.data.aicore.AiCoreException
 import com.smartsales.data.aicore.AiCoreLogger
+import com.smartsales.data.aicore.debug.XfyunTraceSnapshot
 import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.data.aicore.params.AiParaSettingsProvider
 import java.io.File
@@ -50,6 +51,7 @@ class XfyunAsrCoordinator @Inject constructor(
     private val parser: XfyunOrderResultParser,
     private val traceStore: XfyunTraceStore,
     private val aiParaSettingsProvider: AiParaSettingsProvider,
+    private val postXFyun: PostXFyun,
 ) {
 
     private val jobContextByOrderId = ConcurrentHashMap<String, JobContext>()
@@ -204,7 +206,35 @@ class XfyunAsrCoordinator @Inject constructor(
             val status = result.status
             when (status) {
                 4 -> {
-                    val markdown = parser.toTranscriptMarkdown(result.orderResult)
+                    val parsed = parser.parseTranscript(result.orderResult)
+                    val postResult = runCatching {
+                        postXFyun.polish(
+                            originalMarkdown = parsed.markdown,
+                            segments = parsed.segments,
+                        )
+                    }.getOrElse {
+                        // 重要：后处理属于“可选增强”，任何失败都必须回退原始渲染，不影响主流程。
+                        PostXFyunResult(polishedMarkdown = parsed.markdown, repairs = emptyList())
+                    }
+                    if (postResult.repairs.isNotEmpty()) {
+                        val mapped = postResult.repairs.map { repair ->
+                            XfyunTraceSnapshot.PostXfyunRepair(
+                                boundaryIndex = repair.boundaryIndex,
+                                action = repair.action.name,
+                                span = repair.span,
+                                confidence = repair.confidence,
+                                gapMs = repair.gapMs,
+                                prevSpeakerId = repair.prevSpeakerId,
+                                nextSpeakerId = repair.nextSpeakerId,
+                                beforePrevLine = repair.beforePrevLine,
+                                beforeNextLine = repair.beforeNextLine,
+                                afterPrevLine = repair.afterPrevLine,
+                                afterNextLine = repair.afterNextLine,
+                            )
+                        }
+                        traceStore.recordPostXfyunRepairs(mapped)
+                    }
+                    val markdown = postResult.polishedMarkdown
                     // 重要：用于 HUD 判断是否返回了 rl（说话人标签）
                     traceStore.recordSuccess(
                         resultHasRoleLabels = markdown.contains("- 发言人 ")

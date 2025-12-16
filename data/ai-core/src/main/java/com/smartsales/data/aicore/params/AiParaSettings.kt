@@ -41,7 +41,49 @@ data class XfyunAsrSettings(
     val result: XfyunResultSettings = XfyunResultSettings(),
     // 能力开关：默认全部关闭，避免误触发 failType=11。
     val capabilities: XfyunCapabilities = XfyunCapabilities(),
+    // 重要：讯飞转写后处理（跨说话人边界分词漂移修复），默认关闭，避免“看起来变好了但引入不可控改写”。
+    val postXfyun: PostXfyunSettings = PostXfyunSettings(),
 )
+
+/**
+ * 说明：PostXFyun 的运行时配置（MVP：内存态，可被测试壳实时修改）。
+ *
+ * 重要：
+ * - Prompt 必须可调：便于不同账号/口音/场景下快速试验而不改代码。
+ * - 仲裁输出必须是“封闭动作 JSON”，禁止自由改写，避免引入不可追溯的文本变化。
+ */
+data class PostXfyunSettings(
+    val enabled: Boolean = false,
+    // 判定可疑边界：gapMs <= threshold 才会触发仲裁（单位毫秒）。
+    val suspiciousGapThresholdMs: Long = 200L,
+    // 低于该置信度的仲裁结果一律回退为 NONE（不改动文本）。
+    val confidenceThreshold: Double = 0.85,
+    // 每份逐字稿最多修复次数，避免无限调用与过度修改；设置为 0 等同关闭。
+    val maxRepairsPerTranscript: Int = 0,
+    // 重要：LLM 仲裁 Prompt 模板（仅输入前后两行 + boundaryMark，不允许输入 raw JSON）。
+    val promptTemplate: String = DEFAULT_POST_XFYUN_PROMPT_TEMPLATE,
+)
+
+private val DEFAULT_POST_XFYUN_PROMPT_TEMPLATE: String = """
+你是“转写边界修复”仲裁器。你必须只输出严格 JSON（不能有任何多余文字、不能使用 Markdown 代码块）。
+
+输入：
+- prev_line: {{PREV_LINE}}
+- next_line: {{NEXT_LINE}}
+- boundary: {{BOUNDARY_MARK}}
+
+任务：
+判断这两行在“说话人切换处”是否发生了 1~2 个字符的分词漂移（例如：罗/总、为/什、6/d）。
+你只能选择一个封闭动作，不允许改写句子，不允许新增/删除除 span 以外的任何字符。
+
+输出（必须是纯 JSON 对象）：
+{
+  "action": "NONE|MOVE_TAIL_TO_NEXT|MOVE_HEAD_TO_PREV",
+  "span": "当 action 为 MOVE_* 时，必须给出 1~2 个字符；否则给空字符串",
+  "confidence": 0.0,
+  "reason": "不超过 30 个字"
+}
+""".trimIndent()
 
 /**
  * 说明：/v2/upload 的可控参数（排除密钥/签名）。

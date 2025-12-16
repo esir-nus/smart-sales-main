@@ -32,6 +32,8 @@ data class XfyunTraceSnapshot(
     val lastFailType: Int? = null,
     val lastFailDesc: String? = null,
     val rawPayloadSnippet: String? = null,
+    // 重要：PostXFyun 的修复审计（仅内存态），用于定位“跨说话人边界分词漂移”问题。
+    val postXfyunRepairs: List<PostXfyunRepair> = emptyList(),
     val updatedAtMs: Long = 0L,
 ) {
     data class ResultTypeAttempt(
@@ -46,6 +48,20 @@ data class XfyunTraceSnapshot(
         val status: Int?,
         val failType: Int?,
         val httpCode: Int? = null,
+    )
+
+    data class PostXfyunRepair(
+        val boundaryIndex: Int,
+        val action: String,
+        val span: String,
+        val confidence: Double,
+        val gapMs: Long,
+        val prevSpeakerId: String?,
+        val nextSpeakerId: String?,
+        val beforePrevLine: String,
+        val beforeNextLine: String,
+        val afterPrevLine: String,
+        val afterNextLine: String,
     )
 }
 
@@ -209,6 +225,16 @@ class XfyunTraceStore @Inject constructor() {
         update { current ->
             current.copy(
                 resultHasRoleLabels = resultHasRoleLabels,
+                updatedAtMs = System.currentTimeMillis()
+            )
+        }
+    }
+
+    fun recordPostXfyunRepairs(repairs: List<XfyunTraceSnapshot.PostXfyunRepair>) {
+        update { current ->
+            // 重要：仅保存最近一份逐字稿的修复记录；由 PostXFyunSettings.maxRepairsPerTranscript 保证数量上限。
+            current.copy(
+                postXfyunRepairs = repairs,
                 updatedAtMs = System.currentTimeMillis()
             )
         }

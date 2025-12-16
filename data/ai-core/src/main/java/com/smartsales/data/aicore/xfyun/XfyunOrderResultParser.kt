@@ -11,23 +11,47 @@ import com.google.gson.JsonParser
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private val NUMBER_REGEX = Regex("-?\\d+")
+
 @Singleton
 class XfyunOrderResultParser @Inject constructor() {
 
-    fun toTranscriptMarkdown(orderResult: String?): String {
+    data class XfyunParsedTranscript(
+        val markdown: String,
+        val segments: List<XfyunTranscriptSegment>,
+        val hasRole: Boolean,
+    )
+
+    /**
+     * 说明：解析讯飞 orderResult，返回（1）用于展示的 Markdown，（2）用于后处理的最小段元数据。
+     * 重要：段元数据仅包含 roleId/startMs/endMs/text，不包含 raw JSON，便于后续做安全的确定性处理。
+     */
+    fun parseTranscript(orderResult: String?): XfyunParsedTranscript {
         val raw = orderResult?.trim().orEmpty()
         if (raw.isBlank() || raw == "{}") {
-            return "## 讯飞转写\n暂无内容"
+            return XfyunParsedTranscript(
+                markdown = "## 讯飞转写\n暂无内容",
+                segments = emptyList(),
+                hasRole = false,
+            )
         }
-        val root = parseJsonObject(raw) ?: parseJsonObject(raw.replace("\\\\", "\\")) ?: return "## 讯飞转写\n解析失败"
+        val root = parseJsonObject(raw) ?: parseJsonObject(raw.replace("\\\\", "\\")) ?: return XfyunParsedTranscript(
+            markdown = "## 讯飞转写\n解析失败",
+            segments = emptyList(),
+            hasRole = false,
+        )
         val lattice = root.getAsJsonArray("lattice") ?: root.getAsJsonArray("lattice2") ?: JsonArray()
         val segments = buildSegments(lattice)
         if (segments.isEmpty()) {
-            return "## 讯飞转写\n暂无内容"
+            return XfyunParsedTranscript(
+                markdown = "## 讯飞转写\n暂无内容",
+                segments = emptyList(),
+                hasRole = false,
+            )
         }
         val hasRole = segments.any { !it.roleId.isNullOrBlank() }
         val header = "## 讯飞转写"
-        return if (hasRole) {
+        val markdown = if (hasRole) {
             buildString {
                 appendLine(header)
                 segments.forEach { seg ->
@@ -42,10 +66,19 @@ class XfyunOrderResultParser @Inject constructor() {
             val text = segments.joinToString(separator = "") { it.text }.trim()
             if (text.isBlank()) "$header\n暂无内容" else "$header\n$text"
         }
+        return XfyunParsedTranscript(
+            markdown = markdown,
+            segments = segments,
+            hasRole = hasRole,
+        )
     }
 
-    private fun buildSegments(lattice: JsonArray): List<TranscriptSegment> {
-        val result = mutableListOf<TranscriptSegment>()
+    fun toTranscriptMarkdown(orderResult: String?): String {
+        return parseTranscript(orderResult).markdown
+    }
+
+    private fun buildSegments(lattice: JsonArray): List<XfyunTranscriptSegment> {
+        val result = mutableListOf<XfyunTranscriptSegment>()
         for (item in lattice) {
             val obj = item.asJsonObjectOrNull() ?: continue
             val jsonBest = obj.getPrimitiveString("json_1best") ?: continue
@@ -56,7 +89,7 @@ class XfyunOrderResultParser @Inject constructor() {
             val endMs = parseFirstLong(st.getPrimitiveString("ed"))
             val text = extractText(st)
             if (text.isNotBlank()) {
-                result += TranscriptSegment(
+                result += XfyunTranscriptSegment(
                     roleId = roleId,
                     startMs = startMs,
                     endMs = endMs,
@@ -104,14 +137,14 @@ class XfyunOrderResultParser @Inject constructor() {
         return if (element.isJsonPrimitive) element.asString else null
     }
 
-    private data class TranscriptSegment(
-        val roleId: String?,
-        val startMs: Long?,
-        val endMs: Long?,
-        val text: String,
-    )
-
-    private companion object {
-        private val NUMBER_REGEX = Regex("-?\\d+")
-    }
 }
+
+/**
+ * 说明：讯飞转写的最小段模型（用于后处理与 gap 计算）。
+ */
+data class XfyunTranscriptSegment(
+    val roleId: String?,
+    val startMs: Long?,
+    val endMs: Long?,
+    val text: String,
+)

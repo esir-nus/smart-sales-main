@@ -344,6 +344,8 @@ class XfyunAsrApi @Inject constructor(
             "roleType" to roleType.toString(),
             "roleNum" to roleNum.toString(),
             "resultType" to resultType,
+            // 顺滑开关：明确传 true，避免不同账号/默认值差异导致分句体验不一致（需参与签名）
+            "eng_smoothproc" to "true",
         )
         durationMs?.takeIf { it > 0 }?.let { params["duration"] = it.toString() }
 

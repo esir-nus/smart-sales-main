@@ -24,6 +24,7 @@ class XfyunTraceStoreTest {
                 "accessKeySecret" to "should-not-store",
                 "fileName" to "demo.wav",
                 "resultType" to "transfer",
+                "eng_smoothproc" to "true",
             ),
             roleType = 1,
             roleNum = 0,
@@ -37,6 +38,7 @@ class XfyunTraceStoreTest {
         assertFalse(params.containsKey("signature"))
         assertFalse(params.containsKey("accessKeySecret"))
         assertEquals("transfer", params["resultType"])
+        assertEquals("true", params["eng_smoothproc"])
         assertTrue(snapshot.resultTypeAttempts.any { it.phase == "upload" && it.resultType == "transfer" })
     }
 

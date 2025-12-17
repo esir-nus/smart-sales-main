@@ -63,6 +63,8 @@ data class PostXfyunSettings(
     // - 重要：该值同时限制 LLM 仲裁调用次数（即使一直返回 NONE 也会停止），避免 58+ 次无意义调用。
     // - 设置为 0 等同关闭。
     val maxRepairsPerTranscript: Int = 0,
+    // MOVE_* 决策允许的 span 最大字符数（仍需严格匹配边界子串）；用于防止一次移动过长导致文本“整体漂移”。
+    val maxSpanChars: Int = 20,
     // 仲裁模型覆盖（例如：qwen-max3 / qwen-max / qwen-plus）；为空则使用默认模型配置。
     val model: String = "",
     // 重要：LLM 仲裁 Prompt 模板（仅输入前后两行 + boundaryMark，不允许输入 raw JSON）。

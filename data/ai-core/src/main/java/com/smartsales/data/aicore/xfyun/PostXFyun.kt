@@ -344,11 +344,11 @@ class PostXFyun @Inject constructor(
             null
         }
         val modelUsed = (result as? Result.Success)?.data?.modelUsed
-        val parsed = parseStrictDecision(response)
+        val parsed = parseStrictDecision(response, maxSpanChars = settings.maxSpanChars)
         return parsed.copy(rawResponsePreview = preview, modelUsed = modelUsed)
     }
 
-    private fun parseStrictDecision(raw: String): Decision {
+    private fun parseStrictDecision(raw: String, maxSpanChars: Int): Decision {
         // 重要：严格模式——必须是“纯 JSON 对象”，任何前后缀都视为违约并回退 NONE。
         val trimmed = raw.trim()
         val (payload, strippedFence) = stripMarkdownFencesIfPresent(trimmed)
@@ -403,7 +403,9 @@ class PostXFyun @Inject constructor(
                 parseStatus = okStatus
             )
         }
-        if (span.length !in 1..2 || span.any { it.isWhitespace() }) {
+        // 重要：允许短语级 span，但必须在上限内（并且后续仍会做“边界严格匹配”，不允许改写）。
+        val maxAllowed = maxSpanChars.coerceAtLeast(1)
+        if (span.length !in 1..maxAllowed || span.any { it.isWhitespace() }) {
             return Decision(
                 PostXFyunAction.NONE,
                 span = "",

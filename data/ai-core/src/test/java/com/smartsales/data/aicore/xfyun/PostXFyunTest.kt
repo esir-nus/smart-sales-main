@@ -507,6 +507,117 @@ class PostXFyunTest {
         assertTrue(result.repairs.isEmpty())
     }
 
+    @Test
+    fun `phrase span is accepted and applied when within maxSpanChars`() = runTest(dispatcher) {
+        val service = FakeArbitrationService(
+            json = """{"action":"MOVE_HEAD_TO_PREV","span":"什么车？","confidence":0.95,"reason":"句子被切半"}"""
+        )
+        val post = PostXFyun(
+            dispatchers = dispatchers,
+            aiChatService = service,
+            aiParaSettingsProvider = provider(
+                PostXfyunSettings(
+                    enabled = true,
+                    maxRepairsPerTranscript = 3,
+                    confidenceThreshold = 0.8,
+                    suspiciousGapThresholdMs = 200L,
+                    maxSpanChars = 20,
+                )
+            )
+        )
+        val markdown = """
+            ## 讯飞转写
+            - 发言人 1：在路虎能买。
+            - 发言人 2：什么车？您好罗总欢迎来到捷豹路虎
+        """.trimIndent()
+        val segments = listOf(
+            XfyunTranscriptSegment(roleId = "1", startMs = 0, endMs = 1000, text = "在路虎能买。"),
+            XfyunTranscriptSegment(roleId = "2", startMs = 1050, endMs = 2000, text = "什么车？您好罗总欢迎来到捷豹路虎"),
+        )
+
+        val result = post.polish(markdown, segments)
+
+        assertTrue(result.polishedMarkdown.contains("- 发言人 1：在路虎能买。什么车？"))
+        assertTrue(result.polishedMarkdown.contains("- 发言人 2：您好罗总欢迎来到捷豹路虎"))
+        assertEquals(1, result.repairs.size)
+        assertEquals(PostXFyunAction.MOVE_HEAD_TO_PREV, result.repairs.first().action)
+    }
+
+    @Test
+    fun `phrase span is rejected as bad-span when maxSpanChars is small`() = runTest(dispatcher) {
+        val service = FakeArbitrationService(
+            json = """{"action":"MOVE_HEAD_TO_PREV","span":"什么车？","confidence":0.95,"reason":"句子被切半"}"""
+        )
+        val post = PostXFyun(
+            dispatchers = dispatchers,
+            aiChatService = service,
+            aiParaSettingsProvider = provider(
+                PostXfyunSettings(
+                    enabled = true,
+                    maxRepairsPerTranscript = 3,
+                    confidenceThreshold = 0.8,
+                    suspiciousGapThresholdMs = 200L,
+                    maxSpanChars = 2,
+                )
+            )
+        )
+        val markdown = """
+            ## 讯飞转写
+            - 发言人 1：在路虎能买。
+            - 发言人 2：什么车？您好罗总欢迎来到捷豹路虎
+        """.trimIndent()
+        val segments = listOf(
+            XfyunTranscriptSegment(roleId = "1", startMs = 0, endMs = 1000, text = "在路虎能买。"),
+            XfyunTranscriptSegment(roleId = "2", startMs = 1050, endMs = 2000, text = "什么车？您好罗总欢迎来到捷豹路虎"),
+        )
+
+        val result = post.polish(markdown, segments)
+
+        assertEquals(markdown, result.polishedMarkdown)
+        assertTrue(result.repairs.isEmpty())
+        val debug = requireNotNull(result.debugInfo)
+        assertEquals(1, debug.decisions.size)
+        assertEquals("bad-span", debug.decisions.first().reason)
+        assertEquals(PostXFyunAction.NONE, debug.decisions.first().action)
+    }
+
+    @Test
+    fun `accepted span still must match boundary to apply`() = runTest(dispatcher) {
+        val service = FakeArbitrationService(
+            json = """{"action":"MOVE_HEAD_TO_PREV","span":"您好","confidence":0.95,"reason":"测试不匹配"}"""
+        )
+        val post = PostXFyun(
+            dispatchers = dispatchers,
+            aiChatService = service,
+            aiParaSettingsProvider = provider(
+                PostXfyunSettings(
+                    enabled = true,
+                    maxRepairsPerTranscript = 3,
+                    confidenceThreshold = 0.8,
+                    suspiciousGapThresholdMs = 200L,
+                    maxSpanChars = 20,
+                )
+            )
+        )
+        val markdown = """
+            ## 讯飞转写
+            - 发言人 1：在路虎能买。
+            - 发言人 2：什么车？您好罗总欢迎来到捷豹路虎
+        """.trimIndent()
+        val segments = listOf(
+            XfyunTranscriptSegment(roleId = "1", startMs = 0, endMs = 1000, text = "在路虎能买。"),
+            XfyunTranscriptSegment(roleId = "2", startMs = 1050, endMs = 2000, text = "什么车？您好罗总欢迎来到捷豹路虎"),
+        )
+
+        val result = post.polish(markdown, segments)
+
+        // 说明：span 合法但不在边界起始处，确定性校验会阻止修复。
+        assertEquals(markdown, result.polishedMarkdown)
+        assertTrue(result.repairs.isEmpty())
+        val debug = requireNotNull(result.debugInfo)
+        assertEquals(PostXFyunAction.MOVE_HEAD_TO_PREV, debug.decisions.first().action)
+    }
+
     private fun provider(settings: PostXfyunSettings): AiParaSettingsProvider {
         return object : AiParaSettingsProvider {
             override fun snapshot(): AiParaSettingsSnapshot {

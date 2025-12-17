@@ -1334,7 +1334,7 @@ private fun XfyunTraceSection(
         val lastValue = "http=${trace.lastHttpCode ?: "-"}, failType=${trace.lastFailType ?: "-"}"
         KeyValueRow(label = "last", value = lastValue, copyValue = lastValue)
         val postEnabledValue = trace.postXfyunSettings?.let { s ->
-            "enabled=${s.enabled}, model=${s.modelEffective.ifBlank { "-" }}"
+            "enabled=${s.enabled}, model=${s.modelEffective.ifBlank { "-" }}, maxSpan=${s.maxSpanChars}"
         } ?: "enabled=false, model=-"
         KeyValueRow(label = "postXfyun", value = postEnabledValue, copyValue = postEnabledValue)
         val postStatsValue = "suspicious=${trace.postXfyunSuspicious.size}, attempts=${trace.postXfyunArbitrationsAttempted}/${trace.postXfyunArbitrationBudget}, repairs=${trace.postXfyunRepairsApplied}"

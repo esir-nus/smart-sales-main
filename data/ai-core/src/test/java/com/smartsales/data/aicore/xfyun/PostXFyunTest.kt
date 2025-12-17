@@ -521,24 +521,24 @@ class PostXFyunTest {
                     maxRepairsPerTranscript = 3,
                     confidenceThreshold = 0.8,
                     suspiciousGapThresholdMs = 200L,
-                    maxSpanChars = 20,
+                    maxSpanChars = 24,
                 )
             )
         )
         val markdown = """
             ## 讯飞转写
-            - 发言人 1：在路虎能买。
-            - 发言人 2：什么车？您好罗总欢迎来到捷豹路虎
+            - 发言人 1：在路虎能买
+            - 发言人 2：什么车？您好罗总欢迎来到捷豹路虎，
         """.trimIndent()
         val segments = listOf(
-            XfyunTranscriptSegment(roleId = "1", startMs = 0, endMs = 1000, text = "在路虎能买。"),
-            XfyunTranscriptSegment(roleId = "2", startMs = 1050, endMs = 2000, text = "什么车？您好罗总欢迎来到捷豹路虎"),
+            XfyunTranscriptSegment(roleId = "1", startMs = 0, endMs = 1000, text = "在路虎能买"),
+            XfyunTranscriptSegment(roleId = "2", startMs = 1050, endMs = 2000, text = "什么车？您好罗总欢迎来到捷豹路虎，"),
         )
 
         val result = post.polish(markdown, segments)
 
-        assertTrue(result.polishedMarkdown.contains("- 发言人 1：在路虎能买。什么车？"))
-        assertTrue(result.polishedMarkdown.contains("- 发言人 2：您好罗总欢迎来到捷豹路虎"))
+        assertTrue(result.polishedMarkdown.contains("- 发言人 1：在路虎能买什么车？"))
+        assertTrue(result.polishedMarkdown.contains("- 发言人 2：您好罗总欢迎来到捷豹路虎，"))
         assertEquals(1, result.repairs.size)
         assertEquals(PostXFyunAction.MOVE_HEAD_TO_PREV, result.repairs.first().action)
     }
@@ -563,12 +563,12 @@ class PostXFyunTest {
         )
         val markdown = """
             ## 讯飞转写
-            - 发言人 1：在路虎能买。
-            - 发言人 2：什么车？您好罗总欢迎来到捷豹路虎
+            - 发言人 1：在路虎能买
+            - 发言人 2：什么车？您好罗总欢迎来到捷豹路虎，
         """.trimIndent()
         val segments = listOf(
-            XfyunTranscriptSegment(roleId = "1", startMs = 0, endMs = 1000, text = "在路虎能买。"),
-            XfyunTranscriptSegment(roleId = "2", startMs = 1050, endMs = 2000, text = "什么车？您好罗总欢迎来到捷豹路虎"),
+            XfyunTranscriptSegment(roleId = "1", startMs = 0, endMs = 1000, text = "在路虎能买"),
+            XfyunTranscriptSegment(roleId = "2", startMs = 1050, endMs = 2000, text = "什么车？您好罗总欢迎来到捷豹路虎，"),
         )
 
         val result = post.polish(markdown, segments)
@@ -578,6 +578,7 @@ class PostXFyunTest {
         val debug = requireNotNull(result.debugInfo)
         assertEquals(1, debug.decisions.size)
         assertEquals("bad-span", debug.decisions.first().reason)
+        assertTrue(debug.decisions.first().errorHint?.startsWith("span-length>") == true)
         assertEquals(PostXFyunAction.NONE, debug.decisions.first().action)
     }
 
@@ -595,18 +596,18 @@ class PostXFyunTest {
                     maxRepairsPerTranscript = 3,
                     confidenceThreshold = 0.8,
                     suspiciousGapThresholdMs = 200L,
-                    maxSpanChars = 20,
+                    maxSpanChars = 24,
                 )
             )
         )
         val markdown = """
             ## 讯飞转写
-            - 发言人 1：在路虎能买。
-            - 发言人 2：什么车？您好罗总欢迎来到捷豹路虎
+            - 发言人 1：在路虎能买
+            - 发言人 2：什么车？您好罗总欢迎来到捷豹路虎，
         """.trimIndent()
         val segments = listOf(
-            XfyunTranscriptSegment(roleId = "1", startMs = 0, endMs = 1000, text = "在路虎能买。"),
-            XfyunTranscriptSegment(roleId = "2", startMs = 1050, endMs = 2000, text = "什么车？您好罗总欢迎来到捷豹路虎"),
+            XfyunTranscriptSegment(roleId = "1", startMs = 0, endMs = 1000, text = "在路虎能买"),
+            XfyunTranscriptSegment(roleId = "2", startMs = 1050, endMs = 2000, text = "什么车？您好罗总欢迎来到捷豹路虎，"),
         )
 
         val result = post.polish(markdown, segments)
@@ -616,6 +617,7 @@ class PostXFyunTest {
         assertTrue(result.repairs.isEmpty())
         val debug = requireNotNull(result.debugInfo)
         assertEquals(PostXFyunAction.MOVE_HEAD_TO_PREV, debug.decisions.first().action)
+        assertEquals("span-not-at-boundary", debug.decisions.first().errorHint)
     }
 
     private fun provider(settings: PostXfyunSettings): AiParaSettingsProvider {

@@ -59,6 +59,7 @@ data class PostXFyunSettingsDebug(
     val maxRepairsPerTranscript: Int,
     val suspiciousGapThresholdMs: Long,
     val confidenceThreshold: Double,
+    val maxSpanChars: Int,
     val modelEffective: String,
     val promptLength: Int,
     val promptPreview: String,
@@ -197,6 +198,12 @@ class PostXFyun @Inject constructor(
                 )
                 val attemptIndex = arbitrationsAttempted
                 arbitrationsAttempted += 1
+                val boundaryHint = resolveBoundaryMismatchHint(
+                    decision = decision,
+                    prevLine = prevLine,
+                    nextLine = nextLine,
+                )
+                val errorHint = decision.errorHint ?: boundaryHint
                 decisions += PostXFyunDecisionDebug(
                     attemptIndex = attemptIndex,
                     boundaryIndex = index,
@@ -212,7 +219,7 @@ class PostXFyun @Inject constructor(
                     reason = decision.reason,
                     rawResponsePreview = decision.rawResponsePreview,
                     parseStatus = decision.parseStatus.name,
-                    errorHint = decision.errorHint,
+                    errorHint = errorHint,
                 )
                 if (decision.action == PostXFyunAction.NONE) continue
                 if (decision.confidence < settings.confidenceThreshold) continue
@@ -404,17 +411,50 @@ class PostXFyun @Inject constructor(
             )
         }
         // 重要：允许短语级 span，但必须在上限内（并且后续仍会做“边界严格匹配”，不允许改写）。
-        val maxAllowed = maxSpanChars.coerceAtLeast(1)
-        if (span.length !in 1..maxAllowed || span.any { it.isWhitespace() }) {
+        val maxAllowed = maxSpanChars.coerceIn(1, 200)
+        if (span.isBlank()) {
             return Decision(
                 PostXFyunAction.NONE,
                 span = "",
                 confidence = 0.0,
                 reason = "bad-span",
-                parseStatus = okStatus
+                parseStatus = okStatus,
+                errorHint = "span-blank",
+            )
+        }
+        if (span.length !in 1..maxAllowed) {
+            return Decision(
+                PostXFyunAction.NONE,
+                span = "",
+                confidence = 0.0,
+                reason = "bad-span",
+                parseStatus = okStatus,
+                errorHint = "span-length>${maxAllowed}",
             )
         }
         return Decision(action = action, span = span, confidence = confidence, reason = reason, parseStatus = okStatus)
+    }
+
+    private fun resolveBoundaryMismatchHint(
+        decision: Decision,
+        prevLine: String,
+        nextLine: String,
+    ): String? {
+        if (decision.action == PostXFyunAction.NONE) return null
+        if (decision.span.isBlank()) return null
+        val prevText = splitLine(prevLine).text
+        val nextText = splitLine(nextLine).text
+        return when (decision.action) {
+            PostXFyunAction.MOVE_HEAD_TO_PREV -> {
+                val (_, nextCore) = splitLeadingWhitespace(nextText)
+                if (nextCore.startsWith(decision.span)) null else "span-not-at-boundary"
+            }
+            PostXFyunAction.MOVE_TAIL_TO_NEXT -> {
+                val (prevCore, _) = splitTrailingWhitespace(prevText)
+                if (prevCore.endsWith(decision.span)) null else "span-not-at-boundary"
+            }
+            PostXFyunAction.NONE -> null
+        }
     }
 
     private fun stripMarkdownFencesIfPresent(raw: String): Pair<String, Boolean> {
@@ -565,6 +605,7 @@ class PostXFyun @Inject constructor(
             maxRepairsPerTranscript = maxRepairsPerTranscript,
             suspiciousGapThresholdMs = suspiciousGapThresholdMs,
             confidenceThreshold = confidenceThreshold,
+            maxSpanChars = maxSpanChars,
             modelEffective = modelEffective,
             promptLength = template.length,
             promptPreview = preview,

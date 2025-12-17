@@ -64,8 +64,8 @@ data class PostXfyunSettings(
     // - 设置为 0 等同关闭。
     val maxRepairsPerTranscript: Int = 0,
     // MOVE_* 决策允许的 span 最大字符数（仍需严格匹配边界子串）；用于防止一次移动过长导致文本“整体漂移”。
-    val maxSpanChars: Int = 20,
-    // 仲裁模型覆盖（例如：qwen-max3 / qwen-max / qwen-plus）；为空则使用默认模型配置。
+    val maxSpanChars: Int = 24,
+    // 仲裁模型覆盖（例如：qwen3-max / qwen-max / qwen-plus）；为空则使用默认模型配置。
     val model: String = "",
     // 重要：LLM 仲裁 Prompt 模板（仅输入前后两行 + boundaryMark，不允许输入 raw JSON）。
     val promptTemplate: String = DEFAULT_POST_XFYUN_PROMPT_TEMPLATE,
@@ -81,13 +81,13 @@ private val DEFAULT_POST_XFYUN_PROMPT_TEMPLATE: String = """
 
 任务：
 prev_line 末尾可能包含标记：〔/suspicious〕。该标记仅用于提示“这里是一个短 gap 的可疑边界”，不属于原文内容。
-请重点观察标记前后的 1~2 个字符是否应该跨边界移动（例如：罗/总、为/什、6/d）。
+请重点观察标记前后是否存在“被切半”的连续片段，必要时把一段连续 span 跨边界移动（例如：罗/总、为/什、6/d、什么车？）。
 你只能选择一个封闭动作，不允许改写句子，不允许新增/删除除 span 以外的任何字符。
 
 输出（必须是纯 JSON 对象）：
 {
   "action": "NONE|MOVE_TAIL_TO_NEXT|MOVE_HEAD_TO_PREV",
-  "span": "当 action 为 MOVE_* 时，必须给出 1~2 个字符；否则给空字符串",
+  "span": "当 action 为 MOVE_* 时，必须给出 1~24 个字符（以 maxSpanChars 为准）；否则给空字符串",
   "confidence": 0.0,
   "reason": "不超过 30 个字"
 }

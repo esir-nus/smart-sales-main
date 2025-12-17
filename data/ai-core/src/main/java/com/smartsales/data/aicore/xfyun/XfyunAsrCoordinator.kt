@@ -231,6 +231,7 @@ class XfyunAsrCoordinator @Inject constructor(
                                 maxRepairsPerTranscript = debugInfo.settings.maxRepairsPerTranscript,
                                 suspiciousGapThresholdMs = debugInfo.settings.suspiciousGapThresholdMs,
                                 confidenceThreshold = debugInfo.settings.confidenceThreshold,
+                                maxSpanChars = debugInfo.settings.maxSpanChars,
                                 modelEffective = debugInfo.settings.modelEffective,
                                 promptLength = debugInfo.settings.promptLength,
                                 promptPreview = debugInfo.settings.promptPreview,

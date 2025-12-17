@@ -83,6 +83,7 @@ data class XfyunTraceSnapshot(
         val maxRepairsPerTranscript: Int,
         val suspiciousGapThresholdMs: Long,
         val confidenceThreshold: Double,
+        val maxSpanChars: Int,
         val modelEffective: String,
         val promptLength: Int,
         val promptPreview: String,

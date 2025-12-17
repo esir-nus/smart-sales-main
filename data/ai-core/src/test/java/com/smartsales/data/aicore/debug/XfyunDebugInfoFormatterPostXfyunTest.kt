@@ -20,6 +20,7 @@ class XfyunDebugInfoFormatterPostXfyunTest {
                 maxRepairsPerTranscript = 2,
                 suspiciousGapThresholdMs = 200,
                 confidenceThreshold = 0.85,
+                maxSpanChars = 24,
                 modelEffective = "qwen-max3",
                 promptLength = 12,
                 promptPreview = "TEMPLATE-XYZ",

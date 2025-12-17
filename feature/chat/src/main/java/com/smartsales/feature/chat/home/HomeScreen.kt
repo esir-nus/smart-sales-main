@@ -1230,6 +1230,43 @@ private fun XfyunTraceSection(
 ) {
     val context = LocalContext.current
     var confirmShare by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
+
+    @Composable
+    fun KeyValueRow(
+        label: String,
+        value: String,
+        copyValue: String = value,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(0.32f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = value.ifBlank { "-" },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(0.54f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            TextButton(
+                onClick = { onCopy(copyValue) },
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+            ) {
+                Text(text = "复制")
+            }
+        }
+    }
 
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -1248,31 +1285,7 @@ private fun XfyunTraceSection(
                 TextButton(onClick = onRefresh) { Text(text = "刷新") }
                 if (trace != null) {
                     TextButton(onClick = { onCopy(XfyunDebugInfoFormatter.format(trace)) }) {
-                        Text(text = "复制")
-                    }
-                    TextButton(
-                        onClick = {
-                            val text = trace.postXfyunOriginalMarkdown
-                            if (text.isNullOrBlank()) {
-                                Toast.makeText(context, "暂无原始转写可复制", Toast.LENGTH_SHORT).show()
-                                return@TextButton
-                            }
-                            onCopy(text)
-                        }
-                    ) {
-                        Text(text = "复制原始转写")
-                    }
-                    TextButton(
-                        onClick = {
-                            val text = trace.postXfyunPolishedMarkdown
-                            if (text.isNullOrBlank()) {
-                                Toast.makeText(context, "暂无后处理转写可复制", Toast.LENGTH_SHORT).show()
-                                return@TextButton
-                            }
-                            onCopy(text)
-                        }
-                    ) {
-                        Text(text = "复制后转写")
+                        Text(text = "复制摘要")
                     }
                     val rawDumpPath = trace.rawDumpPath
                     if (!rawDumpPath.isNullOrBlank()) {
@@ -1286,7 +1299,7 @@ private fun XfyunTraceSection(
                                 confirmShare = true
                             }
                         ) {
-                            Text(text = "分享")
+                            Text(text = "分享 dump")
                         }
                     }
                 }
@@ -1301,195 +1314,165 @@ private fun XfyunTraceSection(
             return
         }
 
-        DebugField(label = "provider", value = trace.provider)
-        DebugField(label = "baseUrl", value = trace.baseUrl.ifBlank { "-" })
-        DebugField(label = "orderId", value = trace.orderId ?: "-")
-        DebugField(
+        // --- Compact key-value grid (max 8 rows) ---
+        KeyValueRow(
+            label = "orderId",
+            value = trace.orderId ?: "-",
+            copyValue = trace.orderId ?: "",
+        )
+        val rawDumpValue = trace.rawDumpPath?.let { path ->
+            val bytes = trace.rawDumpBytes?.toString() ?: "-"
+            "$path (${bytes} bytes)"
+        } ?: "-"
+        KeyValueRow(
             label = "rawDump",
-            value = trace.rawDumpPath?.let { path ->
-                val bytes = trace.rawDumpBytes?.toString() ?: "-"
-                "$path (${bytes} bytes)"
-            } ?: "-"
+            value = rawDumpValue,
+            copyValue = rawDumpValue,
         )
-        trace.rawDumpSavedAtMs?.takeIf { it > 0 }?.let { savedAt ->
-            DebugField(label = "rawDumpSavedAt", value = formatMillis(savedAt))
-        }
-        DebugField(label = "resultType(当前)", value = trace.resultType ?: "-")
-        DebugField(
-            label = "降级重试",
-            value = if (trace.downgradedBecauseFailType11) "是（failType=11→transfer）" else "否"
-        )
-        DebugField(label = "roleType", value = trace.roleType?.toString() ?: "-")
-        DebugField(label = "roleNum", value = trace.roleNum?.toString() ?: "-")
-        DebugField(
-            label = "角色分离",
-            value = if (trace.roleType == 1) "已开启(roleType=1)" else "未开启(roleType=${trace.roleType ?: 0})"
-        )
-        trace.resultHasRoleLabels?.let { hasRole ->
-            DebugField(label = "结果含 rl", value = if (hasRole) "是" else "否")
-        }
+        val pollValue = "count=${trace.pollCount}, elapsedMs=${trace.elapsedMs}"
+        KeyValueRow(label = "poll", value = pollValue, copyValue = pollValue)
+        val lastValue = "http=${trace.lastHttpCode ?: "-"}, failType=${trace.lastFailType ?: "-"}"
+        KeyValueRow(label = "last", value = lastValue, copyValue = lastValue)
+        val postEnabledValue = trace.postXfyunSettings?.let { s ->
+            "enabled=${s.enabled}, model=${s.modelEffective.ifBlank { "-" }}"
+        } ?: "enabled=false, model=-"
+        KeyValueRow(label = "postXfyun", value = postEnabledValue, copyValue = postEnabledValue)
+        val postStatsValue = "suspicious=${trace.postXfyunSuspicious.size}, attempts=${trace.postXfyunArbitrationsAttempted}/${trace.postXfyunArbitrationBudget}, repairs=${trace.postXfyunRepairsApplied}"
+        KeyValueRow(label = "postXfyun.stats", value = postStatsValue, copyValue = postStatsValue)
 
-        DebugField(label = "pollCount", value = trace.pollCount.toString())
-        DebugField(label = "elapsed", value = formatElapsed(trace.elapsedMs))
-        DebugField(label = "lastHttpCode", value = trace.lastHttpCode?.toString() ?: "-")
-        trace.lastErrorCode?.let { DebugField(label = "lastErrorCode", value = it) }
-        trace.lastFailType?.let { DebugField(label = "lastFailType", value = it.toString()) }
-        trace.lastFailDesc?.let { DebugField(label = "lastFailDesc", value = it) }
-        XfyunFailTypeHints.hint(trace.lastFailType, trace.resultType)?.let { hint ->
+        // --- Copy actions ---
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
-                text = hint,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        if (trace.resultTypeAttempts.isNotEmpty()) {
-            Text(
-                text = "resultType 尝试（最近）",
+                text = "复制操作",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            trace.resultTypeAttempts
-                .asReversed()
-                .take(6)
-                .forEach { entry ->
-                    val suffix = if (entry.downgradedBecauseFailType11) " (downgrade)" else ""
+            Spacer(modifier = Modifier.weight(1f))
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            TextButton(
+                onClick = {
+                    val text = trace.postXfyunOriginalMarkdown
+                    if (text.isNullOrBlank()) {
+                        Toast.makeText(context, "暂无原始转写可复制", Toast.LENGTH_SHORT).show()
+                        return@TextButton
+                    }
+                    onCopy(text)
+                }
+            ) { Text(text = "复制原始转写") }
+            TextButton(
+                onClick = {
+                    val text = trace.postXfyunPolishedMarkdown
+                    if (text.isNullOrBlank()) {
+                        Toast.makeText(context, "暂无后转写可复制", Toast.LENGTH_SHORT).show()
+                        return@TextButton
+                    }
+                    onCopy(text)
+                }
+            ) { Text(text = "复制后转写") }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            TextButton(
+                onClick = {
+                    val text = buildString {
+                        appendLine("PostXFyun 仲裁样本（前 3）")
+                        trace.postXfyunDecisions.take(3).forEach { item ->
+                            appendLine(
+                                "- [${item.attemptIndex}] boundaryIndex=${item.boundaryIndex} gapMs=${item.gapMs} " +
+                                    "action=${item.action} span=\"${item.span}\" confidence=${item.confidence} " +
+                                    "parseStatus=${item.parseStatus} modelUsed=${item.modelUsed ?: "null"}"
+                            )
+                            item.rawResponsePreview?.let { preview ->
+                                val capped = preview.take(200)
+                                appendLine("  rawResponsePreview=$capped")
+                            }
+                        }
+                    }.trimEnd()
+                    onCopy(text)
+                }
+            ) { Text(text = "复制仲裁样本") }
+            TextButton(
+                onClick = {
+                    val text = buildString {
+                        appendLine("PostXFyun 可疑边界样本（前 10）")
+                        trace.postXfyunSuspicious.take(10).forEach { item ->
+                            val prev = item.prevSpeakerId?.let { "\"$it\"" } ?: "null"
+                            val next = item.nextSpeakerId?.let { "\"$it\"" } ?: "null"
+                            appendLine(
+                                "- boundaryIndex=${item.boundaryIndex} gapMs=${item.gapMs} prevSpeakerId=$prev nextSpeakerId=$next " +
+                                    "prevExcerpt=\"${item.prevExcerpt}\" nextExcerpt=\"${item.nextExcerpt}\""
+                            )
+                        }
+                    }.trimEnd()
+                    onCopy(text)
+                }
+            ) { Text(text = "复制可疑边界样本") }
+        }
+
+        // --- Expand details ---
+        TextButton(
+            onClick = { expanded = !expanded },
+            contentPadding = PaddingValues(horizontal = 0.dp),
+        ) {
+            Text(text = if (expanded) "收起详情" else "展开详情")
+        }
+        if (expanded) {
+            if (trace.postXfyunSuspicious.isNotEmpty()) {
+                Text(
+                    text = "可疑边界（Top 10）",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                trace.postXfyunSuspicious.take(10).forEach { item ->
+                    val prev = item.prevSpeakerId?.let { "\"$it\"" } ?: "null"
+                    val next = item.nextSpeakerId?.let { "\"$it\"" } ?: "null"
                     Text(
-                        text = "- ${formatMillis(entry.tsMs)} ${entry.phase}: ${entry.resultType}$suffix",
+                        text = "- #${item.boundaryIndex} gapMs=${item.gapMs} prev=$prev next=$next prev=\"${item.prevExcerpt}\" next=\"${item.nextExcerpt}\"",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-        }
-
-        if (trace.uploadParams.isNotEmpty()) {
-            DebugJsonBlock(
-                label = "upload 参数（已脱敏）",
-                json = formatParams(trace.uploadParams),
-                onCopy = onCopy
-            )
-        }
-
-        if (trace.pollTimeline.isNotEmpty()) {
-            Text(
-                text = "轮询时间线（最近）",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            trace.pollTimeline
-                .takeLast(10)
-                .asReversed()
-                .forEach { entry ->
+            }
+            if (trace.postXfyunDecisions.isNotEmpty()) {
+                Text(
+                    text = "仲裁结果（Top 10）",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                trace.postXfyunDecisions.take(10).forEach { item ->
                     Text(
-                        text = "- ${formatMillis(entry.tsMs)} status=${entry.status ?: "-"} failType=${entry.failType ?: "-"} http=${entry.httpCode ?: "-"}",
+                        text = "- [${item.attemptIndex}] #${item.boundaryIndex} gapMs=${item.gapMs} ${item.action} span=\"${item.span}\" conf=${item.confidence} parse=${item.parseStatus} model=${item.modelUsed ?: "-"}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-        }
-
-        // --- PostXFyun 可观测性（设置 / 可疑边界 / 仲裁结果）---
-        trace.postXfyunSettings?.let { settings ->
-            Text(
-                text = "PostXFyun Settings",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            DebugField(label = "postXfyun.enabled", value = if (settings.enabled) "true" else "false")
-            DebugField(label = "postXfyun.maxRepairs", value = settings.maxRepairsPerTranscript.toString())
-            DebugField(label = "postXfyun.gapThresholdMs", value = settings.suspiciousGapThresholdMs.toString())
-            DebugField(label = "postXfyun.confidenceThreshold", value = settings.confidenceThreshold.toString())
-            DebugField(label = "postXfyun.modelEffective", value = settings.modelEffective.ifBlank { "-" })
-            DebugField(label = "postXfyun.promptLength", value = settings.promptLength.toString())
-            DebugField(
-                label = "postXfyun.promptPreview",
-                value = settings.promptPreview
-                    .replace("\r", "")
-                    .replace("\n", "\\n")
-                    .ifBlank { "-" }
-            )
-            DebugField(label = "postXfyun.promptSha256", value = settings.promptSha256 ?: "-")
-            DebugField(label = "postXfyun.candidatesCount", value = trace.postXfyunCandidatesCount.toString())
-            DebugField(label = "postXfyun.arbitrationsAttempted", value = trace.postXfyunArbitrationsAttempted.toString())
-            DebugField(label = "postXfyun.arbitrationBudget", value = trace.postXfyunArbitrationBudget.toString())
-            DebugField(label = "postXfyun.repairsApplied", value = trace.postXfyunRepairsApplied.toString())
-        }
-
-        if (trace.postXfyunSuspicious.isNotEmpty()) {
-            Text(
-                text = "PostXFyun Suspicious Boundaries (${trace.postXfyunSuspicious.size})",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            trace.postXfyunSuspicious.take(10).forEach { item ->
-                val prev = item.prevSpeakerId?.let { "\"$it\"" } ?: "null"
-                val next = item.nextSpeakerId?.let { "\"$it\"" } ?: "null"
-                Text(
-                    text = "- #${item.boundaryIndex} gapMs=${item.gapMs} prev=$prev next=$next prev=\"${item.prevExcerpt}\" next=\"${item.nextExcerpt}\"",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
             }
-            if (trace.postXfyunSuspicious.size > 10) {
+            if (trace.postXfyunRepairs.isNotEmpty()) {
                 Text(
-                    text = "…已截断，仅展示前 10 条",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = "修复记录（Top 10）",
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-        } else {
-            Text(
-                text = "PostXFyun Suspicious Boundaries (0)",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        if (trace.postXfyunDecisions.isNotEmpty()) {
-            Text(
-                text = "PostXFyun Arbitration Decisions (${trace.postXfyunDecisions.size})",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            trace.postXfyunDecisions.take(10).forEach { item ->
-                Text(
-                    text = "- [${item.attemptIndex}] #${item.boundaryIndex} ${item.action} span=\"${item.span}\" conf=${item.confidence} parse=${item.parseStatus} model=${item.modelUsed ?: "-"}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                item.errorHint?.takeIf { it.isNotBlank() }?.let { hint ->
+                trace.postXfyunRepairs.take(10).forEach { item ->
                     Text(
-                        text = "  hint: $hint",
+                        text = "- #${item.boundaryIndex} ${item.action} span=\"${item.span}\" conf=${item.confidence} gapMs=${item.gapMs}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                item.rawResponsePreview?.takeIf { it.isNotBlank() }?.let { preview ->
-                    Text(
-                        text = "  LLM raw: $preview",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
-            if (trace.postXfyunDecisions.size > 10) {
-                Text(
-                    text = "…已截断，仅展示前 10 条",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            Text(
-                text = "PostXFyun Arbitration Decisions (0)",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // 重要：HUD 不展示任何 XFyun raw HTTP JSON 响应体；排查请以本地 raw dump 文件为准。
         }
-
-        DebugField(label = "postXfyun.repairsCount", value = trace.postXfyunRepairs.size.toString())
-
-        // 重要：HUD 不展示任何 raw JSON 响应片段；排查请以本地 raw dump 文件为准。
     }
 
     if (trace != null && confirmShare) {

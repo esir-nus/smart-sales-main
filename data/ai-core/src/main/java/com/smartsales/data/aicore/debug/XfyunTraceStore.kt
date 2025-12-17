@@ -428,39 +428,29 @@ class XfyunTraceStore @Inject constructor() {
 object XfyunDebugInfoFormatter {
     fun format(snapshot: XfyunTraceSnapshot?): String {
         if (snapshot == null) return "暂无 XFyun 调试信息"
+        // 重要：复制摘要只输出关键字段与计数，不输出任何大段列表或 raw HTTP JSON。
+        val postEnabled = snapshot.postXfyunSettings?.enabled ?: false
+        val postModelEffective = snapshot.postXfyunSettings?.modelEffective
         return buildString {
             appendLine("{")
-            appendLine("  \"provider\": \"${snapshot.provider}\",")
-            appendLine("  \"baseUrl\": \"${snapshot.baseUrl}\",")
-            appendLine("  \"orderId\": ${snapshot.orderId?.let { "\"$it\"" } ?: "null"},")
+            appendLine("  \"provider\": \"${escape(snapshot.provider)}\",")
+            appendLine("  \"baseUrl\": \"${escape(snapshot.baseUrl)}\",")
+            appendLine("  \"orderId\": ${snapshot.orderId?.let { "\"${escape(it)}\"" } ?: "null"},")
             appendLine("  \"rawDumpPath\": ${snapshot.rawDumpPath?.let { "\"${escape(it)}\"" } ?: "null"},")
             appendLine("  \"rawDumpBytes\": ${snapshot.rawDumpBytes ?: "null"},")
-            appendLine("  \"rawDumpSavedAtMs\": ${snapshot.rawDumpSavedAtMs ?: "null"},")
-            appendLine("  \"resultType\": ${snapshot.resultType?.let { "\"$it\"" } ?: "null"},")
-            appendLine("  \"downgradedBecauseFailType11\": ${snapshot.downgradedBecauseFailType11},")
-            appendLine("  \"roleType\": ${snapshot.roleType ?: "null"},")
-            appendLine("  \"roleNum\": ${snapshot.roleNum ?: "null"},")
-            appendLine("  \"resultHasRoleLabels\": ${snapshot.resultHasRoleLabels ?: "null"},")
             appendLine("  \"pollCount\": ${snapshot.pollCount},")
             appendLine("  \"elapsedMs\": ${snapshot.elapsedMs},")
             appendLine("  \"lastHttpCode\": ${snapshot.lastHttpCode ?: "null"},")
-            appendLine("  \"lastErrorCode\": ${snapshot.lastErrorCode?.let { "\"$it\"" } ?: "null"},")
             appendLine("  \"lastFailType\": ${snapshot.lastFailType ?: "null"},")
-            appendLine("  \"lastFailDesc\": ${snapshot.lastFailDesc?.let { "\"${escape(it)}\"" } ?: "null"},")
-            appendLine("  \"uploadParams\": ${formatMap(snapshot.uploadParams)},")
-            appendLine("  \"resultTypeAttempts\": ${formatResultTypeAttempts(snapshot.resultTypeAttempts)},")
-            appendLine("  \"pollTimeline\": ${formatTimeline(snapshot.pollTimeline)},")
-            appendLine("  \"postXfyunSettings\": ${formatPostXfyunSettings(snapshot.postXfyunSettings)},")
+            appendLine("  \"downgradedBecauseFailType11\": ${snapshot.downgradedBecauseFailType11},")
+            appendLine("  \"postXfyunSettings\": {\"enabled\": $postEnabled, \"modelEffective\": ${postModelEffective?.let { "\"${escape(it)}\"" } ?: "null"}},")
             appendLine("  \"postXfyunSuspiciousCount\": ${snapshot.postXfyunSuspicious.size},")
-            appendLine("  \"postXfyunSuspicious\": ${formatPostXfyunSuspicious(snapshot.postXfyunSuspicious)},")
             appendLine("  \"postXfyunDecisionsCount\": ${snapshot.postXfyunDecisions.size},")
-            appendLine("  \"postXfyunDecisions\": ${formatPostXfyunDecisions(snapshot.postXfyunDecisions)},")
-            appendLine("  \"postXfyunRepairsCount\": ${snapshot.postXfyunRepairs.size},")
-            appendLine("  \"postXfyunRepairs\": ${formatPostXfyunRepairs(snapshot.postXfyunRepairs)},")
-            appendLine("  \"postXfyunCandidatesCount\": ${snapshot.postXfyunCandidatesCount},")
             appendLine("  \"postXfyunArbitrationsAttempted\": ${snapshot.postXfyunArbitrationsAttempted},")
             appendLine("  \"postXfyunArbitrationBudget\": ${snapshot.postXfyunArbitrationBudget},")
             appendLine("  \"postXfyunRepairsApplied\": ${snapshot.postXfyunRepairsApplied},")
+            // 兼容旧测试：保留 key 但只输出 count，避免长列表。
+            appendLine("  \"resultTypeAttempts\": ${snapshot.resultTypeAttempts.size},")
             appendLine("  \"updatedAtMs\": ${snapshot.updatedAtMs}")
             append("}")
         }

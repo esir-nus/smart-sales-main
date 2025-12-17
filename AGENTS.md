@@ -11,72 +11,104 @@ This project uses a fixed multi-agent workflow:
 The full rules and invocation protocol are defined in **`role-contract.md`**.  
 All agents must follow that document as the authoritative behavior contract.
 
-- **Orchestrator / MetaHub 合约来源**：`docs/Orchestrator-MetadataHub-V5.md` 是编排与 MetaHub 的最新权威规范（CURRENT）；`docs/Orchestrator-MetadataHub-V4.md` 已归档（ARCHIVED），仅作历史参考。
-- **UX 合约来源优先级**：
-  1. `docs/ux-contract.md`（唯一现行 UX 真实来源，交互/布局/流程）
-  2. `docs/Orchestrator-MetadataHub-V5.md`（推理与元数据，V5 为现行规范；V4/V3 仅历史参考）
-  3. `docs/style-guide.md`（视觉规范）
-  4. 现有 Android 实现与测试
-  5. 归档的 React/UI 仅作历史参考；`assistant-ux-contract.md` 已归档，请勿作为现行规范。
+- **Orchestrator / MetaHub spec source**: `docs/Orchestrator-MetadataHub-V5.md` is the latest authoritative spec (CURRENT). `docs/Orchestrator-MetadataHub-V4.md` is archived (ARCHIVED) and for historical reference only.
+- **UX spec priority order**:
+  1. `docs/ux-contract.md` (the only current UX source of truth: interaction/layout/flow)
+  2. `docs/Orchestrator-MetadataHub-V5.md` (reasoning + metadata spec; V5 is current; V4/V3 are historical)
+  3. `docs/style-guide.md` (visual guidelines)
+  4. Existing Android implementation and tests
+  5. Archived React/UI is historical only; `assistant-ux-contract.md` is archived and must not be treated as current
 
 ---
 
-## 文档版本与纪律（Versioning & Doc Discipline）
+## Development Lifecycle: Feasibility → Simple Deployment → Refinement
 
-1. **现行规范**
-   - CURRENT：`docs/Orchestrator-MetadataHub-V5.md`
-   - ARCHIVED：`docs/Orchestrator-MetadataHub-V4.md`
+> Note: This is a general engineering cadence (not LLM-specific). Core principle: **learn first, ship minimal, then tighten**. Avoid premature hard constraints during feasibility work, which can create false negatives and slow iteration.
 
-2. **XFyun-first（文档口径）**
-   - 讯飞 REST 的唯一权威来源：`docs/xfyun-asr-rest-api.md`
-   - 禁止在其它文档复制其参数大表（只能“链接 + 结论摘要”）
+### 1) Feasibility check (Learning Mode)
 
-3. **能力护栏（必须一致）**
-   - 当前仅允许 `transfer`；`translate/predict/analysis` 默认禁用，禁止“先发请求试试看”（避免 `failType=11` 等失败）
+- Goal: prove the approach works end-to-end on real examples, and you can **see** what happened.
+- Default posture: **permissive + observable**, not **strict + silent** (silent rejection is the fastest way to create false negatives).
+- Avoid: early strict validators / hard rejection / closed-world schemas that block outputs so you can’t inspect results.
+- Prefer: instrumentation and evidence (HUD/trace/files/unit-test assertions). Dry-run / annotated output beats enforcement.
+- Must: define exactly one success metric per iteration (e.g., `pipeline runs + HUD shows key evidence`).
+- Guardrail rule: all guardrails must be **fail-soft** (fallback/skip) and must not block the main flow.
 
-4. **Tingwu 与 OSS 的位置**
-   - Tingwu：legacy/deprecated，仅遗留维护（不做文档默认路径）
-   - OSS：保留为未来扩展工具箱（异步/分发/大文件/多提供方），不强制参与当前 XFyun file-stream 上传链路
+### 2) Simple deployment (Clean + tweakable)
 
-## 核心行为要求（对 Codex）
+- Goal: ship a minimal version behind a flag that is clean, simple, and runtime-tweakable.
+- Requirements: clear module boundaries, settings-driven knobs, still observable and reversible (for rollout and debugging).
+- Avoid: overcomplicating implementation “just to cover every edge case”.
 
-1. **优先写干净、简单、模块化的代码**
-   - 小函数。小类。清晰的模块边界。
-   - 避免过度抽象和过深继承。
-   - 能用简单方案解决时，不追求花哨设计。
+### 3) Refinement & robustness
 
-2. **使用简单、易懂的语言**
-   - 注释和文档用简体中文。
-   - 句子要短。少用长句和复杂结构。
-   - 变量命名清晰。表达真实含义。
-   - All重要代码块必须添加简短中文注释，方便其他开发者快速理解。
+- Goal: after feasibility is proven, add strict constraints, closed-world schemas, caps/invariants, rejection rules, and broader tests.
+- Rule: any hard constraint must map to an **observed failure mode** (evidence + reproduction path). No speculative gating.
 
-3. **不要偷懒，始终完整阅读相关文件**
-   - 在修改一个文件前，应读完整个文件。
-   - 在引用一个文档（如 `dev_plan.md`）前，应读完整个文档。
-   - 不根据“猜测”或“片段”做决定。
+**Rule of thumb (when hard constraints are allowed)**
 
-4. **中国网络环境优先**
-   - 修改构建脚本或依赖配置时：
-     - 优先考虑使用阿里云镜像（Aliyun mirror）或其它国内镜像。
-     - 避免依赖访问极慢或经常超时的海外源。
-   - 在提示命令或配置时，可给出示例镜像配置，但不强制改动现有脚本。
+> Only add a hard constraint when you can name the failure it prevents and show evidence that failure actually happens. Early phases optimize for learning speed and observability; avoid “professional but ineffective” barriers.
 
-5. **Kotlin 项目请合理使用 helper**
-   - 按最佳工程实践调用辅助脚本/工具，遵守现有代码风格、测试与依赖规范。
-   - 不以省事为由跳过质量检查；helper 仅用于加速，而非替代审查和验证。
+**Glossary**
 
-6. **限制感知策略（必须遵守）**
-   - 如果失败像是 **网络 / 沙盒 / 凭证限制**（例如：依赖下载失败、DNS/TLS 错误、401/403、429 限流、主机被阻断），只尝试 **1–2 次**（最多 1 次普通尝试 + 1 次最小必要的复查/重试）。
-   - **不要尝试绕过**（不要反复重试、换源、加代理、改依赖版本、降级/升级等）——先停下来。
-   - 输出“证据包”，并向 Operator 申请 **最小人工介入**：包含 `命令`、关键 `报错行`、疑似受限 `host/endpoint`、需要 Operator 做的最小动作（如：确认网络/凭证/白名单/镜像）。
-   - 证据中不要泄露密钥/Token/个人信息。
+- Learning Mode: optimize for fast falsification/confirmation. Imperfections are acceptable, but the system must be observable, reversible, and diagnosable (avoid false negatives).
+
+## Versioning & Doc Discipline
+
+1. **Current specs**
+   - CURRENT: `docs/Orchestrator-MetadataHub-V5.md`
+   - ARCHIVED: `docs/Orchestrator-MetadataHub-V4.md`
+
+2. **XFyun-first (documentation stance)**
+   - XFyun REST single source of truth: `docs/xfyun-asr-rest-api.md`
+   - Do not copy large parameter tables into other docs (only “link + summary”)
+
+3. **Capability guardrails (must remain consistent)**
+   - Only `transfer` is allowed today; `translate/predict/analysis` are disabled by default. Do not “send requests to try” (avoid failures like `failType=11`).
+
+4. **Positioning of Tingwu and OSS**
+   - Tingwu: legacy/deprecated, maintenance-only (must not be the default path in docs)
+   - OSS: retained as a future scalability toolbelt (async/distribution/large files/multi-provider). Not required for current XFyun file-stream upload.
+
+## Core Behavior Requirements (for Codex)
+
+1. **Prefer clean, simple, modular code**
+   - Small functions, small classes, clear module boundaries.
+   - Avoid over-abstraction and deep inheritance.
+   - Prefer simple solutions over fancy designs.
+
+2. **Use simple, readable language**
+   - Comments and docs should be in Simplified Chinese (unless explicitly overridden by Operator).
+   - Keep sentences short; avoid overly complex structures.
+   - Use clear variable names that reflect real meaning.
+   - All important code blocks must include short Chinese comments so teammates can quickly understand.
+
+3. **No shortcuts: read the full relevant files**
+   - Before modifying a file, read the full file.
+   - Before referencing a document (e.g., `dev_plan.md`), read the full document.
+   - Do not make decisions based on guesses or partial snippets.
+
+4. **China network environment first**
+   - When changing build scripts or dependency config:
+     - Prefer Aliyun mirror or other mainland mirrors.
+     - Avoid overseas sources that are slow or frequently time out.
+   - When suggesting commands/config, you may provide mirror examples, but do not force changes to existing scripts.
+
+5. **For Kotlin projects, use helpers appropriately**
+   - Use helper scripts/tools following best practices and existing style/tests/dependency norms.
+   - Do not skip quality checks for convenience; helpers accelerate work but do not replace review/verification.
+
+6. **Constraint awareness policy (must follow)**
+   - If a failure looks like a network/sandbox/credential restriction (e.g., dependency download fails, DNS/TLS errors, 401/403, 429, blocked host), only try **1–2 times** (max 1 normal attempt + 1 minimal re-check/retry).
+   - Do not attempt “workarounds” (no repeated retries, mirror swapping, proxies, dependency version changes, upgrades/downgrades). Stop first.
+   - Provide an evidence pack and request minimal Operator intervention: include the command, key error lines, suspected host/endpoint, and the smallest Operator action needed (e.g., confirm network/credentials/allowlist/mirror).
+   - Do not leak keys/tokens/personal info in the evidence.
 
    --- 
 ## Code Style & Language Rules
 
-- 所有 **源码文件** 必须：
-  1. 顶部包含统一中文文件头，例如：
+- All **source files** must:
+  1. Include a standard Chinese header at the top, for example:
 
      ```kotlin
      // 文件：<相对路径>

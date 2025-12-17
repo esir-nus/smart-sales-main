@@ -80,6 +80,47 @@
 - 不展示 `<Metadata>/<Reasoning>/<DocReference>`。
 - SMART：仅展示 Orchestrator 生成的 Markdown 卡片。
 
+## 0.5 任务模式声明（mode）与计划模板
+
+> 说明：这是通用工程节奏（不限定 LLM 场景）。目的是避免在“可行性探索”阶段过早上强约束，导致误判为不可行、迭代速度变慢。
+
+### 0.5.1 必填字段（建议写在任务开头）
+
+每个任务必须显式声明以下字段（Orchestrator/Operator 共同对齐）：
+
+```yaml
+mode: feasibility | deployment | refinement
+success_criteria:
+  - <1~3 条，可验证>
+guardrails:
+  - <约束与上限；feasibility 必须最小化且 fail-soft>
+instrumentation:
+  - <证据在哪里可见：HUD/trace/logcat/本地文件等>
+```
+
+### 0.5.2 三种 mode 的执行口径
+
+- feasibility（Learning Mode / 可行性验证）
+  - 目标：用真实样例证明端到端可跑通，并且**看得到**发生了什么。
+  - 禁止：引入会造成“假阴性”的硬拒绝（严格校验/闭世界 schema/过度 gate），把潜在可行输出静默拦掉。
+  - 允许：必要的严格解析（例如协议必须是 JSON），但必须同时提供**诊断证据**与**回退路径**：
+    - 证据：保存截断的 raw preview（例如 200 字）、parseStatus、errorHint。
+    - 回退：解析失败时 fail-soft（按 NONE/跳过/原样输出），主流程不断。
+
+- deployment（Clean + tweakable / 简单上线）
+  - 目标：在开关/flag 下提供“干净、简单、可调”的最小版本。
+  - 重点：模块边界清晰、参数可在线调整、保持可观测与可回退。
+
+- refinement（精炼与鲁棒）
+  - 目标：在已验证可行的基础上，再补齐严格约束、上限/不变量、拒绝规则、更多测试。
+  - 规则：任何硬约束都必须对应一个**已出现的失败模式**（有证据、有复现路径），禁止纯臆测加门槛。
+
+### 0.5.3 Orchestrator 计划检查清单（建议复制进任务）
+
+- 证据将在哪里出现？（HUD/trace/logcat/文件路径/单测断言）
+- 什么会构成“假阴性”？（哪些 gate 会把输出拦掉，看不到结果）
+- 今天的最小可运行版本是什么？（先跑通，再收紧）
+
 ## 1. Write rules
 
 ### GENERAL 首条回复
@@ -168,4 +209,3 @@ OSS 仍保留在体系内的原因：
 - API 合约：`docs/api-contracts.md`
 - XFyun REST SoT：`docs/xfyun-asr-rest-api.md`
 - V4（已归档）：`docs/Orchestrator-MetadataHub-V4.md`
-

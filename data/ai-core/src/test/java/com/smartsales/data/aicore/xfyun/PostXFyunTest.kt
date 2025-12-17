@@ -1,6 +1,6 @@
 // 文件：data/ai-core/src/test/java/com/smartsales/data/aicore/xfyun/PostXFyunTest.kt
 // 模块：:data:ai-core
-// 说明：验证 PostXFyun 跨说话人边界分词漂移修复（仅 1~2 字移动 + 严格 JSON 仲裁）
+// 说明：验证 PostXFyun 跨说话人边界分词漂移修复（仅移动边界 span + 严格 JSON 仲裁）
 // 作者：创建于 2025-12-16
 package com.smartsales.data.aicore.xfyun
 
@@ -292,6 +292,41 @@ class PostXFyunTest {
         val prompt = service.requests.single().prompt
         assertTrue(prompt.contains("〔/suspicious〕"))
         assertEquals("qwen-max3", service.requests.single().model)
+    }
+
+    @Test
+    fun `prompt template placeholder MAX_SPAN_CHARS is replaced`() = runTest(dispatcher) {
+        val service = FakeArbitrationService(
+            json = """{"action":"NONE","span":"","confidence":0.99,"reason":"noop"}"""
+        )
+        val template = "MAX={{MAX_SPAN_CHARS}}"
+        val post = PostXFyun(
+            dispatchers = dispatchers,
+            aiChatService = service,
+            aiParaSettingsProvider = provider(
+                PostXfyunSettings(
+                    enabled = true,
+                    maxRepairsPerTranscript = 1,
+                    confidenceThreshold = 0.8,
+                    suspiciousGapThresholdMs = 200L,
+                    maxSpanChars = 12,
+                    promptTemplate = template,
+                )
+            )
+        )
+        val markdown = """
+            ## 讯飞转写
+            - 发言人 1：好的罗
+            - 发言人 2：总我们继续
+        """.trimIndent()
+        val segments = listOf(
+            XfyunTranscriptSegment(roleId = "1", startMs = 0, endMs = 1000, text = "好的罗"),
+            XfyunTranscriptSegment(roleId = "2", startMs = 1100, endMs = 2000, text = "总我们继续"),
+        )
+
+        post.polish(markdown, segments)
+
+        assertEquals("MAX=12", service.requests.single().prompt)
     }
 
     @Test
@@ -618,6 +653,41 @@ class PostXFyunTest {
         val debug = requireNotNull(result.debugInfo)
         assertEquals(PostXFyunAction.MOVE_HEAD_TO_PREV, debug.decisions.first().action)
         assertEquals("span-not-at-boundary", debug.decisions.first().errorHint)
+        assertEquals("NOT_APPLIED_SPAN_NOT_FOUND", debug.decisions.first().applyStatus)
+    }
+
+    @Test
+    fun `low confidence is bypassed when confidenceThreshold is non-positive`() = runTest(dispatcher) {
+        val service = FakeArbitrationService(
+            json = """{"action":"MOVE_HEAD_TO_PREV","span":"d","confidence":0.05,"reason":"still do it"}"""
+        )
+        val post = PostXFyun(
+            dispatchers = dispatchers,
+            aiChatService = service,
+            aiParaSettingsProvider = provider(
+                PostXfyunSettings(
+                    enabled = true,
+                    maxRepairsPerTranscript = 3,
+                    confidenceThreshold = 0.0,
+                    suspiciousGapThresholdMs = 200L,
+                )
+            )
+        )
+        val markdown = """
+            ## 讯飞转写
+            - 发言人 1：型号是6
+            - 发言人 2：d传感器可以的
+        """.trimIndent()
+        val segments = listOf(
+            XfyunTranscriptSegment(roleId = "1", startMs = 0, endMs = 1000, text = "型号是6"),
+            XfyunTranscriptSegment(roleId = "2", startMs = 1100, endMs = 2000, text = "d传感器可以的"),
+        )
+
+        val result = post.polish(markdown, segments)
+
+        assertTrue(result.polishedMarkdown.contains("- 发言人 1：型号是6d"))
+        assertTrue(result.polishedMarkdown.contains("- 发言人 2：传感器可以的"))
+        assertEquals(1, result.repairs.size)
     }
 
     private fun provider(settings: PostXfyunSettings): AiParaSettingsProvider {

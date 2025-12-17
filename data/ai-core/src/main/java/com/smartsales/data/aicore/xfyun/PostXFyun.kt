@@ -91,13 +91,15 @@ data class PostXFyunDecisionDebug(
     // 重要：仅用于验证“LLM 确实被调用并返回了内容”，只保留截断预览（不落盘）。
     val rawResponsePreview: String? = null,
     val parseStatus: String = "OK",
+    // 重要：用于区分“仲裁返回了动作，但确定性应用失败”的情况，便于 feasibility 阶段排查原因。
+    val applyStatus: String = "UNKNOWN",
     val errorHint: String? = null,
 )
 
 /**
  * 说明：
  * - 目的：修复“跨说话人边界”的轻微分词漂移（例如：罗/总、为/什、6/d）。
- * - 只允许确定性小修：在边界两侧移动 1~2 个字符，不做任何句子改写。
+ * - 只允许确定性小修：在边界两侧移动 1~maxSpanChars 个字符，不做任何句子改写。
  * - LLM 仅做“仲裁”，必须输出封闭动作 JSON；任意违约都强制回退为 NONE。
  */
 @Singleton
@@ -198,12 +200,32 @@ class PostXFyun @Inject constructor(
                 )
                 val attemptIndex = arbitrationsAttempted
                 arbitrationsAttempted += 1
-                val boundaryHint = resolveBoundaryMismatchHint(
-                    decision = decision,
-                    prevLine = prevLine,
-                    nextLine = nextLine,
-                )
-                val errorHint = decision.errorHint ?: boundaryHint
+                val confidenceOk = settings.confidenceThreshold <= 0.0 ||
+                    decision.confidence >= settings.confidenceThreshold
+
+                val (applied, applyStatus, applyHint) = when {
+                    decision.action == PostXFyunAction.NONE ->
+                        Triple(null, "NOT_APPLIED_ACTION_NONE", null)
+                    !confidenceOk ->
+                        Triple(null, "NOT_APPLIED_LOW_CONFIDENCE", null)
+                    repairs.size >= repairLimit ->
+                        Triple(null, "NOT_APPLIED_REPAIR_LIMIT", null)
+                    else -> {
+                        val applied = applyDecision(
+                            boundaryIndex = index,
+                            prevLine = prevLine,
+                            nextLine = nextLine,
+                            decision = decision,
+                            candidate = candidate,
+                        )
+                        if (applied == null) {
+                            Triple(null, "NOT_APPLIED_SPAN_NOT_FOUND", resolveBoundaryMismatchHint(decision, prevLine, nextLine))
+                        } else {
+                            Triple(applied, "APPLIED", null)
+                        }
+                    }
+                }
+
                 decisions += PostXFyunDecisionDebug(
                     attemptIndex = attemptIndex,
                     boundaryIndex = index,
@@ -219,23 +241,15 @@ class PostXFyun @Inject constructor(
                     reason = decision.reason,
                     rawResponsePreview = decision.rawResponsePreview,
                     parseStatus = decision.parseStatus.name,
-                    errorHint = errorHint,
+                    applyStatus = applyStatus,
+                    errorHint = decision.errorHint ?: applyHint,
                 )
-                if (decision.action == PostXFyunAction.NONE) continue
-                if (decision.confidence < settings.confidenceThreshold) continue
-                if (repairs.size >= repairLimit) continue
 
-                val applied = applyDecision(
-                    boundaryIndex = index,
-                    prevLine = prevLine,
-                    nextLine = nextLine,
-                    decision = decision,
-                    candidate = candidate,
-                ) ?: continue
-
-                mutable[index] = applied.afterPrevLine
-                mutable[index + 1] = applied.afterNextLine
-                repairs += applied
+                if (applied != null) {
+                    mutable[index] = applied.afterPrevLine
+                    mutable[index + 1] = applied.afterNextLine
+                    repairs += applied
+                }
             }
 
             val header = originalMarkdown.lineSequence().firstOrNull { it.startsWith("## ") } ?: "## 讯飞转写"
@@ -332,10 +346,12 @@ class PostXFyun @Inject constructor(
     ): Decision {
         // 重要：可疑标记仅用于 Prompt，让模型把注意力聚焦到边界附近；不改变最终展示的逐字稿文本。
         val prevLineForPrompt = prevLine.trimEnd() + PROMPT_SUSPICIOUS_MARK
+        val maxSpan = settings.maxSpanChars.coerceIn(1, 200)
         val prompt = settings.promptTemplate
             .replace("{{PREV_LINE}}", prevLineForPrompt)
             .replace("{{NEXT_LINE}}", nextLine.trimEnd())
             .replace("{{BOUNDARY_MARK}}", boundaryMark)
+            .replace("{{MAX_SPAN_CHARS}}", maxSpan.toString())
         val modelOverride = settings.model.trim().takeIf { it.isNotBlank() }
         val result = aiChatService.sendMessage(AiChatRequest(prompt = prompt, model = modelOverride))
         val response = when (result) {
@@ -446,15 +462,27 @@ class PostXFyun @Inject constructor(
         val nextText = splitLine(nextLine).text
         return when (decision.action) {
             PostXFyunAction.MOVE_HEAD_TO_PREV -> {
-                val (_, nextCore) = splitLeadingWhitespace(nextText)
-                if (nextCore.startsWith(decision.span)) null else "span-not-at-boundary"
+                if (canMoveHeadToPrev(nextText, decision.span)) null else "span-not-at-boundary"
             }
             PostXFyunAction.MOVE_TAIL_TO_NEXT -> {
-                val (prevCore, _) = splitTrailingWhitespace(prevText)
-                if (prevCore.endsWith(decision.span)) null else "span-not-at-boundary"
+                if (canMoveTailToNext(prevText, decision.span)) null else "span-not-at-boundary"
             }
             PostXFyunAction.NONE -> null
         }
+    }
+
+    private fun canMoveHeadToPrev(nextText: String, span: String): Boolean {
+        val text = stripPromptMarker(nextText)
+        val (_, nextCore) = splitLeadingWhitespace(text)
+        return nextCore.startsWith(span) ||
+            (nextCore.isNotEmpty() && isPunctuation(nextCore.first()) && nextCore.drop(1).startsWith(span))
+    }
+
+    private fun canMoveTailToNext(prevText: String, span: String): Boolean {
+        val text = stripPromptMarker(prevText)
+        val (prevCore, _) = splitTrailingWhitespace(text)
+        return prevCore.endsWith(span) ||
+            (prevCore.isNotEmpty() && isPunctuation(prevCore.last()) && prevCore.dropLast(1).endsWith(span))
     }
 
     private fun stripMarkdownFencesIfPresent(raw: String): Pair<String, Boolean> {
@@ -517,21 +545,59 @@ class PostXFyun @Inject constructor(
     }
 
     private fun moveHeadToPrev(prevText: String, nextText: String, span: String): Pair<String, String>? {
-        val (prevCore, prevTrail) = splitTrailingWhitespace(prevText)
-        val (nextLead, nextCore) = splitLeadingWhitespace(nextText)
-        if (!nextCore.startsWith(span)) return null
+        val (prevCoreRaw, prevTrail) = splitTrailingWhitespace(prevText)
+        val (nextLead, nextCoreRaw) = splitLeadingWhitespace(nextText)
+        val prevCore = stripPromptMarker(prevCoreRaw)
+        val nextCore = stripPromptMarker(nextCoreRaw)
+
+        // 重要（feasibility）：
+        // - 首选严格边界匹配（startsWith/endsWith），保证“只移动边界已有 span，不做改写”。
+        // - 若失败，允许 1 个前置标点容错：例如 nextText="，什么车？..." 且 span="什么车？"。
+        val (matched, newNextCore) = when {
+            nextCore.startsWith(span) -> true to nextCore.removePrefix(span)
+            nextCore.isNotEmpty() && isPunctuation(nextCore.first()) && nextCore.drop(1).startsWith(span) -> {
+                val leading = nextCore.first().toString()
+                true to leading + nextCore.drop(1).removePrefix(span)
+            }
+            else -> false to nextCore
+        }
+        if (!matched) return null
+
         val newPrev = prevCore + span + prevTrail
-        val newNext = nextLead + nextCore.removePrefix(span)
+        val newNext = nextLead + newNextCore
         return newPrev to newNext
     }
 
     private fun moveTailToNext(prevText: String, nextText: String, span: String): Pair<String, String>? {
-        val (prevCore, prevTrail) = splitTrailingWhitespace(prevText)
-        val (nextLead, nextCore) = splitLeadingWhitespace(nextText)
-        if (!prevCore.endsWith(span)) return null
-        val newPrev = prevCore.removeSuffix(span) + prevTrail
+        val (prevCoreRaw, prevTrail) = splitTrailingWhitespace(prevText)
+        val (nextLead, nextCoreRaw) = splitLeadingWhitespace(nextText)
+        val prevCore = stripPromptMarker(prevCoreRaw)
+        val nextCore = stripPromptMarker(nextCoreRaw)
+
+        // 重要（feasibility）：
+        // - 允许 1 个尾部标点容错：例如 prevText="...买。" 且 span="买"。
+        val tailMatch = when {
+            prevCore.endsWith(span) -> TailMatch(coreWithoutSpan = prevCore.removeSuffix(span), trailingPunctuation = "")
+            prevCore.isNotEmpty() && isPunctuation(prevCore.last()) && prevCore.dropLast(1).endsWith(span) -> {
+                val punct = prevCore.last().toString()
+                TailMatch(coreWithoutSpan = prevCore.dropLast(1).removeSuffix(span), trailingPunctuation = punct)
+            }
+            else -> null
+        } ?: return null
+
+        val newPrev = tailMatch.coreWithoutSpan + tailMatch.trailingPunctuation + prevTrail
         val newNext = nextLead + span + nextCore
         return newPrev to newNext
+    }
+
+    private data class TailMatch(
+        val coreWithoutSpan: String,
+        val trailingPunctuation: String,
+    )
+
+    private fun stripPromptMarker(text: String): String {
+        // 重要：〔/suspicious〕 只用于 prompt，不属于原文。任何确定性应用都不能把它当作可移动内容。
+        return text.replace(PROMPT_SUSPICIOUS_MARK, "")
     }
 
     private fun splitLeadingWhitespace(text: String): Pair<String, String> {

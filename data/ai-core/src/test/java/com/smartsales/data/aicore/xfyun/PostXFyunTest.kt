@@ -204,7 +204,7 @@ class PostXFyunTest {
     }
 
     @Test
-    fun `maxRepairsPerTranscript caps arbitrations even when decisions are always NONE`() = runTest(dispatcher) {
+    fun `arbitration budget covers all candidates when list is small`() = runTest(dispatcher) {
         val service = FakeArbitrationService(
             json = """
                 {
@@ -246,10 +246,11 @@ class PostXFyunTest {
 
         assertEquals(lines, result.polishedMarkdown)
         assertTrue(result.repairs.isEmpty())
-        assertEquals(3, service.callCount)
+        // 说明：候选数较少时，仲裁预算 = candidates.size，确保能覆盖后面的边界。
+        assertEquals(7, service.callCount)
         val debug = requireNotNull(result.debugInfo)
         assertEquals(7, debug.candidatesCount)
-        assertEquals(3, debug.arbitrationsAttempted)
+        assertEquals(7, debug.arbitrationsAttempted)
         assertEquals(0, debug.repairsApplied)
         assertEquals(debug.arbitrationsAttempted, debug.decisions.size)
     }
@@ -336,11 +337,12 @@ class PostXFyunTest {
 
         assertEquals(lines, result.polishedMarkdown)
         assertTrue(result.repairs.isEmpty())
-        assertEquals(5, service.callCount)
+        // 说明：候选数较少时，仲裁预算 = candidates.size（此处 6 个边界）。
+        assertEquals(6, service.callCount)
         val debug = requireNotNull(result.debugInfo)
         assertEquals(6, debug.candidatesCount)
-        assertEquals(5, debug.arbitrationsAttempted)
-        assertEquals(5, debug.decisions.size)
+        assertEquals(6, debug.arbitrationsAttempted)
+        assertEquals(6, debug.decisions.size)
         debug.decisions.take(3).forEach { decision ->
             val preview = requireNotNull(decision.rawResponsePreview)
             assertTrue(preview.contains("\\n"))
@@ -349,6 +351,53 @@ class PostXFyunTest {
         debug.decisions.drop(3).forEach { decision ->
             assertTrue(decision.rawResponsePreview == null)
         }
+    }
+
+    @Test
+    fun `budget traversal reaches later boundary even if early decisions are NONE`() = runTest(dispatcher) {
+        val service = SequencedArbitrationService(
+            noneUntilCallIndex = 30,
+            thenJson = """{"action":"MOVE_HEAD_TO_PREV","span":"d","confidence":0.95,"reason":"6d 被切开"}"""
+        )
+        val post = PostXFyun(
+            dispatchers = dispatchers,
+            aiChatService = service,
+            aiParaSettingsProvider = provider(
+                PostXfyunSettings(
+                    enabled = true,
+                    // 说明：repairLimit=5 → arbitrationBudget=max(30, 5*10)=50，足以覆盖 index≈30 的问题边界。
+                    maxRepairsPerTranscript = 5,
+                    confidenceThreshold = 0.8,
+                    suspiciousGapThresholdMs = 200L,
+                )
+            )
+        )
+        val lines = buildString {
+            appendLine("## 讯飞转写")
+            repeat(35) { index ->
+                when (index) {
+                    30 -> appendLine("- 发言人 1：型号是6")
+                    31 -> appendLine("- 发言人 2：d底盘，6。")
+                    else -> appendLine("- 发言人 1：第${index}句。")
+                }
+            }
+        }.trimEnd()
+        val segments = (0 until 35).map { index ->
+            XfyunTranscriptSegment(
+                roleId = if (index % 2 == 0) "1" else "2",
+                startMs = (index * 1000).toLong(),
+                endMs = ((index + 1) * 1000).toLong(),
+                text = "seg-$index",
+            )
+        }
+
+        val result = post.polish(lines, segments)
+
+        assertEquals(1, result.repairs.size)
+        assertTrue(result.polishedMarkdown.contains("- 发言人 1：型号是6d"))
+        assertTrue(result.polishedMarkdown.contains("- 发言人 2：底盘，6。"))
+        // 说明：至少要调用到第 31 次仲裁，才能命中 index=30 的修复。
+        assertTrue(service.callCount > 30)
     }
 
     @Test
@@ -409,6 +458,32 @@ class PostXFyunTest {
             return Result.Success(
                 AiChatResponse(
                     displayText = json,
+                    structuredMarkdown = null,
+                    references = emptyList()
+                )
+            )
+        }
+    }
+
+    private class SequencedArbitrationService(
+        private val noneUntilCallIndex: Int,
+        private val thenJson: String,
+    ) : AiChatService {
+        private var calls: Int = 0
+        val callCount: Int
+            get() = calls
+
+        override suspend fun sendMessage(request: AiChatRequest): Result<AiChatResponse> {
+            val index = calls
+            calls += 1
+            val payload = if (index < noneUntilCallIndex) {
+                """{"action":"NONE","span":"","confidence":0.99,"reason":"无需修复"}"""
+            } else {
+                thenJson
+            }
+            return Result.Success(
+                AiChatResponse(
+                    displayText = payload,
                     structuredMarkdown = null,
                     references = emptyList()
                 )

@@ -158,10 +158,18 @@ class PostXFyun @Inject constructor(
             }
 
             val mutable = bulletLines.toMutableList()
+            val repairLimit = settings.maxRepairsPerTranscript
+            val arbitrationBudget = minOf(
+                candidates.size,
+                maxOf(30, repairLimit * 10)
+            )
             var arbitrationsAttempted = 0
             for (candidate in candidates) {
-                // 重要：为验证切片提供直观证据：达到上限后直接停止，不再遍历剩余候选。
-                if (arbitrationsAttempted >= settings.maxRepairsPerTranscript) break
+                // 重要：仲裁预算与修复上限分离：
+                // - repairLimit：最多允许落地多少次文本修复。
+                // - arbitrationBudget：最多允许调用多少次 LLM 仲裁（即使一直返回 NONE 也会继续尝试，确保能覆盖后面的“问题边界”）。
+                if (repairs.size >= repairLimit) break
+                if (arbitrationsAttempted >= arbitrationBudget) break
 
                 val index = candidate.boundaryIndex
                 if (index !in 0 until (mutable.size - 1)) continue
@@ -187,7 +195,7 @@ class PostXFyun @Inject constructor(
                 )
                 if (decision.action == PostXFyunAction.NONE) continue
                 if (decision.confidence < settings.confidenceThreshold) continue
-                if (repairs.size >= settings.maxRepairsPerTranscript) continue
+                if (repairs.size >= repairLimit) continue
 
                 val applied = applyDecision(
                     boundaryIndex = index,
@@ -247,18 +255,14 @@ class PostXFyun @Inject constructor(
             // 重要：候选边界只用 gap 阈值来确定（确定性、可复现），是否需要修复交给 LLM 做封闭动作仲裁。
             // - 不区分同/不同说话人：同说话人也可能出现轻微切分漂移。
             // - 不做字形/标点/英文数字启发式：避免规则过拟合导致“该修不修 / 不该修乱修”的不可控。
-            val prevSpeaker = prevSeg.roleId?.trim()?.takeIf { it.isNotBlank() }
-            val nextSpeaker = nextSeg.roleId?.trim()?.takeIf { it.isNotBlank() }
-            val mark = buildString {
-                append("〔suspicious〕 gapMs=").append(gapMs)
-                append(", prevSpeaker=").append(prevSpeaker ?: "?")
-                append(", nextSpeaker=").append(nextSpeaker ?: "?")
-            }
+            val prevSpeaker = prevSeg.roleId?.trim()
+            val nextSpeaker = nextSeg.roleId?.trim()
+            val mark = "gapMs=$gapMs, prevSpeaker=${prevSpeaker ?: "?"}, nextSpeaker=${nextSpeaker ?: "?"}"
             result += Candidate(
                 boundaryIndex = i,
                 gapMs = gapMs,
-                prevSpeakerId = prevSpeaker,
-                nextSpeakerId = nextSpeaker,
+                prevSpeakerId = prevSpeaker?.takeIf { it.isNotBlank() },
+                nextSpeakerId = nextSpeaker?.takeIf { it.isNotBlank() },
                 boundaryMark = mark,
             )
         }
@@ -312,13 +316,7 @@ class PostXFyun @Inject constructor(
     private fun parseStrictDecision(raw: String): Decision {
         // 重要：严格模式——必须是“纯 JSON 对象”，任何前后缀都视为违约并回退 NONE。
         val trimmed = raw.trim()
-        val extracted = if (trimmed.startsWith("```")) {
-            // 可选：兼容部分模型把 JSON 包在 ```json ... ``` 内的情况（仍然要求内容是单个 JSON 对象）。
-            extractFirstJsonObject(trimmed)
-        } else {
-            null
-        }
-        val payload = extracted?.trim() ?: trimmed
+        val payload = stripMarkdownFencesIfPresent(trimmed).trim()
         if (!payload.startsWith("{") || !payload.endsWith("}")) {
             return Decision(PostXFyunAction.NONE, span = "", confidence = 0.0, reason = "non-json")
         }
@@ -343,22 +341,17 @@ class PostXFyun @Inject constructor(
         return Decision(action = action, span = span, confidence = confidence, reason = reason)
     }
 
-    private fun extractFirstJsonObject(raw: String): String? {
-        val start = raw.indexOf('{')
-        if (start < 0) return null
-        var depth = 0
-        for (i in start until raw.length) {
-            when (raw[i]) {
-                '{' -> depth += 1
-                '}' -> {
-                    depth -= 1
-                    if (depth == 0) {
-                        return raw.substring(start, i + 1)
-                    }
-                }
-            }
-        }
-        return null
+    private fun stripMarkdownFencesIfPresent(raw: String): String {
+        // 说明：兼容 ```json ... ``` 的包装，但不放松“必须是纯 JSON 对象”的约束。
+        // - 仅移除首尾 fence 行，保留中间内容原样。
+        val trimmed = raw.trim()
+        if (!trimmed.startsWith("```")) return trimmed
+        val lines = trimmed.split("\n")
+        if (lines.size < 3) return trimmed
+        val first = lines.first().trim()
+        val last = lines.last().trim()
+        if (!first.startsWith("```") || !last.startsWith("```")) return trimmed
+        return lines.subList(1, lines.size - 1).joinToString("\n")
     }
 
     private fun parseAction(raw: String): PostXFyunAction = when (raw.trim().uppercase()) {

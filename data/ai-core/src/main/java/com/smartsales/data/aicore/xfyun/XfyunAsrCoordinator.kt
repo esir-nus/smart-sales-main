@@ -252,18 +252,28 @@ class XfyunAsrCoordinator @Inject constructor(
                         traceStore.recordPostXfyunDecisions(
                             debugInfo.decisions.map { decision ->
                                 XfyunTraceSnapshot.PostXfyunDecisionDebug(
+                                    attemptIndex = decision.attemptIndex,
                                     boundaryIndex = decision.boundaryIndex,
+                                    gapMs = decision.gapMs,
+                                    prevSpeakerId = decision.prevSpeakerId,
+                                    nextSpeakerId = decision.nextSpeakerId,
+                                    prevExcerpt = decision.prevExcerpt,
+                                    nextExcerpt = decision.nextExcerpt,
+                                    modelUsed = decision.modelUsed,
                                     action = decision.action.name,
                                     span = decision.span,
                                     confidence = decision.confidence,
                                     reason = decision.reason,
                                     rawResponsePreview = decision.rawResponsePreview,
+                                    parseStatus = decision.parseStatus,
+                                    errorHint = decision.errorHint,
                                 )
                             }
                         )
                         traceStore.recordPostXfyunRunStats(
                             candidatesCount = debugInfo.candidatesCount,
                             arbitrationsAttempted = debugInfo.arbitrationsAttempted,
+                            arbitrationBudget = debugInfo.arbitrationBudget,
                             repairsApplied = debugInfo.repairsApplied,
                         )
                     }

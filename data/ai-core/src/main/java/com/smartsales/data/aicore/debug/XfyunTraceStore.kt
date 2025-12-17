@@ -43,6 +43,7 @@ data class XfyunTraceSnapshot(
     // 重要：运行态计数，便于确认“候选数 / 实际仲裁次数 / 实际修复数”是否符合预期（尤其是 maxRepairs 截断）。
     val postXfyunCandidatesCount: Int = 0,
     val postXfyunArbitrationsAttempted: Int = 0,
+    val postXfyunArbitrationBudget: Int = 0,
     val postXfyunRepairsApplied: Int = 0,
     // 重要：用于 HUD “复制原始/复制后逐字稿”验证切片，仅保存在内存，不落盘。
     val postXfyunOriginalMarkdown: String? = null,
@@ -98,13 +99,22 @@ data class XfyunTraceSnapshot(
     )
 
     data class PostXfyunDecisionDebug(
+        val attemptIndex: Int,
         val boundaryIndex: Int,
+        val gapMs: Long,
+        val prevSpeakerId: String?,
+        val nextSpeakerId: String?,
+        val prevExcerpt: String,
+        val nextExcerpt: String,
+        val modelUsed: String? = null,
         val action: String,
         val span: String,
         val confidence: Double,
         val reason: String?,
         // 重要：仅保留截断预览，用于证明 LLM 确实返回了内容（不应包含 XFyun raw HTTP JSON）。
         val rawResponsePreview: String? = null,
+        val parseStatus: String = "OK",
+        val errorHint: String? = null,
     )
 }
 
@@ -313,12 +323,14 @@ class XfyunTraceStore @Inject constructor() {
     fun recordPostXfyunRunStats(
         candidatesCount: Int,
         arbitrationsAttempted: Int,
+        arbitrationBudget: Int,
         repairsApplied: Int,
     ) {
         update { current ->
             current.copy(
                 postXfyunCandidatesCount = candidatesCount,
                 postXfyunArbitrationsAttempted = arbitrationsAttempted,
+                postXfyunArbitrationBudget = arbitrationBudget,
                 postXfyunRepairsApplied = repairsApplied,
                 updatedAtMs = System.currentTimeMillis()
             )
@@ -447,6 +459,7 @@ object XfyunDebugInfoFormatter {
             appendLine("  \"postXfyunRepairs\": ${formatPostXfyunRepairs(snapshot.postXfyunRepairs)},")
             appendLine("  \"postXfyunCandidatesCount\": ${snapshot.postXfyunCandidatesCount},")
             appendLine("  \"postXfyunArbitrationsAttempted\": ${snapshot.postXfyunArbitrationsAttempted},")
+            appendLine("  \"postXfyunArbitrationBudget\": ${snapshot.postXfyunArbitrationBudget},")
             appendLine("  \"postXfyunRepairsApplied\": ${snapshot.postXfyunRepairsApplied},")
             appendLine("  \"updatedAtMs\": ${snapshot.updatedAtMs}")
             append("}")
@@ -538,9 +551,14 @@ object XfyunDebugInfoFormatter {
             limited.forEachIndexed { index, entry ->
                 val comma = if (index == limited.size - 1) "" else ","
                 append(
-                    "\n    {\"boundaryIndex\": ${entry.boundaryIndex}, \"action\": \"${escape(entry.action)}\", " +
-                        "\"span\": \"${escape(entry.span)}\", \"confidence\": ${entry.confidence}, " +
+                    "\n    {\"attemptIndex\": ${entry.attemptIndex}, \"boundaryIndex\": ${entry.boundaryIndex}, \"gapMs\": ${entry.gapMs}, " +
+                        "\"prevSpeakerId\": ${entry.prevSpeakerId?.let { "\"${escape(it)}\"" } ?: "null"}, " +
+                        "\"nextSpeakerId\": ${entry.nextSpeakerId?.let { "\"${escape(it)}\"" } ?: "null"}, " +
+                        "\"action\": \"${escape(entry.action)}\", \"span\": \"${escape(entry.span)}\", \"confidence\": ${entry.confidence}, " +
                         "\"reason\": ${entry.reason?.let { "\"${escape(it)}\"" } ?: "null"}, " +
+                        "\"modelUsed\": ${entry.modelUsed?.let { "\"${escape(it)}\"" } ?: "null"}, " +
+                        "\"parseStatus\": \"${escape(entry.parseStatus)}\", " +
+                        "\"errorHint\": ${entry.errorHint?.let { "\"${escape(it)}\"" } ?: "null"}, " +
                         "\"rawResponsePreview\": ${entry.rawResponsePreview?.let { "\"${escape(it)}\"" } ?: "null"}}$comma"
                 )
             }

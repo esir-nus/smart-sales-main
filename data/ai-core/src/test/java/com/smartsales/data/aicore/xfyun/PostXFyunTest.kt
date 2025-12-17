@@ -347,10 +347,85 @@ class PostXFyunTest {
             val preview = requireNotNull(decision.rawResponsePreview)
             assertTrue(preview.contains("\\n"))
             assertTrue(preview.length <= 200)
+            assertEquals("OK", decision.parseStatus)
         }
         debug.decisions.drop(3).forEach { decision ->
             assertTrue(decision.rawResponsePreview == null)
         }
+    }
+
+    @Test
+    fun `fenced JSON is parsed with STRIPPED_FENCE_OK status`() = runTest(dispatcher) {
+        val service = FakeArbitrationService(
+            json = """
+                ```json
+                {"action":"NONE","span":"","confidence":0.99,"reason":"fence"}
+                ```
+            """.trimIndent()
+        )
+        val post = PostXFyun(
+            dispatchers = dispatchers,
+            aiChatService = service,
+            aiParaSettingsProvider = provider(
+                PostXfyunSettings(
+                    enabled = true,
+                    maxRepairsPerTranscript = 1,
+                    confidenceThreshold = 0.8,
+                    suspiciousGapThresholdMs = 200L,
+                )
+            )
+        )
+        val markdown = """
+            ## 讯飞转写
+            - 发言人 1：好的罗
+            - 发言人 2：总我们继续
+        """.trimIndent()
+        val segments = listOf(
+            XfyunTranscriptSegment(roleId = "1", startMs = 0, endMs = 1000, text = "好的罗"),
+            XfyunTranscriptSegment(roleId = "2", startMs = 1100, endMs = 2000, text = "总我们继续"),
+        )
+
+        val result = post.polish(markdown, segments)
+
+        val debug = requireNotNull(result.debugInfo)
+        assertEquals(1, debug.decisions.size)
+        assertEquals("STRIPPED_FENCE_OK", debug.decisions.first().parseStatus)
+        assertTrue(debug.decisions.first().rawResponsePreview!!.contains("```"))
+    }
+
+    @Test
+    fun `non-json reply falls back with NON_JSON status`() = runTest(dispatcher) {
+        val service = FakeArbitrationService(
+            json = "OK {\"action\":\"NONE\",\"span\":\"\",\"confidence\":0.99,\"reason\":\"prefix\"}"
+        )
+        val post = PostXFyun(
+            dispatchers = dispatchers,
+            aiChatService = service,
+            aiParaSettingsProvider = provider(
+                PostXfyunSettings(
+                    enabled = true,
+                    maxRepairsPerTranscript = 1,
+                    confidenceThreshold = 0.8,
+                    suspiciousGapThresholdMs = 200L,
+                )
+            )
+        )
+        val markdown = """
+            ## 讯飞转写
+            - 发言人 1：好的罗
+            - 发言人 2：总我们继续
+        """.trimIndent()
+        val segments = listOf(
+            XfyunTranscriptSegment(roleId = "1", startMs = 0, endMs = 1000, text = "好的罗"),
+            XfyunTranscriptSegment(roleId = "2", startMs = 1100, endMs = 2000, text = "总我们继续"),
+        )
+
+        val result = post.polish(markdown, segments)
+
+        assertTrue(result.repairs.isEmpty())
+        val debug = requireNotNull(result.debugInfo)
+        assertEquals(1, debug.arbitrationsAttempted)
+        assertEquals("NON_JSON", debug.decisions.first().parseStatus)
     }
 
     @Test

@@ -32,7 +32,9 @@ data class AiChatRequest(
 data class AiChatResponse(
     val displayText: String,
     val structuredMarkdown: String?,
-    val references: List<String> = emptyList()
+    val references: List<String> = emptyList(),
+    // 说明：调试用“实际使用的模型名”（由实现方填充）；为空表示未知或未提供。
+    val modelUsed: String? = null,
 )
 
 sealed class AiChatStreamEvent {

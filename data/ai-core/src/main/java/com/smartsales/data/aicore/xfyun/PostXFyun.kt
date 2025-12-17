@@ -50,6 +50,7 @@ data class PostXFyunDebugInfo(
     val decisions: List<PostXFyunDecisionDebug>,
     val candidatesCount: Int,
     val arbitrationsAttempted: Int,
+    val arbitrationBudget: Int,
     val repairsApplied: Int,
 )
 
@@ -74,13 +75,22 @@ data class PostXFyunSuspiciousBoundary(
 )
 
 data class PostXFyunDecisionDebug(
+    val attemptIndex: Int,
     val boundaryIndex: Int,
+    val gapMs: Long,
+    val prevSpeakerId: String?,
+    val nextSpeakerId: String?,
+    val prevExcerpt: String,
+    val nextExcerpt: String,
+    val modelUsed: String?,
     val action: PostXFyunAction,
     val span: String,
     val confidence: Double,
     val reason: String?,
     // 重要：仅用于验证“LLM 确实被调用并返回了内容”，只保留截断预览（不落盘）。
     val rawResponsePreview: String? = null,
+    val parseStatus: String = "OK",
+    val errorHint: String? = null,
 )
 
 /**
@@ -111,6 +121,7 @@ class PostXFyun @Inject constructor(
                 decisions = emptyList(),
                 candidatesCount = 0,
                 arbitrationsAttempted = 0,
+                arbitrationBudget = 0,
                 repairsApplied = 0,
             )
         )
@@ -184,14 +195,24 @@ class PostXFyun @Inject constructor(
                     settings = settings,
                     capturePreview = capturePreview,
                 )
+                val attemptIndex = arbitrationsAttempted
                 arbitrationsAttempted += 1
                 decisions += PostXFyunDecisionDebug(
+                    attemptIndex = attemptIndex,
                     boundaryIndex = index,
+                    gapMs = candidate.gapMs,
+                    prevSpeakerId = candidate.prevSpeakerId,
+                    nextSpeakerId = candidate.nextSpeakerId,
+                    prevExcerpt = excerptTail(splitLine(prevLine).text, 16) + PROMPT_SUSPICIOUS_MARK,
+                    nextExcerpt = excerptHead(splitLine(nextLine).text, 16),
+                    modelUsed = decision.modelUsed,
                     action = decision.action,
                     span = decision.span,
                     confidence = decision.confidence,
                     reason = decision.reason,
                     rawResponsePreview = decision.rawResponsePreview,
+                    parseStatus = decision.parseStatus.name,
+                    errorHint = decision.errorHint,
                 )
                 if (decision.action == PostXFyunAction.NONE) continue
                 if (decision.confidence < settings.confidenceThreshold) continue
@@ -224,6 +245,7 @@ class PostXFyun @Inject constructor(
                     decisions = decisions,
                     candidatesCount = candidatesCount,
                     arbitrationsAttempted = arbitrationsAttempted,
+                    arbitrationBudget = arbitrationBudget,
                     repairsApplied = repairs.size,
                 )
             )
@@ -261,8 +283,9 @@ class PostXFyun @Inject constructor(
             result += Candidate(
                 boundaryIndex = i,
                 gapMs = gapMs,
-                prevSpeakerId = prevSpeaker?.takeIf { it.isNotBlank() },
-                nextSpeakerId = nextSpeaker?.takeIf { it.isNotBlank() },
+                // 重要：用于 HUD 证据展示：即使 roleId 为空字符串也要保留（不要转成 null）。
+                prevSpeakerId = prevSpeaker,
+                nextSpeakerId = nextSpeaker,
                 boundaryMark = mark,
             )
         }
@@ -281,7 +304,17 @@ class PostXFyun @Inject constructor(
         val confidence: Double,
         val reason: String?,
         val rawResponsePreview: String? = null,
+        val modelUsed: String? = null,
+        val parseStatus: ParseStatus = ParseStatus.OK,
+        val errorHint: String? = null,
     )
+
+    private enum class ParseStatus {
+        OK,
+        STRIPPED_FENCE_OK,
+        NON_JSON,
+        PARSE_FAILED,
+    }
 
     private suspend fun arbitrate(
         prevLine: String,
@@ -297,7 +330,8 @@ class PostXFyun @Inject constructor(
             .replace("{{NEXT_LINE}}", nextLine.trimEnd())
             .replace("{{BOUNDARY_MARK}}", boundaryMark)
         val modelOverride = settings.model.trim().takeIf { it.isNotBlank() }
-        val response = when (val result = aiChatService.sendMessage(AiChatRequest(prompt = prompt, model = modelOverride))) {
+        val result = aiChatService.sendMessage(AiChatRequest(prompt = prompt, model = modelOverride))
+        val response = when (result) {
             is Result.Success -> result.data.displayText
             is Result.Error -> return Decision(PostXFyunAction.NONE, span = "", confidence = 0.0, reason = null)
         }
@@ -309,21 +343,38 @@ class PostXFyun @Inject constructor(
         } else {
             null
         }
+        val modelUsed = (result as? Result.Success)?.data?.modelUsed
         val parsed = parseStrictDecision(response)
-        return parsed.copy(rawResponsePreview = preview)
+        return parsed.copy(rawResponsePreview = preview, modelUsed = modelUsed)
     }
 
     private fun parseStrictDecision(raw: String): Decision {
         // 重要：严格模式——必须是“纯 JSON 对象”，任何前后缀都视为违约并回退 NONE。
         val trimmed = raw.trim()
-        val payload = stripMarkdownFencesIfPresent(trimmed).trim()
-        if (!payload.startsWith("{") || !payload.endsWith("}")) {
-            return Decision(PostXFyunAction.NONE, span = "", confidence = 0.0, reason = "non-json")
+        val (payload, strippedFence) = stripMarkdownFencesIfPresent(trimmed)
+        val normalized = payload.trim()
+        if (!normalized.startsWith("{") || !normalized.endsWith("}")) {
+            return Decision(
+                PostXFyunAction.NONE,
+                span = "",
+                confidence = 0.0,
+                reason = "non-json",
+                parseStatus = ParseStatus.NON_JSON,
+                errorHint = "reply is not a pure JSON object"
+            )
         }
-        val obj = runCatching { JsonParser.parseString(payload) }.getOrNull()
+        val parsed = runCatching { JsonParser.parseString(normalized) }
+        val obj = parsed.getOrNull()
             ?.takeIf { it.isJsonObject }
             ?.asJsonObject
-            ?: return Decision(PostXFyunAction.NONE, span = "", confidence = 0.0, reason = "parse-failed")
+            ?: return Decision(
+                PostXFyunAction.NONE,
+                span = "",
+                confidence = 0.0,
+                reason = "parse-failed",
+                parseStatus = ParseStatus.PARSE_FAILED,
+                errorHint = parsed.exceptionOrNull()?.message?.take(80),
+            )
 
         val action = obj.getString("action")
             ?.trim()
@@ -333,25 +384,48 @@ class PostXFyun @Inject constructor(
         val confidence = obj.getDouble("confidence") ?: 0.0
         val reason = obj.getString("reason")?.takeIf { it.isNotBlank() }
 
-        if (confidence !in 0.0..1.0) return Decision(PostXFyunAction.NONE, span = "", confidence = 0.0, reason = "bad-confidence")
-        if (action == PostXFyunAction.NONE) return Decision(PostXFyunAction.NONE, span = "", confidence = confidence, reason = reason)
-        if (span.length !in 1..2 || span.any { it.isWhitespace() }) {
-            return Decision(PostXFyunAction.NONE, span = "", confidence = 0.0, reason = "bad-span")
+        val okStatus = if (strippedFence) ParseStatus.STRIPPED_FENCE_OK else ParseStatus.OK
+        if (confidence !in 0.0..1.0) {
+            return Decision(
+                PostXFyunAction.NONE,
+                span = "",
+                confidence = 0.0,
+                reason = "bad-confidence",
+                parseStatus = okStatus
+            )
         }
-        return Decision(action = action, span = span, confidence = confidence, reason = reason)
+        if (action == PostXFyunAction.NONE) {
+            return Decision(
+                PostXFyunAction.NONE,
+                span = "",
+                confidence = confidence,
+                reason = reason,
+                parseStatus = okStatus
+            )
+        }
+        if (span.length !in 1..2 || span.any { it.isWhitespace() }) {
+            return Decision(
+                PostXFyunAction.NONE,
+                span = "",
+                confidence = 0.0,
+                reason = "bad-span",
+                parseStatus = okStatus
+            )
+        }
+        return Decision(action = action, span = span, confidence = confidence, reason = reason, parseStatus = okStatus)
     }
 
-    private fun stripMarkdownFencesIfPresent(raw: String): String {
+    private fun stripMarkdownFencesIfPresent(raw: String): Pair<String, Boolean> {
         // 说明：兼容 ```json ... ``` 的包装，但不放松“必须是纯 JSON 对象”的约束。
         // - 仅移除首尾 fence 行，保留中间内容原样。
         val trimmed = raw.trim()
-        if (!trimmed.startsWith("```")) return trimmed
+        if (!trimmed.startsWith("```")) return trimmed to false
         val lines = trimmed.split("\n")
-        if (lines.size < 3) return trimmed
+        if (lines.size < 3) return trimmed to false
         val first = lines.first().trim()
         val last = lines.last().trim()
-        if (!first.startsWith("```") || !last.startsWith("```")) return trimmed
-        return lines.subList(1, lines.size - 1).joinToString("\n")
+        if (!first.startsWith("```") || !last.startsWith("```")) return trimmed to false
+        return lines.subList(1, lines.size - 1).joinToString("\n") to true
     }
 
     private fun parseAction(raw: String): PostXFyunAction = when (raw.trim().uppercase()) {

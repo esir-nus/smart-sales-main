@@ -44,7 +44,9 @@ class DashscopeAiChatService @Inject constructor(
                 AiChatResponse(
                     displayText = completion.displayText,
                     structuredMarkdown = markdown,
-                    references = emptyList()
+                    references = emptyList(),
+                    // 重要：用于验证“真实使用的模型名”，必须是 resolvedModel（override 或 credentials 默认值）。
+                    modelUsed = dashscopeRequest.model,
                 )
             }
         }
@@ -70,7 +72,8 @@ class DashscopeAiChatService @Inject constructor(
                     val response = AiChatResponse(
                         displayText = display,
                         structuredMarkdown = buildMarkdown(display, request),
-                        references = emptyList()
+                        references = emptyList(),
+                        modelUsed = dashscopeRequest.model,
                     )
                     emit(AiChatStreamEvent.Completed(response))
                 }

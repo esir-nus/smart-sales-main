@@ -1411,6 +1411,7 @@ private fun XfyunTraceSection(
             DebugField(label = "postXfyun.promptSha256", value = settings.promptSha256 ?: "-")
             DebugField(label = "postXfyun.candidatesCount", value = trace.postXfyunCandidatesCount.toString())
             DebugField(label = "postXfyun.arbitrationsAttempted", value = trace.postXfyunArbitrationsAttempted.toString())
+            DebugField(label = "postXfyun.arbitrationBudget", value = trace.postXfyunArbitrationBudget.toString())
             DebugField(label = "postXfyun.repairsApplied", value = trace.postXfyunRepairsApplied.toString())
         }
 
@@ -1421,9 +1422,10 @@ private fun XfyunTraceSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             trace.postXfyunSuspicious.take(10).forEach { item ->
-                val speakers = listOfNotNull(item.prevSpeakerId, item.nextSpeakerId).joinToString("→").ifBlank { "-" }
+                val prev = item.prevSpeakerId?.let { "\"$it\"" } ?: "null"
+                val next = item.nextSpeakerId?.let { "\"$it\"" } ?: "null"
                 Text(
-                    text = "- #${item.boundaryIndex} gapMs=${item.gapMs} prev=$speakers prev=\"${item.prevExcerpt}\" next=\"${item.nextExcerpt}\"",
+                    text = "- #${item.boundaryIndex} gapMs=${item.gapMs} prev=$prev next=$next prev=\"${item.prevExcerpt}\" next=\"${item.nextExcerpt}\"",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -1451,10 +1453,17 @@ private fun XfyunTraceSection(
             )
             trace.postXfyunDecisions.take(10).forEach { item ->
                 Text(
-                    text = "- #${item.boundaryIndex} ${item.action} span=\"${item.span}\" conf=${item.confidence} reason=${item.reason ?: "-"}",
+                    text = "- [${item.attemptIndex}] #${item.boundaryIndex} ${item.action} span=\"${item.span}\" conf=${item.confidence} parse=${item.parseStatus} model=${item.modelUsed ?: "-"}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                item.errorHint?.takeIf { it.isNotBlank() }?.let { hint ->
+                    Text(
+                        text = "  hint: $hint",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 item.rawResponsePreview?.takeIf { it.isNotBlank() }?.let { preview ->
                     Text(
                         text = "  LLM raw: $preview",

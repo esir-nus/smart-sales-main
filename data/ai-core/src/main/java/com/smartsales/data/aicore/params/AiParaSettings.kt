@@ -53,13 +53,18 @@ data class XfyunAsrSettings(
  * - 仲裁输出必须是“封闭动作 JSON”，禁止自由改写，避免引入不可追溯的文本变化。
  */
 data class PostXfyunSettings(
-    val enabled: Boolean = true,
+    // 默认关闭：避免线上“看起来变好了但引入不可控改写”。
+    val enabled: Boolean = false,
     // 判定可疑边界：gapMs <= threshold 才会触发仲裁（单位毫秒）。
     val suspiciousGapThresholdMs: Long = 200L,
     // 低于该置信度的仲裁结果一律回退为 NONE（不改动文本）。
     val confidenceThreshold: Double = 0.85,
-    // 每份逐字稿最多修复次数，避免无限调用与过度修改；设置为 0 等同关闭。
-    val maxRepairsPerTranscript: Int = 5,
+    // 每份逐字稿最多仲裁/修复次数：
+    // - 重要：该值同时限制 LLM 仲裁调用次数（即使一直返回 NONE 也会停止），避免 58+ 次无意义调用。
+    // - 设置为 0 等同关闭。
+    val maxRepairsPerTranscript: Int = 0,
+    // 仲裁模型覆盖（例如：qwen-max3 / qwen-max / qwen-plus）；为空则使用默认模型配置。
+    val model: String = "",
     // 重要：LLM 仲裁 Prompt 模板（仅输入前后两行 + boundaryMark，不允许输入 raw JSON）。
     val promptTemplate: String = DEFAULT_POST_XFYUN_PROMPT_TEMPLATE,
 )
@@ -73,7 +78,8 @@ private val DEFAULT_POST_XFYUN_PROMPT_TEMPLATE: String = """
 - boundary: {{BOUNDARY_MARK}}
 
 任务：
-判断这两行在“说话人切换处”是否发生了 1~2 个字符的分词漂移（例如：罗/总、为/什、6/d）。
+prev_line 末尾可能包含标记：〔/suspicious〕。该标记仅用于提示“这里是一个短 gap 的可疑边界”，不属于原文内容。
+请重点观察标记前后的 1~2 个字符是否应该跨边界移动（例如：罗/总、为/什、6/d）。
 你只能选择一个封闭动作，不允许改写句子，不允许新增/删除除 span 以外的任何字符。
 
 输出（必须是纯 JSON 对象）：

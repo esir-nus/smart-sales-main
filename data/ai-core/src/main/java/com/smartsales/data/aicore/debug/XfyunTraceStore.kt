@@ -40,6 +40,10 @@ data class XfyunTraceSnapshot(
     val postXfyunSettings: PostXfyunSettingsDebug? = null,
     val postXfyunSuspicious: List<PostXfyunSuspiciousBoundary> = emptyList(),
     val postXfyunDecisions: List<PostXfyunDecisionDebug> = emptyList(),
+    // 重要：运行态计数，便于确认“候选数 / 实际仲裁次数 / 实际修复数”是否符合预期（尤其是 maxRepairs 截断）。
+    val postXfyunCandidatesCount: Int = 0,
+    val postXfyunArbitrationsAttempted: Int = 0,
+    val postXfyunRepairsApplied: Int = 0,
     val updatedAtMs: Long = 0L,
 ) {
     data class ResultTypeAttempt(
@@ -75,6 +79,7 @@ data class XfyunTraceSnapshot(
         val maxRepairsPerTranscript: Int,
         val suspiciousGapThresholdMs: Long,
         val confidenceThreshold: Double,
+        val modelEffective: String,
         val promptLength: Int,
         val promptPreview: String,
         val promptSha256: String? = null,
@@ -300,6 +305,21 @@ class XfyunTraceStore @Inject constructor() {
         }
     }
 
+    fun recordPostXfyunRunStats(
+        candidatesCount: Int,
+        arbitrationsAttempted: Int,
+        repairsApplied: Int,
+    ) {
+        update { current ->
+            current.copy(
+                postXfyunCandidatesCount = candidatesCount,
+                postXfyunArbitrationsAttempted = arbitrationsAttempted,
+                postXfyunRepairsApplied = repairsApplied,
+                updatedAtMs = System.currentTimeMillis()
+            )
+        }
+    }
+
     fun getSnapshot(): XfyunTraceSnapshot? = snapshot
 
     private inline fun update(block: (XfyunTraceSnapshot) -> XfyunTraceSnapshot) {
@@ -407,6 +427,9 @@ object XfyunDebugInfoFormatter {
             appendLine("  \"postXfyunDecisions\": ${formatPostXfyunDecisions(snapshot.postXfyunDecisions)},")
             appendLine("  \"postXfyunRepairsCount\": ${snapshot.postXfyunRepairs.size},")
             appendLine("  \"postXfyunRepairs\": ${formatPostXfyunRepairs(snapshot.postXfyunRepairs)},")
+            appendLine("  \"postXfyunCandidatesCount\": ${snapshot.postXfyunCandidatesCount},")
+            appendLine("  \"postXfyunArbitrationsAttempted\": ${snapshot.postXfyunArbitrationsAttempted},")
+            appendLine("  \"postXfyunRepairsApplied\": ${snapshot.postXfyunRepairsApplied},")
             appendLine("  \"updatedAtMs\": ${snapshot.updatedAtMs}")
             append("}")
         }
@@ -460,6 +483,7 @@ object XfyunDebugInfoFormatter {
             append("\n    \"maxRepairsPerTranscript\": ${settings.maxRepairsPerTranscript},")
             append("\n    \"suspiciousGapThresholdMs\": ${settings.suspiciousGapThresholdMs},")
             append("\n    \"confidenceThreshold\": ${settings.confidenceThreshold},")
+            append("\n    \"modelEffective\": \"${escape(settings.modelEffective)}\",")
             append("\n    \"promptLength\": ${settings.promptLength},")
             append("\n    \"promptPreview\": \"${escape(settings.promptPreview)}\",")
             append("\n    \"promptSha256\": ${settings.promptSha256?.let { "\"${escape(it)}\"" } ?: "null"}")

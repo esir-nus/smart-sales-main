@@ -20,6 +20,7 @@ class XfyunDebugInfoFormatterPostXfyunTest {
                 maxRepairsPerTranscript = 2,
                 suspiciousGapThresholdMs = 200,
                 confidenceThreshold = 0.85,
+                modelEffective = "qwen-max3",
                 promptLength = 12,
                 promptPreview = "TEMPLATE-XYZ",
                 promptSha256 = "deadbeef",
@@ -52,4 +53,3 @@ class XfyunDebugInfoFormatterPostXfyunTest {
         println(text)
     }
 }
-

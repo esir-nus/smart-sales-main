@@ -120,9 +120,10 @@ class DashscopeAiChatService @Inject constructor(
         credentials: DashscopeCredentials
     ): DashscopeRequest {
         val dashScopeSettings = aiParaSettingsProvider.snapshot().dashScope
+        val modelOverride = request.model?.trim()?.takeIf { it.isNotBlank() }
         return DashscopeRequest(
             apiKey = credentials.apiKey,
-            model = credentials.model,
+            model = modelOverride ?: credentials.model,
             messages = buildMessages(request),
             temperature = dashScopeSettings.temperature.toFloat(),
             incrementalOutput = dashScopeSettings.incrementalOutput

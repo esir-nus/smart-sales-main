@@ -224,6 +224,7 @@ class XfyunAsrCoordinator @Inject constructor(
                                 maxRepairsPerTranscript = debugInfo.settings.maxRepairsPerTranscript,
                                 suspiciousGapThresholdMs = debugInfo.settings.suspiciousGapThresholdMs,
                                 confidenceThreshold = debugInfo.settings.confidenceThreshold,
+                                modelEffective = debugInfo.settings.modelEffective,
                                 promptLength = debugInfo.settings.promptLength,
                                 promptPreview = debugInfo.settings.promptPreview,
                                 promptSha256 = debugInfo.settings.promptSha256,
@@ -251,6 +252,11 @@ class XfyunAsrCoordinator @Inject constructor(
                                     reason = decision.reason,
                                 )
                             }
+                        )
+                        traceStore.recordPostXfyunRunStats(
+                            candidatesCount = debugInfo.candidatesCount,
+                            arbitrationsAttempted = debugInfo.arbitrationsAttempted,
+                            repairsApplied = debugInfo.repairsApplied,
                         )
                     }
                     if (postResult.repairs.isNotEmpty()) {

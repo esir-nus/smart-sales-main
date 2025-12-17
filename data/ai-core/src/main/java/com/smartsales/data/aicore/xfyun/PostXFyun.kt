@@ -48,6 +48,9 @@ data class PostXFyunDebugInfo(
     val settings: PostXFyunSettingsDebug,
     val suspiciousBoundaries: List<PostXFyunSuspiciousBoundary>,
     val decisions: List<PostXFyunDecisionDebug>,
+    val candidatesCount: Int,
+    val arbitrationsAttempted: Int,
+    val repairsApplied: Int,
 )
 
 data class PostXFyunSettingsDebug(
@@ -55,6 +58,7 @@ data class PostXFyunSettingsDebug(
     val maxRepairsPerTranscript: Int,
     val suspiciousGapThresholdMs: Long,
     val confidenceThreshold: Double,
+    val modelEffective: String,
     val promptLength: Int,
     val promptPreview: String,
     val promptSha256: String? = null,
@@ -103,6 +107,9 @@ class PostXFyun @Inject constructor(
                 settings = settingsDebug,
                 suspiciousBoundaries = emptyList(),
                 decisions = emptyList(),
+                candidatesCount = 0,
+                arbitrationsAttempted = 0,
+                repairsApplied = 0,
             )
         )
         // 重要：PostXFyun 属于“可选增强”，任何异常都必须回退原始渲染（同时保留 debug 信息用于排查）。
@@ -126,11 +133,13 @@ class PostXFyun @Inject constructor(
                 segments = segments,
                 gapThresholdMs = settings.suspiciousGapThresholdMs,
             )
+            val candidatesCount = candidates.size
 
             val mutable = bulletLines.toMutableList()
             val repairs = mutableListOf<PostXFyunRepair>()
             val suspicious = mutableListOf<PostXFyunSuspiciousBoundary>()
             val decisions = mutableListOf<PostXFyunDecisionDebug>()
+            var arbitrationsAttempted = 0
             for (candidate in candidates) {
                 val index = candidate.boundaryIndex
                 if (index !in 0 until (mutable.size - 1)) continue
@@ -142,15 +151,27 @@ class PostXFyun @Inject constructor(
                     gapMs = candidate.gapMs,
                     prevSpeakerId = candidate.prevSpeakerId,
                     nextSpeakerId = candidate.nextSpeakerId,
-                    prevExcerpt = excerptTail(splitLine(prevLine).text, 16),
+                    // 重要：可疑标记仅用于 Prompt/HUD，可帮助人工确认标记策略；不会写回逐字稿，除非仲裁后真的发生修复。
+                    prevExcerpt = excerptTail(splitLine(prevLine).text, 16) + PROMPT_SUSPICIOUS_MARK,
                     nextExcerpt = excerptHead(splitLine(nextLine).text, 16),
                 )
-                val decision = arbitrate(
-                    prevLine = prevLine,
-                    nextLine = nextLine,
-                    boundaryMark = candidate.boundaryMark,
-                    settings = settings,
-                )
+                // 重要：maxRepairsPerTranscript 同时限制 LLM 仲裁调用次数（即使一直返回 NONE 也会停止）。
+                val decision = if (arbitrationsAttempted >= settings.maxRepairsPerTranscript) {
+                    Decision(
+                        action = PostXFyunAction.NONE,
+                        span = "",
+                        confidence = 0.0,
+                        reason = "skipped-by-maxRepairsPerTranscript"
+                    )
+                } else {
+                    arbitrationsAttempted += 1
+                    arbitrate(
+                        prevLine = prevLine,
+                        nextLine = nextLine,
+                        boundaryMark = candidate.boundaryMark,
+                        settings = settings,
+                    )
+                }
                 decisions += PostXFyunDecisionDebug(
                     boundaryIndex = index,
                     action = decision.action,
@@ -187,6 +208,9 @@ class PostXFyun @Inject constructor(
                     settings = settingsDebug,
                     suspiciousBoundaries = suspicious,
                     decisions = decisions,
+                    candidatesCount = candidatesCount,
+                    arbitrationsAttempted = arbitrationsAttempted,
+                    repairsApplied = repairs.size,
                 )
             )
         }.getOrElse { fallback }
@@ -254,11 +278,14 @@ class PostXFyun @Inject constructor(
         boundaryMark: String,
         settings: PostXfyunSettings,
     ): Decision {
+        // 重要：可疑标记仅用于 Prompt，让模型把注意力聚焦到边界附近；不改变最终展示的逐字稿文本。
+        val prevLineForPrompt = prevLine.trimEnd() + PROMPT_SUSPICIOUS_MARK
         val prompt = settings.promptTemplate
-            .replace("{{PREV_LINE}}", prevLine)
-            .replace("{{NEXT_LINE}}", nextLine)
+            .replace("{{PREV_LINE}}", prevLineForPrompt)
+            .replace("{{NEXT_LINE}}", nextLine.trimEnd())
             .replace("{{BOUNDARY_MARK}}", boundaryMark)
-        val response = when (val result = aiChatService.sendMessage(AiChatRequest(prompt = prompt))) {
+        val modelOverride = settings.model.trim().takeIf { it.isNotBlank() }
+        val response = when (val result = aiChatService.sendMessage(AiChatRequest(prompt = prompt, model = modelOverride))) {
             is Result.Success -> result.data.displayText
             is Result.Error -> return Decision(PostXFyunAction.NONE, span = "", confidence = 0.0, reason = null)
         }
@@ -421,11 +448,13 @@ class PostXFyun @Inject constructor(
     private fun PostXfyunSettings.toDebug(): PostXFyunSettingsDebug {
         val template = promptTemplate
         val preview = template.trim().take(PROMPT_PREVIEW_CHARS)
+        val modelEffective = model.trim().ifBlank { "(default)" }
         return PostXFyunSettingsDebug(
             enabled = enabled,
             maxRepairsPerTranscript = maxRepairsPerTranscript,
             suspiciousGapThresholdMs = suspiciousGapThresholdMs,
             confidenceThreshold = confidenceThreshold,
+            modelEffective = modelEffective,
             promptLength = template.length,
             promptPreview = preview,
             promptSha256 = sha256Hex(template),
@@ -445,5 +474,6 @@ class PostXFyun @Inject constructor(
     private companion object {
         private val PUNCTUATIONS = setOf('。', '！', '？', '!', '?', '，', ',', '、', '；', ';', '：', ':', '…')
         private const val PROMPT_PREVIEW_CHARS = 120
+        private const val PROMPT_SUSPICIOUS_MARK = "〔/suspicious〕"
     }
 }

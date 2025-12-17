@@ -22,6 +22,8 @@ data class AiAttachment(
 
 data class AiChatRequest(
     val prompt: String,
+    // 说明：可选的模型覆盖（例如：qwen-max3）；为空则沿用默认模型配置。
+    val model: String? = null,
     val skillTags: Set<String> = emptySet(),
     val transcriptMarkdown: String? = null,
     val attachments: List<AiAttachment> = emptyList()

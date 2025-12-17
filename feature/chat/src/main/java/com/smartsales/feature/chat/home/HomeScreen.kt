@@ -1375,6 +1375,7 @@ private fun XfyunTraceSection(
             DebugField(label = "postXfyun.maxRepairs", value = settings.maxRepairsPerTranscript.toString())
             DebugField(label = "postXfyun.gapThresholdMs", value = settings.suspiciousGapThresholdMs.toString())
             DebugField(label = "postXfyun.confidenceThreshold", value = settings.confidenceThreshold.toString())
+            DebugField(label = "postXfyun.modelEffective", value = settings.modelEffective.ifBlank { "-" })
             DebugField(label = "postXfyun.promptLength", value = settings.promptLength.toString())
             DebugField(
                 label = "postXfyun.promptPreview",
@@ -1384,6 +1385,9 @@ private fun XfyunTraceSection(
                     .ifBlank { "-" }
             )
             DebugField(label = "postXfyun.promptSha256", value = settings.promptSha256 ?: "-")
+            DebugField(label = "postXfyun.candidatesCount", value = trace.postXfyunCandidatesCount.toString())
+            DebugField(label = "postXfyun.arbitrationsAttempted", value = trace.postXfyunArbitrationsAttempted.toString())
+            DebugField(label = "postXfyun.repairsApplied", value = trace.postXfyunRepairsApplied.toString())
         }
 
         if (trace.postXfyunSuspicious.isNotEmpty()) {

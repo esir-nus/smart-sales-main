@@ -1,0 +1,155 @@
+# Agent Handbook (Smart Sales App)
+
+> Constitutional doc. Only edit by hand, never by automated tools.
+
+<!-- Path: agent.md -->
+<!-- Purpose: Governance, roles, document rules, workflow conventions -->
+
+---
+
+## 1. Participants
+
+- **Operator（你 + 编辑里的助手）**
+  - 最终决策者。
+  - 修改本文件和计划文件。
+  - 在需要时通过命令触发工作流（例如：`invoke logging workflow`）。
+  - 负责实际执行命令，例如 `./gradlew ...`，以及真机调试。
+
+- **Codex / 本地代码修改工具**
+  - 在仓库里实际修改代码 / 文档。
+  - 必须遵守本文件、`dev_plan.md`、`tdd-plan.md`、`docs/`、`workflows/` 的规则。
+  - 有一定裁量权，可在 guardrail 范围内拆分任务和选实现方式。
+  - 不得自动修改 `agent.md` 本身。
+
+---
+
+## 2. 核心行为要求（对 Codex）
+
+1. **优先写干净、简单、模块化的代码**
+   - 小函数。小类。清晰的模块边界。
+   - 避免过度抽象和过深继承。
+   - 能用简单方案解决时，不追求花哨设计。
+
+2. **使用简单、易懂的语言**
+   - 注释和文档用简体中文。
+   - 句子要短。少用长句和复杂结构。
+   - 变量命名清晰。表达真实含义。
+
+3. **不要偷懒，始终完整阅读相关文件**
+   - 在修改一个文件前，应读完整个文件。
+   - 在引用一个文档（如 `dev_plan.md`）前，应读完整个文档。
+   - 不根据“猜测”或“片段”做决定。
+
+4. **中国网络环境优先**
+   - 修改构建脚本或依赖配置时：
+     - 优先考虑使用阿里云镜像（Aliyun mirror）或其它国内镜像。
+     - 避免依赖访问极慢或经常超时的海外源。
+   - 在提示命令或配置时，可给出示例镜像配置，但不强制改动现有脚本。
+
+
+5. **REALLY IMPORTAT **
+  - if i provide official practices, stick to it alwasy. it serves as the highest principle you should absolutely align with. no execrption, just follow. unless there's limitation or we need workaround, in that case , do tell me for conslutation. OVER
+---
+
+## 3. Document Types & Rules
+
+- **Constitutional**
+  - `agent.md`
+  - 只允许 Operator 手动修改。
+
+- **Plans**
+  - `dev_plan.md`（开发路线和模块顺序）
+  - `tdd-plan.md`（TDD / T0–T3 说明）
+  - 修改时，需要在 `docs/progress-log.md` 有“计划变更”记录。
+
+- **Logs**
+  - `docs/progress-log.md`
+  - 只追加，不修改旧条目。
+
+- **State Snapshot**
+  - `docs/current-state.md`
+  - 描述系统当前实际状态（已完成功能、已知限制）。
+  - 在大的进展或阶段变更后，应更新此文件。
+
+- **Workflows**
+  - 目录：`workflows/`
+  - 每个文件定义一个工作流（例如 `logging-workflow.md`）。
+  - 内容是步骤说明和提示模板，不是业务真相来源。
+
+- **UI 集成资料**
+  - `AGENT.md`（本文件）：入口索引，指向所有计划/工作流/参考文档。
+  - `ui-int-workflow.md`：三角色 UI 集成 SOP，描述任务生命周期。
+  - `frontend_inte_plan.md`：记录跨端流程、特性触点与后端映射。
+  - `api-contracts.md`：详细的 API schema 与字段契约。
+  - `react-ui-reference.md`：概述 React 页/组件的 props、state、事件，供 Android 映射。
+
+---
+
+## 4. Code Style & Language Rules
+
+- 所有 **Kotlin / Java 源码文件** 必须：
+  1. 顶部包含统一中文文件头，例如：
+
+     ```kotlin
+     // 文件：<相对路径>
+     // 模块：<:moduleName>
+     // 说明：<简要中文说明>
+     // 作者：创建于 <YYYY-MM-DD> # use real time, do not invent or guess
+     ```
+
+  2. 注释全部使用简体中文。
+
+- 其它语言文件（如 Gradle 脚本、Shell）：
+  - 注释也优先使用简体中文。
+  - 如涉及网络或镜像，倾向推荐阿里云等国内镜像。
+
+---
+
+## 5. Workflow 模式
+
+- 工作流文件位于：`workflows/`。
+- 触发方式：在对话中显式输入  
+  `invoke <name> workflow`  
+  例如：
+  - `invoke logging workflow`
+  - `invoke dev workflow`
+  - `invoke compliance workflow`
+
+- 当工作流被触发时，Codex 应：
+  1. 打开对应 `workflows/<name>-workflow.md`；
+  2. 按步骤执行；
+  3. 只修改允许的文件。
+
+---
+
+## 6. 执行边界
+
+- 所有实际命令（如 `./gradlew ...`）只能由 Operator 执行。
+- Codex 只负责：
+  - 给出建议命令；
+  - 说明预期结果；
+  - 提供失败时的排查建议。
+- Codex 不假定命令已成功执行。
+
+---
+
+## 7. 最小执行约定
+
+每次实质性工作（写代码 / 写测试 / 调整计划）结束时，应：
+
+1. 至少触发一次：`invoke logging workflow`；  
+2. 向 `docs/progress-log.md` 追加一条记录；  
+3. 若是重大进展或阶段变化，也应更新 `docs/current-state.md`。
+
+---
+
+## 8. ## Tingwu 规则（`tingwu-docs.md`）
+
+`tingwu-docs.md` 是tingwu项目的“最佳实践索引（best-practice map）”，供 Codex 和开发者快速定位：
+- 模块入口与职责
+- SDK 封装与网络层结构
+- 推荐示例（good_examples）
+- 测试指南（testing_guidelines）
+- 常见坑（pitfalls）
+- 需要淘汰的旧模式（deprecated）
+- 所有关键模块与工具链的结构化信息

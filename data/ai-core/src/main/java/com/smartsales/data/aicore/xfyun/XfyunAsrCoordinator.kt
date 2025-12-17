@@ -217,6 +217,13 @@ class XfyunAsrCoordinator @Inject constructor(
                         // 重要：后处理属于“可选增强”，任何失败都必须回退原始渲染，不影响主流程。
                         PostXFyunResult(polishedMarkdown = parsed.markdown, repairs = emptyList())
                     }
+                    runCatching {
+                        // 重要：验证切片——存储最近一次“原始/后处理”逐字稿，供 HUD 一键复制对比。
+                        traceStore.recordPostXfyunMarkdown(
+                            originalMarkdown = parsed.markdown,
+                            polishedMarkdown = postResult.polishedMarkdown,
+                        )
+                    }
                     postResult.debugInfo?.let { debugInfo ->
                         traceStore.recordPostXfyunSettings(
                             XfyunTraceSnapshot.PostXfyunSettingsDebug(
@@ -250,6 +257,7 @@ class XfyunAsrCoordinator @Inject constructor(
                                     span = decision.span,
                                     confidence = decision.confidence,
                                     reason = decision.reason,
+                                    rawResponsePreview = decision.rawResponsePreview,
                                 )
                             }
                         )

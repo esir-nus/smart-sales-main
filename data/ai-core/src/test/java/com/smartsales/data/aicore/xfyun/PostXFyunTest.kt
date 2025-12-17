@@ -206,7 +206,14 @@ class PostXFyunTest {
     @Test
     fun `maxRepairsPerTranscript caps arbitrations even when decisions are always NONE`() = runTest(dispatcher) {
         val service = FakeArbitrationService(
-            json = """{"action":"NONE","span":"","confidence":0.99,"reason":"无需修复"}"""
+            json = """
+                {
+                  "action":"NONE",
+                  "span":"",
+                  "confidence":0.99,
+                  "reason":"无需修复"
+                }
+            """.trimIndent()
         )
         val post = PostXFyun(
             dispatchers = dispatchers,
@@ -244,7 +251,7 @@ class PostXFyunTest {
         assertEquals(7, debug.candidatesCount)
         assertEquals(3, debug.arbitrationsAttempted)
         assertEquals(0, debug.repairsApplied)
-        assertEquals(debug.candidatesCount, debug.decisions.size)
+        assertEquals(debug.arbitrationsAttempted, debug.decisions.size)
     }
 
     @Test
@@ -284,6 +291,64 @@ class PostXFyunTest {
         val prompt = service.requests.single().prompt
         assertTrue(prompt.contains("〔/suspicious〕"))
         assertEquals("qwen-max3", service.requests.single().model)
+    }
+
+    @Test
+    fun `raw response preview is captured for first 3 arbitrations only`() = runTest(dispatcher) {
+        val service = FakeArbitrationService(
+            json = """
+                {
+                  "action":"NONE",
+                  "span":"",
+                  "confidence":0.99,
+                  "reason":"无需修复"
+                }
+            """.trimIndent()
+        )
+        val post = PostXFyun(
+            dispatchers = dispatchers,
+            aiChatService = service,
+            aiParaSettingsProvider = provider(
+                PostXfyunSettings(
+                    enabled = true,
+                    maxRepairsPerTranscript = 5,
+                    confidenceThreshold = 0.8,
+                    suspiciousGapThresholdMs = 200L,
+                )
+            )
+        )
+        val lines = buildString {
+            appendLine("## 讯飞转写")
+            repeat(7) { index ->
+                appendLine("- 发言人 1：第${index}句")
+            }
+        }.trimEnd()
+        val segments = (0 until 7).map { index ->
+            XfyunTranscriptSegment(
+                roleId = "1",
+                startMs = (index * 1000).toLong(),
+                endMs = ((index + 1) * 1000).toLong(),
+                text = "第${index}句",
+            )
+        }
+
+        val result = post.polish(lines, segments)
+
+        assertEquals(lines, result.polishedMarkdown)
+        assertTrue(result.repairs.isEmpty())
+        assertEquals(5, service.callCount)
+        val debug = requireNotNull(result.debugInfo)
+        assertEquals(6, debug.candidatesCount)
+        assertEquals(5, debug.arbitrationsAttempted)
+        assertEquals(5, debug.decisions.size)
+        debug.decisions.take(3).forEach { decision ->
+            val preview = requireNotNull(decision.rawResponsePreview)
+            assertTrue(preview.contains("\\n"))
+            assertTrue(preview.length <= 200)
+        }
+        debug.decisions.drop(3).forEach { decision ->
+            assertTrue(decision.rawResponsePreview == null)
+        }
     }
 
     @Test

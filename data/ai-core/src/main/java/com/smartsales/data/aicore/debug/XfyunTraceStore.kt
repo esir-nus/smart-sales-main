@@ -44,6 +44,9 @@ data class XfyunTraceSnapshot(
     val postXfyunCandidatesCount: Int = 0,
     val postXfyunArbitrationsAttempted: Int = 0,
     val postXfyunRepairsApplied: Int = 0,
+    // 重要：用于 HUD “复制原始/复制后逐字稿”验证切片，仅保存在内存，不落盘。
+    val postXfyunOriginalMarkdown: String? = null,
+    val postXfyunPolishedMarkdown: String? = null,
     val updatedAtMs: Long = 0L,
 ) {
     data class ResultTypeAttempt(
@@ -100,6 +103,8 @@ data class XfyunTraceSnapshot(
         val span: String,
         val confidence: Double,
         val reason: String?,
+        // 重要：仅保留截断预览，用于证明 LLM 确实返回了内容（不应包含 XFyun raw HTTP JSON）。
+        val rawResponsePreview: String? = null,
     )
 }
 
@@ -320,6 +325,19 @@ class XfyunTraceStore @Inject constructor() {
         }
     }
 
+    fun recordPostXfyunMarkdown(
+        originalMarkdown: String?,
+        polishedMarkdown: String?,
+    ) {
+        update { current ->
+            current.copy(
+                postXfyunOriginalMarkdown = originalMarkdown,
+                postXfyunPolishedMarkdown = polishedMarkdown,
+                updatedAtMs = System.currentTimeMillis()
+            )
+        }
+    }
+
     fun getSnapshot(): XfyunTraceSnapshot? = snapshot
 
     private inline fun update(block: (XfyunTraceSnapshot) -> XfyunTraceSnapshot) {
@@ -522,7 +540,8 @@ object XfyunDebugInfoFormatter {
                 append(
                     "\n    {\"boundaryIndex\": ${entry.boundaryIndex}, \"action\": \"${escape(entry.action)}\", " +
                         "\"span\": \"${escape(entry.span)}\", \"confidence\": ${entry.confidence}, " +
-                        "\"reason\": ${entry.reason?.let { "\"${escape(it)}\"" } ?: "null"}}$comma"
+                        "\"reason\": ${entry.reason?.let { "\"${escape(it)}\"" } ?: "null"}, " +
+                        "\"rawResponsePreview\": ${entry.rawResponsePreview?.let { "\"${escape(it)}\"" } ?: "null"}}$comma"
                 )
             }
             if (entries.size > limited.size) {

@@ -79,6 +79,8 @@ data class PostXFyunDecisionDebug(
     val span: String,
     val confidence: Double,
     val reason: String?,
+    // 重要：仅用于验证“LLM 确实被调用并返回了内容”，只保留截断预览（不落盘）。
+    val rawResponsePreview: String? = null,
 )
 
 /**
@@ -135,18 +137,16 @@ class PostXFyun @Inject constructor(
             )
             val candidatesCount = candidates.size
 
-            val mutable = bulletLines.toMutableList()
             val repairs = mutableListOf<PostXFyunRepair>()
-            val suspicious = mutableListOf<PostXFyunSuspiciousBoundary>()
             val decisions = mutableListOf<PostXFyunDecisionDebug>()
-            var arbitrationsAttempted = 0
-            for (candidate in candidates) {
-                val index = candidate.boundaryIndex
-                if (index !in 0 until (mutable.size - 1)) continue
 
-                val prevLine = mutable[index]
-                val nextLine = mutable[index + 1]
-                suspicious += PostXFyunSuspiciousBoundary(
+            // 重要：可疑边界（gap-only）用于“可见证据”，不应被 maxRepairs 截断影响。
+            val suspicious = candidates.mapNotNull { candidate ->
+                val index = candidate.boundaryIndex
+                if (index !in 0 until (bulletLines.size - 1)) return@mapNotNull null
+                val prevLine = bulletLines[index]
+                val nextLine = bulletLines[index + 1]
+                PostXFyunSuspiciousBoundary(
                     boundaryIndex = index,
                     gapMs = candidate.gapMs,
                     prevSpeakerId = candidate.prevSpeakerId,
@@ -155,29 +155,35 @@ class PostXFyun @Inject constructor(
                     prevExcerpt = excerptTail(splitLine(prevLine).text, 16) + PROMPT_SUSPICIOUS_MARK,
                     nextExcerpt = excerptHead(splitLine(nextLine).text, 16),
                 )
-                // 重要：maxRepairsPerTranscript 同时限制 LLM 仲裁调用次数（即使一直返回 NONE 也会停止）。
-                val decision = if (arbitrationsAttempted >= settings.maxRepairsPerTranscript) {
-                    Decision(
-                        action = PostXFyunAction.NONE,
-                        span = "",
-                        confidence = 0.0,
-                        reason = "skipped-by-maxRepairsPerTranscript"
-                    )
-                } else {
-                    arbitrationsAttempted += 1
-                    arbitrate(
-                        prevLine = prevLine,
-                        nextLine = nextLine,
-                        boundaryMark = candidate.boundaryMark,
-                        settings = settings,
-                    )
-                }
+            }
+
+            val mutable = bulletLines.toMutableList()
+            var arbitrationsAttempted = 0
+            for (candidate in candidates) {
+                // 重要：为验证切片提供直观证据：达到上限后直接停止，不再遍历剩余候选。
+                if (arbitrationsAttempted >= settings.maxRepairsPerTranscript) break
+
+                val index = candidate.boundaryIndex
+                if (index !in 0 until (mutable.size - 1)) continue
+
+                val prevLine = mutable[index]
+                val nextLine = mutable[index + 1]
+                val capturePreview = arbitrationsAttempted < MAX_LLM_PREVIEW_COUNT
+                val decision = arbitrate(
+                    prevLine = prevLine,
+                    nextLine = nextLine,
+                    boundaryMark = candidate.boundaryMark,
+                    settings = settings,
+                    capturePreview = capturePreview,
+                )
+                arbitrationsAttempted += 1
                 decisions += PostXFyunDecisionDebug(
                     boundaryIndex = index,
                     action = decision.action,
                     span = decision.span,
                     confidence = decision.confidence,
                     reason = decision.reason,
+                    rawResponsePreview = decision.rawResponsePreview,
                 )
                 if (decision.action == PostXFyunAction.NONE) continue
                 if (decision.confidence < settings.confidenceThreshold) continue
@@ -270,6 +276,7 @@ class PostXFyun @Inject constructor(
         val span: String,
         val confidence: Double,
         val reason: String?,
+        val rawResponsePreview: String? = null,
     )
 
     private suspend fun arbitrate(
@@ -277,6 +284,7 @@ class PostXFyun @Inject constructor(
         nextLine: String,
         boundaryMark: String,
         settings: PostXfyunSettings,
+        capturePreview: Boolean,
     ): Decision {
         // 重要：可疑标记仅用于 Prompt，让模型把注意力聚焦到边界附近；不改变最终展示的逐字稿文本。
         val prevLineForPrompt = prevLine.trimEnd() + PROMPT_SUSPICIOUS_MARK
@@ -289,16 +297,32 @@ class PostXFyun @Inject constructor(
             is Result.Success -> result.data.displayText
             is Result.Error -> return Decision(PostXFyunAction.NONE, span = "", confidence = 0.0, reason = null)
         }
-        return parseStrictDecision(response)
+        val preview = if (capturePreview) {
+            response.trim()
+                .replace("\r", "")
+                .replace("\n", "\\n")
+                .take(LLM_PREVIEW_MAX_CHARS)
+        } else {
+            null
+        }
+        val parsed = parseStrictDecision(response)
+        return parsed.copy(rawResponsePreview = preview)
     }
 
     private fun parseStrictDecision(raw: String): Decision {
         // 重要：严格模式——必须是“纯 JSON 对象”，任何前后缀都视为违约并回退 NONE。
         val trimmed = raw.trim()
-        if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
+        val extracted = if (trimmed.startsWith("```")) {
+            // 可选：兼容部分模型把 JSON 包在 ```json ... ``` 内的情况（仍然要求内容是单个 JSON 对象）。
+            extractFirstJsonObject(trimmed)
+        } else {
+            null
+        }
+        val payload = extracted?.trim() ?: trimmed
+        if (!payload.startsWith("{") || !payload.endsWith("}")) {
             return Decision(PostXFyunAction.NONE, span = "", confidence = 0.0, reason = "non-json")
         }
-        val obj = runCatching { JsonParser.parseString(trimmed) }.getOrNull()
+        val obj = runCatching { JsonParser.parseString(payload) }.getOrNull()
             ?.takeIf { it.isJsonObject }
             ?.asJsonObject
             ?: return Decision(PostXFyunAction.NONE, span = "", confidence = 0.0, reason = "parse-failed")
@@ -317,6 +341,24 @@ class PostXFyun @Inject constructor(
             return Decision(PostXFyunAction.NONE, span = "", confidence = 0.0, reason = "bad-span")
         }
         return Decision(action = action, span = span, confidence = confidence, reason = reason)
+    }
+
+    private fun extractFirstJsonObject(raw: String): String? {
+        val start = raw.indexOf('{')
+        if (start < 0) return null
+        var depth = 0
+        for (i in start until raw.length) {
+            when (raw[i]) {
+                '{' -> depth += 1
+                '}' -> {
+                    depth -= 1
+                    if (depth == 0) {
+                        return raw.substring(start, i + 1)
+                    }
+                }
+            }
+        }
+        return null
     }
 
     private fun parseAction(raw: String): PostXFyunAction = when (raw.trim().uppercase()) {
@@ -475,5 +517,7 @@ class PostXFyun @Inject constructor(
         private val PUNCTUATIONS = setOf('。', '！', '？', '!', '?', '，', ',', '、', '；', ';', '：', ':', '…')
         private const val PROMPT_PREVIEW_CHARS = 120
         private const val PROMPT_SUSPICIOUS_MARK = "〔/suspicious〕"
+        private const val MAX_LLM_PREVIEW_COUNT = 3
+        private const val LLM_PREVIEW_MAX_CHARS = 200
     }
 }

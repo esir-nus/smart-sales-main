@@ -42,6 +42,7 @@ class XfyunDebugInfoFormatterPostXfyunTest {
                     span = "",
                     confidence = 0.99,
                     reason = "无需修复",
+                    rawResponsePreview = "{\"action\":\"NONE\"}",
                 )
             ),
         )

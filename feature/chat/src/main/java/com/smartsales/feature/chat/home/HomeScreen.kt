@@ -1250,6 +1250,30 @@ private fun XfyunTraceSection(
                     TextButton(onClick = { onCopy(XfyunDebugInfoFormatter.format(trace)) }) {
                         Text(text = "复制")
                     }
+                    TextButton(
+                        onClick = {
+                            val text = trace.postXfyunOriginalMarkdown
+                            if (text.isNullOrBlank()) {
+                                Toast.makeText(context, "暂无原始转写可复制", Toast.LENGTH_SHORT).show()
+                                return@TextButton
+                            }
+                            onCopy(text)
+                        }
+                    ) {
+                        Text(text = "复制原始转写")
+                    }
+                    TextButton(
+                        onClick = {
+                            val text = trace.postXfyunPolishedMarkdown
+                            if (text.isNullOrBlank()) {
+                                Toast.makeText(context, "暂无后处理转写可复制", Toast.LENGTH_SHORT).show()
+                                return@TextButton
+                            }
+                            onCopy(text)
+                        }
+                    ) {
+                        Text(text = "复制后转写")
+                    }
                     val rawDumpPath = trace.rawDumpPath
                     if (!rawDumpPath.isNullOrBlank()) {
                         TextButton(
@@ -1399,7 +1423,7 @@ private fun XfyunTraceSection(
             trace.postXfyunSuspicious.take(10).forEach { item ->
                 val speakers = listOfNotNull(item.prevSpeakerId, item.nextSpeakerId).joinToString("→").ifBlank { "-" }
                 Text(
-                    text = "- #${item.boundaryIndex} gap=${item.gapMs}ms spk=$speakers prev=\"${item.prevExcerpt}\" next=\"${item.nextExcerpt}\"",
+                    text = "- #${item.boundaryIndex} gapMs=${item.gapMs} prev=$speakers prev=\"${item.prevExcerpt}\" next=\"${item.nextExcerpt}\"",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -1431,6 +1455,13 @@ private fun XfyunTraceSection(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                item.rawResponsePreview?.takeIf { it.isNotBlank() }?.let { preview ->
+                    Text(
+                        text = "  LLM raw: $preview",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             if (trace.postXfyunDecisions.size > 10) {
                 Text(

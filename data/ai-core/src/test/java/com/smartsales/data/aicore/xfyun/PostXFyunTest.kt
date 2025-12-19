@@ -194,7 +194,7 @@ class PostXFyunTest {
         val debug = requireNotNull(result.debugInfo)
         assertEquals(template.length, debug.settings.promptLength)
         assertTrue(debug.settings.promptPreview.startsWith("TEMPLATE-"))
-        assertEquals("(default)", debug.settings.modelEffective)
+        assertEquals("qwen3-max", debug.settings.modelEffective)
         assertEquals(1, debug.suspiciousBoundaries.size)
         assertEquals(1, debug.decisions.size)
         assertEquals(PostXFyunAction.NONE, debug.decisions.first().action)

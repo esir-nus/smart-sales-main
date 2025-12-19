@@ -57,7 +57,7 @@ data class XfyunAsrSettings(
  */
 data class XfyunVoiceprintSettings(
     // 默认关闭：需要配置 featureIds 才能生效；避免“看起来开了但实际没生效”与隐私误用。
-    val enabled: Boolean = true,
+    val enabled: Boolean = false,
     val featureIds: List<String> = emptyList(),
     val roleNum: Int = 0,
     val baseUrlOverride: String = "",
@@ -351,8 +351,8 @@ data class XfyunUploadSettings(
     val language: String = "autodialect",
     // 文档参数：pd（领域个性化；为空则不传）
     val pd: String = "",
-    // 文档参数：roleType/roleNum（角色分离；默认走普通说话人分离；声纹需显式开启 roleType=3 + featureIds）
-    val roleType: Int = 3,
+    // 文档参数：roleType/roleNum（角色分离；默认走普通说话人分离；声纹必须显式开启 roleType=3 + featureIds）
+    val roleType: Int = 1,
     val roleNum: Int = 0,
     // 文档参数：顺滑/口语规整/远近场模式
     val engSmoothProc: Boolean = true,

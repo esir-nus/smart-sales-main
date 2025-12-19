@@ -54,6 +54,11 @@ import com.smartsales.feature.media.MediaSyncState
 import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.feature.usercenter.UserProfile
 import com.smartsales.feature.usercenter.SalesPersona
+import com.smartsales.data.aicore.params.AiParaSettingsRepository
+import com.smartsales.data.aicore.params.applyXfyunVoiceprintTestPreset
+import com.smartsales.data.aicore.params.enableVoiceprintAndAddFeatureId
+import com.smartsales.data.aicore.params.removeVoiceprintFeatureId
+import com.smartsales.data.aicore.xfyun.XfyunVoiceprintApi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
 import java.io.IOException
@@ -177,6 +182,22 @@ data class DebugSessionMetadata(
     val notes: List<String> = emptyList()
 )
 
+/**
+ * 说明：声纹开发者工具（Voiceprint Lab）的 UI 状态（仅内存态）。
+ *
+ * 重要安全要求：
+ * - 严禁在 ViewModel 内保存音频 base64（敏感数据）；base64 只由 UI 临时持有并在请求后清空。
+ */
+data class VoiceprintLabUiState(
+    val registerInProgress: Boolean = false,
+    val deleteInProgress: Boolean = false,
+    val lastFeatureId: String? = null,
+    val lastMessage: String? = null,
+    // 仅用于提示当前设置概况；不包含 featureIds 明文。
+    val enabledSetting: Boolean? = null,
+    val configuredFeatureIdCount: Int? = null,
+)
+
 /** Home 页的不可变 UI 状态。 */
 data class HomeUiState(
     val chatMessages: List<ChatMessageUi> = emptyList(),
@@ -206,6 +227,7 @@ data class HomeUiState(
     val showDebugMetadata: Boolean = false,
     val debugSessionMetadata: DebugSessionMetadata? = null,
     val xfyunTrace: XfyunTraceSnapshot? = null,
+    val voiceprintLab: VoiceprintLabUiState = VoiceprintLabUiState(),
     val smartReasoningText: String? = null,
     val isInputFocused: Boolean = false,
     val salesPersona: SalesPersona? = null,
@@ -238,7 +260,9 @@ class HomeScreenViewModel @Inject constructor(
     private val exportOrchestrator: ExportOrchestrator,
     private val shareHandler: ChatShareHandler,
     private val metaHub: MetaHub,
-    private val xfyunTraceStore: XfyunTraceStore
+    private val xfyunTraceStore: XfyunTraceStore,
+    private val aiParaSettingsRepository: AiParaSettingsRepository,
+    private val xfyunVoiceprintApi: XfyunVoiceprintApi,
 ) : ViewModel() {
 
     private val quickSkillDefinitions = quickSkillCatalog.homeQuickSkills()
@@ -925,6 +949,127 @@ class HomeScreenViewModel @Inject constructor(
     fun refreshXfyunTrace() {
         if (!CHAT_DEBUG_HUD_ENABLED) return
         _uiState.update { it.copy(xfyunTrace = xfyunTraceStore.getSnapshot()) }
+    }
+
+    fun registerVoiceprintBase64(
+        audioDataBase64: String,
+        audioType: String,
+        uid: String?,
+    ) {
+        if (!BuildConfig.DEBUG) return
+        // 重要：base64 属于敏感音频数据；这里只做请求转发，绝不保存到 ViewModel/日志。
+        val normalizedBase64 = audioDataBase64.filterNot { it.isWhitespace() }
+        if (normalizedBase64.isBlank()) {
+            _uiState.update {
+                it.copy(
+                    voiceprintLab = it.voiceprintLab.copy(
+                        registerInProgress = false,
+                        lastMessage = "No base64 loaded.",
+                    )
+                )
+            }
+            return
+        }
+        val type = audioType.trim()
+        if (type.isBlank()) {
+            _uiState.update {
+                it.copy(
+                    voiceprintLab = it.voiceprintLab.copy(
+                        registerInProgress = false,
+                        lastMessage = "audio_type is blank.",
+                    )
+                )
+            }
+            return
+        }
+        _uiState.update { it.copy(voiceprintLab = it.voiceprintLab.copy(registerInProgress = true, lastMessage = null)) }
+        viewModelScope.launch {
+            val result = runCatching {
+                xfyunVoiceprintApi.registerBase64(
+                    audioDataBase64 = normalizedBase64,
+                    audioType = type,
+                    uid = uid?.trim()?.takeIf { it.isNotBlank() },
+                )
+            }
+            val snapshot = aiParaSettingsRepository.snapshot().transcription.xfyun.voiceprint
+            _uiState.update { state ->
+                state.copy(
+                    voiceprintLab = state.voiceprintLab.copy(
+                        registerInProgress = false,
+                        lastFeatureId = result.getOrNull()?.featureId,
+                        lastMessage = result.exceptionOrNull()?.message
+                            ?: "Register OK. Copy feature_id then enable voiceprint.",
+                        enabledSetting = snapshot.enabled,
+                        configuredFeatureIdCount = snapshot.featureIds.size,
+                    )
+                )
+            }
+        }
+    }
+
+    fun enableVoiceprintAndAddLastFeatureId() {
+        if (!BuildConfig.DEBUG) return
+        val featureId = _uiState.value.voiceprintLab.lastFeatureId?.trim().orEmpty()
+        if (featureId.isBlank()) {
+            _uiState.update { it.copy(voiceprintLab = it.voiceprintLab.copy(lastMessage = "No feature_id to apply.")) }
+            return
+        }
+        // 重要：只写入 featureId（敏感标识）；绝不写入/保存音频 base64。
+        aiParaSettingsRepository.enableVoiceprintAndAddFeatureId(featureId)
+        val snapshot = aiParaSettingsRepository.snapshot().transcription.xfyun.voiceprint
+        _uiState.update { state ->
+            state.copy(
+                voiceprintLab = state.voiceprintLab.copy(
+                    enabledSetting = snapshot.enabled,
+                    configuredFeatureIdCount = snapshot.featureIds.size,
+                    lastMessage = "Applied: enabled=true, featureIdsCount=${snapshot.featureIds.size}",
+                )
+            )
+        }
+    }
+
+    fun applyXfyunVoiceprintTestPreset() {
+        if (!BuildConfig.DEBUG) return
+        val lastFeatureId = _uiState.value.voiceprintLab.lastFeatureId
+        aiParaSettingsRepository.applyXfyunVoiceprintTestPreset(lastFeatureId = lastFeatureId)
+        val snapshot = aiParaSettingsRepository.snapshot().transcription.xfyun.voiceprint
+        _uiState.update { state ->
+            state.copy(
+                voiceprintLab = state.voiceprintLab.copy(
+                    enabledSetting = snapshot.enabled,
+                    configuredFeatureIdCount = snapshot.featureIds.size,
+                    lastMessage = "XFyun VP Test Preset applied.",
+                )
+            )
+        }
+    }
+
+    fun deleteVoiceprintFeatureId(featureId: String, removeFromSettings: Boolean) {
+        if (!BuildConfig.DEBUG) return
+        val id = featureId.trim()
+        if (id.isBlank()) {
+            _uiState.update { it.copy(voiceprintLab = it.voiceprintLab.copy(lastMessage = "feature_id is blank.")) }
+            return
+        }
+        _uiState.update { it.copy(voiceprintLab = it.voiceprintLab.copy(deleteInProgress = true, lastMessage = null)) }
+        viewModelScope.launch {
+            val result = runCatching { xfyunVoiceprintApi.deleteFeatureId(id) }
+            if (result.isSuccess && removeFromSettings) {
+                aiParaSettingsRepository.removeVoiceprintFeatureId(id)
+            }
+            val snapshot = aiParaSettingsRepository.snapshot().transcription.xfyun.voiceprint
+            _uiState.update { state ->
+                state.copy(
+                    voiceprintLab = state.voiceprintLab.copy(
+                        deleteInProgress = false,
+                        enabledSetting = snapshot.enabled,
+                        configuredFeatureIdCount = snapshot.featureIds.size,
+                        lastMessage = result.exceptionOrNull()?.message
+                            ?: "Delete OK. removeFromSettings=$removeFromSettings",
+                    )
+                )
+            }
+        }
     }
 
     private fun updateDebugSessionMetadata(

@@ -28,7 +28,16 @@ class XfyunConfigProvider @Inject constructor(
         )
     }
 
+    fun voiceprintBaseUrl(): String {
+        // 重要：声纹 baseUrl 必须独立于转写 baseUrlOverride，避免误把转写 host 劫持到声纹域名。
+        val voiceprintSettings = aiParaSettingsProvider.snapshot().transcription.xfyun.voiceprint
+        val overrideBaseUrl = voiceprintSettings.baseUrlOverride.trim()
+        return overrideBaseUrl.takeIf { it.isNotBlank() }
+            ?: DEFAULT_VOICEPRINT_BASE_URL
+    }
+
     companion object {
         const val DEFAULT_BASE_URL: String = "https://office-api-ist-dx.iflyaisol.com"
+        const val DEFAULT_VOICEPRINT_BASE_URL: String = "https://office-api-ist-dx.iflyaisol.com"
     }
 }

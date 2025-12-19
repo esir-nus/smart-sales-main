@@ -239,9 +239,12 @@ class XfyunAsrCoordinator @Inject constructor(
                             )
                         )
                         traceStore.recordPostXfyunSuspicious(
-                            debugInfo.suspiciousBoundaries.map { boundary ->
+                            debugInfo.suspiciousBoundaries.mapIndexed { index, boundary ->
                                 XfyunTraceSnapshot.PostXfyunSuspiciousBoundary(
+                                    susId = "s${boundary.boundaryIndex}",
                                     boundaryIndex = boundary.boundaryIndex,
+                                    batchId = "b1",
+                                    localBoundaryIndex = index,
                                     gapMs = boundary.gapMs,
                                     prevSpeakerId = boundary.prevSpeakerId,
                                     nextSpeakerId = boundary.nextSpeakerId,
@@ -254,6 +257,7 @@ class XfyunAsrCoordinator @Inject constructor(
                             debugInfo.decisions.map { decision ->
                                 XfyunTraceSnapshot.PostXfyunDecisionDebug(
                                     attemptIndex = decision.attemptIndex,
+                                    susId = "s${decision.boundaryIndex}",
                                     boundaryIndex = decision.boundaryIndex,
                                     gapMs = decision.gapMs,
                                     prevSpeakerId = decision.prevSpeakerId,
@@ -261,13 +265,14 @@ class XfyunAsrCoordinator @Inject constructor(
                                     prevExcerpt = decision.prevExcerpt,
                                     nextExcerpt = decision.nextExcerpt,
                                     modelUsed = decision.modelUsed,
-                                    action = decision.action.name,
-                                    span = decision.span,
                                     confidence = decision.confidence,
                                     reason = decision.reason,
                                     rawResponsePreview = decision.rawResponsePreview,
                                     parseStatus = decision.parseStatus,
+                                    applyStatus = decision.applyStatus,
                                     errorHint = decision.errorHint,
+                                    afterPrevExcerpt = null,
+                                    afterNextExcerpt = null,
                                 )
                             }
                         )
@@ -281,13 +286,13 @@ class XfyunAsrCoordinator @Inject constructor(
                     if (postResult.repairs.isNotEmpty()) {
                         val mapped = postResult.repairs.map { repair ->
                             XfyunTraceSnapshot.PostXfyunRepair(
+                                susId = "s${repair.boundaryIndex}",
                                 boundaryIndex = repair.boundaryIndex,
-                                action = repair.action.name,
-                                span = repair.span,
                                 confidence = repair.confidence,
                                 gapMs = repair.gapMs,
                                 prevSpeakerId = repair.prevSpeakerId,
                                 nextSpeakerId = repair.nextSpeakerId,
+                                reason = repair.reason,
                                 beforePrevLine = repair.beforePrevLine,
                                 beforeNextLine = repair.beforeNextLine,
                                 afterPrevLine = repair.afterPrevLine,

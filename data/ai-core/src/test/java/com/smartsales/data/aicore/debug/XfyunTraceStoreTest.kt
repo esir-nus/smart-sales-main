@@ -64,6 +64,9 @@ class XfyunTraceStoreTest {
                 "accessKeyId" to "abcd…wxyz",
                 "fileName" to "demo.wav",
             ),
+            uploadBusinessCode = "100020",
+            uploadBusinessDescInfo = "language verify fail, cause: language[cn] does not support",
+            uploadFailureCategory = "LANGUAGE",
             resultTypeAttempts = listOf(
                 XfyunTraceSnapshot.ResultTypeAttempt(
                     tsMs = 1L,
@@ -99,8 +102,41 @@ class XfyunTraceStoreTest {
         assertTrue(text.contains("\"orderId\": \"order-123\""))
         assertTrue(text.contains("\"downgradedBecauseFailType11\": false"))
         assertTrue(text.contains("\"resultTypeAttempts\":"))
+        assertTrue(text.contains("\"uploadBusinessCode\": \"100020\""))
+        assertTrue(text.contains("\"uploadFailureCategory\": \"LANGUAGE\""))
         assertFalse(text.contains("accessKeySecret"))
         assertFalse(text.contains("\"signature\""))
+    }
+
+    @Test
+    fun `recordUploadResult classifies language and quota failures`() {
+        val store = XfyunTraceStore()
+        store.recordUploadAttempt(
+            baseUrl = "https://example.com",
+            uploadParams = mapOf("resultType" to "transfer"),
+            roleType = 1,
+            roleNum = 0,
+        )
+
+        store.recordUploadResult(
+            orderId = null,
+            httpCode = 200,
+            payloadSnippet = "{\"code\":\"100020\"}",
+            serverCode = "100020",
+            serverDesc = "language verify fail, cause: language[cn] does not support",
+        )
+        val snapshot1 = store.getSnapshot()
+        assertEquals("LANGUAGE", snapshot1?.uploadFailureCategory)
+
+        store.recordUploadResult(
+            orderId = null,
+            httpCode = 200,
+            payloadSnippet = "{\"code\":\"100999\"}",
+            serverCode = "100999",
+            serverDesc = "次数超限，请检查 quota",
+        )
+        val snapshot2 = store.getSnapshot()
+        assertEquals("QUOTA_OR_ENTITLEMENT", snapshot2?.uploadFailureCategory)
     }
 
     @Test

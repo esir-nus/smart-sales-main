@@ -28,7 +28,10 @@ class XfyunDebugInfoFormatterPostXfyunTest {
             ),
             postXfyunSuspicious = listOf(
                 XfyunTraceSnapshot.PostXfyunSuspiciousBoundary(
+                    susId = "sus1",
                     boundaryIndex = 0,
+                    batchId = "b1",
+                    localBoundaryIndex = 0,
                     gapMs = 120,
                     prevSpeakerId = "1",
                     nextSpeakerId = "2",
@@ -39,14 +42,13 @@ class XfyunDebugInfoFormatterPostXfyunTest {
             postXfyunDecisions = listOf(
                 XfyunTraceSnapshot.PostXfyunDecisionDebug(
                     attemptIndex = 0,
+                    susId = "sus1",
                     boundaryIndex = 0,
                     gapMs = 120,
                     prevSpeakerId = "1",
                     nextSpeakerId = "2",
                     prevExcerpt = "好的罗",
                     nextExcerpt = "总我们继续",
-                    action = "NONE",
-                    span = "",
                     confidence = 0.99,
                     reason = "无需修复",
                     rawResponsePreview = "{\"action\":\"NONE\"}",

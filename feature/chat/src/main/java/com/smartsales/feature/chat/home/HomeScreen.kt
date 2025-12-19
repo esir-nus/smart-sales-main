@@ -110,6 +110,8 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -218,11 +220,11 @@ fun HomeScreenRoute(
         onDeviceSnapshotChanged(state.deviceSnapshot)
     }
 
-    HomeScreen(
-        state = state,
-        snackbarHostState = snackbarHostState,
-        onInputChanged = viewModel::onInputChanged,
-        onSendClicked = viewModel::onSendMessage,
+        HomeScreen(
+            state = state,
+            snackbarHostState = snackbarHostState,
+            onInputChanged = viewModel::onInputChanged,
+            onSendClicked = viewModel::onSendMessage,
         onQuickSkillSelected = viewModel::onSelectQuickSkill,
         onDeviceBannerClicked = viewModel::onTapDeviceBanner,
         onAudioSummaryClicked = viewModel::onTapAudioSummary,
@@ -254,11 +256,15 @@ fun HomeScreenRoute(
         onHistoryActionDismiss = viewModel::onHistoryActionDismiss,
         onHistoryRenameTextChange = viewModel::onHistoryRenameTextChange,
         onToggleDebugMetadata = viewModel::toggleDebugMetadata,
-        onRefreshXfyunTrace = viewModel::refreshXfyunTrace,
-        onToggleRawAssistantOutput = viewModel::setShowRawAssistantOutput,
-        onDismissKeyboard = dismissKeyboard,
-        onInputFocusChanged = { focused ->
-            viewModel.onInputFocusChanged(focused)
+            onRefreshXfyunTrace = viewModel::refreshXfyunTrace,
+            onVoiceprintRegisterBase64 = viewModel::registerVoiceprintBase64,
+            onVoiceprintApplyLastFeatureId = viewModel::enableVoiceprintAndAddLastFeatureId,
+            onVoiceprintApplyXfyunVpTestPreset = viewModel::applyXfyunVoiceprintTestPreset,
+            onVoiceprintDeleteFeatureId = viewModel::deleteVoiceprintFeatureId,
+            onToggleRawAssistantOutput = viewModel::setShowRawAssistantOutput,
+            onDismissKeyboard = dismissKeyboard,
+            onInputFocusChanged = { focused ->
+                viewModel.onInputFocusChanged(focused)
             onInputFocusChanged(focused)
         }
     )
@@ -383,6 +389,10 @@ fun HomeScreen(
     onHistoryRenameTextChange: (String) -> Unit = {},
     onToggleDebugMetadata: () -> Unit = {},
     onRefreshXfyunTrace: () -> Unit = {},
+    onVoiceprintRegisterBase64: (audioDataBase64: String, audioType: String, uid: String?) -> Unit = { _, _, _ -> },
+    onVoiceprintApplyLastFeatureId: () -> Unit = {},
+    onVoiceprintApplyXfyunVpTestPreset: () -> Unit = {},
+    onVoiceprintDeleteFeatureId: (featureId: String, removeFromSettings: Boolean) -> Unit = { _, _ -> },
     onToggleRawAssistantOutput: (Boolean) -> Unit = {},
     onDismissKeyboard: () -> Unit = {},
     onInputFocusChanged: (Boolean) -> Unit = {}
@@ -413,11 +423,14 @@ fun HomeScreen(
     Log.i("HomeScreen", "HomeScreen composed - entering function")
     val coroutineScope = rememberCoroutineScope()
     val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
     val audioPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let { onPickAudioFile(it) }
     }
+    var showVoiceprintLabSheet by remember { mutableStateOf(false) }
+    val voiceprintLabSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -538,7 +551,11 @@ fun HomeScreen(
                             onNewChatClick = onNewChatClicked,
                             hudEnabled = hudEnabled,
                             showDebugMetadata = state.showDebugMetadata,
-                            onToggleDebugMetadata = { onToggleDebugMetadata() }
+                            onToggleDebugMetadata = { onToggleDebugMetadata() },
+                            onOpenVoiceprintLab = {
+                                // 重要：声纹注册是独立工具，不应依赖一次转写会话；否则无法先注册再使用声纹分离。
+                                showVoiceprintLabSheet = true
+                            },
                 )
                     },
                     bottomBar = {
@@ -721,6 +738,10 @@ fun HomeScreen(
                                 metadata = state.debugSessionMetadata,
                                 xfyunTrace = state.xfyunTrace,
                                 onRefreshXfyun = onRefreshXfyunTrace,
+                                voiceprintLab = state.voiceprintLab,
+                                onVoiceprintRegisterBase64 = onVoiceprintRegisterBase64,
+                                onVoiceprintApplyLastFeatureId = onVoiceprintApplyLastFeatureId,
+                                onVoiceprintDeleteFeatureId = onVoiceprintDeleteFeatureId,
                                 onClose = {
                                     onToggleDebugMetadata()
                                 },
@@ -745,6 +766,32 @@ fun HomeScreen(
                             )
                         }
                     }
+                }
+
+                if (BuildConfig.DEBUG && showVoiceprintLabSheet) {
+                    ModalBottomSheet(
+                        onDismissRequest = { showVoiceprintLabSheet = false },
+                        sheetState = voiceprintLabSheetState,
+                    ) {
+                        val copyText: (String) -> Unit = { text ->
+                            runCatching { clipboardManager.setText(AnnotatedString(text)) }
+                                .onSuccess {
+                                    coroutineScope.launch { snackbarHostState.showSnackbar("Copied.") }
+                                }
+                                .onFailure {
+                                    Toast.makeText(context, "Copy failed.", Toast.LENGTH_SHORT).show()
+                                }
+                        }
+                            VoiceprintLabPanel(
+                                voiceprintLab = state.voiceprintLab,
+                                onRegisterBase64 = onVoiceprintRegisterBase64,
+                                onApplyLastFeatureId = onVoiceprintApplyLastFeatureId,
+                                onApplyTestPreset = onVoiceprintApplyXfyunVpTestPreset,
+                                onDeleteFeatureId = onVoiceprintDeleteFeatureId,
+                                onCopy = copyText,
+                                onClose = { showVoiceprintLabSheet = false },
+                            )
+                        }
                 }
             }
         }
@@ -941,7 +988,8 @@ private fun HomeTopBar(
     onNewChatClick: () -> Unit,
     hudEnabled: Boolean,
     showDebugMetadata: Boolean,
-    onToggleDebugMetadata: () -> Unit
+    onToggleDebugMetadata: () -> Unit,
+    onOpenVoiceprintLab: () -> Unit,
 ) {
     Row(
             modifier = Modifier
@@ -982,6 +1030,16 @@ private fun HomeTopBar(
                             },
                             shape = CircleShape
                         )
+                )
+            }
+        }
+        if (BuildConfig.DEBUG) {
+            IconButton(
+                onClick = onOpenVoiceprintLab,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.AudioFile,
+                    contentDescription = "Voiceprint Lab",
                 )
             }
         }
@@ -1080,6 +1138,10 @@ private fun DebugSessionMetadataHud(
     metadata: DebugSessionMetadata,
     xfyunTrace: XfyunTraceSnapshot?,
     onRefreshXfyun: () -> Unit,
+    voiceprintLab: VoiceprintLabUiState,
+    onVoiceprintRegisterBase64: (audioDataBase64: String, audioType: String, uid: String?) -> Unit,
+    onVoiceprintApplyLastFeatureId: () -> Unit,
+    onVoiceprintDeleteFeatureId: (featureId: String, removeFromSettings: Boolean) -> Unit,
     onClose: () -> Unit,
     onCopy: (String) -> Unit,
     showRawAssistantOutput: Boolean,
@@ -1199,7 +1261,11 @@ private fun DebugSessionMetadataHud(
                 XfyunTraceSection(
                     trace = xfyunTrace,
                     onRefresh = onRefreshXfyun,
-                    onCopy = onCopy
+                    onCopy = onCopy,
+                    voiceprintLab = voiceprintLab,
+                    onVoiceprintRegisterBase64 = onVoiceprintRegisterBase64,
+                    onVoiceprintApplyLastFeatureId = onVoiceprintApplyLastFeatureId,
+                    onVoiceprintDeleteFeatureId = onVoiceprintDeleteFeatureId,
                 )
             }
         }
@@ -1227,10 +1293,13 @@ private fun XfyunTraceSection(
     trace: XfyunTraceSnapshot?,
     onRefresh: () -> Unit,
     onCopy: (String) -> Unit,
+    voiceprintLab: VoiceprintLabUiState,
+    onVoiceprintRegisterBase64: (audioDataBase64: String, audioType: String, uid: String?) -> Unit,
+    onVoiceprintApplyLastFeatureId: () -> Unit,
+    onVoiceprintDeleteFeatureId: (featureId: String, removeFromSettings: Boolean) -> Unit,
 ) {
     val context = LocalContext.current
     var confirmShare by remember { mutableStateOf(false) }
-    var expanded by remember { mutableStateOf(false) }
 
     @Composable
     fun KeyValueRow(
@@ -1333,145 +1402,292 @@ private fun XfyunTraceSection(
         KeyValueRow(label = "poll", value = pollValue, copyValue = pollValue)
         val lastValue = "http=${trace.lastHttpCode ?: "-"}, failType=${trace.lastFailType ?: "-"}"
         KeyValueRow(label = "last", value = lastValue, copyValue = lastValue)
-        val postEnabledValue = trace.postXfyunSettings?.let { s ->
-            "enabled=${s.enabled}, model=${s.modelEffective.ifBlank { "-" }}, maxSpan=${s.maxSpanChars}"
-        } ?: "enabled=false, model=-"
-        KeyValueRow(label = "postXfyun", value = postEnabledValue, copyValue = postEnabledValue)
-        val postStatsValue = "suspicious=${trace.postXfyunSuspicious.size}, attempts=${trace.postXfyunArbitrationsAttempted}/${trace.postXfyunArbitrationBudget}, repairs=${trace.postXfyunRepairsApplied}"
-        KeyValueRow(label = "postXfyun.stats", value = postStatsValue, copyValue = postStatsValue)
+        val uploadBizValue = buildString {
+            append("code=${trace.uploadBusinessCode ?: "-"}, ")
+            append("category=${trace.uploadFailureCategory ?: "-"}, ")
+            val desc = trace.uploadBusinessDescInfo?.trim().orEmpty()
+            append("desc=${if (desc.isBlank()) "-" else desc.take(80)}")
+        }
+        KeyValueRow(label = "uploadBiz", value = uploadBizValue, copyValue = uploadBizValue)
+        trace.uploadFailureHint?.takeIf { it.isNotBlank() }?.let { hint ->
+            KeyValueRow(label = "uploadHint", value = hint, copyValue = hint)
+        }
 
-        // --- Copy actions ---
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "复制操作",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.weight(1f))
+        // --- Voiceprint (roleType=3) evidence (privacy-safe) ---
+        val vpSummary = buildString {
+            append("enabled=${trace.voiceprintEnabledSetting}, ")
+            append("effective=${trace.voiceprintEffectiveEnabled}, ")
+            append("roleType=${trace.voiceprintRoleTypeApplied ?: "-"}, ")
+            append("roleNum=${trace.voiceprintRoleNumApplied ?: "-"}, ")
+            append("cfg=${trace.voiceprintFeatureIdsConfigured.size}, ")
+            append("seen=${trace.voiceprintRoleLabelsSeen.size}, ")
+            append("matched=${trace.voiceprintRoleLabelsMatched.size}")
         }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            TextButton(
-                onClick = {
-                    val text = trace.postXfyunOriginalMarkdown
-                    if (text.isNullOrBlank()) {
-                        Toast.makeText(context, "暂无原始转写可复制", Toast.LENGTH_SHORT).show()
-                        return@TextButton
-                    }
-                    onCopy(text)
-                }
-            ) { Text(text = "复制原始转写") }
-            TextButton(
-                onClick = {
-                    val text = trace.postXfyunPolishedMarkdown
-                    if (text.isNullOrBlank()) {
-                        Toast.makeText(context, "暂无后转写可复制", Toast.LENGTH_SHORT).show()
-                        return@TextButton
-                    }
-                    onCopy(text)
-                }
-            ) { Text(text = "复制后转写") }
+        KeyValueRow(label = "voiceprint", value = vpSummary, copyValue = vpSummary)
+        trace.voiceprintDisabledReason?.takeIf { it.isNotBlank() }?.let { reason ->
+            KeyValueRow(label = "vpDisabledReason", value = reason, copyValue = reason)
         }
+        trace.voiceprintBaseUrlHostUsed?.takeIf { it.isNotBlank() }?.let { host ->
+            KeyValueRow(label = "vpBaseUrlHost", value = host, copyValue = host)
+        }
+        // 重要：
+        // - featureIds/rl 可能是敏感标识：HUD 不应默认明文展示。
+        // - 这里只提供 copy-only JSON 供排错，且不包含任何签名/密钥/原始 HTTP 包体。
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            TextButton(
-                onClick = {
-                    val text = buildString {
-                        appendLine("PostXFyun 仲裁样本（前 3）")
-                        trace.postXfyunDecisions.take(3).forEach { item ->
-                            appendLine(
-                                "- [${item.attemptIndex}] boundaryIndex=${item.boundaryIndex} gapMs=${item.gapMs} " +
-                                    "action=${item.action} span=\"${item.span}\" confidence=${item.confidence} " +
-                                    "parseStatus=${item.parseStatus} modelUsed=${item.modelUsed ?: "null"}"
-                            )
-                            item.rawResponsePreview?.let { preview ->
-                                val capped = preview.take(200)
-                                appendLine("  rawResponsePreview=$capped")
+            TextButton(onClick = { onCopy(XfyunDebugInfoFormatter.voiceprintSettingsJson(trace)) }) {
+                Text(text = "复制声纹设置(JSON)")
+            }
+            TextButton(onClick = { onCopy(XfyunDebugInfoFormatter.voiceprintRoleLabelsJson(trace.voiceprintRoleLabelsSeen)) }) {
+                Text(text = "复制 rl_seen(JSON)")
+            }
+            TextButton(onClick = { onCopy(XfyunDebugInfoFormatter.voiceprintRoleLabelsJson(trace.voiceprintRoleLabelsMatched)) }) {
+                Text(text = "复制 rl_matched(JSON)")
+            }
+            TextButton(onClick = { onCopy(XfyunDebugInfoFormatter.voiceprintFeatureIdOrdinalMapJson(trace.voiceprintFeatureIdOrdinalMap)) }) {
+                Text(text = "复制 featureId→ordinal(JSON)")
+            }
+        }
+
+        // --- PostXFyun (compact + runtime proof) ---
+        val postSettings = trace.postXfyunSettings
+        var showPromptPreview by remember { mutableStateOf(false) }
+        var showBatches by remember { mutableStateOf(false) }
+        var showSuspicious by remember { mutableStateOf(false) }
+        var showEvidence by remember { mutableStateOf(false) }
+
+        @Composable
+        fun ProofRow(
+            label: String,
+            value: String?,
+            copyValue: String? = value,
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(0.34f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = value?.ifBlank { "-" } ?: "-",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(0.5f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                TextButton(
+                    onClick = { onCopy(copyValue ?: "") },
+                    enabled = !copyValue.isNullOrBlank(),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                ) {
+                    Text(text = "Copy")
+                }
+            }
+        }
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 2.dp,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = "PostXFyun",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+
+                val runStatus = postSettings?.runStatus ?: "UNKNOWN"
+                val statusLabel = when (runStatus) {
+                    "SKIPPED_DISABLED", "SKIPPED_INVALID_INPUT" -> "SKIPPED"
+                    "RAN_REWRITE" -> "RAN"
+                    "FAILED" -> "FAILED"
+                    else -> runStatus
+                }
+                ProofRow("Status", statusLabel, statusLabel)
+                postSettings?.skipReason?.takeIf { it.isNotBlank() }?.let { reason ->
+                    Text(
+                        text = "Reason: ${reason.take(120)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                ProofRow("Enabled", postSettings?.enabled?.toString(), postSettings?.enabled?.toString())
+                ProofRow("Model requested", postSettings?.modelRequested, postSettings?.modelRequested)
+                ProofRow("Model used", postSettings?.modelUsed, postSettings?.modelUsed)
+
+                ProofRow("Prompt template sha", postSettings?.promptSha256, postSettings?.promptSha256)
+                ProofRow("Prompt effective sha", postSettings?.promptEffectiveSha256, postSettings?.promptEffectiveSha256)
+
+                // 重要：UI 不允许 inline 展示任何 raw JSON（包括 LLM 决策 JSON 预览），只提供 copy-only 按钮。
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    TextButton(
+                        onClick = { onCopy(XfyunDebugInfoFormatter.postXfyunSettingsJson(trace.postXfyunSettings)) },
+                        enabled = trace.postXfyunSettings != null,
+                    ) {
+                        Text(text = "Copy settings JSON")
+                    }
+                    TextButton(onClick = { onCopy(XfyunDebugInfoFormatter.postXfyunBatchPlanJson(trace.postXfyunBatchPlan)) }) {
+                        Text(text = "Copy batch plan JSON")
+                    }
+                    TextButton(onClick = { onCopy(XfyunDebugInfoFormatter.postXfyunSuspiciousJson(trace.postXfyunSuspicious)) }) {
+                        Text(text = "Copy hints JSON")
+                    }
+                    TextButton(onClick = { onCopy(XfyunDebugInfoFormatter.postXfyunDecisionsJson(trace.postXfyunDecisions)) }) {
+                        Text(text = "Copy decisions JSON")
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    TextButton(
+                        onClick = { onCopy(XfyunDebugInfoFormatter.postXfyunLlmPreviewText(trace)) },
+                        enabled = trace.postXfyunDecisions.isNotEmpty() || !trace.postXfyunSettings?.rewriteOutputPreview.isNullOrBlank(),
+                    ) {
+                        Text(text = "Copy LLM preview")
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(
+                        onClick = {
+                            val preview = postSettings?.promptEffectivePreview
+                            if (preview.isNullOrBlank()) {
+                                Toast.makeText(context, "No effective prompt preview", Toast.LENGTH_SHORT).show()
+                                return@TextButton
                             }
+                            onCopy(preview)
                         }
-                    }.trimEnd()
-                    onCopy(text)
+                    ) { Text(text = "Copy effective prompt preview") }
+                    TextButton(onClick = { showPromptPreview = !showPromptPreview }) {
+                        Text(text = if (showPromptPreview) "Hide" else "Show")
+                    }
                 }
-            ) { Text(text = "复制仲裁样本") }
-            TextButton(
-                onClick = {
-                    val text = buildString {
-                        appendLine("PostXFyun 可疑边界样本（前 10）")
-                        trace.postXfyunSuspicious.take(10).forEach { item ->
-                            val prev = item.prevSpeakerId?.let { "\"$it\"" } ?: "null"
-                            val next = item.nextSpeakerId?.let { "\"$it\"" } ?: "null"
-                            appendLine(
-                                "- boundaryIndex=${item.boundaryIndex} gapMs=${item.gapMs} prevSpeakerId=$prev nextSpeakerId=$next " +
-                                    "prevExcerpt=\"${item.prevExcerpt}\" nextExcerpt=\"${item.nextExcerpt}\""
-                            )
-                        }
-                    }.trimEnd()
-                    onCopy(text)
+                if (showPromptPreview) {
+                    Text(
+                        text = postSettings?.promptEffectivePreview ?: "-",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
-            ) { Text(text = "复制可疑边界样本") }
-        }
 
-        // --- Expand details ---
-        TextButton(
-            onClick = { expanded = !expanded },
-            contentPadding = PaddingValues(horizontal = 0.dp),
-        ) {
-            Text(text = if (expanded) "收起详情" else "展开详情")
-        }
-        if (expanded) {
-            if (trace.postXfyunSuspicious.isNotEmpty()) {
-                Text(
-                    text = "可疑边界（Top 10）",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                trace.postXfyunSuspicious.take(10).forEach { item ->
-                    val prev = item.prevSpeakerId?.let { "\"$it\"" } ?: "null"
-                    val next = item.nextSpeakerId?.let { "\"$it\"" } ?: "null"
-                    Text(
-                        text = "- #${item.boundaryIndex} gapMs=${item.gapMs} prev=$prev next=$next prev=\"${item.prevExcerpt}\" next=\"${item.nextExcerpt}\"",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                val stats = "Candidates=${trace.postXfyunCandidatesCount}, Attempts=${trace.postXfyunArbitrationsAttempted}/${trace.postXfyunArbitrationBudget}, Repairs=${trace.postXfyunRepairsApplied}"
+                ProofRow("Stats", stats, stats)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    TextButton(
+                        onClick = {
+                            val text = trace.postXfyunOriginalMarkdown
+                            if (text.isNullOrBlank()) {
+                                Toast.makeText(context, "No original transcript", Toast.LENGTH_SHORT).show()
+                                return@TextButton
+                            }
+                            onCopy(text)
+                        }
+                    ) { Text(text = "Copy original") }
+                    TextButton(
+                        onClick = {
+                            val text = trace.postXfyunPolishedMarkdown
+                            if (text.isNullOrBlank()) {
+                                Toast.makeText(context, "No polished transcript", Toast.LENGTH_SHORT).show()
+                                return@TextButton
+                            }
+                            onCopy(text)
+                        }
+                    ) { Text(text = "Copy polished") }
+                }
+
+                // Batches (collapsed by default)
+                TextButton(
+                    onClick = { showBatches = !showBatches },
+                    contentPadding = PaddingValues(horizontal = 0.dp),
+                ) {
+                    Text(text = if (showBatches) "Hide batches (${trace.postXfyunBatchPlan.size})" else "Show batches (${trace.postXfyunBatchPlan.size})")
+                }
+                if (showBatches) {
+                    trace.postXfyunBatchPlan.take(5).forEach { batch ->
+                        Text(
+                            text = "${batch.batchId} [${batch.startLineIndex}..${batch.endLineIndexInclusive}]",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+
+                // Suspicious boundaries (collapsed by default)
+                TextButton(
+                    onClick = { showSuspicious = !showSuspicious },
+                    contentPadding = PaddingValues(horizontal = 0.dp),
+                ) {
+                    Text(text = if (showSuspicious) "Hide suspicious boundaries (${trace.postXfyunSuspicious.size})" else "Show suspicious boundaries (${trace.postXfyunSuspicious.size})")
+                }
+                if (showSuspicious) {
+                    trace.postXfyunSuspicious.take(5).forEach { item ->
+                        val prev = item.prevSpeakerId ?: "-"
+                        val next = item.nextSpeakerId ?: "-"
+                        Text(
+                            text = "${item.susId} #${item.boundaryIndex} b=${item.batchId} local=${item.localBoundaryIndex} gapMs=${item.gapMs} prev=$prev next=$next",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+
+                // LLM evidence (collapsed by default)
+                TextButton(
+                    onClick = { showEvidence = !showEvidence },
+                    contentPadding = PaddingValues(horizontal = 0.dp),
+                ) {
+                    Text(text = if (showEvidence) "Hide LLM evidence" else "Show LLM evidence")
+                }
+                if (showEvidence) {
+                    trace.postXfyunDecisions.take(3).forEach { item ->
+                        Text(
+                            text = "[${item.attemptIndex}] ${item.susId} #${item.boundaryIndex} gapMs=${item.gapMs} " +
+                                "apply=${item.applyStatus} parse=${item.parseStatus} model=${item.modelUsed ?: "-"} reason=${item.reason ?: "-"}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
-            if (trace.postXfyunDecisions.isNotEmpty()) {
-                Text(
-                    text = "仲裁结果（Top 10）",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                trace.postXfyunDecisions.take(10).forEach { item ->
-                    Text(
-                        text = "- [${item.attemptIndex}] #${item.boundaryIndex} gapMs=${item.gapMs} ${item.action} span=\"${item.span}\" conf=${item.confidence} parse=${item.parseStatus} model=${item.modelUsed ?: "-"}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-            if (trace.postXfyunRepairs.isNotEmpty()) {
-                Text(
-                    text = "修复记录（Top 10）",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                trace.postXfyunRepairs.take(10).forEach { item ->
-                    Text(
-                        text = "- #${item.boundaryIndex} ${item.action} span=\"${item.span}\" conf=${item.confidence} gapMs=${item.gapMs}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-            // 重要：HUD 不展示任何 XFyun raw HTTP JSON 响应体；排查请以本地 raw dump 文件为准。
         }
     }
 
@@ -1524,6 +1740,312 @@ private fun XfyunTraceSection(
                     Text(text = "取消")
                 }
             }
+        )
+    }
+}
+
+@Composable
+private fun VoiceprintLabPanel(
+    voiceprintLab: VoiceprintLabUiState,
+    onRegisterBase64: (audioDataBase64: String, audioType: String, uid: String?) -> Unit,
+    onApplyLastFeatureId: () -> Unit,
+    onApplyTestPreset: () -> Unit,
+    onDeleteFeatureId: (featureId: String, removeFromSettings: Boolean) -> Unit,
+    onCopy: (String) -> Unit,
+    onClose: () -> Unit,
+) {
+    val context = LocalContext.current
+    var showBase64 by remember { mutableStateOf(false) }
+    // 重要：声纹音频 base64 属于敏感数据：只保存在内存，不落盘、不打日志、不进入 trace/HUD。
+    var audioBase64 by remember { mutableStateOf("") }
+    var manualPasteInput by remember { mutableStateOf("") }
+    var audioType by remember { mutableStateOf("raw") }
+    var uid by remember { mutableStateOf("") }
+    var typeMenuExpanded by remember { mutableStateOf(false) }
+    var deleteFeatureId by remember { mutableStateOf("") }
+    var removeFromSettings by remember { mutableStateOf(true) }
+    var lastRegisterInProgress by remember { mutableStateOf(false) }
+
+    val lastFeatureId = voiceprintLab.lastFeatureId?.trim().orEmpty()
+    var lastClearedFeatureId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(lastFeatureId) {
+        if (lastFeatureId.isNotBlank() && lastFeatureId != lastClearedFeatureId) {
+            // 重要：成功后立即清空 base64，避免敏感音频数据长时间驻留在内存与 UI 中。
+            audioBase64 = ""
+            manualPasteInput = ""
+            showBase64 = false
+            lastClearedFeatureId = lastFeatureId
+        }
+    }
+    LaunchedEffect(voiceprintLab.registerInProgress) {
+        // 重要：无论成功还是失败，只要一次 register 尝试结束，就清空 base64，避免敏感数据驻留。
+        if (lastRegisterInProgress && !voiceprintLab.registerInProgress) {
+            audioBase64 = ""
+            manualPasteInput = ""
+            showBase64 = false
+        }
+        lastRegisterInProgress = voiceprintLab.registerInProgress
+    }
+
+    val base64FilePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        runCatching {
+            // 重要：只读取 txt 内容到内存，不落盘、不打日志；并剔除空白符，得到纯 base64 字符串。
+            val rawText = context.contentResolver.openInputStream(uri)?.use { input ->
+                input.bufferedReader(Charsets.UTF_8).use { it.readText() }
+            }.orEmpty()
+            audioBase64 = rawText.filterNot { it.isWhitespace() }
+            manualPasteInput = ""
+            showBase64 = false
+        }.onFailure {
+            Toast.makeText(context, "Failed to load file.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = "Voiceprint Lab (Debug only)", style = MaterialTheme.typography.titleMedium)
+            IconButton(onClick = onClose) {
+                Icon(imageVector = Icons.Filled.Close, contentDescription = "Close")
+            }
+        }
+        Text(
+            text = "Warning: Do not paste sensitive audio in production builds. Base64 is never stored; it is sent once and cleared after each attempt.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        TextButton(
+            onClick = onApplyTestPreset,
+            enabled = !voiceprintLab.registerInProgress && !voiceprintLab.deleteInProgress,
+            contentPadding = PaddingValues(horizontal = 0.dp),
+        ) {
+            Text(text = "Apply XFyun VP Test Preset")
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextButton(
+                onClick = { base64FilePicker.launch(arrayOf("text/plain")) },
+                enabled = !voiceprintLab.registerInProgress,
+            ) { Text(text = "Load Base64 from .txt") }
+            TextButton(onClick = { showBase64 = !showBase64 }) {
+                Text(text = if (showBase64) "Hide Base64" else "Show Base64")
+            }
+            TextButton(
+                onClick = {
+                    audioBase64 = ""
+                    manualPasteInput = ""
+                    showBase64 = false
+                },
+                enabled = (audioBase64.isNotBlank() || manualPasteInput.isNotBlank()) && !voiceprintLab.registerInProgress,
+            ) { Text(text = "Clear Base64") }
+        }
+
+        val base64Len = audioBase64.length
+        val base64Preview = if (base64Len >= 32) {
+            "${audioBase64.take(16)}…${audioBase64.takeLast(16)}"
+        } else if (base64Len > 0) {
+            audioBase64.take(24)
+        } else {
+            "-"
+        }
+        Text(
+            text = "Loaded base64 length: $base64Len chars",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = "Preview: $base64Preview",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+
+        // Paste input (optional): do NOT render the full base64 string to avoid Compose lag.
+        OutlinedTextField(
+            value = manualPasteInput,
+            onValueChange = { value ->
+                if (value.isBlank()) {
+                    manualPasteInput = ""
+                    return@OutlinedTextField
+                }
+                // 重要：保存原始输入到内存并清空输入框，避免 TextField 渲染大段 base64 导致卡顿。
+                audioBase64 = value.filterNot { it.isWhitespace() }
+                manualPasteInput = ""
+                showBase64 = false
+            },
+            label = { Text(text = "Paste Base64 here (will auto-hide)") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            visualTransformation = if (showBase64) VisualTransformation.None else PasswordVisualTransformation(),
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = "audio_type:", style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = { typeMenuExpanded = true }) {
+                Text(text = audioType)
+                Icon(imageVector = Icons.Filled.KeyboardArrowDown, contentDescription = null)
+            }
+            DropdownMenu(
+                expanded = typeMenuExpanded,
+                onDismissRequest = { typeMenuExpanded = false },
+            ) {
+                listOf("raw", "speex", "opus-ogg").forEach { type ->
+                    DropdownMenuItem(
+                        text = { Text(text = type) },
+                        onClick = {
+                            audioType = type
+                            typeMenuExpanded = false
+                        }
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "uid (optional):",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        OutlinedTextField(
+            value = uid,
+            onValueChange = { uid = it },
+            label = { Text(text = "uid") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextButton(
+                onClick = { onRegisterBase64(audioBase64, audioType, uid.ifBlank { null }) },
+                enabled = audioBase64.trim().isNotBlank() && !voiceprintLab.registerInProgress,
+            ) {
+                if (voiceprintLab.registerInProgress) {
+                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(6.dp))
+                }
+                Text(text = "Register Voiceprint")
+            }
+
+            TextButton(
+                onClick = onApplyLastFeatureId,
+                enabled = lastFeatureId.isNotBlank(),
+            ) {
+                Text(text = "Enable + Add feature_id to Settings")
+            }
+        }
+
+        if (lastFeatureId.isNotBlank()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "feature_id: ${lastFeatureId.take(64)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                TextButton(onClick = { onCopy(lastFeatureId) }) {
+                    Text(text = "Copy feature_id")
+                }
+            }
+        }
+
+        val settingsHint = buildString {
+            val enabledSetting = voiceprintLab.enabledSetting
+            val count = voiceprintLab.configuredFeatureIdCount
+            if (enabledSetting != null || count != null) {
+                append("Settings: enabled=")
+                append(enabledSetting ?: "-")
+                append(", featureIdsCount=")
+                append(count ?: "-")
+            }
+        }
+        if (settingsHint.isNotBlank()) {
+            Text(
+                text = settingsHint,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        val bodySmall = MaterialTheme.typography.bodySmall
+        val onSurface = MaterialTheme.colorScheme.onSurface
+        voiceprintLab.lastMessage?.takeIf { it.isNotBlank() }?.let { msg ->
+            Text(
+                text = msg,
+                style = bodySmall,
+                color = onSurface,
+            )
+        }
+
+        HorizontalDivider()
+
+        Text(
+            text = "Delete feature_id (optional)",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        OutlinedTextField(
+            value = deleteFeatureId,
+            onValueChange = { deleteFeatureId = it },
+            label = { Text(text = "feature_id to delete") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = "Remove from settings", style = MaterialTheme.typography.bodySmall)
+            Switch(
+                checked = removeFromSettings,
+                onCheckedChange = { removeFromSettings = it },
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            TextButton(
+                onClick = { onDeleteFeatureId(deleteFeatureId, removeFromSettings) },
+                enabled = deleteFeatureId.trim().isNotBlank() && !voiceprintLab.deleteInProgress,
+            ) {
+                if (voiceprintLab.deleteInProgress) {
+                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(6.dp))
+                }
+                Text(text = "Delete feature_id")
+            }
+        }
+
+        Text(
+            text = "Next: run transcription and verify in HUD/trace: voiceprintEffectiveEnabled=true, roleTypeApplied=3, roleLabelsMatched>0.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

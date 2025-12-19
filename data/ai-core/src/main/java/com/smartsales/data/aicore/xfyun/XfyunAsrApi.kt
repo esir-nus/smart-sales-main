@@ -18,6 +18,7 @@ import com.smartsales.data.aicore.params.XFYUN_AUDIO_MODE_FILE_STREAM
 import java.io.File
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -57,6 +58,10 @@ internal data class XfyunUploadResult(
     val orderId: String,
     val taskEstimateTimeMs: Long?,
     val attemptUsed: XfyunRequestAttempt,
+    // 重要：声纹辅助分离是否在本次 upload 里实际生效（roleType=3 + featureIds）。
+    val voiceprintApplied: Boolean = false,
+    // 重要：本次 upload 生效的 featureIds（仅在 voiceprintApplied=true 时非空）。
+    val voiceprintFeatureIdsUsed: List<String> = emptyList(),
 )
 
 internal data class XfyunGetResultResult(
@@ -93,33 +98,89 @@ class XfyunAsrApi @Inject constructor(
     ): XfyunUploadResult {
         val credentials = configProvider.credentials()
         // 重要：upload 的 query 参数来自 AiParaSettings，并会参与签名/URL/HUD，必须同源。
-        val uploadSettings = aiParaSettingsProvider.snapshot().transcription.xfyun.upload
-        val effectiveLanguage = normalizeLanguage(uploadSettings.language.ifBlank { requestedLanguage })
-        val roleType = uploadSettings.roleType
-        val roleNum = uploadSettings.roleNum
+        val snapshot = aiParaSettingsProvider.snapshot()
+        val uploadSettings = snapshot.transcription.xfyun.upload
+        val voiceprintEffective = snapshot.transcription.xfyun.voiceprint.resolveEffective()
+        val uploadLanguageFromSettings = uploadSettings.language
+        val uploadLanguageRequested = requestedLanguage
+        val uploadLanguageResolved = resolveUploadLanguage(
+            languageFromSettings = uploadLanguageFromSettings,
+            languageRequested = uploadLanguageRequested,
+        )
+        val voiceprintApplied = voiceprintEffective.effectiveEnabled
+        val appliedRoleType = if (voiceprintApplied) 3 else uploadSettings.roleType
+        val appliedRoleNum = if (voiceprintApplied) {
+            // resolveEffective() 已做范围校验（0..10）；这里用 !! 明确 “生效即合法”。
+            voiceprintEffective.roleNum!!
+        } else {
+            uploadSettings.roleNum
+        }
+        val appliedFeatureIds = if (voiceprintApplied) voiceprintEffective.featureIds else emptyList()
+        val voiceprintBaseUrlHost = parseHost(voiceprintEffective.baseUrl)
         val signature = XfyunSignature(credentials.accessKeySecret)
         val attempts = XfyunRequestAttempt.ordered(preferredAttempt)
         var lastFailure: AiCoreException? = null
-        for (attempt in attempts) {
+
+        fun sha256Hex(text: String): String {
+            val digest = MessageDigest.getInstance("SHA-256").digest(text.toByteArray(StandardCharsets.UTF_8))
+            return digest.joinToString(separator = "") { b -> "%02x".format(b) }
+        }
+
+        fun executeUploadOnce(
+            attempt: XfyunRequestAttempt,
+            attemptLabel: String,
+            language: String?,
+        ): UploadOnceOutcome {
+            val dateTime = nowLocalTimeWithTz()
+            val tsSeconds = nowTsSeconds()
             val params = buildUploadParams(
                 credentials = credentials,
                 file = file,
                 uploadSettings = uploadSettings,
-                language = effectiveLanguage,
+                language = language,
+                roleType = appliedRoleType,
+                roleNum = appliedRoleNum,
+                voiceprintFeatureIds = appliedFeatureIds,
                 resultType = resultType,
                 durationMs = durationMs,
                 signatureRandom = signatureRandom,
-                dateTime = nowLocalTimeWithTz(),
-                tsSeconds = nowTsSeconds(),
+                dateTime = dateTime,
+                tsSeconds = tsSeconds,
                 strategy = attempt.paramStrategy
             )
-            // 重要：记录真正发送的 query 参数（已在 store 内部脱敏）
+
+            // 重要：
+            // - 记录真正发送的 query 参数（已在 store 内部脱敏）
+            // - upload 的签名 baseString 仅记录 SHA-256，避免 HUD/日志输出大段内容
+            val baseString = signature.buildBaseString(params, encodeKeys = attempt.encodeKeysInSignature)
             traceStore.recordUploadAttempt(
                 baseUrl = credentials.baseUrl,
                 uploadParams = params,
-                roleType = roleType,
-                roleNum = roleNum
+                roleType = appliedRoleType,
+                roleNum = appliedRoleNum,
+                attemptLabel = attemptLabel,
+                dateTimeSent = dateTime,
+                languageRequested = uploadLanguageRequested.trim().takeIf { it.isNotBlank() },
+                languageFromSettings = uploadLanguageFromSettings.trim().takeIf { it.isNotBlank() },
+                languageResolved = uploadLanguageResolved,
+                languageSent = params["language"],
+                urlHost = parseHost(credentials.baseUrl),
+                urlPath = API_UPLOAD,
+                queryKeys = params.keys.toList(),
+                baseStringSha256 = sha256Hex(baseString),
             )
+            // 重要：声纹（roleType=3）是可选增强，任何配置缺失/非法都必须 fail-soft；这里只记录证据，不影响主流程。
+            traceStore.recordVoiceprintUploadEvidence(
+                enabledSetting = voiceprintEffective.enabledSetting,
+                effectiveEnabled = voiceprintEffective.effectiveEnabled,
+                disabledReason = voiceprintEffective.disabledReason,
+                featureIdsConfigured = voiceprintEffective.featureIds,
+                featureIdsTruncated = voiceprintEffective.featureIdsTruncated,
+                roleTypeApplied = if (voiceprintApplied) 3 else null,
+                roleNumApplied = if (voiceprintApplied) voiceprintEffective.roleNum else null,
+                baseUrlHostUsed = voiceprintBaseUrlHost,
+            )
+
             val sig = signature.sign(params, encodeKeys = attempt.encodeKeysInSignature)
             val request = Request.Builder()
                 .url(buildUrl(credentials.baseUrl, API_UPLOAD, params))
@@ -181,11 +242,11 @@ class XfyunAsrApi @Inject constructor(
                     payloadSnippet = raw.body
                 )
                 val estimate = content.getPrimitiveLong("taskEstimateTime")
-                AiCoreLogger.d(TAG, "XFyun upload 成功：attempt=${attempt.label}")
-                return XfyunUploadResult(
+                return UploadOnceOutcome.Success(
                     orderId = orderId,
                     taskEstimateTimeMs = estimate,
-                    attemptUsed = attempt
+                    httpCode = raw.httpCode,
+                    rawBody = raw.body,
                 )
             }
 
@@ -198,15 +259,44 @@ class XfyunAsrApi @Inject constructor(
                 serverCode = normalizedCode,
                 serverDesc = desc
             )
-            val mapped = AiCoreException(
-                source = AiCoreErrorSource.XFYUN,
-                reason = AiCoreErrorReason.REMOTE,
-                message = "讯飞 upload 失败(code=$normalizedCode)：$desc"
+            return UploadOnceOutcome.Failure(
+                serverCode = normalizedCode,
+                serverDesc = desc,
+                httpCode = raw.httpCode,
+                rawBody = raw.body,
             )
-            lastFailure = mapped
-            AiCoreLogger.w(TAG, "XFyun upload 失败：attempt=${attempt.label}, code=$normalizedCode")
-            if (!shouldRetryWithDifferentStrategy(normalizedCode)) {
-                throw mapped
+        }
+
+        for (attempt in attempts) {
+            val outcome = executeUploadOnce(
+                attempt = attempt,
+                attemptLabel = attempt.label,
+                language = uploadLanguageResolved,
+            )
+            when (outcome) {
+                is UploadOnceOutcome.Success -> {
+                    AiCoreLogger.d(TAG, "XFyun upload 成功：attempt=${attempt.label}")
+                    return XfyunUploadResult(
+                        orderId = outcome.orderId,
+                        taskEstimateTimeMs = outcome.taskEstimateTimeMs,
+                        attemptUsed = attempt,
+                        voiceprintApplied = voiceprintApplied,
+                        voiceprintFeatureIdsUsed = appliedFeatureIds,
+                    )
+                }
+
+                is UploadOnceOutcome.Failure -> {
+                    val mapped = AiCoreException(
+                        source = AiCoreErrorSource.XFYUN,
+                        reason = AiCoreErrorReason.REMOTE,
+                        message = "讯飞 upload 失败(code=${outcome.serverCode})：${outcome.serverDesc}"
+                    )
+                    lastFailure = mapped
+                    AiCoreLogger.w(TAG, "XFyun upload 失败：attempt=${attempt.label}, code=${outcome.serverCode}")
+                    if (!shouldRetryWithDifferentStrategy(outcome.serverCode)) {
+                        throw mapped
+                    }
+                }
             }
         }
         throw lastFailure ?: AiCoreException(
@@ -342,8 +432,11 @@ class XfyunAsrApi @Inject constructor(
     private fun buildUploadParams(
         credentials: XfyunCredentials,
         file: File,
-        language: String,
+        language: String?,
         uploadSettings: XfyunUploadSettings,
+        roleType: Int,
+        roleNum: Int,
+        voiceprintFeatureIds: List<String>,
         resultType: String,
         durationMs: Long?,
         signatureRandom: String,
@@ -361,11 +454,10 @@ class XfyunAsrApi @Inject constructor(
             "signatureRandom" to signatureRandom,
             "fileSize" to file.length().toString(),
             "fileName" to file.name,
-            "language" to language,
             "ts" to tsSeconds,
             // 文档参数：roleType/roleNum（角色分离）
-            "roleType" to uploadSettings.roleType.toString(),
-            "roleNum" to uploadSettings.roleNum.toString(),
+            "roleType" to roleType.toString(),
+            "roleNum" to roleNum.toString(),
             // 文档参数：audioMode（本项目固定走 fileStream）
             "audioMode" to uploadSettings.audioMode.trim().ifBlank { XFYUN_AUDIO_MODE_FILE_STREAM },
             "resultType" to resultType,
@@ -374,6 +466,19 @@ class XfyunAsrApi @Inject constructor(
             "eng_colloqproc" to if (uploadSettings.engColloqProc) "true" else "false",
             "eng_vad_mdn" to uploadSettings.engVadMdn.toString(),
         )
+        // 文档参数：language（必填）
+        // 重要：
+        // - /v2/upload 的 language 为必填；省略会被服务端默认成 cn，容易触发 100020。
+        // - 这里只修正常见旧值（cn/zh/zh_cn 等）→ autodialect；其它值透传，便于对齐服务端实际约束。
+        params["language"] = sanitizeUploadLanguage(language)
+        // 重要：
+        // - 声纹辅助分离（roleType=3）会通过 query 参数 featureIds 生效。
+        // - 签名必须覆盖所有实际发送的 query 参数，否则会鉴权失败（签名 baseString / URL query / HUD 必须同源）。
+        voiceprintFeatureIds
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .takeIf { it.isNotEmpty() }
+            ?.let { ids -> params["featureIds"] = ids.joinToString(separator = ",") }
         // 文档参数：pd（领域个性化；空值不能参与签名，也不能出现在最终 URL 中）
         uploadSettings.pd.trim().takeIf { it.isNotBlank() }?.let { params["pd"] = it }
         durationMs?.takeIf { it > 0 }?.let { params["duration"] = it.toString() }
@@ -476,16 +581,64 @@ class XfyunAsrApi @Inject constructor(
     }
 
     private fun normalizeLanguage(raw: String): String {
-        // 讯飞文档：language 仅接受 autodialect / autominor；其它值统一回退为 autodialect。
-        val trimmed = raw.trim()
-        return when (trimmed) {
-            "autodialect", "autominor" -> trimmed
-            else -> "autodialect"
+        // 说明：保留该函数用于上层/单测校验；最终写入 uploadParams 前仍会再做一次 sanitize。
+        return sanitizeUploadLanguage(raw)
+    }
+
+    private fun resolveUploadLanguage(
+        languageFromSettings: String,
+        languageRequested: String,
+    ): String {
+        // 重要：
+        // - /v2/upload 的 language 仅支持 autodialect/autominor；但历史上上层可能会给 cn/zh 等旧值导致 100020。
+        // - 为避免把“配额/未开通/鉴权”误诊成语言问题，这里只修正常见旧值与空值；其他值透传，便于对齐服务端实际约束。
+        // - 优先使用调用方显式传入的 language（requested）；否则回退到 AiParaSettings 的 upload.language。
+        val candidate = languageRequested.trim().takeIf { it.isNotBlank() } ?: languageFromSettings
+        return sanitizeUploadLanguage(candidate)
+    }
+
+    private fun sanitizeUploadLanguage(raw: String?): String {
+        // 重要：
+        // - /v2/upload 的 language 仅支持 autodialect/autominor；cn/zh 等旧值会触发 100020: language verify fail。
+        // - 由于省略 language 会被服务端默认成 cn 仍然失败，因此这里必须保证返回非空值（默认 autodialect）。
+        // - 只修正常见旧值；其他值原样透传，避免将“配额/未开通/鉴权”等问题误判为语言问题。
+        val trimmed = raw?.trim().orEmpty()
+        if (trimmed.isBlank()) return "autodialect"
+
+        val normalized = trimmed.lowercase(Locale.US).replace('-', '_')
+        return when (normalized) {
+            "autodialect" -> "autodialect"
+            "autominor" -> "autominor"
+            "cn", "zh", "zh_cn", "chinese" -> "autodialect"
+            else -> trimmed
         }
     }
 
     private fun shouldRetryWithDifferentStrategy(code: String): Boolean =
         code in RETRYABLE_PARAM_CODES
+
+    private sealed interface UploadOnceOutcome {
+        data class Success(
+            val orderId: String,
+            val taskEstimateTimeMs: Long?,
+            val httpCode: Int,
+            val rawBody: String,
+        ) : UploadOnceOutcome
+
+        data class Failure(
+            val serverCode: String,
+            val serverDesc: String,
+            val httpCode: Int,
+            val rawBody: String,
+        ) : UploadOnceOutcome
+    }
+
+    private fun parseHost(baseUrl: String): String? {
+        val trimmed = baseUrl.trim()
+        if (trimmed.isBlank()) return null
+        return runCatching { java.net.URI(trimmed).host }.getOrNull()
+            ?.takeIf { it.isNotBlank() }
+    }
 
     private fun JsonObject.getPrimitiveString(key: String): String? {
         val element = this.get(key) ?: return null

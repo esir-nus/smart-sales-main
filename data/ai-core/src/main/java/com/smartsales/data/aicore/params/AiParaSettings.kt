@@ -38,6 +38,8 @@ data class XfyunAsrSettings(
     val baseUrlOverride: String = "",
     val authMode: String = XFYUN_AUTH_MODE_SIGNATURE,
     val upload: XfyunUploadSettings = XfyunUploadSettings(),
+    // 重要：声纹辅助分离（roleType=3）。默认关闭；仅在配置齐全时才会生效（fail-soft 回退）。
+    val voiceprint: XfyunVoiceprintSettings = XfyunVoiceprintSettings(),
     val result: XfyunResultSettings = XfyunResultSettings(),
     // 能力开关：默认全部关闭，避免误触发 failType=11。
     val capabilities: XfyunCapabilities = XfyunCapabilities(),
@@ -46,54 +48,297 @@ data class XfyunAsrSettings(
 )
 
 /**
+ * 说明：讯飞声纹相关配置（MVP：内存态，可被测试壳实时修改）。
+ *
+ * 重要：
+ * - 声纹属于敏感能力：任何配置缺失/非法都必须 fail-soft（不启用声纹，继续普通转写）。
+ * - featureIds 最多支持 64 个（以 docs/xfyun-asr-rest-api.md 为准）。
+ * - 声纹 API baseUrl 必须独立于转写 baseUrlOverride，避免误把转写 host 劫持到声纹域名。
+ */
+data class XfyunVoiceprintSettings(
+    // 默认关闭：需要配置 featureIds 才能生效；避免“看起来开了但实际没生效”与隐私误用。
+    val enabled: Boolean = true,
+    val featureIds: List<String> = emptyList(),
+    val roleNum: Int = 0,
+    val baseUrlOverride: String = "",
+    // 可选：用于声纹注册接口的 uid；为空则不传。
+    val uid: String = "",
+) {
+    data class Effective(
+        val enabledSetting: Boolean,
+        val effectiveEnabled: Boolean,
+        val featureIds: List<String>,
+        val featureIdsTruncated: Boolean,
+        val roleNum: Int?,
+        val baseUrl: String,
+        val disabledReason: String? = null,
+    )
+
+    fun resolveEffective(): Effective {
+        val normalized = normalizeFeatureIds(featureIds)
+        val roleNumValid = roleNum in 0..10
+        val baseUrl = baseUrlOverride.trim().takeIf { it.isNotBlank() } ?: DEFAULT_BASE_URL
+
+        if (!enabled) {
+            return Effective(
+                enabledSetting = false,
+                effectiveEnabled = false,
+                featureIds = normalized.ids,
+                featureIdsTruncated = normalized.truncated,
+                roleNum = if (roleNumValid) roleNum else null,
+                baseUrl = baseUrl,
+                disabledReason = "VOICEPRINT_DISABLED_SETTING_OFF",
+            )
+        }
+        if (normalized.ids.isEmpty()) {
+            return Effective(
+                enabledSetting = true,
+                effectiveEnabled = false,
+                featureIds = emptyList(),
+                featureIdsTruncated = normalized.truncated,
+                roleNum = if (roleNumValid) roleNum else null,
+                baseUrl = baseUrl,
+                disabledReason = "VOICEPRINT_DISABLED_EMPTY_FEATURE_IDS",
+            )
+        }
+        if (!roleNumValid) {
+            return Effective(
+                enabledSetting = true,
+                effectiveEnabled = false,
+                featureIds = normalized.ids,
+                featureIdsTruncated = normalized.truncated,
+                roleNum = null,
+                baseUrl = baseUrl,
+                disabledReason = "VOICEPRINT_DISABLED_INVALID_ROLE_NUM",
+            )
+        }
+        return Effective(
+            enabledSetting = true,
+            effectiveEnabled = true,
+            featureIds = normalized.ids,
+            featureIdsTruncated = normalized.truncated,
+            roleNum = roleNum,
+            baseUrl = baseUrl,
+            disabledReason = null,
+        )
+    }
+
+    /**
+     * 说明：用于调试/实验时将 featureId 追加到配置，并强制 enabled=true。
+     *
+     * 重要：
+     * - 声纹 featureId 属于敏感标识：只存 ID，不存音频。
+     * - 列表上限 64，避免配置膨胀导致误配或 UI/HUD 过载。
+     */
+    fun withEnabledAndAddedFeatureId(featureId: String): XfyunVoiceprintSettings {
+        val id = featureId.trim()
+        if (id.isBlank()) return copy(enabled = true)
+        val normalized = normalizeFeatureIds(featureIds + id)
+        return copy(
+            enabled = true,
+            featureIds = normalized.ids,
+        )
+    }
+
+    fun withoutFeatureId(featureId: String): XfyunVoiceprintSettings {
+        val id = featureId.trim()
+        if (id.isBlank()) return this
+        val filtered = featureIds.filterNot { it.trim() == id }
+        val normalized = normalizeFeatureIds(filtered)
+        return copy(featureIds = normalized.ids)
+    }
+
+    private data class NormalizedIds(
+        val ids: List<String>,
+        val truncated: Boolean,
+    )
+
+    private fun normalizeFeatureIds(raw: List<String>): NormalizedIds {
+        if (raw.isEmpty()) return NormalizedIds(ids = emptyList(), truncated = false)
+        val deduped = LinkedHashSet<String>()
+        raw.forEach { id ->
+            val trimmed = id.trim()
+            if (trimmed.isNotBlank()) deduped.add(trimmed)
+        }
+        val all = deduped.toList()
+        val capped = all.take(MAX_FEATURE_IDS)
+        return NormalizedIds(ids = capped, truncated = all.size > capped.size)
+    }
+
+    companion object {
+        const val DEFAULT_BASE_URL: String = "https://office-api-personal-dx.iflyaisol.com"
+        const val MAX_FEATURE_IDS: Int = 64
+    }
+}
+
+/**
+ * 说明：声纹设置写入的集中入口（用于 Debug Lab）。
+ *
+ * 重要安全要求：
+ * - 仅写入 featureId（敏感标识）；绝不写入/保存音频 base64。
+ */
+fun AiParaSettingsRepository.enableVoiceprintAndAddFeatureId(featureId: String) {
+    update { current ->
+        val transcription = current.transcription
+        val xfyun = transcription.xfyun
+        val updatedVoiceprint = xfyun.voiceprint.withEnabledAndAddedFeatureId(featureId)
+        current.copy(
+            transcription = transcription.copy(
+                xfyun = xfyun.copy(voiceprint = updatedVoiceprint)
+            )
+        )
+    }
+}
+
+fun AiParaSettingsRepository.removeVoiceprintFeatureId(featureId: String) {
+    update { current ->
+        val transcription = current.transcription
+        val xfyun = transcription.xfyun
+        val updatedVoiceprint = xfyun.voiceprint.withoutFeatureId(featureId)
+        current.copy(
+            transcription = transcription.copy(
+                xfyun = xfyun.copy(voiceprint = updatedVoiceprint)
+            )
+        )
+    }
+}
+
+/**
+ * 说明：一键应用“讯飞声纹调试预置参数”（仅内存态，不持久化）。
+ *
+ * 重要：
+ * - 该 preset 仅用于调试：确保 upload.language 合法且 roleType 不会在未配置 featureIds 时误切到声纹模式。
+ * - 声纹是否生效仍以 voiceprint.resolveEffective() 为准（enabled + featureIds 非空）。
+ */
+fun AiParaSettingsRepository.applyXfyunVoiceprintTestPreset(lastFeatureId: String? = null) {
+    update { current ->
+        val transcription = current.transcription
+        val xfyun = transcription.xfyun
+        val upload = xfyun.upload
+        val postXfyun = xfyun.postXfyun
+        val voiceprint = xfyun.voiceprint
+
+        val updatedVoiceprint = lastFeatureId
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+            ?.let { featureId ->
+                // 重要：声纹 featureId 属于敏感标识，只写入 ID，不写入音频；列表上限 64。
+                voiceprint.withEnabledAndAddedFeatureId(featureId)
+            }
+            ?: voiceprint
+
+        current.copy(
+            transcription = transcription.copy(
+                provider = TRANSCRIPTION_PROVIDER_XFYUN,
+                xfyun = xfyun.copy(
+                    baseUrlOverride = "",
+                    upload = upload.copy(
+                        language = "autodialect",
+                        // 默认走普通说话人分离；声纹必须由 voiceprintEffectiveEnabled（roleType=3 + featureIds）触发。
+                        roleType = 1,
+                        roleNum = 0,
+                    ),
+                    postXfyun = postXfyun.copy(enabled = false),
+                    voiceprint = updatedVoiceprint,
+                )
+            )
+        )
+    }
+}
+
+/**
  * 说明：PostXFyun 的运行时配置（MVP：内存态，可被测试壳实时修改）。
  *
  * 重要：
  * - Prompt 必须可调：便于不同账号/口音/场景下快速试验而不改代码。
- * - 仲裁输出必须是“封闭动作 JSON”，禁止自由改写，避免引入不可追溯的文本变化。
+ * - PostXFyun 属于可行性增强：任何失败必须 fail-soft 回退到原始逐字稿。
  */
 data class PostXfyunSettings(
-    // 默认关闭：避免线上“看起来变好了但引入不可控改写”。
+    // 默认关闭：避免线上"看起来变好了但引入不可控改写"。
     val enabled: Boolean = false,
     // 判定可疑边界：gapMs <= threshold 才会触发仲裁（单位毫秒）。
     val suspiciousGapThresholdMs: Long = 200L,
-    // 低于该置信度的仲裁结果一律回退为 NONE（不改动文本）。
-    val confidenceThreshold: Double = 0.85,
-    // 每份逐字稿最多仲裁/修复次数：
-    // - 重要：该值同时限制 LLM 仲裁调用次数（即使一直返回 NONE 也会停止），避免 58+ 次无意义调用。
-    // - 设置为 0 等同关闭。
-    val maxRepairsPerTranscript: Int = 0,
-    // MOVE_* 决策允许的 span 最大字符数（仍需严格匹配边界子串）；用于防止一次移动过长导致文本“整体漂移”。
-    val maxSpanChars: Int = 16,
-    // 仲裁模型覆盖（例如：qwen3-max / qwen-max / qwen-plus）；为空则使用默认模型配置。
-    val model: String = "",
-    // 重要：LLM 仲裁 Prompt 模板（仅输入前后两行 + boundaryMark，不允许输入 raw JSON）。
-    val promptTemplate: String = DEFAULT_POST_XFYUN_PROMPT_TEMPLATE,
+    // 最多保留多少条"可疑边界提示"（按 boundaryIndex 从小到大，确定性截断）。
+    val maxSuspiciousHints: Int = 50,
+    // 批次切分：每个 batch 最多包含多少条逐字稿行；默认不切分（单批 b1）。
+    val maxUtterancesPerBatch: Int = Int.MAX_VALUE,
+    // 每份逐字稿最多允许应用多少次"边界两行改写修复"（同时也会限制 LLM 调用次数，避免无限循环）。
+    val maxRepairsPerTranscript: Int = 15,
+    // 改写模型覆盖（例如：qwen3-max）；为空则使用默认模型配置。
+    val model: String = "qwen3-max",
+    // 重要：LLM Prompt 模板（仅输入相邻两行 + boundary 信息，不允许输入 raw HTTP JSON）。
+    val promptTemplate: String = DEFAULT_POST_XFYUN_REWRITE_PROMPT_TEMPLATE,
+    // 置信度阈值：<= 0.0 表示禁用置信度检查；> 0.0 时，只有 decision.confidence >= 此值才应用修复。
+    val confidenceThreshold: Double = 0.8,
+    // 最大 span 字符数：允许在边界两侧移动的最大字符数（1-200）。
+    val maxSpanChars: Int = 24,
 )
 
-private val DEFAULT_POST_XFYUN_PROMPT_TEMPLATE: String = """
-You are a transcription boundary repair arbitrator.
-You must output a STRICT JSON object only (no extra text, no Markdown fences).
+private val DEFAULT_POST_XFYUN_REWRITE_PROMPT_TEMPLATE: String = """
+中文ASR转录校正专家提示
 
-Input:
-- prev_line: {{PREV_LINE}}
-- next_line: {{NEXT_LINE}}
-- boundary: {{BOUNDARY_MARK}}
+核心目标：将原始ASR转录转化为专业、连贯、符合口语逻辑的对话文本，尤其适用于销售/客服等互动场景。
 
-Notes:
-- prev_line may end with marker "〔/suspicious〕". This marker is PROMPT-ONLY and not part of the original transcript.
-- The marker indicates a suspicious short-gap boundary. Inspect around the marker and decide if the boundary split a continuous span.
+【执行流程】
 
-Constraints:
-- Closed actions only: NONE | MOVE_TAIL_TO_NEXT | MOVE_HEAD_TO_PREV
-- No rewriting. Do not add/remove any characters other than moving the exact span across the boundary.
+第一步：整体语境分析（先理解，再修改）
 
-Output (single JSON object):
+- 通读全文，识别场景（如销售、会议、访谈）及人物关系（如客户/销售、上级/下属）。
+- 提取关键信息：讨论的核心主题、产品/服务名称、价格、技术参数等。
+- 分析人物特征：标注每个发言人的说话风格（如“客户爱打岔质疑”、“销售使用专业话术”、“领导做总结”）。
+
+第二步：分阶段校正（重点优化开头）
+
+- 初期（前10-15行）重点审查：ASR开头通常错误率更高。特别注意：
+  - 开场白是否完整、自然？不完整的半句（如“在路虎能买”）需根据语境补充或连接。
+  - 称呼、问候语是否粘连（如“您好罗总欢迎来到”）？需添加合理标点分隔。
+  - 口语填充词（的话、呀、啊）是否错位？将其归位到正确的句子中。
+- 中后期校正：基于已建立的语境，处理飘移的从句、修复被错误标点割裂的句子、合并无意义的重复。
+
+第三步：修复具体ASR问题的策略
+
+- 句子边界与标点：忽略原始标点。根据语义和口语节奏重加标点（问号、感叹号、逗号、省略号），使每句话轮完整、自然。
+- 飘移的碎片处理：
+  - 填充词/语气词：将句尾的“呀”、“啊”、“呢”等移至其语义归属的疑问句或感叹句句尾。
+  - 连接词/从句：将孤立的“的话”、“那”、“但是”等与前文或后文连接，形成完整的条件句、转折句。
+  - 跨话轮打断：当A的话被B打断时，A的句子可能在中间被切断。确保中断点合理，且B的接话内容符合其人物性格（如客户抢话、揶揄）。
+  - 重复与冗余：删除ASR造成的无意义重复（如“400万…400万”），保留有修辞或强调作用的重复。
+- 话轮归属：除非有强烈证据，否则不合并说话人。短促的回应（如“是的”、“好”）、笑声（“Haha”）、语气词（“嗯…”）单独成行。
+
+第四步：风格与一致性优化
+
+- 口语化：保留“哥们”、“呀”、“唉哟”等真实口语元素，避免过度书面化。
+- 专业性：确保产品名称、技术术语、数字准确无误。
+- 互动感：通过合理的标点和分段，体现对话的节奏、打断、追问和幽默。
+
+第五步：最终检查
+
+- 通读校正后的全文，确保上下文连贯、人物行为一致、逻辑通顺。
+- 确认所有修正均未引入原文不存在的事实。
+
+【约束条件（必须遵守）】
+
+- 忠于原意：不添加、不删除、不改变事实性内容。
+- 最小化移动：只移动修复连贯性所必需的碎片。
+- 保持话轮独立：绝不合并不同发言人的内容。
+- 修复，不重写：优化表达，但不改变说话人的原始意图和风格。
+
+输入（两行原文，顺序为A、B）：
+LINE_A:
+{{PREV_LINE_TEXT}}
+LINE_B:
+{{NEXT_LINE_TEXT}}
+相关信号：
+sus_id: {{SUS_ID}}
+gap_ms: {{GAP_MS}}
+
+输出（JSON，仅支持以下格式，不得输出多余内容）：
+
 {
-  "action": "NONE|MOVE_TAIL_TO_NEXT|MOVE_HEAD_TO_PREV",
-  "span": "If action is MOVE_*, provide a continuous span of length 1..{{MAX_SPAN_CHARS}} (inclusive); otherwise use an empty string.",
-  "confidence": 0.0,
-  "reason": "short reason (<= 30 chars)"
+  "prevText": "", // 修正后的 LINE_A（保留原有说话人前缀标签）
+  "nextText": "", // 修正后的 LINE_B（保留原有说话人前缀标签）
+  "confidence": 0.0, // 连贯性提升充足时信心高，若仅做标点微调则 confidence <= 0.30
+  "reason": "" // 简要说明修正点（不要出现提示词或标记）
 }
 """.trimIndent()
 
@@ -102,17 +347,17 @@ Output (single JSON object):
  * 重要：这是客户端可控的 query 参数集合；会进入签名/URL/HUD，必须一致。
  */
 data class XfyunUploadSettings(
-    // 文档参数：language（autodialect/autominor）
+    // 文档参数：language（本项目固定使用 autodialect；cn/zh 等旧值会被统一兜底为 autodialect）
     val language: String = "autodialect",
     // 文档参数：pd（领域个性化；为空则不传）
     val pd: String = "",
-    // 文档参数：roleType/roleNum（角色分离；MVP 不开放 roleType=3 声纹）
-    val roleType: Int = 1,
+    // 文档参数：roleType/roleNum（角色分离；默认走普通说话人分离；声纹需显式开启 roleType=3 + featureIds）
+    val roleType: Int = 3,
     val roleNum: Int = 0,
     // 文档参数：顺滑/口语规整/远近场模式
     val engSmoothProc: Boolean = true,
     val engColloqProc: Boolean = false,
-    val engVadMdn: Int = 1,
+    val engVadMdn: Int = 2,
     // 文档参数：audioMode（本项目固定走 fileStream，不走 urlLink）
     val audioMode: String = XFYUN_AUDIO_MODE_FILE_STREAM,
 )
@@ -205,7 +450,7 @@ class DefaultAiParaSettingsProvider @Inject constructor(
 }
 
 data class TingwuSettings(
-    // 语音分离与转码等参数
+    // 听悟语音分离与转码等参数
     val transcription: TingwuTranscriptionSettings = TingwuTranscriptionSettings(),
     val summarization: TingwuSummarizationSettings = TingwuSummarizationSettings(),
     val autoChaptersEnabled: Boolean = true,

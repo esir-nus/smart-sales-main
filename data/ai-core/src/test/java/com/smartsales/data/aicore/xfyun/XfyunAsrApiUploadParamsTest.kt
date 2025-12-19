@@ -47,6 +47,9 @@ class XfyunAsrApiUploadParamsTest {
             File::class.java,
             String::class.java,
             XfyunUploadSettings::class.java,
+            Int::class.javaPrimitiveType,
+            Int::class.javaPrimitiveType,
+            java.util.List::class.java,
             String::class.java,
             Long::class.javaObjectType,
             String::class.java,
@@ -82,6 +85,9 @@ class XfyunAsrApiUploadParamsTest {
             temp,
             "autominor",
             uploadSettings,
+            1,
+            2,
+            emptyList<String>(),
             "transfer",
             null,
             "rand16",
@@ -90,7 +96,7 @@ class XfyunAsrApiUploadParamsTest {
             XfyunParamStrategy.DOC_FIRST,
         ) as Map<String, String>
 
-        // 锁定：与 docs/xfyun-asr-rest-api.md 的 upload 参数表一致
+        // 锁定：/v2/upload 的关键参数构造稳定；language 按产品约束固定为 autodialect
         assertEquals("autominor", params["language"])
         assertEquals("finance", params["pd"])
         assertEquals("1", params["roleType"])
@@ -100,6 +106,332 @@ class XfyunAsrApiUploadParamsTest {
         assertEquals("true", params["eng_colloqproc"])
         assertEquals("2", params["eng_vad_mdn"])
         assertEquals("transfer", params["resultType"])
+    }
+
+    @Test
+    fun buildUploadParams_includesLanguageAutodialect_whenNull() {
+        val dumpDir = Files.createTempDirectory("xfyun_raw_dump").toFile().apply { deleteOnExit() }
+        val temp = File.createTempFile("xfyun", ".wav").apply {
+            writeBytes(byteArrayOf(1, 2, 3, 4))
+            deleteOnExit()
+        }
+        val api = XfyunAsrApi(
+            httpClient = XfyunHttpClient(),
+            configProvider = XfyunConfigProvider(
+                object : AiParaSettingsProvider {
+                    override fun snapshot(): AiParaSettingsSnapshot = AiParaSettingsSnapshot()
+                }
+            ),
+            traceStore = XfyunTraceStore(),
+            aiParaSettingsProvider = object : AiParaSettingsProvider {
+                override fun snapshot(): AiParaSettingsSnapshot = AiParaSettingsSnapshot()
+            },
+            rawResponseDumper = XfyunRawResponseDumper(
+                directoryProvider = object : XfyunRawDumpDirectoryProvider {
+                    override fun directory(): File = dumpDir
+                }
+            ),
+        )
+
+        val method = XfyunAsrApi::class.java.getDeclaredMethod(
+            "buildUploadParams",
+            XfyunCredentials::class.java,
+            File::class.java,
+            String::class.java,
+            XfyunUploadSettings::class.java,
+            Int::class.javaPrimitiveType,
+            Int::class.javaPrimitiveType,
+            java.util.List::class.java,
+            String::class.java,
+            Long::class.javaObjectType,
+            String::class.java,
+            String::class.java,
+            String::class.java,
+            XfyunParamStrategy::class.java,
+        ).apply {
+            isAccessible = true
+        }
+
+        val credentials = XfyunCredentials(
+            appId = "app",
+            accessKeyId = "id",
+            accessKeySecret = "secret",
+            baseUrl = "https://example.com",
+        )
+
+        @Suppress("UNCHECKED_CAST")
+        val params = method.invoke(
+            api,
+            credentials,
+            temp,
+            null,
+            XfyunUploadSettings(),
+            1,
+            0,
+            emptyList<String>(),
+            "transfer",
+            null,
+            "rand16",
+            "2025-12-16T00:00:00+0800",
+            "1234567890",
+            XfyunParamStrategy.DOC_FIRST,
+        ) as Map<String, String>
+
+        assertEquals("autodialect", params["language"])
+    }
+
+    @Test
+    fun normalizeLanguage_sanitizesToSupportedValues() {
+        val dumpDir = Files.createTempDirectory("xfyun_raw_dump").toFile().apply { deleteOnExit() }
+        val api = XfyunAsrApi(
+            httpClient = XfyunHttpClient(),
+            configProvider = XfyunConfigProvider(
+                object : AiParaSettingsProvider {
+                    override fun snapshot(): AiParaSettingsSnapshot = AiParaSettingsSnapshot()
+                }
+            ),
+            traceStore = XfyunTraceStore(),
+            aiParaSettingsProvider = object : AiParaSettingsProvider {
+                override fun snapshot(): AiParaSettingsSnapshot = AiParaSettingsSnapshot()
+            },
+            rawResponseDumper = XfyunRawResponseDumper(
+                directoryProvider = object : XfyunRawDumpDirectoryProvider {
+                    override fun directory(): File = dumpDir
+                }
+            ),
+        )
+
+        val method = XfyunAsrApi::class.java.getDeclaredMethod(
+            "normalizeLanguage",
+            String::class.java,
+        ).apply { isAccessible = true }
+
+        assertEquals("autominor", method.invoke(api, "autominor") as String)
+        assertEquals("autodialect", method.invoke(api, "zh-CN") as String)
+        assertEquals("en", method.invoke(api, "en") as String)
+    }
+
+    @Test
+    fun buildUploadParams_passthroughsUnknownLanguage_whenNotLegacy() {
+        val dumpDir = Files.createTempDirectory("xfyun_raw_dump").toFile().apply { deleteOnExit() }
+        val temp = File.createTempFile("xfyun", ".wav").apply {
+            writeBytes(byteArrayOf(1, 2, 3, 4))
+            deleteOnExit()
+        }
+        val api = XfyunAsrApi(
+            httpClient = XfyunHttpClient(),
+            configProvider = XfyunConfigProvider(
+                object : AiParaSettingsProvider {
+                    override fun snapshot(): AiParaSettingsSnapshot = AiParaSettingsSnapshot()
+                }
+            ),
+            traceStore = XfyunTraceStore(),
+            aiParaSettingsProvider = object : AiParaSettingsProvider {
+                override fun snapshot(): AiParaSettingsSnapshot = AiParaSettingsSnapshot()
+            },
+            rawResponseDumper = XfyunRawResponseDumper(
+                directoryProvider = object : XfyunRawDumpDirectoryProvider {
+                    override fun directory(): File = dumpDir
+                }
+            ),
+        )
+
+        val method = XfyunAsrApi::class.java.getDeclaredMethod(
+            "buildUploadParams",
+            XfyunCredentials::class.java,
+            File::class.java,
+            String::class.java,
+            XfyunUploadSettings::class.java,
+            Int::class.javaPrimitiveType,
+            Int::class.javaPrimitiveType,
+            java.util.List::class.java,
+            String::class.java,
+            Long::class.javaObjectType,
+            String::class.java,
+            String::class.java,
+            String::class.java,
+            XfyunParamStrategy::class.java,
+        ).apply {
+            isAccessible = true
+        }
+
+        val credentials = XfyunCredentials(
+            appId = "app",
+            accessKeyId = "id",
+            accessKeySecret = "secret",
+            baseUrl = "https://example.com",
+        )
+
+        @Suppress("UNCHECKED_CAST")
+        val params = method.invoke(
+            api,
+            credentials,
+            temp,
+            "en",
+            XfyunUploadSettings(language = "en"),
+            1,
+            0,
+            emptyList<String>(),
+            "transfer",
+            null,
+            "rand16",
+            "2025-12-16T00:00:00+0800",
+            "1234567890",
+            XfyunParamStrategy.DOC_FIRST,
+        ) as Map<String, String>
+
+        assertEquals("en", params["language"])
+    }
+
+    @Test
+    fun buildUploadParams_sanitizesCnLanguage_toAutodialect() {
+        val dumpDir = Files.createTempDirectory("xfyun_raw_dump").toFile().apply { deleteOnExit() }
+        val temp = File.createTempFile("xfyun", ".wav").apply {
+            writeBytes(byteArrayOf(1, 2, 3, 4))
+            deleteOnExit()
+        }
+        val api = XfyunAsrApi(
+            httpClient = XfyunHttpClient(),
+            configProvider = XfyunConfigProvider(
+                object : AiParaSettingsProvider {
+                    override fun snapshot(): AiParaSettingsSnapshot = AiParaSettingsSnapshot()
+                }
+            ),
+            traceStore = XfyunTraceStore(),
+            aiParaSettingsProvider = object : AiParaSettingsProvider {
+                override fun snapshot(): AiParaSettingsSnapshot = AiParaSettingsSnapshot()
+            },
+            rawResponseDumper = XfyunRawResponseDumper(
+                directoryProvider = object : XfyunRawDumpDirectoryProvider {
+                    override fun directory(): File = dumpDir
+                }
+            ),
+        )
+
+        val method = XfyunAsrApi::class.java.getDeclaredMethod(
+            "buildUploadParams",
+            XfyunCredentials::class.java,
+            File::class.java,
+            String::class.java,
+            XfyunUploadSettings::class.java,
+            Int::class.javaPrimitiveType,
+            Int::class.javaPrimitiveType,
+            java.util.List::class.java,
+            String::class.java,
+            Long::class.javaObjectType,
+            String::class.java,
+            String::class.java,
+            String::class.java,
+            XfyunParamStrategy::class.java,
+        ).apply {
+            isAccessible = true
+        }
+
+        val credentials = XfyunCredentials(
+            appId = "app",
+            accessKeyId = "id",
+            accessKeySecret = "secret",
+            baseUrl = "https://example.com",
+        )
+
+        @Suppress("UNCHECKED_CAST")
+        val params = method.invoke(
+            api,
+            credentials,
+            temp,
+            "cn",
+            XfyunUploadSettings(language = "cn"),
+            1,
+            0,
+            emptyList<String>(),
+            "transfer",
+            null,
+            "rand16",
+            "2025-12-16T00:00:00+0800",
+            "1234567890",
+            XfyunParamStrategy.DOC_FIRST,
+        ) as Map<String, String>
+
+        assertEquals("autodialect", params["language"])
+    }
+
+    @Test
+    fun buildUploadParams_includesVoiceprintFeatureIds_whenProvided() {
+        val dumpDir = Files.createTempDirectory("xfyun_raw_dump").toFile().apply { deleteOnExit() }
+        val temp = File.createTempFile("xfyun", ".wav").apply {
+            writeBytes(byteArrayOf(1, 2, 3, 4))
+            deleteOnExit()
+        }
+        val api = XfyunAsrApi(
+            httpClient = XfyunHttpClient(),
+            configProvider = XfyunConfigProvider(
+                object : AiParaSettingsProvider {
+                    override fun snapshot(): AiParaSettingsSnapshot = AiParaSettingsSnapshot()
+                }
+            ),
+            traceStore = XfyunTraceStore(),
+            aiParaSettingsProvider = object : AiParaSettingsProvider {
+                override fun snapshot(): AiParaSettingsSnapshot = AiParaSettingsSnapshot()
+            },
+            rawResponseDumper = XfyunRawResponseDumper(
+                directoryProvider = object : XfyunRawDumpDirectoryProvider {
+                    override fun directory(): File = dumpDir
+                }
+            ),
+        )
+
+        val method = XfyunAsrApi::class.java.getDeclaredMethod(
+            "buildUploadParams",
+            XfyunCredentials::class.java,
+            File::class.java,
+            String::class.java,
+            XfyunUploadSettings::class.java,
+            Int::class.javaPrimitiveType,
+            Int::class.javaPrimitiveType,
+            java.util.List::class.java,
+            String::class.java,
+            Long::class.javaObjectType,
+            String::class.java,
+            String::class.java,
+            String::class.java,
+            XfyunParamStrategy::class.java,
+        ).apply {
+            isAccessible = true
+        }
+
+        val credentials = XfyunCredentials(
+            appId = "app",
+            accessKeyId = "id",
+            accessKeySecret = "secret",
+            baseUrl = "https://example.com",
+        )
+
+        val uploadSettings = XfyunUploadSettings(
+            roleType = 0,
+            roleNum = 0,
+        )
+
+        @Suppress("UNCHECKED_CAST")
+        val params = method.invoke(
+            api,
+            credentials,
+            temp,
+            "autodialect",
+            uploadSettings,
+            3,
+            0,
+            listOf("vp_a", "  ", "vp_b"),
+            "transfer",
+            null,
+            "rand16",
+            "2025-12-16T00:00:00+0800",
+            "1234567890",
+            XfyunParamStrategy.DOC_FIRST,
+        ) as Map<String, String>
+
+        assertEquals("3", params["roleType"])
+        assertEquals("0", params["roleNum"])
+        assertEquals("vp_a,vp_b", params["featureIds"])
     }
 
     @Test
@@ -133,6 +465,9 @@ class XfyunAsrApiUploadParamsTest {
             File::class.java,
             String::class.java,
             XfyunUploadSettings::class.java,
+            Int::class.javaPrimitiveType,
+            Int::class.javaPrimitiveType,
+            java.util.List::class.java,
             String::class.java,
             Long::class.javaObjectType,
             String::class.java,
@@ -159,6 +494,9 @@ class XfyunAsrApiUploadParamsTest {
             temp,
             "autodialect",
             uploadSettings,
+            1,
+            0,
+            emptyList<String>(),
             "transfer",
             null,
             "rand16",

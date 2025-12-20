@@ -86,10 +86,15 @@ Legend: TODO / DOING / DONE / BLOCKED
   - M3 renaming accepted vs candidate works and is stable after user override
 
 ### T7-005 Implementation: provider lane selection (default Tingwu+OSS; XFyun disabled)
-- Status: TODO
+- Status: DONE
 - Definition of done:
   - Effective lane selection visible in HUD Section 1
   - XFyun cannot be used unless explicitly enabled and preflight validated
+  - Evidence:
+    - `data/ai-core/src/main/java/com/smartsales/data/aicore/params/AiParaSettings.kt` (default provider -> TINGWU; XFyun has `enabled=false` gate)
+    - `app/src/main/java/com/smartsales/aitest/audio/SwitchableAudioTranscriptionCoordinator.kt` (refuses XFyun unless enabled)
+    - `data/ai-core/src/test/java/com/smartsales/data/aicore/params/InMemoryAiParaSettingsRepositoryTest.kt` updated to match new defaults
+    - Tests: `./gradlew :data:ai-core:testDebugUnitTest --no-daemon`
 
 ### T7-006 Implementation: HUD 3-block copy snapshot
 - Status: TODO
@@ -141,4 +146,3 @@ Legend: TODO / DOING / DONE / BLOCKED
 - [ ] No raw JSON visible in normal UI bubbles
 - [ ] Export gated by Smart Analysis
 - [ ] M4 placeholder does not change behavior unless enabled
-

@@ -1,3 +1,7 @@
+> ARCHIVED: This document is historical reference only.  
+> CURRENT spec is `docs/Orchestrator-MetadataHub-V7.md`.  
+> Do not implement new behavior against this version.
+
 # ⚠️ 已归档（ARCHIVED）
 >
 > 状态：ARCHIVED  

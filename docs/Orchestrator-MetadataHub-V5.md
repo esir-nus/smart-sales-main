@@ -1,3 +1,7 @@
+> ARCHIVED: This document is historical reference only.  
+> CURRENT spec is `docs/Orchestrator-MetadataHub-V7.md`.  
+> Do not implement new behavior against this version.
+
 # Orchestrator–MetaHub 规范（V5）
 
 ## 标题与版本信息（Versioning header）

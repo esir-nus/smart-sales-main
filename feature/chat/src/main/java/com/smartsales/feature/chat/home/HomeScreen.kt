@@ -1997,6 +1997,28 @@ private fun VoiceprintLabPanel(
         }
         val bodySmall = MaterialTheme.typography.bodySmall
         val onSurface = MaterialTheme.colorScheme.onSurface
+        val vpHost = voiceprintLab.lastApiHost?.takeIf { it.isNotBlank() } ?: "-"
+        val vpPath = voiceprintLab.lastApiPath?.takeIf { it.isNotBlank() } ?: "-"
+        val vpHttp = voiceprintLab.lastHttpCode?.toString() ?: "-"
+        val vpBizCode = voiceprintLab.lastBusinessCode?.takeIf { it.isNotBlank() } ?: "-"
+        val vpBizDesc = voiceprintLab.lastBusinessDesc?.takeIf { it.isNotBlank() } ?: "-"
+        val callHint = "Last call: host=$vpHost path=$vpPath http=$vpHttp code=$vpBizCode"
+        Text(
+            text = callHint,
+            style = bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (vpBizDesc != "-") {
+            Text(
+                text = "Business desc: ${vpBizDesc.take(120)}",
+                style = bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         voiceprintLab.lastMessage?.takeIf { it.isNotBlank() }?.let { msg ->
             Text(
                 text = msg,

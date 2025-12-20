@@ -38,6 +38,7 @@ class XfyunConfigProvider @Inject constructor(
 
     companion object {
         const val DEFAULT_BASE_URL: String = "https://office-api-ist-dx.iflyaisol.com"
-        const val DEFAULT_VOICEPRINT_BASE_URL: String = "https://office-api-ist-dx.iflyaisol.com"
+        // 重要：声纹接口走 personal 域名；与转写 upload/getResult 的域名不同。
+        const val DEFAULT_VOICEPRINT_BASE_URL: String = "https://office-api-personal-dx.iflyaisol.com"
     }
 }

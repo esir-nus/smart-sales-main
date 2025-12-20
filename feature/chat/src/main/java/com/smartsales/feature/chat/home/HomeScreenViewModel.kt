@@ -193,6 +193,11 @@ data class VoiceprintLabUiState(
     val deleteInProgress: Boolean = false,
     val lastFeatureId: String? = null,
     val lastMessage: String? = null,
+    val lastApiHost: String? = null,
+    val lastApiPath: String? = null,
+    val lastHttpCode: Int? = null,
+    val lastBusinessCode: String? = null,
+    val lastBusinessDesc: String? = null,
     // 仅用于提示当前设置概况；不包含 featureIds 明文。
     val enabledSetting: Boolean? = null,
     val configuredFeatureIdCount: Int? = null,
@@ -993,12 +998,21 @@ class HomeScreenViewModel @Inject constructor(
             }
             val snapshot = aiParaSettingsRepository.snapshot().transcription.xfyun.voiceprint
             _uiState.update { state ->
+                val evidence = when (val error = result.exceptionOrNull()) {
+                    is XfyunVoiceprintApi.VoiceprintCallException -> error.evidence
+                    else -> result.getOrNull()?.evidence
+                }
                 state.copy(
                     voiceprintLab = state.voiceprintLab.copy(
                         registerInProgress = false,
                         lastFeatureId = result.getOrNull()?.featureId,
                         lastMessage = result.exceptionOrNull()?.message
                             ?: "Register OK. Copy feature_id then enable voiceprint.",
+                        lastApiHost = evidence?.baseUrlHost,
+                        lastApiPath = evidence?.path,
+                        lastHttpCode = evidence?.httpCode,
+                        lastBusinessCode = evidence?.businessCode,
+                        lastBusinessDesc = evidence?.businessDesc,
                         enabledSetting = snapshot.enabled,
                         configuredFeatureIdCount = snapshot.featureIds.size,
                     )
@@ -1059,6 +1073,10 @@ class HomeScreenViewModel @Inject constructor(
             }
             val snapshot = aiParaSettingsRepository.snapshot().transcription.xfyun.voiceprint
             _uiState.update { state ->
+                val evidence = when (val error = result.exceptionOrNull()) {
+                    is XfyunVoiceprintApi.VoiceprintCallException -> error.evidence
+                    else -> result.getOrNull()
+                }
                 state.copy(
                     voiceprintLab = state.voiceprintLab.copy(
                         deleteInProgress = false,
@@ -1066,6 +1084,11 @@ class HomeScreenViewModel @Inject constructor(
                         configuredFeatureIdCount = snapshot.featureIds.size,
                         lastMessage = result.exceptionOrNull()?.message
                             ?: "Delete OK. removeFromSettings=$removeFromSettings",
+                        lastApiHost = evidence?.baseUrlHost,
+                        lastApiPath = evidence?.path,
+                        lastHttpCode = evidence?.httpCode,
+                        lastBusinessCode = evidence?.businessCode,
+                        lastBusinessDesc = evidence?.businessDesc,
                     )
                 )
             }

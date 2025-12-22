@@ -12,8 +12,10 @@ import com.smartsales.data.aicore.AiCoreException
 import com.smartsales.data.aicore.xfyun.XfyunAsrCoordinator
 import com.smartsales.data.aicore.xfyun.XfyunAsrJobState
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
+import com.smartsales.feature.media.audiofiles.AudioTranscriptionBatchEvent
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
+import com.smartsales.feature.media.audiofiles.TranscriptionBatchPlanner
 import java.io.File
 import java.util.Locale
 import java.util.UUID
@@ -21,7 +23,10 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.take
 
 @Singleton
 class XfyunAudioTranscriptionCoordinator @Inject constructor(
@@ -94,6 +99,30 @@ class XfyunAudioTranscriptionCoordinator @Inject constructor(
                 )
             }
         }
+    }
+
+    override fun observeBatches(jobId: String): Flow<AudioTranscriptionBatchEvent> = channelFlow {
+        xfyunAsrCoordinator.observeJob(jobId)
+            .filterIsInstance<XfyunAsrJobState.Completed>()
+            .take(1)
+            .collect { state ->
+                val plan = TranscriptionBatchPlanner.plan(state.transcriptMarkdown)
+                if (plan.totalBatches <= 0) return@collect
+                plan.batches.forEach { batch ->
+                    send(
+                        AudioTranscriptionBatchEvent.BatchReleased(
+                            jobId = state.jobId,
+                            batchIndex = batch.batchIndex,
+                            totalBatches = batch.totalBatches,
+                            markdownChunk = batch.markdownChunk,
+                            isFinal = batch.batchIndex == batch.totalBatches,
+                            batchSize = plan.batchSize,
+                            lineCount = batch.lineCount,
+                            ruleLabel = plan.ruleLabel
+                        )
+                    )
+                }
+            }
     }
 
     private fun readDurationMillis(file: File): Long? {

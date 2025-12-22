@@ -153,6 +153,16 @@ class RealDebugOrchestrator @Inject constructor(
         }.getOrNull()
         appendLine("tingwu.preview:")
         appendLine(tingwuPreview ?: "(missing: tingwu transcript preview not available)")
+        val tingwuBatchPlan = if (tingwuTrace.batchPlanTotalBatches != null) {
+            "rule=${tingwuTrace.batchPlanRule ?: "-"}; " +
+                "batchSize=${tingwuTrace.batchPlanBatchSize ?: "-"}; " +
+                "totalBatches=${tingwuTrace.batchPlanTotalBatches}; " +
+                "currentBatch=${tingwuTrace.batchPlanCurrentBatchIndex ?: "-"}"
+        } else {
+            "(missing: tingwu batch plan not recorded)"
+        }
+        appendLine("tingwu.batchPlan:")
+        appendLine(tingwuBatchPlan)
 
         val xfyunPreviewSource = xfyunTrace?.postXfyunOriginalMarkdown
             ?: xfyunTrace?.postXfyunPolishedMarkdown

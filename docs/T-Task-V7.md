@@ -114,10 +114,25 @@ Legend: TODO / DOING / DONE / BLOCKED
     - `./gradlew :feature:chat:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 25s）
 
 ### T7-007 Implementation: pseudo-streaming transcript batches
-- Status: TODO
-- Definition of done:
-  - BatchReleased events in UI
-  - Speaker labels freeze on completion
+- Status: DONE
+- Evidence:
+  - `feature/media/src/main/java/com/smartsales/feature/media/audiofiles/AudioTranscriptionCoordinator.kt`（新增批次事件流接口）
+  - `feature/media/src/main/java/com/smartsales/feature/media/audiofiles/TranscriptionBatchPlanner.kt`（固定行数批次切分）
+  - `app/src/main/java/com/smartsales/aitest/audio/DefaultAudioTranscriptionCoordinator.kt`（Tingwu 批次事件输出）
+  - `app/src/main/java/com/smartsales/aitest/audio/XfyunAudioTranscriptionCoordinator.kt`（XFyun 批次事件输出）
+  - `app/src/main/java/com/smartsales/aitest/audio/SwitchableAudioTranscriptionCoordinator.kt`（批次流委托）
+  - `feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreenViewModel.kt`（批次合并 + 完成冻结）
+  - `data/ai-core/src/main/java/com/smartsales/data/aicore/debug/TingwuTraceStore.kt`（批次计划记录）
+  - `data/ai-core/src/main/java/com/smartsales/data/aicore/debug/DebugOrchestrator.kt`（Section 3 批次计划展示）
+  - `feature/chat/src/test/java/com/smartsales/feature/chat/home/HomeTranscriptionTest.kt`（批次流单测）
+  - Tests:
+    - `./gradlew :data:ai-core:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 8s）
+    - `./gradlew :feature:chat:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 11s）
+  - On-device sanity checklist (manual):
+    - 使用中/长音频发起转写，确认逐字稿气泡至少出现 2 次批次更新。
+    - 处理中显示“转写进度”提示，最终完成后停止流式标记。
+    - 完成后说话人标签不再变化（冻结）。
+    - HUD Section 3 显示批次计划摘要与预览（缺失时为占位提示）。
 
 ### T7-008 Implementation: Smart Analysis gating for export
 - Status: TODO

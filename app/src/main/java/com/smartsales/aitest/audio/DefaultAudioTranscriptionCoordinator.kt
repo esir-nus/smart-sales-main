@@ -12,13 +12,18 @@ import com.smartsales.data.aicore.TingwuCoordinator
 import com.smartsales.data.aicore.TingwuJobState
 import com.smartsales.data.aicore.TingwuRequest
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
+import com.smartsales.feature.media.audiofiles.AudioTranscriptionBatchEvent
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
+import com.smartsales.feature.media.audiofiles.TranscriptionBatchPlanner
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.take
 
 @Singleton
 class DefaultAudioTranscriptionCoordinator @Inject constructor(
@@ -89,5 +94,29 @@ class DefaultAudioTranscriptionCoordinator @Inject constructor(
                 )
             }
         }
+    }
+
+    override fun observeBatches(jobId: String): Flow<AudioTranscriptionBatchEvent> = channelFlow {
+        tingwuCoordinator.observeJob(jobId)
+            .filterIsInstance<TingwuJobState.Completed>()
+            .take(1)
+            .collect { state ->
+                val plan = TranscriptionBatchPlanner.plan(state.transcriptMarkdown)
+                if (plan.totalBatches <= 0) return@collect
+                plan.batches.forEach { batch ->
+                    send(
+                        AudioTranscriptionBatchEvent.BatchReleased(
+                            jobId = state.jobId,
+                            batchIndex = batch.batchIndex,
+                            totalBatches = batch.totalBatches,
+                            markdownChunk = batch.markdownChunk,
+                            isFinal = batch.batchIndex == batch.totalBatches,
+                            batchSize = plan.batchSize,
+                            lineCount = batch.lineCount,
+                            ruleLabel = plan.ruleLabel
+                        )
+                    )
+                }
+            }
     }
 }

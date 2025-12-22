@@ -13,6 +13,7 @@ import com.smartsales.feature.media.MediaClipStatus
 import com.smartsales.feature.media.MediaSyncCoordinator
 import com.smartsales.feature.media.MediaSyncState
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
+import com.smartsales.feature.media.audiofiles.AudioTranscriptionBatchEvent
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
 import com.smartsales.feature.media.audiofiles.DeviceHttpEndpointProvider
 import com.smartsales.feature.media.audiofiles.AudioStorageRepository
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -492,6 +494,10 @@ class AudioFilesViewModelTest {
 
         override fun observeJob(jobId: String): Flow<AudioTranscriptionJobState> {
             return jobStates.getOrPut(jobId) { MutableStateFlow<AudioTranscriptionJobState>(AudioTranscriptionJobState.Idle) }
+        }
+
+        override fun observeBatches(jobId: String): Flow<AudioTranscriptionBatchEvent> {
+            return emptyFlow()
         }
 
         fun emitState(jobId: String, state: AudioTranscriptionJobState) {

@@ -31,6 +31,7 @@ import com.smartsales.feature.connectivity.WifiCredentials
 import com.smartsales.feature.media.MediaSyncCoordinator
 import com.smartsales.feature.media.MediaSyncState
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
+import com.smartsales.feature.media.audiofiles.AudioTranscriptionBatchEvent
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
 import com.smartsales.feature.usercenter.UserProfile
@@ -41,6 +42,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -121,6 +123,8 @@ class HomeExportActionsTest {
                     Result.Error(UnsupportedOperationException())
 
                 override fun observeJob(jobId: String): Flow<AudioTranscriptionJobState> = flowOf(AudioTranscriptionJobState.Idle)
+
+                override fun observeBatches(jobId: String): Flow<AudioTranscriptionBatchEvent> = emptyFlow()
             },
             audioStorageRepository = object : AudioStorageRepository {
                 override val audios: Flow<List<StoredAudio>> = MutableStateFlow(emptyList())

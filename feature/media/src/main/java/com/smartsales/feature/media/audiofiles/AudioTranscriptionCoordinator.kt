@@ -25,6 +25,9 @@ interface AudioTranscriptionCoordinator {
     ): Result<String>
 
     fun observeJob(jobId: String): Flow<AudioTranscriptionJobState>
+
+    // 说明：伪流式批次事件采用非 conflated 的 Flow 输出。
+    fun observeBatches(jobId: String): Flow<AudioTranscriptionBatchEvent>
 }
 
 data class AudioUploadPayload(
@@ -52,4 +55,19 @@ sealed interface AudioTranscriptionJobState {
         val jobId: String,
         val reason: String,
     ) : AudioTranscriptionJobState
+}
+
+sealed interface AudioTranscriptionBatchEvent {
+    val jobId: String
+
+    data class BatchReleased(
+        override val jobId: String,
+        val batchIndex: Int,
+        val totalBatches: Int,
+        val markdownChunk: String,
+        val isFinal: Boolean,
+        val batchSize: Int,
+        val lineCount: Int,
+        val ruleLabel: String
+    ) : AudioTranscriptionBatchEvent
 }

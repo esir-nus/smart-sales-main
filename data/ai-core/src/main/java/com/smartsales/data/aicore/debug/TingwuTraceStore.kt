@@ -19,6 +19,11 @@ data class TingwuTraceSnapshot(
     val transcriptDumpPath: String? = null,
     val transcriptDumpBytes: Long? = null,
     val transcriptDumpSavedAtMs: Long? = null,
+    // 重要：伪流式批次仅存“规则/进度”，避免输出大段内容。
+    val batchPlanRule: String? = null,
+    val batchPlanBatchSize: Int? = null,
+    val batchPlanTotalBatches: Int? = null,
+    val batchPlanCurrentBatchIndex: Int? = null,
     val lastResultUrls: Map<String, String> = emptyMap(),
     val updatedAtMs: Long = 0L
 )
@@ -39,6 +44,10 @@ class TingwuTraceStore @Inject constructor() {
         transcriptDumpPath: String? = null,
         transcriptDumpBytes: Long? = null,
         transcriptDumpSavedAtMs: Long? = null,
+        batchPlanRule: String? = null,
+        batchPlanBatchSize: Int? = null,
+        batchPlanTotalBatches: Int? = null,
+        batchPlanCurrentBatchIndex: Int? = null,
         resultUrls: Map<String, String>? = null
     ) {
         val now = System.currentTimeMillis()
@@ -55,6 +64,10 @@ class TingwuTraceStore @Inject constructor() {
                 transcriptDumpPath = transcriptDumpPath ?: current.transcriptDumpPath,
                 transcriptDumpBytes = transcriptDumpBytes ?: current.transcriptDumpBytes,
                 transcriptDumpSavedAtMs = transcriptDumpSavedAtMs ?: current.transcriptDumpSavedAtMs,
+                batchPlanRule = batchPlanRule ?: current.batchPlanRule,
+                batchPlanBatchSize = batchPlanBatchSize ?: current.batchPlanBatchSize,
+                batchPlanTotalBatches = batchPlanTotalBatches ?: current.batchPlanTotalBatches,
+                batchPlanCurrentBatchIndex = batchPlanCurrentBatchIndex ?: current.batchPlanCurrentBatchIndex,
                 lastResultUrls = resultUrls ?: current.lastResultUrls,
                 updatedAtMs = now
             )

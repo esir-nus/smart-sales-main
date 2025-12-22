@@ -50,6 +50,7 @@ import com.smartsales.feature.connectivity.ConnectivityError
 import com.smartsales.feature.connectivity.DeviceConnectionManager
 import com.smartsales.feature.chat.ChatShareHandler
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
+import com.smartsales.feature.media.audiofiles.AudioTranscriptionBatchEvent
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioStorageRepository
 import com.smartsales.feature.media.MediaClipStatus
@@ -296,7 +297,10 @@ class HomeScreenViewModel @Inject constructor(
     private var hasShownLowInfoSmartAnalysisHint: Boolean = false
     private var hasShownAnalysisExportHint: Boolean = false
     private var transcriptionJob: Job? = null
+    private var transcriptionBatchJob: Job? = null
     private var lastTranscriptionJobId: String? = null
+    private var transcriptionBatchMessageId: String? = null
+    private var transcriptionBatchFinal: Boolean = false
     // 标记当前会话是否已处理首条助手回复，用于“首条决定标题”规则
     private var firstAssistantProcessed: Boolean = false
     private var latestAnalysisMarkdown: String? = null
@@ -753,6 +757,7 @@ class HomeScreenViewModel @Inject constructor(
     fun onTranscriptionRequested(request: TranscriptionChatRequest) {
         viewModelScope.launch {
             lastTranscriptionJobId = request.jobId
+            resetTranscriptionBatchState()
             refreshDebugSnapshot()
             val transcript = request.transcriptMarkdown ?: request.transcriptPreview
             val targetSessionId = request.sessionId ?: DEFAULT_SESSION_ID
@@ -873,6 +878,15 @@ class HomeScreenViewModel @Inject constructor(
                     )
                 }
                 persistMessagesAsync()
+                transcriptionBatchJob?.cancel()
+                transcriptionBatchJob = launch {
+                    transcriptionCoordinator.observeBatches(request.jobId).collectLatest { event ->
+                        when (event) {
+                            is AudioTranscriptionBatchEvent.BatchReleased ->
+                                handleTranscriptionBatchRelease(event)
+                        }
+                    }
+                }
                 transcriptionJob?.cancel()
                 transcriptionJob = launch {
                     transcriptionCoordinator.observeJob(request.jobId).collectLatest { state ->
@@ -900,7 +914,6 @@ class HomeScreenViewModel @Inject constructor(
                                         isStreaming = false
                                     )
                                 }
-                                appendAssistantMessage(state.transcriptMarkdown)
                             }
 
                             is AudioTranscriptionJobState.Failed -> {
@@ -923,6 +936,98 @@ class HomeScreenViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun handleTranscriptionBatchRelease(
+        event: AudioTranscriptionBatchEvent.BatchReleased
+    ) {
+        if (transcriptionBatchFinal) {
+            warnLog(
+                event = "transcription_batch_after_final",
+                data = mapOf("jobId" to event.jobId, "batchIndex" to event.batchIndex)
+            )
+            return
+        }
+        // 重要：记录伪流式批次计划与进度，供 HUD Section 3 观察。
+        tingwuTraceStore.record(
+            batchPlanRule = event.ruleLabel,
+            batchPlanBatchSize = event.batchSize,
+            batchPlanTotalBatches = event.totalBatches,
+            batchPlanCurrentBatchIndex = event.batchIndex
+        )
+        val isFinal = event.isFinal
+        val existingId = transcriptionBatchMessageId
+        val merged = if (existingId == null) {
+            event.markdownChunk
+        } else {
+            mergeTranscriptionChunks(
+                existing = _uiState.value.chatMessages.firstOrNull { it.id == existingId }?.rawContent
+                    ?: _uiState.value.chatMessages.firstOrNull { it.id == existingId }?.content
+                    ?: "",
+                incoming = event.markdownChunk
+            )
+        }
+        if (existingId == null) {
+            val messageId = nextMessageId()
+            transcriptionBatchMessageId = messageId
+            val display = displayAssistantText(raw = merged, sanitized = merged)
+            _uiState.update {
+                it.copy(
+                    chatMessages = it.chatMessages + ChatMessageUi(
+                        id = messageId,
+                        role = ChatMessageRole.ASSISTANT,
+                        content = display,
+                        rawContent = merged,
+                        sanitizedContent = merged,
+                        timestampMillis = System.currentTimeMillis(),
+                        isStreaming = !isFinal
+                    ),
+                    showWelcomeHero = false
+                )
+            }
+            if (isFinal) {
+                persistMessagesAsync()
+                viewModelScope.launch { updateSessionSummary(merged) }
+            }
+        } else {
+            updateAssistantMessage(existingId, persistAfterUpdate = isFinal) { msg ->
+                val display = displayAssistantText(raw = merged, sanitized = merged)
+                msg.copy(
+                    content = display,
+                    rawContent = merged,
+                    sanitizedContent = merged,
+                    isStreaming = !isFinal
+                )
+            }
+            if (isFinal) {
+                viewModelScope.launch { updateSessionSummary(merged) }
+            }
+        }
+        if (isFinal) {
+            // 重要：完成后冻结说话人标签/文本，忽略后续批次。
+            transcriptionBatchFinal = true
+        }
+        if (CHAT_DEBUG_HUD_ENABLED && _uiState.value.showDebugMetadata) {
+            refreshDebugSnapshot()
+        }
+    }
+
+    private fun mergeTranscriptionChunks(existing: String, incoming: String): String {
+        if (existing.isBlank()) return incoming
+        if (incoming.isBlank()) return existing
+        // 重要：伪流式只做追加，避免重复或乱序。
+        val separator = when {
+            existing.endsWith("\n") || incoming.startsWith("\n") -> ""
+            else -> "\n"
+        }
+        return existing + separator + incoming
+    }
+
+    private fun resetTranscriptionBatchState() {
+        transcriptionBatchJob?.cancel()
+        transcriptionBatchJob = null
+        transcriptionBatchMessageId = null
+        transcriptionBatchFinal = false
     }
 
     fun onOpenDrawer() {
@@ -1235,6 +1340,7 @@ class HomeScreenViewModel @Inject constructor(
                 this@HomeScreenViewModel.sessionId = sessionId
                 firstAssistantProcessed = false
                 lastTranscriptionJobId = null
+                resetTranscriptionBatchState()
                 latestAnalysisMarkdown = null
                 hasShownLowInfoHint = false
                 hasShownAnalysisExportHint = false

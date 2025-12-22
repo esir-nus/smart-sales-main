@@ -28,6 +28,7 @@ import com.smartsales.feature.media.MediaSyncState
 import com.smartsales.feature.media.MediaClipStatus
 import com.smartsales.feature.media.MediaClip
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
+import com.smartsales.feature.media.audiofiles.AudioTranscriptionBatchEvent
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
 import com.smartsales.feature.chat.home.TranscriptionChatRequest
@@ -40,6 +41,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -371,6 +373,9 @@ class HomeSessionListViewModelTest {
 
         override fun observeJob(jobId: String): Flow<AudioTranscriptionJobState> =
             flowOf(AudioTranscriptionJobState.Completed(jobId, "## 完成"))
+
+        override fun observeBatches(jobId: String): Flow<AudioTranscriptionBatchEvent> =
+            emptyFlow()
     }
 
     private class FakeUserProfileRepository : com.smartsales.feature.usercenter.data.UserProfileRepository {

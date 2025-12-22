@@ -25,6 +25,7 @@ import com.smartsales.feature.connectivity.WifiCredentials
 import com.smartsales.feature.media.MediaSyncCoordinator
 import com.smartsales.feature.media.MediaSyncState
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
+import com.smartsales.feature.media.audiofiles.AudioTranscriptionBatchEvent
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
 import com.smartsales.data.aicore.ExportOrchestrator
@@ -36,6 +37,7 @@ import com.smartsales.feature.media.audiofiles.AudioStorageRepository
 import com.smartsales.feature.media.audiofiles.StoredAudio
 import android.net.Uri
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import com.smartsales.feature.chat.title.SessionTitleResolver
 import com.smartsales.core.metahub.MetaHub
@@ -135,6 +137,19 @@ class HomeTranscriptionTest {
             viewModel.uiState.value.chatMessages.any { it.content.contains("demo.wav") && it.isStreaming }
         )
 
+        transcriptionCoordinator.emitBatch(
+            "job-1",
+            AudioTranscriptionBatchEvent.BatchReleased(
+                jobId = "job-1",
+                batchIndex = 1,
+                totalBatches = 1,
+                markdownChunk = "## 转写结果",
+                isFinal = true,
+                batchSize = 20,
+                lineCount = 1,
+                ruleLabel = "fixed_lines_per_batch"
+            )
+        )
         transcriptionCoordinator.emit(
             "job-1",
             AudioTranscriptionJobState.Completed("job-1", "## 转写结果")
@@ -145,6 +160,84 @@ class HomeTranscriptionTest {
             viewModel.uiState.value.chatMessages.any { it.content.contains("## 转写结果") }
         )
         assertFalse(viewModel.uiState.value.isInputBusy)
+    }
+
+    @Test
+    fun `batch releases update transcript bubble and freeze after final`() = runTest(dispatcher) {
+        transcriptionCoordinator.registerJob("job-2")
+
+        viewModel.onTranscriptionRequested(
+            TranscriptionChatRequest(
+                jobId = "job-2",
+                fileName = "batch.wav"
+            )
+        )
+
+        advanceUntilIdle()
+
+        transcriptionCoordinator.emitBatch(
+            "job-2",
+            AudioTranscriptionBatchEvent.BatchReleased(
+                jobId = "job-2",
+                batchIndex = 1,
+                totalBatches = 2,
+                markdownChunk = "## 逐字稿\n- A",
+                isFinal = false,
+                batchSize = 2,
+                lineCount = 2,
+                ruleLabel = "fixed_lines_per_batch"
+            )
+        )
+        advanceUntilIdle()
+
+        val firstMessage = viewModel.uiState.value.chatMessages.firstOrNull {
+            it.content.contains("逐字稿") && it.content.contains("A")
+        }
+        assertTrue(firstMessage != null && firstMessage.isStreaming)
+
+        transcriptionCoordinator.emitBatch(
+            "job-2",
+            AudioTranscriptionBatchEvent.BatchReleased(
+                jobId = "job-2",
+                batchIndex = 2,
+                totalBatches = 2,
+                markdownChunk = "- B",
+                isFinal = true,
+                batchSize = 2,
+                lineCount = 1,
+                ruleLabel = "fixed_lines_per_batch"
+            )
+        )
+        transcriptionCoordinator.emit(
+            "job-2",
+            AudioTranscriptionJobState.Completed("job-2", "## 逐字稿\n- A\n- B")
+        )
+        advanceUntilIdle()
+
+        val finalMessage = viewModel.uiState.value.chatMessages.firstOrNull {
+            it.content.contains("逐字稿") && it.content.contains("A") && it.content.contains("B")
+        }
+        assertTrue(finalMessage != null && !finalMessage.isStreaming)
+
+        val snapshot = finalMessage?.content
+        transcriptionCoordinator.emitBatch(
+            "job-2",
+            AudioTranscriptionBatchEvent.BatchReleased(
+                jobId = "job-2",
+                batchIndex = 3,
+                totalBatches = 2,
+                markdownChunk = "- C",
+                isFinal = false,
+                batchSize = 2,
+                lineCount = 1,
+                ruleLabel = "fixed_lines_per_batch"
+            )
+        )
+        advanceUntilIdle()
+        val afterFinal = viewModel.uiState.value.chatMessages.firstOrNull {
+            it.content.contains("逐字稿") && it.content.contains("A") && it.content.contains("B")
+        }?.content
+        assertEquals(snapshot, afterFinal)
     }
 
     @Test
@@ -305,6 +398,7 @@ class HomeTranscriptionTest {
 
     private class FakeTranscriptionCoordinator : AudioTranscriptionCoordinator {
         private val jobs = mutableMapOf<String, MutableStateFlow<AudioTranscriptionJobState>>()
+        private val batchEvents = mutableMapOf<String, MutableSharedFlow<AudioTranscriptionBatchEvent>>()
 
         fun registerJob(jobId: String) {
             jobs[jobId] = MutableStateFlow(AudioTranscriptionJobState.InProgress(jobId, 5))
@@ -312,6 +406,10 @@ class HomeTranscriptionTest {
 
         fun emit(jobId: String, state: AudioTranscriptionJobState) {
             jobs[jobId]?.value = state
+        }
+
+        fun emitBatch(jobId: String, event: AudioTranscriptionBatchEvent) {
+            batchEvents.getOrPut(jobId) { MutableSharedFlow(extraBufferCapacity = 16) }.tryEmit(event)
         }
 
         override suspend fun uploadAudio(file: File): Result<AudioUploadPayload> =
@@ -326,6 +424,9 @@ class HomeTranscriptionTest {
 
         override fun observeJob(jobId: String): Flow<AudioTranscriptionJobState> =
             jobs.getOrPut(jobId) { MutableStateFlow(AudioTranscriptionJobState.Idle) }
+
+        override fun observeBatches(jobId: String): Flow<AudioTranscriptionBatchEvent> =
+            batchEvents.getOrPut(jobId) { MutableSharedFlow(extraBufferCapacity = 16) }
     }
 
     private class FakeExportOrchestrator : ExportOrchestrator {

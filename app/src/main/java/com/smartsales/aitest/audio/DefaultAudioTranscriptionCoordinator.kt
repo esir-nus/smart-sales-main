@@ -44,6 +44,7 @@ class DefaultAudioTranscriptionCoordinator @Inject constructor(
         uploadPayload: AudioUploadPayload,
         sessionId: String?,
     ): Result<String> {
+        // 重要：Tingwu 走 OSS FileUrl 链路，使用上传后的预签名 URL 作为唯一输入。
         val request = TingwuRequest(
             audioAssetName = audioAssetName,
             language = language,

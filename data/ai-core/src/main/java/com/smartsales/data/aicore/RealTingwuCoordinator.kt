@@ -146,6 +146,7 @@ class RealTingwuCoordinator @Inject constructor(
                 } else {
                     null
                 }
+                // 重要：Tingwu CreateTask 使用 Input.FileUrl，严禁改写字段名或引入未证实的请求结构。
                 val response = api.createTranscriptionTask(
                     body = TingwuCreateTaskRequest(
                         appKey = credentials.appKey,
@@ -487,6 +488,13 @@ class RealTingwuCoordinator @Inject constructor(
         AiCoreLogger.d(TAG, "尝试使用 /transcription 接口：jobId=$jobId")
         val inline = runCatching { api.getTaskResult(taskId = jobId) }.fold(
             onSuccess = { response ->
+                runCatching {
+                    // 重要：仅记录转写结果响应体（copy-only），不在 UI 内联展示。
+                    tingwuTraceStore.record(
+                        taskId = jobId,
+                        transcriptionJson = gson.toJson(response)
+                    )
+                }
                 val data = requireData(
                     code = response.code,
                     message = response.message,
@@ -653,6 +661,13 @@ class RealTingwuCoordinator @Inject constructor(
                 val payload = reader.readText()
                 AiCoreLogger.d(TAG, "下载完成：jobId=$jobId payload大小=${payload.length} 字符")
                 logVerbose { "下载转写 payload 前200字符：${payload.take(200)}" }
+                runCatching {
+                    // 重要：仅保存原始转写 JSON（copy-only），HUD 不内联展示。
+                    tingwuTraceStore.record(
+                        taskId = jobId,
+                        transcriptionJson = payload
+                    )
+                }
                 val parsed = parseDownloadedTranscription(payload, jobId)
                 parsed ?: throw AiCoreException(
                     source = AiCoreErrorSource.TINGWU,

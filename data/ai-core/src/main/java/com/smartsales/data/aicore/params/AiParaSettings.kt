@@ -25,7 +25,10 @@ data class AiParaSettingsSnapshot(
  * 说明：转写相关运行时开关（MVP：内存态，可被测试壳实时修改）。
  */
 data class TranscriptionSettings(
-    val provider: String = TRANSCRIPTION_PROVIDER_XFYUN,
+    // 重要：V7 默认走 Tingwu+OSS；XFyun 默认关闭，需显式开启后才允许选中（避免“试试看”误触发错误与配额消耗）。
+    val provider: String = TRANSCRIPTION_PROVIDER_TINGWU,
+    // 重要：讯飞转写开关，默认关闭；仅显式开启才允许走 XFyun 链路。
+    val xfyunEnabled: Boolean = false,
     // 重要：这是客户端可控的 query 参数集合；会进入签名/URL/HUD，必须一致。
     val xfyun: XfyunAsrSettings = XfyunAsrSettings(),
 )
@@ -230,6 +233,7 @@ fun AiParaSettingsRepository.applyXfyunVoiceprintTestPreset(lastFeatureId: Strin
         current.copy(
             transcription = transcription.copy(
                 provider = TRANSCRIPTION_PROVIDER_XFYUN,
+                xfyunEnabled = true,
                 xfyun = xfyun.copy(
                     baseUrlOverride = "",
                     upload = upload.copy(

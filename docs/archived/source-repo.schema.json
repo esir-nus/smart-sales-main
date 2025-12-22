@@ -1,0 +1,401 @@
+ 
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Schema for docs/source-repo.json (implementation reference registry).",
+  "type": "object",
+  "required": [
+    "version",
+    "doc",
+    "generatedFrom",
+    "index",
+    "tingwu",
+    "dashscope"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "string", "minLength": 1 },
+    "doc": {
+      "type": "object",
+      "required": ["id", "purpose", "audience", "scope", "nonGoals", "trustModel"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "purpose": { "type": "string", "minLength": 1 },
+        "audience": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "scope": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "nonGoals": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "trustModel": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "generatedFrom": {
+      "type": "object",
+      "required": ["repoRoot", "branch", "commit", "generatedAt"],
+      "properties": {
+        "repoRoot": { "type": "string", "minLength": 1 },
+        "branch": { "type": "string", "minLength": 1 },
+        "commit": { "type": "string", "minLength": 1 },
+        "generatedAt": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "index": {
+      "type": "object",
+      "required": ["areas", "symbols"],
+      "properties": {
+        "areas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "jsonPointer"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "jsonPointer": { "type": "string", "pattern": "^/" },
+              "keywords": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "symbols": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "file", "kind", "searchTerms"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "file": { "type": "string", "minLength": 1 },
+              "kind": {
+                "type": "string",
+                "enum": ["function", "class", "object", "const"]
+              },
+              "searchTerms": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": "string", "minLength": 1 }
+              },
+              "evidenceSnippet": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "tingwu": {
+      "type": "object",
+      "required": [
+        "defaultsAndInvariants",
+        "createTask",
+        "getTaskInfo",
+        "artifacts",
+        "tests",
+        "unknownOrUnverified"
+      ],
+      "properties": {
+        "defaultsAndInvariants": { "type": "object" },
+        "createTask": {
+          "type": "object",
+          "required": ["requestBuilder", "parametersPaths", "featureBlocks"],
+          "properties": {
+            "requestBuilder": {
+              "type": "object",
+              "required": ["file", "symbol", "dtoTypes"],
+              "properties": {
+                "file": { "type": "string", "minLength": 1 },
+                "symbol": { "type": "string", "minLength": 1 },
+                "dtoTypes": {
+                  "type": "object",
+                  "required": ["requestBodyType", "parametersType", "inputType"],
+                  "properties": {
+                    "requestBodyType": { "type": "string", "minLength": 1 },
+                    "parametersType": { "type": "string", "minLength": 1 },
+                    "inputType": { "type": "string", "minLength": 1 }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            "parametersPaths": {
+              "type": "array",
+              "items": { "type": "string", "pattern": "^/" }
+            },
+            "featureBlocks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["featureId", "controlSemantics"],
+                "properties": {
+                  "featureId": { "type": "string", "minLength": 1 },
+                  "controlSemantics": {
+                    "type": "string",
+                    "enum": ["ALWAYS_ON", "CONDITIONAL", "UNSUPPORTED"]
+                  },
+                  "enableFlagPath": { "type": "string", "pattern": "^/" },
+                  "configObjectPath": { "type": "string", "pattern": "^/" },
+                  "emittedDefaults": { "type": ["object", "array", "string", "number", "boolean", "null"] },
+                  "validationStatus": {
+                    "type": "string",
+                    "enum": ["VALIDATED", "OBSERVED_IN_CODE_ONLY", "UNKNOWN"]
+                  },
+                  "validatedByTests": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["file", "testName"],
+                      "properties": {
+                        "file": { "type": "string", "minLength": 1 },
+                        "testName": { "type": "string", "minLength": 1 }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "notes": { "type": "string" }
+                },
+                "additionalProperties": false,
+                "allOf": [
+                  {
+                    "if": { "properties": { "validationStatus": { "const": "VALIDATED" } } },
+                    "then": { "required": ["validatedByTests"], "properties": { "validatedByTests": { "minItems": 1 } } }
+                  }
+                ]
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "getTaskInfo": {
+          "type": "object",
+          "required": ["responseTypes", "resultRepresentation", "resultKeyToArtifactMapping"],
+          "properties": {
+            "responseTypes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["file", "type"],
+                "properties": {
+                  "file": { "type": "string", "minLength": 1 },
+                  "type": { "type": "string", "minLength": 1 },
+                  "notes": { "type": "string" }
+                },
+                "additionalProperties": false
+              }
+            },
+            "resultRepresentation": { "type": "object" },
+            "resultKeyToArtifactMapping": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["resultKey", "resultPath", "mappingLocations", "validationStatus"],
+                "properties": {
+                  "resultKey": { "type": "string", "minLength": 1 },
+                  "resultPath": { "type": "string", "pattern": "^/" },
+                  "artifactUrlField": { "type": "string" },
+                  "artifactParsedField": { "type": "string" },
+                  "mappingLocations": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["file", "symbol"],
+                      "properties": {
+                        "file": { "type": "string", "minLength": 1 },
+                        "symbol": { "type": "string", "minLength": 1 },
+                        "searchTerms": {
+                          "type": "array",
+                          "items": { "type": "string", "minLength": 1 }
+                        },
+                        "evidenceSnippet": { "type": "string" }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "validationStatus": {
+                    "type": "string",
+                    "enum": ["VALIDATED", "OBSERVED_IN_CODE_ONLY", "UNKNOWN"]
+                  },
+                  "validatedByTests": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["file", "testName"],
+                      "properties": {
+                        "file": { "type": "string", "minLength": 1 },
+                        "testName": { "type": "string", "minLength": 1 }
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false,
+                "allOf": [
+                  {
+                    "if": { "properties": { "validationStatus": { "const": "VALIDATED" } } },
+                    "then": { "required": ["validatedByTests"], "properties": { "validatedByTests": { "minItems": 1 } } }
+                  }
+                ]
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "artifacts": { "type": "object" },
+        "tests": {
+          "type": "object",
+          "required": ["requestAssertions", "resultMappingAssertions"],
+          "properties": {
+            "requestAssertions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["file", "testName", "assertedPaths"],
+                "properties": {
+                  "file": { "type": "string", "minLength": 1 },
+                  "testName": { "type": "string", "minLength": 1 },
+                  "assertedPaths": {
+                    "type": "array",
+                    "items": { "type": "string", "pattern": "^/" }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "resultMappingAssertions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["file", "testName", "assertedMappings"],
+                "properties": {
+                  "file": { "type": "string", "minLength": 1 },
+                  "testName": { "type": "string", "minLength": 1 },
+                  "assertedMappings": {
+                    "type": "array",
+                    "items": { "type": "string", "minLength": 1 }
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "unknownOrUnverified": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["topic", "whatWasSearched", "whyUnverified"],
+            "properties": {
+              "topic": { "type": "string", "minLength": 1 },
+              "whatWasSearched": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              },
+              "whyUnverified": { "type": "string", "minLength": 1 },
+              "nextEvidenceToCollect": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "dashscope": {
+      "type": "object",
+      "required": [
+        "defaultsAndInvariants",
+        "requestBuilder",
+        "streaming",
+        "retryAndErrorHandling",
+        "responseParsingAndBoundaries",
+        "tests",
+        "unknownOrUnverified"
+      ],
+      "properties": {
+        "defaultsAndInvariants": { "type": "object" },
+        "requestBuilder": {
+          "type": "object",
+          "required": ["file", "symbol", "dtoTypes"],
+          "properties": {
+            "file": { "type": "string", "minLength": 1 },
+            "symbol": { "type": "string", "minLength": 1 },
+            "dtoTypes": {
+              "type": "object",
+              "required": ["requestType"],
+              "properties": {
+                "requestType": { "type": "string", "minLength": 1 },
+                "messageType": { "type": "string" }
+              },
+              "additionalProperties": false
+            },
+            "controlSemantics": {
+              "type": "string",
+              "enum": ["ALWAYS_ON", "CONDITIONAL", "UNSUPPORTED"]
+            },
+            "validationStatus": {
+              "type": "string",
+              "enum": ["VALIDATED", "OBSERVED_IN_CODE_ONLY", "UNKNOWN"]
+            },
+            "validatedByTests": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["file", "testName"],
+                "properties": {
+                  "file": { "type": "string", "minLength": 1 },
+                  "testName": { "type": "string", "minLength": 1 }
+                },
+                "additionalProperties": false
+              }
+            },
+            "notes": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "streaming": {
+          "type": "object",
+          "properties": {
+            "controlSemantics": { "type": "string", "enum": ["ALWAYS_ON", "CONDITIONAL", "UNSUPPORTED"] },
+            "validationStatus": { "type": "string", "enum": ["VALIDATED", "OBSERVED_IN_CODE_ONLY", "UNKNOWN"] },
+            "validatedByTests": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["file", "testName"],
+                "properties": {
+                  "file": { "type": "string", "minLength": 1 },
+                  "testName": { "type": "string", "minLength": 1 }
+                },
+                "additionalProperties": false
+              }
+            },
+            "notes": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "retryAndErrorHandling": { "type": "object" },
+        "responseParsingAndBoundaries": { "type": "object" },
+        "tests": { "type": "object" },
+        "unknownOrUnverified": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["topic", "whatWasSearched", "whyUnverified"],
+            "properties": {
+              "topic": { "type": "string", "minLength": 1 },
+              "whatWasSearched": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 }
+              },
+              "whyUnverified": { "type": "string", "minLength": 1 },
+              "nextEvidenceToCollect": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

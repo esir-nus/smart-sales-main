@@ -41,7 +41,7 @@ fun AudioFilesShell(
     val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
     val provider = TranscriptionProvider.entries.firstOrNull {
         it.name == settings.transcription.provider.trim().uppercase(Locale.US)
-    } ?: TranscriptionProvider.XFYUN
+    } ?: TranscriptionProvider.TINGWU // 重要：V7 默认链路是 Tingwu+OSS，fallback 不得让 XFyun 变成默认。
 
     Column(
         modifier = Modifier

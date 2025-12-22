@@ -1,7 +1,7 @@
 # Orchestrator–MetaHub V7 (Docs-Driven Spec)
 
 Version: 7.0.0  
-Status: CURRENT  
+Status: CURRENT（现行规范）  
 Audience: Operator / Orchestrator / Codex / Android engineers  
 Scope: Orchestrator + MetaHub + multi-agent pipeline + provider lanes + HUD contracts + schemas
 
@@ -217,9 +217,9 @@ UI talks to a unified facade, which routes internally to:
 ## 11. Changelog
 
 ### 7.0.0
+- V7 已标记为 CURRENT（现行规范）。
 - New M1/M2/M3/M4 model with explicit ownership and provenance.
 - Default provider lane becomes Tingwu+OSS; XFyun disabled by default.
 - Added RenamingMetadata (candidate vs accepted) and export gating via Smart Analysis.
 - Added HUD 3-section debug contract.
 - Added External Memory / M4 placeholder interface (query-only by default).
-

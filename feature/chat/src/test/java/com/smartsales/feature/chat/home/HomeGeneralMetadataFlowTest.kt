@@ -13,6 +13,7 @@ import com.smartsales.core.metahub.SessionTitlePolicy
 import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.ExportResult
+import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.feature.chat.ChatShareHandler
 import com.smartsales.feature.chat.InMemoryAiSessionRepository
@@ -98,7 +99,8 @@ class HomeGeneralMetadataFlowTest {
             metaHub = metaHub,
             exportOrchestrator = FakeExportOrchestrator(),
             shareHandler = FakeShareHandler(),
-            xfyunTraceStore = XfyunTraceStore()
+            xfyunTraceStore = XfyunTraceStore(),
+            tingwuTraceStore = TingwuTraceStore()
         )
     }
 

@@ -1,3 +1,26 @@
 {
-    "java.configuration.updateBuildConfiguration": "interactive"
+  // 文件监听配置 - 根据 VS Code 官方文档优化
+  // 参考: https://code.visualstudio.com/docs/setup/linux#_visual-studio-code-is-unable-to-watch-for-file-changes-in-this-large-workspace-error-enospc
+  "files.watcherExclude": {
+    // VS Code 默认排除项
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/*/**": true,
+    
+    // 项目特定的大目录（减少 inotify 文件句柄消耗）
+    "**/build/**": true,
+    "**/.gradle/**": true,
+    "**/third_party/maven-repo/**": true,
+    "**/reference-source/**": true,
+    "**/tingwuTestApp/**": true,
+    "**/.idea/**": true,
+    "**/__pycache__/**": true,
+    "**/*.zip": true,
+    "**/*.jar": true,
+    "**/*.apk": true,
+    "**/*.aar": true
+  },
+  
+  // 启用实验性文件监听器（可能使用轮询作为后备方案）
+  "files.useExperimentalFileWatcher": true
 }

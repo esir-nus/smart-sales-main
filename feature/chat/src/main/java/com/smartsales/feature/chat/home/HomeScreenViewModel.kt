@@ -33,6 +33,8 @@ import com.smartsales.feature.chat.home.CHAT_DEBUG_HUD_ENABLED
 import com.smartsales.feature.chat.BuildConfig
 import com.smartsales.feature.chat.history.toEntity
 import com.smartsales.feature.chat.history.toUiModel
+import com.smartsales.data.aicore.debug.TingwuTraceSnapshot
+import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.debug.XfyunTraceSnapshot
 import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.feature.chat.title.SessionTitleResolver
@@ -55,6 +57,7 @@ import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.feature.usercenter.UserProfile
 import com.smartsales.feature.usercenter.SalesPersona
 import com.smartsales.data.aicore.params.AiParaSettingsRepository
+import com.smartsales.data.aicore.params.TranscriptionLaneSelector
 import com.smartsales.data.aicore.params.applyXfyunVoiceprintTestPreset
 import com.smartsales.data.aicore.params.enableVoiceprintAndAddFeatureId
 import com.smartsales.data.aicore.params.removeVoiceprintFeatureId
@@ -179,6 +182,10 @@ data class DebugSessionMetadata(
     val tagsLabel: String? = null,
     val latestSourceLabel: String? = null,
     val latestAtLabel: String? = null,
+    val transcriptionProviderRequested: String? = null,
+    val transcriptionProviderSelected: String? = null,
+    val transcriptionProviderDisabledReason: String? = null,
+    val transcriptionXfyunEnabledSetting: Boolean? = null,
     val notes: List<String> = emptyList()
 )
 
@@ -232,6 +239,7 @@ data class HomeUiState(
     val showDebugMetadata: Boolean = false,
     val debugSessionMetadata: DebugSessionMetadata? = null,
     val xfyunTrace: XfyunTraceSnapshot? = null,
+    val tingwuTrace: TingwuTraceSnapshot? = null,
     val voiceprintLab: VoiceprintLabUiState = VoiceprintLabUiState(),
     val smartReasoningText: String? = null,
     val isInputFocused: Boolean = false,
@@ -266,6 +274,7 @@ class HomeScreenViewModel @Inject constructor(
     private val shareHandler: ChatShareHandler,
     private val metaHub: MetaHub,
     private val xfyunTraceStore: XfyunTraceStore,
+    private val tingwuTraceStore: TingwuTraceStore,
     private val aiParaSettingsRepository: AiParaSettingsRepository,
     private val xfyunVoiceprintApi: XfyunVoiceprintApi,
 ) : ViewModel() {
@@ -953,7 +962,13 @@ class HomeScreenViewModel @Inject constructor(
 
     fun refreshXfyunTrace() {
         if (!CHAT_DEBUG_HUD_ENABLED) return
-        _uiState.update { it.copy(xfyunTrace = xfyunTraceStore.getSnapshot()) }
+        _uiState.update {
+            it.copy(
+                xfyunTrace = xfyunTraceStore.getSnapshot(),
+                // 重要：HUD 打开时同时刷新 Tingwu 调试快照，便于确认默认链路。
+                tingwuTrace = tingwuTraceStore.getSnapshot()
+            )
+        }
     }
 
     fun registerVoiceprintBase64(
@@ -1124,6 +1139,7 @@ class HomeScreenViewModel @Inject constructor(
             .timeLabel(meta?.latestMajorAnalysisAt)
             .takeIf { it.isNotBlank() }
         val reasoning = buildSmartReasoningStrip(meta)
+        val laneDecision = TranscriptionLaneSelector.resolve(aiParaSettingsRepository.snapshot())
         val debug = DebugSessionMetadata(
             sessionId = sessionId,
             title = title,
@@ -1135,6 +1151,11 @@ class HomeScreenViewModel @Inject constructor(
             tagsLabel = tagsLabel,
             latestSourceLabel = latestSourceLabel,
             latestAtLabel = latestAtLabel,
+            // 重要：HUD 需展示转写链路选择与禁用原因，避免“看起来切了但实际没生效”。
+            transcriptionProviderRequested = laneDecision.requestedProvider,
+            transcriptionProviderSelected = laneDecision.selectedProvider,
+            transcriptionProviderDisabledReason = laneDecision.disabledReason,
+            transcriptionXfyunEnabledSetting = laneDecision.xfyunEnabledSetting,
             notes = mergedNotes
         )
         val messageId = meta?.latestMajorAnalysisMessageId

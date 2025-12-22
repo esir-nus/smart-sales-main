@@ -8,6 +8,7 @@ package com.smartsales.feature.chat.home
 import com.smartsales.core.metahub.InMemoryMetaHub
 import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.ExportResult
+import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.feature.chat.AiSessionSummary
 import com.smartsales.feature.chat.ChatShareHandler
@@ -82,7 +83,8 @@ class HomeStreamingDedupTest {
             metaHub = metaHub,
             exportOrchestrator = FakeExportOrchestrator(),
             shareHandler = FakeShareHandler(),
-            xfyunTraceStore = XfyunTraceStore()
+            xfyunTraceStore = XfyunTraceStore(),
+            tingwuTraceStore = TingwuTraceStore()
         )
     }
 

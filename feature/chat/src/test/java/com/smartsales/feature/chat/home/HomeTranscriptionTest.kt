@@ -29,6 +29,7 @@ import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
 import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.ExportResult
+import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.feature.media.audiofiles.AudioStorageRepository
 import com.smartsales.feature.media.audiofiles.StoredAudio
@@ -102,7 +103,8 @@ class HomeTranscriptionTest {
             metaHub = metaHub,
             exportOrchestrator = FakeExportOrchestrator(),
             shareHandler = FakeShareHandler(),
-            xfyunTraceStore = XfyunTraceStore()
+            xfyunTraceStore = XfyunTraceStore(),
+            tingwuTraceStore = TingwuTraceStore()
         )
     }
 

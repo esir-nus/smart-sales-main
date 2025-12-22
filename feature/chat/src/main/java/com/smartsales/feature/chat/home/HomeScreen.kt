@@ -126,6 +126,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import com.smartsales.feature.chat.core.QuickSkillId
 import java.io.File
 import com.smartsales.feature.chat.history.ChatHistoryTestTags
+import com.smartsales.data.aicore.debug.TingwuTraceSnapshot
 import com.smartsales.data.aicore.debug.XfyunDebugInfoFormatter
 import com.smartsales.data.aicore.debug.XfyunFailTypeHints
 import com.smartsales.data.aicore.debug.XfyunTraceSnapshot
@@ -737,6 +738,7 @@ fun HomeScreen(
                             DebugSessionMetadataHud(
                                 metadata = state.debugSessionMetadata,
                                 xfyunTrace = state.xfyunTrace,
+                                tingwuTrace = state.tingwuTrace,
                                 onRefreshXfyun = onRefreshXfyunTrace,
                                 voiceprintLab = state.voiceprintLab,
                                 onVoiceprintRegisterBase64 = onVoiceprintRegisterBase64,
@@ -1137,6 +1139,7 @@ private fun HistoryDeviceStatus(snapshot: DeviceSnapshotUi?) {
 private fun DebugSessionMetadataHud(
     metadata: DebugSessionMetadata,
     xfyunTrace: XfyunTraceSnapshot?,
+    tingwuTrace: TingwuTraceSnapshot?,
     onRefreshXfyun: () -> Unit,
     voiceprintLab: VoiceprintLabUiState,
     onVoiceprintRegisterBase64: (audioDataBase64: String, audioType: String, uid: String?) -> Unit,
@@ -1162,6 +1165,10 @@ private fun DebugSessionMetadataHud(
             appendLine("tags: ${metadata.tagsLabel?.ifBlank { "-" } ?: "-"}")
             appendLine("latestSource: ${metadata.latestSourceLabel ?: "-"}")
             appendLine("latestAt: ${metadata.latestAtLabel ?: "-"}")
+            appendLine("transcriptionRequested: ${metadata.transcriptionProviderRequested ?: "-"}")
+            appendLine("transcriptionSelected: ${metadata.transcriptionProviderSelected ?: "-"}")
+            appendLine("transcriptionDisabledReason: ${metadata.transcriptionProviderDisabledReason ?: "-"}")
+            appendLine("xfyunEnabledSetting: ${metadata.transcriptionXfyunEnabledSetting ?: "-"}")
             if (metadata.notes.isNotEmpty()) {
                 appendLine("notes:")
                 metadata.notes.forEach { appendLine("- $it") }
@@ -1243,6 +1250,13 @@ private fun DebugSessionMetadataHud(
             DebugField(label = "tags", value = metadata.tagsLabel?.ifBlank { "-" } ?: "-")
             DebugField(label = "latestSource", value = metadata.latestSourceLabel ?: "-")
             DebugField(label = "latestAt", value = metadata.latestAtLabel ?: "-")
+            DebugField(label = "transcriptionRequested", value = metadata.transcriptionProviderRequested ?: "-")
+            DebugField(label = "transcriptionSelected", value = metadata.transcriptionProviderSelected ?: "-")
+            DebugField(label = "transcriptionDisabledReason", value = metadata.transcriptionProviderDisabledReason ?: "-")
+            DebugField(
+                label = "xfyunEnabledSetting",
+                value = metadata.transcriptionXfyunEnabledSetting?.toString() ?: "-"
+            )
             if (metadata.notes.isNotEmpty()) {
                 Text(
                     text = "notes",
@@ -1258,6 +1272,10 @@ private fun DebugSessionMetadataHud(
                 }
             }
             if (CHAT_DEBUG_HUD_ENABLED) {
+                TingwuTraceSection(
+                    trace = tingwuTrace,
+                    onCopy = onCopy
+                )
                 XfyunTraceSection(
                     trace = xfyunTrace,
                     onRefresh = onRefreshXfyun,
@@ -1285,6 +1303,47 @@ private fun DebugField(label: String, value: String) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface
         )
+    }
+}
+
+@Composable
+private fun TingwuTraceSection(
+    trace: TingwuTraceSnapshot?,
+    onCopy: (String) -> Unit,
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = "Tingwu 调试",
+            style = MaterialTheme.typography.titleMedium
+        )
+        if (trace == null) {
+            Text(
+                text = "暂无 Tingwu 调用记录",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            return
+        }
+        val raw = trace.lastTranscriptionJson
+        val status = if (raw.isNullOrBlank()) {
+            "missing: no transcription snapshot"
+        } else {
+            "available: ${raw.length} chars"
+        }
+        Text(
+            text = "rawTranscription: $status",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        TextButton(
+            onClick = { onCopy(raw ?: "missing: no transcription snapshot") },
+        ) {
+            // 重要：原始转写仅允许复制，不在 HUD 内联展示。
+            Text(text = "复制原始转写")
+        }
     }
 }
 

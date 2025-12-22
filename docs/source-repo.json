@@ -43,7 +43,34 @@
       "This registry does not prescribe a specific OSS vendor API shape; it only records integration points in code when present.",
       "Tingwu lane may require a stable FileUrl (OSS-backed). XFyun lane uses direct file-stream upload and does not require OSS in the active path."
     ],
-    "integrationPoints": [],
+    "integrationPoints": [
+      {
+        "id": "oss.uploadAudio",
+        "status": "OBSERVED_IN_CODE_ONLY",
+        "validationStatus": "UNKNOWN",
+        "purpose": "upload_audio_and_return_presigned_url",
+        "codeRefs": [
+          "data/ai-core/src/main/java/com/smartsales/data/aicore/RealOssUploadClient.kt:RealOssUploadClient",
+          "app/src/main/java/com/smartsales/aitest/audio/DefaultAudioTranscriptionCoordinator.kt:DefaultAudioTranscriptionCoordinator"
+        ],
+        "testRefs": [
+          "core/test/README.md (OSS fake planned)"
+        ]
+      },
+      {
+        "id": "oss.presignUrl",
+        "status": "OBSERVED_IN_CODE_ONLY",
+        "validationStatus": "UNKNOWN",
+        "purpose": "generate_presigned_download_url",
+        "codeRefs": [
+          "data/ai-core/src/main/java/com/smartsales/data/aicore/OssSignedUrlProvider.kt:RealOssSignedUrlProvider",
+          "data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt:resolveFileUrl"
+        ],
+        "testRefs": [
+          "core/test/README.md (OSS fake planned)"
+        ]
+      }
+    ],
     "validationStatus": "UNKNOWN",
     "nextEvidence": [
       "Search for 'OSS', 'Aliyun', 'putObject', 'presign', 'FileUrl' in the repo to locate the active OSS implementation.",
@@ -54,6 +81,47 @@
     "status": "OBSERVED_IN_CODE_ONLY",
     "notes": [
       "Keep Tingwu details here at the 'integration facts' level: request/response keys, feature flags, evidence refs, tests."
+    ],
+    "integrationPoints": [
+      {
+        "id": "tingwu.createTask",
+        "status": "OBSERVED_IN_CODE_ONLY",
+        "validationStatus": "UNKNOWN",
+        "requestKeys": ["AppKey", "Input", "Parameters", "Input.FileUrl"],
+        "codeRefs": [
+          "data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/TingwuApi.kt:TingwuCreateTaskRequest",
+          "data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt:submit"
+        ],
+        "testRefs": [
+          "data/ai-core/src/test/java/com/smartsales/data/aicore/RealTingwuCoordinatorTest.kt"
+        ]
+      },
+      {
+        "id": "tingwu.getTaskInfo",
+        "status": "OBSERVED_IN_CODE_ONLY",
+        "validationStatus": "UNKNOWN",
+        "responseKeys": ["TaskStatus", "TaskProgress", "Result"],
+        "codeRefs": [
+          "data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/TingwuApi.kt:TingwuStatusResponse",
+          "data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt:startPolling"
+        ],
+        "testRefs": [
+          "data/ai-core/src/test/java/com/smartsales/data/aicore/RealTingwuCoordinatorTest.kt"
+        ]
+      },
+      {
+        "id": "tingwu.transcriptionResult",
+        "status": "OBSERVED_IN_CODE_ONLY",
+        "validationStatus": "UNKNOWN",
+        "responseKeys": ["Transcription", "Segments", "Speakers", "Result"],
+        "codeRefs": [
+          "data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/TingwuApi.kt:TingwuResultResponse",
+          "data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt:fetchTranscript"
+        ],
+        "testRefs": [
+          "data/ai-core/src/test/java/com/smartsales/data/aicore/RealTingwuCoordinatorTest.kt"
+        ]
+      }
     ]
   },
   "xfyun": {
@@ -128,4 +196,3 @@
     }
   }
 }
-

@@ -33,6 +33,7 @@ import com.smartsales.data.aicore.tingwu.TingwuCustomPrompt
 import com.smartsales.data.aicore.tingwu.TingwuCustomPromptContent
 import com.smartsales.data.aicore.params.AiParaSettingsProvider
 import com.smartsales.data.aicore.debug.TingwuTraceStore
+import com.smartsales.data.aicore.tingwu.TingwuRawResponseDumper
 import com.smartsales.data.aicore.tingwu.TingwuArtifactFetcher
 import com.smartsales.data.aicore.posttingwu.EnhancerInput
 import com.smartsales.data.aicore.posttingwu.EnhancerUtterance
@@ -78,6 +79,7 @@ class RealTingwuCoordinator @Inject constructor(
     private val transcriptOrchestrator: TranscriptOrchestrator,
     private val metaHub: MetaHub,
     private val tingwuTraceStore: TingwuTraceStore,
+    private val tingwuRawResponseDumper: TingwuRawResponseDumper,
     private val artifactFetcher: TingwuArtifactFetcher,
     private val postTingwuTranscriptEnhancer: PostTingwuTranscriptEnhancer,
     private val aiParaSettingsProvider: AiParaSettingsProvider,
@@ -488,13 +490,7 @@ class RealTingwuCoordinator @Inject constructor(
         AiCoreLogger.d(TAG, "尝试使用 /transcription 接口：jobId=$jobId")
         val inline = runCatching { api.getTaskResult(taskId = jobId) }.fold(
             onSuccess = { response ->
-                runCatching {
-                    // 重要：仅记录转写结果响应体（copy-only），不在 UI 内联展示。
-                    tingwuTraceStore.record(
-                        taskId = jobId,
-                        transcriptionJson = gson.toJson(response)
-                    )
-                }
+                val rawJson = gson.toJson(response)
                 val data = requireData(
                     code = response.code,
                     message = response.message,
@@ -517,6 +513,12 @@ class RealTingwuCoordinator @Inject constructor(
                     val diarizedSegments = buildDiarizedSegments(transcription)
                     val speakerLabels = buildSpeakerLabels(transcription, diarizedSegments)
                     val markdown = buildMarkdown(transcription, diarizedSegments, speakerLabels)
+                    // 重要：转写原始响应仅落盘，不在内存/HUD 直接保存原文。
+                    recordTingwuRawDump(
+                        jobId = jobId,
+                        rawJson = rawJson,
+                        transcriptText = resolveTranscriptText(transcription, markdown),
+                    )
                     val enhancedMarkdown = runEnhancerIfEnabled(
                         jobId = jobId,
                         transcription = transcription,
@@ -661,14 +663,13 @@ class RealTingwuCoordinator @Inject constructor(
                 val payload = reader.readText()
                 AiCoreLogger.d(TAG, "下载完成：jobId=$jobId payload大小=${payload.length} 字符")
                 logVerbose { "下载转写 payload 前200字符：${payload.take(200)}" }
-                runCatching {
-                    // 重要：仅保存原始转写 JSON（copy-only），HUD 不内联展示。
-                    tingwuTraceStore.record(
-                        taskId = jobId,
-                        transcriptionJson = payload
-                    )
-                }
                 val parsed = parseDownloadedTranscription(payload, jobId)
+                // 重要：转写原始响应仅落盘，不在内存/HUD 直接保存原文。
+                recordTingwuRawDump(
+                    jobId = jobId,
+                    rawJson = payload,
+                    transcriptText = resolveTranscriptText(parsed, null),
+                )
                 parsed ?: throw AiCoreException(
                     source = AiCoreErrorSource.TINGWU,
                     reason = AiCoreErrorReason.IO,
@@ -1645,6 +1646,48 @@ class RealTingwuCoordinator @Inject constructor(
                 }
         }
         return emptyList()
+    }
+
+    private fun resolveTranscriptText(
+        transcription: TingwuTranscription?,
+        fallback: String?
+    ): String? {
+        val rawText = transcription?.text?.trim().orEmpty()
+        if (rawText.isNotBlank()) return rawText
+        val segments = transcription?.segments.orEmpty()
+        if (segments.isNotEmpty()) {
+            val joined = segments.mapNotNull { it.text?.trim() }
+                .filter { it.isNotBlank() }
+                .joinToString(separator = "\n")
+            if (joined.isNotBlank()) return joined
+        }
+        return fallback?.trim()?.takeIf { it.isNotBlank() }
+    }
+
+    private fun recordTingwuRawDump(
+        jobId: String,
+        rawJson: String,
+        transcriptText: String?,
+    ) {
+        runCatching {
+            val dump = tingwuRawResponseDumper.dumpTranscription(
+                jobId = jobId,
+                sessionId = jobContext[jobId]?.sessionId,
+                rawJson = rawJson,
+                transcriptText = transcriptText,
+            )
+            tingwuTraceStore.record(
+                taskId = jobId,
+                transcriptionDumpPath = dump.rawDumpPath,
+                transcriptionDumpBytes = dump.rawDumpBytes,
+                transcriptionDumpSavedAtMs = dump.rawDumpSavedAtMs,
+                transcriptDumpPath = dump.transcriptDumpPath,
+                transcriptDumpBytes = dump.transcriptDumpBytes,
+                transcriptDumpSavedAtMs = dump.transcriptDumpSavedAtMs,
+            )
+        }.onFailure { error ->
+            AiCoreLogger.d(TAG, "Tingwu raw dump 失败：${error.message}")
+        }
     }
 
     /**

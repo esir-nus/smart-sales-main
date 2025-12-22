@@ -31,6 +31,7 @@ import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.ExportResult
 import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.debug.XfyunTraceStore
+import com.smartsales.data.aicore.params.InMemoryAiParaSettingsRepository
 import com.smartsales.feature.media.audiofiles.AudioStorageRepository
 import com.smartsales.feature.media.audiofiles.StoredAudio
 import android.net.Uri
@@ -47,6 +48,7 @@ import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import com.smartsales.feature.chat.testutil.TestContext
+import com.smartsales.feature.chat.testutil.buildNoopXfyunVoiceprintApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -104,7 +106,9 @@ class HomeTranscriptionTest {
             exportOrchestrator = FakeExportOrchestrator(),
             shareHandler = FakeShareHandler(),
             xfyunTraceStore = XfyunTraceStore(),
-            tingwuTraceStore = TingwuTraceStore()
+            tingwuTraceStore = TingwuTraceStore(),
+            aiParaSettingsRepository = InMemoryAiParaSettingsRepository(),
+            xfyunVoiceprintApi = buildNoopXfyunVoiceprintApi(),
         )
     }
 

@@ -60,8 +60,10 @@ import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.ExportResult
 import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.debug.XfyunTraceStore
+import com.smartsales.data.aicore.params.InMemoryAiParaSettingsRepository
 import com.smartsales.feature.chat.ChatShareHandler
 import com.smartsales.core.metahub.SessionTitlePolicy
+import com.smartsales.feature.chat.testutil.buildNoopXfyunVoiceprintApi
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeSessionListViewModelTest {
@@ -109,7 +111,9 @@ class HomeSessionListViewModelTest {
             exportOrchestrator = FakeExportOrchestrator(),
             shareHandler = FakeShareHandler(),
             xfyunTraceStore = XfyunTraceStore(),
-            tingwuTraceStore = TingwuTraceStore()
+            tingwuTraceStore = TingwuTraceStore(),
+            aiParaSettingsRepository = InMemoryAiParaSettingsRepository(),
+            xfyunVoiceprintApi = buildNoopXfyunVoiceprintApi(),
         )
     }
 

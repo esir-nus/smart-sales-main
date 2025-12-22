@@ -32,6 +32,8 @@ import com.smartsales.data.aicore.posttingwu.SpeakerLabel
 import com.smartsales.data.aicore.posttingwu.SplitLine
 import com.smartsales.data.aicore.posttingwu.UtteranceEdit
 import com.smartsales.data.aicore.tingwu.TingwuArtifactFetcher
+import com.smartsales.data.aicore.tingwu.TingwuRawDumpDirectoryProvider
+import com.smartsales.data.aicore.tingwu.TingwuRawResponseDumper
 import com.smartsales.data.aicore.posttingwu.PostTingwuTranscriptEnhancer
 import java.io.File
 import java.util.Optional
@@ -63,6 +65,15 @@ class RealTingwuCoordinatorTest {
     private val dispatcher = StandardTestDispatcher()
     private val dispatchers = FakeDispatcherProvider(dispatcher)
     private val traceStore = TingwuTraceStore()
+    private val rawDumpDir = File.createTempFile("tingwu_raw_dump", "dir").apply {
+        delete()
+        mkdirs()
+        deleteOnExit()
+    }
+    private val rawDumpDirectoryProvider = object : TingwuRawDumpDirectoryProvider {
+        override fun directory(): File = rawDumpDir
+    }
+    private val rawResponseDumper = TingwuRawResponseDumper(rawDumpDirectoryProvider)
     private val noopFetcher = object : TingwuArtifactFetcher {
         override fun fetchText(url: String, timeoutMs: Int, maxChars: Int): String? = null
     }
@@ -103,6 +114,7 @@ class RealTingwuCoordinatorTest {
         transcriptOrchestrator = transcriptOrchestrator,
         metaHub = metaHub,
         tingwuTraceStore = traceStore,
+        tingwuRawResponseDumper = rawResponseDumper,
         artifactFetcher = noopFetcher,
         postTingwuTranscriptEnhancer = enhancer,
         aiParaSettingsProvider = settingsProvider,
@@ -736,6 +748,7 @@ class RealTingwuCoordinatorTest {
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = InMemoryMetaHub(),
             tingwuTraceStore = traceStore,
+            tingwuRawResponseDumper = rawResponseDumper,
             artifactFetcher = noopFetcher,
             postTingwuTranscriptEnhancer = noopEnhancer,
             aiParaSettingsProvider = defaultSettingsProvider,
@@ -855,6 +868,7 @@ class RealTingwuCoordinatorTest {
             transcriptOrchestrator = orchestrator,
             metaHub = InMemoryMetaHub(),
             tingwuTraceStore = traceStore,
+            tingwuRawResponseDumper = rawResponseDumper,
             artifactFetcher = noopFetcher,
             postTingwuTranscriptEnhancer = noopEnhancer,
             aiParaSettingsProvider = defaultSettingsProvider,
@@ -926,6 +940,7 @@ class RealTingwuCoordinatorTest {
             transcriptOrchestrator = orchestrator,
             metaHub = InMemoryMetaHub(),
             tingwuTraceStore = traceStore,
+            tingwuRawResponseDumper = rawResponseDumper,
             artifactFetcher = noopFetcher,
             postTingwuTranscriptEnhancer = noopEnhancer,
             aiParaSettingsProvider = defaultSettingsProvider,
@@ -1001,6 +1016,7 @@ class RealTingwuCoordinatorTest {
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = InMemoryMetaHub(),
             tingwuTraceStore = traceStore,
+            tingwuRawResponseDumper = rawResponseDumper,
             artifactFetcher = fetcher,
             postTingwuTranscriptEnhancer = noopEnhancer,
             aiParaSettingsProvider = defaultSettingsProvider,
@@ -1069,6 +1085,7 @@ class RealTingwuCoordinatorTest {
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = InMemoryMetaHub(),
             tingwuTraceStore = traceStore,
+            tingwuRawResponseDumper = rawResponseDumper,
             artifactFetcher = fetcher,
             postTingwuTranscriptEnhancer = noopEnhancer,
             aiParaSettingsProvider = defaultSettingsProvider,
@@ -1146,6 +1163,7 @@ class RealTingwuCoordinatorTest {
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = InMemoryMetaHub(),
             tingwuTraceStore = traceStore,
+            tingwuRawResponseDumper = rawResponseDumper,
             artifactFetcher = fetcher,
             postTingwuTranscriptEnhancer = noopEnhancer,
             aiParaSettingsProvider = defaultSettingsProvider,
@@ -1221,6 +1239,7 @@ class RealTingwuCoordinatorTest {
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = InMemoryMetaHub(),
             tingwuTraceStore = traceStore,
+            tingwuRawResponseDumper = rawResponseDumper,
             artifactFetcher = fetcher,
             postTingwuTranscriptEnhancer = noopEnhancer,
             aiParaSettingsProvider = defaultSettingsProvider,
@@ -1288,6 +1307,7 @@ class RealTingwuCoordinatorTest {
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = InMemoryMetaHub(),
             tingwuTraceStore = traceStore,
+            tingwuRawResponseDumper = rawResponseDumper,
             artifactFetcher = fetcher,
             postTingwuTranscriptEnhancer = noopEnhancer,
             aiParaSettingsProvider = defaultSettingsProvider,

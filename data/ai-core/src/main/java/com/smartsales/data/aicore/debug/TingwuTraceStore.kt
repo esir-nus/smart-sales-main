@@ -12,8 +12,13 @@ data class TingwuTraceSnapshot(
     val lastCreateTaskRequestJson: String? = null,
     val lastCreateTaskResponseJson: String? = null,
     val lastGetTaskInfoResponseJson: String? = null,
-    // 重要：仅保存 Tingwu 原始转写输出（copy-only），不在 UI 内联展示。
-    val lastTranscriptionJson: String? = null,
+    // 重要：Tingwu 原始转写仅保留落盘路径，不在内存/HUD 内保存原文。
+    val transcriptionDumpPath: String? = null,
+    val transcriptionDumpBytes: Long? = null,
+    val transcriptionDumpSavedAtMs: Long? = null,
+    val transcriptDumpPath: String? = null,
+    val transcriptDumpBytes: Long? = null,
+    val transcriptDumpSavedAtMs: Long? = null,
     val lastResultUrls: Map<String, String> = emptyMap(),
     val updatedAtMs: Long = 0L
 )
@@ -28,11 +33,15 @@ class TingwuTraceStore @Inject constructor() {
         createRequestJson: String? = null,
         createResponseJson: String? = null,
         getTaskInfoJson: String? = null,
-        transcriptionJson: String? = null,
+        transcriptionDumpPath: String? = null,
+        transcriptionDumpBytes: Long? = null,
+        transcriptionDumpSavedAtMs: Long? = null,
+        transcriptDumpPath: String? = null,
+        transcriptDumpBytes: Long? = null,
+        transcriptDumpSavedAtMs: Long? = null,
         resultUrls: Map<String, String>? = null
     ) {
         val now = System.currentTimeMillis()
-        val safeTranscription = transcriptionJson?.let { sanitizeTranscriptionJson(it) }
         synchronized(this) {
             val current = snapshot
             snapshot = current.copy(
@@ -40,7 +49,12 @@ class TingwuTraceStore @Inject constructor() {
                 lastCreateTaskRequestJson = createRequestJson ?: current.lastCreateTaskRequestJson,
                 lastCreateTaskResponseJson = createResponseJson ?: current.lastCreateTaskResponseJson,
                 lastGetTaskInfoResponseJson = getTaskInfoJson ?: current.lastGetTaskInfoResponseJson,
-                lastTranscriptionJson = safeTranscription ?: current.lastTranscriptionJson,
+                transcriptionDumpPath = transcriptionDumpPath ?: current.transcriptionDumpPath,
+                transcriptionDumpBytes = transcriptionDumpBytes ?: current.transcriptionDumpBytes,
+                transcriptionDumpSavedAtMs = transcriptionDumpSavedAtMs ?: current.transcriptionDumpSavedAtMs,
+                transcriptDumpPath = transcriptDumpPath ?: current.transcriptDumpPath,
+                transcriptDumpBytes = transcriptDumpBytes ?: current.transcriptDumpBytes,
+                transcriptDumpSavedAtMs = transcriptDumpSavedAtMs ?: current.transcriptDumpSavedAtMs,
                 lastResultUrls = resultUrls ?: current.lastResultUrls,
                 updatedAtMs = now
             )
@@ -48,28 +62,4 @@ class TingwuTraceStore @Inject constructor() {
     }
 
     fun getSnapshot(): TingwuTraceSnapshot = snapshot
-
-    private fun sanitizeTranscriptionJson(raw: String): String {
-        if (raw.isBlank()) return raw
-        var sanitized = raw
-        // 重要：URL 可能包含签名参数，仅保留主路径。
-        sanitized = sanitized.replace(
-            Regex("(https?://[^\"\\s]+)\\?[^\"\\s]+", RegexOption.IGNORE_CASE),
-            "$1?<redacted>"
-        )
-        val secretKeys = listOf(
-            "AccessKeyId",
-            "AccessKeySecret",
-            "SecurityToken",
-            "Signature",
-            "Token"
-        )
-        secretKeys.forEach { key ->
-            sanitized = sanitized.replace(
-                Regex("\"$key\"\\s*:\\s*\"[^\"]*\"", RegexOption.IGNORE_CASE),
-                "\"$key\":\"<redacted>\""
-            )
-        }
-        return sanitized
-    }
 }

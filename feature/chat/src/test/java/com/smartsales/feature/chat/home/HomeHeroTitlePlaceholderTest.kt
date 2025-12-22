@@ -17,6 +17,7 @@ import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.ExportResult
 import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.debug.XfyunTraceStore
+import com.smartsales.data.aicore.params.InMemoryAiParaSettingsRepository
 import com.smartsales.feature.chat.AiSessionRepository as SessionRepository
 import com.smartsales.feature.chat.AiSessionSummary
 import com.smartsales.feature.chat.ChatShareHandler
@@ -43,6 +44,7 @@ import com.smartsales.feature.media.audiofiles.StoredAudio
 import com.smartsales.feature.usercenter.UserProfile
 import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.feature.chat.testutil.TestContext
+import com.smartsales.feature.chat.testutil.buildNoopXfyunVoiceprintApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -234,7 +236,9 @@ class HomeHeroTitlePlaceholderTest {
             },
             metaHub = metaHub,
             xfyunTraceStore = XfyunTraceStore(),
-            tingwuTraceStore = TingwuTraceStore()
+            tingwuTraceStore = TingwuTraceStore(),
+            aiParaSettingsRepository = InMemoryAiParaSettingsRepository(),
+            xfyunVoiceprintApi = buildNoopXfyunVoiceprintApi(),
         )
     }
 

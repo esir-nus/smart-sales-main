@@ -1311,6 +1311,7 @@ private fun TingwuTraceSection(
     trace: TingwuTraceSnapshot?,
     onCopy: (String) -> Unit,
 ) {
+    val context = LocalContext.current
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxWidth()
@@ -1327,22 +1328,69 @@ private fun TingwuTraceSection(
             )
             return
         }
-        val raw = trace.lastTranscriptionJson
-        val status = if (raw.isNullOrBlank()) {
-            "missing: no transcription snapshot"
-        } else {
-            "available: ${raw.length} chars"
-        }
+        val rawDumpPath = trace.transcriptionDumpPath
+        val rawFile = rawDumpPath?.let { path -> File(path) }?.takeIf { it.exists() && it.isFile }
+        val rawStatus = if (rawFile == null) "missing" else "available"
         Text(
-            text = "rawTranscription: $status",
+            text = "raw.json: $rawStatus",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         TextButton(
-            onClick = { onCopy(raw ?: "missing: no transcription snapshot") },
+            onClick = {
+                val file = rawFile ?: return@TextButton
+                runCatching {
+                    // 重要：调试导出使用 FileProvider，避免复制大文本或内联展示原始内容。
+                    val authority = "${context.packageName}.chatfileprovider"
+                    val uri = FileProvider.getUriForFile(context, authority, file)
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "application/json"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    val chooser = Intent.createChooser(intent, "导出 ${file.name}").apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(chooser)
+                }.onFailure { error ->
+                    Toast.makeText(context, error.message ?: "导出失败", Toast.LENGTH_SHORT).show()
+                }
+            },
+            enabled = rawFile != null,
         ) {
-            // 重要：原始转写仅允许复制，不在 HUD 内联展示。
-            Text(text = "复制原始转写")
+            Text(text = "导出 Raw JSON")
+        }
+        val transcriptPath = trace.transcriptDumpPath
+        val transcriptFile = transcriptPath?.let { path -> File(path) }?.takeIf { it.exists() && it.isFile }
+        val transcriptStatus = if (transcriptFile == null) "missing" else "available"
+        Text(
+            text = "transcript.txt: $transcriptStatus",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        TextButton(
+            onClick = {
+                val file = transcriptFile ?: return@TextButton
+                runCatching {
+                    // 重要：调试导出使用 FileProvider，避免复制大文本或内联展示原始内容。
+                    val authority = "${context.packageName}.chatfileprovider"
+                    val uri = FileProvider.getUriForFile(context, authority, file)
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    val chooser = Intent.createChooser(intent, "导出 ${file.name}").apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(chooser)
+                }.onFailure { error ->
+                    Toast.makeText(context, error.message ?: "导出失败", Toast.LENGTH_SHORT).show()
+                }
+            },
+            enabled = transcriptFile != null,
+        ) {
+            Text(text = "导出 Transcript")
         }
     }
 }

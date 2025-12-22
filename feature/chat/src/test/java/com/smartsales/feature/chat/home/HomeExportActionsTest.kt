@@ -11,6 +11,7 @@ import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.ExportResult
 import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.debug.XfyunTraceStore
+import com.smartsales.data.aicore.params.InMemoryAiParaSettingsRepository
 import com.smartsales.feature.chat.ChatShareHandler
 import com.smartsales.feature.chat.AiSessionSummary
 import com.smartsales.feature.chat.home.ChatMessageRole
@@ -63,6 +64,7 @@ import android.net.Uri
 import com.smartsales.feature.media.audiofiles.AudioStorageRepository
 import com.smartsales.feature.media.audiofiles.StoredAudio
 import com.smartsales.feature.chat.testutil.TestContext
+import com.smartsales.feature.chat.testutil.buildNoopXfyunVoiceprintApi
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeExportActionsTest {
@@ -166,7 +168,9 @@ class HomeExportActionsTest {
             exportOrchestrator = exportOrchestrator,
             shareHandler = shareHandler,
             xfyunTraceStore = XfyunTraceStore(),
-            tingwuTraceStore = TingwuTraceStore()
+            tingwuTraceStore = TingwuTraceStore(),
+            aiParaSettingsRepository = InMemoryAiParaSettingsRepository(),
+            xfyunVoiceprintApi = buildNoopXfyunVoiceprintApi(),
         )
     }
 

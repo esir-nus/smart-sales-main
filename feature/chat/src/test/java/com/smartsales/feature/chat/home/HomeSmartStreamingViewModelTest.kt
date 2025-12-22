@@ -39,7 +39,9 @@ import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.debug.XfyunTraceStore
+import com.smartsales.data.aicore.params.InMemoryAiParaSettingsRepository
 import com.smartsales.feature.chat.testutil.TestContext
+import com.smartsales.feature.chat.testutil.buildNoopXfyunVoiceprintApi
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -87,7 +89,9 @@ class HomeSmartStreamingViewModelTest {
             exportOrchestrator = FakeExportOrchestrator(),
             shareHandler = FakeShareHandler(),
             xfyunTraceStore = XfyunTraceStore(),
-            tingwuTraceStore = TingwuTraceStore()
+            tingwuTraceStore = TingwuTraceStore(),
+            aiParaSettingsRepository = InMemoryAiParaSettingsRepository(),
+            xfyunVoiceprintApi = buildNoopXfyunVoiceprintApi(),
         )
     }
 

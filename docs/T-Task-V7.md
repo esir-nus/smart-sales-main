@@ -95,9 +95,11 @@ Legend: TODO / DOING / DONE / BLOCKED
     - `data/ai-core/src/main/java/com/smartsales/data/aicore/params/TranscriptionLaneSelector.kt`（集中判定 lane + disabled reason）
     - `app/src/main/java/com/smartsales/aitest/audio/SwitchableAudioTranscriptionCoordinator.kt`（未开启 XFyun 时回退 Tingwu）
     - `app/src/main/java/com/smartsales/aitest/ui/screens/audio/AiParaSettingsViewModel.kt`（用户显式选择 XFyun 时开启 gate）
-    - `feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreenViewModel.kt` + `feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreen.kt`（HUD Section 1 展示 lane + 禁用原因；Tingwu raw 状态 copy-only）
-    - `data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt` + `data/ai-core/src/main/java/com/smartsales/data/aicore/debug/TingwuTraceStore.kt`（记录 Tingwu 原始转写输出供 HUD 复制）
-    - Tests: `./gradlew :data:ai-core:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 22s）
+    - `feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreenViewModel.kt` + `feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreen.kt`（HUD Section 1 展示 lane + 禁用原因；Tingwu HUD Raw/Transcript 导出按钮）
+    - `data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt` + `data/ai-core/src/main/java/com/smartsales/data/aicore/debug/TingwuTraceStore.kt`（Tingwu 原始转写落盘；HUD 展示导出入口）
+    - Tests:
+      - `./gradlew :data:ai-core:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 8s）
+      - `./gradlew :feature:chat:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 8s）
 
 ### T7-006 Implementation: HUD 3-block copy snapshot
 - Status: TODO

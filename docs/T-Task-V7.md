@@ -102,10 +102,16 @@ Legend: TODO / DOING / DONE / BLOCKED
       - `./gradlew :feature:chat:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 8s）
 
 ### T7-006 Implementation: HUD 3-block copy snapshot
-- Status: TODO
-- Definition of done:
-  - One-click copy per section
-  - No secrets; no raw HTTP bodies; JSON copy-only
+- Status: DONE
+- Evidence:
+  - `data/ai-core/src/main/java/com/smartsales/data/aicore/debug/DebugSnapshot.kt`
+  - `data/ai-core/src/main/java/com/smartsales/data/aicore/debug/DebugOrchestrator.kt`
+  - `data/ai-core/src/main/java/com/smartsales/data/aicore/debug/DebugSnapshotRedactor.kt`
+  - `feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreenViewModel.kt`
+  - `feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreen.kt`
+  - Tests:
+    - `./gradlew :data:ai-core:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 17s）
+    - `./gradlew :feature:chat:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 25s）
 
 ### T7-007 Implementation: pseudo-streaming transcript batches
 - Status: TODO

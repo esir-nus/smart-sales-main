@@ -42,6 +42,7 @@ import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.data.aicore.params.InMemoryAiParaSettingsRepository
 import com.smartsales.feature.chat.testutil.TestContext
 import com.smartsales.feature.chat.testutil.buildNoopXfyunVoiceprintApi
+import com.smartsales.feature.chat.testutil.NoopDebugOrchestrator
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -86,6 +87,7 @@ class HomeSmartStreamingViewModelTest {
             sessionTitleResolver = SessionTitleResolver(metaHub),
             userProfileRepository = FakeUserProfileRepository(),
             metaHub = metaHub,
+            debugOrchestrator = NoopDebugOrchestrator(),
             exportOrchestrator = FakeExportOrchestrator(),
             shareHandler = FakeShareHandler(),
             xfyunTraceStore = XfyunTraceStore(),

@@ -33,6 +33,8 @@ import com.smartsales.feature.chat.home.CHAT_DEBUG_HUD_ENABLED
 import com.smartsales.feature.chat.BuildConfig
 import com.smartsales.feature.chat.history.toEntity
 import com.smartsales.feature.chat.history.toUiModel
+import com.smartsales.data.aicore.debug.DebugOrchestrator
+import com.smartsales.data.aicore.debug.DebugSnapshot
 import com.smartsales.data.aicore.debug.TingwuTraceSnapshot
 import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.debug.XfyunTraceSnapshot
@@ -238,6 +240,7 @@ data class HomeUiState(
     val isSmartAnalysisMode: Boolean = false,
     val showDebugMetadata: Boolean = false,
     val debugSessionMetadata: DebugSessionMetadata? = null,
+    val debugSnapshot: DebugSnapshot? = null,
     val xfyunTrace: XfyunTraceSnapshot? = null,
     val tingwuTrace: TingwuTraceSnapshot? = null,
     val voiceprintLab: VoiceprintLabUiState = VoiceprintLabUiState(),
@@ -273,6 +276,7 @@ class HomeScreenViewModel @Inject constructor(
     private val exportOrchestrator: ExportOrchestrator,
     private val shareHandler: ChatShareHandler,
     private val metaHub: MetaHub,
+    private val debugOrchestrator: DebugOrchestrator,
     private val xfyunTraceStore: XfyunTraceStore,
     private val tingwuTraceStore: TingwuTraceStore,
     private val aiParaSettingsRepository: AiParaSettingsRepository,
@@ -292,6 +296,7 @@ class HomeScreenViewModel @Inject constructor(
     private var hasShownLowInfoSmartAnalysisHint: Boolean = false
     private var hasShownAnalysisExportHint: Boolean = false
     private var transcriptionJob: Job? = null
+    private var lastTranscriptionJobId: String? = null
     // 标记当前会话是否已处理首条助手回复，用于“首条决定标题”规则
     private var firstAssistantProcessed: Boolean = false
     private var latestAnalysisMarkdown: String? = null
@@ -747,6 +752,8 @@ class HomeScreenViewModel @Inject constructor(
 
     fun onTranscriptionRequested(request: TranscriptionChatRequest) {
         viewModelScope.launch {
+            lastTranscriptionJobId = request.jobId
+            refreshDebugSnapshot()
             val transcript = request.transcriptMarkdown ?: request.transcriptPreview
             val targetSessionId = request.sessionId ?: DEFAULT_SESSION_ID
             val existing = sessionRepository.findById(targetSessionId)
@@ -947,6 +954,7 @@ class HomeScreenViewModel @Inject constructor(
         if (newValue) {
             // 打开时刷新一次 MetaHub，关闭时保留现有数据即可
             refreshDebugSessionMetadata()
+            refreshDebugSnapshot()
         }
     }
 
@@ -968,6 +976,28 @@ class HomeScreenViewModel @Inject constructor(
                 // 重要：HUD 打开时同时刷新 Tingwu 调试快照，便于确认默认链路。
                 tingwuTrace = tingwuTraceStore.getSnapshot()
             )
+        }
+        refreshDebugSnapshot()
+    }
+
+    private fun refreshDebugSnapshot() {
+        if (!CHAT_DEBUG_HUD_ENABLED || !_uiState.value.showDebugMetadata) return
+        val currentSession = sessionId
+        val currentJobId = lastTranscriptionJobId
+        viewModelScope.launch {
+            val snapshot = runCatching {
+                debugOrchestrator.getDebugSnapshot(currentSession, currentJobId)
+            }.getOrElse { error ->
+                // 重要：HUD 的调试快照失败时要 fail-soft，避免阻断调试面板展示。
+                DebugSnapshot(
+                    section1EffectiveRunText = "DebugSnapshot failed: ${error.message ?: "unknown"}",
+                    section2RawTranscriptionText = "(missing: debug snapshot unavailable)",
+                    section3PreprocessedText = "(missing: debug snapshot unavailable)",
+                    sessionId = currentSession,
+                    jobId = currentJobId,
+                )
+            }
+            _uiState.update { it.copy(debugSnapshot = snapshot) }
         }
     }
 
@@ -1204,6 +1234,7 @@ class HomeScreenViewModel @Inject constructor(
             if (sessionId != this@HomeScreenViewModel.sessionId) {
                 this@HomeScreenViewModel.sessionId = sessionId
                 firstAssistantProcessed = false
+                lastTranscriptionJobId = null
                 latestAnalysisMarkdown = null
                 hasShownLowInfoHint = false
                 hasShownAnalysisExportHint = false
@@ -1226,6 +1257,7 @@ class HomeScreenViewModel @Inject constructor(
                 )
             }
             refreshDebugSessionMetadata()
+            refreshDebugSnapshot()
         }
     }
 

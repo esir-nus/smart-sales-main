@@ -49,6 +49,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import com.smartsales.feature.chat.testutil.TestContext
 import com.smartsales.feature.chat.testutil.buildNoopXfyunVoiceprintApi
+import com.smartsales.feature.chat.testutil.NoopDebugOrchestrator
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -103,6 +104,7 @@ class HomeTranscriptionTest {
             sessionTitleResolver = SessionTitleResolver(metaHub),
             userProfileRepository = FakeUserProfileRepository(),
             metaHub = metaHub,
+            debugOrchestrator = NoopDebugOrchestrator(),
             exportOrchestrator = FakeExportOrchestrator(),
             shareHandler = FakeShareHandler(),
             xfyunTraceStore = XfyunTraceStore(),

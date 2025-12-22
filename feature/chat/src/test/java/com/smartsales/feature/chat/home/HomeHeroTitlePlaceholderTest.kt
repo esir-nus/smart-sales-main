@@ -45,6 +45,7 @@ import com.smartsales.feature.usercenter.UserProfile
 import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.feature.chat.testutil.TestContext
 import com.smartsales.feature.chat.testutil.buildNoopXfyunVoiceprintApi
+import com.smartsales.feature.chat.testutil.NoopDebugOrchestrator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -235,6 +236,7 @@ class HomeHeroTitlePlaceholderTest {
                 override suspend fun shareExport(result: ExportResult): Result<Unit> = Result.Success(Unit)
             },
             metaHub = metaHub,
+            debugOrchestrator = NoopDebugOrchestrator(),
             xfyunTraceStore = XfyunTraceStore(),
             tingwuTraceStore = TingwuTraceStore(),
             aiParaSettingsRepository = InMemoryAiParaSettingsRepository(),

@@ -10,6 +10,8 @@ import com.smartsales.core.util.DefaultDispatcherProvider
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.data.aicore.debug.DashscopeDebugClient
 import com.smartsales.data.aicore.debug.DashscopeDebugClientImpl
+import com.smartsales.data.aicore.debug.DebugOrchestrator
+import com.smartsales.data.aicore.debug.RealDebugOrchestrator
 import com.smartsales.data.aicore.params.AiParaSettingsProvider
 import com.smartsales.data.aicore.params.AiParaSettingsRepository
 import com.smartsales.data.aicore.params.DefaultAiParaSettingsProvider
@@ -84,6 +86,12 @@ abstract class AiCoreModule {
     abstract fun bindDashscopeDebugClient(
         impl: DashscopeDebugClientImpl
     ): DashscopeDebugClient
+
+    @Binds
+    @Singleton
+    abstract fun bindDebugOrchestrator(
+        impl: RealDebugOrchestrator
+    ): DebugOrchestrator
 
     @Binds
     @Singleton

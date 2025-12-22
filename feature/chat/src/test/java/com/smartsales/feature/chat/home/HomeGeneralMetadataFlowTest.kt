@@ -49,6 +49,7 @@ import com.smartsales.feature.usercenter.UserProfile
 import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.feature.chat.testutil.TestContext
 import com.smartsales.feature.chat.testutil.buildNoopXfyunVoiceprintApi
+import com.smartsales.feature.chat.testutil.NoopDebugOrchestrator
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -99,6 +100,7 @@ class HomeGeneralMetadataFlowTest {
             sessionTitleResolver = SessionTitleResolver(metaHub),
             userProfileRepository = FakeUserProfileRepository(),
             metaHub = metaHub,
+            debugOrchestrator = NoopDebugOrchestrator(),
             exportOrchestrator = FakeExportOrchestrator(),
             shareHandler = FakeShareHandler(),
             xfyunTraceStore = XfyunTraceStore(),

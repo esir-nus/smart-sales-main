@@ -64,6 +64,7 @@ import com.smartsales.data.aicore.params.InMemoryAiParaSettingsRepository
 import com.smartsales.feature.chat.ChatShareHandler
 import com.smartsales.core.metahub.SessionTitlePolicy
 import com.smartsales.feature.chat.testutil.buildNoopXfyunVoiceprintApi
+import com.smartsales.feature.chat.testutil.NoopDebugOrchestrator
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeSessionListViewModelTest {
@@ -108,6 +109,7 @@ class HomeSessionListViewModelTest {
             sessionTitleResolver = SessionTitleResolver(metaHub),
             userProfileRepository = FakeUserProfileRepository(),
             metaHub = metaHub,
+            debugOrchestrator = NoopDebugOrchestrator(),
             exportOrchestrator = FakeExportOrchestrator(),
             shareHandler = FakeShareHandler(),
             xfyunTraceStore = XfyunTraceStore(),

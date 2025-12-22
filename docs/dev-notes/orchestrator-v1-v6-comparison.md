@@ -5,7 +5,7 @@
 
 ---
 
-### 0. 总览表：V1–V6 体验向的演进对比
+### 0. 总览表：V1–V7 体验向的演进对比
 
 > 只看“对用户/测试同学来说感觉如何”，弱化内部技术细节。
 
@@ -17,6 +17,7 @@
 | **V4** | 正式区分：气泡给人看、JSON 给系统看 | 聊天气泡相对干净了，但长音频仍然是“等整段转完再看结果”，中途几乎没有可视反馈 |
 | **V5** | 明确 XFyun 链路和调试信息该怎么看 | 可以比较稳定地跑几十分钟录音，HUD 也能看到关键信息，但用户/测试往往要“等到全部结束”才能判断好坏 |
 | **V6** | 为长音频优化的“批次式智能助手” | 针对一小时级录音：不再是一口气等到底，而是按批次逐步产出结果；同时 HUD 有清晰的“进展和证据”，既不用干等、又能在出问题时快速定位是哪一段出错 |
+| **V7** | 在 V6 之上“补齐大脑和仪表盘”的版本 | 在 V6 批次体验基础上：默认用更稳的 Tingwu+OSS 通道、把“客户画像+对话结论+会话管理”拆成 M1–M4 四层、引入两类 Agent 分工做分析和润色，并且 HUD 固定为三块可复制的调试面板，让长音频转写和智能分析更稳定、更容易排查问题，也更符合风控与合规要求 |
 
 ---
 
@@ -39,18 +40,27 @@
     - `docs/Orchestrator-MetadataHub-V5.md`（已归档，见 `docs/archived/Orchestrator-MetadataHub-V5.md`）。
   - 结果：系统边界清晰很多，但整体还是“**单批次、单 Agent、弱结构化**”的时代。
 
-- **V6：批次化 + 多 Agent + MetaHub 时代（CURRENT）**
+- **V6：批次化 + 多 Agent + MetaHub 时代**
   - 核心关键词：
-    - **BatchPlan**：以“批次”为单位规划可编辑窗口和只读上下文；
-    - **SuspiciousHint**：只做“可疑边界提示”（hint-only），不直接改文案；
-    - **DecisionRecord / MemoryBank / SpeakerLabelRegistry**：所有 LLM 输出都变成“结构化可验证的决策记录”；
-    - **Pseudo Streaming**：按批次渐进输出，而不是 token 级流式；
-    - **HUD/MetaHub**：所有 JSON 只允许“复制”，不允许“内联展示”。
+  - **BatchPlan**：以“批次”为单位规划可编辑窗口和只读上下文；
+  - **SuspiciousHint**：只做“可疑边界提示”（hint-only），不直接改文案；
+  - **DecisionRecord / MemoryBank / SpeakerLabelRegistry**：所有 LLM 输出都变成“结构化可验证的决策记录”；
+  - **Pseudo Streaming**：按批次渐进输出，而不是 token 级流式；
+  - **HUD/MetaHub**：所有 JSON 只允许“复制”，不允许“内联展示”。
+  - 规范文件（已被 V7 继承和细化）：
+  - `docs/archived/Orchestrator-MetadataHub-V6.md`
+- **V7：M1–M4 元数据 + Provider lane 策略 + HUD 3 块（CURRENT）**
+  - 核心关键词：
+  - **M1–M4 分层模型**：UserMetadata / ConversationDerivedState / SessionState / External Knowledge & Style；
+  - **Provider Policy（Tingwu+OSS 默认）**：Tingwu+OSS 恢复为默认转写通道，XFyun 保持“显式开启 + fail-soft”，禁止“试试看”；
+  - **两 Agent 模型**：Agent1 负责记忆与 Smart Analysis，Agent2 负责 polish，边界更清晰；
+  - **HUD 3 块**：运行快照 / 原始转写输出 / 预处理快照，全部 copy-only，禁止内联敏感 JSON；
+  - **Pseudo-streaming + 导出门控**：继续使用批次式 pseudo-streaming，并通过 Smart Analysis + RenamingMetadata 控制导出命名与 gating；
   - 规范文件：
-    - `docs/Orchestrator-MetadataHub-V6.md`（CURRENT）
-    - 与之配套的 UX / API 合同：
-      - `docs/ux-contract.md`
-      - `docs/api-contracts.md`
+  - `docs/Orchestrator-MetadataHub-V7.md`（CURRENT）
+  - 与之配套的 UX / API 合同：
+  - `docs/ux-contract.md`
+  - `docs/api-contracts.md`
 
 ---
 
@@ -96,7 +106,7 @@
 
 ### 三、数据形态：从“自由文本 + 尾部 JSON”到“稳定模型族”
 
-> 参考：`docs/Orchestrator-MetadataHub-V6.md` 第 3 节（UtteranceLine / BatchPlan / SuspiciousHint / DecisionRecord / MemoryBank / LabelPatch）
+> 参考：`docs/Orchestrator-MetadataHub-V7.md` 第 3/4/6 节（M1–M4 / UtteranceLine / BatchPlan / SuspiciousHint / DecisionRecord / MemoryBank / LabelPatch）
 
 - **V1–V3**
   - Prompt 输出大多是：
@@ -209,12 +219,34 @@
 - **从协议到体系**：V6 把一次对话拆成若干批次，每个批次引入 hint、决策记录、记忆与标签补丁，真正支撑多 Agent 协作；
 - **从 Demo 到产品**：借助可观测性、安全策略与 UX 合约，V6 让 SmartSales 从“AI Demo”升级为“可上线、可审计、可持续演进”的产品级系统。
 
-这份文档只是 V1–V6 的高维度对比；具体字段与不变量请始终以以下文档为准：
+### 七、小结：V7 对股东 / 业务方意味着什么？
 
-- CURRENT 规范：`docs/Orchestrator-MetadataHub-V6.md`
-- 归档版本：`docs/archived/Orchestrator-MetadataHub-V5.md`、`docs/archived/Orchestrator-MetadataHub-V4.md`
+用“外行视角”看，V7 在 V6 之上，重点做了三件事：
+
+- **更稳的“进水口”**：  
+  - 默认统一走 Tingwu+OSS 这条已经验证稳定的转写链路；  
+  - XFyun 保持“显式开启 + 能力确认”后才使用，彻底杜绝“试试看就把配额和体验赌进去”的情况；  
+  - 对股东来说，这意味着：**长音频任务成功率更高、不可预期的失败更少、云端费用更可控**。
+
+- **更清晰的“资产分类账本”（M1–M4）**：  
+  - 把“客户自身信息（M1）”、“这次对话里推断出来的信号（M2）”、“会话标题/导出命名等管理信息（M3）”和“公司级知识与话术包（M4）”彻底分开；  
+  - 每一层都有自己的“谁能写、谁能读、带不带证据”的规则；  
+  - 对股东来说，这意味着：**以后要做复盘、风控、合规审计或迁移到新系统时，有一套清楚的“总账 + 明细”可以查，不会陷在一团难以复用的大 JSON 里**。
+
+- **更专业的“仪表盘 + 证据链”（HUD 3 块 + 两 Agent 分工）**：  
+  - HUD 固定为三块：本次运行关键设置、原始转写 JSON、预处理后的摘要与可疑边界——全部可复制，但不会把敏感原始报文直接晾在 UI 上；  
+  - 两类 Agent 各司其职：一个负责“记笔记 + 做分析结论”，另一个只负责“把逐字稿润色到专业可读”，避免单个大模型“一把抓”带来的不可控改写；  
+  - 对股东来说，这意味着：**当销售/客服的智能分析结果有争议时，我们既能给出清晰的证据链，又能保证系统不会“私自篡改事实”，从而在专业度和合规性上站得住脚**。
+
+综合来看：  
+V6 把 SmartSales 从“AI Demo”拉到了“可上线的产品”；  
+V7 则是在这个基础上，把“稳定性、可追责性和可扩展性”补齐到能长期支撑业务增长的水平——**更像一套可以放心托管长音频资产和销售洞察的基础设施，而不是一个好玩的 AI 小玩具**。
+
+这份文档只是 V1–V7 的高维度对比；具体字段与不变量请始终以以下文档为准：
+
+- CURRENT 规范：`docs/Orchestrator-MetadataHub-V7.md`
+- 归档版本：`docs/archived/Orchestrator-MetadataHub-V6.md`、`docs/archived/Orchestrator-MetadataHub-V5.md`、`docs/archived/Orchestrator-MetadataHub-V4.md`
 - UX 合约：`docs/ux-contract.md`
 - API 合约：`docs/api-contracts.md`
 - 产品叙事：`docs/ToShareholders.md`
-
 

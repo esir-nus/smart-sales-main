@@ -60,6 +60,7 @@ import com.smartsales.core.metahub.ExportMetadata
 import com.smartsales.core.metahub.TokenUsage
 import com.smartsales.feature.usercenter.SalesPersona
 import com.smartsales.feature.chat.testutil.buildNoopXfyunVoiceprintApi
+import com.smartsales.feature.chat.testutil.NoopDebugOrchestrator
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeUserNameTest {
@@ -240,6 +241,7 @@ class HomeUserNameTest {
             sessionTitleResolver = SessionTitleResolver(metaHub),
             userProfileRepository = profileRepo,
             metaHub = metaHub,
+            debugOrchestrator = NoopDebugOrchestrator(),
             exportOrchestrator = object : ExportOrchestrator {
                 override suspend fun exportPdf(
                     sessionId: String,

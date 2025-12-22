@@ -110,6 +110,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
@@ -127,8 +128,6 @@ import com.smartsales.feature.chat.core.QuickSkillId
 import java.io.File
 import com.smartsales.feature.chat.history.ChatHistoryTestTags
 import com.smartsales.data.aicore.debug.TingwuTraceSnapshot
-import com.smartsales.data.aicore.debug.XfyunDebugInfoFormatter
-import com.smartsales.data.aicore.debug.XfyunFailTypeHints
 import com.smartsales.data.aicore.debug.XfyunTraceSnapshot
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -721,7 +720,7 @@ fun HomeScreen(
                                 }
                             )
                         }
-                        if (hudEnabled && showDebugPanel && state.debugSessionMetadata != null) {
+                        if (hudEnabled && showDebugPanel) {
                             LaunchedEffect(showDebugPanel) { onRefreshXfyunTrace() }
                             Box(
                                 modifier = Modifier
@@ -736,14 +735,10 @@ fun HomeScreen(
                                     .testTag(HomeScreenTestTags.DEBUG_HUD_SCRIM)
                             )
                             DebugSessionMetadataHud(
-                                metadata = state.debugSessionMetadata,
+                                snapshot = state.debugSnapshot,
                                 xfyunTrace = state.xfyunTrace,
                                 tingwuTrace = state.tingwuTrace,
                                 onRefreshXfyun = onRefreshXfyunTrace,
-                                voiceprintLab = state.voiceprintLab,
-                                onVoiceprintRegisterBase64 = onVoiceprintRegisterBase64,
-                                onVoiceprintApplyLastFeatureId = onVoiceprintApplyLastFeatureId,
-                                onVoiceprintDeleteFeatureId = onVoiceprintDeleteFeatureId,
                                 onClose = {
                                     onToggleDebugMetadata()
                                 },
@@ -1137,14 +1132,10 @@ private fun HistoryDeviceStatus(snapshot: DeviceSnapshotUi?) {
 
 @Composable
 private fun DebugSessionMetadataHud(
-    metadata: DebugSessionMetadata,
+    snapshot: com.smartsales.data.aicore.debug.DebugSnapshot?,
     xfyunTrace: XfyunTraceSnapshot?,
     tingwuTrace: TingwuTraceSnapshot?,
     onRefreshXfyun: () -> Unit,
-    voiceprintLab: VoiceprintLabUiState,
-    onVoiceprintRegisterBase64: (audioDataBase64: String, audioType: String, uid: String?) -> Unit,
-    onVoiceprintApplyLastFeatureId: () -> Unit,
-    onVoiceprintDeleteFeatureId: (featureId: String, removeFromSettings: Boolean) -> Unit,
     onClose: () -> Unit,
     onCopy: (String) -> Unit,
     showRawAssistantOutput: Boolean,
@@ -1153,28 +1144,9 @@ private fun DebugSessionMetadataHud(
 ) {
     val screenHalfHeight = LocalConfiguration.current.screenHeightDp.dp * 0.5f
     val scrollState = rememberScrollState()
-    val hudText = remember(metadata) {
-        buildString {
-            appendLine("sessionId: ${metadata.sessionId}")
-            appendLine("title: ${metadata.title}")
-            appendLine("mainPerson: ${metadata.mainPerson ?: "-"}")
-            appendLine("shortSummary: ${metadata.shortSummary ?: "-"}")
-            appendLine("title6: ${metadata.summaryTitle6Chars ?: "-"}")
-            appendLine("stage: ${metadata.stageLabel ?: "-"}")
-            appendLine("risk: ${metadata.riskLabel ?: "-"}")
-            appendLine("tags: ${metadata.tagsLabel?.ifBlank { "-" } ?: "-"}")
-            appendLine("latestSource: ${metadata.latestSourceLabel ?: "-"}")
-            appendLine("latestAt: ${metadata.latestAtLabel ?: "-"}")
-            appendLine("transcriptionRequested: ${metadata.transcriptionProviderRequested ?: "-"}")
-            appendLine("transcriptionSelected: ${metadata.transcriptionProviderSelected ?: "-"}")
-            appendLine("transcriptionDisabledReason: ${metadata.transcriptionProviderDisabledReason ?: "-"}")
-            appendLine("xfyunEnabledSetting: ${metadata.transcriptionXfyunEnabledSetting ?: "-"}")
-            if (metadata.notes.isNotEmpty()) {
-                appendLine("notes:")
-                metadata.notes.forEach { appendLine("- $it") }
-            }
-        }.trimEnd()
-    }
+    val section1Text = snapshot?.section1EffectiveRunText ?: "加载中..."
+    val section2Text = snapshot?.section2RawTranscriptionText ?: "加载中..."
+    val section3Text = snapshot?.section3PreprocessedText ?: "加载中..."
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -1203,20 +1175,14 @@ private fun DebugSessionMetadataHud(
                 color = MaterialTheme.colorScheme.onSurface
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(
-                    onClick = { onCopy(hudText) },
-                    modifier = Modifier.testTag(HomeScreenTestTags.DEBUG_HUD_COPY)
-                ) {
-                    Text(text = "复制")
-                }
                 IconButton(
                     onClick = onClose,
                     modifier = Modifier.testTag(HomeScreenTestTags.DEBUG_HUD_CLOSE)
                 ) {
                     Icon(imageVector = Icons.Filled.Close, contentDescription = "关闭 HUD")
                 }
+                }
             }
-        }
         if (BuildConfig.DEBUG) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1240,50 +1206,33 @@ private fun DebugSessionMetadataHud(
                     )
                 }
             }
-            DebugField(label = "sessionId", value = metadata.sessionId)
-            DebugField(label = "title", value = metadata.title)
-            DebugField(label = "mainPerson", value = metadata.mainPerson ?: "-")
-            DebugField(label = "shortSummary", value = metadata.shortSummary ?: "-")
-            DebugField(label = "title6", value = metadata.summaryTitle6Chars ?: "-")
-            DebugField(label = "stage", value = metadata.stageLabel ?: "-")
-            DebugField(label = "risk", value = metadata.riskLabel ?: "-")
-            DebugField(label = "tags", value = metadata.tagsLabel?.ifBlank { "-" } ?: "-")
-            DebugField(label = "latestSource", value = metadata.latestSourceLabel ?: "-")
-            DebugField(label = "latestAt", value = metadata.latestAtLabel ?: "-")
-            DebugField(label = "transcriptionRequested", value = metadata.transcriptionProviderRequested ?: "-")
-            DebugField(label = "transcriptionSelected", value = metadata.transcriptionProviderSelected ?: "-")
-            DebugField(label = "transcriptionDisabledReason", value = metadata.transcriptionProviderDisabledReason ?: "-")
-            DebugField(
-                label = "xfyunEnabledSetting",
-                value = metadata.transcriptionXfyunEnabledSetting?.toString() ?: "-"
+            // 重要：HUD 内容由 Orchestrator 生成，UI 只渲染字符串，不做二次拼装。
+            DebugSnapshotBlock(
+                title = "Section 1 — Effective Run Snapshot",
+                content = section1Text,
+                onCopy = onCopy,
+                testTag = HomeScreenTestTags.DEBUG_HUD_COPY,
             )
-            if (metadata.notes.isNotEmpty()) {
-                Text(
-                    text = "notes",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                metadata.notes.forEach { note ->
-                    Text(
-                        text = "- $note",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
+            DebugSnapshotBlock(
+                title = "Section 2 — Raw Transcription Output",
+                content = section2Text,
+                onCopy = onCopy,
+                testTag = null,
+            )
+            DebugSnapshotBlock(
+                title = "Section 3 — Preprocessed Snapshot",
+                content = section3Text,
+                onCopy = onCopy,
+                testTag = null,
+            )
+
             if (CHAT_DEBUG_HUD_ENABLED) {
                 TingwuTraceSection(
                     trace = tingwuTrace,
-                    onCopy = onCopy
                 )
                 XfyunTraceSection(
                     trace = xfyunTrace,
                     onRefresh = onRefreshXfyun,
-                    onCopy = onCopy,
-                    voiceprintLab = voiceprintLab,
-                    onVoiceprintRegisterBase64 = onVoiceprintRegisterBase64,
-                    onVoiceprintApplyLastFeatureId = onVoiceprintApplyLastFeatureId,
-                    onVoiceprintDeleteFeatureId = onVoiceprintDeleteFeatureId,
                 )
             }
         }
@@ -1291,17 +1240,43 @@ private fun DebugSessionMetadataHud(
 }
 
 @Composable
-private fun DebugField(label: String, value: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+private fun DebugSnapshotBlock(
+    title: String,
+    content: String,
+    onCopy: (String) -> Unit,
+    testTag: String?,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            TextButton(
+                onClick = { onCopy(content) },
+                enabled = content.isNotBlank(),
+                modifier = testTag?.let { Modifier.testTag(it) } ?: Modifier,
+            ) {
+                Text(text = "复制")
+            }
+        }
         Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
+            text = content,
+            style = MaterialTheme.typography.bodySmall,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(10.dp)
+                )
+                .padding(10.dp),
         )
     }
 }
@@ -1309,7 +1284,6 @@ private fun DebugField(label: String, value: String) {
 @Composable
 private fun TingwuTraceSection(
     trace: TingwuTraceSnapshot?,
-    onCopy: (String) -> Unit,
 ) {
     val context = LocalContext.current
     Column(
@@ -1399,50 +1373,9 @@ private fun TingwuTraceSection(
 private fun XfyunTraceSection(
     trace: XfyunTraceSnapshot?,
     onRefresh: () -> Unit,
-    onCopy: (String) -> Unit,
-    voiceprintLab: VoiceprintLabUiState,
-    onVoiceprintRegisterBase64: (audioDataBase64: String, audioType: String, uid: String?) -> Unit,
-    onVoiceprintApplyLastFeatureId: () -> Unit,
-    onVoiceprintDeleteFeatureId: (featureId: String, removeFromSettings: Boolean) -> Unit,
 ) {
     val context = LocalContext.current
     var confirmShare by remember { mutableStateOf(false) }
-
-    @Composable
-    fun KeyValueRow(
-        label: String,
-        value: String,
-        copyValue: String = value,
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(0.32f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = value.ifBlank { "-" },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(0.54f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            TextButton(
-                onClick = { onCopy(copyValue) },
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-            ) {
-                Text(text = "复制")
-            }
-        }
-    }
 
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -1459,24 +1392,9 @@ private fun XfyunTraceSection(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = onRefresh) { Text(text = "刷新") }
-                if (trace != null) {
-                    TextButton(onClick = { onCopy(XfyunDebugInfoFormatter.format(trace)) }) {
-                        Text(text = "复制摘要")
-                    }
-                    val rawDumpPath = trace.rawDumpPath
-                    if (!rawDumpPath.isNullOrBlank()) {
-                        TextButton(
-                            onClick = {
-                                val file = File(rawDumpPath)
-                                if (!file.exists() || !file.isFile) {
-                                    Toast.makeText(context, "dump 文件不存在，无法分享", Toast.LENGTH_SHORT).show()
-                                    return@TextButton
-                                }
-                                confirmShare = true
-                            }
-                        ) {
-                            Text(text = "分享 dump")
-                        }
+                if (trace?.rawDumpPath?.isNotBlank() == true) {
+                    TextButton(onClick = { confirmShare = true }) {
+                        Text(text = "分享 dump")
                     }
                 }
             }
@@ -1490,311 +1408,22 @@ private fun XfyunTraceSection(
             return
         }
 
-        // --- Compact key-value grid (max 8 rows) ---
-        KeyValueRow(
-            label = "orderId",
-            value = trace.orderId ?: "-",
-            copyValue = trace.orderId ?: "",
+        val rawDumpPath = trace.rawDumpPath
+        val rawFile = rawDumpPath?.let { path -> File(path) }?.takeIf { it.exists() && it.isFile }
+        val rawStatus = if (rawFile == null) "missing" else "available"
+        Text(
+            text = "raw.json: $rawStatus",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        val rawDumpValue = trace.rawDumpPath?.let { path ->
-            val bytes = trace.rawDumpBytes?.toString() ?: "-"
-            "$path (${bytes} bytes)"
-        } ?: "-"
-        KeyValueRow(
-            label = "rawDump",
-            value = rawDumpValue,
-            copyValue = rawDumpValue,
-        )
-        val pollValue = "count=${trace.pollCount}, elapsedMs=${trace.elapsedMs}"
-        KeyValueRow(label = "poll", value = pollValue, copyValue = pollValue)
-        val lastValue = "http=${trace.lastHttpCode ?: "-"}, failType=${trace.lastFailType ?: "-"}"
-        KeyValueRow(label = "last", value = lastValue, copyValue = lastValue)
-        val uploadBizValue = buildString {
-            append("code=${trace.uploadBusinessCode ?: "-"}, ")
-            append("category=${trace.uploadFailureCategory ?: "-"}, ")
-            val desc = trace.uploadBusinessDescInfo?.trim().orEmpty()
-            append("desc=${if (desc.isBlank()) "-" else desc.take(80)}")
-        }
-        KeyValueRow(label = "uploadBiz", value = uploadBizValue, copyValue = uploadBizValue)
-        trace.uploadFailureHint?.takeIf { it.isNotBlank() }?.let { hint ->
-            KeyValueRow(label = "uploadHint", value = hint, copyValue = hint)
-        }
-
-        // --- Voiceprint (roleType=3) evidence (privacy-safe) ---
-        val vpSummary = buildString {
-            append("enabled=${trace.voiceprintEnabledSetting}, ")
-            append("effective=${trace.voiceprintEffectiveEnabled}, ")
-            append("roleType=${trace.voiceprintRoleTypeApplied ?: "-"}, ")
-            append("roleNum=${trace.voiceprintRoleNumApplied ?: "-"}, ")
-            append("cfg=${trace.voiceprintFeatureIdsConfigured.size}, ")
-            append("seen=${trace.voiceprintRoleLabelsSeen.size}, ")
-            append("matched=${trace.voiceprintRoleLabelsMatched.size}")
-        }
-        KeyValueRow(label = "voiceprint", value = vpSummary, copyValue = vpSummary)
-        trace.voiceprintDisabledReason?.takeIf { it.isNotBlank() }?.let { reason ->
-            KeyValueRow(label = "vpDisabledReason", value = reason, copyValue = reason)
-        }
-        trace.voiceprintBaseUrlHostUsed?.takeIf { it.isNotBlank() }?.let { host ->
-            KeyValueRow(label = "vpBaseUrlHost", value = host, copyValue = host)
-        }
-        // 重要：
-        // - featureIds/rl 可能是敏感标识：HUD 不应默认明文展示。
-        // - 这里只提供 copy-only JSON 供排错，且不包含任何签名/密钥/原始 HTTP 包体。
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            TextButton(onClick = { onCopy(XfyunDebugInfoFormatter.voiceprintSettingsJson(trace)) }) {
-                Text(text = "复制声纹设置(JSON)")
-            }
-            TextButton(onClick = { onCopy(XfyunDebugInfoFormatter.voiceprintRoleLabelsJson(trace.voiceprintRoleLabelsSeen)) }) {
-                Text(text = "复制 rl_seen(JSON)")
-            }
-            TextButton(onClick = { onCopy(XfyunDebugInfoFormatter.voiceprintRoleLabelsJson(trace.voiceprintRoleLabelsMatched)) }) {
-                Text(text = "复制 rl_matched(JSON)")
-            }
-            TextButton(onClick = { onCopy(XfyunDebugInfoFormatter.voiceprintFeatureIdOrdinalMapJson(trace.voiceprintFeatureIdOrdinalMap)) }) {
-                Text(text = "复制 featureId→ordinal(JSON)")
-            }
-        }
-
-        // --- PostXFyun (compact + runtime proof) ---
-        val postSettings = trace.postXfyunSettings
-        var showPromptPreview by remember { mutableStateOf(false) }
-        var showBatches by remember { mutableStateOf(false) }
-        var showSuspicious by remember { mutableStateOf(false) }
-        var showEvidence by remember { mutableStateOf(false) }
-
-        @Composable
-        fun ProofRow(
-            label: String,
-            value: String?,
-            copyValue: String? = value,
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(0.34f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = value?.ifBlank { "-" } ?: "-",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(0.5f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                TextButton(
-                    onClick = { onCopy(copyValue ?: "") },
-                    enabled = !copyValue.isNullOrBlank(),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                ) {
-                    Text(text = "Copy")
-                }
-            }
-        }
-
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            tonalElevation = 2.dp,
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    text = "PostXFyun",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-
-                val runStatus = postSettings?.runStatus ?: "UNKNOWN"
-                val statusLabel = when (runStatus) {
-                    "SKIPPED_DISABLED", "SKIPPED_INVALID_INPUT" -> "SKIPPED"
-                    "RAN_REWRITE" -> "RAN"
-                    "FAILED" -> "FAILED"
-                    else -> runStatus
-                }
-                ProofRow("Status", statusLabel, statusLabel)
-                postSettings?.skipReason?.takeIf { it.isNotBlank() }?.let { reason ->
-                    Text(
-                        text = "Reason: ${reason.take(120)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-
-                ProofRow("Enabled", postSettings?.enabled?.toString(), postSettings?.enabled?.toString())
-                ProofRow("Model requested", postSettings?.modelRequested, postSettings?.modelRequested)
-                ProofRow("Model used", postSettings?.modelUsed, postSettings?.modelUsed)
-
-                ProofRow("Prompt template sha", postSettings?.promptSha256, postSettings?.promptSha256)
-                ProofRow("Prompt effective sha", postSettings?.promptEffectiveSha256, postSettings?.promptEffectiveSha256)
-
-                // 重要：UI 不允许 inline 展示任何 raw JSON（包括 LLM 决策 JSON 预览），只提供 copy-only 按钮。
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    TextButton(
-                        onClick = { onCopy(XfyunDebugInfoFormatter.postXfyunSettingsJson(trace.postXfyunSettings)) },
-                        enabled = trace.postXfyunSettings != null,
-                    ) {
-                        Text(text = "Copy settings JSON")
-                    }
-                    TextButton(onClick = { onCopy(XfyunDebugInfoFormatter.postXfyunBatchPlanJson(trace.postXfyunBatchPlan)) }) {
-                        Text(text = "Copy batch plan JSON")
-                    }
-                    TextButton(onClick = { onCopy(XfyunDebugInfoFormatter.postXfyunSuspiciousJson(trace.postXfyunSuspicious)) }) {
-                        Text(text = "Copy hints JSON")
-                    }
-                    TextButton(onClick = { onCopy(XfyunDebugInfoFormatter.postXfyunDecisionsJson(trace.postXfyunDecisions)) }) {
-                        Text(text = "Copy decisions JSON")
-                    }
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    TextButton(
-                        onClick = { onCopy(XfyunDebugInfoFormatter.postXfyunLlmPreviewText(trace)) },
-                        enabled = trace.postXfyunDecisions.isNotEmpty() || !trace.postXfyunSettings?.rewriteOutputPreview.isNullOrBlank(),
-                    ) {
-                        Text(text = "Copy LLM preview")
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    TextButton(
-                        onClick = {
-                            val preview = postSettings?.promptEffectivePreview
-                            if (preview.isNullOrBlank()) {
-                                Toast.makeText(context, "No effective prompt preview", Toast.LENGTH_SHORT).show()
-                                return@TextButton
-                            }
-                            onCopy(preview)
-                        }
-                    ) { Text(text = "Copy effective prompt preview") }
-                    TextButton(onClick = { showPromptPreview = !showPromptPreview }) {
-                        Text(text = if (showPromptPreview) "Hide" else "Show")
-                    }
-                }
-                if (showPromptPreview) {
-                    Text(
-                        text = postSettings?.promptEffectivePreview ?: "-",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-
-                val stats = "Candidates=${trace.postXfyunCandidatesCount}, Attempts=${trace.postXfyunArbitrationsAttempted}/${trace.postXfyunArbitrationBudget}, Repairs=${trace.postXfyunRepairsApplied}"
-                ProofRow("Stats", stats, stats)
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    TextButton(
-                        onClick = {
-                            val text = trace.postXfyunOriginalMarkdown
-                            if (text.isNullOrBlank()) {
-                                Toast.makeText(context, "No original transcript", Toast.LENGTH_SHORT).show()
-                                return@TextButton
-                            }
-                            onCopy(text)
-                        }
-                    ) { Text(text = "Copy original") }
-                    TextButton(
-                        onClick = {
-                            val text = trace.postXfyunPolishedMarkdown
-                            if (text.isNullOrBlank()) {
-                                Toast.makeText(context, "No polished transcript", Toast.LENGTH_SHORT).show()
-                                return@TextButton
-                            }
-                            onCopy(text)
-                        }
-                    ) { Text(text = "Copy polished") }
-                }
-
-                // Batches (collapsed by default)
-                TextButton(
-                    onClick = { showBatches = !showBatches },
-                    contentPadding = PaddingValues(horizontal = 0.dp),
-                ) {
-                    Text(text = if (showBatches) "Hide batches (${trace.postXfyunBatchPlan.size})" else "Show batches (${trace.postXfyunBatchPlan.size})")
-                }
-                if (showBatches) {
-                    trace.postXfyunBatchPlan.take(5).forEach { batch ->
-                        Text(
-                            text = "${batch.batchId} [${batch.startLineIndex}..${batch.endLineIndexInclusive}]",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-
-                // Suspicious boundaries (collapsed by default)
-                TextButton(
-                    onClick = { showSuspicious = !showSuspicious },
-                    contentPadding = PaddingValues(horizontal = 0.dp),
-                ) {
-                    Text(text = if (showSuspicious) "Hide suspicious boundaries (${trace.postXfyunSuspicious.size})" else "Show suspicious boundaries (${trace.postXfyunSuspicious.size})")
-                }
-                if (showSuspicious) {
-                    trace.postXfyunSuspicious.take(5).forEach { item ->
-                        val prev = item.prevSpeakerId ?: "-"
-                        val next = item.nextSpeakerId ?: "-"
-                        Text(
-                            text = "${item.susId} #${item.boundaryIndex} b=${item.batchId} local=${item.localBoundaryIndex} gapMs=${item.gapMs} prev=$prev next=$next",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-
-                // LLM evidence (collapsed by default)
-                TextButton(
-                    onClick = { showEvidence = !showEvidence },
-                    contentPadding = PaddingValues(horizontal = 0.dp),
-                ) {
-                    Text(text = if (showEvidence) "Hide LLM evidence" else "Show LLM evidence")
-                }
-                if (showEvidence) {
-                    trace.postXfyunDecisions.take(3).forEach { item ->
-                        Text(
-                            text = "[${item.attemptIndex}] ${item.susId} #${item.boundaryIndex} gapMs=${item.gapMs} " +
-                                "apply=${item.applyStatus} parse=${item.parseStatus} model=${item.modelUsed ?: "-"} reason=${item.reason ?: "-"}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-            }
+        trace.orderId?.takeIf { it.isNotBlank() }?.let { orderId ->
+            Text(
+                text = "orderId: ${orderId.take(64)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 
@@ -2176,74 +1805,6 @@ private fun VoiceprintLabPanel(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-    }
-}
-
-private fun formatElapsed(valueMs: Long): String {
-    if (valueMs <= 0) return "-"
-    val totalSeconds = valueMs / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return "${minutes}m${seconds}s"
-}
-
-private fun formatParams(params: Map<String, String>): String {
-    if (params.isEmpty()) return "{}"
-    return buildString {
-        appendLine("{")
-        params.entries.forEachIndexed { index, (key, value) ->
-            val comma = if (index == params.size - 1) "" else ","
-            appendLine("  \"$key\": \"$value\"$comma")
-        }
-        append("}")
-    }
-}
-
-@Composable
-private fun DebugJsonBlock(
-    label: String,
-    json: String?,
-    onCopy: (String) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            if (!json.isNullOrBlank()) {
-                TextButton(onClick = { onCopy(json) }) { Text(text = "复制") }
-            }
-        }
-        val display = if (expanded) json ?: "-" else json?.take(240) ?: "-"
-        Text(
-            text = display,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = if (expanded) Int.MAX_VALUE else 8,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .padding(8.dp)
-                .clickable { expanded = !expanded }
-        )
-        if (!json.isNullOrBlank()) {
-            Text(
-                text = if (expanded) "点击收起" else "点击展开",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
     }
 }
 

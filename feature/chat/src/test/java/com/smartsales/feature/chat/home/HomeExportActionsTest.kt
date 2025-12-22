@@ -65,6 +65,7 @@ import com.smartsales.feature.media.audiofiles.AudioStorageRepository
 import com.smartsales.feature.media.audiofiles.StoredAudio
 import com.smartsales.feature.chat.testutil.TestContext
 import com.smartsales.feature.chat.testutil.buildNoopXfyunVoiceprintApi
+import com.smartsales.feature.chat.testutil.NoopDebugOrchestrator
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeExportActionsTest {
@@ -165,6 +166,7 @@ class HomeExportActionsTest {
                 override suspend fun clear() {}
             },
             metaHub = metaHub,
+            debugOrchestrator = NoopDebugOrchestrator(),
             exportOrchestrator = exportOrchestrator,
             shareHandler = shareHandler,
             xfyunTraceStore = XfyunTraceStore(),

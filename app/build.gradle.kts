@@ -93,6 +93,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.coroutines.android)
     implementation(libs.hilt.android)
+    implementation(libs.gson)
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
     kapt(libs.hilt.compiler)

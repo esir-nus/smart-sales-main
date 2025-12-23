@@ -98,9 +98,9 @@ Legend: TODO / DOING / DONE / BLOCKED
   - `data/ai-core/src/test/java/com/smartsales/data/aicore/ExportNameResolverTest.kt`
   - `feature/chat/src/test/java/com/smartsales/feature/chat/history/ChatHistoryViewModelTest.kt`
   - Tests:
-    - `./gradlew :core:util:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 14s）
-    - `./gradlew :data:ai-core:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 15s）
-    - `./gradlew :feature:chat:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 34s）
+    - `./gradlew :core:util:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 8s）
+    - `./gradlew :data:ai-core:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 18s）
+    - `./gradlew :feature:chat:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 12s）
 - Semantics summary:
   - M3 命名直接写入 `SessionMetadata.renaming`，避免平行 SessionState 结构。
   - accepted 优先于 candidate，candidate 更新不会覆盖 accepted（合并与 helper 均遵循）。
@@ -195,6 +195,26 @@ Legend: TODO / DOING / DONE / BLOCKED
 - Definition of done:
   - feature flag + consent gates defined
   - HUD Section 1 logs pack versions + traceId (when enabled)
+
+### T7-009 Implementation: Persistent MetaHub (file-backed)
+- Status: DONE
+- Evidence:
+  - `data/ai-core/src/main/java/com/smartsales/data/aicore/metahub/FileBackedMetaHub.kt`
+  - `app/src/main/java/com/smartsales/aitest/MetaHubModule.kt`
+  - `data/ai-core/src/test/java/com/smartsales/data/aicore/metahub/FileBackedMetaHubTest.kt`
+  - Tests:
+    - `./gradlew :core:util:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 14s）
+    - `./gradlew :data:ai-core:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 15s）
+    - `./gradlew :feature:chat:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 34s）
+- Notes:
+  - 仅持久化 SessionMetadata（含 M3 renaming）；M2 patch 仍未落盘（V7 mismatch，需后续专门任务）
+- 📱 On-device sanity checklist (manual):
+  - [ ] 进入会话并执行智能分析，生成 latestMajorAnalysis*
+  - [ ] 手动重命名会话（写入 M3 accepted）
+  - [ ] 强制停止 App 后重启
+  - [ ] 验证导出 gate 仍为已就绪
+  - [ ] 验证 HUD Section 1 显示相同 sessionId + M3 accepted 命名
+  - [ ] 验证会话改名仍存在
 
 ---
 

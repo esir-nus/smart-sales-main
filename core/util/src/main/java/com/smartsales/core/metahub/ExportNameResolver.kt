@@ -37,6 +37,7 @@ object ExportNameResolver {
         meta: SessionMetadata?,
         nowMillis: Long = System.currentTimeMillis()
     ): ExportNameResolution {
+        resolveByRenaming(meta?.renaming)?.let { return it }
         val normalizedTitle = sessionTitle
             ?.trim()
             ?.takeIf { it.isNotBlank() && !SessionTitlePolicy.isPlaceholder(it) }
@@ -66,6 +67,34 @@ object ExportNameResolver {
         return ExportNameResolution(
             baseName = sanitizeBaseName(fallback),
             source = ExportNameSource.FALLBACK
+        )
+    }
+
+    private fun resolveByRenaming(renaming: RenamingMetadata?): ExportNameResolution? {
+        if (renaming == null) return null
+        // 规则：所有 accepted 优先于任何 candidate
+        resolveAccepted(renaming.exportTitle)?.let { return it }
+        resolveAccepted(renaming.sessionTitle)?.let { return it }
+        resolveCandidate(renaming.exportTitle)?.let { return it }
+        resolveCandidate(renaming.sessionTitle)?.let { return it }
+        return null
+    }
+
+    private fun resolveAccepted(metadata: AcceptedAndCandidate): ExportNameResolution? {
+        val accepted = metadata.accepted?.trim().orEmpty()
+        if (accepted.isBlank()) return null
+        return ExportNameResolution(
+            baseName = sanitizeBaseName(accepted),
+            source = ExportNameSource.ACCEPTED
+        )
+    }
+
+    private fun resolveCandidate(metadata: AcceptedAndCandidate): ExportNameResolution? {
+        val candidate = metadata.candidate?.trim().orEmpty()
+        if (candidate.isBlank()) return null
+        return ExportNameResolution(
+            baseName = sanitizeBaseName(candidate),
+            source = ExportNameSource.CANDIDATE
         )
     }
 

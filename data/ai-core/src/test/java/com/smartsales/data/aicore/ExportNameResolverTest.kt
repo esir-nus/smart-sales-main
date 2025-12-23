@@ -7,6 +7,8 @@ package com.smartsales.data.aicore
 
 import com.smartsales.core.metahub.ExportNameResolver
 import com.smartsales.core.metahub.ExportNameSource
+import com.smartsales.core.metahub.AcceptedAndCandidate
+import com.smartsales.core.metahub.RenamingMetadata
 import com.smartsales.core.metahub.SessionMetadata
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -38,6 +40,29 @@ class ExportNameResolverTest {
 
         assertEquals(ExportNameSource.CANDIDATE, resolution.source)
         assertEquals("自动标题", resolution.baseName)
+    }
+
+    @Test
+    fun resolve_prefersM3RenamingWhenPresent() {
+        val meta = SessionMetadata(
+            sessionId = "s-3",
+            renaming = RenamingMetadata(
+                sessionTitle = AcceptedAndCandidate(
+                    accepted = "用户确认名",
+                    candidate = "候选名"
+                ),
+                exportTitle = AcceptedAndCandidate(candidate = "导出候选名")
+            )
+        )
+        val resolution = ExportNameResolver.resolve(
+            sessionId = "s-3",
+            sessionTitle = "旧标题",
+            isTitleUserEdited = true,
+            meta = meta
+        )
+
+        assertEquals(ExportNameSource.ACCEPTED, resolution.source)
+        assertEquals("用户确认名", resolution.baseName)
     }
 
     @Test

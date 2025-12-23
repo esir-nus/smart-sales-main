@@ -6,6 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.smartsales.core.util.LogTags
 import com.smartsales.feature.chat.AiSessionRepository
 import com.smartsales.feature.chat.AiSessionSummary
+import com.smartsales.core.metahub.MetaHub
+import com.smartsales.core.metahub.Provenance
+import com.smartsales.core.metahub.RenamingTarget
+import com.smartsales.core.metahub.setM3AcceptedName
 import javax.inject.Inject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import androidx.annotation.VisibleForTesting
@@ -55,7 +59,8 @@ sealed class ChatHistoryEvent {
 @HiltViewModel
 class ChatHistoryViewModel @Inject constructor(
     private val aiSessionRepository: AiSessionRepository,
-    private val chatHistoryRepository: ChatHistoryRepository
+    private val chatHistoryRepository: ChatHistoryRepository,
+    private val metaHub: MetaHub
 ) : ViewModel() {
 
     private var nowProvider: () -> Long = { System.currentTimeMillis() }
@@ -106,8 +111,18 @@ class ChatHistoryViewModel @Inject constructor(
                 _uiState.update { it.copy(errorMessage = "会话不存在") }
                 return@launch
             }
-            val updated = session.copy(title = newTitle, isTitleUserEdited = true)
-            safeUpsert(updated)
+            aiSessionRepository.updateTitle(sessionId, newTitle, isUserEdited = true)
+            // 用户确认改名：写入 M3 accepted，确保稳定优先级
+            metaHub.setM3AcceptedName(
+                sessionId = sessionId,
+                target = RenamingTarget.SESSION_TITLE,
+                name = newTitle,
+                prov = Provenance(
+                    source = "user_rename",
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
+            safeUpsert(session.copy(title = newTitle, isTitleUserEdited = true))
         }
     }
 

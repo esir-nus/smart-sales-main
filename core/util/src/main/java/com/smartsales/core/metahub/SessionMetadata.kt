@@ -21,6 +21,7 @@ data class SessionMetadata(
     val latestMajorAnalysisMessageId: String? = null,
     val latestMajorAnalysisAt: Long? = null,
     val latestMajorAnalysisSource: AnalysisSource? = null,
+    val renaming: RenamingMetadata = RenamingMetadata(),
     val crmRows: List<CrmRow> = emptyList()
 ) {
     /**
@@ -39,6 +40,8 @@ data class SessionMetadata(
         latestMajorAnalysisMessageId = other.latestMajorAnalysisMessageId ?: latestMajorAnalysisMessageId,
         latestMajorAnalysisAt = other.latestMajorAnalysisAt ?: latestMajorAnalysisAt,
         latestMajorAnalysisSource = other.latestMajorAnalysisSource ?: latestMajorAnalysisSource,
+        // 重要：命名字段遵循 accepted > candidate，candidate 不得覆盖 accepted
+        renaming = renaming.mergeWith(other.renaming),
         crmRows = mergeCrmRows(crmRows, other.crmRows)
     )
 

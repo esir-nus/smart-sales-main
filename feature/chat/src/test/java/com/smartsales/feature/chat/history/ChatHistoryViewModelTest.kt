@@ -2,6 +2,7 @@ package com.smartsales.feature.chat.history
 
 import com.smartsales.feature.chat.AiSessionRepository
 import com.smartsales.feature.chat.AiSessionSummary
+import com.smartsales.core.metahub.InMemoryMetaHub
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -31,6 +32,7 @@ class ChatHistoryViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val sessionRepository = FakeAiSessionRepository()
     private val historyRepository = FakeChatHistoryRepository()
+    private val metaHub = InMemoryMetaHub()
     private val fixedNow = 40L * 24 * 60 * 60 * 1000 // 40 天标尺，方便分桶
     @Before
     fun setUp() {
@@ -190,7 +192,7 @@ class ChatHistoryViewModelTest {
     }
 
     private fun buildViewModel(): ChatHistoryViewModel =
-        ChatHistoryViewModel(sessionRepository, historyRepository).also {
+        ChatHistoryViewModel(sessionRepository, historyRepository, metaHub).also {
             it.overrideNowProvider { fixedNow }
         }
 

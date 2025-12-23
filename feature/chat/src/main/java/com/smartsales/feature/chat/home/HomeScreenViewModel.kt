@@ -31,6 +31,9 @@ import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.SessionTitlePolicy
 import com.smartsales.core.metahub.AnalysisSource
 import com.smartsales.core.metahub.SessionMetadataLabelProvider
+import com.smartsales.core.metahub.Provenance
+import com.smartsales.core.metahub.RenamingTarget
+import com.smartsales.core.metahub.setM3AcceptedName
 import com.smartsales.feature.chat.home.CHAT_DEBUG_HUD_ENABLED
 import com.smartsales.feature.chat.BuildConfig
 import com.smartsales.feature.chat.history.toEntity
@@ -1590,6 +1593,16 @@ class HomeScreenViewModel @Inject constructor(
         if (trimmed.isEmpty()) return
         viewModelScope.launch {
             sessionRepository.updateTitle(sessionId, trimmed, isUserEdited = true)
+            // 用户确认改名：写入 M3 accepted，后续候选不得覆盖
+            metaHub.setM3AcceptedName(
+                sessionId = sessionId,
+                target = RenamingTarget.SESSION_TITLE,
+                name = trimmed,
+                prov = Provenance(
+                    source = "user_rename",
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
             latestSessionSummaries = latestSessionSummaries.map { summary ->
                 if (summary.id == sessionId) {
                     summary.copy(title = trimmed, isTitleUserEdited = true)

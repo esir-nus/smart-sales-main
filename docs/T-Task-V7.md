@@ -85,6 +85,29 @@ Legend: TODO / DOING / DONE / BLOCKED
   - M2 writes are patch-based with provenance
   - M3 renaming accepted vs candidate works and is stable after user override
 
+### T7-004A Implementation: MetaHub M3 naming stability (candidate/accepted/effective)
+- Status: DONE
+- Evidence:
+  - `core/util/src/main/java/com/smartsales/core/metahub/RenamingMetadata.kt`
+  - `core/util/src/main/java/com/smartsales/core/metahub/MetaHubRenamingHelper.kt`
+  - `core/util/src/main/java/com/smartsales/core/metahub/SessionMetadata.kt`
+  - `core/util/src/main/java/com/smartsales/core/metahub/ExportNameResolver.kt`
+  - `feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreenViewModel.kt`
+  - `feature/chat/src/main/java/com/smartsales/feature/chat/history/ChatHistoryViewModel.kt`
+  - `core/util/src/test/java/com/smartsales/core/metahub/RenamingMetadataTest.kt`
+  - `data/ai-core/src/test/java/com/smartsales/data/aicore/ExportNameResolverTest.kt`
+  - `feature/chat/src/test/java/com/smartsales/feature/chat/history/ChatHistoryViewModelTest.kt`
+  - Tests:
+    - `./gradlew :core:util:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 14s）
+    - `./gradlew :data:ai-core:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 15s）
+    - `./gradlew :feature:chat:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 34s）
+- Semantics summary:
+  - M3 命名直接写入 `SessionMetadata.renaming`，避免平行 SessionState 结构。
+  - accepted 优先于 candidate，candidate 更新不会覆盖 accepted（合并与 helper 均遵循）。
+  - effective name 解析为 accepted > candidate > fallback。
+  - ExportNameResolver 优先使用 M3 命名：先所有 accepted，再 candidate。
+  - 用户手动改名时写入 M3 accepted 与对应时间戳（userRenamedAt）。
+
 ### T7-005 Implementation: provider lane selection (default Tingwu+OSS; XFyun disabled)
 - Status: DONE
 - Definition of done:

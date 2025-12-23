@@ -20,6 +20,16 @@ interface MetaHub {
     suspend fun getSession(sessionId: String): SessionMetadata?
 
     /**
+     * 追加 M2 补丁（内部派生结构），用于计算有效的 ConversationDerivedState。
+     */
+    suspend fun appendM2Patch(sessionId: String, patch: M2PatchRecord)
+
+    /**
+     * 读取有效的 M2 会话派生状态。
+     */
+    suspend fun getEffectiveM2(sessionId: String): ConversationDerivedState?
+
+    /**
      * 写入或覆盖转写元数据。
      */
     suspend fun upsertTranscript(metadata: TranscriptMetadata)

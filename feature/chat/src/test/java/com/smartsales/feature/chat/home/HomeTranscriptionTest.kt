@@ -45,6 +45,9 @@ import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.TranscriptMetadata
 import com.smartsales.core.metahub.ExportMetadata
 import com.smartsales.core.metahub.TokenUsage
+import com.smartsales.core.metahub.ConversationDerivedState
+import com.smartsales.core.metahub.M2PatchRecord
+import com.smartsales.core.metahub.applyM2PatchHistory
 import com.smartsales.feature.chat.ChatShareHandler
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -444,8 +447,28 @@ class HomeTranscriptionTest {
     }
 
     private class FakeMetaHub : MetaHub {
-        override suspend fun upsertSession(metadata: SessionMetadata) {}
-        override suspend fun getSession(sessionId: String): SessionMetadata? = null
+        private val sessionStore = mutableMapOf<String, SessionMetadata>()
+        private val m2PatchHistoryBySession = mutableMapOf<String, MutableList<M2PatchRecord>>()
+
+        override suspend fun upsertSession(metadata: SessionMetadata) {
+            sessionStore[metadata.sessionId] = metadata
+        }
+        override suspend fun getSession(sessionId: String): SessionMetadata? = sessionStore[sessionId]
+        override suspend fun appendM2Patch(sessionId: String, patch: M2PatchRecord) {
+            // 说明：测试替身按追加顺序保存 M2 补丁，避免非确定性合并。
+            val history = m2PatchHistoryBySession.getOrPut(sessionId) { mutableListOf() }
+            history.add(patch)
+            val current = sessionStore[sessionId] ?: SessionMetadata(sessionId = sessionId)
+            sessionStore[sessionId] = current.copy(
+                effectiveM2 = applyM2PatchHistory(history),
+                m2PatchHistory = history.toList()
+            )
+        }
+        override suspend fun getEffectiveM2(sessionId: String): ConversationDerivedState? {
+            val history = m2PatchHistoryBySession[sessionId] ?: return null
+            if (history.isEmpty()) return null
+            return sessionStore[sessionId]?.effectiveM2 ?: applyM2PatchHistory(history)
+        }
         override suspend fun upsertTranscript(metadata: TranscriptMetadata) {}
         override suspend fun getTranscriptBySession(sessionId: String): TranscriptMetadata? = null
         override suspend fun upsertExport(metadata: ExportMetadata) {}

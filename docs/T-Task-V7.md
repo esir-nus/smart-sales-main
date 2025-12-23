@@ -80,10 +80,32 @@ Legend: TODO / DOING / DONE / BLOCKED
   - `docs/source-repo.schema.json`
 
 ### T7-004 Implementation: MetaHub storage for M2/M3 (patch-based)
-- Status: TODO
+- Status: DONE
 - Definition of done:
   - M2 writes are patch-based with provenance
   - M3 renaming accepted vs candidate works and is stable after user override
+ - Evidence:
+  - `core/util/src/main/java/com/smartsales/core/metahub/ConversationDerivedState.kt`
+  - `core/util/src/main/java/com/smartsales/core/metahub/M2PatchRecord.kt`
+  - `core/util/src/main/java/com/smartsales/core/metahub/MetaHubM2Helper.kt`
+  - `core/util/src/main/java/com/smartsales/core/metahub/MetaHub.kt`
+  - `core/util/src/main/java/com/smartsales/core/metahub/InMemoryMetaHub.kt`
+  - `data/ai-core/src/main/java/com/smartsales/data/aicore/metahub/FileBackedMetaHub.kt`
+  - `core/util/src/test/java/com/smartsales/core/metahub/M2PatchMergeTest.kt`
+  - `data/ai-core/src/test/java/com/smartsales/data/aicore/metahub/FileBackedMetaHubTest.kt`
+  - Tests:
+    - `./gradlew :core:util:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 7s）
+    - `./gradlew :data:ai-core:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 14s）
+    - `./gradlew :feature:chat:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 22s）
+ - Semantics summary:
+  - M2 补丁记录为内部派生结构（schema 未定义 patch type），仅用于存储与确定性合并。
+  - 合并按补丁追加顺序应用，后写覆盖（仅覆盖补丁中显式字段）。
+  - effective.updatedAt 取最后一个补丁 createdAt；version 取补丁数量，读取不产生新时间戳。
+  - PatchHistory 与 effectiveM2 落盘由 FileBackedMetaHub 统一持久化（原子写）。
+ - 📱 On-device sanity checklist (manual):
+  - [ ] 触发至少 1 个 M2 补丁写入（使用现有调试入口/流程）
+  - [ ] 强制停止 App 后重启
+  - [ ] 验证同一 session 的 m2PatchHistory/effectiveM2 仍可加载（HUD/文件路径确认）
 
 ### T7-004A Implementation: MetaHub M3 naming stability (candidate/accepted/effective)
 - Status: DONE

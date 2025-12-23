@@ -37,6 +37,25 @@ class InMemoryMetaHub : MetaHub {
     override suspend fun getSession(sessionId: String): SessionMetadata? =
         sessionMutex.withLock { sessionStore[sessionId] }
 
+    override suspend fun appendM2Patch(sessionId: String, patch: M2PatchRecord) {
+        sessionMutex.withLock {
+            val existing = sessionStore[sessionId] ?: SessionMetadata(sessionId = sessionId)
+            val history = existing.m2PatchHistory + patch
+            val effective = applyM2PatchHistory(history)
+            sessionStore[sessionId] = existing.copy(
+                effectiveM2 = effective,
+                m2PatchHistory = history
+            )
+        }
+    }
+
+    override suspend fun getEffectiveM2(sessionId: String): ConversationDerivedState? =
+        sessionMutex.withLock {
+            val existing = sessionStore[sessionId] ?: return@withLock null
+            if (existing.m2PatchHistory.isEmpty()) return@withLock null
+            existing.effectiveM2 ?: applyM2PatchHistory(existing.m2PatchHistory)
+        }
+
     override suspend fun upsertTranscript(metadata: TranscriptMetadata) {
         transcriptMutex.withLock {
             val existing = transcriptStoreById[metadata.transcriptId]

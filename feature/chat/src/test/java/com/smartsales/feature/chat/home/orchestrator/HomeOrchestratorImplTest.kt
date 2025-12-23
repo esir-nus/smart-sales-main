@@ -11,6 +11,9 @@ import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.TokenUsage
 import com.smartsales.core.metahub.TranscriptMetadata
+import com.smartsales.core.metahub.ConversationDerivedState
+import com.smartsales.core.metahub.M2PatchRecord
+import com.smartsales.core.metahub.applyM2PatchHistory
 import com.smartsales.feature.chat.core.AiChatService
 import com.smartsales.feature.chat.core.ChatRequest
 import com.smartsales.feature.chat.core.ChatStreamEvent
@@ -556,11 +559,27 @@ class HomeOrchestratorImplTest {
 
     private class RecordingMetaHub : MetaHub {
         var lastSession: SessionMetadata? = null
+        private val m2PatchHistoryBySession = mutableMapOf<String, MutableList<M2PatchRecord>>()
         override suspend fun upsertSession(metadata: SessionMetadata) {
             lastSession = metadata
         }
 
         override suspend fun getSession(sessionId: String): SessionMetadata? = lastSession
+        override suspend fun appendM2Patch(sessionId: String, patch: M2PatchRecord) {
+            // 说明：测试替身按追加顺序保存 M2 补丁，确保合并稳定可测。
+            val history = m2PatchHistoryBySession.getOrPut(sessionId) { mutableListOf() }
+            history.add(patch)
+            val current = lastSession ?: SessionMetadata(sessionId = sessionId)
+            lastSession = current.copy(
+                effectiveM2 = applyM2PatchHistory(history),
+                m2PatchHistory = history.toList()
+            )
+        }
+        override suspend fun getEffectiveM2(sessionId: String): ConversationDerivedState? {
+            val history = m2PatchHistoryBySession[sessionId] ?: return null
+            if (history.isEmpty()) return null
+            return lastSession?.effectiveM2 ?: applyM2PatchHistory(history)
+        }
         override suspend fun upsertTranscript(metadata: TranscriptMetadata) {}
         override suspend fun getTranscriptBySession(sessionId: String): TranscriptMetadata? = null
         override suspend fun upsertExport(metadata: ExportMetadata) {}

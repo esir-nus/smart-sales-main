@@ -7,6 +7,11 @@ package com.smartsales.data.aicore.metahub
 
 import com.google.gson.Gson
 import com.smartsales.core.metahub.AcceptedAndCandidate
+import com.smartsales.core.metahub.ConversationDerivedStateDelta
+import com.smartsales.core.metahub.DerivedEnumWithProv
+import com.smartsales.core.metahub.M2PatchRecord
+import com.smartsales.core.metahub.Provenance
+import com.smartsales.core.metahub.RawSignals
 import com.smartsales.core.metahub.RenamingMetadata
 import com.smartsales.core.metahub.SessionMetadata
 import java.nio.file.Files
@@ -68,5 +73,32 @@ class FileBackedMetaHubTest {
         val stored = metaHub.getSession("s2")
         assertEquals("客户B", stored?.mainPerson)
         assertEquals("旧摘要", stored?.shortSummary)
+    }
+
+    @Test
+    fun appendM2Patch_persistsEffectiveAndHistory() = runTest {
+        val dir = Files.createTempDirectory("metahub-test").toFile()
+        val gson = Gson()
+        val metaHub = FileBackedMetaHub(dir, gson)
+        val prov = Provenance(source = "test", updatedAt = 100L)
+        val patch = M2PatchRecord(
+            patchId = "p1",
+            createdAt = 10L,
+            prov = prov,
+            payload = ConversationDerivedStateDelta(
+                rawSignals = RawSignals(
+                    dealRiskLevel = DerivedEnumWithProv(value = "LOW", prov = prov)
+                )
+            )
+        )
+
+        metaHub.appendM2Patch("s3", patch)
+
+        val reloaded = FileBackedMetaHub(dir, gson)
+        val effective = reloaded.getEffectiveM2("s3")
+        val stored = reloaded.getSession("s3")
+        assertEquals("LOW", effective?.rawSignals?.dealRiskLevel?.value)
+        assertEquals(1, stored?.m2PatchHistory?.size)
+        assertEquals("p1", stored?.m2PatchHistory?.firstOrNull()?.patchId)
     }
 }

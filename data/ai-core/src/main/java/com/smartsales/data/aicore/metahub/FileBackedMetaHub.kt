@@ -6,11 +6,14 @@ package com.smartsales.data.aicore.metahub
 // 作者：创建于 2025-12-23
 
 import com.google.gson.Gson
+import com.smartsales.core.metahub.ConversationDerivedState
 import com.smartsales.core.metahub.ExportMetadata
+import com.smartsales.core.metahub.M2PatchRecord
 import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.TokenUsage
 import com.smartsales.core.metahub.TranscriptMetadata
+import com.smartsales.core.metahub.applyM2PatchHistory
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.sync.Mutex
@@ -57,6 +60,36 @@ class FileBackedMetaHub(
             sessionCache[sessionId] ?: loadSessionLocked(sessionId)?.also {
                 sessionCache[sessionId] = it
             }
+        }
+    }
+
+    override suspend fun appendM2Patch(sessionId: String, patch: M2PatchRecord) {
+        val sessionLock = lockFor(sessionId)
+        sessionLock.withLock {
+            val existing = sessionCache[sessionId]
+                ?: loadSessionLocked(sessionId)
+                ?: SessionMetadata(sessionId = sessionId)
+            val history = existing.m2PatchHistory + patch
+            val effective = applyM2PatchHistory(history)
+            val updated = existing.copy(
+                effectiveM2 = effective,
+                m2PatchHistory = history
+            )
+            sessionCache[sessionId] = updated
+            // 重要：补丁写入失败不能静默吞掉，否则会造成补丁丢失与持久化不一致。
+            persistSessionLocked(updated)
+        }
+    }
+
+    override suspend fun getEffectiveM2(sessionId: String): ConversationDerivedState? {
+        val sessionLock = lockFor(sessionId)
+        return sessionLock.withLock {
+            val existing = sessionCache[sessionId] ?: loadSessionLocked(sessionId)?.also {
+                sessionCache[sessionId] = it
+            }
+            val history = existing?.m2PatchHistory ?: return@withLock null
+            if (history.isEmpty()) return@withLock null
+            existing.effectiveM2 ?: applyM2PatchHistory(history)
         }
     }
 

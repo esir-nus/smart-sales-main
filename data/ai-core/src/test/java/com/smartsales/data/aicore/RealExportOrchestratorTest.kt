@@ -10,6 +10,9 @@ import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.TokenUsage
 import com.smartsales.core.metahub.AnalysisSource
+import com.smartsales.core.metahub.ConversationDerivedState
+import com.smartsales.core.metahub.M2PatchRecord
+import com.smartsales.core.metahub.applyM2PatchHistory
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -143,10 +146,25 @@ class RealExportOrchestratorTest {
     private class RecordingMetaHub : MetaHub {
         var session: SessionMetadata? = null
         var export: ExportMetadata? = null
+        private val m2PatchHistory = mutableListOf<M2PatchRecord>()
         override suspend fun upsertSession(metadata: SessionMetadata) {
             session = metadata
         }
         override suspend fun getSession(sessionId: String): SessionMetadata? = session
+        override suspend fun appendM2Patch(sessionId: String, patch: M2PatchRecord) {
+            // 说明：测试替身按追加顺序保存 M2 补丁，确保确定性合并。
+            val current = session ?: SessionMetadata(sessionId = sessionId)
+            m2PatchHistory.add(patch)
+            val effective = applyM2PatchHistory(m2PatchHistory)
+            session = current.copy(
+                effectiveM2 = effective,
+                m2PatchHistory = m2PatchHistory.toList()
+            )
+        }
+        override suspend fun getEffectiveM2(sessionId: String): ConversationDerivedState? {
+            if (m2PatchHistory.isEmpty()) return null
+            return session?.effectiveM2 ?: applyM2PatchHistory(m2PatchHistory)
+        }
         override suspend fun upsertTranscript(metadata: com.smartsales.core.metahub.TranscriptMetadata) {}
         override suspend fun getTranscriptBySession(sessionId: String): com.smartsales.core.metahub.TranscriptMetadata? = null
         override suspend fun upsertExport(metadata: ExportMetadata) {

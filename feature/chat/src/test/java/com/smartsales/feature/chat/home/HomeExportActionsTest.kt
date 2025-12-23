@@ -62,6 +62,9 @@ import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.TranscriptMetadata
 import com.smartsales.core.metahub.ExportMetadata
 import com.smartsales.core.metahub.TokenUsage
+import com.smartsales.core.metahub.ConversationDerivedState
+import com.smartsales.core.metahub.M2PatchRecord
+import com.smartsales.core.metahub.applyM2PatchHistory
 import android.net.Uri
 import com.smartsales.feature.media.audiofiles.AudioStorageRepository
 import com.smartsales.feature.media.audiofiles.StoredAudio
@@ -434,10 +437,26 @@ class HomeExportActionsTest {
 
     private class FakeMetaHub : MetaHub {
         var session: SessionMetadata? = null
+        private val m2PatchHistoryBySession = mutableMapOf<String, MutableList<M2PatchRecord>>()
         override suspend fun upsertSession(metadata: SessionMetadata) {
             session = session?.mergeWith(metadata) ?: metadata
         }
         override suspend fun getSession(sessionId: String): SessionMetadata? = session
+        override suspend fun appendM2Patch(sessionId: String, patch: M2PatchRecord) {
+            // 说明：测试替身按追加顺序保存 M2 补丁，确保合并可复现。
+            val history = m2PatchHistoryBySession.getOrPut(sessionId) { mutableListOf() }
+            history.add(patch)
+            val current = session ?: SessionMetadata(sessionId = sessionId)
+            session = current.copy(
+                effectiveM2 = applyM2PatchHistory(history),
+                m2PatchHistory = history.toList()
+            )
+        }
+        override suspend fun getEffectiveM2(sessionId: String): ConversationDerivedState? {
+            val history = m2PatchHistoryBySession[sessionId] ?: return null
+            if (history.isEmpty()) return null
+            return session?.effectiveM2 ?: applyM2PatchHistory(history)
+        }
         override suspend fun upsertTranscript(metadata: TranscriptMetadata) {}
         override suspend fun getTranscriptBySession(sessionId: String): TranscriptMetadata? = null
         override suspend fun upsertExport(metadata: ExportMetadata) {}

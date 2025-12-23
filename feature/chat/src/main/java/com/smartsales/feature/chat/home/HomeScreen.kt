@@ -232,6 +232,7 @@ fun HomeScreenRoute(
         onExportPdfClicked = viewModel::onExportPdfClicked,
     onExportCsvClicked = viewModel::onExportCsvClicked,
     exportInProgress = state.exportInProgress,
+    exportGateState = state.exportGateState,
     onLoadMoreHistory = viewModel::onLoadMoreHistory,
     onProfileClicked = viewModel::onTapProfile,
     onNewChatClicked = viewModel::onNewChatClicked,
@@ -372,6 +373,7 @@ fun HomeScreen(
     onSessionSelected: (String) -> Unit = {},
     chatErrorMessage: String? = null,
     exportInProgress: Boolean,
+    exportGateState: ExportGateState,
     onPickAudioFile: (Uri) -> Unit = {},
     onPickImageFile: (Uri) -> Unit = {},
     modifier: Modifier = Modifier,
@@ -568,12 +570,15 @@ fun HomeScreen(
                             busy = chatBusy,
                             inputValue = state.inputText,
                             isSmartAnalysisMode = state.isSmartAnalysisMode,
+                            exportGateState = exportGateState,
                             onInputChanged = onInputChanged,
                             onSendClicked = {
                                 onSendClicked()
                                 onDismissKeyboard()
                             },
                             onQuickSkillSelected = onQuickSkillSelected,
+                            onExportPdfClicked = onExportPdfClicked,
+                            onExportCsvClicked = onExportCsvClicked,
                             onPickAudio = { audioPicker.launch(arrayOf("audio/*")) },
                             onPickImage = { imagePicker.launch(arrayOf("image/*")) },
                             onInputFocusChanged = onInputFocusChanged
@@ -614,8 +619,11 @@ fun HomeScreen(
                                             userName = state.userName,
                                             skills = allowedSkills,
                                             selectedSkillId = state.selectedSkill?.id,
+                                            exportGateState = exportGateState,
                                             enabled = !chatBusy && !state.isInputBusy,
-                                            onSkillSelected = onQuickSkillSelected
+                                            onSkillSelected = onQuickSkillSelected,
+                                            onExportPdfClicked = onExportPdfClicked,
+                                            onExportCsvClicked = onExportCsvClicked
                                         )
                                     } else {
                                         Box(
@@ -800,8 +808,11 @@ private fun EmptyStateContent(
     userName: String,
     skills: List<QuickSkillUi>,
     selectedSkillId: QuickSkillId?,
+    exportGateState: ExportGateState,
     enabled: Boolean,
-    onSkillSelected: (QuickSkillId) -> Unit
+    onSkillSelected: (QuickSkillId) -> Unit,
+    onExportPdfClicked: () -> Unit,
+    onExportCsvClicked: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -864,8 +875,11 @@ private fun EmptyStateContent(
                 skills = skills,
                 selectedSkillId = selectedSkillId,
                 enabled = enabled,
-                onQuickSkillSelected = onSkillSelected
+                onQuickSkillSelected = onSkillSelected,
+                onExportPdfClicked = onExportPdfClicked,
+                onExportCsvClicked = onExportCsvClicked
             )
+            ExportGateHint(exportGateState = exportGateState)
             Divider(modifier = Modifier.fillMaxWidth())
         }
     }
@@ -2066,9 +2080,12 @@ private fun HomeInputArea(
     busy: Boolean,
     inputValue: String,
     isSmartAnalysisMode: Boolean,
+    exportGateState: ExportGateState,
     onInputChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
     onQuickSkillSelected: (QuickSkillId) -> Unit,
+    onExportPdfClicked: () -> Unit,
+    onExportCsvClicked: () -> Unit,
     onPickAudio: () -> Unit,
     onPickImage: () -> Unit,
     onInputFocusChanged: (Boolean) -> Unit
@@ -2099,8 +2116,11 @@ private fun HomeInputArea(
                     skills = quickSkills,
                     selectedSkillId = selectedSkill?.id,
                     enabled = enabled && !busy,
-                    onQuickSkillSelected = onQuickSkillSelected
+                    onQuickSkillSelected = onQuickSkillSelected,
+                    onExportPdfClicked = onExportPdfClicked,
+                    onExportCsvClicked = onExportCsvClicked
                 )
+                ExportGateHint(exportGateState = exportGateState)
             }
             Row(
                 modifier = Modifier
@@ -2288,7 +2308,9 @@ private fun QuickSkillRow(
     skills: List<QuickSkillUi>,
     selectedSkillId: QuickSkillId?,
     enabled: Boolean,
-    onQuickSkillSelected: (QuickSkillId) -> Unit
+    onQuickSkillSelected: (QuickSkillId) -> Unit,
+    onExportPdfClicked: () -> Unit,
+    onExportCsvClicked: () -> Unit
 ) {
     if (skills.isEmpty()) return
     LazyRow(
@@ -2297,7 +2319,9 @@ private fun QuickSkillRow(
     ) {
         items(skills, key = { it.id }) { skill ->
             val skillTag = "home_quick_skill_${skill.id}"
-            val isSelected = skill.id == selectedSkillId
+            val isExportSkill = skill.id == QuickSkillId.EXPORT_PDF || skill.id == QuickSkillId.EXPORT_CSV
+            val isSelected = !isExportSkill && skill.id == selectedSkillId
+            val skillEnabled = enabled
             val colors = AssistChipDefaults.assistChipColors(
                 containerColor = if (isSelected) {
                     MaterialTheme.colorScheme.primaryContainer
@@ -2313,8 +2337,19 @@ private fun QuickSkillRow(
                 }
             )
             AssistChip(
-                onClick = { onQuickSkillSelected(skill.id) },
-                enabled = enabled,
+                onClick = {
+                    if (isExportSkill) {
+                        // 导出类技能为立即动作：不改变输入框/选中态。
+                        when (skill.id) {
+                            QuickSkillId.EXPORT_PDF -> onExportPdfClicked()
+                            QuickSkillId.EXPORT_CSV -> onExportCsvClicked()
+                            else -> Unit
+                        }
+                    } else {
+                        onQuickSkillSelected(skill.id)
+                    }
+                },
+                enabled = skillEnabled,
                 modifier = Modifier
                     .testTag(skillTag)
                     .padding(vertical = 2.dp),
@@ -2338,6 +2373,17 @@ private fun QuickSkillRow(
             )
         }
     }
+}
+
+@Composable
+private fun ExportGateHint(exportGateState: ExportGateState) {
+    if (exportGateState.ready || exportGateState.reason.isBlank()) return
+    Text(
+        text = exportGateState.reason,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp)
+    )
 }
 
 @Composable

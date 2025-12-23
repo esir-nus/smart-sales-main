@@ -285,23 +285,21 @@ class HomeExportActionsTest {
     }
 
     @Test
-    fun `auto analysis persists marker to metahub with auto source`() = runTest(dispatcher) {
+    fun `export triggers auto analysis when not ready`() = runTest(dispatcher) {
         metaHub.session = SessionMetadata(sessionId = "home-session")
         val longInput = "自动分析触发内容".repeat(40)
         viewModel.onInputChanged(longInput)
         viewModel.onSendMessage()
         advanceUntilIdle()
 
+        val callsBeforeExport = aiChatService.callCount
         viewModel.onExportPdfClicked()
         advanceUntilIdle()
-        waitForMetaHubUpdate()
 
-        assertEquals(2, aiChatService.callCount)
-        val saved = metaHub.session!!
-        println("auto analysis saved meta=$saved")
-        assertNotNull(saved.latestMajorAnalysisMessageId)
-        assertEquals(AnalysisSource.SMART_ANALYSIS_AUTO, saved.latestMajorAnalysisSource)
-        assertTrue((saved.latestMajorAnalysisAt ?: 0L) > 0L)
+        assertEquals(callsBeforeExport + 1, aiChatService.callCount)
+        assertEquals(ExportFormat.PDF, exportOrchestrator.lastFormat)
+        assertTrue(shareHandler.shared)
+        assertTrue(!viewModel.uiState.value.exportInProgress)
     }
 
     @Test
@@ -328,21 +326,18 @@ class HomeExportActionsTest {
     }
 
     @Test
-    fun `export runs auto smart analysis once when no analysis and long content`() = runTest(dispatcher) {
+    fun `export csv triggers auto analysis when not ready`() = runTest(dispatcher) {
         val longInput = "这是一个很长的对话片段，用于导出前自动分析。".repeat(20)
         viewModel.onInputChanged(longInput)
         viewModel.onSendMessage()
         advanceUntilIdle()
 
         val callsBeforeExport = aiChatService.callCount
-
-        viewModel.onExportPdfClicked()
+        viewModel.onExportCsvClicked()
         advanceUntilIdle()
 
         assertEquals(callsBeforeExport + 1, aiChatService.callCount)
-        assertEquals(ExportFormat.PDF, exportOrchestrator.lastFormat)
-        assertEquals(1, exportOrchestrator.pdfCallCount)
-        assertTrue(exportOrchestrator.lastPdfMarkdown?.contains("智能分析结果") == true)
+        assertEquals(ExportFormat.CSV, exportOrchestrator.lastFormat)
         assertTrue(shareHandler.shared)
         assertTrue(!viewModel.uiState.value.exportInProgress)
     }

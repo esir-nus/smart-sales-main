@@ -5,6 +5,8 @@
 package com.smartsales.data.aicore.debug
 
 import com.smartsales.core.util.DispatcherProvider
+import com.smartsales.core.metahub.ExportNameResolver
+import com.smartsales.core.metahub.MetaHub
 import com.smartsales.data.aicore.params.AiParaSettingsRepository
 import com.smartsales.data.aicore.params.AiParaSettingsSnapshot
 import com.smartsales.data.aicore.params.TranscriptionLaneSelector
@@ -15,23 +17,44 @@ import javax.inject.Singleton
 import kotlinx.coroutines.withContext
 
 interface DebugOrchestrator {
-    suspend fun getDebugSnapshot(sessionId: String, jobId: String? = null): DebugSnapshot
+    suspend fun getDebugSnapshot(
+        sessionId: String,
+        jobId: String? = null,
+        sessionTitle: String? = null,
+        isTitleUserEdited: Boolean? = null,
+    ): DebugSnapshot
 }
 
 @Singleton
 class RealDebugOrchestrator @Inject constructor(
+    private val metaHub: MetaHub,
     private val aiParaSettingsRepository: AiParaSettingsRepository,
     private val tingwuTraceStore: TingwuTraceStore,
     private val xfyunTraceStore: XfyunTraceStore,
     private val dispatchers: DispatcherProvider,
 ) : DebugOrchestrator {
 
-    override suspend fun getDebugSnapshot(sessionId: String, jobId: String?): DebugSnapshot =
+    override suspend fun getDebugSnapshot(
+        sessionId: String,
+        jobId: String?,
+        sessionTitle: String?,
+        isTitleUserEdited: Boolean?,
+    ): DebugSnapshot =
         withContext(dispatchers.default) {
             val settingsSnapshot = aiParaSettingsRepository.snapshot()
             val laneDecision = TranscriptionLaneSelector.resolve(settingsSnapshot)
             val tingwuTrace = tingwuTraceStore.getSnapshot()
             val xfyunTrace = xfyunTraceStore.getSnapshot()
+            val sessionMeta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
+            // 重要：导出 gate 以“智能分析是否就绪”为准，仅供 HUD 可观测。
+            val exportGateReady = sessionMeta?.latestMajorAnalysisMessageId != null
+            val exportGateReason = if (exportGateReady) "-" else "智能分析未完成"
+            val exportName = ExportNameResolver.resolve(
+                sessionId = sessionId,
+                sessionTitle = sessionTitle,
+                isTitleUserEdited = isTitleUserEdited,
+                meta = sessionMeta
+            )
 
             // 重要：HUD 三段文本由 Orchestrator 统一拼装与脱敏，UI 只做展示。
             val section1 = DebugSnapshotRedactor.redact(
@@ -42,6 +65,9 @@ class RealDebugOrchestrator @Inject constructor(
                     laneDecision = laneDecision,
                     tingwuTrace = tingwuTrace,
                     xfyunTrace = xfyunTrace,
+                    exportGateReady = exportGateReady,
+                    exportGateReason = exportGateReason,
+                    exportName = exportName,
                 )
             )
             val section2 = DebugSnapshotRedactor.redact(
@@ -74,6 +100,9 @@ class RealDebugOrchestrator @Inject constructor(
         laneDecision: com.smartsales.data.aicore.params.TranscriptionLaneDecision,
         tingwuTrace: TingwuTraceSnapshot,
         xfyunTrace: XfyunTraceSnapshot?,
+        exportGateReady: Boolean,
+        exportGateReason: String,
+        exportName: com.smartsales.core.metahub.ExportNameResolution,
     ): String {
         val settings = settingsSnapshot.transcription
         val voiceprintEffective = settings.xfyun.voiceprint.resolveEffective()
@@ -112,6 +141,10 @@ class RealDebugOrchestrator @Inject constructor(
             appendLine("settings.tingwu.postEnhancer.enabled: ${settingsSnapshot.tingwu.postTingwuEnhancer.enabled}")
             appendLine("trace.tingwu.taskId: ${tingwuTrace.lastTaskId ?: "-"}")
             appendLine("trace.xfyun.orderId: ${xfyunTrace?.orderId ?: "-"}")
+            appendLine("exportGate.ready: $exportGateReady")
+            appendLine("exportGate.reason: $exportGateReason")
+            appendLine("export.name: ${exportName.baseName}")
+            appendLine("export.nameSource: ${exportName.source}")
             appendLine("llmPromptPack: (missing: not recorded)")
             appendLine("m4: (missing: not available)")
         }.trimEnd()

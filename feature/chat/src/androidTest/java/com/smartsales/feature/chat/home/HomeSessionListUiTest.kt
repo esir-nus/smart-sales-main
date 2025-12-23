@@ -16,6 +16,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.smartsales.core.metahub.ExportNameSource
 import org.junit.Rule
 import org.junit.Test
 
@@ -112,6 +113,12 @@ class HomeSessionListUiTest {
                     },
                     chatErrorMessage = null,
                     exportInProgress = false,
+                    exportGateState = ExportGateState(
+                        ready = true,
+                        reason = "",
+                        resolvedName = "demo",
+                        nameSource = ExportNameSource.CANDIDATE
+                    ),
                     showHistoryPanel = false,
                     onToggleHistoryPanel = {},
                     onDismissHistoryPanel = {},

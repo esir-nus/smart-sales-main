@@ -25,6 +25,8 @@ import com.smartsales.feature.chat.history.ChatHistoryRepository
 import com.smartsales.data.aicore.ExportFormat
 import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.core.metahub.MetaHub
+import com.smartsales.core.metahub.ExportNameResolver
+import com.smartsales.core.metahub.ExportNameSource
 import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.SessionTitlePolicy
 import com.smartsales.core.metahub.AnalysisSource
@@ -96,6 +98,21 @@ private const val SMART_ANALYSIS_FAILURE_TEXT = "本次智能分析暂时不可�
 private enum class InputBucket { NOISE, SHORT_RELEVANT, RICH }
 private data class AnalysisTarget(val content: String, val source: String)
 
+private fun defaultExportGateState(): ExportGateState {
+    val resolution = ExportNameResolver.resolve(
+        sessionId = DEFAULT_SESSION_ID,
+        sessionTitle = null,
+        isTitleUserEdited = null,
+        meta = null
+    )
+    return ExportGateState(
+        ready = false,
+        reason = "智能分析未完成",
+        resolvedName = resolution.baseName,
+        nameSource = resolution.source
+    )
+}
+
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreenViewModel.kt
 // 模块：:feature:chat
 // 说明：HomeScreen 的 UiState 模型与 ViewModel，实现聊天/快捷技能/设备信息更新逻辑
@@ -146,6 +163,14 @@ data class AudioSummaryUi(
     val pendingUploadCount: Int = 0,
     val pendingTranscriptionCount: Int = 0,
     val lastSyncedAtMillis: Long? = null
+)
+
+/** 导出门禁状态：仅当智能分析就绪时允许导出。 */
+data class ExportGateState(
+    val ready: Boolean,
+    val reason: String,
+    val resolvedName: String,
+    val nameSource: ExportNameSource
 )
 
 /** Home 发出的单次导航请求。 */
@@ -237,6 +262,7 @@ data class HomeUiState(
     ),
     val userName: String = "用户",
     val exportInProgress: Boolean = false,
+    val exportGateState: ExportGateState = defaultExportGateState(),
     val showWelcomeHero: Boolean = true,
     val isSmartAnalysisMode: Boolean = false,
     val showDebugMetadata: Boolean = false,
@@ -306,6 +332,7 @@ class HomeScreenViewModel @Inject constructor(
     private var latestAnalysisMarkdown: String? = null
     private var latestAnalysisMessageId: String? = null
     private var pendingExportAfterAnalysis: ExportFormat? = null
+    private var exportAutoAnalysisInFlight: Boolean = false
 
     init {
         // 从 catalog 加载快捷技能到状态
@@ -421,6 +448,33 @@ class HomeScreenViewModel @Inject constructor(
         )
     }
 
+    private fun startSmartAnalysisForExport(): Boolean {
+        if (_uiState.value.isSending || _uiState.value.isStreaming || exportAutoAnalysisInFlight) {
+            return false
+        }
+        val target = findSmartAnalysisPrimaryContent("")
+        if (target == null) {
+            _uiState.update { it.copy(snackbarMessage = "内容太少，无法智能分析，已取消导出") }
+            return false
+        }
+        val contextContent = findContextForAnalysis(target.content)
+        val userMessage = buildSmartAnalysisUserMessage(
+            mainContent = target.content,
+            context = contextContent,
+            goal = "通用分析"
+        )
+        exportAutoAnalysisInFlight = true
+        // 说明：导出触发的智能分析不清空输入框，避免打断用户输入。
+        sendMessageInternal(
+            messageText = userMessage,
+            skillOverride = QuickSkillId.SMART_ANALYSIS,
+            userDisplayText = "智能分析（为导出准备）",
+            isAutoAnalysis = true,
+            preserveInputText = true
+        )
+        return true
+    }
+
     fun onSmartAnalysisClicked() {
         // 直接复用智能分析主流程
         val input = _uiState.value.inputText
@@ -428,15 +482,50 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     fun onExportPdfClicked() {
-        exportMarkdown(ExportFormat.PDF)
+        onExportRequested(ExportFormat.PDF)
     }
 
     fun onExportCsvClicked() {
-        exportMarkdown(ExportFormat.CSV)
+        onExportRequested(ExportFormat.CSV)
+    }
+
+    private fun onExportRequested(format: ExportFormat) {
+        if (_uiState.value.exportInProgress) return
+        viewModelScope.launch {
+            val summary = sessionRepository.findById(sessionId)
+            val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
+            val gate = resolveExportGateState(sessionId, summary, meta)
+            _uiState.update { it.copy(exportGateState = gate) }
+            if (gate.ready) {
+                pendingExportAfterAnalysis = null
+                exportAutoAnalysisInFlight = false
+                exportMarkdown(format)
+                return@launch
+            }
+
+            // 未就绪：记录最新导出请求（最后一次点击优先），完成智能分析后自动导出。
+            pendingExportAfterAnalysis = format
+            val formatLabel = if (format == ExportFormat.PDF) "PDF" else "CSV"
+            if (exportAutoAnalysisInFlight || _uiState.value.isSending || _uiState.value.isStreaming) {
+                _uiState.update { it.copy(snackbarMessage = "智能分析进行中，完成后将自动导出${formatLabel}") }
+                return@launch
+            }
+            if (startSmartAnalysisForExport()) {
+                _uiState.update { it.copy(snackbarMessage = "已开始智能分析，完成后将自动导出${formatLabel}") }
+            } else {
+                pendingExportAfterAnalysis = null
+            }
+        }
     }
 
     fun onSelectQuickSkill(skillId: QuickSkillId) {
         if (_uiState.value.isSending || _uiState.value.isStreaming) return
+        if (skillId == QuickSkillId.EXPORT_PDF || skillId == QuickSkillId.EXPORT_CSV) {
+            // 导出快捷技能为立即动作：不走“选中 + 发送”流程。
+            val format = if (skillId == QuickSkillId.EXPORT_PDF) ExportFormat.PDF else ExportFormat.CSV
+            onExportRequested(format)
+            return
+        }
         val definition = quickSkillDefinitionsById[skillId]
         if (definition == null) {
             _uiState.update { it.copy(snackbarMessage = "无法识别的快捷技能") }
@@ -472,13 +561,75 @@ class HomeScreenViewModel @Inject constructor(
             append(body.trim())
         }.trim()
 
+    private fun resolveExportGateState(
+        sessionId: String,
+        summary: AiSessionSummary?,
+        meta: SessionMetadata?
+    ): ExportGateState {
+        // 重要：导出必须等待智能分析完成；未就绪时只做提示，不触发导出副作用。
+        val ready = meta?.latestMajorAnalysisMessageId != null
+        val reason = if (ready) "" else "需先完成智能分析"
+        val resolution = ExportNameResolver.resolve(
+            sessionId = sessionId,
+            sessionTitle = summary?.title,
+            isTitleUserEdited = summary?.isTitleUserEdited,
+            meta = meta
+        )
+        return ExportGateState(
+            ready = ready,
+            reason = reason,
+            resolvedName = resolution.baseName,
+            nameSource = resolution.source
+        )
+    }
+
+    private fun refreshExportGateState() {
+        val currentSessionId = sessionId
+        viewModelScope.launch {
+            val summary = sessionRepository.findById(currentSessionId)
+            val meta = runCatching { metaHub.getSession(currentSessionId) }.getOrNull()
+            val gate = resolveExportGateState(currentSessionId, summary, meta)
+            _uiState.update { it.copy(exportGateState = gate) }
+        }
+    }
+
+    private fun maybeStartPendingExportAnalysis() {
+        val pending = pendingExportAfterAnalysis ?: return
+        if (exportAutoAnalysisInFlight || _uiState.value.isSending || _uiState.value.isStreaming) return
+        // 说明：导出被排队时，等待对话空闲后再自动触发智能分析。
+        viewModelScope.launch {
+            val summary = sessionRepository.findById(sessionId)
+            val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
+            val gate = resolveExportGateState(sessionId, summary, meta)
+            _uiState.update { it.copy(exportGateState = gate) }
+            if (gate.ready) {
+                pendingExportAfterAnalysis = null
+                exportMarkdown(pending)
+                return@launch
+            }
+            val formatLabel = if (pending == ExportFormat.PDF) "PDF" else "CSV"
+            if (startSmartAnalysisForExport()) {
+                _uiState.update { it.copy(snackbarMessage = "已开始智能分析，完成后将自动导出${formatLabel}") }
+            } else {
+                pendingExportAfterAnalysis = null
+            }
+        }
+    }
+
     private fun exportMarkdown(format: ExportFormat) {
         if (_uiState.value.exportInProgress) return
         viewModelScope.launch {
             // 检查 MetaHub 分析状态
+            val summary = sessionRepository.findById(sessionId)
             val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
+            val gate = resolveExportGateState(sessionId, summary, meta)
+            _uiState.update { it.copy(exportGateState = gate) }
+            if (!gate.ready) {
+                _uiState.update { it.copy(snackbarMessage = gate.reason.ifBlank { "需先完成智能分析" }) }
+                return@launch
+            }
             val hasMetaAnalysis = meta?.latestMajorAnalysisMessageId != null
-            val cachedAnalysis = latestAnalysisMarkdown
+            val cachedAnalysis = findSmartAnalysisMarkdownForExport()
 
             when {
                 !cachedAnalysis.isNullOrBlank() -> {
@@ -499,30 +650,12 @@ class HomeScreenViewModel @Inject constructor(
                     return@launch
                 }
                 else -> {
-                    // 没有任何分析记录，走现有 "自动 SMART_ANALYSIS 然后导出" 路径
-                    val (mainContent, context) = findLatestLongContent()
-                    if (mainContent == null) {
-                        performExport(format, markdownOverride = null)
-                        return@launch
+                    _uiState.update {
+                        it.copy(
+                            exportInProgress = false,
+                            snackbarMessage = "智能分析未完成，暂不可导出。"
+                        )
                     }
-                    pendingExportAfterAnalysis = format
-                    _uiState.update { it.copy(exportInProgress = true, chatErrorMessage = null) }
-                    val autoGoal = "导出前自动分析"
-                    val userMessage = buildSmartAnalysisUserMessage(
-                        mainContent = mainContent,
-                        context = context,
-                        goal = autoGoal
-                    )
-                    sendMessageInternal(
-                        messageText = userMessage,
-                        skillOverride = QuickSkillId.SMART_ANALYSIS,
-                        userDisplayText = "智能分析（导出前自动生成）",
-                        onCompleted = {},
-                        onCompletedTransform = { body ->
-                            body.trim()
-                        },
-                        isAutoAnalysis = true
-                    )
                 }
             }
         }
@@ -535,7 +668,7 @@ class HomeScreenViewModel @Inject constructor(
             return
         }
         _uiState.update { it.copy(exportInProgress = true, chatErrorMessage = null) }
-        val sessionTitle = _uiState.value.currentSession.title
+        val sessionTitle = _uiState.value.exportGateState.resolvedName
         val result = when (format) {
             ExportFormat.PDF -> exportOrchestrator.exportPdf(sessionId, markdown, sessionTitle, _uiState.value.userName)
             ExportFormat.CSV -> exportOrchestrator.exportCsv(sessionId, sessionTitle, _uiState.value.userName)
@@ -561,6 +694,22 @@ class HomeScreenViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun findSmartAnalysisMarkdownForExport(): String? {
+        latestAnalysisMarkdown?.takeIf { it.isNotBlank() }?.let { return it }
+        val messageId = latestAnalysisMessageId
+        if (messageId != null) {
+            val match = _uiState.value.chatMessages.firstOrNull { it.id == messageId }
+            val content = match?.sanitizedContent ?: match?.content
+            if (!content.isNullOrBlank()) return content
+        }
+        // 重要：兜底只取已标记为智能分析的气泡，避免误导导出内容来源。
+        val fallback = _uiState.value.chatMessages
+            .lastOrNull { it.isSmartAnalysis }
+            ?.sanitizedContent
+            ?: _uiState.value.chatMessages.lastOrNull { it.isSmartAnalysis }?.content
+        return fallback?.takeIf { it.isNotBlank() }
     }
 
     fun onLoadMoreHistory() {
@@ -1060,6 +1209,7 @@ class HomeScreenViewModel @Inject constructor(
             // 打开时刷新一次 MetaHub，关闭时保留现有数据即可
             refreshDebugSessionMetadata()
             refreshDebugSnapshot()
+            refreshExportGateState()
         }
     }
 
@@ -1090,8 +1240,14 @@ class HomeScreenViewModel @Inject constructor(
         val currentSession = sessionId
         val currentJobId = lastTranscriptionJobId
         viewModelScope.launch {
+            val summary = sessionRepository.findById(currentSession)
             val snapshot = runCatching {
-                debugOrchestrator.getDebugSnapshot(currentSession, currentJobId)
+                debugOrchestrator.getDebugSnapshot(
+                    sessionId = currentSession,
+                    jobId = currentJobId,
+                    sessionTitle = summary?.title ?: _uiState.value.currentSession.title,
+                    isTitleUserEdited = summary?.isTitleUserEdited
+                )
             }.getOrElse { error ->
                 // 重要：HUD 的调试快照失败时要 fail-soft，避免阻断调试面板展示。
                 DebugSnapshot(
@@ -1294,6 +1450,9 @@ class HomeScreenViewModel @Inject constructor(
             notes = mergedNotes
         )
         val messageId = meta?.latestMajorAnalysisMessageId
+        if (!messageId.isNullOrBlank()) {
+            latestAnalysisMessageId = messageId
+        }
         _uiState.update {
             val updatedMessages = if (messageId != null) {
                 it.chatMessages.map { msg ->
@@ -1505,6 +1664,7 @@ class HomeScreenViewModel @Inject constructor(
                 )
             }
             updateDebugSessionMetadata(null)
+            refreshExportGateState()
             chatHistoryRepository.saveMessages(newSession.id, emptyList())
             applySessionList()
         }
@@ -1549,6 +1709,7 @@ class HomeScreenViewModel @Inject constructor(
             sessionRepository.summaries.collectLatest { summaries ->
                 latestSessionSummaries = summaries
                 applySessionList()
+                refreshExportGateState()
             }
         }
     }
@@ -1626,7 +1787,8 @@ class HomeScreenViewModel @Inject constructor(
         userDisplayText: String? = null,
         onCompleted: (String) -> Unit = {},
         onCompletedTransform: ((String) -> String)? = null,
-        isAutoAnalysis: Boolean = false
+        isAutoAnalysis: Boolean = false,
+        preserveInputText: Boolean = false
     ) {
         val content = messageText.trim()
         if (content.isEmpty() || _uiState.value.isSending || _uiState.value.isStreaming) return
@@ -1675,7 +1837,7 @@ class HomeScreenViewModel @Inject constructor(
         }
         val newState = _uiState.value.copy(
             chatMessages = _uiState.value.chatMessages + userMessage + assistantPlaceholder,
-            inputText = "",
+            inputText = if (preserveInputText) _uiState.value.inputText else "",
             isSending = true,
             isStreaming = true,
             isInputBusy = true,
@@ -1693,7 +1855,8 @@ class HomeScreenViewModel @Inject constructor(
             request = request,
             assistantId = assistantPlaceholder.id,
             onCompleted = onCompleted,
-            onCompletedTransform = onCompletedTransform
+            onCompletedTransform = onCompletedTransform,
+            isAutoAnalysis = isAutoAnalysis
         )
     }
 
@@ -1702,7 +1865,8 @@ class HomeScreenViewModel @Inject constructor(
         request: ChatRequest,
         assistantId: String,
         onCompleted: (String) -> Unit = {},
-        onCompletedTransform: ((String) -> String)? = null
+        onCompletedTransform: ((String) -> String)? = null,
+        isAutoAnalysis: Boolean = false
     ) {
         val isSmartAnalysis = request.quickSkillId == "SMART_ANALYSIS"
         val streamingDeduplicator = StreamingDeduplicator()
@@ -1780,6 +1944,9 @@ class HomeScreenViewModel @Inject constructor(
                             pendingExportAfterAnalysis = null
                             _uiState.update { it.copy(exportInProgress = false) }
                         }
+                        if (isSmartAnalysis && isAutoAnalysis) {
+                            exportAutoAnalysisInFlight = false
+                        }
                         debugLog(
                             event = "chat_stream_completed",
                             data = mapOf(
@@ -1800,6 +1967,8 @@ class HomeScreenViewModel @Inject constructor(
                         }
                         onCompleted(cleaned)
                         _uiState.update { it.copy(isSending = false, isStreaming = false, isInputBusy = false, isBusy = false) }
+                        // 说明：若导出被排队，当前对话完成后再尝试触发自动分析。
+                        maybeStartPendingExportAnalysis()
                         if (isFirstGeneralReply) {
                             // 自动标题仅在首条助手回复时尝试，优先 Rename 渠道，缺失时回退元数据
                             maybeResolveSessionTitle(latestMeta, channels.renameCandidate)
@@ -1837,6 +2006,9 @@ class HomeScreenViewModel @Inject constructor(
                                 msg.copy(hasError = true, isStreaming = false)
                             }
                         }
+                        if (isSmartAnalysis && isAutoAnalysis) {
+                            exportAutoAnalysisInFlight = false
+                        }
                         pendingExportAfterAnalysis = null
                         _uiState.update {
                             it.copy(
@@ -1848,6 +2020,8 @@ class HomeScreenViewModel @Inject constructor(
                                 chatErrorMessage = event.throwable.message ?: "AI 回复失败"
                             )
                         }
+                        // 说明：若导出被排队，失败后也尝试触发自动分析。
+                        maybeStartPendingExportAnalysis()
                     }
                 }
             }
@@ -2276,7 +2450,10 @@ class HomeScreenViewModel @Inject constructor(
         )
 
         runCatching { metaHub.upsertSession(updated) }
-            .onSuccess { updateDebugSessionMetadata(updated) }
+            .onSuccess {
+                updateDebugSessionMetadata(updated)
+                refreshExportGateState()
+            }
     }
 
     private fun onAnalysisCompleted(summary: String, messageId: String) {
@@ -3350,6 +3527,7 @@ class HomeScreenViewModel @Inject constructor(
             )
         }
         updateDebugSessionMetadata(null)
+        refreshExportGateState()
     }
 
     private suspend fun enforcePlaceholderForHeroIfNeeded() {

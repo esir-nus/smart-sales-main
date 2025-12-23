@@ -8,7 +8,12 @@ import com.smartsales.data.aicore.debug.DebugOrchestrator
 import com.smartsales.data.aicore.debug.DebugSnapshot
 
 class NoopDebugOrchestrator : DebugOrchestrator {
-    override suspend fun getDebugSnapshot(sessionId: String, jobId: String?): DebugSnapshot {
+    override suspend fun getDebugSnapshot(
+        sessionId: String,
+        jobId: String?,
+        sessionTitle: String?,
+        isTitleUserEdited: Boolean?,
+    ): DebugSnapshot {
         return DebugSnapshot(
             section1EffectiveRunText = "section1",
             section2RawTranscriptionText = "section2",

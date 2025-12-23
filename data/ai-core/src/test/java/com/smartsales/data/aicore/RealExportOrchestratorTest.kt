@@ -17,6 +17,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -40,6 +41,7 @@ class RealExportOrchestratorTest {
                 sessionId = "s1",
                 mainPerson = "王总",
                 summaryTitle6Chars = "季度回顾",
+                latestMajorAnalysisMessageId = "m1",
                 latestMajorAnalysisSource = AnalysisSource.SMART_ANALYSIS_USER,
                 latestMajorAnalysisAt = fixedTimestamp
             )
@@ -59,10 +61,10 @@ class RealExportOrchestratorTest {
         assertTrue(result is Result.Success)
         val suggested = exportManager.lastSuggestedFileName
         val expectedTimestamp = formatter.format(fixedTimestamp)
-        assertEquals("王总_季度回顾_$expectedTimestamp", suggested)
+        assertEquals("季度回顾_$expectedTimestamp", suggested)
         val fileName = (result as Result.Success).data.fileName
         assertTrue(fileName.endsWith(".pdf"))
-        assertTrue(fileName.contains("王总_季度回顾"))
+        assertTrue(fileName.contains("季度回顾"))
         assertEquals(fileName, metaHub.export?.lastPdfFileName)
         val rendered = exportManager.lastMarkdown.orEmpty()
         assertTrue(rendered.contains("## 会话概要"))
@@ -73,8 +75,14 @@ class RealExportOrchestratorTest {
     @Test
     fun exportCsv_usesPlaceholdersWhenMetadataMissing() = runTest(dispatcher) {
         val exportManager = RecordingExportManager()
+        val metaHub = RecordingMetaHub().apply {
+            session = SessionMetadata(
+                sessionId = "s-empty",
+                latestMajorAnalysisMessageId = "m1"
+            )
+        }
         val orchestrator = RealExportOrchestrator(
-            metaHub = RecordingMetaHub(),
+            metaHub = metaHub,
             exportManager = exportManager,
             exportFileStore = object : ExportFileStore {
                 override fun persist(fileName: String, payload: ByteArray, mimeType: String): String = ""
@@ -87,7 +95,27 @@ class RealExportOrchestratorTest {
         assertTrue(result is Result.Success)
         val fileName = (result as Result.Success).data.fileName
         assertTrue(fileName.endsWith(".csv"))
-        assertTrue(fileName.startsWith("未知客户_未命名会话_"))
+        assertTrue(fileName.startsWith("session_s-empty_"))
+    }
+
+    @Test
+    fun exportPdf_blocksWhenSmartAnalysisMissing() = runTest(dispatcher) {
+        val exportManager = RecordingExportManager()
+        val orchestrator = RealExportOrchestrator(
+            metaHub = RecordingMetaHub(),
+            exportManager = exportManager,
+            exportFileStore = object : ExportFileStore {
+                override fun persist(fileName: String, payload: ByteArray, mimeType: String): String = ""
+            },
+            dispatchers = dispatchers
+        )
+
+        val result = orchestrator.exportPdf("s-blocked", "markdown content", sessionTitle = "测试", userName = "Alice")
+
+        assertTrue(result is Result.Error)
+        val error = result as Result.Error
+        assertTrue(error.throwable.message?.contains("智能分析未完成") == true)
+        assertFalse(exportManager.lastMarkdown?.contains("markdown content") == true)
     }
 
     private class RecordingExportManager : ExportManager {

@@ -5,6 +5,7 @@
 package com.smartsales.data.aicore.debug
 
 import com.smartsales.core.util.DefaultDispatcherProvider
+import com.smartsales.core.metahub.InMemoryMetaHub
 import com.smartsales.data.aicore.params.InMemoryAiParaSettingsRepository
 import com.smartsales.data.aicore.params.TranscriptionSettings
 import com.smartsales.data.aicore.params.TRANSCRIPTION_PROVIDER_XFYUN
@@ -25,16 +26,23 @@ class RealDebugOrchestratorTest {
             )
         }
         val orchestrator = RealDebugOrchestrator(
+            metaHub = InMemoryMetaHub(),
             aiParaSettingsRepository = settingsRepository,
             tingwuTraceStore = TingwuTraceStore(),
             xfyunTraceStore = XfyunTraceStore(),
             dispatchers = DefaultDispatcherProvider,
         )
 
-        val snapshot = orchestrator.getDebugSnapshot("s-1", "job-1")
+        val snapshot = orchestrator.getDebugSnapshot(
+            sessionId = "s-1",
+            jobId = "job-1",
+            sessionTitle = "客户复盘",
+            isTitleUserEdited = true
+        )
         assertTrue(snapshot.section1EffectiveRunText.contains("sessionId: s-1"))
         assertTrue(snapshot.section1EffectiveRunText.contains("lane.selected: TINGWU"))
         assertTrue(snapshot.section1EffectiveRunText.contains("lane.disabledReason: XFYUN_DISABLED_BY_SETTING"))
+        assertTrue(snapshot.section1EffectiveRunText.contains("exportGate.ready"))
         assertTrue(snapshot.section2RawTranscriptionText.contains("Tingwu:"))
         assertTrue(snapshot.section3PreprocessedText.contains("Preprocessed"))
     }

@@ -7,6 +7,7 @@ package com.smartsales.data.aicore
 
 import com.smartsales.core.metahub.CrmRow
 import com.smartsales.core.metahub.ExportMetadata
+import com.smartsales.core.metahub.ExportNameResolver
 import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.SessionMetadataLabelProvider
@@ -14,6 +15,7 @@ import com.smartsales.core.metahub.AnalysisSource
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.AiCoreErrorReason.IO
+import com.smartsales.data.aicore.AiCoreErrorReason.UNSUPPORTED_CAPABILITY
 import com.smartsales.data.aicore.AiCoreErrorSource.EXPORT
 import com.smartsales.data.aicore.AiCoreException
 import java.text.SimpleDateFormat
@@ -70,11 +72,12 @@ class RealExportOrchestrator @Inject constructor(
         sessionTitle: String?,
         userName: String?
     ): Result<ExportResult> = withContext(dispatchers.io) {
+        val meta = loadSessionMeta(sessionId)
+        ensureSmartAnalysisReady(meta)?.let { return@withContext it }
         if (markdown.isBlank()) {
             return@withContext Result.Error(IllegalArgumentException("导出内容为空"))
         }
-        val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-        val context = buildExportContext(meta)
+        val context = buildExportContext(meta, sessionId, sessionTitle)
         val pdfBody = buildPdfBody(markdown, context)
         when (val result = exportManager.exportMarkdown(pdfBody, ExportFormat.PDF, context.fileNameBase)) {
             is Result.Success -> {
@@ -92,9 +95,10 @@ class RealExportOrchestrator @Inject constructor(
         userName: String?
     ): Result<ExportResult> =
         withContext(dispatchers.io) {
-            val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
+            val meta = loadSessionMeta(sessionId)
+            ensureSmartAnalysisReady(meta)?.let { return@withContext it }
             val csvText = buildCsv(meta?.crmRows.orEmpty())
-            val context = buildExportContext(meta)
+            val context = buildExportContext(meta, sessionId, sessionTitle)
             val fileName = "${context.fileNameBase}.csv"
             val payload = csvText.toByteArray(Charsets.UTF_8)
             val result = runCatching {
@@ -169,6 +173,22 @@ class RealExportOrchestrator @Inject constructor(
         return "\"$escaped\""
     }
 
+    private suspend fun loadSessionMeta(sessionId: String): SessionMetadata? =
+        runCatching { metaHub.getSession(sessionId) }.getOrNull()
+
+    private fun ensureSmartAnalysisReady(meta: SessionMetadata?): Result<ExportResult>? {
+        // 重要：导出必须等待智能分析成功，否则直接失败返回，不写文件。
+        if (meta?.latestMajorAnalysisMessageId != null) return null
+        return Result.Error(
+            AiCoreException(
+                source = EXPORT,
+                reason = UNSUPPORTED_CAPABILITY,
+                message = "智能分析未完成，暂不可导出",
+                suggestion = "请先完成智能分析"
+            )
+        )
+    }
+
     private fun sanitizeFileName(name: String): String {
         return name
             .replace(Regex("[\\\\/:*?\"<>|]"), "_")
@@ -179,15 +199,17 @@ class RealExportOrchestrator @Inject constructor(
 
     private fun buildExportContext(
         meta: SessionMetadata?,
+        sessionId: String,
+        sessionTitle: String?,
         exportTimestamp: Long = System.currentTimeMillis()
     ): ExportContext {
-        // 文件名仅依赖 SMART 元数据与时间戳，忽略会话标题与用户名
-        val person = meta?.mainPerson?.takeIf { it.isNotBlank() } ?: "未知客户"
-        val summary = when {
-            !meta?.summaryTitle6Chars.isNullOrBlank() -> meta!!.summaryTitle6Chars!!
-            !meta?.shortSummary.isNullOrBlank() -> meta!!.shortSummary!!.take(8)
-            else -> "未命名会话"
-        }
+        // 重要：文件名遵循 accepted > candidate > fallback，避免导出时改名混乱。
+        val nameResolution = ExportNameResolver.resolve(
+            sessionId = sessionId,
+            sessionTitle = sessionTitle,
+            isTitleUserEdited = null,
+            meta = meta
+        )
         val smartTimestamp = when (meta?.latestMajorAnalysisSource) {
             AnalysisSource.SMART_ANALYSIS_USER,
             AnalysisSource.SMART_ANALYSIS_AUTO -> meta.latestMajorAnalysisAt
@@ -195,8 +217,14 @@ class RealExportOrchestrator @Inject constructor(
         }
         val timestampMillis = smartTimestamp ?: exportTimestamp
         val timestamp = timestampFormatter.format(Date(timestampMillis))
-        val baseName = sanitizeFileName("${person}_${summary}_$timestamp")
+        val baseName = sanitizeFileName("${nameResolution.baseName}_$timestamp")
 
+        val person = meta?.mainPerson?.takeIf { it.isNotBlank() } ?: "未知客户"
+        val summary = when {
+            !meta?.summaryTitle6Chars.isNullOrBlank() -> meta!!.summaryTitle6Chars!!
+            !meta?.shortSummary.isNullOrBlank() -> meta!!.shortSummary!!.take(8)
+            else -> "未命名会话"
+        }
         val stageLabel = meta?.stage?.let { SessionMetadataLabelProvider.stageLabel(it) }
         val riskLabel = meta?.riskLevel?.let { SessionMetadataLabelProvider.riskLabel(it) }
         val tagsLabel = meta?.tags

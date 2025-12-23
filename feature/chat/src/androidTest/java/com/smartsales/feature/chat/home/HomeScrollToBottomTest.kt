@@ -26,6 +26,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.smartsales.core.metahub.ExportNameSource
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -132,7 +133,13 @@ class HomeScrollToBottomTest {
                     onLoadMoreHistory = {},
                     onProfileClicked = {},
                     chatErrorMessage = null,
-                    exportInProgress = false
+                    exportInProgress = false,
+                    exportGateState = ExportGateState(
+                        ready = true,
+                        reason = "",
+                        resolvedName = "demo",
+                        nameSource = ExportNameSource.CANDIDATE
+                    )
                 )
             }
         }

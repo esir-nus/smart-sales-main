@@ -135,10 +135,37 @@ Legend: TODO / DOING / DONE / BLOCKED
     - HUD Section 3 显示批次计划摘要与预览（缺失时为占位提示）。
 
 ### T7-008 Implementation: Smart Analysis gating for export
-- Status: TODO
-- Definition of done:
-  - Export button disabled until smart analysis ready
-  - Export naming uses accepted/candidate fallback rules
+- Status: DONE
+- Evidence:
+  - `core/util/src/main/java/com/smartsales/core/metahub/ExportNameResolver.kt`（accepted/candidate/fallback 命名解析）
+  - `feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreenViewModel.kt`（导出 gate 判定 + 早退）
+  - `feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreen.kt`（导出按钮禁用 + 原因提示）
+  - `data/ai-core/src/main/java/com/smartsales/data/aicore/ExportOrchestrator.kt`（导出防线 gate + 命名落地）
+  - `data/ai-core/src/main/java/com/smartsales/data/aicore/debug/DebugOrchestrator.kt`（HUD Section 1 展示 exportGate + resolved name）
+  - Tests:
+    - `./gradlew :data:ai-core:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 13s）
+    - `./gradlew :feature:chat:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 33s）
+  - 📱 On-device sanity checklist (manual):
+    - [ ] Smart Analysis 未就绪时导出按钮禁用并提示原因
+    - [ ] Smart Analysis 完成后导出按钮自动可用
+    - [ ] 导出文件名遵循 accepted > candidate > fallback
+    - [ ] HUD Section 1 展示 exportGate 状态 + resolved name
+
+### T7-008.1 Implementation: export chips immediate + auto-analysis auto-export
+- Status: DONE
+- Evidence:
+  - `feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreen.kt`（导出快捷技能立即动作，不再走选中+发送）
+  - `feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreenViewModel.kt`（自动分析+自动导出状态机，最后一次点击优先）
+  - `feature/chat/src/test/java/com/smartsales/feature/chat/home/HomeExportActionsTest.kt`（未就绪导出触发自动分析+导出）
+  - Tests:
+    - `./gradlew :data:ai-core:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 8s）
+    - `./gradlew :feature:chat:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 28s）
+  - 📱 On-device sanity checklist (manual):
+    - [ ] Smart Analysis 未就绪时点击“导出 PDF/CSV”，自动触发智能分析
+    - [ ] 分析完成后自动弹出导出分享（无需再次点击）
+    - [ ] Smart Analysis 已就绪时点击导出立即生效
+    - [ ] Smart Analysis 芯片仍需发送触发（模式不变）
+    - [ ] 多次点击导出时以最后一次点击为准
 
 ### T7-009 Placeholder: External Knowledge & Style (M4) API interface
 - Status: TODO

@@ -15,8 +15,10 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.smartsales.core.metahub.ExportNameSource
 import com.smartsales.feature.chat.home.ChatMessageRole
 import com.smartsales.feature.chat.home.ChatMessageUi
+import com.smartsales.feature.chat.home.ExportGateState
 import com.smartsales.feature.chat.home.HomeScreen
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.chat.home.HomeUiState
@@ -58,6 +60,12 @@ class HomeAssistantCopyTest {
                 onSessionSelected = {},
                 chatErrorMessage = null,
                 exportInProgress = false,
+                exportGateState = ExportGateState(
+                    ready = true,
+                    reason = "",
+                    resolvedName = "demo",
+                    nameSource = ExportNameSource.CANDIDATE
+                ),
                 modifier = Modifier,
                 showHistoryPanel = false,
                 onToggleHistoryPanel = {},

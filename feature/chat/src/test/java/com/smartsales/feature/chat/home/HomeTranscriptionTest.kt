@@ -244,6 +244,39 @@ class HomeTranscriptionTest {
     }
 
     @Test
+    fun `audio recovery hint respects started dismissed finished`() = runTest(dispatcher) {
+        // 说明：只验证提示规则，不触发任何气泡或转写副作用
+        advanceUntilIdle()
+        val currentSessionId = viewModel.uiState.value.currentSession.id
+
+        metaHub.upsertSession(
+            SessionMetadata(
+                sessionId = currentSessionId,
+                lastAudioTaskStartedAt = 1_000L
+            )
+        )
+        viewModel.setSession(currentSessionId, allowHero = false)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.showAudioRecoveryHint)
+        assertEquals(1_000L, viewModel.uiState.value.audioRecoveryHintStartedAt)
+
+        viewModel.dismissAudioRecoveryHint()
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.showAudioRecoveryHint)
+
+        metaHub.upsertSession(
+            SessionMetadata(
+                sessionId = currentSessionId,
+                lastAudioTaskStartedAt = 1_000L,
+                lastAudioTaskFinishedAt = 2_000L
+            )
+        )
+        viewModel.setSession(currentSessionId, allowHero = false)
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.showAudioRecoveryHint)
+    }
+
+    @Test
     fun `transcription request injects intro and transcript context`() = runTest(dispatcher) {
         viewModel.onTranscriptionRequested(
             TranscriptionChatRequest(

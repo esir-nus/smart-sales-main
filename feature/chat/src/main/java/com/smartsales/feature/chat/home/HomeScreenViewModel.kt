@@ -254,6 +254,8 @@ data class HomeUiState(
     val selectedSkill: QuickSkillUi? = null,
     val deviceSnapshot: DeviceSnapshotUi? = null,
     val audioSummary: AudioSummaryUi? = null,
+    val showAudioRecoveryHint: Boolean = false,
+    val audioRecoveryHintStartedAt: Long? = null,
     val snackbarMessage: String? = null,
     val chatErrorMessage: String? = null,
     val navigationRequest: HomeNavigationRequest? = null,
@@ -330,6 +332,8 @@ class HomeScreenViewModel @Inject constructor(
     private var lastTranscriptionJobId: String? = null
     private var transcriptionBatchMessageId: String? = null
     private var transcriptionBatchFinal: Boolean = false
+    // 标记本次转写是否仍在进行中，用于抑制中途恢复提示
+    private var activelyTranscribing: Boolean = false
     // 标记当前会话是否已处理首条助手回复，用于“首条决定标题”规则
     private var firstAssistantProcessed: Boolean = false
     private var latestAnalysisMarkdown: String? = null
@@ -790,6 +794,11 @@ class HomeScreenViewModel @Inject constructor(
      */
     fun onAudioFilePicked(uri: Uri) {
         viewModelScope.launch {
+            val startedAt = System.currentTimeMillis()
+            activelyTranscribing = true
+            // 重要：转写进行中不展示恢复提示
+            _uiState.update { it.copy(showAudioRecoveryHint = false, audioRecoveryHintStartedAt = null) }
+            persistAudioTaskStartedMarker(startedAt)
             _uiState.update { it.copy(isInputBusy = true, isBusy = true, snackbarMessage = null, showWelcomeHero = false) }
             val stored = withContext(Dispatchers.IO) {
                 runCatching { audioStorageRepository.importFromPhone(uri) }
@@ -1066,6 +1075,8 @@ class HomeScreenViewModel @Inject constructor(
                                         isStreaming = false
                                     )
                                 }
+                                activelyTranscribing = false
+                                persistAudioTaskFinishedMarker(System.currentTimeMillis())
                             }
 
                             is AudioTranscriptionJobState.Failed -> {
@@ -1081,6 +1092,8 @@ class HomeScreenViewModel @Inject constructor(
                                         hasError = true
                                     )
                                 }
+                                activelyTranscribing = false
+                                refreshAudioRecoveryHintFromMetaHub()
                                 _uiState.update { it.copy(snackbarMessage = it.snackbarMessage ?: reason) }
                             }
                         }
@@ -1476,6 +1489,7 @@ class HomeScreenViewModel @Inject constructor(
         viewModelScope.launch {
             val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
             updateDebugSessionMetadata(meta)
+            refreshAudioRecoveryHint(meta)
         }
     }
 
@@ -2467,6 +2481,60 @@ class HomeScreenViewModel @Inject constructor(
                 updateDebugSessionMetadata(updated)
                 refreshExportGateState()
             }
+    }
+
+    private fun refreshAudioRecoveryHint(meta: SessionMetadata?) {
+        val startedAt = meta?.lastAudioTaskStartedAt
+        val finishedAt = meta?.lastAudioTaskFinishedAt
+        val dismissedAt = meta?.audioRecoveryHintDismissedForStartedAt
+        // 重要：仅按标记字段判断，且转写进行中必须抑制提示
+        val show = startedAt != null &&
+            finishedAt == null &&
+            dismissedAt != startedAt &&
+            !activelyTranscribing
+        _uiState.update {
+            it.copy(
+                showAudioRecoveryHint = show,
+                audioRecoveryHintStartedAt = if (show) startedAt else null
+            )
+        }
+    }
+
+    private suspend fun refreshAudioRecoveryHintFromMetaHub() {
+        val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
+        refreshAudioRecoveryHint(meta)
+    }
+
+    private suspend fun persistAudioTaskStartedMarker(startedAt: Long) {
+        val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
+        val base = existing ?: SessionMetadata(sessionId = sessionId)
+        val updated = base.copy(
+            lastAudioTaskStartedAt = startedAt,
+            lastAudioTaskFinishedAt = null,
+            audioRecoveryHintDismissedForStartedAt = null
+        )
+        runCatching { metaHub.upsertSession(updated) }
+            .onSuccess { refreshAudioRecoveryHint(updated) }
+    }
+
+    private suspend fun persistAudioTaskFinishedMarker(finishedAt: Long) {
+        val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
+        val base = existing ?: SessionMetadata(sessionId = sessionId)
+        val updated = base.copy(lastAudioTaskFinishedAt = finishedAt)
+        runCatching { metaHub.upsertSession(updated) }
+            .onSuccess { refreshAudioRecoveryHint(updated) }
+    }
+
+    fun dismissAudioRecoveryHint() {
+        val startedAt = _uiState.value.audioRecoveryHintStartedAt ?: return
+        viewModelScope.launch {
+            val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
+            val base = existing ?: SessionMetadata(sessionId = sessionId)
+            // 重要：关闭提示与 startedAt 绑定，避免影响下一次转写
+            val updated = base.copy(audioRecoveryHintDismissedForStartedAt = startedAt)
+            runCatching { metaHub.upsertSession(updated) }
+                .onSuccess { refreshAudioRecoveryHint(updated) }
+        }
     }
 
     private fun onAnalysisCompleted(summary: String, messageId: String) {

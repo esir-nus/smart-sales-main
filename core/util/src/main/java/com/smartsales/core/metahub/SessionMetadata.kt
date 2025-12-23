@@ -22,6 +22,10 @@ data class SessionMetadata(
     val latestMajorAnalysisAt: Long? = null,
     val latestMajorAnalysisSource: AnalysisSource? = null,
     val renaming: RenamingMetadata = RenamingMetadata(),
+    // 音频转写恢复提示标记：仅记录开始/结束/已关闭时间点
+    val lastAudioTaskStartedAt: Long? = null,
+    val lastAudioTaskFinishedAt: Long? = null,
+    val audioRecoveryHintDismissedForStartedAt: Long? = null,
     // 重要：M2 有效态与补丁记录（patch 为内部派生结构，schema 未定义 patch type）
     val effectiveM2: ConversationDerivedState? = null,
     val m2PatchHistory: List<M2PatchRecord> = emptyList(),
@@ -45,6 +49,11 @@ data class SessionMetadata(
         latestMajorAnalysisSource = other.latestMajorAnalysisSource ?: latestMajorAnalysisSource,
         // 重要：命名字段遵循 accepted > candidate，candidate 不得覆盖 accepted
         renaming = renaming.mergeWith(other.renaming),
+        // 重要：音频恢复提示以写入方为准，非空值优先
+        lastAudioTaskStartedAt = other.lastAudioTaskStartedAt ?: lastAudioTaskStartedAt,
+        lastAudioTaskFinishedAt = other.lastAudioTaskFinishedAt ?: lastAudioTaskFinishedAt,
+        audioRecoveryHintDismissedForStartedAt = other.audioRecoveryHintDismissedForStartedAt
+            ?: audioRecoveryHintDismissedForStartedAt,
         // 重要：M2 由补丁合并产生，避免在 mergeWith 中重新排序或合并历史
         effectiveM2 = other.effectiveM2 ?: effectiveM2,
         m2PatchHistory = if (other.m2PatchHistory.isNotEmpty()) other.m2PatchHistory else m2PatchHistory,

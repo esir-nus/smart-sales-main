@@ -7,6 +7,7 @@ package com.smartsales.data.aicore.debug
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.metahub.ExportNameResolver
 import com.smartsales.core.metahub.MetaHub
+import com.smartsales.core.metahub.SuspiciousBoundary
 import com.smartsales.data.aicore.params.AiParaSettingsRepository
 import com.smartsales.data.aicore.params.AiParaSettingsSnapshot
 import com.smartsales.data.aicore.params.TranscriptionLaneSelector
@@ -230,7 +231,17 @@ class RealDebugOrchestrator @Inject constructor(
         }
         appendLine("xfyun.suspiciousBoundaries:")
         appendLine(suspicious)
-            return@buildString
+        appendLine("[Section3B: Tingwu Suspicious Boundaries]")
+        val boundarySource = if (preprocess == null) {
+            "(missing: metahub preprocess not available)"
+        } else {
+            "metahub.m2.preprocess"
+        }
+        appendLine("source: $boundarySource")
+        appendLine("count=0")
+        appendLine("indices: (empty)")
+        appendLine("details: (empty)")
+        return@buildString
         }
 
         val effectivePreprocess = preprocess ?: return@buildString
@@ -278,7 +289,42 @@ class RealDebugOrchestrator @Inject constructor(
         }
         appendLine("xfyun.suspiciousBoundaries:")
         appendLine(suspicious)
+
+        appendLine("[Section3B: Tingwu Suspicious Boundaries]")
+        appendLine("source: metahub.m2.preprocess")
+        val sortedBoundaries = effectivePreprocess.suspiciousBoundaries
+            .sortedBy { it.index }
+        val totalBoundaries = sortedBoundaries.size
+        appendLine("count=$totalBoundaries")
+        val (indicesLine, detailsLine) = formatBoundaryLines(sortedBoundaries)
+        appendLine(indicesLine)
+        appendLine(detailsLine)
     }.trimEnd()
+
+    private fun formatBoundaryLines(
+        boundaries: List<SuspiciousBoundary>
+    ): Pair<String, String> {
+        if (boundaries.isEmpty()) {
+            return "indices: (empty)" to "details: (empty)"
+        }
+        val limited = boundaries.take(MAX_BOUNDARY_OUTPUT)
+        val remaining = (boundaries.size - limited.size).coerceAtLeast(0)
+        val indices = limited.joinToString(separator = ",") { it.index.toString() }
+        val indicesLine = if (remaining > 0) {
+            "indices: $indices ... +$remaining more"
+        } else {
+            "indices: $indices"
+        }
+        val details = limited.joinToString(separator = ",") { entry ->
+            "${entry.index}(${entry.reason})"
+        }
+        val detailsLine = if (remaining > 0) {
+            "details: $details ... +$remaining more"
+        } else {
+            "details: $details"
+        }
+        return indicesLine to detailsLine
+    }
 
     private fun formatDumpInfo(
         name: String,
@@ -345,6 +391,7 @@ class RealDebugOrchestrator @Inject constructor(
     }
 
     private companion object {
-        private const val MAX_PREVIEW_LINES = 20
-    }
+    private const val MAX_PREVIEW_LINES = 20
+    private const val MAX_BOUNDARY_OUTPUT = 50
+}
 }

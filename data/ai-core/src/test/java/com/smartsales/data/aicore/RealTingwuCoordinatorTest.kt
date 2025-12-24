@@ -1670,6 +1670,59 @@ class RealTingwuCoordinatorTest {
     }
 
     @Test
+    fun `completion records suspicious boundaries into trace store`() = runTest(dispatcher) {
+        val api = FakeTingwuApi()
+        api.enqueueStatus(statusResponse(status = "PROCESSING", progress = 30))
+        api.enqueueStatus(statusResponse(status = "SUCCEEDED", progress = 100))
+        api.resultData = TingwuResultResponse(
+            requestId = "req-result",
+            code = "0",
+            message = "Success",
+            data = TingwuResultData(
+                taskId = "job-1",
+                transcription = TingwuTranscription(
+                    text = "",
+                    segments = listOf(
+                        TingwuTranscriptSegment(id = 1, start = 0.0, end = 1.0, text = "你好", speaker = "spk_1"),
+                        TingwuTranscriptSegment(id = 2, start = 5.0, end = 6.0, text = "继续", speaker = "spk_2")
+                    ),
+                    speakers = listOf(
+                        TingwuSpeaker(id = "spk_1", name = "销售"),
+                        TingwuSpeaker(id = "spk_2", name = "客户")
+                    ),
+                    language = "zh",
+                    duration = 10.0,
+                    url = "https://example.com/transcription.json"
+                ),
+                resultLinks = emptyMap(),
+                outputMp3Path = null,
+                outputMp4Path = null,
+                outputThumbnailPath = null,
+                outputSpectrumPath = null
+            )
+        )
+        val coordinator = newCoordinator(api = api)
+
+        val submit = coordinator.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav"
+            )
+        )
+        assertTrue(submit is Result.Success)
+        val jobId = (submit as Result.Success).data
+        advanceTimeBy(20)
+        advanceUntilIdle()
+
+        val snapshot = traceStore.getSnapshot()
+        assertEquals(jobId, snapshot.lastTaskId)
+        assertTrue(snapshot.suspiciousBoundaries.isNotEmpty())
+        val indices = snapshot.suspiciousBoundaries.map { it.index }
+        assertEquals(indices.sorted(), indices)
+        assertEquals(indices.distinct(), indices)
+    }
+
+    @Test
     fun `trace store keeps preprocess artifacts deterministic`() {
         val store = TingwuTraceStore()
         val batchPlan = listOf(

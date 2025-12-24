@@ -297,6 +297,26 @@ Legend: TODO / DOING / DONE / BLOCKED
 - 📱 On-device sanity checklist (manual):
   - [ ] 传入含时间戳与说话人标签的转写文本，探测器返回非空可疑边界
 
+### T7-010B3B2 Tingwu suspicious-boundary wiring (trace → M2)
+- Status: DONE
+- Evidence:
+  - `data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt`
+  - `data/ai-core/src/test/java/com/smartsales/data/aicore/RealTingwuCoordinatorTest.kt`
+  - Tests:
+    - `./gradlew :data:ai-core:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 27s）
+- 📱 On-device sanity checklist (manual):
+  - [ ] Tingwu 转写完成后，trace 中 suspiciousBoundaries 非空且 M2 preprocess 使用它们
+
+### T7-010B3C Debug HUD — Tingwu suspiciousBoundaries inspector
+- Status: DONE
+- Evidence:
+  - `data/ai-core/src/main/java/com/smartsales/data/aicore/debug/DebugOrchestrator.kt`
+  - `data/ai-core/src/test/java/com/smartsales/data/aicore/debug/RealDebugOrchestratorTest.kt`
+  - Tests:
+    - `./gradlew :data:ai-core:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 20s）
+- 📱 On-device sanity checklist (manual):
+  - [ ] HUD Section3B 显示 Tingwu suspiciousBoundaries（count/indices/details）
+
 ---
 
 ## 3) Decision Log

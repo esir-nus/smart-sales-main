@@ -34,6 +34,7 @@ import com.smartsales.data.aicore.tingwu.TingwuCustomPromptContent
 import com.smartsales.data.aicore.params.AiParaSettingsProvider
 import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.metahub.TingwuPreprocessPatchBuilder
+import com.smartsales.data.aicore.tingwu.TingwuSuspiciousBoundaryDetector
 import com.smartsales.data.aicore.tingwu.TingwuRawResponseDumper
 import com.smartsales.data.aicore.tingwu.TingwuArtifactFetcher
 import com.smartsales.data.aicore.posttingwu.EnhancerInput
@@ -403,6 +404,22 @@ class RealTingwuCoordinator @Inject constructor(
                                 transcriptMeta = transcriptMeta,
                                 chapters = transcriptResult.chapters
                             )
+                            // 说明：Tingwu 完成后记录可疑边界，供 M2 预处理补丁使用。
+                            runCatching {
+                                val boundaries = TingwuSuspiciousBoundaryDetector.detect(
+                                    transcriptMarkdown = transcriptResult.markdown
+                                )
+                                tingwuTraceStore.record(
+                                    taskId = jobId,
+                                    suspiciousBoundaries = boundaries
+                                )
+                            }.onFailure { error ->
+                                AiCoreLogger.w(TAG, "Tingwu 可疑边界记录失败：${error.message}")
+                                tingwuTraceStore.record(
+                                    taskId = jobId,
+                                    suspiciousBoundaries = emptyList()
+                                )
+                            }
                             appendTingwuPreprocessPatch(
                                 jobId = jobId,
                                 transcriptMarkdown = transcriptResult.markdown

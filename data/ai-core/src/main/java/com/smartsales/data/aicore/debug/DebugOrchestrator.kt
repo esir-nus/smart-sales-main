@@ -276,19 +276,24 @@ class RealDebugOrchestrator @Inject constructor(
         appendLine("(missing: xfyun preprocessed preview not available)")
         appendLine("xfyun.batchPlan:")
         appendLine("(missing: postXfyun batch plan not recorded)")
-        val suspicious = if (effectivePreprocess.suspiciousBoundaries.isNotEmpty()) {
-            effectivePreprocess.suspiciousBoundaries.joinToString(
-                prefix = "[",
-                postfix = "]",
-                separator = ", "
-            ) { entry ->
-                "{\"index\":${entry.index},\"reason\":\"${entry.reason.replace("\"", "\\\"")}\"}"
-            }
-        } else {
-            "(missing: postXfyun suspicious hints not recorded)"
-        }
         appendLine("xfyun.suspiciousBoundaries:")
-        appendLine(suspicious)
+        if (preprocessProv == "tingwu.preprocess") {
+            val count = effectivePreprocess.suspiciousBoundaries.size
+            appendLine("(suppressed; count=$count; see Section3B)")
+        } else {
+            val suspicious = if (effectivePreprocess.suspiciousBoundaries.isNotEmpty()) {
+                effectivePreprocess.suspiciousBoundaries.joinToString(
+                    prefix = "[",
+                    postfix = "]",
+                    separator = ", "
+                ) { entry ->
+                    "{\"index\":${entry.index},\"reason\":\"${entry.reason.replace("\"", "\\\"")}\"}"
+                }
+            } else {
+                "(missing: postXfyun suspicious hints not recorded)"
+            }
+            appendLine(suspicious)
+        }
 
         appendLine("[Section3B: Tingwu Suspicious Boundaries]")
         appendLine("source: metahub.m2.preprocess")

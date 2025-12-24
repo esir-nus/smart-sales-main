@@ -317,6 +317,16 @@ Legend: TODO / DOING / DONE / BLOCKED
 - 📱 On-device sanity checklist (manual):
   - [ ] HUD Section3B 显示 Tingwu suspiciousBoundaries（count/indices/details）
 
+### T7-010B3D Debug HUD hygiene — suppress legacy xfyun.suspiciousBoundaries
+- Status: DONE
+- Evidence:
+  - `data/ai-core/src/main/java/com/smartsales/data/aicore/debug/DebugOrchestrator.kt`
+  - `data/ai-core/src/test/java/com/smartsales/data/aicore/debug/RealDebugOrchestratorTest.kt`
+  - Tests:
+    - `./gradlew :data:ai-core:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 20s）
+- 📱 On-device sanity checklist (manual):
+  - [ ] Tingwu preprocess 时，Section3 的 xfyun.suspiciousBoundaries 显示 suppressed 文案
+
 ---
 
 ## 3) Decision Log

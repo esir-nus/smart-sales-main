@@ -16,6 +16,7 @@ import com.smartsales.data.aicore.params.TranscriptionSettings
 import com.smartsales.data.aicore.params.TRANSCRIPTION_PROVIDER_XFYUN
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class RealDebugOrchestratorTest {
@@ -98,6 +99,10 @@ class RealDebugOrchestratorTest {
         assertTrue(preprocessIndex in 0 until previewIndex)
         assertTrue(section3.contains("tingwu.preview:"))
         assertTrue(section3.contains("METAHUB_PREVIEW_LINE"))
+        assertTrue(section3.contains("xfyun.suspiciousBoundaries:"))
+        assertTrue(section3.contains("(suppressed; count=2; see Section3B)"))
+        assertTrue(section3.contains("count=2"))
+        assertFalse(section3.contains("xfyun.suspiciousBoundaries:\n["))
         assertTrue(section3.contains("[Section3B: Tingwu Suspicious Boundaries]"))
         assertTrue(section3.contains("source: metahub.m2.preprocess"))
         assertTrue(section3.contains("count=2"))

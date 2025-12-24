@@ -59,11 +59,12 @@ class RealDebugOrchestratorTest {
             sessionId = "s-1",
             patch = M2PatchRecord(
                 patchId = "m2-preprocess-1",
-                createdAt = 1_000L,
-                prov = Provenance(source = "TEST_PREPROCESS", updatedAt = 1_000L),
+                createdAt = 123L,
+                prov = Provenance(source = "tingwu.preprocess", updatedAt = 123L),
                 payload = ConversationDerivedStateDelta(
                     preprocess = PreprocessSnapshot(
-                        first20Rendered = listOf("METAHUB_PREVIEW_LINE")
+                        first20Rendered = listOf("METAHUB_PREVIEW_LINE"),
+                        prov = Provenance(source = "tingwu.preprocess", updatedAt = 123L)
                     )
                 )
             )
@@ -82,6 +83,15 @@ class RealDebugOrchestratorTest {
             sessionTitle = "客户复盘",
             isTitleUserEdited = true
         )
-        assertTrue(snapshot.section3PreprocessedText.contains("METAHUB_PREVIEW_LINE"))
+        val section3 = snapshot.section3PreprocessedText
+        assertTrue(section3.contains(
+            "preprocess.source: metahub.m2.preprocess; " +
+                "prov=tingwu.preprocess; updatedAt=123; version=1"
+        ))
+        val preprocessIndex = section3.indexOf("preprocess.source: metahub.m2.preprocess;")
+        val previewIndex = section3.indexOf("tingwu.preview:")
+        assertTrue(preprocessIndex in 0 until previewIndex)
+        assertTrue(section3.contains("tingwu.preview:"))
+        assertTrue(section3.contains("METAHUB_PREVIEW_LINE"))
     }
 }

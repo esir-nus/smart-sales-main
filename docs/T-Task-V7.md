@@ -263,6 +263,16 @@ Legend: TODO / DOING / DONE / BLOCKED
   - [ ] 完成 Tingwu 转写后，HUD Section 3 显示 MetaHub 预处理预览与批次
   - [ ] 强制停止并重启后，同一会话仍能显示预处理快照
 
+### T7-010B2 Implementation: HUD Section 3 MetaHub preprocess provenance line
+- Status: DONE
+- Evidence:
+  - `data/ai-core/src/main/java/com/smartsales/data/aicore/debug/DebugOrchestrator.kt`
+  - `data/ai-core/src/test/java/com/smartsales/data/aicore/debug/RealDebugOrchestratorTest.kt`
+  - Tests:
+    - `./gradlew :data:ai-core:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 25s）
+- 📱 On-device sanity checklist (manual):
+  - [ ] 完成 Tingwu 转写后，HUD Section 3 显示 preprocess.source 行
+
 ---
 
 ## 3) Decision Log

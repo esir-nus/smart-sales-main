@@ -183,9 +183,9 @@ class RealDebugOrchestrator @Inject constructor(
     ): String = buildString {
         // 重要：Section 3 仅复用已有预处理产物，缺失时用明确占位提示。
         appendLine("[Section3: Preprocessed Snapshot]")
-        val preprocess = runCatching { metaHub.getEffectiveM2(sessionId) }
+        val effectiveM2 = runCatching { metaHub.getEffectiveM2(sessionId) }
             .getOrNull()
-            ?.preprocess
+        val preprocess = effectiveM2?.preprocess
         val hasMeaningful = preprocess?.let {
             it.first20Rendered.isNotEmpty() ||
                 it.batchPlan.isNotEmpty() ||
@@ -234,6 +234,14 @@ class RealDebugOrchestrator @Inject constructor(
         }
 
         val effectivePreprocess = preprocess ?: return@buildString
+        val effectiveSnapshot = effectiveM2 ?: return@buildString
+        val preprocessProv = effectivePreprocess.prov?.source ?: "-"
+        appendLine(
+            "preprocess.source: metahub.m2.preprocess; " +
+                "prov=$preprocessProv; " +
+                "updatedAt=${effectiveSnapshot.updatedAt}; " +
+                "version=${effectiveSnapshot.version}"
+        )
         val previewText = effectivePreprocess.first20Rendered
             .takeIf { it.isNotEmpty() }
             ?.joinToString(separator = "\n")

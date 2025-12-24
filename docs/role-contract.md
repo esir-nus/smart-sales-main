@@ -173,12 +173,12 @@ For any task requiring repo inspection, Codex must follow this sequence:
 
 1. **Anchor search**
 
-   * Use at most **2** targeted searches (e.g., `rg`) to find the anchor symbols/keywords.
+   * Use at most **5** targeted searches (e.g., `rg`) to find the anchor symbols/keywords.
 
 2. **Minimal context windows**
 
-   * Use at most **3** narrow windows (e.g., `sed`) around the anchors.
-   * Default window size: **≤ 60 lines each**.
+   * Use at most **8** narrow windows (e.g., `sed`) around the anchors.
+   * Default window size: **≤ 80 lines each**.
 
 3. **No full-file reading by default**
 

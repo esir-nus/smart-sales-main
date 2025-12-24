@@ -273,6 +273,20 @@ Legend: TODO / DOING / DONE / BLOCKED
 - 📱 On-device sanity checklist (manual):
   - [ ] 完成 Tingwu 转写后，HUD Section 3 显示 preprocess.source 行
 
+### T7-010B3A Tingwu preprocess trace capture (A1/A2)
+- A1 Status: DONE（补齐 TingwuTraceStore 字段与排序，尚未接入真实产出点）
+- A2 Status: DONE（Tingwu 完成后优先使用 trace 批次/边界）
+- Evidence:
+  - `data/ai-core/src/main/java/com/smartsales/data/aicore/debug/TingwuTraceStore.kt`
+  - `data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt`
+  - `data/ai-core/src/main/java/com/smartsales/data/aicore/metahub/TingwuPreprocessPatchBuilder.kt`
+  - `data/ai-core/src/test/java/com/smartsales/data/aicore/RealTingwuCoordinatorTest.kt`
+  - `data/ai-core/src/test/java/com/smartsales/data/aicore/TingwuPreprocessPatchBuilderTest.kt`
+  - Tests:
+    - `./gradlew :data:ai-core:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 1m 43s）
+- 📱 On-device sanity checklist (manual):
+  - [ ] Tingwu 转写完成后，MetaHub M2 preprocess 使用 trace 批次与可疑边界
+
 ---
 
 ## 3) Decision Log

@@ -490,11 +490,15 @@ class RealTingwuCoordinator @Inject constructor(
     ) {
         val sessionId = jobContext[jobId]?.sessionId ?: return
         val createdAt = System.currentTimeMillis()
+        val traceSnapshot = tingwuTraceStore.getSnapshot()
+            .takeIf { it.lastTaskId == jobId }
         val patch = TingwuPreprocessPatchBuilder.build(
             sessionId = sessionId,
             jobId = jobId,
             transcriptMarkdown = transcriptMarkdown,
-            createdAt = createdAt
+            createdAt = createdAt,
+            traceBatchPlan = traceSnapshot?.batchPlan,
+            traceSuspiciousBoundaries = traceSnapshot?.suspiciousBoundaries
         )
         runCatching {
             metaHub.appendM2Patch(sessionId, patch)

@@ -6,6 +6,7 @@ import com.smartsales.core.metahub.IndexRange
 import com.smartsales.core.metahub.M2PatchRecord
 import com.smartsales.core.metahub.PreprocessSnapshot
 import com.smartsales.core.metahub.Provenance
+import com.smartsales.core.metahub.SuspiciousBoundary
 import kotlin.math.min
 
 // 文件：data/ai-core/src/main/java/com/smartsales/data/aicore/metahub/TingwuPreprocessPatchBuilder.kt
@@ -24,7 +25,9 @@ internal object TingwuPreprocessPatchBuilder {
         jobId: String,
         transcriptMarkdown: String,
         createdAt: Long,
-        batchSize: Int = DEFAULT_BATCH_SIZE
+        batchSize: Int = DEFAULT_BATCH_SIZE,
+        traceBatchPlan: List<BatchPlanItem>? = null,
+        traceSuspiciousBoundaries: List<SuspiciousBoundary>? = null
     ): M2PatchRecord {
         val normalizedLines = transcriptMarkdown
             .lineSequence()
@@ -32,10 +35,18 @@ internal object TingwuPreprocessPatchBuilder {
             .filter { it.isNotBlank() }
             .toList()
         val first20 = normalizedLines.take(MAX_PREVIEW_LINES)
-        val batchPlan = buildFixedLineBatchPlan(
+        val fallbackBatchPlan = buildFixedLineBatchPlan(
             totalLines = normalizedLines.size,
             batchSize = batchSize
         )
+        val batchPlan = traceBatchPlan
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { normalizeBatchPlan(it) }
+            ?: fallbackBatchPlan
+        val suspiciousBoundaries = traceSuspiciousBoundaries
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { normalizeSuspiciousBoundaries(it) }
+            ?: emptyList()
         val prov = Provenance(
             source = "tingwu.preprocess",
             updatedAt = createdAt
@@ -47,7 +58,7 @@ internal object TingwuPreprocessPatchBuilder {
             payload = ConversationDerivedStateDelta(
                 preprocess = PreprocessSnapshot(
                     first20Rendered = first20,
-                    suspiciousBoundaries = emptyList(),
+                    suspiciousBoundaries = suspiciousBoundaries,
                     batchPlan = batchPlan,
                     prov = prov
                 )
@@ -75,6 +86,23 @@ internal object TingwuPreprocessPatchBuilder {
                 tailLookaheadEnabled = false
             )
         }
+    }
+
+    private fun normalizeBatchPlan(input: List<BatchPlanItem>): List<BatchPlanItem> {
+        if (input.isEmpty()) return emptyList()
+        val isSorted = input.map { it.batchId }
+            .zipWithNext()
+            .all { (prev, next) -> prev <= next }
+        // 说明：仅在顺序不稳定时按 batchId 排序，避免无谓变更。
+        return if (isSorted) input else input.sortedBy { it.batchId }
+    }
+
+    private fun normalizeSuspiciousBoundaries(
+        input: List<SuspiciousBoundary>
+    ): List<SuspiciousBoundary> {
+        if (input.isEmpty()) return emptyList()
+        // 说明：按 index 升序，保证顺序稳定。
+        return input.sortedBy { it.index }
     }
 
     private const val MAX_PREVIEW_LINES = 20

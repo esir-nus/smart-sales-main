@@ -12,8 +12,11 @@ import com.smartsales.data.aicore.tingwu.TingwuStatusData
 import com.smartsales.data.aicore.tingwu.TingwuStatusResponse
 import com.smartsales.data.aicore.tingwu.TingwuTranscription
 import com.smartsales.core.metahub.AnalysisSource
+import com.smartsales.core.metahub.BatchPlanItem
 import com.smartsales.core.metahub.InMemoryMetaHub
+import com.smartsales.core.metahub.IndexRange
 import com.smartsales.core.metahub.SpeakerMeta
+import com.smartsales.core.metahub.SuspiciousBoundary
 import com.smartsales.core.metahub.TranscriptMetadata
 import com.smartsales.data.aicore.tingwu.TingwuTaskParameters
 import com.smartsales.data.aicore.tingwu.TingwuSummarizationParameters
@@ -1664,6 +1667,35 @@ class RealTingwuCoordinatorTest {
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
         assertTrue(completed.transcriptMarkdown.contains("原始内容"))
         assertTrue(completed.transcriptMarkdown.contains("客户"))
+    }
+
+    @Test
+    fun `trace store keeps preprocess artifacts deterministic`() {
+        val store = TingwuTraceStore()
+        val batchPlan = listOf(
+            BatchPlanItem(
+                batchId = "b2",
+                editableRange = IndexRange(start = 20, endInclusive = 39),
+                examineRange = IndexRange(start = 20, endInclusive = 39)
+            ),
+            BatchPlanItem(
+                batchId = "b1",
+                editableRange = IndexRange(start = 0, endInclusive = 19),
+                examineRange = IndexRange(start = 0, endInclusive = 19)
+            )
+        )
+        val boundaries = listOf(
+            SuspiciousBoundary(index = 5, reason = "gap"),
+            SuspiciousBoundary(index = 1, reason = "gap")
+        )
+        store.record(
+            batchPlan = batchPlan,
+            suspiciousBoundaries = boundaries
+        )
+
+        val snapshot = store.getSnapshot()
+        assertEquals(listOf("b1", "b2"), snapshot.batchPlan.map { it.batchId })
+        assertEquals(listOf(1, 5), snapshot.suspiciousBoundaries.map { it.index })
     }
 
     private class FakeAiParaSettingsProvider(

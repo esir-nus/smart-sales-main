@@ -4,6 +4,8 @@ package com.smartsales.data.aicore.debug
 // 模块：:data:ai-core
 // 说明：调试用 Tingwu 调用痕迹存储，仅保存在内存，供 Home HUD 展示
 // 作者：创建于 2025-12-12
+import com.smartsales.core.metahub.BatchPlanItem
+import com.smartsales.core.metahub.SuspiciousBoundary
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,6 +26,8 @@ data class TingwuTraceSnapshot(
     val batchPlanBatchSize: Int? = null,
     val batchPlanTotalBatches: Int? = null,
     val batchPlanCurrentBatchIndex: Int? = null,
+    val batchPlan: List<BatchPlanItem> = emptyList(),
+    val suspiciousBoundaries: List<SuspiciousBoundary> = emptyList(),
     val lastResultUrls: Map<String, String> = emptyMap(),
     val updatedAtMs: Long = 0L
 )
@@ -48,6 +52,8 @@ class TingwuTraceStore @Inject constructor() {
         batchPlanBatchSize: Int? = null,
         batchPlanTotalBatches: Int? = null,
         batchPlanCurrentBatchIndex: Int? = null,
+        batchPlan: List<BatchPlanItem>? = null,
+        suspiciousBoundaries: List<SuspiciousBoundary>? = null,
         resultUrls: Map<String, String>? = null
     ) {
         val now = System.currentTimeMillis()
@@ -68,6 +74,9 @@ class TingwuTraceStore @Inject constructor() {
                 batchPlanBatchSize = batchPlanBatchSize ?: current.batchPlanBatchSize,
                 batchPlanTotalBatches = batchPlanTotalBatches ?: current.batchPlanTotalBatches,
                 batchPlanCurrentBatchIndex = batchPlanCurrentBatchIndex ?: current.batchPlanCurrentBatchIndex,
+                batchPlan = batchPlan?.let { normalizeBatchPlan(it) } ?: current.batchPlan,
+                suspiciousBoundaries = suspiciousBoundaries?.let { normalizeSuspiciousBoundaries(it) }
+                    ?: current.suspiciousBoundaries,
                 lastResultUrls = resultUrls ?: current.lastResultUrls,
                 updatedAtMs = now
             )
@@ -75,4 +84,19 @@ class TingwuTraceStore @Inject constructor() {
     }
 
     fun getSnapshot(): TingwuTraceSnapshot = snapshot
+
+    private fun normalizeBatchPlan(input: List<BatchPlanItem>): List<BatchPlanItem> {
+        if (input.isEmpty()) return emptyList()
+        val isSorted = input.map { it.batchId }
+            .zipWithNext()
+            .all { (prev, next) -> prev <= next }
+        // 说明：优先保留原顺序，不稳定时按 batchId 排序。
+        return if (isSorted) input else input.sortedBy { it.batchId }
+    }
+
+    private fun normalizeSuspiciousBoundaries(input: List<SuspiciousBoundary>): List<SuspiciousBoundary> {
+        if (input.isEmpty()) return emptyList()
+        // 说明：按 index 升序确保顺序确定。
+        return input.sortedBy { it.index }
+    }
 }

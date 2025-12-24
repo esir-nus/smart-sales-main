@@ -18,6 +18,7 @@ release/
 
 # Gradle files
 .gradle/
+.gradle-user/
 .gradle-local/
 .gradle-tmp/
 build/
@@ -153,4 +154,3 @@ plans/
 
 # Virtual machine crash logs
 hs_err_pid*
-

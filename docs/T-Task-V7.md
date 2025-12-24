@@ -287,6 +287,16 @@ Legend: TODO / DOING / DONE / BLOCKED
 - 📱 On-device sanity checklist (manual):
   - [ ] Tingwu 转写完成后，MetaHub M2 preprocess 使用 trace 批次与可疑边界
 
+### T7-010B3B1 Tingwu suspicious-boundary detector (pure helper)
+- Status: DONE
+- Evidence:
+  - `data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/TingwuSuspiciousBoundaryDetector.kt`
+  - `data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/TingwuSuspiciousBoundaryDetectorTest.kt`
+  - Tests:
+    - `./gradlew :data:ai-core:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 20s）
+- 📱 On-device sanity checklist (manual):
+  - [ ] 传入含时间戳与说话人标签的转写文本，探测器返回非空可疑边界
+
 ---
 
 ## 3) Decision Log

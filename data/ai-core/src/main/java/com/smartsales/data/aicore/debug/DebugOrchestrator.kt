@@ -78,6 +78,7 @@ class RealDebugOrchestrator @Inject constructor(
             )
             val section3 = DebugSnapshotRedactor.redact(
                 buildSection3(
+                    sessionId = sessionId,
                     tingwuTrace = tingwuTrace,
                     xfyunTrace = xfyunTrace,
                 )
@@ -176,11 +177,21 @@ class RealDebugOrchestrator @Inject constructor(
     }.trimEnd()
 
     private suspend fun buildSection3(
+        sessionId: String,
         tingwuTrace: TingwuTraceSnapshot,
         xfyunTrace: XfyunTraceSnapshot?,
     ): String = buildString {
         // 重要：Section 3 仅复用已有预处理产物，缺失时用明确占位提示。
         appendLine("[Section3: Preprocessed Snapshot]")
+        val preprocess = runCatching { metaHub.getEffectiveM2(sessionId) }
+            .getOrNull()
+            ?.preprocess
+        val hasMeaningful = preprocess?.let {
+            it.first20Rendered.isNotEmpty() ||
+                it.batchPlan.isNotEmpty() ||
+                it.suspiciousBoundaries.isNotEmpty()
+        } == true
+        if (!hasMeaningful) {
         val tingwuPreview = runCatching {
             readPreviewLines(tingwuTrace.transcriptDumpPath, MAX_PREVIEW_LINES)
         }.getOrNull()
@@ -214,6 +225,46 @@ class RealDebugOrchestrator @Inject constructor(
 
         val suspicious = if (xfyunTrace?.postXfyunSuspicious?.isNotEmpty() == true) {
             XfyunDebugInfoFormatter.postXfyunSuspiciousJson(xfyunTrace.postXfyunSuspicious)
+        } else {
+            "(missing: postXfyun suspicious hints not recorded)"
+        }
+        appendLine("xfyun.suspiciousBoundaries:")
+        appendLine(suspicious)
+            return@buildString
+        }
+
+        val effectivePreprocess = preprocess ?: return@buildString
+        val previewText = effectivePreprocess.first20Rendered
+            .takeIf { it.isNotEmpty() }
+            ?.joinToString(separator = "\n")
+        appendLine("tingwu.preview:")
+        appendLine(previewText ?: "(missing: tingwu transcript preview not available)")
+        val derivedBatchSize = effectivePreprocess.batchPlan.firstOrNull()
+            ?.editableRange
+            ?.let { (it.endInclusive - it.start + 1).coerceAtLeast(0) }
+        val tingwuBatchPlan = if (effectivePreprocess.batchPlan.isNotEmpty()) {
+            "rule=derived; " +
+                "batchSize=${derivedBatchSize ?: "-"}; " +
+                "totalBatches=${effectivePreprocess.batchPlan.size}; " +
+                "currentBatch=${effectivePreprocess.batchPlan.lastOrNull()?.batchId ?: "-"}"
+        } else {
+            "(missing: tingwu batch plan not recorded)"
+        }
+        appendLine("tingwu.batchPlan:")
+        appendLine(tingwuBatchPlan)
+
+        appendLine("xfyun.preview:")
+        appendLine("(missing: xfyun preprocessed preview not available)")
+        appendLine("xfyun.batchPlan:")
+        appendLine("(missing: postXfyun batch plan not recorded)")
+        val suspicious = if (effectivePreprocess.suspiciousBoundaries.isNotEmpty()) {
+            effectivePreprocess.suspiciousBoundaries.joinToString(
+                prefix = "[",
+                postfix = "]",
+                separator = ", "
+            ) { entry ->
+                "{\"index\":${entry.index},\"reason\":\"${entry.reason.replace("\"", "\\\"")}\"}"
+            }
         } else {
             "(missing: postXfyun suspicious hints not recorded)"
         }

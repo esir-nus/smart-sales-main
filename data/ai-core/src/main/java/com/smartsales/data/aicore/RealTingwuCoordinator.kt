@@ -33,6 +33,7 @@ import com.smartsales.data.aicore.tingwu.TingwuCustomPrompt
 import com.smartsales.data.aicore.tingwu.TingwuCustomPromptContent
 import com.smartsales.data.aicore.params.AiParaSettingsProvider
 import com.smartsales.data.aicore.debug.TingwuTraceStore
+import com.smartsales.data.aicore.metahub.TingwuPreprocessPatchBuilder
 import com.smartsales.data.aicore.tingwu.TingwuRawResponseDumper
 import com.smartsales.data.aicore.tingwu.TingwuArtifactFetcher
 import com.smartsales.data.aicore.posttingwu.EnhancerInput
@@ -402,6 +403,10 @@ class RealTingwuCoordinator @Inject constructor(
                                 transcriptMeta = transcriptMeta,
                                 chapters = transcriptResult.chapters
                             )
+                            appendTingwuPreprocessPatch(
+                                jobId = jobId,
+                                transcriptMarkdown = transcriptResult.markdown
+                            )
                             AiCoreLogger.d(TAG, "转写结果拉取成功：jobId=$jobId markdown长度=${transcriptResult.markdown.length}")
                             flow.value = TingwuJobState.Completed(
                                 jobId = jobId,
@@ -475,6 +480,26 @@ class RealTingwuCoordinator @Inject constructor(
             metaHub.upsertSession(merged)
         }.onFailure {
             AiCoreLogger.w(TAG, "Tingwu 元数据写入 MetaHub 失败：${it.message}")
+        }
+    }
+
+    // Tingwu 转写完成后写入 M2 预处理补丁（内部派生），用于 HUD 预处理快照展示。
+    private suspend fun appendTingwuPreprocessPatch(
+        jobId: String,
+        transcriptMarkdown: String
+    ) {
+        val sessionId = jobContext[jobId]?.sessionId ?: return
+        val createdAt = System.currentTimeMillis()
+        val patch = TingwuPreprocessPatchBuilder.build(
+            sessionId = sessionId,
+            jobId = jobId,
+            transcriptMarkdown = transcriptMarkdown,
+            createdAt = createdAt
+        )
+        runCatching {
+            metaHub.appendM2Patch(sessionId, patch)
+        }.onFailure {
+            AiCoreLogger.w(TAG, "Tingwu 预处理补丁写入 MetaHub 失败：${it.message}")
         }
     }
 

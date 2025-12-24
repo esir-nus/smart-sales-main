@@ -212,6 +212,19 @@ Legend: TODO / DOING / DONE / BLOCKED
     - [ ] Smart Analysis 芯片仍需发送触发（模式不变）
     - [ ] 多次点击导出时以最后一次点击为准
 
+### T7-008.2B Implementation: interrupted audio recovery banner (Home)
+- Status: DONE
+- Evidence:
+  - `feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreen.kt`（Home 顶部横幅 + 两个动作）
+  - Tests:
+    - `./gradlew :core:util:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 7s）
+    - `./gradlew :data:ai-core:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 8s）
+    - `./gradlew :feature:chat:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 15s）
+  - 📱 On-device sanity checklist (manual):
+    - [ ] 进行音频转写并中途强制停止 App，重启后 Home 顶部横幅出现
+    - [ ] 点击“知道了”后横幅消失，重启后同一 startedAt 不再出现
+    - [ ] 点击“重新上传”打开音频选择流程，选文件后正常进入转写且不发送消息
+
 ### T7-009 Placeholder: External Knowledge & Style (M4) API interface
 - Status: TODO
 - Definition of done:
@@ -237,6 +250,18 @@ Legend: TODO / DOING / DONE / BLOCKED
   - [ ] 验证导出 gate 仍为已就绪
   - [ ] 验证 HUD Section 1 显示相同 sessionId + M3 accepted 命名
   - [ ] 验证会话改名仍存在
+
+### T7-010B1 Implementation: Tingwu preprocess → MetaHub M2 patch
+- Status: DONE
+- Evidence:
+  - `data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt`（转写完成追加 Tingwu 预处理补丁）
+  - `data/ai-core/src/main/java/com/smartsales/data/aicore/metahub/TingwuPreprocessPatchBuilder.kt`（确定性预览/批次构建）
+  - `data/ai-core/src/test/java/com/smartsales/data/aicore/TingwuPreprocessPatchBuilderTest.kt`（补丁写入后预处理快照）
+  - Tests:
+    - `./gradlew :data:ai-core:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 29s）
+- 📱 On-device sanity checklist (manual):
+  - [ ] 完成 Tingwu 转写后，HUD Section 3 显示 MetaHub 预处理预览与批次
+  - [ ] 强制停止并重启后，同一会话仍能显示预处理快照
 
 ---
 

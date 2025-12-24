@@ -240,6 +240,7 @@ fun HomeScreenRoute(
     chatErrorMessage = state.chatErrorMessage,
     onPickAudioFile = viewModel::onAudioFilePicked,
     onPickImageFile = viewModel::onImagePicked,
+    onDismissAudioRecoveryHint = viewModel::dismissAudioRecoveryHint,
     modifier = modifier,
     showHistoryPanel = showHistoryPanel,
         onToggleHistoryPanel = { showHistoryPanel = true },
@@ -376,6 +377,7 @@ fun HomeScreen(
     exportGateState: ExportGateState,
     onPickAudioFile: (Uri) -> Unit = {},
     onPickImageFile: (Uri) -> Unit = {},
+    onDismissAudioRecoveryHint: () -> Unit = {},
     modifier: Modifier = Modifier,
     showHistoryPanel: Boolean = false,
     onToggleHistoryPanel: () -> Unit = {},
@@ -597,6 +599,12 @@ fun HomeScreen(
                         Column(
                             modifier = Modifier.fillMaxSize()
                         ) {
+                            if (state.showAudioRecoveryHint) {
+                                AudioRecoveryHintBanner(
+                                    onReupload = { audioPicker.launch(arrayOf("audio/*")) },
+                                    onDismiss = onDismissAudioRecoveryHint
+                                )
+                            }
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
@@ -947,6 +955,47 @@ private fun BulletLine(text: String) {
         )
     }
 }
+
+@Composable
+private fun AudioRecoveryHintBanner(
+    onReupload: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        tonalElevation = 2.dp,
+        color = MaterialTheme.colorScheme.surfaceVariant
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "上次音频处理似乎被中断。建议重新上传音频继续。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = onReupload) {
+                    Text(text = "重新上传")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                TextButton(onClick = onDismiss) {
+                    Text(text = "知道了")
+                }
+            }
+        }
+    }
+}
+
 object HomeScreenTestTags {
     const val ROOT = "home_screen_root"
     // 兼容旧测试

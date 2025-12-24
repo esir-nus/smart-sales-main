@@ -5,7 +5,11 @@
 package com.smartsales.data.aicore.debug
 
 import com.smartsales.core.util.DefaultDispatcherProvider
+import com.smartsales.core.metahub.ConversationDerivedStateDelta
 import com.smartsales.core.metahub.InMemoryMetaHub
+import com.smartsales.core.metahub.M2PatchRecord
+import com.smartsales.core.metahub.PreprocessSnapshot
+import com.smartsales.core.metahub.Provenance
 import com.smartsales.data.aicore.params.InMemoryAiParaSettingsRepository
 import com.smartsales.data.aicore.params.TranscriptionSettings
 import com.smartsales.data.aicore.params.TRANSCRIPTION_PROVIDER_XFYUN
@@ -45,5 +49,39 @@ class RealDebugOrchestratorTest {
         assertTrue(snapshot.section1EffectiveRunText.contains("exportGate.ready"))
         assertTrue(snapshot.section2RawTranscriptionText.contains("Tingwu:"))
         assertTrue(snapshot.section3PreprocessedText.contains("Preprocessed"))
+    }
+
+    @Test
+    fun `snapshot prefers metahub preprocess when meaningful`() = runTest {
+        val settingsRepository = InMemoryAiParaSettingsRepository()
+        val metaHub = InMemoryMetaHub()
+        metaHub.appendM2Patch(
+            sessionId = "s-1",
+            patch = M2PatchRecord(
+                patchId = "m2-preprocess-1",
+                createdAt = 1_000L,
+                prov = Provenance(source = "TEST_PREPROCESS", updatedAt = 1_000L),
+                payload = ConversationDerivedStateDelta(
+                    preprocess = PreprocessSnapshot(
+                        first20Rendered = listOf("METAHUB_PREVIEW_LINE")
+                    )
+                )
+            )
+        )
+        val orchestrator = RealDebugOrchestrator(
+            metaHub = metaHub,
+            aiParaSettingsRepository = settingsRepository,
+            tingwuTraceStore = TingwuTraceStore(),
+            xfyunTraceStore = XfyunTraceStore(),
+            dispatchers = DefaultDispatcherProvider,
+        )
+
+        val snapshot = orchestrator.getDebugSnapshot(
+            sessionId = "s-1",
+            jobId = "job-1",
+            sessionTitle = "客户复盘",
+            isTitleUserEdited = true
+        )
+        assertTrue(snapshot.section3PreprocessedText.contains("METAHUB_PREVIEW_LINE"))
     }
 }

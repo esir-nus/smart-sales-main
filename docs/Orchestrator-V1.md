@@ -111,6 +111,9 @@
 - 统一上下文，为后续 LLM 任务提供稳定输入。
 - 输出 speaker mapping（给 Publisher 使用）。
 - 支持“未来思考/工作日志”扩展，但 V1 **不依赖** chain-of-thought。
+- 结构字段（可选/最小集）：
+   - `batchSummaries`：按 batchIndex 的简短批次摘要列表。
+   - `highlights` / `decisions` / `nextSteps`：面向分析视图的要点清单。
 
 ### 4.3 章节时间校准（与 captureStart 一致）
 - 若 Tingwu 提供 `chapter.offsetMs`：
@@ -138,6 +141,12 @@
   - 若 `(absStart, absEnd)` 已知：发布当且仅当 `absEnd > batch.absStartMs && absStart < batch.absEndMs`
   - 若仅有 `absStart`：发布当且仅当 `absStart ∈ [batch.absStartMs, batch.absEndMs)`
 - 保留“去重 hook”接口用于未来扩展，但 V1 不启用文本相似度。
+
+#### 5.3.1 范围过滤示例（计算口径）
+- 已知：`batch.absStartMs=600000`，`batch.absEndMs=1200000`，`captureStartMs=590000`
+- Tingwu 段：`relStartMs=15000`，`relEndMs=20000`
+- 绝对时间：`absStart=605000`，`absEnd=610000`
+- 因 `absEnd > 600000` 且 `absStart < 1200000`，段落发布。
 
 ### 5.4 当无相对段信息时
 - 以**批次块**形式发布（每批次一个 block）。

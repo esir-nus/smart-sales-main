@@ -4,14 +4,33 @@
   "title": "Orchestrator-V1 JSON Schema",
   "description": "Schema for Orchestrator-V1 data models defined in docs/Orchestrator-V1.md. Macro windows are half-open [absStartMs, absEndMs); pre-roll overlap only; ordering uses batchIndex (integer).",
   "$comment": "CURRENT. Spec: docs/Orchestrator-V1.md. SchemaVersion: 1.0.0. Idempotency key: (sessionId, batchIndex, artifactType, version). Range filtering, chapter offset anchoring, and pre-roll rules are documented via descriptions; schema enforces types and required fields only.",
-  "oneOf": [
-    { "$ref": "#/$defs/DisectorPlan" },
-    { "$ref": "#/$defs/TingwuJobState" },
-    { "$ref": "#/$defs/TingwuBatchArtifact" },
-    { "$ref": "#/$defs/SessionMemory" },
-    { "$ref": "#/$defs/PublisherState" },
-    { "$ref": "#/$defs/PublishedTranscript" },
-    { "$ref": "#/$defs/PublishedAnalysis" }
+  "anyOf": [
+    {
+      "oneOf": [
+        { "$ref": "#/$defs/DisectorPlan" },
+        { "$ref": "#/$defs/TingwuJobState" },
+        { "$ref": "#/$defs/TingwuBatchArtifact" },
+        { "$ref": "#/$defs/SessionMemory" },
+        { "$ref": "#/$defs/PublisherState" },
+        { "$ref": "#/$defs/PublishedTranscript" },
+        { "$ref": "#/$defs/PublishedAnalysis" }
+      ]
+    },
+    {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/DisectorPlan" },
+          { "$ref": "#/$defs/TingwuJobState" },
+          { "$ref": "#/$defs/TingwuBatchArtifact" },
+          { "$ref": "#/$defs/SessionMemory" },
+          { "$ref": "#/$defs/PublisherState" },
+          { "$ref": "#/$defs/PublishedTranscript" },
+          { "$ref": "#/$defs/PublishedAnalysis" }
+        ]
+      }
+    }
   ],
   "$defs": {
     "NonEmptyString": {

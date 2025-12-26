@@ -1,6 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://smartsales.local/schemas/metahub-schema-v7.json",
+  "$comment": "ARCHIVED: replaced by Orchestrator-V1 JSON set (docs/orchestrator-v1.schema.json). This schema is preserved for historical reference only.",
   "title": "SmartSales MetaHub Schema V7",
   "type": "object",
   "additionalProperties": false,
@@ -289,4 +290,3 @@
     }
   }
 }
-

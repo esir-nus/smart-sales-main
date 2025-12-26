@@ -1,9 +1,12 @@
-# Orchestrator–MetaHub V7 (Docs-Driven Spec)
+# Orchestrator–MetaHub V7 (Docs-Driven Spec) [ARCHIVED]
 
 Version: 7.0.0  
-Status: CURRENT（现行规范）  
+Status: ARCHIVED（已归档，仅历史参考）  
+Replacement: `docs/Orchestrator-V1.md`  
 Audience: Operator / Orchestrator / Codex / Android engineers  
 Scope: Orchestrator + MetaHub + multi-agent pipeline + provider lanes + HUD contracts + schemas
+
+> 说明：V7 已弃用并归档，请以 `docs/Orchestrator-V1.md` 作为唯一现行规范。
 
 ## 0. Goals
 
@@ -199,7 +202,7 @@ UI talks to a unified facade, which routes internally to:
 
 ## 9. Schema and Versioning
 
-- M1/M2/M3/M4 schemas are described by `docs/metahub-schema-v7.json`.
+- M1/M2/M3/M4 schemas are described by `docs/archived/metahub-schema-v7.json`.
 - Each layer includes:
   - schemaVersion
   - updatedAt

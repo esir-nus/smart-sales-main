@@ -1,0 +1,288 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smartsales.local/schemas/orchestrator-v1.schema.json",
+  "title": "Orchestrator-V1 JSON Schema",
+  "description": "Schema for Orchestrator-V1 data models defined in docs/Orchestrator-V1.md. Macro windows are half-open [absStartMs, absEndMs); pre-roll overlap only; ordering uses batchIndex (integer).",
+  "$comment": "CURRENT. Spec: docs/Orchestrator-V1.md. SchemaVersion: 1.0.0. Idempotency key: (sessionId, batchIndex, artifactType, version). Range filtering, chapter offset anchoring, and pre-roll rules are documented via descriptions; schema enforces types and required fields only.",
+  "oneOf": [
+    { "$ref": "#/$defs/DisectorPlan" },
+    { "$ref": "#/$defs/TingwuJobState" },
+    { "$ref": "#/$defs/TingwuBatchArtifact" },
+    { "$ref": "#/$defs/SessionMemory" },
+    { "$ref": "#/$defs/PublisherState" },
+    { "$ref": "#/$defs/PublishedTranscript" },
+    { "$ref": "#/$defs/PublishedAnalysis" }
+  ],
+  "$defs": {
+    "NonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "TimestampMs": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "BatchIndex": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Ordering primitive; numeric sort only."
+    },
+    "BatchId": {
+      "type": "string",
+      "pattern": "^b[0-9]+$",
+      "description": "Stable identifier derived from batchIndex; not used for ordering."
+    },
+    "DisectorBatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Batch time ranges: absStartMs..absEndMs define macro window (half-open). captureStartMs may include pre-roll; captureEndMs must equal absEndMs.",
+      "required": [
+        "batchIndex",
+        "batchId",
+        "absStartMs",
+        "absEndMs",
+        "captureStartMs",
+        "captureEndMs",
+        "durationMs"
+      ],
+      "properties": {
+        "batchIndex": { "$ref": "#/$defs/BatchIndex" },
+        "batchId": { "$ref": "#/$defs/BatchId" },
+        "absStartMs": {
+          "$ref": "#/$defs/TimestampMs",
+          "description": "Macro window start (inclusive)."
+        },
+        "absEndMs": {
+          "$ref": "#/$defs/TimestampMs",
+          "description": "Macro window end (exclusive)."
+        },
+        "captureStartMs": {
+          "$ref": "#/$defs/TimestampMs",
+          "description": "Capture start; may be earlier than absStartMs for pre-roll.",
+          "minimum": 0
+        },
+        "captureEndMs": {
+          "$ref": "#/$defs/TimestampMs",
+          "description": "Capture end; must equal absEndMs (no post-roll)."
+        },
+        "durationMs": { "$ref": "#/$defs/TimestampMs" }
+      }
+    },
+    "DisectorPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Deterministic batch plan. overlapMs is fixed to 10s in V1. Use batchIndex for ordering.",
+      "required": ["sessionId", "version", "totalMs", "overlapMs", "batches"],
+      "properties": {
+        "sessionId": { "$ref": "#/$defs/NonEmptyString" },
+        "version": {
+          "type": "integer",
+          "const": 1,
+          "description": "V1 plan version is always 1."
+        },
+        "totalMs": { "$ref": "#/$defs/TimestampMs" },
+        "overlapMs": {
+          "type": "integer",
+          "const": 10000,
+          "description": "Pre-roll overlap only; non-first batches start at absStartMs - overlapMs."
+        },
+        "batches": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/DisectorBatch" },
+          "minItems": 1
+        }
+      }
+    },
+    "TingwuJobState": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Persisted status for a Tingwu job per batch.",
+      "required": ["sessionId", "batchIndex", "batchId", "status", "attemptCount"],
+      "properties": {
+        "sessionId": { "$ref": "#/$defs/NonEmptyString" },
+        "batchIndex": { "$ref": "#/$defs/BatchIndex" },
+        "batchId": { "$ref": "#/$defs/BatchId" },
+        "status": {
+          "type": "string",
+          "enum": ["PLANNED", "SUBMITTED", "RUNNING", "SUCCEEDED", "FAILED"]
+        },
+        "attemptCount": { "type": "integer", "minimum": 0 },
+        "lastErrorCategory": {
+          "type": "string",
+          "enum": ["NONE", "NETWORK", "TIMEOUT", "RATE_LIMIT", "AUTH", "INPUT", "PROVIDER", "UNKNOWN"],
+          "default": "NONE"
+        }
+      }
+    },
+    "RelativeSegment": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Relative segment times are relative to captureStartMs, not absStartMs. Absolute time = captureStartMs + relStartMs.",
+      "required": ["relStartMs", "text"],
+      "properties": {
+        "relStartMs": { "$ref": "#/$defs/TimestampMs" },
+        "relEndMs": { "$ref": "#/$defs/TimestampMs" },
+        "speakerKey": { "type": "string" },
+        "text": { "type": "string" }
+      }
+    },
+    "TingwuTranscription": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {
+        "text": { "type": "string" },
+        "relativeSegments": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/RelativeSegment" },
+          "default": []
+        }
+      }
+    },
+    "TingwuSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {
+        "text": { "type": "string" }
+      }
+    },
+    "TingwuChapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "offsetMs is relative to captureStartMs; published chapters must fall within macro window or fall back to batch.absStartMs.",
+      "required": ["title"],
+      "properties": {
+        "title": { "type": "string" },
+        "offsetMs": { "$ref": "#/$defs/TimestampMs" },
+        "durationMs": { "$ref": "#/$defs/TimestampMs" }
+      }
+    },
+    "TingwuBatchArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Batch artifacts returned by Tingwu: transcription (with optional relative segments), summary, chapters.",
+      "required": ["sessionId", "batchIndex", "batchId", "jobId", "transcription", "summary", "chapters"],
+      "properties": {
+        "sessionId": { "$ref": "#/$defs/NonEmptyString" },
+        "batchIndex": { "$ref": "#/$defs/BatchIndex" },
+        "batchId": { "$ref": "#/$defs/BatchId" },
+        "jobId": { "$ref": "#/$defs/NonEmptyString" },
+        "transcription": { "$ref": "#/$defs/TingwuTranscription" },
+        "summary": { "$ref": "#/$defs/TingwuSummary" },
+        "chapters": { "type": "array", "items": { "$ref": "#/$defs/TingwuChapter" }, "default": [] }
+      }
+    },
+    "SpeakerMapEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Speaker mapping evolves by batch; effectiveFromBatchId marks the first batch where mapping applies.",
+      "required": ["speakerKey", "displayName", "confidence", "effectiveFromBatchId"],
+      "properties": {
+        "speakerKey": { "type": "string" },
+        "displayName": { "type": "string" },
+        "title": { "type": "string" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "effectiveFromBatchId": { "$ref": "#/$defs/BatchId" }
+      }
+    },
+    "BatchSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["batchIndex", "batchId", "summary"],
+      "properties": {
+        "batchIndex": { "$ref": "#/$defs/BatchIndex" },
+        "batchId": { "$ref": "#/$defs/BatchId" },
+        "summary": { "type": "string" }
+      }
+    },
+    "MemoryChapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "absStartMs", "batchId"],
+      "properties": {
+        "title": { "type": "string" },
+        "absStartMs": { "$ref": "#/$defs/TimestampMs" },
+        "absEndMs": { "$ref": "#/$defs/TimestampMs" },
+        "batchId": { "$ref": "#/$defs/BatchId" }
+      }
+    },
+    "SessionMemory": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Structured memory derived from Tingwu summaries and chapters; chapter timestamps are chapter-level only.",
+      "required": ["sessionId", "schemaVersion", "speakerMap", "chapters"],
+      "properties": {
+        "sessionId": { "$ref": "#/$defs/NonEmptyString" },
+        "schemaVersion": { "type": "integer", "const": 1 },
+        "updatedAtMs": { "$ref": "#/$defs/TimestampMs" },
+        "speakerMap": { "type": "array", "items": { "$ref": "#/$defs/SpeakerMapEntry" }, "default": [] },
+        "chapters": { "type": "array", "items": { "$ref": "#/$defs/MemoryChapter" }, "default": [] },
+        "batchSummaries": { "type": "array", "items": { "$ref": "#/$defs/BatchSummary" }, "default": [] },
+        "highlights": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "decisions": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "nextSteps": { "type": "array", "items": { "type": "string" }, "default": [] }
+      }
+    },
+    "PublisherState": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Published prefix state; publishedPrefixBatchIndex is monotonic and advances only for contiguous batches.",
+      "required": ["sessionId", "version", "publishedPrefixBatchIndex"],
+      "properties": {
+        "sessionId": { "$ref": "#/$defs/NonEmptyString" },
+        "version": { "type": "integer", "const": 1 },
+        "publishedPrefixBatchIndex": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "PublishedUtterance": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Published utterance line with absolute timestamps derived from captureStartMs + relative times.",
+      "required": ["absStartMs", "speakerKey", "speakerDisplay", "text", "batchId"],
+      "properties": {
+        "absStartMs": { "$ref": "#/$defs/TimestampMs" },
+        "absEndMs": { "$ref": "#/$defs/TimestampMs" },
+        "speakerKey": { "type": "string" },
+        "speakerDisplay": { "type": "string" },
+        "text": { "type": "string" },
+        "batchId": { "$ref": "#/$defs/BatchId" }
+      }
+    },
+    "PublishedTranscript": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Published transcript; items are range-filtered to macro window overlap.",
+      "required": ["sessionId", "version", "publishedPrefixBatchIndex", "items"],
+      "properties": {
+        "sessionId": { "$ref": "#/$defs/NonEmptyString" },
+        "version": { "type": "integer", "const": 1 },
+        "publishedPrefixBatchIndex": { "type": "integer", "minimum": 0 },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/PublishedUtterance" }, "default": [] }
+      }
+    },
+    "PublishedAnalysisChapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "absStartMs"],
+      "properties": {
+        "title": { "type": "string" },
+        "absStartMs": { "$ref": "#/$defs/TimestampMs" },
+        "absEndMs": { "$ref": "#/$defs/TimestampMs" }
+      }
+    },
+    "PublishedAnalysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Published analysis view; chapter timeline and speaker map are derived from SessionMemory.",
+      "required": ["sessionId", "version", "summary", "chapters", "speakerMap"],
+      "properties": {
+        "sessionId": { "$ref": "#/$defs/NonEmptyString" },
+        "version": { "type": "integer", "const": 1 },
+        "summary": { "type": "string" },
+        "chapters": { "type": "array", "items": { "$ref": "#/$defs/PublishedAnalysisChapter" }, "default": [] },
+        "speakerMap": { "type": "array", "items": { "$ref": "#/$defs/SpeakerMapEntry" }, "default": [] }
+      }
+    }
+  }
+}

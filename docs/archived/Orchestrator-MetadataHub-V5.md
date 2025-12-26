@@ -1,5 +1,5 @@
 > ARCHIVED: This document is historical reference only.  
-> CURRENT spec is `docs/Orchestrator-MetadataHub-V7.md`.  
+> CURRENT spec is `docs/Orchestrator-V1.md`.  
 > Do not implement new behavior against this version.
 
 # Orchestrator–MetaHub 规范（V5）
@@ -7,9 +7,9 @@
 ## 标题与版本信息（Versioning header）
 
 - 版本：V5.0.0
-- 状态：CURRENT
+- 状态：ARCHIVED
 - 生效日期：2025-12-16
-- 取代：V4（`docs/Orchestrator-MetadataHub-V4.md`，已归档）
+- 取代：V4（`docs/archived/Orchestrator-MetadataHub-V4.md`，已归档）
 
 ### 版本号规则
 
@@ -36,7 +36,7 @@
 
 1. `docs/ux-contract.md`：唯一 UX 真实来源（交互/布局/流程）。
 2. `docs/api-contracts.md`：对外 API 与数据模型的统一口径。
-3. `docs/Orchestrator-MetadataHub-V5.md`：本文档（推理与元数据规范，唯一现行版本）。
+3. `docs/archived/Orchestrator-MetadataHub-V5.md`：本文档（历史规范，归档版本）。
 4. `docs/style-guide.md`：视觉规范（不得覆盖 UX 合约）。
 
 ## V4 → V5 迁移摘要
@@ -212,4 +212,4 @@ OSS 仍保留在体系内的原因：
 - UX 合约：`docs/ux-contract.md`
 - API 合约：`docs/api-contracts.md`
 - XFyun REST SoT：`docs/xfyun-asr-rest-api.md`
-- V4（已归档）：`docs/Orchestrator-MetadataHub-V4.md`
+- V4（已归档）：`docs/archived/Orchestrator-MetadataHub-V4.md`

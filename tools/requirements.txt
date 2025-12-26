@@ -1,0 +1,10 @@
+# Pause Marker Tool - Requirements
+#
+# This tool uses only Python standard library modules:
+# - json, argparse, dataclasses, re, html, pathlib, sys
+#
+# No external dependencies required.
+#
+# Python version requirement: 3.7+ (for dataclasses and type hints)
+
+

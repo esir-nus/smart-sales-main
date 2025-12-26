@@ -15,16 +15,20 @@ All agents must follow that document as the authoritative behavior contract.
 
 ## 文档来源与优先级（Docs > Code > Guessing）
 
-- Orchestrator / MetaHub 合约来源（CURRENT）：
-  - `docs/Orchestrator-MetadataHub-V7.md`（现行唯一权威规范）
+- Orchestrator 合约来源（CURRENT）：
+  - `docs/Orchestrator-V1.md`（现行唯一权威规范）
+- V1 JSON（CURRENT）：
+  - `docs/orchestrator-v1.schema.json`
+  - `docs/orchestrator-v1.examples.json`
 - ARCHIVED（仅历史参考，不得作为目标行为）：
-  - `docs/Orchestrator-MetadataHub-V6.md`
-  - `docs/Orchestrator-MetadataHub-V5.md`
-  - `docs/Orchestrator-MetadataHub-V4.md`
+  - `docs/archived/Orchestrator-MetadataHub-V7.md`
+  - `docs/archived/Orchestrator-MetadataHub-V6.md`
+  - `docs/archived/Orchestrator-MetadataHub-V5.md`
+  - `docs/archived/Orchestrator-MetadataHub-V4.md`
 
 - UX 合约来源优先级：
   1. `docs/ux-contract.md`（唯一现行 UX 真实来源：交互/布局/流程/HUD）
-  2. `docs/Orchestrator-MetadataHub-V7.md`（推理与元数据结构/边界）
+  2. `docs/Orchestrator-V1.md`（推理与管线结构/边界）
   3. `docs/style-guide.md`（视觉与代码风格规范）
   4. 现有 Android 实现与测试
   5. 归档 UI/历史实现仅作参考
@@ -42,7 +46,7 @@ All agents must follow that document as the authoritative behavior contract.
 
 ---
 
-## Provider Policy（V7）
+## Provider Policy（V1）
 
 1) 默认转写链路
 - 默认 provider lane：Tingwu + OSS
@@ -123,4 +127,3 @@ Keep commit titles in `Scope: Imperative summary` style. PRs must outline affect
 
 ## Security & Configuration Tips
 Never commit `local.properties`; it stores DashScope, Tingwu, and OSS keys consumed by `data/ai-core`. `TINGWU_BASE_URL` automatically appends `/openapi/tingwu/v2/` unless you pass a proxy URL—note any overrides in PR descriptions. Verify `JAVA_HOME` before running Gradle. Prefer the cached `third_party/maven-repo/` when network access is limited and scrub logs so transcripts or payloads do not leak into commits.
-

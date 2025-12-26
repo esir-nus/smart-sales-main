@@ -11,10 +11,10 @@ This project uses a fixed multi-agent workflow:
 The full rules and invocation protocol are defined in **`role-contract.md`**.  
 All agents must follow that document as the authoritative behavior contract.
 
-- **Orchestrator / MetaHub spec source**: `docs/Orchestrator-MetadataHub-V7.md` is the only authoritative spec (CURRENT). `docs/Orchestrator-MetadataHub-V6.md`, `docs/Orchestrator-MetadataHub-V5.md`, and `docs/Orchestrator-MetadataHub-V4.md` are archived and for historical reference only.
+- **Orchestrator spec source**: `docs/Orchestrator-V1.md` is the only authoritative spec (CURRENT). `docs/archived/Orchestrator-MetadataHub-V7.md` and earlier versions are archived and for historical reference only.
 - **UX spec priority order**:
   1. `docs/ux-contract.md` (the only current UX source of truth: interaction/layout/flow)
-  2. `docs/Orchestrator-MetadataHub-V7.md` (reasoning + metadata spec; V7 is current; V6/V5/V4 are historical)
+  2. `docs/Orchestrator-V1.md` (reasoning + pipeline spec; V1 is current)
   3. `docs/style-guide.md` (visual guidelines)
   4. Existing Android implementation and tests
   5. Archived React/UI is historical only; `assistant-ux-contract.md` is archived and must not be treated as current
@@ -56,10 +56,12 @@ All agents must follow that document as the authoritative behavior contract.
 ## Versioning & Doc Discipline
 
 1. **Current specs**
-   - CURRENT: `docs/Orchestrator-MetadataHub-V7.md`
-   - ARCHIVED: `docs/Orchestrator-MetadataHub-V6.md`
-   - ARCHIVED: `docs/Orchestrator-MetadataHub-V5.md`
-   - ARCHIVED: `docs/Orchestrator-MetadataHub-V4.md`
+   - CURRENT: `docs/Orchestrator-V1.md`
+   - CURRENT JSON: `docs/orchestrator-v1.schema.json`, `docs/orchestrator-v1.examples.json`
+   - ARCHIVED: `docs/archived/Orchestrator-MetadataHub-V7.md`
+   - ARCHIVED: `docs/archived/Orchestrator-MetadataHub-V6.md`
+   - ARCHIVED: `docs/archived/Orchestrator-MetadataHub-V5.md`
+   - ARCHIVED: `docs/archived/Orchestrator-MetadataHub-V4.md`
 
 2. **XFyun-first (documentation stance)**
    - XFyun REST single source of truth: `docs/xfyun-asr-rest-api.md`
@@ -68,7 +70,7 @@ All agents must follow that document as the authoritative behavior contract.
 3. **Capability guardrails (must remain consistent)**
    - Only `transfer` is allowed today; `translate/predict/analysis` are disabled by default. Do not “send requests to try” (avoid failures like `failType=11`).
 
-4. **Provider lanes in V7**
+4. **Provider lanes (V1)**
    - Default transcription lane: Tingwu + OSS
    - XFyun: optional lane, disabled by default; enable only when explicitly switched on and verified available
    - OSS: used by Tingwu lane to provide stable FileUrl; XFyun lane uses direct file-stream upload (no OSS in active path)

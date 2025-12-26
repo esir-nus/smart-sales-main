@@ -1,0 +1,143 @@
+{
+  "disectorPlanSingleBatch": {
+    "sessionId": "session-single-18m",
+    "version": 1,
+    "totalMs": 1080000,
+    "overlapMs": 10000,
+    "batches": [
+      {
+        "batchIndex": 1,
+        "batchId": "b1",
+        "absStartMs": 0,
+        "absEndMs": 1080000,
+        "captureStartMs": 0,
+        "captureEndMs": 1080000,
+        "durationMs": 1080000
+      }
+    ]
+  },
+  "disectorPlanRemEquals7min": {
+    "sessionId": "session-rem7",
+    "version": 1,
+    "totalMs": 1620000,
+    "overlapMs": 10000,
+    "note": "remMs == 7min => create a new remainder batch of 7min",
+    "batches": [
+      {
+        "batchIndex": 1,
+        "batchId": "b1",
+        "absStartMs": 0,
+        "absEndMs": 600000,
+        "captureStartMs": 0,
+        "captureEndMs": 600000,
+        "durationMs": 600000
+      },
+      {
+        "batchIndex": 2,
+        "batchId": "b2",
+        "absStartMs": 600000,
+        "absEndMs": 1200000,
+        "captureStartMs": 590000,
+        "captureEndMs": 1200000,
+        "durationMs": 600000
+      },
+      {
+        "batchIndex": 3,
+        "batchId": "b3",
+        "absStartMs": 1200000,
+        "absEndMs": 1620000,
+        "captureStartMs": 1190000,
+        "captureEndMs": 1620000,
+        "durationMs": 420000
+      }
+    ]
+  },
+  "tingwuBatchArtifact": {
+    "sessionId": "session-rem7",
+    "batchIndex": 2,
+    "batchId": "b2",
+    "jobId": "tingwu-job-002",
+    "transcription": {
+      "text": "[10:00] S1: Hello.\n[10:04] S2: Hi.",
+      "relativeSegments": [
+        {
+          "relStartMs": 1000,
+          "relEndMs": 4000,
+          "speakerKey": "S1",
+          "text": "Hello."
+        },
+        {
+          "relStartMs": 5000,
+          "relEndMs": 7500,
+          "speakerKey": "S2",
+          "text": "Hi."
+        }
+      ]
+    },
+    "summary": {
+      "text": "Brief greeting and confirmation."
+    },
+    "chapters": [
+      {
+        "title": "Opening",
+        "offsetMs": 15000,
+        "durationMs": 45000
+      }
+    ]
+  },
+  "publisherRangeFilterExample": {
+    "macroWindow": {
+      "absStartMs": 600000,
+      "absEndMs": 1200000
+    },
+    "captureStartMs": 590000,
+    "relativeSegment": {
+      "relStartMs": 1000,
+      "relEndMs": 4000
+    },
+    "absoluteDerived": {
+      "absStartMs": 591000,
+      "absEndMs": 594000
+    },
+    "publish": true,
+    "ruleNote": "absStart = captureStartMs + relStartMs; publish if segment overlaps macro window"
+  },
+  "sessionMemoryMinimal": {
+    "sessionId": "session-rem7",
+    "schemaVersion": 1,
+    "updatedAtMs": 1630000,
+    "speakerMap": [
+      {
+        "speakerKey": "S1",
+        "displayName": "Alice",
+        "title": "Sales",
+        "confidence": 0.82,
+        "effectiveFromBatchId": "b1"
+      },
+      {
+        "speakerKey": "S2",
+        "displayName": "Client",
+        "confidence": 0.7,
+        "effectiveFromBatchId": "b2"
+      }
+    ],
+    "chapters": [
+      {
+        "title": "Opening",
+        "absStartMs": 605000,
+        "absEndMs": 650000,
+        "batchId": "b2"
+      }
+    ],
+    "batchSummaries": [
+      {
+        "batchIndex": 2,
+        "batchId": "b2",
+        "summary": "Greeting and check-in."
+      }
+    ],
+    "highlights": ["Confirmed intent"],
+    "decisions": [],
+    "nextSteps": ["Schedule follow-up"]
+  }
+}

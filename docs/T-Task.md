@@ -1,8 +1,54 @@
-# T-Task: V7 Dev Trace (Orchestrator–MetaHub)
+# T-Task: Engineering Trace (Orchestrator)
+
+Current spec: `docs/Orchestrator-V1.md` (CURRENT)  
+Purpose: track active workstreams and preserve archived traces.  
+Note: This file is CURRENT. Historical traces (e.g., V7) are preserved under Archived Traces and frozen.
+
+---
+
+## 1) V1 Workstreams (CURRENT)
+
+### WS-V1-1 — Disector plan + batch policy
+- 10min target + 10s pre-roll overlap
+- Absolute timeline grounding and deterministic plan persistence
+
+### WS-V1-2 — Tingwu batch orchestration
+- maxInflight=10 queue + retry scaffolding
+- Batch completion can be out-of-order; publish is prefix-only
+
+### WS-V1-3 — MemoryCenter interface + SessionMemory schema
+- LLM outputs are optional; schema must be stable
+- Speaker mapping evolves by batchIndex
+
+### WS-V1-4 — Publisher deterministic rendering
+- Absolute time anchoring + overlap range filtering
+- Transcript + analysis views, no suspicious-gap polishing
+
+---
+
+## 2) Task List (V1)
+
+Legend: TODO / DOING / DONE / BLOCKED
+
+### T1-001 Orchestrator-V1 spec + doc sync
+- Status: DONE
+- Evidence:
+  - `docs/Orchestrator-V1.md`
+
+---
+
+## Archived Traces
+
+### V7 Dev Trace (Orchestrator–MetaHub) [ARCHIVED]
+
+# T-Task: V7 Dev Trace (Orchestrator–MetaHub) [ARCHIVED]
 
 Doc version: 1.0  
-Target spec: `docs/Orchestrator-MetadataHub-V7.md` (CURRENT)  
+Target spec: `docs/archived/Orchestrator-MetadataHub-V7.md` (ARCHIVED)  
+Replacement: `docs/Orchestrator-V1.md`  
 Purpose: Track V7 engineering workstreams, decisions, and verification evidence.
+
+> 说明：V7 已弃用并归档。本文件冻结，仅供历史参考；新任务以 V1 规范为准。
 
 ---
 
@@ -27,7 +73,7 @@ V7 targets:
 
 ### WS1 — Docs & Contracts
 - V7 spec doc (Orchestrator–MetaHub)
-- V7 schema (metahub-schema-v7.json)
+- V7 schema (`docs/archived/metahub-schema-v7.json`)
 - api-contracts + ux-contract alignment
 - AGENTS.md updated to set V7 as CURRENT
 - Archived banners added to V6/V5/V4
@@ -62,8 +108,8 @@ Legend: TODO / DOING / DONE / BLOCKED
 ### T7-001 Doc sync to V7 (spec + contracts + schema)
 - Status: DONE
 - Evidence:
-  - `docs/Orchestrator-MetadataHub-V7.md`
-  - `docs/metahub-schema-v7.json`
+  - `docs/archived/Orchestrator-MetadataHub-V7.md`
+  - `docs/archived/metahub-schema-v7.json`
   - `docs/api-contracts.md`
   - `docs/ux-contract.md`
   - `docs/AGENTS.md`
@@ -243,6 +289,7 @@ Legend: TODO / DOING / DONE / BLOCKED
     - `./gradlew :feature:chat:testDebugUnitTest --no-daemon`（BUILD SUCCESSFUL in 34s）
 - Notes:
   - 仅持久化 SessionMetadata（含 M3 renaming）；M2 patch 仍未落盘（V7 mismatch，需后续专门任务）
+  - Errata: M2 patch persistence statements conflict with T7-004; treat T7-004 evidence/tests as authoritative; this V7 trace is preserved as-is.
 - 📱 On-device sanity checklist (manual):
   - [ ] 进入会话并执行智能分析，生成 latestMajorAnalysis*
   - [ ] 手动重命名会话（写入 M3 accepted）

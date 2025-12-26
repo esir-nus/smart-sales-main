@@ -8,6 +8,8 @@
 本文件为唯一可信快照。更新任一模块 README 或重大流程后，必须同步这里并触发 logging workflow。
 
 ## 系统快照
+- **架构规范**：`docs/Orchestrator-V1.md` 为现行唯一规范；V7 已归档，仅作历史参考。
+- **JSON 定义**：`docs/orchestrator-v1.schema.json`（schema）、`docs/orchestrator-v1.examples.json`（示例）。
 - **整体层级**：`:core:util`、`:core:test` 维持 T0；`:feature:connectivity` 与 `:feature:chat` 的核心路径已进入 T1；`:feature:media` 目前介于 T0→T1（DeviceManager、AudioFiles 已能驱动媒体服务器 + Tingwu 管线，但仍依赖 Fake 数据）；`:data:ai-core` 处在 T1-（真实 DashScope/Tingwu/OSS 已连通，尚缺全面联动测试）；`:app` 为 T0+ 的导航壳（主要体验可跑通，但缺乏自动化构建验证）。
 - **端到端路径**：
   - **连接链路**：`DefaultDeviceConnectionManager` + `AndroidBleWifiProvisioner` + `GattBleGateway` 支持扫描、配网、网络诊断，WiFi/BLE Tester 页面可触发所有指令。真实 BLE 仍待更多真机验证。

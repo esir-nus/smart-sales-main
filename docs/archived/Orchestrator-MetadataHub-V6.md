@@ -1,12 +1,12 @@
 > ARCHIVED: This document is historical reference only.  
-> CURRENT spec is `docs/Orchestrator-MetadataHub-V7.md`.  
+> CURRENT spec is `docs/Orchestrator-V1.md`.  
 > Do not implement new behavior against this version.
 
 # ⚠️ 已归档（ARCHIVED）
 
 > 状态：ARCHIVED  
-> 本文档为历史规范 V6（V6.0.0-alpha），已被 `docs/Orchestrator-MetadataHub-V7.md`（CURRENT）取代。  
-> 请以 V7 为唯一现行规范；V6 仅用于追溯历史与审计对照。
+> 本文档为历史规范 V6（V6.0.0-alpha），已被后续版本取代。  
+> 当前规范为 `docs/Orchestrator-V1.md`；V6 仅用于追溯历史与审计对照。
 
 # Orchestrator–MetaHub Spec (V6)
 
@@ -15,8 +15,8 @@
 - Version: `V6.0.0-alpha`
 - Status: `ARCHIVED`
 - Effective date: `2025-12-18`
-- Replaced by: `docs/Orchestrator-MetadataHub-V7.md` (CURRENT)
-- Replaces: `docs/Orchestrator-MetadataHub-V5.md` (archived)
+- Replaced by: `docs/Orchestrator-V1.md` (CURRENT)
+- Replaces: `docs/archived/Orchestrator-MetadataHub-V5.md` (archived)
 
 ## SemVer + Changelog Discipline (Normative)
 

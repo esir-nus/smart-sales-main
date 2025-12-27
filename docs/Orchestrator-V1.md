@@ -174,6 +174,7 @@
 ### 7.1 DisectorPlan
 ```
 DisectorPlan {
+  artifactType: "DisectorPlan"
   sessionId: String
   version: Int = 1
   totalMs: Long
@@ -183,7 +184,7 @@ DisectorPlan {
 
 DisectorBatch {
   batchIndex: Int        // 1-based, ordering primitive
-  batchId: String        // "b<batchIndex>"
+  batchId?: String       // display hint only; recommended "b<batchIndex>"
   absStartMs: Long
   absEndMs: Long
   captureStartMs: Long
@@ -194,16 +195,13 @@ DisectorBatch {
 
 ### 7.2 Tingwu 批次产物
 ```
-TingwuBatchArtifacts {
+TingwuBatchArtifact {
+  artifactType: "TingwuBatchArtifact"
   sessionId: String
+  version: Int = 1
   batchIndex: Int
-  batchId: String
+  batchId?: String
   jobId: String
-  providerMeta: {
-    attempt: Int
-    status: String
-    rawRef?: String
-  }
   transcription: TingwuTranscription
   summary: TingwuSummary
   chapters: List<TingwuChapter>
@@ -216,10 +214,26 @@ TingwuChapter {
 }
 ```
 
+TingwuJobState（最小形态）
+```
+TingwuJobState {
+  artifactType: "TingwuJobState"
+  sessionId: String
+  version: Int = 1
+  batchIndex: Int
+  status: "PLANNED" | "SUBMITTED" | "RUNNING" | "SUCCEEDED" | "FAILED"
+  attemptCount: Int
+  lastErrorCategory?: String
+  lastErrorStatusCode?: Int
+}
+```
+
 ### 7.3 SessionMemory（MemoryCenter 输出）
 ```
 SessionMemory {
+  artifactType: "SessionMemory"
   sessionId: String
+  version: Int = 1
   schemaVersion: Int = 1
   updatedAtMs?: Long
   speakerMap: List<SpeakerMapping>
@@ -234,20 +248,23 @@ SpeakerMapping {
   displayName: String
   title?: String
   confidence: Float
-  effectiveFromBatchId: String // "b<batchIndex>"
+  effectiveFromBatchIndex: Int // ordering primitive
+  effectiveFromBatchId?: String // display only
 }
 
 MemoryChapter {
   title: String
   absStartMs: Long
   absEndMs?: Long
-  batchId: String
+  batchIndex: Int
+  batchId?: String
 }
 ```
 
 ### 7.4 PublishedTranscript（Publisher 输出）
 ```
 PublishedTranscript {
+  artifactType: "PublishedTranscript"
   sessionId: String
   version: Int = 1
   publishedPrefixBatchIndex: Int
@@ -260,7 +277,8 @@ PublishedUtterance {
   speakerKey: String
   speakerDisplay: String
   text: String
-  batchId: String
+  batchIndex: Int
+  batchId?: String
 }
 ```
 
@@ -275,6 +293,8 @@ PublishedUtterance {
 
 说明：
 - 关键不变量通过 `$comment` 标注（例如 pre-roll only、half-open 宏观窗口、batchIndex 排序基元）。
+- Examples 文件为 `{ xIndex, payloads[] }` 结构，所有 payload 必须包含 `artifactType` + `version`。
+- 字段 required/optional 与类型约束以 `docs/orchestrator-v1.schema.json` 为准；语义不变量与流程规则以本文为准。
 - 以本节 JSON 为准进行数据校验与工具集成。
 
 ---
@@ -309,14 +329,15 @@ PublishedUtterance {
 ### 10.1 必须持久化
 - DisectorPlan（批次宏观时间轴 + captureStartMs）
 - TingwuJobState（提交/运行/成功/失败 + attempt）
-- TingwuBatchArtifacts（transcription/summary/chapters）
+- TingwuBatchArtifact（transcription/summary/chapters）
 - SessionMemory（按 batchIndex 生成）
 - PublisherState（publishedPrefixBatchIndex + 可选 checksum）
 
 ### 10.2 幂等规则（V1 最小定义）
 - 幂等键：`(sessionId, batchIndex, artifactType, version)`
 - `DisectorPlan.version = 1`（确定性可重建）
-- Tingwu artifacts：按 `(sessionId, batchId)` **upsert**；attempt 记录在 providerMeta
+- TingwuJobState/TingwuBatchArtifact：按 `(sessionId, batchIndex, artifactType, version)` **upsert**
+- attemptCount/status 归属于 TingwuJobState（不在 TingwuBatchArtifact 内）
 - Publisher：`PublishedTranscript.version = 1`，以 `publishedPrefixBatchIndex` 单调推进
 
 ---

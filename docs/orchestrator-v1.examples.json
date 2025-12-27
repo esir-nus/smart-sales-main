@@ -1,158 +1,293 @@
-[
-  {
-    "sessionId": "session-rem7",
-    "version": 1,
-    "totalMs": 1620000,
-    "overlapMs": 10000,
-    "batches": [
-      {
-        "batchIndex": 1,
-        "batchId": "b1",
-        "absStartMs": 0,
-        "absEndMs": 600000,
-        "captureStartMs": 0,
-        "captureEndMs": 600000,
-        "durationMs": 600000
-      },
-      {
-        "batchIndex": 2,
-        "batchId": "b2",
-        "absStartMs": 600000,
-        "absEndMs": 1200000,
-        "captureStartMs": 590000,
-        "captureEndMs": 1200000,
-        "durationMs": 600000
-      },
-      {
-        "batchIndex": 3,
-        "batchId": "b3",
-        "absStartMs": 1200000,
-        "absEndMs": 1620000,
-        "captureStartMs": 1190000,
-        "captureEndMs": 1620000,
-        "durationMs": 420000
-      }
+{
+  "xIndex": {
+    "purpose": "Compact Orchestrator-V1 payload examples for coding agents.",
+    "payloads": [
+      "DisectorPlan<=20m",
+      "DisectorPlan26mMerge",
+      "DisectorPlan27mEdge",
+      "TingwuJobState429",
+      "TingwuBatchArtifactWithSegments",
+      "TingwuBatchArtifactNoSegments",
+      "SessionMemoryWithDeltas",
+      "PublishedTranscriptRangeFiltered",
+      "PublishedAnalysisSummary"
+    ],
+    "howToUse": [
+      "read docs/Orchestrator-V1.md for invariants",
+      "use docs/orchestrator-v1.schema.json for types",
+      "range-filter demo: pre-roll segment is absent from PublishedTranscript"
     ]
   },
-  {
-    "sessionId": "session-rem7",
-    "batchIndex": 2,
-    "batchId": "b2",
-    "jobId": "tingwu-job-002",
-    "transcription": {
-      "text": "[10:00] S1: Hello.\n[10:04] S2: Hi.",
-      "relativeSegments": [
+  "payloads": [
+    {
+      "artifactType": "DisectorPlan",
+      "sessionId": "session-short",
+      "version": 1,
+      "totalMs": 1000000,
+      "overlapMs": 10000,
+      "batches": [
         {
-          "relStartMs": 1000,
-          "relEndMs": 4000,
-          "speakerKey": "S1",
-          "text": "Hello."
-        },
-        {
-          "relStartMs": 5000,
-          "relEndMs": 7500,
-          "speakerKey": "S2",
-          "text": "Hi."
+          "batchIndex": 1,
+          "batchId": "b1",
+          "absStartMs": 0,
+          "absEndMs": 1000000,
+          "captureStartMs": 0,
+          "captureEndMs": 1000000,
+          "durationMs": 1000000
         }
       ]
     },
-    "summary": {
-      "text": "Brief greeting and confirmation."
+    {
+      "artifactType": "DisectorPlan",
+      "sessionId": "session-26m",
+      "version": 1,
+      "totalMs": 1560000,
+      "overlapMs": 10000,
+      "batches": [
+        {
+          "batchIndex": 1,
+          "batchId": "b1",
+          "absStartMs": 0,
+          "absEndMs": 600000,
+          "captureStartMs": 0,
+          "captureEndMs": 600000,
+          "durationMs": 600000
+        },
+        {
+          "batchIndex": 2,
+          "batchId": "b2",
+          "absStartMs": 600000,
+          "absEndMs": 1560000,
+          "captureStartMs": 590000,
+          "captureEndMs": 1560000,
+          "durationMs": 960000
+        }
+      ]
     },
-    "chapters": [
-      {
-        "title": "Opening",
-        "offsetMs": 15000,
-        "durationMs": 45000
-      }
-    ]
-  },
-  {
-    "sessionId": "session-rem7",
-    "schemaVersion": 1,
-    "updatedAtMs": 1630000,
-    "speakerMap": [
-      {
-        "speakerKey": "S1",
-        "displayName": "Alice",
-        "title": "Sales",
-        "confidence": 0.82,
-        "effectiveFromBatchId": "b1"
+    {
+      "artifactType": "DisectorPlan",
+      "sessionId": "session-27m",
+      "version": 1,
+      "totalMs": 1620000,
+      "overlapMs": 10000,
+      "batches": [
+        {
+          "batchIndex": 1,
+          "batchId": "b1",
+          "absStartMs": 0,
+          "absEndMs": 600000,
+          "captureStartMs": 0,
+          "captureEndMs": 600000,
+          "durationMs": 600000
+        },
+        {
+          "batchIndex": 2,
+          "batchId": "b2",
+          "absStartMs": 600000,
+          "absEndMs": 1200000,
+          "captureStartMs": 590000,
+          "captureEndMs": 1200000,
+          "durationMs": 600000
+        },
+        {
+          "batchIndex": 3,
+          "batchId": "b3",
+          "absStartMs": 1200000,
+          "absEndMs": 1620000,
+          "captureStartMs": 1190000,
+          "captureEndMs": 1620000,
+          "durationMs": 420000
+        }
+      ]
+    },
+    {
+      "artifactType": "TingwuJobState",
+      "sessionId": "session-27m",
+      "version": 1,
+      "batchIndex": 2,
+      "batchId": "b2",
+      "status": "SUBMITTED",
+      "attemptCount": 2,
+      "lastErrorCategory": "RATE_LIMIT",
+      "lastErrorStatusCode": 429,
+      "retryBackoffSeconds": [60, 120, 300]
+    },
+    {
+      "artifactType": "TingwuBatchArtifact",
+      "sessionId": "session-27m",
+      "version": 1,
+      "batchIndex": 2,
+      "batchId": "b2",
+      "jobId": "tingwu-job-002",
+      "transcription": {
+        "text": "[09:52] S1: warm-up.\n[10:05] S1: Hello.\n[10:08] S2: Hi.\n[10:11] S1: Let's start.",
+        "relativeSegments": [
+          {
+            "relStartMs": 2000,
+            "relEndMs": 4000,
+            "speakerKey": "S1",
+            "text": "warm-up."
+          },
+          {
+            "relStartMs": 15000,
+            "relEndMs": 17500,
+            "speakerKey": "S1",
+            "text": "Hello."
+          },
+          {
+            "relStartMs": 18000,
+            "relEndMs": 20000,
+            "speakerKey": "S2",
+            "text": "Hi."
+          },
+          {
+            "relStartMs": 21000,
+            "relEndMs": 23000,
+            "speakerKey": "S1",
+            "text": "Let's start."
+          }
+        ]
       },
-      {
-        "speakerKey": "S2",
-        "displayName": "Client",
-        "confidence": 0.7,
-        "effectiveFromBatchId": "b2"
-      }
-    ],
-    "chapters": [
-      {
-        "title": "Opening",
-        "absStartMs": 605000,
-        "absEndMs": 650000,
-        "batchId": "b2"
-      }
-    ],
-    "batchSummaries": [
-      {
-        "batchIndex": 2,
-        "batchId": "b2",
-        "summary": "Greeting and check-in."
-      }
-    ],
-    "highlights": ["Confirmed intent"],
-    "decisions": ["Proceed to demo"],
-    "nextSteps": ["Schedule follow-up"]
-  },
-  {
-    "sessionId": "session-rem7",
-    "version": 1,
-    "publishedPrefixBatchIndex": 2,
-    "items": [
-      {
-        "absStartMs": 605000,
-        "absEndMs": 607500,
-        "speakerKey": "S1",
-        "speakerDisplay": "Alice",
-        "text": "Hello.",
-        "batchId": "b2"
+      "summary": {
+        "text": "Brief greeting and confirmation."
       },
-      {
-        "absStartMs": 608000,
-        "absEndMs": 610000,
-        "speakerKey": "S2",
-        "speakerDisplay": "Client",
-        "text": "Hi.",
-        "batchId": "b2"
-      }
-    ]
-  },
-  {
-    "sessionId": "session-rem7",
-    "version": 1,
-    "summary": "Client confirmed interest; next step scheduled.",
-    "chapters": [
-      {
-        "title": "Opening",
-        "absStartMs": 605000,
-        "absEndMs": 650000
-      }
-    ],
-    "speakerMap": [
-      {
-        "speakerKey": "S1",
-        "displayName": "Alice",
-        "title": "Sales",
-        "confidence": 0.82,
-        "effectiveFromBatchId": "b1"
+      "chapters": [
+        {
+          "title": "Opening",
+          "offsetMs": 15000,
+          "durationMs": 45000
+        }
+      ]
+    },
+    {
+      "artifactType": "TingwuBatchArtifact",
+      "sessionId": "session-27m",
+      "version": 1,
+      "batchIndex": 3,
+      "batchId": "b3",
+      "jobId": "tingwu-job-003",
+      "transcription": {
+        "text": "[20:00] S1: Next topic.\n[20:05] S2: Agree.",
+        "relativeSegments": []
       },
-      {
-        "speakerKey": "S2",
-        "displayName": "Client",
-        "confidence": 0.7,
-        "effectiveFromBatchId": "b2"
-      }
-    ]
-  }
-]
+      "summary": {
+        "text": "Transitioned to next topic."
+      },
+      "chapters": [
+        {
+          "title": "Next Topic",
+          "offsetMs": 5000,
+          "durationMs": 30000
+        }
+      ]
+    },
+    {
+      "artifactType": "SessionMemory",
+      "sessionId": "session-27m",
+      "version": 1,
+      "schemaVersion": 1,
+      "updatedAtMs": 1630000,
+      "speakerMap": [
+        {
+          "speakerKey": "S1",
+          "displayName": "Alice",
+          "title": "Sales",
+          "confidence": 0.82,
+          "effectiveFromBatchIndex": 1,
+          "effectiveFromBatchId": "b1"
+        },
+        {
+          "speakerKey": "S2",
+          "displayName": "Client",
+          "confidence": 0.7,
+          "effectiveFromBatchIndex": 2,
+          "effectiveFromBatchId": "b2"
+        }
+      ],
+      "chapters": [
+        {
+          "title": "Opening",
+          "absStartMs": 605000,
+          "absEndMs": 650000,
+          "batchIndex": 2,
+          "batchId": "b2"
+        }
+      ],
+      "batchSummaries": [
+        {
+          "batchIndex": 2,
+          "batchId": "b2",
+          "summary": "Greeting and check-in."
+        }
+      ],
+      "highlights": ["Confirmed intent"],
+      "decisions": ["Proceed to demo"],
+      "nextSteps": ["Schedule follow-up"]
+    },
+    {
+      "artifactType": "PublishedTranscript",
+      "sessionId": "session-27m",
+      "version": 1,
+      "publishedPrefixBatchIndex": 2,
+      "items": [
+        {
+          "absStartMs": 605000,
+          "absEndMs": 607500,
+          "speakerKey": "S1",
+          "speakerDisplay": "Alice",
+          "text": "Hello.",
+          "batchIndex": 2,
+          "batchId": "b2"
+        },
+        {
+          "absStartMs": 608000,
+          "absEndMs": 610000,
+          "speakerKey": "S2",
+          "speakerDisplay": "Client",
+          "text": "Hi.",
+          "batchIndex": 2,
+          "batchId": "b2"
+        },
+        {
+          "absStartMs": 611000,
+          "absEndMs": 613000,
+          "speakerKey": "S1",
+          "speakerDisplay": "Alice",
+          "text": "Let's start.",
+          "batchIndex": 2,
+          "batchId": "b2"
+        }
+      ]
+    },
+    {
+      "artifactType": "PublishedAnalysis",
+      "sessionId": "session-27m",
+      "version": 1,
+      "summary": "Client confirmed interest; next step scheduled.",
+      "chapters": [
+        {
+          "title": "Opening",
+          "absStartMs": 605000,
+          "absEndMs": 650000
+        }
+      ],
+      "speakerMap": [
+        {
+          "speakerKey": "S1",
+          "displayName": "Alice",
+          "title": "Sales",
+          "confidence": 0.82,
+          "effectiveFromBatchIndex": 1,
+          "effectiveFromBatchId": "b1"
+        },
+        {
+          "speakerKey": "S2",
+          "displayName": "Client",
+          "confidence": 0.7,
+          "effectiveFromBatchIndex": 2,
+          "effectiveFromBatchId": "b2"
+        }
+      ]
+    }
+  ]
+}

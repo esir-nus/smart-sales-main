@@ -1,35 +1,22 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Third-Party Integration Registry",
-  "description": "Compact registry for third-party provider lanes (OSS/Tingwu/XFyun/Dashscope).",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Third-Party Provider Registry Schema",
   "type": "object",
   "additionalProperties": false,
-  "required": ["version", "doc", "generatedFrom", "providers"],
+  "required": ["index", "providers"],
   "properties": {
-    "$schema": { "type": "string" },
-    "version": { "type": "string", "minLength": 1 },
-    "doc": {
+    "index": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "purpose", "audience", "scope", "nonGoals", "trustModel"],
+      "required": ["current", "schemaVersion", "purpose", "scope", "governedByDocs", "howToUse", "antiGoals"],
       "properties": {
-        "id": { "type": "string", "minLength": 1 },
+        "current": { "type": "boolean" },
+        "schemaVersion": { "type": "string", "minLength": 1 },
         "purpose": { "type": "string", "minLength": 1 },
-        "audience": { "type": "array", "items": { "type": "string", "minLength": 1 } },
-        "scope": { "type": "array", "items": { "type": "string", "minLength": 1 } },
-        "nonGoals": { "type": "array", "items": { "type": "string", "minLength": 1 } },
-        "trustModel": { "type": "string", "minLength": 1 }
-      }
-    },
-    "generatedFrom": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["repoRoot", "branch", "commit", "generatedAt"],
-      "properties": {
-        "repoRoot": { "type": "string", "minLength": 1 },
-        "branch": { "type": "string", "minLength": 1 },
-        "commit": { "type": "string", "minLength": 1 },
-        "generatedAt": { "type": "string", "minLength": 1 }
+        "scope": { "type": "string", "minLength": 1 },
+        "governedByDocs": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 },
+        "howToUse": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 },
+        "antiGoals": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 }
       }
     },
     "providers": {
@@ -37,28 +24,52 @@
       "additionalProperties": false,
       "required": ["oss", "tingwu", "xfyun", "dashscope"],
       "properties": {
-        "oss": { "$ref": "#/definitions/ProviderEntry" },
-        "tingwu": { "$ref": "#/definitions/ProviderEntry" },
-        "xfyun": { "$ref": "#/definitions/ProviderEntry" },
-        "dashscope": { "$ref": "#/definitions/ProviderEntry" }
+        "oss": { "$ref": "#/$defs/ProviderEntry" },
+        "tingwu": { "$ref": "#/$defs/ProviderEntry" },
+        "xfyun": { "$ref": "#/$defs/ProviderEntry" },
+        "dashscope": { "$ref": "#/$defs/ProviderEntry" }
       }
     }
   },
-  "definitions": {
+  "$defs": {
+    "Endpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "method"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "method": { "type": "string", "minLength": 1 },
+        "path": { "type": "string", "minLength": 1 },
+        "urlKey": { "type": "string", "minLength": 1 }
+      },
+      "anyOf": [
+        { "required": ["path"] },
+        { "required": ["urlKey"] }
+      ]
+    },
     "ProviderEntry": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["status", "primaryDocs", "capabilities", "endpoints", "guardrails", "evidencePointers"],
+      "required": [
+        "displayName",
+        "status",
+        "purpose",
+        "endpoints",
+        "auth",
+        "guardrails",
+        "failureModes",
+        "evidencePointers"
+      ],
       "properties": {
-        "status": {
-          "type": "string",
-          "enum": ["ENABLED_DEFAULT", "DISABLED_DEFAULT", "OPTIONAL", "LEGACY", "UNKNOWN"]
-        },
-        "primaryDocs": { "type": "array", "items": { "type": "string", "minLength": 1 }, "default": [] },
-        "capabilities": { "type": "array", "items": { "type": "string", "minLength": 1 }, "default": [] },
-        "endpoints": { "type": "array", "items": { "type": "string", "minLength": 1 }, "default": [] },
-        "guardrails": { "type": "array", "items": { "type": "string", "minLength": 1 }, "default": [] },
-        "evidencePointers": { "type": "array", "items": { "type": "string", "minLength": 1 }, "default": [] }
+        "displayName": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "enum": ["enabled", "disabled"] },
+        "purpose": { "type": "string", "minLength": 1 },
+        "endpoints": { "type": "array", "items": { "$ref": "#/$defs/Endpoint" }, "minItems": 1 },
+        "auth": { "type": "string", "minLength": 1 },
+        "guardrails": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "failureModes": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "evidencePointers": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 },
+        "settingsKnobs": { "type": "array", "items": { "type": "string", "minLength": 1 } }
       }
     }
   }

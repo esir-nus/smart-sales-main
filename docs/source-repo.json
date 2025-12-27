@@ -1,60 +1,88 @@
 {
-  "$schema": "./source-repo.schema.json",
-  "version": "source-repo.v3",
-  "doc": {
-    "id": "source-repo",
-    "purpose": "third_party_registry",
-    "audience": ["ai_agent", "human_reviewer"],
-    "scope": ["providers", "capabilities", "guardrails", "evidence"],
-    "nonGoals": ["product_spec", "ux_spec", "orchestrator_models"],
-    "trustModel": "Claims marked VALIDATED must include evidencePointers; otherwise use OBSERVED_IN_CODE_ONLY or UNKNOWN in guardrails."
-  },
-  "generatedFrom": {
-    "repoRoot": "/home/cslh-frank/main_app",
-    "branch": "dashscope-playground",
-    "commit": "ddbae30182a47da6def1abdae155164ca9f0fef6",
-    "generatedAt": "2025-12-12T12:52:34+08:00"
+  "index": {
+    "current": true,
+    "schemaVersion": "1.0.0",
+    "purpose": "Third-party provider ledger for coding agents (providers only).",
+    "scope": "OSS/Tingwu/XFyun/Dashscope only; no product specs or UX contracts.",
+    "governedByDocs": [
+      "docs/source-repo.schema.json",
+      "docs/source-repo.json",
+      "XFyun params only in docs/xfyun-asr-rest-api.md"
+    ],
+    "howToUse": [
+      "start from provider entry, then follow evidencePointers",
+      "use guardrails and failureModes to avoid guessing",
+      "treat this as a ledger, not a product spec"
+    ],
+    "antiGoals": [
+      "not architecture spec",
+      "not UX spec",
+      "not MetaHub schema"
+    ]
   },
   "providers": {
     "oss": {
-      "status": "OPTIONAL",
-      "primaryDocs": [],
-      "capabilities": ["upload", "presigned-url"],
-      "endpoints": ["PutObject", "PresignUrl"],
-      "guardrails": ["Requires credentials in local.properties"],
+      "displayName": "Aliyun OSS",
+      "status": "enabled",
+      "purpose": "Upload audio and generate FileUrl for Tingwu.",
+      "endpoints": [
+        { "name": "PutObject", "method": "PUT", "urlKey": "oss.putObject" },
+        { "name": "PresignUrl", "method": "GET", "urlKey": "oss.presignUrl" }
+      ],
+      "auth": "accessKey/secret from local.properties",
+      "guardrails": ["Credentials required in local.properties."],
+      "failureModes": ["Missing credentials", "Network timeout", "Access denied"],
       "evidencePointers": [
         "data/ai-core/src/main/java/com/smartsales/data/aicore/RealOssUploadClient.kt"
       ]
     },
     "tingwu": {
-      "status": "ENABLED_DEFAULT",
-      "primaryDocs": ["docs/archived/tingwu-doc.md"],
-      "capabilities": ["asr", "summary", "chapters"],
-      "endpoints": ["CreateTask", "GetTaskInfo"],
-      "guardrails": ["Use OSS FileUrl lane by default"],
+      "displayName": "Tingwu ASR",
+      "status": "enabled",
+      "purpose": "ASR transcription + summary + chapters.",
+      "endpoints": [
+        { "name": "CreateTask", "method": "PUT", "path": "/openapi/tingwu/v2/tasks" },
+        { "name": "GetTaskStatus", "method": "GET", "path": "/openapi/tingwu/v2/tasks/{taskId}" },
+        { "name": "GetTaskResult", "method": "GET", "path": "/openapi/tingwu/v2/tasks/{taskId}/transcription" }
+      ],
+      "auth": "appKey + accessKey/secret (signature)",
+      "guardrails": ["Default lane uses OSS FileUrl."],
+      "failureModes": ["Rate limit", "Timeout", "Provider error"],
       "evidencePointers": [
         "data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt",
-        "data/ai-core/src/test/java/com/smartsales/data/aicore/RealTingwuCoordinatorTest.kt"
+        "data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/TingwuApi.kt"
       ]
     },
     "xfyun": {
-      "status": "DISABLED_DEFAULT",
-      "primaryDocs": ["docs/xfyun-asr-rest-api.md"],
-      "capabilities": ["asr.transfer"],
-      "endpoints": ["upload", "getResult"],
-      "guardrails": ["transfer-only; translate/predict/analysis disabled by default"],
+      "displayName": "XFyun ASR",
+      "status": "disabled",
+      "purpose": "ASR transfer-only lane (gated).",
+      "endpoints": [
+        { "name": "Upload", "method": "POST", "path": "/v2/upload" },
+        { "name": "GetResult", "method": "GET", "path": "/v2/getResult" }
+      ],
+      "auth": "signature + accessKey/secret",
+      "guardrails": ["transfer-only; translate/predict/analysis disabled by default."],
+      "failureModes": ["Rate limit (429)", "Signature mismatch", "Invalid params"],
       "evidencePointers": [
-        "data/ai-core/src/main/java/com/smartsales/data/aicore/params/TranscriptionLaneSelector.kt"
+        "docs/xfyun-asr-rest-api.md",
+        "data/ai-core/src/main/java/com/smartsales/data/aicore/xfyun/XfyunAsrApi.kt",
+        "data/ai-core/src/main/java/com/smartsales/data/aicore/xfyun/XfyunAsrCoordinator.kt"
       ]
     },
     "dashscope": {
-      "status": "OPTIONAL",
-      "primaryDocs": ["docs/dashscope-doc.md"],
-      "capabilities": ["chat", "streaming"],
-      "endpoints": ["chat.completions"],
-      "guardrails": ["streaming gated by config"],
+      "displayName": "DashScope LLM",
+      "status": "enabled",
+      "purpose": "LLM chat/completions for analysis features.",
+      "endpoints": [
+        { "name": "Generate", "method": "POST", "urlKey": "dashscope.generate" }
+      ],
+      "auth": "apiKey",
+      "guardrails": ["Streaming gated by config."],
+      "failureModes": ["Rate limit", "Network error", "Auth error"],
       "evidencePointers": [
-        "data/ai-core/src/main/java/com/smartsales/data/aicore/DashscopeAiChatService.kt"
+        "data/ai-core/src/main/java/com/smartsales/data/aicore/DashscopeAiChatService.kt",
+        "data/ai-core/src/main/java/com/smartsales/data/aicore/DashscopeClient.kt"
       ]
     }
   }

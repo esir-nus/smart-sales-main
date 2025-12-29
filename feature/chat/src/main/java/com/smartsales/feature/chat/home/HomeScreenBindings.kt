@@ -9,7 +9,8 @@ import com.smartsales.feature.usercenter.SalesPersona
 object HomeScreenBindings {
     fun buildPromptWithHistory(
         request: ChatRequest,
-        isFirstGeneralAssistantReply: Boolean = false
+        isFirstGeneralAssistantReply: Boolean = false,
+        enableV1ChatPublisher: Boolean = false
     ): String {
         val builder = StringBuilder()
 
@@ -17,7 +18,8 @@ object HomeScreenBindings {
             SystemPromptContext(
                 persona = request.persona,
                 quickSkillId = request.quickSkillId,
-                isFirstGeneralAssistantReply = request.quickSkillId == null && isFirstGeneralAssistantReply
+                isFirstGeneralAssistantReply = request.quickSkillId == null && isFirstGeneralAssistantReply,
+                enableV1ChatPublisher = enableV1ChatPublisher
             )
         )
         builder.appendLine(systemPrompt)

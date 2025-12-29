@@ -6,9 +6,11 @@ package com.smartsales.feature.chat.core
 // 作者：创建于 2025-12-10
 
 import com.smartsales.data.aicore.AiChatRequest
+import com.smartsales.data.aicore.AiCoreConfig
 import com.smartsales.data.aicore.AiChatService as DataAiChatService
 import com.smartsales.data.aicore.AiChatStreamEvent as DataAiChatStreamEvent
 import com.smartsales.feature.chat.home.HomeScreenBindings
+import java.util.Optional
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -16,11 +18,17 @@ import kotlinx.coroutines.flow.map
 
 @Singleton
 class DefaultAiChatService @Inject constructor(
-    private val dataAiChatService: DataAiChatService
+    private val dataAiChatService: DataAiChatService,
+    optionalConfig: Optional<AiCoreConfig> = Optional.empty()
 ) : AiChatService {
 
+    private val config: AiCoreConfig = optionalConfig.orElse(AiCoreConfig())
+
     override fun streamChat(request: ChatRequest): Flow<ChatStreamEvent> {
-        val prompt = HomeScreenBindings.buildPromptWithHistory(request)
+        val prompt = HomeScreenBindings.buildPromptWithHistory(
+            request = request,
+            enableV1ChatPublisher = config.enableV1ChatPublisher
+        )
         val aiRequest = AiChatRequest(
             prompt = prompt,
             skillTags = request.quickSkillId?.let { setOf(it) } ?: emptySet()

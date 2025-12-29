@@ -10,7 +10,8 @@ import com.smartsales.feature.usercenter.SalesPersona
 data class SystemPromptContext(
     val persona: SalesPersona?,
     val quickSkillId: String?,
-    val isFirstGeneralAssistantReply: Boolean
+    val isFirstGeneralAssistantReply: Boolean,
+    val enableV1ChatPublisher: Boolean = false
 )
 
 object SystemPromptBuilder {
@@ -19,15 +20,24 @@ object SystemPromptBuilder {
         val builder = StringBuilder()
         builder.appendLine(buildPersonaBlock(context.persona))
         builder.appendLine()
+        val shouldApplyPublisher = context.enableV1ChatPublisher && context.quickSkillId != "SMART_ANALYSIS"
         when (context.quickSkillId) {
             null -> {
                 builder.appendLine(buildGeneralBehavior(context.isFirstGeneralAssistantReply))
+                if (shouldApplyPublisher) {
+                    // V1 Publisher 格式约束仅在启用开关时追加
+                    builder.appendLine(buildV1PublisherBlock())
+                }
             }
             "SMART_ANALYSIS" -> {
                 builder.appendLine(buildSmartBehavior())
             }
             else -> {
                 builder.appendLine(buildGeneralBehavior(context.isFirstGeneralAssistantReply))
+                if (shouldApplyPublisher) {
+                    // V1 Publisher 格式约束仅在启用开关时追加
+                    builder.appendLine(buildV1PublisherBlock())
+                }
             }
         }
         builder.appendLine()
@@ -76,6 +86,13 @@ object SystemPromptBuilder {
         - 回答区禁止复述规则/标题/“历史对话”“最新问题”等提示语，避免输出上述规则中的小节标题；简短、信息密集，避免同一句或同一要点重复。
         """.trimIndent()
     }
+
+    private fun buildV1PublisherBlock(): String = """
+        ## 输出格式（V1 Publisher）
+        - 给用户看的正文只能放在一个 <visible2user>...</visible2user> 中。
+        - 机器可读结构必须放在首个 ```json fenced 块中，且必须位于 <visible2user>...</visible2user> 之外。
+        - 除了上述 ```json 块外，禁止输出其他 JSON、标签外说明或多余文本。
+    """.trimIndent()
 
     private fun buildSmartBehavior(): String = """
         ## 行为（SMART_ANALYSIS）

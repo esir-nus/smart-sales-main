@@ -14,6 +14,8 @@
 > - Uses React `/ui` only as a **visual example**, not as a behavioral spec.
 > - Must **never override `docs/ux-contract.md`**.  
 >   If React or this guide disagree with `ux-contract`, **`ux-contract` wins** and this file (and React) must be updated.
+>
+> Documentation language: all documentation prose must be English. Chinese is allowed only inside fenced code blocks as code comments, and should be Simplified Chinese.
 
 ---
 
@@ -63,9 +65,9 @@
 | **BorderDefault**   | `#E5E5EA` | Card borders, input borders, section dividers, ChatInput top border.       |
 | **AccentPrimary**   | `#007AFF` | Primary actions, hero accent text, quick skill chips, links.               |
 | **TextPrimary**     | `#000000` | Main titles, important labels.                                              |
-| **TextSecondary**   | `#3A3A3C` | Secondary headings, descriptive body text, “让我们开始吧”.                       |
+| **TextSecondary**   | `#3A3A3C` | Secondary headings, descriptive body text, “Let’s get started”.             |
 | **TextMuted**       | `#8E8E93` | Helper text, bullets, subtitles, timestamps, input placeholder.            |
-| **DangerText**      | `#EF4444` | Destructive actions (删除, 退出登录), error labels.                           |
+| **DangerText**      | `#EF4444` | Destructive actions (Delete, Sign out), error labels.                       |
 | **DangerSurface**   | `#FEF2F2` | Error banners, destructive confirm dialog backgrounds.                      |
 | **BackdropOverlay** | `rgba(0,0,0,0.3)` | Scrim behind drawers, dialogs, and full-screen overlays.          |
 
@@ -106,11 +108,11 @@ We follow a semantic type scale. Tailwind classes are examples for React `/ui`; 
 
 | Role             | Tailwind size | Approx px | Usage                                         |
 | ---------------- | ------------- | --------- | --------------------------------------------- |
-| **AppTitle**     | `text-lg`     | 17–18 px  | Top bar title: “AI 助手”, “历史会话”.               |
+| **AppTitle**     | `text-lg`     | 17–18 px  | Top bar title: “AI Assistant”, “Chat History”.     |
 | **HeroBrand**    | `text-4xl`    | 32–36 px  | “LOGO” in `ChatWelcome`.                      |
-| **HeroGreeting** | `text-2xl`    | 24 px     | “你好，{userName}”.                              |
-| **HeroSubtitle** | `text-xl`     | 20 px     | “我是您的销售助手”.                                   |
-| **SectionTitle** | `text-base`   | 16 px     | Section headers: “设备管理”, “音频库”, “导出”.         |
+| **HeroGreeting** | `text-2xl`    | 24 px     | “Hello, {userName}”.                             |
+| **HeroSubtitle** | `text-xl`     | 20 px     | “I am your sales assistant”.                     |
+| **SectionTitle** | `text-base`   | 16 px     | Section headers: “Device Manager”, “Audio Library”, “Export”. |
 | **Body**         | `text-sm`     | 14–15 px  | Normal descriptive text, bullets, row labels. |
 | **Caption**      | `text-xs`     | 12–13 px  | Timestamps, subtle metadata, helper tips.     |
 
@@ -248,21 +250,21 @@ Full details: `ux-contract.md` §6.
   1. `LOGO` text or brand mark — `HeroBrand`, `AccentPrimary`.
 
   2. Greeting — `HeroGreeting`, `TextPrimary`
-     “你好，{userName}”
+     “Hello, {userName}”
 
   3. Subtitle — `HeroSubtitle`, `AccentPrimary`
-     “我是您的销售助手”
+     “I am your sales assistant”
 
   4. Bullet block (Body + TextMuted):
 
-     * 标题：“我可以帮您：”
-     * 条目：
+     * Title: “I can help you:”
+     * Items:
 
-       * “• 分析用户画像、意图、痛点。”
-       * “• 生成 PDF、CSV 文档及思维导图。”
+       * “• Analyze user profile, intent, and pain points.”
+       * “• Generate PDF/CSV documents and mind maps.”
 
   5. Ending line — `HeroSubtitle`, `TextSecondary`
-     “让我们开始吧”
+     “Let’s get started”
 
 * Under the hero: **one** `QuickSkillRow` followed by a divider.
 
@@ -359,7 +361,7 @@ Visual behavior shared by all drawers; specific flows in `ux-contract.md`.
   * Header row: `SectionTitle` + optional filter/actions.
   * Content: `LazyColumn` with list items.
   * Empty state text: `Body` + `TextMuted` centered or top-aligned.
-  * History drawer uses全高列布局，顶部为设备状态占位卡片，底部为个人中心入口，两者均使用 `SurfaceCard` 样式并与抽屉宽度对齐。
+  * History drawer uses a full-height column layout, with a device-status placeholder card at the top and a profile entry at the bottom; both use `SurfaceCard` style and align to drawer width.
 
 ### 6.7 Lists & Rows
 
@@ -425,7 +427,7 @@ Before shipping a screen, verify:
 
 1. **Doc precedence**
 
-   * Behavior / layout matches `docs/ux-contract.md` 和 `docs/archived/Orchestrator-MetadataHub-V4.md`（V3 已归档，仅背景参考）。
+   * Behavior / layout matches `docs/ux-contract.md` and `docs/Orchestrator-V1.md` (CURRENT). Archived versions are for historical reference only.
    * This style guide has been used **only** for visuals.
    * React `/ui` was used as reference, not as the behavioral source of truth.
 

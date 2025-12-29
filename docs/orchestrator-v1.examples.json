@@ -8,9 +8,12 @@
       "TingwuJobState429",
       "TingwuBatchArtifactWithSegments",
       "TingwuBatchArtifactNoSegments",
-      "SessionMemoryWithDeltas",
+      "M2BTranscriptionStatePointers",
       "PublishedTranscriptRangeFiltered",
-      "PublishedAnalysisSummary"
+      "PublishedAnalysisSummary",
+      "PublishedChatTurnL3",
+      "MachineArtifactL3",
+      "M2BTranscriptionStatePointers"
     ],
     "howToUse": [
       "read docs/Orchestrator-V1.md for invariants",
@@ -21,7 +24,6 @@
   "payloads": [
     {
       "artifactType": "DisectorPlan",
-      "sessionId": "session-short",
       "version": 1,
       "totalMs": 1000000,
       "overlapMs": 10000,
@@ -33,13 +35,16 @@
           "absEndMs": 1000000,
           "captureStartMs": 0,
           "captureEndMs": 1000000,
-          "durationMs": 1000000
+          "durationMs": 1000000,
+          "batchAssetId": "plan-demo-001-v1:b1"
         }
-      ]
+      ],
+      "audioAssetId": "audio-asset-demo-001",
+      "recordingSessionId": "rec-session-demo-001",
+      "disectorPlanId": "plan-demo-001-v1"
     },
     {
       "artifactType": "DisectorPlan",
-      "sessionId": "session-26m",
       "version": 1,
       "totalMs": 1560000,
       "overlapMs": 10000,
@@ -51,7 +56,8 @@
           "absEndMs": 600000,
           "captureStartMs": 0,
           "captureEndMs": 600000,
-          "durationMs": 600000
+          "durationMs": 600000,
+          "batchAssetId": "plan-demo-001-v1:b1"
         },
         {
           "batchIndex": 2,
@@ -60,13 +66,16 @@
           "absEndMs": 1560000,
           "captureStartMs": 590000,
           "captureEndMs": 1560000,
-          "durationMs": 960000
+          "durationMs": 960000,
+          "batchAssetId": "plan-demo-001-v1:b2"
         }
-      ]
+      ],
+      "audioAssetId": "audio-asset-demo-001",
+      "recordingSessionId": "rec-session-demo-001",
+      "disectorPlanId": "plan-demo-001-v1"
     },
     {
       "artifactType": "DisectorPlan",
-      "sessionId": "session-27m",
       "version": 1,
       "totalMs": 1620000,
       "overlapMs": 10000,
@@ -78,7 +87,8 @@
           "absEndMs": 600000,
           "captureStartMs": 0,
           "captureEndMs": 600000,
-          "durationMs": 600000
+          "durationMs": 600000,
+          "batchAssetId": "plan-demo-001-v1:b1"
         },
         {
           "batchIndex": 2,
@@ -87,7 +97,8 @@
           "absEndMs": 1200000,
           "captureStartMs": 590000,
           "captureEndMs": 1200000,
-          "durationMs": 600000
+          "durationMs": 600000,
+          "batchAssetId": "plan-demo-001-v1:b2"
         },
         {
           "batchIndex": 3,
@@ -96,13 +107,16 @@
           "absEndMs": 1620000,
           "captureStartMs": 1190000,
           "captureEndMs": 1620000,
-          "durationMs": 420000
+          "durationMs": 420000,
+          "batchAssetId": "plan-demo-001-v1:b3"
         }
-      ]
+      ],
+      "audioAssetId": "audio-asset-demo-001",
+      "recordingSessionId": "rec-session-demo-001",
+      "disectorPlanId": "plan-demo-001-v1"
     },
     {
       "artifactType": "TingwuJobState",
-      "sessionId": "session-27m",
       "version": 1,
       "batchIndex": 2,
       "batchId": "b2",
@@ -110,11 +124,17 @@
       "attemptCount": 2,
       "lastErrorCategory": "RATE_LIMIT",
       "lastErrorStatusCode": 429,
-      "retryBackoffSeconds": [60, 120, 300]
+      "retryBackoffSeconds": [
+        60,
+        120,
+        300
+      ],
+      "audioAssetId": "audio-asset-demo-001",
+      "recordingSessionId": "rec-session-demo-001",
+      "batchAssetId": "plan-demo-001-v1:b2"
     },
     {
       "artifactType": "TingwuBatchArtifact",
-      "sessionId": "session-27m",
       "version": 1,
       "batchIndex": 2,
       "batchId": "b2",
@@ -157,11 +177,13 @@
           "offsetMs": 15000,
           "durationMs": 45000
         }
-      ]
+      ],
+      "audioAssetId": "audio-asset-demo-001",
+      "recordingSessionId": "rec-session-demo-001",
+      "batchAssetId": "plan-demo-001-v1:b2"
     },
     {
       "artifactType": "TingwuBatchArtifact",
-      "sessionId": "session-27m",
       "version": 1,
       "batchIndex": 3,
       "batchId": "b3",
@@ -179,54 +201,13 @@
           "offsetMs": 5000,
           "durationMs": 30000
         }
-      ]
-    },
-    {
-      "artifactType": "SessionMemory",
-      "sessionId": "session-27m",
-      "version": 1,
-      "schemaVersion": 1,
-      "updatedAtMs": 1630000,
-      "speakerMap": [
-        {
-          "speakerKey": "S1",
-          "displayName": "Alice",
-          "title": "Sales",
-          "confidence": 0.82,
-          "effectiveFromBatchIndex": 1,
-          "effectiveFromBatchId": "b1"
-        },
-        {
-          "speakerKey": "S2",
-          "displayName": "Client",
-          "confidence": 0.7,
-          "effectiveFromBatchIndex": 2,
-          "effectiveFromBatchId": "b2"
-        }
       ],
-      "chapters": [
-        {
-          "title": "Opening",
-          "absStartMs": 605000,
-          "absEndMs": 650000,
-          "batchIndex": 2,
-          "batchId": "b2"
-        }
-      ],
-      "batchSummaries": [
-        {
-          "batchIndex": 2,
-          "batchId": "b2",
-          "summary": "Greeting and check-in."
-        }
-      ],
-      "highlights": ["Confirmed intent"],
-      "decisions": ["Proceed to demo"],
-      "nextSteps": ["Schedule follow-up"]
+      "audioAssetId": "audio-asset-demo-001",
+      "recordingSessionId": "rec-session-demo-001",
+      "batchAssetId": "plan-demo-001-v1:b3"
     },
     {
       "artifactType": "PublishedTranscript",
-      "sessionId": "session-27m",
       "version": 1,
       "publishedPrefixBatchIndex": 2,
       "items": [
@@ -257,11 +238,12 @@
           "batchIndex": 2,
           "batchId": "b2"
         }
-      ]
+      ],
+      "audioAssetId": "audio-asset-demo-001",
+      "recordingSessionId": "rec-session-demo-001"
     },
     {
       "artifactType": "PublishedAnalysis",
-      "sessionId": "session-27m",
       "version": 1,
       "summary": "Client confirmed interest; next step scheduled.",
       "chapters": [
@@ -286,6 +268,169 @@
           "confidence": 0.7,
           "effectiveFromBatchIndex": 2,
           "effectiveFromBatchId": "b2"
+        }
+      ],
+      "audioAssetId": "audio-asset-demo-001",
+      "recordingSessionId": "rec-session-demo-001"
+    },
+    {
+      "artifactType": "PublishedChatTurn",
+      "chatSessionId": "chat-session-demo-001",
+      "turnId": "turn-0001",
+      "version": 1,
+      "mode": "L3",
+      "displayMarkdown": "**Summary:** The customer is price-sensitive and concerned about rollout timing.\n\n**Next steps:** propose a phased plan and send 2 case studies.",
+      "artifactStatus": "VALID",
+      "machineArtifact": {
+        "artifactType": "MachineArtifact",
+        "schemaVersion": 1,
+        "mode": "L3",
+        "provenance": {
+          "chatSessionId": "chat-session-demo-001",
+          "turnId": "turn-0001",
+          "createdAtMs": 1735459200000
+        },
+        "smartAnalysis": {
+          "highlights": [
+            "Customer is price-sensitive",
+            "Main objection is implementation timeline"
+          ],
+          "actionableTips": [
+            "Offer phased rollout option",
+            "Share 2 similar case studies"
+          ],
+          "entities": [
+            "Acme Corp",
+            "Q1 rollout"
+          ],
+          "pointers": [
+            {
+              "audioAssetId": "audio-asset-demo-001",
+              "recordingSessionId": "rec-session-demo-001",
+              "chapterId": "ch-2",
+              "startMs": 720000,
+              "endMs": 900000
+            }
+          ]
+        },
+        "metadataPatch": {
+          "target": "M2",
+          "ops": [
+            {
+              "op": "addTag",
+              "value": "price-sensitive"
+            },
+            {
+              "op": "setRiskLevel",
+              "value": "MEDIUM"
+            }
+          ]
+        }
+      },
+      "smartAnalysisCard": {
+        "highlights": [
+          "Customer is price-sensitive",
+          "Main objection is implementation timeline"
+        ],
+        "actionableTips": [
+          "Offer phased rollout option",
+          "Share 2 similar case studies"
+        ],
+        "entities": [
+          "Acme Corp",
+          "Q1 rollout"
+        ],
+        "pointers": [
+          {
+            "audioAssetId": "audio-asset-demo-001",
+            "recordingSessionId": "rec-session-demo-001",
+            "chapterId": "ch-2",
+            "startMs": 720000,
+            "endMs": 900000
+          }
+        ]
+      }
+    },
+    {
+      "artifactType": "MachineArtifact",
+      "schemaVersion": 1,
+      "mode": "L3",
+      "provenance": {
+        "chatSessionId": "chat-session-demo-001",
+        "turnId": "turn-0001",
+        "createdAtMs": 1735459200000
+      },
+      "smartAnalysis": {
+        "highlights": [
+          "Customer is price-sensitive",
+          "Main objection is implementation timeline"
+        ],
+        "actionableTips": [
+          "Offer phased rollout option",
+          "Share 2 similar case studies"
+        ],
+        "entities": [
+          "Acme Corp",
+          "Q1 rollout"
+        ],
+        "pointers": [
+          {
+            "audioAssetId": "audio-asset-demo-001",
+            "recordingSessionId": "rec-session-demo-001",
+            "chapterId": "ch-2",
+            "startMs": 720000,
+            "endMs": 900000
+          }
+        ]
+      },
+      "metadataPatch": {
+        "target": "M2",
+        "ops": [
+          {
+            "op": "addTag",
+            "value": "price-sensitive"
+          },
+          {
+            "op": "setRiskLevel",
+            "value": "MEDIUM"
+          }
+        ]
+      }
+    },
+    {
+      "artifactType": "M2BTranscriptionState",
+      "schemaVersion": 1,
+      "recordingSessionId": "rec-session-demo-001",
+      "audioAssetId": "audio-asset-demo-001",
+      "chapters": [
+        {
+          "chapterId": "ch-1",
+          "title": "Opening & context",
+          "startMs": 0,
+          "endMs": 420000,
+          "audioAssetId": "audio-asset-demo-001",
+          "recordingSessionId": "rec-session-demo-001"
+        },
+        {
+          "chapterId": "ch-2",
+          "title": "Pricing & objections",
+          "summary": "Discussion of pricing options and customer objections",
+          "startMs": 420000,
+          "endMs": 960000,
+          "audioAssetId": "audio-asset-demo-001",
+          "recordingSessionId": "rec-session-demo-001"
+        }
+      ],
+      "keyPoints": [
+        {
+          "text": "Customer asked for phased rollout to hit Q1 timeline.",
+          "chapterId": "ch-2",
+          "timeRange": {
+            "startMs": 720000,
+            "endMs": 900000
+          },
+          "audioAssetId": "audio-asset-demo-001",
+          "recordingSessionId": "rec-session-demo-001"
         }
       ]
     }

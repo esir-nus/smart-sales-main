@@ -1,81 +1,149 @@
-# API Contracts（对齐 Orchestrator-V1）
+# API Contracts (Aligned with Orchestrator-V1)
 
-> 说明：
-> - 本文仅描述“UI <-> Orchestrator-V1”边界与关键事件类型。
-> - V7 相关 `<Metadata>` / M1/M2/M3/M4 语义已归档，不再作为当前契约。
-> - 三方参数大表仍以 `docs/xfyun-asr-rest-api.md` 为唯一来源（如仍存在兼容需求）。
-> - DTO/Schema 定义以 `docs/orchestrator-v1.schema.json` 为准。
-
----
-
-## 1) Orchestrator Facade（UI 入口面）
-
-V1 推荐 UI 面向统一入口，但内部拆分为可测试模块：
-
-- DisectorOrchestrator：生成 DisectorPlan（见 schema）
-- TingwuOrchestrator：批次提交/重试/状态管理
-- MemoryCenterOrchestrator：SessionMemory 生成（接口先行，见 schema）
-- PublisherOrchestrator：确定性发布与去重（PublishedTranscript/PublishedAnalysis）
-- DebugOrchestrator：HUD 三段可复制快照
+> Notes (Precedence):
+> - This document only describes the **UI <-> Orchestrator-V1 Facade** boundary and event/object contracts.
+> - The only current spec is `docs/Orchestrator-V1.md`.
+> - V7 is archived (ARCHIVED): historical reference only, not an implementation basis.
+> - Stable data objects (Published* / Plan / Artifacts / Metadata layers) follow `docs/orchestrator-v1.schema.json`.
 
 ---
 
-## 2) Session 生命周期事件（音频管线）
+## 1) Facade: UI-callable interfaces (recommended set)
 
-建议提供独立事件流（不复用聊天流）：
+### 1.1 Chat
 
-- `SessionEvent.PlanReady(plan)` — DisectorPlan
-- `SessionEvent.BatchSubmitted(batchId, attempt)`
-- `SessionEvent.BatchSucceeded(batchId, artifact)` — TingwuBatchArtifact
-- `SessionEvent.BatchFailed(batchId, reason, retryable)`
-- `SessionEvent.MemoryUpdated(memory)` — SessionMemory
-- `SessionEvent.Published(prefixBatchIndex, published)` — PublishedTranscript / PublishedAnalysis
-- `SessionEvent.Completed(finalRef)`
+- `streamChat(ChatRequest) -> Flow<ChatEvent>`
+  - Primary event stream for UI chat rendering.
+  - **Hard rule**: UI must only show Publisher output (see 2).
 
-约束：
-- UI 只能展示 Publisher 输出（连续前缀）。
-- 原始 Tingwu JSON 仅可在 HUD 中读取，不进入正常气泡。
+- `getPublishedChatTurn(chatSessionId, turnId) -> PublishedChatTurn`
+  - For history recovery or reconnect backfill.
 
----
+- `getThinkingTrace(chatSessionId, turnId?) -> ThinkingTraceSnapshot`
+  - For optional "Thinking Trace" panel (no chain-of-thought).
 
-## 3) Publisher 输出读取
+- `getDebugSnapshot(chatSessionId, turnId?) -> DebugSnapshot`
+  - For HUD (three copy/paste blocks).
 
-### 3.1 `getPublishedTranscript(sessionId)`
-返回：`PublishedTranscript`（见 `docs/orchestrator-v1.schema.json`）。
+### 1.2 Recording / Transcription
 
-### 3.2 `getPublishedAnalysis(sessionId)`
-返回：`PublishedAnalysis`（见 `docs/orchestrator-v1.schema.json`）。
+- `startTranscription(RecordingRequest) -> RecordingHandle`
+  - Returns: `audioAssetId` + `recordingSessionId` (optional `disectorPlanId`).
+  - Cache hit: if `audioAssetId` exists, Tingwu artifacts may be reused; still allow new `recordingSessionId` for this processing instance.
 
----
+- `observeRecordingSession(recordingSessionId) -> Flow<RecordingEvent>`
+  - UI shows "processing / pseudo-stream updates / completed".
 
-## 4) Debug / HUD Snapshot（强制 3 段）
+- `getPublishedTranscript(recordingSessionId) -> PublishedTranscript`
+  - UI shows only Publisher continuous prefix (b1..bk).
 
-### 4.1 `getDebugSnapshot(sessionId, optionalBatchId)`
-需要提供 3 段可复制文本：
+- `getPublishedAnalysis(recordingSessionId) -> PublishedAnalysis`
+  - UI view for "chapters/summary/speaker map" (chapter-level timeline).
 
-1) Effective Run Snapshot
-   - DisectorPlan 摘要
-   - Tingwu 队列状态、重试与禁用原因
+- `getDebugSnapshot(recordingSessionId, batchIndex?) -> DebugSnapshot`
+  - HUD (three copy/paste blocks).
 
-2) Raw Transcription Output
-   - Tingwu 原始输出或引用
+### 1.3 Metadata Hub (UI read-only)
 
-3) Publisher-ready Snapshot
-   - 预处理/发布前的确定性产物（批次计划、章节时间线、发布前缀）
-
-> V1 不使用 suspicious gap 作为润色依据。
+- `getSessionOverview(chatSessionId) -> SessionOverview`
+  - For UI badges/titles/tags (e.g., M3-derived titles, M2 tags).
+  - UI does not write M1/M2/M2B/M3/M4 (writes are by LLM Parser/system modules).
 
 ---
 
-## 5) 错误语义（最小约束）
+## 2) Chat Event Stream (ChatEvent)
 
-- 429：可重试且需更长退避。
-- 其他 4xx（除 429）：默认不可重试。
-- 5xx/网络超时：可重试（按确定性退避）。
+### 2.1 Event types
+
+- `ChatEvent.DisplayDelta(deltaText)` (optional)
+  - For "pseudo-stream" display.
+
+- `ChatEvent.Completed(publishedTurn: PublishedChatTurn)`
+  - Final result for this turn.
+
+- `ChatEvent.Retrying(reason, attempt, maxRetries)`
+  - Only when MachineArtifact validation fails (Strategy B).
+
+- `ChatEvent.Error(userFacingMessage, retryable)`
+
+### 2.2 Hard constraints (must satisfy)
+
+- **UI shows only** `PublishedChatTurn.displayMarkdown`.
+- `DisplayDelta` (if enabled) must be projected from `<visible2user>` content; do not stream text outside `<visible2user>` to UI.
+- `PublishedChatTurn.machineArtifact` is for system/debug only, not the UI render source.
+- Publisher MUST follow the extraction algorithm in Section 5.2 (HumanDraft via first `<visible2user>`, MachineArtifact via first ```json fenced block outside `<visible2user>`; no heuristics).
+- If UI renders L3 structured cards, use Publisher output `smartAnalysisCard` (if present), not direct JSON parsing.
 
 ---
 
-## 6) 兼容说明
+## 3) Recording Event Stream (RecordingEvent)
 
-- 若存在旧版 UI 依赖 V7 事件流，应通过兼容适配层转换为 V1 事件。
-- 新功能必须以 `docs/Orchestrator-V1.md` 作为唯一依据。
+### 3.1 Event types (recommended)
+
+- `RecordingEvent.PlanReady(plan: DisectorPlan)`
+- `RecordingEvent.BatchSubmitted(batchIndex, attempt)`
+- `RecordingEvent.BatchSucceeded(batchIndex)`
+- `RecordingEvent.BatchFailed(batchIndex, reason, retryable)`
+- `RecordingEvent.PublishedPrefixAdvanced(publishedPrefixBatchIndex)`
+- `RecordingEvent.Completed(recordingSessionId)`
+- `RecordingEvent.Error(userFacingMessage, retryable)`
+
+### 3.2 Hard constraints
+
+- UI must not assemble out-of-order batches; consume `PublishedTranscript` only.
+- Chapters/summary only from `PublishedAnalysis` (chapter-level timeline; no per-line timestamp polishing in V1).
+
+---
+
+## 4) Debug / HUD Snapshot (mandatory three copy/paste blocks)
+
+### 4.1 DebugSnapshot
+
+`getDebugSnapshot(...)` must return three copyable text blocks:
+
+1) **Effective Run Snapshot**
+   - Key config and state (cache hit, retry count, plan/version, batch progress)
+
+2) **Raw Output**
+   - Chat: raw LLM output (includes `<visible2user>` and MachineArtifact text)
+   - Transcription: Tingwu raw output or reference
+
+3) **Publisher-ready / Published Snapshot**
+   - Chat: extracted `displayMarkdown` + artifact validation summary
+   - Transcription: DisectorPlan summary + published prefix state + chapter timeline summary
+
+> Constraint: normal bubbles/views **never show raw JSON**; JSON is allowed only in HUD.
+
+---
+
+## 5) Error Semantics (minimum constraints)
+
+### 5.1 Tingwu Runner
+
+Retry rules (see `docs/Orchestrator-V1.md` Section 8.1):
+- 429: retryable with longer backoff.
+- Other 4xx (except 429): not retryable by default.
+- 5xx/network timeouts: retryable (deterministic backoff).
+
+### 5.2 Chat (MachineArtifact validation failure)
+
+- `maxRetries = 2` (default recommendation).
+- Publisher extraction algorithm (see `docs/Orchestrator-V1.md` Section 5.2):
+  1) Extract HumanDraft: first complete `<visible2user>...</visible2user>` innerText
+  2) Extract MachineArtifact: first ```json fenced block outside `<visible2user>`
+  3) If fenced block missing or JSON parse/validation fails: set `artifactStatus = INVALID`, trigger retry
+  4) **Explicitly forbidden**: heuristic "guess JSON / regex extract JSON" from non-fenced text
+- If retries exhausted (see `docs/Orchestrator-V1.md` Section 8):
+  - HumanDraft extractable when: correct `<visible2user>` pairing exists, innerText trim length > 0
+  - If extractable: publish that `displayMarkdown`
+  - Else: publish a fixed fallback message (example: `Sorry, I could not generate a displayable response. Please retry.`)
+  - `artifactStatus = FAILED`
+  - Do not write Metadata Hub
+  - Must record Trace/HUD events (include failure reason + retry count)
+
+---
+
+## 6) Compatibility and Migration
+
+- New features must use `docs/Orchestrator-V1.md` as the sole basis.
+- If legacy UI still depends on V7, use a compatibility layer to convert events/objects to V1 objects (do not back-propagate V7 into V1 contracts).

@@ -1,17 +1,16 @@
 # Repository Guidelines
 
-> **⚠️ 过渡文件：此文件已迁移**  
-> 本文件仅作为过渡重定向，实际内容已迁移至：  
-> **👉 [`docs/AGENTS.md`](docs/AGENTS.md) 👈**
+> **Warning: Transitional file**  
+> This file only redirects for backward compatibility. The authoritative content has moved to:  
+> **=> `docs/AGENTS.md`**
 
-请查看 [`docs/AGENTS.md`](docs/AGENTS.md) 获取最新的仓库指南和规范。
+Please read `docs/AGENTS.md` for the latest repository guidelines and rules.
 
 ---
 
-## 为什么有两个文件？
+## Why are there two files?
 
-- `AGENTS.md`（本文件）：根目录过渡文件，用于向后兼容
-- `docs/AGENTS.md`：**权威版本**，包含最新的规范、第三方集成注册表、Provider Policy 等
+- `AGENTS.md` (this file): root-level transitional file for backward compatibility
+- `docs/AGENTS.md`: **authoritative version**, contains the latest rules, third-party integration registry, and Provider Policy
 
-**请始终参考 `docs/AGENTS.md` 作为唯一真实来源。**
-
+**Always treat `docs/AGENTS.md` as the single source of truth.**

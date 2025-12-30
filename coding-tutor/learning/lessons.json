@@ -35,6 +35,15 @@
       "completed": true,
       "taskCompleted": true,
       "checkpointAnswered": true
+    },
+    {
+      "lessonNumber": 5,
+      "title": "Null Safety",
+      "date": "2025-01-28",
+      "concepts": ["null safety", "nullable types", "safe call operator", "Long type"],
+      "completed": true,
+      "taskCompleted": true,
+      "checkpointAnswered": true
     }
   ]
 }

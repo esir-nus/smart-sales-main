@@ -15,6 +15,7 @@ import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionBatchEvent
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
+import com.smartsales.feature.media.audiofiles.TranscriptionBatchPlanWithWindows
 import com.smartsales.feature.media.audiofiles.TranscriptionBatchPlanner
 import java.io.File
 import java.util.Locale
@@ -34,6 +35,7 @@ class XfyunAudioTranscriptionCoordinator @Inject constructor(
 ) : AudioTranscriptionCoordinator {
 
     private val pendingUploads = ConcurrentHashMap<String, PendingUpload>()
+    private val durationByJobId = ConcurrentHashMap<String, Long>()
 
     override suspend fun uploadAudio(file: File): Result<AudioUploadPayload> {
         val ext = file.extension.lowercase(Locale.ROOT)
@@ -74,11 +76,18 @@ class XfyunAudioTranscriptionCoordinator @Inject constructor(
         )
 
         // 重要：讯飞转写参数由 AiParaSettings 统一管理，这里只负责把本地文件提交给协调器。
-        return xfyunAsrCoordinator.submitTranscription(
+        val result = xfyunAsrCoordinator.submitTranscription(
             file = pending.file,
             language = language,
             durationMs = pending.durationMs,
         )
+        if (result is Result.Success) {
+            pending.durationMs?.let { durationMs ->
+                // 仅保存时长，不记录内容；用于后续 V1 时间窗口生成。
+                durationByJobId[result.data] = durationMs
+            }
+        }
+        return result
     }
 
     override fun observeJob(jobId: String): Flow<AudioTranscriptionJobState> {
@@ -93,10 +102,13 @@ class XfyunAudioTranscriptionCoordinator @Inject constructor(
                     jobId = state.jobId,
                     transcriptMarkdown = state.transcriptMarkdown
                 )
-                is XfyunAsrJobState.Failed -> AudioTranscriptionJobState.Failed(
-                    jobId = state.jobId,
-                    reason = state.reason
-                )
+                is XfyunAsrJobState.Failed -> {
+                    durationByJobId.remove(state.jobId)
+                    AudioTranscriptionJobState.Failed(
+                        jobId = state.jobId,
+                        reason = state.reason
+                    )
+                }
             }
         }
     }
@@ -106,8 +118,19 @@ class XfyunAudioTranscriptionCoordinator @Inject constructor(
             .filterIsInstance<XfyunAsrJobState.Completed>()
             .take(1)
             .collect { state ->
-                val plan = TranscriptionBatchPlanner.plan(state.transcriptMarkdown)
-                if (plan.totalBatches <= 0) return@collect
+                val durationMs = durationByJobId[state.jobId]
+                // 生成 V1 窗口计划仅为后续时间锚点铺垫，不影响现有展示逻辑。
+                val planWithWindows = buildBatchPlanWithWindows(
+                    markdown = state.transcriptMarkdown,
+                    audioDurationMs = durationMs,
+                    batchDurationMs = V1_BATCH_DURATION_MS,
+                    overlapMs = V1_OVERLAP_MS
+                )
+                val plan = planWithWindows?.plan ?: TranscriptionBatchPlanner.plan(state.transcriptMarkdown)
+                if (plan.totalBatches <= 0) {
+                    durationByJobId.remove(state.jobId)
+                    return@collect
+                }
                 plan.batches.forEach { batch ->
                     send(
                         AudioTranscriptionBatchEvent.BatchReleased(
@@ -122,6 +145,7 @@ class XfyunAudioTranscriptionCoordinator @Inject constructor(
                         )
                     )
                 }
+                durationByJobId.remove(state.jobId)
             }
     }
 
@@ -144,5 +168,23 @@ class XfyunAudioTranscriptionCoordinator @Inject constructor(
 
     private companion object {
         private val SUPPORTED_EXTENSIONS = setOf("wav", "mp3")
+        // 说明：为 V1 时间锚点预留的保守窗口参数（当前只生成窗口，不改展示）。
+        private const val V1_BATCH_DURATION_MS = 60_000L
+        private const val V1_OVERLAP_MS = 5_000L
     }
+}
+
+internal fun buildBatchPlanWithWindows(
+    markdown: String,
+    audioDurationMs: Long?,
+    batchDurationMs: Long,
+    overlapMs: Long
+): TranscriptionBatchPlanWithWindows? {
+    if (audioDurationMs == null) return null
+    return TranscriptionBatchPlanner.planWithWindows(
+        markdown = markdown,
+        audioDurationMs = audioDurationMs,
+        batchDurationMs = batchDurationMs,
+        overlapMs = overlapMs
+    )
 }

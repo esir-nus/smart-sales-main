@@ -93,6 +93,7 @@ import com.smartsales.feature.chat.core.publisher.ChatPublisher
 import com.smartsales.feature.chat.core.publisher.ChatPublisherImpl
 import com.smartsales.feature.chat.core.publisher.GeneralChatV1Finalizer
 import com.smartsales.feature.chat.core.stream.ChatStreamCoordinator
+import com.smartsales.feature.chat.core.v1.V1GeneralCompletionEvaluator
 import com.smartsales.feature.chat.core.v1.V1GeneralRetryPolicy
 
 private const val DEFAULT_SESSION_ID = "home-session"
@@ -1932,13 +1933,15 @@ class HomeScreenViewModel @Inject constructor(
         } else {
             null
         }
-        // V1：先验收再发布，避免中间失败结果污染 UI（保持原有行为不变）
+        // V1：先验收再发布，避免中间失败结果污染 UI（行为保持不变）
         val completionEvaluator: (suspend (String, Int) -> com.smartsales.feature.chat.core.stream.CompletionDecision)? = if (v1RetryActive) {
-            { rawFullText: String, attempt: Int ->
+            val evaluator = V1GeneralCompletionEvaluator(v1Finalizer)
+            val provider: suspend (String, Int) -> com.smartsales.feature.chat.core.stream.CompletionDecision = { rawFullText, attempt ->
                 // V1 合约检查：MachineArtifact 必须有效，否则触发重试
-                val result = v1Finalizer.finalize(rawFullText)
-                V1GeneralRetryPolicy.decide(result.artifactStatus, attempt, v1MaxRetries)
+                val eval = evaluator.evaluate(rawFullText, attempt, v1MaxRetries)
+                eval.decision
             }
+            provider
         } else {
             null
         }

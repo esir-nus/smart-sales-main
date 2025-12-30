@@ -6,6 +6,8 @@ package com.smartsales.feature.chat.core.v1
 // Author: created on 2025-12-30
 
 import com.smartsales.feature.chat.core.publisher.ArtifactStatus
+import com.smartsales.feature.chat.core.publisher.GeneralChatV1Finalizer
+import com.smartsales.feature.chat.core.publisher.V1FinalizeResult
 import com.smartsales.feature.chat.core.stream.CompletionDecision
 
 object V1GeneralRetryPolicy {
@@ -26,5 +28,28 @@ object V1GeneralRetryPolicy {
         } else {
             CompletionDecision.Terminal
         }
+    }
+}
+
+data class V1CompletionEval(
+    val decision: CompletionDecision,
+    val finalizeResult: V1FinalizeResult,
+)
+
+class V1GeneralCompletionEvaluator(
+    private val finalizer: GeneralChatV1Finalizer,
+) {
+    // 把“验收/决策”集中在纯逻辑层，降低 ViewModel 复杂度，便于测试（行为不变）
+    fun evaluate(
+        rawFullText: String,
+        attempt: Int,
+        maxRetries: Int
+    ): V1CompletionEval {
+        val finalizeResult = finalizer.finalize(rawFullText)
+        val decision = V1GeneralRetryPolicy.decide(finalizeResult.artifactStatus, attempt, maxRetries)
+        return V1CompletionEval(
+            decision = decision,
+            finalizeResult = finalizeResult
+        )
     }
 }

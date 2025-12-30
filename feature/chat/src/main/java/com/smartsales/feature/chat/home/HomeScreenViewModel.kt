@@ -1916,6 +1916,20 @@ class HomeScreenViewModel @Inject constructor(
             }
         }
 
+        val v1RetryEnabled = enableV1ChatPublisher && request.quickSkillId == null && !isSmartAnalysis
+        val v1MaxRetries = if (v1RetryEnabled) 2 else 0
+        // V1 GENERAL：修复指令只进请求，不进 UI；未启用时保持原样
+        val requestProvider = if (v1RetryEnabled && v1MaxRetries > 0) {
+            val repairInstruction = "REPAIR: Output exactly one <visible2user>...</visible2user> and one ```json block outside <visible2user>. No other text outside those sections."
+            { attempt: Int ->
+                if (attempt == 0) request else request.copy(
+                    userMessage = request.userMessage + "\n\n" + repairInstruction
+                )
+            }
+        } else {
+            null
+        }
+
         // 抽出流式协调器，降低 ViewModel 复杂度，便于后续 V1 规则演进
         chatStreamCoordinator.start(
             scope = viewModelScope,
@@ -1953,7 +1967,9 @@ class HomeScreenViewModel @Inject constructor(
                     isAutoAnalysis = isAutoAnalysis,
                     isSmartAnalysis = isSmartAnalysis
                 )
-            }
+            },
+            maxRetries = v1MaxRetries,
+            requestProvider = requestProvider
         )
     }
 

@@ -1907,7 +1907,7 @@ class HomeScreenViewModel @Inject constructor(
         isAutoAnalysis: Boolean = false
     ) {
         val isSmartAnalysis = request.quickSkillId == "SMART_ANALYSIS"
-        val streamingDeduplicator = StreamingDeduplicator()
+        var streamingDeduplicator = StreamingDeduplicator()
 
         if (isSmartAnalysis) {
             // 本地占位提示，避免流式展示脏文本
@@ -1918,8 +1918,9 @@ class HomeScreenViewModel @Inject constructor(
 
         val v1RetryEnabled = enableV1ChatPublisher && request.quickSkillId == null && !isSmartAnalysis
         val v1MaxRetries = if (v1RetryEnabled) 2 else 0
+        val v1RetryActive = v1RetryEnabled && v1MaxRetries > 0
         // V1 GENERAL：修复指令只进请求，不进 UI；未启用时保持原样
-        val requestProvider = if (v1RetryEnabled && v1MaxRetries > 0) {
+        val requestProvider = if (v1RetryActive) {
             val repairInstruction = "REPAIR: Output exactly one <visible2user>...</visible2user> and one ```json block outside <visible2user>. No other text outside those sections."
             { attempt: Int ->
                 if (attempt == 0) request else request.copy(
@@ -1928,6 +1929,53 @@ class HomeScreenViewModel @Inject constructor(
             }
         } else {
             null
+        }
+        // V1：先验收再发布，避免中间失败结果污染 UI
+        val completionEvaluator: (suspend (String, Int) -> com.smartsales.feature.chat.core.stream.CompletionDecision)? = if (v1RetryActive) {
+            { rawFullText: String, attempt: Int ->
+                // V1 合约检查：MachineArtifact 必须有效，否则触发重试
+                val result = v1Finalizer.finalize(rawFullText)
+                if (result.artifactStatus == com.smartsales.feature.chat.core.publisher.ArtifactStatus.VALID) {
+                    com.smartsales.feature.chat.core.stream.CompletionDecision.Accept
+                } else if (attempt < v1MaxRetries) {
+                    com.smartsales.feature.chat.core.stream.CompletionDecision.Retry
+                } else {
+                    com.smartsales.feature.chat.core.stream.CompletionDecision.Terminal
+                }
+            }
+        } else {
+            null
+        }
+        val onRetryStart: suspend (Int) -> Unit = if (v1RetryActive) {
+            { _: Int ->
+                // 重试前清空占位内容并重置去重器，避免 UI 闪烁/残留
+                streamingDeduplicator = StreamingDeduplicator()
+                updateAssistantMessage(assistantId) { msg ->
+                    msg.copy(
+                        content = "",
+                        rawContent = "",
+                        sanitizedContent = "",
+                        isStreaming = true
+                    )
+                }
+            }
+        } else {
+            { _: Int -> }
+        }
+        val onTerminal: suspend (String, Int) -> Unit = if (v1RetryActive) {
+            { fullText: String, _: Int ->
+                handleStreamCompleted(
+                    request = request,
+                    assistantId = assistantId,
+                    rawFullText = fullText,
+                    onCompleted = onCompleted,
+                    onCompletedTransform = onCompletedTransform,
+                    isAutoAnalysis = isAutoAnalysis,
+                    isSmartAnalysis = isSmartAnalysis
+                )
+            }
+        } else {
+            { _: String, _: Int -> }
         }
 
         // 抽出流式协调器，降低 ViewModel 复杂度，便于后续 V1 规则演进
@@ -1969,7 +2017,10 @@ class HomeScreenViewModel @Inject constructor(
                 )
             },
             maxRetries = v1MaxRetries,
-            requestProvider = requestProvider
+            completionEvaluator = completionEvaluator,
+            requestProvider = requestProvider,
+            onRetryStart = onRetryStart,
+            onTerminal = onTerminal
         )
     }
 

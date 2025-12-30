@@ -93,6 +93,7 @@ import com.smartsales.feature.chat.core.publisher.ChatPublisher
 import com.smartsales.feature.chat.core.publisher.ChatPublisherImpl
 import com.smartsales.feature.chat.core.publisher.GeneralChatV1Finalizer
 import com.smartsales.feature.chat.core.stream.ChatStreamCoordinator
+import com.smartsales.feature.chat.core.v1.V1GeneralRetryPolicy
 
 private const val DEFAULT_SESSION_ID = "home-session"
 private const val DEFAULT_SESSION_TITLE = SessionTitlePolicy.PLACEHOLDER_TITLE
@@ -1921,27 +1922,22 @@ class HomeScreenViewModel @Inject constructor(
         val v1RetryActive = v1RetryEnabled && v1MaxRetries > 0
         // V1 GENERAL：修复指令只进请求，不进 UI；未启用时保持原样
         val requestProvider = if (v1RetryActive) {
-            val repairInstruction = "REPAIR: Output exactly one <visible2user>...</visible2user> and one ```json block outside <visible2user>. No other text outside those sections."
-            { attempt: Int ->
+            val repairInstruction = V1GeneralRetryPolicy.buildRepairInstruction()
+            val provider: (Int) -> ChatRequest = { attempt: Int ->
                 if (attempt == 0) request else request.copy(
                     userMessage = request.userMessage + "\n\n" + repairInstruction
                 )
             }
+            provider
         } else {
             null
         }
-        // V1：先验收再发布，避免中间失败结果污染 UI
+        // V1：先验收再发布，避免中间失败结果污染 UI（保持原有行为不变）
         val completionEvaluator: (suspend (String, Int) -> com.smartsales.feature.chat.core.stream.CompletionDecision)? = if (v1RetryActive) {
             { rawFullText: String, attempt: Int ->
                 // V1 合约检查：MachineArtifact 必须有效，否则触发重试
                 val result = v1Finalizer.finalize(rawFullText)
-                if (result.artifactStatus == com.smartsales.feature.chat.core.publisher.ArtifactStatus.VALID) {
-                    com.smartsales.feature.chat.core.stream.CompletionDecision.Accept
-                } else if (attempt < v1MaxRetries) {
-                    com.smartsales.feature.chat.core.stream.CompletionDecision.Retry
-                } else {
-                    com.smartsales.feature.chat.core.stream.CompletionDecision.Terminal
-                }
+                V1GeneralRetryPolicy.decide(result.artifactStatus, attempt, v1MaxRetries)
             }
         } else {
             null

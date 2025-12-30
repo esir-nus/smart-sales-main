@@ -9,6 +9,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class GeneralChatV1FinalizerTest {
+    private val validArtifactJson =
+        """{"artifactType":"MachineArtifact","schemaVersion":1,"mode":"L1","provenance":{"chatSessionId":"cs1","turnId":"t1","createdAtMs":0}}"""
 
     @Test
     fun `finalizer returns visible2user and valid artifact`() {
@@ -17,7 +19,7 @@ class GeneralChatV1FinalizerTest {
         val raw = """
             <visible2user>Hi</visible2user>
             ```json
-            {"a":1}
+            $validArtifactJson
             ```
         """.trimIndent()
 
@@ -25,7 +27,7 @@ class GeneralChatV1FinalizerTest {
 
         assertEquals("Hi", result.visibleMarkdown)
         assertEquals(ArtifactStatus.VALID, result.artifactStatus)
-        assertEquals("{\"a\":1}", result.artifactJson)
+        assertEquals(validArtifactJson, result.artifactJson)
     }
 
     @Test
@@ -35,7 +37,7 @@ class GeneralChatV1FinalizerTest {
         val raw = """
             hello
             ```json
-            {"a":1}
+            $validArtifactJson
             ```
         """.trimIndent()
 

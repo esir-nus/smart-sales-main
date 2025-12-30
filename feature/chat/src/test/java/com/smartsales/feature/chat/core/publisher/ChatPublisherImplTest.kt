@@ -13,20 +13,26 @@ import org.junit.Test
 class ChatPublisherImplTest {
 
     private val publisher = ChatPublisherImpl()
+    private val validArtifactJson =
+        """{"artifactType":"MachineArtifact","schemaVersion":1,"mode":"L1","provenance":{"chatSessionId":"cs1","turnId":"t1","createdAtMs":0}}"""
+    private val validArtifactJsonAlt =
+        """{"artifactType":"MachineArtifact","schemaVersion":1,"mode":"L1","provenance":{"chatSessionId":"cs2","turnId":"t2","createdAtMs":1}}"""
+    private val invalidArtifactMissingProvenance =
+        """{"artifactType":"MachineArtifact","schemaVersion":1,"mode":"L1"}"""
 
     @Test
     fun `happy path extracts visible2user and json fence`() {
         val raw = """
             <visible2user>Hello</visible2user>
             ```json
-            {"a":1}
+            $validArtifactJson
             ```
         """.trimIndent()
 
         val result = publisher.publish(raw)
 
         assertEquals("Hello", result.displayMarkdown)
-        assertEquals("{\"a\":1}", result.machineArtifactJson)
+        assertEquals(validArtifactJson, result.machineArtifactJson)
         assertEquals(ArtifactStatus.VALID, result.artifactStatus)
         assertNull(result.failureReason)
     }
@@ -37,7 +43,7 @@ class ChatPublisherImplTest {
             <visible2user>
             Hello
             ```json
-            {"a":1}
+            $validArtifactJson
             ```
             </visible2user>
         """.trimIndent()
@@ -67,14 +73,14 @@ class ChatPublisherImplTest {
         val raw = """
             <visible2user>Hello
             ```json
-            {"a":1}
+            $validArtifactJson
             ```
         """.trimIndent()
 
         val result = publisher.publish(raw)
 
         assertEquals("", result.displayMarkdown)
-        assertEquals("{\"a\":1}", result.machineArtifactJson)
+        assertEquals(validArtifactJson, result.machineArtifactJson)
         assertEquals(ArtifactStatus.VALID, result.artifactStatus)
     }
 
@@ -83,14 +89,14 @@ class ChatPublisherImplTest {
         val raw = """
             <visible2user>   </visible2user>
             ```json
-            {"a":1}
+            $validArtifactJson
             ```
         """.trimIndent()
 
         val result = publisher.publish(raw)
 
         assertEquals("", result.displayMarkdown)
-        assertEquals("{\"a\":1}", result.machineArtifactJson)
+        assertEquals(validArtifactJson, result.machineArtifactJson)
         assertEquals(ArtifactStatus.VALID, result.artifactStatus)
     }
 
@@ -98,17 +104,35 @@ class ChatPublisherImplTest {
     fun `multiple fences choose first outside visible2user`() {
         val raw = """
             ```json
-            {"first":1}
+            $validArtifactJson
             ```
             <visible2user>Hello</visible2user>
             ```json
-            {"second":2}
+            $validArtifactJsonAlt
             ```
         """.trimIndent()
 
         val result = publisher.publish(raw)
 
-        assertEquals("{\"first\":1}", result.machineArtifactJson)
+        assertEquals(validArtifactJson, result.machineArtifactJson)
         assertEquals(ArtifactStatus.VALID, result.artifactStatus)
+    }
+
+    @Test
+    fun `invalid artifact missing provenance yields invalid`() {
+        val raw = """
+            <visible2user>Hello</visible2user>
+            ```json
+            $invalidArtifactMissingProvenance
+            ```
+        """.trimIndent()
+
+        val result = publisher.publish(raw)
+
+        assertEquals(ArtifactStatus.INVALID, result.artifactStatus)
+        assertEquals(
+            MachineArtifactValidator.REASON_MISSING_REQUIRED_FIELD,
+            result.failureReason
+        )
     }
 }

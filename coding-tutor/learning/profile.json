@@ -1,5 +1,7 @@
 {
-  "knownLanguages": ["Java", "Python"],
+  "knownLanguages": ["Python"],
+  "learningLanguages": ["Kotlin", "Java"],
+  "primaryFocus": "Kotlin",
   "currentPath": "Fundamentals",
   "currentLanguage": "Kotlin",
   "currentFramework": "Android",

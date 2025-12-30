@@ -5,9 +5,8 @@ package com.smartsales.feature.chat.core.publisher
 // Summary: Deterministic V1 publisher with no heuristic extraction.
 // Author: created on 2025-12-29
 
-import org.json.JSONObject
-
 class ChatPublisherImpl : ChatPublisher {
+    private val validator = MachineArtifactValidator()
 
     override fun publish(rawText: String, retryCount: Int): PublishedChatTurnV1 {
         // 仅使用首个完整的 <visible2user>...</visible2user> 作为 HumanDraft
@@ -32,14 +31,14 @@ class ChatPublisherImpl : ChatPublisher {
             ?.trim()
             ?.takeIf { it.isNotBlank() }
 
-        // 只接受合法 JSON 对象，不做括号猜测或兜底解析
-        val isValidJson = jsonText?.let { runCatching { JSONObject(it) }.isSuccess } ?: false
-
-        val status = if (isValidJson) ArtifactStatus.VALID else ArtifactStatus.INVALID
+        // 按 V1 schema 做确定性校验，避免“能解析就算合法”
+        val validation = jsonText?.let { validator.validate(it) }
+        val status = if (validation?.isValid == true) ArtifactStatus.VALID else ArtifactStatus.INVALID
+        // 透传确定性的失败原因，便于重试与排查
         val failureReason = when {
             jsonText == null -> "missing_json_fence"
-            isValidJson -> null
-            else -> "invalid_json"
+            validation?.isValid == true -> null
+            else -> validation?.reason ?: "invalid_machine_artifact"
         }
 
         return PublishedChatTurnV1(

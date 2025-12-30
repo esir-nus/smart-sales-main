@@ -17,6 +17,15 @@
       "completed": true,
       "taskCompleted": true,
       "checkpointAnswered": true
+    },
+    {
+      "lessonNumber": 3,
+      "title": "Sealed Classes",
+      "date": "2025-01-28",
+      "concepts": ["sealed class", "exhaustiveness checking", "type safety"],
+      "completed": true,
+      "taskCompleted": true,
+      "checkpointAnswered": true
     }
   ]
 }

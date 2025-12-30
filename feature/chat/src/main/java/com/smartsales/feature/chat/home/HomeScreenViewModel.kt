@@ -1939,7 +1939,13 @@ class HomeScreenViewModel @Inject constructor(
             val evaluator = V1GeneralCompletionEvaluator(v1Finalizer)
             val provider: suspend (String, Int) -> com.smartsales.feature.chat.core.stream.CompletionDecision = { rawFullText, attempt ->
                 // V1 合约检查：MachineArtifact 必须有效，否则触发重试
-                val eval = evaluator.evaluate(rawFullText, attempt, v1MaxRetries)
+                // missing_json_fence 属于不可修复类错误，开启 reason-aware 避免无意义重试，提升稳定性
+                val eval = evaluator.evaluate(
+                    rawFullText = rawFullText,
+                    attempt = attempt,
+                    maxRetries = v1MaxRetries,
+                    enableReasonAwareRetry = true
+                )
                 eval.decision
             }
             provider

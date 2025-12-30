@@ -72,4 +72,96 @@ class ChatStreamCoordinatorTest {
 
         assertSame(expected, error)
     }
+
+    @Test
+    fun `retry then accept uses last attempt`() = runTest(dispatcher) {
+        // 验证重试框架按 maxRetries 触发，多次尝试后仅接受一次结果
+        var streamCalls = 0
+        val coordinator = ChatStreamCoordinator { _ ->
+            val attempt = streamCalls
+            streamCalls += 1
+            flowOf(ChatStreamEvent.Completed("attempt-$attempt"))
+        }
+        val request = ChatRequest(sessionId = "s1", userMessage = "hello")
+        val completed = mutableListOf<String>()
+        val retries = mutableListOf<Int>()
+
+        coordinator.start(
+            scope = this,
+            request = request,
+            onDelta = { },
+            onCompleted = { completed.add(it) },
+            onError = { },
+            maxRetries = 2,
+            completionEvaluator = { _, attempt ->
+                if (attempt < 2) CompletionDecision.Retry else CompletionDecision.Accept
+            },
+            onRetryStart = { retries.add(it) },
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(3, streamCalls)
+        assertEquals(listOf(1, 2), retries)
+        assertEquals(listOf("attempt-2"), completed)
+    }
+
+    @Test
+    fun `always retry triggers terminal callback`() = runTest(dispatcher) {
+        // 验证达到最大重试次数后进入终止分支
+        var streamCalls = 0
+        val coordinator = ChatStreamCoordinator { _ ->
+            val attempt = streamCalls
+            streamCalls += 1
+            flowOf(ChatStreamEvent.Completed("attempt-$attempt"))
+        }
+        val request = ChatRequest(sessionId = "s1", userMessage = "hello")
+        var terminal: Pair<Int, String>? = null
+
+        coordinator.start(
+            scope = this,
+            request = request,
+            onDelta = { },
+            onCompleted = { },
+            onError = { },
+            maxRetries = 2,
+            completionEvaluator = { _, _ -> CompletionDecision.Retry },
+            onTerminal = { text, attempt -> terminal = attempt to text },
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(3, streamCalls)
+        assertEquals(2 to "attempt-2", terminal)
+    }
+
+    @Test
+    fun `request provider applies per attempt`() = runTest(dispatcher) {
+        // 验证 requestProvider 可以为每次尝试生成不同请求
+        val seen = mutableListOf<String>()
+        val coordinator = ChatStreamCoordinator { req ->
+            seen.add(req.userMessage)
+            flowOf(ChatStreamEvent.Completed(req.userMessage))
+        }
+        val base = ChatRequest(sessionId = "s1", userMessage = "msg-0")
+        val completed = mutableListOf<String>()
+
+        coordinator.start(
+            scope = this,
+            request = base,
+            onDelta = { },
+            onCompleted = { completed.add(it) },
+            onError = { },
+            maxRetries = 2,
+            completionEvaluator = { _, attempt ->
+                if (attempt < 2) CompletionDecision.Retry else CompletionDecision.Accept
+            },
+            requestProvider = { attempt -> base.copy(userMessage = "msg-$attempt") },
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(listOf("msg-0", "msg-1", "msg-2"), seen)
+        assertEquals(listOf("msg-2"), completed)
+    }
 }

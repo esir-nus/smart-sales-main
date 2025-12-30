@@ -26,6 +26,15 @@
       "completed": true,
       "taskCompleted": true,
       "checkpointAnswered": true
+    },
+    {
+      "lessonNumber": 4,
+      "title": "when Expressions",
+      "date": "2025-01-28",
+      "concepts": ["when expression", "pattern matching", "exhaustiveness checking"],
+      "completed": true,
+      "taskCompleted": true,
+      "checkpointAnswered": true
     }
   ]
 }

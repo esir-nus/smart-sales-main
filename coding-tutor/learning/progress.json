@@ -1,7 +1,7 @@
 {
-  "lessonsCompleted": 3,
-  "conceptsLearned": ["val", "var", "immutability", "data class", "auto-generation", "equals", "hashCode", "toString", "sealed class", "exhaustiveness checking"],
-  "currentLesson": "Lesson 4",
+  "lessonsCompleted": 4,
+  "conceptsLearned": ["val", "var", "immutability", "data class", "auto-generation", "equals", "hashCode", "toString", "sealed class", "exhaustiveness checking", "when expression", "pattern matching"],
+  "currentLesson": "Lesson 5",
   "lastLessonDate": "2025-01-28"
 }
 

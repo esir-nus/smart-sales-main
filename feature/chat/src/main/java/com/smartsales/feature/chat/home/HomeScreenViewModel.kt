@@ -92,7 +92,9 @@ import java.util.Optional
 import com.smartsales.feature.chat.core.publisher.ChatPublisher
 import com.smartsales.feature.chat.core.publisher.ChatPublisherImpl
 import com.smartsales.feature.chat.core.publisher.GeneralChatV1Finalizer
+import com.smartsales.feature.chat.core.publisher.ArtifactStatus
 import com.smartsales.feature.chat.core.stream.ChatStreamCoordinator
+import com.smartsales.feature.chat.core.transcription.V1BatchIndexPrefixGate
 import com.smartsales.feature.chat.core.v1.V1GeneralCompletionEvaluator
 import com.smartsales.feature.chat.core.v1.V1GeneralRetryPolicy
 import com.smartsales.feature.chat.core.v1.V1GeneralRetryEffects
@@ -342,6 +344,7 @@ class HomeScreenViewModel @Inject constructor(
     private var lastTranscriptionJobId: String? = null
     private var transcriptionBatchMessageId: String? = null
     private var transcriptionBatchFinal: Boolean = false
+    private val transcriptionBatchGate = V1BatchIndexPrefixGate<AudioTranscriptionBatchEvent.BatchReleased>()
     // 标记本次转写是否仍在进行中，用于抑制中途恢复提示
     private var activelyTranscribing: Boolean = false
     // 标记当前会话是否已处理首条助手回复，用于“首条决定标题”规则
@@ -1134,57 +1137,64 @@ class HomeScreenViewModel @Inject constructor(
             batchPlanTotalBatches = event.totalBatches,
             batchPlanCurrentBatchIndex = event.batchIndex
         )
-        val isFinal = event.isFinal
-        val existingId = transcriptionBatchMessageId
-        val merged = if (existingId == null) {
-            event.markdownChunk
-        } else {
-            mergeTranscriptionChunks(
-                existing = _uiState.value.chatMessages.firstOrNull { it.id == existingId }?.rawContent
-                    ?: _uiState.value.chatMessages.firstOrNull { it.id == existingId }?.content
-                    ?: "",
-                incoming = event.markdownChunk
-            )
+        // V1：按 batchIndex 发布连续前缀，乱序批次先缓存再释放
+        val releasables = transcriptionBatchGate.offer(event.batchIndex, event)
+        if (releasables.isEmpty()) {
+            return
         }
-        if (existingId == null) {
-            val messageId = nextMessageId()
-            transcriptionBatchMessageId = messageId
-            val display = displayAssistantText(raw = merged, sanitized = merged)
-            _uiState.update {
-                it.copy(
-                    chatMessages = it.chatMessages + ChatMessageUi(
-                        id = messageId,
-                        role = ChatMessageRole.ASSISTANT,
+        for (released in releasables) {
+            val isFinal = released.isFinal
+            val existingId = transcriptionBatchMessageId
+            val merged = if (existingId == null) {
+                released.markdownChunk
+            } else {
+                mergeTranscriptionChunks(
+                    existing = _uiState.value.chatMessages.firstOrNull { it.id == existingId }?.rawContent
+                        ?: _uiState.value.chatMessages.firstOrNull { it.id == existingId }?.content
+                        ?: "",
+                    incoming = released.markdownChunk
+                )
+            }
+            if (existingId == null) {
+                val messageId = nextMessageId()
+                transcriptionBatchMessageId = messageId
+                val display = displayAssistantText(raw = merged, sanitized = merged)
+                _uiState.update {
+                    it.copy(
+                        chatMessages = it.chatMessages + ChatMessageUi(
+                            id = messageId,
+                            role = ChatMessageRole.ASSISTANT,
+                            content = display,
+                            rawContent = merged,
+                            sanitizedContent = merged,
+                            timestampMillis = System.currentTimeMillis(),
+                            isStreaming = !isFinal
+                        ),
+                        showWelcomeHero = false
+                    )
+                }
+                if (isFinal) {
+                    persistMessagesAsync()
+                    viewModelScope.launch { updateSessionSummary(merged) }
+                }
+            } else {
+                updateAssistantMessage(existingId, persistAfterUpdate = isFinal) { msg ->
+                    val display = displayAssistantText(raw = merged, sanitized = merged)
+                    msg.copy(
                         content = display,
                         rawContent = merged,
                         sanitizedContent = merged,
-                        timestampMillis = System.currentTimeMillis(),
                         isStreaming = !isFinal
-                    ),
-                    showWelcomeHero = false
-                )
+                    )
+                }
+                if (isFinal) {
+                    viewModelScope.launch { updateSessionSummary(merged) }
+                }
             }
             if (isFinal) {
-                persistMessagesAsync()
-                viewModelScope.launch { updateSessionSummary(merged) }
+                // 重要：完成后冻结说话人标签/文本，忽略后续批次。
+                transcriptionBatchFinal = true
             }
-        } else {
-            updateAssistantMessage(existingId, persistAfterUpdate = isFinal) { msg ->
-                val display = displayAssistantText(raw = merged, sanitized = merged)
-                msg.copy(
-                    content = display,
-                    rawContent = merged,
-                    sanitizedContent = merged,
-                    isStreaming = !isFinal
-                )
-            }
-            if (isFinal) {
-                viewModelScope.launch { updateSessionSummary(merged) }
-            }
-        }
-        if (isFinal) {
-            // 重要：完成后冻结说话人标签/文本，忽略后续批次。
-            transcriptionBatchFinal = true
         }
         if (CHAT_DEBUG_HUD_ENABLED && _uiState.value.showDebugMetadata) {
             refreshDebugSnapshot()
@@ -1207,6 +1217,7 @@ class HomeScreenViewModel @Inject constructor(
         transcriptionBatchJob = null
         transcriptionBatchMessageId = null
         transcriptionBatchFinal = false
+        transcriptionBatchGate.reset()
     }
 
     fun onOpenDrawer() {
@@ -1922,6 +1933,8 @@ class HomeScreenViewModel @Inject constructor(
         val v1RetryEnabled = enableV1ChatPublisher && request.quickSkillId == null && !isSmartAnalysis
         val v1MaxRetries = if (v1RetryEnabled) 2 else 0
         val v1RetryActive = v1RetryEnabled && v1MaxRetries > 0
+        var v1TerminalFailureReason: String? = null
+        var v1TerminalArtifactStatus: ArtifactStatus? = null
         // V1 GENERAL：修复指令只进请求，不进 UI；未启用时保持原样
         val requestProvider = if (v1RetryActive) {
             val repairInstruction = V1GeneralRetryPolicy.buildRepairInstruction()
@@ -1946,6 +1959,10 @@ class HomeScreenViewModel @Inject constructor(
                     maxRetries = v1MaxRetries,
                     enableReasonAwareRetry = true
                 )
+                if (eval.decision == com.smartsales.feature.chat.core.stream.CompletionDecision.Terminal) {
+                    v1TerminalFailureReason = eval.finalizeResult.failureReason
+                    v1TerminalArtifactStatus = eval.finalizeResult.artifactStatus
+                }
                 eval.decision
             }
             provider
@@ -1985,12 +2002,34 @@ class HomeScreenViewModel @Inject constructor(
             null
         }
         val onRetryStart: suspend (Int) -> Unit = if (v1RetryActive) {
-            { attempt -> requireNotNull(v1RetryEffects).onRetryStart(attempt) }
+            { attempt ->
+                // 只记录 reason code/次数；严禁记录任何用户/模型原文
+                Log.d(
+                    TAG,
+                    "event=v1_general_retry_start, " +
+                        "nextAttempt=$attempt, " +
+                        "maxRetries=$v1MaxRetries, " +
+                        "lastFailureReason=$v1TerminalFailureReason"
+                )
+                requireNotNull(v1RetryEffects).onRetryStart(attempt)
+            }
         } else {
             { _: Int -> }
         }
         val onTerminal: suspend (String, Int) -> Unit = if (v1RetryActive) {
-            { fullText, attempt -> requireNotNull(v1RetryEffects).onTerminal(fullText, attempt) }
+            { fullText, attempt ->
+                // 终止发布点仅记录原因码与重试信息，严禁输出任何用户/模型原文，避免隐私泄露
+                Log.d(
+                    TAG,
+                    "event=v1_general_terminal_publish, " +
+                        "failureReason=$v1TerminalFailureReason, " +
+                        "attempt=$attempt, " +
+                        "maxRetries=$v1MaxRetries, " +
+                        "reasonAware=true, " +
+                        "artifactStatus=$v1TerminalArtifactStatus"
+                )
+                requireNotNull(v1RetryEffects).onTerminal(fullText, attempt)
+            }
         } else {
             { _: String, _: Int -> }
         }
@@ -2014,6 +2053,16 @@ class HomeScreenViewModel @Inject constructor(
                 }
             },
             onCompleted = { fullText ->
+                if (v1RetryActive && enableV1ChatPublisher && request.quickSkillId == null && !isSmartAnalysis) {
+                    // 仅记录发布事件与次数信息，严禁输出任何用户/模型原文
+                    Log.d(
+                        TAG,
+                        "event=v1_general_accept_publish, " +
+                            "attempt=unknown, " +
+                            "maxRetries=$v1MaxRetries, " +
+                            "failureReason=null"
+                    )
+                }
                 handleStreamCompleted(
                     request = request,
                     assistantId = assistantId,

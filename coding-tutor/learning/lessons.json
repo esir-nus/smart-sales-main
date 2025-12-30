@@ -1,4 +1,14 @@
 {
-  "lessons": []
+  "lessons": [
+    {
+      "lessonNumber": 1,
+      "title": "Kotlin Basics: val vs var",
+      "date": "2025-01-28",
+      "concepts": ["val", "var", "immutability"],
+      "completed": true,
+      "taskCompleted": true,
+      "checkpointAnswered": true
+    }
+  ]
 }
 

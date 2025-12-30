@@ -95,6 +95,7 @@ import com.smartsales.feature.chat.core.publisher.GeneralChatV1Finalizer
 import com.smartsales.feature.chat.core.stream.ChatStreamCoordinator
 import com.smartsales.feature.chat.core.v1.V1GeneralCompletionEvaluator
 import com.smartsales.feature.chat.core.v1.V1GeneralRetryPolicy
+import com.smartsales.feature.chat.core.v1.V1GeneralRetryEffects
 
 private const val DEFAULT_SESSION_ID = "home-session"
 private const val DEFAULT_SESSION_TITLE = SessionTitlePolicy.PLACEHOLDER_TITLE
@@ -1945,34 +1946,45 @@ class HomeScreenViewModel @Inject constructor(
         } else {
             null
         }
-        val onRetryStart: suspend (Int) -> Unit = if (v1RetryActive) {
-            { _: Int ->
-                // 重试前清空占位内容并重置去重器，避免 UI 闪烁/残留
-                streamingDeduplicator = StreamingDeduplicator()
-                updateAssistantMessage(assistantId) { msg ->
-                    msg.copy(
-                        content = "",
-                        rawContent = "",
-                        sanitizedContent = "",
-                        isStreaming = true
+        // V1：行为保持不变，仅封装副作用以缩短 ViewModel 逻辑
+        val v1RetryEffects = if (v1RetryActive) {
+            V1GeneralRetryEffects(
+                resetDeduper = {
+                    // 重试前清空占位内容并重置去重器，避免 UI 闪烁/残留
+                    streamingDeduplicator = StreamingDeduplicator()
+                },
+                resetPlaceholder = {
+                    updateAssistantMessage(assistantId) { msg ->
+                        msg.copy(
+                            content = "",
+                            rawContent = "",
+                            sanitizedContent = "",
+                            isStreaming = true
+                        )
+                    }
+                },
+                publishTerminal = { fullText ->
+                    handleStreamCompleted(
+                        request = request,
+                        assistantId = assistantId,
+                        rawFullText = fullText,
+                        onCompleted = onCompleted,
+                        onCompletedTransform = onCompletedTransform,
+                        isAutoAnalysis = isAutoAnalysis,
+                        isSmartAnalysis = isSmartAnalysis
                     )
                 }
-            }
+            )
+        } else {
+            null
+        }
+        val onRetryStart: suspend (Int) -> Unit = if (v1RetryActive) {
+            { attempt -> requireNotNull(v1RetryEffects).onRetryStart(attempt) }
         } else {
             { _: Int -> }
         }
         val onTerminal: suspend (String, Int) -> Unit = if (v1RetryActive) {
-            { fullText: String, _: Int ->
-                handleStreamCompleted(
-                    request = request,
-                    assistantId = assistantId,
-                    rawFullText = fullText,
-                    onCompleted = onCompleted,
-                    onCompletedTransform = onCompletedTransform,
-                    isAutoAnalysis = isAutoAnalysis,
-                    isSmartAnalysis = isSmartAnalysis
-                )
-            }
+            { fullText, attempt -> requireNotNull(v1RetryEffects).onTerminal(fullText, attempt) }
         } else {
             { _: String, _: Int -> }
         }

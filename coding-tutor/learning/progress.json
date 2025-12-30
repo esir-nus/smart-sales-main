@@ -1,7 +1,7 @@
 {
-  "lessonsCompleted": 0,
-  "conceptsLearned": [],
-  "currentLesson": null,
-  "lastLessonDate": null
+  "lessonsCompleted": 1,
+  "conceptsLearned": ["val", "var", "immutability"],
+  "currentLesson": "Lesson 2",
+  "lastLessonDate": "2025-01-28"
 }
 

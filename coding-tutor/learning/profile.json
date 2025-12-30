@@ -1,9 +1,9 @@
 {
-  "knownLanguages": [],
-  "currentPath": null,
-  "currentLanguage": null,
-  "currentFramework": null,
-  "startedAt": null,
-  "lastUpdated": null
+  "knownLanguages": ["Java", "Python"],
+  "currentPath": "Fundamentals",
+  "currentLanguage": "Kotlin",
+  "currentFramework": "Android",
+  "startedAt": "2025-01-28",
+  "lastUpdated": "2025-01-28"
 }
 

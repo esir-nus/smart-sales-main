@@ -35,6 +35,13 @@ data class AudioUploadPayload(
     val presignedUrl: String,
 )
 
+// 说明：时间基准为录音起点 0ms（非 captureStartMs）。
+data class V1TimedTextSegment(
+    val startMs: Long,
+    val endMs: Long,
+    val text: String
+)
+
 sealed interface AudioTranscriptionJobState {
     data object Idle : AudioTranscriptionJobState
     data class InProgress(
@@ -68,6 +75,10 @@ sealed interface AudioTranscriptionBatchEvent {
         val isFinal: Boolean,
         val batchSize: Int,
         val lineCount: Int,
-        val ruleLabel: String
+        val ruleLabel: String,
+        // 说明：V1 可选窗口，仅用于后续时间锚定与宏窗口过滤（当前不改变展示）。
+        val v1Window: V1TranscriptionBatchWindow? = null,
+        // 说明：V1 可选分段时间戳，仅用于后续窗口过滤（当前不改变展示）。
+        val timedSegments: List<V1TimedTextSegment>? = null
     ) : AudioTranscriptionBatchEvent
 }

@@ -1123,6 +1123,7 @@ class HomeScreenViewModel @Inject constructor(
     private fun handleTranscriptionBatchRelease(
         event: AudioTranscriptionBatchEvent.BatchReleased
     ) {
+        // 说明：v1Window/timedSegments 为可选透传字段，后续用于时间锚定/窗口过滤，当前不改变展示逻辑。
         if (transcriptionBatchFinal) {
             warnLog(
                 event = "transcription_batch_after_final",

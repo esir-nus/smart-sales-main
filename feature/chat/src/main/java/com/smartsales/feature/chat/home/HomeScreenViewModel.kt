@@ -44,6 +44,7 @@ import com.smartsales.data.aicore.debug.TingwuTraceSnapshot
 import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.debug.XfyunTraceSnapshot
 import com.smartsales.data.aicore.debug.XfyunTraceStore
+import com.smartsales.data.aicore.AiCoreConfig
 import com.smartsales.feature.chat.title.SessionTitleResolver
 import com.smartsales.feature.chat.title.TitleCandidate
 import com.smartsales.feature.chat.title.TitleResolver
@@ -87,6 +88,11 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Optional
+import com.smartsales.feature.chat.core.publisher.ChatPublisher
+import com.smartsales.feature.chat.core.publisher.ChatPublisherImpl
+import com.smartsales.feature.chat.core.publisher.GeneralChatV1Finalizer
+import com.smartsales.feature.chat.core.stream.ChatStreamCoordinator
 
 private const val DEFAULT_SESSION_ID = "home-session"
 private const val DEFAULT_SESSION_TITLE = SessionTitlePolicy.PLACEHOLDER_TITLE
@@ -313,6 +319,7 @@ class HomeScreenViewModel @Inject constructor(
     private val tingwuTraceStore: TingwuTraceStore,
     private val aiParaSettingsRepository: AiParaSettingsRepository,
     private val xfyunVoiceprintApi: XfyunVoiceprintApi,
+    optionalConfig: Optional<AiCoreConfig> = Optional.empty(),
 ) : ViewModel() {
 
     private val quickSkillDefinitions = quickSkillCatalog.homeQuickSkills()
@@ -340,6 +347,10 @@ class HomeScreenViewModel @Inject constructor(
     private var latestAnalysisMessageId: String? = null
     private var pendingExportAfterAnalysis: ExportFormat? = null
     private var exportAutoAnalysisInFlight: Boolean = false
+    private val enableV1ChatPublisher = optionalConfig.orElse(AiCoreConfig()).enableV1ChatPublisher
+    private val chatPublisher: ChatPublisher = ChatPublisherImpl()
+    private val v1Finalizer = GeneralChatV1Finalizer(chatPublisher)
+    private val chatStreamCoordinator = ChatStreamCoordinator { req -> homeOrchestrator.streamChat(req) }
 
     init {
         // 从 catalog 加载快捷技能到状态
@@ -1905,154 +1916,205 @@ class HomeScreenViewModel @Inject constructor(
             }
         }
 
-        viewModelScope.launch {
-            homeOrchestrator.streamChat(request).collect { event ->
-                when (event) {
-                    is ChatStreamEvent.Delta -> {
-                        if (!isSmartAnalysis) {
-                            updateAssistantMessage(assistantId) { msg ->
-                                val merged = streamingDeduplicator.mergeSnapshot(
-                                    current = msg.content,
-                                    incoming = event.token
-                                )
-                                msg.copy(
-                                    content = merged,
-                                    isStreaming = true
-                                )
-                            }
-                        }
-                    }
-                    is ChatStreamEvent.Completed -> {
-                        // 完成：关闭 streaming，最终清理和去重
-                        val rawFullText = event.fullText
-                        val isGeneralChat = request.quickSkillId == null
-                        val isFirstGeneralReply = isGeneralChat && request.isFirstAssistantReply && !firstAssistantProcessed
-                        
-                        // 首条 GENERAL 回复处理开始时，无条件标记为已处理（确保后续回复不会被当作首条）
-                        if (isGeneralChat && isFirstGeneralReply) {
-                            firstAssistantProcessed = true
-                        }
-                        
-                        // 提取 GENERAL 的 channels（Visible2User 和 Metadata）
-                        val channels = if (isGeneralChat) extractGeneralChannels(rawFullText) else GeneralChannels(null, null, null)
-                        val metadataJson = channels.metadataJson
-                        
-                        // 仅首条 GENERAL 回复允许解析并写入元数据
-                        val generalMeta = if (isFirstGeneralReply) {
-                            handleGeneralChatMetadata(rawFullText, metadataJson)
-                        } else {
-                            null
-                        }
-                        
-                        val latestMeta = generalMeta ?: runCatching { metaHub.getSession(sessionId) }.getOrNull()
-                        
-                        // <Visible2User> 驱动显示，rawContent 保留原始文本（含标签）
-                        val visibleText = channels.visibleText
-                        val displaySource = visibleText ?: rawFullText
-                        val sanitized = if (isSmartAnalysis) rawFullText else sanitizeAssistantOutput(displaySource, isSmartAnalysis)
-                        // SMART_ANALYSIS 已由 Orchestrator 生成最终 Markdown，这里直接透传
-                        val cleaned = if (isSmartAnalysis) {
-                            sanitized
-                        } else {
-                            val base = onCompletedTransform?.invoke(sanitized) ?: sanitized
-                            applyGeneralOutputGuards(base)
-                        }
-                        val isSmartFailure = isSmartAnalysis && cleaned.trim() == SMART_ANALYSIS_FAILURE_TEXT
-                        if (isSmartAnalysis && !isSmartFailure) {
-                            // 根据是否是导出前自动分析，区分来源
-                            val source = if (pendingExportAfterAnalysis != null) {
-                                AnalysisSource.SMART_ANALYSIS_AUTO
-                            } else {
-                                AnalysisSource.SMART_ANALYSIS_USER
-                            }
-                            persistLatestAnalysisMarker(source, assistantId)
-                            onAnalysisCompleted(cleaned, assistantId)
-                        } else if (isSmartAnalysis && isSmartFailure) {
-                            pendingExportAfterAnalysis = null
-                            _uiState.update { it.copy(exportInProgress = false) }
-                        }
-                        if (isSmartAnalysis && isAutoAnalysis) {
-                            exportAutoAnalysisInFlight = false
-                        }
-                        debugLog(
-                            event = "chat_stream_completed",
-                            data = mapOf(
-                                "sessionId" to sessionId,
-                                "mode" to (request.quickSkillId ?: "GENERAL_CHAT"),
-                                "isFirstReply" to request.isFirstAssistantReply,
-                                "assistantTextLength" to cleaned.length
-                            )
+        // 抽出流式协调器，降低 ViewModel 复杂度，便于后续 V1 规则演进
+        chatStreamCoordinator.start(
+            scope = viewModelScope,
+            request = request,
+            onDelta = { token ->
+                if (!isSmartAnalysis) {
+                    updateAssistantMessage(assistantId) { msg ->
+                        val merged = streamingDeduplicator.mergeSnapshot(
+                            current = msg.content,
+                            incoming = token
                         )
-                        updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
-                            val display = displayAssistantText(raw = rawFullText, sanitized = cleaned)
-                            msg.copy(
-                                content = display,
-                                rawContent = rawFullText, // 保留原始文本（含所有标签）
-                                sanitizedContent = cleaned,
-                                isStreaming = false
-                            )
-                        }
-                        onCompleted(cleaned)
-                        _uiState.update { it.copy(isSending = false, isStreaming = false, isInputBusy = false, isBusy = false) }
-                        // 说明：若导出被排队，当前对话完成后再尝试触发自动分析。
-                        maybeStartPendingExportAnalysis()
-                        if (isFirstGeneralReply) {
-                            // 自动标题仅在首条助手回复时尝试，优先 Rename 渠道，缺失时回退元数据
-                            maybeResolveSessionTitle(latestMeta, channels.renameCandidate)
-                        }
-                        val previewText = latestMeta?.shortSummary?.takeIf { it.isNotBlank() } ?: cleaned
-                        viewModelScope.launch {
-                            updateSessionSummary(previewText)
-                            applySessionList()
-                        }
-                    }
-                    is ChatStreamEvent.Error -> {
-                        // 错误：标记消息失败并弹出提示
-                        warnLog(
-                            event = "chat_stream_error",
-                            data = mapOf(
-                                "sessionId" to sessionId,
-                                "mode" to (request.quickSkillId ?: "GENERAL_CHAT")
-                            ),
-                            throwable = event.throwable
+                        msg.copy(
+                            content = merged,
+                            isStreaming = true
                         )
-                        if (isSmartAnalysis) {
-                            val errorText = event.throwable.message?.takeIf { it.isNotBlank() }
-                                ?: SMART_ANALYSIS_FAILURE_TEXT
-                            updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
-                                msg.copy(
-                                    content = errorText,
-                                    rawContent = errorText,
-                                    sanitizedContent = errorText,
-                                    hasError = true,
-                                    isStreaming = false
-                                )
-                            }
-                        } else {
-                            updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
-                                msg.copy(hasError = true, isStreaming = false)
-                            }
-                        }
-                        if (isSmartAnalysis && isAutoAnalysis) {
-                            exportAutoAnalysisInFlight = false
-                        }
-                        pendingExportAfterAnalysis = null
-                        _uiState.update {
-                            it.copy(
-                                isSending = false,
-                                isStreaming = false,
-                                isInputBusy = false,
-                                isBusy = false,
-                                exportInProgress = false,
-                                chatErrorMessage = event.throwable.message ?: "AI 回复失败"
-                            )
-                        }
-                        // 说明：若导出被排队，失败后也尝试触发自动分析。
-                        maybeStartPendingExportAnalysis()
                     }
                 }
+            },
+            onCompleted = { fullText ->
+                handleStreamCompleted(
+                    request = request,
+                    assistantId = assistantId,
+                    rawFullText = fullText,
+                    onCompleted = onCompleted,
+                    onCompletedTransform = onCompletedTransform,
+                    isAutoAnalysis = isAutoAnalysis,
+                    isSmartAnalysis = isSmartAnalysis
+                )
+            },
+            onError = { throwable ->
+                handleStreamError(
+                    request = request,
+                    assistantId = assistantId,
+                    throwable = throwable,
+                    isAutoAnalysis = isAutoAnalysis,
+                    isSmartAnalysis = isSmartAnalysis
+                )
+            }
+        )
+    }
+
+    private suspend fun handleStreamCompleted(
+        request: ChatRequest,
+        assistantId: String,
+        rawFullText: String,
+        onCompleted: (String) -> Unit,
+        onCompletedTransform: ((String) -> String)?,
+        isAutoAnalysis: Boolean,
+        isSmartAnalysis: Boolean
+    ) {
+        // 完成：关闭 streaming，最终清理和去重
+        val isGeneralChat = request.quickSkillId == null
+        val isFirstGeneralReply = isGeneralChat && request.isFirstAssistantReply && !firstAssistantProcessed
+        val useV1Publisher = enableV1ChatPublisher && isGeneralChat && !isSmartAnalysis
+        // V1 模式：仅由 Publisher 决定可见文本，禁止启发式提取
+        val v1Result = if (useV1Publisher) v1Finalizer.finalize(rawFullText) else null
+
+        // 首条 GENERAL 回复处理开始时，无条件标记为已处理（确保后续回复不会被当作首条）
+        if (isGeneralChat && isFirstGeneralReply) {
+            firstAssistantProcessed = true
+        }
+
+        // 提取 GENERAL 的 channels（Visible2User 和 Metadata）
+        val channels = if (isGeneralChat && !useV1Publisher) {
+            extractGeneralChannels(rawFullText)
+        } else {
+            GeneralChannels(null, null, null)
+        }
+        val metadataJson = channels.metadataJson
+
+        // 仅首条 GENERAL 回复允许解析并写入元数据
+        val generalMeta = if (!useV1Publisher && isFirstGeneralReply) {
+            // V1 模式不走旧的元数据解析，避免启发式 JSON 写入
+            handleGeneralChatMetadata(rawFullText, metadataJson)
+        } else {
+            null
+        }
+
+        val latestMeta = if (useV1Publisher) {
+            runCatching { metaHub.getSession(sessionId) }.getOrNull()
+        } else {
+            generalMeta ?: runCatching { metaHub.getSession(sessionId) }.getOrNull()
+        }
+
+        // <Visible2User> 驱动显示，rawContent 保留原始文本（含标签）
+        val visibleText = channels.visibleText
+        val displaySource = visibleText ?: rawFullText
+        val cleaned = if (useV1Publisher) {
+            v1Result?.visibleMarkdown.orEmpty()
+        } else {
+            val sanitized = if (isSmartAnalysis) rawFullText else sanitizeAssistantOutput(displaySource, isSmartAnalysis)
+            // SMART_ANALYSIS 已由 Orchestrator 生成最终 Markdown，这里直接透传
+            if (isSmartAnalysis) {
+                sanitized
+            } else {
+                val base = onCompletedTransform?.invoke(sanitized) ?: sanitized
+                applyGeneralOutputGuards(base)
             }
         }
+        val isSmartFailure = isSmartAnalysis && cleaned.trim() == SMART_ANALYSIS_FAILURE_TEXT
+        if (isSmartAnalysis && !isSmartFailure) {
+            // 根据是否是导出前自动分析，区分来源
+            val source = if (pendingExportAfterAnalysis != null) {
+                AnalysisSource.SMART_ANALYSIS_AUTO
+            } else {
+                AnalysisSource.SMART_ANALYSIS_USER
+            }
+            persistLatestAnalysisMarker(source, assistantId)
+            onAnalysisCompleted(cleaned, assistantId)
+        } else if (isSmartAnalysis && isSmartFailure) {
+            pendingExportAfterAnalysis = null
+            _uiState.update { it.copy(exportInProgress = false) }
+        }
+        if (isSmartAnalysis && isAutoAnalysis) {
+            exportAutoAnalysisInFlight = false
+        }
+        debugLog(
+            event = "chat_stream_completed",
+            data = mapOf(
+                "sessionId" to sessionId,
+                "mode" to (request.quickSkillId ?: "GENERAL_CHAT"),
+                "isFirstReply" to request.isFirstAssistantReply,
+                "assistantTextLength" to cleaned.length
+            )
+        )
+        updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
+            val display = displayAssistantText(raw = rawFullText, sanitized = cleaned)
+            msg.copy(
+                content = display,
+                rawContent = rawFullText, // 保留原始文本（含所有标签）
+                sanitizedContent = cleaned,
+                isStreaming = false
+            )
+        }
+        onCompleted(cleaned)
+        // 顺序保持不变，确保状态与展示一致
+        _uiState.update { it.copy(isSending = false, isStreaming = false, isInputBusy = false, isBusy = false) }
+        // 说明：若导出被排队，当前对话完成后再尝试触发自动分析。
+        maybeStartPendingExportAnalysis()
+        if (isFirstGeneralReply) {
+            // 自动标题仅在首条助手回复时尝试，优先 Rename 渠道，缺失时回退元数据
+            maybeResolveSessionTitle(latestMeta, channels.renameCandidate)
+        }
+        val previewText = latestMeta?.shortSummary?.takeIf { it.isNotBlank() } ?: cleaned
+        viewModelScope.launch {
+            updateSessionSummary(previewText)
+            applySessionList()
+        }
+    }
+
+    private fun handleStreamError(
+        request: ChatRequest,
+        assistantId: String,
+        throwable: Throwable,
+        isAutoAnalysis: Boolean,
+        isSmartAnalysis: Boolean
+    ) {
+        // 错误：标记消息失败并弹出提示
+        warnLog(
+            event = "chat_stream_error",
+            data = mapOf(
+                "sessionId" to sessionId,
+                "mode" to (request.quickSkillId ?: "GENERAL_CHAT")
+            ),
+            throwable = throwable
+        )
+        if (isSmartAnalysis) {
+            val errorText = throwable.message?.takeIf { it.isNotBlank() }
+                ?: SMART_ANALYSIS_FAILURE_TEXT
+            updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
+                msg.copy(
+                    content = errorText,
+                    rawContent = errorText,
+                    sanitizedContent = errorText,
+                    hasError = true,
+                    isStreaming = false
+                )
+            }
+        } else {
+            updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
+                msg.copy(hasError = true, isStreaming = false)
+            }
+        }
+        if (isSmartAnalysis && isAutoAnalysis) {
+            exportAutoAnalysisInFlight = false
+        }
+        pendingExportAfterAnalysis = null
+        _uiState.update {
+            it.copy(
+                isSending = false,
+                isStreaming = false,
+                isInputBusy = false,
+                isBusy = false,
+                exportInProgress = false,
+                chatErrorMessage = throwable.message ?: "AI 回复失败"
+            )
+        }
+        // 说明：若导出被排队，失败后也尝试触发自动分析。
+        maybeStartPendingExportAnalysis()
     }
 
     private fun updateAssistantMessage(

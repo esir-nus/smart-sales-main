@@ -11,6 +11,11 @@ data class TranscriptionBatchPlan(
     val batches: List<TranscriptionBatchChunk>
 )
 
+data class TranscriptionBatchPlanWithWindows(
+    val plan: TranscriptionBatchPlan,
+    val windows: List<V1TranscriptionBatchWindow>
+)
+
 data class TranscriptionBatchChunk(
     val batchIndex: Int,
     val totalBatches: Int,
@@ -55,6 +60,28 @@ object TranscriptionBatchPlanner {
             batchSize = effectiveBatchSize,
             totalBatches = total,
             batches = batches
+        )
+    }
+
+    /**
+     * 说明：V1 时间窗口仅用于后续 Tingwu anchor/macro-window 过滤，不影响现有行切分行为。
+     */
+    fun planWithWindows(
+        markdown: String,
+        audioDurationMs: Long,
+        batchDurationMs: Long,
+        overlapMs: Long,
+        batchSize: Int = DEFAULT_BATCH_SIZE
+    ): TranscriptionBatchPlanWithWindows {
+        // 说明：保持原有批次切分行为不变，仅增加窗口计划用于后续 V1 接入。
+        val plan = plan(markdown, batchSize)
+        val windows = V1DisectorWindowPlanner(
+            batchDurationMs = batchDurationMs,
+            overlapMs = overlapMs
+        ).plan(audioDurationMs)
+        return TranscriptionBatchPlanWithWindows(
+            plan = plan,
+            windows = windows
         )
     }
 }

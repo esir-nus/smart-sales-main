@@ -29,6 +29,30 @@ object V1GeneralRetryPolicy {
             CompletionDecision.Terminal
         }
     }
+
+    fun decide(
+        artifactStatus: ArtifactStatus,
+        attempt: Int,
+        maxRetries: Int,
+        failureReason: String?,
+        enableReasonAware: Boolean
+    ): CompletionDecision {
+        if (!enableReasonAware) {
+            return decide(artifactStatus, attempt, maxRetries)
+        }
+        if (artifactStatus == ArtifactStatus.VALID) {
+            return CompletionDecision.Accept
+        }
+        if (failureReason == "missing_json_fence") {
+            // 缺失 fenced JSON 无法靠重试补齐，直接终止并走 terminal
+            return CompletionDecision.Terminal
+        }
+        return if (attempt < maxRetries) {
+            CompletionDecision.Retry
+        } else {
+            CompletionDecision.Terminal
+        }
+    }
 }
 
 data class V1CompletionEval(
@@ -43,10 +67,17 @@ class V1GeneralCompletionEvaluator(
     fun evaluate(
         rawFullText: String,
         attempt: Int,
-        maxRetries: Int
+        maxRetries: Int,
+        enableReasonAwareRetry: Boolean = false
     ): V1CompletionEval {
         val finalizeResult = finalizer.finalize(rawFullText)
-        val decision = V1GeneralRetryPolicy.decide(finalizeResult.artifactStatus, attempt, maxRetries)
+        val decision = V1GeneralRetryPolicy.decide(
+            artifactStatus = finalizeResult.artifactStatus,
+            attempt = attempt,
+            maxRetries = maxRetries,
+            failureReason = finalizeResult.failureReason,
+            enableReasonAware = enableReasonAwareRetry
+        )
         return V1CompletionEval(
             decision = decision,
             finalizeResult = finalizeResult

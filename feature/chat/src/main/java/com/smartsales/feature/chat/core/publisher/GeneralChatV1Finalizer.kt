@@ -9,6 +9,7 @@ data class V1FinalizeResult(
     val visibleMarkdown: String,
     val artifactStatus: ArtifactStatus,
     val artifactJson: String?,
+    val failureReason: String? = null,
 )
 
 class GeneralChatV1Finalizer(
@@ -19,10 +20,12 @@ class GeneralChatV1Finalizer(
         val published = publisher.publish(rawFullText)
         val visible = published.displayMarkdown.ifBlank { publisher.fallbackMessage() }
         // V1：机器结构只允许 fenced JSON，不做任何启发式提取
+        // 透传 failureReason 供上层重试策略判断，不改变发布内容/校验结果
         return V1FinalizeResult(
             visibleMarkdown = visible,
             artifactStatus = published.artifactStatus,
             artifactJson = published.machineArtifactJson,
+            failureReason = published.failureReason,
         )
     }
 }

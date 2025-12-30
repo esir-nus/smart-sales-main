@@ -45,22 +45,88 @@ class V1GeneralCompletionEvaluatorTest {
         assertEquals(expectedFinalize(ArtifactStatus.INVALID), eval.finalizeResult)
     }
 
-    private fun evaluatorWithStatus(status: ArtifactStatus): V1GeneralCompletionEvaluator {
-        val publisher = FakePublisher(status)
+    @Test
+    fun `reason aware missing fence is terminal`() {
+        val evaluator = evaluatorWithStatus(
+            status = ArtifactStatus.INVALID,
+            failureReason = REASON_MISSING_JSON_FENCE
+        )
+
+        val eval = evaluator.evaluate(
+            rawFullText = "raw",
+            attempt = 0,
+            maxRetries = 2,
+            enableReasonAwareRetry = true
+        )
+
+        assertEquals(CompletionDecision.Terminal, eval.decision)
+        assertEquals(
+            expectedFinalize(ArtifactStatus.INVALID, REASON_MISSING_JSON_FENCE),
+            eval.finalizeResult
+        )
+    }
+
+    @Test
+    fun `reason aware disabled keeps legacy behavior`() {
+        val evaluator = evaluatorWithStatus(
+            status = ArtifactStatus.INVALID,
+            failureReason = REASON_MISSING_JSON_FENCE
+        )
+
+        val eval = evaluator.evaluate(rawFullText = "raw", attempt = 0, maxRetries = 2)
+
+        assertEquals(CompletionDecision.Retry, eval.decision)
+        assertEquals(
+            expectedFinalize(ArtifactStatus.INVALID, REASON_MISSING_JSON_FENCE),
+            eval.finalizeResult
+        )
+    }
+
+    @Test
+    fun `reason aware retries for other invalid reasons`() {
+        val evaluator = evaluatorWithStatus(
+            status = ArtifactStatus.INVALID,
+            failureReason = "type_mismatch"
+        )
+
+        val eval = evaluator.evaluate(
+            rawFullText = "raw",
+            attempt = 0,
+            maxRetries = 2,
+            enableReasonAwareRetry = true
+        )
+
+        assertEquals(CompletionDecision.Retry, eval.decision)
+        assertEquals(
+            expectedFinalize(ArtifactStatus.INVALID, "type_mismatch"),
+            eval.finalizeResult
+        )
+    }
+
+    private fun evaluatorWithStatus(
+        status: ArtifactStatus,
+        failureReason: String? = null
+    ): V1GeneralCompletionEvaluator {
+        val publisher = FakePublisher(status, failureReason)
         val finalizer = GeneralChatV1Finalizer(publisher)
         return V1GeneralCompletionEvaluator(finalizer)
     }
 
-    private fun expectedFinalize(status: ArtifactStatus): V1FinalizeResult {
+    private fun expectedFinalize(
+        status: ArtifactStatus,
+        failureReason: String? = null
+    ): V1FinalizeResult {
         return V1FinalizeResult(
             visibleMarkdown = "ok",
             artifactStatus = status,
             artifactJson = VALID_ARTIFACT_JSON,
+            failureReason = failureReason,
         )
     }
 
     private class FakePublisher(
         private val status: ArtifactStatus,
+        private val failureReason: String?,
     ) : ChatPublisher {
         override fun publish(rawText: String, retryCount: Int): PublishedChatTurnV1 {
             return PublishedChatTurnV1(
@@ -68,7 +134,7 @@ class V1GeneralCompletionEvaluatorTest {
                 machineArtifactJson = VALID_ARTIFACT_JSON,
                 artifactStatus = status,
                 retryCount = retryCount,
-                failureReason = null,
+                failureReason = failureReason,
             )
         }
 
@@ -78,5 +144,6 @@ class V1GeneralCompletionEvaluatorTest {
     private companion object {
         const val VALID_ARTIFACT_JSON =
             """{"artifactType":"MachineArtifact","schemaVersion":1,"mode":"L1","provenance":{"chatSessionId":"test-session","turnId":"turn-1","createdAtMs":0}}"""
+        const val REASON_MISSING_JSON_FENCE = "missing_json_fence"
     }
 }

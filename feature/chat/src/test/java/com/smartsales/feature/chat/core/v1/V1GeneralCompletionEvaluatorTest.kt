@@ -15,7 +15,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class V1GeneralCompletionEvaluatorTest {
-
     @Test
     fun `valid artifact returns accept`() {
         val evaluator = evaluatorWithStatus(ArtifactStatus.VALID)
@@ -56,7 +55,7 @@ class V1GeneralCompletionEvaluatorTest {
         return V1FinalizeResult(
             visibleMarkdown = "ok",
             artifactStatus = status,
-            artifactJson = "{\"a\":1}",
+            artifactJson = VALID_ARTIFACT_JSON,
         )
     }
 
@@ -66,7 +65,7 @@ class V1GeneralCompletionEvaluatorTest {
         override fun publish(rawText: String, retryCount: Int): PublishedChatTurnV1 {
             return PublishedChatTurnV1(
                 displayMarkdown = "ok",
-                machineArtifactJson = "{\"a\":1}",
+                machineArtifactJson = VALID_ARTIFACT_JSON,
                 artifactStatus = status,
                 retryCount = retryCount,
                 failureReason = null,
@@ -74,5 +73,10 @@ class V1GeneralCompletionEvaluatorTest {
         }
 
         override fun fallbackMessage(): String = "fallback"
+    }
+
+    private companion object {
+        const val VALID_ARTIFACT_JSON =
+            """{"artifactType":"MachineArtifact","schemaVersion":1,"mode":"L1","provenance":{"chatSessionId":"test-session","turnId":"turn-1","createdAtMs":0}}"""
     }
 }

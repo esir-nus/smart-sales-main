@@ -8,6 +8,15 @@
       "completed": true,
       "taskCompleted": true,
       "checkpointAnswered": true
+    },
+    {
+      "lessonNumber": 2,
+      "title": "Data Classes",
+      "date": "2025-01-28",
+      "concepts": ["data class", "auto-generation", "equals", "hashCode", "toString"],
+      "completed": true,
+      "taskCompleted": true,
+      "checkpointAnswered": true
     }
   ]
 }

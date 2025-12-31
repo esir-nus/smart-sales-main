@@ -21,6 +21,7 @@ import com.smartsales.feature.media.audiofiles.AudioUploadPayload
 import com.smartsales.feature.media.audiofiles.TranscriptionBatchPlanWithWindows
 import com.smartsales.feature.media.audiofiles.TranscriptionBatchPlanner
 import com.smartsales.feature.media.audiofiles.V1TimedTextSegment
+import com.smartsales.feature.media.audiofiles.V1WindowIndexedBatchReleasedBuilder
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -146,43 +147,79 @@ class DefaultAudioTranscriptionCoordinator @Inject constructor(
                         )
                     }
                     ?.takeIf { it.isNotEmpty() }
-                plan.batches.forEach { batch ->
-                    // 仅透传窗口数据（可选），不影响现有伪流式展示。
-                    val v1Window = planWithWindows?.windows?.getOrNull(batch.batchIndex - 1)
-                    if (BuildConfig.DEBUG && v1Window != null && !timedSegments.isNullOrEmpty()) {
+                val windows = planWithWindows?.windows
+                if (windows != null && !timedSegments.isNullOrEmpty()) {
+                    // 说明：按 V1 窗口顺序发批次，batchIndex 与窗口一致（非行分块索引）。
+                    val releases = V1WindowIndexedBatchReleasedBuilder.build(
+                        jobId = state.jobId,
+                        windows = windows,
+                        timedSegments = timedSegments,
+                        transcriptMarkdown = state.transcriptMarkdown,
+                        v1BatchPlanRule = "v1_windowed",
+                        v1BatchDurationMs = V1_BATCH_DURATION_MS,
+                        v1OverlapMs = V1_OVERLAP_MS
+                    )
+                    if (BuildConfig.DEBUG) {
                         val minStartMs = timedSegments.minOf { it.startMs }
-                        if (v1Window.absStartMs >= 60_000L && minStartMs <= 5_000L) {
-                            // 归一化时间会破坏宏窗口过滤；此处仅 DEBUG 告警，便于尽早发现回归。
-                            Log.w(
-                                "DefaultAudioTranscriptionCoordinator",
-                                "event=v1_tingwu_timedSegments_timebase_suspect " +
-                                    "batchIndex=${batch.batchIndex} " +
-                                    "absStartMs=${v1Window.absStartMs} " +
-                                    "minStartMs=$minStartMs"
-                            )
+                        for (release in releases) {
+                            val v1Window = release.v1Window
+                            if (v1Window != null &&
+                                v1Window.absStartMs >= 60_000L &&
+                                minStartMs <= 5_000L
+                            ) {
+                                // 归一化时间会破坏宏窗口过滤；此处仅 DEBUG 告警，便于尽早发现回归。
+                                Log.w(
+                                    "DefaultAudioTranscriptionCoordinator",
+                                    "event=v1_tingwu_timedSegments_timebase_suspect " +
+                                        "batchIndex=${release.batchIndex} " +
+                                        "absStartMs=${v1Window.absStartMs} " +
+                                        "minStartMs=$minStartMs"
+                                )
+                            }
                         }
                     }
-                    send(
-                        AudioTranscriptionBatchEvent.BatchReleased(
-                            jobId = state.jobId,
-                            batchIndex = batch.batchIndex,
-                            totalBatches = batch.totalBatches,
-                            markdownChunk = batch.markdownChunk,
-                            isFinal = batch.batchIndex == batch.totalBatches,
-                            batchSize = plan.batchSize,
-                            lineCount = batch.lineCount,
-                            ruleLabel = plan.ruleLabel,
-                            v1Window = v1Window,
-                            // 仅贯通时间戳分段数据，当前不改展示逻辑。
-                            timedSegments = timedSegments,
-                            // 说明：V1 窗口计划用于 HUD 展示，优先提供窗口级批次信息。
-                            v1BatchPlanRule = if (v1TotalBatches != null) "v1_windowed" else null,
-                            v1BatchDurationMs = if (v1TotalBatches != null) V1_BATCH_DURATION_MS else null,
-                            v1OverlapMs = if (v1TotalBatches != null) V1_OVERLAP_MS else null,
-                            v1TotalBatches = v1TotalBatches,
-                            v1CurrentBatchIndex = v1Window?.batchIndex
+                    for (release in releases) {
+                        send(release)
+                    }
+                } else {
+                    plan.batches.forEach { batch ->
+                        // 仅透传窗口数据（可选），不影响现有伪流式展示。
+                        val v1Window = planWithWindows?.windows?.getOrNull(batch.batchIndex - 1)
+                        if (BuildConfig.DEBUG && v1Window != null && !timedSegments.isNullOrEmpty()) {
+                            val minStartMs = timedSegments.minOf { it.startMs }
+                            if (v1Window.absStartMs >= 60_000L && minStartMs <= 5_000L) {
+                                // 归一化时间会破坏宏窗口过滤；此处仅 DEBUG 告警，便于尽早发现回归。
+                                Log.w(
+                                    "DefaultAudioTranscriptionCoordinator",
+                                    "event=v1_tingwu_timedSegments_timebase_suspect " +
+                                        "batchIndex=${batch.batchIndex} " +
+                                        "absStartMs=${v1Window.absStartMs} " +
+                                        "minStartMs=$minStartMs"
+                                )
+                            }
+                        }
+                        send(
+                            AudioTranscriptionBatchEvent.BatchReleased(
+                                jobId = state.jobId,
+                                batchIndex = batch.batchIndex,
+                                totalBatches = batch.totalBatches,
+                                markdownChunk = batch.markdownChunk,
+                                isFinal = batch.batchIndex == batch.totalBatches,
+                                batchSize = plan.batchSize,
+                                lineCount = batch.lineCount,
+                                ruleLabel = plan.ruleLabel,
+                                v1Window = v1Window,
+                                // 仅贯通时间戳分段数据，当前不改展示逻辑。
+                                timedSegments = timedSegments,
+                                // 说明：V1 窗口计划用于 HUD 展示，优先提供窗口级批次信息。
+                                v1BatchPlanRule = if (v1TotalBatches != null) "v1_windowed" else null,
+                                v1BatchDurationMs = if (v1TotalBatches != null) V1_BATCH_DURATION_MS else null,
+                                v1OverlapMs = if (v1TotalBatches != null) V1_OVERLAP_MS else null,
+                                v1TotalBatches = v1TotalBatches,
+                                v1CurrentBatchIndex = v1Window?.batchIndex
+                            )
                         )
-                    )
+                    }
                 }
                 durationByJobId.remove(state.jobId)
             }

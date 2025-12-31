@@ -109,4 +109,53 @@ class RealDebugOrchestratorTest {
         assertTrue(section3.contains("indices: 1,5"))
         assertTrue(section3.contains("details: 1(speaker-change),5(gap)"))
     }
+
+    @Test
+    fun `snapshot prefers v1 window plan over derived batch plan`() = runTest {
+        val settingsRepository = InMemoryAiParaSettingsRepository()
+        val metaHub = InMemoryMetaHub()
+        metaHub.appendM2Patch(
+            sessionId = "s-1",
+            patch = M2PatchRecord(
+                patchId = "m2-preprocess-1",
+                createdAt = 123L,
+                prov = Provenance(source = "tingwu.preprocess", updatedAt = 123L),
+                payload = ConversationDerivedStateDelta(
+                    preprocess = PreprocessSnapshot(
+                        first20Rendered = listOf("METAHUB_PREVIEW_LINE"),
+                        prov = Provenance(source = "tingwu.preprocess", updatedAt = 123L)
+                    )
+                )
+            )
+        )
+        val traceStore = TingwuTraceStore().apply {
+            record(
+                v1BatchPlanRule = "v1_windowed",
+                v1BatchDurationMs = 600_000L,
+                v1OverlapMs = 10_000L,
+                v1BatchPlanTotalBatches = 3,
+                v1BatchPlanCurrentBatchIndex = 2
+            )
+        }
+        val orchestrator = RealDebugOrchestrator(
+            metaHub = metaHub,
+            aiParaSettingsRepository = settingsRepository,
+            tingwuTraceStore = traceStore,
+            xfyunTraceStore = XfyunTraceStore(),
+            dispatchers = DefaultDispatcherProvider,
+        )
+
+        val snapshot = orchestrator.getDebugSnapshot(
+            sessionId = "s-1",
+            jobId = "job-1",
+            sessionTitle = "客户复盘",
+            isTitleUserEdited = true
+        )
+        val section3 = snapshot.section3PreprocessedText
+        assertTrue(section3.contains("tingwu.batchPlan:"))
+        assertTrue(section3.contains(
+            "rule=v1_windowed; batchDurationMs=600000; overlapMs=10000; totalBatches=3; currentBatchIndex=2"
+        ))
+        assertFalse(section3.contains("rule=derived;"))
+    }
 }

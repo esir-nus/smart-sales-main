@@ -79,6 +79,12 @@ sealed interface AudioTranscriptionBatchEvent {
         // 说明：V1 可选窗口，仅用于后续时间锚定与宏窗口过滤（当前不改变展示）。
         val v1Window: V1TranscriptionBatchWindow? = null,
         // 说明：V1 可选分段时间戳，仅用于后续窗口过滤（当前不改变展示）。
-        val timedSegments: List<V1TimedTextSegment>? = null
+        val timedSegments: List<V1TimedTextSegment>? = null,
+        // 说明：V1 窗口计划摘要，仅用于 HUD/预处理展示，默认缺省保持旧行为。
+        val v1BatchPlanRule: String? = null,
+        val v1BatchDurationMs: Long? = null,
+        val v1OverlapMs: Long? = null,
+        val v1TotalBatches: Int? = null,
+        val v1CurrentBatchIndex: Int? = null
     ) : AudioTranscriptionBatchEvent
 }

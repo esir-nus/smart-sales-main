@@ -26,6 +26,12 @@ data class TingwuTraceSnapshot(
     val batchPlanBatchSize: Int? = null,
     val batchPlanTotalBatches: Int? = null,
     val batchPlanCurrentBatchIndex: Int? = null,
+    // 说明：V1 窗口计划摘要（10min/10s），用于 HUD 展示，优先于旧行批次。
+    val v1BatchPlanRule: String? = null,
+    val v1BatchDurationMs: Long? = null,
+    val v1OverlapMs: Long? = null,
+    val v1BatchPlanTotalBatches: Int? = null,
+    val v1BatchPlanCurrentBatchIndex: Int? = null,
     val batchPlan: List<BatchPlanItem> = emptyList(),
     val suspiciousBoundaries: List<SuspiciousBoundary> = emptyList(),
     val lastResultUrls: Map<String, String> = emptyMap(),
@@ -52,6 +58,11 @@ class TingwuTraceStore @Inject constructor() {
         batchPlanBatchSize: Int? = null,
         batchPlanTotalBatches: Int? = null,
         batchPlanCurrentBatchIndex: Int? = null,
+        v1BatchPlanRule: String? = null,
+        v1BatchDurationMs: Long? = null,
+        v1OverlapMs: Long? = null,
+        v1BatchPlanTotalBatches: Int? = null,
+        v1BatchPlanCurrentBatchIndex: Int? = null,
         batchPlan: List<BatchPlanItem>? = null,
         suspiciousBoundaries: List<SuspiciousBoundary>? = null,
         resultUrls: Map<String, String>? = null
@@ -74,6 +85,12 @@ class TingwuTraceStore @Inject constructor() {
                 batchPlanBatchSize = batchPlanBatchSize ?: current.batchPlanBatchSize,
                 batchPlanTotalBatches = batchPlanTotalBatches ?: current.batchPlanTotalBatches,
                 batchPlanCurrentBatchIndex = batchPlanCurrentBatchIndex ?: current.batchPlanCurrentBatchIndex,
+                v1BatchPlanRule = v1BatchPlanRule ?: current.v1BatchPlanRule,
+                v1BatchDurationMs = v1BatchDurationMs ?: current.v1BatchDurationMs,
+                v1OverlapMs = v1OverlapMs ?: current.v1OverlapMs,
+                v1BatchPlanTotalBatches = v1BatchPlanTotalBatches ?: current.v1BatchPlanTotalBatches,
+                v1BatchPlanCurrentBatchIndex = v1BatchPlanCurrentBatchIndex
+                    ?: current.v1BatchPlanCurrentBatchIndex,
                 batchPlan = batchPlan?.let { normalizeBatchPlan(it) } ?: current.batchPlan,
                 suspiciousBoundaries = suspiciousBoundaries?.let { normalizeSuspiciousBoundaries(it) }
                     ?: current.suspiciousBoundaries,

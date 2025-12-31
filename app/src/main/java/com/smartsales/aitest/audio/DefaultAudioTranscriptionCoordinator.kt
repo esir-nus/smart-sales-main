@@ -131,6 +131,7 @@ class DefaultAudioTranscriptionCoordinator @Inject constructor(
                 )
                 // 说明：窗口计划仅用于后续 V1 锚点接入，当前展示逻辑不变。
                 val plan = planWithWindows?.plan ?: TranscriptionBatchPlanner.plan(state.transcriptMarkdown)
+                val v1TotalBatches = planWithWindows?.windows?.size
                 if (plan.totalBatches <= 0) {
                     durationByJobId.remove(state.jobId)
                     return@collect
@@ -173,7 +174,13 @@ class DefaultAudioTranscriptionCoordinator @Inject constructor(
                             ruleLabel = plan.ruleLabel,
                             v1Window = v1Window,
                             // 仅贯通时间戳分段数据，当前不改展示逻辑。
-                            timedSegments = timedSegments
+                            timedSegments = timedSegments,
+                            // 说明：V1 窗口计划用于 HUD 展示，优先提供窗口级批次信息。
+                            v1BatchPlanRule = if (v1TotalBatches != null) "v1_windowed" else null,
+                            v1BatchDurationMs = if (v1TotalBatches != null) V1_BATCH_DURATION_MS else null,
+                            v1OverlapMs = if (v1TotalBatches != null) V1_OVERLAP_MS else null,
+                            v1TotalBatches = v1TotalBatches,
+                            v1CurrentBatchIndex = v1Window?.batchIndex
                         )
                     )
                 }

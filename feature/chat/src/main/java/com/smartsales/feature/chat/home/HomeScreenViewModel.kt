@@ -1139,7 +1139,13 @@ class HomeScreenViewModel @Inject constructor(
             batchPlanRule = event.ruleLabel,
             batchPlanBatchSize = event.batchSize,
             batchPlanTotalBatches = event.totalBatches,
-            batchPlanCurrentBatchIndex = event.batchIndex
+            batchPlanCurrentBatchIndex = event.batchIndex,
+            // 说明：V1 窗口计划优先用于 HUD 展示，避免行批次误导。
+            v1BatchPlanRule = event.v1BatchPlanRule,
+            v1BatchDurationMs = event.v1BatchDurationMs,
+            v1OverlapMs = event.v1OverlapMs,
+            v1BatchPlanTotalBatches = event.v1TotalBatches,
+            v1BatchPlanCurrentBatchIndex = event.v1CurrentBatchIndex
         )
         // V1：按 batchIndex 发布连续前缀，乱序批次先缓存再释放
         val releasables = transcriptionBatchGate.offer(event.batchIndex, event)

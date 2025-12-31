@@ -192,20 +192,22 @@ class RealDebugOrchestrator @Inject constructor(
                 it.batchPlan.isNotEmpty() ||
                 it.suspiciousBoundaries.isNotEmpty()
         } == true
+        val v1BatchPlanLine = buildV1BatchPlanLine(tingwuTrace)
         if (!hasMeaningful) {
         val tingwuPreview = runCatching {
             readPreviewLines(tingwuTrace.transcriptDumpPath, MAX_PREVIEW_LINES)
         }.getOrNull()
         appendLine("tingwu.preview:")
         appendLine(tingwuPreview ?: "(missing: tingwu transcript preview not available)")
-        val tingwuBatchPlan = if (tingwuTrace.batchPlanTotalBatches != null) {
-            "rule=${tingwuTrace.batchPlanRule ?: "-"}; " +
-                "batchSize=${tingwuTrace.batchPlanBatchSize ?: "-"}; " +
-                "totalBatches=${tingwuTrace.batchPlanTotalBatches}; " +
-                "currentBatch=${tingwuTrace.batchPlanCurrentBatchIndex ?: "-"}"
-        } else {
-            "(missing: tingwu batch plan not recorded)"
-        }
+        val tingwuBatchPlan = v1BatchPlanLine
+            ?: if (tingwuTrace.batchPlanTotalBatches != null) {
+                "rule=${tingwuTrace.batchPlanRule ?: "-"}; " +
+                    "batchSize=${tingwuTrace.batchPlanBatchSize ?: "-"}; " +
+                    "totalBatches=${tingwuTrace.batchPlanTotalBatches}; " +
+                    "currentBatch=${tingwuTrace.batchPlanCurrentBatchIndex ?: "-"}"
+            } else {
+                "(missing: tingwu batch plan not recorded)"
+            }
         appendLine("tingwu.batchPlan:")
         appendLine(tingwuBatchPlan)
 
@@ -261,14 +263,16 @@ class RealDebugOrchestrator @Inject constructor(
         val derivedBatchSize = effectivePreprocess.batchPlan.firstOrNull()
             ?.editableRange
             ?.let { (it.endInclusive - it.start + 1).coerceAtLeast(0) }
-        val tingwuBatchPlan = if (effectivePreprocess.batchPlan.isNotEmpty()) {
-            "rule=derived; " +
-                "batchSize=${derivedBatchSize ?: "-"}; " +
-                "totalBatches=${effectivePreprocess.batchPlan.size}; " +
-                "currentBatch=${effectivePreprocess.batchPlan.lastOrNull()?.batchId ?: "-"}"
-        } else {
-            "(missing: tingwu batch plan not recorded)"
-        }
+        // 说明：V1 窗口计划是权威批次模型，行批次仅作旧逻辑兜底。
+        val tingwuBatchPlan = v1BatchPlanLine
+            ?: if (effectivePreprocess.batchPlan.isNotEmpty()) {
+                "rule=derived; " +
+                    "batchSize=${derivedBatchSize ?: "-"}; " +
+                    "totalBatches=${effectivePreprocess.batchPlan.size}; " +
+                    "currentBatch=${effectivePreprocess.batchPlan.lastOrNull()?.batchId ?: "-"}"
+            } else {
+                "(missing: tingwu batch plan not recorded)"
+            }
         appendLine("tingwu.batchPlan:")
         appendLine(tingwuBatchPlan)
 
@@ -329,6 +333,30 @@ class RealDebugOrchestrator @Inject constructor(
             "details: $details"
         }
         return indicesLine to detailsLine
+    }
+
+    private fun buildV1BatchPlanLine(
+        snapshot: TingwuTraceSnapshot
+    ): String? {
+        val rule = snapshot.v1BatchPlanRule
+        val batchDurationMs = snapshot.v1BatchDurationMs
+        val overlapMs = snapshot.v1OverlapMs
+        val totalBatches = snapshot.v1BatchPlanTotalBatches
+        val currentBatchIndex = snapshot.v1BatchPlanCurrentBatchIndex
+        // 说明：V1 需要数值型 batchIndex，避免 "b6" 等字典序误导。
+        if (rule == null ||
+            batchDurationMs == null ||
+            overlapMs == null ||
+            totalBatches == null ||
+            currentBatchIndex == null
+        ) {
+            return null
+        }
+        return "rule=$rule; " +
+            "batchDurationMs=$batchDurationMs; " +
+            "overlapMs=$overlapMs; " +
+            "totalBatches=$totalBatches; " +
+            "currentBatchIndex=$currentBatchIndex"
     }
 
     private fun formatDumpInfo(

@@ -33,7 +33,7 @@ class DefaultAudioTranscriptionCoordinatorTimedSegmentsTest {
         val state = TingwuJobState.Completed(
             jobId = "job-1",
             transcriptMarkdown = "line1",
-            artifacts = TingwuJobArtifacts(diarizedSegments = segments)
+            artifacts = TingwuJobArtifacts(recordingOriginDiarizedSegments = segments)
         )
         val coordinator = DefaultAudioTranscriptionCoordinator(
             tingwuCoordinator = FakeTingwuCoordinator(state),

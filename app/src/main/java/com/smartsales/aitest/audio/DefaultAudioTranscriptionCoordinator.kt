@@ -133,7 +133,8 @@ class DefaultAudioTranscriptionCoordinator @Inject constructor(
                     durationByJobId.remove(state.jobId)
                     return@collect
                 }
-                val timedSegments = state.artifacts?.diarizedSegments
+                // 说明：timedSegments 必须是录音起点(0ms)绝对时间，避免后续窗口过滤错位。
+                val timedSegments = state.artifacts?.recordingOriginDiarizedSegments
                     ?.map { segment ->
                         V1TimedTextSegment(
                             startMs = segment.startMs,

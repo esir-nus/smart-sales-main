@@ -95,6 +95,7 @@ import com.smartsales.feature.chat.core.publisher.GeneralChatV1Finalizer
 import com.smartsales.feature.chat.core.publisher.ArtifactStatus
 import com.smartsales.feature.chat.core.stream.ChatStreamCoordinator
 import com.smartsales.feature.chat.core.transcription.V1BatchIndexPrefixGate
+import com.smartsales.feature.chat.core.transcription.V1TingwuWindowedChunkBuilder
 import com.smartsales.feature.chat.core.v1.V1GeneralCompletionEvaluator
 import com.smartsales.feature.chat.core.v1.V1GeneralRetryPolicy
 import com.smartsales.feature.chat.core.v1.V1GeneralRetryEffects
@@ -1146,14 +1147,34 @@ class HomeScreenViewModel @Inject constructor(
         for (released in releasables) {
             val isFinal = released.isFinal
             val existingId = transcriptionBatchMessageId
-            val merged = if (existingId == null) {
+            val window = released.v1Window
+            val timedSegments = released.timedSegments
+            // V1：发布去重只做宏窗口范围过滤 [absStartMs, absEndMs)，不做文本相似度；不要记录转写文本内容。
+            val effectiveChunk = if (window != null && timedSegments != null) {
+                // 重要：timedSegments 的时间基准是录音起点(0ms)，可直接与 absStart/absEnd 比较。
+                V1TingwuWindowedChunkBuilder.buildWindowedMarkdownChunk(
+                    absStartMs = window.absStartMs,
+                    absEndMs = window.absEndMs,
+                    timedSegments = timedSegments
+                )
+            } else {
+                // 字段缺失则回退旧逻辑，避免破坏现有行为。
                 released.markdownChunk
+            }
+            if (effectiveChunk.isBlank() && existingId == null) {
+                if (isFinal) {
+                    transcriptionBatchFinal = true
+                }
+                continue
+            }
+            val merged = if (existingId == null) {
+                effectiveChunk
             } else {
                 mergeTranscriptionChunks(
                     existing = _uiState.value.chatMessages.firstOrNull { it.id == existingId }?.rawContent
                         ?: _uiState.value.chatMessages.firstOrNull { it.id == existingId }?.content
                         ?: "",
-                    incoming = released.markdownChunk
+                    incoming = effectiveChunk
                 )
             }
             if (existingId == null) {

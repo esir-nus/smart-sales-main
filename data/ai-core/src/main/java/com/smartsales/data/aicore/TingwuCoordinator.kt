@@ -41,7 +41,10 @@ data class TingwuJobArtifacts(
     val extraResultUrls: Map<String, String> = emptyMap(),
     val chapters: List<TingwuChapter>? = null,
     val smartSummary: TingwuSmartSummary? = null,
+    // 说明：diarizedSegments 为归一化时间轴（最早片段 -> 0ms），用于当前展示稳定性。
     val diarizedSegments: List<DiarizedSegment>? = null,
+    // 说明：recordingOriginDiarizedSegments 为录音起点(0ms)绝对时间，用于 V1 宏窗口过滤。
+    val recordingOriginDiarizedSegments: List<DiarizedSegment>? = null,
     /** 说话人ID到可读名称的映射，例如 \"1\" -> \"客户\"、\"2\" -> \"销售\"。 */
     val speakerLabels: Map<String, String> = emptyMap(),
 )

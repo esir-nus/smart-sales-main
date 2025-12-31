@@ -3,7 +3,7 @@
   "learningLanguages": ["Kotlin", "Java"],
   "primaryFocus": "Kotlin",
   "currentPath": "Fundamentals - Kotlin First",
-  "learningStrategy": "Kotlin-first with Java comparisons when relevant",
+  "learningStrategy": "Kotlin-first with Python comparisons only",
   "currentLanguage": "Kotlin",
   "currentFramework": "Android",
   "startedAt": "2025-01-28",

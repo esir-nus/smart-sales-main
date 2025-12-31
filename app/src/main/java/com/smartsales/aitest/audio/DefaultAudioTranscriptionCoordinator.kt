@@ -6,6 +6,8 @@ package com.smartsales.aitest.audio
 // 作者：创建于 2025-11-21
 
 import android.media.MediaMetadataRetriever
+import android.util.Log
+import com.smartsales.aitest.BuildConfig
 import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.OssUploadClient
 import com.smartsales.data.aicore.OssUploadRequest
@@ -133,7 +135,7 @@ class DefaultAudioTranscriptionCoordinator @Inject constructor(
                     durationByJobId.remove(state.jobId)
                     return@collect
                 }
-                // 说明：timedSegments 必须是录音起点(0ms)绝对时间，避免后续窗口过滤错位。
+                // 说明：timedSegments 必须是录音起点(0ms)绝对时间（非归一化），避免后续窗口过滤错位。
                 val timedSegments = state.artifacts?.recordingOriginDiarizedSegments
                     ?.map { segment ->
                         V1TimedTextSegment(
@@ -146,6 +148,19 @@ class DefaultAudioTranscriptionCoordinator @Inject constructor(
                 plan.batches.forEach { batch ->
                     // 仅透传窗口数据（可选），不影响现有伪流式展示。
                     val v1Window = planWithWindows?.windows?.getOrNull(batch.batchIndex - 1)
+                    if (BuildConfig.DEBUG && v1Window != null && !timedSegments.isNullOrEmpty()) {
+                        val minStartMs = timedSegments.minOf { it.startMs }
+                        if (v1Window.absStartMs >= 60_000L && minStartMs <= 5_000L) {
+                            // 归一化时间会破坏宏窗口过滤；此处仅 DEBUG 告警，便于尽早发现回归。
+                            Log.w(
+                                "DefaultAudioTranscriptionCoordinator",
+                                "event=v1_tingwu_timedSegments_timebase_suspect " +
+                                    "batchIndex=${batch.batchIndex} " +
+                                    "absStartMs=${v1Window.absStartMs} " +
+                                    "minStartMs=$minStartMs"
+                            )
+                        }
+                    }
                     send(
                         AudioTranscriptionBatchEvent.BatchReleased(
                             jobId = state.jobId,
@@ -180,8 +195,8 @@ class DefaultAudioTranscriptionCoordinator @Inject constructor(
 
     private companion object {
         // 说明：为 V1 时间窗口预留的保守默认值（当前仅生成窗口，不影响展示）。
-        private const val V1_BATCH_DURATION_MS = 60_000L
-        private const val V1_OVERLAP_MS = 5_000L
+        private const val V1_BATCH_DURATION_MS = 600_000L
+        private const val V1_OVERLAP_MS = 10_000L
     }
 }
 

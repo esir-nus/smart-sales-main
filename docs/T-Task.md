@@ -44,6 +44,16 @@ Legend: TODO / DOING / DONE / BLOCKED
 - Evidence:
   - `docs/Orchestrator-V1.md`
 
+### T18f Tingwu macro-window filter kill-switch (default ON)
+- Status: DONE
+- Evidence:
+  - `data/ai-core/src/main/java/com/smartsales/data/aicore/AiCoreConfig.kt`
+  - `feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreenViewModel.kt`
+- Behavior:
+  - `enableV1TingwuMacroWindowFilter` default `true`
+  - When ON: apply V1 macro-window filtering when `v1Window + timedSegments` present; emit `v1_tingwu_window_filter_applied` (counts only)
+  - When OFF: always publish legacy `markdownChunk`; do not emit `v1_tingwu_window_filter_applied`
+
 ---
 
 ## Archived Traces

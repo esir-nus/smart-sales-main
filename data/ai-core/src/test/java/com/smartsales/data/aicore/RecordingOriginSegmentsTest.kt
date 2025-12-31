@@ -15,8 +15,8 @@ class RecordingOriginSegmentsTest {
         val transcription = TingwuTranscription(
             text = "t",
             segments = listOf(
-                TingwuTranscriptSegment(id = 1, start = 5.0, end = 7.0, text = "A", speaker = "s1"),
-                TingwuTranscriptSegment(id = 2, start = 9.0, end = 10.5, text = "B", speaker = "s1")
+                TingwuTranscriptSegment(id = 1, start = 12.0, end = 13.0, text = "A", speaker = "s1"),
+                TingwuTranscriptSegment(id = 2, start = 20.0, end = 21.0, text = "B", speaker = "s1")
             ),
             speakers = listOf(TingwuSpeaker(id = "s1", name = "S1")),
             language = "zh-CN",
@@ -26,10 +26,12 @@ class RecordingOriginSegmentsTest {
         val normalized = buildNormalizedSegmentsForTest(transcription)
         val recordingOrigin = buildRecordingOriginSegmentsForTest(transcription)
 
+        // 说明：V1 宏窗口过滤依赖录音起点绝对时间，recording-origin 不允许 baseStart 归一化。
         assertEquals(0, normalized.first().startMs)
-        assertEquals(2000, normalized.first().endMs)
-        assertEquals(5000, recordingOrigin.first().startMs)
-        assertEquals(7000, recordingOrigin.first().endMs)
+        assertEquals(1000, normalized.first().endMs)
+        assertEquals(12_000, recordingOrigin.first().startMs)
+        assertEquals(13_000, recordingOrigin.first().endMs)
+        assertEquals(20_000, recordingOrigin[1].startMs)
     }
 
     private fun buildNormalizedSegmentsForTest(transcription: TingwuTranscription): List<DiarizedSegment> {

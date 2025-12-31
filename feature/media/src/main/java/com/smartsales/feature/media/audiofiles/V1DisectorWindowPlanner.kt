@@ -23,19 +23,39 @@ class V1DisectorWindowPlanner(
         if (audioDurationMs <= 0) {
             return emptyList()
         }
-        val totalBatches = ((audioDurationMs + batchDurationMs - 1) / batchDurationMs).toInt()
-        return (1..totalBatches).map { batchIndex ->
-            val absStartMs = (batchIndex - 1) * batchDurationMs
-            val absEndMs = min(batchIndex * batchDurationMs, audioDurationMs)
+        val fullBatches = audioDurationMs / batchDurationMs
+        val rem = audioDurationMs % batchDurationMs
+        val windows = mutableListOf<Pair<Long, Long>>()
+        if (fullBatches == 0L) {
+            windows += 0L to audioDurationMs
+        } else {
+            for (i in 0 until fullBatches) {
+                val absStartMs = i * batchDurationMs
+                windows += absStartMs to (absStartMs + batchDurationMs)
+            }
+            if (rem != 0L) {
+                // 余数合并规则：rem < 7分钟则合并到最后一段，否则新建余数批次。
+                if (rem < 420_000L) {
+                    val last = windows.last()
+                    windows[windows.lastIndex] = last.first to (last.second + rem)
+                } else {
+                    val absStartMs = fullBatches * batchDurationMs
+                    windows += absStartMs to (absStartMs + rem)
+                }
+            }
+        }
+        return windows.mapIndexed { index, window ->
+            val absStartMs = window.first
+            val absEndMs = min(window.second, audioDurationMs)
             // overlapMs 仅作为 pre-roll，第二批开始回溯录音起点用于对齐 Tingwu 相对时间。
-            val captureStartMs = if (batchIndex == 1) {
+            val captureStartMs = if (index == 0) {
                 absStartMs
             } else {
                 (absStartMs - effectiveOverlapMs).coerceAtLeast(0)
             }
             // 半开区间 [absStartMs, absEndMs)，批次顺序严格按 batchIndex 递增。
             V1TranscriptionBatchWindow(
-                batchIndex = batchIndex,
+                batchIndex = index + 1,
                 absStartMs = absStartMs,
                 absEndMs = absEndMs,
                 overlapMs = effectiveOverlapMs,

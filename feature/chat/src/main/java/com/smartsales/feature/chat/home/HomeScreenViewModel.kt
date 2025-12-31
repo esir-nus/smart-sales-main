@@ -1152,11 +1152,23 @@ class HomeScreenViewModel @Inject constructor(
             // V1：发布去重只做宏窗口范围过滤 [absStartMs, absEndMs)，不做文本相似度；不要记录转写文本内容。
             val effectiveChunk = if (window != null && timedSegments != null) {
                 // 重要：timedSegments 的时间基准是录音起点(0ms)，可直接与 absStart/absEnd 比较。
-                V1TingwuWindowedChunkBuilder.buildWindowedMarkdownChunk(
+                val result = V1TingwuWindowedChunkBuilder.buildWindowedMarkdownChunkResult(
                     absStartMs = window.absStartMs,
                     absEndMs = window.absEndMs,
                     timedSegments = timedSegments
                 )
+                // 只记录统计信息，不记录文本内容，避免隐私泄露。
+                Log.d(
+                    TAG,
+                    "event=v1_tingwu_window_filter_applied " +
+                        "batchIndex=${released.batchIndex} " +
+                        "absStartMs=${window.absStartMs} " +
+                        "absEndMs=${window.absEndMs} " +
+                        "segmentsIn=${result.segmentsInCount} " +
+                        "segmentsOut=${result.segmentsOutCount} " +
+                        "chunkChars=${result.chunk.length}"
+                )
+                result.chunk
             } else {
                 // 字段缺失则回退旧逻辑，避免破坏现有行为。
                 released.markdownChunk

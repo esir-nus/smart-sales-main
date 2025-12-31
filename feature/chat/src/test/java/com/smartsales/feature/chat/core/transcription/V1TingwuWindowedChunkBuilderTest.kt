@@ -13,13 +13,15 @@ class V1TingwuWindowedChunkBuilderTest {
             V1TimedTextSegment(startMs = 2000, endMs = 3000, text = "B")
         )
 
-        val result = V1TingwuWindowedChunkBuilder.buildWindowedMarkdownChunk(
+        val result = V1TingwuWindowedChunkBuilder.buildWindowedMarkdownChunkResult(
             absStartMs = 1000,
             absEndMs = 2000,
             timedSegments = segments
         )
 
-        assertEquals("", result)
+        assertEquals("", result.chunk)
+        assertEquals(2, result.segmentsInCount)
+        assertEquals(0, result.segmentsOutCount)
     }
 
     @Test
@@ -28,13 +30,15 @@ class V1TingwuWindowedChunkBuilderTest {
             V1TimedTextSegment(startMs = 900, endMs = 1100, text = "X")
         )
 
-        val result = V1TingwuWindowedChunkBuilder.buildWindowedMarkdownChunk(
+        val result = V1TingwuWindowedChunkBuilder.buildWindowedMarkdownChunkResult(
             absStartMs = 1000,
             absEndMs = 2000,
             timedSegments = segments
         )
 
-        assertEquals("X", result)
+        assertEquals("X", result.chunk)
+        assertEquals(1, result.segmentsInCount)
+        assertEquals(1, result.segmentsOutCount)
     }
 
     @Test
@@ -43,13 +47,15 @@ class V1TingwuWindowedChunkBuilderTest {
             V1TimedTextSegment(startMs = 100, endMs = 200, text = "A")
         )
 
-        val result = V1TingwuWindowedChunkBuilder.buildWindowedMarkdownChunk(
+        val result = V1TingwuWindowedChunkBuilder.buildWindowedMarkdownChunkResult(
             absStartMs = 2000,
             absEndMs = 2000,
             timedSegments = segments
         )
 
-        assertEquals("", result)
+        assertEquals("", result.chunk)
+        assertEquals(1, result.segmentsInCount)
+        assertEquals(0, result.segmentsOutCount)
     }
 
     @Test
@@ -59,12 +65,14 @@ class V1TingwuWindowedChunkBuilderTest {
             V1TimedTextSegment(startMs = 300, endMs = 400, text = "ok")
         )
 
-        val result = V1TingwuWindowedChunkBuilder.buildWindowedMarkdownChunk(
+        val result = V1TingwuWindowedChunkBuilder.buildWindowedMarkdownChunkResult(
             absStartMs = 0,
             absEndMs = 1000,
             timedSegments = segments
         )
 
-        assertEquals("ok", result)
+        assertEquals("ok", result.chunk)
+        assertEquals(2, result.segmentsInCount)
+        assertEquals(1, result.segmentsOutCount)
     }
 }

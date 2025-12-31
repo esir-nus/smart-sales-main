@@ -355,6 +355,8 @@ class HomeScreenViewModel @Inject constructor(
     private var pendingExportAfterAnalysis: ExportFormat? = null
     private var exportAutoAnalysisInFlight: Boolean = false
     private val enableV1ChatPublisher = optionalConfig.orElse(AiCoreConfig()).enableV1ChatPublisher
+    private val enableV1TingwuMacroWindowFilter =
+        optionalConfig.orElse(AiCoreConfig()).enableV1TingwuMacroWindowFilter
     private val chatPublisher: ChatPublisher = ChatPublisherImpl()
     private val v1Finalizer = GeneralChatV1Finalizer(chatPublisher)
     private val chatStreamCoordinator = ChatStreamCoordinator { req -> homeOrchestrator.streamChat(req) }
@@ -1150,14 +1152,15 @@ class HomeScreenViewModel @Inject constructor(
             val window = released.v1Window
             val timedSegments = released.timedSegments
             // V1：发布去重只做宏窗口范围过滤 [absStartMs, absEndMs)，不做文本相似度；不要记录转写文本内容。
-            val effectiveChunk = if (window != null && timedSegments != null) {
+            val effectiveChunk = if (enableV1TingwuMacroWindowFilter && window != null && timedSegments != null) {
                 // 重要：timedSegments 的时间基准是录音起点(0ms)，可直接与 absStart/absEnd 比较。
                 val result = V1TingwuWindowedChunkBuilder.buildWindowedMarkdownChunkResult(
                     absStartMs = window.absStartMs,
                     absEndMs = window.absEndMs,
                     timedSegments = timedSegments
                 )
-                // 只记录统计信息，不记录文本内容，避免隐私泄露。
+                // 默认开启，作为 V1 主路径；保留开关仅用于紧急回退。
+                // 日志只输出统计信息，不记录转写文本内容，避免隐私泄露。
                 Log.d(
                     TAG,
                     "event=v1_tingwu_window_filter_applied " +

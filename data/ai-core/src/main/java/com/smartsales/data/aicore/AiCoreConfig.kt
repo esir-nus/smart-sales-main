@@ -19,6 +19,7 @@ data class SpeakerDisplayConfig(
 data class AiCoreConfig(
     val preferFakeAiChat: Boolean = false,
     val enableV1ChatPublisher: Boolean = false,
+    val enableV1TingwuMacroWindowFilter: Boolean = true,
     val dashscopeMaxRetries: Int = 1,
     val dashscopeRequestTimeoutMillis: Long = 15_000,
     val dashscopeEnableStreaming: Boolean = false,

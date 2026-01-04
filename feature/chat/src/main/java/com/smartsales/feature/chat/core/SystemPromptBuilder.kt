@@ -23,9 +23,16 @@ object SystemPromptBuilder {
         val shouldApplyPublisher = context.enableV1ChatPublisher && context.quickSkillId != "SMART_ANALYSIS"
         when (context.quickSkillId) {
             null -> {
-                builder.appendLine(buildGeneralBehavior(context.isFirstGeneralAssistantReply))
+                builder.appendLine(
+                    buildGeneralBehavior(
+                        isFirstAssistant = context.isFirstGeneralAssistantReply,
+                        enableV1Publisher = shouldApplyPublisher
+                    )
+                )
                 if (shouldApplyPublisher) {
                     // V1 Publisher 格式约束仅在启用开关时追加
+                    // V1 约束必须与发布器提取逻辑严格对齐：小写 visible2user + JSON 在标签外。
+                    // V1 路径禁用 legacy <Metadata>/<Visible2User>，避免冲突和误解析。
                     builder.appendLine(buildV1PublisherBlock())
                 }
             }
@@ -33,9 +40,16 @@ object SystemPromptBuilder {
                 builder.appendLine(buildSmartBehavior())
             }
             else -> {
-                builder.appendLine(buildGeneralBehavior(context.isFirstGeneralAssistantReply))
+                builder.appendLine(
+                    buildGeneralBehavior(
+                        isFirstAssistant = context.isFirstGeneralAssistantReply,
+                        enableV1Publisher = shouldApplyPublisher
+                    )
+                )
                 if (shouldApplyPublisher) {
                     // V1 Publisher 格式约束仅在启用开关时追加
+                    // V1 约束必须与发布器提取逻辑严格对齐：小写 visible2user + JSON 在标签外。
+                    // V1 路径禁用 legacy <Metadata>/<Visible2User>，避免冲突和误解析。
                     builder.appendLine(buildV1PublisherBlock())
                 }
             }
@@ -62,7 +76,38 @@ object SystemPromptBuilder {
         }.trim()
     }
 
-    private fun buildGeneralBehavior(isFirstAssistant: Boolean): String {
+    private fun buildGeneralBehavior(
+        isFirstAssistant: Boolean,
+        enableV1Publisher: Boolean
+    ): String {
+        return if (enableV1Publisher) {
+            buildGeneralBehaviorV1(isFirstAssistant)
+        } else {
+            buildGeneralBehaviorLegacy(isFirstAssistant)
+        }
+    }
+
+    private fun buildGeneralBehaviorV1(isFirstAssistant: Boolean): String {
+        if (!isFirstAssistant) {
+            return """
+            ## 行为（GENERAL 后续回复）
+            - 用简短中文直接回答当前问题，遵守 persona 语气。
+            - 输出格式遵循 V1 Publisher 约束。
+            - 回答区禁止复述规则/标题/“历史对话”“最新问题”等提示语，避免重复同一句或同一要点。
+            """.trimIndent()
+        }
+        return """
+        ## 行为（GENERAL 首条回复）
+        - 模型自行判断输入类型：
+          * 状态A：纯问候/噪音 → 简短友好回应，说明可粘贴销售对话/纪要获取分析。
+          * 状态B：模糊但有销售味道 → 提 2–4 个澄清问题 + 需要补充的关键信息点，可附 1–2 句澄清话术。
+          * 状态C：富文本/完整上下文 → 2–3 句总结 + 2–4 条要点/下一步。
+        - 输出格式遵循 V1 Publisher 约束。
+        - 回答区禁止复述规则/标题/“历史对话”“最新问题”等提示语，避免输出上述规则中的小节标题；简短、信息密集，避免同一句或同一要点重复。
+        """.trimIndent()
+    }
+
+    private fun buildGeneralBehaviorLegacy(isFirstAssistant: Boolean): String {
         if (!isFirstAssistant) {
             return """
             ## 行为（GENERAL 后续回复）
@@ -89,9 +134,11 @@ object SystemPromptBuilder {
 
     private fun buildV1PublisherBlock(): String = """
         ## 输出格式（V1 Publisher）
-        - 给用户看的正文只能放在一个 <visible2user>...</visible2user> 中。
-        - 机器可读结构必须放在首个 ```json fenced 块中，且必须位于 <visible2user>...</visible2user> 之外。
-        - 除了上述 ```json 块外，禁止输出其他 JSON、标签外说明或多余文本。
+        - 必须使用小写 <visible2user>...</visible2user> 包裹用户可见正文，且只出现一个完整块。
+        - 先输出 <visible2user>...</visible2user>，再输出机器可读结构。
+        - L3 模式必须在标签外输出一个 ```json fenced 块作为 MachineArtifact；L1/L2 不需要 JSON。
+        - 严禁在 <visible2user> 内放 ```json（防止泄露，且便于稳定提取）。
+        - 除了上述 ```json 块外，不输出其他 JSON 或标签外说明。
     """.trimIndent()
 
     private fun buildSmartBehavior(): String = """

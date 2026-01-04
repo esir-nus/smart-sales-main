@@ -11,7 +11,11 @@ import com.smartsales.feature.chat.core.publisher.GeneralChatV1Finalizer
 import com.smartsales.feature.chat.core.publisher.PublishedChatTurnV1
 import com.smartsales.feature.chat.core.publisher.V1FinalizeResult
 import com.smartsales.feature.chat.core.stream.CompletionDecision
+import com.smartsales.feature.chat.core.SystemPromptBuilder
+import com.smartsales.feature.chat.core.SystemPromptContext
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class V1GeneralCompletionEvaluatorTest {
@@ -101,6 +105,24 @@ class V1GeneralCompletionEvaluatorTest {
             expectedFinalize(ArtifactStatus.INVALID, "type_mismatch"),
             eval.finalizeResult
         )
+    }
+
+    @Test
+    fun `v1 prompt enforces visible2user and forbids legacy tags`() {
+        val prompt = SystemPromptBuilder.buildForHomeChat(
+            SystemPromptContext(
+                persona = null,
+                quickSkillId = null,
+                isFirstGeneralAssistantReply = true,
+                enableV1ChatPublisher = true
+            )
+        )
+
+        assertTrue(prompt.contains("<visible2user>"))
+        assertTrue(prompt.contains("</visible2user>"))
+        assertTrue(prompt.contains("标签外输出一个 ```json"))
+        assertFalse(prompt.contains("<Metadata>"))
+        assertFalse(prompt.contains("<Visible2User>"))
     }
 
     private fun evaluatorWithStatus(

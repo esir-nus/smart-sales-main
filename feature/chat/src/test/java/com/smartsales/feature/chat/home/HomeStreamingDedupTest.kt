@@ -104,8 +104,8 @@ class HomeStreamingDedupTest {
     @Test
     fun `delta only keeps single assistant bubble`() = runTest(dispatcher) {
         orchestrator.enqueue(
-            ChatStreamEvent.Delta("a"),
-            ChatStreamEvent.Delta("b")
+            ChatStreamEvent.Delta("<visible2user>a"),
+            ChatStreamEvent.Delta("<visible2user>ab")
         )
         viewModel.onInputChanged("客户需要报价")
         viewModel.onSendMessage()
@@ -119,9 +119,9 @@ class HomeStreamingDedupTest {
     @Test
     fun `delta then completed replaces content once`() = runTest(dispatcher) {
         orchestrator.enqueue(
-            ChatStreamEvent.Delta("he"),
-            ChatStreamEvent.Delta("hel"),
-            ChatStreamEvent.Completed("hello")
+            ChatStreamEvent.Delta("<visible2user>he"),
+            ChatStreamEvent.Delta("<visible2user>hel"),
+            ChatStreamEvent.Completed("<visible2user>hello</visible2user>")
         )
         viewModel.onInputChanged("客户询问产品报价")
         viewModel.onSendMessage()
@@ -202,15 +202,15 @@ class HomeStreamingDedupTest {
     @Test
     fun `multiple rounds keep one assistant bubble per turn`() = runTest(dispatcher) {
         orchestrator.enqueue(
-            ChatStreamEvent.Delta("hi"),
-            ChatStreamEvent.Completed("hi there")
+            ChatStreamEvent.Delta("<visible2user>hi"),
+            ChatStreamEvent.Completed("<visible2user>hi there</visible2user>")
         )
         viewModel.onInputChanged("客户询问第一次报价")
         viewModel.onSendMessage()
 
         orchestrator.enqueue(
-            ChatStreamEvent.Delta("second"),
-            ChatStreamEvent.Completed("second reply")
+            ChatStreamEvent.Delta("<visible2user>second"),
+            ChatStreamEvent.Completed("<visible2user>second reply</visible2user>")
         )
         viewModel.onInputChanged("客户再次跟进报价")
         viewModel.onSendMessage()
@@ -221,6 +221,32 @@ class HomeStreamingDedupTest {
         assertEquals(2, assistants.size)
         assertEquals("hi there", assistants[0].content)
         assertEquals("second reply", assistants[1].content)
+    }
+
+    @Test
+    fun `streaming only projects visible2user content`() = runTest(dispatcher) {
+        val dedup = StreamingDeduplicator()
+
+        val before = dedup.mergeSnapshot(current = "", incoming = "prefix")
+        assertEquals("", before)
+
+        val partial = dedup.mergeSnapshot(current = before, incoming = "<visible2user>Hel")
+        assertEquals("Hel", partial)
+
+        val complete = dedup.mergeSnapshot(current = partial, incoming = "<visible2user>Hello</visible2user>")
+        assertEquals("Hello", complete)
+
+        val jsonAfter = dedup.mergeSnapshot(
+            current = complete,
+            incoming = "<visible2user>Hello</visible2user>```json\n{\"x\":1}\n```"
+        )
+        assertEquals("Hello", jsonAfter)
+
+        val jsonInside = dedup.mergeSnapshot(
+            current = jsonAfter,
+            incoming = "<visible2user>Hi ```json\n{\"x\":1}\n``` there</visible2user>"
+        )
+        assertEquals("Hi  there", jsonInside)
     }
 
     private class FakeHomeOrchestrator : HomeOrchestrator {

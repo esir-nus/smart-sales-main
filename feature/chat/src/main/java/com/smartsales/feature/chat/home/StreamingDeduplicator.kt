@@ -19,6 +19,9 @@ internal class StreamingDeduplicator {
         val base = if (lastSnapshot.isNotEmpty()) lastSnapshot else current
         if (incoming.isEmpty()) return base
 
+        val startTag = "<visible2user>"
+        // 若出现新的可见块起始标签且与旧快照不匹配，则视为重置，避免拼接成多个可见块。
+        val isVisibleReset = incoming.contains(startTag) && base.contains(startTag) && !incoming.startsWith(base)
         val (delta, isReset) = extractDelta(incoming, base)
         val nextSnapshot = when {
             // 上游输出是累计快照：直接采用快照
@@ -26,13 +29,13 @@ internal class StreamingDeduplicator {
             // 上游回退：保持当前内容
             base.startsWith(incoming) -> base
             // 明确重置：直接采用新文本
-            isReset -> incoming
+            isReset || isVisibleReset -> incoming
             // 常规增量或无法匹配：按基线追加 delta
             delta.isNotEmpty() -> base + delta
             else -> base
         }
         lastSnapshot = nextSnapshot
-        return nextSnapshot
+        return projectVisibleDraft(nextSnapshot)
     }
 
     /**
@@ -70,6 +73,45 @@ internal class StreamingDeduplicator {
             i++
         }
         return i
+    }
+
+    // 流式阶段也只能展示 visible2user 内文本，避免 JSON/调试内容泄露到 UI。
+    // 必须用扫描而非启发式，保证可重复的确定性提取。
+    internal fun projectVisibleDraft(text: String): String {
+        val startTag = "<visible2user>"
+        val endTag = "</visible2user>"
+        val start = text.indexOf(startTag)
+        if (start == -1) return ""
+        val contentStart = start + startTag.length
+        val end = text.indexOf(endTag, contentStart)
+        val visibleSlice = if (end == -1) {
+            text.substring(contentStart)
+        } else {
+            text.substring(contentStart, end)
+        }
+        return stripJsonFences(visibleSlice)
+    }
+
+    private fun stripJsonFences(text: String): String {
+        val fence = "```"
+        if (!text.contains(fence)) return text
+        val builder = StringBuilder()
+        var idx = 0
+        while (idx < text.length) {
+            val fenceStart = text.indexOf(fence, idx)
+            if (fenceStart == -1) {
+                builder.append(text.substring(idx))
+                break
+            }
+            builder.append(text.substring(idx, fenceStart))
+            val fenceEnd = text.indexOf(fence, fenceStart + fence.length)
+            if (fenceEnd == -1) {
+                // 不完整 fence：直接截断，避免泄露潜在 JSON
+                break
+            }
+            idx = fenceEnd + fence.length
+        }
+        return builder.toString()
     }
 
     companion object {

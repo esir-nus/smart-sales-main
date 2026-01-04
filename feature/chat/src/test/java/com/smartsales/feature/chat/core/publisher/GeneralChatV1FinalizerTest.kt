@@ -31,7 +31,7 @@ class GeneralChatV1FinalizerTest {
     }
 
     @Test
-    fun `finalizer falls back when visible2user missing`() {
+    fun `finalizer does not fallback when visible2user missing`() {
         val publisher = ChatPublisherImpl()
         val finalizer = GeneralChatV1Finalizer(publisher)
         val raw = """
@@ -43,8 +43,27 @@ class GeneralChatV1FinalizerTest {
 
         val result = finalizer.finalize(raw)
 
-        assertEquals(publisher.fallbackMessage(), result.visibleMarkdown)
-        assertEquals(ArtifactStatus.VALID, result.artifactStatus)
+        assertEquals("", result.visibleMarkdown)
+        assertEquals(ArtifactStatus.INVALID, result.artifactStatus)
+    }
+
+    @Test
+    fun `terminal fallback strips json and marks failed`() {
+        val publisher = ChatPublisherImpl()
+        val finalizer = GeneralChatV1Finalizer(publisher)
+        val raw = """
+            hello
+            ```json
+            $validArtifactJson
+            ```
+        """.trimIndent()
+
+        val result = finalizer.finalize(raw, isTerminal = true)
+
+        assertEquals("hello", result.visibleMarkdown)
+        assertEquals(ArtifactStatus.FAILED, result.artifactStatus)
+        assertEquals(true, result.visibleMarkdown.contains("```").not())
+        assertEquals(true, result.visibleMarkdown.contains("artifactType").not())
     }
 
     @Test

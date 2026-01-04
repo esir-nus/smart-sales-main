@@ -46,7 +46,7 @@ class V1GeneralCompletionEvaluatorTest {
     }
 
     @Test
-    fun `reason aware missing fence is terminal`() {
+    fun `reason aware missing fence retries`() {
         val evaluator = evaluatorWithStatus(
             status = ArtifactStatus.INVALID,
             failureReason = REASON_MISSING_JSON_FENCE
@@ -59,7 +59,7 @@ class V1GeneralCompletionEvaluatorTest {
             enableReasonAwareRetry = true
         )
 
-        assertEquals(CompletionDecision.Terminal, eval.decision)
+        assertEquals(CompletionDecision.Retry, eval.decision)
         assertEquals(
             expectedFinalize(ArtifactStatus.INVALID, REASON_MISSING_JSON_FENCE),
             eval.finalizeResult

@@ -14,7 +14,16 @@ import com.smartsales.feature.chat.core.stream.CompletionDecision
 object V1GeneralRetryPolicy {
     // 抽取策略常量，降低 ViewModel 复杂度，便于单元测试
     fun buildRepairInstruction(): String {
-        return "REPAIR: Output exactly one <visible2user>...</visible2user> and one ```json block outside <visible2user>. No other text outside those sections."
+        // 仅允许格式修复：保持原意不新增内容，避免语义漂移
+        // 禁止在 <visible2user> 内放 ```json，防止泄露到 UI，便于稳定提取
+        return buildString {
+            append("FORMAT REPAIR ONLY: ")
+            append("Wrap the SAME user-visible content in lowercase <visible2user>...</visible2user>. ")
+            append("Do not add new content or change meaning. ")
+            append("Do NOT put ```json inside <visible2user>. ")
+            append("For L3 only, include exactly one ```json block OUTSIDE <visible2user>. ")
+            append("L1/L2 do not need JSON.")
+        }
     }
 
     fun decide(
@@ -44,10 +53,7 @@ object V1GeneralRetryPolicy {
         if (artifactStatus == ArtifactStatus.VALID) {
             return CompletionDecision.Accept
         }
-        if (failureReason == "missing_json_fence") {
-            // 缺失 fenced JSON 无法靠重试补齐，直接终止并走 terminal
-            return CompletionDecision.Terminal
-        }
+        // 格式类失败允许重试，避免过早进入终态
         return if (attempt < maxRetries) {
             CompletionDecision.Retry
         } else {

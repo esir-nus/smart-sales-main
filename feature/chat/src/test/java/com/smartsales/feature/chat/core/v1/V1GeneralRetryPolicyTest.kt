@@ -8,15 +8,21 @@ package com.smartsales.feature.chat.core.v1
 import com.smartsales.feature.chat.core.publisher.ArtifactStatus
 import com.smartsales.feature.chat.core.stream.CompletionDecision
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class V1GeneralRetryPolicyTest {
 
     @Test
     fun `buildRepairInstruction matches expected string`() {
-        val expected = "REPAIR: Output exactly one <visible2user>...</visible2user> and one ```json block outside <visible2user>. No other text outside those sections."
+        val instruction = V1GeneralRetryPolicy.buildRepairInstruction()
 
-        assertEquals(expected, V1GeneralRetryPolicy.buildRepairInstruction())
+        assertTrue(instruction.contains("<visible2user>"))
+        assertTrue(instruction.contains("FORMAT REPAIR ONLY"))
+        assertTrue(instruction.contains("Do not add new content"))
+        assertTrue(instruction.contains("```json"))
+        assertTrue(instruction.contains("OUTSIDE <visible2user>"))
+        assertTrue(instruction.contains("Do NOT put ```json inside <visible2user>"))
     }
 
     @Test
@@ -58,6 +64,84 @@ class V1GeneralRetryPolicyTest {
             artifactStatus = ArtifactStatus.INVALID,
             attempt = 0,
             maxRetries = 0
+        )
+
+        assertEquals(CompletionDecision.Terminal, decision)
+    }
+
+    @Test
+    fun `missing visible2user is retryable`() {
+        val decision = V1GeneralRetryPolicy.decide(
+            artifactStatus = ArtifactStatus.INVALID,
+            attempt = 0,
+            maxRetries = 2,
+            failureReason = "missing_visible2user",
+            enableReasonAware = true
+        )
+
+        assertEquals(CompletionDecision.Retry, decision)
+    }
+
+    @Test
+    fun `malformed visible2user is retryable`() {
+        val decision = V1GeneralRetryPolicy.decide(
+            artifactStatus = ArtifactStatus.INVALID,
+            attempt = 0,
+            maxRetries = 2,
+            failureReason = "malformed_visible2user",
+            enableReasonAware = true
+        )
+
+        assertEquals(CompletionDecision.Retry, decision)
+    }
+
+    @Test
+    fun `empty visible2user is retryable`() {
+        val decision = V1GeneralRetryPolicy.decide(
+            artifactStatus = ArtifactStatus.INVALID,
+            attempt = 0,
+            maxRetries = 2,
+            failureReason = "empty_visible2user",
+            enableReasonAware = true
+        )
+
+        assertEquals(CompletionDecision.Retry, decision)
+    }
+
+    @Test
+    fun `missing json fence is retryable`() {
+        val decision = V1GeneralRetryPolicy.decide(
+            artifactStatus = ArtifactStatus.INVALID,
+            attempt = 0,
+            maxRetries = 2,
+            failureReason = "missing_json_fence",
+            enableReasonAware = true
+        )
+
+        assertEquals(CompletionDecision.Retry, decision)
+    }
+
+    @Test
+    fun `invalid machine artifact is retryable`() {
+        val decision = V1GeneralRetryPolicy.decide(
+            artifactStatus = ArtifactStatus.INVALID,
+            attempt = 0,
+            maxRetries = 2,
+            failureReason = "invalid_machine_artifact",
+            enableReasonAware = true
+        )
+
+        assertEquals(CompletionDecision.Retry, decision)
+    }
+
+    @Test
+    fun `reason aware still terminals after max retries`() {
+        val decision = V1GeneralRetryPolicy.decide(
+            artifactStatus = ArtifactStatus.INVALID,
+            attempt = 2,
+            maxRetries = 2,
+            failureReason = "missing_visible2user",
+            enableReasonAware = true
         )
 
         assertEquals(CompletionDecision.Terminal, decision)

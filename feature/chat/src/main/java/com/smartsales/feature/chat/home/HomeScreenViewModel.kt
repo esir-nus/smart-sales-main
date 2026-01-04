@@ -100,6 +100,24 @@ import com.smartsales.feature.chat.core.v1.V1GeneralCompletionEvaluator
 import com.smartsales.feature.chat.core.v1.V1GeneralRetryPolicy
 import com.smartsales.feature.chat.core.v1.V1GeneralRetryEffects
 
+/*
+ * HomeScreenViewModel.kt — NAV INDEX (for Codex / AI directed reads)
+ *
+ * 使用方式：在编辑器里搜索下面的锚点（例如：HSVM@PUBLISH）快速跳转。
+ * 注意：不要依赖行号（会漂移），只依赖锚点。
+ *
+ * [HSVM@TOP]          文件顶部 / 常量 / 初始化
+ * [HSVM@PUBLIC_API]   对外 public API（UI 调用入口）
+ * [HSVM@ENTRY]        用户事件入口（send / event / intent）
+ * [HSVM@STREAM]       Streaming / DisplayDelta 相关
+ * [HSVM@PUBLISH]      V1 Chat 发布流水线（visible2user 提取 / MachineArtifact）
+ * [HSVM@RETRY]        Retry loop / terminal 处理（含 maxRetries / FAILED）
+ * [HSVM@META]         Metadata 写入路径（含 L3-only gating）
+ * [HSVM@HELPERS]      strip/sanitize/parse 等 helper（严禁 JSON 泄露）
+ * [HSVM@HUD]          DebugSnapshot / HUD / trace 输出
+ */
+
+// [HSVM@TOP] ===== 文件顶部 / 常量 / 初始化 =====
 private const val DEFAULT_SESSION_ID = "home-session"
 private const val DEFAULT_SESSION_TITLE = SessionTitlePolicy.PLACEHOLDER_TITLE
 private const val LONG_CONTENT_THRESHOLD = 240
@@ -302,7 +320,14 @@ interface AiSessionRepository {
     suspend fun loadOlderMessages(currentTopMessageId: String?): List<ChatMessageUi>
 }
 
+// [HSVM@PUBLIC_API] ===== 对外 public API（UI 调用入口） =====
 /** HomeScreenViewModel：驱动聊天、快捷技能以及设备/音频快照。 */
+/**
+ * NAV: docs/index/HomeScreenViewModel.index.md
+ * Tags: [HSVM:STREAMING_PIPELINE] [HSVM:RETRY_LOOP] [HSVM:CHAT_PUBLISH]
+ *       [HSVM:TINGWU_BATCH_RELEASE] [HSVM:PREFIX_GATE] [HSVM:MACRO_WINDOW_FILTER]
+ *       [HSVM:DEBUG_SNAPSHOT] [HSVM:SESSION_BOOTSTRAP]
+ */
 @HiltViewModel
 class HomeScreenViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
@@ -345,6 +370,7 @@ class HomeScreenViewModel @Inject constructor(
     private var lastTranscriptionJobId: String? = null
     private var transcriptionBatchMessageId: String? = null
     private var transcriptionBatchFinal: Boolean = false
+    // [HSVM:PREFIX_GATE]
     private val transcriptionBatchGate = V1BatchIndexPrefixGate<AudioTranscriptionBatchEvent.BatchReleased>()
     // 标记本次转写是否仍在进行中，用于抑制中途恢复提示
     private var activelyTranscribing: Boolean = false
@@ -361,6 +387,7 @@ class HomeScreenViewModel @Inject constructor(
     private val v1Finalizer = GeneralChatV1Finalizer(chatPublisher)
     private val chatStreamCoordinator = ChatStreamCoordinator { req -> homeOrchestrator.streamChat(req) }
 
+    // [HSVM:SESSION_BOOTSTRAP]
     init {
         // 从 catalog 加载快捷技能到状态
         val skills = quickSkillDefinitions.map { it.toUiModel() }
@@ -373,6 +400,7 @@ class HomeScreenViewModel @Inject constructor(
         firstAssistantProcessed = false
     }
 
+    // [HSVM@ENTRY] ===== 用户事件入口（send / event / intent） =====
     fun onInputChanged(text: String) {
         _uiState.update { it.copy(inputText = text) }
     }
@@ -1123,6 +1151,7 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
+    // [HSVM:TINGWU_BATCH_RELEASE]
     private fun handleTranscriptionBatchRelease(
         event: AudioTranscriptionBatchEvent.BatchReleased
     ) {
@@ -1157,6 +1186,7 @@ class HomeScreenViewModel @Inject constructor(
             val existingId = transcriptionBatchMessageId
             val window = released.v1Window
             val timedSegments = released.timedSegments
+            // [HSVM:MACRO_WINDOW_FILTER]
             // V1：发布去重只做宏窗口范围过滤 [absStartMs, absEndMs)，不做文本相似度；不要记录转写文本内容。
             val effectiveChunk = if (enableV1TingwuMacroWindowFilter && window != null && timedSegments != null) {
                 // 重要：timedSegments 的时间基准是录音起点(0ms)，可直接与 absStart/absEnd 比较。
@@ -1319,6 +1349,8 @@ class HomeScreenViewModel @Inject constructor(
         refreshDebugSnapshot()
     }
 
+    // [HSVM@HUD] ===== DebugSnapshot / HUD / trace 输出 =====
+    // [HSVM:DEBUG_SNAPSHOT]
     private fun refreshDebugSnapshot() {
         if (!CHAT_DEBUG_HUD_ENABLED || !_uiState.value.showDebugMetadata) return
         val currentSession = sessionId
@@ -1955,6 +1987,8 @@ class HomeScreenViewModel @Inject constructor(
         )
     }
 
+    // [HSVM@STREAM] ===== Streaming / DisplayDelta 相关 =====
+    // [HSVM:STREAMING_PIPELINE]
     /** 启动 streaming，更新最后一条助手气泡。 */
     private fun startStreamingResponse(
         request: ChatRequest,
@@ -1973,6 +2007,8 @@ class HomeScreenViewModel @Inject constructor(
             }
         }
 
+        // [HSVM@RETRY] ===== Retry loop / terminal 处理 =====
+        // [HSVM:RETRY_LOOP]
         val v1RetryEnabled = enableV1ChatPublisher && request.quickSkillId == null && !isSmartAnalysis
         val v1MaxRetries = if (v1RetryEnabled) 2 else 0
         val v1RetryActive = v1RetryEnabled && v1MaxRetries > 0
@@ -2133,6 +2169,8 @@ class HomeScreenViewModel @Inject constructor(
         )
     }
 
+    // [HSVM@PUBLISH] ===== V1 Chat 发布流水线 =====
+    // [HSVM:CHAT_PUBLISH]
     private suspend fun handleStreamCompleted(
         request: ChatRequest,
         assistantId: String,
@@ -2864,6 +2902,7 @@ class HomeScreenViewModel @Inject constructor(
         return builder.toString().trim()
     }
 
+    // [HSVM@HELPERS] ===== strip/sanitize/parse 等 helper =====
     private fun sanitizeAssistantOutput(raw: String, isSmartAnalysis: Boolean = false): String {
         // 去掉 channel 标签但保留其内容（用于 fallback 模式）
         val withoutTags = raw
@@ -3566,6 +3605,7 @@ class HomeScreenViewModel @Inject constructor(
      * - 优先尝试 <Metadata> 标签内的 JSON，失败则回退到末尾 JSON 块（兼容旧格式）
      * - 仅当存在有效字段时写入 MetaHub
      */
+    // [HSVM@META] ===== Metadata 写入路径（含 L3-only gating） =====
     private suspend fun handleGeneralChatMetadata(
         rawFullText: String,
         metadataJson: String?

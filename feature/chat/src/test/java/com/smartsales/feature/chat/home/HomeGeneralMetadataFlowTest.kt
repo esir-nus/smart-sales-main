@@ -13,6 +13,7 @@ import com.smartsales.core.metahub.SessionTitlePolicy
 import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.data.aicore.ExportResult
+import com.smartsales.data.aicore.AiCoreConfig
 import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.data.aicore.params.InMemoryAiParaSettingsRepository
@@ -72,6 +73,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.Optional
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeGeneralMetadataFlowTest {
@@ -313,6 +315,91 @@ class HomeGeneralMetadataFlowTest {
         val item = viewModel.uiState.value.sessionList.firstOrNull { it.id == sessionId }
         assertNotNull(item)
         assertEquals("采购进展讨论", item?.lastMessagePreview)
+    }
+
+    @Test
+    fun `v1 metadata write is gated by L3 and VALID`() = runTest(dispatcher) {
+        fun buildV1Harness(): Triple<HomeScreenViewModel, QueueingHomeOrchestrator, InMemoryMetaHub> {
+            val v1Orchestrator = QueueingHomeOrchestrator()
+            val v1MetaHub = InMemoryMetaHub()
+            val v1SessionRepo = InMemoryAiSessionRepository()
+            val v1ViewModel = HomeScreenViewModel(
+                appContext = TestContext(),
+                homeOrchestrator = v1Orchestrator,
+                aiSessionRepository = FakeAiSessionRepository(),
+                deviceConnectionManager = FakeDeviceConnectionManager(),
+                mediaSyncCoordinator = FakeMediaSyncCoordinator(),
+                transcriptionCoordinator = FakeTranscriptionCoordinator(),
+                audioStorageRepository = FakeAudioStorageRepository(),
+                quickSkillCatalog = EmptyQuickSkillCatalog(),
+                chatHistoryRepository = FakeChatHistoryRepository(),
+                sessionRepository = v1SessionRepo,
+                sessionTitleResolver = SessionTitleResolver(v1MetaHub),
+                userProfileRepository = FakeUserProfileRepository(),
+                metaHub = v1MetaHub,
+                debugOrchestrator = NoopDebugOrchestrator(),
+                exportOrchestrator = FakeExportOrchestrator(),
+                shareHandler = FakeShareHandler(),
+                xfyunTraceStore = XfyunTraceStore(),
+                tingwuTraceStore = TingwuTraceStore(),
+                aiParaSettingsRepository = InMemoryAiParaSettingsRepository(),
+                xfyunVoiceprintApi = buildNoopXfyunVoiceprintApi(),
+                optionalConfig = Optional.of(AiCoreConfig(enableV1ChatPublisher = true))
+            )
+            return Triple(v1ViewModel, v1Orchestrator, v1MetaHub)
+        }
+
+        val l3Artifact = """
+            {"artifactType":"MachineArtifact","schemaVersion":1,"mode":"L3",
+            "provenance":{"chatSessionId":"s1","turnId":"t1","createdAtMs":0},
+            "metadataPatch":{"main_person":"罗总","short_summary":"首条沟通","summary_title_6chars":"罗总首条","location":"上海"}}
+        """.trimIndent()
+        val (l3ViewModel, l3Orchestrator, l3MetaHub) = buildV1Harness()
+        l3Orchestrator.enqueue(
+            ChatStreamEvent.Completed(
+                "<visible2user>好的</visible2user>\n```json\n$l3Artifact\n```"
+            )
+        )
+
+        l3ViewModel.onInputChanged("客户问询")
+        l3ViewModel.onSendMessage()
+        advanceUntilIdle()
+
+        val sessionId = l3ViewModel.uiState.value.currentSession.id
+        val stored = l3MetaHub.getSession(sessionId)
+        assertNotNull(stored)
+        stored!!
+        assertEquals("罗总", stored.mainPerson)
+        assertEquals("首条沟通", stored.shortSummary)
+
+        val l1Artifact = """
+            {"artifactType":"MachineArtifact","schemaVersion":1,"mode":"L1",
+            "provenance":{"chatSessionId":"s2","turnId":"t2","createdAtMs":1},
+            "metadataPatch":{"main_person":"李总","short_summary":"不应写入"}}
+        """.trimIndent()
+        val (l1ViewModel, l1Orchestrator, l1MetaHub) = buildV1Harness()
+        l1Orchestrator.enqueue(
+            ChatStreamEvent.Completed(
+                "<visible2user>继续</visible2user>\n```json\n$l1Artifact\n```"
+            )
+        )
+        l1ViewModel.onInputChanged("继续沟通")
+        l1ViewModel.onSendMessage()
+        advanceUntilIdle()
+
+        val l1SessionId = l1ViewModel.uiState.value.currentSession.id
+        val afterL1 = l1MetaHub.getSession(l1SessionId)
+        assertNull("L1 不应触发元数据更新", afterL1)
+
+        val (invalidViewModel, invalidOrchestrator, invalidMetaHub) = buildV1Harness()
+        invalidOrchestrator.enqueue(ChatStreamEvent.Completed("缺少标签的输出"))
+        invalidViewModel.onInputChanged("第三轮")
+        invalidViewModel.onSendMessage()
+        advanceUntilIdle()
+
+        val invalidSessionId = invalidViewModel.uiState.value.currentSession.id
+        val afterInvalid = invalidMetaHub.getSession(invalidSessionId)
+        assertNull("INVALID 不应触发元数据更新", afterInvalid)
     }
 
     private class QueueingHomeOrchestrator : HomeOrchestrator {

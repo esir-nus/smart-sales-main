@@ -93,6 +93,7 @@ import com.smartsales.feature.chat.core.publisher.ChatPublisher
 import com.smartsales.feature.chat.core.publisher.ChatPublisherImpl
 import com.smartsales.feature.chat.core.publisher.GeneralChatV1Finalizer
 import com.smartsales.feature.chat.core.publisher.ArtifactStatus
+import com.smartsales.feature.chat.core.publisher.V1FinalizeResult
 import com.smartsales.feature.chat.core.stream.ChatStreamCoordinator
 import com.smartsales.feature.chat.core.transcription.V1BatchIndexPrefixGate
 import com.smartsales.feature.chat.core.transcription.V1TingwuWindowedChunkBuilder
@@ -2207,9 +2208,14 @@ class HomeScreenViewModel @Inject constructor(
         } else {
             null
         }
+        val v1Meta = if (useV1Publisher && isFirstGeneralReply) {
+            handleV1GeneralChatMetadata(v1Result)
+        } else {
+            null
+        }
 
         val latestMeta = if (useV1Publisher) {
-            runCatching { metaHub.getSession(sessionId) }.getOrNull()
+            v1Meta ?: runCatching { metaHub.getSession(sessionId) }.getOrNull()
         } else {
             generalMeta ?: runCatching { metaHub.getSession(sessionId) }.getOrNull()
         }
@@ -3618,6 +3624,40 @@ class HomeScreenViewModel @Inject constructor(
         }
         val parsed = candidates.firstNotNullOfOrNull { parseGeneralChatMetadata(it, sessionId) }
         val metadata = parsed?.takeIf { it.hasMeaningfulGeneralFields() } ?: return null
+        val patch = metadata.copy(
+            latestMajorAnalysisSource = AnalysisSource.GENERAL_FIRST_REPLY,
+            latestMajorAnalysisAt = System.currentTimeMillis()
+        )
+        val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
+        val merged = existing?.mergeWith(patch) ?: patch
+        runCatching { metaHub.upsertSession(merged) }
+            .onSuccess { updateDebugSessionMetadata(merged) }
+            .onFailure {
+                warnLog(
+                    event = "metahub_upsert_failed",
+                    data = mapOf("sessionId" to sessionId, "target" to "session"),
+                    throwable = it
+                )
+                appendDebugNote("sessionMetaUpsertFailed")
+            }
+        return merged
+    }
+
+    private suspend fun handleV1GeneralChatMetadata(
+        result: V1FinalizeResult?
+    ): SessionMetadata? {
+        if (result == null) return null
+        // 仅 L3 才允许写入元数据：与 V1 解析器输入一致，避免 L1/L2 误触发更新。
+        // INVALID/FAILED 必须禁止写入，避免污染 MetadataHub 的确定性状态。
+        if (result.artifactStatus != ArtifactStatus.VALID) return null
+        val artifactJson = result.artifactJson?.takeIf { it.isNotBlank() } ?: return null
+        val obj = runCatching { org.json.JSONObject(artifactJson) }.getOrNull() ?: return null
+        if (obj.optString("mode") != "L3") return null
+        // 禁止启发式/legacy <Metadata> 触发写入；V1 仅允许 MachineArtifact.metadataPatch。
+        val patchObj = obj.optJSONObject("metadataPatch") ?: return null
+        val metadata = parseGeneralChatMetadata(patchObj.toString(), sessionId)
+            ?.takeIf { it.hasMeaningfulGeneralFields() }
+            ?: return null
         val patch = metadata.copy(
             latestMajorAnalysisSource = AnalysisSource.GENERAL_FIRST_REPLY,
             latestMajorAnalysisAt = System.currentTimeMillis()

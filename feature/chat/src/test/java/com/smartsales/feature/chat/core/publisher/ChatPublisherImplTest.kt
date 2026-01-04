@@ -14,12 +14,11 @@ class ChatPublisherImplTest {
 
     private val publisher = ChatPublisherImpl()
     private val validArtifactJson =
-        """{"artifactType":"MachineArtifact","schemaVersion":1,"mode":"L1","provenance":{"chatSessionId":"cs1","turnId":"t1","createdAtMs":0}}"""
+        """{"artifactType":"MachineArtifact","schemaVersion":1,"mode":"L3","provenance":{"chatSessionId":"cs1","turnId":"t1","createdAtMs":0}}"""
     private val validArtifactJsonAlt =
-        """{"artifactType":"MachineArtifact","schemaVersion":1,"mode":"L1","provenance":{"chatSessionId":"cs2","turnId":"t2","createdAtMs":1}}"""
+        """{"artifactType":"MachineArtifact","schemaVersion":1,"mode":"L3","provenance":{"chatSessionId":"cs2","turnId":"t2","createdAtMs":1}}"""
     private val invalidArtifactMissingProvenance =
-        """{"artifactType":"MachineArtifact","schemaVersion":1,"mode":"L1"}"""
-
+        """{"artifactType":"MachineArtifact","schemaVersion":1,"mode":"L3"}"""
     @Test
     fun `happy path extracts visible2user and json fence`() {
         val raw = """
@@ -35,6 +34,22 @@ class ChatPublisherImplTest {
         assertEquals(validArtifactJson, result.machineArtifactJson)
         assertEquals(ArtifactStatus.VALID, result.artifactStatus)
         assertNull(result.failureReason)
+    }
+
+    @Test
+    fun `first complete visible2user wins`() {
+        val raw = """
+            <visible2user>First</visible2user>
+            <visible2user>Second</visible2user>
+            ```json
+            $validArtifactJson
+            ```
+        """.trimIndent()
+
+        val result = publisher.publish(raw)
+
+        assertEquals("First", result.displayMarkdown)
+        assertEquals(ArtifactStatus.VALID, result.artifactStatus)
     }
 
     @Test
@@ -57,19 +72,23 @@ class ChatPublisherImplTest {
     }
 
     @Test
-    fun `missing json fence yields invalid artifact`() {
-        val raw = "<visible2user>Hello</visible2user>"
+    fun `missing visible2user yields invalid`() {
+        val raw = """
+            Hello
+            ```json
+            $validArtifactJson
+            ```
+        """.trimIndent()
 
         val result = publisher.publish(raw)
 
-        assertEquals("Hello", result.displayMarkdown)
-        assertNull(result.machineArtifactJson)
+        assertEquals("", result.displayMarkdown)
         assertEquals(ArtifactStatus.INVALID, result.artifactStatus)
-        assertEquals("missing_json_fence", result.failureReason)
+        assertEquals("missing_visible2user", result.failureReason)
     }
 
     @Test
-    fun `malformed visible2user yields empty draft`() {
+    fun `malformed visible2user yields invalid`() {
         val raw = """
             <visible2user>Hello
             ```json
@@ -81,23 +100,36 @@ class ChatPublisherImplTest {
 
         assertEquals("", result.displayMarkdown)
         assertEquals(validArtifactJson, result.machineArtifactJson)
-        assertEquals(ArtifactStatus.VALID, result.artifactStatus)
+        assertEquals(ArtifactStatus.INVALID, result.artifactStatus)
+        assertEquals("malformed_visible2user", result.failureReason)
     }
 
     @Test
-    fun `empty visible2user is not extractable`() {
+    fun `l3 missing json fence yields invalid`() {
         val raw = """
-            <visible2user>   </visible2user>
-            ```json
-            $validArtifactJson
-            ```
+            <visible2user>Hello</visible2user>
         """.trimIndent()
 
         val result = publisher.publish(raw)
 
-        assertEquals("", result.displayMarkdown)
-        assertEquals(validArtifactJson, result.machineArtifactJson)
-        assertEquals(ArtifactStatus.VALID, result.artifactStatus)
+        assertEquals("Hello", result.displayMarkdown)
+        assertNull(result.machineArtifactJson)
+        assertEquals(ArtifactStatus.INVALID, result.artifactStatus)
+        assertEquals("missing_json_fence", result.failureReason)
+    }
+
+    @Test
+    fun `l1 missing json fence does not invalidate`() {
+        val raw = """
+            <visible2user>Hello</visible2user>
+        """.trimIndent()
+
+        val result = publisher.publish(raw)
+
+        assertEquals("Hello", result.displayMarkdown)
+        assertNull(result.machineArtifactJson)
+        assertEquals(ArtifactStatus.INVALID, result.artifactStatus)
+        assertEquals("missing_json_fence", result.failureReason)
     }
 
     @Test

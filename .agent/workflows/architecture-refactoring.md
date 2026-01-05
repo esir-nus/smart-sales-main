@@ -1,140 +1,111 @@
 ---
-description: Architecture refactoring workflow - clean up god files, create domain layer
+description: Architecture refactoring workflow - evolve to Clean Architecture per V1 spec
 ---
 
 # Architecture Refactoring Workflow
 
+## Reference Documents
+
+| Document | Purpose |
+|----------|---------|
+| `docs/ArchitectureRefactoring.md` | **North Star** - Vision, target structure, milestones |
+| `docs/Orchestrator-V1.md` | Module definitions and contracts |
+| `docs/CHANGELOG.md` | Wave history and dev log |
+
+---
+
 ## Pre-Flight Checklist
+
 // turbo
-1. Read the tracker: `cat docs/ArchitectureRefactoring.md`
+1. Read the North Star: `cat docs/ArchitectureRefactoring.md`
 // turbo
-2. Check current phase status (look for `[ ]` incomplete items)
-3. Read Orchestrator-V1.md if working on transcription modules: `docs/Orchestrator-V1.md`
+2. Check current milestone progress (look for unchecked `[ ]` items)
+3. Review V1 module mapping to identify next extraction target
 
 ---
 
 ## Guardrails (MUST FOLLOW)
 
-### File Size Limits
-- **Hard limit**: No file > 500 lines after refactoring
-- **Soft target**: Prefer files < 300 lines
+### Quality Over Quantity
+- Focus on clean separation, not line counts
+- Only extract when it improves testability or clarity
 
-### Naming Conventions
-- UseCases: `[Action][Domain]UseCase.kt` (e.g., `SendChatMessageUseCase.kt`)
-- Repositories: `[Domain]Repository.kt` (e.g., `TingwuBatchRepository.kt`)
-- Package: `domain/[feature]/` for UseCases
+### Layer Rules
+- **Domain layer**: Pure Kotlin, no Android imports
+- **ViewModel**: Routing + state only, no business logic
+- **Data layer**: I/O only, no business logic
 
-### Do NOT
-- Create circular dependencies between domain and feature layers
-- Put Android dependencies in domain layer
-- Create "manager" or "helper" classes (use UseCases instead)
-- Skip build verification after each extraction
+### Naming (V1 Aligned)
+- Parsers: `[Domain]Parser.kt` (e.g., `SmartAnalysisParser.kt`)
+- Coordinators: `[Domain]Coordinator.kt` (e.g., `TranscriptionCoordinator.kt`)
+- UseCases: `[Action]UseCase.kt` (e.g., `DisectorUseCase.kt`)
 
-### Do
-- Verify build after EVERY extraction: `./gradlew :feature:chat:compileDebugKotlin`
-- Update `docs/ArchitectureRefactoring.md` checkboxes as you complete items
-- Keep existing functionality intact (no behavior changes)
-- Follow Orchestrator-V1 module names for transcription-related code
+### Hard Rules
+- Build must pass after EVERY change: `./gradlew :feature:chat:compileDebugKotlin`
+- No behavior changes during refactoring
+- Update North Star when structure changes
 
 ---
 
-## Phase 1: Split RealTingwuCoordinator
+## Execution Steps
 
-Target file: `data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt`
+### Step 1: Identify Target
+1. Check V1 module mapping in North Star
+2. Find first 🔲 PLANNED or ⚠️ Mixed item
+3. Analyze current code for extraction opportunity
 
-### Step 1.1: Create domain package
-```bash
-mkdir -p feature/chat/src/main/java/com/smartsales/domain/transcription
-```
-
-### Step 1.2: Extract DisectorUseCase
-1. Find Disector logic in RealTingwuCoordinator (batch splitting)
-2. Create `domain/transcription/DisectorUseCase.kt`
-3. Move batch splitting logic (aligns with Orchestrator-V1 Appendix A)
+### Step 2: Extract
+1. Create new file in appropriate `domain/` package
+2. Move pure logic (no state dependencies)
+3. Keep state management in ViewModel/Coordinator
 // turbo
 4. Verify build: `./gradlew :feature:chat:compileDebugKotlin`
 
-### Step 1.3: Extract TingwuRunnerRepository
-1. Find Tingwu API call logic
-2. Create `data/ai-core/.../tingwu/TingwuRunnerRepository.kt`
-3. Move API interaction code
+### Step 3: Test
+1. Create unit test in parallel `test/` directory
+2. Cover happy path + edge cases
 // turbo
-4. Verify build
+3. Run tests: `./gradlew :feature:chat:testDebugUnitTest`
 
-### Step 1.4: Extract SanitizerUseCase
-1. Find sanitization logic (display cleanup)
-2. Create `domain/transcription/SanitizerUseCase.kt`
-// turbo
-3. Verify build
-
-### Step 1.5: Extract TranscriptPublisherUseCase
-1. Find continuous prefix publishing logic (Appendix B)
-2. Create `domain/transcription/TranscriptPublisherUseCase.kt`
-// turbo
-3. Verify build
-
-### Step 1.6: Update tracker
-Mark Phase 1 items as [x] in docs/ArchitectureRefactoring.md
+### Step 4: Document
+1. Update North Star module mapping (🔲 → ✅)
+2. Log in CHANGELOG.md
+3. Commit with descriptive message
 
 ---
 
-## Phase 2: Slim HomeScreenViewModel
+## Milestone Verification
 
-Target file: `feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreenViewModel.kt`
-
-### Step 2.1: Create chat domain package
+### M1: Domain Completeness
 ```bash
-mkdir -p feature/chat/src/main/java/com/smartsales/domain/chat
+# Check all domain files exist
+ls -la feature/chat/src/main/java/com/smartsales/domain/*/
+# Verify no Android imports in domain
+grep -r "android\." feature/chat/src/main/java/com/smartsales/domain/ || echo "Clean!"
 ```
 
-### Step 2.2: Extract SendChatMessageUseCase
-1. Find `sendMessageInternal` and related functions
-2. Create `domain/chat/SendChatMessageUseCase.kt`
-3. Move message sending logic
-// turbo
-4. Verify build
-
-### Step 2.3: Extract StreamChatResponseUseCase
-1. Find streaming/retry logic
-2. Create `domain/chat/StreamChatResponseUseCase.kt`
-// turbo
-3. Verify build
-
-### Step 2.4: Refactor ViewModel to routing
-1. HomeScreenViewModel should only:
-   - Hold UI state
-   - Route user intents to UseCases
-   - Observe UseCase results
-2. Target: < 500 lines
-// turbo
-3. Verify build
-
----
-
-## Post-Refactoring Checklist
-
-// turbo
-1. Run full build: `./gradlew assembleDebug`
-// turbo
-2. Run tests: `./gradlew testDebugUnitTest`
-3. Update `docs/ArchitectureRefactoring.md` with completion status
-4. Verify no file exceeds 500 lines: `wc -l <files>`
+### M2: ViewModel Purity
+```bash
+# Check ViewModel line counts
+wc -l feature/chat/src/main/java/com/smartsales/feature/chat/home/*ViewModel.kt
+# Look for business logic (manual review)
+```
 
 ---
 
 ## Recovery: If Build Breaks
 
-1. Check error message carefully
-2. Common issues:
-   - Missing imports → Add import statement
-   - Unresolved reference → Check if function was moved, update call site
-   - Circular dependency → Refactor interface to break cycle
-3. If stuck, revert last change and try smaller extraction
+1. Check error message for unresolved references
+2. Common fixes:
+   - Missing import → Add import
+   - Circular dependency → Extract interface
+   - Moved function → Update call sites
+3. If stuck, revert: `git checkout -- <file>`
 
 ---
 
-## Reference Files
+## Escape Hatches
 
-- `docs/ArchitectureRefactoring.md` - Tracker (source of truth for progress)
-- `docs/Orchestrator-V1.md` - Module definitions for transcription
-- `docs/orchestrator-v1.schema.json` - Data contracts
+- Combine files if extraction creates too much fragmentation
+- Rename packages if clearer name emerges
+- Reorder priorities based on business needs

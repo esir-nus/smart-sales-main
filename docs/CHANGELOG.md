@@ -89,3 +89,67 @@ Updated documentation system to ensure V1 is CURRENT and consistent, V7 is ARCHI
 - `docs/role-contract.md` - Unchanged
 - `docs/orchestrator-sample-response.md` - Unchanged
 
+---
+
+## Architecture Refactoring Log
+
+> Detailed history of architecture refactoring waves. North Star is in [ArchitectureRefactoring.md](./ArchitectureRefactoring.md).
+
+### Summary Metrics
+
+| Metric | Original | Current | Change |
+|--------|----------|---------|--------|
+| HomeScreenViewModel | 3668 lines | 2553 lines | **-30.4%** |
+| HomeScreen.kt | 2547 lines | 2220 lines | -12.9% |
+| Domain classes | 4 | 13 | +9 |
+| Unit tests | 0 | 48+ | New |
+
+---
+
+### Phase 1: RealTingwuCoordinator Split ✅
+- Extracted `TingwuRunnerRepository`, `TranscriptPublisherUseCase`
+
+### Hilt DI Fix ✅
+- Converted 4 ViewModels to domain coordinators
+
+### Wave 1: ChatMessageBuilder ✅
+- Extracted 3 pure helper functions (~65 lines)
+
+### Wave 2: InputClassifier ✅
+- Extracted 5 classification functions (~145 lines)
+
+### Wave 3: ChatPublisher ✅
+- Created V1-aligned `ChatPublisher.kt` (~140 lines)
+- Removed 700 lines of legacy heuristic sanitizer
+
+### Wave 4: MetadataParser ✅
+- Extracted pure JSON parsing (~100 lines)
+
+### Wave 5: Typed Error Model ✅
+- Created `ChatError.kt` sealed class (~60 lines)
+
+### Wave 6: HUD Delegation Cleanup ✅
+- Removed wrapper function (~14 lines)
+
+### Wave 8A: Extraction Consolidation ✅
+- Consolidated `extractMetadataJson` and `extractChannels` into `ChatPublisher`
+
+### Wave 9: Display Resolution Extraction ✅
+- Added `resolveDisplayText` to `ChatPublisher`
+
+### Wave 10: Voiceprint Removal ✅
+- Removed 4 deprecated voiceprint functions (~138 lines)
+- Deleted `VoiceprintLabPanel` component (~327 lines)
+
+### Wave 11: Dead Code Removal ✅
+- Removed 3 unused functions (-56 lines)
+
+### Wave 12: Stale Comment Cleanup ✅
+- Removed 24 "moved to" comments
+
+### Wave 13: Blank Line Compression ✅
+- Removed 27 consecutive blank lines
+
+### Wave 14: Duplicate Header Cleanup ✅
+- Removed duplicate file header and stale comments (-8 lines)
+

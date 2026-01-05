@@ -1,107 +1,176 @@
-# Architecture Refactoring Tracker
+# Architecture Evolution Guide
 
-**Goal**: Clean, production-grade Android architecture  
-**Scope**: Align with Orchestrator-V1 spec, modularize god files  
-**Status**: ✅ Waves 1-6 Complete - 23% Reduction Achieved  
-**Last Updated**: 2026-01-05
-
----
-
-## Progress Summary
-
-| Metric | Before | After | Change |
-|--------|--------|-------|--------|
-| HomeScreenViewModel | 3668 lines | **2818 lines** | -850 (-23%) |
-| RealTingwuCoordinator | ~1990 lines | ~1870 lines | -120 (-6%) |
-| Domain layer classes | 4 | **13** | +9 |
-| Unit test coverage | 0 | **35 tests** | New ✅ |
+> **Purpose**: North Star for Smart Sales architecture evolution  
+> **Spec Alignment**: Orchestrator-V1.md (v1.2.0)  
+> **Approach**: Prescriptive with escape hatches
 
 ---
 
-## Completed Work
+## 1. Vision
 
-### Phase 1: RealTingwuCoordinator Split ✅
-- Extracted `TingwuRunnerRepository`, `TranscriptPublisherUseCase`
-
-### Hilt DI Fix ✅
-- Converted 4 ViewModels to domain coordinators
-
-### Wave 1: ChatMessageBuilder ✅
-- Extracted 3 pure helper functions (~65 lines)
-
-### Wave 2: InputClassifier ✅
-- Extracted 5 classification functions (~145 lines)
-
-### Wave 3: ChatPublisher ✅
-- Created V1-aligned `ChatPublisher.kt` (~140 lines)
-- **Removed 700 lines** of legacy heuristic sanitizer
-
-### Wave 4: MetadataParser ✅
-- Extracted pure JSON parsing (~100 lines)
-
-### Wave 5: Typed Error Model ✅
-- Created `ChatError.kt` sealed class (~60 lines)
-- 15 typed error cases
-
-### Wave 6: HUD Delegation Cleanup ✅
-- Removed wrapper function (~14 lines)
-
-### Unit Tests ✅
-- 35 test cases across 3 domain classes
+Transform from ViewModel-centric "god files" to **Clean Architecture** where:
+- ViewModels are routing + state only (no business logic)
+- Domain layer owns all business logic (testable, spec-aligned)
+- Data layer handles I/O only
 
 ---
 
-## Production-Grade Score: 8.5/10 ✅
+## 2. Target Architecture
 
-**Strengths:**
-- ✅ Clean layer separation
-- ✅ Testable domain modules
-- ✅ V1 spec alignment
-- ✅ Typed error model
-
----
-
-## Completed Work (continued)
-
-### Wave 8A: Extraction Consolidation ✅
-- Consolidated `extractMetadataJson` and `extractChannels` into `ChatPublisher`
-- Removed duplicate functions from HomeScreenViewModel (-12 lines)
-- Added 6 new unit tests (now 21 ChatPublisher tests total)
-
-### Wave 9: Display Resolution Extraction ✅
-- Added `resolveDisplayText` to `ChatPublisher` for V1/legacy text resolution
-- Refactored `handleStreamCompleted` to delegate display logic
-- Added 6 new unit tests (now 27 ChatPublisher tests total)
-
-### Wave 10: Voiceprint Removal ✅
-- Removed 4 deprecated voiceprint functions from HomeScreenViewModel (~138 lines)
-- Removed voiceprint imports, constructor params, and UI state fields
-- Deleted `VoiceprintLabPanel` component from HomeScreen.kt (~327 lines)
-
-### Wave 11: Dead Code Removal ✅
-- Removed 3 unused functions: `getGreetingResponse`, `stripTrailingJsonFromGeneralReply`, `buildTranscriptContext`
-- Total: 56 lines removed
-
----
-
-## Current Metrics
-
-| File | Original | Current | Reduction |
-|------|----------|---------|-----------|
-| HomeScreenViewModel | 3668 | 2611 | **-28.8%** |
-| HomeScreen.kt | 2547 | 2220 | -12.9% |
-| ChatPublisher | - | 238 | +238 (new) |
+```
+┌─────────────────────────────────────────┐
+│  UI Layer (Compose)                     │
+│  • Stateless render of ViewModel state  │
+└─────────────────┬───────────────────────┘
+                  │
+┌─────────────────▼───────────────────────┐
+│  ViewModel Layer                        │
+│  • Hold StateFlow                       │
+│  • Route intents to domain              │
+│  • Observe domain results               │
+│  • NO business logic                    │
+└─────────────────┬───────────────────────┘
+                  │
+┌─────────────────▼───────────────────────┐
+│  Domain Layer (pure Kotlin)             │
+│  • Coordinators (stateful flows)        │
+│  • Parsers/Transformers (pure funcs)    │
+│  • No Android dependencies              │
+└─────────────────┬───────────────────────┘
+                  │
+┌─────────────────▼───────────────────────┐
+│  Data Layer                             │
+│  • Repositories (API/DB)                │
+│  • No business logic                    │
+└─────────────────────────────────────────┘
+```
 
 ---
 
-## Next Steps
+## 3. Target File Structure
 
-**Continue extraction**:
-1. Extract `sendMessageInternal` (~78 lines) → `MessageSender` domain class
-2. Extract `updateDebugSessionMetadata` (~66 lines) → `DebugMetadataManager`
-3. Further transcription logic consolidation
+### Domain Layer (`domain/`)
 
-- HomeScreenViewModel: 2805 → 400 lines (still ~2400 to go)
-- Wave 10+: Further streaming/metadata extraction opportunities
+```
+domain/
+├── chat/                        # General Chat Pipeline (V1 §5)
+│   ├── ChatPublisher.kt         ✅ EXISTS
+│   ├── ChatMessageBuilder.kt    ✅ EXISTS
+│   ├── InputClassifier.kt       ✅ EXISTS
+│   ├── MetadataParser.kt        ✅ EXISTS
+│   └── SmartAnalysisParser.kt   🔲 PLANNED
+│
+├── transcription/               # Tingwu Pipeline (V1 §6)
+│   ├── DisectorUseCase.kt       🔲 PLANNED
+│   ├── SanitizerUseCase.kt      ✅ EXISTS
+│   ├── TranscriptPublisher.kt   🔲 PLANNED
+│   └── TranscriptionCoordinator.kt ✅ EXISTS
+│
+├── debug/
+│   └── DebugCoordinator.kt      ✅ EXISTS
+│
+├── export/
+│   └── ExportCoordinator.kt     ✅ EXISTS
+│
+└── sessions/
+    └── SessionsRepository.kt    🔲 FUTURE
+```
 
+### Feature Layer (`feature/chat/`)
 
+```
+feature/chat/
+├── home/
+│   ├── HomeScreenViewModel.kt   ✅ EXISTS (target: routing only)
+│   ├── HomeScreen.kt            ✅ EXISTS
+│   ├── HomeUiState.kt           ✅ EXISTS
+│   ├── orchestrator/
+│   │   └── HomeOrchestratorImpl.kt ✅ EXISTS (target: slim)
+│   ├── debug/DebugViewModel.kt  ✅ EXISTS
+│   ├── export/ExportViewModel.kt ✅ EXISTS
+│   └── transcription/TranscriptionViewModel.kt ✅ EXISTS
+│
+└── core/
+    └── stream/ChatStreamCoordinator.kt ✅ EXISTS
+```
+
+### Data Layer (`data/ai-core/`)
+
+```
+data/ai-core/
+├── tingwu/
+│   ├── TingwuRunnerRepository.kt ✅ EXISTS
+│   └── TingwuBatchRepository.kt 🔲 PLANNED
+├── dashscope/                   ✅ EXISTS
+└── oss/                         ✅ EXISTS
+```
+
+---
+
+## 4. V1 Module → File Mapping
+
+| V1 Module | File | Status |
+|-----------|------|--------|
+| AI Chatter (§3.1.1) | `HomeOrchestratorImpl` | ⚠️ Mixed |
+| SmartAnalysis (§3.1.2) | `SmartAnalysisParser` | 🔲 Extract |
+| LLM Parser (§3.1.3) | `MetadataParser` | ✅ Done |
+| Disector (§3.2.1) | `DisectorUseCase` | 🔲 Create |
+| Tingwu Runner (§3.2.2) | `TingwuRunnerRepository` | ✅ Done |
+| Sanitizer (§3.2.3) | `SanitizerUseCase` | ✅ Done |
+| ChatPublisher (§3.2.4) | `ChatPublisher` | ✅ Done |
+| TranscriptPublisher (§3.2.4) | `TranscriptPublisher` | 🔲 Create |
+
+---
+
+## 5. Milestones
+
+### M1: Domain Completeness ⏳
+**Criteria:**
+- [ ] All V1 modules have corresponding domain files
+- [ ] `SmartAnalysisParser` extracted from orchestrator
+- [ ] `DisectorUseCase` implements V1 Appendix A rules
+
+**Verification:** Each domain file has unit tests
+
+---
+
+### M2: ViewModel Purity ⏳
+**Criteria:**
+- [ ] HomeScreenViewModel contains no `if/when` business logic
+- [ ] All business decisions delegated to domain layer
+- [ ] ViewModel < 800 lines
+
+**Verification:** Code review passes "can I test this without mocking Android?"
+
+---
+
+### M3: Full V1 Alignment ⏳
+**Criteria:**
+- [ ] All module mappings show ✅
+- [ ] Data contracts match `orchestrator-v1.schema.json`
+- [ ] Unit test coverage > 80% for domain layer
+
+---
+
+## 6. Escape Hatches
+
+- **Combine if too granular** — Don't create 10-line files
+- **Package names advisory** — Can rename if clearer
+- **Priority order flexible** — Business needs may reorder
+
+---
+
+## 7. Constraints (Hard Rules)
+
+1. **Build must pass after every change**
+2. **No behavior changes during refactoring**
+3. **Domain layer has no Android imports**
+4. **Update this doc when structure changes**
+
+---
+
+## 8. References
+
+- [Orchestrator-V1.md](./Orchestrator-V1.md) — Module definitions
+- [orchestrator-v1.schema.json](./orchestrator-v1.schema.json) — Data contracts
+- [CHANGELOG.md](./CHANGELOG.md) — Wave history and dev log

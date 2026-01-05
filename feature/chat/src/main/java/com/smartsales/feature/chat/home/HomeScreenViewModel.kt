@@ -132,8 +132,9 @@ private const val TAG = "HomeScreenVM"
 private const val SMART_PLACEHOLDER_TEXT = "正在智能分析当前会话内容…"
 private const val SMART_ANALYSIS_FAILURE_TEXT = "本次智能分析暂时不可用，请稍后重试。"
 
-private enum class InputBucket { NOISE, SHORT_RELEVANT, RICH }
-private data class AnalysisTarget(val content: String, val source: String)
+// InputBucket and AnalysisTarget moved to domain/chat/InputClassifier.kt
+private typealias InputBucket = com.smartsales.domain.chat.InputBucket
+private typealias AnalysisTarget = com.smartsales.domain.chat.AnalysisTarget
 
 private fun defaultExportGateState(): ExportGateState {
     val resolution = ExportNameResolver.resolve(
@@ -242,10 +243,10 @@ class HomeScreenViewModel @Inject constructor(
     private val tingwuTraceStore: TingwuTraceStore,
     private val aiParaSettingsRepository: AiParaSettingsRepository,
     private val xfyunVoiceprintApi: XfyunVoiceprintApi,
-    private val exportViewModel: com.smartsales.feature.chat.home.export.ExportViewModel,
-    private val debugViewModel: com.smartsales.feature.chat.home.debug.DebugViewModel,
-    private val sessionsViewModel: com.smartsales.feature.chat.home.sessions.SessionsViewModel,
-    private val transcriptionViewModel: com.smartsales.feature.chat.home.transcription.TranscriptionViewModel,
+    private val exportCoordinator: com.smartsales.domain.export.ExportCoordinator,
+    private val debugCoordinator: com.smartsales.domain.debug.DebugCoordinator,
+    private val sessionsManager: com.smartsales.domain.sessions.SessionsManager,
+    private val tingwuCoordinator: com.smartsales.domain.transcription.TranscriptionCoordinator,
     optionalConfig: Optional<AiCoreConfig> = Optional.empty(),
 ) : ViewModel() {
 
@@ -328,7 +329,7 @@ class HomeScreenViewModel @Inject constructor(
         }
         if (resolvedInput.isNullOrBlank()) return
         // 低信息输入：不调用模型，避免无意义消耗与噪声对话
-        if (selectedSkill == null && isLowInfoGeneralChatInput(resolvedInput)) {
+        if (selectedSkill == null && com.smartsales.domain.chat.InputClassifier.isLowInfoGeneralChatInput(resolvedInput)) {
             handleLowInfoGeneralChatInput()
             return
         }
@@ -341,8 +342,8 @@ class HomeScreenViewModel @Inject constructor(
     private fun handleSmartAnalysisSend(rawInput: String) {
         if (_uiState.value.isSending) return
         val goal = rawInput.trim()
-        val bucket = classifyUserInput(goal.ifBlank { _uiState.value.inputText }, _uiState.value.chatMessages)
-        val target = findSmartAnalysisPrimaryContent(goal)
+        val bucket = com.smartsales.domain.chat.InputClassifier.classifyUserInput(goal.ifBlank { _uiState.value.inputText }, _uiState.value.chatMessages)
+        val target = com.smartsales.domain.chat.InputClassifier.findSmartAnalysisPrimaryContent(goal, _uiState.value.chatMessages)
         if (target == null) {
             if (!hasShownLowInfoSmartAnalysisHint) {
                 hasShownLowInfoSmartAnalysisHint = true
@@ -352,7 +353,7 @@ class HomeScreenViewModel @Inject constructor(
             _uiState.update { it.copy(isSmartAnalysisMode = false, selectedSkill = null, inputText = "") }
             return
         }
-        val isLowInfoGoal = goal.isNotBlank() && isLowInfoAnalysisInput(goal)
+        val isLowInfoGoal = goal.isNotBlank() && com.smartsales.domain.chat.InputClassifier.isLowInfoAnalysisInput(goal)
         val analysisGoal = if (goal.isNotBlank() && !isLowInfoGoal) goal else "通用分析"
         val hasCustomGoal = goal.isNotBlank() && !isLowInfoGoal
         val preface = if (goal.isBlank() || isLowInfoGoal || bucket == InputBucket.NOISE) {
@@ -366,7 +367,7 @@ class HomeScreenViewModel @Inject constructor(
                 "primarySource" to target.source
             )
         )
-        val contextContent = findContextForAnalysis(target.content)
+        val contextContent = com.smartsales.domain.chat.InputClassifier.findContextForAnalysis(target.content, _uiState.value.chatMessages)
         val userMessage = buildSmartAnalysisUserMessage(
             mainContent = target.content,
             context = contextContent,
@@ -396,12 +397,12 @@ class HomeScreenViewModel @Inject constructor(
         if (_uiState.value.isSending || _uiState.value.isStreaming || exportAutoAnalysisInFlight) {
             return false
         }
-        val target = findSmartAnalysisPrimaryContent("")
+        val target = com.smartsales.domain.chat.InputClassifier.findSmartAnalysisPrimaryContent("", _uiState.value.chatMessages)
         if (target == null) {
             _uiState.update { it.copy(snackbarMessage = "内容太少，无法智能分析，已取消导出") }
             return false
         }
-        val contextContent = findContextForAnalysis(target.content)
+        val contextContent = com.smartsales.domain.chat.InputClassifier.findContextForAnalysis(target.content, _uiState.value.chatMessages)
         val userMessage = buildSmartAnalysisUserMessage(
             mainContent = target.content,
             context = contextContent,
@@ -437,7 +438,7 @@ class HomeScreenViewModel @Inject constructor(
         if (_uiState.value.exportInProgress) return
         viewModelScope.launch {
             // Check export gate via ExportViewModel
-            val gate = exportViewModel.checkExportGate(sessionId)
+            val gate = exportCoordinator.checkExportGate(sessionId)
             
             if (gate.ready) {
                 // Gate passed: prepare markdown and export
@@ -450,7 +451,7 @@ class HomeScreenViewModel @Inject constructor(
                     buildTranscriptMarkdown(_uiState.value.chatMessages)
                 }
                 _uiState.update { it.copy(exportInProgress = true) }
-                val result = exportViewModel.performExport(sessionId, format, _uiState.value.userName, markdown)
+                val result = exportCoordinator.performExport(sessionId, format, _uiState.value.userName, markdown)
                 when (result) {
                     is Result.Success -> _uiState.update { it.copy(exportInProgress = false) }
                     is Result.Error -> _uiState.update { 
@@ -516,10 +517,7 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     private fun wrapSmartAnalysisForExport(body: String): String =
-        buildString {
-            append("智能分析结果\n\n")
-            append(body.trim())
-        }.trim()
+        com.smartsales.domain.chat.ChatMessageBuilder.wrapSmartAnalysisForExport(body)
 
     // resolveExportGateState and refreshExportGateState moved to ExportViewModel
 
@@ -528,7 +526,7 @@ class HomeScreenViewModel @Inject constructor(
         if (exportAutoAnalysisInFlight || _uiState.value.isSending || _uiState.value.isStreaming) return
         // 说明：导出被排队时，等待对话空闲后再自动触发智能分析。
         viewModelScope.launch {
-            val gate = exportViewModel.checkExportGate(sessionId)
+            val gate = exportCoordinator.checkExportGate(sessionId)
             if (gate.ready) {
                 // Gate ready: trigger export immediately
                 pendingExportAfterAnalysis = null
@@ -539,7 +537,7 @@ class HomeScreenViewModel @Inject constructor(
                     buildTranscriptMarkdown(_uiState.value.chatMessages)
                 }
                 _uiState.update { it.copy(exportInProgress = true) }
-                val result = exportViewModel.performExport(sessionId, pending, _uiState.value.userName, markdown)
+                val result = exportCoordinator.performExport(sessionId, pending, _uiState.value.userName, markdown)
                 when (result) {
                     is Result.Success -> _uiState.update { it.copy(exportInProgress = false) }
                     is Result.Error -> _uiState.update {
@@ -561,7 +559,7 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     // exportMarkdown and performExport moved to ExportViewModel
-    // Export flow now handled by onExportRequested -> exportViewModel.checkExportGate/performExport
+    // Export flow now handled by onExportRequested -> exportCoordinator.checkExportGate/performExport
 
     private fun findSmartAnalysisMarkdownForExport(): String? {
         latestAnalysisMarkdown?.takeIf { it.isNotBlank() }?.let { return it }
@@ -778,7 +776,7 @@ class HomeScreenViewModel @Inject constructor(
     fun onTranscriptionRequested(request: TranscriptionChatRequest) {
         viewModelScope.launch {
             lastTranscriptionJobId = request.jobId
-            transcriptionViewModel.reset()
+            tingwuCoordinator.reset()
             refreshDebugSnapshot()
             val transcript = request.transcriptMarkdown ?: request.transcriptPreview
             val targetSessionId = request.sessionId ?: DEFAULT_SESSION_ID
@@ -900,17 +898,17 @@ class HomeScreenViewModel @Inject constructor(
                 }
                 persistMessagesAsync()
                 // Start transcription observation via TranscriptionViewModel
-                transcriptionViewModel.reset()
-                transcriptionViewModel.startTranscription(request.jobId)
+                tingwuCoordinator.reset()
+                tingwuCoordinator.startTranscription(request.jobId)
                 // Observe processed batches
                 launch {
-                    transcriptionViewModel.observeProcessedBatches(request.jobId).collect { batch ->
+                    tingwuCoordinator.observeProcessedBatches(request.jobId).collect { batch ->
                         handleProcessedBatch(batch)
                     }
                 }
                 // Observe job state
                 launch {
-                    transcriptionViewModel.observeJob(request.jobId).collectLatest { state ->
+                    tingwuCoordinator.observeJob(request.jobId).collectLatest { state ->
                         when (state) {
                             AudioTranscriptionJobState.Idle -> Unit
                             is AudioTranscriptionJobState.InProgress -> updateAssistantMessage(introId) { msg ->
@@ -967,12 +965,12 @@ class HomeScreenViewModel @Inject constructor(
     private fun handleProcessedBatch(batch: com.smartsales.feature.chat.home.transcription.ProcessedBatch) {
         val effectiveChunk = batch.effectiveChunk
         val isFinal = batch.isFinal
-        val currentMessageId = transcriptionViewModel.state.value.currentMessageId
+        val currentMessageId = tingwuCoordinator.state.value.currentMessageId
 
         // Skip empty chunks unless we have an existing message
         if (effectiveChunk.isBlank() && currentMessageId == null) {
             if (isFinal) {
-                transcriptionViewModel.markFinal()
+                tingwuCoordinator.markFinal()
             }
             return
         }
@@ -991,7 +989,7 @@ class HomeScreenViewModel @Inject constructor(
         if (currentMessageId == null) {
             // Create new message
             val messageId = nextMessageId()
-            transcriptionViewModel.setCurrentMessageId(messageId)
+            tingwuCoordinator.setCurrentMessageId(messageId)
             val display = displayAssistantText(raw = merged, sanitized = merged)
             _uiState.update {
                 it.copy(
@@ -1028,7 +1026,7 @@ class HomeScreenViewModel @Inject constructor(
         }
 
         if (isFinal) {
-            transcriptionViewModel.markFinal()
+            tingwuCoordinator.markFinal()
         }
 
         if (CHAT_DEBUG_HUD_ENABLED && _uiState.value.showDebugMetadata) {
@@ -1073,22 +1071,22 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     fun toggleDebugMetadata() {
-        debugViewModel.toggleDebugPanel()
-        val visible = debugViewModel.debugState.value.visible
+        debugCoordinator.toggleDebugPanel()
+        val visible = debugCoordinator.debugState.value.visible
         _uiState.update { it.copy(showDebugMetadata = visible) }
         if (visible) {
             // 打开时刷新调试数据
             viewModelScope.launch {
                 val sessionTitle = _uiState.value.currentSession.title
                 val summary = sessionRepository.findById(sessionId)
-                debugViewModel.refreshSessionMetadata(sessionId, sessionTitle)
-                debugViewModel.refreshDebugSnapshot(
+                debugCoordinator.refreshSessionMetadata(sessionId, sessionTitle)
+                debugCoordinator.refreshDebugSnapshot(
                     sessionId = sessionId,
                     jobId = lastTranscriptionJobId,
                     sessionTitle = sessionTitle,
                     isTitleUserEdited = summary?.isTitleUserEdited
                 )
-                debugViewModel.refreshTraces()
+                debugCoordinator.refreshTraces()
             }
         }
     }
@@ -1105,7 +1103,7 @@ class HomeScreenViewModel @Inject constructor(
 
     fun refreshXfyunTrace() {
         if (!CHAT_DEBUG_HUD_ENABLED) return
-        debugViewModel.refreshTraces()
+        debugCoordinator.refreshTraces()
         refreshDebugSnapshot()
     }
 
@@ -1115,7 +1113,7 @@ class HomeScreenViewModel @Inject constructor(
         if (!CHAT_DEBUG_HUD_ENABLED || !_uiState.value.showDebugMetadata) return
         viewModelScope.launch {
             val summary = sessionRepository.findById(sessionId)
-            debugViewModel.refreshDebugSnapshot(
+            debugCoordinator.refreshDebugSnapshot(
                 sessionId = sessionId,
                 jobId = lastTranscriptionJobId,
                 sessionTitle = summary?.title ?: _uiState.value.currentSession.title,
@@ -1362,7 +1360,7 @@ class HomeScreenViewModel @Inject constructor(
                 this@HomeScreenViewModel.sessionId = sessionId
                 firstAssistantProcessed = false
                 lastTranscriptionJobId = null
-                transcriptionViewModel.reset()
+                tingwuCoordinator.reset()
                 latestAnalysisMarkdown = null
                 hasShownLowInfoHint = false
                 hasShownAnalysisExportHint = false
@@ -1404,7 +1402,7 @@ class HomeScreenViewModel @Inject constructor(
 
     fun onNewChatClicked() {
         viewModelScope.launch {
-            val newSession = sessionsViewModel.createNewSession()
+            val newSession = sessionsManager.createNewSession()
             sessionId = newSession.id
             firstAssistantProcessed = false
             latestAnalysisMarkdown = null
@@ -1467,12 +1465,12 @@ class HomeScreenViewModel @Inject constructor(
 
     private fun observeSessions() {
         viewModelScope.launch {
-            sessionsViewModel.sessionList.collectLatest { list ->
+            sessionsManager.sessionList.collectLatest { list ->
                 updateSessionListSelection(list)
             }
         }
         viewModelScope.launch {
-            sessionsViewModel.uiState.collectLatest { state ->
+            sessionsManager.uiState.collectLatest { state ->
                 _uiState.update {
                     it.copy(
                         historyActionSession = state.historyActionSession,
@@ -1496,28 +1494,32 @@ class HomeScreenViewModel @Inject constructor(
     // applySessionList removed - replaced by updateSessionListSelection used in observeSessions
 
     fun onHistorySessionLongPress(sessionId: String) {
-        sessionsViewModel.onHistorySessionLongPress(sessionId)
+        viewModelScope.launch {
+            sessionsManager.onHistorySessionLongPress(sessionId)
+        }
     }
 
     fun onHistoryActionDismiss() {
-        sessionsViewModel.onHistoryActionDismiss()
+        sessionsManager.onHistoryActionDismiss()
     }
 
     fun onHistoryActionRenameStart() {
-        sessionsViewModel.onHistoryActionRenameStart()
+        sessionsManager.onHistoryActionRenameStart()
     }
 
     fun onHistoryRenameTextChange(text: String) {
-        sessionsViewModel.onHistoryRenameTextChange(text)
+        sessionsManager.onHistoryRenameTextChange(text)
     }
 
     fun onHistorySessionPinToggle(sessionId: String) {
-        sessionsViewModel.onHistorySessionPinToggle(sessionId)
+        viewModelScope.launch {
+            sessionsManager.onHistorySessionPinToggle(sessionId)
+        }
     }
 
     fun onHistorySessionRenameConfirmed(sessionId: String, newTitle: String) {
         viewModelScope.launch {
-            val updatedTitle = sessionsViewModel.onHistorySessionRenameConfirmed(sessionId, newTitle)
+            val updatedTitle = sessionsManager.onHistorySessionRenameConfirmed(sessionId, newTitle)
             if (updatedTitle != null && sessionId == this@HomeScreenViewModel.sessionId) {
                 // 如果当前会话被重命名，同步更新当前会话标题
                 _uiState.update {
@@ -1529,8 +1531,8 @@ class HomeScreenViewModel @Inject constructor(
 
     fun onHistorySessionDelete(sessionId: String) {
         viewModelScope.launch {
-            val result = sessionsViewModel.onHistorySessionDelete(sessionId, this@HomeScreenViewModel.sessionId)
-            if (result is com.smartsales.feature.chat.home.sessions.SessionsViewModel.DeleteResult.CurrentSessionDeleted) {
+            val result = sessionsManager.onHistorySessionDelete(sessionId, this@HomeScreenViewModel.sessionId)
+            if (result is com.smartsales.domain.sessions.SessionsManager.DeleteResult.CurrentSessionDeleted) {
                 val next = result.nextSession
                 this@HomeScreenViewModel.sessionId = next.id
                 firstAssistantProcessed = false
@@ -2099,17 +2101,8 @@ class HomeScreenViewModel @Inject constructor(
         )
     }
 
-    private fun buildTranscriptMarkdown(messages: List<ChatMessageUi>): String {
-        if (messages.isEmpty()) return ""
-        val builder = StringBuilder()
-        builder.append("# 对话记录\n\n")
-        messages.forEach { msg ->
-            val role = if (msg.role == ChatMessageRole.USER) "用户" else "助手"
-            val text = msg.sanitizedContent ?: msg.content
-            builder.append("- **$role**：$text\n")
-        }
-        return builder.toString()
-    }
+    private fun buildTranscriptMarkdown(messages: List<ChatMessageUi>): String =
+        com.smartsales.domain.chat.ChatMessageBuilder.buildTranscriptMarkdown(messages)
 
     private fun createUserMessage(content: String): ChatMessageUi = ChatMessageUi(
         id = nextMessageId(),
@@ -2213,53 +2206,11 @@ class HomeScreenViewModel @Inject constructor(
     private fun latestUserContent(): String? =
         _uiState.value.chatMessages.lastOrNull { it.role == ChatMessageRole.USER }?.content?.trim()
 
-    private fun classifyUserInput(
-        text: String,
-        history: List<ChatMessageUi>
-    ): InputBucket {
-        val trimmed = text.trim()
-        if (trimmed.isEmpty()) return InputBucket.NOISE
-        val normalized = trimmed.lowercase(Locale.getDefault())
-        val keywords = listOf("客户", "会议", "报价", "合同", "跟进", "电话", "录音", "邮件", "沟通", "销售")
-        val hasKeyword = keywords.any { normalized.contains(it) }
-        val hasLongHistory = history.any { it.content.length >= LONG_CONTENT_THRESHOLD }
-        val hasTranscript = history.any { it.role == ChatMessageRole.ASSISTANT && it.content.contains("通话分析") }
-        if (normalized.length <= 4 && !hasKeyword) {
-            return InputBucket.NOISE
-        }
-        if (normalized.length <= 8 && !hasKeyword && !hasLongHistory) {
-            return InputBucket.NOISE
-        }
-        if (trimmed.length >= LONG_CONTENT_THRESHOLD || hasLongHistory || hasTranscript) {
-            return InputBucket.RICH
-        }
-        if (hasKeyword) return InputBucket.SHORT_RELEVANT
-        return InputBucket.SHORT_RELEVANT
-    }
+    // Classification functions moved to domain/chat/InputClassifier.kt
 
-    private fun isLowInfoAnalysisInput(text: String): Boolean {
-        val normalized = text.trim().lowercase(Locale.getDefault())
-        if (normalized.isEmpty()) return true
-        if (normalized.length <= 3) {
-            val stop = setOf("的", "啊", "么", "吗", "吧", "哦", "呢", "hi", "hi!", "ok", "?", "？", "分析", "看看")
-            if (stop.contains(normalized)) return true
-        }
-        val greetings = setOf("你好", "您好", "hello", "hi", "你是谁", "嘿", "早", "下午好", "晚上好")
-        if (greetings.contains(normalized)) return true
-        val filler = setOf("分析", "看看", "随便", "随便看看", "简单看看", "简单分析")
-        if (filler.contains(normalized)) return true
-        if (normalized.length <= 4 && normalized.all { it.isWhitespace() || it in listOf('的', '啊', '吗', '呢', '?', '？') }) {
-            return true
-        }
-        return false
-    }
 
-    private fun isLowInfoGeneralChatInput(text: String): Boolean {
-        val normalized = text.trim().lowercase(Locale.getDefault())
-        if (normalized.isBlank()) return true
-        val acknowledgements = setOf("是", "好的", "好", "嗯", "嗯嗯", "ok", "okay", "收到")
-        return acknowledgements.contains(normalized)
-    }
+
+
 
     private fun handleLowInfoGeneralChatInput() {
         // 清空输入框，避免用户反复点击发送同一段内容
@@ -2519,7 +2470,7 @@ class HomeScreenViewModel @Inject constructor(
             viewModelScope.launch {
                 val markdown = wrapSmartAnalysisForExport(summary)
                 _uiState.update { it.copy(exportInProgress = true) }
-                val result = exportViewModel.performExport(sessionId, format, _uiState.value.userName, markdown)
+                val result = exportCoordinator.performExport(sessionId, format, _uiState.value.userName, markdown)
                 when (result) {
                     is Result.Success -> _uiState.update { it.copy(exportInProgress = false) }
                     is Result.Error -> _uiState.update {
@@ -2556,52 +2507,16 @@ class HomeScreenViewModel @Inject constructor(
         return primary to contextChunks.asReversed().joinToString("\n")
     }
 
-    private fun findSmartAnalysisPrimaryContent(currentInput: String): AnalysisTarget? {
-        val trimmed = currentInput.trim()
-        if (trimmed.length >= LONG_CONTENT_THRESHOLD) {
-            return AnalysisTarget(trimmed, "user_input")
-        }
-        val messages = _uiState.value.chatMessages.asReversed()
-        val transcript = messages.firstOrNull { msg ->
-            msg.role == ChatMessageRole.ASSISTANT &&
-                msg.content.length >= LONG_CONTENT_THRESHOLD &&
-                (msg.content.contains("转写") || msg.content.contains("通话") || msg.content.contains("录音"))
-        }
-        if (transcript != null) return AnalysisTarget(transcript.content, "transcript")
-        val longHistory = messages.firstOrNull { it.content.length >= LONG_CONTENT_THRESHOLD }
-        return longHistory?.let { AnalysisTarget(it.content, "history_long") }
-    }
+    // findSmartAnalysisPrimaryContent moved to InputClassifier.kt
 
-    private fun findContextForAnalysis(primaryContent: String): String? {
-        val messages = _uiState.value.chatMessages.asReversed()
-        val contextChunks = mutableListOf<String>()
-        var contextLength = 0
-        messages.forEach { msg ->
-            val text = msg.content.trim()
-            if (text.isEmpty() || text == primaryContent) return@forEach
-            if (contextChunks.size >= CONTEXT_MESSAGE_LIMIT || contextLength >= CONTEXT_LENGTH_LIMIT) return@forEach
-            val toAdd = text.take(CONTEXT_LENGTH_LIMIT - contextLength)
-            contextChunks += toAdd
-            contextLength += toAdd.length
-        }
-        return contextChunks.asReversed().joinToString("\n").takeIf { it.isNotBlank() }
-    }
+    // findContextForAnalysis moved to InputClassifier.kt
 
     private fun buildSmartAnalysisUserMessage(
         mainContent: String,
         context: String?,
         goal: String
-    ): String {
-        val cappedContent = mainContent.trim().take(ANALYSIS_CONTENT_LIMIT)
-        val builder = StringBuilder()
-        builder.appendLine("分析目标：").appendLine(goal.trim()).appendLine()
-        builder.appendLine("主体内容（供重点分析）：").appendLine(cappedContent).appendLine()
-        context?.takeIf { it.isNotBlank() }?.let {
-            builder.appendLine("最近上下文：").appendLine(it.trim()).appendLine()
-        }
-        builder.appendLine("请基于上述主体内容完成结构化智能分析。")
-        return builder.toString().trim()
-    }
+    ): String =
+        com.smartsales.domain.chat.ChatMessageBuilder.buildSmartAnalysisUserMessage(mainContent, context, goal)
 
     // [HSVM@HELPERS] ===== strip/sanitize/parse 等 helper =====
     private fun sanitizeAssistantOutput(raw: String, isSmartAnalysis: Boolean = false): String {
@@ -3601,7 +3516,7 @@ class HomeScreenViewModel @Inject constructor(
     private suspend fun prepareInitialSession() {
         if (initialSessionPrepared) return
         initialSessionPrepared = true
-        val newSession = sessionsViewModel.createNewSession()
+        val newSession = sessionsManager.createNewSession()
         sessionId = newSession.id
         firstAssistantProcessed = false
         // latestSessionSummaries removed, flow updates

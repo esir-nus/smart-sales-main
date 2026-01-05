@@ -85,6 +85,8 @@ class RealTingwuCoordinator @Inject constructor(
     private val artifactFetcher: TingwuArtifactFetcher,
     private val postTingwuTranscriptEnhancer: PostTingwuTranscriptEnhancer,
     private val aiParaSettingsProvider: AiParaSettingsProvider,
+    private val tingwuRunner: com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository,
+    private val transcriptPublisher: com.smartsales.data.aicore.tingwu.TranscriptPublisherUseCase,
     optionalConfig: Optional<AiCoreConfig>
 ) : TingwuCoordinator {
 
@@ -102,20 +104,20 @@ class RealTingwuCoordinator @Inject constructor(
     override suspend fun submit(request: TingwuRequest): Result<String> =
         withContext(dispatchers.io) {
             val credentials = credentialsProvider.obtain()
-            validateCredentials(credentials)?.let { return@withContext Result.Error(it) }
+            tingwuRunner.validateCredentials(credentials)?.let { return@withContext Result.Error(it) }
             val sourceDesc = request.ossObjectKey ?: request.fileUrl ?: request.audioAssetName
             AiCoreLogger.d(
                 TAG,
                 "提交 Tingwu 请求：source=$sourceDesc, lang=${request.language}"
             )
-            val fileUrlResult = resolveFileUrl(request)
+            val fileUrlResult = tingwuRunner.resolveFileUrl(request)
             val resolvedUrl = when (fileUrlResult) {
                 is Result.Success -> fileUrlResult.data
                 is Result.Error -> return@withContext Result.Error(fileUrlResult.throwable)
             }
-            val taskKey = buildTaskKey(request)
+            val taskKey = tingwuRunner.buildTaskKey(request)
             val requestedLanguage = request.language.ifBlank { DEFAULT_LANGUAGE }
-            val sourceLanguage = mapSourceLanguage(requestedLanguage)
+            val sourceLanguage = tingwuRunner.mapSourceLanguage(requestedLanguage)
             val model = config.tingwuModelOverride?.takeIf { it.isNotBlank() } ?: credentials.model
             val defaultCustomPrompt = tingwuSettings.customPrompt.contents.firstOrNull()
             val resolvedName = request.customPromptName?.takeIf { it.isNotBlank() }
@@ -257,7 +259,7 @@ class RealTingwuCoordinator @Inject constructor(
                 taskId
             }.fold(
                 onSuccess = { Result.Success(it) },
-                onFailure = { Result.Error(mapError(it)) }
+                onFailure = { Result.Error(tingwuRunner.mapError(it)) }
             )
         }
 
@@ -268,45 +270,10 @@ class RealTingwuCoordinator @Inject constructor(
         jobStates.getOrPut(jobId) { MutableStateFlow<TingwuJobState>(TingwuJobState.Idle) }
 
     // V1 spec §8.1: Tingwu retry policy with backoff
-    private suspend fun pollWithRetry(jobId: String): TingwuStatusResponse {
-        val maxRetries = config.tingwuMaxRetries
-        val backoffSeconds = config.tingwuRetryBackoffSeconds
-        var lastError: Throwable? = null
-        repeat(maxRetries + 1) { attempt ->
-            try {
-                return api.getTaskStatus(taskId = jobId)
-            } catch (error: Throwable) {
-                if (error is CancellationException) throw error
-                lastError = error
-                val isLast = attempt >= maxRetries
-                if (isLast || !isRetryableError(error)) {
-                    AiCoreLogger.e(TAG, "Tingwu 轮询失败（尝试 ${attempt + 1}/${maxRetries + 1}）：${error.message}")
-                    throw error
-                }
-                val backoff = backoffSeconds.getOrElse(attempt) { backoffSeconds.lastOrNull() ?: 60 }
-                AiCoreLogger.w(TAG, "Tingwu 轮询失败，${backoff}s 后重试（尝试 ${attempt + 1}/${maxRetries + 1}）：${error.message}")
-                delay(backoff * 1000L)
-            }
-        }
-        throw lastError ?: AiCoreException(
-            source = AiCoreErrorSource.TINGWU,
-            reason = AiCoreErrorReason.UNKNOWN,
-            message = "Tingwu 轮询重试耗尽"
-        )
-    }
+    private suspend fun pollWithRetry(jobId: String): TingwuStatusResponse =
+        tingwuRunner.pollWithRetry(jobId)
 
-    // V1 spec §8.1: Retryable = 429, 5xx, timeout, network; Non-retryable = 4xx except 429
-    private fun isRetryableError(error: Throwable): Boolean = when (error) {
-        is HttpException -> {
-            val code = error.code()
-            code == 429 || code >= 500
-        }
-        is SocketTimeoutException -> true
-        is UnknownHostException -> true
-        is SSLException -> true
-        is IOException -> true
-        else -> false
-    }
+
 
 
     private fun startPolling(jobId: String) {
@@ -343,7 +310,7 @@ class RealTingwuCoordinator @Inject constructor(
                         pollWithRetry(jobId)
                     } catch (error: Throwable) {
                         if (error is CancellationException) throw error
-                        val mapped = mapError(error)
+                        val mapped = tingwuRunner.mapError(error)
                         AiCoreLogger.e(TAG, "查询 Tingwu 状态失败（已耗尽重试）：${mapped.message}", mapped)
                         flow.value = TingwuJobState.Failed(jobId, mapped)
                         return@launch
@@ -411,7 +378,7 @@ class RealTingwuCoordinator @Inject constructor(
                         )
                     } catch (error: Throwable) {
                         if (error is CancellationException) throw error
-                        val mapped = mapError(error)
+                        val mapped = tingwuRunner.mapError(error)
                         AiCoreLogger.e(TAG, "拉取转写结果失败：${mapped.message}", mapped)
                         flow.value = TingwuJobState.Failed(jobId, mapped)
                         return@launch
@@ -423,7 +390,7 @@ class RealTingwuCoordinator @Inject constructor(
                             ?: artifacts?.autoChaptersUrl
                             ) ?: artifacts ?: transcriptResult.chapters?.let {
                                 TingwuJobArtifacts(
-                                    autoChaptersUrl = extractAutoChaptersUrl(data.resultLinks),
+                                    autoChaptersUrl = transcriptPublisher.extractAutoChaptersUrl(data.resultLinks),
                                     chapters = it,
                                     customPromptUrl = data.resultLinks?.get(CUSTOM_PROMPT_KEY)
                                 )
@@ -573,7 +540,7 @@ class RealTingwuCoordinator @Inject constructor(
     ): TranscriptResult = withContext(dispatchers.io) {
         AiCoreLogger.d(TAG, "开始拉取转写结果：jobId=$jobId")
         logVerbose { "拉取转写：jobId=$jobId resultLinks=${resultLinks?.size ?: 0} 个键" }
-        val chaptersUrl = extractAutoChaptersUrl(resultLinks) ?: fallbackArtifacts?.autoChaptersUrl
+        val chaptersUrl = transcriptPublisher.extractAutoChaptersUrl(resultLinks) ?: fallbackArtifacts?.autoChaptersUrl
         // First try the /transcription endpoint
         AiCoreLogger.d(TAG, "尝试使用 /transcription 接口：jobId=$jobId")
         val inline = runCatching { api.getTaskResult(taskId = jobId) }.fold(
@@ -616,14 +583,14 @@ class RealTingwuCoordinator @Inject constructor(
                         fallback = markdown
                     )
                     AiCoreLogger.d(TAG, "转写 markdown 生成成功：jobId=$jobId markdown长度=${markdown.length}")
-                    val chapters = chaptersUrl?.let { fetchChaptersSafe(it, jobId) }
+                    val chapters = chaptersUrl?.let { transcriptPublisher.fetchChaptersSafe(it, jobId) }
                     val artifacts = data.toArtifacts(
                         transcriptionUrl = transcription.url,
-                        autoChaptersUrl = extractAutoChaptersUrl(data.resultLinks),
+                        autoChaptersUrl = transcriptPublisher.extractAutoChaptersUrl(data.resultLinks),
                         customPromptUrl = data.resultLinks?.get(CUSTOM_PROMPT_KEY),
                         extraResultUrls = data.resultLinks.orEmpty(),
                         chapters = chapters,
-                        smartSummary = fetchSmartSummarySafe(data.resultLinks, jobId),
+                        smartSummary = transcriptPublisher.fetchSmartSummarySafe(data.resultLinks, jobId),
                         diarizedSegments = diarizedSegments.takeIf { it.isNotEmpty() },
                         recordingOriginDiarizedSegments = recordingOriginSegments.takeIf { it.isNotEmpty() },
                         speakerLabels = speakerLabels
@@ -649,7 +616,7 @@ class RealTingwuCoordinator @Inject constructor(
                     AiCoreLogger.w(TAG, "官方 /transcription 接口不可用，改用 Result.Transcription 链接")
                     null
                 } else {
-                    val mapped = mapError(error)
+                    val mapped = tingwuRunner.mapError(error)
                     AiCoreLogger.e(TAG, "拉取 Tingwu 结果失败：${mapped.message}", mapped)
                     throw mapped
                 }
@@ -660,7 +627,7 @@ class RealTingwuCoordinator @Inject constructor(
             return@withContext inline
         }
         AiCoreLogger.d(TAG, "内联结果不可用，尝试从 Result.Transcription URL 下载")
-        val signedUrl = extractTranscriptionUrl(resultLinks)
+        val signedUrl = transcriptPublisher.extractTranscriptionUrl(resultLinks)
             ?: throw AiCoreException(
                 source = AiCoreErrorSource.TINGWU,
                 reason = AiCoreErrorReason.REMOTE,
@@ -681,8 +648,8 @@ class RealTingwuCoordinator @Inject constructor(
             fallback = markdown
         )
         AiCoreLogger.d(TAG, "转写 JSON 解析成功：jobId=$jobId markdown长度=${markdown.length}")
-        val chapters = chaptersUrl?.let { fetchChaptersSafe(it, jobId) }
-        val smartSummary = fetchSmartSummarySafe(resultLinks, jobId)
+        val chapters = chaptersUrl?.let { transcriptPublisher.fetchChaptersSafe(it, jobId) }
+        val smartSummary = transcriptPublisher.fetchSmartSummarySafe(resultLinks, jobId)
         TranscriptResult(
             markdown = enhancedMarkdown,
             artifacts = fallbackArtifacts?.copy(
@@ -703,48 +670,7 @@ class RealTingwuCoordinator @Inject constructor(
         )
     }
 
-    private fun extractTranscriptionUrl(resultLinks: Map<String, String>?): String? {
-        if (resultLinks == null) {
-            AiCoreLogger.w(TAG, "extractTranscriptionUrl: resultLinks 为 null")
-            return null
-        }
-        if (resultLinks.isEmpty()) {
-            AiCoreLogger.w(TAG, "extractTranscriptionUrl: resultLinks 为空")
-            return null
-        }
-        val availableKeys = resultLinks.keys.joinToString(", ")
-        AiCoreLogger.d(TAG, "extractTranscriptionUrl: 可用键 [$availableKeys]")
-        val transcriptionUrl = resultLinks
-            .entries
-            .firstOrNull { it.key.equals("Transcription", ignoreCase = true) }
-            ?.value
-            ?.takeIf { it.isNotBlank() }
-        if (transcriptionUrl != null) {
-            AiCoreLogger.d(TAG, "extractTranscriptionUrl: 找到 Transcription URL (长度=${transcriptionUrl.length})")
-            logVerbose { "Transcription URL: $transcriptionUrl" }
-        } else {
-            AiCoreLogger.w(TAG, "extractTranscriptionUrl: 未找到 Transcription 键，可用键: [$availableKeys]")
-        }
-        return transcriptionUrl
-    }
 
-    private fun extractAutoChaptersUrl(resultLinks: Map<String, String>?): String? {
-        if (resultLinks.isNullOrEmpty()) return null
-        return resultLinks.entries.firstOrNull { it.key.equals("AutoChapters", ignoreCase = true) }?.value
-    }
-
-    private fun extractSmartSummaryUrl(resultLinks: Map<String, String>?): String? {
-        if (resultLinks.isNullOrEmpty()) return null
-        val keys = listOf("MeetingAssistance", "Summarization", "SmartSummary", "Summary")
-        return resultLinks.entries.firstOrNull { entry ->
-            keys.any { key -> entry.key.equals(key, ignoreCase = true) }
-        }?.value
-    }
-
-    private fun fetchChaptersSafe(url: String, jobId: String): List<TingwuChapter>? =
-        runCatching { downloadChapters(url, jobId) }.onFailure {
-            AiCoreLogger.w(TAG, "下载章节失败，将忽略：jobId=$jobId url=${url.take(80)} error=${it.message}")
-        }.getOrNull()
 
     private fun downloadTranscription(url: String, jobId: String): TingwuTranscription {
         AiCoreLogger.d(TAG, "开始下载转写 JSON：jobId=$jobId url=${url.take(100)}...")
@@ -784,54 +710,7 @@ class RealTingwuCoordinator @Inject constructor(
         }
     }
 
-    private fun downloadChapters(url: String, jobId: String): List<TingwuChapter> {
-        AiCoreLogger.d(TAG, "开始下载章节 JSON：jobId=$jobId url=${url.take(100)}...")
-        return try {
-            val connection = URL(url).openConnection().apply {
-                connectTimeout = config.tingwuReadTimeoutMillis.toInt()
-                readTimeout = config.tingwuReadTimeoutMillis.toInt()
-            }
-            connection.getInputStream().bufferedReader(Charsets.UTF_8).use { reader ->
-                val payload = reader.readText()
-                logVerbose { "章节 JSON 前 200 字符：${payload.take(200)}" }
-                val chapters = parseAutoChaptersPayload(payload)
-                if (chapters.isEmpty()) {
-                    AiCoreLogger.w(TAG, "章节 JSON 未解析出有效章节：jobId=$jobId")
-                } else {
-                    AiCoreLogger.d(TAG, "章节解析成功：jobId=$jobId 数量=${chapters.size}")
-                }
-                chapters
-            }
-        } catch (io: IOException) {
-            AiCoreLogger.e(TAG, "下载章节 JSON 失败：jobId=$jobId error=${io.message}", io)
-            emptyList()
-        }
-    }
 
-    private fun fetchSmartSummarySafe(resultLinks: Map<String, String>?, jobId: String): TingwuSmartSummary? {
-        val url = extractSmartSummaryUrl(resultLinks) ?: return null
-        return runCatching { downloadSmartSummary(url, jobId) }.onFailure {
-            AiCoreLogger.w(TAG, "下载智能总结失败，将忽略：jobId=$jobId url=${url.take(80)} error=${it.message}")
-        }.getOrNull()
-    }
-
-    private fun downloadSmartSummary(url: String, jobId: String): TingwuSmartSummary? {
-        AiCoreLogger.d(TAG, "开始下载智能总结 JSON：jobId=$jobId url=${url.take(100)}...")
-        return try {
-            val connection = URL(url).openConnection().apply {
-                connectTimeout = config.tingwuReadTimeoutMillis.toInt()
-                readTimeout = config.tingwuReadTimeoutMillis.toInt()
-            }
-            connection.getInputStream().bufferedReader(Charsets.UTF_8).use { reader ->
-                val payload = reader.readText()
-                logVerbose { "智能总结 JSON 前 200 字符：${payload.take(200)}" }
-                parseSmartSummaryPayload(payload)
-            }
-        } catch (io: IOException) {
-            AiCoreLogger.e(TAG, "下载智能总结失败：jobId=$jobId error=${io.message}", io)
-            null
-        }
-    }
 
     private fun parseDownloadedTranscription(json: String, jobId: String): TingwuTranscription? {
         AiCoreLogger.d(TAG, "开始解析转写 JSON：jobId=$jobId")

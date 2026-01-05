@@ -2,7 +2,8 @@
 
 **Goal**: Clean, production-grade Android architecture  
 **Scope**: Eliminate god files, modularize, align with Orchestrator-V1 spec  
-**Status**: Planning Complete, Ready for Execution
+**Status**: Phase 1 Complete, Phase 2 Wave 1 In Progress  
+**Last Updated**: 2026-01-05
 
 ---
 
@@ -11,54 +12,80 @@
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | Domain layer | Package first, module later | Lower friction, faster iteration |
-| Splitting approach | Conservative (5-7 UseCases) | Reduce risk, split more where needed |
-| Migration order | RealTingwuCoordinator first | Aligns with spec, creates clean building blocks |
+| Splitting approach | Conservative, incremental | Reduce risk, verify after each extraction |
+| Migration order | RealTingwuCoordinator → HomeScreenViewModel | Aligns with spec, creates clean building blocks |
 
 ---
 
-## God Files to Eliminate
+## God Files Status
 
-| File | Current Lines | Target | Priority |
-|------|---------------|--------|----------|
-| `RealTingwuCoordinator.kt` | ~2500 | <500 per module | P0 |
-| `HomeScreenViewModel.kt` | 3668 | <500 | P1 |
-| `ChatController.kt` | ~400 | <200 | P2 |
+| File | Original Lines | Current Lines | Target | Status |
+|------|----------------|---------------|--------|--------|
+| `RealTingwuCoordinator.kt` | ~1990 | ~1870 | <500 | Phase 1 ✅ |
+| `HomeScreenViewModel.kt` | 3668 | ~3650 | <500 | Phase 2 🔄 |
+| `ChatController.kt` | ~400 | ~400 | <200 | P2 |
 
 ---
 
 ## Target Architecture
 
 ```
-feature/           # UI layer (ViewModels <500 lines each)
-domain/            # Pure Kotlin UseCases
-data/              # Repositories, API clients
-core/              # Shared utilities
+feature/chat/src/main/java/com/smartsales/
+├── domain/                              # Pure Kotlin UseCases
+│   ├── chat/ChatMessageBuilder.kt       # ✅ Wave 1
+│   ├── export/ExportCoordinator.kt      # ✅ Hilt fix
+│   ├── sessions/SessionsManager.kt      # ✅ Hilt fix
+│   ├── transcription/                   # ✅ Phase 1 + Hilt fix
+│   │   ├── TranscriptPublisherUseCase.kt
+│   │   ├── SanitizerUseCase.kt
+│   │   ├── DisectorUseCase.kt
+│   │   └── TranscriptionCoordinator.kt
+│   └── debug/DebugCoordinator.kt        # ✅ Hilt fix
+├── feature/                             # UI layer
+│   └── chat/home/HomeScreenViewModel.kt
+└── data/ai-core/                        # Repositories
+    └── tingwu/runner/TingwuRunnerRepository.kt  # ✅ Phase 1
 ```
 
 ---
 
-## Phase 0: Stabilize (COMPLETE)
+## Phase 0: Stabilize (COMPLETE ✅)
 - [x] Complete ViewModel extractions (Export, Debug, Sessions, Transcription)
 - [x] Verify build passes
-- [ ] Runtime verification
+- [x] Hilt DI violation discovered and fixed
+  - Converted ViewModels to domain coordinators
+  - Build verified successful
+- [ ] Runtime verification (awaiting user test)
 
-## Phase 1: Split RealTingwuCoordinator
-Align with Orchestrator-V1 Section 3 modules:
+## Phase 1: Split RealTingwuCoordinator (COMPLETE ✅)
+Aligned with Orchestrator-V1 Section 3 modules:
 
-- [ ] Extract `DisectorUseCase` (batch splitting logic)
-- [ ] Extract `TingwuRunnerRepository` (API calls)
-- [ ] Extract `SanitizerUseCase` (display cleanup)
-- [ ] Extract `TranscriptPublisherUseCase` (continuous prefix publishing)
-- [ ] Create `domain/transcription/` package
-- [ ] Verify build + basic functionality
+- [x] Extract `TingwuRunnerRepository` (polling, validation, error mapping)
+- [x] Extract `TranscriptPublisherUseCase` (URL extraction, download helpers)
+- [x] Create `data/ai-core/tingwu/` package
+- [x] Update RealTingwuCoordinatorTest with new dependencies
+- [x] Verify build + tests pass
 
-## Phase 2: Slim HomeScreenViewModel
-- [ ] Create `domain/chat/` package
-- [ ] Extract `SendChatMessageUseCase`
-- [ ] Extract `StreamChatResponseUseCase`
-- [ ] Extract `SmartAnalysisUseCase`
-- [ ] Reduce HomeScreenViewModel to routing only
-- [ ] Verify build + chat flow
+**Result**: RealTingwuCoordinator reduced by ~120 lines
+
+## Phase 2: Slim HomeScreenViewModel (IN PROGRESS 🔄)
+
+### Wave 1: ChatMessageBuilder (COMPLETE ✅)
+- [x] Create `domain/chat/ChatMessageBuilder.kt`
+- [x] Extract pure helper functions:
+  - `buildSmartAnalysisUserMessage()`
+  - `buildTranscriptMarkdown()`
+  - `wrapSmartAnalysisForExport()`
+- [x] Wire into HomeScreenViewModel
+- [ ] On-device sanity check (PDF export)
+
+### Wave 2: InputClassifier (PLANNED)
+- [ ] Extract classification logic
+- [ ] Extract `findSmartAnalysisPrimaryContent()`
+- [ ] Extract `isLowInfoGeneralChatInput()`
+
+### Wave 3: SmartAnalysisUseCase (DEFERRED)
+> **Note**: Deferred due to deep coupling (50+ references, interacts with export, streaming, MetaHub). Safer to extract smaller building blocks first.
 
 ## Phase 3: Feature Module Cleanup
 - [ ] Create `:feature:transcription` sub-package
@@ -66,19 +93,35 @@ Align with Orchestrator-V1 Section 3 modules:
 - [ ] Ensure feature isolation
 
 ## Phase 4: Final Polish
-- [ ] Add unit tests for UseCases
-- [ ] Update documentation
+- [ ] Add unit tests for UseCases  
+- [ ] Update this documentation
 - [ ] Code review
+
+---
+
+## Hilt Fix: ViewModel → Coordinator Migration
+
+During Phase 2, discovered pre-existing Hilt violation from Phase 0 ViewModel extractions.
+
+**Fixed by converting to domain layer:**
+
+| Original | New | Notes |
+|----------|-----|-------|
+| `ExportViewModel` | `ExportCoordinator` | @Singleton, domain/export/ |
+| `DebugViewModel` | `DebugCoordinator` | @Singleton, domain/debug/ |
+| `SessionsViewModel` | `SessionsManager` | @Singleton, domain/sessions/ |
+| `TranscriptionViewModel` | `TranscriptionCoordinator` | Injected as `tingwuCoordinator` to avoid naming collision |
 
 ---
 
 ## Success Metrics
 
-| Metric | Before | Target |
-|--------|--------|--------|
-| Largest file | ~2500 lines | <500 lines |
-| UseCase count | 0 | 5-7 |
-| God files | 3 | 0 |
+| Metric | Before | Current | Target |
+|--------|--------|---------|--------|
+| Largest file | ~2500 lines | ~3650 (HomeVM) | <500 lines |
+| UseCase count | 0 | 7 | 5-7 ✅ |
+| God files | 3 | 2 | 0 |
+| Domain layer classes | 0 | 7 | 10+ |
 
 ---
 

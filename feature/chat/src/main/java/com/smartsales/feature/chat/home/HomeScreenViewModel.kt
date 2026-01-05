@@ -2533,11 +2533,11 @@ class HomeScreenViewModel @Inject constructor(
     ): SessionMetadata? {
         val candidates = buildList {
             metadataJson?.takeIf { it.isNotBlank() }?.let { add(it) }
-            findLastJsonBlock(rawFullText)?.text?.let { tail ->
+            com.smartsales.domain.chat.MetadataParser.findLastJsonBlock(rawFullText)?.text?.let { tail ->
                 if (tail != metadataJson) add(tail)
             }
         }
-        val parsed = candidates.firstNotNullOfOrNull { parseGeneralChatMetadata(it, sessionId) }
+        val parsed = candidates.firstNotNullOfOrNull { com.smartsales.domain.chat.MetadataParser.parseGeneralChatMetadata(it, sessionId) }
         val metadata = parsed?.takeIf { it.hasMeaningfulGeneralFields() } ?: return null
         val patch = metadata.copy(
             latestMajorAnalysisSource = AnalysisSource.GENERAL_FIRST_REPLY,
@@ -2570,7 +2570,7 @@ class HomeScreenViewModel @Inject constructor(
         if (obj.optString("mode") != "L3") return null
         // 禁止启发式/legacy <Metadata> 触发写入；V1 仅允许 MachineArtifact.metadataPatch。
         val patchObj = obj.optJSONObject("metadataPatch") ?: return null
-        val metadata = parseGeneralChatMetadata(patchObj.toString(), sessionId)
+        val metadata = com.smartsales.domain.chat.MetadataParser.parseGeneralChatMetadata(patchObj.toString(), sessionId)
             ?.takeIf { it.hasMeaningfulGeneralFields() }
             ?: return null
         val patch = metadata.copy(
@@ -2592,67 +2592,7 @@ class HomeScreenViewModel @Inject constructor(
         return merged
     }
 
-    private data class JsonBlock(val text: String, val startIndex: Int)
-
-    // TODO: Replace with Orchestrator-MetadataHub V2 spec metadata types when available
-    private fun parseGeneralChatMetadata(jsonText: String, sessionId: String): SessionMetadata? = runCatching {
-        val obj = org.json.JSONObject(jsonText)
-        val summary6 = obj.optString("summary_title_6chars").takeIf { it.isNotBlank() }?.take(6)
-        val summary8 = obj.optString("summary_title_8chars").takeIf { it.isNotBlank() }?.take(8)
-        SessionMetadata(
-            sessionId = sessionId,
-            mainPerson = obj.optString("main_person").takeIf { it.isNotBlank() },
-            shortSummary = obj.optString("short_summary").takeIf { it.isNotBlank() },
-            summaryTitle6Chars = summary6 ?: summary8?.take(6),
-            location = obj.optString("location").takeIf { it.isNotBlank() }
-        )
-    }.getOrNull()
-
-    private fun findLastJsonBlock(text: String): JsonBlock? {
-        // 优先提取 fenced JSON（```json ... ```），否则尝试抓取末尾裸 JSON 对象
-        val fencedRegex = Regex("```json\\s*([\\s\\S]*?)```", RegexOption.IGNORE_CASE)
-        val fenced = fencedRegex.findAll(text).lastOrNull()
-        val fencedContent = fenced?.groupValues?.getOrNull(1)?.trim()
-        if (!fencedContent.isNullOrBlank() && fencedContent.startsWith("{") && fencedContent.endsWith("}")) {
-            val braceStart = text.indexOf('{', fenced.range.first)
-            return JsonBlock(fencedContent, if (braceStart >= 0) braceStart else fenced.range.first)
-        }
-        val anyFenceRegex = Regex("```\\s*([\\s\\S]*?)```")
-        val anyFence = anyFenceRegex.findAll(text).lastOrNull()
-        val anyContent = anyFence?.groupValues?.getOrNull(1)?.trim()
-        if (!anyContent.isNullOrBlank() && anyContent.startsWith("{") && anyContent.endsWith("}")) {
-            val braceStart = text.indexOf('{', anyFence.range.first)
-            return JsonBlock(anyContent, if (braceStart >= 0) braceStart else anyFence.range.first)
-        }
-        val trimmed = text.trimEnd()
-        if (trimmed.startsWith("{") && trimmed.endsWith("}")) return JsonBlock(trimmed, text.lastIndexOf('{'))
-
-        // 从末尾向前寻找最后一对完整的大括号，确保 JSON 位于文本末尾
-        fun findMatchingEnd(content: String, start: Int): Int {
-            var depth = 0
-            for (i in start until content.length) {
-                when (content[i]) {
-                    '{' -> depth++
-                    '}' -> {
-                        depth--
-                        if (depth == 0) return i
-                    }
-                }
-            }
-            return -1
-        }
-
-        var start = text.lastIndexOf('{')
-        while (start >= 0) {
-            val end = findMatchingEnd(text, start)
-            if (end > start && text.substring(end + 1).trim().isEmpty()) {
-                val block = text.substring(start, end + 1)
-                return JsonBlock(block, start)
-            }
-            start = text.lastIndexOf('{', start - 1)
-        }
-        return null
-    }
+    // Metadata parsing moved to domain/chat/MetadataParser.kt
 
     private fun SessionMetadata.hasMeaningfulGeneralFields(): Boolean =
         !mainPerson.isNullOrBlank() ||
@@ -2661,7 +2601,7 @@ class HomeScreenViewModel @Inject constructor(
             !location.isNullOrBlank()
 
     private fun stripTrailingJsonFromGeneralReply(fullText: String): String {
-        val jsonBlock = findLastJsonBlock(fullText) ?: return fullText
+        val jsonBlock = com.smartsales.domain.chat.MetadataParser.findLastJsonBlock(fullText) ?: return fullText
         val isValidJson = runCatching { org.json.JSONObject(jsonBlock.text) }.isSuccess
         if (!isValidJson) return fullText
         return fullText.substring(0, jsonBlock.startIndex).trimEnd()

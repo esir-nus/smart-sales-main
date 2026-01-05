@@ -137,7 +137,7 @@ import java.util.Date
 import java.util.Locale
 import com.smartsales.feature.chat.BuildConfig
 import com.smartsales.feature.chat.home.export.ExportGateState
-import com.smartsales.feature.chat.home.voiceprint.VoiceprintLabUiState
+
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreen.kt
 // 模块：:feature:chat
@@ -261,10 +261,7 @@ fun HomeScreenRoute(
         onHistoryRenameTextChange = viewModel::onHistoryRenameTextChange,
         onToggleDebugMetadata = viewModel::toggleDebugMetadata,
             onRefreshXfyunTrace = viewModel::refreshXfyunTrace,
-            onVoiceprintRegisterBase64 = viewModel::registerVoiceprintBase64,
-            onVoiceprintApplyLastFeatureId = viewModel::enableVoiceprintAndAddLastFeatureId,
-            onVoiceprintApplyXfyunVpTestPreset = viewModel::applyXfyunVoiceprintTestPreset,
-            onVoiceprintDeleteFeatureId = viewModel::deleteVoiceprintFeatureId,
+
             onToggleRawAssistantOutput = viewModel::setShowRawAssistantOutput,
             onDismissKeyboard = dismissKeyboard,
             onInputFocusChanged = { focused ->
@@ -395,10 +392,7 @@ fun HomeScreen(
     onHistoryRenameTextChange: (String) -> Unit = {},
     onToggleDebugMetadata: () -> Unit = {},
     onRefreshXfyunTrace: () -> Unit = {},
-    onVoiceprintRegisterBase64: (audioDataBase64: String, audioType: String, uid: String?) -> Unit = { _, _, _ -> },
-    onVoiceprintApplyLastFeatureId: () -> Unit = {},
-    onVoiceprintApplyXfyunVpTestPreset: () -> Unit = {},
-    onVoiceprintDeleteFeatureId: (featureId: String, removeFromSettings: Boolean) -> Unit = { _, _ -> },
+
     onToggleRawAssistantOutput: (Boolean) -> Unit = {},
     onDismissKeyboard: () -> Unit = {},
     onInputFocusChanged: (Boolean) -> Unit = {}
@@ -435,8 +429,7 @@ fun HomeScreen(
     ) { uri: Uri? ->
         uri?.let { onPickAudioFile(it) }
     }
-    var showVoiceprintLabSheet by remember { mutableStateOf(false) }
-    val voiceprintLabSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
@@ -558,11 +551,7 @@ fun HomeScreen(
                             hudEnabled = hudEnabled,
                             showDebugMetadata = state.showDebugMetadata,
                             onToggleDebugMetadata = { onToggleDebugMetadata() },
-                            onOpenVoiceprintLab = {
-                                // 重要：声纹注册是独立工具，不应依赖一次转写会话；否则无法先注册再使用声纹分离。
-                                showVoiceprintLabSheet = true
-                            },
-                )
+                        )
                     },
                     bottomBar = {
                         val inputEnabled = !chatBusy && !state.isInputBusy
@@ -783,31 +772,7 @@ fun HomeScreen(
                     }
                 }
 
-                if (BuildConfig.DEBUG && showVoiceprintLabSheet) {
-                    ModalBottomSheet(
-                        onDismissRequest = { showVoiceprintLabSheet = false },
-                        sheetState = voiceprintLabSheetState,
-                    ) {
-                        val copyText: (String) -> Unit = { text ->
-                            runCatching { clipboardManager.setText(AnnotatedString(text)) }
-                                .onSuccess {
-                                    coroutineScope.launch { snackbarHostState.showSnackbar("Copied.") }
-                                }
-                                .onFailure {
-                                    Toast.makeText(context, "Copy failed.", Toast.LENGTH_SHORT).show()
-                                }
-                        }
-                            VoiceprintLabPanel(
-                                voiceprintLab = state.voiceprintLab,
-                                onRegisterBase64 = onVoiceprintRegisterBase64,
-                                onApplyLastFeatureId = onVoiceprintApplyLastFeatureId,
-                                onApplyTestPreset = onVoiceprintApplyXfyunVpTestPreset,
-                                onDeleteFeatureId = onVoiceprintDeleteFeatureId,
-                                onCopy = copyText,
-                                onClose = { showVoiceprintLabSheet = false },
-                            )
-                        }
-                }
+
             }
         }
     )
@@ -1051,7 +1016,7 @@ private fun HomeTopBar(
     hudEnabled: Boolean,
     showDebugMetadata: Boolean,
     onToggleDebugMetadata: () -> Unit,
-    onOpenVoiceprintLab: () -> Unit,
+
 ) {
     Row(
             modifier = Modifier
@@ -1092,16 +1057,6 @@ private fun HomeTopBar(
                             },
                             shape = CircleShape
                         )
-                )
-            }
-        }
-        if (BuildConfig.DEBUG) {
-            IconButton(
-                onClick = onOpenVoiceprintLab,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.AudioFile,
-                    contentDescription = "Voiceprint Lab",
                 )
             }
         }
@@ -1546,332 +1501,6 @@ private fun XfyunTraceSection(
 }
 
 @Composable
-private fun VoiceprintLabPanel(
-    voiceprintLab: VoiceprintLabUiState,
-    onRegisterBase64: (audioDataBase64: String, audioType: String, uid: String?) -> Unit,
-    onApplyLastFeatureId: () -> Unit,
-    onApplyTestPreset: () -> Unit,
-    onDeleteFeatureId: (featureId: String, removeFromSettings: Boolean) -> Unit,
-    onCopy: (String) -> Unit,
-    onClose: () -> Unit,
-) {
-    val context = LocalContext.current
-    var showBase64 by remember { mutableStateOf(false) }
-    // 重要：声纹音频 base64 属于敏感数据：只保存在内存，不落盘、不打日志、不进入 trace/HUD。
-    var audioBase64 by remember { mutableStateOf("") }
-    var manualPasteInput by remember { mutableStateOf("") }
-    var audioType by remember { mutableStateOf("raw") }
-    var uid by remember { mutableStateOf("") }
-    var typeMenuExpanded by remember { mutableStateOf(false) }
-    var deleteFeatureId by remember { mutableStateOf("") }
-    var removeFromSettings by remember { mutableStateOf(true) }
-    var lastRegisterInProgress by remember { mutableStateOf(false) }
-
-    val lastFeatureId = voiceprintLab.lastFeatureId?.trim().orEmpty()
-    var lastClearedFeatureId by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(lastFeatureId) {
-        if (lastFeatureId.isNotBlank() && lastFeatureId != lastClearedFeatureId) {
-            // 重要：成功后立即清空 base64，避免敏感音频数据长时间驻留在内存与 UI 中。
-            audioBase64 = ""
-            manualPasteInput = ""
-            showBase64 = false
-            lastClearedFeatureId = lastFeatureId
-        }
-    }
-    LaunchedEffect(voiceprintLab.registerInProgress) {
-        // 重要：无论成功还是失败，只要一次 register 尝试结束，就清空 base64，避免敏感数据驻留。
-        if (lastRegisterInProgress && !voiceprintLab.registerInProgress) {
-            audioBase64 = ""
-            manualPasteInput = ""
-            showBase64 = false
-        }
-        lastRegisterInProgress = voiceprintLab.registerInProgress
-    }
-
-    val base64FilePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        runCatching {
-            // 重要：只读取 txt 内容到内存，不落盘、不打日志；并剔除空白符，得到纯 base64 字符串。
-            val rawText = context.contentResolver.openInputStream(uri)?.use { input ->
-                input.bufferedReader(Charsets.UTF_8).use { it.readText() }
-            }.orEmpty()
-            audioBase64 = rawText.filterNot { it.isWhitespace() }
-            manualPasteInput = ""
-            showBase64 = false
-        }.onFailure {
-            Toast.makeText(context, "Failed to load file.", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(text = "Voiceprint Lab (Debug only)", style = MaterialTheme.typography.titleMedium)
-            IconButton(onClick = onClose) {
-                Icon(imageVector = Icons.Filled.Close, contentDescription = "Close")
-            }
-        }
-        Text(
-            text = "Warning: Do not paste sensitive audio in production builds. Base64 is never stored; it is sent once and cleared after each attempt.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        TextButton(
-            onClick = onApplyTestPreset,
-            enabled = !voiceprintLab.registerInProgress && !voiceprintLab.deleteInProgress,
-            contentPadding = PaddingValues(horizontal = 0.dp),
-        ) {
-            Text(text = "Apply XFyun VP Test Preset")
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(
-                onClick = { base64FilePicker.launch(arrayOf("text/plain")) },
-                enabled = !voiceprintLab.registerInProgress,
-            ) { Text(text = "Load Base64 from .txt") }
-            TextButton(onClick = { showBase64 = !showBase64 }) {
-                Text(text = if (showBase64) "Hide Base64" else "Show Base64")
-            }
-            TextButton(
-                onClick = {
-                    audioBase64 = ""
-                    manualPasteInput = ""
-                    showBase64 = false
-                },
-                enabled = (audioBase64.isNotBlank() || manualPasteInput.isNotBlank()) && !voiceprintLab.registerInProgress,
-            ) { Text(text = "Clear Base64") }
-        }
-
-        val base64Len = audioBase64.length
-        val base64Preview = if (base64Len >= 32) {
-            "${audioBase64.take(16)}…${audioBase64.takeLast(16)}"
-        } else if (base64Len > 0) {
-            audioBase64.take(24)
-        } else {
-            "-"
-        }
-        Text(
-            text = "Loaded base64 length: $base64Len chars",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = "Preview: $base64Preview",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-
-        // Paste input (optional): do NOT render the full base64 string to avoid Compose lag.
-        OutlinedTextField(
-            value = manualPasteInput,
-            onValueChange = { value ->
-                if (value.isBlank()) {
-                    manualPasteInput = ""
-                    return@OutlinedTextField
-                }
-                // 重要：保存原始输入到内存并清空输入框，避免 TextField 渲染大段 base64 导致卡顿。
-                audioBase64 = value.filterNot { it.isWhitespace() }
-                manualPasteInput = ""
-                showBase64 = false
-            },
-            label = { Text(text = "Paste Base64 here (will auto-hide)") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            visualTransformation = if (showBase64) VisualTransformation.None else PasswordVisualTransformation(),
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(text = "audio_type:", style = MaterialTheme.typography.bodySmall)
-            TextButton(onClick = { typeMenuExpanded = true }) {
-                Text(text = audioType)
-                Icon(imageVector = Icons.Filled.KeyboardArrowDown, contentDescription = null)
-            }
-            DropdownMenu(
-                expanded = typeMenuExpanded,
-                onDismissRequest = { typeMenuExpanded = false },
-            ) {
-                listOf("raw", "speex", "opus-ogg").forEach { type ->
-                    DropdownMenuItem(
-                        text = { Text(text = type) },
-                        onClick = {
-                            audioType = type
-                            typeMenuExpanded = false
-                        }
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = "uid (optional):",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        OutlinedTextField(
-            value = uid,
-            onValueChange = { uid = it },
-            label = { Text(text = "uid") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(
-                onClick = { onRegisterBase64(audioBase64, audioType, uid.ifBlank { null }) },
-                enabled = audioBase64.trim().isNotBlank() && !voiceprintLab.registerInProgress,
-            ) {
-                if (voiceprintLab.registerInProgress) {
-                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(6.dp))
-                }
-                Text(text = "Register Voiceprint")
-            }
-
-            TextButton(
-                onClick = onApplyLastFeatureId,
-                enabled = lastFeatureId.isNotBlank(),
-            ) {
-                Text(text = "Enable + Add feature_id to Settings")
-            }
-        }
-
-        if (lastFeatureId.isNotBlank()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "feature_id: ${lastFeatureId.take(64)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                TextButton(onClick = { onCopy(lastFeatureId) }) {
-                    Text(text = "Copy feature_id")
-                }
-            }
-        }
-
-        val settingsHint = buildString {
-            val enabledSetting = voiceprintLab.enabledSetting
-            val count = voiceprintLab.configuredFeatureIdCount
-            if (enabledSetting != null || count != null) {
-                append("Settings: enabled=")
-                append(enabledSetting ?: "-")
-                append(", featureIdsCount=")
-                append(count ?: "-")
-            }
-        }
-        if (settingsHint.isNotBlank()) {
-            Text(
-                text = settingsHint,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        val bodySmall = MaterialTheme.typography.bodySmall
-        val onSurface = MaterialTheme.colorScheme.onSurface
-        val vpHost = voiceprintLab.lastApiHost?.takeIf { it.isNotBlank() } ?: "-"
-        val vpPath = voiceprintLab.lastApiPath?.takeIf { it.isNotBlank() } ?: "-"
-        val vpHttp = voiceprintLab.lastHttpCode?.toString() ?: "-"
-        val vpBizCode = voiceprintLab.lastBusinessCode?.takeIf { it.isNotBlank() } ?: "-"
-        val vpBizDesc = voiceprintLab.lastBusinessDesc?.takeIf { it.isNotBlank() } ?: "-"
-        val callHint = "Last call: host=$vpHost path=$vpPath http=$vpHttp code=$vpBizCode"
-        Text(
-            text = callHint,
-            style = bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-        if (vpBizDesc != "-") {
-            Text(
-                text = "Business desc: ${vpBizDesc.take(120)}",
-                style = bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        voiceprintLab.lastMessage?.takeIf { it.isNotBlank() }?.let { msg ->
-            Text(
-                text = msg,
-                style = bodySmall,
-                color = onSurface,
-            )
-        }
-
-        HorizontalDivider()
-
-        Text(
-            text = "Delete feature_id (optional)",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        OutlinedTextField(
-            value = deleteFeatureId,
-            onValueChange = { deleteFeatureId = it },
-            label = { Text(text = "feature_id to delete") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(text = "Remove from settings", style = MaterialTheme.typography.bodySmall)
-            Switch(
-                checked = removeFromSettings,
-                onCheckedChange = { removeFromSettings = it },
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            TextButton(
-                onClick = { onDeleteFeatureId(deleteFeatureId, removeFromSettings) },
-                enabled = deleteFeatureId.trim().isNotBlank() && !voiceprintLab.deleteInProgress,
-            ) {
-                if (voiceprintLab.deleteInProgress) {
-                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(6.dp))
-                }
-                Text(text = "Delete feature_id")
-            }
-        }
-
-        Text(
-            text = "Next: run transcription and verify in HUD/trace: voiceprintEffectiveEnabled=true, roleTypeApplied=3, roleLabelsMatched>0.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
 
 private fun formatMillis(value: Long): String {
     if (value <= 0) return "-"

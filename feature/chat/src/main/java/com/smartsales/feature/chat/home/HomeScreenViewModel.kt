@@ -69,10 +69,7 @@ import com.smartsales.feature.usercenter.UserProfile
 import com.smartsales.feature.usercenter.SalesPersona
 import com.smartsales.data.aicore.params.AiParaSettingsRepository
 import com.smartsales.data.aicore.params.TranscriptionLaneSelector
-import com.smartsales.data.aicore.params.applyXfyunVoiceprintTestPreset
-import com.smartsales.data.aicore.params.enableVoiceprintAndAddFeatureId
-import com.smartsales.data.aicore.params.removeVoiceprintFeatureId
-import com.smartsales.data.aicore.xfyun.XfyunVoiceprintApi
+
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
 import java.io.IOException
@@ -93,7 +90,7 @@ import kotlinx.coroutines.withContext
 import java.util.Optional
 import com.smartsales.feature.chat.core.publisher.ChatPublisher
 import com.smartsales.feature.chat.core.publisher.ChatPublisherImpl
-import com.smartsales.feature.chat.home.voiceprint.VoiceprintLabUiState
+
 import com.smartsales.feature.chat.core.publisher.GeneralChatV1Finalizer
 import com.smartsales.feature.chat.core.publisher.ArtifactStatus
 import com.smartsales.feature.chat.core.publisher.V1FinalizeResult
@@ -242,7 +239,7 @@ class HomeScreenViewModel @Inject constructor(
     private val xfyunTraceStore: XfyunTraceStore,
     private val tingwuTraceStore: TingwuTraceStore,
     private val aiParaSettingsRepository: AiParaSettingsRepository,
-    private val xfyunVoiceprintApi: XfyunVoiceprintApi,
+
     private val exportCoordinator: com.smartsales.domain.export.ExportCoordinator,
     private val debugCoordinator: com.smartsales.domain.debug.DebugCoordinator,
     private val sessionsManager: com.smartsales.domain.sessions.SessionsManager,
@@ -1111,144 +1108,9 @@ class HomeScreenViewModel @Inject constructor(
 
     // HUD delegation moved to DebugCoordinator (removed wrapper function)
 
-    fun registerVoiceprintBase64(
-        audioDataBase64: String,
-        audioType: String,
-        uid: String?,
-    ) {
-        if (!BuildConfig.DEBUG) return
-        // 重要：base64 属于敏感音频数据；这里只做请求转发，绝不保存到 ViewModel/日志。
-        val normalizedBase64 = audioDataBase64.filterNot { it.isWhitespace() }
-        if (normalizedBase64.isBlank()) {
-            _uiState.update {
-                it.copy(
-                    voiceprintLab = it.voiceprintLab.copy(
-                        registerInProgress = false,
-                        lastMessage = "No base64 loaded.",
-                    )
-                )
-            }
-            return
-        }
-        val type = audioType.trim()
-        if (type.isBlank()) {
-            _uiState.update {
-                it.copy(
-                    voiceprintLab = it.voiceprintLab.copy(
-                        registerInProgress = false,
-                        lastMessage = "audio_type is blank.",
-                    )
-                )
-            }
-            return
-        }
-        _uiState.update { it.copy(voiceprintLab = it.voiceprintLab.copy(registerInProgress = true, lastMessage = null)) }
-        viewModelScope.launch {
-            val result = runCatching {
-                xfyunVoiceprintApi.registerBase64(
-                    audioDataBase64 = normalizedBase64,
-                    audioType = type,
-                    uid = uid?.trim()?.takeIf { it.isNotBlank() },
-                )
-            }
-            val snapshot = aiParaSettingsRepository.snapshot().transcription.xfyun.voiceprint
-            _uiState.update { state ->
-                val evidence = when (val error = result.exceptionOrNull()) {
-                    is XfyunVoiceprintApi.VoiceprintCallException -> error.evidence
-                    else -> result.getOrNull()?.evidence
-                }
-                state.copy(
-                    voiceprintLab = state.voiceprintLab.copy(
-                        registerInProgress = false,
-                        lastFeatureId = result.getOrNull()?.featureId,
-                        lastMessage = result.exceptionOrNull()?.message
-                            ?: "Register OK. Copy feature_id then enable voiceprint.",
-                        lastApiHost = evidence?.baseUrlHost,
-                        lastApiPath = evidence?.path,
-                        lastHttpCode = evidence?.httpCode,
-                        lastBusinessCode = evidence?.businessCode,
-                        lastBusinessDesc = evidence?.businessDesc,
-                        enabledSetting = snapshot.enabled,
-                        configuredFeatureIdCount = snapshot.featureIds.size,
-                    )
-                )
-            }
-        }
-    }
 
-    fun enableVoiceprintAndAddLastFeatureId() {
-        if (!BuildConfig.DEBUG) return
-        val featureId = _uiState.value.voiceprintLab.lastFeatureId?.trim().orEmpty()
-        if (featureId.isBlank()) {
-            _uiState.update { it.copy(voiceprintLab = it.voiceprintLab.copy(lastMessage = "No feature_id to apply.")) }
-            return
-        }
-        // 重要：只写入 featureId（敏感标识）；绝不写入/保存音频 base64。
-        aiParaSettingsRepository.enableVoiceprintAndAddFeatureId(featureId)
-        val snapshot = aiParaSettingsRepository.snapshot().transcription.xfyun.voiceprint
-        _uiState.update { state ->
-            state.copy(
-                voiceprintLab = state.voiceprintLab.copy(
-                    enabledSetting = snapshot.enabled,
-                    configuredFeatureIdCount = snapshot.featureIds.size,
-                    lastMessage = "Applied: enabled=true, featureIdsCount=${snapshot.featureIds.size}",
-                )
-            )
-        }
-    }
 
-    fun applyXfyunVoiceprintTestPreset() {
-        if (!BuildConfig.DEBUG) return
-        val lastFeatureId = _uiState.value.voiceprintLab.lastFeatureId
-        aiParaSettingsRepository.applyXfyunVoiceprintTestPreset(lastFeatureId = lastFeatureId)
-        val snapshot = aiParaSettingsRepository.snapshot().transcription.xfyun.voiceprint
-        _uiState.update { state ->
-            state.copy(
-                voiceprintLab = state.voiceprintLab.copy(
-                    enabledSetting = snapshot.enabled,
-                    configuredFeatureIdCount = snapshot.featureIds.size,
-                    lastMessage = "XFyun VP Test Preset applied.",
-                )
-            )
-        }
-    }
 
-    fun deleteVoiceprintFeatureId(featureId: String, removeFromSettings: Boolean) {
-        if (!BuildConfig.DEBUG) return
-        val id = featureId.trim()
-        if (id.isBlank()) {
-            _uiState.update { it.copy(voiceprintLab = it.voiceprintLab.copy(lastMessage = "feature_id is blank.")) }
-            return
-        }
-        _uiState.update { it.copy(voiceprintLab = it.voiceprintLab.copy(deleteInProgress = true, lastMessage = null)) }
-        viewModelScope.launch {
-            val result = runCatching { xfyunVoiceprintApi.deleteFeatureId(id) }
-            if (result.isSuccess && removeFromSettings) {
-                aiParaSettingsRepository.removeVoiceprintFeatureId(id)
-            }
-            val snapshot = aiParaSettingsRepository.snapshot().transcription.xfyun.voiceprint
-            _uiState.update { state ->
-                val evidence = when (val error = result.exceptionOrNull()) {
-                    is XfyunVoiceprintApi.VoiceprintCallException -> error.evidence
-                    else -> result.getOrNull()
-                }
-                state.copy(
-                    voiceprintLab = state.voiceprintLab.copy(
-                        deleteInProgress = false,
-                        enabledSetting = snapshot.enabled,
-                        configuredFeatureIdCount = snapshot.featureIds.size,
-                        lastMessage = result.exceptionOrNull()?.message
-                            ?: "Delete OK. removeFromSettings=$removeFromSettings",
-                        lastApiHost = evidence?.baseUrlHost,
-                        lastApiPath = evidence?.path,
-                        lastHttpCode = evidence?.httpCode,
-                        lastBusinessCode = evidence?.businessCode,
-                        lastBusinessDesc = evidence?.businessDesc,
-                    )
-                )
-            }
-        }
-    }
 
     private fun updateDebugSessionMetadata(
         meta: SessionMetadata?,
@@ -1898,19 +1760,18 @@ class HomeScreenViewModel @Inject constructor(
 
         // <Visible2User> 驱动显示，rawContent 保留原始文本（含标签）
         val visibleText = channels.visibleText
-        val displaySource = visibleText ?: rawFullText
-        val cleaned = if (useV1Publisher) {
-            v1Result?.visibleMarkdown.orEmpty()
-        } else {
-            val sanitized = if (isSmartAnalysis) rawFullText else com.smartsales.domain.chat.ChatPublisher.extractDisplayText(displaySource)
-            // SMART_ANALYSIS 已由 Orchestrator 生成最终 Markdown，这里直接透传
-            if (isSmartAnalysis) {
-                sanitized
-            } else {
-                val base = onCompletedTransform?.invoke(sanitized) ?: sanitized
-                applyGeneralOutputGuards(base)
+        // Wave 9: Delegate display text resolution to domain layer
+        val cleaned = com.smartsales.domain.chat.ChatPublisher.resolveDisplayText(
+            rawFullText = rawFullText,
+            visibleText = visibleText,
+            isSmartAnalysis = isSmartAnalysis,
+            useV1Publisher = useV1Publisher,
+            v1VisibleMarkdown = v1Result?.visibleMarkdown,
+            onCompletedTransform = if (isSmartAnalysis) null else { text -> 
+                val transformed = onCompletedTransform?.invoke(text) ?: text
+                applyGeneralOutputGuards(transformed)
             }
-        }
+        )
         val isSmartFailure = isSmartAnalysis && cleaned.trim() == SMART_ANALYSIS_FAILURE_TEXT
         if (isSmartAnalysis && !isSmartFailure) {
             // 根据是否是导出前自动分析，区分来源
@@ -2127,19 +1988,7 @@ class HomeScreenViewModel @Inject constructor(
         return rawCandidate ?: sanitized ?: raw.orEmpty()
     }
 
-    /** 提取 <Visible2User> 内部文本，若不存在则返回 null。 */
-    private fun extractVisible2User(raw: String): String? {
-        val regex = Regex("<\\s*Visible2User\\s*>([\\s\\S]*?)<\\s*/\\s*Visible2User\\s*>", RegexOption.IGNORE_CASE)
-        val match = regex.find(raw) ?: return null
-        return match.groupValues.getOrNull(1)?.trim()?.takeIf { it.isNotBlank() }
-    }
-
-    /** 提取 <Metadata> 包裹的 JSON 文本，若不存在则返回 null。 */
-    private fun extractMetadataJson(raw: String): String? {
-        val regex = Regex("<\\s*Metadata\\s*>([\\s\\S]*?)<\\s*/\\s*Metadata\\s*>", RegexOption.IGNORE_CASE)
-        val match = regex.find(raw) ?: return null
-        return match.groupValues.getOrNull(1)?.trim()?.takeIf { it.isNotBlank() }
-    }
+    // extractVisible2User and extractMetadataJson removed - using ChatPublisher.extractChannels()
 
     /** GENERAL 回复的 channels 数据（Visible2User 和 Metadata） */
     private data class GeneralChannels(
@@ -2150,12 +1999,12 @@ class HomeScreenViewModel @Inject constructor(
 
     /** 提取 GENERAL 回复中的 channels */
     private fun extractGeneralChannels(raw: String): GeneralChannels {
-        val visibleText = extractVisible2User(raw)
-        val metadataJson = extractMetadataJson(raw)
+        // Delegate extraction to domain layer (Wave 8A consolidation)
+        val channels = com.smartsales.domain.chat.ChatPublisher.extractChannels(raw)
         val rename = parseRenameCandidate(raw, TitleSource.GENERAL)
         return GeneralChannels(
-            visibleText = visibleText,
-            metadataJson = metadataJson,
+            visibleText = channels.visibleText,
+            metadataJson = channels.metadataJson,
             renameCandidate = rename
         )
     }

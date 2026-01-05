@@ -7,7 +7,7 @@ import com.smartsales.data.aicore.debug.DebugSnapshot
 import com.smartsales.data.aicore.debug.TingwuTraceSnapshot
 import com.smartsales.data.aicore.debug.XfyunTraceSnapshot
 import com.smartsales.feature.chat.home.debug.DebugSessionMetadata
-import com.smartsales.feature.chat.home.voiceprint.VoiceprintLabUiState
+
 import com.smartsales.feature.chat.home.export.ExportGateState
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeUiState.kt
@@ -75,7 +75,7 @@ data class HomeUiState(
     val debugSnapshot: DebugSnapshot? = null,
     val xfyunTrace: XfyunTraceSnapshot? = null,
     val tingwuTrace: TingwuTraceSnapshot? = null,
-    val voiceprintLab: VoiceprintLabUiState = VoiceprintLabUiState(),
+
     val smartReasoningText: String? = null,
     val isInputFocused: Boolean = false,
     val salesPersona: SalesPersona? = null,

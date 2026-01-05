@@ -137,4 +137,130 @@ class ChatPublisherTest {
         val raw = "原始文本"
         assertEquals("原始文本", ChatPublisher.extractDisplayText(raw))
     }
+
+    // ===== Wave 8A: extractMetadataJson tests =====
+
+    @Test
+    fun extractMetadataJson_withValidTag_extractsContent() {
+        val raw = "<Metadata>{\"title\": \"测试标题\"}</Metadata>"
+        assertEquals("{\"title\": \"测试标题\"}", ChatPublisher.extractMetadataJson(raw))
+    }
+
+    @Test
+    fun extractMetadataJson_withWhitespace_extractsContent() {
+        val raw = "< Metadata >{\"key\": \"value\"}</ Metadata >"
+        assertEquals("{\"key\": \"value\"}", ChatPublisher.extractMetadataJson(raw))
+    }
+
+    @Test
+    fun extractMetadataJson_notPresent_returnsNull() {
+        val raw = "<visible2user>内容</visible2user>"
+        assertNull(ChatPublisher.extractMetadataJson(raw))
+    }
+
+    // ===== Wave 8A: extractChannels tests =====
+
+    @Test
+    fun extractChannels_bothTagsPresent_extractsBoth() {
+        val raw = """
+            < Visible2User >用户内容</ Visible2User >
+            <Metadata>{"key": "value"}</Metadata>
+        """.trimIndent()
+        val result = ChatPublisher.extractChannels(raw)
+        assertEquals("用户内容", result.visibleText)
+        assertEquals("{\"key\": \"value\"}", result.metadataJson)
+    }
+
+    @Test
+    fun extractChannels_onlyVisible_extractsVisible() {
+        val raw = "<Visible2User>只有可见内容</Visible2User>"
+        val result = ChatPublisher.extractChannels(raw)
+        assertEquals("只有可见内容", result.visibleText)
+        assertNull(result.metadataJson)
+    }
+
+    @Test
+    fun extractChannels_onlyMetadata_extractsMetadata() {
+        val raw = "<Metadata>{}</Metadata>"
+        val result = ChatPublisher.extractChannels(raw)
+        assertNull(result.visibleText)
+        assertEquals("{}", result.metadataJson)
+    }
+
+    // ===== Wave 9: resolveDisplayText tests =====
+
+    @Test
+    fun resolveDisplayText_v1Mode_usesV1VisibleMarkdown() {
+        val result = ChatPublisher.resolveDisplayText(
+            rawFullText = "raw text",
+            visibleText = "visible text",
+            isSmartAnalysis = false,
+            useV1Publisher = true,
+            v1VisibleMarkdown = "v1 markdown"
+        )
+        assertEquals("v1 markdown", result)
+    }
+
+    @Test
+    fun resolveDisplayText_legacyMode_extractsFromVisibleText() {
+        val result = ChatPublisher.resolveDisplayText(
+            rawFullText = "raw text",
+            visibleText = "visible text",
+            isSmartAnalysis = false,
+            useV1Publisher = false,
+            v1VisibleMarkdown = null
+        )
+        assertEquals("visible text", result)
+    }
+
+    @Test
+    fun resolveDisplayText_legacyMode_fallbackToRaw() {
+        val result = ChatPublisher.resolveDisplayText(
+            rawFullText = "raw text",
+            visibleText = null,
+            isSmartAnalysis = false,
+            useV1Publisher = false,
+            v1VisibleMarkdown = null
+        )
+        assertEquals("raw text", result)
+    }
+
+    @Test
+    fun resolveDisplayText_smartAnalysis_passthroughRaw() {
+        val result = ChatPublisher.resolveDisplayText(
+            rawFullText = "smart analysis result",
+            visibleText = "ignored",
+            isSmartAnalysis = true,
+            useV1Publisher = false,
+            v1VisibleMarkdown = null
+        )
+        assertEquals("smart analysis result", result)
+    }
+
+    @Test
+    fun resolveDisplayText_appliesTransform() {
+        val result = ChatPublisher.resolveDisplayText(
+            rawFullText = "raw",
+            visibleText = "visible",
+            isSmartAnalysis = false,
+            useV1Publisher = false,
+            v1VisibleMarkdown = null,
+            onCompletedTransform = { it.uppercase() }
+        )
+        assertEquals("VISIBLE", result)
+    }
+
+    @Test
+    fun resolveDisplayText_smartAnalysis_skipsTransform() {
+        val result = ChatPublisher.resolveDisplayText(
+            rawFullText = "smart result",
+            visibleText = null,
+            isSmartAnalysis = true,
+            useV1Publisher = false,
+            v1VisibleMarkdown = null,
+            onCompletedTransform = { it.uppercase() }
+        )
+        assertEquals("smart result", result)  // Transform not applied for smart analysis
+    }
 }
+

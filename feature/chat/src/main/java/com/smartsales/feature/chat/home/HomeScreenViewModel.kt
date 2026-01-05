@@ -91,6 +91,7 @@ import kotlinx.coroutines.withContext
 import java.util.Optional
 import com.smartsales.feature.chat.core.publisher.ChatPublisher
 import com.smartsales.feature.chat.core.publisher.ChatPublisherImpl
+import com.smartsales.feature.chat.home.voiceprint.VoiceprintLabUiState
 import com.smartsales.feature.chat.core.publisher.GeneralChatV1Finalizer
 import com.smartsales.feature.chat.core.publisher.ArtifactStatus
 import com.smartsales.feature.chat.core.publisher.V1FinalizeResult
@@ -251,26 +252,7 @@ data class DebugSessionMetadata(
     val notes: List<String> = emptyList()
 )
 
-/**
- * 说明：声纹开发者工具（Voiceprint Lab）的 UI 状态（仅内存态）。
- *
- * 重要安全要求：
- * - 严禁在 ViewModel 内保存音频 base64（敏感数据）；base64 只由 UI 临时持有并在请求后清空。
- */
-data class VoiceprintLabUiState(
-    val registerInProgress: Boolean = false,
-    val deleteInProgress: Boolean = false,
-    val lastFeatureId: String? = null,
-    val lastMessage: String? = null,
-    val lastApiHost: String? = null,
-    val lastApiPath: String? = null,
-    val lastHttpCode: Int? = null,
-    val lastBusinessCode: String? = null,
-    val lastBusinessDesc: String? = null,
-    // 仅用于提示当前设置概况；不包含 featureIds 明文。
-    val enabledSetting: Boolean? = null,
-    val configuredFeatureIdCount: Int? = null,
-)
+// VoiceprintLabUiState moved to voiceprint/VoiceprintLabUiState.kt (deprecated feature)
 
 /** Home 页的不可变 UI 状态。 */
 data class HomeUiState(
@@ -352,6 +334,7 @@ class HomeScreenViewModel @Inject constructor(
     private val aiParaSettingsRepository: AiParaSettingsRepository,
     private val xfyunVoiceprintApi: XfyunVoiceprintApi,
     private val exportViewModel: com.smartsales.feature.chat.home.export.ExportViewModel,
+    private val debugViewModel: com.smartsales.feature.chat.home.debug.DebugViewModel,
     optionalConfig: Optional<AiCoreConfig> = Optional.empty(),
 ) : ViewModel() {
 
@@ -1242,13 +1225,23 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     fun toggleDebugMetadata() {
-        val newValue = !_uiState.value.showDebugMetadata
-        _uiState.update { it.copy(showDebugMetadata = newValue) }
-        if (newValue) {
-            // 打开时刷新一次 MetaHub，关闭时保留现有数据即可
-            refreshDebugSessionMetadata()
-            refreshDebugSnapshot()
-            // Export gate is now checked on-demand via exportViewModel.checkExportGate()
+        debugViewModel.toggleDebugPanel()
+        val visible = debugViewModel.debugState.value.visible
+        _uiState.update { it.copy(showDebugMetadata = visible) }
+        if (visible) {
+            // 打开时刷新调试数据
+            viewModelScope.launch {
+                val sessionTitle = _uiState.value.currentSession.title
+                val summary = sessionRepository.findById(sessionId)
+                debugViewModel.refreshSessionMetadata(sessionId, sessionTitle)
+                debugViewModel.refreshDebugSnapshot(
+                    sessionId = sessionId,
+                    jobId = lastTranscriptionJobId,
+                    sessionTitle = sessionTitle,
+                    isTitleUserEdited = summary?.isTitleUserEdited
+                )
+                debugViewModel.refreshTraces()
+            }
         }
     }
 
@@ -1264,42 +1257,22 @@ class HomeScreenViewModel @Inject constructor(
 
     fun refreshXfyunTrace() {
         if (!CHAT_DEBUG_HUD_ENABLED) return
-        _uiState.update {
-            it.copy(
-                xfyunTrace = xfyunTraceStore.getSnapshot(),
-                // 重要：HUD 打开时同时刷新 Tingwu 调试快照，便于确认默认链路。
-                tingwuTrace = tingwuTraceStore.getSnapshot()
-            )
-        }
+        debugViewModel.refreshTraces()
         refreshDebugSnapshot()
     }
 
     // [HSVM@HUD] ===== DebugSnapshot / HUD / trace 输出 =====
-    // [HSVM:DEBUG_SNAPSHOT]
+    // [HSVM:DEBUG_SNAPSHOT] - Now delegating to DebugViewModel
     private fun refreshDebugSnapshot() {
         if (!CHAT_DEBUG_HUD_ENABLED || !_uiState.value.showDebugMetadata) return
-        val currentSession = sessionId
-        val currentJobId = lastTranscriptionJobId
         viewModelScope.launch {
-            val summary = sessionRepository.findById(currentSession)
-            val snapshot = runCatching {
-                debugOrchestrator.getDebugSnapshot(
-                    sessionId = currentSession,
-                    jobId = currentJobId,
-                    sessionTitle = summary?.title ?: _uiState.value.currentSession.title,
-                    isTitleUserEdited = summary?.isTitleUserEdited
-                )
-            }.getOrElse { error ->
-                // 重要：HUD 的调试快照失败时要 fail-soft，避免阻断调试面板展示。
-                DebugSnapshot(
-                    section1EffectiveRunText = "DebugSnapshot failed: ${error.message ?: "unknown"}",
-                    section2RawTranscriptionText = "(missing: debug snapshot unavailable)",
-                    section3PreprocessedText = "(missing: debug snapshot unavailable)",
-                    sessionId = currentSession,
-                    jobId = currentJobId,
-                )
-            }
-            _uiState.update { it.copy(debugSnapshot = snapshot) }
+            val summary = sessionRepository.findById(sessionId)
+            debugViewModel.refreshDebugSnapshot(
+                sessionId = sessionId,
+                jobId = lastTranscriptionJobId,
+                sessionTitle = summary?.title ?: _uiState.value.currentSession.title,
+                isTitleUserEdited = summary?.isTitleUserEdited
+            )
         }
     }
 

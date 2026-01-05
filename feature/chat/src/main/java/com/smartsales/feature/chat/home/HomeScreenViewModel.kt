@@ -351,6 +351,7 @@ class HomeScreenViewModel @Inject constructor(
     private val tingwuTraceStore: TingwuTraceStore,
     private val aiParaSettingsRepository: AiParaSettingsRepository,
     private val xfyunVoiceprintApi: XfyunVoiceprintApi,
+    private val exportViewModel: com.smartsales.feature.chat.home.export.ExportViewModel,
     optionalConfig: Optional<AiCoreConfig> = Optional.empty(),
 ) : ViewModel() {
 
@@ -548,18 +549,34 @@ class HomeScreenViewModel @Inject constructor(
     private fun onExportRequested(format: ExportFormat) {
         if (_uiState.value.exportInProgress) return
         viewModelScope.launch {
-            val summary = sessionRepository.findById(sessionId)
-            val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-            val gate = resolveExportGateState(sessionId, summary, meta)
-            _uiState.update { it.copy(exportGateState = gate) }
+            // Check export gate via ExportViewModel
+            val gate = exportViewModel.checkExportGate(sessionId)
+            
             if (gate.ready) {
+                // Gate passed: prepare markdown and export
                 pendingExportAfterAnalysis = null
                 exportAutoAnalysisInFlight = false
-                exportMarkdown(format)
+                val analysisMarkdown = findSmartAnalysisMarkdownForExport()
+                val markdown = if (!analysisMarkdown.isNullOrBlank()) {
+                    wrapSmartAnalysisForExport(analysisMarkdown)
+                } else {
+                    buildTranscriptMarkdown(_uiState.value.chatMessages)
+                }
+                _uiState.update { it.copy(exportInProgress = true) }
+                val result = exportViewModel.performExport(sessionId, format, _uiState.value.userName, markdown)
+                when (result) {
+                    is Result.Success -> _uiState.update { it.copy(exportInProgress = false) }
+                    is Result.Error -> _uiState.update { 
+                        it.copy(
+                            exportInProgress = false,
+                            chatErrorMessage = result.throwable.message ?: "导出失败"
+                        )
+                    }
+                }
                 return@launch
             }
 
-            // 未就绪：记录最新导出请求（最后一次点击优先），完成智能分析后自动导出。
+            // Gate not ready: start smart analysis and queue export
             pendingExportAfterAnalysis = format
             val formatLabel = if (format == ExportFormat.PDF) "PDF" else "CSV"
             if (exportAutoAnalysisInFlight || _uiState.value.isSending || _uiState.value.isStreaming) {
@@ -617,50 +634,34 @@ class HomeScreenViewModel @Inject constructor(
             append(body.trim())
         }.trim()
 
-    private fun resolveExportGateState(
-        sessionId: String,
-        summary: AiSessionSummary?,
-        meta: SessionMetadata?
-    ): ExportGateState {
-        // 重要：导出必须等待智能分析完成；未就绪时只做提示，不触发导出副作用。
-        val ready = meta?.latestMajorAnalysisMessageId != null
-        val reason = if (ready) "" else "需先完成智能分析"
-        val resolution = ExportNameResolver.resolve(
-            sessionId = sessionId,
-            sessionTitle = summary?.title,
-            isTitleUserEdited = summary?.isTitleUserEdited,
-            meta = meta
-        )
-        return ExportGateState(
-            ready = ready,
-            reason = reason,
-            resolvedName = resolution.baseName,
-            nameSource = resolution.source
-        )
-    }
-
-    private fun refreshExportGateState() {
-        val currentSessionId = sessionId
-        viewModelScope.launch {
-            val summary = sessionRepository.findById(currentSessionId)
-            val meta = runCatching { metaHub.getSession(currentSessionId) }.getOrNull()
-            val gate = resolveExportGateState(currentSessionId, summary, meta)
-            _uiState.update { it.copy(exportGateState = gate) }
-        }
-    }
+    // resolveExportGateState and refreshExportGateState moved to ExportViewModel
 
     private fun maybeStartPendingExportAnalysis() {
         val pending = pendingExportAfterAnalysis ?: return
         if (exportAutoAnalysisInFlight || _uiState.value.isSending || _uiState.value.isStreaming) return
         // 说明：导出被排队时，等待对话空闲后再自动触发智能分析。
         viewModelScope.launch {
-            val summary = sessionRepository.findById(sessionId)
-            val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-            val gate = resolveExportGateState(sessionId, summary, meta)
-            _uiState.update { it.copy(exportGateState = gate) }
+            val gate = exportViewModel.checkExportGate(sessionId)
             if (gate.ready) {
+                // Gate ready: trigger export immediately
                 pendingExportAfterAnalysis = null
-                exportMarkdown(pending)
+                val analysisMarkdown = findSmartAnalysisMarkdownForExport()
+                val markdown = if (!analysisMarkdown.isNullOrBlank()) {
+                    wrapSmartAnalysisForExport(analysisMarkdown)
+                } else {
+                    buildTranscriptMarkdown(_uiState.value.chatMessages)
+                }
+                _uiState.update { it.copy(exportInProgress = true) }
+                val result = exportViewModel.performExport(sessionId, pending, _uiState.value.userName, markdown)
+                when (result) {
+                    is Result.Success -> _uiState.update { it.copy(exportInProgress = false) }
+                    is Result.Error -> _uiState.update {
+                        it.copy(
+                            exportInProgress = false,
+                            chatErrorMessage = result.throwable.message ?: "导出失败"
+                        )
+                    }
+                }
                 return@launch
             }
             val formatLabel = if (pending == ExportFormat.PDF) "PDF" else "CSV"
@@ -672,85 +673,8 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
-    private fun exportMarkdown(format: ExportFormat) {
-        if (_uiState.value.exportInProgress) return
-        viewModelScope.launch {
-            // 检查 MetaHub 分析状态
-            val summary = sessionRepository.findById(sessionId)
-            val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-            val gate = resolveExportGateState(sessionId, summary, meta)
-            _uiState.update { it.copy(exportGateState = gate) }
-            if (!gate.ready) {
-                _uiState.update { it.copy(snackbarMessage = gate.reason.ifBlank { "需先完成智能分析" }) }
-                return@launch
-            }
-            val hasMetaAnalysis = meta?.latestMajorAnalysisMessageId != null
-            val cachedAnalysis = findSmartAnalysisMarkdownForExport()
-
-            when {
-                !cachedAnalysis.isNullOrBlank() -> {
-                    // 直接导出：使用缓存分析 markdown
-                    val markdown = wrapSmartAnalysisForExport(cachedAnalysis)
-                    performExport(format, markdownOverride = markdown)
-                }
-                hasMetaAnalysis -> {
-                    // MetaHub 认为有分析，但 VM 没有缓存文本
-                    // 不自动重跑，给轻量提示 + 退回
-                    _uiState.update {
-                        it.copy(
-                            exportInProgress = false,
-                            snackbarMessage = "检测到历史分析记录，如需导出，请重新运行一次智能分析。"
-                        )
-                    }
-                    // 可选：退回到对话导出（逐字稿），或直接 return
-                    return@launch
-                }
-                else -> {
-                    _uiState.update {
-                        it.copy(
-                            exportInProgress = false,
-                            snackbarMessage = "智能分析未完成，暂不可导出。"
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    private suspend fun performExport(format: ExportFormat, markdownOverride: String? = null) {
-        val markdown = markdownOverride ?: latestAnalysisMarkdown ?: buildTranscriptMarkdown(_uiState.value.chatMessages)
-        if (format == ExportFormat.PDF && markdown.isBlank()) {
-            _uiState.update { it.copy(exportInProgress = false, snackbarMessage = "暂无可导出的内容") }
-            return
-        }
-        _uiState.update { it.copy(exportInProgress = true, chatErrorMessage = null) }
-        val sessionTitle = _uiState.value.exportGateState.resolvedName
-        val result = when (format) {
-            ExportFormat.PDF -> exportOrchestrator.exportPdf(sessionId, markdown, sessionTitle, _uiState.value.userName)
-            ExportFormat.CSV -> exportOrchestrator.exportCsv(sessionId, sessionTitle, _uiState.value.userName)
-        }
-        when (result) {
-            is Result.Success -> {
-                when (val share = shareHandler.shareExport(result.data)) {
-                    is Result.Success -> _uiState.update { it.copy(exportInProgress = false) }
-                    is Result.Error -> _uiState.update {
-                        it.copy(
-                            exportInProgress = false,
-                            chatErrorMessage = share.throwable.message ?: "分享失败"
-                        )
-                    }
-                }
-            }
-            is Result.Error -> {
-                _uiState.update {
-                    it.copy(
-                        exportInProgress = false,
-                        chatErrorMessage = result.throwable.message ?: "导出失败"
-                    )
-                }
-            }
-        }
-    }
+    // exportMarkdown and performExport moved to ExportViewModel
+    // Export flow now handled by onExportRequested -> exportViewModel.checkExportGate/performExport
 
     private fun findSmartAnalysisMarkdownForExport(): String? {
         latestAnalysisMarkdown?.takeIf { it.isNotBlank() }?.let { return it }
@@ -1324,7 +1248,7 @@ class HomeScreenViewModel @Inject constructor(
             // 打开时刷新一次 MetaHub，关闭时保留现有数据即可
             refreshDebugSessionMetadata()
             refreshDebugSnapshot()
-            refreshExportGateState()
+            // Export gate is now checked on-demand via exportViewModel.checkExportGate()
         }
     }
 
@@ -1792,7 +1716,7 @@ class HomeScreenViewModel @Inject constructor(
                 )
             }
             updateDebugSessionMetadata(null)
-            refreshExportGateState()
+            // Export gate is now checked on-demand via exportViewModel.checkExportGate()
             chatHistoryRepository.saveMessages(newSession.id, emptyList())
             applySessionList()
         }
@@ -1837,7 +1761,7 @@ class HomeScreenViewModel @Inject constructor(
             sessionRepository.summaries.collectLatest { summaries ->
                 latestSessionSummaries = summaries
                 applySessionList()
-                refreshExportGateState()
+                // Export gate is now checked on-demand via exportViewModel.checkExportGate()
             }
         }
     }
@@ -2761,7 +2685,7 @@ class HomeScreenViewModel @Inject constructor(
         runCatching { metaHub.upsertSession(updated) }
             .onSuccess {
                 updateDebugSessionMetadata(updated)
-                refreshExportGateState()
+                // Export gate is now checked on-demand via exportViewModel.checkExportGate()
             }
     }
 
@@ -2831,9 +2755,20 @@ class HomeScreenViewModel @Inject constructor(
 
         pendingExportAfterAnalysis?.let { format ->
             pendingExportAfterAnalysis = null
+            exportAutoAnalysisInFlight = false
             viewModelScope.launch {
                 val markdown = wrapSmartAnalysisForExport(summary)
-                performExport(format, markdownOverride = markdown)
+                _uiState.update { it.copy(exportInProgress = true) }
+                val result = exportViewModel.performExport(sessionId, format, _uiState.value.userName, markdown)
+                when (result) {
+                    is Result.Success -> _uiState.update { it.copy(exportInProgress = false) }
+                    is Result.Error -> _uiState.update {
+                        it.copy(
+                            exportInProgress = false,
+                            chatErrorMessage = result.throwable.message ?: "导出失败"
+                        )
+                    }
+                }
             }
         }
     }
@@ -3926,7 +3861,7 @@ class HomeScreenViewModel @Inject constructor(
             )
         }
         updateDebugSessionMetadata(null)
-        refreshExportGateState()
+        // Export gate is now checked on-demand via exportViewModel.checkExportGate()
     }
 
     private suspend fun enforcePlaceholderForHeroIfNeeded() {

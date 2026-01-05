@@ -40,6 +40,8 @@ import com.smartsales.feature.chat.history.toEntity
 import com.smartsales.feature.chat.history.toUiModel
 import com.smartsales.data.aicore.debug.DebugOrchestrator
 import com.smartsales.data.aicore.debug.DebugSnapshot
+import com.smartsales.feature.chat.home.debug.DebugSessionMetadata
+import com.smartsales.feature.chat.home.export.ExportGateState
 import com.smartsales.data.aicore.debug.TingwuTraceSnapshot
 import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.debug.XfyunTraceSnapshot
@@ -200,103 +202,10 @@ data class AudioSummaryUi(
     val lastSyncedAtMillis: Long? = null
 )
 
-/** 导出门禁状态：仅当智能分析就绪时允许导出。 */
-data class ExportGateState(
-    val ready: Boolean,
-    val reason: String,
-    val resolvedName: String,
-    val nameSource: ExportNameSource
-)
-
-/** Home 发出的单次导航请求。 */
-sealed class HomeNavigationRequest {
-    data object DeviceSetup : HomeNavigationRequest()
-    data object DeviceManager : HomeNavigationRequest()
-    data object AudioFiles : HomeNavigationRequest()
-    data object ChatHistory : HomeNavigationRequest()
-    data object UserCenter : HomeNavigationRequest()
-}
-
-data class CurrentSessionUi(
-    val id: String,
-    val title: String,
-    val isTranscription: Boolean
-)
-
-/** UI 模型：会话列表的一条摘要。 */
-data class SessionListItemUi(
-    val id: String,
-    val title: String,
-    val lastMessagePreview: String,
-    val updatedAtMillis: Long,
-    val isCurrent: Boolean,
-    val isTranscription: Boolean,
-    val pinned: Boolean = false
-)
-
-data class DebugSessionMetadata(
-    val sessionId: String,
-    val title: String,
-    val mainPerson: String? = null,
-    val shortSummary: String? = null,
-    val summaryTitle6Chars: String? = null,
-    val stageLabel: String? = null,
-    val riskLabel: String? = null,
-    val tagsLabel: String? = null,
-    val latestSourceLabel: String? = null,
-    val latestAtLabel: String? = null,
-    val transcriptionProviderRequested: String? = null,
-    val transcriptionProviderSelected: String? = null,
-    val transcriptionProviderDisabledReason: String? = null,
-    val transcriptionXfyunEnabledSetting: Boolean? = null,
-    val notes: List<String> = emptyList()
-)
-
-// VoiceprintLabUiState moved to voiceprint/VoiceprintLabUiState.kt (deprecated feature)
-
-/** Home 页的不可变 UI 状态。 */
-data class HomeUiState(
-    val chatMessages: List<ChatMessageUi> = emptyList(),
-    val inputText: String = "",
-    val isSending: Boolean = false,
-    val isStreaming: Boolean = false,
-    val isInputBusy: Boolean = false,
-    val isBusy: Boolean = false,
-    val isLoadingHistory: Boolean = false,
-    val quickSkills: List<QuickSkillUi> = emptyList(),
-    val selectedSkill: QuickSkillUi? = null,
-    val deviceSnapshot: DeviceSnapshotUi? = null,
-    val audioSummary: AudioSummaryUi? = null,
-    val showAudioRecoveryHint: Boolean = false,
-    val audioRecoveryHintStartedAt: Long? = null,
-    val snackbarMessage: String? = null,
-    val chatErrorMessage: String? = null,
-    val navigationRequest: HomeNavigationRequest? = null,
-    val sessionList: List<SessionListItemUi> = emptyList(),
-    val currentSession: CurrentSessionUi = CurrentSessionUi(
-        id = DEFAULT_SESSION_ID,
-        title = DEFAULT_SESSION_TITLE,
-        isTranscription = false
-    ),
-    val userName: String = "用户",
-    val exportInProgress: Boolean = false,
-    val exportGateState: ExportGateState = defaultExportGateState(),
-    val showWelcomeHero: Boolean = true,
-    val isSmartAnalysisMode: Boolean = false,
-    val showDebugMetadata: Boolean = false,
-    val debugSessionMetadata: DebugSessionMetadata? = null,
-    val debugSnapshot: DebugSnapshot? = null,
-    val xfyunTrace: XfyunTraceSnapshot? = null,
-    val tingwuTrace: TingwuTraceSnapshot? = null,
-    val voiceprintLab: VoiceprintLabUiState = VoiceprintLabUiState(),
-    val smartReasoningText: String? = null,
-    val isInputFocused: Boolean = false,
-    val salesPersona: SalesPersona? = null,
-    val showRawAssistantOutput: Boolean = false,
-    val historyActionSession: SessionListItemUi? = null,
-    val showHistoryRenameDialog: Boolean = false,
-    val historyRenameText: String = ""
-)
+// Classes moved to HomeUiState.kt:
+// ExportGateState, HomeNavigationRequest, CurrentSessionUi, SessionListItemUi
+// DebugSessionMetadata (imported from debug package)
+// HomeUiState
 
 /** 外部依赖（除 AiChatService 外保留原有 stub）。 */
 interface AiSessionRepository {
@@ -335,6 +244,8 @@ class HomeScreenViewModel @Inject constructor(
     private val xfyunVoiceprintApi: XfyunVoiceprintApi,
     private val exportViewModel: com.smartsales.feature.chat.home.export.ExportViewModel,
     private val debugViewModel: com.smartsales.feature.chat.home.debug.DebugViewModel,
+    private val sessionsViewModel: com.smartsales.feature.chat.home.sessions.SessionsViewModel,
+    private val transcriptionViewModel: com.smartsales.feature.chat.home.transcription.TranscriptionViewModel,
     optionalConfig: Optional<AiCoreConfig> = Optional.empty(),
 ) : ViewModel() {
 
@@ -344,21 +255,14 @@ class HomeScreenViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = _uiState
     private var latestMediaSyncState: MediaSyncState? = null
     private var sessionId: String = DEFAULT_SESSION_ID
-    private var latestSessionSummaries: List<AiSessionSummary> = emptyList()
     private var initialSessionPrepared: Boolean = false
     private var hasShownLowInfoHint: Boolean = false
     // 低信息智能分析提示是否已经出现过
     private var hasShownLowInfoSmartAnalysisHint: Boolean = false
     private var hasShownAnalysisExportHint: Boolean = false
-    private var transcriptionJob: Job? = null
-    private var transcriptionBatchJob: Job? = null
-    private var lastTranscriptionJobId: String? = null
-    private var transcriptionBatchMessageId: String? = null
-    private var transcriptionBatchFinal: Boolean = false
-    // [HSVM:PREFIX_GATE]
-    private val transcriptionBatchGate = V1BatchIndexPrefixGate<AudioTranscriptionBatchEvent.BatchReleased>()
-    // 标记本次转写是否仍在进行中，用于抑制中途恢复提示
-    private var activelyTranscribing: Boolean = false
+    // Transcription state moved to TranscriptionViewModel
+    private var lastTranscriptionJobId: String? = null // kept for debug snapshot
+    private var activelyTranscribing: Boolean = false // kept for recovery hint logic
     // 标记当前会话是否已处理首条助手回复，用于“首条决定标题”规则
     private var firstAssistantProcessed: Boolean = false
     private var latestAnalysisMarkdown: String? = null
@@ -874,7 +778,7 @@ class HomeScreenViewModel @Inject constructor(
     fun onTranscriptionRequested(request: TranscriptionChatRequest) {
         viewModelScope.launch {
             lastTranscriptionJobId = request.jobId
-            resetTranscriptionBatchState()
+            transcriptionViewModel.reset()
             refreshDebugSnapshot()
             val transcript = request.transcriptMarkdown ?: request.transcriptPreview
             val targetSessionId = request.sessionId ?: DEFAULT_SESSION_ID
@@ -995,18 +899,18 @@ class HomeScreenViewModel @Inject constructor(
                     )
                 }
                 persistMessagesAsync()
-                transcriptionBatchJob?.cancel()
-                transcriptionBatchJob = launch {
-                    transcriptionCoordinator.observeBatches(request.jobId).collectLatest { event ->
-                        when (event) {
-                            is AudioTranscriptionBatchEvent.BatchReleased ->
-                                handleTranscriptionBatchRelease(event)
-                        }
+                // Start transcription observation via TranscriptionViewModel
+                transcriptionViewModel.reset()
+                transcriptionViewModel.startTranscription(request.jobId)
+                // Observe processed batches
+                launch {
+                    transcriptionViewModel.observeProcessedBatches(request.jobId).collect { batch ->
+                        handleProcessedBatch(batch)
                     }
                 }
-                transcriptionJob?.cancel()
-                transcriptionJob = launch {
-                    transcriptionCoordinator.observeJob(request.jobId).collectLatest { state ->
+                // Observe job state
+                launch {
+                    transcriptionViewModel.observeJob(request.jobId).collectLatest { state ->
                         when (state) {
                             AudioTranscriptionJobState.Idle -> Unit
                             is AudioTranscriptionJobState.InProgress -> updateAssistantMessage(introId) { msg ->
@@ -1059,124 +963,74 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
-    // [HSVM:TINGWU_BATCH_RELEASE]
-    private fun handleTranscriptionBatchRelease(
-        event: AudioTranscriptionBatchEvent.BatchReleased
-    ) {
-        // 说明：v1Window/timedSegments 为可选透传字段，后续用于时间锚定/窗口过滤，当前不改变展示逻辑。
-        if (transcriptionBatchFinal) {
-            warnLog(
-                event = "transcription_batch_after_final",
-                data = mapOf("jobId" to event.jobId, "batchIndex" to event.batchIndex)
+    // Simplified batch handler - receives processed batches from TranscriptionViewModel
+    private fun handleProcessedBatch(batch: com.smartsales.feature.chat.home.transcription.ProcessedBatch) {
+        val effectiveChunk = batch.effectiveChunk
+        val isFinal = batch.isFinal
+        val currentMessageId = transcriptionViewModel.state.value.currentMessageId
+
+        // Skip empty chunks unless we have an existing message
+        if (effectiveChunk.isBlank() && currentMessageId == null) {
+            if (isFinal) {
+                transcriptionViewModel.markFinal()
+            }
+            return
+        }
+
+        val merged = if (currentMessageId == null) {
+            effectiveChunk
+        } else {
+            mergeTranscriptionChunks(
+                existing = _uiState.value.chatMessages.firstOrNull { it.id == currentMessageId }?.rawContent
+                    ?: _uiState.value.chatMessages.firstOrNull { it.id == currentMessageId }?.content
+                    ?: "",
+                incoming = effectiveChunk
             )
-            return
         }
-        // 重要：记录伪流式批次计划与进度，供 HUD Section 3 观察。
-        tingwuTraceStore.record(
-            batchPlanRule = event.ruleLabel,
-            batchPlanBatchSize = event.batchSize,
-            batchPlanTotalBatches = event.totalBatches,
-            batchPlanCurrentBatchIndex = event.batchIndex,
-            // 说明：V1 窗口计划优先用于 HUD 展示，避免行批次误导。
-            v1BatchPlanRule = event.v1BatchPlanRule,
-            v1BatchDurationMs = event.v1BatchDurationMs,
-            v1OverlapMs = event.v1OverlapMs,
-            v1BatchPlanTotalBatches = event.v1TotalBatches,
-            v1BatchPlanCurrentBatchIndex = event.v1CurrentBatchIndex
-        )
-        // V1：按 batchIndex 发布连续前缀，乱序批次先缓存再释放
-        val releasables = transcriptionBatchGate.offer(event.batchIndex, event)
-        if (releasables.isEmpty()) {
-            return
-        }
-        for (released in releasables) {
-            val isFinal = released.isFinal
-            val existingId = transcriptionBatchMessageId
-            val window = released.v1Window
-            val timedSegments = released.timedSegments
-            // [HSVM:MACRO_WINDOW_FILTER]
-            // V1：发布去重只做宏窗口范围过滤 [absStartMs, absEndMs)，不做文本相似度；不要记录转写文本内容。
-            val effectiveChunk = if (enableV1TingwuMacroWindowFilter && window != null && timedSegments != null) {
-                // 重要：timedSegments 的时间基准是录音起点(0ms)，可直接与 absStart/absEnd 比较。
-                val result = V1TingwuWindowedChunkBuilder.buildWindowedMarkdownChunkResult(
-                    absStartMs = window.absStartMs,
-                    absEndMs = window.absEndMs,
-                    timedSegments = timedSegments
-                )
-                // 默认开启，作为 V1 主路径；保留开关仅用于紧急回退。
-                // 日志只输出统计信息，不记录转写文本内容，避免隐私泄露。
-                Log.d(
-                    TAG,
-                    "event=v1_tingwu_window_filter_applied " +
-                        "batchIndex=${released.batchIndex} " +
-                        "absStartMs=${window.absStartMs} " +
-                        "absEndMs=${window.absEndMs} " +
-                        "segmentsIn=${result.segmentsInCount} " +
-                        "segmentsOut=${result.segmentsOutCount} " +
-                        "chunkChars=${result.chunk.length}"
-                )
-                result.chunk
-            } else {
-                // 字段缺失则回退旧逻辑，避免破坏现有行为。
-                released.markdownChunk
-            }
-            if (effectiveChunk.isBlank() && existingId == null) {
-                if (isFinal) {
-                    transcriptionBatchFinal = true
-                }
-                continue
-            }
-            val merged = if (existingId == null) {
-                effectiveChunk
-            } else {
-                mergeTranscriptionChunks(
-                    existing = _uiState.value.chatMessages.firstOrNull { it.id == existingId }?.rawContent
-                        ?: _uiState.value.chatMessages.firstOrNull { it.id == existingId }?.content
-                        ?: "",
-                    incoming = effectiveChunk
-                )
-            }
-            if (existingId == null) {
-                val messageId = nextMessageId()
-                transcriptionBatchMessageId = messageId
-                val display = displayAssistantText(raw = merged, sanitized = merged)
-                _uiState.update {
-                    it.copy(
-                        chatMessages = it.chatMessages + ChatMessageUi(
-                            id = messageId,
-                            role = ChatMessageRole.ASSISTANT,
-                            content = display,
-                            rawContent = merged,
-                            sanitizedContent = merged,
-                            timestampMillis = System.currentTimeMillis(),
-                            isStreaming = !isFinal
-                        ),
-                        showWelcomeHero = false
-                    )
-                }
-                if (isFinal) {
-                    persistMessagesAsync()
-                    viewModelScope.launch { updateSessionSummary(merged) }
-                }
-            } else {
-                updateAssistantMessage(existingId, persistAfterUpdate = isFinal) { msg ->
-                    val display = displayAssistantText(raw = merged, sanitized = merged)
-                    msg.copy(
+
+        if (currentMessageId == null) {
+            // Create new message
+            val messageId = nextMessageId()
+            transcriptionViewModel.setCurrentMessageId(messageId)
+            val display = displayAssistantText(raw = merged, sanitized = merged)
+            _uiState.update {
+                it.copy(
+                    chatMessages = it.chatMessages + ChatMessageUi(
+                        id = messageId,
+                        role = ChatMessageRole.ASSISTANT,
                         content = display,
                         rawContent = merged,
                         sanitizedContent = merged,
+                        timestampMillis = System.currentTimeMillis(),
                         isStreaming = !isFinal
-                    )
-                }
-                if (isFinal) {
-                    viewModelScope.launch { updateSessionSummary(merged) }
-                }
+                    ),
+                    showWelcomeHero = false
+                )
             }
             if (isFinal) {
-                // 重要：完成后冻结说话人标签/文本，忽略后续批次。
-                transcriptionBatchFinal = true
+                persistMessagesAsync()
+                viewModelScope.launch { updateSessionSummary(merged) }
+            }
+        } else {
+            // Update existing message
+            updateAssistantMessage(currentMessageId, persistAfterUpdate = isFinal) { msg ->
+                val display = displayAssistantText(raw = merged, sanitized = merged)
+                msg.copy(
+                    content = display,
+                    rawContent = merged,
+                    sanitizedContent = merged,
+                    isStreaming = !isFinal
+                )
+            }
+            if (isFinal) {
+                viewModelScope.launch { updateSessionSummary(merged) }
             }
         }
+
+        if (isFinal) {
+            transcriptionViewModel.markFinal()
+        }
+
         if (CHAT_DEBUG_HUD_ENABLED && _uiState.value.showDebugMetadata) {
             refreshDebugSnapshot()
         }
@@ -1193,13 +1047,7 @@ class HomeScreenViewModel @Inject constructor(
         return existing + separator + incoming
     }
 
-    private fun resetTranscriptionBatchState() {
-        transcriptionBatchJob?.cancel()
-        transcriptionBatchJob = null
-        transcriptionBatchMessageId = null
-        transcriptionBatchFinal = false
-        transcriptionBatchGate.reset()
-    }
+    // resetTranscriptionBatchState removed - now handled by TranscriptionViewModel.reset()
 
     fun onOpenDrawer() {
         _uiState.update { it.copy(navigationRequest = HomeNavigationRequest.ChatHistory) }
@@ -1514,12 +1362,13 @@ class HomeScreenViewModel @Inject constructor(
                 this@HomeScreenViewModel.sessionId = sessionId
                 firstAssistantProcessed = false
                 lastTranscriptionJobId = null
-                resetTranscriptionBatchState()
+                transcriptionViewModel.reset()
                 latestAnalysisMarkdown = null
                 hasShownLowInfoHint = false
                 hasShownAnalysisExportHint = false
                 _uiState.update { it.copy(isSmartAnalysisMode = false, selectedSkill = null) }
-                applySessionList()
+                _uiState.update { it.copy(isSmartAnalysisMode = false, selectedSkill = null) }
+                updateSessionListSelection()
                 loadSession(sessionId)
             }
             if (!allowHero) {
@@ -1545,131 +1394,17 @@ class HomeScreenViewModel @Inject constructor(
         _uiState.update { it.copy(quickSkills = skills) }
     }
 
-    fun onHistorySessionLongPress(sessionId: String) {
-        val target = _uiState.value.sessionList.firstOrNull { it.id == sessionId } ?: return
-        _uiState.update {
-            it.copy(
-                historyActionSession = target,
-                showHistoryRenameDialog = false,
-                historyRenameText = target.title
-            )
-        }
-    }
 
-    fun onHistoryActionDismiss() {
-        _uiState.update {
-            it.copy(
-                historyActionSession = null,
-                showHistoryRenameDialog = false,
-                historyRenameText = ""
-            )
-        }
-    }
 
-    fun onHistoryActionRenameStart() {
-        val target = _uiState.value.historyActionSession ?: return
-        _uiState.update {
-            it.copy(
-                showHistoryRenameDialog = true,
-                historyRenameText = target.title
-            )
-        }
-    }
 
-    fun onHistoryRenameTextChange(text: String) {
-        _uiState.update { it.copy(historyRenameText = text) }
-    }
 
-    fun onHistorySessionPinToggle(sessionId: String) {
-        viewModelScope.launch {
-            val existing = sessionRepository.findById(sessionId) ?: return@launch
-            val toggled = existing.copy(pinned = !existing.pinned)
-            sessionRepository.upsert(toggled)
-            latestSessionSummaries = latestSessionSummaries.map { summary ->
-                if (summary.id == sessionId) toggled else summary
-            }
-            applySessionList()
-            _uiState.update { state ->
-                val current = state.currentSession
-                val updatedCurrent = if (current.id == sessionId) {
-                    current.copy()
-                } else current
-                state.copy(currentSession = updatedCurrent)
-            }
-            onHistoryActionDismiss()
-        }
-    }
 
-    fun onHistorySessionRenameConfirmed(sessionId: String, newTitle: String) {
-        val trimmed = newTitle.trim()
-        if (trimmed.isEmpty()) return
-        viewModelScope.launch {
-            sessionRepository.updateTitle(sessionId, trimmed, isUserEdited = true)
-            // 用户确认改名：写入 M3 accepted，后续候选不得覆盖
-            metaHub.setM3AcceptedName(
-                sessionId = sessionId,
-                target = RenamingTarget.SESSION_TITLE,
-                name = trimmed,
-                prov = Provenance(
-                    source = "user_rename",
-                    updatedAt = System.currentTimeMillis()
-                )
-            )
-            latestSessionSummaries = latestSessionSummaries.map { summary ->
-                if (summary.id == sessionId) {
-                    summary.copy(title = trimmed, isTitleUserEdited = true)
-                } else summary
-            }
-            applySessionList()
-            _uiState.update { state ->
-                val current = state.currentSession
-                val updatedCurrent = if (current.id == sessionId) {
-                    current.copy(title = trimmed)
-                } else current
-                state.copy(
-                    currentSession = updatedCurrent,
-                    historyActionSession = state.historyActionSession?.takeIf { it.id == sessionId }?.copy(title = trimmed),
-                    showHistoryRenameDialog = false,
-                    historyRenameText = ""
-                )
-            }
-        }
-    }
 
-    fun onHistorySessionDelete(sessionId: String) {
-        viewModelScope.launch {
-            runCatching { sessionRepository.delete(sessionId) }
-            runCatching { chatHistoryRepository.deleteSession(sessionId) }
-            latestSessionSummaries = latestSessionSummaries.filterNot { it.id == sessionId }
-            applySessionList()
-            val deletedCurrent = sessionId == this@HomeScreenViewModel.sessionId
-            onHistoryActionDismiss()
-            if (deletedCurrent) {
-                val next = latestSessionSummaries.firstOrNull()
-                    ?: sessionRepository.createNewChatSession().also { created ->
-                        latestSessionSummaries = latestSessionSummaries + created
-                    }
-                this@HomeScreenViewModel.sessionId = next.id
-                firstAssistantProcessed = false
-                _uiState.update {
-                    it.copy(
-                        currentSession = CurrentSessionUi(
-                            id = next.id,
-                            title = next.title,
-                            isTranscription = next.isTranscription
-                        ),
-                        chatMessages = emptyList(),
-                        showWelcomeHero = true
-                    )
-                }
-                loadSession(next.id)
-            }
-        }
-    }
+
 
     fun onNewChatClicked() {
         viewModelScope.launch {
-            val newSession = sessionRepository.createNewChatSession()
+            val newSession = sessionsViewModel.createNewSession()
             sessionId = newSession.id
             firstAssistantProcessed = false
             latestAnalysisMarkdown = null
@@ -1691,7 +1426,8 @@ class HomeScreenViewModel @Inject constructor(
             updateDebugSessionMetadata(null)
             // Export gate is now checked on-demand via exportViewModel.checkExportGate()
             chatHistoryRepository.saveMessages(newSession.id, emptyList())
-            applySessionList()
+            chatHistoryRepository.saveMessages(newSession.id, emptyList())
+            updateSessionListSelection()
         }
     }
 
@@ -1731,35 +1467,86 @@ class HomeScreenViewModel @Inject constructor(
 
     private fun observeSessions() {
         viewModelScope.launch {
-            sessionRepository.summaries.collectLatest { summaries ->
-                latestSessionSummaries = summaries
-                applySessionList()
-                // Export gate is now checked on-demand via exportViewModel.checkExportGate()
+            sessionsViewModel.sessionList.collectLatest { list ->
+                updateSessionListSelection(list)
+            }
+        }
+        viewModelScope.launch {
+            sessionsViewModel.uiState.collectLatest { state ->
+                _uiState.update {
+                    it.copy(
+                        historyActionSession = state.historyActionSession,
+                        showHistoryRenameDialog = state.showHistoryRenameDialog,
+                        historyRenameText = state.historyRenameText
+                    )
+                }
             }
         }
     }
 
-    private fun applySessionList() {
-        val mapped = latestSessionSummaries.map { summary ->
-            SessionListItemUi(
-                id = summary.id,
-                title = summary.title,
-                lastMessagePreview = summary.lastMessagePreview,
-                updatedAtMillis = summary.updatedAtMillis,
-                isCurrent = summary.id == sessionId,
-                isTranscription = summary.isTranscription ||
-                    summary.title.startsWith(SessionTitlePolicy.LEGACY_TRANSCRIPTION_PREFIX),
-                pinned = summary.pinned
-            )
+    private fun updateSessionListSelection(list: List<SessionListItemUi>? = null) {
+        val targetList = list ?: _uiState.value.sessionList
+        val currentId = sessionId
+        val mapped = targetList.map { item ->
+            item.copy(isCurrent = item.id == currentId)
         }
-        _uiState.update { state ->
-            val updatedActionSession = state.historyActionSession?.let { current ->
-                mapped.firstOrNull { it.id == current.id }
+        _uiState.update { it.copy(sessionList = mapped) }
+    }
+
+    // applySessionList removed - replaced by updateSessionListSelection used in observeSessions
+
+    fun onHistorySessionLongPress(sessionId: String) {
+        sessionsViewModel.onHistorySessionLongPress(sessionId)
+    }
+
+    fun onHistoryActionDismiss() {
+        sessionsViewModel.onHistoryActionDismiss()
+    }
+
+    fun onHistoryActionRenameStart() {
+        sessionsViewModel.onHistoryActionRenameStart()
+    }
+
+    fun onHistoryRenameTextChange(text: String) {
+        sessionsViewModel.onHistoryRenameTextChange(text)
+    }
+
+    fun onHistorySessionPinToggle(sessionId: String) {
+        sessionsViewModel.onHistorySessionPinToggle(sessionId)
+    }
+
+    fun onHistorySessionRenameConfirmed(sessionId: String, newTitle: String) {
+        viewModelScope.launch {
+            val updatedTitle = sessionsViewModel.onHistorySessionRenameConfirmed(sessionId, newTitle)
+            if (updatedTitle != null && sessionId == this@HomeScreenViewModel.sessionId) {
+                // 如果当前会话被重命名，同步更新当前会话标题
+                _uiState.update {
+                    it.copy(currentSession = it.currentSession.copy(title = updatedTitle))
+                }
             }
-            state.copy(
-                sessionList = mapped,
-                historyActionSession = updatedActionSession
-            )
+        }
+    }
+
+    fun onHistorySessionDelete(sessionId: String) {
+        viewModelScope.launch {
+            val result = sessionsViewModel.onHistorySessionDelete(sessionId, this@HomeScreenViewModel.sessionId)
+            if (result is com.smartsales.feature.chat.home.sessions.SessionsViewModel.DeleteResult.CurrentSessionDeleted) {
+                val next = result.nextSession
+                this@HomeScreenViewModel.sessionId = next.id
+                firstAssistantProcessed = false
+                _uiState.update {
+                    it.copy(
+                        currentSession = CurrentSessionUi(
+                            id = next.id,
+                            title = next.title,
+                            isTranscription = next.isTranscription
+                        ),
+                        chatMessages = emptyList(),
+                        showWelcomeHero = true
+                    )
+                }
+                loadSession(next.id)
+            }
         }
     }
 
@@ -2179,7 +1966,7 @@ class HomeScreenViewModel @Inject constructor(
         val previewText = latestMeta?.shortSummary?.takeIf { it.isNotBlank() } ?: cleaned
         viewModelScope.launch {
             updateSessionSummary(previewText)
-            applySessionList()
+            updateSessionListSelection()
         }
     }
 
@@ -2618,7 +2405,7 @@ class HomeScreenViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        transcriptionJob?.cancel()
+        // transcriptionJob moved to TranscriptionViewModel
     }
 
     private fun loadUserProfile() {
@@ -3800,7 +3587,7 @@ class HomeScreenViewModel @Inject constructor(
         val resolved = TitleResolver.resolveTitle(existingSummary, candidate, meta)
         if (resolved.isNullOrBlank()) return
         sessionRepository.updateTitle(sessionId, resolved)
-        applySessionList()
+        // applySessionList() removed, flow updates automatically
         _uiState.update { state ->
             val updatedCurrent = if (state.currentSession.id == sessionId) {
                 state.currentSession.copy(title = resolved)
@@ -3814,12 +3601,11 @@ class HomeScreenViewModel @Inject constructor(
     private suspend fun prepareInitialSession() {
         if (initialSessionPrepared) return
         initialSessionPrepared = true
-        val newSession = sessionRepository.createNewChatSession()
+        val newSession = sessionsViewModel.createNewSession()
         sessionId = newSession.id
         firstAssistantProcessed = false
-        latestSessionSummaries =
-            (latestSessionSummaries.filterNot { it.id == newSession.id } + newSession)
-        applySessionList()
+        // latestSessionSummaries removed, flow updates
+        updateSessionListSelection()
         chatHistoryRepository.saveMessages(newSession.id, emptyList())
         _uiState.update {
             it.copy(
@@ -3845,10 +3631,8 @@ class HomeScreenViewModel @Inject constructor(
         if (SessionTitlePolicy.isPlaceholder(state.currentSession.title)) return
         val placeholder = SessionTitlePolicy.newChatPlaceholder()
         sessionRepository.updateTitle(sessionId, placeholder)
-        latestSessionSummaries = latestSessionSummaries.map { summary ->
-            if (summary.id == sessionId) summary.copy(title = placeholder) else summary
-        }
-        applySessionList()
+        // latestSessionSummaries manual update removed
+        // applySessionList() removed
         _uiState.update {
             it.copy(currentSession = it.currentSession.copy(title = placeholder))
         }

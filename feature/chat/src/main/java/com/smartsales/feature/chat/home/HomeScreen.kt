@@ -136,6 +136,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import com.smartsales.feature.chat.BuildConfig
+import com.smartsales.feature.chat.home.export.ExportGateState
 import com.smartsales.feature.chat.home.voiceprint.VoiceprintLabUiState
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreen.kt
@@ -375,7 +376,7 @@ fun HomeScreen(
     onSessionSelected: (String) -> Unit = {},
     chatErrorMessage: String? = null,
     exportInProgress: Boolean,
-    exportGateState: ExportGateState,
+    exportGateState: ExportGateState?,
     onPickAudioFile: (Uri) -> Unit = {},
     onPickImageFile: (Uri) -> Unit = {},
     onDismissAudioRecoveryHint: () -> Unit = {},
@@ -817,7 +818,7 @@ private fun EmptyStateContent(
     userName: String,
     skills: List<QuickSkillUi>,
     selectedSkillId: QuickSkillId?,
-    exportGateState: ExportGateState,
+    exportGateState: ExportGateState?,
     enabled: Boolean,
     onSkillSelected: (QuickSkillId) -> Unit,
     onExportPdfClicked: () -> Unit,
@@ -2130,7 +2131,7 @@ private fun HomeInputArea(
     busy: Boolean,
     inputValue: String,
     isSmartAnalysisMode: Boolean,
-    exportGateState: ExportGateState,
+    exportGateState: ExportGateState?,
     onInputChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
     onQuickSkillSelected: (QuickSkillId) -> Unit,
@@ -2426,8 +2427,8 @@ private fun QuickSkillRow(
 }
 
 @Composable
-private fun ExportGateHint(exportGateState: ExportGateState) {
-    if (exportGateState.ready || exportGateState.reason.isBlank()) return
+private fun ExportGateHint(exportGateState: ExportGateState?) {
+    if (exportGateState == null || exportGateState.ready || exportGateState.reason.isBlank()) return
     Text(
         text = exportGateState.reason,
         style = MaterialTheme.typography.bodySmall,

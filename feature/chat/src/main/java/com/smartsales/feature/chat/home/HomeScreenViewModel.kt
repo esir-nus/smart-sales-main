@@ -147,10 +147,6 @@ private fun defaultExportGateState(): ExportGateState {
     )
 }
 
-// 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreenViewModel.kt
-// 模块：:feature:chat
-// 说明：HomeScreen 的 UiState 模型与 ViewModel，实现聊天/快捷技能/设备信息更新逻辑
-// 作者：创建于 2025-11-20
 
 /** UI 模型：代表 Home 页里的一条聊天气泡。 */
 data class ChatMessageUi(
@@ -199,9 +195,6 @@ data class AudioSummaryUi(
     val lastSyncedAtMillis: Long? = null
 )
 
-// ExportGateState, HomeNavigationRequest, CurrentSessionUi, SessionListItemUi
-// DebugSessionMetadata (imported from debug package)
-// HomeUiState
 
 /** 外部依赖（除 AiChatService 外保留原有 stub）。 */
 interface AiSessionRepository {

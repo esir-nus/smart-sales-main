@@ -513,7 +513,6 @@ class HomeScreenViewModel @Inject constructor(
     private fun wrapSmartAnalysisForExport(body: String): String =
         com.smartsales.domain.chat.ChatMessageBuilder.wrapSmartAnalysisForExport(body)
 
-
     private fun maybeStartPendingExportAnalysis() {
         val pending = pendingExportAfterAnalysis ?: return
         if (exportAutoAnalysisInFlight || _uiState.value.isSending || _uiState.value.isStreaming) return
@@ -550,7 +549,6 @@ class HomeScreenViewModel @Inject constructor(
             }
         }
     }
-
 
     private fun findSmartAnalysisMarkdownForExport(): String? {
         latestAnalysisMarkdown?.takeIf { it.isNotBlank() }?.let { return it }
@@ -1036,7 +1034,6 @@ class HomeScreenViewModel @Inject constructor(
         return existing + separator + incoming
     }
 
-
     fun onOpenDrawer() {
         _uiState.update { it.copy(navigationRequest = HomeNavigationRequest.ChatHistory) }
     }
@@ -1095,11 +1092,6 @@ class HomeScreenViewModel @Inject constructor(
         if (!CHAT_DEBUG_HUD_ENABLED) return
         debugCoordinator.refreshTraces()
     }
-
-
-
-
-
 
     private fun updateDebugSessionMetadata(
         meta: SessionMetadata?,
@@ -1232,14 +1224,6 @@ class HomeScreenViewModel @Inject constructor(
         _uiState.update { it.copy(quickSkills = skills) }
     }
 
-
-
-
-
-
-
-
-
     fun onNewChatClicked() {
         viewModelScope.launch {
             val newSession = sessionsManager.createNewSession()
@@ -1330,7 +1314,6 @@ class HomeScreenViewModel @Inject constructor(
         }
         _uiState.update { it.copy(sessionList = mapped) }
     }
-
 
     fun onHistorySessionLongPress(sessionId: String) {
         viewModelScope.launch {
@@ -1975,7 +1958,6 @@ class HomeScreenViewModel @Inject constructor(
         return rawCandidate ?: sanitized ?: raw.orEmpty()
     }
 
-
     /** GENERAL 回复的 channels 数据（Visible2User 和 Metadata） */
     private data class GeneralChannels(
         val visibleText: String?,
@@ -2030,11 +2012,6 @@ class HomeScreenViewModel @Inject constructor(
 
     private fun latestUserContent(): String? =
         _uiState.value.chatMessages.lastOrNull { it.role == ChatMessageRole.USER }?.content?.trim()
-
-
-
-
-
 
     private fun handleLowInfoGeneralChatInput() {
         // 清空输入框，避免用户反复点击发送同一段内容
@@ -2330,8 +2307,6 @@ class HomeScreenViewModel @Inject constructor(
         return primary to contextChunks.asReversed().joinToString("\n")
     }
 
-
-
     private fun buildSmartAnalysisUserMessage(
         mainContent: String,
         context: String?,
@@ -2412,7 +2387,6 @@ class HomeScreenViewModel @Inject constructor(
         return merged
     }
 
-
     private fun SessionMetadata.hasMeaningfulGeneralFields(): Boolean =
         !mainPerson.isNullOrBlank() ||
             !shortSummary.isNullOrBlank() ||
@@ -2448,7 +2422,6 @@ class HomeScreenViewModel @Inject constructor(
             QuickSkillId.SMART_ANALYSIS -> "SMART_ANALYSIS"
             else -> null
         }
-
 
         internal fun deriveUserName(profile: UserProfile): String {
             if (!profile.displayName.isNullOrBlank()) return profile.displayName

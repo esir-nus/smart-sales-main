@@ -1,29 +1,19 @@
 # Architecture Refactoring Tracker
 
 **Goal**: Clean, production-grade Android architecture  
-**Scope**: Eliminate god files, modularize, align with Orchestrator-V1 spec  
-**Status**: Phase 1 Complete, Phase 2 Wave 1 In Progress  
+**Scope**: Align with Orchestrator-V1 spec, modularize god files  
+**Status**: ✅ Waves 1-3 Complete - Consolidation Checkpoint  
 **Last Updated**: 2026-01-05
 
 ---
 
-## Decisions Made
+## Progress Summary
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Domain layer | Package first, module later | Lower friction, faster iteration |
-| Splitting approach | Conservative, incremental | Reduce risk, verify after each extraction |
-| Migration order | RealTingwuCoordinator → HomeScreenViewModel | Aligns with spec, creates clean building blocks |
-
----
-
-## God Files Status
-
-| File | Original Lines | Current Lines | Target | Status |
-|------|----------------|---------------|--------|--------|
-| `RealTingwuCoordinator.kt` | ~1990 | ~1870 | <500 | Phase 1 ✅ |
-| `HomeScreenViewModel.kt` | 3668 | ~3650 | <500 | Phase 2 🔄 |
-| `ChatController.kt` | ~400 | ~400 | <200 | P2 |
+| Metric | Before | After | Change |
+|--------|--------|-------|--------|
+| HomeScreenViewModel | 3668 lines | **2888 lines** | -780 (-21%) |
+| RealTingwuCoordinator | ~1990 lines | ~1870 lines | -120 (-6%) |
+| Domain layer classes | 4 | **11** | +7 |
 
 ---
 
@@ -31,101 +21,74 @@
 
 ```
 feature/chat/src/main/java/com/smartsales/
-├── domain/                              # Pure Kotlin UseCases
-│   ├── chat/ChatMessageBuilder.kt       # ✅ Wave 1
-│   ├── export/ExportCoordinator.kt      # ✅ Hilt fix
-│   ├── sessions/SessionsManager.kt      # ✅ Hilt fix
-│   ├── transcription/                   # ✅ Phase 1 + Hilt fix
-│   │   ├── TranscriptPublisherUseCase.kt
-│   │   ├── SanitizerUseCase.kt
-│   │   ├── DisectorUseCase.kt
-│   │   └── TranscriptionCoordinator.kt
-│   └── debug/DebugCoordinator.kt        # ✅ Hilt fix
-├── feature/                             # UI layer
-│   └── chat/home/HomeScreenViewModel.kt
-└── data/ai-core/                        # Repositories
-    └── tingwu/runner/TingwuRunnerRepository.kt  # ✅ Phase 1
+├── domain/
+│   ├── chat/
+│   │   ├── ChatMessageBuilder.kt       ✅ Wave 1
+│   │   ├── InputClassifier.kt          ✅ Wave 2
+│   │   └── ChatPublisher.kt            ✅ Wave 3 (V1-aligned)
+│   ├── export/ExportCoordinator.kt     ✅ Hilt fix
+│   ├── sessions/SessionsManager.kt     ✅ Hilt fix
+│   ├── transcription/
+│   │   ├── DisectorUseCase.kt          ✅ Phase 1
+│   │   ├── SanitizerUseCase.kt         ✅ Phase 1
+│   │   └── TranscriptionCoordinator.kt ✅ Hilt fix
+│   └── debug/DebugCoordinator.kt       ✅ Hilt fix
+└── data/ai-core/tingwu/
+    ├── runner/TingwuRunnerRepository.kt     ✅ Phase 1
+    └── TranscriptPublisherUseCase.kt        ✅ Phase 1
 ```
 
 ---
 
-## Phase 0: Stabilize (COMPLETE ✅)
-- [x] Complete ViewModel extractions (Export, Debug, Sessions, Transcription)
-- [x] Verify build passes
-- [x] Hilt DI violation discovered and fixed
-  - Converted ViewModels to domain coordinators
-  - Build verified successful
-- [ ] Runtime verification (awaiting user test)
+## Completed Work
 
-## Phase 1: Split RealTingwuCoordinator (COMPLETE ✅)
-Aligned with Orchestrator-V1 Section 3 modules:
+### Phase 1: RealTingwuCoordinator Split ✅
+- Extracted `TingwuRunnerRepository`, `TranscriptPublisherUseCase`
+- Aligned with V1 Section 3.2 (Deterministic Modules)
+- Tests passing
 
-- [x] Extract `TingwuRunnerRepository` (polling, validation, error mapping)
-- [x] Extract `TranscriptPublisherUseCase` (URL extraction, download helpers)
-- [x] Create `data/ai-core/tingwu/` package
-- [x] Update RealTingwuCoordinatorTest with new dependencies
-- [x] Verify build + tests pass
+### Hilt DI Fix ✅
+Converted 4 ViewModels to domain coordinators:
+- `ExportCoordinator`, `SessionsManager`, `TranscriptionCoordinator`, `DebugCoordinator`
 
-**Result**: RealTingwuCoordinator reduced by ~120 lines
+### Wave 1: ChatMessageBuilder ✅
+Extracted 3 pure helper functions (~65 lines)
 
-## Phase 2: Slim HomeScreenViewModel (IN PROGRESS 🔄)
+### Wave 2: InputClassifier ✅
+Extracted 5 classification functions (~145 lines)
 
-### Wave 1: ChatMessageBuilder (COMPLETE ✅)
-- [x] Create `domain/chat/ChatMessageBuilder.kt`
-- [x] Extract pure helper functions:
-  - `buildSmartAnalysisUserMessage()`
-  - `buildTranscriptMarkdown()`
-  - `wrapSmartAnalysisForExport()`
-- [x] Wire into HomeScreenViewModel
-- [ ] On-device sanity check (PDF export)
-
-### Wave 2: InputClassifier (PLANNED)
-- [ ] Extract classification logic
-- [ ] Extract `findSmartAnalysisPrimaryContent()`
-- [ ] Extract `isLowInfoGeneralChatInput()`
-
-### Wave 3: SmartAnalysisUseCase (DEFERRED)
-> **Note**: Deferred due to deep coupling (50+ references, interacts with export, streaming, MetaHub). Safer to extract smaller building blocks first.
-
-## Phase 3: Feature Module Cleanup
-- [ ] Create `:feature:transcription` sub-package
-- [ ] Move transcription UI components
-- [ ] Ensure feature isolation
-
-## Phase 4: Final Polish
-- [ ] Add unit tests for UseCases  
-- [ ] Update this documentation
-- [ ] Code review
+### Wave 3: ChatPublisher ✅
+**Architecture rebuild** per V1 Section 3.2.4:
+- Created V1-aligned `ChatPublisher.kt` (~140 lines)
+- **Removed 700 lines** of legacy heuristic sanitizer (V1 violations)
+- Enforces V1 contract: extract `<visible2user>` only, no heuristic cleanup
 
 ---
 
-## Hilt Fix: ViewModel → Coordinator Migration
+## V1 Compliance Status
 
-During Phase 2, discovered pre-existing Hilt violation from Phase 0 ViewModel extractions.
-
-**Fixed by converting to domain layer:**
-
-| Original | New | Notes |
-|----------|-----|-------|
-| `ExportViewModel` | `ExportCoordinator` | @Singleton, domain/export/ |
-| `DebugViewModel` | `DebugCoordinator` | @Singleton, domain/debug/ |
-| `SessionsViewModel` | `SessionsManager` | @Singleton, domain/sessions/ |
-| `TranscriptionViewModel` | `TranscriptionCoordinator` | Injected as `tingwuCoordinator` to avoid naming collision |
+| V1 Module | Status |
+|-----------|--------|
+| Disector | ✅ |
+| Tingwu Runner | ✅ |
+| Sanitizer (Transcription) | ✅ |
+| **ChatPublisher** | ✅ |
+| TranscriptPublisher | ✅ |
 
 ---
 
-## Success Metrics
+## Next Steps
 
-| Metric | Before | Current | Target |
-|--------|--------|---------|--------|
-| Largest file | ~2500 lines | ~3650 (HomeVM) | <500 lines |
-| UseCase count | 0 | 7 | 5-7 ✅ |
-| God files | 3 | 2 | 0 |
-| Domain layer classes | 0 | 7 | 10+ |
+**Recommended**: Verify stability before continuing extraction
+1. Manual testing on device
+2. Verify chat flow, export, transcription
+3. Commit checkpoint
+
+**Future Waves**: Continue extracting cohesive modules from HomeScreenViewModel
 
 ---
 
 ## References
 
-- [Orchestrator-V1.md](./Orchestrator-V1.md) - Core pipeline spec
+- [Orchestrator-V1.md](./Orchestrator-V1.md) - Architecture spec
 - [orchestrator-v1.schema.json](./orchestrator-v1.schema.json) - Data contracts

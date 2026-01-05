@@ -2439,56 +2439,6 @@ class HomeScreenViewModel @Inject constructor(
             !summaryTitle6Chars.isNullOrBlank() ||
             !location.isNullOrBlank()
 
-    private fun stripTrailingJsonFromGeneralReply(fullText: String): String {
-        val jsonBlock = com.smartsales.domain.chat.MetadataParser.findLastJsonBlock(fullText) ?: return fullText
-        val isValidJson = runCatching { org.json.JSONObject(jsonBlock.text) }.isSuccess
-        if (!isValidJson) return fullText
-        return fullText.substring(0, jsonBlock.startIndex).trimEnd()
-    }
-    
-    /**
-     * 根据问候语内容返回友好的回复
-     */
-    private fun getGreetingResponse(input: String): String {
-        val normalized = input.trim().lowercase(Locale.getDefault())
-        
-        return when {
-            normalized == "你好" || normalized == "您好" || normalized == "hello" || normalized == "hi" || normalized == "hey" || normalized == "嗨" -> {
-                "你好！我是您的销售助手，可以帮助您：\n" +
-                "• 分析客户对话和会议记录\n" +
-                "• 生成销售话术和建议\n" +
-                "• 总结工作日报\n" +
-                "• 分析行业趋势和竞争情况\n\n" +
-                "请告诉我您需要什么帮助？"
-            }
-            normalized == "你是谁" || normalized == "你是谁？" || normalized.contains("who are you") -> {
-                "我是您的智能销售助手，专注于帮助销售团队提升工作效率。\n\n" +
-                "我可以帮您：\n" +
-                "• 智能分析：分析客户对话、会议记录，提取关键洞察\n" +
-                "• 话术辅导：根据场景生成专业的销售话术\n" +
-                "• 日报生成：整理工作摘要、行动项和风险提醒\n" +
-                "• 趋势分析：分析行业动态和竞争格局\n\n" +
-                "有什么我可以帮您的吗？"
-            }
-            normalized.contains("早上好") || normalized.contains("good morning") -> {
-                "早上好！新的一天开始了，有什么销售相关的问题需要我帮助吗？"
-            }
-            normalized.contains("下午好") || normalized.contains("good afternoon") -> {
-                "下午好！今天的工作进展如何？需要我帮您分析什么吗？"
-            }
-            normalized.contains("晚上好") || normalized.contains("good evening") -> {
-                "晚上好！今天辛苦了，有什么需要我帮您总结或分析的吗？"
-            }
-            else -> {
-                "我还不太确定你的需求，能再多提供一些上下文或问题细节吗？\n\n" +
-                "我可以帮您：\n" +
-                "• 分析客户对话或会议记录\n" +
-                "• 生成销售话术和建议\n" +
-                "• 总结工作日报\n" +
-                "• 分析行业趋势"
-            }
-        }
-    }
     
     private fun debugLog(event: String, data: Map<String, Any?> = emptyMap()) {
         if (!CHAT_DEBUG_HUD_ENABLED) return
@@ -2519,12 +2469,6 @@ class HomeScreenViewModel @Inject constructor(
             else -> null
         }
 
-        private fun buildTranscriptContext(fileName: String, transcript: String): String {
-            return buildString {
-                append("已加载录音 ").append(fileName).append(" 的转写内容。以下为通话文本，结合上下文回答用户问题：\n")
-                append(transcript)
-            }
-        }
 
         internal fun deriveUserName(profile: UserProfile): String {
             if (!profile.displayName.isNullOrBlank()) return profile.displayName

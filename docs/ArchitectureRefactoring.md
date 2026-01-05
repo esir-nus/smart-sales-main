@@ -77,15 +77,18 @@
 - Removed 4 deprecated voiceprint functions from HomeScreenViewModel (~138 lines)
 - Removed voiceprint imports, constructor params, and UI state fields
 - Deleted `VoiceprintLabPanel` component from HomeScreen.kt (~327 lines)
-- **Final line counts**: HomeScreenViewModel: 2667, HomeScreen.kt: 2220
+
+### Wave 11: Dead Code Removal ✅
+- Removed 3 unused functions: `getGreetingResponse`, `stripTrailingJsonFromGeneralReply`, `buildTranscriptContext`
+- Total: 56 lines removed
 
 ---
 
 ## Current Metrics
 
-| File | Original | After Wave 10 | Reduction |
-|------|----------|---------------|-----------|
-| HomeScreenViewModel | 3668 | 2667 | -27.3% |
+| File | Original | Current | Reduction |
+|------|----------|---------|-----------|
+| HomeScreenViewModel | 3668 | 2611 | **-28.8%** |
 | HomeScreen.kt | 2547 | 2220 | -12.9% |
 | ChatPublisher | - | 238 | +238 (new) |
 

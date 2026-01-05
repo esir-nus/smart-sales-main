@@ -124,6 +124,8 @@ APIs.txt
 
 # Workflow documentation (internal)
 workflows/
+!.agent/
+!.agent/workflows/
 
 # Plans (internal)
 plans/

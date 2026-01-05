@@ -66,6 +66,7 @@ import com.smartsales.core.metahub.applyM2PatchHistory
 import com.smartsales.feature.usercenter.SalesPersona
 import com.smartsales.feature.chat.testutil.buildNoopXfyunVoiceprintApi
 import com.smartsales.feature.chat.testutil.NoopDebugOrchestrator
+import com.smartsales.feature.chat.testutil.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeUserNameTest {
@@ -283,6 +284,10 @@ class HomeUserNameTest {
             tingwuTraceStore = TingwuTraceStore(),
             aiParaSettingsRepository = InMemoryAiParaSettingsRepository(),
             xfyunVoiceprintApi = buildNoopXfyunVoiceprintApi(),
+            exportCoordinator = buildNoopExportCoordinator(),
+            debugCoordinator = buildNoopDebugCoordinator(),
+            sessionsManager = buildNoopSessionsManager(),
+            tingwuCoordinator = buildNoopTingwuCoordinator(),
         )
     }
 

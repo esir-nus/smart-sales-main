@@ -52,6 +52,7 @@ import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.feature.chat.testutil.TestContext
 import com.smartsales.feature.chat.testutil.buildNoopXfyunVoiceprintApi
 import com.smartsales.feature.chat.testutil.NoopDebugOrchestrator
+import com.smartsales.feature.chat.testutil.*
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -111,6 +112,10 @@ class HomeGeneralMetadataFlowTest {
             tingwuTraceStore = TingwuTraceStore(),
             aiParaSettingsRepository = InMemoryAiParaSettingsRepository(),
             xfyunVoiceprintApi = buildNoopXfyunVoiceprintApi(),
+            exportCoordinator = buildNoopExportCoordinator(),
+            debugCoordinator = buildNoopDebugCoordinator(),
+            sessionsManager = buildNoopSessionsManager(),
+            tingwuCoordinator = buildNoopTingwuCoordinator(),
         )
     }
 
@@ -344,6 +349,10 @@ class HomeGeneralMetadataFlowTest {
                 tingwuTraceStore = TingwuTraceStore(),
                 aiParaSettingsRepository = InMemoryAiParaSettingsRepository(),
                 xfyunVoiceprintApi = buildNoopXfyunVoiceprintApi(),
+            exportCoordinator = buildNoopExportCoordinator(),
+            debugCoordinator = buildNoopDebugCoordinator(),
+            sessionsManager = buildNoopSessionsManager(),
+            tingwuCoordinator = buildNoopTingwuCoordinator(),
                 optionalConfig = Optional.of(AiCoreConfig(enableV1ChatPublisher = true))
             )
             return Triple(v1ViewModel, v1Orchestrator, v1MetaHub)

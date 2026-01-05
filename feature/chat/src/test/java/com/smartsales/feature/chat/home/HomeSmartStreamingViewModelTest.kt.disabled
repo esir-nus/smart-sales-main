@@ -1,22 +1,20 @@
 package com.smartsales.feature.chat.home
 
-// 文件：feature/chat/src/test/java/com/smartsales/feature/chat/home/HomeStreamingDedupTest.kt
+// 文件：feature/chat/src/test/java/com/smartsales/feature/chat/home/HomeSmartStreamingViewModelTest.kt
 // 模块：:feature:chat
-// 说明：验证 Home 流式去重逻辑，确保 Delta 与 Completed 不重复追加
-// 作者：创建于 2025-12-06
+// 说明：验证 SMART_ANALYSIS 在 ViewModel 层的占位与流式行为符合 V4：无 Delta 展示，Completed 替换占位
+// 作者：创建于 2025-12-08
 
 import com.smartsales.core.metahub.InMemoryMetaHub
 import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.ExportResult
-import com.smartsales.data.aicore.debug.TingwuTraceStore
-import com.smartsales.data.aicore.debug.XfyunTraceStore
-import com.smartsales.data.aicore.params.InMemoryAiParaSettingsRepository
 import com.smartsales.feature.chat.AiSessionSummary
 import com.smartsales.feature.chat.ChatShareHandler
 import com.smartsales.feature.chat.core.ChatRequest
 import com.smartsales.feature.chat.core.ChatStreamEvent
 import com.smartsales.feature.chat.core.QuickSkillCatalog
 import com.smartsales.feature.chat.core.QuickSkillDefinition
+import com.smartsales.feature.chat.core.QuickSkillId
 import com.smartsales.feature.chat.home.orchestrator.HomeOrchestrator
 import com.smartsales.feature.chat.history.ChatHistoryRepository
 import com.smartsales.feature.chat.history.ChatMessageEntity
@@ -28,18 +26,25 @@ import com.smartsales.feature.connectivity.DeviceNetworkStatus
 import com.smartsales.feature.connectivity.WifiCredentials
 import com.smartsales.feature.media.MediaSyncCoordinator
 import com.smartsales.feature.media.MediaSyncState
+import com.smartsales.feature.media.audiofiles.AudioOrigin
 import com.smartsales.feature.media.audiofiles.AudioStorageRepository
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionBatchEvent
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
 import com.smartsales.feature.media.audiofiles.StoredAudio
+import com.smartsales.feature.media.devicemanager.DeviceMediaFile
+import android.net.Uri
 import com.smartsales.feature.usercenter.UserProfile
 import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.data.aicore.ExportOrchestrator
+import com.smartsales.data.aicore.debug.TingwuTraceStore
+import com.smartsales.data.aicore.debug.XfyunTraceStore
+import com.smartsales.data.aicore.params.InMemoryAiParaSettingsRepository
 import com.smartsales.feature.chat.testutil.TestContext
 import com.smartsales.feature.chat.testutil.buildNoopXfyunVoiceprintApi
 import com.smartsales.feature.chat.testutil.NoopDebugOrchestrator
+import com.smartsales.feature.chat.testutil.*
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -48,7 +53,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -56,21 +61,20 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class HomeStreamingDedupTest {
+class HomeSmartStreamingViewModelTest {
 
-    private val dispatcher = UnconfinedTestDispatcher()
-    private lateinit var orchestrator: FakeHomeOrchestrator
+    private val dispatcher = StandardTestDispatcher()
+    private lateinit var orchestrator: QueueingHomeOrchestrator
     private lateinit var viewModel: HomeScreenViewModel
 
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
-        orchestrator = FakeHomeOrchestrator()
+        orchestrator = QueueingHomeOrchestrator()
         val metaHub = InMemoryMetaHub()
         viewModel = HomeScreenViewModel(
             appContext = TestContext(),
@@ -80,7 +84,7 @@ class HomeStreamingDedupTest {
             mediaSyncCoordinator = FakeMediaSyncCoordinator(),
             transcriptionCoordinator = FakeTranscriptionCoordinator(),
             audioStorageRepository = FakeAudioStorageRepository(),
-            quickSkillCatalog = FakeQuickSkillCatalog(),
+            quickSkillCatalog = SmartOnlyQuickSkillCatalog(),
             chatHistoryRepository = FakeChatHistoryRepository(),
             sessionRepository = FakeSessionRepository(),
             sessionTitleResolver = SessionTitleResolver(metaHub),
@@ -93,6 +97,10 @@ class HomeStreamingDedupTest {
             tingwuTraceStore = TingwuTraceStore(),
             aiParaSettingsRepository = InMemoryAiParaSettingsRepository(),
             xfyunVoiceprintApi = buildNoopXfyunVoiceprintApi(),
+            exportCoordinator = buildNoopExportCoordinator(),
+            debugCoordinator = buildNoopDebugCoordinator(),
+            sessionsManager = buildNoopSessionsManager(),
+            tingwuCoordinator = buildNoopTingwuCoordinator(),
         )
     }
 
@@ -102,154 +110,74 @@ class HomeStreamingDedupTest {
     }
 
     @Test
-    fun `delta only keeps single assistant bubble`() = runTest(dispatcher) {
-        orchestrator.enqueue(
-            ChatStreamEvent.Delta("<visible2user>a"),
-            ChatStreamEvent.Delta("<visible2user>ab")
-        )
-        viewModel.onInputChanged("客户需要报价")
-        viewModel.onSendMessage()
-        advanceUntilIdle()
+    fun `smart analysis inserts placeholder immediately`() = runTest(dispatcher) {
+        orchestrator.enqueue(ChatStreamEvent.Completed("## 会话概要\n- 完成"))
 
-        val assistants = viewModel.uiState.value.chatMessages.filter { it.role == ChatMessageRole.ASSISTANT }
+        triggerSmartSend()
+
+        val assistants = assistants()
         assertEquals(1, assistants.size)
-        assertEquals("ab", assistants.first().content)
+        assertEquals("正在智能分析当前会话内容…", assistants.first().content)
+        assertEquals(true, assistants.first().isStreaming)
+
+        advanceUntilIdle()
     }
 
     @Test
-    fun `delta then completed replaces content once`() = runTest(dispatcher) {
+    fun `smart analysis ignores deltas and only shows completed text`() = runTest(dispatcher) {
         orchestrator.enqueue(
-            ChatStreamEvent.Delta("<visible2user>he"),
-            ChatStreamEvent.Delta("<visible2user>hel"),
-            ChatStreamEvent.Completed("<visible2user>hello</visible2user>")
+            ChatStreamEvent.Delta("流式噪声"),
+            ChatStreamEvent.Completed("## 会话概要\n- 最终结果")
         )
-        viewModel.onInputChanged("客户询问产品报价")
-        viewModel.onSendMessage()
+
+        triggerSmartSend()
         advanceUntilIdle()
 
-        val assistants = viewModel.uiState.value.chatMessages.filter { it.role == ChatMessageRole.ASSISTANT }
+        val assistants = assistants()
         assertEquals(1, assistants.size)
-        assertEquals("hello", assistants.first().content)
+        assertEquals("## 会话概要\n- 最终结果", assistants.first().content)
+        assertFalse(assistants.first().content.contains("流式噪声"))
     }
 
     @Test
-    fun `debug toggle switches between sanitized and raw assistant text`() = runTest(dispatcher) {
-        val rawReply = "重复重复重复"
-        orchestrator.enqueue(ChatStreamEvent.Completed(rawReply))
+    fun `smart analysis completed replaces placeholder in place`() = runTest(dispatcher) {
+        orchestrator.enqueue(ChatStreamEvent.Completed("## 会话概要\n- 内容 A"))
 
-        viewModel.onInputChanged("客户询问产品报价")
-        viewModel.onSendMessage()
+        triggerSmartSend()
+        val placeholderId = assistants().first().id
         advanceUntilIdle()
 
-        val assistant = viewModel.uiState.value.chatMessages.first { it.role == ChatMessageRole.ASSISTANT }
-        val raw = assistant.rawContent
-        val sanitized = assistant.sanitizedContent ?: assistant.content
-
-        viewModel.setShowRawAssistantOutput(true)
-        val rawDisplay = viewModel.uiState.value.chatMessages.first { it.role == ChatMessageRole.ASSISTANT }.content
-        assertEquals(raw, rawDisplay)
-
-        viewModel.setShowRawAssistantOutput(false)
-        val sanitizedDisplay = viewModel.uiState.value.chatMessages.first { it.role == ChatMessageRole.ASSISTANT }.content
-        assertEquals(sanitized, sanitizedDisplay)
+        val assistants = assistants()
+        assertEquals(1, assistants.size)
+        assertEquals(placeholderId, assistants.first().id)
+        assertEquals("## 会话概要\n- 内容 A", assistants.first().content)
+        assertFalse(assistants.first().isStreaming)
     }
 
     @Test
-    fun `general output strips prompt echo and duplicate clauses`() = runTest(dispatcher) {
-        val raw = """
-            # 你的销售画像（供模型理解，不需要给用户复述）
-            - 岗位：销售
-            ## 输入摘要
-            - 用户提问
-            历史对话：
-            用户：之前问过价格
-            最新问题：请跟进客户。
-            请跟进客户。请跟进客户。
-        """.trimIndent()
-        orchestrator.enqueue(ChatStreamEvent.Completed(raw))
+    fun `smart analysis failure replaces placeholder text`() = runTest(dispatcher) {
+        val failure = "本次智能分析暂时不可用，请稍后重试。"
+        orchestrator.enqueue(ChatStreamEvent.Completed(failure))
 
-        viewModel.onInputChanged("请跟进客户")
-        viewModel.onSendMessage()
+        triggerSmartSend()
         advanceUntilIdle()
 
-        val assistant = viewModel.uiState.value.chatMessages.first { it.role == ChatMessageRole.ASSISTANT }
-        assertFalse(assistant.content.contains("输入摘要"))
-        assertFalse(assistant.content.contains("历史对话"))
-        assertFalse(assistant.content.contains("最新问题"))
-        assertEquals("请跟进客户。", assistant.content.trim())
-        assertTrue(assistant.rawContent?.contains("你的销售画像") == true)
+        val assistants = assistants()
+        assertEquals(1, assistants.size)
+        assertEquals(failure, assistants.first().content)
+        assertFalse(assistants.first().isStreaming)
     }
 
-    @Test
-    fun `visible2user tag drives display while raw keeps tags`() = runTest(dispatcher) {
-        val raw = """
-            <Visible2User>这里是可见内容</Visible2User>
-            <Metadata>{"main_person":"罗总"}</Metadata>
-            <Reasoning>内部思考</Reasoning>
-        """.trimIndent()
-        orchestrator.enqueue(ChatStreamEvent.Completed(raw))
-
-        viewModel.onInputChanged("生成总结")
+    private fun triggerSmartSend() {
+        viewModel.onSelectQuickSkill(QuickSkillId.SMART_ANALYSIS)
+        viewModel.onInputChanged("客户对话".repeat(150)) // 长文本，确保走智能分析主路径
         viewModel.onSendMessage()
-        advanceUntilIdle()
-
-        val assistant = viewModel.uiState.value.chatMessages.first { it.role == ChatMessageRole.ASSISTANT }
-        assertEquals("这里是可见内容", assistant.content.trim())
-        assertTrue(assistant.rawContent?.contains("<Metadata>") == true)
-        assertTrue(assistant.rawContent?.contains("<Visible2User>") == true)
     }
 
-    @Test
-    fun `multiple rounds keep one assistant bubble per turn`() = runTest(dispatcher) {
-        orchestrator.enqueue(
-            ChatStreamEvent.Delta("<visible2user>hi"),
-            ChatStreamEvent.Completed("<visible2user>hi there</visible2user>")
-        )
-        viewModel.onInputChanged("客户询问第一次报价")
-        viewModel.onSendMessage()
+    private fun assistants(): List<ChatMessageUi> =
+        viewModel.uiState.value.chatMessages.filter { it.role == ChatMessageRole.ASSISTANT }
 
-        orchestrator.enqueue(
-            ChatStreamEvent.Delta("<visible2user>second"),
-            ChatStreamEvent.Completed("<visible2user>second reply</visible2user>")
-        )
-        viewModel.onInputChanged("客户再次跟进报价")
-        viewModel.onSendMessage()
-
-        advanceUntilIdle()
-
-        val assistants = viewModel.uiState.value.chatMessages.filter { it.role == ChatMessageRole.ASSISTANT }
-        assertEquals(2, assistants.size)
-        assertEquals("hi there", assistants[0].content)
-        assertEquals("second reply", assistants[1].content)
-    }
-
-    @Test
-    fun `streaming only projects visible2user content`() = runTest(dispatcher) {
-        val dedup = StreamingDeduplicator()
-
-        val before = dedup.mergeSnapshot(current = "", incoming = "prefix")
-        assertEquals("", before)
-
-        val partial = dedup.mergeSnapshot(current = before, incoming = "<visible2user>Hel")
-        assertEquals("Hel", partial)
-
-        val complete = dedup.mergeSnapshot(current = partial, incoming = "<visible2user>Hello</visible2user>")
-        assertEquals("Hello", complete)
-
-        val jsonAfter = dedup.mergeSnapshot(
-            current = complete,
-            incoming = "<visible2user>Hello</visible2user>```json\n{\"x\":1}\n```"
-        )
-        assertEquals("Hello", jsonAfter)
-
-        val jsonInside = dedup.mergeSnapshot(
-            current = jsonAfter,
-            incoming = "<visible2user>Hi ```json\n{\"x\":1}\n``` there</visible2user>"
-        )
-        assertEquals("Hi  there", jsonInside)
-    }
-
-    private class FakeHomeOrchestrator : HomeOrchestrator {
+    private class QueueingHomeOrchestrator : HomeOrchestrator {
         private val queue: ArrayDeque<List<ChatStreamEvent>> = ArrayDeque()
 
         fun enqueue(vararg events: ChatStreamEvent) {
@@ -260,6 +188,19 @@ class HomeStreamingDedupTest {
             val events = queue.removeFirstOrNull().orEmpty()
             events.forEach { emit(it) }
         }
+    }
+
+    private class SmartOnlyQuickSkillCatalog : QuickSkillCatalog {
+        override fun homeQuickSkills(): List<QuickSkillDefinition> = listOf(
+            QuickSkillDefinition(
+                id = QuickSkillId.SMART_ANALYSIS,
+                label = "智能分析",
+                description = null,
+                defaultPrompt = "",
+                isRecommended = false,
+                requiresAudioContext = false
+            )
+        )
     }
 
     private class FakeAiSessionRepository : AiSessionRepository {
@@ -306,22 +247,34 @@ class HomeStreamingDedupTest {
 
     private class FakeAudioStorageRepository : AudioStorageRepository {
         override val audios: Flow<List<StoredAudio>> = flowOf(emptyList())
-        override suspend fun importFromDevice(
-            baseUrl: String,
-            file: com.smartsales.feature.media.devicemanager.DeviceMediaFile
-        ): StoredAudio {
-            throw UnsupportedOperationException()
+        
+        override suspend fun importFromDevice(baseUrl: String, file: DeviceMediaFile): StoredAudio {
+            return StoredAudio(
+                id = "fake-device",
+                displayName = file.name,
+                sizeBytes = 0L,
+                durationMillis = null,
+                timestampMillis = System.currentTimeMillis(),
+                origin = AudioOrigin.DEVICE,
+                localUri = Uri.parse("file://fake-device")
+            )
         }
 
-        override suspend fun importFromPhone(uri: android.net.Uri): StoredAudio {
-            throw UnsupportedOperationException()
+        override suspend fun importFromPhone(uri: Uri): StoredAudio {
+            return StoredAudio(
+                id = "fake-phone",
+                displayName = "fake-phone-audio",
+                sizeBytes = 0L,
+                durationMillis = null,
+                timestampMillis = System.currentTimeMillis(),
+                origin = AudioOrigin.PHONE,
+                localUri = uri
+            )
         }
 
-        override suspend fun delete(audioId: String) {}
-    }
-
-    private class FakeQuickSkillCatalog : QuickSkillCatalog {
-        override fun homeQuickSkills(): List<QuickSkillDefinition> = emptyList()
+        override suspend fun delete(audioId: String) {
+            // no-op
+        }
     }
 
     private class FakeChatHistoryRepository : ChatHistoryRepository {
@@ -367,17 +320,14 @@ class HomeStreamingDedupTest {
 
         override suspend fun updateTitle(id: String, newTitle: String, isUserEdited: Boolean) {
             sessions[id]?.let { existing ->
-                sessions[id] = existing.copy(
-                    title = newTitle,
-                    isTitleUserEdited = existing.isTitleUserEdited || isUserEdited
-                )
+                sessions[id] = existing.copy(title = newTitle)
                 summaries.value = sessions.values.toList()
             }
         }
     }
 
     private class FakeUserProfileRepository : UserProfileRepository {
-        private val state = kotlinx.coroutines.flow.MutableStateFlow(
+        private val state = MutableStateFlow(
             UserProfile("Tester", "tester@example.com", false)
         )
         override val profileFlow = state
@@ -399,5 +349,4 @@ class HomeStreamingDedupTest {
         override suspend fun copyAssistantReply(text: String): Result<Unit> = Result.Success(Unit)
         override suspend fun shareExport(result: ExportResult): Result<Unit> = Result.Success(Unit)
     }
-
 }

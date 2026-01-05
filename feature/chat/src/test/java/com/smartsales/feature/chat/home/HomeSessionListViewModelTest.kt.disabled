@@ -1,22 +1,23 @@
 package com.smartsales.feature.chat.home
 
-// 文件：feature/chat/src/test/java/com/smartsales/feature/chat/home/HomeTranscriptionTest.kt
+// 文件：feature/chat/src/test/java/com/smartsales/feature/chat/home/HomeSessionListViewModelTest.kt
 // 模块：:feature:chat
-// 说明：验证聊天界面处理音频转写导航请求的行为
-// 作者：创建于 2025-11-21
+// 说明：验证 Home 层会话列表的加载、排序与转写会话标记逻辑
+// 作者：创建于 2025-11-25
 
 import com.smartsales.core.util.Result
+import com.smartsales.feature.chat.AiSessionRepository as SessionRepository
+import com.smartsales.feature.chat.AiSessionSummary
 import com.smartsales.feature.chat.core.AiChatService
+import com.smartsales.feature.chat.core.ChatRequest
+import com.smartsales.feature.chat.core.ChatStreamEvent
 import com.smartsales.feature.chat.core.QuickSkillCatalog
 import com.smartsales.feature.chat.core.QuickSkillDefinition
 import com.smartsales.feature.chat.core.QuickSkillId
-import com.smartsales.feature.chat.core.ChatRequest
-import com.smartsales.feature.chat.core.ChatStreamEvent
 import com.smartsales.feature.chat.home.orchestrator.HomeOrchestrator
-import com.smartsales.feature.chat.history.ChatMessageEntity
-import com.smartsales.feature.chat.AiSessionSummary
-import com.smartsales.feature.chat.AiSessionRepository as SessionRepository
+import com.smartsales.feature.chat.title.SessionTitleResolver
 import com.smartsales.feature.chat.history.ChatHistoryRepository
+import com.smartsales.feature.chat.history.ChatMessageEntity
 import com.smartsales.feature.connectivity.BlePeripheral
 import com.smartsales.feature.connectivity.ConnectionState
 import com.smartsales.feature.connectivity.DeviceConnectionManager
@@ -24,39 +25,24 @@ import com.smartsales.feature.connectivity.DeviceNetworkStatus
 import com.smartsales.feature.connectivity.WifiCredentials
 import com.smartsales.feature.media.MediaSyncCoordinator
 import com.smartsales.feature.media.MediaSyncState
+import com.smartsales.feature.media.MediaClipStatus
+import com.smartsales.feature.media.MediaClip
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionBatchEvent
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
-import com.smartsales.data.aicore.ExportOrchestrator
-import com.smartsales.data.aicore.ExportResult
-import com.smartsales.data.aicore.debug.TingwuTraceStore
-import com.smartsales.data.aicore.debug.XfyunTraceStore
-import com.smartsales.data.aicore.params.InMemoryAiParaSettingsRepository
+import com.smartsales.feature.chat.home.TranscriptionChatRequest
 import com.smartsales.feature.media.audiofiles.AudioStorageRepository
 import com.smartsales.feature.media.audiofiles.StoredAudio
+import com.smartsales.feature.chat.testutil.TestContext
 import android.net.Uri
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import com.smartsales.feature.chat.title.SessionTitleResolver
-import com.smartsales.core.metahub.MetaHub
-import com.smartsales.core.metahub.SessionMetadata
-import com.smartsales.core.metahub.TranscriptMetadata
-import com.smartsales.core.metahub.ExportMetadata
-import com.smartsales.core.metahub.TokenUsage
-import com.smartsales.core.metahub.ConversationDerivedState
-import com.smartsales.core.metahub.M2PatchRecord
-import com.smartsales.core.metahub.applyM2PatchHistory
-import com.smartsales.feature.chat.ChatShareHandler
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import com.smartsales.feature.chat.testutil.TestContext
-import com.smartsales.feature.chat.testutil.buildNoopXfyunVoiceprintApi
-import com.smartsales.feature.chat.testutil.NoopDebugOrchestrator
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -65,16 +51,34 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Test
+import com.smartsales.core.metahub.MetaHub
+import com.smartsales.core.metahub.SessionMetadata
+import com.smartsales.core.metahub.TranscriptMetadata
+import com.smartsales.core.metahub.ExportMetadata
+import com.smartsales.core.metahub.TokenUsage
+import com.smartsales.core.metahub.ConversationDerivedState
+import com.smartsales.core.metahub.M2PatchRecord
+import com.smartsales.core.metahub.applyM2PatchHistory
+import com.smartsales.data.aicore.ExportOrchestrator
+import com.smartsales.data.aicore.ExportResult
+import com.smartsales.data.aicore.debug.TingwuTraceStore
+import com.smartsales.data.aicore.debug.XfyunTraceStore
+import com.smartsales.data.aicore.params.InMemoryAiParaSettingsRepository
+import com.smartsales.feature.chat.ChatShareHandler
+import com.smartsales.core.metahub.SessionTitlePolicy
+import com.smartsales.feature.chat.testutil.buildNoopXfyunVoiceprintApi
+import com.smartsales.feature.chat.testutil.NoopDebugOrchestrator
+import com.smartsales.feature.chat.testutil.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class HomeTranscriptionTest {
+class HomeSessionListViewModelTest {
 
     private val dispatcher = UnconfinedTestDispatcher()
-    private lateinit var transcriptionCoordinator: FakeTranscriptionCoordinator
+    private lateinit var sessionRepository: FakeSessionRepository
     private lateinit var viewModel: HomeScreenViewModel
+    private lateinit var fakeHistoryRepository: FakeChatHistoryRepository
     private lateinit var aiChatService: FakeAiChatService
     private val appContext = TestContext()
     private lateinit var metaHub: FakeMetaHub
@@ -82,21 +86,23 @@ class HomeTranscriptionTest {
     @Before
     fun setup() {
         Dispatchers.setMain(dispatcher)
-        transcriptionCoordinator = FakeTranscriptionCoordinator()
+        sessionRepository = FakeSessionRepository()
+        fakeHistoryRepository = FakeChatHistoryRepository()
         aiChatService = FakeAiChatService()
         metaHub = FakeMetaHub()
         viewModel = HomeScreenViewModel(
             appContext = appContext,
             homeOrchestrator = FakeHomeOrchestrator(aiChatService),
-            aiSessionRepository = FakeChatMessageRepository(),
+            aiSessionRepository = FakeHomeSessionMessageRepository(),
             deviceConnectionManager = FakeDeviceConnectionManager(),
             mediaSyncCoordinator = FakeMediaSyncCoordinator(),
-            transcriptionCoordinator = transcriptionCoordinator,
+            transcriptionCoordinator = FakeTranscriptionCoordinator(),
             audioStorageRepository = object : AudioStorageRepository {
                 override val audios: Flow<List<StoredAudio>> = MutableStateFlow(emptyList())
                 override suspend fun importFromDevice(baseUrl: String, file: com.smartsales.feature.media.devicemanager.DeviceMediaFile): StoredAudio {
                     throw UnsupportedOperationException()
                 }
+
                 override suspend fun importFromPhone(uri: android.net.Uri): StoredAudio {
                     throw UnsupportedOperationException()
                 }
@@ -104,8 +110,8 @@ class HomeTranscriptionTest {
                 override suspend fun delete(audioId: String) {}
             },
             quickSkillCatalog = FakeQuickSkillCatalog(),
-            chatHistoryRepository = FakeChatHistoryRepository(),
-            sessionRepository = FakeSessionRepository(),
+            chatHistoryRepository = fakeHistoryRepository,
+            sessionRepository = sessionRepository,
             sessionTitleResolver = SessionTitleResolver(metaHub),
             userProfileRepository = FakeUserProfileRepository(),
             metaHub = metaHub,
@@ -116,6 +122,10 @@ class HomeTranscriptionTest {
             tingwuTraceStore = TingwuTraceStore(),
             aiParaSettingsRepository = InMemoryAiParaSettingsRepository(),
             xfyunVoiceprintApi = buildNoopXfyunVoiceprintApi(),
+            exportCoordinator = buildNoopExportCoordinator(),
+            debugCoordinator = buildNoopDebugCoordinator(),
+            sessionsManager = buildNoopSessionsManager(),
+            tingwuCoordinator = buildNoopTingwuCoordinator(),
         )
     }
 
@@ -125,225 +135,126 @@ class HomeTranscriptionTest {
     }
 
     @Test
-    fun `transcription request adds progress and final transcript`() = runTest(dispatcher) {
-        transcriptionCoordinator.registerJob("job-1")
+    fun `session list maps summaries with ordering and flags`() = runTest(dispatcher) {
+        val manual = AiSessionSummary(
+            id = "manual-session",
+            title = "手动会话",
+            lastMessagePreview = "你好",
+            updatedAtMillis = Long.MAX_VALUE - 1
+        )
+        val transcript = AiSessionSummary(
+            id = "call-session",
+            title = "通话分析 – 客户A",
+            lastMessagePreview = "结论",
+            updatedAtMillis = Long.MAX_VALUE,
+            isTranscription = true
+        )
+        sessionRepository.upsert(manual)
+        sessionRepository.upsert(transcript)
 
+        advanceUntilIdle()
+
+        val sessions = viewModel.uiState.value.sessionList
+        assertTrue(sessions.first().id == "call-session")
+        assertTrue(sessions.first().isTranscription)
+        val manualItem = sessions.first { it.id == "manual-session" }
+        assertTrue(!manualItem.isTranscription)
+    }
+
+    @Test
+    fun `transcription request updates session list title and preview`() = runTest(dispatcher) {
         viewModel.onTranscriptionRequested(
             TranscriptionChatRequest(
                 jobId = "job-1",
-                fileName = "demo.wav"
+                fileName = "demo.wav",
+                transcriptMarkdown = "## 录音摘要"
             )
         )
 
         advanceUntilIdle()
-        assertTrue(
-            viewModel.uiState.value.chatMessages.any { it.content.contains("demo.wav") && it.isStreaming }
-        )
 
-        transcriptionCoordinator.emitBatch(
-            "job-1",
-            AudioTranscriptionBatchEvent.BatchReleased(
-                jobId = "job-1",
-                batchIndex = 1,
-                totalBatches = 1,
-                markdownChunk = "## 转写结果",
-                isFinal = true,
-                batchSize = 20,
-                lineCount = 1,
-                ruleLabel = "fixed_lines_per_batch"
-            )
-        )
-        transcriptionCoordinator.emit(
-            "job-1",
-            AudioTranscriptionJobState.Completed("job-1", "## 转写结果")
-        )
-        advanceUntilIdle()
-
-        assertTrue(
-            viewModel.uiState.value.chatMessages.any { it.content.contains("## 转写结果") }
-        )
-        assertFalse(viewModel.uiState.value.isInputBusy)
+        val sessions = viewModel.uiState.value.sessionList
+        val transcriptItem = sessions.first { it.id == "home-session" }
+        assertEquals(SessionTitlePolicy.PLACEHOLDER_TITLE, transcriptItem.title)
+        assertTrue(transcriptItem.isTranscription)
+        assertTrue(transcriptItem.lastMessagePreview.contains("录音摘要"))
     }
 
     @Test
-    fun `batch releases update transcript bubble and freeze after final`() = runTest(dispatcher) {
-        transcriptionCoordinator.registerJob("job-2")
-
-        viewModel.onTranscriptionRequested(
-            TranscriptionChatRequest(
-                jobId = "job-2",
-                fileName = "batch.wav"
-            )
-        )
-
+    fun `new chat creates manual session and switches current`() = runTest(dispatcher) {
         advanceUntilIdle()
+        val firstId = viewModel.uiState.value.currentSession.id
 
-        transcriptionCoordinator.emitBatch(
-            "job-2",
-            AudioTranscriptionBatchEvent.BatchReleased(
-                jobId = "job-2",
-                batchIndex = 1,
-                totalBatches = 2,
-                markdownChunk = "## 逐字稿\n- A",
-                isFinal = false,
-                batchSize = 2,
-                lineCount = 2,
-                ruleLabel = "fixed_lines_per_batch"
-            )
-        )
+        viewModel.onNewChatClicked()
         advanceUntilIdle()
+        val state = viewModel.uiState.value
 
-        val firstMessage = viewModel.uiState.value.chatMessages.firstOrNull {
-            it.content.contains("逐字稿") && it.content.contains("A")
-        }
-        assertTrue(firstMessage != null && firstMessage.isStreaming)
-
-        transcriptionCoordinator.emitBatch(
-            "job-2",
-            AudioTranscriptionBatchEvent.BatchReleased(
-                jobId = "job-2",
-                batchIndex = 2,
-                totalBatches = 2,
-                markdownChunk = "- B",
-                isFinal = true,
-                batchSize = 2,
-                lineCount = 1,
-                ruleLabel = "fixed_lines_per_batch"
-            )
-        )
-        transcriptionCoordinator.emit(
-            "job-2",
-            AudioTranscriptionJobState.Completed("job-2", "## 逐字稿\n- A\n- B")
-        )
-        advanceUntilIdle()
-
-        val finalMessage = viewModel.uiState.value.chatMessages.firstOrNull {
-            it.content.contains("逐字稿") && it.content.contains("A") && it.content.contains("B")
-        }
-        assertTrue(finalMessage != null && !finalMessage.isStreaming)
-
-        val snapshot = finalMessage?.content
-        transcriptionCoordinator.emitBatch(
-            "job-2",
-            AudioTranscriptionBatchEvent.BatchReleased(
-                jobId = "job-2",
-                batchIndex = 3,
-                totalBatches = 2,
-                markdownChunk = "- C",
-                isFinal = false,
-                batchSize = 2,
-                lineCount = 1,
-                ruleLabel = "fixed_lines_per_batch"
-            )
-        )
-        advanceUntilIdle()
-        val afterFinal = viewModel.uiState.value.chatMessages.firstOrNull {
-            it.content.contains("逐字稿") && it.content.contains("A") && it.content.contains("B")
-        }?.content
-        assertEquals(snapshot, afterFinal)
+        assertTrue(state.currentSession.id != firstId)
+        assertTrue(!state.currentSession.isTranscription)
+        assertTrue(state.chatMessages.isEmpty())
+        assertTrue(state.sessionList.any { it.id == firstId })
+        assertTrue(state.sessionList.first { it.id == state.currentSession.id }.isCurrent)
+        assertEquals(null, state.chatErrorMessage)
     }
 
     @Test
-    fun `audio recovery hint respects started dismissed finished`() = runTest(dispatcher) {
-        // 说明：只验证提示规则，不触发任何气泡或转写副作用
+    fun `multiple new chats produce distinct sessions`() = runTest(dispatcher) {
+        viewModel.onNewChatClicked()
+        viewModel.onNewChatClicked()
         advanceUntilIdle()
-        val currentSessionId = viewModel.uiState.value.currentSession.id
-
-        metaHub.upsertSession(
-            SessionMetadata(
-                sessionId = currentSessionId,
-                lastAudioTaskStartedAt = 1_000L
-            )
-        )
-        viewModel.setSession(currentSessionId, allowHero = false)
-        advanceUntilIdle()
-        assertTrue(viewModel.uiState.value.showAudioRecoveryHint)
-        assertEquals(1_000L, viewModel.uiState.value.audioRecoveryHintStartedAt)
-
-        viewModel.dismissAudioRecoveryHint()
-        advanceUntilIdle()
-        assertFalse(viewModel.uiState.value.showAudioRecoveryHint)
-
-        metaHub.upsertSession(
-            SessionMetadata(
-                sessionId = currentSessionId,
-                lastAudioTaskStartedAt = 1_000L,
-                lastAudioTaskFinishedAt = 2_000L
-            )
-        )
-        viewModel.setSession(currentSessionId, allowHero = false)
-        advanceUntilIdle()
-        assertFalse(viewModel.uiState.value.showAudioRecoveryHint)
+        val ids = viewModel.uiState.value.sessionList.map { it.id }.toSet()
+        assertTrue(ids.size >= 3) // 包含默认会话
     }
 
     @Test
-    fun `transcription request injects intro and transcript context`() = runTest(dispatcher) {
-        viewModel.onTranscriptionRequested(
-            TranscriptionChatRequest(
-                jobId = "job-2",
-                fileName = "call-1.wav",
-                transcriptMarkdown = "## 内容\n- 要点"
+    fun `history pin toggle moves session to top`() = runTest(dispatcher) {
+        val second = sessionRepository.createNewChatSession()
+        sessionRepository.upsert(
+            second.copy(
+                updatedAtMillis = sessionRepository.summaries.value.first().updatedAtMillis - 10
             )
         )
-
         advanceUntilIdle()
 
-        val messages = viewModel.uiState.value.chatMessages
-        assertTrue(messages.any { it.content.contains("通话分析 · 已为你加载录音") && it.content.contains("call-1.wav") })
-        assertTrue(messages.any { it.content.contains("## 内容") && it.content.contains("要点") })
+        viewModel.onHistorySessionPinToggle(second.id)
+        advanceUntilIdle()
+
+        val sessions = viewModel.uiState.value.sessionList
+        assertEquals(second.id, sessions.first().id)
+        assertTrue(sessionRepository.findById(second.id)?.pinned == true)
     }
 
     @Test
-    fun `cached transcript shows compact notice without duplicates`() = runTest(dispatcher) {
-        viewModel.onTranscriptionRequested(
-            TranscriptionChatRequest(
-                jobId = "job-cache",
-                fileName = "cached.wav",
-                transcriptMarkdown = "缓存逐字稿",
-                isFromCache = true
-            )
-        )
-
+    fun `history rename sets user edited flag`() = runTest(dispatcher) {
+        val currentId = viewModel.uiState.value.currentSession.id
+        viewModel.onHistorySessionRenameConfirmed(currentId, "手动改名")
         advanceUntilIdle()
 
-        val messages = viewModel.uiState.value.chatMessages
-        assertTrue(messages.any { it.content.contains("历史转写") })
-        val transcriptCount = messages.count { it.content.contains("缓存逐字稿") }
-        assertEquals(1, transcriptCount)
-        assertFalse(messages.any { it.content.contains("转写完成：cached.wav") })
+        val updated = sessionRepository.findById(currentId)
+        assertEquals("手动改名", updated?.title)
+        assertTrue(updated?.isTitleUserEdited == true)
+    }
+
+    @Test
+    fun `history delete switches away from removed current session`() = runTest(dispatcher) {
+        val originalId = viewModel.uiState.value.currentSession.id
+        val other = sessionRepository.createNewChatSession()
+        sessionRepository.upsert(other)
+        advanceUntilIdle()
+
+        viewModel.onHistorySessionDelete(originalId)
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.currentSession.id != originalId)
+        assertTrue(state.sessionList.none { it.id == originalId })
     }
 
     private class FakeAiChatService : AiChatService {
         override fun streamChat(request: ChatRequest): Flow<ChatStreamEvent> = flowOf()
     }
 
-    private class FakeHomeOrchestrator(
-        private val delegate: AiChatService
-    ) : HomeOrchestrator {
-        override fun streamChat(request: ChatRequest): Flow<ChatStreamEvent> =
-            delegate.streamChat(request)
-    }
-
-    private class FakeUserProfileRepository : com.smartsales.feature.usercenter.data.UserProfileRepository {
-        private val state = kotlinx.coroutines.flow.MutableStateFlow(
-            com.smartsales.feature.usercenter.UserProfile(
-                displayName = "测试用户",
-                email = "user@example.com",
-                isGuest = false
-            )
-        )
-        override val profileFlow = state
-        override suspend fun load(): com.smartsales.feature.usercenter.UserProfile = state.value
-        override suspend fun save(profile: com.smartsales.feature.usercenter.UserProfile) {
-            state.value = profile
-        }
-
-        override suspend fun clear() {
-            state.value = com.smartsales.feature.usercenter.UserProfile("", "", true)
-        }
-    }
-
-    private class FakeChatMessageRepository : com.smartsales.feature.chat.home.AiSessionRepository {
+    private class FakeHomeSessionMessageRepository : com.smartsales.feature.chat.home.AiSessionRepository {
         override suspend fun loadOlderMessages(currentTopMessageId: String?): List<ChatMessageUi> =
             emptyList()
     }
@@ -356,7 +267,7 @@ class HomeTranscriptionTest {
         override suspend fun createNewChatSession(): AiSessionSummary {
             val summary = AiSessionSummary(
                 id = "session-${sessions.size}",
-                title = com.smartsales.core.metahub.SessionTitlePolicy.newChatPlaceholder(),
+                title = SessionTitlePolicy.newChatPlaceholder(),
                 lastMessagePreview = "",
                 updatedAtMillis = 0L
             )
@@ -366,7 +277,10 @@ class HomeTranscriptionTest {
 
         override suspend fun upsert(summary: AiSessionSummary) {
             sessions[summary.id] = summary
-            summaries.value = sessions.values.toList()
+            summaries.value = sessions.values.sortedWith(
+                compareByDescending<AiSessionSummary> { it.pinned }
+                    .thenByDescending { it.updatedAtMillis }
+            )
         }
 
         override suspend fun delete(id: String) {
@@ -410,13 +324,35 @@ class HomeTranscriptionTest {
 
     private class FakeMediaSyncCoordinator : MediaSyncCoordinator {
         override val state: MutableStateFlow<MediaSyncState> =
-            MutableStateFlow(MediaSyncState())
+            MutableStateFlow(
+                MediaSyncState(
+                    items = listOf(
+                        MediaClip(
+                            id = "1",
+                            title = "demo",
+                            customer = "c",
+                            recordedAtMillis = 0L,
+                            durationSeconds = 10,
+                            sourceDeviceName = "dev",
+                            status = MediaClipStatus.Ready,
+                            transcriptSource = "ready"
+                        )
+                    )
+                )
+            )
 
         override suspend fun triggerSync(): Result<Unit> = Result.Success(Unit)
     }
 
     private class FakeQuickSkillCatalog : QuickSkillCatalog {
         override fun homeQuickSkills(): List<QuickSkillDefinition> = emptyList()
+    }
+
+    private class FakeHomeOrchestrator(
+        private val delegate: AiChatService
+    ) : HomeOrchestrator {
+        override fun streamChat(request: ChatRequest): Flow<ChatStreamEvent> =
+            delegate.streamChat(request)
     }
 
     private class FakeChatHistoryRepository : ChatHistoryRepository {
@@ -433,21 +369,6 @@ class HomeTranscriptionTest {
     }
 
     private class FakeTranscriptionCoordinator : AudioTranscriptionCoordinator {
-        private val jobs = mutableMapOf<String, MutableStateFlow<AudioTranscriptionJobState>>()
-        private val batchEvents = mutableMapOf<String, MutableSharedFlow<AudioTranscriptionBatchEvent>>()
-
-        fun registerJob(jobId: String) {
-            jobs[jobId] = MutableStateFlow(AudioTranscriptionJobState.InProgress(jobId, 5))
-        }
-
-        fun emit(jobId: String, state: AudioTranscriptionJobState) {
-            jobs[jobId]?.value = state
-        }
-
-        fun emitBatch(jobId: String, event: AudioTranscriptionBatchEvent) {
-            batchEvents.getOrPut(jobId) { MutableSharedFlow(extraBufferCapacity = 16) }.tryEmit(event)
-        }
-
         override suspend fun uploadAudio(file: File): Result<AudioUploadPayload> =
             Result.Error(UnsupportedOperationException())
 
@@ -459,10 +380,29 @@ class HomeTranscriptionTest {
         ): Result<String> = Result.Success("job-ignored")
 
         override fun observeJob(jobId: String): Flow<AudioTranscriptionJobState> =
-            jobs.getOrPut(jobId) { MutableStateFlow(AudioTranscriptionJobState.Idle) }
+            flowOf(AudioTranscriptionJobState.Completed(jobId, "## 完成"))
 
         override fun observeBatches(jobId: String): Flow<AudioTranscriptionBatchEvent> =
-            batchEvents.getOrPut(jobId) { MutableSharedFlow(extraBufferCapacity = 16) }
+            emptyFlow()
+    }
+
+    private class FakeUserProfileRepository : com.smartsales.feature.usercenter.data.UserProfileRepository {
+        private val state = kotlinx.coroutines.flow.MutableStateFlow(
+            com.smartsales.feature.usercenter.UserProfile(
+                displayName = "会话用户",
+                email = "session@example.com",
+                isGuest = false
+            )
+        )
+        override val profileFlow = state
+        override suspend fun load(): com.smartsales.feature.usercenter.UserProfile = state.value
+        override suspend fun save(profile: com.smartsales.feature.usercenter.UserProfile) {
+            state.value = profile
+        }
+
+        override suspend fun clear() {
+            state.value = com.smartsales.feature.usercenter.UserProfile("", "", true)
+        }
     }
 
     private class FakeExportOrchestrator : ExportOrchestrator {
@@ -488,7 +428,7 @@ class HomeTranscriptionTest {
         }
         override suspend fun getSession(sessionId: String): SessionMetadata? = sessionStore[sessionId]
         override suspend fun appendM2Patch(sessionId: String, patch: M2PatchRecord) {
-            // 说明：测试替身按追加顺序保存 M2 补丁，避免非确定性合并。
+            // 说明：测试替身保留 M2 补丁追加顺序，避免合并非确定性。
             val history = m2PatchHistoryBySession.getOrPut(sessionId) { mutableListOf() }
             history.add(patch)
             val current = sessionStore[sessionId] ?: SessionMetadata(sessionId = sessionId)

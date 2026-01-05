@@ -50,6 +50,7 @@ import com.smartsales.feature.usercenter.data.UserProfileRepository
 import com.smartsales.feature.chat.testutil.TestContext
 import com.smartsales.feature.chat.testutil.buildNoopXfyunVoiceprintApi
 import com.smartsales.feature.chat.testutil.NoopDebugOrchestrator
+import com.smartsales.feature.chat.testutil.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -269,6 +270,10 @@ class HomeHeroTitlePlaceholderTest {
             tingwuTraceStore = TingwuTraceStore(),
             aiParaSettingsRepository = InMemoryAiParaSettingsRepository(),
             xfyunVoiceprintApi = buildNoopXfyunVoiceprintApi(),
+            exportCoordinator = buildNoopExportCoordinator(),
+            debugCoordinator = buildNoopDebugCoordinator(),
+            sessionsManager = buildNoopSessionsManager(),
+            tingwuCoordinator = buildNoopTingwuCoordinator(),
         )
     }
 

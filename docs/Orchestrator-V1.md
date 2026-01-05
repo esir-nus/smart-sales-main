@@ -8,7 +8,7 @@
 
 # Orchestrator-V1 Architecture Spec (CURRENT)
 
-Version: 1.1.0  
+Version: 1.2.0  
 Status: CURRENT (active spec)  
 V7: ARCHIVED (historical reference only; not an implementation basis)
 
@@ -127,6 +127,12 @@ Metadata Hub is **context and structured memory for LLM modules**. Recommended t
 
 > Are versions/schema "required"?  
 > V1 recommends minimalism: each JSON top-level includes `schemaVersion` (integer), only increment on breaking change; no complex migration system.
+
+### 4.1 Versioning Glossary
+
+- **schemaVersion** (integer): JSON schema version for parsing/validation. Increment only on breaking changes. Current: `1`.
+- **version** (integer): Per-artifact version for idempotency/ordering. Current: `1` for all V1 artifacts.
+- **Migration policy**: V1 does not require automatic migration. On schemaVersion mismatch, fail parse and emit Trace event.
 
 ---
 
@@ -288,6 +294,32 @@ When MachineArtifact fails parse/validation, Publisher must execute retry strate
   - prohibit Metadata Hub writes (prevent contamination)
   - must write Trace events (for HUD diagnosis)
 
+### 8.1 Tingwu Runner Retry Policy
+
+When a Tingwu batch request fails, Tingwu Runner must execute retry strategy:
+
+- `maxRetries = 3` (default recommendation)
+- `retryBackoffSeconds = [60, 120, 300]` (exponential backoff)
+
+**Retryable errors**:
+- HTTP 429 (rate limit): retryable with longer backoff
+- HTTP 5xx (server errors): retryable with standard backoff
+- Network timeouts: retryable with standard backoff
+
+**Non-retryable errors**:
+- HTTP 4xx (except 429): not retryable by default (e.g., 400, 401, 403)
+
+**Terminal behavior** (retries exhausted):
+- Set `TingwuJobState.status = FAILED`
+- Set `TingwuJobState.lastErrorCategory` (NETWORK / TIMEOUT / RATE_LIMIT / AUTH / INPUT / PROVIDER / UNKNOWN)
+- Emit Trace events for HUD diagnosis
+- Prefix publishing stops at the gap; later batches can run but cannot publish until the gap is filled
+
+**Partial failure impact**:
+- Only continuous prefix (b1..bk) is published
+- If batch k+1 fails, batches k+2, k+3... can still succeed, but UI shows only up to batch k
+- Recovery may allow resubmission of failed batch to resume publishing
+
 ---
 
 ## 9) Debug / HUD / Thinking Trace
@@ -383,7 +415,46 @@ HUD is a debug panel with three copyable sections (for both Chat and Transcripti
 
 ---
 
-## 13) Future Extensions (reserved; not in V1.1 scope)
+## 13) Appendix D: State Recovery Rules (restart/resume)
+
+When processing is interrupted (app kill, network failure, restart), the following recovery rules apply:
+
+### D.1 PublisherState
+
+- `publishedPrefixBatchIndex` is persisted and monotonic
+- On restart, resume from `publishedPrefixBatchIndex + 1`
+- Never re-publish already-published batches
+
+### D.2 TingwuJobState
+
+- Per-batch status is persisted (PLANNED / SUBMITTED / RUNNING / SUCCEEDED / FAILED)
+- On restart:
+  - SUCCEEDED batches: skip, use cached artifacts
+  - FAILED batches: may retry if policy allows (check `attemptCount`)
+  - SUBMITTED/RUNNING batches: treat as unknown, re-poll or re-submit
+
+### D.3 DisectorPlan
+
+- Plan is deterministic and reproducible from `audioAssetId` + `totalMs` + rule version
+- On restart, regenerate plan if not cached; compare `disectorPlanId` to validate
+- If rule version changed, old plan is invalid; generate new plan
+
+### D.4 SessionMemory / M2B
+
+- Derived from published batches and LLM Parser outputs
+- On restart, rebuild from published artifacts if needed
+- Do not attempt to recover partial/unpersisted LLM outputs
+
+### D.5 Partial Failure Impact
+
+- If batch k fails and batches k+1..n succeed:
+  - UI shows prefix up to k-1 only
+  - M2B derived from published prefix only
+  - Recovery: re-submit batch k; on success, prefix advances to include k..n
+
+---
+
+## 14) Future Extensions (reserved; not in V1.2 scope)
 
 - Confidence/threshold-based cross-session retrieval and prompts (long-term cross-session memory).
 - Publisher semantic transform boundaries and test strategy (currently display-only transforms allowed).

@@ -267,6 +267,48 @@ class RealTingwuCoordinator @Inject constructor(
     private fun getOrCreateJobFlow(jobId: String): MutableStateFlow<TingwuJobState> =
         jobStates.getOrPut(jobId) { MutableStateFlow<TingwuJobState>(TingwuJobState.Idle) }
 
+    // V1 spec §8.1: Tingwu retry policy with backoff
+    private suspend fun pollWithRetry(jobId: String): TingwuStatusResponse {
+        val maxRetries = config.tingwuMaxRetries
+        val backoffSeconds = config.tingwuRetryBackoffSeconds
+        var lastError: Throwable? = null
+        repeat(maxRetries + 1) { attempt ->
+            try {
+                return api.getTaskStatus(taskId = jobId)
+            } catch (error: Throwable) {
+                if (error is CancellationException) throw error
+                lastError = error
+                val isLast = attempt >= maxRetries
+                if (isLast || !isRetryableError(error)) {
+                    AiCoreLogger.e(TAG, "Tingwu 轮询失败（尝试 ${attempt + 1}/${maxRetries + 1}）：${error.message}")
+                    throw error
+                }
+                val backoff = backoffSeconds.getOrElse(attempt) { backoffSeconds.lastOrNull() ?: 60 }
+                AiCoreLogger.w(TAG, "Tingwu 轮询失败，${backoff}s 后重试（尝试 ${attempt + 1}/${maxRetries + 1}）：${error.message}")
+                delay(backoff * 1000L)
+            }
+        }
+        throw lastError ?: AiCoreException(
+            source = AiCoreErrorSource.TINGWU,
+            reason = AiCoreErrorReason.UNKNOWN,
+            message = "Tingwu 轮询重试耗尽"
+        )
+    }
+
+    // V1 spec §8.1: Retryable = 429, 5xx, timeout, network; Non-retryable = 4xx except 429
+    private fun isRetryableError(error: Throwable): Boolean = when (error) {
+        is HttpException -> {
+            val code = error.code()
+            code == 429 || code >= 500
+        }
+        is SocketTimeoutException -> true
+        is UnknownHostException -> true
+        is SSLException -> true
+        is IOException -> true
+        else -> false
+    }
+
+
     private fun startPolling(jobId: String) {
         val existing = pollingJobs[jobId]
         if (existing != null && existing.isActive) {
@@ -298,11 +340,11 @@ class RealTingwuCoordinator @Inject constructor(
                         break
                     }
                     val response = try {
-                        api.getTaskStatus(taskId = jobId)
+                        pollWithRetry(jobId)
                     } catch (error: Throwable) {
                         if (error is CancellationException) throw error
                         val mapped = mapError(error)
-                        AiCoreLogger.e(TAG, "查询 Tingwu 状态失败：${mapped.message}", mapped)
+                        AiCoreLogger.e(TAG, "查询 Tingwu 状态失败（已耗尽重试）：${mapped.message}", mapped)
                         flow.value = TingwuJobState.Failed(jobId, mapped)
                         return@launch
                     }

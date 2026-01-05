@@ -1,6 +1,27 @@
-# Documentation Update Changelog - 2025-01-27
+# Documentation Update Changelog
 
-## Summary
+---
+
+## V1.2.0 - 2026-01-05
+
+### Summary
+Implemented missing V1 sections that were planned but not yet present in spec.
+
+### Changes to docs/Orchestrator-V1.md
+- **Version**: Updated from 1.1.0 → 1.2.0
+- **§4.1 Versioning Glossary**: Added definitions for `schemaVersion` vs `version`, migration policy
+- **§8.1 Tingwu Runner Retry Policy**: Added retry rules (maxRetries=3, backoff, error categories, terminal behavior, partial failures)
+- **§13/Appendix D State Recovery Rules**: Added recovery rules for PublisherState, TingwuJobState, DisectorPlan, M2B
+- **§14 Future Extensions**: Renumbered from §13
+
+### Cross-Reference Fix
+- `api-contracts.md` §5.1 reference to "Section 8.1" now resolves
+
+---
+
+## 2025-01-27
+
+### Summary
 Updated documentation system to ensure V1 is CURRENT and consistent, V7 is ARCHIVED, and all contracts/examples are unambiguous and validate.
 
 ## Files Modified

@@ -42,5 +42,8 @@ data class AiCoreConfig(
     val enableTingwuHttpDns: Boolean = false,
     val enableTingwuNetworkEventLog: Boolean = false,
     val tingwuGlobalPollTimeoutMillis: Long = 600_000,
+    // V1 spec §8.1: Tingwu retry policy
+    val tingwuMaxRetries: Int = 3,
+    val tingwuRetryBackoffSeconds: List<Int> = listOf(60, 120, 300),
     val speakerDisplayConfig: SpeakerDisplayConfig = SpeakerDisplayConfig(),
 )

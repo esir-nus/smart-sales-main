@@ -8,7 +8,7 @@
       "TingwuJobState429",
       "TingwuBatchArtifactWithSegments",
       "TingwuBatchArtifactNoSegments",
-      "M2BTranscriptionStatePointers",
+      "SessionMemoryWithDeltas",
       "PublishedTranscriptRangeFiltered",
       "PublishedAnalysisSummary",
       "PublishedChatTurnL3",
@@ -24,6 +24,7 @@
   "payloads": [
     {
       "artifactType": "DisectorPlan",
+      "sessionId": "session-short",
       "version": 1,
       "totalMs": 1000000,
       "overlapMs": 10000,
@@ -45,6 +46,7 @@
     },
     {
       "artifactType": "DisectorPlan",
+      "sessionId": "session-26m",
       "version": 1,
       "totalMs": 1560000,
       "overlapMs": 10000,
@@ -76,6 +78,7 @@
     },
     {
       "artifactType": "DisectorPlan",
+      "sessionId": "session-27m",
       "version": 1,
       "totalMs": 1620000,
       "overlapMs": 10000,
@@ -117,6 +120,7 @@
     },
     {
       "artifactType": "TingwuJobState",
+      "sessionId": "session-27m",
       "version": 1,
       "batchIndex": 2,
       "batchId": "b2",
@@ -135,6 +139,7 @@
     },
     {
       "artifactType": "TingwuBatchArtifact",
+      "sessionId": "session-27m",
       "version": 1,
       "batchIndex": 2,
       "batchId": "b2",
@@ -184,6 +189,7 @@
     },
     {
       "artifactType": "TingwuBatchArtifact",
+      "sessionId": "session-27m",
       "version": 1,
       "batchIndex": 3,
       "batchId": "b3",
@@ -207,7 +213,59 @@
       "batchAssetId": "plan-demo-001-v1:b3"
     },
     {
+      "artifactType": "SessionMemory",
+      "sessionId": "session-27m",
+      "version": 1,
+      "schemaVersion": 1,
+      "updatedAtMs": 1630000,
+      "speakerMap": [
+        {
+          "speakerKey": "S1",
+          "displayName": "Alice",
+          "title": "Sales",
+          "confidence": 0.82,
+          "effectiveFromBatchIndex": 1,
+          "effectiveFromBatchId": "b1"
+        },
+        {
+          "speakerKey": "S2",
+          "displayName": "Client",
+          "confidence": 0.7,
+          "effectiveFromBatchIndex": 2,
+          "effectiveFromBatchId": "b2"
+        }
+      ],
+      "chapters": [
+        {
+          "title": "Opening",
+          "absStartMs": 605000,
+          "absEndMs": 650000,
+          "batchIndex": 2,
+          "batchId": "b2"
+        }
+      ],
+      "batchSummaries": [
+        {
+          "batchIndex": 2,
+          "batchId": "b2",
+          "summary": "Greeting and check-in."
+        }
+      ],
+      "highlights": [
+        "Confirmed intent"
+      ],
+      "decisions": [
+        "Proceed to demo"
+      ],
+      "nextSteps": [
+        "Schedule follow-up"
+      ],
+      "audioAssetId": "audio-asset-demo-001",
+      "recordingSessionId": "rec-session-demo-001"
+    },
+    {
       "artifactType": "PublishedTranscript",
+      "sessionId": "session-27m",
       "version": 1,
       "publishedPrefixBatchIndex": 2,
       "items": [
@@ -244,6 +302,7 @@
     },
     {
       "artifactType": "PublishedAnalysis",
+      "sessionId": "session-27m",
       "version": 1,
       "summary": "Client confirmed interest; next step scheduled.",
       "chapters": [

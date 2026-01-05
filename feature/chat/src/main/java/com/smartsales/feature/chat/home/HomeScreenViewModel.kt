@@ -129,7 +129,6 @@ private const val TAG = "HomeScreenVM"
 private const val SMART_PLACEHOLDER_TEXT = "正在智能分析当前会话内容…"
 private const val SMART_ANALYSIS_FAILURE_TEXT = "本次智能分析暂时不可用，请稍后重试。"
 
-// InputBucket and AnalysisTarget moved to domain/chat/InputClassifier.kt
 private typealias InputBucket = com.smartsales.domain.chat.InputBucket
 private typealias AnalysisTarget = com.smartsales.domain.chat.AnalysisTarget
 
@@ -200,7 +199,6 @@ data class AudioSummaryUi(
     val lastSyncedAtMillis: Long? = null
 )
 
-// Classes moved to HomeUiState.kt:
 // ExportGateState, HomeNavigationRequest, CurrentSessionUi, SessionListItemUi
 // DebugSessionMetadata (imported from debug package)
 // HomeUiState
@@ -258,7 +256,6 @@ class HomeScreenViewModel @Inject constructor(
     // 低信息智能分析提示是否已经出现过
     private var hasShownLowInfoSmartAnalysisHint: Boolean = false
     private var hasShownAnalysisExportHint: Boolean = false
-    // Transcription state moved to TranscriptionViewModel
     private var lastTranscriptionJobId: String? = null // kept for debug snapshot
     private var activelyTranscribing: Boolean = false // kept for recovery hint logic
     // 标记当前会话是否已处理首条助手回复，用于“首条决定标题”规则
@@ -516,7 +513,6 @@ class HomeScreenViewModel @Inject constructor(
     private fun wrapSmartAnalysisForExport(body: String): String =
         com.smartsales.domain.chat.ChatMessageBuilder.wrapSmartAnalysisForExport(body)
 
-    // resolveExportGateState and refreshExportGateState moved to ExportViewModel
 
     private fun maybeStartPendingExportAnalysis() {
         val pending = pendingExportAfterAnalysis ?: return
@@ -555,8 +551,6 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
-    // exportMarkdown and performExport moved to ExportViewModel
-    // Export flow now handled by onExportRequested -> exportCoordinator.checkExportGate/performExport
 
     private fun findSmartAnalysisMarkdownForExport(): String? {
         latestAnalysisMarkdown?.takeIf { it.isNotBlank() }?.let { return it }
@@ -775,7 +769,6 @@ class HomeScreenViewModel @Inject constructor(
             lastTranscriptionJobId = request.jobId
             tingwuCoordinator.reset()
             debugCoordinator.refreshTraces()
-            // Direct call to DebugCoordinator (removed wrapper)
             val transcript = request.transcriptMarkdown ?: request.transcriptPreview
             val targetSessionId = request.sessionId ?: DEFAULT_SESSION_ID
             val existing = sessionRepository.findById(targetSessionId)
@@ -1029,7 +1022,6 @@ class HomeScreenViewModel @Inject constructor(
 
         if (CHAT_DEBUG_HUD_ENABLED && _uiState.value.showDebugMetadata) {
             debugCoordinator.refreshTraces()
-            // Direct call to DebugCoordinator (removed wrapper)
         }
     }
 
@@ -1044,7 +1036,6 @@ class HomeScreenViewModel @Inject constructor(
         return existing + separator + incoming
     }
 
-    // resetTranscriptionBatchState removed - now handled by TranscriptionViewModel.reset()
 
     fun onOpenDrawer() {
         _uiState.update { it.copy(navigationRequest = HomeNavigationRequest.ChatHistory) }
@@ -1103,10 +1094,8 @@ class HomeScreenViewModel @Inject constructor(
     fun refreshXfyunTrace() {
         if (!CHAT_DEBUG_HUD_ENABLED) return
         debugCoordinator.refreshTraces()
-        // Direct call to DebugCoordinator (removed wrapper)
     }
 
-    // HUD delegation moved to DebugCoordinator (removed wrapper function)
 
 
 
@@ -1236,7 +1225,6 @@ class HomeScreenViewModel @Inject constructor(
             }
             refreshDebugSessionMetadata()
             debugCoordinator.refreshTraces()
-            // Direct call to DebugCoordinator (removed wrapper)
         }
     }
 
@@ -1343,7 +1331,6 @@ class HomeScreenViewModel @Inject constructor(
         _uiState.update { it.copy(sessionList = mapped) }
     }
 
-    // applySessionList removed - replaced by updateSessionListSelection used in observeSessions
 
     fun onHistorySessionLongPress(sessionId: String) {
         viewModelScope.launch {
@@ -1988,7 +1975,6 @@ class HomeScreenViewModel @Inject constructor(
         return rawCandidate ?: sanitized ?: raw.orEmpty()
     }
 
-    // extractVisible2User and extractMetadataJson removed - using ChatPublisher.extractChannels()
 
     /** GENERAL 回复的 channels 数据（Visible2User 和 Metadata） */
     private data class GeneralChannels(
@@ -2045,7 +2031,6 @@ class HomeScreenViewModel @Inject constructor(
     private fun latestUserContent(): String? =
         _uiState.value.chatMessages.lastOrNull { it.role == ChatMessageRole.USER }?.content?.trim()
 
-    // Classification functions moved to domain/chat/InputClassifier.kt
 
 
 
@@ -2195,7 +2180,6 @@ class HomeScreenViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        // transcriptionJob moved to TranscriptionViewModel
     }
 
     private fun loadUserProfile() {
@@ -2346,9 +2330,7 @@ class HomeScreenViewModel @Inject constructor(
         return primary to contextChunks.asReversed().joinToString("\n")
     }
 
-    // findSmartAnalysisPrimaryContent moved to InputClassifier.kt
 
-    // findContextForAnalysis moved to InputClassifier.kt
 
     private fun buildSmartAnalysisUserMessage(
         mainContent: String,
@@ -2357,7 +2339,6 @@ class HomeScreenViewModel @Inject constructor(
     ): String =
         com.smartsales.domain.chat.ChatMessageBuilder.buildSmartAnalysisUserMessage(mainContent, context, goal)
 
-    // Legacy sanitizer removed - replaced with V1-aligned ChatPublisher (domain/chat/ChatPublisher.kt)
     // Per Orchestrator-V1 Section 5.2: Publisher renders only <visible2user> content, no heuristic cleanup
 
     /**
@@ -2431,7 +2412,6 @@ class HomeScreenViewModel @Inject constructor(
         return merged
     }
 
-    // Metadata parsing moved to domain/chat/MetadataParser.kt
 
     private fun SessionMetadata.hasMeaningfulGeneralFields(): Boolean =
         !mainPerson.isNullOrBlank() ||
@@ -2530,7 +2510,6 @@ class HomeScreenViewModel @Inject constructor(
         val resolved = TitleResolver.resolveTitle(existingSummary, candidate, meta)
         if (resolved.isNullOrBlank()) return
         sessionRepository.updateTitle(sessionId, resolved)
-        // applySessionList() removed, flow updates automatically
         _uiState.update { state ->
             val updatedCurrent = if (state.currentSession.id == sessionId) {
                 state.currentSession.copy(title = resolved)
@@ -2547,7 +2526,6 @@ class HomeScreenViewModel @Inject constructor(
         val newSession = sessionsManager.createNewSession()
         sessionId = newSession.id
         firstAssistantProcessed = false
-        // latestSessionSummaries removed, flow updates
         updateSessionListSelection()
         chatHistoryRepository.saveMessages(newSession.id, emptyList())
         _uiState.update {
@@ -2574,8 +2552,6 @@ class HomeScreenViewModel @Inject constructor(
         if (SessionTitlePolicy.isPlaceholder(state.currentSession.title)) return
         val placeholder = SessionTitlePolicy.newChatPlaceholder()
         sessionRepository.updateTitle(sessionId, placeholder)
-        // latestSessionSummaries manual update removed
-        // applySessionList() removed
         _uiState.update {
             it.copy(currentSession = it.currentSession.copy(title = placeholder))
         }

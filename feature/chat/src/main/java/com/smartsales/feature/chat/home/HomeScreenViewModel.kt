@@ -777,7 +777,8 @@ class HomeScreenViewModel @Inject constructor(
         viewModelScope.launch {
             lastTranscriptionJobId = request.jobId
             tingwuCoordinator.reset()
-            refreshDebugSnapshot()
+            debugCoordinator.refreshTraces()
+            // Direct call to DebugCoordinator (removed wrapper)
             val transcript = request.transcriptMarkdown ?: request.transcriptPreview
             val targetSessionId = request.sessionId ?: DEFAULT_SESSION_ID
             val existing = sessionRepository.findById(targetSessionId)
@@ -1030,7 +1031,8 @@ class HomeScreenViewModel @Inject constructor(
         }
 
         if (CHAT_DEBUG_HUD_ENABLED && _uiState.value.showDebugMetadata) {
-            refreshDebugSnapshot()
+            debugCoordinator.refreshTraces()
+            // Direct call to DebugCoordinator (removed wrapper)
         }
     }
 
@@ -1104,23 +1106,10 @@ class HomeScreenViewModel @Inject constructor(
     fun refreshXfyunTrace() {
         if (!CHAT_DEBUG_HUD_ENABLED) return
         debugCoordinator.refreshTraces()
-        refreshDebugSnapshot()
+        // Direct call to DebugCoordinator (removed wrapper)
     }
 
-    // [HSVM@HUD] ===== DebugSnapshot / HUD / trace 输出 =====
-    // [HSVM:DEBUG_SNAPSHOT] - Now delegating to DebugViewModel
-    private fun refreshDebugSnapshot() {
-        if (!CHAT_DEBUG_HUD_ENABLED || !_uiState.value.showDebugMetadata) return
-        viewModelScope.launch {
-            val summary = sessionRepository.findById(sessionId)
-            debugCoordinator.refreshDebugSnapshot(
-                sessionId = sessionId,
-                jobId = lastTranscriptionJobId,
-                sessionTitle = summary?.title ?: _uiState.value.currentSession.title,
-                isTitleUserEdited = summary?.isTitleUserEdited
-            )
-        }
-    }
+    // HUD delegation moved to DebugCoordinator (removed wrapper function)
 
     fun registerVoiceprintBase64(
         audioDataBase64: String,
@@ -1384,7 +1373,8 @@ class HomeScreenViewModel @Inject constructor(
                 )
             }
             refreshDebugSessionMetadata()
-            refreshDebugSnapshot()
+            debugCoordinator.refreshTraces()
+            // Direct call to DebugCoordinator (removed wrapper)
         }
     }
 

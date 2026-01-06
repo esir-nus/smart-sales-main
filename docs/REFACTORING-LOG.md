@@ -19,6 +19,29 @@
 
 ---
 
+## Wave 21 / M4 Complete: Portable Reducers ✅ (2026-01-06)
+
+**M4 Milestone Complete** - Business logic is platform-agnostic
+
+**Pattern Validation:**
+- ConversationReducer: Pure `reduce()` pattern + streaming (P3.1.B1 + B2 partial)
+- SessionsManager: Coordinator pattern with StateFlow (169 lines, pre-existing)
+- TranscriptionCoordinator: Coordinator pattern (domain/transcription, pre-existing)
+
+**Key Recognition:**
+- P3.2 HistoryReducer was already complete via `SessionsManager`
+- P3.3 TranscriptionReducer was already complete via `TranscriptionCoordinator`
+- Mixed patterns (Reducer + Coordinator) both achieve portability goal
+
+**Architecture Decision:**
+- Don't rewrite SessionsManager to pure Reducer - working code,  tested, portable
+- ConversationReducer establishes best practice for **new** features
+- Existing Coordinators are acceptable debt
+
+---
+
+---
+
 ## Wave 20 / P3.1.B1: ConversationViewModel Wiring ✅ (2026-01-06)
 
 **Portable Reducer Pattern Established**

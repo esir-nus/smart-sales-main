@@ -235,6 +235,14 @@ class HomeScreenViewModel @Inject constructor(
             _uiState.update { it.copy(chatMessages = messages) }
         }
         
+        // P3.8: Migration bridge for SmartAnalysis state sync (TODO: remove in P3.9)
+        conversationViewModel.onSmartAnalysisModeChanged = { mode, goal ->
+            _uiState.update { it.copy(
+                isSmartAnalysisMode = mode,
+                smartAnalysisGoal = goal
+            ) }
+        }
+        
         observeDeviceConnection()
         observeMediaSync()
         observeSessions()
@@ -313,6 +321,23 @@ class HomeScreenViewModel @Inject constructor(
     private fun handleSmartAnalysisSend(rawInput: String) {
         if (_uiState.value.isSending) return
         val goal = rawInput.trim()
+        
+        // P3.8: Dispatch SmartAnalysis through Reducer
+        conversationViewModel.dispatch(
+            com.smartsales.feature.chat.conversation.ConversationIntent.SendSmartAnalysis(
+                timestamp = System.currentTimeMillis(),
+                goal = goal
+            ),
+            scope = viewModelScope,
+            analysisContext = com.smartsales.feature.chat.conversation.SmartAnalysisContext(
+                sessionId = sessionId,
+                messages = _uiState.value.chatMessages,
+                salesPersona = _uiState.value.salesPersona
+            )
+        )
+        
+        // TODO(P3.8.1): Remove legacy flow below once side effect handler is complete
+        // For now, preserve existing logic as fallback
         val bucket = com.smartsales.domain.chat.InputClassifier.classifyUserInput(goal.ifBlank { _uiState.value.inputText }, _uiState.value.chatMessages)
         val target = com.smartsales.domain.chat.InputClassifier.findSmartAnalysisPrimaryContent(goal, _uiState.value.chatMessages)
         if (target == null) {

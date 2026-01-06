@@ -28,9 +28,15 @@ class ConversationViewModel @Inject constructor(
     
     /**
      * Migration bridge: callback to sync messages to HomeUiState.
-     * TODO(P3.8): Remove when HomeScreenViewModel is deleted.
+     * TODO(P3.9): Remove when HomeScreenViewModel is deleted.
      */
     var onMessagesChanged: ((List<ChatMessageUi>) -> Unit)? = null
+    
+    /**
+     * P3.8: Migration bridge for SmartAnalysis state.
+     * TODO(P3.9): Remove when HomeScreenViewModel is deleted.
+     */
+    var onSmartAnalysisModeChanged: ((Boolean, String?) -> Unit)? = null
     
     private val _state = MutableStateFlow(ConversationState())
     val state: StateFlow<ConversationState> = _state.asStateFlow()
@@ -51,16 +57,24 @@ class ConversationViewModel @Inject constructor(
     fun dispatch(
         intent: ConversationIntent, 
         scope: CoroutineScope? = null,
-        context: SendContext? = null
+        context: SendContext? = null,
+        analysisContext: SmartAnalysisContext? = null
     ) {
         _state.value = ConversationReducer.reduce(_state.value, intent)
         
         // Migration bridge: sync messages to HomeUiState
         onMessagesChanged?.invoke(_state.value.messages)
         
-        // P3.1.B2: Side effect handling
+        // P3.8: Migration bridge for SmartAnalysis state
+        onSmartAnalysisModeChanged?.invoke(
+            _state.value.isSmartAnalysisMode,
+            _state.value.smartAnalysisGoal
+        )
+        
+        // Side effect handling
         when (intent) {
             is ConversationIntent.SendMessage -> handleSendEffect(scope, context)
+            is ConversationIntent.SendSmartAnalysis -> handleSmartAnalysisEffect(scope, analysisContext)
             else -> Unit
         }
     }
@@ -129,6 +143,20 @@ class ConversationViewModel @Inject constructor(
             isFirstAssistantReply = context.isFirstAssistant,
             persona = context.salesPersona
         )
+    }
+    
+    // P3.8: SmartAnalysis side effect handler
+    private fun handleSmartAnalysisEffect(scope: CoroutineScope?, analysisContext: SmartAnalysisContext?) {
+        if (!_state.value.isSending) return
+        requireNotNull(scope) { "Scope required for SendSmartAnalysis" }
+        requireNotNull(analysisContext) { "SmartAnalysisContext required for SendSmartAnalysis" }
+        
+        // TODO(P3.8): Implement SmartAnalysis streaming
+        // - Use InputClassifier.findSmartAnalysisPrimaryContent()
+        // - Build SmartAnalysis user message
+        // - Start streaming with SmartAnalysis skill
+        // 
+        // For now, delegate to HomeScreenViewModel's existing flow
     }
     
     private var messageIdCounter = 0

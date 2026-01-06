@@ -186,6 +186,78 @@ class ConversationReducerTest {
         assertEquals("Second", result.messages[1].content)
     }
     
+    // ===== SendSmartAnalysis tests (P3.8) =====
+    
+    @Test
+    fun sendSmartAnalysis_whenAlreadySending_noChange() {
+        val state = ConversationState(isSending = true)
+        val intent = ConversationIntent.SendSmartAnalysis(timestamp = 1000L, goal = "analyze this")
+        
+        val result = ConversationReducer.reduce(state, intent)
+        
+        assertEquals(state, result)
+    }
+    
+    @Test
+    fun sendSmartAnalysis_setsSmartAnalysisModeTrue() {
+        val state = ConversationState(isSmartAnalysisMode = false)
+        val intent = ConversationIntent.SendSmartAnalysis(timestamp = 1000L, goal = "总结要点")
+        
+        val result = ConversationReducer.reduce(state, intent)
+        
+        assertTrue(result.isSmartAnalysisMode)
+    }
+    
+    @Test
+    fun sendSmartAnalysis_setSendingTrue() {
+        val state = ConversationState(isSending = false)
+        val intent = ConversationIntent.SendSmartAnalysis(timestamp = 1000L, goal = "analyze")
+        
+        val result = ConversationReducer.reduce(state, intent)
+        
+        assertTrue(result.isSending)
+    }
+    
+    @Test
+    fun sendSmartAnalysis_capturesGoal() {
+        val state = ConversationState()
+        val intent = ConversationIntent.SendSmartAnalysis(timestamp = 1000L, goal = "总结要点")
+        
+        val result = ConversationReducer.reduce(state, intent)
+        
+        assertEquals("总结要点", result.smartAnalysisGoal)
+    }
+    
+    @Test
+    fun sendSmartAnalysis_withEmptyGoal_setsGoalNull() {
+        val state = ConversationState()
+        val intent = ConversationIntent.SendSmartAnalysis(timestamp = 1000L, goal = "")
+        
+        val result = ConversationReducer.reduce(state, intent)
+        
+        assertNull(result.smartAnalysisGoal)
+    }
+    
+    @Test
+    fun sendSmartAnalysis_withBlankGoal_setsGoalNull() {
+        val state = ConversationState()
+        val intent = ConversationIntent.SendSmartAnalysis(timestamp = 1000L, goal = "   ")
+        
+        val result = ConversationReducer.reduce(state, intent)
+        
+        assertNull(result.smartAnalysisGoal)
+    }
+    
+    @Test
+    fun sendSmartAnalysis_clearsErrorMessage() {
+        val state = ConversationState(errorMessage = "Previous error")
+        val intent = ConversationIntent.SendSmartAnalysis(timestamp = 1000L, goal = "analyze")
+        
+        val result = ConversationReducer.reduce(state, intent)
+        
+        assertNull(result.errorMessage)
+    }
+    
     // ===== Helper functions =====
     
     private fun sampleMessage(

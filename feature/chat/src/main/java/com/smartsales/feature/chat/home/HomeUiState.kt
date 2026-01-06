@@ -70,6 +70,7 @@ data class HomeUiState(
     val exportGateState: ExportGateState? = null, // Using nullable or default from elsewhere?
     val showWelcomeHero: Boolean = true,
     val isSmartAnalysisMode: Boolean = false,
+    val smartAnalysisGoal: String? = null,  // P3.8: Synced from ConversationState via bridge
     val showDebugMetadata: Boolean = false,
     val debugSessionMetadata: DebugSessionMetadata? = null,
     val debugSnapshot: DebugSnapshot? = null,

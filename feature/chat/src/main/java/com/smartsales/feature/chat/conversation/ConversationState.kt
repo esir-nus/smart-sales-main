@@ -14,5 +14,8 @@ data class ConversationState(
     val inputText: String = "",
     val isSending: Boolean = false,
     val isStreaming: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    // P3.8: SmartAnalysis state (source of truth, synced to HomeUiState via bridge)
+    val isSmartAnalysisMode: Boolean = false,
+    val smartAnalysisGoal: String? = null
 )

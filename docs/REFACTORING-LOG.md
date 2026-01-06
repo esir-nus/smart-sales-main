@@ -17,6 +17,28 @@
 
 ---
 
+## Wave 22 / P3.7: HomeScreen Consolidation ✅ (2026-01-06)
+
+**Eliminated Dual HomeScreen Implementations**
+
+**Problem:**
+- Two parallel HomeScreen implementations with divergent features
+- `MainScreen.kt` (bottom nav) → `app/.../HomeScreen.kt` (585 lines, simpler UI)
+- `AiFeatureTestActivity.kt` (overlay UX) → `feature/chat/.../HomeScreenRoute()` (1400 lines, full-featured)
+
+**Solution:**
+- Deleted `app/.../screens/home/HomeScreen.kt` (585 lines)
+- Updated `MainScreen.kt` to use feature module's `HomeScreenRoute`
+- Fixed navigation callbacks: `onNavigateToHistory` → `onNavigateToChatHistory`
+- Removed `deviceManagerViewModel` parameter (feature module manages internally)
+
+**Impact:**
+- **Single source of truth** for home screen behavior
+- Elimina future drift between implementations
+- **-585 lines** of duplicated code
+
+---
+
 ---
 
 ## Wave 21 / M4 Complete: Portable Reducers ✅ (2026-01-06)

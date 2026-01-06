@@ -25,9 +25,9 @@ import com.smartsales.aitest.navigation.Screen
 import com.smartsales.aitest.ui.screens.history.ChatHistoryShell
 import com.smartsales.aitest.ui.screens.audio.AudioFilesShell
 import com.smartsales.aitest.ui.screens.device.DeviceManagerShell
-import com.smartsales.aitest.ui.screens.home.HomeScreen
 import com.smartsales.aitest.ui.screens.user.UserCenterScreen
 import com.smartsales.aitest.ui.screens.debug.DebugDashscopeStreamScreen
+import com.smartsales.feature.chat.home.HomeScreenRoute
 import com.smartsales.feature.chat.home.HomeScreenViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.smartsales.feature.media.devicemanager.DeviceManagerViewModel
@@ -70,17 +70,16 @@ fun MainScreen() {
         ) {
             composable(Screen.Home.route) { backStackEntry ->
                 val homeViewModel: HomeScreenViewModel = hiltViewModel(backStackEntry)
-                HomeScreen(
+                HomeScreenRoute(
                     viewModel = homeViewModel,
-                    onNavigateToHistory = { navController.navigate(Screen.ChatHistory.route) },
+                    onNavigateToChatHistory = { navController.navigate(Screen.ChatHistory.route) },
                     onNavigateToDeviceSetup = {
                         navController.navigate(Screen.Device.route) {
                             popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
                         }
-                    },
-                    deviceManagerViewModel = deviceManagerViewModel
+                    }
                 )
             }
             composable(Screen.Audio.route) {

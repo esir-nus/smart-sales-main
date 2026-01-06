@@ -122,7 +122,7 @@ We are breaking the implementation of `HomeScreenViewModel` (2500+ lines) into p
 **Goal**: Break the UI monolith.
 - [ ] **P3.5 ConversationScreen**: Standalone chat UI.
 - [ ] **P3.6 HistoryScreen**: Standalone history UI.
-- [ ] **P3.7 ChatNavHost**: Jetpack Navigation shell replacing `HomeScreen`.
+- [x] **P3.7 HomeScreen Consolidation**: Eliminate dual implementations (app + feature modules).
 - [ ] **P3.8 God ViewModel Liquidation**: Delete `HomeScreenViewModel`.
 
 ### M6: Multiplatform Prep (Future)

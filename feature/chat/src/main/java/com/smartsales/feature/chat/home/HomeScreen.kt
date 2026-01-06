@@ -138,6 +138,7 @@ import java.util.Locale
 import com.smartsales.feature.chat.BuildConfig
 import com.smartsales.feature.chat.home.debug.DebugSessionMetadataHud
 import com.smartsales.feature.chat.home.export.ExportGateState
+import com.smartsales.feature.chat.home.history.HistoryDrawerContent
 
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreen.kt
@@ -521,6 +522,8 @@ fun HomeScreen(
                     currentSessionId = state.currentSession.id,
                     // TODO(hardware): 接入真实设备状态后更新此处占位卡片
                     deviceSnapshot = state.deviceSnapshot,
+                    formatSessionTime = ::formatSessionTime,
+                    historyDeviceStatus = { HistoryDeviceStatus(snapshot = it) },
                     onSessionSelected = onHistorySessionSelected,
                     onSessionLongPress = onHistorySessionLongPress,
                     onUserCenterClick = onProfileClicked
@@ -1740,134 +1743,4 @@ private fun ScrollToLatestButton(
     }
 }
 
-@Composable
-@OptIn(ExperimentalFoundationApi::class)
-private fun HistoryDrawerContent(
-    sessions: List<SessionListItemUi>,
-    currentSessionId: String,
-    deviceSnapshot: DeviceSnapshotUi?,
-    onSessionSelected: (String) -> Unit,
-    onSessionLongPress: (String) -> Unit,
-    onUserCenterClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .testTag(ChatHistoryTestTags.PAGE),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        HistoryDeviceStatus(snapshot = deviceSnapshot)
-        if (sessions.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f, fill = true)
-            ) {
-                Text(
-                    text = "暂无历史会话，先开始一次对话吧。",
-                    modifier = Modifier
-                        .padding(horizontal = 12.dp)
-                        .testTag(HomeScreenTestTags.HISTORY_EMPTY),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f, fill = true),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                items(items = sessions, key = { it.id }) { session ->
-                    val isCurrent = session.id == currentSessionId
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .combinedClickable(
-                                onClick = { onSessionSelected(session.id) },
-                                onLongClick = { onSessionLongPress(session.id) }
-                            )
-                            .testTag("${HomeScreenTestTags.HISTORY_ITEM_PREFIX}${session.id}"),
-                        color = MaterialTheme.colorScheme.surface,
-                        tonalElevation = if (isCurrent) 4.dp else 1.dp,
-                        border = BorderStroke(
-                            width = 1.dp,
-                            color = if (isCurrent) {
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-                            } else {
-                                MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                            }
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = session.title,
-                                style = MaterialTheme.typography.bodyLarge,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            if (session.lastMessagePreview.isNotBlank()) {
-                                Text(
-                                    text = session.lastMessagePreview,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Text(
-                                text = formatSessionTime(session.updatedAtMillis),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        HistoryUserCenter(onClick = onUserCenterClick)
-    }
-}
 
-@Composable
-private fun HistoryUserCenter(onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 10.dp)
-            .testTag(HomeScreenTestTags.HISTORY_USER_CENTER),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            tonalElevation = 0.dp
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Person,
-                contentDescription = "个人中心",
-                modifier = Modifier.padding(8.dp),
-                tint = MaterialTheme.colorScheme.onSurface
-            )
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = "个人中心",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "查看账号设置与偏好",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}

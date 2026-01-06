@@ -26,6 +26,12 @@ class ConversationViewModel @Inject constructor(
     private val homeOrchestrator: HomeOrchestrator
 ) {
     
+    /**
+     * Migration bridge: callback to sync messages to HomeUiState.
+     * TODO(P3.8): Remove when HomeScreenViewModel is deleted.
+     */
+    var onMessagesChanged: ((List<ChatMessageUi>) -> Unit)? = null
+    
     private val _state = MutableStateFlow(ConversationState())
     val state: StateFlow<ConversationState> = _state.asStateFlow()
     
@@ -48,6 +54,9 @@ class ConversationViewModel @Inject constructor(
         context: SendContext? = null
     ) {
         _state.value = ConversationReducer.reduce(_state.value, intent)
+        
+        // Migration bridge: sync messages to HomeUiState
+        onMessagesChanged?.invoke(_state.value.messages)
         
         // P3.1.B2: Side effect handling
         when (intent) {

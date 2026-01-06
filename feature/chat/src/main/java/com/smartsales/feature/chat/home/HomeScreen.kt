@@ -633,75 +633,21 @@ fun HomeScreen(
                                             onExportCsvClicked = onExportCsvClicked
                                         )
                                     } else {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                        ) {
-                                            val hasActiveChat = state.chatMessages.isNotEmpty()
-                                        LazyColumn(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .testTag(HomeScreenTestTags.LIST),
-                                                state = listState,
-                                                verticalArrangement = Arrangement.spacedBy(12.dp),
-                                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
-                                                userScrollEnabled = true
-                                            ) {
-                                                if (!hasActiveChat) {
-                                                    item("welcome_spacer") { Spacer(modifier = Modifier.height(8.dp)) }
-                                                } else {
-                                                    if (state.isLoadingHistory) {
-                                                        item("history-loading") {
-                                                            Text(
-                                                                text = "加载历史记录...",
-                                                                style = MaterialTheme.typography.bodySmall,
-                                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                                modifier = Modifier
-                                                                    .fillMaxWidth()
-                                                                    .padding(vertical = 8.dp)
-                                                            )
-                                                        }
-                                                    }
-                                                    itemsIndexed(state.chatMessages, key = { _, item -> item.id }) { index, message ->
-                                                        val isTranscriptSummary = message.role == ChatMessageRole.ASSISTANT &&
-                                                            message.content.contains("通话分析")
-                                                        val tagModifier = if (message.role == ChatMessageRole.ASSISTANT &&
-                                                            (index == state.chatMessages.lastIndex || isTranscriptSummary)
-                                                        ) {
-                                                            Modifier.testTag(HomeScreenTestTags.ASSISTANT_MESSAGE)
-                                                        } else {
-                                                            Modifier
-                                                        }
-                                                        val alignEnd = message.role == ChatMessageRole.USER
-                                                        MessageBubble(
-                                                            message = message,
-                                                            alignEnd = alignEnd,
-                                                            modifier = tagModifier,
-                                                            reasoningText = if (!alignEnd && message.isSmartAnalysis) {
-                                                                state.smartReasoningText
-                                                            } else {
-                                                                null
-                                                            },
-                                                            showRawAssistantOutput = state.showRawAssistantOutput,
-                                                            onCopyAssistant = { content ->
-                                                                clipboardManager.setText(AnnotatedString(content))
-                                                                coroutineScope.launch {
-                                                                    snackbarHostState.showSnackbar("已复制到剪贴板")
-                                                                }
-                                                            }
-                                                        )
-                                                    }
+                                        // P3.5: Delegated to ConversationScreen
+                                        com.smartsales.feature.chat.conversation.ConversationScreen(
+                                            messages = state.chatMessages,
+                                            isLoadingHistory = state.isLoadingHistory,
+                                            showRawAssistantOutput = state.showRawAssistantOutput,
+                                            smartReasoningText = state.smartReasoningText,
+                                            onCopy = { content ->
+                                                clipboardManager.setText(AnnotatedString(content))
+                                                coroutineScope.launch {
+                                                    snackbarHostState.showSnackbar("已复制到剪贴板")
                                                 }
-                                                if (state.chatMessages.lastOrNull()?.isStreaming == true) {
-                                                    item("typing-indicator") {
-                                                        AssistantTypingBubble()
-                                                    }
-                                                }
-                                                item("chat-bottom-pad") {
-                                                    Spacer(modifier = Modifier.height(72.dp))
-                                                }
-                                            }
-                                        }
+                                            },
+                                            onLoadMoreHistory = onLoadMoreHistory,
+                                            listState = listState
+                                        )
                                     }
                                 }
                             }
@@ -1253,35 +1199,6 @@ private fun SessionListItem(
     }
 }
 
-
-
-@Composable
-private fun AssistantTypingBubble() {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-        shape = RoundedCornerShape(14.dp),
-        tonalElevation = 2.dp,
-        color = MaterialTheme.colorScheme.surface
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
-                strokeWidth = 2.dp
-            )
-            Text(
-                text = "AI 回复中...",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
 
 private fun formatSessionTime(timestamp: Long): String {
     val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())

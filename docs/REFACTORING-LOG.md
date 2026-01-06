@@ -8,12 +8,35 @@
 
 | Metric | Original | Current | Change |
 |--------|----------|---------|--------|
-| HomeScreenViewModel | 3668 lines | 2505 lines | **-31.7%** |
+| HomeScreenViewModel | 3668 lines | 2524 lines | **-31.2%** |
 | HomeOrchestratorImpl | 531 lines | 75 lines | **-85.9%** |
-| HomeScreen.kt | 2547 lines | **1399 lines** | **-45.1%** |
+| HomeScreen.kt | 2547 lines | **1318 lines** | **-48.3%** |
 | Domain classes | 4 | 14 | +10 |
 | Unit tests | 0 | 223+ | New (+45) |
 | V1 Modules | 0/8 | 8/8 | **100%** |
+
+---
+
+## Wave 23 / P3.5: ConversationScreen Extraction ✅ (2026-01-06)
+
+**Completed SendMessage Wiring + UI Extraction**
+
+**Phase 1: SendMessage→Reducer Wiring**
+- Added `onMessagesChanged` callback to `ConversationViewModel` for state sync
+- Updated `HomeScreenViewModel.onSendMessage` to dispatch through `ConversationReducer`
+- Preserved SmartAnalysis, export skills, and low-info guards in ViewModel (deferred to P3.8)
+- Normal chat messages now flow through portable Reducer pattern
+
+**Phase 2: UI Extraction**
+- Created `ConversationScreen.kt` (~120 lines) - message list + typing indicator
+- Extracted `AssistantTypingBubble.kt` to messages/ package (~50 lines)
+- Updated `HomeScreen.kt` to delegate conversation rendering (-80 lines)
+
+**Impact:**
+- HomeScreenViewModel: 2505 → 2524 lines (+19, wiring code)
+- HomeScreen.kt: 1399 → 1318 lines (-81)
+- **First isolated screen component** in M5 Navigation & Isolation phase
+- Normal chat flow now portable (SmartAnalysis deferred)
 
 ---
 

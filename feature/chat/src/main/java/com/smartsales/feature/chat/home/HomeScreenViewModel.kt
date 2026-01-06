@@ -230,6 +230,11 @@ class HomeScreenViewModel @Inject constructor(
             }
         }
         
+        // P3.1.B2: Migration bridge for message sync (TODO: remove in P3.8)
+        conversationViewModel.onMessagesChanged = { messages ->
+            _uiState.update { it.copy(chatMessages = messages) }
+        }
+        
         observeDeviceConnection()
         observeMediaSync()
         observeSessions()
@@ -255,6 +260,8 @@ class HomeScreenViewModel @Inject constructor(
         val state = _uiState.value
         if (state.isSending) return
         val selectedSkill = state.selectedSkill?.id
+        
+        // Export skills bypass chat flow
         when (selectedSkill) {
             QuickSkillId.EXPORT_PDF -> {
                 onExportPdfClicked()
@@ -266,12 +273,16 @@ class HomeScreenViewModel @Inject constructor(
             }
             else -> Unit
         }
+        
         val rawInput = state.inputText
         val content = rawInput.trim()
+        
+        // SmartAnalysis has special handling (deferred to P3.8)
         if (_uiState.value.isSmartAnalysisMode) {
             handleSmartAnalysisSend(content)
             return
         }
+        
         val resolvedInput = when {
             content.isNotEmpty() -> content
             selectedSkill != null -> {
@@ -280,14 +291,22 @@ class HomeScreenViewModel @Inject constructor(
             else -> null
         }
         if (resolvedInput.isNullOrBlank()) return
+        
         // 低信息输入：不调用模型，避免无意义消耗与噪声对话
         if (selectedSkill == null && com.smartsales.domain.chat.InputClassifier.isLowInfoGeneralChatInput(resolvedInput)) {
             handleLowInfoGeneralChatInput()
             return
         }
-        sendMessageInternal(
-            messageText = resolvedInput,
-            skillOverride = selectedSkill
+        
+        // P3.1.B2: Dispatch to ConversationReducer for normal chat
+        conversationViewModel.dispatch(
+            com.smartsales.feature.chat.conversation.ConversationIntent.SendMessage(System.currentTimeMillis()),
+            scope = viewModelScope,
+            context = com.smartsales.feature.chat.conversation.SendContext(
+                sessionId = sessionId,
+                salesPersona = _uiState.value.salesPersona,
+                isFirstAssistant = !firstAssistantProcessed
+            )
         )
     }
 

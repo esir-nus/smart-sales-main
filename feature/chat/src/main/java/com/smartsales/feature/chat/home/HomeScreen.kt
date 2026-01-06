@@ -138,7 +138,7 @@ import java.util.Locale
 import com.smartsales.feature.chat.BuildConfig
 import com.smartsales.feature.chat.home.debug.DebugSessionMetadataHud
 import com.smartsales.feature.chat.home.export.ExportGateState
-import com.smartsales.feature.chat.home.history.HistoryDrawerContent
+import com.smartsales.feature.chat.history.HistoryDrawerContent
 import com.smartsales.feature.chat.home.input.HomeInputArea
 import com.smartsales.feature.chat.home.input.QuickSkillRow
 import com.smartsales.feature.chat.home.input.ExportGateHint

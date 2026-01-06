@@ -17,6 +17,29 @@
 
 ---
 
+## Wave 24 / P3.6: History Package Consolidation ✅ (2026-01-06)
+
+**Package Reorganization for History Components**
+
+**Changes:**
+- Moved `HistoryDrawer.kt` from `home/history/` → `history/` package
+- Updated package declarations and imports
+- **Note:** SessionsManager already exists as Coordinator pattern (M4 verified)
+
+**Rationale:**
+- Research revealed most extraction work already complete
+- HistoryDrawer: 176 lines, already extracted
+- SessionsManager: Domain Coordinator with 10+ unit tests
+- Creating HistoryReducer would be over-engineering for CRUD operations
+
+**Impact:**
+- Cleaner package structure
+- History components properly isolated
+- **No line count change** (reorganization only)
+- Coordinator pattern validated as portable alternative to Reducer
+
+---
+
 ## Wave 23 / P3.5: ConversationScreen Extraction ✅ (2026-01-06)
 
 **Completed SendMessage Wiring + UI Extraction**

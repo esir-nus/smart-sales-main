@@ -1,9 +1,9 @@
-// File: feature/chat/src/main/java/com/smartsales/feature/chat/home/history/HistoryDrawer.kt
+// File: feature/chat/src/main/java/com/smartsales/feature/chat/history/HistoryDrawer.kt
 // Module: :feature:chat
 // Summary: History drawer components extracted from HomeScreen
 // Author: created on 2026-01-06
 
-package com.smartsales.feature.chat.home.history
+package com.smartsales.feature.chat.history
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi

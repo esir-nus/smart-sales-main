@@ -217,7 +217,6 @@ class HomeScreenViewModel @Inject constructor(
     // Publishing infrastructure (moved from inline creation)
     private val chatPublisher: ChatPublisher = ChatPublisherImpl()
     private val v1Finalizer = GeneralChatV1Finalizer(chatPublisher)
-    private val responsePublisher = com.smartsales.feature.chat.core.publish.ChatResponsePublisher(v1Finalizer)
 
     // [HSVM:SESSION_BOOTSTRAP]
     init {

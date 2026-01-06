@@ -90,3 +90,15 @@ HUD is a debug panel with three copyable sections:
 
 - UI layer does not do complex cleanup or secondary LLM cleanup.
 - Publisher may do display transforms (e.g., segmentation, truncation, bold/italic, Markdown safety), but must not do semantic rewriting.
+
+---
+
+## 7) Core UI Behavioral Invariants
+
+The following behaviors are mandatory. Visual specifications are in `style-guide.md` at the referenced sections.
+
+| Invariant | Rule | Visual Spec |
+|-----------|------|-------------|
+| **Home Hero visibility** | Hero appears ONLY when current session is empty (no user messages, no assistant messages, no imported transcripts). Never rendered as a chat bubble or in the scrollable message list. | §6.2 |
+| **Quick Skill Row placement** | Under hero when session is empty; inside input area (above text field) when session is active. There is **never more than one quick skill row visible**. | §6.3 |
+| **History Drawer layout** | Device-status placeholder card at top, profile entry at bottom. Both use full drawer width. | §6.6 |

@@ -1,187 +1,168 @@
 # Architecture Evolution Guide
 
 > **Purpose**: North Star for Smart Sales architecture evolution  
+> **Target**: Cross-Platform (Android/iOS/HarmonyOS) Ready  
 > **Spec Alignment**: Orchestrator-V1.md (v1.2.0)  
-> **Approach**: Prescriptive with escape hatches
+> **Status**: Phase 3 (Feature Isolation + Portable Core)
 
 ---
 
-## 1. Vision
+## 1. Vision: "Hybrid Feature-Based + Portable Core"
 
-Transform from ViewModel-centric "god files" to **Clean Architecture** where:
-- ViewModels are routing + state only (no business logic)
-- Domain layer owns all business logic (testable, spec-aligned)
-- Data layer handles I/O only
+We are transforming from a **legacy compiled monolith** into a **modern cross-platform architecture**. The goal is transferability without full rewrite costs.
+
+### Core Principles
+1.  **Vertical Features**: Each feature (`chat`, `history`, `transcription`) owns its full stack.
+2.  **Portable "Brain"**: All state logic lives in `shared/` as pure Kotlin Reducers (no Android imports).
+3.  **Platform "Hands"**: Android/iOS/HarmonyOS layers only handle UI rendering and lifecycle glue.
+
+```mermaid
+graph TD
+    subgraph "Platform Layer (The Hands)"
+        UI[Compose / SwiftUI / ArkUI] --> VM[ViewModel / Controller]
+    end
+
+    subgraph "Shared Core (The Brain)"
+        VM --> Reducer[Pure Kotlin Reducer]
+        Reducer --> UseCase[Domain UseCase]
+        UseCase --> Repo[Repository Interface]
+    end
+
+    subgraph "Data Layer"
+        Repo --> API[Ktor / Retrofit]
+        Repo --> DB[SqlDelight / Room]
+    end
+```
 
 ---
 
-## 2. Target Architecture
+## 2. Target Architecture (Phase 3)
 
-```
-┌─────────────────────────────────────────┐
-│  UI Layer (Compose)                     │
-│  • Stateless render of ViewModel state  │
-└─────────────────┬───────────────────────┘
-                  │
-┌─────────────────▼───────────────────────┐
-│  ViewModel Layer                        │
-│  • Hold StateFlow                       │
-│  • Route intents to domain              │
-│  • Observe domain results               │
-│  • NO business logic                    │
-└─────────────────┬───────────────────────┘
-                  │
-┌─────────────────▼───────────────────────┐
-│  Domain Layer (pure Kotlin)             │
-│  • Coordinators (stateful flows)        │
-│  • Parsers/Transformers (pure funcs)    │
-│  • No Android dependencies              │
-└─────────────────┬───────────────────────┘
-                  │
-┌─────────────────▼───────────────────────┐
-│  Data Layer                             │
-│  • Repositories (API/DB)                │
-│  • No business logic                    │
-└─────────────────────────────────────────┘
-```
+### The Constraint
+**NO BUSINESS LOGIC IN VIEWMODELS.**
+ViewModels are now thin wrappers that bind platform lifecycle to shared Reducers.
+
+### 2.1 The "Portable Core" Pattern
+
+Instead of putting logic in `ViewModel`, we use **Reducers** and **Coordinators**.
+
+| Component | Responsibility | Dependencies | Transferable? |
+|-----------|----------------|--------------|---------------|
+| **UI** | Rendering state | Compose/SwiftUI | ❌ No |
+| **ViewModel** | Lifecycle, StateFlow holder | Android SDK | ❌ No |
+| **Reducer** | `(State, Intent) -> State` | Pure Kotlin | ✅ **YES** |
+| **Coordinator** | Async flows, side effects | Pure Kotlin | ✅ **YES** |
+| **Domain** | Parsers, Rules | Pure Kotlin | ✅ **YES** |
 
 ---
 
 ## 3. Target File Structure
 
-### Domain Layer (`domain/`)
+We are moving to a structure that separates "portable logic" from "platform glue" *within* feature directories.
 
+### Feature: Conversation (`feature/chat/conversation/`)
+
+```kotlin
+// 1. THE BRAIN (Portable - eventually moves to shared/)
+conversation/
+├── ConversationState.kt      // data class (Pure)
+├── ConversationIntent.kt     // sealed interface (Pure)
+└── ConversationReducer.kt    // The Logic Engine (Pure)
+
+// 2. THE HANDS (Android Specific)
+conversation/
+├── ConversationViewModel.kt  // Thin Hilt Wrapper
+└── ConversationScreen.kt     // Compose UI
 ```
+
+### Feature: History (`feature/chat/history/`)
+
+```kotlin
+// 1. THE BRAIN (Portable)
+history/
+├── HistoryState.kt
+├── HistoryIntent.kt
+└── HistoryReducer.kt
+
+// 2. THE HANDS (Android Specific)
+history/
+├── HistoryViewModel.kt
+└── HistoryScreen.kt
+```
+
+### Shared Domain (`domain/`)
+*Already largely portable (M1/M2 complete)*
+```kotlin
 domain/
-├── chat/                        # General Chat Pipeline (V1 §5)
-│   ├── ChatPublisher.kt         ✅ EXISTS
-│   ├── ChatMessageBuilder.kt    ✅ EXISTS
-│   ├── InputClassifier.kt       ✅ EXISTS
-│   ├── MetadataParser.kt        ✅ EXISTS
-│   └── SmartAnalysisParser.kt   ✅ EXISTS
-│
-├── transcription/               # Tingwu Pipeline (V1 §6)
-│   ├── DisectorUseCase.kt       ✅ EXISTS
-│   ├── SanitizerUseCase.kt      ✅ EXISTS
-│   ├── TranscriptPublisher.kt   🔲 PLANNED
-│   └── TranscriptionCoordinator.kt ✅ EXISTS
-│
-├── debug/
-│   └── DebugCoordinator.kt      ✅ EXISTS
-│
-├── export/
-│   └── ExportCoordinator.kt     ✅ EXISTS
-│
-└── sessions/
-    └── SessionsRepository.kt    🔲 FUTURE
-```
-
-### Feature Layer (`feature/chat/`)
-
-```
-feature/chat/
-├── home/
-│   ├── HomeScreenViewModel.kt   ✅ EXISTS (2505 lines, routing only)
-│   ├── HomeScreen.kt            ✅ EXISTS (1399 lines, target <1500 ✅)
-│   ├── HomeUiState.kt           ✅ EXISTS
-│   ├── debug/
-│   │   ├── DebugHud.kt          ✅ EXISTS (extracted UI components)
-│   │   └── DebugViewModel.kt    ✅ EXISTS
-│   ├── export/ExportViewModel.kt ✅ EXISTS
-│   ├── history/
-│   │   └── HistoryDrawer.kt     ✅ EXISTS (extracted UI components)
-│   ├── input/
-│   │   └── HomeInputArea.kt     ✅ EXISTS (extracted UI components)
-│   ├── messages/
-│   │   └── MessageBubble.kt     ✅ EXISTS (extracted UI components)
-│   ├── orchestrator/
-│   │   └── HomeOrchestratorImpl.kt ✅ EXISTS (75 lines, slim)
-│   ├── sessions/SessionsViewModel.kt ✅ EXISTS
-│   └── transcription/TranscriptionViewModel.kt ✅ EXISTS
-│
-└── core/
-    └── stream/ChatStreamCoordinator.kt ✅ EXISTS
-```
-
-### Data Layer (`data/ai-core/`)
-
-```
-data/ai-core/
-├── tingwu/
-│   ├── TingwuRunnerRepository.kt ✅ EXISTS
-│   └── TingwuBatchRepository.kt 🔲 PLANNED
-├── dashscope/                   ✅ EXISTS
-└── oss/                         ✅ EXISTS
+├── chat/
+│   ├── ChatPublisher.kt         ✅ Pure
+│   ├── InputClassifier.kt       ✅ Pure
+│   └── MetadataParser.kt        ✅ Pure
+├── transcription/
+│   └── TranscriptionCoordinator.kt ✅ Pure
 ```
 
 ---
 
-## 4. V1 Module → File Mapping
+## 4. Phase 3 Roadmap: "The Great Split"
 
-| V1 Module | File | Status |
-|-----------|------|--------|
-| AI Chatter (§3.1.1) | `HomeOrchestratorImpl` | ✅ Slim |
-| SmartAnalysis (§3.1.2) | `SmartAnalysisParser` | ✅ Done |
-| LLM Parser (§3.1.3) | `MetadataParser` | ✅ Done |
-| Disector (§3.2.1) | `DisectorUseCase` | ✅ Done |
-| Tingwu Runner (§3.2.2) | `TingwuRunnerRepository` | ✅ Done |
-| Sanitizer (§3.2.3) | `SanitizerUseCase` | ✅ Done |
-| ChatPublisher (§3.2.4) | `ChatPublisher` | ✅ Done |
-| TranscriptPublisher (§3.2.4) | `ChatMessageBuilder` + `TranscriptPublisherUseCase` | ✅ Done |
+We are breaking the implementation of `HomeScreenViewModel` (2500+ lines) into portable reducers.
 
----
+### M4: Portable Reducers (Current Phase)
+**Goal**: Make business logic platform-agnostic.
+- [ ] **P3.1 ConversationReducer**: Extract chat logic (input, sending, streaming) into a pure Reducer.
+- [ ] **P3.2 HistoryReducer**: Extract session management logic into a pure Reducer.
+- [ ] **P3.3 TranscriptionReducer**: Extract transcription state logic.
+- [ ] **P3.4 Feature Shells**: Create `ConversationViewModel` and `HistoryViewModel` as thin wrappers.
 
-## 5. Milestones
+### M5: Navigation & Isolation
+**Goal**: Break the UI monolith.
+- [ ] **P3.5 ConversationScreen**: Standalone chat UI.
+- [ ] **P3.6 HistoryScreen**: Standalone history UI.
+- [ ] **P3.7 ChatNavHost**: Jetpack Navigation shell replacing `HomeScreen`.
+- [ ] **P3.8 God ViewModel Liquidation**: Delete `HomeScreenViewModel`.
 
-### M1: Domain Completeness ✅
-**Criteria:**
-- [x] All V1 modules have corresponding domain files
-- [x] `SmartAnalysisParser` extracted from orchestrator
-- [x] `DisectorUseCase` implements V1 Appendix A rules
-
-**Verification:** Each domain file has unit tests (26 new tests)
+### M6: Multiplatform Prep (Future)
+**Goal**: Physical module separation.
+- [ ] Move Reducers/Domain to `:shared` Gradle module.
+- [ ] Set up KMP build definitions.
 
 ---
 
-### M2: ViewModel Purity ✅
-**Criteria:**
-- [x] HomeScreenViewModel contains no `if/when` business logic
-- [x] All business decisions delegated to domain layer
-- [x] ViewModel reduced to 2505 lines (from 3668, -31.7%)
+## 5. V1 Module Alignment
 
-**Verification:** All logic delegated to coordinators (SessionsManager, TranscriptionCoordinator, ChatStreamCoordinator)
-
----
-
-### M3: Full V1 Alignment ✅
-**Criteria:**
-- [x] All module mappings show ✅
-- [x] Data contracts match `orchestrator-v1.schema.json`
-- [x] Unit test coverage >80% for domain layer
-
-**Verification:** Architecture audit complete, all V1 modules implemented
+| V1 Module | Implementation | Status |
+|-----------|----------------|--------|
+| **Orchestrator** | `ChatNavHost` (Shell) | 🔲 Planned |
+| **Pipeline** | `ChatStreamCoordinator` | ✅ Done |
+| **Analysis** | `SmartAnalysisParser` | ✅ Done |
+| **Context** | `SessionsManager` | ✅ Done |
+| **Transcript** | `TranscriptionCoordinator` | ✅ Done |
 
 ---
 
-## 6. Escape Hatches
+## 6. Migration Guide (for Vibe Coding)
 
-- **Combine if too granular** — Don't create 10-line files
-- **Package names advisory** — Can rename if clearer
-- **Priority order flexible** — Business needs may reorder
+When prompted to add a feature:
+1. **Define State**: Add properties to `X State` data class.
+2. **Define Intent**: Add `XIntent` sealed interface.
+3. **Implement Logic**: Handle intent in `XReducer` (Pure Kotlin).
+4. **Bind UI**: Update Compose to render new state.
+
+**Do NOT** add functions to generic ViewModels.
+**Do NOT** add `if/else` logic in Composable.
 
 ---
 
-## 7. Constraints (Hard Rules)
+## 7. Quality Guardrails
 
-1. **Build must pass after every change**
-2. **No behavior changes during refactoring**
-3. **Domain layer has no Android imports**
-4. **Update this doc when structure changes**
+1. **The "Import Test"**: Domain and Reducer files must NOT contain `android.*` imports (except generic `android.util.Log` if absolutely necessary, but prefer pure loggers).
+2. **500 Line Limit**: No file exceeds 500 lines. If a Reducer gets big, split it into child reducers.
+3. **Tests First**: Write tests for Reducers *before* binding to ViewModels. Reducers are easy to test (input -> output).
 
 ---
 
 ## 8. References
 
 - [Orchestrator-V1.md](./Orchestrator-V1.md) — Module definitions
-- [orchestrator-v1.schema.json](./orchestrator-v1.schema.json) — Data contracts
-- [CHANGELOG.md](./CHANGELOG.md) — Wave history and dev log
+- Senior review workflow: `.agent/workflows/senior-review.md`

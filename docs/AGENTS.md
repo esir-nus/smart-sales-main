@@ -1,18 +1,5 @@
 # Repository Guidelines
 
-## Role Contract Reference
-
-This project uses a fixed multi-agent workflow:
-
-- Operator = You (human developer, writes all real code)
-- Orchestrator = ChatGPT default mode (specs, flows, contracts, no code)
-- Codex = ChatGPT code-analysis mode (invoked with `Codex:`)
-
-The full rules and invocation protocol are defined in `docs/role-contract.md`.
-All agents must follow that document as the authoritative behavior contract.
-
----
-
 ## Source of Truth (SoT) and Archived Docs
 
 - SoT: The only authoritative spec is `docs/Orchestrator-V1.md` (CURRENT) plus the V1 schema/examples.
@@ -32,8 +19,8 @@ All agents must follow that document as the authoritative behavior contract.
   - Archived specs live under `docs/archived/**` (historical only).
 
 - UX contract source precedence:
-  1. `docs/ux-contract.md` (the only current UX source of truth: interaction/layout/flows/HUD)
-  2. `docs/Orchestrator-V1.md` (reasoning and pipeline structure/boundaries)
+  1. `docs/Orchestrator-V1.md` (reasoning and pipeline structure/boundaries)
+  2. `docs/ux-contract.md` (the only current UX source of truth: interaction/layout/flows/HUD)
   3. `docs/style-guide.md` (visual and code style rules)
   4. Existing Android implementation and tests
   5. Archived UI/history implementations for reference only
@@ -70,7 +57,7 @@ All agents must follow that document as the authoritative behavior contract.
 
 ---
 
-## Core Behavior Requirements (for Codex)
+## Core Behavior Requirements (for AI Agents)
 
 1) Prefer clean, simple, modular code
 - Small functions, small classes, clear module boundaries.

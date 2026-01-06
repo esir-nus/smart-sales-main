@@ -2,7 +2,6 @@
 <!-- Purpose: Orchestrator-V1 architecture spec (single authority / AI coding SoT) -->
 <!-- Notes:
   - V7 is deprecated and archived (ARCHIVED) and must not be used as behavior/contract basis.
-  - role-contract.md and orchestrator-sample-response.md remain unchanged as collaboration norms/examples.
   - This file is the single source of truth (SoT) for the new architecture.
 -->
 

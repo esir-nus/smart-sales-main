@@ -1,3 +1,5 @@
+> ⚠️ **ARCHIVED** - This file is historical reference only. Current spec: `docs/Orchestrator-V1.md`
+
 # T-Task: Engineering Trace (Orchestrator)
 
 Current spec: `docs/Orchestrator-V1.md` (CURRENT)  

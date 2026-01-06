@@ -58,10 +58,10 @@ domain/
 │   ├── ChatMessageBuilder.kt    ✅ EXISTS
 │   ├── InputClassifier.kt       ✅ EXISTS
 │   ├── MetadataParser.kt        ✅ EXISTS
-│   └── SmartAnalysisParser.kt   🔲 PLANNED
+│   └── SmartAnalysisParser.kt   ✅ EXISTS
 │
 ├── transcription/               # Tingwu Pipeline (V1 §6)
-│   ├── DisectorUseCase.kt       🔲 PLANNED
+│   ├── DisectorUseCase.kt       ✅ EXISTS
 │   ├── SanitizerUseCase.kt      ✅ EXISTS
 │   ├── TranscriptPublisher.kt   🔲 PLANNED
 │   └── TranscriptionCoordinator.kt ✅ EXISTS
@@ -111,10 +111,10 @@ data/ai-core/
 
 | V1 Module | File | Status |
 |-----------|------|--------|
-| AI Chatter (§3.1.1) | `HomeOrchestratorImpl` | ⚠️ Mixed |
-| SmartAnalysis (§3.1.2) | `SmartAnalysisParser` | 🔲 Extract |
+| AI Chatter (§3.1.1) | `HomeOrchestratorImpl` | ✅ Slim |
+| SmartAnalysis (§3.1.2) | `SmartAnalysisParser` | ✅ Done |
 | LLM Parser (§3.1.3) | `MetadataParser` | ✅ Done |
-| Disector (§3.2.1) | `DisectorUseCase` | 🔲 Create |
+| Disector (§3.2.1) | `DisectorUseCase` | ✅ Done |
 | Tingwu Runner (§3.2.2) | `TingwuRunnerRepository` | ✅ Done |
 | Sanitizer (§3.2.3) | `SanitizerUseCase` | ✅ Done |
 | ChatPublisher (§3.2.4) | `ChatPublisher` | ✅ Done |
@@ -124,13 +124,13 @@ data/ai-core/
 
 ## 5. Milestones
 
-### M1: Domain Completeness ⏳
+### M1: Domain Completeness ✅
 **Criteria:**
-- [ ] All V1 modules have corresponding domain files
-- [ ] `SmartAnalysisParser` extracted from orchestrator
-- [ ] `DisectorUseCase` implements V1 Appendix A rules
+- [x] All V1 modules have corresponding domain files
+- [x] `SmartAnalysisParser` extracted from orchestrator
+- [x] `DisectorUseCase` implements V1 Appendix A rules
 
-**Verification:** Each domain file has unit tests
+**Verification:** Each domain file has unit tests (26 new tests)
 
 ---
 

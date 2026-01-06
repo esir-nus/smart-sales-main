@@ -101,10 +101,24 @@ Updated documentation system to ensure V1 is CURRENT and consistent, V7 is ARCHI
 |--------|----------|---------|--------|
 | HomeScreenViewModel | 3668 lines | 2505 lines | **-31.7%** |
 | HomeOrchestratorImpl | 531 lines | 75 lines | **-85.9%** |
-| HomeScreen.kt | 2547 lines | **1490 lines** | **-41.5%** |
+| HomeScreen.kt | 2547 lines | **1399 lines** | **-45.1%** |
 | Domain classes | 4 | 14 | +10 |
-| Unit tests | 0 | 198+ | New (+20) |
+| Unit tests | 0 | 218+ | New (+40) |
 | V1 Modules | 0/8 | 8/8 | **100%** |
+
+---
+
+### Wave 19: UI Component Extraction & Test Fixes ✅ (2026-01-06)
+
+**MessageBubble Extraction**
+- Extract MessageBubble → `messages/MessageBubble.kt` (132 lines): 1490 → 1399 (-91)
+- Isolated bubble rendering for future UX iteration
+- **Cumulative HomeScreen.kt reduction**: 2221 → 1399 lines (**-822 lines, -37%**)
+
+**Test Fixes**
+- Fixed `SessionsManagerTest`: FakeMetaHub now stores sessions (extension function works)
+- Fixed `TranscriptionCoordinatorTest`: UnconfinedTestDispatcher, null jobId, async/launch patterns
+- **All tests passing**: 20/20 ✅ (was 14/20)
 
 ---
 

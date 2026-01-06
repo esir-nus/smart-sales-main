@@ -82,7 +82,7 @@ domain/
 feature/chat/
 ├── home/
 │   ├── HomeScreenViewModel.kt   ✅ EXISTS (2505 lines, routing only)
-│   ├── HomeScreen.kt            ✅ EXISTS (1490 lines, target <1500 ✅)
+│   ├── HomeScreen.kt            ✅ EXISTS (1399 lines, target <1500 ✅)
 │   ├── HomeUiState.kt           ✅ EXISTS
 │   ├── debug/
 │   │   ├── DebugHud.kt          ✅ EXISTS (extracted UI components)
@@ -92,6 +92,8 @@ feature/chat/
 │   │   └── HistoryDrawer.kt     ✅ EXISTS (extracted UI components)
 │   ├── input/
 │   │   └── HomeInputArea.kt     ✅ EXISTS (extracted UI components)
+│   ├── messages/
+│   │   └── MessageBubble.kt     ✅ EXISTS (extracted UI components)
 │   ├── orchestrator/
 │   │   └── HomeOrchestratorImpl.kt ✅ EXISTS (75 lines, slim)
 │   ├── sessions/SessionsViewModel.kt ✅ EXISTS

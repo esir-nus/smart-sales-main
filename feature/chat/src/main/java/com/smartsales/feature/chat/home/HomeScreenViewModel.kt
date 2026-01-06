@@ -189,7 +189,7 @@ class HomeScreenViewModel @Inject constructor(
     private val tingwuCoordinator: com.smartsales.domain.transcription.TranscriptionCoordinator,
     private val conversationViewModel: com.smartsales.feature.chat.conversation.ConversationViewModel,
     optionalConfig: Optional<AiCoreConfig> = Optional.empty(),
-) : ViewModel() {
+) : ViewModel(), com.smartsales.feature.chat.conversation.StreamingCallbacks {
 
     private val quickSkillDefinitions = quickSkillCatalog.homeQuickSkills()
     private val quickSkillDefinitionsById = quickSkillDefinitions.associateBy { it.id }
@@ -1438,24 +1438,25 @@ class HomeScreenViewModel @Inject constructor(
         }
         val request = buildChatRequest(content, quickSkillId, newState.chatMessages, audioContext, isAutoAnalysis)
         startStreamingResponse(
-            request = request,
-            assistantId = assistantPlaceholder.id,
-            onCompleted = onCompleted,
-            onCompletedTransform = onCompletedTransform,
-            isAutoAnalysis = isAutoAnalysis
+            com.smartsales.feature.chat.conversation.StreamingContext(
+                request = request,
+                assistantId = assistantPlaceholder.id,
+                onCompleted = onCompleted,
+                onCompletedTransform = onCompletedTransform,
+                isAutoAnalysis = isAutoAnalysis
+            )
         )
     }
 
     // [HSVM@STREAM] ===== Streaming / DisplayDelta 相关 =====
     // [HSVM:STREAMING_PIPELINE]
     /** 启动 streaming，更新最后一条助手气泡。 */
-    private fun startStreamingResponse(
-        request: ChatRequest,
-        assistantId: String,
-        onCompleted: (String) -> Unit = {},
-        onCompletedTransform: ((String) -> String)? = null,
-        isAutoAnalysis: Boolean = false
-    ) {
+    private fun startStreamingResponse(context: com.smartsales.feature.chat.conversation.StreamingContext) {
+        val request = context.request
+        val assistantId = context.assistantId
+        val onCompleted = context.onCompleted
+        val onCompletedTransform = context.onCompletedTransform
+        val isAutoAnalysis = context.isAutoAnalysis
         val isSmartAnalysis = request.quickSkillId == "SMART_ANALYSIS"
         var streamingDeduplicator = StreamingDeduplicator()
 
@@ -1465,6 +1466,12 @@ class HomeScreenViewModel @Inject constructor(
                 msg.copy(content = SMART_PLACEHOLDER_TEXT, isStreaming = true)
             }
         }
+
+        // P3.9.3: Set temporary state for StreamingCallbacks
+        currentStreamingRequest = request
+        currentOnCompleted = onCompleted
+        currentOnCompletedTransform = onCompletedTransform
+        currentIsAutoAnalysis = isAutoAnalysis
 
         // [HSVM@RETRY] ===== Retry loop / terminal 处理 =====
         // [HSVM:RETRY_LOOP]
@@ -2507,4 +2514,62 @@ class HomeScreenViewModel @Inject constructor(
             .removePrefix("#")
             .trim()
     }
+
+    // [HSVM@STREAMING_CALLBACKS] ===== StreamingCallbacks Implementation =====
+    // P3.9.2: Extract callbacks from inline lambdas for decoupling
+    
+    override fun onDelta(assistantId: String, token: String) {
+        // Note: SmartAnalysis check happens at coordinator level
+        updateAssistantMessage(assistantId) { msg ->
+            val merged = StreamingDeduplicator().mergeSnapshot(
+                current = msg.content,
+                incoming = token
+            )
+            msg.copy(
+                content = merged,
+                isStreaming = true
+            )
+        }
+    }
+    
+    override suspend fun onCompleted(assistantId: String, rawFullText: String) {
+        // Delegate to existing completion handler
+        // Note: Request context must be captured externally
+        handleStreamCompleted(
+            request = currentStreamingRequest ?: return,
+            assistantId = assistantId,
+            rawFullText = rawFullText,
+            onCompleted = currentOnCompleted ?: {},
+            onCompletedTransform = currentOnCompletedTransform,
+            isAutoAnalysis = currentIsAutoAnalysis,
+            isSmartAnalysis = currentStreamingRequest?.quickSkillId == "SMART_ANALYSIS"
+        )
+    }
+    
+    override fun onError(assistantId: String, throwable: Throwable) {
+        // Delegate to existing error handler
+        handleStreamError(
+            request = currentStreamingRequest ?: // fallback to empty request
+                ChatRequest(
+                    sessionId = sessionId,
+                    userMessage = "",
+                    quickSkillId = null,
+                    audioContextSummary = null,
+                    history = emptyList(),
+                    isFirstAssistantReply = false,
+                    persona = null
+                ),
+            assistantId = assistantId,
+            throwable = throwable,
+            isAutoAnalysis = currentIsAutoAnalysis,
+            isSmartAnalysis = false
+        )
+    }
+    
+    // Temporary state holders for streaming context
+    // TODO(P3.9.3): Remove when startStreamingResponse moves to ConversationVM
+    private var currentStreamingRequest: ChatRequest? = null
+    private var currentOnCompleted: ((String) -> Unit)? = null
+    private var currentOnCompletedTransform: ((String) -> String)? = null
+    private var currentIsAutoAnalysis: Boolean = false
 }

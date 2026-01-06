@@ -8,12 +8,37 @@
 
 | Metric | Original | Current | Change |
 |--------|----------|---------|--------|
-| HomeScreenViewModel | 3668 lines | 2524 lines | **-31.2%** |
+| HomeScreenViewModel | 3668 lines | 2575 lines | **-29.8%** |
 | HomeOrchestratorImpl | 531 lines | 75 lines | **-85.9%** |
 | HomeScreen.kt | 2547 lines | **1318 lines** | **-48.3%** |
 | Domain classes | 4 | 14 | +10 |
 | Unit tests | 0 | 223+ | New (+45) |
 | V1 Modules | 0/8 | 8/8 | **100%** |
+| conversation/* | 0 | 678 lines | New (P3.9) |
+
+---
+
+## Wave 25 / P3.9: Streaming Infrastructure Seams ✅ (2026-01-06)
+
+**Strangler Fig Pattern Preparation for Streaming Migration**
+
+**Changes:**
+- Created `StreamingContext.kt` (17 lines) - data class for streaming parameters
+- Created `StreamingCallbacks.kt` (13 lines) - callback interface for streaming events
+- Added `ConversationViewModel.startStreaming()` method (30 lines)
+- HomeScreenViewModel implements `StreamingCallbacks` interface (+60 lines)
+- Added temporary state bridging variables
+
+**Rationale:**
+- Establish seams before moving production-critical V1 retry logic
+- Enable future incremental migration without big-bang refactoring
+- Keep battle-tested retry logic in HSVM until validated alternatives exist
+
+**Impact:**
+- HomeScreenViewModel: 2524 → 2575 lines (+51 seam infrastructure)
+- conversation/* package: ~390 → 678 lines (+288 new infrastructure)
+- **No behavioral changes** - purely structural preparation
+- **Tech Debt:** Full streaming migration deferred (P3.9.4+)
 
 ---
 

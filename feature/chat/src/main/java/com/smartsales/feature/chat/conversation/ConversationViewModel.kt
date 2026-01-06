@@ -252,4 +252,34 @@ class ConversationViewModel @Inject constructor(
     
     private var messageIdCounter = 0
     private fun generateMessageId(): String = "msg_${System.currentTimeMillis()}_${messageIdCounter++}"
+    
+    /**
+     * P3.9.3: Start streaming with callbacks pattern.
+     * 
+     * Delegates to ChatStreamCoordinator and calls back to HSVM for side effects.
+     * This enables migration of streaming logic without moving all HSVM state.
+     */
+    fun startStreaming(
+        context: StreamingContext,
+        callbacks: StreamingCallbacks,
+        scope: CoroutineScope
+    ) {
+        val request = context.request
+        val assistantId = context.assistantId
+        
+        // Delegate to chatStreamCoordinator
+        chatStreamCoordinator.start(
+            scope = scope,
+            request = request,
+            onDelta = { token ->
+                callbacks.onDelta(assistantId, token)
+            },
+            onCompleted = { fullText ->
+                callbacks.onCompleted(assistantId, fullText)
+            },
+            onError = { throwable ->
+                callbacks.onError(assistantId, throwable)
+            }
+        )
+    }
 }

@@ -104,20 +104,31 @@ Updated documentation system to ensure V1 is CURRENT and consistent, V7 is ARCHI
 | HomeScreen.kt | 2547 lines | 2220 lines | -12.9% |
 | Domain classes | 4 | 14 | +10 |
 | Unit tests | 0 | 178+ | New |
+| V1 Modules | 0/8 | 8/8 | **100%** |
 
 ---
 
-### Wave 16: UI Model Extraction ✅ (2026-01-06)
+### Wave 17 / M3: Full V1 Alignment ✅ (2026-01-06)
 
-**M2: ViewModel Purity Wave**
-- Created `HomeUiModels.kt` (59 lines) with 6 UI data classes
-- Extracted: `ChatMessageUi`, `ChatMessageRole`, `QuickSkillUi`, `DeviceSnapshotUi`, `DeviceConnectionStateUi`, `AudioSummaryUi`
+**Verification milestone (no code changes)**
+- All 8 V1 modules verified as implemented
+- TranscriptPublisher: `ChatMessageBuilder` (domain) + `TranscriptPublisherUseCase` (data)
+- PlanReview workflow created for evidence-based planning
+
+---
+
+### Wave 16 / M2: ViewModel Purity ✅ (2026-01-06)
+
+**M2.1: UI Models Extraction**
+- Created `HomeUiModels.kt` (59 lines): ChatMessageUi, QuickSkillUi, DeviceSnapshotUi, AudioSummaryUi
 - HomeScreenViewModel: 2553 → 2505 lines (-1.9%)
 
-**M2 Findings:**
-- Waves 17-19 delegation already complete (session history, transcription, streaming)
-- ViewModel appropriately focused on UI state management
-- Further extraction would violate separation of concerns
+**M2.2: Delegation Verification**
+- Session history → `SessionsManager` (verified complete)
+- Transcription → `TranscriptionCoordinator` (verified complete)
+- Streaming → `ChatStreamCoordinator` (verified complete)
+
+---
 
 ### Wave 15 / M1: Domain Completeness ✅ (2026-01-06)
 

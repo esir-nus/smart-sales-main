@@ -266,20 +266,29 @@ class SessionsManagerTest {
     }
 
     private class FakeMetaHub : MetaHub {
+        // Store sessions so the setM3AcceptedName extension function can work
+        private val sessions = mutableMapOf<String, com.smartsales.core.metahub.SessionMetadata>()
+
+        // Helper to check rename calls via stored session metadata
         data class RenameCall(val sessionId: String, val target: RenamingTarget, val name: String, val prov: Provenance)
-        val renameCalls = mutableListOf<RenameCall>()
+        val renameCalls: List<RenameCall>
+            get() = sessions.values.mapNotNull { session ->
+                val renaming = session.renaming
+                val sessionTitle = renaming.sessionTitle.accepted
+                if (sessionTitle != null) {
+                    RenameCall(
+                        sessionId = session.sessionId,
+                        target = RenamingTarget.SESSION_TITLE,
+                        name = sessionTitle,
+                        prov = Provenance(source = "user_rename", updatedAt = renaming.userRenamedAt ?: 0)
+                    )
+                } else null
+            }
 
-        suspend fun setM3AcceptedName(
-            sessionId: String,
-            target: RenamingTarget,
-            name: String,
-            prov: Provenance
-        ) {
-            renameCalls.add(RenameCall(sessionId, target, name, prov))
+        override suspend fun upsertSession(metadata: com.smartsales.core.metahub.SessionMetadata) {
+            sessions[metadata.sessionId] = metadata
         }
-
-        override suspend fun upsertSession(metadata: com.smartsales.core.metahub.SessionMetadata) {}
-        override suspend fun getSession(sessionId: String) = null
+        override suspend fun getSession(sessionId: String) = sessions[sessionId]
         override suspend fun appendM2Patch(sessionId: String, patch: com.smartsales.core.metahub.M2PatchRecord) {}
         override suspend fun getEffectiveM2(sessionId: String) = null
         override suspend fun upsertTranscript(metadata: com.smartsales.core.metahub.TranscriptMetadata) {}

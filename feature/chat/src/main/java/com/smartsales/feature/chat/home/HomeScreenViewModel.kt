@@ -335,58 +335,6 @@ class HomeScreenViewModel @Inject constructor(
                 salesPersona = _uiState.value.salesPersona
             )
         )
-        
-        // TODO(P3.8.1): Remove legacy flow below once side effect handler is complete
-        // For now, preserve existing logic as fallback
-        val bucket = com.smartsales.domain.chat.InputClassifier.classifyUserInput(goal.ifBlank { _uiState.value.inputText }, _uiState.value.chatMessages)
-        val target = com.smartsales.domain.chat.InputClassifier.findSmartAnalysisPrimaryContent(goal, _uiState.value.chatMessages)
-        if (target == null) {
-            if (!hasShownLowInfoSmartAnalysisHint) {
-                hasShownLowInfoSmartAnalysisHint = true
-                // 低信息：用助手气泡提示一次，避免触发模型调用
-                appendAssistantMessage("内容太少，无法智能分析，请先粘贴对话或纪要再试。")
-            }
-            _uiState.update { it.copy(isSmartAnalysisMode = false, selectedSkill = null, inputText = "") }
-            return
-        }
-        val isLowInfoGoal = goal.isNotBlank() && com.smartsales.domain.chat.InputClassifier.isLowInfoAnalysisInput(goal)
-        val analysisGoal = if (goal.isNotBlank() && !isLowInfoGoal) goal else "通用分析"
-        val hasCustomGoal = goal.isNotBlank() && !isLowInfoGoal
-        val preface = if (goal.isBlank() || isLowInfoGoal || bucket == InputBucket.NOISE) {
-            "提示：你没有额外说明分析目标，我会基于最近的一段对话或内容做通用智能分析。"
-        } else null
-        debugLog(
-            event = "smart_analysis_request_start",
-            data = mapOf(
-                "sessionId" to sessionId,
-                "bucket" to bucket.name,
-                "primarySource" to target.source
-            )
-        )
-        val contextContent = com.smartsales.domain.chat.InputClassifier.findContextForAnalysis(target.content, _uiState.value.chatMessages)
-        val userMessage = buildSmartAnalysisUserMessage(
-            mainContent = target.content,
-            context = contextContent,
-            goal = analysisGoal
-        )
-        _uiState.update { it.copy(isSmartAnalysisMode = false, selectedSkill = null, inputText = "") }
-        sendMessageInternal(
-            messageText = userMessage,
-            skillOverride = QuickSkillId.SMART_ANALYSIS,
-            userDisplayText = if (hasCustomGoal) {
-                "智能分析：${goal.take(60)}"
-            } else {
-                "智能分析（通用）"
-            },
-            onCompletedTransform = { body ->
-                buildString {
-                    preface?.let {
-                        append(it.trim()).append("\n\n")
-                    }
-                    append(body.trim())
-                }.trim()
-            }
-        )
     }
 
     private fun startSmartAnalysisForExport(): Boolean {

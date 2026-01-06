@@ -145,18 +145,109 @@ class ConversationViewModel @Inject constructor(
         )
     }
     
-    // P3.8: SmartAnalysis side effect handler
+    // P3.8.1: SmartAnalysis side effect handler (complete implementation)
     private fun handleSmartAnalysisEffect(scope: CoroutineScope?, analysisContext: SmartAnalysisContext?) {
         if (!_state.value.isSending) return
         requireNotNull(scope) { "Scope required for SendSmartAnalysis" }
         requireNotNull(analysisContext) { "SmartAnalysisContext required for SendSmartAnalysis" }
         
-        // TODO(P3.8): Implement SmartAnalysis streaming
-        // - Use InputClassifier.findSmartAnalysisPrimaryContent()
-        // - Build SmartAnalysis user message
-        // - Start streaming with SmartAnalysis skill
-        // 
-        // For now, delegate to HomeScreenViewModel's existing flow
+        val goal = _state.value.smartAnalysisGoal ?: ""
+        val messages = analysisContext.messages
+        
+        // Input classification
+        val bucket = com.smartsales.domain.chat.InputClassifier.classifyUserInput(
+            goal.ifBlank { _state.value.inputText }, 
+            messages
+        )
+        val target = com.smartsales.domain.chat.InputClassifier.findSmartAnalysisPrimaryContent(goal, messages)
+        
+        // Guard: not enough content for analysis
+        if (target == null) {
+            // Dispatch error and reset state
+            dispatch(ConversationIntent.StreamError("内容太少，无法智能分析，请先粘贴对话或纪要再试。"))
+            return
+        }
+        
+        // Build analysis parameters
+        val isLowInfoGoal = goal.isNotBlank() && com.smartsales.domain.chat.InputClassifier.isLowInfoAnalysisInput(goal)
+        val analysisGoal = if (goal.isNotBlank() && !isLowInfoGoal) goal else "通用分析"
+        val hasCustomGoal = goal.isNotBlank() && !isLowInfoGoal
+        val preface = if (goal.isBlank() || isLowInfoGoal || bucket == com.smartsales.domain.chat.InputBucket.NOISE) {
+            "提示：你没有额外说明分析目标，我会基于最近的一段对话或内容做通用智能分析。"
+        } else null
+        
+        // Build user message
+        val contextContent = com.smartsales.domain.chat.InputClassifier.findContextForAnalysis(target.content, messages)
+        val userMessage = com.smartsales.domain.chat.ChatMessageBuilder.buildSmartAnalysisUserMessage(
+            mainContent = target.content,
+            context = contextContent,
+            goal = analysisGoal
+        )
+        
+        // Create user message UI
+        val userDisplayText = if (hasCustomGoal) {
+            "智能分析：${goal.take(60)}"
+        } else {
+            "智能分析（通用）"
+        }
+        val userMessageUi = ChatMessageUi(
+            id = generateMessageId(),
+            role = ChatMessageRole.USER,
+            content = userDisplayText,
+            timestampMillis = System.currentTimeMillis()
+        )
+        
+        // Create assistant placeholder
+        val assistantId = generateMessageId()
+        val assistantPlaceholder = ChatMessageUi(
+            id = assistantId,
+            role = ChatMessageRole.ASSISTANT,
+            content = "正在智能分析当前会话内容…",
+            timestampMillis = System.currentTimeMillis(),
+            isStreaming = true
+        )
+        
+        // Add messages to state
+        dispatch(ConversationIntent.MessageReceived(userMessageUi))
+        dispatch(ConversationIntent.MessageReceived(assistantPlaceholder))
+        
+        // Build chat request with SmartAnalysis skill
+        val request = ChatRequest(
+            sessionId = analysisContext.sessionId,
+            userMessage = userMessage,  // Built SmartAnalysis message
+            quickSkillId = com.smartsales.feature.chat.core.QuickSkillId.SMART_ANALYSIS.name,
+            audioContextSummary = null,
+            history = _state.value.messages.map { ui ->
+                ChatHistoryItem(
+                    role = if (ui.role == ChatMessageRole.USER) ChatRole.USER else ChatRole.ASSISTANT,
+                    content = ui.content
+                )
+            },
+            isFirstAssistantReply = false,
+            persona = analysisContext.salesPersona
+        )
+        
+        // Start streaming with preface transform
+        chatStreamCoordinator.start(
+            scope = scope,
+            request = request,
+            onDelta = { token ->
+                dispatch(ConversationIntent.StreamDelta(assistantId, token))
+            },
+            onCompleted = { fullText ->
+                // Apply preface transform
+                val transformed = buildString {
+                    preface?.let {
+                        append(it.trim()).append("\n\n")
+                    }
+                    append(fullText.trim())
+                }.trim()
+                dispatch(ConversationIntent.StreamCompleted(assistantId, transformed))
+            },
+            onError = { throwable ->
+                dispatch(ConversationIntent.StreamError(throwable.message ?: "SmartAnalysis失败"))
+            }
+        )
     }
     
     private var messageIdCounter = 0

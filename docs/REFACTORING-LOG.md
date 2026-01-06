@@ -18,6 +18,28 @@
 
 ---
 
+## Wave 26 / P3.10: Transcription Analysis ✅ (2026-01-06)
+
+**Analysis: Transcription Already Portable**
+
+**Findings:**
+- `TranscriptionCoordinator` already exists (196 lines, domain layer)
+- Handles batch gate ordering, V1 window filtering, clean flow interface
+- Has 10+ unit tests, well-designed architecture
+- `HSVM.onTranscriptionRequested` (186 lines) is UI orchestration: session setup, message creation
+
+**Decision:**
+- **No extraction needed** - transcription logic already portable via coordinator pattern
+- Pattern matches P3.9 approach (coordinator handles logic, ViewModel handles UI)
+- Further extraction would be refactoring for refactoring's sake
+
+**Impact:**
+- **Zero code changes** - analysis only
+- Validated that coordinator pattern achieves portability goal
+- Reduced scope of "God ViewModel Liquidation" to focus on high-value extraction
+
+---
+
 ## Wave 25 / P3.9: Streaming Infrastructure Seams ✅ (2026-01-06)
 
 **Strangler Fig Pattern Preparation for Streaming Migration**

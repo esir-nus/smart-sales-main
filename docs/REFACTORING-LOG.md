@@ -12,8 +12,30 @@
 | HomeOrchestratorImpl | 531 lines | 75 lines | **-85.9%** |
 | HomeScreen.kt | 2547 lines | **1399 lines** | **-45.1%** |
 | Domain classes | 4 | 14 | +10 |
-| Unit tests | 0 | 218+ | New (+40) |
+| Unit tests | 0 | 223+ | New (+45) |
 | V1 Modules | 0/8 | 8/8 | **100%** |
+
+---
+
+---
+
+## Wave 20 / P3.1.B1: ConversationViewModel Wiring ✅ (2026-01-06)
+
+**Portable Reducer Pattern Established**
+- Created `ConversationViewModel` (regular class, injects HomeOrchestrator)
+- Wired into `HomeScreenViewModel` as state delegate
+- `onInputChanged` → dispatches to `ConversationReducer`
+- State sync: `ConversationViewModel.state` → `HomeUiState.inputText`
+
+**Test Coverage**
+- `ConversationReducerTest`: 14 passing tests (Phase A)
+- `ConversationViewModelTest`: 5 passing tests (Phase B1)
+- **Total**: 19 tests, 100% pass rate ✅
+
+**Architectural Notes**
+- ConversationViewModel is NOT `@HiltViewModel` (Hilt prohibits ViewModel-to-ViewModel injection)
+- Streaming side effects deferred to P3.1.B2
+- First reducer pattern in codebase - blueprint for HistoryReducer, TranscriptionReducer
 
 ---
 

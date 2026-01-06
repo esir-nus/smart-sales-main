@@ -187,6 +187,7 @@ class HomeScreenViewModel @Inject constructor(
     private val debugCoordinator: com.smartsales.domain.debug.DebugCoordinator,
     private val sessionsManager: com.smartsales.domain.sessions.SessionsManager,
     private val tingwuCoordinator: com.smartsales.domain.transcription.TranscriptionCoordinator,
+    private val conversationViewModel: com.smartsales.feature.chat.conversation.ConversationViewModel,
     optionalConfig: Optional<AiCoreConfig> = Optional.empty(),
 ) : ViewModel() {
 
@@ -221,6 +222,14 @@ class HomeScreenViewModel @Inject constructor(
         // 从 catalog 加载快捷技能到状态
         val skills = quickSkillDefinitions.map { it.toUiModel() }
         _uiState.update { it.copy(quickSkills = skills) }
+        
+        // P3.1.B1: Sync ConversationViewModel.state -> HomeUiState
+        viewModelScope.launch {
+            conversationViewModel.state.collect { conversationState ->
+                _uiState.update { it.copy(inputText = conversationState.inputText) }
+            }
+        }
+        
         observeDeviceConnection()
         observeMediaSync()
         observeSessions()
@@ -231,7 +240,11 @@ class HomeScreenViewModel @Inject constructor(
 
     // [HSVM@ENTRY] ===== 用户事件入口（send / event / intent） =====
     fun onInputChanged(text: String) {
-        _uiState.update { it.copy(inputText = text) }
+        // P3.1.B1: Dispatch to ConversationReducer
+        conversationViewModel.dispatch(
+            com.smartsales.feature.chat.conversation.ConversationIntent.InputChanged(text)
+        )
+        // State sync handled by collector in init
     }
 
     fun onInputFocusChanged(focused: Boolean) {

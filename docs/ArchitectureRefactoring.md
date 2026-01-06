@@ -118,7 +118,7 @@ data/ai-core/
 | Tingwu Runner (§3.2.2) | `TingwuRunnerRepository` | ✅ Done |
 | Sanitizer (§3.2.3) | `SanitizerUseCase` | ✅ Done |
 | ChatPublisher (§3.2.4) | `ChatPublisher` | ✅ Done |
-| TranscriptPublisher (§3.2.4) | `TranscriptPublisher` | 🔲 Create |
+| TranscriptPublisher (§3.2.4) | `ChatMessageBuilder` + `TranscriptPublisherUseCase` | ✅ Done |
 
 ---
 
@@ -134,23 +134,23 @@ data/ai-core/
 
 ---
 
-### M2: ViewModel Purity ✅
+### M2: ViewModel Purity ⏳
 **Criteria:**
-- [x] All business decisions delegated to domain layer
-- [x] ViewModel focused on UI state management only
-- [/] ViewModel < 800 lines (achieved 2505 lines, 31.7% reduction from baseline)
+- [ ] HomeScreenViewModel contains no `if/when` business logic
+- [ ] All business decisions delegated to domain layer
+- [ ] ViewModel < 800 lines
 
-**Result:** Architectural purity achieved. Remaining size reflects genuine UI coordination complexity, not misplaced business logic.
-
-**Verification:** Wave 16 UI models extracted + verified delegation complete (session history, transcription, streaming)
+**Verification:** Code review passes "can I test this without mocking Android?"
 
 ---
 
-### M3: Full V1 Alignment ⏳
+### M3: Full V1 Alignment ✅
 **Criteria:**
-- [ ] All module mappings show ✅
-- [ ] Data contracts match `orchestrator-v1.schema.json`
-- [ ] Unit test coverage > 80% for domain layer
+- [x] All module mappings show ✅
+- [x] Data contracts match `orchestrator-v1.schema.json`
+- [x] Unit test coverage >80% for domain layer
+
+**Verification:** Architecture audit complete, all V1 modules implemented
 
 ---
 

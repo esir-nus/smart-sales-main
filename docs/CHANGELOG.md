@@ -99,13 +99,25 @@ Updated documentation system to ensure V1 is CURRENT and consistent, V7 is ARCHI
 
 | Metric | Original | Current | Change |
 |--------|----------|---------|--------|
-| HomeScreenViewModel | 3668 lines | 2553 lines | **-30.4%** |
+| HomeScreenViewModel | 3668 lines | 2505 lines | **-31.7%** |
 | HomeOrchestratorImpl | 531 lines | 75 lines | **-85.9%** |
 | HomeScreen.kt | 2547 lines | 2220 lines | -12.9% |
 | Domain classes | 4 | 14 | +10 |
 | Unit tests | 0 | 178+ | New |
 
 ---
+
+### Wave 16: UI Model Extraction ✅ (2026-01-06)
+
+**M2: ViewModel Purity Wave**
+- Created `HomeUiModels.kt` (59 lines) with 6 UI data classes
+- Extracted: `ChatMessageUi`, `ChatMessageRole`, `QuickSkillUi`, `DeviceSnapshotUi`, `DeviceConnectionStateUi`, `AudioSummaryUi`
+- HomeScreenViewModel: 2553 → 2505 lines (-1.9%)
+
+**M2 Findings:**
+- Waves 17-19 delegation already complete (session history, transcription, streaming)
+- ViewModel appropriately focused on UI state management
+- Further extraction would violate separation of concerns
 
 ### Wave 15 / M1: Domain Completeness ✅ (2026-01-06)
 

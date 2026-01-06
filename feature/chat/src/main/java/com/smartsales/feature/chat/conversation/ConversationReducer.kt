@@ -24,6 +24,9 @@ object ConversationReducer {
             is ConversationIntent.InputChanged -> handleInputChanged(state, intent)
             is ConversationIntent.SendMessage -> handleSendMessage(state, intent)
             is ConversationIntent.MessageReceived -> handleMessageReceived(state, intent)
+            is ConversationIntent.StreamDelta -> handleStreamDelta(state, intent)
+            is ConversationIntent.StreamCompleted -> handleStreamCompleted(state, intent)
+            is ConversationIntent.StreamError -> handleStreamError(state, intent)
         }
     
     private fun handleInputChanged(
@@ -65,6 +68,55 @@ object ConversationReducer {
         return state.copy(
             messages = state.messages + intent.message,
             isSending = false
+        )
+    }
+    
+    // P3.1.B2: Streaming handlers
+    private fun handleStreamDelta(
+        state: ConversationState,
+        intent: ConversationIntent.StreamDelta
+    ): ConversationState {
+        val updatedMessages = state.messages.map { msg ->
+            if (msg.id == intent.assistantId) {
+                msg.copy(
+                    content = msg.content + intent.token,
+                    isStreaming = true
+                )
+            } else msg
+        }
+        return state.copy(
+            messages = updatedMessages,
+            isStreaming = true
+        )
+    }
+    
+    private fun handleStreamCompleted(
+        state: ConversationState,
+        intent: ConversationIntent.StreamCompleted
+    ): ConversationState {
+        val updatedMessages = state.messages.map { msg ->
+            if (msg.id == intent.assistantId) {
+                msg.copy(
+                    content = intent.fullText,
+                    isStreaming = false
+                )
+            } else msg
+        }
+        return state.copy(
+            messages = updatedMessages,
+            isSending = false,
+            isStreaming = false
+        )
+    }
+    
+    private fun handleStreamError(
+        state: ConversationState,
+        intent: ConversationIntent.StreamError
+    ): ConversationState {
+        return state.copy(
+            errorMessage = intent.error,
+            isSending = false,
+            isStreaming = false
         )
     }
 }

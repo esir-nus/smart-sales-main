@@ -23,4 +23,25 @@ sealed interface ConversationIntent {
      * A new message (user or assistant) has been received.
      */
     data class MessageReceived(val message: ChatMessageUi) : ConversationIntent
+    
+    // P3.1.B2: Streaming intents
+    /**
+     * Streaming delta received during assistant response.
+     * @param assistantId ID of the assistant message being updated
+     * @param token New text token to append
+     */
+    data class StreamDelta(val assistantId: String, val token: String) : ConversationIntent
+    
+    /**
+     * Streaming completed successfully.
+     * @param assistantId ID of the assistant message being finalized
+     * @param fullText Complete response text
+     */
+    data class StreamCompleted(val assistantId: String, val fullText: String) : ConversationIntent
+    
+    /**
+     * Streaming error occurred.
+     * @param error Error message
+     */
+    data class StreamError(val error: String) : ConversationIntent
 }

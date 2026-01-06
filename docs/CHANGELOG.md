@@ -101,10 +101,21 @@ Updated documentation system to ensure V1 is CURRENT and consistent, V7 is ARCHI
 |--------|----------|---------|--------|
 | HomeScreenViewModel | 3668 lines | 2505 lines | **-31.7%** |
 | HomeOrchestratorImpl | 531 lines | 75 lines | **-85.9%** |
-| HomeScreen.kt | 2547 lines | 2220 lines | -12.9% |
+| HomeScreen.kt | 2547 lines | **1490 lines** | **-41.5%** |
 | Domain classes | 4 | 14 | +10 |
-| Unit tests | 0 | 178+ | New |
+| Unit tests | 0 | 198+ | New (+20) |
 | V1 Modules | 0/8 | 8/8 | **100%** |
+
+---
+
+### Wave 18: UI Component Extraction ✅ (2026-01-06)
+
+**HomeScreen.kt Reduction (Target: <1500 lines)**
+- Extract Debug HUD → `debug/DebugHud.kt` (399 lines): 2221 → 1873 (-348)
+- Extract HistoryDrawer → `history/HistoryDrawer.kt` (175 lines): 1874 → 1746 (-128)
+- Extract HomeInputArea → `input/HomeInputArea.kt` (326 lines): 1746 → 1490 (-256)
+- **Total reduction**: 2221 → 1490 lines (**-731 lines, -32.9%**)
+- **Target achieved**: <1500 lines ✅
 
 ---
 

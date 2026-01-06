@@ -8,17 +8,55 @@
 
 | Metric | Original | Current | Change |
 |--------|----------|---------|--------|
-| HomeScreenViewModel | 3668 lines | 2575 lines | **-29.8%** |
+| HomeScreenViewModel | 3668 lines | 2428 lines | **-33.8%** |
 | HomeOrchestratorImpl | 531 lines | 75 lines | **-85.9%** |
 | HomeScreen.kt | 2547 lines | **1318 lines** | **-48.3%** |
 | Domain classes | 4 | 14 | +10 |
 | Unit tests | 0 | 223+ | New (+45) |
 | V1 Modules | 0/8 | 8/8 | **100%** |
-| conversation/* | 0 | 678 lines | New (P3.9) |
+| conversation/* | 0 | 738 lines | New (P3.11) |
+
+
+---
+
+## Wave 27 / P3.11: Streaming Consolidation ✅ (2026-01-06)
+
+**Consolidated streaming in ConversationVM, extracted ChatResponsePublisher**
+
+**Problem:**
+- `chatStreamCoordinator` duplicated in both HSVM and ConversationVM
+- V1 retry logic (185 lines) tangled in HSVM's `startStreamingResponse()`
+- Creating new StreamingExecutor would add third abstraction
+
+**Approach: Rewrite > Extract**
+- Used "nuke and pave" strategy instead of surgical extraction
+- V1 retry is safety feature, not business logic—safe to rewrite fresh
+- AI can write clean new code faster than understanding 185 legacy lines
+
+**Changes:**
+| File | Change |
+|------|--------|
+| `V1RetryConfig.kt` | **[NEW]** Config data class |
+| `ConversationViewModel.kt` | Added V1 retry to `startStreaming()` (+60 lines) |
+| `StreamingCallbacks.kt` | Added `onRetryStart`, `onTerminal` |
+| `ChatResponsePublisher.kt` | **[NEW]** 84 lines |
+| `PublishResult.kt` | **[NEW]** Result data class |
+| `HomeScreenViewModel.kt` | **-150 lines** |
+
+**Impact:**
+- HSVM: 2578 → 2428 lines (-150)
+- `startStreamingResponse()`: 185 → 35 lines
+- Single `chatStreamCoordinator` instance (ConversationVM)
+- V1 retry logic centralized in ConversationVM
+
+**Workflow Update:**
+- Added "Rewrite vs Extract" decision framework to `1-senior-review.md`
+- Default bias: Rewrite in vibe coding
 
 ---
 
 ## Wave 26 / P3.10: Transcription Analysis ✅ (2026-01-06)
+
 
 **Analysis: Transcription Already Portable**
 

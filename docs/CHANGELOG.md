@@ -100,11 +100,23 @@ Updated documentation system to ensure V1 is CURRENT and consistent, V7 is ARCHI
 | Metric | Original | Current | Change |
 |--------|----------|---------|--------|
 | HomeScreenViewModel | 3668 lines | 2553 lines | **-30.4%** |
+| HomeOrchestratorImpl | 531 lines | 75 lines | **-85.9%** |
 | HomeScreen.kt | 2547 lines | 2220 lines | -12.9% |
-| Domain classes | 4 | 13 | +9 |
-| Unit tests | 0 | 48+ | New |
+| Domain classes | 4 | 14 | +10 |
+| Unit tests | 0 | 178+ | New |
 
 ---
+
+### Wave 15 / M1: Domain Completeness ✅ (2026-01-06)
+
+**M1.1: SmartAnalysisParser Extraction**
+- Created `SmartAnalysisParser.kt` (548 lines) in domain layer
+- Extracted from `HomeOrchestratorImpl`: parsing, markdown generation, post-processing
+- Orchestrator reduced from 531 → 75 lines (**-85.9%**)
+
+**M1.2: Domain Test Coverage**
+- Created `SmartAnalysisParserTest.kt` (16 tests): JSON parsing, POV normalization, post-processing
+- Created `DisectorUseCaseTest.kt` (10 tests): V1 Appendix A batch splitting, 10s overlap
 
 ### Phase 1: RealTingwuCoordinator Split ✅
 - Extracted `TingwuRunnerRepository`, `TranscriptPublisherUseCase`

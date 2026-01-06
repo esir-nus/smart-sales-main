@@ -213,9 +213,11 @@ class HomeScreenViewModel @Inject constructor(
     private val enableV1ChatPublisher = optionalConfig.orElse(AiCoreConfig()).enableV1ChatPublisher
     private val enableV1TingwuMacroWindowFilter =
         optionalConfig.orElse(AiCoreConfig()).enableV1TingwuMacroWindowFilter
+    
+    // Publishing infrastructure (moved from inline creation)
     private val chatPublisher: ChatPublisher = ChatPublisherImpl()
     private val v1Finalizer = GeneralChatV1Finalizer(chatPublisher)
-    private val chatStreamCoordinator = ChatStreamCoordinator { req -> homeOrchestrator.streamChat(req) }
+    private val responsePublisher = com.smartsales.feature.chat.core.publish.ChatResponsePublisher(v1Finalizer)
 
     // [HSVM:SESSION_BOOTSTRAP]
     init {
@@ -1450,188 +1452,38 @@ class HomeScreenViewModel @Inject constructor(
 
     // [HSVM@STREAM] ===== Streaming / DisplayDelta 相关 =====
     // [HSVM:STREAMING_PIPELINE]
-    /** 启动 streaming，更新最后一条助手气泡。 */
+    /** 启动 streaming，更新最后一条助手气泡。Delegates to ConversationVM. */
+    private var streamingDeduplicator = StreamingDeduplicator()
+    
     private fun startStreamingResponse(context: com.smartsales.feature.chat.conversation.StreamingContext) {
         val request = context.request
         val assistantId = context.assistantId
-        val onCompleted = context.onCompleted
-        val onCompletedTransform = context.onCompletedTransform
-        val isAutoAnalysis = context.isAutoAnalysis
         val isSmartAnalysis = request.quickSkillId == "SMART_ANALYSIS"
-        var streamingDeduplicator = StreamingDeduplicator()
+        streamingDeduplicator = StreamingDeduplicator()
+
+        // Set context for callbacks
+        currentStreamingRequest = request
+        currentOnCompleted = context.onCompleted
+        currentOnCompletedTransform = context.onCompletedTransform
+        currentIsAutoAnalysis = context.isAutoAnalysis
 
         if (isSmartAnalysis) {
-            // 本地占位提示，避免流式展示脏文本
             updateAssistantMessage(assistantId) { msg ->
                 msg.copy(content = SMART_PLACEHOLDER_TEXT, isStreaming = true)
             }
         }
 
-        // P3.9.3: Set temporary state for StreamingCallbacks
-        currentStreamingRequest = request
-        currentOnCompleted = onCompleted
-        currentOnCompletedTransform = onCompletedTransform
-        currentIsAutoAnalysis = isAutoAnalysis
+        // V1 retry config: only for general chat
+        val v1RetryConfig = if (enableV1ChatPublisher && request.quickSkillId == null && !isSmartAnalysis) {
+            com.smartsales.feature.chat.conversation.V1RetryConfig(maxRetries = 2, enableReasonAware = true)
+        } else null
 
-        // [HSVM@RETRY] ===== Retry loop / terminal 处理 =====
-        // [HSVM:RETRY_LOOP]
-        val v1RetryEnabled = enableV1ChatPublisher && request.quickSkillId == null && !isSmartAnalysis
-        val v1MaxRetries = if (v1RetryEnabled) 2 else 0
-        val v1RetryActive = v1RetryEnabled && v1MaxRetries > 0
-        var v1TerminalFailureReason: String? = null
-        var v1TerminalArtifactStatus: ArtifactStatus? = null
-        // V1 GENERAL：修复指令只进请求，不进 UI；未启用时保持原样
-        val requestProvider = if (v1RetryActive) {
-            val repairInstruction = V1GeneralRetryPolicy.buildRepairInstruction()
-            val provider: (Int) -> ChatRequest = { attempt: Int ->
-                if (attempt == 0) request else request.copy(
-                    userMessage = request.userMessage + "\n\n" + repairInstruction
-                )
-            }
-            provider
-        } else {
-            null
-        }
-        // V1：先验收再发布，避免中间失败结果污染 UI（行为保持不变）
-        val completionEvaluator: (suspend (String, Int) -> com.smartsales.feature.chat.core.stream.CompletionDecision)? = if (v1RetryActive) {
-            val evaluator = V1GeneralCompletionEvaluator(v1Finalizer)
-            val provider: suspend (String, Int) -> com.smartsales.feature.chat.core.stream.CompletionDecision = { rawFullText, attempt ->
-                // V1 合约检查：MachineArtifact 必须有效，否则触发重试
-                // missing_json_fence 属于不可修复类错误，开启 reason-aware 避免无意义重试，提升稳定性
-                val eval = evaluator.evaluate(
-                    rawFullText = rawFullText,
-                    attempt = attempt,
-                    maxRetries = v1MaxRetries,
-                    enableReasonAwareRetry = true
-                )
-                if (eval.decision == com.smartsales.feature.chat.core.stream.CompletionDecision.Terminal) {
-                    v1TerminalFailureReason = eval.finalizeResult.failureReason
-                    v1TerminalArtifactStatus = eval.finalizeResult.artifactStatus
-                }
-                eval.decision
-            }
-            provider
-        } else {
-            null
-        }
-        // V1：行为保持不变，仅封装副作用以缩短 ViewModel 逻辑
-        val v1RetryEffects = if (v1RetryActive) {
-            V1GeneralRetryEffects(
-                resetDeduper = {
-                    // 重试前清空占位内容并重置去重器，避免 UI 闪烁/残留
-                    streamingDeduplicator = StreamingDeduplicator()
-                },
-                resetPlaceholder = {
-                    updateAssistantMessage(assistantId) { msg ->
-                        msg.copy(
-                            content = "",
-                            rawContent = "",
-                            sanitizedContent = "",
-                            isStreaming = true
-                        )
-                    }
-                },
-                publishTerminal = { fullText ->
-                    handleStreamCompleted(
-                        request = request,
-                        assistantId = assistantId,
-                        rawFullText = fullText,
-                        onCompleted = onCompleted,
-                        onCompletedTransform = onCompletedTransform,
-                        isAutoAnalysis = isAutoAnalysis,
-                        isSmartAnalysis = isSmartAnalysis
-                    )
-                }
-            )
-        } else {
-            null
-        }
-        val onRetryStart: suspend (Int) -> Unit = if (v1RetryActive) {
-            { attempt ->
-                // 只记录 reason code/次数；严禁记录任何用户/模型原文
-                Log.d(
-                    TAG,
-                    "event=v1_general_retry_start, " +
-                        "nextAttempt=$attempt, " +
-                        "maxRetries=$v1MaxRetries, " +
-                        "lastFailureReason=$v1TerminalFailureReason"
-                )
-                requireNotNull(v1RetryEffects).onRetryStart(attempt)
-            }
-        } else {
-            { _: Int -> }
-        }
-        val onTerminal: suspend (String, Int) -> Unit = if (v1RetryActive) {
-            { fullText, attempt ->
-                // 终止发布点仅记录原因码与重试信息，严禁输出任何用户/模型原文，避免隐私泄露
-                Log.d(
-                    TAG,
-                    "event=v1_general_terminal_publish, " +
-                        "failureReason=$v1TerminalFailureReason, " +
-                        "attempt=$attempt, " +
-                        "maxRetries=$v1MaxRetries, " +
-                        "reasonAware=true, " +
-                        "artifactStatus=$v1TerminalArtifactStatus"
-                )
-                requireNotNull(v1RetryEffects).onTerminal(fullText, attempt)
-            }
-        } else {
-            { _: String, _: Int -> }
-        }
-
-        // 抽出流式协调器，降低 ViewModel 复杂度，便于后续 V1 规则演进
-        chatStreamCoordinator.start(
+        // Delegate to ConversationViewModel with all V1 retry logic centralized there
+        conversationViewModel.startStreaming(
+            context = context,
+            callbacks = this,
             scope = viewModelScope,
-            request = request,
-            onDelta = { token ->
-                if (!isSmartAnalysis) {
-                    updateAssistantMessage(assistantId) { msg ->
-                        val merged = streamingDeduplicator.mergeSnapshot(
-                            current = msg.content,
-                            incoming = token
-                        )
-                        msg.copy(
-                            content = merged,
-                            isStreaming = true
-                        )
-                    }
-                }
-            },
-            onCompleted = { fullText ->
-                if (v1RetryActive && enableV1ChatPublisher && request.quickSkillId == null && !isSmartAnalysis) {
-                    // 仅记录发布事件与次数信息，严禁输出任何用户/模型原文
-                    Log.d(
-                        TAG,
-                        "event=v1_general_accept_publish, " +
-                            "attempt=unknown, " +
-                            "maxRetries=$v1MaxRetries, " +
-                            "failureReason=null"
-                    )
-                }
-                handleStreamCompleted(
-                    request = request,
-                    assistantId = assistantId,
-                    rawFullText = fullText,
-                    onCompleted = onCompleted,
-                    onCompletedTransform = onCompletedTransform,
-                    isAutoAnalysis = isAutoAnalysis,
-                    isSmartAnalysis = isSmartAnalysis
-                )
-            },
-            onError = { throwable ->
-                handleStreamError(
-                    request = request,
-                    assistantId = assistantId,
-                    throwable = throwable,
-                    isAutoAnalysis = isAutoAnalysis,
-                    isSmartAnalysis = isSmartAnalysis
-                )
-            },
-            maxRetries = v1MaxRetries,
-            completionEvaluator = completionEvaluator,
-            requestProvider = requestProvider,
-            onRetryStart = onRetryStart,
-            onTerminal = onTerminal
+            v1RetryConfig = v1RetryConfig
         )
     }
 

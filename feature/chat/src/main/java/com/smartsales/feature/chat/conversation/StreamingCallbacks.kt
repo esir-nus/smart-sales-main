@@ -10,4 +10,9 @@ interface StreamingCallbacks {
     fun onDelta(assistantId: String, token: String)
     suspend fun onCompleted(assistantId: String, rawFullText: String)
     fun onError(assistantId: String, throwable: Throwable)
+    
+    // V1 retry callbacks
+    suspend fun onRetryStart(attempt: Int) {}
+    suspend fun onTerminal(fullText: String, attempt: Int, failureReason: String?) {}
 }
+

@@ -79,3 +79,48 @@ When reviewing for AI-assisted development (vibe coding), specifically evaluate:
 - **Naming**: Do names tell the story without comments?
 - **Debuggability**: When this breaks at 2am, can you find the problem fast?
 - **Modification safety**: Can you change this without breaking something far away?
+
+---
+
+## Refactoring Strategy: Rewrite vs Extract
+
+When reviewing refactoring work, evaluate which approach is better:
+
+### 🔄 Rewrite ("Nuke and Pave")
+
+**Choose when:**
+- Code is > 100 lines and tangled
+- New architecture exists to target
+- Existing tests cover behavior (not implementation)
+- AI can write clean new code faster than understanding old
+
+**Advantages:**
+- Natively built for new architecture
+- No legacy bugs/anti-patterns carried forward
+- Easier for AI to reason about
+- Clean test coverage from scratch
+
+### 🔬 Surgical Extraction
+
+**Choose when:**
+- Code is battle-tested with edge cases
+- < 50 lines, well-isolated
+- No architecture change, just reorganization
+- Specific behavior must be preserved exactly
+
+**Risks:**
+- May preserve hidden bugs
+- Legacy patterns leak into new code
+- AI struggles to understand context
+
+### Decision Checklist
+
+| Factor | Rewrite | Extract |
+|--------|---------|---------|
+| Lines of code | > 100 | < 50 |
+| Architecture changing? | Yes → Rewrite | No |
+| Test coverage | Behavior tests exist | Implementation tests exist |
+| AI context window | Would exceed | Fits easily |
+| Safety feature (not business logic)? | Rewrite is safe | Be careful |
+
+**Default bias: Rewrite.** In vibe coding, clean new code is faster and safer than surgical extraction.

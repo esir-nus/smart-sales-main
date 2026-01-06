@@ -4,6 +4,13 @@ import com.smartsales.feature.chat.core.ChatHistoryItem
 import com.smartsales.feature.chat.core.ChatRequest
 import com.smartsales.feature.chat.core.ChatRole
 import com.smartsales.feature.chat.core.stream.ChatStreamCoordinator
+import com.smartsales.feature.chat.core.stream.CompletionDecision
+import com.smartsales.feature.chat.core.publisher.ChatPublisher
+import com.smartsales.feature.chat.core.publisher.ChatPublisherImpl
+import com.smartsales.feature.chat.core.publisher.GeneralChatV1Finalizer
+import com.smartsales.feature.chat.core.v1.V1GeneralCompletionEvaluator
+import com.smartsales.feature.chat.core.v1.V1GeneralRetryPolicy
+import com.smartsales.feature.chat.core.v1.V1GeneralRetryEffects
 import com.smartsales.feature.chat.home.ChatMessageRole
 import com.smartsales.feature.chat.home.ChatMessageUi
 import com.smartsales.feature.chat.home.orchestrator.HomeOrchestrator
@@ -45,6 +52,10 @@ class ConversationViewModel @Inject constructor(
     private val chatStreamCoordinator = ChatStreamCoordinator { req -> 
         homeOrchestrator.streamChat(req) 
     }
+    
+    // V1 infrastructure for retry support (pure Kotlin, no DI needed)
+    private val chatPublisher: ChatPublisher = ChatPublisherImpl()
+    private val v1Finalizer = GeneralChatV1Finalizer(chatPublisher)
     
     /**
      * Dispatch intent to Reducer with optional scope for side effects.
@@ -257,17 +268,66 @@ class ConversationViewModel @Inject constructor(
      * P3.9.3: Start streaming with callbacks pattern.
      * 
      * Delegates to ChatStreamCoordinator and calls back to HSVM for side effects.
-     * This enables migration of streaming logic without moving all HSVM state.
+     * Supports V1 retry configuration for general chat.
      */
     fun startStreaming(
         context: StreamingContext,
         callbacks: StreamingCallbacks,
-        scope: CoroutineScope
+        scope: CoroutineScope,
+        v1RetryConfig: V1RetryConfig? = null
     ) {
         val request = context.request
         val assistantId = context.assistantId
         
-        // Delegate to chatStreamCoordinator
+        // V1 retry setup (moved from HSVM)
+        val v1RetryActive = v1RetryConfig != null && v1RetryConfig.maxRetries > 0
+        var v1TerminalFailureReason: String? = null
+        
+        val completionEvaluator: (suspend (String, Int) -> CompletionDecision)? = if (v1RetryActive) {
+            val evaluator = V1GeneralCompletionEvaluator(v1Finalizer)
+            val lambda: suspend (String, Int) -> CompletionDecision = { rawFullText, attempt ->
+                val eval = evaluator.evaluate(
+                    rawFullText = rawFullText,
+                    attempt = attempt,
+                    maxRetries = v1RetryConfig!!.maxRetries,
+                    enableReasonAwareRetry = v1RetryConfig.enableReasonAware
+                )
+                if (eval.decision == CompletionDecision.Terminal) {
+                    v1TerminalFailureReason = eval.finalizeResult.failureReason
+                }
+                eval.decision
+            }
+            lambda
+        } else null
+        
+        val requestProvider: ((Int) -> ChatRequest)? = if (v1RetryActive) {
+            val repairInstruction = V1GeneralRetryPolicy.buildRepairInstruction()
+            val lambda: (Int) -> ChatRequest = { attempt ->
+                if (attempt == 0) request else request.copy(
+                    userMessage = request.userMessage + "\n\n" + repairInstruction
+                )
+            }
+            lambda
+        } else null
+        
+        val onRetryStart: suspend (Int) -> Unit = if (v1RetryActive) {
+            { attempt ->
+                // Notify callback for UI reset
+                callbacks.onRetryStart(attempt)
+            }
+        } else {
+            { _ -> }
+        }
+        
+        val onTerminal: suspend (String, Int) -> Unit = if (v1RetryActive) {
+            { fullText, attempt ->
+                callbacks.onTerminal(fullText, attempt, v1TerminalFailureReason)
+            }
+        } else {
+            { _, _ -> }
+        }
+        
+        // Delegate to chatStreamCoordinator with V1 retry config
         chatStreamCoordinator.start(
             scope = scope,
             request = request,
@@ -279,7 +339,13 @@ class ConversationViewModel @Inject constructor(
             },
             onError = { throwable ->
                 callbacks.onError(assistantId, throwable)
-            }
+            },
+            maxRetries = v1RetryConfig?.maxRetries ?: 0,
+            completionEvaluator = completionEvaluator,
+            requestProvider = requestProvider,
+            onRetryStart = onRetryStart,
+            onTerminal = onTerminal
         )
     }
+
 }

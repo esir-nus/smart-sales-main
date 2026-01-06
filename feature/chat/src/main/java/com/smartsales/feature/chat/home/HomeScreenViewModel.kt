@@ -101,24 +101,7 @@ import com.smartsales.feature.chat.core.v1.V1GeneralCompletionEvaluator
 import com.smartsales.feature.chat.core.v1.V1GeneralRetryPolicy
 import com.smartsales.feature.chat.core.v1.V1GeneralRetryEffects
 
-/*
- * HomeScreenViewModel.kt — NAV INDEX (for Codex / AI directed reads)
- *
- * 使用方式：在编辑器里搜索下面的锚点（例如：HSVM@PUBLISH）快速跳转。
- * 注意：不要依赖行号（会漂移），只依赖锚点。
- *
- * [HSVM@TOP]          文件顶部 / 常量 / 初始化
- * [HSVM@PUBLIC_API]   对外 public API（UI 调用入口）
- * [HSVM@ENTRY]        用户事件入口（send / event / intent）
- * [HSVM@STREAM]       Streaming / DisplayDelta 相关
- * [HSVM@PUBLISH]      V1 Chat 发布流水线（visible2user 提取 / MachineArtifact）
- * [HSVM@RETRY]        Retry loop / terminal 处理（含 maxRetries / FAILED）
- * [HSVM@META]         Metadata 写入路径（含 L3-only gating）
- * [HSVM@HELPERS]      strip/sanitize/parse 等 helper（严禁 JSON 泄露）
- * [HSVM@HUD]          DebugSnapshot / HUD / trace 输出
- */
 
-// [HSVM@TOP] ===== 文件顶部 / 常量 / 初始化 =====
 private const val DEFAULT_SESSION_ID = "home-session"
 private const val DEFAULT_SESSION_TITLE = SessionTitlePolicy.PLACEHOLDER_TITLE
 private const val LONG_CONTENT_THRESHOLD = 240
@@ -153,14 +136,7 @@ interface AiSessionRepository {
     suspend fun loadOlderMessages(currentTopMessageId: String?): List<ChatMessageUi>
 }
 
-// [HSVM@PUBLIC_API] ===== 对外 public API（UI 调用入口） =====
 /** HomeScreenViewModel：驱动聊天、快捷技能以及设备/音频快照。 */
-/**
- * NAV: docs/index/HomeScreenViewModel.index.md
- * Tags: [HSVM:STREAMING_PIPELINE] [HSVM:RETRY_LOOP] [HSVM:CHAT_PUBLISH]
- *       [HSVM:TINGWU_BATCH_RELEASE] [HSVM:PREFIX_GATE] [HSVM:MACRO_WINDOW_FILTER]
- *       [HSVM:DEBUG_SNAPSHOT] [HSVM:SESSION_BOOTSTRAP]
- */
 @HiltViewModel
 class HomeScreenViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
@@ -208,8 +184,7 @@ class HomeScreenViewModel @Inject constructor(
     private var firstAssistantProcessed: Boolean = false
     private var latestAnalysisMarkdown: String? = null
     private var latestAnalysisMessageId: String? = null
-    private var pendingExportAfterAnalysis: ExportFormat? = null
-    private var exportAutoAnalysisInFlight: Boolean = false
+
     private val enableV1ChatPublisher = optionalConfig.orElse(AiCoreConfig()).enableV1ChatPublisher
     private val enableV1TingwuMacroWindowFilter =
         optionalConfig.orElse(AiCoreConfig()).enableV1TingwuMacroWindowFilter
@@ -218,7 +193,7 @@ class HomeScreenViewModel @Inject constructor(
     private val chatPublisher: ChatPublisher = ChatPublisherImpl()
     private val v1Finalizer = GeneralChatV1Finalizer(chatPublisher)
 
-    // [HSVM:SESSION_BOOTSTRAP]
+
     init {
         // 从 catalog 加载快捷技能到状态
         val skills = quickSkillDefinitions.map { it.toUiModel() }
@@ -252,7 +227,7 @@ class HomeScreenViewModel @Inject constructor(
         firstAssistantProcessed = false
     }
 
-    // [HSVM@ENTRY] ===== 用户事件入口（send / event / intent） =====
+
     fun onInputChanged(text: String) {
         // P3.1.B1: Dispatch to ConversationReducer
         conversationViewModel.dispatch(
@@ -338,32 +313,6 @@ class HomeScreenViewModel @Inject constructor(
         )
     }
 
-    private fun startSmartAnalysisForExport(): Boolean {
-        if (_uiState.value.isSending || _uiState.value.isStreaming || exportAutoAnalysisInFlight) {
-            return false
-        }
-        val target = com.smartsales.domain.chat.InputClassifier.findSmartAnalysisPrimaryContent("", _uiState.value.chatMessages)
-        if (target == null) {
-            _uiState.update { it.copy(snackbarMessage = "内容太少，无法智能分析，已取消导出") }
-            return false
-        }
-        val contextContent = com.smartsales.domain.chat.InputClassifier.findContextForAnalysis(target.content, _uiState.value.chatMessages)
-        val userMessage = buildSmartAnalysisUserMessage(
-            mainContent = target.content,
-            context = contextContent,
-            goal = "通用分析"
-        )
-        exportAutoAnalysisInFlight = true
-        // 说明：导出触发的智能分析不清空输入框，避免打断用户输入。
-        sendMessageInternal(
-            messageText = userMessage,
-            skillOverride = QuickSkillId.SMART_ANALYSIS,
-            userDisplayText = "智能分析（为导出准备）",
-            isAutoAnalysis = true,
-            preserveInputText = true
-        )
-        return true
-    }
 
     fun onSmartAnalysisClicked() {
         // 直接复用智能分析主流程
@@ -382,44 +331,31 @@ class HomeScreenViewModel @Inject constructor(
     private fun onExportRequested(format: ExportFormat) {
         if (_uiState.value.exportInProgress) return
         viewModelScope.launch {
-            // Check export gate via ExportViewModel
             val gate = exportCoordinator.checkExportGate(sessionId)
             
-            if (gate.ready) {
-                // Gate passed: prepare markdown and export
-                pendingExportAfterAnalysis = null
-                exportAutoAnalysisInFlight = false
-                val analysisMarkdown = findSmartAnalysisMarkdownForExport()
-                val markdown = if (!analysisMarkdown.isNullOrBlank()) {
-                    wrapSmartAnalysisForExport(analysisMarkdown)
-                } else {
-                    buildTranscriptMarkdown(_uiState.value.chatMessages)
-                }
-                _uiState.update { it.copy(exportInProgress = true) }
-                val result = exportCoordinator.performExport(sessionId, format, _uiState.value.userName, markdown)
-                when (result) {
-                    is Result.Success -> _uiState.update { it.copy(exportInProgress = false) }
-                    is Result.Error -> _uiState.update { 
-                        it.copy(
-                            exportInProgress = false,
-                            chatErrorMessage = result.throwable.message ?: "导出失败"
-                        )
-                    }
-                }
+            if (!gate.ready) {
+                // Simplified: just tell user to complete analysis first
+                _uiState.update { it.copy(snackbarMessage = "请先完成智能分析再导出") }
                 return@launch
             }
-
-            // Gate not ready: start smart analysis and queue export
-            pendingExportAfterAnalysis = format
-            val formatLabel = if (format == ExportFormat.PDF) "PDF" else "CSV"
-            if (exportAutoAnalysisInFlight || _uiState.value.isSending || _uiState.value.isStreaming) {
-                _uiState.update { it.copy(snackbarMessage = "智能分析进行中，完成后将自动导出${formatLabel}") }
-                return@launch
-            }
-            if (startSmartAnalysisForExport()) {
-                _uiState.update { it.copy(snackbarMessage = "已开始智能分析，完成后将自动导出${formatLabel}") }
+            
+            // Gate passed: prepare markdown and export
+            val analysisMarkdown = findSmartAnalysisMarkdownForExport()
+            val markdown = if (!analysisMarkdown.isNullOrBlank()) {
+                wrapSmartAnalysisForExport(analysisMarkdown)
             } else {
-                pendingExportAfterAnalysis = null
+                buildTranscriptMarkdown(_uiState.value.chatMessages)
+            }
+            _uiState.update { it.copy(exportInProgress = true) }
+            val result = exportCoordinator.performExport(sessionId, format, _uiState.value.userName, markdown)
+            when (result) {
+                is Result.Success -> _uiState.update { it.copy(exportInProgress = false) }
+                is Result.Error -> _uiState.update { 
+                    it.copy(
+                        exportInProgress = false,
+                        chatErrorMessage = result.throwable.message ?: "导出失败"
+                    )
+                }
             }
         }
     }
@@ -464,42 +400,8 @@ class HomeScreenViewModel @Inject constructor(
     private fun wrapSmartAnalysisForExport(body: String): String =
         com.smartsales.domain.chat.ChatMessageBuilder.wrapSmartAnalysisForExport(body)
 
-    private fun maybeStartPendingExportAnalysis() {
-        val pending = pendingExportAfterAnalysis ?: return
-        if (exportAutoAnalysisInFlight || _uiState.value.isSending || _uiState.value.isStreaming) return
-        // 说明：导出被排队时，等待对话空闲后再自动触发智能分析。
-        viewModelScope.launch {
-            val gate = exportCoordinator.checkExportGate(sessionId)
-            if (gate.ready) {
-                // Gate ready: trigger export immediately
-                pendingExportAfterAnalysis = null
-                val analysisMarkdown = findSmartAnalysisMarkdownForExport()
-                val markdown = if (!analysisMarkdown.isNullOrBlank()) {
-                    wrapSmartAnalysisForExport(analysisMarkdown)
-                } else {
-                    buildTranscriptMarkdown(_uiState.value.chatMessages)
-                }
-                _uiState.update { it.copy(exportInProgress = true) }
-                val result = exportCoordinator.performExport(sessionId, pending, _uiState.value.userName, markdown)
-                when (result) {
-                    is Result.Success -> _uiState.update { it.copy(exportInProgress = false) }
-                    is Result.Error -> _uiState.update {
-                        it.copy(
-                            exportInProgress = false,
-                            chatErrorMessage = result.throwable.message ?: "导出失败"
-                        )
-                    }
-                }
-                return@launch
-            }
-            val formatLabel = if (pending == ExportFormat.PDF) "PDF" else "CSV"
-            if (startSmartAnalysisForExport()) {
-                _uiState.update { it.copy(snackbarMessage = "已开始智能分析，完成后将自动导出${formatLabel}") }
-            } else {
-                pendingExportAfterAnalysis = null
-            }
-        }
-    }
+
+
 
     private fun findSmartAnalysisMarkdownForExport(): String? {
         latestAnalysisMarkdown?.takeIf { it.isNotBlank() }?.let { return it }
@@ -993,12 +895,7 @@ class HomeScreenViewModel @Inject constructor(
         _uiState.update { it.copy(navigationRequest = HomeNavigationRequest.UserCenter) }
     }
 
-    fun onRetryMessage(messageId: String) {
-        val failed = _uiState.value.chatMessages.firstOrNull { it.id == messageId } ?: return
-        sendMessageInternal(
-            messageText = failed.content,
-        )
-    }
+
 
     fun onDismissError() {
         _uiState.update { it.copy(snackbarMessage = null, chatErrorMessage = null) }
@@ -1171,9 +1068,7 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
-    fun setQuickSkills(skills: List<QuickSkillUi>) {
-        _uiState.update { it.copy(quickSkills = skills) }
-    }
+
 
     fun onNewChatClicked() {
         viewModelScope.launch {
@@ -1367,90 +1262,7 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
-    // 共享的发送 helper：输入框和快捷技能都走这里
-    private fun sendMessageInternal(
-        messageText: String,
-        skillOverride: QuickSkillId? = null,
-        userDisplayText: String? = null,
-        onCompleted: (String) -> Unit = {},
-        onCompletedTransform: ((String) -> String)? = null,
-        isAutoAnalysis: Boolean = false,
-        preserveInputText: Boolean = false
-    ) {
-        val content = messageText.trim()
-        if (content.isEmpty() || _uiState.value.isSending || _uiState.value.isStreaming) return
-        _uiState.update { it.copy(chatErrorMessage = null) }
-        val quickSkill = (skillOverride ?: _uiState.value.selectedSkill?.id)?.let { id ->
-            quickSkillDefinitionsById[id]
-        }
-        val quickSkillId = quickSkill?.id
-        val userMessage = createUserMessage(userDisplayText ?: content)
-        val isSmartAnalysis = quickSkillId == QuickSkillId.SMART_ANALYSIS
-        val assistantPlaceholder = if (isSmartAnalysis) {
-            createAssistantPlaceholder(
-                content = SMART_PLACEHOLDER_TEXT,
-                isSmartAnalysis = true
-            )
-        } else {
-            createAssistantPlaceholder()
-        }
-        // 先在旧消息列表上判断是否已有助手回复，避免占位气泡干扰
-        val hadAssistantReplyBefore = _uiState.value.chatMessages.any { it.role == ChatMessageRole.ASSISTANT }
-        val isFirstAssistantReply = !hadAssistantReplyBefore
-        debugLog(
-            event = "chat_request_start",
-            data = mapOf(
-                "sessionId" to sessionId,
-                "mode" to (quickSkillId ?: "GENERAL_CHAT"),
-                "isFirstReply" to isFirstAssistantReply,
-                "inputLength" to content.length,
-                "isAutoAnalysis" to isAutoAnalysis
-            )
-        )
-        val audioContext = when {
-            quickSkill?.requiresAudioContext == true -> {
-                buildAudioContextSummary() ?: run {
-                    // 没有最新录音可用时仍放行，但给出提示
-                    _uiState.update { state ->
-                        if (state.snackbarMessage == null) {
-                            state.copy(snackbarMessage = "暂无可用音频上下文，已发送文本请求")
-                        } else state
-                    }
-                    null
-                }
-            }
 
-            else -> null
-        }
-        val newState = _uiState.value.copy(
-            chatMessages = _uiState.value.chatMessages + userMessage + assistantPlaceholder,
-            inputText = if (preserveInputText) _uiState.value.inputText else "",
-            isSending = true,
-            isStreaming = true,
-            isInputBusy = true,
-            isBusy = true,
-            snackbarMessage = null,
-            showWelcomeHero = false
-        )
-        _uiState.value = newState
-        persistMessagesAsync()
-        viewModelScope.launch {
-            updateSessionSummary(userMessage.content)
-        }
-        val request = buildChatRequest(content, quickSkillId, newState.chatMessages, audioContext, isAutoAnalysis)
-        startStreamingResponse(
-            com.smartsales.feature.chat.conversation.StreamingContext(
-                request = request,
-                assistantId = assistantPlaceholder.id,
-                onCompleted = onCompleted,
-                onCompletedTransform = onCompletedTransform,
-                isAutoAnalysis = isAutoAnalysis
-            )
-        )
-    }
-
-    // [HSVM@STREAM] ===== Streaming / DisplayDelta 相关 =====
-    // [HSVM:STREAMING_PIPELINE]
     /** 启动 streaming，更新最后一条助手气泡。Delegates to ConversationVM. */
     private var streamingDeduplicator = StreamingDeduplicator()
     
@@ -1486,8 +1298,8 @@ class HomeScreenViewModel @Inject constructor(
         )
     }
 
-    // [HSVM@PUBLISH] ===== V1 Chat 发布流水线 =====
-    // [HSVM:CHAT_PUBLISH]
+
+
     private suspend fun handleStreamCompleted(
         request: ChatRequest,
         assistantId: String,
@@ -1552,20 +1364,10 @@ class HomeScreenViewModel @Inject constructor(
         )
         val isSmartFailure = isSmartAnalysis && cleaned.trim() == SMART_ANALYSIS_FAILURE_TEXT
         if (isSmartAnalysis && !isSmartFailure) {
-            // 根据是否是导出前自动分析，区分来源
-            val source = if (pendingExportAfterAnalysis != null) {
-                AnalysisSource.SMART_ANALYSIS_AUTO
-            } else {
-                AnalysisSource.SMART_ANALYSIS_USER
-            }
-            persistLatestAnalysisMarker(source, assistantId)
+            persistLatestAnalysisMarker(AnalysisSource.SMART_ANALYSIS_USER, assistantId)
             onAnalysisCompleted(cleaned, assistantId)
         } else if (isSmartAnalysis && isSmartFailure) {
-            pendingExportAfterAnalysis = null
             _uiState.update { it.copy(exportInProgress = false) }
-        }
-        if (isSmartAnalysis && isAutoAnalysis) {
-            exportAutoAnalysisInFlight = false
         }
         debugLog(
             event = "chat_stream_completed",
@@ -1588,8 +1390,6 @@ class HomeScreenViewModel @Inject constructor(
         onCompleted(cleaned)
         // 顺序保持不变，确保状态与展示一致
         _uiState.update { it.copy(isSending = false, isStreaming = false, isInputBusy = false, isBusy = false) }
-        // 说明：若导出被排队，当前对话完成后再尝试触发自动分析。
-        maybeStartPendingExportAnalysis()
         if (isFirstGeneralReply) {
             // 自动标题仅在首条助手回复时尝试，优先 Rename 渠道，缺失时回退元数据
             maybeResolveSessionTitle(latestMeta, channels.renameCandidate)
@@ -1634,10 +1434,6 @@ class HomeScreenViewModel @Inject constructor(
                 msg.copy(hasError = true, isStreaming = false)
             }
         }
-        if (isSmartAnalysis && isAutoAnalysis) {
-            exportAutoAnalysisInFlight = false
-        }
-        pendingExportAfterAnalysis = null
         _uiState.update {
             it.copy(
                 isSending = false,
@@ -1648,8 +1444,6 @@ class HomeScreenViewModel @Inject constructor(
                 chatErrorMessage = throwable.message ?: "AI 回复失败"
             )
         }
-        // 说明：若导出被排队，失败后也尝试触发自动分析。
-        maybeStartPendingExportAnalysis()
     }
 
     private fun updateAssistantMessage(
@@ -1818,8 +1612,7 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
-    private fun latestUserContent(): String? =
-        _uiState.value.chatMessages.lastOrNull { it.role == ChatMessageRole.USER }?.content?.trim()
+
 
     private fun handleLowInfoGeneralChatInput() {
         // 清空输入框，避免用户反复点击发送同一段内容
@@ -2071,49 +1864,9 @@ class HomeScreenViewModel @Inject constructor(
             // 导出提示改为非对话层面的 UI（例如顶部 banner / icon 提示），
             // 不再插入额外的对话气泡，避免打断会话流和影响"单条智能分析卡片"结构。
         }
-
-        pendingExportAfterAnalysis?.let { format ->
-            pendingExportAfterAnalysis = null
-            exportAutoAnalysisInFlight = false
-            viewModelScope.launch {
-                val markdown = wrapSmartAnalysisForExport(summary)
-                _uiState.update { it.copy(exportInProgress = true) }
-                val result = exportCoordinator.performExport(sessionId, format, _uiState.value.userName, markdown)
-                when (result) {
-                    is Result.Success -> _uiState.update { it.copy(exportInProgress = false) }
-                    is Result.Error -> _uiState.update {
-                        it.copy(
-                            exportInProgress = false,
-                            chatErrorMessage = result.throwable.message ?: "导出失败"
-                        )
-                    }
-                }
-            }
-        }
     }
 
-    private fun findLatestLongContent(): Pair<String?, String?> {
-        val messages = _uiState.value.chatMessages.asReversed()
-        var primary: String? = null
-        val contextChunks = mutableListOf<String>()
-        var contextLength = 0
-        for (msg in messages) {
-            val text = msg.content.trim()
-            if (text.isEmpty()) continue
-            if (primary == null && text.length >= LONG_CONTENT_THRESHOLD) {
-                primary = text
-                continue
-            }
-            if (contextChunks.size < CONTEXT_MESSAGE_LIMIT && contextLength < CONTEXT_LENGTH_LIMIT) {
-                val toAdd = text.take(CONTEXT_LENGTH_LIMIT - contextLength)
-                contextChunks += toAdd
-                contextLength += toAdd.length
-            } else {
-                break
-            }
-        }
-        return primary to contextChunks.asReversed().joinToString("\n")
-    }
+
 
     private fun buildSmartAnalysisUserMessage(
         mainContent: String,
@@ -2129,7 +1882,7 @@ class HomeScreenViewModel @Inject constructor(
      * - 优先尝试 <Metadata> 标签内的 JSON，失败则回退到末尾 JSON 块（兼容旧格式）
      * - 仅当存在有效字段时写入 MetaHub
      */
-    // [HSVM@META] ===== Metadata 写入路径（含 L3-only gating） =====
+
     private suspend fun handleGeneralChatMetadata(
         rawFullText: String,
         metadataJson: String?
@@ -2366,7 +2119,7 @@ class HomeScreenViewModel @Inject constructor(
             .trim()
     }
 
-    // [HSVM@STREAMING_CALLBACKS] ===== StreamingCallbacks Implementation =====
+
     // P3.9.2: Extract callbacks from inline lambdas for decoupling
     
     override fun onDelta(assistantId: String, token: String) {

@@ -78,49 +78,57 @@ When reviewing for AI-assisted development (vibe coding), specifically evaluate:
 - **Locality**: Is related logic close together or scattered?
 - **Naming**: Do names tell the story without comments?
 - **Debuggability**: When this breaks at 2am, can you find the problem fast?
-- **Modification safety**: Can you change this without breaking something far away?
+- **Modification safety**: Can you change this without breaking something far away?---
 
----
+## Refactoring Strategy: Rewrite First
 
-## Refactoring Strategy: Rewrite vs Extract
+**Default: Rewrite. Always.**
 
-When reviewing refactoring work, evaluate which approach is better:
+In vibe coding, AI writes clean new code faster than understanding legacy. The old code is a **reference**, not a **constraint**.
 
-### 🔄 Rewrite ("Nuke and Pave")
-
-**Choose when:**
-- Code is > 100 lines and tangled
-- New architecture exists to target
-- Existing tests cover behavior (not implementation)
-- AI can write clean new code faster than understanding old
-
-**Advantages:**
-- Natively built for new architecture
-- No legacy bugs/anti-patterns carried forward
-- Easier for AI to reason about
-- Clean test coverage from scratch
-
-### 🔬 Surgical Extraction
+### 🔄 Rewrite ("Nuke and Pave") — THE DEFAULT
 
 **Choose when:**
-- Code is battle-tested with edge cases
-- < 50 lines, well-isolated
-- No architecture change, just reorganization
-- Specific behavior must be preserved exactly
+- You're refactoring (any size)
+- Architecture guidelines exist (ArchitectureRefactoring.md)
+- You can verify behavior (tests, manual check, or both)
 
-**Risks:**
-- May preserve hidden bugs
-- Legacy patterns leak into new code
-- AI struggles to understand context
+**The Rewrite Flow:**
+1. Read old code to understand **what it does** (not how)
+2. Write new code following **current architecture patterns**
+3. Rewrite/adapt tests for new structure
+4. Delete old code entirely
+5. Verify behavior
 
-### Decision Checklist
+**Why this wins:**
+- AI writes clean code faster than untangling legacy
+- Native to new architecture (no legacy patterns leak)
+- Tests get rewritten too (cleaner, aligned to new structure)
+- Old code = reference repo, not sacred text
 
-| Factor | Rewrite | Extract |
-|--------|---------|---------|
-| Lines of code | > 100 | < 50 |
-| Architecture changing? | Yes → Rewrite | No |
-| Test coverage | Behavior tests exist | Implementation tests exist |
-| AI context window | Would exceed | Fits easily |
-| Safety feature (not business logic)? | Rewrite is safe | Be careful |
+### 🔬 Surgical Extraction — THE EXCEPTION
 
-**Default bias: Rewrite.** In vibe coding, clean new code is faster and safer than surgical extraction.
+**Choose ONLY when:**
+- Code is < 30 lines AND already isolated
+- No architecture change (just moving files)
+- Exact byte-for-byte behavior required (crypto, protocol)
+
+### The Vibe Coding Advantage
+
+| Old Approach | Vibe Coding |
+|--------------|-------------|
+| "Preserve edge cases" | "Reference old code, write fresh" |
+| "Migrate tests carefully" | "Rewrite tests for new patterns" |
+| "Step-by-step extraction" | "Understand → Rewrite → Delete" |
+| "Fear of breaking" | "Tests + verify = confidence" |
+
+### Decision: Almost Always Rewrite
+
+| Question | Answer |
+|----------|--------|
+| Is there an architecture to follow? | Yes → Rewrite |
+| Can I verify behavior after? | Yes → Rewrite |
+| Is code > 30 lines? | Yes → Rewrite |
+| Am I spending time understanding instead of coding? | Yes → Rewrite |
+
+**If you're debating, rewrite.**

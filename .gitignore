@@ -122,6 +122,9 @@ tingwu-doc.md
 frontend_integration.md
 APIs.txt
 
+# Archived documentation (historical reference only)
+docs/archived/
+
 # Workflow documentation (internal)
 workflows/
 !.agent/

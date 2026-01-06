@@ -40,6 +40,10 @@ android {
             excludes += "META-INF/NOTICE.md"
         }
     }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 kotlin {

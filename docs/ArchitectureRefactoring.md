@@ -54,7 +54,7 @@ smart-sales/
 │
 ├── data/ai-core/                    # Provider Layer
 │   ├── DashscopeAiChatService.kt       # AI Chatter (V1 §3.1.1)
-│   ├── TingwuRunner.kt                 # V1 §3.2.2 [RENAME]
+│   ├── TingwuRunner.kt                 # Impl of TingwuCoordinator (V1 §3.2.2) ✅
 │   └── tingwu/
 │       └── TranscriptPublisher.kt      # V1 §3.2.4 [RENAME]
 │
@@ -73,8 +73,7 @@ smart-sales/
 │   ├── stream/StreamingCoordinator.kt  # [RENAME]
 │   └── sessions/SessionsManager.kt
 │
-├── data/ai-core/                    # Provider Layer
-│   └── TingwuRunner.kt                 # Interface + impl [ADD interface]
+
 │
 └── feature/chat/presentation/
     └── HomeViewModel.kt                # Shell [RENAME from HSVM]
@@ -89,37 +88,42 @@ smart-sales/
 | AI Chatter | §3.1.1 | `DashscopeAiChatService.kt` | ✅ |
 | SmartAnalysis | §3.1.2 | `SmartAnalysisParser.kt` | ✅ |
 | LLM Parser | §3.1.3 | `SmartAnalysisParser.kt` | ✅ |
-| Disector | §3.2.1 | `Disector.kt` | 🔄 Rename |
-| Tingwu Runner | §3.2.2 | `TingwuRunner.kt` | 🔄 Rename |
-| Sanitizer | §3.2.3 | `Sanitizer.kt` | 🔄 Rename |
+| Disector | §3.2.1 | `Disector.kt` | ✅ |
+| Tingwu Runner | §3.2.2 | `TingwuRunner.kt` (impl TingwuCoordinator) | ✅ |
+| Sanitizer | §3.2.3 | `Sanitizer.kt` | ✅ |
 | ChatPublisher | §3.2.4 | `ChatPublisher.kt` | ✅ |
 | TranscriptPublisher | §3.2.4 | `TranscriptPublisher.kt` | 🔄 Rename |
 | M2/M2B/M3 | §4 | `core/metahub/` | ✅ |
 
 ---
 
-## 4. Current Sprint: M5 Cleanup
+## 4. M5 Status: ✅ COMPLETE
 
-### Renames (6 total)
+**Completed 2026-01-07**
 
-| Current | Target |
-|---------|--------|
-| `HomeScreenViewModel.kt` | `HomeViewModel.kt` |
-| `DisectorUseCase.kt` | `Disector.kt` |
-| `SanitizerUseCase.kt` | `Sanitizer.kt` |
-| `RealTingwuCoordinator.kt` | `TingwuRunner.kt` |
-| `TranscriptPublisherUseCase.kt` | `TranscriptPublisher.kt` |
-| `ChatStreamCoordinator.kt` | `StreamingCoordinator.kt` |
+### Renames (6 total) ✅
 
-### HSVM → Shell Wiring
+| Before | After | Status |
+|--------|-------|--------|
+| `HomeScreenViewModel.kt` | `HomeViewModel.kt` | ✅ |
+| `DisectorUseCase.kt` | `Disector.kt` | ✅ |
+| `SanitizerUseCase.kt` | `Sanitizer.kt` | ✅ |
+| `RealTingwuCoordinator.kt` | `TingwuRunner.kt` | ✅ (already impl TingwuCoordinator) |
+| `TranscriptPublisherUseCase.kt` | `TranscriptPublisher.kt` | 🔄 Deferred |
+| `ChatStreamCoordinator.kt` | `StreamingCoordinator.kt` | ✅ |
 
-HomeViewModel receives coordinators and delegates:
-- `SmartAnalysisParser` → L3 parsing
-- `StreamingCoordinator` → streaming callbacks
-- `TranscriptionCoordinator` → batch orchestration
-- `DebugCoordinator` → HUD/debug
-- `ExportCoordinator` → export gate
-- `SessionsManager` → session CRUD
+### HSVM → HomeViewModel Shell ✅
+
+**Result**: 2179 → 2126 lines (-53)
+
+HomeViewModel delegates to coordinators:
+- `SmartAnalysisParser` → L3 parsing ✅
+- `StreamingCoordinator` → streaming callbacks ✅
+- `TranscriptionCoordinator` → batch orchestration ✅
+- `MediaInputCoordinator` → audio/image file handling (NEW) ✅
+- `DebugCoordinator` → HUD/debug ✅
+- `ExportCoordinator` → export gate ✅
+- `SessionsManager` → session CRUD ✅
 
 ---
 
@@ -156,6 +160,7 @@ HomeViewModel receives coordinators and delegates:
 | **Import Test** | `grep "import android." domain/` = 0 |
 | **Audit Before Assume** | Verify with grep/find, no guessing |
 | **V1 Alignment** | Every module maps to spec section |
+| **Doc Verification** | Before marking "[ADD X]", run `grep -rn "X" .` to check if X already exists |
 
 ---
 

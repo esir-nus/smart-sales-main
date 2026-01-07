@@ -75,18 +75,18 @@ smart-sales/
 │   │   ├── ChatPublisher.kt            # ChatPublisher (V1 §3.2.4)
 │   │   └── ChatMessageBuilder.kt
 │   ├── transcription/
-│   │   ├── Disector.kt                 # V1 §3.2.1 [RENAME]
-│   │   ├── Sanitizer.kt                # V1 §3.2.3 [RENAME]
+│   │   ├── Disector.kt                 # V1 §3.2.1 ✅
+│   │   ├── Sanitizer.kt                # V1 §3.2.3 ✅
 │   │   └── TranscriptionCoordinator.kt
 │   ├── debug/DebugCoordinator.kt       # HUD (V1 §9)
 │   ├── export/ExportCoordinator.kt
-│   ├── stream/StreamingCoordinator.kt  # [RENAME]
+│   ├── stream/StreamingCoordinator.kt  # ✅
 │   └── sessions/SessionsManager.kt
 │
 
 │
 └── feature/chat/presentation/
-    └── HomeViewModel.kt                # Shell [RENAME from HSVM]
+    └── HomeViewModel.kt                # Shell ✅
 ```
 
 ---

@@ -39,7 +39,7 @@ When documents conflict, follow this precedence order:
 | File | Purpose |
 |------|---------|
 | [AGENTS.md](./AGENTS.md) | Agent collaboration rules, doc precedence, build commands, coding style |
-| [ArchitectureRefactoring.md](./ArchitectureRefactoring.md) | **North Star** for architecture evolution: Phase 3 roadmap, portable reducers, cross-platform prep |
+| [RealizeTheArchi.md](./RealizeTheArchi.md) | **Blueprint** for architecture realization: Portable Core, KMP prep, milestone tracking |
 | [CHANGELOG.md](./CHANGELOG.md) | Spec versioning history (V1.x documentation updates) |
 | [REFACTORING-LOG.md](./REFACTORING-LOG.md) | Architecture refactoring waves (Wave 1-19 code changes) |
 
@@ -81,7 +81,7 @@ Key archived specs:
 1. Read [Orchestrator-V1.md](./Orchestrator-V1.md) for module boundaries
 2. Check [api-contracts.md](./api-contracts.md) for facade contracts
 3. Verify [ux-contract.md](./ux-contract.md) for UI behavior
-4. Follow [ArchitectureRefactoring.md](./ArchitectureRefactoring.md) patterns (Reducers, Coordinators)
+4. Follow [RealizeTheArchi.md](./RealizeTheArchi.md) patterns (Coordinators, Interface extraction)
 
 ### I'm integrating a provider
 1. Read [source-repo.json](./source-repo.json) for endpoint registry
@@ -92,6 +92,6 @@ Key archived specs:
 2. Apply [style-guide.md](./style-guide.md) for visuals (colors, spacing, components)
 
 ### I'm refactoring code
-1. Follow [ArchitectureRefactoring.md](./ArchitectureRefactoring.md) Phase 3 patterns
+1. Follow [RealizeTheArchi.md](./RealizeTheArchi.md) blueprint and paradigm
 2. Update [REFACTORING-LOG.md](./REFACTORING-LOG.md) with new waves
 3. Respect source of truth hierarchy from [AGENTS.md](./AGENTS.md)

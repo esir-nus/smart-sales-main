@@ -1,6 +1,6 @@
 # Architecture Refactoring Log
 
-> Detailed history of architecture refactoring waves. North Star is in [ArchitectureRefactoring.md](./ArchitectureRefactoring.md).
+> Detailed history of architecture refactoring waves. North Star is in [RealizeTheArchi.md](./RealizeTheArchi.md).
 
 ---
 
@@ -47,7 +47,7 @@
 - M6 (KMP Prep) deferred to next sprint
 
 **Impact:**
-- Updated `ArchitectureRefactoring.md` as SOT for target architecture
+- Updated `RealizeTheArchi.md` as SOT for target architecture
 - Domain layer verified portable (0 Android imports)
 - 7 domain test files verified
 

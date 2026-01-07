@@ -1,17 +1,20 @@
-# Architecture Evolution Guide
+# Realize The Archi (RTA)
 
-> **Purpose**: North Star for Smart Sales architecture evolution  
+> **Purpose**: Blueprint for Smart Sales architecture REALIZATION  
+> **Paradigm**: Reference existing code + Orchestrator-V1 → write toward target state  
 > **Target**: Cross-Platform (Android/iOS/HarmonyOS) Ready  
 > **Spec Alignment**: Orchestrator-V1.md (v1.2.0)  
-> **Status**: M5 Complete, M6 Next  
+> **Status**: M6 Phase 1 Complete  
 > **Last Audit**: 2026-01-07
 
 > [!IMPORTANT]
-> **Blueprint Principle**: This doc is *aspirational*, not *prescriptive*.  
-> - Reality may differ from the target tree  
-> - Differences are not failures—they're work items  
-> - The doc shows the *corrective path*: what to rewrite, move, or create  
-> - Always verify with `grep`/`find` before assuming state matches doc
+> **Architecture Realization Principle**:  
+> This doc is *aspirational*, not *prescriptive*.  
+> - **Reality may differ** from the target tree — that's expected  
+> - **Differences are work items**, not failures  
+> - **The doc shows the corrective path**: what to rewrite, move, or create  
+> - **Use the right tool**: rewrite > extract > surgical fix  
+> - **Always verify** with `grep`/`find` before assuming state matches doc
 
 ---
 

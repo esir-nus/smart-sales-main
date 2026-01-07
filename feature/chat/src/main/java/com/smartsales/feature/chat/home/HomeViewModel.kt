@@ -311,6 +311,62 @@ class HomeViewModel @Inject constructor(
         )
     }
 
+    /**
+     * TEST METHOD: Send message via ChatCoordinator (parallel path).
+     * TODO: Remove after verifying ChatCoordinator works end-to-end.
+     */
+    fun sendViaCoordinator(message: String) {
+        val state = _uiState.value
+        
+        // Build params from current state
+        val audioCtx = buildAudioContextSummary()
+        val params = com.smartsales.domain.chat.SendMessageParams(
+            sessionId = sessionId,
+            userMessage = message,
+            skillId = null,
+            audioContext = audioCtx?.let {
+                com.smartsales.domain.chat.AudioContextSummary(
+                    readyClipCount = it.readyClipCount,
+                    pendingClipCount = it.pendingClipCount,
+                    hasTranscripts = it.hasTranscripts,
+                    note = it.note
+                )
+            },
+            chatHistory = state.chatMessages.map { msg ->
+                com.smartsales.domain.chat.ChatHistoryMessage(
+                    role = when (msg.role) {
+                        ChatMessageRole.USER -> com.smartsales.domain.chat.MessageRole.USER
+                        ChatMessageRole.ASSISTANT -> com.smartsales.domain.chat.MessageRole.ASSISTANT
+                    },
+                    content = msg.sanitizedContent ?: msg.content
+                )
+            },
+            isFirstAssistantReply = !firstAssistantProcessed,
+            persona = state.salesPersona,
+            timestamp = System.currentTimeMillis()
+        )
+        
+        // Create user message UI
+        val userMsg = ChatMessageUi(
+            id = nextMessageId(),
+            role = ChatMessageRole.USER,
+            content = message,
+            timestampMillis = System.currentTimeMillis()
+        )
+        
+        _uiState.update {
+            it.copy(
+                chatMessages = it.chatMessages + userMsg,
+                isSending = true,
+                showWelcomeHero = false
+            )
+        }
+        
+        // Invoke ChatCoordinator directly
+        chatCoordinator.sendMessage(params)
+    }
+
+
     private fun handleSmartAnalysisSend(rawInput: String) {
         if (_uiState.value.isSending) return
         val goal = rawInput.trim()

@@ -40,7 +40,6 @@ import javax.inject.Singleton
 class ChatCoordinatorImpl @Inject constructor(
     private val metaHub: MetaHub,
     private val homeOrchestrator: HomeOrchestrator,
-    private val streamingCoordinator: StreamingCoordinator,
 ) : ChatCoordinator {
 
     // Event emission
@@ -49,6 +48,11 @@ class ChatCoordinatorImpl @Inject constructor(
 
     // Active stream tracking
     private var activeScope: CoroutineScope? = null
+    
+    // Streaming coordinator created inline like ConversationViewModel
+    private val streamingCoordinator = StreamingCoordinator { req ->
+        homeOrchestrator.streamChat(req)
+    }
 
     override fun sendMessage(params: SendMessageParams) {
         val scope = activeScope ?: return

@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.smartsales.domain.config.QuickSkillId
 import com.smartsales.aitest.ui.screens.home.model.SkillSuggestion
 
 @Composable
@@ -23,7 +24,7 @@ fun SkillChips(
     skills: List<SkillSuggestion>,
     onSkillClick: (SkillSuggestion) -> Unit,
     modifier: Modifier = Modifier,
-    selectedId: com.smartsales.feature.chat.core.QuickSkillId? = null,
+    selectedId: QuickSkillId? = null,
     enabled: Boolean = true
 ) {
     Row(

@@ -6,7 +6,7 @@ package com.smartsales.aitest.ui.screens.home.model
 // 作者：创建于 2025-12-02
 
 import java.util.UUID
-import com.smartsales.feature.chat.core.QuickSkillId
+import com.smartsales.domain.config.QuickSkillId
 
 enum class MessageRole {
     USER,

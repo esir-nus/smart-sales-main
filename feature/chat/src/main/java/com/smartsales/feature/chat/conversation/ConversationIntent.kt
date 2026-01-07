@@ -44,14 +44,4 @@ sealed interface ConversationIntent {
      * @param error Error message
      */
     data class StreamError(val error: String) : ConversationIntent
-    
-    /**
-     * User wants to run SmartAnalysis on current conversation.
-     * @param timestamp Injected timestamp for deterministic Reducer behavior.
-     * @param goal Optional analysis goal (e.g., "总结要点")
-     */
-    data class SendSmartAnalysis(
-        val timestamp: Long,
-        val goal: String = ""
-    ) : ConversationIntent
 }

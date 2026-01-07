@@ -23,7 +23,6 @@ object ConversationReducer {
         when (intent) {
             is ConversationIntent.InputChanged -> handleInputChanged(state, intent)
             is ConversationIntent.SendMessage -> handleSendMessage(state, intent)
-            is ConversationIntent.SendSmartAnalysis -> handleSendSmartAnalysis(state, intent)
             is ConversationIntent.MessageReceived -> handleMessageReceived(state, intent)
             is ConversationIntent.StreamDelta -> handleStreamDelta(state, intent)
             is ConversationIntent.StreamCompleted -> handleStreamCompleted(state, intent)
@@ -121,20 +120,4 @@ object ConversationReducer {
         )
     }
     
-    // P3.8: SmartAnalysis handler
-    private fun handleSendSmartAnalysis(
-        state: ConversationState,
-        intent: ConversationIntent.SendSmartAnalysis
-    ): ConversationState {
-        // Guard: don't send if already sending
-        if (state.isSending) return state
-        
-        // Pure state transition - side effects handled by ViewModel
-        return state.copy(
-            isSending = true,
-            isSmartAnalysisMode = true,
-            smartAnalysisGoal = intent.goal.ifBlank { null },
-            errorMessage = null
-        )
-    }
 }

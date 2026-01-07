@@ -311,16 +311,53 @@ class HomeViewModel @Inject constructor(
             return
         }
         
-        // P3.1.B2: Dispatch to ConversationReducer for normal chat
-        conversationViewModel.dispatch(
-            com.smartsales.feature.chat.conversation.ConversationIntent.SendMessage(System.currentTimeMillis()),
-            scope = viewModelScope,
-            context = com.smartsales.feature.chat.conversation.SendContext(
-                sessionId = sessionId,
-                salesPersona = _uiState.value.salesPersona,
-                isFirstAssistant = !firstAssistantProcessed
-            )
+        // Wave 4: Use ChatCoordinator for streaming (replaces ConversationViewModel path)
+        val audioCtx = buildAudioContextSummary()
+        val params = com.smartsales.domain.chat.SendMessageParams(
+            sessionId = sessionId,
+            userMessage = resolvedInput,
+            skillId = selectedSkill?.name,
+            audioContext = audioCtx?.let {
+                com.smartsales.domain.chat.AudioContextSummary(
+                    readyClipCount = it.readyClipCount,
+                    pendingClipCount = it.pendingClipCount,
+                    hasTranscripts = it.hasTranscripts,
+                    note = it.note
+                )
+            },
+            chatHistory = state.chatMessages.map { msg ->
+                com.smartsales.domain.chat.ChatHistoryMessage(
+                    role = when (msg.role) {
+                        ChatMessageRole.USER -> com.smartsales.domain.chat.MessageRole.USER
+                        ChatMessageRole.ASSISTANT -> com.smartsales.domain.chat.MessageRole.ASSISTANT
+                    },
+                    content = msg.sanitizedContent ?: msg.content
+                )
+            },
+            isFirstAssistantReply = !firstAssistantProcessed,
+            persona = state.salesPersona,
+            timestamp = System.currentTimeMillis()
         )
+        
+        // Create user message UI
+        val userMsg = ChatMessageUi(
+            id = nextMessageId(),
+            role = ChatMessageRole.USER,
+            content = resolvedInput,
+            timestampMillis = System.currentTimeMillis()
+        )
+        
+        _uiState.update {
+            it.copy(
+                chatMessages = it.chatMessages + userMsg,
+                isSending = true,
+                showWelcomeHero = false,
+                inputText = "" // Clear input after sending
+            )
+        }
+        
+        // Invoke ChatCoordinator
+        chatCoordinator.sendMessage(params)
     }
 
     /**

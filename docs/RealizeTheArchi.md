@@ -4,7 +4,7 @@
 > **Paradigm**: Reference existing code + Orchestrator-V1 → write toward target state  
 > **Target**: Cross-Platform (Android/iOS/HarmonyOS) Ready  
 > **Spec Alignment**: Orchestrator-V1.md (v1.2.0)  
-> **Status**: M6 Phase 1 & Phase 2 Wave 1 Complete  
+> **Status**: M6 Phase 1 & Phase 2 Complete (Wave 1 & Wave 2)  
 > **Last Audit**: 2026-01-07
 
 > [!IMPORTANT]
@@ -152,10 +152,16 @@ HomeViewModel delegates to coordinators:
 - `Sanitizer` / `SanitizerImpl` — interface extracted ✅
 - Created `DomainModule` for Hilt bindings ✅
 
+### Phase 2 Wave 2: Interface Extraction ✅
+- `ExportCoordinator` / `ExportCoordinatorImpl` — interface extracted ✅
+- `DebugCoordinator` / `DebugCoordinatorImpl` — interface extracted ✅
+- `TranscriptionCoordinator` / `TranscriptionCoordinatorImpl` — interface extracted ✅
+- `SessionsManager` / `SessionsManagerImpl` — interface extracted ✅
+- Updated `DomainModule` with 4 new bindings ✅
+
 ### Deferred Work
 
-**Wave 2** (4 complex coordinators): ExportCoordinator, DebugCoordinator, TranscriptionCoordinator, SessionsManager
-- Defer until actual KMP module creation
+**Phase 3** (`:shared` module creation): Actual KMP module creation deferred until iOS development starts
 
 **Phase 3** (`:shared` module):
 - `data/ai-core/` — OkHttp/Android networking

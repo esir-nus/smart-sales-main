@@ -32,4 +32,20 @@ interface DomainModule {
     @Binds
     @Singleton
     fun bindSanitizer(impl: SanitizerImpl): Sanitizer
+
+    @Binds
+    @Singleton
+    fun bindExportCoordinator(impl: com.smartsales.domain.export.ExportCoordinatorImpl): com.smartsales.domain.export.ExportCoordinator
+
+    @Binds
+    @Singleton
+    fun bindDebugCoordinator(impl: com.smartsales.domain.debug.DebugCoordinatorImpl): com.smartsales.domain.debug.DebugCoordinator
+
+    @Binds
+    @Singleton
+    fun bindTranscriptionCoordinator(impl: com.smartsales.domain.transcription.TranscriptionCoordinatorImpl): com.smartsales.domain.transcription.TranscriptionCoordinator
+
+    @Binds
+    @Singleton
+    fun bindSessionsManager(impl: com.smartsales.domain.sessions.SessionsManagerImpl): com.smartsales.domain.sessions.SessionsManager
 }

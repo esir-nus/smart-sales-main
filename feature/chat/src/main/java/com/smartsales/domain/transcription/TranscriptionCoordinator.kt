@@ -1,25 +1,15 @@
 // File: feature/chat/src/main/java/com/smartsales/domain/transcription/TranscriptionCoordinator.kt
 // Module: :feature:chat
-// Summary: Transcription task coordination, batch gate, and window filtering
+// Summary: Transcription task coordination interface - batch gate and window filtering
 // Author: created on 2026-01-05
 
 package com.smartsales.domain.transcription
 
-import com.smartsales.data.aicore.AiCoreConfig
-import com.smartsales.feature.chat.core.transcription.V1BatchIndexPrefixGate
-import com.smartsales.feature.chat.core.transcription.V1TingwuWindowedChunkBuilder
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionBatchEvent
-import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
-import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.feature.chat.home.transcription.ProcessedBatch
 import com.smartsales.feature.chat.home.transcription.TranscriptionUiState
 import kotlinx.coroutines.flow.*
-import java.util.Optional
-import javax.inject.Inject
-import javax.inject.Singleton
-
-private const val TAG = "TranscriptionCoordinator"
 
 /**
  * Transcription Coordinator: handles Tingwu transcription task coordination, batch gate, and window filtering.
@@ -35,29 +25,14 @@ private const val TAG = "TranscriptionCoordinator"
  * - UI message creation handled by HomeViewModel
  * - Exposes processed data flows for caller consumption
  */
-@Singleton
-class TranscriptionCoordinator @Inject constructor(
-    private val transcriptionCoordinator: AudioTranscriptionCoordinator,
-    private val tingwuTraceStore: TingwuTraceStore,
-    optionalConfig: Optional<AiCoreConfig>
-) {
+interface TranscriptionCoordinator {
 
-    private val _state = MutableStateFlow(TranscriptionUiState())
-    val state: StateFlow<TranscriptionUiState> = _state.asStateFlow()
-
-    // Batch gate: ensure batches released in order
-    private val batchGate = V1BatchIndexPrefixGate<AudioTranscriptionBatchEvent.BatchReleased>()
-
-    // Window filter switch
-    private val enableV1TingwuMacroWindowFilter =
-        optionalConfig.orElse(AiCoreConfig()).enableV1TingwuMacroWindowFilter
+    val state: StateFlow<TranscriptionUiState>
 
     /**
      * Observe transcription job state.
      */
-    fun observeJob(jobId: String): Flow<AudioTranscriptionJobState> {
-        return transcriptionCoordinator.observeJob(jobId)
-    }
+    fun observeJob(jobId: String): Flow<AudioTranscriptionJobState>
 
     /**
      * Observe processed batches (after gate and window filtering).
@@ -67,128 +42,35 @@ class TranscriptionCoordinator @Inject constructor(
      * - Window filtering (if enabled)
      * - Tingwu trace recording
      */
-    fun observeProcessedBatches(jobId: String): Flow<ProcessedBatch> = flow {
-        transcriptionCoordinator.observeBatches(jobId).collect { event ->
-            when (event) {
-                is AudioTranscriptionBatchEvent.BatchReleased -> {
-                    // Check if already marked final
-                    if (_state.value.isFinal) {
-                        // Batch received after final - skip
-                        return@collect
-                    }
-
-                    // Record Tingwu trace data
-                    tingwuTraceStore.record(
-                        batchPlanRule = event.ruleLabel,
-                        batchPlanBatchSize = event.batchSize,
-                        batchPlanTotalBatches = event.totalBatches,
-                        batchPlanCurrentBatchIndex = event.batchIndex,
-                        v1BatchPlanRule = event.v1BatchPlanRule,
-                        v1BatchDurationMs = event.v1BatchDurationMs,
-                        v1OverlapMs = event.v1OverlapMs,
-                        v1BatchPlanTotalBatches = event.v1TotalBatches,
-                        v1BatchPlanCurrentBatchIndex = event.v1CurrentBatchIndex
-                    )
-
-                    // Release batches through gate
-                    val releasables = batchGate.offer(event.batchIndex, event)
-
-                    // Process all releasable batches
-                    for (released in releasables) {
-                        val effectiveChunk = processChunk(released)
-                        val isFinal = released.isFinal
-
-                        // Emit processed batch
-                        emit(
-                            ProcessedBatch(
-                                batchIndex = released.batchIndex,
-                                effectiveChunk = effectiveChunk,
-                                isFinal = isFinal,
-                                event = released
-                            )
-                        )
-
-                        // Mark final if this is the final batch
-                        if (isFinal) {
-                            _state.update { it.copy(isFinal = true) }
-                        }
-                    }
-                }
-            }
-        }
-    }
+    fun observeProcessedBatches(jobId: String): Flow<ProcessedBatch>
 
     /**
      * Process batch data: apply window filtering, return effective markdown chunk.
      */
-    fun processChunk(event: AudioTranscriptionBatchEvent.BatchReleased): String {
-        val window = event.v1Window
-        val timedSegments = event.timedSegments
-
-        // Apply macro window filtering (if enabled)
-        return if (enableV1TingwuMacroWindowFilter && window != null && timedSegments != null) {
-            val result = V1TingwuWindowedChunkBuilder.buildWindowedMarkdownChunkResult(
-                absStartMs = window.absStartMs,
-                absEndMs = window.absEndMs,
-                timedSegments = timedSegments
-            )
-
-            // V1 window filter applied
-            result.chunk
-        } else {
-            // Fallback to original markdown
-            event.markdownChunk
-        }
-    }
+    fun processChunk(event: AudioTranscriptionBatchEvent.BatchReleased): String
 
     /**
      * Reset transcription state (call when starting new transcription).
      */
-    fun reset() {
-        batchGate.reset()
-        _state.update {
-            TranscriptionUiState()
-        }
-    }
+    fun reset()
 
     /**
      * Mark transcription as final.
      */
-    fun markFinal() {
-        _state.update { it.copy(isFinal = true) }
-    }
+    fun markFinal()
 
     /**
      * Set current message ID being processed.
      */
-    fun setCurrentMessageId(messageId: String?) {
-        _state.update { it.copy(currentMessageId = messageId) }
-    }
+    fun setCurrentMessageId(messageId: String?)
 
     /**
      * Start transcription task.
      */
-    fun startTranscription(jobId: String) {
-        _state.update {
-            it.copy(
-                jobId = jobId,
-                isActive = true,
-                isFinal = false
-            )
-        }
-    }
+    fun startTranscription(jobId: String)
 
     /**
      * Merge transcription chunks for streaming display.
      */
-    fun mergeChunks(existing: String, incoming: String): String {
-        if (existing.isBlank()) return incoming
-        if (incoming.isBlank()) return existing
-        // Streaming append only: avoid duplication or out-of-order
-        val separator = when {
-            existing.endsWith("\n") || incoming.startsWith("\n") -> ""
-            else -> "\n"
-        }
-        return existing + separator + incoming
-    }
+    fun mergeChunks(existing: String, incoming: String): String
 }

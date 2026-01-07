@@ -31,7 +31,7 @@ class TranscriptionCoordinatorTest {
 
     private val fakeCoordinator = FakeAudioTranscriptionCoordinator()
     private val traceStore = TingwuTraceStore()
-    private val coordinator = TranscriptionCoordinator(
+    private val coordinator = TranscriptionCoordinatorImpl(
         transcriptionCoordinator = fakeCoordinator,
         tingwuTraceStore = traceStore,
         optionalConfig = Optional.of(AiCoreConfig(enableV1TingwuMacroWindowFilter = false))
@@ -137,7 +137,7 @@ class TranscriptionCoordinatorTest {
     @Test
     fun processChunk_windowFilterEnabled_appliesFilter() = runTest {
         // Given: Coordinator with window filtering enabled
-        val coordinatorWithFilter = TranscriptionCoordinator(
+        val coordinatorWithFilter = TranscriptionCoordinatorImpl(
             transcriptionCoordinator = fakeCoordinator,
             tingwuTraceStore = traceStore,
             optionalConfig = Optional.of(AiCoreConfig(enableV1TingwuMacroWindowFilter = true))

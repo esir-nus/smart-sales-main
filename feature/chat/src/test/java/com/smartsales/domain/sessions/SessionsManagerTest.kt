@@ -27,7 +27,7 @@ class SessionsManagerTest {
     private val repository = FakeAiSessionRepository()
     private val historyRepo = FakeChatHistoryRepository()
     private val metaHub = FakeMetaHub()
-    private val manager = SessionsManager(repository, historyRepo, metaHub)
+    private val manager = SessionsManagerImpl(repository, historyRepo, metaHub)
 
     @Test
     fun onHistorySessionLongPress_updatesUiState() = runTest {

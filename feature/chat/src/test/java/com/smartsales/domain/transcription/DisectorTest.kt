@@ -10,7 +10,7 @@ import org.junit.Test
 
 class DisectorTest {
 
-    private val disector = Disector()
+    private val disector: Disector = DisectorImpl()
 
     // ===== Single batch tests (≤20 min) =====
 

@@ -128,7 +128,7 @@ smart-sales/
 
 ---
 
-## 4. M5 Status: ✅ COMPLETE
+## 5. M5 Status: ✅ COMPLETE
 
 **Completed 2026-01-07**
 
@@ -158,7 +158,30 @@ HomeViewModel delegates to coordinators:
 
 ---
 
-## 5. M6 KMP Prep: ✅ Phase 1 & Phase 2 Wave 1 COMPLETE
+## 5B. M9 ViewModel Refactoring: 🔄 IN PROGRESS
+
+**Started 2026-01-07**
+
+**Strategy**: Extract god object HomeViewModel into single-responsibility ViewModels using event-based decoupling.
+
+### Wave 1: AudioViewModel ✅
+- Created `AudioViewModel` (320 lines) for audio/device management
+- Removed 15 functions from HomeViewModel (-268 lines)
+- Result: 2,126 → 1,858 lines (-12.6%)
+
+### Wave 2: SessionListViewModel ✅
+- Created `SessionListViewModel` (152 lines) for session list UI
+- Event-based decoupling via `SessionListEvent.SwitchToSession`
+- Removed 9 functions from HomeViewModel (-88 lines)
+- Result: 1,858 → 1,768 lines (-4.7%)
+
+**M9 Progress**: 2,126 → 1,768 lines (-358, -16.8%)
+
+**Remaining**: Export, Transcription, Message/Chat logic (~400-600 lines extractable)
+
+---
+
+## 6. M6 KMP Prep: ✅ Phase 1 & Phase 2 Wave 1 COMPLETE
 
 **Completed 2026-01-07**
 

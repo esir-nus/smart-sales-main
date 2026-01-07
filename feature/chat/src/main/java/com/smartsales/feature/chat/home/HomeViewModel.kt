@@ -165,6 +165,7 @@ class HomeViewModel @Inject constructor(
     private val tingwuCoordinator: com.smartsales.domain.transcription.TranscriptionCoordinator,
     private val mediaInputCoordinator: com.smartsales.feature.chat.platform.MediaInputCoordinator,
     private val conversationViewModel: com.smartsales.feature.chat.conversation.ConversationViewModel,
+    private val chatCoordinator: com.smartsales.domain.chat.ChatCoordinator,
     optionalConfig: Optional<AiCoreConfig> = Optional.empty(),
 ) : ViewModel(), com.smartsales.feature.chat.conversation.StreamingCallbacks {
 
@@ -199,6 +200,33 @@ class HomeViewModel @Inject constructor(
         // 从 catalog 加载快捷技能到状态
         val skills = quickSkillDefinitions.map { it.toUiModel() }
         _uiState.update { it.copy(quickSkills = skills) }
+        
+        // Set ChatCoordinator scope
+        (chatCoordinator as? com.smartsales.domain.chat.ChatCoordinatorImpl)?.setScope(viewModelScope)
+        
+        // Collect ChatCoordinator events (Wave 4: Event-based decoupling)
+        viewModelScope.launch {
+            chatCoordinator.chatEvents.collect { event ->
+                when (event) {
+                    is com.smartsales.domain.chat.ChatEvent.StreamStarted -> {
+                        // Mark streaming active
+                        _uiState.update { it.copy(isStreaming = true) }
+                    }
+                    is com.smartsales.domain.chat.ChatEvent.StreamDelta -> {
+                        // Update assistant message with token
+                        updateAssistantMessageWithToken(event.assistantId, event.token)
+                    }
+                    is com.smartsales.domain.chat.ChatEvent.StreamCompleted -> {
+                        // Finalize message with completion result
+                        handleChatEventCompleted(event.result)
+                    }
+                    is com.smartsales.domain.chat.ChatEvent.StreamError -> {
+                        // Display error
+                        handleChatEventError(event.assistantId, event.error)
+                    }
+                }
+            }
+        }
         
         // P3.1.B1: Sync ConversationViewModel.state -> HomeUiState
         viewModelScope.launch {
@@ -1728,10 +1756,102 @@ class HomeViewModel @Inject constructor(
         )
     }
     
+    
     // Temporary state holders for streaming context
     // TODO(P3.9.3): Remove when startStreamingResponse moves to ConversationVM
     private var currentStreamingRequest: ChatRequest? = null
     private var currentOnCompleted: ((String) -> Unit)? = null
     private var currentOnCompletedTransform: ((String) -> String)? = null
     private var currentIsAutoAnalysis: Boolean = false
+
+    // ====== ChatCoordinator Event Handlers (Wave 4) ======
+
+    private fun updateAssistantMessageWithToken(assistantId: String, token: String) {
+        updateAssistantMessage(assistantId) { msg ->
+            val merged = streamingDeduplicator.mergeSnapshot(
+                current = msg.content,
+                incoming = token
+            )
+            msg.copy(
+                content = merged,
+                isStreaming = true
+            )
+        }
+    }
+
+    private suspend fun handleChatEventCompleted(result: com.smartsales.domain.chat.ChatCompletionResult) {
+        // Update message with final content
+        updateAssistantMessage(result.assistantId, persistAfterUpdate = true) { msg ->
+            val display = displayAssistantText(raw = result.rawFullText, sanitized = result.displayText)
+            msg.copy(
+                content = display,
+                rawContent = result.rawFullText,
+                sanitizedContent = result.displayText,
+                isStreaming = false,
+                isSmartAnalysis = result.isSmartAnalysis
+            )
+        }
+
+        // Update metadata if present (first reply)
+        if (result.metadata != null) {
+            updateDebugSessionMetadata(result.metadata)
+        }
+
+        // Handle title candidate if present
+        if (result.titleCandidate != null) {
+            val featureTitleCandidate = com.smartsales.feature.chat.title.TitleCandidate(
+                name = result.titleCandidate.name,
+                title6 = result.titleCandidate.title6,
+                source = when (result.titleCandidate.source) {
+                    com.smartsales.domain.chat.TitleSource.GENERAL -> com.smartsales.feature.chat.title.TitleSource.GENERAL
+                    com.smartsales.domain.chat.TitleSource.SMART_ANALYSIS -> com.smartsales.feature.chat.title.TitleSource.SMART
+                },
+                createdAt = result.titleCandidate.createdAt
+            )
+            maybeResolveSessionTitle(result.metadata, featureTitleCandidate)
+        }
+
+        // Update UI state
+        _uiState.update { 
+            it.copy(
+                isSending = false, 
+                isStreaming = false, 
+                isInputBusy = false, 
+                isBusy = false
+            ) 
+        }
+
+        // Update session summary
+        val previewText = result.metadata?.shortSummary?.takeIf { it.isNotBlank() } ?: result.displayText
+        updateSessionSummary(previewText)
+
+        // Handle SmartAnalysis completion
+        if (result.isSmartAnalysis) {
+            persistLatestAnalysisMarker(AnalysisSource.SMART_ANALYSIS_USER, result.assistantId)
+            onAnalysisCompleted(result.displayText, result.assistantId)
+        }
+    }
+
+    private fun handleChatEventError(assistantId: String, error: com.smartsales.domain.error.ChatError) {
+        updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
+            msg.copy(hasError = true, isStreaming = false)
+        }
+
+        _uiState.update {
+            it.copy(
+                isSending = false,
+                isStreaming = false,
+                isInputBusy = false,
+                isBusy = false,
+                chatErrorMessage = when (error) {
+                    is com.smartsales.domain.error.ChatError.NetworkError -> 
+                        error.message ?: error.cause.message ?: "网络请求失败"
+                    is com.smartsales.domain.error.ChatError.NetworkTimeout -> "请求超时"
+                    is com.smartsales.domain.error.ChatError.NoConnection -> "无网络连接"
+                    else -> "AI 回复失败"
+                }
+            )
+        }
+    }
 }
+

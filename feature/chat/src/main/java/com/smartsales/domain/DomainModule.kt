@@ -56,5 +56,9 @@ interface DomainModule {
     @Binds
     @Singleton
     fun bindSessionsManager(impl: SessionsManagerImpl): SessionsManager
+
+    @Binds
+    @Singleton
+    fun bindChatCoordinator(impl: com.smartsales.domain.chat.ChatCoordinatorImpl): com.smartsales.domain.chat.ChatCoordinator
 }
 

@@ -23,7 +23,7 @@ import org.junit.Test
  * P3.1.B1: Tests only InputChanged intent (no streaming side effects).
  * 
  * Note: ConversationViewModel is a regular class (not ViewModel) 
- * since it's injected into HomeScreenViewModel.
+ * since it's injected into HomeViewModel.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ConversationViewModelTest {

@@ -1,4 +1,4 @@
-// File: data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/TranscriptPublisherUseCase.kt
+// File: data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/TranscriptPublisher.kt
 // Module: :data:ai-core
 // Summary: Transcript URL extraction and download helpers
 // Author: created on 2026-01-05
@@ -26,7 +26,7 @@ import javax.inject.Singleton
  * Transcript URL extraction and download utilities.
  */
 @Singleton
-class TranscriptPublisherUseCase @Inject constructor(
+class TranscriptPublisher @Inject constructor(
     private val config: AiCoreConfig
 ) {
 
@@ -173,6 +173,6 @@ class TranscriptPublisherUseCase @Inject constructor(
         takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }?.asString
 
     companion object {
-        private const val TAG = "TranscriptPublisherUseCase"
+        private const val TAG = "TranscriptPublisher"
     }
 }

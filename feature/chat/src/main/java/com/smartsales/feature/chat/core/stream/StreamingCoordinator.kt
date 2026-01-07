@@ -1,6 +1,6 @@
 package com.smartsales.feature.chat.core.stream
 
-// File: feature/chat/src/main/java/com/smartsales/feature/chat/core/stream/ChatStreamCoordinator.kt
+// File: feature/chat/src/main/java/com/smartsales/feature/chat/core/stream/StreamingCoordinator.kt
 // Module: :feature:chat
 // Summary: Streaming coordinator for chat event routing.
 // Author: created on 2025-12-29
@@ -17,7 +17,7 @@ sealed interface CompletionDecision {
     object Terminal : CompletionDecision
 }
 
-class ChatStreamCoordinator(
+class StreamingCoordinator(
     private val streamSource: (ChatRequest) -> Flow<ChatStreamEvent>,
 ) {
     fun start(

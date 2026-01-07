@@ -68,12 +68,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 import javax.net.ssl.SSLException
-// 文件：data/ai-core/src/main/java/com/smartsales/data/aicore/RealTingwuCoordinator.kt
+// 文件：data/ai-core/src/main/java/com/smartsales/data/aicore/TingwuRunner.kt
 // 模块：:data:ai-core
 // 说明：通过真实 Tingwu HTTP API 提交、轮询并拉取转写结果
 // 作者：创建于 2025-11-16
 @Singleton
-class RealTingwuCoordinator @Inject constructor(
+class TingwuRunner @Inject constructor(
     private val dispatchers: DispatcherProvider,
     private val api: TingwuApi,
     private val credentialsProvider: TingwuCredentialsProvider,
@@ -86,7 +86,7 @@ class RealTingwuCoordinator @Inject constructor(
     private val postTingwuTranscriptEnhancer: PostTingwuTranscriptEnhancer,
     private val aiParaSettingsProvider: AiParaSettingsProvider,
     private val tingwuRunner: com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository,
-    private val transcriptPublisher: com.smartsales.data.aicore.tingwu.TranscriptPublisherUseCase,
+    private val transcriptPublisher: com.smartsales.data.aicore.tingwu.TranscriptPublisher,
     optionalConfig: Optional<AiCoreConfig>
 ) : TingwuCoordinator {
 

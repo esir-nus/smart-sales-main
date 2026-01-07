@@ -28,7 +28,7 @@ import com.smartsales.aitest.ui.screens.device.DeviceManagerShell
 import com.smartsales.aitest.ui.screens.user.UserCenterScreen
 import com.smartsales.aitest.ui.screens.debug.DebugDashscopeStreamScreen
 import com.smartsales.feature.chat.home.HomeScreenRoute
-import com.smartsales.feature.chat.home.HomeScreenViewModel
+import com.smartsales.feature.chat.home.HomeViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.smartsales.feature.media.devicemanager.DeviceManagerViewModel
 
@@ -69,7 +69,7 @@ fun MainScreen() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Screen.Home.route) { backStackEntry ->
-                val homeViewModel: HomeScreenViewModel = hiltViewModel(backStackEntry)
+                val homeViewModel: HomeViewModel = hiltViewModel(backStackEntry)
                 HomeScreenRoute(
                     viewModel = homeViewModel,
                     onNavigateToChatHistory = { navController.navigate(Screen.ChatHistory.route) },
@@ -84,7 +84,7 @@ fun MainScreen() {
             }
             composable(Screen.Audio.route) {
                 val homeBackStackEntry = remember(navController) { navController.getBackStackEntry(Screen.Home.route) }
-                val homeViewModel: HomeScreenViewModel = hiltViewModel(homeBackStackEntry)
+                val homeViewModel: HomeViewModel = hiltViewModel(homeBackStackEntry)
                 AudioFilesShell(
                     homeViewModel = homeViewModel,
                     onNavigateHome = {
@@ -117,7 +117,7 @@ fun MainScreen() {
             }
             composable(Screen.ChatHistory.route) {
                 val homeBackStackEntry = remember(navController) { navController.getBackStackEntry(Screen.Home.route) }
-                val homeViewModel: HomeScreenViewModel = hiltViewModel(homeBackStackEntry)
+                val homeViewModel: HomeViewModel = hiltViewModel(homeBackStackEntry)
                 ChatHistoryShell(
                     homeViewModel = homeViewModel,
                     onBack = { navController.popBackStack() }

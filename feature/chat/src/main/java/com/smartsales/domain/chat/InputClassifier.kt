@@ -27,7 +27,7 @@ private const val CONTEXT_MESSAGE_LIMIT = 5
 /**
  * InputClassifier: Pure helper functions for classifying user input.
  *
- * Extracted from HomeScreenViewModel to domain layer.
+ * Extracted from HomeViewModel to domain layer.
  * All functions are stateless and operate purely on input data.
  */
 object InputClassifier {

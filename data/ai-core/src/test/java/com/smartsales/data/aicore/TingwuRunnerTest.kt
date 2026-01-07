@@ -58,12 +58,12 @@ import retrofit2.HttpException
 import retrofit2.Response
 import kotlin.io.path.createTempFile
 
-// 文件：data/ai-core/src/test/java/com/smartsales/data/aicore/RealTingwuCoordinatorTest.kt
+// 文件：data/ai-core/src/test/java/com/smartsales/data/aicore/TingwuRunnerTest.kt
 // 模块：:data:ai-core
 // 说明：验证真实 Tingwu 协调器的轮询与状态映射
 // 作者：创建于 2025-11-16
 @OptIn(ExperimentalCoroutinesApi::class)
-class RealTingwuCoordinatorTest {
+class TingwuRunnerTest {
 
     private val dispatcher = StandardTestDispatcher()
     private val dispatchers = FakeDispatcherProvider(dispatcher)
@@ -109,9 +109,9 @@ class RealTingwuCoordinatorTest {
         enhancer: PostTingwuTranscriptEnhancer = noopEnhancer,
         settingsProvider: AiParaSettingsProvider = defaultSettingsProvider,
         metaHub: com.smartsales.core.metahub.MetaHub = InMemoryMetaHub()
-    ): RealTingwuCoordinator {
+    ): TingwuRunner {
         val config = optionalConfig.orElse(AiCoreConfig())
-        return RealTingwuCoordinator(
+        return TingwuRunner(
             dispatchers = dispatchers,
             api = api,
             credentialsProvider = credentialsProvider,
@@ -124,7 +124,7 @@ class RealTingwuCoordinatorTest {
             postTingwuTranscriptEnhancer = enhancer,
             aiParaSettingsProvider = settingsProvider,
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, config),
-            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisherUseCase(config),
+            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(config),
             optionalConfig = optionalConfig
         )
     }
@@ -738,7 +738,7 @@ class RealTingwuCoordinatorTest {
 
     @Test
     fun submit_returnsErrorWhenCredentialsMissing() = runTest(dispatcher) {
-        val coordinator = RealTingwuCoordinator(
+        val coordinator = TingwuRunner(
             dispatchers = dispatchers,
             api = FakeTingwuApi(),
             credentialsProvider = object : TingwuCredentialsProvider {
@@ -777,7 +777,7 @@ class RealTingwuCoordinatorTest {
                 dispatchers = dispatchers,
                 config = AiCoreConfig()
             ),
-            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisherUseCase(AiCoreConfig()),
+            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig()),
             optionalConfig = Optional.empty()
         )
 
@@ -886,7 +886,7 @@ class RealTingwuCoordinatorTest {
                 )
             )
         )
-        val coordinator = RealTingwuCoordinator(
+        val coordinator = TingwuRunner(
             dispatchers = dispatchers,
             api = api,
             credentialsProvider = credentialsProvider,
@@ -899,7 +899,7 @@ class RealTingwuCoordinatorTest {
             postTingwuTranscriptEnhancer = noopEnhancer,
             aiParaSettingsProvider = defaultSettingsProvider,
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisherUseCase(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
+            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -960,7 +960,7 @@ class RealTingwuCoordinatorTest {
             )
         )
         val orchestrator = RecordingTranscriptOrchestrator(throwable = IllegalStateException("llm fail"))
-        val coordinator = RealTingwuCoordinator(
+        val coordinator = TingwuRunner(
             dispatchers = dispatchers,
             api = api,
             credentialsProvider = credentialsProvider,
@@ -973,7 +973,7 @@ class RealTingwuCoordinatorTest {
             postTingwuTranscriptEnhancer = noopEnhancer,
             aiParaSettingsProvider = defaultSettingsProvider,
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisherUseCase(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
+            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1038,7 +1038,7 @@ class RealTingwuCoordinatorTest {
                 outputSpectrumPath = null
             )
         )
-        val coordinator = RealTingwuCoordinator(
+        val coordinator = TingwuRunner(
             dispatchers = dispatchers,
             api = api,
             credentialsProvider = credentialsProvider,
@@ -1051,7 +1051,7 @@ class RealTingwuCoordinatorTest {
             postTingwuTranscriptEnhancer = noopEnhancer,
             aiParaSettingsProvider = defaultSettingsProvider,
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisherUseCase(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
+            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1109,7 +1109,7 @@ class RealTingwuCoordinatorTest {
                 outputSpectrumPath = null
             )
         )
-        val coordinator = RealTingwuCoordinator(
+        val coordinator = TingwuRunner(
             dispatchers = dispatchers,
             api = api,
             credentialsProvider = credentialsProvider,
@@ -1122,7 +1122,7 @@ class RealTingwuCoordinatorTest {
             postTingwuTranscriptEnhancer = noopEnhancer,
             aiParaSettingsProvider = defaultSettingsProvider,
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisherUseCase(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
+            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1189,7 +1189,7 @@ class RealTingwuCoordinatorTest {
                 outputSpectrumPath = null
             )
         )
-        val coordinator = RealTingwuCoordinator(
+        val coordinator = TingwuRunner(
             dispatchers = dispatchers,
             api = api,
             credentialsProvider = credentialsProvider,
@@ -1202,7 +1202,7 @@ class RealTingwuCoordinatorTest {
             postTingwuTranscriptEnhancer = noopEnhancer,
             aiParaSettingsProvider = defaultSettingsProvider,
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisherUseCase(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
+            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1267,7 +1267,7 @@ class RealTingwuCoordinatorTest {
                 outputSpectrumPath = null
             )
         )
-        val coordinator = RealTingwuCoordinator(
+        val coordinator = TingwuRunner(
             dispatchers = dispatchers,
             api = api,
             credentialsProvider = credentialsProvider,
@@ -1280,7 +1280,7 @@ class RealTingwuCoordinatorTest {
             postTingwuTranscriptEnhancer = noopEnhancer,
             aiParaSettingsProvider = defaultSettingsProvider,
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisherUseCase(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
+            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1337,7 +1337,7 @@ class RealTingwuCoordinatorTest {
                 outputSpectrumPath = null
             )
         )
-        val coordinator = RealTingwuCoordinator(
+        val coordinator = TingwuRunner(
             dispatchers = dispatchers,
             api = api,
             credentialsProvider = credentialsProvider,
@@ -1350,7 +1350,7 @@ class RealTingwuCoordinatorTest {
             postTingwuTranscriptEnhancer = noopEnhancer,
             aiParaSettingsProvider = defaultSettingsProvider,
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisherUseCase(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
+            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 

@@ -3,7 +3,7 @@ package com.smartsales.feature.chat.conversation
 import com.smartsales.feature.chat.core.ChatHistoryItem
 import com.smartsales.feature.chat.core.ChatRequest
 import com.smartsales.feature.chat.core.ChatRole
-import com.smartsales.feature.chat.core.stream.ChatStreamCoordinator
+import com.smartsales.feature.chat.core.stream.StreamingCoordinator
 import com.smartsales.feature.chat.core.stream.CompletionDecision
 import com.smartsales.feature.chat.core.publisher.ChatPublisher
 import com.smartsales.feature.chat.core.publisher.ChatPublisherImpl
@@ -27,7 +27,7 @@ import javax.inject.Inject
  * 
  * P3.1.B2: Added streaming side effects with caller-passed scope.
  * 
- * Note: NOT an @HiltViewModel (injected into HomeScreenViewModel).
+ * Note: NOT an @HiltViewModel (injected into HomeViewModel).
  */
 class ConversationViewModel @Inject constructor(
     private val homeOrchestrator: HomeOrchestrator
@@ -35,21 +35,21 @@ class ConversationViewModel @Inject constructor(
     
     /**
      * Migration bridge: callback to sync messages to HomeUiState.
-     * TODO(P3.9): Remove when HomeScreenViewModel is deleted.
+     * TODO(P3.9): Remove when HomeViewModel is deleted.
      */
     var onMessagesChanged: ((List<ChatMessageUi>) -> Unit)? = null
     
     /**
      * P3.8: Migration bridge for SmartAnalysis state.
-     * TODO(P3.9): Remove when HomeScreenViewModel is deleted.
+     * TODO(P3.9): Remove when HomeViewModel is deleted.
      */
     var onSmartAnalysisModeChanged: ((Boolean, String?) -> Unit)? = null
     
     private val _state = MutableStateFlow(ConversationState())
     val state: StateFlow<ConversationState> = _state.asStateFlow()
     
-    // Constructed inline like HomeScreenViewModel pattern
-    private val chatStreamCoordinator = ChatStreamCoordinator { req -> 
+    // Constructed inline like HomeViewModel pattern
+    private val chatStreamCoordinator = StreamingCoordinator { req -> 
         homeOrchestrator.streamChat(req) 
     }
     
@@ -60,9 +60,9 @@ class ConversationViewModel @Inject constructor(
     /**
      * Dispatch intent to Reducer with optional scope for side effects.
      * 
-     * P3.1.B2: SendMessage triggers streaming via ChatStreamCoordinator.
+     * P3.1.B2: SendMessage triggers streaming via StreamingCoordinator.
      * 
-     * @param scope CoroutineScope from caller (HomeScreenViewModel.viewModelScope)
+     * @param scope CoroutineScope from caller (HomeViewModel.viewModelScope)
      * @param context SendContext for building requests (sessionId, persona, etc.)
      */
     fun dispatch(
@@ -267,7 +267,7 @@ class ConversationViewModel @Inject constructor(
     /**
      * P3.9.3: Start streaming with callbacks pattern.
      * 
-     * Delegates to ChatStreamCoordinator and calls back to HSVM for side effects.
+     * Delegates to StreamingCoordinator and calls back to HSVM for side effects.
      * Supports V1 retry configuration for general chat.
      */
     fun startStreaming(

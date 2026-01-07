@@ -1,8 +1,8 @@
 package com.smartsales.feature.chat.core.stream
 
-// File: feature/chat/src/test/java/com/smartsales/feature/chat/core/stream/ChatStreamCoordinatorTest.kt
+// File: feature/chat/src/test/java/com/smartsales/feature/chat/core/stream/StreamingCoordinatorTest.kt
 // Module: :feature:chat
-// Summary: Unit tests for ChatStreamCoordinator event routing.
+// Summary: Unit tests for StreamingCoordinator event routing.
 // Author: created on 2025-12-30
 
 import com.smartsales.feature.chat.core.ChatRequest
@@ -17,14 +17,14 @@ import org.junit.Assert.assertSame
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class ChatStreamCoordinatorTest {
+class StreamingCoordinatorTest {
 
     private val dispatcher = StandardTestDispatcher()
 
     @Test
     fun `routes delta and completed events`() = runTest(dispatcher) {
         // 验证流事件能按顺序回调到外部处理器
-        val coordinator = ChatStreamCoordinator { _ ->
+        val coordinator = StreamingCoordinator { _ ->
             flowOf(
                 ChatStreamEvent.Delta("Hi"),
                 ChatStreamEvent.Completed("Hi there"),
@@ -54,7 +54,7 @@ class ChatStreamCoordinatorTest {
     fun `routes error event`() = runTest(dispatcher) {
         // 错误应直接透传给调用方，避免吞掉异常
         val expected = IllegalStateException("boom")
-        val coordinator = ChatStreamCoordinator { _ ->
+        val coordinator = StreamingCoordinator { _ ->
             flowOf(ChatStreamEvent.Error(expected))
         }
         val request = ChatRequest(sessionId = "s1", userMessage = "hello")
@@ -77,7 +77,7 @@ class ChatStreamCoordinatorTest {
     fun `retry then accept uses last attempt`() = runTest(dispatcher) {
         // 验证重试框架按 maxRetries 触发，多次尝试后仅接受一次结果
         var streamCalls = 0
-        val coordinator = ChatStreamCoordinator { _ ->
+        val coordinator = StreamingCoordinator { _ ->
             val attempt = streamCalls
             streamCalls += 1
             flowOf(ChatStreamEvent.Completed("attempt-$attempt"))
@@ -110,7 +110,7 @@ class ChatStreamCoordinatorTest {
     fun `always retry triggers terminal callback`() = runTest(dispatcher) {
         // 验证达到最大重试次数后进入终止分支
         var streamCalls = 0
-        val coordinator = ChatStreamCoordinator { _ ->
+        val coordinator = StreamingCoordinator { _ ->
             val attempt = streamCalls
             streamCalls += 1
             flowOf(ChatStreamEvent.Completed("attempt-$attempt"))
@@ -139,7 +139,7 @@ class ChatStreamCoordinatorTest {
     fun `request provider applies per attempt`() = runTest(dispatcher) {
         // 验证 requestProvider 可以为每次尝试生成不同请求
         val seen = mutableListOf<String>()
-        val coordinator = ChatStreamCoordinator { req ->
+        val coordinator = StreamingCoordinator { req ->
             seen.add(req.userMessage)
             flowOf(ChatStreamEvent.Completed(req.userMessage))
         }

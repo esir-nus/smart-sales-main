@@ -32,7 +32,7 @@ class ExportOrchestratorContractTest {
 
     @Test
     fun `real tingwu coordinator has no ai chat dependency`() {
-        val paramTypes = RealTingwuCoordinator::class.java.constructors
+        val paramTypes = TingwuRunner::class.java.constructors
             .flatMap { it.parameterTypes.toList() }
         assertFalse(paramTypes.any { it.name.contains("AiChatService") || it.name.contains("Dashscope", ignoreCase = true) })
     }

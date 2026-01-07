@@ -19,6 +19,41 @@
 
 ---
 
+## Wave 28: Architecture Blueprint Planning ✅ (2026-01-07)
+
+**Evidence-based architecture tree with V1 module mapping**
+
+**Approach:**
+- Audited entire codebase with grep/find to verify V1 module locations
+- Discovered 3 false positives in initial plan (modules already exist)
+- Created verified target tree mapped to Orchestrator-V1.md sections
+
+**Planned Changes (M5 Sprint):**
+
+| Action | Files |
+|--------|-------|
+| Rename | `HomeScreenViewModel.kt` → `HomeViewModel.kt` |
+| Rename | `DisectorUseCase.kt` → `Disector.kt` |
+| Rename | `SanitizerUseCase.kt` → `Sanitizer.kt` |
+| Rename | `RealTingwuCoordinator.kt` → `TingwuRunner.kt` |
+| Rename | `TranscriptPublisherUseCase.kt` → `TranscriptPublisher.kt` |
+| Rename | `ChatStreamCoordinator.kt` → `StreamingCoordinator.kt` |
+| Move | `SmartAnalysisParser.kt` → `domain/analysis/` |
+| Add | `TingwuRunner` interface for testability |
+
+**Key Decisions:**
+- No line metrics; responsibility-based success criteria only
+- All V1 modules already exist; work is wiring, not creating
+- M6 (KMP Prep) deferred to next sprint
+
+**Impact:**
+- Updated `ArchitectureRefactoring.md` as SOT for target architecture
+- Domain layer verified portable (0 Android imports)
+- 7 domain test files verified
+
+---
+
+
 ## Wave 27 / P3.11: Streaming Consolidation ✅ (2026-01-06)
 
 **Consolidated streaming in ConversationVM, extracted ChatResponsePublisher**

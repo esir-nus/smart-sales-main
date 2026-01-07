@@ -154,7 +154,7 @@ import com.smartsales.feature.chat.home.messages.MessageBubble
 @Composable
 fun HomeScreenRoute(
     modifier: Modifier = Modifier,
-    viewModel: HomeScreenViewModel = hiltViewModel(),
+    viewModel: HomeViewModel = hiltViewModel(),
     sessionId: String? = null,
     transcriptionRequest: TranscriptionChatRequest? = null,
     onTranscriptionRequestConsumed: () -> Unit = {},

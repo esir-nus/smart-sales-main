@@ -21,7 +21,7 @@ import javax.inject.Inject
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/debug/DebugViewModel.kt
 // 模块：:feature:chat
-// 说明：调试面板 ViewModel，从 HomeScreenViewModel 中提取
+// 说明：调试面板 ViewModel，从 HomeViewModel 中提取
 // 作者：创建于 2026-01-05
 
 /**

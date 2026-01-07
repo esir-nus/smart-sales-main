@@ -1,4 +1,4 @@
-// File: feature/chat/src/main/java/com/smartsales/domain/transcription/SanitizerUseCase.kt
+// File: feature/chat/src/main/java/com/smartsales/domain/transcription/Sanitizer.kt
 // Module: :feature:chat
 // Summary: Transcription display cleanup per Orchestrator-V1 Section 3.2 (no semantic changes)
 // Author: created on 2026-01-05
@@ -22,7 +22,7 @@ import kotlin.math.max
  * Note: Sanitizer ensures display safety and consistency; no language polishing.
  */
 @Singleton
-class SanitizerUseCase @Inject constructor() {
+class Sanitizer @Inject constructor() {
 
     private val timeFormatter = DecimalFormat("00")
 

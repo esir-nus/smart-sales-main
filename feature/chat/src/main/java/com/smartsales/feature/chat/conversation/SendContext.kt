@@ -5,7 +5,7 @@ import com.smartsales.feature.usercenter.SalesPersona
 /**
  * Context needed for building chat requests.
  * 
- * P3.1.B2: Encapsulates dependencies from HomeScreenViewModel
+ * P3.1.B2: Encapsulates dependencies from HomeViewModel
  * that ConversationViewModel needs to build requests.
  */
 data class SendContext(

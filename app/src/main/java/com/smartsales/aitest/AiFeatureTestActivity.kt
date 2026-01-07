@@ -105,7 +105,7 @@ import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.chat.home.DeviceConnectionStateUi
 import com.smartsales.feature.chat.home.DeviceSnapshotUi
 import com.smartsales.feature.chat.home.HomeScreenRoute
-import com.smartsales.feature.chat.home.HomeScreenViewModel
+import com.smartsales.feature.chat.home.HomeViewModel
 import com.smartsales.feature.chat.home.TranscriptionChatRequest
 import com.smartsales.feature.chat.history.ChatHistoryRoute
 import com.smartsales.feature.media.audio.AudioFilesEvent
@@ -164,7 +164,7 @@ private fun AiFeatureTestApp(
     val lifecycleOwner = LocalLifecycleOwner.current
     val lifecycle = lifecycleOwner.lifecycle
     val scope = lifecycleOwner.lifecycleScope
-    val homeViewModel: HomeScreenViewModel = hiltViewModel()
+    val homeViewModel: HomeViewModel = hiltViewModel()
     val audioFilesViewModel: AudioFilesViewModel = hiltViewModel()
     var currentPage by rememberSaveable { mutableStateOf(TestHomePage.Home) }
     var latestDeviceSnapshot by remember { mutableStateOf<DeviceSnapshotUi?>(null) }
@@ -478,7 +478,7 @@ private fun OverlayScaffold(
     currentOverlay: HomeOverlay,
     onOverlayChange: (HomeOverlay) -> Unit,
     mediaServerClient: MediaServerClient,
-    homeViewModel: HomeScreenViewModel,
+    homeViewModel: HomeViewModel,
     audioFilesViewModel: AudioFilesViewModel,
     setPage: (TestHomePage) -> Unit,
     goHome: () -> Unit,

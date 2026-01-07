@@ -150,7 +150,7 @@ abstract class AiCoreModule {
         fun provideTingwuCoordinator(
             optionalConfig: Optional<AiCoreConfig>,
             fake: FakeTingwuCoordinator,
-            real: RealTingwuCoordinator
+            real: TingwuRunner
         ): TingwuCoordinator {
             val preferFake = optionalConfig.orElse(AiCoreConfig()).preferFakeTingwu
             return if (preferFake) fake else real

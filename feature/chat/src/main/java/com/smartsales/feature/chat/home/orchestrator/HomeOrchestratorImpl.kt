@@ -10,8 +10,8 @@ import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.RiskLevel
 import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.SessionStage
-import com.smartsales.domain.chat.SmartAnalysisParser
-import com.smartsales.domain.chat.SmartAnalysisResult
+import com.smartsales.domain.analysis.SmartAnalysisParser
+import com.smartsales.domain.analysis.SmartAnalysisResult
 import com.smartsales.feature.chat.core.AiChatService
 import com.smartsales.feature.chat.core.ChatRequest
 import com.smartsales.feature.chat.core.ChatStreamEvent

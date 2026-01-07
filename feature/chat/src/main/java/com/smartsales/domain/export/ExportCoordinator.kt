@@ -32,7 +32,7 @@ import javax.inject.Singleton
  *
  * Design:
  * - Pure coordinator, no markdown preparation logic
- * - Markdown provided by caller (HomeScreenViewModel)
+ * - Markdown provided by caller (HomeViewModel)
  * - Decoupled from smart analysis - caller coordinates
  */
 @Singleton

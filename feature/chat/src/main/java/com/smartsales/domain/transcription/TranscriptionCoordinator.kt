@@ -33,7 +33,7 @@ private const val TAG = "TranscriptionCoordinator"
  *
  * Design:
  * - Pure coordinator, no UI message creation
- * - UI message creation handled by HomeScreenViewModel
+ * - UI message creation handled by HomeViewModel
  * - Exposes processed data flows for caller consumption
  */
 @Singleton

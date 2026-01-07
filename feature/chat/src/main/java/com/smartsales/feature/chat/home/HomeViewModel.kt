@@ -1,4 +1,4 @@
-// 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreenViewModel.kt
+// 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeViewModel.kt
 // 模块：:feature:chat
 // 说明：Home 页面状态与交互 ViewModel
 // 作者：创建于 2025-12-15
@@ -94,7 +94,7 @@ import com.smartsales.feature.chat.core.publisher.ChatPublisherImpl
 import com.smartsales.feature.chat.core.publisher.GeneralChatV1Finalizer
 import com.smartsales.feature.chat.core.publisher.ArtifactStatus
 import com.smartsales.feature.chat.core.publisher.V1FinalizeResult
-import com.smartsales.feature.chat.core.stream.ChatStreamCoordinator
+import com.smartsales.feature.chat.core.stream.StreamingCoordinator
 import com.smartsales.feature.chat.core.transcription.V1BatchIndexPrefixGate
 import com.smartsales.feature.chat.core.transcription.V1TingwuWindowedChunkBuilder
 import com.smartsales.feature.chat.core.v1.V1GeneralCompletionEvaluator
@@ -136,9 +136,9 @@ interface AiSessionRepository {
     suspend fun loadOlderMessages(currentTopMessageId: String?): List<ChatMessageUi>
 }
 
-/** HomeScreenViewModel：驱动聊天、快捷技能以及设备/音频快照。 */
+/** HomeViewModel：驱动聊天、快捷技能以及设备/音频快照。 */
 @HiltViewModel
-class HomeScreenViewModel @Inject constructor(
+class HomeViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val homeOrchestrator: HomeOrchestrator,
     private val aiSessionRepository: AiSessionRepository,
@@ -650,7 +650,7 @@ class HomeScreenViewModel @Inject constructor(
             sessionRepository.upsert(updated)
             
             val existingHistory = chatHistoryRepository.loadLatestSession(targetSessionId)
-            this@HomeScreenViewModel.sessionId = targetSessionId
+            this@HomeViewModel.sessionId = targetSessionId
             firstAssistantProcessed = false
             hasShownLowInfoHint = false
             hasShownAnalysisExportHint = false
@@ -1036,8 +1036,8 @@ class HomeScreenViewModel @Inject constructor(
         allowHero: Boolean = true
     ) {
         viewModelScope.launch {
-            if (sessionId != this@HomeScreenViewModel.sessionId) {
-                this@HomeScreenViewModel.sessionId = sessionId
+            if (sessionId != this@HomeViewModel.sessionId) {
+                this@HomeViewModel.sessionId = sessionId
                 firstAssistantProcessed = false
                 lastTranscriptionJobId = null
                 tingwuCoordinator.reset()
@@ -1188,7 +1188,7 @@ class HomeScreenViewModel @Inject constructor(
     fun onHistorySessionRenameConfirmed(sessionId: String, newTitle: String) {
         viewModelScope.launch {
             val updatedTitle = sessionsManager.onHistorySessionRenameConfirmed(sessionId, newTitle)
-            if (updatedTitle != null && sessionId == this@HomeScreenViewModel.sessionId) {
+            if (updatedTitle != null && sessionId == this@HomeViewModel.sessionId) {
                 // 如果当前会话被重命名，同步更新当前会话标题
                 _uiState.update {
                     it.copy(currentSession = it.currentSession.copy(title = updatedTitle))
@@ -1199,10 +1199,10 @@ class HomeScreenViewModel @Inject constructor(
 
     fun onHistorySessionDelete(sessionId: String) {
         viewModelScope.launch {
-            val result = sessionsManager.onHistorySessionDelete(sessionId, this@HomeScreenViewModel.sessionId)
+            val result = sessionsManager.onHistorySessionDelete(sessionId, this@HomeViewModel.sessionId)
             if (result is com.smartsales.domain.sessions.SessionsManager.DeleteResult.CurrentSessionDeleted) {
                 val next = result.nextSession
-                this@HomeScreenViewModel.sessionId = next.id
+                this@HomeViewModel.sessionId = next.id
                 firstAssistantProcessed = false
                 _uiState.update {
                     it.copy(

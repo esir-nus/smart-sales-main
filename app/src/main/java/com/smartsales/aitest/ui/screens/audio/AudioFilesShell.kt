@@ -28,13 +28,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.aitest.AiFeatureTestTags
 import com.smartsales.aitest.audio.AudioFilesRoute
 import com.smartsales.aitest.audio.TranscriptionProvider
-import com.smartsales.feature.chat.home.HomeScreenViewModel
+import com.smartsales.feature.chat.home.HomeViewModel
 import com.smartsales.feature.chat.home.TranscriptionChatRequest
 import java.util.Locale
 
 @Composable
 fun AudioFilesShell(
-    homeViewModel: HomeScreenViewModel,
+    homeViewModel: HomeViewModel,
     onNavigateHome: () -> Unit
 ) {
     val settingsViewModel: AiParaSettingsViewModel = hiltViewModel()

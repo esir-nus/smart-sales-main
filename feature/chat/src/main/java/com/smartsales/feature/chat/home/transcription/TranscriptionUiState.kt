@@ -4,7 +4,7 @@ import com.smartsales.feature.media.audiofiles.AudioTranscriptionBatchEvent
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/transcription/TranscriptionUiState.kt
 // 模块：:feature:chat
-// 说明：转写相关的 UI 状态，从 HomeScreenViewModel 中提取
+// 说明：转写相关的 UI 状态，从 HomeViewModel 中提取
 // 作者：创建于 2026-01-05
 
 /**

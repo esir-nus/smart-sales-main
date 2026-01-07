@@ -5,7 +5,7 @@ import com.smartsales.data.aicore.ExportFormat
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/export/ExportUiState.kt
 // 模块：:feature:chat
-// 说明：导出相关的 UI 状态，从 HomeScreenViewModel 中提取
+// 说明：导出相关的 UI 状态，从 HomeViewModel 中提取
 // 作者：创建于 2026-01-05
 
 /** 导出门禁状态：仅当智能分析就绪时允许导出。 */

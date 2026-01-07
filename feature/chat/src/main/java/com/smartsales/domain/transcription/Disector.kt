@@ -1,4 +1,4 @@
-// File: feature/chat/src/main/java/com/smartsales/domain/transcription/DisectorUseCase.kt
+// File: feature/chat/src/main/java/com/smartsales/domain/transcription/Disector.kt
 // Module: :feature:chat
 // Summary: Batch splitting logic per Orchestrator-V1 Appendix A (deterministic, reproducible)
 // Author: created on 2026-01-05
@@ -23,7 +23,7 @@ import kotlin.math.floor
  * - Pre-roll overlap: 10 seconds (first batch: no overlap)
  */
 @Singleton
-class DisectorUseCase @Inject constructor() {
+class Disector @Inject constructor() {
 
     fun createPlan(
         totalMs: Long,

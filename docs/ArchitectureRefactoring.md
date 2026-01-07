@@ -3,126 +3,148 @@
 > **Purpose**: North Star for Smart Sales architecture evolution  
 > **Target**: Cross-Platform (Android/iOS/HarmonyOS) Ready  
 > **Spec Alignment**: Orchestrator-V1.md (v1.2.0)  
-> **Status**: Phase 3 (God ViewModel Liquidation)  
-> **Last Audit**: 2026-01-06
+> **Status**: M5 Cleanup Sprint  
+> **Last Audit**: 2026-01-07
 
 ---
 
-## 1. Vision: "Hybrid Feature-Based + Portable Core"
-
-We are transforming from a **legacy compiled monolith** into a **modern cross-platform architecture**. The goal is transferability without full rewrite costs.
-
-### Core Principles
-1.  **Vertical Features**: Each feature (`chat`, `history`, `transcription`) owns its full stack.
-2.  **Portable "Brain"**: All state logic lives in pure Kotlin Coordinators (no Android imports).
-3.  **Platform "Hands"**: Android layers only handle UI rendering and lifecycle glue.
-4.  **Quality Over Quantity**: Responsibility limits, not line limits.
+## 1. Vision: Portable Core + Platform Shell
 
 ```mermaid
 graph TD
-    subgraph "Platform Layer (The Hands)"
-        UI[Compose UI] --> VM[ViewModel]
+    subgraph "Platform Layer (Shell)"
+        UI[Compose UI]
+        VM[HomeViewModel]
     end
+    
+    subgraph "Domain Layer (Portable Brain)"
+        SAP[SmartAnalysisParser]
+        SC[StreamingCoordinator]
+        TC[TranscriptionCoordinator]
+        DC[DebugCoordinator]
+        EC[ExportCoordinator]
+        SM[SessionsManager]
+    end
+    
+    VM --> SAP
+    VM --> SC
+    VM --> TC
+    VM --> DC
+    VM --> EC
+    VM --> SM
+    UI --> VM
+```
 
-    subgraph "Shared Core (The Brain)"
-        VM --> Coordinator[Pure Coordinator]
-        VM --> Manager[Pure Manager]
-    end
+### Core Principles
+1. **Single Responsibility**: Each component has ONE job
+2. **Portable Domain**: `domain/` has zero Android imports
+3. **Platform Shell**: ViewModel only wires coordinators to UI state
+4. **V1 Spec Alignment**: Every module maps to Orchestrator-V1.md section
+
+---
+
+## 2. Target Architecture Tree
+
+```
+smart-sales/
+├── core/metahub/                    # Metadata Hub (V1 §4)
+│   ├── ConversationDerivedState.kt     # M2
+│   ├── TranscriptMetadata.kt           # M2B
+│   └── SessionMetadata.kt              # M3
+│
+├── data/ai-core/                    # Provider Layer
+│   ├── DashscopeAiChatService.kt       # AI Chatter (V1 §3.1.1)
+│   ├── TingwuRunner.kt                 # V1 §3.2.2 [RENAME]
+│   └── tingwu/
+│       └── TranscriptPublisher.kt      # V1 §3.2.4 [RENAME]
+│
+├── feature/chat/domain/             # Portable Brain (Pure Kotlin)
+│   ├── analysis/
+│   │   └── SmartAnalysisParser.kt      # LLM Parser (V1 §3.1.3) [MOVE from chat/]
+│   ├── chat/
+│   │   ├── ChatPublisher.kt            # ChatPublisher (V1 §3.2.4)
+│   │   └── ChatMessageBuilder.kt
+│   ├── transcription/
+│   │   ├── Disector.kt                 # V1 §3.2.1 [RENAME]
+│   │   ├── Sanitizer.kt                # V1 §3.2.3 [RENAME]
+│   │   └── TranscriptionCoordinator.kt
+│   ├── debug/DebugCoordinator.kt       # HUD (V1 §9)
+│   ├── export/ExportCoordinator.kt
+│   ├── stream/StreamingCoordinator.kt  # [RENAME]
+│   └── sessions/SessionsManager.kt
+│
+├── data/ai-core/                    # Provider Layer
+│   └── TingwuRunner.kt                 # Interface + impl [ADD interface]
+│
+└── feature/chat/presentation/
+    └── HomeViewModel.kt                # Shell [RENAME from HSVM]
 ```
 
 ---
 
-## 2. Current State (Audited 2026-01-06)
+## 3. V1 Module Mapping
 
-### Wired Portable Components
-
-| Coordinator | Lines | Wired Into | Job |
-|-------------|-------|------------|-----|
-| `SessionsManager` | 169 | HSVM | Session CRUD, history operations |
-| `ExportCoordinator` | ~150 | HSVM | Export gate, PDF/CSV, share |
-| `TranscriptionCoordinator` | 196 | HSVM | Batch gate, window filter, Tingwu trace |
-| `ConversationViewModel` | 352 | HSVM | Streaming, SmartAnalysis, message state |
-
-### Dead Code Deleted (This Session)
-
-| File | Lines | Reason |
-|------|-------|--------|
-| `SessionsViewModel.kt` | 166 | Duplicate of `SessionsManager` |
-| `ExportViewModel.kt` | 164 | Duplicate of `ExportCoordinator` |
-| NAV system (header + index) | ~35 | Broken/stale anchors |
-
-### The God Object
-
-`HomeScreenViewModel.kt` is **2398 lines** (after cleanup). It still:
-- Orchestrates all coordinators
-- Manages UI state aggregation
-- Handles lifecycle observers
-- Contains session bootstrap logic
+| V1 Module | V1 Section | File | Status |
+|-----------|------------|------|--------|
+| AI Chatter | §3.1.1 | `DashscopeAiChatService.kt` | ✅ |
+| SmartAnalysis | §3.1.2 | `SmartAnalysisParser.kt` | ✅ |
+| LLM Parser | §3.1.3 | `SmartAnalysisParser.kt` | ✅ |
+| Disector | §3.2.1 | `Disector.kt` | 🔄 Rename |
+| Tingwu Runner | §3.2.2 | `TingwuRunner.kt` | 🔄 Rename |
+| Sanitizer | §3.2.3 | `Sanitizer.kt` | 🔄 Rename |
+| ChatPublisher | §3.2.4 | `ChatPublisher.kt` | ✅ |
+| TranscriptPublisher | §3.2.4 | `TranscriptPublisher.kt` | 🔄 Rename |
+| M2/M2B/M3 | §4 | `core/metahub/` | ✅ |
 
 ---
 
-## 3. The Constraint: Single Responsibility
+## 4. Current Sprint: M5 Cleanup
 
-> ⚠️ **NO GOD VIEWMODELS.** We enforce separation by **responsibility**, not metrics.
+### Renames (6 total)
 
-Each component has **ONE job**. If you're writing a second `when` branch for unrelated intents, you've crossed the line—extract it.
+| Current | Target |
+|---------|--------|
+| `HomeScreenViewModel.kt` | `HomeViewModel.kt` |
+| `DisectorUseCase.kt` | `Disector.kt` |
+| `SanitizerUseCase.kt` | `Sanitizer.kt` |
+| `RealTingwuCoordinator.kt` | `TingwuRunner.kt` |
+| `TranscriptPublisherUseCase.kt` | `TranscriptPublisher.kt` |
+| `ChatStreamCoordinator.kt` | `StreamingCoordinator.kt` |
 
-### 3.1 The "Portable Core" Pattern
+### HSVM → Shell Wiring
 
-| Component | Responsibility | Dependencies | Transferable? |
-|-----------|----------------|--------------|---------------|
-| **UI** | Rendering state | Compose | ❌ No |
-| **ViewModel** | Lifecycle, StateFlow holder | Android SDK | ❌ No |
-| **Coordinator/Manager** | Async flows, state logic | Pure Kotlin | ✅ **YES** |
-
----
-
-## 4. Phase 3 Roadmap: "The Great Split"
-
-### M4: Portable Core ✅ COMPLETE
-- [x] `SessionsManager`: Session CRUD (wired)
-- [x] `ExportCoordinator`: Export logic (wired)
-- [x] `TranscriptionCoordinator`: Tingwu batch logic (wired)
-- [x] `ConversationViewModel`: Streaming + SmartAnalysis (wired)
-
-### M5: God ViewModel Liquidation (Current)
-
-**Goal**: Split HSVM by responsibility into focused ViewModels/Coordinators.
-
-| Step | Action | Verification |
-|------|--------|--------------|
-| **M5.1** | Audit HSVM responsibility breakdown | Map 118 methods to responsibility areas |
-| **M5.2** | Delete dead code | Build passes, no functionality lost |
-| **M5.3** | Extract Transcription responsibility | Create `TranscriptionSessionManager` for `onTranscriptionRequested` |
-| **M5.4** | Extract Debug responsibility | Move debug methods to `DebugCoordinator` |
-| **M5.5** | Extract Streaming callbacks | Consolidate `handleStreamCompleted/Error` into streaming layer |
-| **M5.6** | Final evaluation | HSVM has ONE responsibility: wiring coordinators |
-
-> [!IMPORTANT]
-> **M5 DONE Criteria:**
-> 1. `HomeScreenViewModel` has **ONE clear responsibility**: lifecycle + coordinator wiring.
-> 2. Each extracted component has **ONE responsibility** with its own tests.
-> 3. All existing tests pass.
-> 4. No `android.*` imports in any `:feature/*/domain/` directory.
-
-### M6: Multiplatform Prep (Deferred)
-
-> [!CAUTION]
-> Not scheduled. KMP migration is 2+ sprints. This section exists for direction only.
-
-- [ ] Move Coordinators to `:shared` Gradle module.
-- [ ] Implement `expect`/`actual` for platform bridges.
+HomeViewModel receives coordinators and delegates:
+- `SmartAnalysisParser` → L3 parsing
+- `StreamingCoordinator` → streaming callbacks
+- `TranscriptionCoordinator` → batch orchestration
+- `DebugCoordinator` → HUD/debug
+- `ExportCoordinator` → export gate
+- `SessionsManager` → session CRUD
 
 ---
 
-## 5. Migration Guide (Rewrite First)
+## 5. Next Sprint: M6 KMP Prep
 
-**Rule: Do not patch the God Object. Rewrite into coordinators first.**
+> [!NOTE]
+> Not scheduled. This section defines the path.
 
-1. **Audit**: Verify what logic already exists in coordinators.
-2. **Delete Duplicates**: Remove duplicated logic from HSVM.
-3. **Evaluate**: See what remains in HSVM.
-4. **Decide**: Rename to ShellVM or delete entirely.
+### What's Portable Now
+- `domain/` — 0 Android imports ✅
+- `core/metahub/` — 0 Android imports ✅
+
+### What Needs Work
+- `data/ai-core/` — OkHttp/Android networking
+- Hilt DI → Koin for multiplatform
+
+### KMP Target Structure
+```
+├── shared/                  # NEW Gradle module
+│   ├── domain/              # Move from feature/chat/domain
+│   ├── metahub/             # Move from core/metahub
+│   └── network/             # expect/actual for HTTP
+├── androidApp/
+└── iosApp/
+```
 
 ---
 
@@ -130,7 +152,18 @@ Each component has **ONE job**. If you're writing a second `when` branch for unr
 
 | Guardrail | Enforcement |
 |-----------|-------------|
-| **Single Responsibility** | Code review: "Does this component have ONE job?" |
-| **Import Test** | CI: `grep -R "import android." :feature/*/domain/` must return empty |
-| **Audit Before Assume** | Verify claims about code state with grep/view before acting |
-| **No Premature Abstraction** | Don't create wrappers unless they add logic beyond delegation |
+| **Single Responsibility** | "Does this component have ONE job?" |
+| **Import Test** | `grep "import android." domain/` = 0 |
+| **Audit Before Assume** | Verify with grep/find, no guessing |
+| **V1 Alignment** | Every module maps to spec section |
+
+---
+
+## 7. Success Criteria
+
+> Does each component have ONE responsibility?
+
+- If YES → done
+- If NO → extract
+
+No line metrics. Responsibility is the only measure.

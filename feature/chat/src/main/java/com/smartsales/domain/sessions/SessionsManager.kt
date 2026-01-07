@@ -59,7 +59,7 @@ class SessionsManager @Inject constructor(
                     title = summary.title,
                     lastMessagePreview = summary.lastMessagePreview,
                     updatedAtMillis = summary.updatedAtMillis,
-                    isCurrent = false, // Handled by HomeScreenViewModel
+                    isCurrent = false, // Handled by HomeViewModel
                     isTranscription = summary.isTranscription,
                     pinned = summary.pinned
                 )

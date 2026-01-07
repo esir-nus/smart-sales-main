@@ -1,9 +1,9 @@
-// File: feature/chat/src/main/java/com/smartsales/domain/chat/SmartAnalysisParser.kt
+// File: feature/chat/src/main/java/com/smartsales/domain/analysis/SmartAnalysisParser.kt
 // Module: :feature:chat
 // Summary: V1 SmartAnalysis module (§3.1.2) - pure JSON parsing for L3 MachineArtifact
 // Author: created on 2026-01-06
 
-package com.smartsales.domain.chat
+package com.smartsales.domain.analysis
 
 import com.smartsales.core.metahub.RiskLevel
 import com.smartsales.core.metahub.SessionMetadata

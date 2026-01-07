@@ -13,7 +13,7 @@ import com.smartsales.feature.chat.home.export.ExportGateState
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeUiState.kt
 // 模块：:feature:chat
 // 说明：Home 页面的 UI 状态定义
-// 作者：提取自 HomeScreenViewModel.kt 2026-01-05
+// 作者：提取自 HomeViewModel.kt 2026-01-05
 
 /** Home 发出的单次导航请求。 */
 sealed class HomeNavigationRequest {

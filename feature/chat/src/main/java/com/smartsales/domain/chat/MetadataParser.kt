@@ -10,7 +10,7 @@ import com.smartsales.core.metahub.SessionMetadata
 /**
  * MetadataParser: Pure JSON parsing utilities for metadata extraction.
  *
- * Extracted from HomeScreenViewModel to isolate pure parsing logic.
+ * Extracted from HomeViewModel to isolate pure parsing logic.
  */
 object MetadataParser {
 

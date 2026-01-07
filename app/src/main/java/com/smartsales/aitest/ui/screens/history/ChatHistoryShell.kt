@@ -12,11 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import com.smartsales.feature.chat.history.ChatHistoryRoute
 import com.smartsales.feature.chat.home.HomeScreenTestTags
-import com.smartsales.feature.chat.home.HomeScreenViewModel
+import com.smartsales.feature.chat.home.HomeViewModel
 
 @Composable
 fun ChatHistoryShell(
-    homeViewModel: HomeScreenViewModel,
+    homeViewModel: HomeViewModel,
     onBack: () -> Unit
 ) {
     Box(

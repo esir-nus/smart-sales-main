@@ -1,16 +1,16 @@
 package com.smartsales.domain.transcription
 
-// File: feature/chat/src/test/java/com/smartsales/domain/transcription/DisectorUseCaseTest.kt
+// File: feature/chat/src/test/java/com/smartsales/domain/transcription/DisectorTest.kt
 // Module: :feature:chat
-// Summary: Unit tests for DisectorUseCase (V1 Appendix A batch splitting rules)
+// Summary: Unit tests for Disector (V1 Appendix A batch splitting rules)
 // Author: created on 2026-01-06
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class DisectorUseCaseTest {
+class DisectorTest {
 
-    private val disector = DisectorUseCase()
+    private val disector = Disector()
 
     // ===== Single batch tests (≤20 min) =====
 

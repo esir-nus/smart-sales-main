@@ -2,20 +2,51 @@
 
 > Detailed history of architecture refactoring waves. North Star is in [RealizeTheArchi.md](./RealizeTheArchi.md).
 
+> [!NOTE]
+> **Historical entries may reference deleted code.** Earlier waves (e.g., Wave 20-25) mention `ConversationViewModel`, `StreamingCallbacks`, and `HomeScreenViewModel` — these were deleted in Wave 29 (M9) as part of dead code cleanup.
+
 ---
 
 ## Summary Metrics
 
 | Metric | Original | Current | Change |
 |--------|----------|---------|--------|
-| HomeScreenViewModel | 3668 lines | 2428 lines | **-33.8%** |
-| HomeOrchestratorImpl | 531 lines | 75 lines | **-85.9%** |
-| HomeScreen.kt | 2547 lines | **1318 lines** | **-48.3%** |
+| HomeViewModel | 2,126 lines | 1,654 lines | **-22.2%** |
+| Dead Code Removed | - | 1,031 lines | **M9 W6** |
 | Domain classes | 4 | 14 | +10 |
 | Unit tests | 0 | 223+ | New (+45) |
 | V1 Modules | 0/8 | 8/8 | **100%** |
-| conversation/* | 0 | 738 lines | New (P3.11) |
+| M9 Status | - | ✅ Complete | -472 lines |
 
+---
+
+## Wave 29: M9 ViewModel Refactoring Complete ✅ (2026-01-07)
+
+**HomeViewModel extraction phase complete: 2,126 → 1,654 lines (-22.2%)**
+
+**Waves Executed:**
+
+| Wave | Target | Lines | Status |
+|------|--------|-------|--------|
+| W1 | AudioViewModel extraction | -268 | ✅ |
+| W2 | SessionListViewModel extraction | -88 | ✅ |
+| W6 | Dead Code Cleanup | -1,031 | ✅ |
+| W7 | TranscriptionCoordinator.runTranscription() | -59 | ✅ |
+| W8 | Debug HUD | 0 | ❌ Cancelled |
+| W9 | Session Management | 0 | ❌ Deferred |
+
+**Key Decisions:**
+- W8 cancelled: Methods already delegate to DebugCoordinator (9 calls)
+- W9 deferred: High UI state coupling, trigger when KMP or 2nd ViewModel
+- Evidence-based decision tree: Check alignment → check coupling → decide
+
+**Remaining in HomeViewModel:**
+- 48 `_uiState.update` calls (correct layer)
+- 15 `viewModelScope.launch` calls (orchestration)
+- 71 methods, avg 23 lines (acceptable)
+
+**Policy Established:**
+> "Extract when duplication appears, not when imagined."
 
 ---
 

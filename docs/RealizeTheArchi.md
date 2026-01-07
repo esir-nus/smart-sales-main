@@ -158,9 +158,9 @@ HomeViewModel delegates to coordinators:
 
 ---
 
-## 5B. M9 ViewModel Refactoring: 🔄 IN PROGRESS
+## 5B. M9 ViewModel Refactoring: ✅ EXTRACTION PHASE COMPLETE
 
-**Started 2026-01-07**
+**Completed 2026-01-07**
 
 **Strategy**: Extract god object HomeViewModel into single-responsibility ViewModels using event-based decoupling.
 
@@ -175,9 +175,27 @@ HomeViewModel delegates to coordinators:
 - Removed 9 functions from HomeViewModel (-88 lines)
 - Result: 1,858 → 1,768 lines (-4.7%)
 
-**M9 Progress**: 2,126 → 1,768 lines (-358, -16.8%)
+### Wave 6: Dead Code Cleanup ✅
+- Deleted ConversationViewModel subsystem (Redux overhead)
+- Removed vestigial streaming infrastructure
+- Total: -1,031 lines of dead code
 
-**Remaining**: Export, Transcription, Message/Chat logic (~400-600 lines extractable)
+### Wave 7: Transcription Extract ✅
+- Moved observation loops to `TranscriptionCoordinator.runTranscription()`
+- Callback-based API for UI updates
+- Result: -59 lines from HomeViewModel
+
+### Wave 8: Debug HUD ❌ CANCELLED
+- Evidence: Already delegating to `DebugCoordinator` (9 calls)
+- No extraction needed
+
+### Wave 9: Session Management ❌ DEFERRED
+- Evidence: Tightly coupled to ViewModel state
+- Trigger: Extract when KMP migration starts or 2nd ViewModel needs session logic
+
+**M9 Final**: 2,126 → 1,654 lines (**-472, -22.2%**)
+
+**Remaining in HomeViewModel**: Legitimate UI orchestration (48 `_uiState.update` calls, 15 coroutine launches)
 
 ---
 

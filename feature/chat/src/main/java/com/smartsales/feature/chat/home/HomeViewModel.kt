@@ -209,8 +209,20 @@ class HomeViewModel @Inject constructor(
             chatCoordinator.chatEvents.collect { event ->
                 when (event) {
                     is com.smartsales.domain.chat.ChatEvent.StreamStarted -> {
-                        // Mark streaming active
-                        _uiState.update { it.copy(isStreaming = true) }
+                        // Create assistant placeholder and mark streaming active
+                        val placeholder = ChatMessageUi(
+                            id = event.assistantId,
+                            role = ChatMessageRole.ASSISTANT,
+                            content = "",
+                            timestampMillis = System.currentTimeMillis(),
+                            isStreaming = true
+                        )
+                        _uiState.update {
+                            it.copy(
+                                chatMessages = it.chatMessages + placeholder,
+                                isStreaming = true
+                            )
+                        }
                     }
                     is com.smartsales.domain.chat.ChatEvent.StreamDelta -> {
                         // Update assistant message with token

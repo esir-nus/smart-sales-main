@@ -365,20 +365,26 @@ class HomeViewModel @Inject constructor(
         if (_uiState.value.isSending) return
         val goal = rawInput.trim()
         
-        // P3.8: Dispatch SmartAnalysis through Reducer
-        conversationViewModel.dispatch(
-            com.smartsales.feature.chat.conversation.ConversationIntent.SendSmartAnalysis(
-                timestamp = System.currentTimeMillis(),
-                goal = goal
-            ),
-            scope = viewModelScope,
-            analysisContext = com.smartsales.feature.chat.conversation.SmartAnalysisContext(
-                sessionId = sessionId,
-                messages = _uiState.value.chatMessages,
-                salesPersona = _uiState.value.salesPersona
-            )
+        // Wave 5: Use ChatCoordinator for SmartAnalysis (replaces ConversationViewModel path)
+        val params = com.smartsales.domain.chat.SmartAnalysisParams(
+            sessionId = sessionId,
+            goal = goal,
+            chatHistory = _uiState.value.chatMessages.map { msg ->
+                com.smartsales.domain.chat.ChatHistoryMessage(
+                    role = when (msg.role) {
+                        ChatMessageRole.USER -> com.smartsales.domain.chat.MessageRole.USER
+                        ChatMessageRole.ASSISTANT -> com.smartsales.domain.chat.MessageRole.ASSISTANT
+                    },
+                    content = msg.sanitizedContent ?: msg.content
+                )
+            },
+            persona = _uiState.value.salesPersona,
+            timestamp = System.currentTimeMillis()
         )
+        
+        chatCoordinator.sendSmartAnalysis(params)
     }
+
 
 
     fun onSmartAnalysisClicked() {

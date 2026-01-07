@@ -92,12 +92,72 @@ class ChatCoordinatorImpl @Inject constructor(
     }
 
     override fun sendSmartAnalysis(params: SmartAnalysisParams) {
-        // TODO(Phase 2): Implement SmartAnalysis flow
-        // - Build SmartAnalysis request with goal
-        // - Stream with SMART_ANALYSIS mode
-        // - Parse analysis result
-        // - Persist analysis marker
+        val scope = activeScope ?: return
+        
+        scope.launch {
+            // Build simple message for SmartAnalysis
+            val allContent = params.chatHistory.joinToString("\n") { it.content }
+            if (allContent.isBlank()) {
+                val error = ChatError.ValidationError("内容太少，无法智能分析，请先粘贴对话或纪要再试。")
+                _chatEvents.emit(ChatEvent.StreamError("error_${System.currentTimeMillis()}", error))
+                return@launch
+            }
+            
+            // Build user message
+            val userMessage = ChatMessageBuilder.buildSmartAnalysisUserMessage(
+                mainContent = allContent.take(2000),
+                context = null,
+                goal = params.goal.ifBlank { "通用分析" }
+            )
+            
+            val assistantId = "smart_${System.currentTimeMillis()}"
+            _chatEvents.emit(ChatEvent.StreamStarted(assistantId))
+            
+            // Build request
+            val request = com.smartsales.feature.chat.core.ChatRequest(
+                sessionId = params.sessionId,
+                userMessage = userMessage,
+                quickSkillId = "SMART_ANALYSIS",
+                audioContextSummary = null,
+                history = params.chatHistory.map {
+                    com.smartsales.feature.chat.core.ChatHistoryItem(
+                        role = if (it.role == MessageRole.USER) com.smartsales.feature.chat.core.ChatRole.USER else com.smartsales.feature.chat.core.ChatRole.ASSISTANT,
+                        content = it.content
+                    )
+                },
+                isFirstAssistantReply = false,
+                persona = params.persona
+            )
+            
+            // Stream
+            streamingCoordinator.start(
+                scope = scope,
+                request = request,
+                onDelta = { token ->
+                    _chatEvents.emit(ChatEvent.StreamDelta(assistantId, token))
+                },
+                onCompleted = { fullText ->
+                    // Simple display text extraction
+                    val displayText = ChatPublisher.extractDisplayText(fullText)
+                    _chatEvents.emit(ChatEvent.StreamCompleted(
+                        result = ChatCompletionResult(
+                            assistantId = assistantId,
+                            rawFullText = fullText,
+                            displayText = displayText,
+                            metadata = null,
+                            titleCandidate = null,
+                            isSmartAnalysis = true
+                        )
+                    ))
+                },
+                onError = { throwable ->
+                    val error = ChatError.NetworkError(throwable, throwable.message)
+                    _chatEvents.emit(ChatEvent.StreamError(assistantId, error))
+                }
+            )
+        }
     }
+
 
     override fun resetStream() {
         // Reset active stream state (for session switch or error recovery)

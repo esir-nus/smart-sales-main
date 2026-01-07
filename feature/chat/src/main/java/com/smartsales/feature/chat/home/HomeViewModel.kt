@@ -164,10 +164,10 @@ class HomeViewModel @Inject constructor(
     private val sessionsManager: com.smartsales.domain.sessions.SessionsManager,
     private val tingwuCoordinator: com.smartsales.domain.transcription.TranscriptionCoordinator,
     private val mediaInputCoordinator: com.smartsales.feature.chat.platform.MediaInputCoordinator,
-    private val conversationViewModel: com.smartsales.feature.chat.conversation.ConversationViewModel,
+
     private val chatCoordinator: com.smartsales.domain.chat.ChatCoordinator,
     optionalConfig: Optional<AiCoreConfig> = Optional.empty(),
-) : ViewModel(), com.smartsales.feature.chat.conversation.StreamingCallbacks {
+) : ViewModel() {
 
     private val quickSkillDefinitions = quickSkillCatalog.homeQuickSkills()
     private val quickSkillDefinitionsById = quickSkillDefinitions.associateBy { it.id }
@@ -240,25 +240,7 @@ class HomeViewModel @Inject constructor(
             }
         }
         
-        // P3.1.B1: Sync ConversationViewModel.state -> HomeUiState
-        viewModelScope.launch {
-            conversationViewModel.state.collect { conversationState ->
-                _uiState.update { it.copy(inputText = conversationState.inputText) }
-            }
-        }
-        
-        // P3.1.B2: Migration bridge for message sync (TODO: remove in P3.8)
-        conversationViewModel.onMessagesChanged = { messages ->
-            _uiState.update { it.copy(chatMessages = messages) }
-        }
-        
-        // P3.8: Migration bridge for SmartAnalysis state sync (TODO: remove in P3.9)
-        conversationViewModel.onSmartAnalysisModeChanged = { mode, goal ->
-            _uiState.update { it.copy(
-                isSmartAnalysisMode = mode,
-                smartAnalysisGoal = goal
-            ) }
-        }
+
         
         
         
@@ -269,11 +251,7 @@ class HomeViewModel @Inject constructor(
 
 
     fun onInputChanged(text: String) {
-        // P3.1.B1: Dispatch to ConversationReducer
-        conversationViewModel.dispatch(
-            com.smartsales.feature.chat.conversation.ConversationIntent.InputChanged(text)
-        )
-        // State sync handled by collector in init
+        _uiState.update { it.copy(inputText = text) }
     }
 
     fun onInputFocusChanged(focused: Boolean) {
@@ -1060,185 +1038,11 @@ class HomeViewModel @Inject constructor(
     }
 
 
-    /** 启动 streaming，更新最后一条助手气泡。Delegates to ConversationVM. */
-    private var streamingDeduplicator = StreamingDeduplicator()
-    
-    private fun startStreamingResponse(context: com.smartsales.feature.chat.conversation.StreamingContext) {
-        val request = context.request
-        val assistantId = context.assistantId
-        val isSmartAnalysis = request.quickSkillId == "SMART_ANALYSIS"
-        streamingDeduplicator = StreamingDeduplicator()
-
-        // Set context for callbacks
-        currentStreamingRequest = request
-        currentOnCompleted = context.onCompleted
-        currentOnCompletedTransform = context.onCompletedTransform
-        currentIsAutoAnalysis = context.isAutoAnalysis
-
-        if (isSmartAnalysis) {
-            updateAssistantMessage(assistantId) { msg ->
-                msg.copy(content = SMART_PLACEHOLDER_TEXT, isStreaming = true)
-            }
-        }
-
-        // V1 retry config: only for general chat
-        val v1RetryConfig = if (enableV1ChatPublisher && request.quickSkillId == null && !isSmartAnalysis) {
-            com.smartsales.feature.chat.conversation.V1RetryConfig(maxRetries = 2, enableReasonAware = true)
-        } else null
-
-        // Delegate to ConversationViewModel with all V1 retry logic centralized there
-        conversationViewModel.startStreaming(
-            context = context,
-            callbacks = this,
-            scope = viewModelScope,
-            v1RetryConfig = v1RetryConfig
-        )
-    }
 
 
 
-    private suspend fun handleStreamCompleted(
-        request: ChatRequest,
-        assistantId: String,
-        rawFullText: String,
-        onCompleted: (String) -> Unit,
-        onCompletedTransform: ((String) -> String)?,
-        isAutoAnalysis: Boolean,
-        isSmartAnalysis: Boolean
-    ) {
-        // 完成：关闭 streaming，最终清理和去重
-        val isGeneralChat = request.quickSkillId == null
-        val isFirstGeneralReply = isGeneralChat && request.isFirstAssistantReply && !firstAssistantProcessed
-        val useV1Publisher = enableV1ChatPublisher && isGeneralChat && !isSmartAnalysis
-        // V1 模式：仅由 Publisher 决定可见文本，禁止启发式提取
-        val v1Result = if (useV1Publisher) v1Finalizer.finalize(rawFullText) else null
 
-        // 首条 GENERAL 回复处理开始时，无条件标记为已处理（确保后续回复不会被当作首条）
-        if (isGeneralChat && isFirstGeneralReply) {
-            firstAssistantProcessed = true
-        }
 
-        // 提取 GENERAL 的 channels（Visible2User 和 Metadata）
-        val channels = if (isGeneralChat && !useV1Publisher) {
-            extractGeneralChannels(rawFullText)
-        } else {
-            GeneralChannels(null, null, null)
-        }
-        val metadataJson = channels.metadataJson
-
-        // 仅首条 GENERAL 回复允许解析并写入元数据
-        val generalMeta = if (!useV1Publisher && isFirstGeneralReply) {
-            // V1 模式不走旧的元数据解析，避免启发式 JSON 写入
-            handleGeneralChatMetadata(rawFullText, metadataJson)
-        } else {
-            null
-        }
-        val v1Meta = if (useV1Publisher && isFirstGeneralReply) {
-            handleV1GeneralChatMetadata(v1Result)
-        } else {
-            null
-        }
-
-        val latestMeta = if (useV1Publisher) {
-            v1Meta ?: runCatching { metaHub.getSession(sessionId) }.getOrNull()
-        } else {
-            generalMeta ?: runCatching { metaHub.getSession(sessionId) }.getOrNull()
-        }
-
-        // <Visible2User> 驱动显示，rawContent 保留原始文本（含标签）
-        val visibleText = channels.visibleText
-        // Wave 9: Delegate display text resolution to domain layer
-        val cleaned = com.smartsales.domain.chat.ChatPublisher.resolveDisplayText(
-            rawFullText = rawFullText,
-            visibleText = visibleText,
-            isSmartAnalysis = isSmartAnalysis,
-            useV1Publisher = useV1Publisher,
-            v1VisibleMarkdown = v1Result?.visibleMarkdown,
-            onCompletedTransform = if (isSmartAnalysis) null else { text -> 
-                val transformed = onCompletedTransform?.invoke(text) ?: text
-                applyGeneralOutputGuards(transformed)
-            }
-        )
-        val isSmartFailure = isSmartAnalysis && cleaned.trim() == SMART_ANALYSIS_FAILURE_TEXT
-        if (isSmartAnalysis && !isSmartFailure) {
-            persistLatestAnalysisMarker(AnalysisSource.SMART_ANALYSIS_USER, assistantId)
-            onAnalysisCompleted(cleaned, assistantId)
-        }
-        // Export state managed by ExportViewModel
-        debugLog(
-            event = "chat_stream_completed",
-            data = mapOf(
-                "sessionId" to sessionId,
-                "mode" to (request.quickSkillId ?: "GENERAL_CHAT"),
-                "isFirstReply" to request.isFirstAssistantReply,
-                "assistantTextLength" to cleaned.length
-            )
-        )
-        updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
-            val display = displayAssistantText(raw = rawFullText, sanitized = cleaned)
-            msg.copy(
-                content = display,
-                rawContent = rawFullText, // 保留原始文本（含所有标签）
-                sanitizedContent = cleaned,
-                isStreaming = false
-            )
-        }
-        onCompleted(cleaned)
-        // 顺序保持不变，确保状态与展示一致
-        _uiState.update { it.copy(isSending = false, isStreaming = false, isInputBusy = false, isBusy = false) }
-        if (isFirstGeneralReply) {
-            // 自动标题仅在首条助手回复时尝试，优先 Rename 渠道，缺失时回退元数据
-            maybeResolveSessionTitle(latestMeta, channels.renameCandidate)
-        }
-        val previewText = latestMeta?.shortSummary?.takeIf { it.isNotBlank() } ?: cleaned
-        viewModelScope.launch {
-            updateSessionSummary(previewText)
-        }
-    }
-
-    private fun handleStreamError(
-        request: ChatRequest,
-        assistantId: String,
-        throwable: Throwable,
-        isAutoAnalysis: Boolean,
-        isSmartAnalysis: Boolean
-    ) {
-        // 错误：标记消息失败并弹出提示
-        warnLog(
-            event = "chat_stream_error",
-            data = mapOf(
-                "sessionId" to sessionId,
-                "mode" to (request.quickSkillId ?: "GENERAL_CHAT")
-            ),
-            throwable = throwable
-        )
-        if (isSmartAnalysis) {
-            val errorText = throwable.message?.takeIf { it.isNotBlank() }
-                ?: SMART_ANALYSIS_FAILURE_TEXT
-            updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
-                msg.copy(
-                    content = errorText,
-                    rawContent = errorText,
-                    sanitizedContent = errorText,
-                    hasError = true,
-                    isStreaming = false
-                )
-            }
-        } else {
-            updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
-                msg.copy(hasError = true, isStreaming = false)
-            }
-        }
-        _uiState.update {
-            it.copy(
-                isSending = false,
-                isStreaming = false,
-                isInputBusy = false,
-                isBusy = false,
-                chatErrorMessage = throwable.message ?: "AI 回复失败"
-            )
-        }
-    }
 
     private fun updateAssistantMessage(
         assistantId: String,
@@ -1762,63 +1566,8 @@ class HomeViewModel @Inject constructor(
     }
 
 
-    // P3.9.2: Extract callbacks from inline lambdas for decoupling
-    
-    override fun onDelta(assistantId: String, token: String) {
-        // Note: SmartAnalysis check happens at coordinator level
-        updateAssistantMessage(assistantId) { msg ->
-            val merged = StreamingDeduplicator().mergeSnapshot(
-                current = msg.content,
-                incoming = token
-            )
-            msg.copy(
-                content = merged,
-                isStreaming = true
-            )
-        }
-    }
-    
-    override suspend fun onCompleted(assistantId: String, rawFullText: String) {
-        // Delegate to existing completion handler
-        // Note: Request context must be captured externally
-        handleStreamCompleted(
-            request = currentStreamingRequest ?: return,
-            assistantId = assistantId,
-            rawFullText = rawFullText,
-            onCompleted = currentOnCompleted ?: {},
-            onCompletedTransform = currentOnCompletedTransform,
-            isAutoAnalysis = currentIsAutoAnalysis,
-            isSmartAnalysis = currentStreamingRequest?.quickSkillId == "SMART_ANALYSIS"
-        )
-    }
-    
-    override fun onError(assistantId: String, throwable: Throwable) {
-        // Delegate to existing error handler
-        handleStreamError(
-            request = currentStreamingRequest ?: // fallback to empty request
-                ChatRequest(
-                    sessionId = sessionId,
-                    userMessage = "",
-                    quickSkillId = null,
-                    audioContextSummary = null,
-                    history = emptyList(),
-                    isFirstAssistantReply = false,
-                    persona = null
-                ),
-            assistantId = assistantId,
-            throwable = throwable,
-            isAutoAnalysis = currentIsAutoAnalysis,
-            isSmartAnalysis = false
-        )
-    }
-    
-    
-    // Temporary state holders for streaming context
-    // TODO(P3.9.3): Remove when startStreamingResponse moves to ConversationVM
-    private var currentStreamingRequest: ChatRequest? = null
-    private var currentOnCompleted: ((String) -> Unit)? = null
-    private var currentOnCompletedTransform: ((String) -> String)? = null
-    private var currentIsAutoAnalysis: Boolean = false
+    // Live streaming state for ChatCoordinator events
+    private var streamingDeduplicator = StreamingDeduplicator()
 
     // ====== ChatCoordinator Event Handlers (Wave 4) ======
 

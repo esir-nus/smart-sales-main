@@ -4,7 +4,7 @@
 > **Paradigm**: Reference existing code + Orchestrator-V1 → write toward target state  
 > **Target**: Cross-Platform (Android/iOS/HarmonyOS) Ready  
 > **Spec Alignment**: Orchestrator-V1.md (v1.2.0)  
-> **Status**: M6 Phase 1 Complete  
+> **Status**: M6 Phase 1 & Phase 2 Wave 1 Complete  
 > **Last Audit**: 2026-01-07
 
 > [!IMPORTANT]
@@ -70,7 +70,7 @@ smart-sales/
 │
 ├── feature/chat/domain/             # Portable Brain (Pure Kotlin)
 │   ├── analysis/
-│   │   └── SmartAnalysisParser.kt      # LLM Parser (V1 §3.1.3) [MOVE from chat/]
+│   │   └── SmartAnalysisParser.kt      # LLM Parser (V1 §3.1.3) ✅
 │   ├── chat/
 │   │   ├── ChatPublisher.kt            # ChatPublisher (V1 §3.2.4)
 │   │   └── ChatMessageBuilder.kt
@@ -137,18 +137,30 @@ HomeViewModel delegates to coordinators:
 
 ---
 
-## 5. Next Sprint: M6 KMP Prep
+## 5. M6 KMP Prep: ✅ Phase 1 & Phase 2 Wave 1 COMPLETE
 
-> [!NOTE]
-> Not scheduled. This section defines the path.
+**Completed 2026-01-07**
 
-### What's Portable Now
+### Phase 1: Remove Android Imports ✅
 - `domain/` — 0 Android imports ✅
 - `core/metahub/` — 0 Android imports ✅
+- Moved `MediaInputCoordinator` to platform layer
+- Removed `android.util.Log` from `TranscriptionCoordinator`
 
-### What Needs Work
+### Phase 2 Wave 1: Interface Extraction ✅
+- `Disector` / `DisectorImpl` — interface extracted ✅
+- `Sanitizer` / `SanitizerImpl` — interface extracted ✅
+- Created `DomainModule` for Hilt bindings ✅
+
+### Deferred Work
+
+**Wave 2** (4 complex coordinators): ExportCoordinator, DebugCoordinator, TranscriptionCoordinator, SessionsManager
+- Defer until actual KMP module creation
+
+**Phase 3** (`:shared` module):
 - `data/ai-core/` — OkHttp/Android networking
 - Hilt DI → Koin for multiplatform
+- Only when iOS development starts
 
 ### KMP Target Structure
 ```

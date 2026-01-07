@@ -6,7 +6,7 @@ package com.smartsales.feature.chat.core.v1
 // Author: created on 2025-12-30
 
 import com.smartsales.feature.chat.core.publisher.ArtifactStatus
-import com.smartsales.feature.chat.core.stream.CompletionDecision
+import com.smartsales.domain.stream.CompletionDecision
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

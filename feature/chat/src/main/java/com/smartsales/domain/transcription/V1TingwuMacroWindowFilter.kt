@@ -1,4 +1,4 @@
-package com.smartsales.feature.chat.core.transcription
+package com.smartsales.domain.transcription
 
 // File: feature/chat/src/main/java/com/smartsales/feature/chat/core/transcription/V1TingwuMacroWindowFilter.kt
 // Module: :feature:chat

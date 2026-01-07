@@ -10,7 +10,7 @@ import com.smartsales.feature.chat.core.publisher.ChatPublisher
 import com.smartsales.feature.chat.core.publisher.GeneralChatV1Finalizer
 import com.smartsales.feature.chat.core.publisher.PublishedChatTurnV1
 import com.smartsales.feature.chat.core.publisher.V1FinalizeResult
-import com.smartsales.feature.chat.core.stream.CompletionDecision
+import com.smartsales.domain.stream.CompletionDecision
 import com.smartsales.feature.chat.core.SystemPromptBuilder
 import com.smartsales.feature.chat.core.SystemPromptContext
 import org.junit.Assert.assertEquals

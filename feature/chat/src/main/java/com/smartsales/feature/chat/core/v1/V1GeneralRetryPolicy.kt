@@ -9,7 +9,7 @@ import android.util.Log
 import com.smartsales.feature.chat.core.publisher.ArtifactStatus
 import com.smartsales.feature.chat.core.publisher.GeneralChatV1Finalizer
 import com.smartsales.feature.chat.core.publisher.V1FinalizeResult
-import com.smartsales.feature.chat.core.stream.CompletionDecision
+import com.smartsales.domain.stream.CompletionDecision
 
 object V1GeneralRetryPolicy {
     // 抽取策略常量，降低 ViewModel 复杂度，便于单元测试

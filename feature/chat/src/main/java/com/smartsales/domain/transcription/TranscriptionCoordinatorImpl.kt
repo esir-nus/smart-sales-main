@@ -6,8 +6,8 @@
 package com.smartsales.domain.transcription
 
 import com.smartsales.data.aicore.AiCoreConfig
-import com.smartsales.feature.chat.core.transcription.V1BatchIndexPrefixGate
-import com.smartsales.feature.chat.core.transcription.V1TingwuWindowedChunkBuilder
+import com.smartsales.domain.transcription.V1BatchIndexPrefixGate
+import com.smartsales.domain.transcription.V1TingwuWindowedChunkBuilder
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionBatchEvent
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState

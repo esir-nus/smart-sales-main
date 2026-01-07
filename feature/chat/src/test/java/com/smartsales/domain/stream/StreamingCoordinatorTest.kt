@@ -1,4 +1,4 @@
-package com.smartsales.feature.chat.core.stream
+package com.smartsales.domain.stream
 
 // File: feature/chat/src/test/java/com/smartsales/feature/chat/core/stream/StreamingCoordinatorTest.kt
 // Module: :feature:chat

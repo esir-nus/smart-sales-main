@@ -94,9 +94,9 @@ import com.smartsales.feature.chat.core.publisher.ChatPublisherImpl
 import com.smartsales.feature.chat.core.publisher.GeneralChatV1Finalizer
 import com.smartsales.feature.chat.core.publisher.ArtifactStatus
 import com.smartsales.feature.chat.core.publisher.V1FinalizeResult
-import com.smartsales.feature.chat.core.stream.StreamingCoordinator
-import com.smartsales.feature.chat.core.transcription.V1BatchIndexPrefixGate
-import com.smartsales.feature.chat.core.transcription.V1TingwuWindowedChunkBuilder
+import com.smartsales.domain.stream.StreamingCoordinator
+import com.smartsales.domain.transcription.V1BatchIndexPrefixGate
+import com.smartsales.domain.transcription.V1TingwuWindowedChunkBuilder
 import com.smartsales.feature.chat.core.v1.V1GeneralCompletionEvaluator
 import com.smartsales.feature.chat.core.v1.V1GeneralRetryPolicy
 import com.smartsales.feature.chat.core.v1.V1GeneralRetryEffects

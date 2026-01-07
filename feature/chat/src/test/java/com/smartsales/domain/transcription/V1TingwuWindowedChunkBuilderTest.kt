@@ -1,4 +1,4 @@
-package com.smartsales.feature.chat.core.transcription
+package com.smartsales.domain.transcription
 
 import com.smartsales.feature.media.audiofiles.V1TimedTextSegment
 import org.junit.Assert.assertEquals

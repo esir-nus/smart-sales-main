@@ -3,8 +3,8 @@ package com.smartsales.feature.chat.conversation
 import com.smartsales.feature.chat.core.ChatHistoryItem
 import com.smartsales.feature.chat.core.ChatRequest
 import com.smartsales.feature.chat.core.ChatRole
-import com.smartsales.feature.chat.core.stream.StreamingCoordinator
-import com.smartsales.feature.chat.core.stream.CompletionDecision
+import com.smartsales.domain.stream.StreamingCoordinator
+import com.smartsales.domain.stream.CompletionDecision
 import com.smartsales.feature.chat.core.publisher.ChatPublisher
 import com.smartsales.feature.chat.core.publisher.ChatPublisherImpl
 import com.smartsales.feature.chat.core.publisher.GeneralChatV1Finalizer

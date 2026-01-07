@@ -351,9 +351,6 @@ fun HomeScreenRoute(
             onInputFocusChanged = { focused ->
                 viewModel.onInputFocusChanged(focused)
             onInputFocusChanged(focused)
-        },
-        onTestCoordinator = {
-            viewModel.sendViaCoordinator("测试 ChatCoordinator 流程")
         }
     )
 
@@ -480,7 +477,6 @@ fun HomeScreen(
     onHistoryRenameTextChange: (String) -> Unit = {},
     onToggleDebugMetadata: () -> Unit = {},
     onRefreshXfyunTrace: () -> Unit = {},
-    onTestCoordinator: () -> Unit = {},
     onToggleRawAssistantOutput: (Boolean) -> Unit = {},
     onDismissKeyboard: () -> Unit = {},
     onInputFocusChanged: (Boolean) -> Unit = {}
@@ -640,8 +636,7 @@ fun HomeScreen(
                             onNewChatClick = onNewChatClicked,
                             hudEnabled = hudEnabled,
                             showDebugMetadata = state.showDebugMetadata,
-                            onToggleDebugMetadata = { onToggleDebugMetadata() },
-                            onTestCoordinator = onTestCoordinator
+                            onToggleDebugMetadata = { onToggleDebugMetadata() }
                         )
                     },
                     bottomBar = {
@@ -1053,7 +1048,6 @@ private fun HomeTopBar(
     hudEnabled: Boolean,
     showDebugMetadata: Boolean,
     onToggleDebugMetadata: () -> Unit,
-    onTestCoordinator: () -> Unit = {},
 ) {
     Row(
             modifier = Modifier
@@ -1079,10 +1073,6 @@ private fun HomeTopBar(
             overflow = TextOverflow.Ellipsis
         )
         if (hudEnabled) {
-            // TODO: Remove after ChatCoordinator testing complete
-            TextButton(onClick = onTestCoordinator) {
-                Text("TEST", style = MaterialTheme.typography.labelSmall)
-            }
             IconButton(
                 onClick = onToggleDebugMetadata,
                 modifier = Modifier.testTag(HomeScreenTestTags.DEBUG_HUD_TOGGLE)

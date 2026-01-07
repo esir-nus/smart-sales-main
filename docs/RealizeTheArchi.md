@@ -66,7 +66,7 @@ smart-sales/
 │   ├── DashscopeAiChatService.kt       # AI Chatter (V1 §3.1.1)
 │   ├── TingwuRunner.kt                 # Impl of TingwuCoordinator (V1 §3.2.2) ✅
 │   └── tingwu/
-│       └── TranscriptPublisher.kt      # V1 §3.2.4 [RENAME]
+│       └── TranscriptPublisher.kt      # V1 §3.2.4 ✅
 │
 ├── feature/chat/domain/             # Portable Brain (Pure Kotlin)
 │   ├── analysis/
@@ -102,7 +102,7 @@ smart-sales/
 | Tingwu Runner | §3.2.2 | `TingwuRunner.kt` (impl TingwuCoordinator) | ✅ |
 | Sanitizer | §3.2.3 | `Sanitizer.kt` | ✅ |
 | ChatPublisher | §3.2.4 | `ChatPublisher.kt` | ✅ |
-| TranscriptPublisher | §3.2.4 | `TranscriptPublisher.kt` | 🔄 Rename |
+| TranscriptPublisher | §3.2.4 | `TranscriptPublisher.kt` | ✅ |
 | M2/M2B/M3 | §4 | `core/metahub/` | ✅ |
 
 ---
@@ -119,7 +119,7 @@ smart-sales/
 | `DisectorUseCase.kt` | `Disector.kt` | ✅ |
 | `SanitizerUseCase.kt` | `Sanitizer.kt` | ✅ |
 | `RealTingwuCoordinator.kt` | `TingwuRunner.kt` | ✅ (already impl TingwuCoordinator) |
-| `TranscriptPublisherUseCase.kt` | `TranscriptPublisher.kt` | 🔄 Deferred |
+| `TranscriptPublisherUseCase.kt` | `TranscriptPublisher.kt` | ✅ (already renamed) |
 | `ChatStreamCoordinator.kt` | `StreamingCoordinator.kt` | ✅ |
 
 ### HSVM → HomeViewModel Shell ✅

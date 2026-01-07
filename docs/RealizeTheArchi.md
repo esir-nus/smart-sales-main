@@ -4,7 +4,7 @@
 > **Paradigm**: Reference existing code + Orchestrator-V1 → write toward target state  
 > **Target**: Cross-Platform (Android/iOS/HarmonyOS) Ready  
 > **Spec Alignment**: Orchestrator-V1.md (v1.2.0)  
-> **Status**: M6 Phase 2 Complete — Tree Reflects Reality ✅  
+> **Status**: M6 + M7 Complete — Domain Layer Realized ✅  
 > **Last Updated**: 2026-01-07
 
 > [!IMPORTANT]
@@ -179,15 +179,32 @@ HomeViewModel delegates to coordinators:
 - `TranscriptionCoordinator` / `TranscriptionCoordinatorImpl` — interface extracted ✅
 - `SessionsManager` / `SessionsManagerImpl` — interface extracted ✅
 - Updated `DomainModule` with 4 new bindings ✅
+---
 
-### Deferred Work
+## 6. M7 Architecture Alignment: ✅ COMPLETE
 
-**Phase 3** (`:shared` module creation): Actual KMP module creation deferred until iOS development starts
+**Completed 2026-01-07**
 
-**Phase 3** (`:shared` module):
-- `data/ai-core/` — OkHttp/Android networking
+### Files Moved to Domain ✅
+- `V1BatchIndexPrefixGate.kt` → `domain/transcription/` ✅
+- `V1TingwuWindowedChunkBuilder.kt` → `domain/transcription/` ✅
+- `V1TingwuMacroWindowFilter.kt` → `domain/transcription/` ✅
+- `StreamingCoordinator.kt` → `domain/stream/` ✅
+
+### Verification ✅
+- Zero Android imports in `domain/`
+- 23 files in domain layer
+- 38 domain tests passing
+
+---
+
+## 7. Deferred Work (Phase 3)
+
+**`:shared` module creation**: Deferred until iOS development starts
+
+**Scope**:
+- `data/ai-core/` — OkHttp/Android networking → expect/actual
 - Hilt DI → Koin for multiplatform
-- Only when iOS development starts
 
 ### KMP Target Structure
 ```
@@ -201,7 +218,7 @@ HomeViewModel delegates to coordinators:
 
 ---
 
-## 6. Quality Guardrails
+## 8. Quality Guardrails
 
 | Guardrail | Enforcement |
 |-----------|-------------|
@@ -213,7 +230,7 @@ HomeViewModel delegates to coordinators:
 
 ---
 
-## 7. Success Criteria
+## 9. Success Criteria
 
 > Does each component have ONE responsibility?
 

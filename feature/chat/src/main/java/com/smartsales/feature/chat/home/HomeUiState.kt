@@ -52,14 +52,9 @@ data class HomeUiState(
     val isLoadingHistory: Boolean = false,
     val quickSkills: List<QuickSkillUi> = emptyList(),
     val selectedSkill: QuickSkillUi? = null,
-    val deviceSnapshot: DeviceSnapshotUi? = null,
-    val audioSummary: AudioSummaryUi? = null,
-    val showAudioRecoveryHint: Boolean = false,
-    val audioRecoveryHintStartedAt: Long? = null,
     val snackbarMessage: String? = null,
     val chatErrorMessage: String? = null,
     val navigationRequest: HomeNavigationRequest? = null,
-    val sessionList: List<SessionListItemUi> = emptyList(),
     val currentSession: CurrentSessionUi = CurrentSessionUi(
         id = "new_chat", // DEFAULT_SESSION_ID constant not visible here, hardcoding or using string
         title = "新对话", // DEFAULT_SESSION_TITLE
@@ -80,8 +75,5 @@ data class HomeUiState(
     val smartReasoningText: String? = null,
     val isInputFocused: Boolean = false,
     val salesPersona: SalesPersona? = null,
-    val showRawAssistantOutput: Boolean = false,
-    val historyActionSession: SessionListItemUi? = null,
-    val showHistoryRenameDialog: Boolean = false,
-    val historyRenameText: String = ""
+    val showRawAssistantOutput: Boolean = false
 )

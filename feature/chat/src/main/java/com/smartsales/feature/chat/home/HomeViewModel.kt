@@ -220,9 +220,8 @@ class HomeViewModel @Inject constructor(
             ) }
         }
         
-        observeDeviceConnection()
-        observeMediaSync()
-        observeSessions()
+        
+        
         loadUserProfile()
         viewModelScope.launch { prepareInitialSession() }
         firstAssistantProcessed = false
@@ -446,78 +445,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun onRefreshDeviceAndAudio() {
-        // Home 仅触发轻量刷新，真实状态仍由各模块推送
-        viewModelScope.launch {
-            when (val result = deviceConnectionManager.queryNetworkStatus()) {
-                is Result.Error -> {
-                    _uiState.update { state ->
-                        val message = result.throwable.message ?: "刷新设备状态失败"
-                        state.copy(snackbarMessage = state.snackbarMessage ?: message)
-                    }
-                }
 
-                else -> Unit
-            }
-            when (val syncResult = mediaSyncCoordinator.triggerSync()) {
-                is Result.Error -> {
-                    _uiState.update { state ->
-                        val message = syncResult.throwable.message ?: "刷新音频状态失败"
-                        state.copy(snackbarMessage = state.snackbarMessage ?: message)
-                    }
-                }
-
-                else -> Unit
-            }
-        }
-    }
-
-    fun onTapDeviceBanner() {
-        val snapshot = _uiState.value.deviceSnapshot
-        val destination = when (snapshot?.connectionState) {
-            DeviceConnectionStateUi.CONNECTED -> HomeNavigationRequest.DeviceManager
-            DeviceConnectionStateUi.CONNECTING,
-            DeviceConnectionStateUi.DISCONNECTED,
-            DeviceConnectionStateUi.WAITING_FOR_NETWORK,
-            DeviceConnectionStateUi.ERROR,
-            null -> HomeNavigationRequest.DeviceSetup
-        }
-        _uiState.update { it.copy(navigationRequest = destination) }
-    }
-
-    fun onTapAudioSummary() {
-        _uiState.update { it.copy(navigationRequest = HomeNavigationRequest.AudioFiles) }
-    }
-
-    /**
-     * 处理用户上传的本地音频，保存到本地并提交 Tingwu 转写。
-     * 复用当前聊天 sessionId，避免为每次音频上传创建新会话。
-     */
-    fun onAudioFilePicked(uri: Uri) {
-        viewModelScope.launch {
-            val startedAt = System.currentTimeMillis()
-            activelyTranscribing = true
-            _uiState.update { it.copy(showAudioRecoveryHint = false, audioRecoveryHintStartedAt = null, showWelcomeHero = false) }
-            persistAudioTaskStartedMarker(startedAt)
-            _uiState.update { it.copy(isInputBusy = true, isBusy = true, snackbarMessage = null) }
-            
-            when (val result = mediaInputCoordinator.handleAudioPick(uri, sessionId)) {
-                is Result.Success -> {
-                    _uiState.update { it.copy(isInputBusy = false, isBusy = false, snackbarMessage = "音频已上传，正在转写…") }
-                    onTranscriptionRequested(result.data)
-                }
-                is Result.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            isInputBusy = false,
-                            isBusy = false,
-                            snackbarMessage = result.throwable.message ?: "音频处理失败"
-                        )
-                    }
-                }
-            }
-        }
-    }
 
     /** 处理用户上传图片，保存并触发占位分析。 */
     fun onImagePicked(uri: Uri) {
@@ -733,7 +661,6 @@ class HomeViewModel @Inject constructor(
                                     )
                                 }
                                 activelyTranscribing = false
-                                persistAudioTaskFinishedMarker(System.currentTimeMillis())
                             }
 
                             is AudioTranscriptionJobState.Failed -> {
@@ -750,7 +677,6 @@ class HomeViewModel @Inject constructor(
                                     )
                                 }
                                 activelyTranscribing = false
-                                refreshAudioRecoveryHintFromMetaHub()
                                 _uiState.update { it.copy(snackbarMessage = it.snackbarMessage ?: reason) }
                             }
                         }
@@ -960,7 +886,6 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
             updateDebugSessionMetadata(meta)
-            refreshAudioRecoveryHint(meta)
         }
     }
 
@@ -993,7 +918,6 @@ class HomeViewModel @Inject constructor(
                 hasShownAnalysisExportHint = false
                 _uiState.update { it.copy(isSmartAnalysisMode = false, selectedSkill = null) }
                 _uiState.update { it.copy(isSmartAnalysisMode = false, selectedSkill = null) }
-                updateSessionListSelection()
                 loadSession(sessionId)
             }
             if (!allowHero) {
@@ -1042,143 +966,14 @@ class HomeViewModel @Inject constructor(
             // Export gate is now checked on-demand via exportViewModel.checkExportGate()
             chatHistoryRepository.saveMessages(newSession.id, emptyList())
             chatHistoryRepository.saveMessages(newSession.id, emptyList())
-            updateSessionListSelection()
         }
     }
 
-    private fun observeDeviceConnection() {
-        // 监听连接模块输出，只读映射为 Home 的 snapshot 提示
-        applyDeviceSnapshot(deviceConnectionManager.state.value)
-        viewModelScope.launch {
-            deviceConnectionManager.state.collectLatest { connection ->
-                applyDeviceSnapshot(connection)
-            }
-        }
-    }
 
-    private fun applyDeviceSnapshot(connection: ConnectionState) {
-        val snapshot = connection.toDeviceSnapshot()
-        _uiState.update { state ->
-            val shouldSurfaceError =
-                snapshot.connectionState == DeviceConnectionStateUi.ERROR &&
-                    snapshot.errorSummary != null &&
-                    state.snackbarMessage == null
-            state.copy(
-                deviceSnapshot = snapshot,
-                snackbarMessage = if (shouldSurfaceError) snapshot.errorSummary else state.snackbarMessage
-            )
-        }
-    }
 
-    private fun observeMediaSync() {
-        // 监听媒体同步状态，提示录音/转写摘要
-        applyAudioSummary(mediaSyncCoordinator.state.value)
-        viewModelScope.launch {
-            mediaSyncCoordinator.state.collectLatest { syncState ->
-                applyAudioSummary(syncState)
-            }
-        }
-    }
 
-    private fun observeSessions() {
-        viewModelScope.launch {
-            sessionsManager.sessionList.collectLatest { list ->
-                updateSessionListSelection(list)
-            }
-        }
-        viewModelScope.launch {
-            sessionsManager.uiState.collectLatest { state ->
-                _uiState.update {
-                    it.copy(
-                        historyActionSession = state.historyActionSession,
-                        showHistoryRenameDialog = state.showHistoryRenameDialog,
-                        historyRenameText = state.historyRenameText
-                    )
-                }
-            }
-        }
-    }
 
-    private fun updateSessionListSelection(list: List<SessionListItemUi>? = null) {
-        val targetList = list ?: _uiState.value.sessionList
-        val currentId = sessionId
-        val mapped = targetList.map { item ->
-            item.copy(isCurrent = item.id == currentId)
-        }
-        _uiState.update { it.copy(sessionList = mapped) }
-    }
 
-    fun onHistorySessionLongPress(sessionId: String) {
-        viewModelScope.launch {
-            sessionsManager.onHistorySessionLongPress(sessionId)
-        }
-    }
-
-    fun onHistoryActionDismiss() {
-        sessionsManager.onHistoryActionDismiss()
-    }
-
-    fun onHistoryActionRenameStart() {
-        sessionsManager.onHistoryActionRenameStart()
-    }
-
-    fun onHistoryRenameTextChange(text: String) {
-        sessionsManager.onHistoryRenameTextChange(text)
-    }
-
-    fun onHistorySessionPinToggle(sessionId: String) {
-        viewModelScope.launch {
-            sessionsManager.onHistorySessionPinToggle(sessionId)
-        }
-    }
-
-    fun onHistorySessionRenameConfirmed(sessionId: String, newTitle: String) {
-        viewModelScope.launch {
-            val updatedTitle = sessionsManager.onHistorySessionRenameConfirmed(sessionId, newTitle)
-            if (updatedTitle != null && sessionId == this@HomeViewModel.sessionId) {
-                // 如果当前会话被重命名，同步更新当前会话标题
-                _uiState.update {
-                    it.copy(currentSession = it.currentSession.copy(title = updatedTitle))
-                }
-            }
-        }
-    }
-
-    fun onHistorySessionDelete(sessionId: String) {
-        viewModelScope.launch {
-            val result = sessionsManager.onHistorySessionDelete(sessionId, this@HomeViewModel.sessionId)
-            if (result is com.smartsales.domain.sessions.SessionsManager.DeleteResult.CurrentSessionDeleted) {
-                val next = result.nextSession
-                this@HomeViewModel.sessionId = next.id
-                firstAssistantProcessed = false
-                _uiState.update {
-                    it.copy(
-                        currentSession = CurrentSessionUi(
-                            id = next.id,
-                            title = next.title,
-                            isTranscription = next.isTranscription
-                        ),
-                        chatMessages = emptyList(),
-                        showWelcomeHero = true
-                    )
-                }
-                loadSession(next.id)
-            }
-        }
-    }
-
-    private fun applyAudioSummary(syncState: MediaSyncState) {
-        latestMediaSyncState = syncState
-        val summary = syncState.toAudioSummaryUi()
-        _uiState.update { state ->
-            val shouldSurfaceError =
-                syncState.errorMessage != null && state.snackbarMessage == null
-            state.copy(
-                audioSummary = summary,
-                snackbarMessage = if (shouldSurfaceError) syncState.errorMessage else state.snackbarMessage
-            )
-        }
-    }
 
     private fun loadSession(targetSessionId: String) {
         _uiState.update { it.copy(isLoadingHistory = true, chatMessages = emptyList()) }
@@ -1344,7 +1139,6 @@ class HomeViewModel @Inject constructor(
         val previewText = latestMeta?.shortSummary?.takeIf { it.isNotBlank() } ?: cleaned
         viewModelScope.launch {
             updateSessionSummary(previewText)
-            updateSessionListSelection()
         }
     }
 
@@ -1593,104 +1387,6 @@ class HomeViewModel @Inject constructor(
         )
     }
 
-    private fun ConnectionState.toDeviceSnapshot(): DeviceSnapshotUi = when (this) {
-        ConnectionState.NeedsSetup -> DeviceSnapshotUi(
-            statusText = "设备未配网，点击开始配置",
-            connectionState = DeviceConnectionStateUi.DISCONNECTED
-        )
-
-        ConnectionState.Disconnected -> DeviceSnapshotUi(
-            statusText = "设备未连接，点击开始配网",
-            connectionState = DeviceConnectionStateUi.DISCONNECTED
-        )
-
-        is ConnectionState.Pairing -> DeviceSnapshotUi(
-            deviceName = deviceName,
-            statusText = "正在连接设备，请保持靠近",
-            connectionState = DeviceConnectionStateUi.CONNECTING
-        )
-
-        is ConnectionState.AutoReconnecting -> DeviceSnapshotUi(
-            statusText = "正在自动重连设备…",
-            connectionState = DeviceConnectionStateUi.CONNECTING
-        )
-
-        is ConnectionState.Connected -> DeviceSnapshotUi(
-            deviceName = session.peripheralName,
-            statusText = "设备已连接，等待联网",
-            connectionState = DeviceConnectionStateUi.WAITING_FOR_NETWORK
-        )
-
-        is ConnectionState.WifiProvisioned -> DeviceSnapshotUi(
-            deviceName = session.peripheralName,
-            statusText = "设备已上线，网络：${status.wifiSsid}",
-            connectionState = DeviceConnectionStateUi.CONNECTED,
-            wifiName = status.wifiSsid
-        )
-
-        is ConnectionState.Syncing -> DeviceSnapshotUi(
-            deviceName = session.peripheralName,
-            statusText = "设备在线，网络：${status.wifiSsid}",
-            connectionState = DeviceConnectionStateUi.CONNECTED,
-            wifiName = status.wifiSsid
-        )
-
-        is ConnectionState.Error -> DeviceSnapshotUi(
-            statusText = "连接异常",
-            connectionState = DeviceConnectionStateUi.ERROR,
-            errorSummary = error.toReadableMessage()
-        )
-    }
-
-    private fun ConnectivityError.toReadableMessage(): String = when (this) {
-        is ConnectivityError.PairingInProgress -> "配对冲突：${deviceName} 已在使用"
-        is ConnectivityError.ProvisioningFailed -> reason
-        is ConnectivityError.PermissionDenied -> "缺少权限：${permissions.joinToString()}"
-        is ConnectivityError.Timeout -> "连接超时，请稍后重试"
-        is ConnectivityError.Transport -> reason
-        is ConnectivityError.EndpointUnreachable -> reason.ifBlank { "设备服务不可达" }
-        is ConnectivityError.DeviceNotFound -> "未找到设备 ${deviceId}"
-        ConnectivityError.MissingSession -> "当前没有有效的配对会话"
-    }
-
-    private fun MediaSyncState.toAudioSummaryUi(): AudioSummaryUi? {
-        val readyCount = items.count { it.status == MediaClipStatus.Ready }
-        val uploadingCount = items.count { it.status == MediaClipStatus.Uploading }
-        val failedCount = items.count { it.status == MediaClipStatus.Failed }
-        val pendingTranscriptions = items.count {
-            it.status == MediaClipStatus.Ready && it.transcriptSource == null
-        }
-        if (!syncing && readyCount == 0 && uploadingCount == 0 && failedCount == 0) {
-            return null
-        }
-        val headline = when {
-            uploadingCount > 0 -> "${uploadingCount} 条录音待上传"
-            syncing -> "正在同步录音..."
-            failedCount > 0 -> "${failedCount} 条录音同步失败"
-            readyCount > 0 -> "${readyCount} 条录音已就绪"
-            else -> "暂无录音"
-        }
-        val detailParts = mutableListOf<String>()
-        if (readyCount > 0 && uploadingCount > 0) {
-            detailParts += "${readyCount} 条已完成"
-        }
-        if (pendingTranscriptions > 0) {
-            detailParts += "${pendingTranscriptions} 条待转写"
-        }
-        if (failedCount > 0) {
-            detailParts += "${failedCount} 条失败"
-        }
-        val detail = detailParts.takeIf { it.isNotEmpty() }?.joinToString("，")
-            ?: lastSyncedAtMillis?.let { "上次同步 ${formatSyncTime(it)}" }
-        return AudioSummaryUi(
-            headline = headline,
-            detail = detail,
-            syncedCount = readyCount,
-            pendingUploadCount = uploadingCount,
-            pendingTranscriptionCount = pendingTranscriptions,
-            lastSyncedAtMillis = lastSyncedAtMillis
-        )
-    }
 
     private fun formatSyncTime(timestamp: Long): String {
         val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -1748,59 +1444,6 @@ class HomeViewModel @Inject constructor(
             }
     }
 
-    private fun refreshAudioRecoveryHint(meta: SessionMetadata?) {
-        val startedAt = meta?.lastAudioTaskStartedAt
-        val finishedAt = meta?.lastAudioTaskFinishedAt
-        val dismissedAt = meta?.audioRecoveryHintDismissedForStartedAt
-        // 重要：仅按标记字段判断，且转写进行中必须抑制提示
-        val show = startedAt != null &&
-            finishedAt == null &&
-            dismissedAt != startedAt &&
-            !activelyTranscribing
-        _uiState.update {
-            it.copy(
-                showAudioRecoveryHint = show,
-                audioRecoveryHintStartedAt = if (show) startedAt else null
-            )
-        }
-    }
-
-    private suspend fun refreshAudioRecoveryHintFromMetaHub() {
-        val meta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-        refreshAudioRecoveryHint(meta)
-    }
-
-    private suspend fun persistAudioTaskStartedMarker(startedAt: Long) {
-        val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-        val base = existing ?: SessionMetadata(sessionId = sessionId)
-        val updated = base.copy(
-            lastAudioTaskStartedAt = startedAt,
-            lastAudioTaskFinishedAt = null,
-            audioRecoveryHintDismissedForStartedAt = null
-        )
-        runCatching { metaHub.upsertSession(updated) }
-            .onSuccess { refreshAudioRecoveryHint(updated) }
-    }
-
-    private suspend fun persistAudioTaskFinishedMarker(finishedAt: Long) {
-        val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-        val base = existing ?: SessionMetadata(sessionId = sessionId)
-        val updated = base.copy(lastAudioTaskFinishedAt = finishedAt)
-        runCatching { metaHub.upsertSession(updated) }
-            .onSuccess { refreshAudioRecoveryHint(updated) }
-    }
-
-    fun dismissAudioRecoveryHint() {
-        val startedAt = _uiState.value.audioRecoveryHintStartedAt ?: return
-        viewModelScope.launch {
-            val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-            val base = existing ?: SessionMetadata(sessionId = sessionId)
-            // 重要：关闭提示与 startedAt 绑定，避免影响下一次转写
-            val updated = base.copy(audioRecoveryHintDismissedForStartedAt = startedAt)
-            runCatching { metaHub.upsertSession(updated) }
-                .onSuccess { refreshAudioRecoveryHint(updated) }
-        }
-    }
 
     private fun onAnalysisCompleted(summary: String, messageId: String) {
         latestAnalysisMarkdown = summary
@@ -2007,7 +1650,6 @@ class HomeViewModel @Inject constructor(
         val newSession = sessionsManager.createNewSession()
         sessionId = newSession.id
         firstAssistantProcessed = false
-        updateSessionListSelection()
         chatHistoryRepository.saveMessages(newSession.id, emptyList())
         _uiState.update {
             it.copy(

@@ -155,6 +155,8 @@ import com.smartsales.feature.chat.home.messages.MessageBubble
 fun HomeScreenRoute(
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
+    audioViewModel: com.smartsales.feature.chat.audio.AudioViewModel = hiltViewModel(),
+    sessionListViewModel: com.smartsales.feature.chat.sessionlist.SessionListViewModel = hiltViewModel(),
     sessionId: String? = null,
     transcriptionRequest: TranscriptionChatRequest? = null,
     onTranscriptionRequestConsumed: () -> Unit = {},
@@ -170,7 +172,10 @@ fun HomeScreenRoute(
 ) {
     Log.i("HomeScreenRoute", "HomeScreenRoute composed - entering function")
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val audioState by audioViewModel.state.collectAsStateWithLifecycle()
+    val sessionListState by sessionListViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
     // 抽屉开关保留在 Route 层，避免影响 ViewModel 状态
     var showHistoryPanel by rememberSaveable { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
@@ -189,12 +194,22 @@ fun HomeScreenRoute(
         }
     }
 
+    // Snackbar from AudioViewModel
+    LaunchedEffect(audioState.snackbarMessage) {
+        val message = audioState.snackbarMessage
+        if (message != null) {
+            snackbarHostState.showSnackbar(message)
+            audioViewModel.onDismissSnackbar()
+        }
+    }
+
     // 监听导航请求并通过回调交给宿主 Activity
-    LaunchedEffect(state.navigationRequest) {
-        if (state.navigationRequest != null) {
+    LaunchedEffect(state.navigationRequest, audioState.navigationRequest) {
+        val navRequest = state.navigationRequest ?: audioState.navigationRequest
+        if (navRequest != null) {
             dismissKeyboard()
         }
-        when (state.navigationRequest) {
+        when (navRequest) {
             HomeNavigationRequest.DeviceManager -> onNavigateToDeviceManager()
             HomeNavigationRequest.DeviceSetup -> onNavigateToDeviceSetup()
             HomeNavigationRequest.AudioFiles -> onNavigateToAudioFiles()
@@ -204,6 +219,9 @@ fun HomeScreenRoute(
         }
         if (state.navigationRequest != null) {
             viewModel.onNavigationConsumed()
+        }
+        if (audioState.navigationRequest != null) {
+            audioViewModel.onNavigationConsumed()
         }
     }
     LaunchedEffect(transcriptionRequest) {
@@ -224,19 +242,37 @@ fun HomeScreenRoute(
     LaunchedEffect(sessionId) {
         sessionId?.let { viewModel.setSession(it, allowHero = false) }
     }
-    LaunchedEffect(state.deviceSnapshot) {
-        onDeviceSnapshotChanged(state.deviceSnapshot)
+    LaunchedEffect(audioState.deviceSnapshot) {
+        onDeviceSnapshotChanged(audioState.deviceSnapshot)
+    }
+    
+    // Handle session list events
+    LaunchedEffect(Unit) {
+        sessionListViewModel.events.collect { event ->
+            when (event) {
+                is com.smartsales.feature.chat.sessionlist.SessionListEvent.SwitchToSession -> {
+                    viewModel.setSession(event.id, allowHero = true)
+                    showHistoryPanel = false
+                }
+            }
+        }
+    }
+    
+    // Sync current session ID to session list
+    LaunchedEffect(state.currentSession.id) {
+        sessionListViewModel.setCurrentSessionId(state.currentSession.id)
     }
 
         HomeScreen(
             state = state,
+            audioState = audioState,
             snackbarHostState = snackbarHostState,
             onInputChanged = viewModel::onInputChanged,
             onSendClicked = viewModel::onSendMessage,
         onQuickSkillSelected = viewModel::onSelectQuickSkill,
-        onDeviceBannerClicked = viewModel::onTapDeviceBanner,
-        onAudioSummaryClicked = viewModel::onTapAudioSummary,
-        onRefreshDeviceAndAudio = viewModel::onRefreshDeviceAndAudio,
+        onDeviceBannerClicked = audioViewModel::onTapDeviceBanner,
+        onAudioSummaryClicked = audioViewModel::onTapAudioSummary,
+        onRefreshDeviceAndAudio = audioViewModel::onRefreshDeviceAndAudio,
         onExportPdfClicked = viewModel::onExportPdfClicked,
     onExportCsvClicked = viewModel::onExportCsvClicked,
     exportInProgress = state.exportInProgress,
@@ -246,25 +282,26 @@ fun HomeScreenRoute(
     onNewChatClicked = viewModel::onNewChatClicked,
     onSessionSelected = viewModel::setSession,
     chatErrorMessage = state.chatErrorMessage,
-    onPickAudioFile = viewModel::onAudioFilePicked,
+    onPickAudioFile = { uri ->
+        coroutineScope.launch {
+            audioViewModel.onAudioFilePicked(uri, state.currentSession.id)
+        }
+    },
     onPickImageFile = viewModel::onImagePicked,
-    onDismissAudioRecoveryHint = viewModel::dismissAudioRecoveryHint,
+    onDismissAudioRecoveryHint = audioViewModel::dismissAudioRecoveryHint,
     modifier = modifier,
     showHistoryPanel = showHistoryPanel,
         onToggleHistoryPanel = { showHistoryPanel = true },
         onDismissHistoryPanel = { showHistoryPanel = false },
-        historySessions = state.sessionList.take(10),
-        onHistorySessionSelected = { sessionId ->
-            viewModel.setSession(sessionId, allowHero = false)
-            showHistoryPanel = false
-        },
-        onHistorySessionLongPress = viewModel::onHistorySessionLongPress,
-        onHistoryActionPinToggle = viewModel::onHistorySessionPinToggle,
-        onHistoryActionRenameStart = viewModel::onHistoryActionRenameStart,
-        onHistoryActionRenameConfirm = { sessionId, title -> viewModel.onHistorySessionRenameConfirmed(sessionId, title) },
-        onHistoryActionDelete = viewModel::onHistorySessionDelete,
-        onHistoryActionDismiss = viewModel::onHistoryActionDismiss,
-        onHistoryRenameTextChange = viewModel::onHistoryRenameTextChange,
+        historySessions = sessionListState.sessions.take(10),
+        onHistorySessionSelected = sessionListViewModel::onSessionSelected,
+        onHistorySessionLongPress = sessionListViewModel::onSessionLongPress,
+        onHistoryActionPinToggle = sessionListViewModel::onPinToggle,
+        onHistoryActionRenameStart = sessionListViewModel::onActionRenameStart,
+        onHistoryActionRenameConfirm = sessionListViewModel::onRenameConfirmed,
+        onHistoryActionDelete = { sessionId -> sessionListViewModel.onDelete(sessionId, state.currentSession.id) },
+        onHistoryActionDismiss = sessionListViewModel::onActionDismiss,
+        onHistoryRenameTextChange = sessionListViewModel::onRenameTextChange,
         onToggleDebugMetadata = viewModel::toggleDebugMetadata,
             onRefreshXfyunTrace = viewModel::refreshXfyunTrace,
 
@@ -276,10 +313,10 @@ fun HomeScreenRoute(
         }
     )
 
-    val actionSession = state.historyActionSession
+    val actionSession = sessionListState.actionSession
     if (actionSession != null) {
         ModalBottomSheet(
-            onDismissRequest = viewModel::onHistoryActionDismiss,
+            onDismissRequest = sessionListViewModel::onActionDismiss,
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ) {
             Column(
@@ -290,33 +327,33 @@ fun HomeScreenRoute(
             ) {
                 SheetAction(
                     label = if (actionSession.pinned) "取消置顶" else "置顶会话",
-                    onClick = { viewModel.onHistorySessionPinToggle(actionSession.id) }
+                    onClick = { sessionListViewModel.onPinToggle(actionSession.id) }
                 )
                 SheetAction(
                     label = "重命名",
-                    onClick = { viewModel.onHistoryActionRenameStart() }
+                    onClick = sessionListViewModel::onActionRenameStart
                 )
                 SheetAction(
                     label = "删除",
-                    onClick = { viewModel.onHistorySessionDelete(actionSession.id) }
+                    onClick = { sessionListViewModel.onDelete(actionSession.id, state.currentSession.id) }
                 )
                 HorizontalDivider()
                 SheetAction(
                     label = "取消",
-                    onClick = viewModel::onHistoryActionDismiss
+                    onClick = sessionListViewModel::onActionDismiss
                 )
             }
         }
     }
 
-    if (state.showHistoryRenameDialog && actionSession != null) {
+    if (sessionListState.showRenameDialog && actionSession != null) {
         AlertDialog(
-            onDismissRequest = viewModel::onHistoryActionDismiss,
+            onDismissRequest = sessionListViewModel::onActionDismiss,
             title = { Text(text = "重命名会话") },
             text = {
                 OutlinedTextField(
-                    value = state.historyRenameText,
-                    onValueChange = viewModel::onHistoryRenameTextChange,
+                    value = sessionListState.renameText,
+                    onValueChange = sessionListViewModel::onRenameTextChange,
                     label = { Text(text = "标题") },
                     singleLine = true
                 )
@@ -324,16 +361,16 @@ fun HomeScreenRoute(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.onHistorySessionRenameConfirmed(actionSession.id, state.historyRenameText)
-                        viewModel.onHistoryActionDismiss()
+                        sessionListViewModel.onRenameConfirmed(actionSession.id, sessionListState.renameText)
+                        sessionListViewModel.onActionDismiss()
                     },
-                    enabled = state.historyRenameText.isNotBlank()
+                    enabled = sessionListState.renameText.isNotBlank()
                 ) {
                     Text(text = "保存标题")
                 }
             },
             dismissButton = {
-                TextButton(onClick = viewModel::onHistoryActionDismiss) {
+                TextButton(onClick = sessionListViewModel::onActionDismiss) {
                     Text(text = "取消")
                 }
             }
@@ -364,6 +401,7 @@ private fun SheetAction(label: String, onClick: () -> Unit) {
 @Composable
 fun HomeScreen(
     state: HomeUiState,
+    audioState: com.smartsales.feature.chat.audio.AudioUiState,
     snackbarHostState: SnackbarHostState,
     onInputChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
@@ -525,7 +563,7 @@ fun HomeScreen(
                     sessions = historySessions,
                     currentSessionId = state.currentSession.id,
                     // TODO(hardware): 接入真实设备状态后更新此处占位卡片
-                    deviceSnapshot = state.deviceSnapshot,
+                    deviceSnapshot = audioState.deviceSnapshot,
                     formatSessionTime = ::formatSessionTime,
                     historyDeviceStatus = { HistoryDeviceStatus(snapshot = it) },
                     onSessionSelected = onHistorySessionSelected,
@@ -549,7 +587,7 @@ fun HomeScreen(
                         // TODO(hardware): 后续接入真实设备状态，填充顶栏指示器文案
                         HomeTopBar(
                             title = state.currentSession.title,
-                            deviceSnapshot = state.deviceSnapshot,
+                            deviceSnapshot = audioState.deviceSnapshot,
                             onHistoryClick = {
                                 onDismissKeyboard()
                                 onToggleHistoryPanel()
@@ -598,7 +636,7 @@ fun HomeScreen(
                         Column(
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            if (state.showAudioRecoveryHint) {
+                            if (audioState.showAudioRecoveryHint) {
                                 AudioRecoveryHintBanner(
                                     onReupload = { audioPicker.launch(arrayOf("audio/*")) },
                                     onDismiss = onDismissAudioRecoveryHint

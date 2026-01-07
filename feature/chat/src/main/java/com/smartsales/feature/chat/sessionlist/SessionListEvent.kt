@@ -19,4 +19,12 @@ sealed class SessionListEvent {
         val title: String,
         val isTranscription: Boolean
     ) : SessionListEvent()
+
+    /**
+     * Current session was renamed. HomeViewModel should update currentSession.title.
+     */
+    data class TitleRenamed(
+        val sessionId: String,
+        val newTitle: String
+    ) : SessionListEvent()
 }

@@ -774,6 +774,15 @@ class HomeViewModel @Inject constructor(
         _uiState.update { it.copy(snackbarMessage = null, chatErrorMessage = null) }
     }
 
+    /**
+     * Update the current session's title (called when SessionListViewModel emits TitleRenamed).
+     */
+    fun updateCurrentSessionTitle(newTitle: String) {
+        _uiState.update {
+            it.copy(currentSession = it.currentSession.copy(title = newTitle))
+        }
+    }
+
     fun onNavigationConsumed() {
         _uiState.update { it.copy(navigationRequest = null) }
     }

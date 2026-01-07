@@ -254,6 +254,12 @@ fun HomeScreenRoute(
                     viewModel.setSession(event.id, allowHero = true)
                     showHistoryPanel = false
                 }
+                is com.smartsales.feature.chat.sessionlist.SessionListEvent.TitleRenamed -> {
+                    // Sync current session title if this session was renamed
+                    if (event.sessionId == state.currentSession.id) {
+                        viewModel.updateCurrentSessionTitle(event.newTitle)
+                    }
+                }
             }
         }
     }

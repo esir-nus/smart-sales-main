@@ -114,7 +114,11 @@ class SessionListViewModel @Inject constructor(
 
     fun onRenameConfirmed(sessionId: String, newTitle: String) {
         viewModelScope.launch {
-            sessionsManager.onHistorySessionRenameConfirmed(sessionId, newTitle)
+            val updatedTitle = sessionsManager.onHistorySessionRenameConfirmed(sessionId, newTitle)
+            // Emit event so HomeViewModel can sync currentSession.title if needed
+            if (updatedTitle != null) {
+                _events.emit(SessionListEvent.TitleRenamed(sessionId, updatedTitle))
+            }
         }
     }
 

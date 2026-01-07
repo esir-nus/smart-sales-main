@@ -1,9 +1,9 @@
-// File: feature/chat/src/main/java/com/smartsales/domain/media/MediaInputCoordinator.kt
+// File: feature/chat/src/main/java/com/smartsales/feature/chat/platform/MediaInputCoordinator.kt
 // Module: :feature:chat
-// Summary: Media input coordination for audio/image file handling
+// Summary: Platform-specific media input coordination for audio/image file handling
 // Author: created on 2026-01-07
 
-package com.smartsales.domain.media
+package com.smartsales.feature.chat.platform
 
 import android.content.Context
 import android.net.Uri

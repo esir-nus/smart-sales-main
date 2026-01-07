@@ -163,7 +163,7 @@ class HomeViewModel @Inject constructor(
     private val debugCoordinator: com.smartsales.domain.debug.DebugCoordinator,
     private val sessionsManager: com.smartsales.domain.sessions.SessionsManager,
     private val tingwuCoordinator: com.smartsales.domain.transcription.TranscriptionCoordinator,
-    private val mediaInputCoordinator: com.smartsales.domain.media.MediaInputCoordinator,
+    private val mediaInputCoordinator: com.smartsales.feature.chat.platform.MediaInputCoordinator,
     private val conversationViewModel: com.smartsales.feature.chat.conversation.ConversationViewModel,
     optionalConfig: Optional<AiCoreConfig> = Optional.empty(),
 ) : ViewModel(), com.smartsales.feature.chat.conversation.StreamingCallbacks {

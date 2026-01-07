@@ -5,7 +5,6 @@
 
 package com.smartsales.domain.transcription
 
-import android.util.Log
 import com.smartsales.data.aicore.AiCoreConfig
 import com.smartsales.feature.chat.core.transcription.V1BatchIndexPrefixGate
 import com.smartsales.feature.chat.core.transcription.V1TingwuWindowedChunkBuilder
@@ -74,11 +73,7 @@ class TranscriptionCoordinator @Inject constructor(
                 is AudioTranscriptionBatchEvent.BatchReleased -> {
                     // Check if already marked final
                     if (_state.value.isFinal) {
-                        Log.w(
-                            TAG,
-                            "event=transcription_batch_after_final " +
-                                "jobId=${event.jobId} batchIndex=${event.batchIndex}"
-                        )
+                        // Batch received after final - skip
                         return@collect
                     }
 
@@ -138,17 +133,7 @@ class TranscriptionCoordinator @Inject constructor(
                 timedSegments = timedSegments
             )
 
-            Log.d(
-                TAG,
-                "event=v1_tingwu_window_filter_applied " +
-                    "batchIndex=${event.batchIndex} " +
-                    "absStartMs=${window.absStartMs} " +
-                    "absEndMs=${window.absEndMs} " +
-                    "segmentsIn=${result.segmentsInCount} " +
-                    "segmentsOut=${result.segmentsOutCount} " +
-                    "chunkChars=${result.chunk.length}"
-            )
-
+            // V1 window filter applied
             result.chunk
         } else {
             // Fallback to original markdown

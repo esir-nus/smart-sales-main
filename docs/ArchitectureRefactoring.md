@@ -3,8 +3,15 @@
 > **Purpose**: North Star for Smart Sales architecture evolution  
 > **Target**: Cross-Platform (Android/iOS/HarmonyOS) Ready  
 > **Spec Alignment**: Orchestrator-V1.md (v1.2.0)  
-> **Status**: M5 Cleanup Sprint  
+> **Status**: M5 Complete, M6 Next  
 > **Last Audit**: 2026-01-07
+
+> [!IMPORTANT]
+> **Blueprint Principle**: This doc is *aspirational*, not *prescriptive*.  
+> - Reality may differ from the target tree  
+> - Differences are not failures—they're work items  
+> - The doc shows the *corrective path*: what to rewrite, move, or create  
+> - Always verify with `grep`/`find` before assuming state matches doc
 
 ---
 

@@ -245,18 +245,7 @@ class HomeViewModel @Inject constructor(
         if (state.isSending) return
         val selectedSkill = state.selectedSkill?.id
         
-        // Export skills bypass chat flow
-        when (selectedSkill) {
-            QuickSkillId.EXPORT_PDF -> {
-                onExportPdfClicked()
-                return
-            }
-            QuickSkillId.EXPORT_CSV -> {
-                onExportCsvClicked()
-                return
-            }
-            else -> Unit
-        }
+        // Export skills are handled by ExportViewModel via UI callbacks
         
         val rawInput = state.inputText
         val content = rawInput.trim()
@@ -320,52 +309,25 @@ class HomeViewModel @Inject constructor(
         handleSmartAnalysisSend(input)
     }
 
-    fun onExportPdfClicked() {
-        onExportRequested(ExportFormat.PDF)
-    }
 
-    fun onExportCsvClicked() {
-        onExportRequested(ExportFormat.CSV)
-    }
-
-    private fun onExportRequested(format: ExportFormat) {
-        if (_uiState.value.exportInProgress) return
-        viewModelScope.launch {
-            val gate = exportCoordinator.checkExportGate(sessionId)
-            
-            if (!gate.ready) {
-                // Simplified: just tell user to complete analysis first
-                _uiState.update { it.copy(snackbarMessage = "请先完成智能分析再导出") }
-                return@launch
-            }
-            
-            // Gate passed: prepare markdown and export
-            val analysisMarkdown = findSmartAnalysisMarkdownForExport()
-            val markdown = if (!analysisMarkdown.isNullOrBlank()) {
-                wrapSmartAnalysisForExport(analysisMarkdown)
-            } else {
-                buildTranscriptMarkdown(_uiState.value.chatMessages)
-            }
-            _uiState.update { it.copy(exportInProgress = true) }
-            val result = exportCoordinator.performExport(sessionId, format, _uiState.value.userName, markdown)
-            when (result) {
-                is Result.Success -> _uiState.update { it.copy(exportInProgress = false) }
-                is Result.Error -> _uiState.update { 
-                    it.copy(
-                        exportInProgress = false,
-                        chatErrorMessage = result.throwable.message ?: "导出失败"
-                    )
-                }
-            }
+    /**
+     * Get markdown for export (called by ExportViewModel).
+     * Returns smart analysis markdown if available, otherwise builds from transcript.
+     */
+    fun getExportMarkdown(): String {
+        val analysisMarkdown = findSmartAnalysisMarkdownForExport()
+        return if (!analysisMarkdown.isNullOrBlank()) {
+            wrapSmartAnalysisForExport(analysisMarkdown)
+        } else {
+            buildTranscriptMarkdown(_uiState.value.chatMessages)
         }
     }
+
 
     fun onSelectQuickSkill(skillId: QuickSkillId) {
         if (_uiState.value.isSending || _uiState.value.isStreaming) return
         if (skillId == QuickSkillId.EXPORT_PDF || skillId == QuickSkillId.EXPORT_CSV) {
-            // 导出快捷技能为立即动作：不走“选中 + 发送”流程。
-            val format = if (skillId == QuickSkillId.EXPORT_PDF) ExportFormat.PDF else ExportFormat.CSV
-            onExportRequested(format)
+            // Export handled by ExportViewModel now
             return
         }
         val definition = quickSkillDefinitionsById[skillId]
@@ -1117,9 +1079,8 @@ class HomeViewModel @Inject constructor(
         if (isSmartAnalysis && !isSmartFailure) {
             persistLatestAnalysisMarker(AnalysisSource.SMART_ANALYSIS_USER, assistantId)
             onAnalysisCompleted(cleaned, assistantId)
-        } else if (isSmartAnalysis && isSmartFailure) {
-            _uiState.update { it.copy(exportInProgress = false) }
         }
+        // Export state managed by ExportViewModel
         debugLog(
             event = "chat_stream_completed",
             data = mapOf(
@@ -1190,7 +1151,6 @@ class HomeViewModel @Inject constructor(
                 isStreaming = false,
                 isInputBusy = false,
                 isBusy = false,
-                exportInProgress = false,
                 chatErrorMessage = throwable.message ?: "AI 回复失败"
             )
         }

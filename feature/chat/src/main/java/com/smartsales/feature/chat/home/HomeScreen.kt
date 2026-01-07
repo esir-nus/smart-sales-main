@@ -175,6 +175,7 @@ fun HomeScreenRoute(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val audioState by audioViewModel.state.collectAsStateWithLifecycle()
     val sessionListState by sessionListViewModel.uiState.collectAsStateWithLifecycle()
+    val exportState by exportViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     // 抽屉开关保留在 Route 层，避免影响 ViewModel 状态
@@ -297,10 +298,26 @@ fun HomeScreenRoute(
         onDeviceBannerClicked = audioViewModel::onTapDeviceBanner,
         onAudioSummaryClicked = audioViewModel::onTapAudioSummary,
         onRefreshDeviceAndAudio = audioViewModel::onRefreshDeviceAndAudio,
-        onExportPdfClicked = viewModel::onExportPdfClicked,
-    onExportCsvClicked = viewModel::onExportCsvClicked,
-    exportInProgress = state.exportInProgress,
-    exportGateState = state.exportGateState,
+        onExportPdfClicked = {
+            val markdown = viewModel.getExportMarkdown()
+            exportViewModel.performExport(
+                sessionId = state.currentSession.id,
+                format = com.smartsales.data.aicore.ExportFormat.PDF,
+                userName = state.userName,
+                markdown = markdown
+            )
+        },
+        onExportCsvClicked = {
+            val markdown = viewModel.getExportMarkdown()
+            exportViewModel.performExport(
+                sessionId = state.currentSession.id,
+                format = com.smartsales.data.aicore.ExportFormat.CSV,
+                userName = state.userName,
+                markdown = markdown
+            )
+        },
+        exportInProgress = exportState.inProgress,
+        exportGateState = exportState.gateState,
     onLoadMoreHistory = viewModel::onLoadMoreHistory,
     onProfileClicked = viewModel::onTapProfile,
     onNewChatClicked = viewModel::onNewChatClicked,

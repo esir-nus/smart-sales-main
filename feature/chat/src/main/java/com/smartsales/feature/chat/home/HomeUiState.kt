@@ -61,8 +61,6 @@ data class HomeUiState(
         isTranscription = false
     ),
     val userName: String = "用户",
-    val exportInProgress: Boolean = false,
-    val exportGateState: ExportGateState? = null, // Using nullable or default from elsewhere?
     val showWelcomeHero: Boolean = true,
     val isSmartAnalysisMode: Boolean = false,
     val smartAnalysisGoal: String? = null,  // P3.8: Synced from ConversationState via bridge

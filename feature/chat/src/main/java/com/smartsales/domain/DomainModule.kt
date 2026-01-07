@@ -5,10 +5,18 @@
 
 package com.smartsales.domain
 
+import com.smartsales.domain.debug.DebugCoordinator
+import com.smartsales.domain.debug.DebugCoordinatorImpl
+import com.smartsales.domain.export.ExportCoordinator
+import com.smartsales.domain.export.ExportCoordinatorImpl
+import com.smartsales.domain.sessions.SessionsManager
+import com.smartsales.domain.sessions.SessionsManagerImpl
 import com.smartsales.domain.transcription.Disector
 import com.smartsales.domain.transcription.DisectorImpl
 import com.smartsales.domain.transcription.Sanitizer
 import com.smartsales.domain.transcription.SanitizerImpl
+import com.smartsales.domain.transcription.TranscriptionCoordinator
+import com.smartsales.domain.transcription.TranscriptionCoordinatorImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -35,17 +43,18 @@ interface DomainModule {
 
     @Binds
     @Singleton
-    fun bindExportCoordinator(impl: com.smartsales.domain.export.ExportCoordinatorImpl): com.smartsales.domain.export.ExportCoordinator
+    fun bindExportCoordinator(impl: ExportCoordinatorImpl): ExportCoordinator
 
     @Binds
     @Singleton
-    fun bindDebugCoordinator(impl: com.smartsales.domain.debug.DebugCoordinatorImpl): com.smartsales.domain.debug.DebugCoordinator
+    fun bindDebugCoordinator(impl: DebugCoordinatorImpl): DebugCoordinator
 
     @Binds
     @Singleton
-    fun bindTranscriptionCoordinator(impl: com.smartsales.domain.transcription.TranscriptionCoordinatorImpl): com.smartsales.domain.transcription.TranscriptionCoordinator
+    fun bindTranscriptionCoordinator(impl: TranscriptionCoordinatorImpl): TranscriptionCoordinator
 
     @Binds
     @Singleton
-    fun bindSessionsManager(impl: com.smartsales.domain.sessions.SessionsManagerImpl): com.smartsales.domain.sessions.SessionsManager
+    fun bindSessionsManager(impl: SessionsManagerImpl): SessionsManager
 }
+

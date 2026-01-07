@@ -7,6 +7,8 @@ package com.smartsales.domain.chat
 
 import com.smartsales.core.metahub.RiskLevel
 import com.smartsales.core.metahub.SessionStage
+import com.smartsales.domain.analysis.ParsedSmartAnalysis
+import com.smartsales.domain.analysis.SmartAnalysisParser
 import org.junit.Assert.*
 import org.junit.Test
 

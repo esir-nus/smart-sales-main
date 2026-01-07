@@ -17,9 +17,9 @@ import com.smartsales.feature.chat.core.ChatHistoryItem
 import com.smartsales.feature.chat.core.ChatRequest
 import com.smartsales.feature.chat.core.ChatRole
 import com.smartsales.feature.chat.core.ChatStreamEvent
-import com.smartsales.feature.chat.core.QuickSkillCatalog
-import com.smartsales.feature.chat.core.QuickSkillDefinition
-import com.smartsales.feature.chat.core.QuickSkillId
+import com.smartsales.domain.config.QuickSkillCatalog
+import com.smartsales.domain.config.QuickSkillDefinition
+import com.smartsales.domain.config.QuickSkillId
 import com.smartsales.feature.chat.home.orchestrator.HomeOrchestrator
 import com.smartsales.feature.chat.history.ChatHistoryRepository
 import com.smartsales.data.aicore.ExportFormat

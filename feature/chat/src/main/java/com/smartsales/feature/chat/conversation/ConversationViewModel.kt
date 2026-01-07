@@ -226,7 +226,7 @@ class ConversationViewModel @Inject constructor(
         val request = ChatRequest(
             sessionId = analysisContext.sessionId,
             userMessage = userMessage,  // Built SmartAnalysis message
-            quickSkillId = com.smartsales.feature.chat.core.QuickSkillId.SMART_ANALYSIS.name,
+            quickSkillId = com.smartsales.domain.config.QuickSkillId.SMART_ANALYSIS.name,
             audioContextSummary = null,
             history = _state.value.messages.map { ui ->
                 ChatHistoryItem(

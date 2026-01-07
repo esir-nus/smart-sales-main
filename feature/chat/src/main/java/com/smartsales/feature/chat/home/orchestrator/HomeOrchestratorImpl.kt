@@ -15,7 +15,7 @@ import com.smartsales.domain.analysis.SmartAnalysisResult
 import com.smartsales.feature.chat.core.AiChatService
 import com.smartsales.feature.chat.core.ChatRequest
 import com.smartsales.feature.chat.core.ChatStreamEvent
-import com.smartsales.feature.chat.core.QuickSkillId
+import com.smartsales.domain.config.QuickSkillId
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton

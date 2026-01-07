@@ -1,7 +1,7 @@
 package com.smartsales.feature.chat.home
 
 import com.smartsales.core.metahub.ExportNameSource
-import com.smartsales.feature.chat.core.QuickSkillId
+import com.smartsales.domain.config.QuickSkillId
 import com.smartsales.feature.usercenter.SalesPersona
 import com.smartsales.data.aicore.debug.DebugSnapshot
 import com.smartsales.data.aicore.debug.TingwuTraceSnapshot

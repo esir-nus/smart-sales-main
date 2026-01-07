@@ -124,7 +124,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
-import com.smartsales.feature.chat.core.QuickSkillId
+import com.smartsales.domain.config.QuickSkillId
 import java.io.File
 import com.smartsales.feature.chat.history.ChatHistoryTestTags
 import com.smartsales.data.aicore.debug.TingwuTraceSnapshot

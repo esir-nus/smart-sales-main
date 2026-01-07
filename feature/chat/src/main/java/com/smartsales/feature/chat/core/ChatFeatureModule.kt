@@ -8,6 +8,8 @@ package com.smartsales.feature.chat.core
 import com.smartsales.feature.chat.core.AiChatService as FeatureAiChatService
 import com.smartsales.feature.chat.home.orchestrator.HomeOrchestrator
 import com.smartsales.feature.chat.home.orchestrator.HomeOrchestratorImpl
+import com.smartsales.domain.config.QuickSkillCatalog
+import com.smartsales.domain.config.DefaultQuickSkillCatalog
 import dagger.Binds
 import dagger.Module
 import dagger.Provides

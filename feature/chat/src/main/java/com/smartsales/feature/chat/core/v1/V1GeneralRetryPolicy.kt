@@ -5,7 +5,6 @@ package com.smartsales.feature.chat.core.v1
 // Summary: V1 GENERAL retry policy helpers (instruction + decision rules).
 // Author: created on 2025-12-30
 
-import android.util.Log
 import com.smartsales.feature.chat.core.publisher.ArtifactStatus
 import com.smartsales.feature.chat.core.publisher.GeneralChatV1Finalizer
 import com.smartsales.feature.chat.core.publisher.V1FinalizeResult
@@ -85,22 +84,9 @@ class V1GeneralCompletionEvaluator(
             failureReason = finalizeResult.failureReason,
             enableReasonAware = enableReasonAwareRetry
         )
-        // 这里只记录 reason code 与重试决策，严禁输出用户内容/模型原文，避免隐私泄露
-        Log.d(
-            LOG_TAG,
-            "event=v1_general_retry_decision, " +
-                "artifactStatus=${finalizeResult.artifactStatus}, " +
-                "failureReason=${finalizeResult.failureReason}, " +
-                "attempt=$attempt, " +
-                "maxRetries=$maxRetries, " +
-                "decision=$decision, " +
-                "reasonAware=$enableReasonAwareRetry"
-        )
         return V1CompletionEval(
             decision = decision,
             finalizeResult = finalizeResult
         )
     }
 }
-
-private const val LOG_TAG = "V1General"

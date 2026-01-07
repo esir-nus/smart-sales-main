@@ -5,7 +5,7 @@
 
 package com.smartsales.feature.chat.home
 
-import com.smartsales.feature.chat.core.QuickSkillId
+import com.smartsales.domain.config.QuickSkillId
 import java.util.UUID
 
 /** UI 模型：代表 Home 页里的一条聊天气泡。 */

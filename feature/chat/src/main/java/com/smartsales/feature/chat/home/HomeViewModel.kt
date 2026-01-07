@@ -163,6 +163,7 @@ class HomeViewModel @Inject constructor(
     private val debugCoordinator: com.smartsales.domain.debug.DebugCoordinator,
     private val sessionsManager: com.smartsales.domain.sessions.SessionsManager,
     private val tingwuCoordinator: com.smartsales.domain.transcription.TranscriptionCoordinator,
+    private val mediaInputCoordinator: com.smartsales.domain.media.MediaInputCoordinator,
     private val conversationViewModel: com.smartsales.feature.chat.conversation.ConversationViewModel,
     optionalConfig: Optional<AiCoreConfig> = Optional.empty(),
 ) : ViewModel(), com.smartsales.feature.chat.conversation.StreamingCallbacks {
@@ -496,69 +497,21 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val startedAt = System.currentTimeMillis()
             activelyTranscribing = true
-            // 重要：转写进行中不展示恢复提示
-            _uiState.update { it.copy(showAudioRecoveryHint = false, audioRecoveryHintStartedAt = null) }
+            _uiState.update { it.copy(showAudioRecoveryHint = false, audioRecoveryHintStartedAt = null, showWelcomeHero = false) }
             persistAudioTaskStartedMarker(startedAt)
-            _uiState.update { it.copy(isInputBusy = true, isBusy = true, snackbarMessage = null, showWelcomeHero = false) }
-            val stored = withContext(Dispatchers.IO) {
-                runCatching { audioStorageRepository.importFromPhone(uri) }
-            }.getOrElse { error ->
-                _uiState.update {
-                    it.copy(
-                        isInputBusy = false,
-                        isBusy = false,
-                        snackbarMessage = error.message ?: "导入音频失败"
-                    )
-                }
-                return@launch
-            }
-            val localPath = stored.localUri.path
-            if (localPath.isNullOrBlank()) {
-                _uiState.update {
-                    it.copy(
-                        isInputBusy = false,
-                        isBusy = false,
-                        snackbarMessage = "找不到本地音频路径"
-                    )
-                }
-                return@launch
-            }
-            val uploadPayload = when (val upload = transcriptionCoordinator.uploadAudio(File(localPath))) {
-                is Result.Success -> upload.data
-                is Result.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            isInputBusy = false,
-                            isBusy = false,
-                            snackbarMessage = upload.throwable.message ?: "上传音频失败"
-                        )
-                    }
-                    return@launch
-                }
-            }
-            when (val submit = transcriptionCoordinator.submitTranscription(
-                audioAssetName = stored.displayName,
-                language = "zh-CN",
-                uploadPayload = uploadPayload,
-                sessionId = sessionId
-            )) {
+            _uiState.update { it.copy(isInputBusy = true, isBusy = true, snackbarMessage = null) }
+            
+            when (val result = mediaInputCoordinator.handleAudioPick(uri, sessionId)) {
                 is Result.Success -> {
                     _uiState.update { it.copy(isInputBusy = false, isBusy = false, snackbarMessage = "音频已上传，正在转写…") }
-                    onTranscriptionRequested(
-                        TranscriptionChatRequest(
-                            jobId = submit.data,
-                            fileName = stored.displayName,
-                            recordingId = stored.id,
-                            sessionId = sessionId
-                        )
-                    )
+                    onTranscriptionRequested(result.data)
                 }
                 is Result.Error -> {
                     _uiState.update {
                         it.copy(
                             isInputBusy = false,
                             isBusy = false,
-                            snackbarMessage = submit.throwable.message ?: "提交转写失败"
+                            snackbarMessage = result.throwable.message ?: "音频处理失败"
                         )
                     }
                 }
@@ -570,50 +523,54 @@ class HomeViewModel @Inject constructor(
     fun onImagePicked(uri: Uri) {
         viewModelScope.launch {
             _uiState.update { it.copy(isBusy = true, isInputBusy = true, snackbarMessage = null, showWelcomeHero = false) }
-            val saved = withContext(Dispatchers.IO) {
-                runCatching { saveImageToCache(uri) }
-            }.getOrElse { error ->
-                _uiState.update {
-                    it.copy(
-                        isBusy = false,
-                        isInputBusy = false,
-                        snackbarMessage = error.message ?: "保存图片失败"
+            
+            when (val result = mediaInputCoordinator.handleImagePick(uri)) {
+                is Result.Success -> {
+                    val saved = result.data
+                    val placeholderId = nextMessageId()
+                    val placeholder = ChatMessageUi(
+                        id = placeholderId,
+                        role = ChatMessageRole.ASSISTANT,
+                        content = "已上传图片：${saved.name}，正在分析…",
+                        rawContent = "已上传图片：${saved.name}，正在分析…",
+                        sanitizedContent = "已上传图片：${saved.name}，正在分析…",
+                        timestampMillis = System.currentTimeMillis(),
+                        isStreaming = true
                     )
+                    _uiState.update { state ->
+                        state.copy(
+                            chatMessages = state.chatMessages + placeholder,
+                            snackbarMessage = state.snackbarMessage
+                        )
+                    }
+                    persistMessagesAsync()
+                    // TODO: 接入 DashScope 图像分析，当前为占位分析
+                    delay(800)
+                    updateAssistantMessage(placeholderId, persistAfterUpdate = true) { msg ->
+                        val raw = "图片分析占位：${saved.name}。图像解析接口接入后将提供详细描述。"
+                        val display = displayAssistantText(raw = raw, sanitized = raw)
+                        msg.copy(
+                            content = display,
+                            rawContent = raw,
+                            sanitizedContent = raw,
+                            isStreaming = false
+                        )
+                    }
+                    _uiState.update { it.copy(isBusy = false, isInputBusy = false) }
                 }
-                return@launch
+                is Result.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            isBusy = false,
+                            isInputBusy = false,
+                            snackbarMessage = result.throwable.message ?: "图片处理失败"
+                        )
+                    }
+                }
             }
-            val placeholderId = nextMessageId()
-            val placeholder = ChatMessageUi(
-                id = placeholderId,
-                role = ChatMessageRole.ASSISTANT,
-                content = "已上传图片：${saved.name}，正在分析…",
-                rawContent = "已上传图片：${saved.name}，正在分析…",
-                sanitizedContent = "已上传图片：${saved.name}，正在分析…",
-                timestampMillis = System.currentTimeMillis(),
-                isStreaming = true
-            )
-            _uiState.update { state ->
-                state.copy(
-                    chatMessages = state.chatMessages + placeholder,
-                    snackbarMessage = state.snackbarMessage
-                )
-            }
-            persistMessagesAsync()
-            // TODO: 接入 DashScope 图像分析，当前为占位分析
-            delay(800)
-            updateAssistantMessage(placeholderId, persistAfterUpdate = true) { msg ->
-                val raw = "图片分析占位：${saved.name}。图像解析接口接入后将提供详细描述。"
-                val display = displayAssistantText(raw = raw, sanitized = raw)
-                msg.copy(
-                    content = display,
-                    rawContent = raw,
-                    sanitizedContent = raw,
-                    isStreaming = false
-                )
-            }
-            _uiState.update { it.copy(isBusy = false, isInputBusy = false) }
         }
     }
+
 
     fun onTranscriptionRequested(request: TranscriptionChatRequest) {
         viewModelScope.launch {
@@ -820,7 +777,7 @@ class HomeViewModel @Inject constructor(
         val merged = if (currentMessageId == null) {
             effectiveChunk
         } else {
-            mergeTranscriptionChunks(
+            tingwuCoordinator.mergeChunks(
                 existing = _uiState.value.chatMessages.firstOrNull { it.id == currentMessageId }?.rawContent
                     ?: _uiState.value.chatMessages.firstOrNull { it.id == currentMessageId }?.content
                     ?: "",
@@ -876,16 +833,6 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun mergeTranscriptionChunks(existing: String, incoming: String): String {
-        if (existing.isBlank()) return incoming
-        if (incoming.isBlank()) return existing
-        // 重要：伪流式只做追加，避免重复或乱序。
-        val separator = when {
-            existing.endsWith("\n") || incoming.startsWith("\n") -> ""
-            else -> "\n"
-        }
-        return existing + separator + incoming
-    }
 
     fun onOpenDrawer() {
         _uiState.update { it.copy(navigationRequest = HomeNavigationRequest.ChatHistory) }

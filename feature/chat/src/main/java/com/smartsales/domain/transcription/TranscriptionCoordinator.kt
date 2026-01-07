@@ -192,4 +192,18 @@ class TranscriptionCoordinator @Inject constructor(
             )
         }
     }
+
+    /**
+     * Merge transcription chunks for streaming display.
+     */
+    fun mergeChunks(existing: String, incoming: String): String {
+        if (existing.isBlank()) return incoming
+        if (incoming.isBlank()) return existing
+        // Streaming append only: avoid duplication or out-of-order
+        val separator = when {
+            existing.endsWith("\n") || incoming.startsWith("\n") -> ""
+            else -> "\n"
+        }
+        return existing + separator + incoming
+    }
 }

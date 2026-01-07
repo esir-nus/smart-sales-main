@@ -15,8 +15,8 @@ import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.feature.chat.AiSessionRepository
 import com.smartsales.core.metahub.SessionMetadataLabelProvider
 import com.smartsales.data.aicore.params.TranscriptionLaneSelector
-import com.smartsales.feature.chat.home.debug.DebugSessionMetadata
-import com.smartsales.feature.chat.home.debug.DebugUiState
+import com.smartsales.domain.debug.DebugSessionMetadata
+import com.smartsales.domain.debug.DebugUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update

@@ -137,7 +137,7 @@ import java.util.Date
 import java.util.Locale
 import com.smartsales.feature.chat.BuildConfig
 import com.smartsales.feature.chat.home.debug.DebugSessionMetadataHud
-import com.smartsales.feature.chat.home.export.ExportGateState
+import com.smartsales.domain.export.ExportGateState
 import com.smartsales.feature.chat.history.HistoryDrawerContent
 import com.smartsales.feature.chat.home.input.HomeInputArea
 import com.smartsales.feature.chat.home.input.QuickSkillRow

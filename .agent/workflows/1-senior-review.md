@@ -78,20 +78,66 @@ When reviewing for AI-assisted development (vibe coding), specifically evaluate:
 - **Locality**: Is related logic close together or scattered?
 - **Naming**: Do names tell the story without comments?
 - **Debuggability**: When this breaks at 2am, can you find the problem fast?
-- **Modification safety**: Can you change this without breaking something far away?---
+---
 
-## Refactoring Strategy: Rewrite First
+## Refactoring Strategy: Evidence-Based Decision
 
-**Default: Rewrite. Always.**
+**Don't decide by line count. Decide by alignment and coupling.**
 
-In vibe coding, AI writes clean new code faster than understanding legacy. The old code is a **reference**, not a **constraint**.
+### Decision Tree
 
-### 🔄 Rewrite ("Nuke and Pave") — THE DEFAULT
+```
+┌─────────────────────────────────────────┐
+│ Is code ALIGNED with target arch?       │
+│ (Check RealizeTheArchi.md / specs)      │
+└───────────────┬─────────────────────────┘
+                │
+        ┌───────┴───────┐
+        │               │
+      NO               YES
+        │               │
+        ▼               ▼
+    REWRITE      ┌──────────────────────┐
+                 │ Is it easy to        │
+                 │ DECOUPLE?            │
+                 │ (grep imports,       │
+                 │  count callers)      │
+                 └───────┬──────────────┘
+                         │
+                 ┌───────┴───────┐
+                 │               │
+               NO              YES
+                 │               │
+                 ▼               ▼
+             REWRITE         EXTRACT
+```
+
+### Axis 1: Architecture Alignment
+
+**Audit questions:**
+- Is the code in the correct layer? (domain vs platform)
+- Does it follow the right pattern? (Coordinator, Reducer, etc.)
+- Does it use the right contracts? (interfaces from target arch)
+- Are there Android/platform imports in domain code?
+
+**If misaligned → REWRITE** toward target architecture
+
+### Axis 2: Coupling Level
+
+**Audit questions:**
+- How many files import this code?
+- How many callers are there?
+- Is there shared mutable state with other features?
+- Would moving this break many other files?
+
+**If tightly coupled → REWRITE** to break dependencies
+
+### 🔄 Rewrite ("Nuke and Pave")
 
 **Choose when:**
-- You're refactoring (any size)
-- Architecture guidelines exist (ArchitectureRefactoring.md)
-- You can verify behavior (tests, manual check, or both)
+- Code is misaligned with target architecture
+- Code is tightly coupled to other components
+- Legacy patterns would leak if extracted
 
 **The Rewrite Flow:**
 1. Read old code to understand **what it does** (not how)
@@ -100,35 +146,26 @@ In vibe coding, AI writes clean new code faster than understanding legacy. The o
 4. Delete old code entirely
 5. Verify behavior
 
-**Why this wins:**
-- AI writes clean code faster than untangling legacy
-- Native to new architecture (no legacy patterns leak)
-- Tests get rewritten too (cleaner, aligned to new structure)
-- Old code = reference repo, not sacred text
+### 🔬 Extract ("Surgical Move")
 
-### 🔬 Surgical Extraction — THE EXCEPTION
+**Choose when:**
+- Code is well-aligned with target architecture
+- Code is loosely coupled (few callers, no shared state)
+- Logic is correct, just in the wrong place
 
-**Choose ONLY when:**
-- Code is < 30 lines AND already isolated
-- No architecture change (just moving files)
-- Exact byte-for-byte behavior required (crypto, protocol)
+**The Extract Flow:**
+1. Audit coupling with grep (imports, callers)
+2. Move code to target location
+3. Update imports at call sites
+4. Verify build + tests
 
-### The Vibe Coding Advantage
+### Examples
 
-| Old Approach | Vibe Coding |
-|--------------|-------------|
-| "Preserve edge cases" | "Reference old code, write fresh" |
-| "Migrate tests carefully" | "Rewrite tests for new patterns" |
-| "Step-by-step extraction" | "Understand → Rewrite → Delete" |
-| "Fear of breaking" | "Tests + verify = confidence" |
+| Scenario | Alignment | Coupling | Decision |
+|----------|-----------|----------|----------|
+| ConversationViewModel Redux pattern | ❌ Bad (overkill) | - | REWRITE → DELETE |
+| TranscriptionCoordinator observation loops | ✅ Good | Low (1 caller) | EXTRACT |
+| 500-line god function with 20 imports | ❌ Bad | High | REWRITE |
+| 50-line well-factored utility | ✅ Good | Low | EXTRACT |
 
-### Decision: Almost Always Rewrite
-
-| Question | Answer |
-|----------|--------|
-| Is there an architecture to follow? | Yes → Rewrite |
-| Can I verify behavior after? | Yes → Rewrite |
-| Is code > 30 lines? | Yes → Rewrite |
-| Am I spending time understanding instead of coding? | Yes → Rewrite |
-
-**If you're debating, rewrite.**
+**If you're debating, audit first.**

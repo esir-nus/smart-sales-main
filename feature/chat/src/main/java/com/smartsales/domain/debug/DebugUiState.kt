@@ -1,10 +1,10 @@
-package com.smartsales.feature.chat.home.debug
+package com.smartsales.domain.debug
 
 import com.smartsales.data.aicore.debug.DebugSnapshot
 import com.smartsales.data.aicore.debug.XfyunTraceSnapshot
 import com.smartsales.data.aicore.debug.TingwuTraceSnapshot
 
-// 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/debug/DebugUiState.kt
+// 文件：feature/chat/src/main/java/com/smartsales/domain/debug/DebugUiState.kt
 // 模块：:feature:chat
 // 说明：调试面板 UI 状态，从 HomeViewModel 中提取
 // 作者：创建于 2026-01-05

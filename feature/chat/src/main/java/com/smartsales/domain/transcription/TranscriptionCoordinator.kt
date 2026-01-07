@@ -73,4 +73,30 @@ interface TranscriptionCoordinator {
      * Merge transcription chunks for streaming display.
      */
     fun mergeChunks(existing: String, incoming: String): String
+
+    /**
+     * Run transcription with callbacks for UI updates.
+     *
+     * Handles observation loops internally:
+     * - Observes processed batches
+     * - Observes job state (progress/completed/failed)
+     * - Calls back to ViewModel for UI updates
+     *
+     * @param jobId Transcription job ID
+     * @param fileName Audio file name (for progress messages)
+     * @param progressMessageId Message ID for progress updates
+     * @param onProgressUpdate Called when progress percentage changes
+     * @param onBatchReceived Called when batch is received
+     * @param onCompleted Called when transcription completes
+     * @param onFailed Called when transcription fails
+     */
+    suspend fun runTranscription(
+        jobId: String,
+        fileName: String,
+        progressMessageId: String,
+        onProgressUpdate: (percent: Int, messageId: String) -> Unit,
+        onBatchReceived: (ProcessedBatch) -> Unit,
+        onCompleted: (messageId: String) -> Unit,
+        onFailed: (reason: String, messageId: String) -> Unit
+    )
 }

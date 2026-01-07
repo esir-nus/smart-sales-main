@@ -6,9 +6,9 @@ import com.smartsales.feature.usercenter.SalesPersona
 import com.smartsales.data.aicore.debug.DebugSnapshot
 import com.smartsales.data.aicore.debug.TingwuTraceSnapshot
 import com.smartsales.data.aicore.debug.XfyunTraceSnapshot
-import com.smartsales.feature.chat.home.debug.DebugSessionMetadata
+import com.smartsales.domain.debug.DebugSessionMetadata
 
-import com.smartsales.feature.chat.home.export.ExportGateState
+import com.smartsales.domain.export.ExportGateState
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeUiState.kt
 // 模块：:feature:chat

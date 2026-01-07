@@ -7,8 +7,8 @@ package com.smartsales.domain.export
 
 import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.ExportFormat
-import com.smartsales.feature.chat.home.export.ExportGateState
-import com.smartsales.feature.chat.home.export.ExportUiState
+import com.smartsales.domain.export.ExportGateState
+import com.smartsales.domain.export.ExportUiState
 import kotlinx.coroutines.flow.StateFlow
 
 /**

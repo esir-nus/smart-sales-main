@@ -12,12 +12,15 @@ import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.feature.chat.AiSessionRepository
 import com.smartsales.core.metahub.SessionMetadataLabelProvider
 import com.smartsales.data.aicore.params.TranscriptionLaneSelector
+import com.smartsales.domain.debug.DebugUiState
+import com.smartsales.domain.debug.DebugSessionMetadata
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/debug/DebugViewModel.kt
 // 模块：:feature:chat

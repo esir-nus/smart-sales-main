@@ -15,6 +15,8 @@ import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.feature.chat.home.transcription.ProcessedBatch
 import com.smartsales.feature.chat.home.transcription.TranscriptionUiState
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import java.util.Optional
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -148,5 +150,42 @@ class TranscriptionCoordinatorImpl @Inject constructor(
             else -> "\n"
         }
         return existing + separator + incoming
+    }
+
+    override suspend fun runTranscription(
+        jobId: String,
+        fileName: String,
+        progressMessageId: String,
+        onProgressUpdate: (percent: Int, messageId: String) -> Unit,
+        onBatchReceived: (ProcessedBatch) -> Unit,
+        onCompleted: (messageId: String) -> Unit,
+        onFailed: (reason: String, messageId: String) -> Unit
+    ) {
+        coroutineScope {
+            // Launch batch observation
+            launch {
+                observeProcessedBatches(jobId).collect { batch ->
+                    onBatchReceived(batch)
+                }
+            }
+
+            // Launch job state observation
+            launch {
+                observeJob(jobId).collect { state ->
+                    when (state) {
+                        is AudioTranscriptionJobState.Idle -> Unit
+                        is AudioTranscriptionJobState.InProgress -> {
+                            onProgressUpdate(state.progressPercent, progressMessageId)
+                        }
+                        is AudioTranscriptionJobState.Completed -> {
+                            onCompleted(progressMessageId)
+                        }
+                        is AudioTranscriptionJobState.Failed -> {
+                            onFailed(state.reason.ifBlank { "转写失败" }, progressMessageId)
+                        }
+                    }
+                }
+            }
+        }
     }
 }

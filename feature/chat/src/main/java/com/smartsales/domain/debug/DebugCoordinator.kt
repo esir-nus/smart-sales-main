@@ -5,7 +5,7 @@
 
 package com.smartsales.domain.debug
 
-import com.smartsales.feature.chat.home.debug.DebugUiState
+import com.smartsales.domain.debug.DebugUiState
 import kotlinx.coroutines.flow.StateFlow
 
 /**

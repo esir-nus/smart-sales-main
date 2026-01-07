@@ -54,7 +54,7 @@ import androidx.compose.ui.unit.dp
 import com.smartsales.domain.config.QuickSkillId
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.chat.home.QuickSkillUi
-import com.smartsales.feature.chat.home.export.ExportGateState
+import com.smartsales.domain.export.ExportGateState
 
 @Composable
 internal fun HomeInputArea(

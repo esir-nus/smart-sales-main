@@ -1,9 +1,9 @@
-package com.smartsales.feature.chat.home.export
+package com.smartsales.domain.export
 
 import com.smartsales.core.metahub.ExportNameSource
 import com.smartsales.data.aicore.ExportFormat
 
-// 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/export/ExportUiState.kt
+// 文件：feature/chat/src/main/java/com/smartsales/domain/export/ExportUiState.kt
 // 模块：:feature:chat
 // 说明：导出相关的 UI 状态，从 HomeViewModel 中提取
 // 作者：创建于 2026-01-05

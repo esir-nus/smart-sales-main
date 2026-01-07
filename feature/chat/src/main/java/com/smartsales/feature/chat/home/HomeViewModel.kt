@@ -40,8 +40,8 @@ import com.smartsales.feature.chat.history.toEntity
 import com.smartsales.feature.chat.history.toUiModel
 import com.smartsales.data.aicore.debug.DebugOrchestrator
 import com.smartsales.data.aicore.debug.DebugSnapshot
-import com.smartsales.feature.chat.home.debug.DebugSessionMetadata
-import com.smartsales.feature.chat.home.export.ExportGateState
+import com.smartsales.domain.debug.DebugSessionMetadata
+import com.smartsales.domain.export.ExportGateState
 import com.smartsales.data.aicore.debug.TingwuTraceSnapshot
 import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.debug.XfyunTraceSnapshot
@@ -648,64 +648,55 @@ class HomeViewModel @Inject constructor(
                     )
                 }
                 persistMessagesAsync()
-                // Start transcription observation via TranscriptionViewModel
+                // Delegate to TranscriptionCoordinator
                 tingwuCoordinator.reset()
                 tingwuCoordinator.startTranscription(request.jobId)
-                // Observe processed batches
-                launch {
-                    tingwuCoordinator.observeProcessedBatches(request.jobId).collect { batch ->
-                        handleProcessedBatch(batch)
-                    }
-                }
-                // Observe job state
-                launch {
-                    tingwuCoordinator.observeJob(request.jobId).collectLatest { state ->
-                        when (state) {
-                            AudioTranscriptionJobState.Idle -> Unit
-                            is AudioTranscriptionJobState.InProgress -> updateAssistantMessage(introId) { msg ->
-                                val raw = "正在转写音频文件 ${request.fileName} ... ${state.progressPercent}%"
-                                val display = displayAssistantText(raw = raw, sanitized = raw)
-                                msg.copy(
-                                    content = display,
-                                    rawContent = raw,
-                                    sanitizedContent = raw,
-                                    isStreaming = true
-                                )
-                            }
-
-                            is AudioTranscriptionJobState.Completed -> {
-                                updateAssistantMessage(introId, persistAfterUpdate = true) { msg ->
-                                    val raw = "转写完成：${request.fileName}"
-                                    val display = displayAssistantText(raw = raw, sanitized = raw)
-                                    msg.copy(
-                                        content = display,
-                                        rawContent = raw,
-                                        sanitizedContent = raw,
-                                        isStreaming = false
-                                    )
-                                }
-                                activelyTranscribing = false
-                            }
-
-                            is AudioTranscriptionJobState.Failed -> {
-                                val reason = state.reason.ifBlank { "转写失败" }
-                                updateAssistantMessage(introId, persistAfterUpdate = true) { msg ->
-                                    val raw = "转写失败：$reason"
-                                    val display = displayAssistantText(raw = raw, sanitized = raw)
-                                    msg.copy(
-                                        content = display,
-                                        rawContent = raw,
-                                        sanitizedContent = raw,
-                                        isStreaming = false,
-                                        hasError = true
-                                    )
-                                }
-                                activelyTranscribing = false
-                                _uiState.update { it.copy(snackbarMessage = it.snackbarMessage ?: reason) }
-                            }
+                tingwuCoordinator.runTranscription(
+                    jobId = request.jobId,
+                    fileName = request.fileName,
+                    progressMessageId = introId,
+                    onProgressUpdate = { percent, messageId ->
+                        updateAssistantMessage(messageId) { msg ->
+                            val raw = "正在转写音频文件 ${request.fileName} ... $percent%"
+                            val display = displayAssistantText(raw = raw, sanitized = raw)
+                            msg.copy(
+                                content = display,
+                                rawContent = raw,
+                                sanitizedContent = raw,
+                                isStreaming = true
+                            )
                         }
+                    },
+                    onBatchReceived = { batch -> handleProcessedBatch(batch) },
+                    onCompleted = { messageId ->
+                        updateAssistantMessage(messageId, persistAfterUpdate = true) { msg ->
+                            val raw = "转写完成：${request.fileName}"
+                            val display = displayAssistantText(raw = raw, sanitized = raw)
+                            msg.copy(
+                                content = display,
+                                rawContent = raw,
+                                sanitizedContent = raw,
+                                isStreaming = false
+                            )
+                        }
+                        activelyTranscribing = false
+                    },
+                    onFailed = { reason, messageId ->
+                        updateAssistantMessage(messageId, persistAfterUpdate = true) { msg ->
+                            val raw = "转写失败：$reason"
+                            val display = displayAssistantText(raw = raw, sanitized = raw)
+                            msg.copy(
+                                content = display,
+                                rawContent = raw,
+                                sanitizedContent = raw,
+                                isStreaming = false,
+                                hasError = true
+                            )
+                        }
+                        activelyTranscribing = false
+                        _uiState.update { it.copy(snackbarMessage = it.snackbarMessage ?: reason) }
                     }
-                }
+                )
             }
         }
     }

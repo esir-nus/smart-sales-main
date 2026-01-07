@@ -5,7 +5,7 @@
 
 package com.smartsales.feature.chat.export
 
-import com.smartsales.feature.chat.home.export.ExportGateState
+import com.smartsales.domain.export.ExportGateState
 
 /**
  * UI state for export functionality.

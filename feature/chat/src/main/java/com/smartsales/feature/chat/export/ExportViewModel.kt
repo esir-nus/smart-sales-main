@@ -10,7 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.ExportFormat
 import com.smartsales.domain.export.ExportCoordinator
-import com.smartsales.feature.chat.home.export.ExportGateState
+import com.smartsales.domain.export.ExportGateState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

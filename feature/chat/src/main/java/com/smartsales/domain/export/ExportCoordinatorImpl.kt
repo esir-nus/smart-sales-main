@@ -14,8 +14,8 @@ import com.smartsales.data.aicore.ExportOrchestrator
 import com.smartsales.feature.chat.AiSessionRepository
 import com.smartsales.feature.chat.AiSessionSummary
 import com.smartsales.feature.chat.ChatShareHandler
-import com.smartsales.feature.chat.home.export.ExportGateState
-import com.smartsales.feature.chat.home.export.ExportUiState
+import com.smartsales.domain.export.ExportGateState
+import com.smartsales.domain.export.ExportUiState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update

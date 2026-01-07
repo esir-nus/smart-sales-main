@@ -257,6 +257,25 @@ HomeViewModel delegates to coordinators:
 └── iosApp/
 ```
 
+### Dependency Direction Cleanup (KMP Prerequisite)
+
+**Status:** Deferred until iOS development starts  
+**Audit Date:** 2026-01-07  
+**Score Impact:** -15 points (0/15 on Dependency Direction in alignment audit)
+
+**5 types to move to domain layer:**
+
+| Type | Current Location | Target Location |
+|------|------------------|-----------------|
+| `ExportGateState` | `feature/chat/home/export/` | `domain/export/` |
+| `ExportUiState` | `feature/chat/home/export/` | `domain/export/` |
+| `DebugUiState` | `feature/chat/home/debug/` | `domain/debug/` |
+| `DebugSessionMetadata` | `feature/chat/home/debug/` | `domain/debug/` |
+| `AiSessionRepository` | `feature/chat/` | `domain/sessions/` (interface) |
+
+**Effort:** 4-6 hours  
+**Trigger:** Run when KMP migration starts
+
 ---
 
 ## 8. Quality Guardrails

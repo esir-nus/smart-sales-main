@@ -157,6 +157,7 @@ fun HomeScreenRoute(
     viewModel: HomeViewModel = hiltViewModel(),
     audioViewModel: com.smartsales.feature.chat.audio.AudioViewModel = hiltViewModel(),
     sessionListViewModel: com.smartsales.feature.chat.sessionlist.SessionListViewModel = hiltViewModel(),
+    exportViewModel: com.smartsales.feature.chat.export.ExportViewModel = hiltViewModel(),
     sessionId: String? = null,
     transcriptionRequest: TranscriptionChatRequest? = null,
     onTranscriptionRequestConsumed: () -> Unit = {},
@@ -244,6 +245,23 @@ fun HomeScreenRoute(
     }
     LaunchedEffect(audioState.deviceSnapshot) {
         onDeviceSnapshotChanged(audioState.deviceSnapshot)
+    }
+    
+    // Handle export events
+    LaunchedEffect(Unit) {
+        exportViewModel.events.collect { event ->
+            when (event) {
+                is com.smartsales.feature.chat.export.ExportEvent.ExportCompleted -> {
+                    val message = when (event.result) {
+                        is com.smartsales.core.util.Result.Success -> "导出成功"
+                        is com.smartsales.core.util.Result.Error -> event.result.throwable.message ?: "导出失败"
+                    }
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(message)
+                    }
+                }
+            }
+        }
     }
     
     // Handle session list events

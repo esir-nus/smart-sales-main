@@ -127,7 +127,10 @@ object SystemPromptBuilder {
           * 将最终回答文本放入一个 <Visible2User>...</Visible2User> 中。
           * 若有会话级 JSON 元数据，放入单个 <Metadata>{...}</Metadata> 中（字段：main_person/short_summary/summary_title_6chars/location/stage/risk_level/highlights/actionable_tips/core_insight/sharp_line，不含 persona）。
           * 内部推理放入 <Reasoning>...</Reasoning>（不会展示给用户，可选）。
-          * 若要提供会话标题候选，可选输出一个 <Rename><Name>人物/客户</Name><Title6>≤6字摘要</Title6></Rename>，仅供系统改名，不展示给用户。
+          * **会话标题（必须）**：在首条回复末尾输出一个 <Rename><Name>客户名/人物</Name><Title6>≤6字摘要</Title6></Rename>。系统用此自动改名，不会展示给用户。
+            - 规则：Name 取对话中提到的客户/人物名；Title6 用 ≤6 个中文概括主题。
+            - 若信息不足：Name 用"新客户"；Title6 根据输入类型选择：问候→"打招呼"，销售相关→"待补充"，其他→"新对话"。
+            - 禁止：Name/Title6 输出"..."或空字符串。
         - 回答区禁止复述规则/标题/“历史对话”“最新问题”等提示语，避免输出上述规则中的小节标题；简短、信息密集，避免同一句或同一要点重复。
         """.trimIndent()
     }

@@ -16,6 +16,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.withContext
@@ -27,6 +28,7 @@ class DashscopeAiChatService @Inject constructor(
     private val dashscopeClient: DashscopeClient,
     private val credentialsProvider: DashscopeCredentialsProvider,
     private val aiParaSettingsProvider: AiParaSettingsProvider,
+    private val networkChecker: NetworkChecker,
     optionalConfig: Optional<AiCoreConfig>
 ) : AiChatService {
 
@@ -59,35 +61,50 @@ class DashscopeAiChatService @Inject constructor(
         if (credentials.apiKey.isBlank()) {
             return flowOf(AiChatStreamEvent.Error(missingCredentialsError()))
         }
+        
+        // Pre-check: ensure network is available before calling SDK
+        // SDK crashes with NPE in OkHttpHttpClient.parseFailed() when response is null
+        if (!networkChecker.isNetworkAvailable()) {
+            return flowOf(AiChatStreamEvent.Error(noNetworkError()))
+        }
         val dashscopeRequest = buildDashscopeRequest(request, credentials)
         val accumulator = StringBuilder()
-        return dashscopeClient.stream(dashscopeRequest).transform { event ->
-            when (event) {
-                is DashscopeStreamEvent.Chunk -> {
-                    accumulator.append(event.content)
-                    emit(AiChatStreamEvent.Chunk(event.content))
-                }
-                DashscopeStreamEvent.Completed -> {
-                    val display = accumulator.toString()
-                    val response = AiChatResponse(
-                        displayText = display,
-                        structuredMarkdown = buildMarkdown(display, request),
-                        references = emptyList(),
-                        modelUsed = dashscopeRequest.model,
-                    )
-                    emit(AiChatStreamEvent.Completed(response))
-                }
-                is DashscopeStreamEvent.Failed -> {
-                    val throwable = event.throwable?.let { mapError(it) }
-                        ?: AiCoreException(
-                            source = AiCoreErrorSource.DASH_SCOPE,
-                            reason = AiCoreErrorReason.UNKNOWN,
-                            message = "DashScope 流式返回失败：${event.reason}"
+        
+        // Wrap SDK stream call to catch network failures and prevent SDK NPE crash
+        // The SDK has a bug where it crashes in OkHttpHttpClient.parseFailed() when response is null
+        return dashscopeClient.stream(dashscopeRequest)
+            .transform { event ->
+                when (event) {
+                    is DashscopeStreamEvent.Chunk -> {
+                        accumulator.append(event.content)
+                        emit(AiChatStreamEvent.Chunk(event.content))
+                    }
+                    DashscopeStreamEvent.Completed -> {
+                        val display = accumulator.toString()
+                        val response = AiChatResponse(
+                            displayText = display,
+                            structuredMarkdown = buildMarkdown(display, request),
+                            references = emptyList(),
+                            modelUsed = dashscopeRequest.model,
                         )
-                    emit(AiChatStreamEvent.Error(throwable))
+                        emit(AiChatStreamEvent.Completed(response))
+                    }
+                    is DashscopeStreamEvent.Failed -> {
+                        val throwable = event.throwable?.let { mapError(it) }
+                            ?: AiCoreException(
+                                source = AiCoreErrorSource.DASH_SCOPE,
+                                reason = AiCoreErrorReason.UNKNOWN,
+                                message = "DashScope 流式返回失败：${event.reason}"
+                            )
+                        emit(AiChatStreamEvent.Error(throwable))
+                    }
                 }
             }
-        }
+            .catch { e ->
+                // Catch any exception (including SDK internal crashes) and emit as error
+                val error = mapError(e)
+                emit(AiChatStreamEvent.Error(error))
+            }
     }
 
     private suspend fun <T> executeWithRetry(
@@ -231,6 +248,12 @@ class DashscopeAiChatService @Inject constructor(
         reason = AiCoreErrorReason.MISSING_CREDENTIALS,
         message = "DashScope API Key 未配置",
         suggestion = "在 local.properties 写入 DASHSCOPE_API_KEY"
+    )
+
+    private fun noNetworkError(): AiCoreException = AiCoreException(
+        source = AiCoreErrorSource.DASH_SCOPE,
+        reason = AiCoreErrorReason.NETWORK,
+        message = "无网络连接，请恢复网络后重试"
     )
 
     companion object {

@@ -44,11 +44,13 @@ class HomeAssistantCopyTest {
         composeRule.setContent {
             HomeScreen(
                 state = state,
+                audioState = com.smartsales.feature.chat.audio.AudioUiState(),
                 snackbarHostState = SnackbarHostState(),
                 onInputChanged = {},
                 onSendClicked = {},
                 onQuickSkillSelected = {},
-
+                onExportPdfClicked = {},
+                onExportCsvClicked = {},
                 onDeviceBannerClicked = {},
                 onAudioSummaryClicked = {},
                 onRefreshDeviceAndAudio = {},
@@ -57,7 +59,8 @@ class HomeAssistantCopyTest {
                 onNewChatClicked = {},
                 onSessionSelected = {},
                 chatErrorMessage = null,
-
+                exportInProgress = false,
+                exportGateState = null,
                 modifier = Modifier,
                 showHistoryPanel = false,
                 onToggleHistoryPanel = {},

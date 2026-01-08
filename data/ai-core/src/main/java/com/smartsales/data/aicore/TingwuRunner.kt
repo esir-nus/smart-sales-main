@@ -87,6 +87,7 @@ class TingwuRunner @Inject constructor(
     private val aiParaSettingsProvider: AiParaSettingsProvider,
     private val tingwuRunner: com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository,
     private val transcriptPublisher: com.smartsales.data.aicore.tingwu.TranscriptPublisher,
+    private val formatter: TranscriptFormatter,
     optionalConfig: Optional<AiCoreConfig>
 ) : TingwuCoordinator {
 
@@ -565,10 +566,10 @@ class TingwuRunner @Inject constructor(
                         "拉取成功：jobId=$jobId text=$textLength requestId=${response.requestId}"
                     }
                     val transcription = data.transcription
-                    val diarizedSegments = buildDiarizedSegments(transcription)
+                    val diarizedSegments = formatter.buildDiarizedSegments(transcription)
                     val recordingOriginSegments = buildRecordingOriginSegments(transcription)
-                    val speakerLabels = buildSpeakerLabels(transcription, diarizedSegments)
-                    val markdown = buildMarkdown(transcription, diarizedSegments, speakerLabels)
+                    val speakerLabels = formatter.buildSpeakerLabels(transcription, diarizedSegments)
+                    val markdown = formatter.buildMarkdown(transcription, diarizedSegments, speakerLabels)
                     // 重要：转写原始响应仅落盘，不在内存/HUD 直接保存原文。
                     recordTingwuRawDump(
                         jobId = jobId,
@@ -636,10 +637,10 @@ class TingwuRunner @Inject constructor(
             )
         AiCoreLogger.d(TAG, "开始从 URL 下载转写 JSON：jobId=$jobId")
         val transcription = downloadTranscription(signedUrl, jobId)
-        val diarizedSegments = buildDiarizedSegments(transcription)
+        val diarizedSegments = formatter.buildDiarizedSegments(transcription)
         val recordingOriginSegments = buildRecordingOriginSegments(transcription)
-        val speakerLabels = buildSpeakerLabels(transcription, diarizedSegments)
-        val markdown = buildMarkdown(transcription, diarizedSegments, speakerLabels)
+        val speakerLabels = formatter.buildSpeakerLabels(transcription, diarizedSegments)
+        val markdown = formatter.buildMarkdown(transcription, diarizedSegments, speakerLabels)
         val enhancedMarkdown = runEnhancerIfEnabled(
             jobId = jobId,
             transcription = transcription,
@@ -920,159 +921,43 @@ class TingwuRunner @Inject constructor(
         @SerializedName("SpeakerId") val speakerId: String?
     )
 
-    private fun buildMarkdown(
-        transcription: TingwuTranscription?,
-        diarizedSegments: List<DiarizedSegment> = emptyList(),
-        speakerLabels: Map<String, String> = emptyMap(),
-    ): String {
-        if (diarizedSegments.isNotEmpty()) {
-            val sorted = diarizedSegments.sortedBy { it.startMs }
-            val builder = StringBuilder()
-            builder.append("## 逐字稿\n")
-            sorted.forEach { segment ->
-                val label = segment.speakerId?.let { id ->
-                    speakerLabels[id]?.takeIf { it.isNotBlank() } ?: id
-                }
-                val begin = formatTimeMs(segment.startMs)
-                val end = formatTimeMs(segment.endMs)
-                val hasValidRange = segment.endMs > segment.startMs &&
-                    segment.endMs - segment.startMs <= MAX_SUBTITLE_DURATION_MS
-                builder.append("- ")
-                if (segment.startMs > 0 || segment.endMs > 0) {
-                    builder.append("[")
-                        .append(begin)
-                    if (hasValidRange) {
-                        builder.append(" - ").append(end)
-                    }
-                    builder.append("] ")
-                }
-                label?.let { builder.append(it).append("：") }
-                builder.append(segment.text.ifBlank { "（空白）" }).append("\n")
-            }
-            return builder.toString().trimEnd()
-        }
-        transcription?.text?.takeIf { it.isNotBlank() }?.let { raw ->
-            return buildString {
-                append("## 逐字稿（无说话人分离数据）\n")
-                append(raw.trim())
-            }
-        }
-        val segments = transcription?.segments.orEmpty()
-        if (segments.isEmpty()) {
-            return "暂无可用的转写结果。"
-        }
-        return buildString {
-            append("## 逐字稿\n")
-            segments.forEach { segment ->
-                val begin = formatTime(segment.start)
-                val end = formatTime(segment.end)
-                val content = segment.text?.trim().orEmpty()
-                append("- ")
-                if (!begin.isNullOrBlank() || !end.isNullOrBlank()) {
-                    append("[")
-                    append(begin)
-                    append(" - ")
-                    append(end)
-                    append("] ")
-                }
-                append(content.ifBlank { "（空白）" }).append("\n")
-            }
-        }.trimEnd()
-    }
 
-    private fun buildDiarizedSegments(transcription: TingwuTranscription?): List<DiarizedSegment> {
-        if (transcription == null) return emptyList()
-        
-        val segments = transcription.segments.orEmpty()
-        val hasUsableSegments = segments.any { !it.text.isNullOrBlank() && !it.speaker.isNullOrBlank() }
-
-        if (!hasUsableSegments) {
-            // No diarized material; let caller fall back to transcription.text or "暂无可用..."
-            return emptyList()
-        }
-
-        // If we have usable segments, do NOT disable diarization just because text looks formatted.
-
-        val speakerOrder = LinkedHashMap<String, Int>()
-        transcription.speakers?.forEachIndexed { index, speaker ->
-            speakerOrder[speaker.id] = index + 1
-        }
-        var nextIndex = speakerOrder.size + 1
-        fun resolveSpeaker(idRaw: String): Pair<String, Int> {
-            val key = idRaw.trim()
-            val idx = speakerOrder.getOrPut(key) { nextIndex++ }
-            return key to idx
-        }
-        val sortedSegments = transcription.segments.orEmpty()
-            .filter { !it.text.isNullOrBlank() && !it.speaker.isNullOrBlank() }
-            .sortedBy { it.start ?: 0.0 }
-        if (sortedSegments.isEmpty()) {
-            return emptyList()
-        }
-
-        val baseStartSeconds = sortedSegments.minOfOrNull { it.start ?: 0.0 }?.coerceAtLeast(0.0) ?: 0.0
-        val diarized = sortedSegments.map { segment ->
-            val (speakerId, speakerIndex) = resolveSpeaker(segment.speaker!!)
-            val rawStart = (segment.start ?: 0.0) - baseStartSeconds
-            val rawEnd = (segment.end ?: segment.start ?: 0.0) - baseStartSeconds
-            val startMs = (rawStart * 1000).toLong()
-            val endMs = (rawEnd * 1000).toLong()
-            val normalizedStart = max(startMs, 0)
-            val normalizedEnd = max(endMs, 0)
-            val safeEnd = if (normalizedEnd >= normalizedStart) normalizedEnd else normalizedStart
-            DiarizedSegment(
-                speakerId = speakerId,
-                speakerIndex = speakerIndex,
-                startMs = normalizedStart,
-                endMs = safeEnd,
-                text = segment.text?.trim().orEmpty()
-            )
-        }
-        val merged = mutableListOf<DiarizedSegment>()
-        diarized.forEach { segment ->
-            val last = merged.lastOrNull()
-            if (last != null && shouldMergeAsSubtitle(last, segment)) {
-                val combined = last.copy(
-                    endMs = max(last.endMs, segment.endMs),
-                    text = (last.text + " " + segment.text).trim()
-                )
-                merged[merged.lastIndex] = combined
-            } else {
-                merged += segment
-            }
-        }
-        return merged
-    }
 
     private fun buildRecordingOriginSegments(transcription: TingwuTranscription?): List<DiarizedSegment> {
         return buildRecordingOriginSegmentsWithOffset(
             transcription = transcription,
             baseOffsetMs = 0L,
-            shouldMerge = ::shouldMergeAsSubtitle
+            shouldMerge = { prev, next -> shouldMergeAsSubtitle(prev, next) }
         )
     }
 
-    /**
-     * 根据 Tingwu 的说话人信息和分段结果，为每个 speakerId 生成稳定且可读的显示名称。
-     */
-    private fun buildSpeakerLabels(
-        transcription: TingwuTranscription?,
-        segments: List<DiarizedSegment>,
-    ): Map<String, String> {
-        if (transcription == null || segments.isEmpty()) return emptyMap()
-        val speakerIdsInOrder = segments
-            .mapNotNull { it.speakerId }
-            .distinct()
-        if (speakerIdsInOrder.isEmpty()) return emptyMap()
-        val speakersById = transcription.speakers.orEmpty().associateBy { it.id }
-        val labels = LinkedHashMap<String, String>()
-        speakerIdsInOrder.forEach { id ->
-            val fromName = speakersById[id]?.name?.takeIf { it.isNotBlank() }
-            val fallback = id
-            labels[id] = fromName ?: fallback
-        }
-        return labels
+    /** Helper: delegates to formatter for subtitle merging logic. */
+    private fun shouldMergeAsSubtitle(previous: DiarizedSegment, next: DiarizedSegment): Boolean {
+        // Reconstruct logic inline to avoid exposing formatter internals
+        if (previous.speakerIndex != next.speakerIndex) return false
+        val gapMs = next.startMs - previous.endMs
+        if (gapMs < 0 || gapMs > 2_000L) return false
+        val combinedDuration = max(next.endMs, previous.endMs) - min(previous.startMs, next.startMs)
+        if (combinedDuration > 10_000L) return false
+        val combinedLength = previous.text.length + 1 + next.text.length
+        if (combinedLength > 100) return false
+        return true
     }
+
+    /** Helper: formats milliseconds to time string for chapter display. */
+    private fun formatTimeMs(value: Long): String {
+        if (value <= 0) return "00:00"
+        val totalSeconds = (value / 1000).toInt()
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
+        return if (hours > 0) {
+            "${timeFormatter.format(hours)}:${timeFormatter.format(minutes)}:${timeFormatter.format(seconds)}"
+        } else {
+            "${timeFormatter.format(minutes)}:${timeFormatter.format(seconds)}"
+        }
+    }
+
 
     private suspend fun refineSpeakerLabels(
         transcriptId: String,
@@ -1110,26 +995,6 @@ class TingwuRunner @Inject constructor(
         return merged
     }
 
-    private fun formatTime(value: Double?): String {
-        if (value == null) return "00:00"
-        val totalSeconds = max(value.toInt(), 0)
-        val minutes = totalSeconds / 60
-        val seconds = totalSeconds % 60
-        return "${timeFormatter.format(minutes)}:${timeFormatter.format(seconds)}"
-    }
-
-    private fun formatTimeMs(value: Long): String {
-        if (value <= 0) return "00:00"
-        val totalSeconds = (value / 1000).toInt()
-        val hours = totalSeconds / 3600
-        val minutes = (totalSeconds % 3600) / 60
-        val seconds = totalSeconds % 60
-        return if (hours > 0) {
-            "${timeFormatter.format(hours)}:${timeFormatter.format(minutes)}:${timeFormatter.format(seconds)}"
-        } else {
-            "${timeFormatter.format(minutes)}:${timeFormatter.format(seconds)}"
-        }
-    }
 
     private fun inferProgress(status: TingwuStatusData): Int {
         val normalized = status.taskStatus?.uppercase(Locale.US) ?: "PENDING"
@@ -1370,17 +1235,6 @@ class TingwuRunner @Inject constructor(
         )
     }
 
-    /** 判断两段是否可以安全合并为一行字幕。 */
-    private fun shouldMergeAsSubtitle(previous: DiarizedSegment, next: DiarizedSegment): Boolean {
-        if (previous.speakerIndex != next.speakerIndex) return false
-        val gapMs = next.startMs - previous.endMs
-        if (gapMs < 0 || gapMs > MAX_SUBTITLE_GAP_MS) return false
-        val combinedDuration = max(next.endMs, previous.endMs) - min(previous.startMs, next.startMs)
-        if (combinedDuration > MAX_SUBTITLE_DURATION_MS) return false
-        val combinedLength = previous.text.length + 1 + next.text.length
-        if (combinedLength > MAX_SUBTITLE_TEXT_LENGTH) return false
-        return true
-    }
 
     private fun splitIntoSentences(text: String): List<String> {
         val sentences = mutableListOf<String>()
@@ -1715,9 +1569,6 @@ class TingwuRunner @Inject constructor(
         private const val DEFAULT_SOURCE_LANGUAGE = "cn"
         private const val SUBMITTED_PROGRESS = 1
         private const val CUSTOM_PROMPT_KEY = "CustomPrompt"
-        private const val MAX_SUBTITLE_GAP_MS = 2_000L
-        private const val MAX_SUBTITLE_DURATION_MS = 10_000L
-        private const val MAX_SUBTITLE_TEXT_LENGTH = 100
         private val SENTENCE_DELIMITERS = setOf('。', '？', '！', '.', '!', '?')
     }
 }

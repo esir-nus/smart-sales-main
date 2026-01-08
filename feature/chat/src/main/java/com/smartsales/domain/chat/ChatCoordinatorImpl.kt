@@ -9,6 +9,7 @@ import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.AnalysisSource
 import com.smartsales.domain.error.ChatError
+import com.smartsales.domain.error.toChatError
 import com.smartsales.domain.stream.StreamingCoordinator
 import com.smartsales.feature.chat.core.ChatRequest
 import com.smartsales.feature.chat.core.ChatHistoryItem
@@ -64,30 +65,36 @@ class ChatCoordinatorImpl @Inject constructor(
         val assistantId = "msg-${System.currentTimeMillis()}"
 
         scope.launch {
-            // Emit StreamStarted
-            _chatEvents.emit(ChatEvent.StreamStarted(assistantId))
+            try {
+                // Emit StreamStarted
+                _chatEvents.emit(ChatEvent.StreamStarted(assistantId))
 
-            // Start streaming
-            streamingCoordinator.start(
-                scope = scope,
-                request = request,
-                onDelta = { token ->
-                    _chatEvents.emit(ChatEvent.StreamDelta(assistantId, token))
-                },
-                onCompleted = { rawFullText ->
-                    handleStreamCompleted(
-                        params = params,
-                        assistantId = assistantId,
-                        rawFullText = rawFullText,
-                        isSmartAnalysis = false
-                    )
-                },
-                onError = { throwable ->
-                    val error = ChatError.NetworkError(throwable, throwable.message)
-                    _chatEvents.emit(ChatEvent.StreamError(assistantId, error))
-                }
-                // TODO(Phase 2): Add V1 retry logic with maxRetries + completionEvaluator
-            )
+                // Start streaming
+                streamingCoordinator.start(
+                    scope = scope,
+                    request = request,
+                    onDelta = { token ->
+                        _chatEvents.emit(ChatEvent.StreamDelta(assistantId, token))
+                    },
+                    onCompleted = { rawFullText ->
+                        handleStreamCompleted(
+                            params = params,
+                            assistantId = assistantId,
+                            rawFullText = rawFullText,
+                            isSmartAnalysis = false
+                        )
+                    },
+                    onError = { throwable ->
+                        val error = ChatError.NetworkError(throwable, throwable.message)
+                        _chatEvents.emit(ChatEvent.StreamError(assistantId, error))
+                    }
+                    // TODO(Phase 2): Add V1 retry logic with maxRetries + completionEvaluator
+                )
+            } catch (e: Exception) {
+                // Catch any exception (network failure, etc.) and emit error instead of crash
+                val error = e.toChatError()
+                _chatEvents.emit(ChatEvent.StreamError(assistantId, error))
+            }
         }
     }
 
@@ -189,14 +196,7 @@ class ChatCoordinatorImpl @Inject constructor(
             sessionId = params.sessionId,
             userMessage = params.userMessage,
             quickSkillId = params.skillId,
-            audioContextSummary = params.audioContext?.let {
-                com.smartsales.feature.chat.core.AudioContextSummary(
-                    readyClipCount = it.readyClipCount,
-                    pendingClipCount = it.pendingClipCount,
-                    hasTranscripts = it.hasTranscripts,
-                    note = it.note
-                )
-            },
+            audioContextSummary = params.audioContext,
             history = history,
             isFirstAssistantReply = params.isFirstAssistantReply,
             persona = params.persona
@@ -287,11 +287,16 @@ class ChatCoordinatorImpl @Inject constructor(
         val name = nameRegex.find(block)?.groupValues?.getOrNull(1)?.trim()
         val title6 = titleRegex.find(block)?.groupValues?.getOrNull(1)?.trim()
 
-        if (name.isNullOrBlank() && title6.isNullOrBlank()) return null
+        // Reject placeholder ellipsis (LLM sometimes outputs "..." when uncertain)
+        fun String?.isValidTitlePart() = !this.isNullOrBlank() && this != "..." && this != "…"
+        val cleanName = name?.takeIf { it.isValidTitlePart() }
+        val cleanTitle = title6?.takeIf { it.isValidTitlePart() }
+
+        if (cleanName == null && cleanTitle == null) return null
 
         return TitleCandidate(
-            name = name?.takeIf { it.isNotBlank() },
-            title6 = title6?.takeIf { it.isNotBlank() },
+            name = cleanName,
+            title6 = cleanTitle,
             source = if (isSmartAnalysis) TitleSource.SMART_ANALYSIS else TitleSource.GENERAL,
             createdAt = System.currentTimeMillis()
         )

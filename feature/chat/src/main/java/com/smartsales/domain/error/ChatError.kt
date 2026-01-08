@@ -56,3 +56,32 @@ fun Throwable.toChatError(): ChatError = when (this) {
     is java.io.IOException -> ChatError.NetworkError(this)
     else -> ChatError.Unknown(this)
 }
+
+/**
+ * Maps ChatError to user-facing message (Chinese microcopy).
+ *
+ * Single source of truth for error display text. UI layers call this
+ * instead of doing their own mapping.
+ *
+ * @see ux-experience.md for state inventory
+ */
+fun ChatError.toUserMessage(): String = when (this) {
+    is ChatError.NetworkError -> message ?: cause.message ?: "网络请求失败"
+    is ChatError.NetworkTimeout -> "请求超时"
+    is ChatError.NoConnection -> "无网络连接"
+    is ChatError.SessionExpired -> "会话已过期"
+    is ChatError.SessionNotFound -> "会话不存在"
+    is ChatError.ValidationError -> message
+    is ChatError.EmptyInput -> "请输入内容"
+    is ChatError.InputTooLong -> "输入内容过长"
+    is ChatError.ApiError -> message.ifBlank { "服务异常 ($code)" }
+    is ChatError.RateLimited -> "请求过于频繁，请稍后重试"
+    is ChatError.Unauthorized -> "登录已失效，请重新登录"
+    is ChatError.TranscriptionFailed -> "转写失败: $reason"
+    is ChatError.AudioUploadFailed -> "音频上传失败"
+    is ChatError.ExportNotReady -> "导出尚未就绪"
+    is ChatError.ExportFailed -> "导出失败: $reason"
+    is ChatError.MetadataParseError -> "数据解析失败"
+    is ChatError.MetadataNotFound -> "未找到数据"
+    is ChatError.Unknown -> cause.message ?: "AI 回复失败"
+}

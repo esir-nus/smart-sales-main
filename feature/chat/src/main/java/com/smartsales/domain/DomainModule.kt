@@ -13,8 +13,6 @@ import com.smartsales.domain.sessions.SessionsManager
 import com.smartsales.domain.sessions.SessionsManagerImpl
 import com.smartsales.domain.transcription.Disector
 import com.smartsales.domain.transcription.DisectorImpl
-import com.smartsales.domain.transcription.Sanitizer
-import com.smartsales.domain.transcription.SanitizerImpl
 import com.smartsales.domain.transcription.TranscriptionCoordinator
 import com.smartsales.domain.transcription.TranscriptionCoordinatorImpl
 import dagger.Binds
@@ -36,10 +34,6 @@ interface DomainModule {
     @Binds
     @Singleton
     fun bindDisector(impl: DisectorImpl): Disector
-
-    @Binds
-    @Singleton
-    fun bindSanitizer(impl: SanitizerImpl): Sanitizer
 
     @Binds
     @Singleton

@@ -68,6 +68,7 @@ smart-sales/
 ├── data/ai-core/                    # Provider Layer
 │   ├── DashscopeAiChatService.kt       # AI Chatter (V1 §3.1.1) ✅
 │   ├── TingwuRunner.kt                 # Impl of TingwuCoordinator (V1 §3.2.2) ✅
+│   ├── TranscriptFormatter.kt         # V1 §3.2.3 Sanitizer (data layer impl) ✅ [DEVIATION]
 │   └── tingwu/
 │       └── TranscriptPublisher.kt      # V1 §3.2.4 ✅
 │
@@ -83,8 +84,6 @@ smart-sales/
 │   │   ├── transcription/
 │   │   │   ├── Disector.kt             # V1 §3.2.1 ✅
 │   │   │   ├── DisectorImpl.kt         # ✅
-│   │   │   ├── Sanitizer.kt            # V1 §3.2.3 ✅
-│   │   │   ├── SanitizerImpl.kt        # ✅
 │   │   │   ├── TranscriptionCoordinator.kt  # ✅
 │   │   │   └── TranscriptionCoordinatorImpl.kt  # ✅
 │   │   ├── debug/
@@ -108,6 +107,25 @@ smart-sales/
 │   │
 │   └── feature/chat/home/
 │       └── HomeViewModel.kt            # Wiring Shell ✅
+│
+├── feature/connectivity/               # Device Connectivity
+│   ├── DeviceConnectionManager.kt      # BLE/WiFi state machine
+│   ├── WifiProvisioner.kt              # WiFi provisioning interface
+│   ├── AndroidBleWifiProvisioner.kt    # Android BLE+WiFi impl
+│   ├── BleProfile.kt                   # BLE profile definitions
+│   ├── ConnectionModels.kt             # Connection state types
+│   ├── gateway/                        # Gateway communication
+│   ├── scan/                           # Device scanning
+│   └── setup/                          # Device setup wizard
+│
+├── feature/media/                       # Media Management
+│   ├── MediaSyncCoordinator.kt         # Media sync orchestration
+│   ├── audio/                          # Audio playback/recording
+│   ├── audiofiles/                     # Audio file management
+│   └── devicemanager/                  # Device media management
+│
+└── feature/usercenter/                  # User Settings
+    └── (user preferences, account)
 ```
 
 ---
@@ -121,7 +139,7 @@ smart-sales/
 | LLM Parser | §3.1.3 | `SmartAnalysisParser.kt` | ✅ |
 | Disector | §3.2.1 | `Disector.kt` | ✅ |
 | Tingwu Runner | §3.2.2 | `TingwuRunner.kt` (impl TingwuCoordinator) | ✅ |
-| Sanitizer | §3.2.3 | `Sanitizer.kt` | ✅ |
+| Sanitizer | §3.2.3 | `TranscriptFormatter.kt` (data layer) | ⚠️ DEVIATION |
 | ChatPublisher | §3.2.4 | `ChatPublisher.kt` | ✅ |
 | TranscriptPublisher | §3.2.4 | `TranscriptPublisher.kt` | ✅ |
 | M2/M2B/M3 | §4 | `core/metahub/` | ✅ |
@@ -298,3 +316,97 @@ HomeViewModel delegates to coordinators:
 - If NO → extract
 
 No line metrics. Responsibility is the only measure.
+
+---
+
+## 10. Product Milestone Roadmap
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  M0: STABILIZE         │  Fix regressions from refactor    │ ← CURRENT
+├─────────────────────────────────────────────────────────────┤
+│  M1: FEATURE COMPLETE  │  All features work end-to-end     │
+├─────────────────────────────────────────────────────────────┤
+│  M2: BETA READY        │  Bugs fixed, stable for testers   │
+├─────────────────────────────────────────────────────────────┤
+│  M3: POLISH            │  UI/UX, performance, edge cases   │
+├─────────────────────────────────────────────────────────────┤
+│  M4: RELEASE CANDIDATE │  Final QA, store submission       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### M0: Stabilize ← YOU ARE HERE
+
+> Fix regressions before building new features. Broken code compounds.
+
+**Exit Criteria:**
+- [ ] All unit tests passing
+- [ ] Core flows work (chat, transcription, connectivity)
+- [ ] No P0 crashes or blockers
+- [ ] Build passes clean
+
+**Note:** Fixing regressions IS the deviation check. Don't skip this.
+
+---
+
+### M1: Feature Complete
+
+**Exit Criteria:**
+- [ ] All Orchestrator-V1 features implemented
+- [ ] Connectivity (BLE/WiFi) pairing flow works
+- [ ] Media sync and audio management works
+- [ ] All happy-path tests passing
+- [ ] Build passes, no blocking errors
+
+**NOT required:** Polish, edge cases, performance tuning
+
+---
+
+### M2: Beta Ready
+
+**Exit Criteria:**
+- [ ] Crash-free for 3+ consecutive test sessions
+- [ ] No P0/P1 bugs open
+- [ ] Error states handled (not just happy path)
+- [ ] Logging sufficient for remote debugging
+- [ ] Internal beta deployed
+
+**Focus:** Stability over features
+
+---
+
+### M3: Polish
+
+**Exit Criteria:**
+- [ ] UI/UX feedback from beta addressed
+- [ ] Performance acceptable (app start <2s, no jank)
+- [ ] Edge cases covered (network loss, BLE disconnect, etc.)
+- [ ] Animations and micro-interactions polished
+- [ ] Accessibility basics (contrast, font scaling)
+
+**Focus:** User experience
+
+---
+
+### M4: Release Candidate
+
+**Exit Criteria:**
+- [ ] Full QA pass (regression + exploratory)
+- [ ] Store assets ready (screenshots, description)
+- [ ] Privacy/security review complete
+- [ ] Analytics/crash-reporting wired
+- [ ] Version tagged, signed APK/AAB
+
+**Focus:** Ship it
+
+---
+
+### Post-Release: Architecture Debt
+
+**After v1.0 ships, then:**
+- [ ] Spec deviation audit (compare Orchestrator-V1.md vs code)
+- [ ] Fix only deviations that hurt (coupling, duplication)
+- [ ] KMP prep (if iOS planned)
+- [ ] Document remaining tech debt for v1.1
+
+**Rule:** Don't refactor before shipping. Ship, then refine.

@@ -125,6 +125,7 @@ class TingwuRunnerTest {
             aiParaSettingsProvider = settingsProvider,
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, config),
             transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(config),
+            formatter = TranscriptFormatter(),
             optionalConfig = optionalConfig
         )
     }
@@ -778,6 +779,7 @@ class TingwuRunnerTest {
                 config = AiCoreConfig()
             ),
             transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig()),
+            formatter = TranscriptFormatter(),
             optionalConfig = Optional.empty()
         )
 
@@ -900,6 +902,7 @@ class TingwuRunnerTest {
             aiParaSettingsProvider = defaultSettingsProvider,
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
+            formatter = TranscriptFormatter(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -974,6 +977,7 @@ class TingwuRunnerTest {
             aiParaSettingsProvider = defaultSettingsProvider,
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
+            formatter = TranscriptFormatter(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1052,6 +1056,7 @@ class TingwuRunnerTest {
             aiParaSettingsProvider = defaultSettingsProvider,
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
+            formatter = TranscriptFormatter(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1123,6 +1128,7 @@ class TingwuRunnerTest {
             aiParaSettingsProvider = defaultSettingsProvider,
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
+            formatter = TranscriptFormatter(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1203,6 +1209,7 @@ class TingwuRunnerTest {
             aiParaSettingsProvider = defaultSettingsProvider,
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
+            formatter = TranscriptFormatter(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1281,6 +1288,7 @@ class TingwuRunnerTest {
             aiParaSettingsProvider = defaultSettingsProvider,
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
+            formatter = TranscriptFormatter(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1351,6 +1359,7 @@ class TingwuRunnerTest {
             aiParaSettingsProvider = defaultSettingsProvider,
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
+            formatter = TranscriptFormatter(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 

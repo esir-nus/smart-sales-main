@@ -119,12 +119,7 @@ internal fun MessageBubble(
                     )
                 }
                 if (message.hasError) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "发送失败，稍后重试",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
+                    // Error message is already in content, styled differently
                 }
             }
         }

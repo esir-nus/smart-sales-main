@@ -4,9 +4,12 @@ plugins {
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.kapt) apply false
     alias(libs.plugins.hilt) apply false
+    alias(libs.plugins.ktlint) apply false
 }
 
 subprojects {
+    apply(plugin = "org.jlleitschuh.gradle.ktlint")
+    
     configurations.all {
         resolutionStrategy.capabilitiesResolution
             .withCapability("com.google.guava:listenablefuture") {

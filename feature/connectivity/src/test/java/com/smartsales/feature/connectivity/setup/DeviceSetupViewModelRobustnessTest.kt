@@ -23,6 +23,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -139,13 +140,7 @@ class DeviceSetupViewModelRobustnessTest {
             )
         )
         viewModel = createViewModel(connectionManager = connection)
-        dispatcher.scheduler.runCurrent()
-
-        viewModel.onWifiSsidChanged("ssid")
-        viewModel.onWifiPasswordChanged("pwd")
-        viewModel.onPrimaryClick()
-        advanceTimeBy(2_000)
-        dispatcher.scheduler.runCurrent()
+        advanceUntilIdle()
 
         val state = viewModel.uiState.value
         assertEquals(DeviceSetupStep.Error, state.step)

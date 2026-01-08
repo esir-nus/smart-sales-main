@@ -1,5 +1,6 @@
 package com.smartsales.feature.chat.core
 
+import com.smartsales.domain.chat.AudioContextSummary
 import kotlinx.coroutines.flow.Flow
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/core/AiChatService.kt
@@ -16,13 +17,8 @@ data class ChatHistoryItem(
 /** LLM 聊天角色，映射到 USER/ASSISTANT。 */
 enum class ChatRole { USER, ASSISTANT }
 
-/** 可选音频上下文，后续整合 Tingwu/录音摘要时使用。 */
-data class AudioContextSummary(
-    val readyClipCount: Int,
-    val pendingClipCount: Int,
-    val hasTranscripts: Boolean,
-    val note: String? = null
-)
+// AudioContextSummary is now defined in domain layer
+// See: domain/chat/ChatCoordinator.kt
 
 /** Chat 请求模型，封装 session、用户输入、技能标签与历史。 */
 data class ChatRequest(

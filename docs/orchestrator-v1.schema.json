@@ -40,6 +40,32 @@
       "SessionMemory"
     ]
   },
+  "xAgentGuidance": {
+    "whenToRead": [
+      "Generating MachineArtifact or SmartAnalysis from LLM output",
+      "Parsing Tingwu response into TingwuBatchArtifact",
+      "Validating DisectorPlan before transcription",
+      "Understanding M1-M4 metadata layer structure",
+      "Building PublishedChatTurn with artifactStatus"
+    ],
+    "whenNotToRead": [
+      "UI-level concerns (use docs/ux-contract.md instead)",
+      "Domain coordinator interfaces (use docs/api-contracts.md instead)",
+      "Third-party provider details (use docs/source-repo.json instead)",
+      "V1 behavioral invariants (use docs/Orchestrator-V1.md instead)"
+    ],
+    "startWith": [
+      "xIndex.payloadTypes for list of active types",
+      "xIndex.deprecatedPayloadTypes to know what to avoid",
+      "xIndex.invariants for ordering and filtering rules"
+    ],
+    "keyTypes": {
+      "forChat": ["PublishedChatTurn", "MachineArtifact", "SmartAnalysisCard", "ChatMode", "ArtifactStatus"],
+      "forTranscription": ["DisectorPlan", "DisectorBatch", "TingwuBatchArtifact", "PublishedTranscript", "PublishedAnalysis"],
+      "forMetadata": ["M1UserMetadata", "M2ConversationState", "M2BTranscriptionState", "M3SessionState", "M4ExternalKnowledge"],
+      "forIds": ["AudioAssetId", "RecordingSessionId", "ChatSessionId", "TurnId", "BatchIndex", "BatchAssetId"]
+    }
+  },
   "oneOf": [
     {
       "$ref": "#/$defs/SinglePayload"

@@ -1,149 +1,136 @@
-# API Contracts (Aligned with Orchestrator-V1)
+# API Contracts (V1-Verified)
 
-> Notes (Precedence):
-> - This document only describes the **UI <-> Orchestrator-V1 Facade** boundary and event/object contracts.
-> - The only current spec is `docs/Orchestrator-V1.md`.
-> - V7 is archived (ARCHIVED): historical reference only, not an implementation basis.
-> - Stable data objects (Published* / Plan / Artifacts / Metadata layers) follow `docs/orchestrator-v1.schema.json`.
+> **Source of Truth**: [Orchestrator-V1.md](file:///home/cslh-frank/main_app/docs/Orchestrator-V1.md)  
+> **Data Schemas**: [orchestrator-v1.schema.json](file:///home/cslh-frank/main_app/docs/orchestrator-v1.schema.json)  
+> **Last Verified**: 2026-01-08
 
----
-
-## 1) Facade: UI-callable interfaces (recommended set)
-
-### 1.1 Chat
-
-- `streamChat(ChatRequest) -> Flow<ChatEvent>`
-  - Primary event stream for UI chat rendering.
-  - **Hard rule**: UI must only show Publisher output (see 2).
-
-- `getPublishedChatTurn(chatSessionId, turnId) -> PublishedChatTurn`
-  - For history recovery or reconnect backfill.
-
-- `getThinkingTrace(chatSessionId, turnId?) -> ThinkingTraceSnapshot`
-  - For optional "Thinking Trace" panel (no chain-of-thought).
-
-- `getDebugSnapshot(chatSessionId, turnId?) -> DebugSnapshot`
-  - For HUD (three copy/paste blocks).
-
-### 1.2 Recording / Transcription
-
-- `startTranscription(RecordingRequest) -> RecordingHandle`
-  - Returns: `audioAssetId` + `recordingSessionId` (optional `disectorPlanId`).
-  - Cache hit: if `audioAssetId` exists, Tingwu artifacts may be reused; still allow new `recordingSessionId` for this processing instance.
-
-- `observeRecordingSession(recordingSessionId) -> Flow<RecordingEvent>`
-  - UI shows "processing / pseudo-stream updates / completed".
-
-- `getPublishedTranscript(recordingSessionId) -> PublishedTranscript`
-  - UI shows only Publisher continuous prefix (b1..bk).
-
-- `getPublishedAnalysis(recordingSessionId) -> PublishedAnalysis`
-  - UI view for "chapters/summary/speaker map" (chapter-level timeline).
-
-- `getDebugSnapshot(recordingSessionId, batchIndex?) -> DebugSnapshot`
-  - HUD (three copy/paste blocks).
-
-### 1.3 Metadata Hub (UI read-only)
-
-- `getSessionOverview(chatSessionId) -> SessionOverview`
-  - For UI badges/titles/tags (e.g., M3-derived titles, M2 tags).
-  - UI does not write M1/M2/M2B/M3/M4 (writes are by LLM Parser/system modules).
+This document describes the **actual implemented** domain coordinator interfaces. For V1 artifact schemas (DisectorPlan, TingwuBatchArtifact, MachineArtifact, etc.), see the JSON schema.
 
 ---
 
-## 2) Chat Event Stream (ChatEvent)
+## 1) Domain Coordinators
 
-### 2.1 Event types
+### 1.1 ChatCoordinator
 
-- `ChatEvent.DisplayDelta(deltaText)` (optional)
-  - For "pseudo-stream" display.
+**File**: [ChatCoordinator.kt](file:///home/cslh-frank/main_app/feature/chat/src/main/java/com/smartsales/domain/chat/ChatCoordinator.kt)
 
-- `ChatEvent.Completed(publishedTurn: PublishedChatTurn)`
-  - Final result for this turn.
+| Member | Signature | Purpose |
+|--------|-----------|---------|
+| `chatEvents` | `Flow<ChatEvent>` | Chat events stream for UI consumption |
+| `sendMessage()` | `fun sendMessage(params: SendMessageParams)` | Send regular chat message |
+| `sendSmartAnalysis()` | `fun sendSmartAnalysis(params: SmartAnalysisParams)` | Send SmartAnalysis request |
+| `resetStream()` | `fun resetStream()` | Reset streaming state |
 
-- `ChatEvent.Retrying(reason, attempt, maxRetries)`
-  - Only when MachineArtifact validation fails (Strategy B).
+**ChatEvent sealed class:**
 
-- `ChatEvent.Error(userFacingMessage, retryable)`
-
-### 2.2 Hard constraints (must satisfy)
-
-- **UI shows only** `PublishedChatTurn.displayMarkdown`.
-- `DisplayDelta` (if enabled) must be projected from `<visible2user>` content; do not stream text outside `<visible2user>` to UI.
-- `PublishedChatTurn.machineArtifact` is for system/debug only, not the UI render source.
-- Publisher MUST follow the extraction algorithm in Section 5.2 (HumanDraft via first `<visible2user>`, MachineArtifact via first ```json fenced block outside `<visible2user>`; no heuristics).
-- If UI renders L3 structured cards, use Publisher output `smartAnalysisCard` (if present), not direct JSON parsing.
-
----
-
-## 3) Recording Event Stream (RecordingEvent)
-
-### 3.1 Event types (recommended)
-
-- `RecordingEvent.PlanReady(plan: DisectorPlan)`
-- `RecordingEvent.BatchSubmitted(batchIndex, attempt)`
-- `RecordingEvent.BatchSucceeded(batchIndex)`
-- `RecordingEvent.BatchFailed(batchIndex, reason, retryable)`
-- `RecordingEvent.PublishedPrefixAdvanced(publishedPrefixBatchIndex)`
-- `RecordingEvent.Completed(recordingSessionId)`
-- `RecordingEvent.Error(userFacingMessage, retryable)`
-
-### 3.2 Hard constraints
-
-- UI must not assemble out-of-order batches; consume `PublishedTranscript` only.
-- Chapters/summary only from `PublishedAnalysis` (chapter-level timeline; no per-line timestamp polishing in V1).
+| Variant | Payload | When Emitted |
+|---------|---------|--------------|
+| `StreamStarted` | `assistantId: String` | Streaming begins, placeholder created |
+| `StreamDelta` | `assistantId, token: String` | Token received from LLM |
+| `StreamCompleted` | `result: ChatCompletionResult` | Final result ready |
+| `StreamError` | `assistantId, error: ChatError` | Error occurred |
 
 ---
 
-## 4) Debug / HUD Snapshot (mandatory three copy/paste blocks)
+### 1.2 TranscriptionCoordinator
 
-### 4.1 DebugSnapshot
+**File**: [TranscriptionCoordinator.kt](file:///home/cslh-frank/main_app/feature/chat/src/main/java/com/smartsales/domain/transcription/TranscriptionCoordinator.kt)
 
-`getDebugSnapshot(...)` must return three copyable text blocks:
-
-1) **Effective Run Snapshot**
-   - Key config and state (cache hit, retry count, plan/version, batch progress)
-
-2) **Raw Output**
-   - Chat: raw LLM output (includes `<visible2user>` and MachineArtifact text)
-   - Transcription: Tingwu raw output or reference
-
-3) **Publisher-ready / Published Snapshot**
-   - Chat: extracted `displayMarkdown` + artifact validation summary
-   - Transcription: DisectorPlan summary + published prefix state + chapter timeline summary
-
-> Constraint: normal bubbles/views **never show raw JSON**; JSON is allowed only in HUD.
+| Member | Signature | Purpose |
+|--------|-----------|---------|
+| `state` | `StateFlow<TranscriptionUiState>` | Transcription state for UI |
+| `observeJob()` | `fun observeJob(jobId): Flow<AudioTranscriptionJobState>` | Observe job state |
+| `observeProcessedBatches()` | `fun observeProcessedBatches(jobId): Flow<ProcessedBatch>` | Observe processed batches (gate + filter) |
+| `runTranscription()` | `suspend fun runTranscription(...)` | Run transcription with callbacks |
+| `reset()` | `fun reset()` | Reset state for new transcription |
+| `markFinal()` | `fun markFinal()` | Mark transcription as final |
 
 ---
 
-## 5) Error Semantics (minimum constraints)
+### 1.3 DebugCoordinator
 
-### 5.1 Tingwu Runner
+**File**: [DebugCoordinator.kt](file:///home/cslh-frank/main_app/feature/chat/src/main/java/com/smartsales/domain/debug/DebugCoordinator.kt)
 
-Retry rules (see `docs/Orchestrator-V1.md` Section 8.1):
-- 429: retryable with longer backoff.
-- Other 4xx (except 429): not retryable by default.
-- 5xx/network timeouts: retryable (deterministic backoff).
+| Member | Signature | Purpose |
+|--------|-----------|---------|
+| `debugState` | `StateFlow<DebugUiState>` | Debug state for HUD panel |
+| `toggleDebugPanel()` | `fun toggleDebugPanel()` | Toggle visibility |
+| `refreshDebugSnapshot()` | `suspend fun refreshDebugSnapshot(...)` | Refresh HUD snapshot |
+| `refreshSessionMetadata()` | `suspend fun refreshSessionMetadata(...)` | Refresh session metadata |
+| `refreshTraces()` | `fun refreshTraces()` | Refresh Xfyun/Tingwu traces |
 
-### 5.2 Chat (MachineArtifact validation failure)
-
-- `maxRetries = 2` (default recommendation).
-- Publisher extraction algorithm (see `docs/Orchestrator-V1.md` Section 5.2):
-  1) Extract HumanDraft: first complete `<visible2user>...</visible2user>` innerText
-  2) Extract MachineArtifact: first ```json fenced block outside `<visible2user>`
-  3) If fenced block missing or JSON parse/validation fails: set `artifactStatus = INVALID`, trigger retry
-  4) **Explicitly forbidden**: heuristic "guess JSON / regex extract JSON" from non-fenced text
-- If retries exhausted (see `docs/Orchestrator-V1.md` Section 8):
-  - HumanDraft extractable when: correct `<visible2user>` pairing exists, innerText trim length > 0
-  - If extractable: publish that `displayMarkdown`
-  - Else: publish a fixed fallback message (example: `Sorry, I could not generate a displayable response. Please retry.`)
-  - `artifactStatus = FAILED`
-  - Do not write Metadata Hub
-  - Must record Trace/HUD events (include failure reason + retry count)
+**DebugUiState:**
+- `visible: Boolean` — Panel visibility
+- `snapshot: DebugSnapshot?` — HUD three-block snapshot
+- `xfyunTrace: XfyunTraceSnapshot?`, `tingwuTrace: TingwuTraceSnapshot?`
 
 ---
 
-## 6) Compatibility and Migration
+### 1.4 ExportCoordinator
 
-- New features must use `docs/Orchestrator-V1.md` as the sole basis.
-- If legacy UI still depends on V7, use a compatibility layer to convert events/objects to V1 objects (do not back-propagate V7 into V1 contracts).
+**File**: [ExportCoordinator.kt](file:///home/cslh-frank/main_app/feature/chat/src/main/java/com/smartsales/domain/export/ExportCoordinator.kt)
+
+| Member | Signature | Purpose |
+|--------|-----------|---------|
+| `exportState` | `StateFlow<ExportUiState>` | Export state for UI |
+| `checkExportGate()` | `suspend fun checkExportGate(sessionId): ExportGateState` | Check if export allowed |
+| `performExport()` | `suspend fun performExport(...): Result<Unit>` | Execute PDF/CSV export |
+| `clearSnackbar()` | `fun clearSnackbar()` | Clear snackbar message |
+
+**ExportGateState:**
+- `ready: Boolean` — Export allowed
+- `reason: String` — Gate reason (e.g., "SmartAnalysis required")
+- `resolvedName: String`, `nameSource: ExportNameSource`
+
+---
+
+## 2) Error Semantics
+
+### 2.1 Tingwu Retry Rules (per V1 Section 8.1)
+
+| Error | Retryable | Backoff |
+|-------|-----------|---------|
+| 429 (Rate Limit) | ✅ Yes | Exponential (60s, 120s, 300s) |
+| Other 4xx | ❌ No | — |
+| 5xx / Network | ✅ Yes | Deterministic |
+
+### 2.2 Chat Retry Rules
+
+- `maxRetries = 2`
+- On MachineArtifact validation failure: retry with same prompt
+- If retries exhausted: publish `displayMarkdown` if extractable, else fallback message
+- Set `artifactStatus = FAILED`, record trace
+
+---
+
+## 3) Data Schemas
+
+For V1 artifact types, use the JSON schema directly:
+
+| Schema | Purpose |
+|--------|---------|
+| [orchestrator-v1.schema.json](file:///home/cslh-frank/main_app/docs/orchestrator-v1.schema.json) | DisectorPlan, TingwuBatchArtifact, PublishedTranscript, MachineArtifact, M1-M4 |
+| [orchestrator-v1.examples.json](file:///home/cslh-frank/main_app/docs/orchestrator-v1.examples.json) | Payload examples |
+| [source-repo.schema.json](file:///home/cslh-frank/main_app/docs/source-repo.schema.json) | Third-party provider registry |
+
+### When to Read the Schema
+
+| Scenario | Read Schema? | Why |
+|----------|--------------|-----|
+| Generating `MachineArtifact` from LLM output | ✅ Yes | Validate structure before emitting |
+| Parsing Tingwu response | ✅ Yes | Use `TingwuBatchArtifact` shape |
+| Understanding coordinator interfaces | ❌ No | Use this doc (api-contracts.md) |
+| UI behavior questions | ❌ No | Use ux-contract.md |
+| V1 behavioral invariants | ❌ No | Use Orchestrator-V1.md |
+
+> **Tip**: The schema has an `xAgentGuidance` block at the top with `whenToRead`, `whenNotToRead`, and `keyTypes` for quick navigation.
+
+---
+
+## 4) Cross-References
+
+| Document | Role |
+|----------|------|
+| [Orchestrator-V1.md](file:///home/cslh-frank/main_app/docs/Orchestrator-V1.md) | V1 spec (behavioral invariants) |
+| [ux-contract.md](file:///home/cslh-frank/main_app/docs/ux-contract.md) | UX contracts (what UI must show) |
+| [RealizeTheArchi.md](file:///home/cslh-frank/main_app/docs/RealizeTheArchi.md) | Architecture realization status |

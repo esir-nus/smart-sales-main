@@ -142,7 +142,7 @@ class AudioFilesScreenTest {
             }
         }
 
-        composeRule.onNode(progressMatcher()).assertIsDisplayed()
+        composeRule.onAllNodes(progressMatcher()).onFirst().assertIsDisplayed()
     }
 
     @Test

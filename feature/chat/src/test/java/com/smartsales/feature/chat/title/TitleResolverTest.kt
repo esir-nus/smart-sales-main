@@ -6,6 +6,8 @@ package com.smartsales.feature.chat.title
 // 作者：创建于 2025-12-11
 
 import com.smartsales.core.metahub.SessionMetadata
+import com.smartsales.domain.chat.TitleCandidate
+import com.smartsales.domain.chat.TitleSource
 import com.smartsales.feature.chat.AiSessionSummary
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

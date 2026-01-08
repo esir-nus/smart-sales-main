@@ -7,18 +7,12 @@ package com.smartsales.feature.chat.title
 
 import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.SessionTitlePolicy
+import com.smartsales.domain.chat.TitleCandidate
+import com.smartsales.domain.chat.TitleSource
 import com.smartsales.feature.chat.AiSessionSummary
 
-enum class TitleSource { GENERAL, SMART, TINGWU }
-
-data class TitleCandidate(
-    val name: String?,
-    val title6: String?,
-    val source: TitleSource,
-    val createdAt: Long
-) {
-    fun hasContent(): Boolean = !name.isNullOrBlank() || !title6.isNullOrBlank()
-}
+// Extension to check if candidate has content (moved from deleted data class)
+private fun TitleCandidate.hasContent(): Boolean = !name.isNullOrBlank() || !title6.isNullOrBlank()
 
 /**
  * 统一处理改名决策：

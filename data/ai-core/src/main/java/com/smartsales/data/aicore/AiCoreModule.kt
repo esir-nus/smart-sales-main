@@ -125,6 +125,12 @@ abstract class AiCoreModule {
     // Tingwu 调试痕迹存储
     // 仅调试 HUD 使用，生产逻辑不依赖
 
+    @Binds
+    @Singleton
+    abstract fun bindNetworkChecker(
+        impl: AndroidNetworkChecker
+    ): NetworkChecker
+
     @BindsOptionalOf
     abstract fun optionalAiCoreConfig(): AiCoreConfig
 

@@ -34,6 +34,7 @@ class DashscopeAiChatServiceTest {
             dashscopeClient = dashscopeClient,
             credentialsProvider = FakeCredentialsProvider(apiKey = "key", model = "qwen-turbo"),
             aiParaSettingsProvider = FakeAiParaSettingsProvider(),
+            networkChecker = FakeNetworkChecker(),
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     preferFakeAiChat = false,
@@ -92,6 +93,7 @@ class DashscopeAiChatServiceTest {
             dashscopeClient = dashscopeClient,
             credentialsProvider = FakeCredentialsProvider(apiKey = "", model = "qwen-turbo"),
             aiParaSettingsProvider = FakeAiParaSettingsProvider(),
+            networkChecker = FakeNetworkChecker(),
             optionalConfig = Optional.empty()
         )
 
@@ -110,6 +112,7 @@ class DashscopeAiChatServiceTest {
             dashscopeClient = streamingClient,
             credentialsProvider = FakeCredentialsProvider(apiKey = "key", model = "qwen"),
             aiParaSettingsProvider = FakeAiParaSettingsProvider(),
+            networkChecker = FakeNetworkChecker(),
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     preferFakeAiChat = false,
@@ -135,6 +138,7 @@ class DashscopeAiChatServiceTest {
             dashscopeClient = streamingClient,
             credentialsProvider = FakeCredentialsProvider(apiKey = "key", model = "qwen"),
             aiParaSettingsProvider = FakeAiParaSettingsProvider(),
+            networkChecker = FakeNetworkChecker(),
             optionalConfig = Optional.of(
                 AiCoreConfig(
                     preferFakeAiChat = false,
@@ -199,5 +203,11 @@ class DashscopeAiChatServiceTest {
         private val snapshot: AiParaSettingsSnapshot = AiParaSettingsSnapshot()
     ) : AiParaSettingsProvider {
         override fun snapshot(): AiParaSettingsSnapshot = snapshot
+    }
+
+    private class FakeNetworkChecker(
+        private val isAvailable: Boolean = true
+    ) : NetworkChecker {
+        override fun isNetworkAvailable(): Boolean = isAvailable
     }
 }

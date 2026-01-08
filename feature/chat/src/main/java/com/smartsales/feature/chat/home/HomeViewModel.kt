@@ -12,7 +12,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.core.util.Result
 import dagger.hilt.android.qualifiers.ApplicationContext
-import com.smartsales.feature.chat.core.AudioContextSummary
+import com.smartsales.domain.chat.AudioContextSummary
 import com.smartsales.feature.chat.core.ChatHistoryItem
 import com.smartsales.feature.chat.core.ChatRequest
 import com.smartsales.feature.chat.core.ChatRole
@@ -48,13 +48,14 @@ import com.smartsales.data.aicore.debug.XfyunTraceSnapshot
 import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.data.aicore.AiCoreConfig
 import com.smartsales.feature.chat.title.SessionTitleResolver
-import com.smartsales.feature.chat.title.TitleCandidate
 import com.smartsales.feature.chat.title.TitleResolver
-import com.smartsales.feature.chat.title.TitleSource
+import com.smartsales.domain.chat.TitleCandidate
+import com.smartsales.domain.chat.TitleSource
 import com.smartsales.feature.chat.AiSessionRepository as SessionRepository
 import com.smartsales.feature.chat.AiSessionSummary
 import com.smartsales.feature.connectivity.ConnectionState
 import com.smartsales.feature.connectivity.ConnectivityError
+import com.smartsales.domain.error.toUserMessage
 import com.smartsales.feature.connectivity.DeviceConnectionManager
 import com.smartsales.feature.chat.ChatShareHandler
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
@@ -1152,38 +1153,23 @@ class HomeViewModel @Inject constructor(
     /** GENERAL 回复的 channels 数据（Visible2User 和 Metadata） */
     private data class GeneralChannels(
         val visibleText: String?,
-        val metadataJson: String?,
-        val renameCandidate: TitleCandidate?
+        val metadataJson: String?
+        // Note: renameCandidate moved to ChatCoordinator (M0 consolidation)
     )
 
     /** 提取 GENERAL 回复中的 channels */
     private fun extractGeneralChannels(raw: String): GeneralChannels {
         // Delegate extraction to domain layer (Wave 8A consolidation)
+        // Note: Rename candidate extraction now happens in ChatCoordinatorImpl
         val channels = com.smartsales.domain.chat.ChatPublisher.extractChannels(raw)
-        val rename = parseRenameCandidate(raw, TitleSource.GENERAL)
         return GeneralChannels(
             visibleText = channels.visibleText,
-            metadataJson = channels.metadataJson,
-            renameCandidate = rename
+            metadataJson = channels.metadataJson
         )
     }
 
-    /** 解析 <Rename> 标签，提取 Name 与 Title6，供自动改名使用。 */
-    private fun parseRenameCandidate(raw: String, source: TitleSource): TitleCandidate? {
-        val blockRegex = Regex("<\\s*Rename\\s*>([\\s\\S]*?)<\\s*/\\s*Rename\\s*>", RegexOption.IGNORE_CASE)
-        val block = blockRegex.find(raw)?.groupValues?.getOrNull(1)?.trim() ?: return null
-        val nameRegex = Regex("<\\s*Name\\s*>([\\s\\S]*?)<\\s*/\\s*Name\\s*>", RegexOption.IGNORE_CASE)
-        val titleRegex = Regex("<\\s*Title6\\s*>([\\s\\S]*?)<\\s*/\\s*Title6\\s*>", RegexOption.IGNORE_CASE)
-        val name = nameRegex.find(block)?.groupValues?.getOrNull(1)?.trim()
-        val title6 = titleRegex.find(block)?.groupValues?.getOrNull(1)?.trim()
-        if (name.isNullOrBlank() && title6.isNullOrBlank()) return null
-        return TitleCandidate(
-            name = name?.takeIf { it.isNotBlank() },
-            title6 = title6?.takeIf { it.isNotBlank() },
-            source = source,
-            createdAt = System.currentTimeMillis()
-        )
-    }
+    // NOTE: parseRenameCandidate moved to ChatCoordinatorImpl (M0 consolidation)
+    // See: domain/chat/ChatCoordinatorImpl.kt:parseRenameCandidate()
 
     private fun applyAssistantDisplay(
         messages: List<ChatMessageUi>,
@@ -1593,18 +1579,9 @@ class HomeViewModel @Inject constructor(
             updateDebugSessionMetadata(result.metadata)
         }
 
-        // Handle title candidate if present
+        // Handle title candidate if present (now uses domain type directly, M0 consolidation)
         if (result.titleCandidate != null) {
-            val featureTitleCandidate = com.smartsales.feature.chat.title.TitleCandidate(
-                name = result.titleCandidate.name,
-                title6 = result.titleCandidate.title6,
-                source = when (result.titleCandidate.source) {
-                    com.smartsales.domain.chat.TitleSource.GENERAL -> com.smartsales.feature.chat.title.TitleSource.GENERAL
-                    com.smartsales.domain.chat.TitleSource.SMART_ANALYSIS -> com.smartsales.feature.chat.title.TitleSource.SMART
-                },
-                createdAt = result.titleCandidate.createdAt
-            )
-            maybeResolveSessionTitle(result.metadata, featureTitleCandidate)
+            maybeResolveSessionTitle(result.metadata, result.titleCandidate)
         }
 
         // Update UI state
@@ -1629,8 +1606,9 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun handleChatEventError(assistantId: String, error: com.smartsales.domain.error.ChatError) {
+        val errorMessage = error.toUserMessage()
         updateAssistantMessage(assistantId, persistAfterUpdate = true) { msg ->
-            msg.copy(hasError = true, isStreaming = false)
+            msg.copy(content = errorMessage, hasError = true, isStreaming = false)
         }
 
         _uiState.update {
@@ -1639,13 +1617,7 @@ class HomeViewModel @Inject constructor(
                 isStreaming = false,
                 isInputBusy = false,
                 isBusy = false,
-                chatErrorMessage = when (error) {
-                    is com.smartsales.domain.error.ChatError.NetworkError -> 
-                        error.message ?: error.cause.message ?: "网络请求失败"
-                    is com.smartsales.domain.error.ChatError.NetworkTimeout -> "请求超时"
-                    is com.smartsales.domain.error.ChatError.NoConnection -> "无网络连接"
-                    else -> "AI 回复失败"
-                }
+                chatErrorMessage = error.toUserMessage()
             )
         }
     }

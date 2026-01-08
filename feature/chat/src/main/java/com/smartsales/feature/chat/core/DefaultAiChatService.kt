@@ -27,6 +27,7 @@ class DefaultAiChatService @Inject constructor(
     override fun streamChat(request: ChatRequest): Flow<ChatStreamEvent> {
         val prompt = HomeScreenBindings.buildPromptWithHistory(
             request = request,
+            isFirstGeneralAssistantReply = request.isFirstAssistantReply,
             enableV1ChatPublisher = config.enableV1ChatPublisher
         )
         val aiRequest = AiChatRequest(

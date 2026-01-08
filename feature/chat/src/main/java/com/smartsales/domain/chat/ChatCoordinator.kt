@@ -97,7 +97,8 @@ data class TitleCandidate(
 
 enum class TitleSource {
     GENERAL,
-    SMART_ANALYSIS
+    SMART_ANALYSIS,
+    TINGWU  // Reserved for future Tingwu-derived title suggestions
 }
 
 /**

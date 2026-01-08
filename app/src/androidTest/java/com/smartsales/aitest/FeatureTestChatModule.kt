@@ -9,8 +9,8 @@ import com.smartsales.core.metahub.MetaHub
 import com.smartsales.feature.chat.core.AiChatService
 import com.smartsales.feature.chat.core.ChatRequest
 import com.smartsales.feature.chat.core.ChatStreamEvent
-import com.smartsales.feature.chat.core.DefaultQuickSkillCatalog
-import com.smartsales.feature.chat.core.QuickSkillCatalog
+import com.smartsales.domain.config.DefaultQuickSkillCatalog
+import com.smartsales.domain.config.QuickSkillCatalog
 import com.smartsales.feature.chat.home.AiSessionRepository as HomeAiSessionRepository
 import com.smartsales.feature.chat.home.ChatMessageUi
 import com.smartsales.feature.chat.core.ChatFeatureModule

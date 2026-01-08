@@ -91,7 +91,7 @@ class DeviceManagerScreenTest {
         )
         renderDeviceManager(state)
 
-        composeRule.onNode(progressMatcher()).assertIsDisplayed()
+        composeRule.onAllNodes(progressMatcher()).onFirst().assertIsDisplayed()
         composeRule.onNodeWithText("刷新中...").assertIsDisplayed()
         composeRule.onAllNodesWithText("上传新文件").onFirst().assertIsDisplayed()
     }
@@ -104,7 +104,7 @@ class DeviceManagerScreenTest {
         )
         renderDeviceManager(state)
 
-        composeRule.onNodeWithText("设备管理").assertIsDisplayed()
+        composeRule.onAllNodesWithText("设备管理").onFirst().assertIsDisplayed()
         composeRule.onNodeWithText("管理您的销售助手设备").assertIsDisplayed()
         composeRule.onNodeWithTag(DeviceManagerTestTags.EMPTY_STATE).assertIsDisplayed()
         composeRule.onAllNodesWithTag(DeviceManagerTestTags.UPLOAD_BUTTON).onFirst().assertIsDisplayed()

@@ -325,7 +325,10 @@ fun HomeScreenRoute(
     chatErrorMessage = state.chatErrorMessage,
     onPickAudioFile = { uri ->
         coroutineScope.launch {
-            audioViewModel.onAudioFilePicked(uri, state.currentSession.id)
+            val result = audioViewModel.onAudioFilePicked(uri, state.currentSession.id)
+            if (result is com.smartsales.core.util.Result.Success) {
+                viewModel.onTranscriptionRequested(result.data)
+            }
         }
     },
     onPickImageFile = viewModel::onImagePicked,

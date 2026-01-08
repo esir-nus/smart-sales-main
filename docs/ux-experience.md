@@ -25,15 +25,65 @@
 
 ### Chat Flow
 
+#### State Inventory
+
+> **Note**: State names below are UX concepts describing user experience, not code symbols. For implementation details, see [api-contracts.md](api-contracts.md).
+
 | State | Trigger | User Sees | Microcopy |
 |-------|---------|-----------|-----------|
-| `idle` | default | Input field ready | — |
-| `composing` | user types | Text in input | — |
-| `sending` | tap send | Bubble appears (pending) | — |
-| `streaming` | LLM responds | Text streams into bubble | — |
-| `complete` | stream ends | Full response in bubble | — |
-| `error:network` | connection fail | Error indicator | "Couldn't send. Check your connection." |
-| `error:llm` | LLM error | Error indicator | "Something went wrong. Try again." |
+| `idle` | default | Input field ready, session title in header | — |
+| `composing` | user types | Text in input field | — |
+| `sending` | tap send | User bubble appears, assistant placeholder created | — |
+| `streaming` | LLM responds | Text streams into assistant bubble | — |
+| `streaming:rename` | LLM emits `<Rename>` block | (invisible) title candidate extracted | — |
+| `complete` | stream ends | Full response, session title may update | — |
+| `complete:title_updated` | auto-rename applied | Header title changes (subtle transition) | — |
+| `error:network` | connection fail | Error indicator on bubble | "无网络连接，请恢复网络后重试" |
+| `error:timeout` | request timeout | Error indicator on bubble | "请求超时" |
+| `error:llm` | LLM error | Error indicator on bubble | "AI 回复失败" |
+
+#### Session Renaming Sub-Flow
+
+| State | Trigger | User Sees | Microcopy |
+|-------|---------|-----------|-----------|
+| `title:placeholder` | new session | Header shows "新会话" or timestamp | — |
+| `title:auto_candidate` | first LLM reply with `<Rename>` | (invisible) candidate stored | — |
+| `title:auto_applied` | TitleResolver accepts candidate | Header title updates smoothly | — |
+| `title:user_editing` | long-press session in drawer → Rename | Rename dialog with text field | "重命名会话" |
+| `title:user_confirmed` | tap Confirm in dialog | Dialog closes, title updates | — |
+| `title:user_locked` | user manually renamed | Future auto-candidates ignored | — |
+
+#### Flow Diagram
+
+```
+idle
+├── type → composing
+│   └── tap send → sending
+│       └── LLM starts → streaming
+│           ├── token received → streaming (accumulate)
+│           ├── <Rename> detected → streaming:rename (extract candidate)
+│           └── stream ends → complete
+│               ├── title candidate + placeholder title → complete:title_updated
+│               └── no candidate OR user-edited title → complete (no change)
+├── error → error:network | error:llm
+│   └── dismiss → idle
+└── drawer: long-press session → title:user_editing
+    ├── cancel → idle
+    └── confirm → title:user_confirmed → title:user_locked
+```
+
+#### Invariants
+
+| Rule | How to Verify |
+|------|---------------|
+| Streaming feedback within 200ms of send | Stopwatch: tap send → bubble appears |
+| Title never auto-updates after user manual rename | Set `isTitleUserEdited=true` → auto-rename blocked |
+| Placeholder titles are format "新会话" or timestamp-based | grep `SessionTitlePolicy.isPlaceholder` |
+| `<Rename>` tag never visible to user | Code review: Publisher strips before display |
+| `<Rename>` tag always output on first reply | LLM prompt requires it; fallback: "新客户 - 打招呼" |
+| `<Rename>` must not contain "..." or empty strings | Parser rejects these values |
+| Rename dialog requires non-empty text | Confirm button disabled when blank |
+| Title update is a smooth transition (no flash) | UI review: no jarring reflow |
 
 ### Audio Upload Flow
 
@@ -94,13 +144,22 @@
 
 | Context | Message |
 |---------|---------|
-| Upload progress | "Uploading... {progress}%" |
-| Transcription pending | "Transcribing..." |
+| Upload progress | "上传中... {progress}%" |
+| Transcription pending | "转写中..." |
 | Transcription complete | — (transcript renders inline) |
-| Network error (chat) | "Couldn't send. Check your connection." |
-| Network error (upload) | "Upload failed. Retry?" |
-| Transcription error | "Couldn't transcribe. Try again?" |
-| Generic error | "Something went wrong. Try again." |
+| Network error (chat) | "无网络连接" |
+| Timeout error (chat) | "请求超时" |
+| Network error (upload) | "音频上传失败" |
+| Transcription error | "转写失败" |
+| Generic error | "AI 回复失败" |
+
+### Session Rename
+
+| Context | Message |
+|---------|---------|
+| Rename dialog title | "重命名会话" |
+| Rename confirm button | "保存" |
+| Rename cancel button | "取消" |
 
 ### Empty States
 
@@ -126,4 +185,6 @@ Track unresolved UX decisions here for Product/Eng review:
 
 | Date | Flow | Change | Reason |
 |------|------|--------|--------|
+| 2026-01-08 | Chat | Chinese microcopy for all error states | Sync with implementation, Chinese Priority policy |
+| 2026-01-08 | Chat | Enhanced with session renaming sub-flow | Document auto-rename via `<Rename>` and manual rename via drawer |
 | 2026-01-08 | — | Initial creation | Split from ux-contract.md |

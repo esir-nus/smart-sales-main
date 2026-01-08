@@ -6,6 +6,8 @@
 > Changes require Product/Engineering approval. Do not modify without explicit sign-off.
 >
 > For **HOW** things are presented (states, microcopy, timing, layout), see [`ux-experience.md`](ux-experience.md).
+>
+> **Last verified against Orchestrator-V1.md**: 2026-01-08 ✅
 
 ---
 
@@ -70,9 +72,11 @@ The system classifies LLM responses. UI adapts based on classification.
 - "Jump to chapter" interaction allowed (chapterId or time range)
 
 ### 4.3 Speaker Display
-- Prefer `PublishedAnalysis.speakerMap`
+- Prefer `PublishedAnalysis.speakerMap` (if available)
 - Fallback: stable placeholders S1, S2...
 - Mapping updates as batches advance; do not back-write history
+
+> **Note**: `speakerMap` is an implementation pattern; not yet defined in V1 schema. This section documents current behavior.
 
 ---
 

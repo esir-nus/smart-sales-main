@@ -1,104 +1,121 @@
-# UX Contract (Aligned with Orchestrator-V1)
+# UX Contract (Canonical)
 
-## Version notes
+> **🔒 LOCKED DOCUMENT**
+> 
+> This file defines **WHAT** the system presents—data contracts, pipeline ownership, and feature boundaries.
+> Changes require Product/Engineering approval. Do not modify without explicit sign-off.
+>
+> For **HOW** things are presented (states, microcopy, timing, layout), see [`ux-experience.md`](ux-experience.md).
+
+---
+
+## Version Notes
+
 - The only current spec is `docs/Orchestrator-V1.md`.
 - V7 is archived; do not use V7 as UX basis.
-- UI never shows raw JSON; JSON is allowed only in HUD copyable blocks.
 - Stable data objects follow `docs/orchestrator-v1.schema.json`.
 
 ---
 
-## 1) Chat UX (General Chat Pipeline)
+## 1. Data Contracts
 
-### 1.1 Message rendering (hard constraints)
-- UI renders only `PublishedChatTurn.displayMarkdown`.
-- `<visible2user>` tags never appear in UI; Publisher extracts and sanitizes to `displayMarkdown`.
-- Machine-side structure (`machineArtifact`) is not a primary render source; do not display it except in Debug/HUD.
+These define what data the UI consumes. Changing these affects implementation.
 
-### 1.2 L1/L2/L3 presentation
-- L1: short answer/greeting -> normal bubble
-- L2: needs clarification -> bubble + (optional) follow-up prompt styling
-- L3 (SmartAnalysis):
-  - Normal bubble (`displayMarkdown`) must be readable and complete
-  - If `PublishedChatTurn.smartAnalysisCard` exists: UI shows a structured card (Highlights / Action items / Entities / Pointers)
-
-### 1.3 Thinking Trace (optional panel)
-- This is a display/debug panel, not a correctness source.
-- No chain-of-thought display; only:
-  - which modules ran, latency, cache hits, retries
-  - which metadata layers updated (M2/M2B/M3)
-  - pointers (turnId / chapterId / time range)
+| Contract | Rule |
+|----------|------|
+| Chat rendering source | UI renders only `PublishedChatTurn.displayMarkdown` |
+| Tag sanitization | `<visible2user>` tags never appear in UI; Publisher extracts to `displayMarkdown` |
+| Machine artifacts | `machineArtifact` is not a render source; display only in Debug/HUD |
+| Transcript source | UI consumes only Publisher "prefix publish" results |
+| Transcript ordering | UI shows continuous prefix only (b1..bk), no out-of-order display |
+| De-duplication | Unified in Publisher (range filtering); UI must not re-compute |
 
 ---
 
-## 2) Recording UX (Tingwu Transcription Pipeline)
+## 2. Pipeline Ownership
 
-### 2.1 Transcript (verbatim view)
-- Driven by `PublishedTranscript`.
-- UI shows **continuous prefix** only (b1..bk), no out-of-order display.
-- De-dup logic is unified in Publisher (range filtering); UI must not re-compute.
-- If relative segment info missing: show as "batch blocks" and accept pre-roll duplication (V1 limitation).
+Defines which pipeline handles which user action. Changing this affects routing logic.
 
-### 2.2 Chapters & Summary (chapter/summary view)
-- Driven by `PublishedAnalysis`.
-- Chapter-level timeline only; V1 does not do per-line timestamp polishing.
-- Allow "jump to chapter" interaction (chapterId or time range).
-
-### 2.3 Speaker display
-- Prefer `PublishedAnalysis.speakerMap`.
-- If no mapping, fall back to stable placeholders: S1, S2...
-- Mapping updates as batches advance, but do not back-write history.
+| User Action | Pipeline | Outcome |
+|-------------|----------|---------|
+| Send chat message | General Chat Pipeline | LLM response in chat |
+| Upload audio for transcription | Tingwu Pipeline | Transcript appears in chat |
+| Q&A on transcript (post-transcription) | General Chat Pipeline | Uses M2B pointers for context |
 
 ---
 
-## 3) Entry points and boundaries (must be consistent)
+## 3. Response Classifications
 
-- User sends chat message -> General Chat Pipeline
-- User uploads audio for transcription -> Tingwu Pipeline
-- **Post-transcription discussion** (Q&A, summary, review) belongs to General Chat Pipeline (can reference M2B pointers)
+The system classifies LLM responses. UI adapts based on classification.
 
----
+| Level | Definition | UI Adaptation |
+|-------|------------|---------------|
+| L1 | Short answer/greeting | Normal bubble |
+| L2 | Needs clarification | Bubble + follow-up prompt styling |
+| L3 | SmartAnalysis | Bubble (`displayMarkdown`) + structured card if `smartAnalysisCard` exists |
 
-## 4) Progressive publishing rules (Transcription)
-
-- UI only consumes Publisher "prefix publish" results.
-- UI must not assemble out-of-order batches.
-
----
-
-## 5) HUD (Debug) three copy/paste blocks (mandatory)
-
-HUD is a debug panel with three copyable sections:
-
-1) **Section 1: Effective Run Snapshot**
-   - Current config and key state
-   - Cache hits, retry count, plan/version, batch progress
-
-2) **Section 2: Raw Output**
-   - Chat: raw LLM output (includes `<visible2user>` and MachineArtifact text)
-   - Transcription: Tingwu raw output or reference
-
-3) **Section 3: Publisher-ready / Published Snapshot**
-   - Chat: extracted `displayMarkdown` + artifact validation summary
-   - Transcription: DisectorPlan summary + published prefix state + chapter timeline summary
-
-> Constraint: normal UI never shows raw JSON; JSON is allowed only in HUD.
+> **Experience spec**: See [ux-experience.md#l3-smartanalysis-card](ux-experience.md#l3-smartanalysis-card) for card layout details.
 
 ---
 
-## 6) Text cleaning boundary
+## 4. Transcription Data Structure
 
-- UI layer does not do complex cleanup or secondary LLM cleanup.
-- Publisher may do display transforms (e.g., segmentation, truncation, bold/italic, Markdown safety), but must not do semantic rewriting.
+### 4.1 Transcript (Verbatim View)
+- Driven by `PublishedTranscript`
+- If relative segment info missing: show as "batch blocks" (V1 limitation)
+
+### 4.2 Chapters & Summary
+- Driven by `PublishedAnalysis`
+- Chapter-level timeline only; V1 does not do per-line timestamp polishing
+- "Jump to chapter" interaction allowed (chapterId or time range)
+
+### 4.3 Speaker Display
+- Prefer `PublishedAnalysis.speakerMap`
+- Fallback: stable placeholders S1, S2...
+- Mapping updates as batches advance; do not back-write history
 
 ---
 
-## 7) Core UI Behavioral Invariants
+## 5. HUD (Debug Panel) Requirements
 
-The following behaviors are mandatory. Visual specifications are in `style-guide.md` at the referenced sections.
+The HUD is a debug panel for developers. It must contain three copyable sections:
 
-| Invariant | Rule | Visual Spec |
-|-----------|------|-------------|
-| **Home Hero visibility** | Hero appears ONLY when current session is empty (no user messages, no assistant messages, no imported transcripts). Never rendered as a chat bubble or in the scrollable message list. | §6.2 |
-| **Quick Skill Row placement** | Under hero when session is empty; inside input area (above text field) when session is active. There is **never more than one quick skill row visible**. | §6.3 |
-| **History Drawer layout** | Device-status placeholder card at top, profile entry at bottom. Both use full drawer width. | §6.6 |
+| Section | Contents |
+|---------|----------|
+| **1. Effective Run Snapshot** | Current config, cache hits, retry count, plan/version, batch progress |
+| **2. Raw Output** | Chat: raw LLM output (includes `<visible2user>` tags). Transcription: Tingwu raw output |
+| **3. Published Snapshot** | Chat: extracted `displayMarkdown` + artifact validation. Transcription: DisectorPlan summary + prefix state |
+
+> **Constraint**: Normal UI never shows raw JSON; JSON is allowed only in HUD.
+
+---
+
+## 6. Text Processing Boundaries
+
+| Layer | Allowed | Not Allowed |
+|-------|---------|-------------|
+| UI Layer | Display transforms only | Complex cleanup, secondary LLM cleanup |
+| Publisher | Segmentation, truncation, bold/italic, Markdown safety | Semantic rewriting |
+
+---
+
+## 7. Thinking Trace (Debug Panel)
+
+This is a display/debug panel, not a correctness source. Shows:
+- Which modules ran, latency, cache hits, retries
+- Which metadata layers updated (M2/M2B/M3)
+- Pointers (turnId / chapterId / time range)
+
+No chain-of-thought display.
+
+---
+
+## Cross-References
+
+| Topic | Experience Spec |
+|-------|-----------------|
+| Chat flow states | [ux-experience.md#chat-flow](ux-experience.md#chat-flow) |
+| Audio upload flow states | [ux-experience.md#audio-upload-flow](ux-experience.md#audio-upload-flow) |
+| Transcription flow states | [ux-experience.md#transcription-flow](ux-experience.md#transcription-flow) |
+| Layout invariants | [ux-experience.md#layout-invariants](ux-experience.md#layout-invariants) |
+| Timing rules | [ux-experience.md#timing--feedback](ux-experience.md#timing--feedback) |

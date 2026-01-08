@@ -20,10 +20,11 @@
 
 - UX contract source precedence:
   1. `docs/Orchestrator-V1.md` (reasoning and pipeline structure/boundaries)
-  2. `docs/ux-contract.md` (the only current UX source of truth: interaction/layout/flows/HUD)
-  3. `docs/style-guide.md` (visual and code style rules)
-  4. Existing Android implementation and tests
-  5. Archived UI/history implementations for reference only
+  2. `docs/ux-contract.md` (🔒 canonical: data contracts, pipelines, feature boundaries — locked, requires Product/Eng approval)
+  3. `docs/ux-experience.md` (📝 experience: state inventories, microcopy, timing, layout — UX-owned, modifiable)
+  4. `docs/style-guide.md` (visual and code style rules)
+  5. Existing Android implementation and tests
+  6. Archived UI/history implementations for reference only
 
 ---
 
@@ -42,6 +43,49 @@
   - Prohibited: Orchestrator/MetaHub product specs, M1/M2/M3 schema, business semantics definitions
 - The only authoritative source for XFyun REST details remains `docs/xfyun-asr-rest-api.md`
   - Do not duplicate its parameter tables in other docs (only link + conclusion summary)
+
+---
+
+## Architecture Workflow Order
+
+**Priority**: Finish spec → Ship features → Check deviations
+
+### Workflow Rules
+
+1. **Spec-First**: Finish `Orchestrator-V1.md` before major purity refactors
+   - Writing spec surfaces design gaps early
+   - Don't refactor toward incomplete/aspirational specs
+
+2. **Ship Features**: Implement features following current patterns
+   - Structure guardrails prevent new god files
+   - Purity issues will surface organically during development
+
+3. **Post-Ship Deviation Check**: After feature complete, audit spec vs reality
+   - Only fix deviations that **hurt** (coupling, duplication, complexity)
+   - Document acceptable deviations inline in spec
+
+### Module Status Convention
+
+When documenting V1 modules in specs, include implementation status:
+
+```markdown
+### 3.2.3 Sanitizer
+**Status:** IMPLEMENTED as TranscriptFormatter in data:ai-core
+**Deviation:** Not a separate module; coupled to TingwuRunner
+**Reason:** Single consumer, no benefit to extraction yet
+```
+
+Valid status values:
+- `IMPLEMENTED` — fully realized per spec
+- `PARTIAL` — partially implemented
+- `DEVIATION` — implemented differently than spec (document reason)
+- `DEFERRED` — not yet implemented (document trigger condition)
+- `DEPRECATED` — spec section no longer applies
+
+### Anti-Pattern
+
+❌ **Don't** refactor toward theoretical purity in incomplete specs  
+✅ **Do** refactor toward working software with documented deviations
 
 ---
 

@@ -31,7 +31,8 @@ When documents conflict, follow this precedence order:
 
 | File | Purpose |
 |------|---------|
-| [ux-contract.md](./ux-contract.md) | **BEHAVIORAL AUTHORITY** for UI: message rendering, chat modes, HUD, entry points |
+| [ux-contract.md](./ux-contract.md) | **CANONICAL** (🔒 locked): data contracts, pipelines, feature boundaries |
+| [ux-experience.md](./ux-experience.md) | **EXPERIENCE** (📝 UX-owned): state inventories, microcopy, timing, layout |
 | [style-guide.md](./style-guide.md) | Visual design system: colors, typography, spacing, component patterns |
 
 ### Project Governance
@@ -88,8 +89,9 @@ Key archived specs:
 2. For XFyun: use [xfyun-asr-rest-api.md](./xfyun-asr-rest-api.md) as authority
 
 ### I'm designing UI
-1. Check [ux-contract.md](./ux-contract.md) for behavior (what happens when)
-2. Apply [style-guide.md](./style-guide.md) for visuals (colors, spacing, components)
+1. Check [ux-contract.md](./ux-contract.md) for canonical constraints (WHAT to present)
+2. Check [ux-experience.md](./ux-experience.md) for state inventories and microcopy (HOW to present)
+3. Apply [style-guide.md](./style-guide.md) for visuals (colors, spacing, components)
 
 ### I'm refactoring code
 1. Follow [RealizeTheArchi.md](./RealizeTheArchi.md) blueprint and paradigm

@@ -161,31 +161,32 @@ class TranscriptionCoordinatorImpl @Inject constructor(
         onCompleted: (messageId: String) -> Unit,
         onFailed: (reason: String, messageId: String) -> Unit
     ) {
-        coroutineScope {
-            // Launch batch observation
-            launch {
+        // Observe job state until terminal state (Completed/Failed)
+        val terminalState = observeJob(jobId)
+            .onEach { state ->
+                when (state) {
+                    is AudioTranscriptionJobState.InProgress -> {
+                        onProgressUpdate(state.progressPercent, progressMessageId)
+                    }
+                    else -> Unit
+                }
+            }
+            .first { it is AudioTranscriptionJobState.Completed || it is AudioTranscriptionJobState.Failed }
+
+        // Now process all batches (they're available after Completed)
+        when (terminalState) {
+            is AudioTranscriptionJobState.Completed -> {
+                // Collect all batches first
                 observeProcessedBatches(jobId).collect { batch ->
                     onBatchReceived(batch)
                 }
+                // Then signal completion
+                onCompleted(progressMessageId)
             }
-
-            // Launch job state observation
-            launch {
-                observeJob(jobId).collect { state ->
-                    when (state) {
-                        is AudioTranscriptionJobState.Idle -> Unit
-                        is AudioTranscriptionJobState.InProgress -> {
-                            onProgressUpdate(state.progressPercent, progressMessageId)
-                        }
-                        is AudioTranscriptionJobState.Completed -> {
-                            onCompleted(progressMessageId)
-                        }
-                        is AudioTranscriptionJobState.Failed -> {
-                            onFailed(state.reason.ifBlank { "转写失败" }, progressMessageId)
-                        }
-                    }
-                }
+            is AudioTranscriptionJobState.Failed -> {
+                onFailed(terminalState.reason.ifBlank { "转写失败" }, progressMessageId)
             }
+            else -> Unit // Idle - shouldn't happen as terminal
         }
     }
 }

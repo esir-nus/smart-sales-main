@@ -56,6 +56,11 @@ The system classifies LLM responses. UI adapts based on classification.
 | L2 | Needs clarification | Bubble + follow-up prompt styling |
 | L3 | SmartAnalysis | Bubble (`displayMarkdown`) + structured card if `smartAnalysisCard` exists |
 
+> [!NOTE]
+> **L1/L2/L3 classify output richness, not pipeline selection.**
+> - All GENERAL chat first-replies (including L3-style 状态C responses) produce `<Rename>` for session naming
+> - The SMART_ANALYSIS pipeline (`quickSkillId = "SMART_ANALYSIS"`) is separate: it uses JSON-only output and derives session title from `main_person` + `summary_title_6chars` fields instead of `<Rename>` tags
+
 > **Experience spec**: See [ux-experience.md#l3-smartanalysis-card](ux-experience.md#l3-smartanalysis-card) for card layout details.
 
 ---

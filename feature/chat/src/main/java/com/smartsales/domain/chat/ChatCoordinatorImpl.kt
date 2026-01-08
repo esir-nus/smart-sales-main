@@ -144,15 +144,28 @@ class ChatCoordinatorImpl @Inject constructor(
                     _chatEvents.emit(ChatEvent.StreamDelta(assistantId, token))
                 },
                 onCompleted = { fullText ->
-                    // Simple display text extraction
+                    // Parse SmartAnalysis JSON and build display text
+                    val parsed = com.smartsales.domain.analysis.SmartAnalysisParser.parse(fullText)
                     val displayText = ChatPublisher.extractDisplayText(fullText)
+                    
+                    // Extract title candidate from SmartAnalysis JSON fields
+                    val titleCandidate = if (parsed != null && 
+                        (!parsed.mainPerson.isNullOrBlank() || !parsed.summaryTitle6Chars.isNullOrBlank())) {
+                        TitleCandidate(
+                            name = parsed.mainPerson?.takeIf { it.isNotBlank() },
+                            title6 = parsed.summaryTitle6Chars?.takeIf { it.isNotBlank() },
+                            source = TitleSource.SMART_ANALYSIS,
+                            createdAt = System.currentTimeMillis()
+                        )
+                    } else null
+                    
                     _chatEvents.emit(ChatEvent.StreamCompleted(
                         result = ChatCompletionResult(
                             assistantId = assistantId,
                             rawFullText = fullText,
                             displayText = displayText,
                             metadata = null,
-                            titleCandidate = null,
+                            titleCandidate = titleCandidate,
                             isSmartAnalysis = true
                         )
                     ))

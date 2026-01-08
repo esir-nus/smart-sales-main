@@ -80,22 +80,36 @@ idle
 | Title never auto-updates after user manual rename | Set `isTitleUserEdited=true` → auto-rename blocked |
 | Placeholder titles are format "新会话" or timestamp-based | grep `SessionTitlePolicy.isPlaceholder` |
 | `<Rename>` tag never visible to user | Code review: Publisher strips before display |
-| `<Rename>` tag always output on first reply | LLM prompt requires it; fallback: "新客户 - 打招呼" |
-| `<Rename>` must not contain "..." or empty strings | Parser rejects these values |
+| GENERAL first reply always outputs `<Rename>` | LLM prompt requires it; fallback: "新客户 - 打招呼" |
+| SmartAnalysis derives title from `main_person` + `summary_title_6chars` | No `<Rename>` tag in JSON-only output |
+| `<Rename>` / title fields must not be "..." or empty | Parser rejects placeholder values |
 | Rename dialog requires non-empty text | Confirm button disabled when blank |
 | Title update is a smooth transition (no flash) | UI review: no jarring reflow |
+
+> [!NOTE]
+> **Tingwu renaming is DEFERRED.** The Tingwu pipeline uses a different flow (audio upload → transcription) and may derive session title from transcript metadata in a future iteration.
 
 ### Audio Upload Flow
 
 | State | Trigger | User Sees | Microcopy |
 |-------|---------|-----------|-----------|
-| `idle` | default | "+" button visible | — |
-| `picking` | tap + | System file picker | — |
-| `uploading` | file selected | Progress bar | "Uploading... {progress}%" |
-| `transcribing` | upload complete | Spinner in chat | "Transcribing..." |
-| `complete` | transcription done | Transcript in chat bubble | — |
-| `error:upload` | network fail | Error card | "Upload failed. Retry?" |
-| `error:transcription` | Tingwu error | Error card | "Couldn't transcribe. Try again?" |
+| `idle` | 默认 | "+" 按钮可见 | — |
+| `picking` | 点击 + | 系统文件选择器 | — |
+| `uploading` | 文件已选 | 进度条 | "上传中…" |
+| `transcribing` | 上传完成 | 聊天区加载动画 | "音频已上传，正在转写…" |
+| `complete` | 转写完成 | 转写结果气泡 | — |
+| `error:upload` | 网络失败 | 错误提示 | "音频处理失败" |
+| `error:transcription` | Tingwu 错误 | 错误提示 | "转写失败，请重试" |
+
+#### Invariants
+
+| Rule | How to Verify |
+|------|---------------|
+| 文件选择器仅限音频 (`audio/*`) | Code: `audioPicker.launch(arrayOf("audio/*"))` |
+| 上传/转写期间输入框禁用 | `AudioUiState.isInputBusy = true` during flow |
+| 中断恢复提示仅在有未完成任务时显示 | `showAudioRecoveryHint` logic in `AudioViewModel` |
+| 成功后清除恢复提示 | `onTranscriptionCompleted()` persists marker |
+| 错误消息展示为 Snackbar | `AudioViewModel.snackbarMessage` → UI collection |
 
 ### Transcription Flow
 

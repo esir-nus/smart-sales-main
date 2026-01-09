@@ -7,11 +7,9 @@ package com.smartsales.data.aicore.debug
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.metahub.ExportNameResolver
 import com.smartsales.core.metahub.MetaHub
-import com.smartsales.core.metahub.SuspiciousBoundary
 import com.smartsales.data.aicore.params.AiParaSettingsRepository
 import com.smartsales.data.aicore.params.AiParaSettingsSnapshot
 import com.smartsales.data.aicore.params.TranscriptionLaneSelector
-import com.smartsales.data.aicore.params.XfyunResultType
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -31,7 +29,6 @@ class RealDebugOrchestrator @Inject constructor(
     private val metaHub: MetaHub,
     private val aiParaSettingsRepository: AiParaSettingsRepository,
     private val tingwuTraceStore: TingwuTraceStore,
-    private val xfyunTraceStore: XfyunTraceStore,
     private val dispatchers: DispatcherProvider,
 ) : DebugOrchestrator {
 
@@ -45,7 +42,6 @@ class RealDebugOrchestrator @Inject constructor(
             val settingsSnapshot = aiParaSettingsRepository.snapshot()
             val laneDecision = TranscriptionLaneSelector.resolve(settingsSnapshot)
             val tingwuTrace = tingwuTraceStore.getSnapshot()
-            val xfyunTrace = xfyunTraceStore.getSnapshot()
             val sessionMeta = runCatching { metaHub.getSession(sessionId) }.getOrNull()
             // 重要：导出 gate 以“智能分析是否就绪”为准，仅供 HUD 可观测。
             val exportGateReady = sessionMeta?.latestMajorAnalysisMessageId != null
@@ -65,7 +61,6 @@ class RealDebugOrchestrator @Inject constructor(
                     settingsSnapshot = settingsSnapshot,
                     laneDecision = laneDecision,
                     tingwuTrace = tingwuTrace,
-                    xfyunTrace = xfyunTrace,
                     exportGateReady = exportGateReady,
                     exportGateReason = exportGateReason,
                     exportName = exportName,
@@ -74,14 +69,12 @@ class RealDebugOrchestrator @Inject constructor(
             val section2 = DebugSnapshotRedactor.redact(
                 buildSection2(
                     tingwuTrace = tingwuTrace,
-                    xfyunTrace = xfyunTrace,
                 )
             )
             val section3 = DebugSnapshotRedactor.redact(
                 buildSection3(
                     sessionId = sessionId,
                     tingwuTrace = tingwuTrace,
-                    xfyunTrace = xfyunTrace,
                 )
             )
 
@@ -101,20 +94,11 @@ class RealDebugOrchestrator @Inject constructor(
         settingsSnapshot: AiParaSettingsSnapshot,
         laneDecision: com.smartsales.data.aicore.params.TranscriptionLaneDecision,
         tingwuTrace: TingwuTraceSnapshot,
-        xfyunTrace: XfyunTraceSnapshot?,
         exportGateReady: Boolean,
         exportGateReason: String,
         exportName: com.smartsales.core.metahub.ExportNameResolution,
     ): String {
         val settings = settingsSnapshot.transcription
-        val voiceprintEffective = settings.xfyun.voiceprint.resolveEffective()
-        val resultType = settings.xfyun.result.resultType
-        val resultTypeLabel = when (resultType) {
-            XfyunResultType.TRANSFER -> "transfer"
-            XfyunResultType.TRANSLATE -> "translate"
-            XfyunResultType.PREDICT -> "predict"
-            XfyunResultType.ANALYSIS -> "analysis"
-        }
         return buildString {
             appendLine("[Section1: Effective Run Snapshot]")
             appendLine("sessionId: $sessionId")
@@ -122,27 +106,13 @@ class RealDebugOrchestrator @Inject constructor(
             appendLine("lane.requested: ${laneDecision.requestedProvider}")
             appendLine("lane.selected: ${laneDecision.selectedProvider}")
             appendLine("lane.disabledReason: ${laneDecision.disabledReason ?: "-"}")
-            appendLine("lane.xfyunEnabledSetting: ${laneDecision.xfyunEnabledSetting}")
             appendLine("settings.transcription.provider: ${settings.provider}")
-            appendLine("settings.transcription.xfyunEnabled: ${settings.xfyunEnabled}")
-            appendLine("settings.xfyun.resultType: $resultTypeLabel")
-            appendLine("settings.xfyun.capabilities.translate: ${settings.xfyun.capabilities.allowTranslate}")
-            appendLine("settings.xfyun.capabilities.predict: ${settings.xfyun.capabilities.allowPredict}")
-            appendLine("settings.xfyun.capabilities.analysis: ${settings.xfyun.capabilities.allowAnalysis}")
-            appendLine("settings.xfyun.voiceprint.enabled: ${voiceprintEffective.enabledSetting}")
-            appendLine("settings.xfyun.voiceprint.effective: ${voiceprintEffective.effectiveEnabled}")
-            appendLine("settings.xfyun.voiceprint.featureIdsCount: ${voiceprintEffective.featureIds.size}")
-            appendLine("settings.xfyun.voiceprint.disabledReason: ${voiceprintEffective.disabledReason ?: "-"}")
-            appendLine("settings.xfyun.upload.language: ${settings.xfyun.upload.language}")
-            appendLine("settings.xfyun.upload.roleType: ${settings.xfyun.upload.roleType}")
-            appendLine("settings.xfyun.upload.roleNum: ${settings.xfyun.upload.roleNum}")
             appendLine("settings.tingwu.diarizationEnabled: ${settingsSnapshot.tingwu.transcription.diarizationEnabled}")
             appendLine("settings.tingwu.diarizationSpeakerCount: ${settingsSnapshot.tingwu.transcription.diarizationSpeakerCount}")
             appendLine("settings.tingwu.diarizationOutputLevel: ${settingsSnapshot.tingwu.transcription.diarizationOutputLevel}")
             appendLine("settings.tingwu.audioEventDetectionEnabled: ${settingsSnapshot.tingwu.transcription.audioEventDetectionEnabled}")
             appendLine("settings.tingwu.postEnhancer.enabled: ${settingsSnapshot.tingwu.postTingwuEnhancer.enabled}")
             appendLine("trace.tingwu.taskId: ${tingwuTrace.lastTaskId ?: "-"}")
-            appendLine("trace.xfyun.orderId: ${xfyunTrace?.orderId ?: "-"}")
             appendLine("exportGate.ready: $exportGateReady")
             appendLine("exportGate.reason: $exportGateReason")
             appendLine("export.name: ${exportName.baseName}")
@@ -154,7 +124,6 @@ class RealDebugOrchestrator @Inject constructor(
 
     private fun buildSection2(
         tingwuTrace: TingwuTraceSnapshot,
-        xfyunTrace: XfyunTraceSnapshot?,
     ): String = buildString {
         // 重要：Section 2 只输出引用信息（路径/状态），不内联原始 JSON 内容。
         appendLine("[Section2: Raw Transcription Output]")
@@ -169,18 +138,11 @@ class RealDebugOrchestrator @Inject constructor(
             path = tingwuTrace.transcriptDumpPath,
             bytes = tingwuTrace.transcriptDumpBytes,
         ))
-        appendLine("XFyun:")
-        appendLine(formatDumpInfo(
-            name = "rawDump",
-            path = xfyunTrace?.rawDumpPath,
-            bytes = xfyunTrace?.rawDumpBytes,
-        ))
     }.trimEnd()
 
     private suspend fun buildSection3(
         sessionId: String,
         tingwuTrace: TingwuTraceSnapshot,
-        xfyunTrace: XfyunTraceSnapshot?,
     ): String = buildString {
         // 重要：Section 3 仅复用已有预处理产物，缺失时用明确占位提示。
         appendLine("[Section3: Preprocessed Snapshot]")
@@ -211,38 +173,6 @@ class RealDebugOrchestrator @Inject constructor(
         appendLine("tingwu.batchPlan:")
         appendLine(tingwuBatchPlan)
 
-        val xfyunPreviewSource = xfyunTrace?.postXfyunOriginalMarkdown
-            ?: xfyunTrace?.postXfyunPolishedMarkdown
-        val xfyunPreview = xfyunPreviewSource
-            ?.let { buildPreviewFromText(it, MAX_PREVIEW_LINES) }
-        appendLine("xfyun.preview:")
-        appendLine(xfyunPreview ?: "(missing: xfyun preprocessed preview not available)")
-
-        val batchPlan = if (xfyunTrace?.postXfyunBatchPlan?.isNotEmpty() == true) {
-            XfyunDebugInfoFormatter.postXfyunBatchPlanJson(xfyunTrace.postXfyunBatchPlan)
-        } else {
-            "(missing: postXfyun batch plan not recorded)"
-        }
-        appendLine("xfyun.batchPlan:")
-        appendLine(batchPlan)
-
-        val suspicious = if (xfyunTrace?.postXfyunSuspicious?.isNotEmpty() == true) {
-            XfyunDebugInfoFormatter.postXfyunSuspiciousJson(xfyunTrace.postXfyunSuspicious)
-        } else {
-            "(missing: postXfyun suspicious hints not recorded)"
-        }
-        appendLine("xfyun.suspiciousBoundaries:")
-        appendLine(suspicious)
-        appendLine("[Section3B: Tingwu Suspicious Boundaries]")
-        val boundarySource = if (preprocess == null) {
-            "(missing: metahub preprocess not available)"
-        } else {
-            "metahub.m2.preprocess"
-        }
-        appendLine("source: $boundarySource")
-        appendLine("count=0")
-        appendLine("indices: (empty)")
-        appendLine("details: (empty)")
         return@buildString
         }
 
@@ -276,64 +206,8 @@ class RealDebugOrchestrator @Inject constructor(
         appendLine("tingwu.batchPlan:")
         appendLine(tingwuBatchPlan)
 
-        appendLine("xfyun.preview:")
-        appendLine("(missing: xfyun preprocessed preview not available)")
-        appendLine("xfyun.batchPlan:")
-        appendLine("(missing: postXfyun batch plan not recorded)")
-        appendLine("xfyun.suspiciousBoundaries:")
-        if (preprocessProv == "tingwu.preprocess") {
-            val count = effectivePreprocess.suspiciousBoundaries.size
-            appendLine("(suppressed; count=$count; see Section3B)")
-        } else {
-            val suspicious = if (effectivePreprocess.suspiciousBoundaries.isNotEmpty()) {
-                effectivePreprocess.suspiciousBoundaries.joinToString(
-                    prefix = "[",
-                    postfix = "]",
-                    separator = ", "
-                ) { entry ->
-                    "{\"index\":${entry.index},\"reason\":\"${entry.reason.replace("\"", "\\\"")}\"}"
-                }
-            } else {
-                "(missing: postXfyun suspicious hints not recorded)"
-            }
-            appendLine(suspicious)
-        }
-
-        appendLine("[Section3B: Tingwu Suspicious Boundaries]")
-        appendLine("source: metahub.m2.preprocess")
-        val sortedBoundaries = effectivePreprocess.suspiciousBoundaries
-            .sortedBy { it.index }
-        val totalBoundaries = sortedBoundaries.size
-        appendLine("count=$totalBoundaries")
-        val (indicesLine, detailsLine) = formatBoundaryLines(sortedBoundaries)
-        appendLine(indicesLine)
-        appendLine(detailsLine)
     }.trimEnd()
 
-    private fun formatBoundaryLines(
-        boundaries: List<SuspiciousBoundary>
-    ): Pair<String, String> {
-        if (boundaries.isEmpty()) {
-            return "indices: (empty)" to "details: (empty)"
-        }
-        val limited = boundaries.take(MAX_BOUNDARY_OUTPUT)
-        val remaining = (boundaries.size - limited.size).coerceAtLeast(0)
-        val indices = limited.joinToString(separator = ",") { it.index.toString() }
-        val indicesLine = if (remaining > 0) {
-            "indices: $indices ... +$remaining more"
-        } else {
-            "indices: $indices"
-        }
-        val details = limited.joinToString(separator = ",") { entry ->
-            "${entry.index}(${entry.reason})"
-        }
-        val detailsLine = if (remaining > 0) {
-            "details: $details ... +$remaining more"
-        } else {
-            "details: $details"
-        }
-        return indicesLine to detailsLine
-    }
 
     private fun buildV1BatchPlanLine(
         snapshot: TingwuTraceSnapshot
@@ -401,30 +275,7 @@ class RealDebugOrchestrator @Inject constructor(
             }
         }
 
-    private fun buildPreviewFromText(text: String, maxLines: Int): String? {
-        val trimmed = text.trim()
-        if (trimmed.isBlank()) return null
-        val iterator = trimmed.lineSequence().iterator()
-        val limited = mutableListOf<String>()
-        var truncated = false
-        while (iterator.hasNext() && limited.size < maxLines) {
-            val line = iterator.next()
-            if (line.isNotBlank()) {
-                limited += line
-            }
-        }
-        if (iterator.hasNext()) truncated = true
-        if (limited.isEmpty()) return null
-        return buildString {
-            append(limited.joinToString("\n"))
-            if (truncated) {
-                append("\n…(truncated ${limited.size} lines)")
-            }
-        }
-    }
-
     private companion object {
     private const val MAX_PREVIEW_LINES = 20
-    private const val MAX_BOUNDARY_OUTPUT = 50
 }
 }

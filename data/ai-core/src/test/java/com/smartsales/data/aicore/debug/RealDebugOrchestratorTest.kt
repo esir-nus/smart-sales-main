@@ -10,7 +10,6 @@ import com.smartsales.core.metahub.InMemoryMetaHub
 import com.smartsales.core.metahub.M2PatchRecord
 import com.smartsales.core.metahub.PreprocessSnapshot
 import com.smartsales.core.metahub.Provenance
-import com.smartsales.core.metahub.SuspiciousBoundary
 import com.smartsales.data.aicore.params.InMemoryAiParaSettingsRepository
 import com.smartsales.data.aicore.params.TranscriptionSettings
 import com.smartsales.data.aicore.params.TRANSCRIPTION_PROVIDER_XFYUN
@@ -35,7 +34,6 @@ class RealDebugOrchestratorTest {
             metaHub = InMemoryMetaHub(),
             aiParaSettingsRepository = settingsRepository,
             tingwuTraceStore = TingwuTraceStore(),
-            xfyunTraceStore = XfyunTraceStore(),
             dispatchers = DefaultDispatcherProvider,
         )
 
@@ -66,10 +64,6 @@ class RealDebugOrchestratorTest {
                 payload = ConversationDerivedStateDelta(
                     preprocess = PreprocessSnapshot(
                         first20Rendered = listOf("METAHUB_PREVIEW_LINE"),
-                        suspiciousBoundaries = listOf(
-                            SuspiciousBoundary(index = 5, reason = "gap"),
-                            SuspiciousBoundary(index = 1, reason = "speaker-change")
-                        ),
                         prov = Provenance(source = "tingwu.preprocess", updatedAt = 123L)
                     )
                 )
@@ -79,7 +73,6 @@ class RealDebugOrchestratorTest {
             metaHub = metaHub,
             aiParaSettingsRepository = settingsRepository,
             tingwuTraceStore = TingwuTraceStore(),
-            xfyunTraceStore = XfyunTraceStore(),
             dispatchers = DefaultDispatcherProvider,
         )
 
@@ -99,15 +92,6 @@ class RealDebugOrchestratorTest {
         assertTrue(preprocessIndex in 0 until previewIndex)
         assertTrue(section3.contains("tingwu.preview:"))
         assertTrue(section3.contains("METAHUB_PREVIEW_LINE"))
-        assertTrue(section3.contains("xfyun.suspiciousBoundaries:"))
-        assertTrue(section3.contains("(suppressed; count=2; see Section3B)"))
-        assertTrue(section3.contains("count=2"))
-        assertFalse(section3.contains("xfyun.suspiciousBoundaries:\n["))
-        assertTrue(section3.contains("[Section3B: Tingwu Suspicious Boundaries]"))
-        assertTrue(section3.contains("source: metahub.m2.preprocess"))
-        assertTrue(section3.contains("count=2"))
-        assertTrue(section3.contains("indices: 1,5"))
-        assertTrue(section3.contains("details: 1(speaker-change),5(gap)"))
     }
 
     @Test
@@ -141,7 +125,6 @@ class RealDebugOrchestratorTest {
             metaHub = metaHub,
             aiParaSettingsRepository = settingsRepository,
             tingwuTraceStore = traceStore,
-            xfyunTraceStore = XfyunTraceStore(),
             dispatchers = DefaultDispatcherProvider,
         )
 

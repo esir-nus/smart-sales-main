@@ -604,8 +604,14 @@ class TingwuRunner @Inject constructor(
                             ?: fallbackArtifacts.recordingOriginDiarizedSegments,
                         speakerLabels = if (speakerLabels.isNotEmpty()) speakerLabels else fallbackArtifacts.speakerLabels
                     )
+                    // M1 Phase 2: Include chapters + summary in final markdown
+                    val finalMarkdown = composeFinalMarkdown(
+                        transcriptMarkdown = enhancedMarkdown,
+                        artifacts = artifacts,
+                        resultLinks = data.resultLinks
+                    )
                     TranscriptResult(
-                        markdown = enhancedMarkdown,
+                        markdown = finalMarkdown,
                         artifacts = artifacts,
                         chapters = chapters,
                         diarizedSegments = diarizedSegments.takeIf { it.isNotEmpty() }

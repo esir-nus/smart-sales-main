@@ -80,6 +80,13 @@ The palette uses clean, neutral surfaces to let the **AI Intelligence** (Chroma 
 
 ### 2.3 Chroma Wave Gradients (The Signature)
 
+**Visual Reference**: ![Chroma Wave V3](file:///home/cslh-frank/main_app/docs/home_chroma_wave_v3_1767947501094.png)
+
+**Design Intent**: The wave is a **Harmonic, Multi-Layered Signal**, not a solid bar.
+- **Organic**: Uses filled gradients with sinusoidal curves.
+- **Depth**: Multiple layers (3+) moving at different speeds/phases.
+- **Fluidity**: Transitions are water-like, not mechanical.
+
 **Behavior Rule**: The wave is **TRANSIENT**. It is not a fixed footer.
 * **Enters**: Gracefully when AI starts listening or processing.
 * **Exits**: Gracefully fades out when generation is done.

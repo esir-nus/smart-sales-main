@@ -7,25 +7,31 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.smartsales.feature.chat.home.theme.AppColors
 import kotlin.math.PI
 import kotlin.math.sin
 
 enum class MotionState {
     Hidden,
-    Idle,      // Gentle sine wave
-    Listening, // High amplitude, fast frequency
-    Thinking,  // Fast phase shift, medium amplitude
-    Error      // Jagged or chaotic (simulated with high freq)
+    Idle,      // Gentle harmonic wave
+    Listening, // High amplitude, fast
+    Thinking,  // Medium amplitude, lateral flow
+    Error      // Jitter
 }
 
+/**
+ * ChromaWave V3: Multi-layered harmonic wave based on the V3 visual reference.
+ *
+ * Design Intent:
+ * - **Organic**: Sinusoidal curves with transparency, not solid blocks.
+ * - **Depth**: 3 layers moving at different speeds/phases.
+ * - **Fluidity**: Water-like, semi-transparent.
+ */
 @Composable
 fun ChromaWave(
     state: MotionState,
@@ -35,104 +41,148 @@ fun ChromaWave(
 
     val infiniteTransition = rememberInfiniteTransition(label = "WaveAnimation")
 
-    // Phase animation (moves the wave horizontally)
-    val phase by infiniteTransition.animateFloat(
+    // --- Phase Animations (3 layers) ---
+    val phase1 by infiniteTransition.animateFloat(
         initialValue = 0f,
-        targetValue = 2 * PI.toFloat(),
+        targetValue = (2 * PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "Phase1"
+    )
+
+    val phase2 by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(2500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "Phase2"
+    )
+
+    val phase3 by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * PI).toFloat(),
         animationSpec = infiniteRepeatable(
             animation = tween(2000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "Phase"
+        label = "Phase3"
     )
 
-    // Amplitude animation (height of the wave)
-    // We animate this based on state changes if we want transitions, 
-    // but here we map state to target amplitude directly for simplicity or use animateFloatAsState if needed.
-    // For now using infinite transition for "breathing" amplitude in Idle.
-    
-    val amplitudeFactor = when (state) {
-        MotionState.Idle -> 0.2f
-        MotionState.Listening -> 0.8f
-        MotionState.Thinking -> 0.5f 
-        MotionState.Error -> 0.6f
+    // --- Amplitude Factors per State ---
+    val baseAmplitude = when (state) {
+        MotionState.Idle -> 0.15f
+        MotionState.Listening -> 0.6f
+        MotionState.Thinking -> 0.35f
+        MotionState.Error -> 0.5f
         MotionState.Hidden -> 0f
     }
-    
-    // Frequency factor
-    val frequency = when(state) {
-        MotionState.Idle -> 1.0f
-        MotionState.Listening -> 2.5f
-        MotionState.Thinking -> 3.0f // Fast shimmy
-        MotionState.Error -> 5.0f // Jittery
-        MotionState.Hidden -> 0f
-    }
-    
-    val speedMultiplier = when(state) {
+
+    // --- Speed Multiplier per State ---
+    val speedMult = when (state) {
         MotionState.Idle -> 0.5f
         MotionState.Listening -> 1.5f
         MotionState.Thinking -> 2.0f
-        MotionState.Error -> 0.2f // Slow but jagged? Or fast? Let's say fast.
+        MotionState.Error -> 3.0f
         MotionState.Hidden -> 0f
     }
 
     Canvas(modifier = modifier) {
         val width = size.width
         val height = size.height
-        val centerY = height / 2
-        val maxAmplitude = height / 3
+        val centerY = height * 0.5f
+        val maxAmplitude = height * 0.4f
 
-        val effectivePhase = phase * speedMultiplier
-
-        val path = Path()
-        path.moveTo(0f, height) // Start bottom left
-        path.lineTo(0f, centerY) // Go to center Y start
-
-        // Draw sine wave
-        for (x in 0..width.toInt() step 10) {
-            val xPos = x.toFloat()
-            // Normalized X (0..1)
-            val nX = xPos / width
-            
-            // Angular frequency: 2PI * frequency
-            // Wave equation: y = A * sin(wx + phase)
-            // We apply a window function (sin(PI*nX)) to taper ends to 0 so it looks like a contained wave
-            val window = sin(PI * nX).toFloat() 
-            
-            val yOffset = maxAmplitude * amplitudeFactor * window * 
-                          sin(2 * PI * frequency * nX + effectivePhase).toFloat()
-            
-            path.lineTo(xPos, centerY + yOffset)
-        }
-
-        path.lineTo(width, height) // Bottom right
-        path.lineTo(0f, height) // Close loop at bottom left
-        path.close()
-
-        val brush = when (state) {
-            MotionState.Idle -> AppColors.WaveIdle
-            MotionState.Listening -> AppColors.WaveListening
-            MotionState.Thinking -> AppColors.WaveThinking
-            MotionState.Error -> AppColors.WaveError
-            MotionState.Hidden -> Brush.horizontalGradient(listOf(Color.Transparent, Color.Transparent))
-        }
-
-        drawPath(
-            path = path,
-            brush = brush,
-            style = Fill
+        // Layer definitions: (Frequency, Alpha, PhaseOffset, Color)
+        data class WaveLayer(
+            val frequency: Float,
+            val alpha: Float,
+            val phaseAnimation: Float,
+            val colorStart: Color,
+            val colorEnd: Color
         )
+
+        val layers = listOf(
+            // Layer 1 (Back): Slow, wide, subtle
+            WaveLayer(
+                frequency = 1.2f,
+                alpha = 0.3f,
+                phaseAnimation = phase1 * speedMult,
+                colorStart = Color(0xFF007AFF).copy(alpha = 0.4f), // Blue
+                colorEnd = Color(0xFFA259FF).copy(alpha = 0.4f)    // Purple
+            ),
+            // Layer 2 (Middle): Medium
+            WaveLayer(
+                frequency = 1.8f,
+                alpha = 0.5f,
+                phaseAnimation = phase2 * speedMult,
+                colorStart = Color(0xFFA259FF).copy(alpha = 0.6f), // Purple
+                colorEnd = Color(0xFFFF2D55).copy(alpha = 0.5f)    // Pink
+            ),
+            // Layer 3 (Front): Fast, sharp
+            WaveLayer(
+                frequency = 2.5f,
+                alpha = 0.7f,
+                phaseAnimation = phase3 * speedMult,
+                colorStart = Color(0xFF00C7BE).copy(alpha = 0.5f), // Teal
+                colorEnd = Color(0xFF007AFF).copy(alpha = 0.6f)    // Blue
+            )
+        )
+
+        for (layer in layers) {
+            val path = Path()
+            path.moveTo(0f, height) // Start bottom-left
+
+            // Draw wave from left to right
+            val step = 8
+            for (x in 0..width.toInt() step step) {
+                val xPos = x.toFloat()
+                val nX = xPos / width // Normalized X (0..1)
+
+                // Window function to taper at edges (sin(PI * nX) is 0 at 0 and 1)
+                val window = sin(PI * nX).toFloat()
+
+                // Wave equation: y = A * window * sin(2PI * freq * nX + phase)
+                val yOffset = maxAmplitude * baseAmplitude * window *
+                        sin(2 * PI * layer.frequency * nX + layer.phaseAnimation).toFloat()
+
+                path.lineTo(xPos, centerY + yOffset)
+            }
+
+            path.lineTo(width, height) // Bottom-right
+            path.close()
+
+            val brush = Brush.horizontalGradient(
+                colors = listOf(layer.colorStart, layer.colorEnd, layer.colorStart)
+            )
+
+            drawPath(
+                path = path,
+                brush = brush,
+                style = Fill,
+                alpha = layer.alpha
+            )
+        }
     }
 }
 
-@Preview
+@Preview(showBackground = true, backgroundColor = 0xFFF7F7F7)
 @Composable
-fun PreviewChromaWave() {
-    androidx.compose.foundation.layout.Column {
-        ChromaWave(state = MotionState.Idle, modifier = Modifier.fillMaxWidth().height(80.dp))
-        androidx.compose.foundation.layout.Spacer(Modifier.height(10.dp))
-        ChromaWave(state = MotionState.Listening, modifier = Modifier.fillMaxWidth().height(80.dp))
-        androidx.compose.foundation.layout.Spacer(Modifier.height(10.dp))
-        ChromaWave(state = MotionState.Thinking, modifier = Modifier.fillMaxWidth().height(80.dp))
-    }
+fun PreviewChromaWaveIdle() {
+    ChromaWave(state = MotionState.Idle, modifier = Modifier.fillMaxWidth().height(120.dp))
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFF7F7F7)
+@Composable
+fun PreviewChromaWaveListening() {
+    ChromaWave(state = MotionState.Listening, modifier = Modifier.fillMaxWidth().height(120.dp))
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFF7F7F7)
+@Composable
+fun PreviewChromaWaveThinking() {
+    ChromaWave(state = MotionState.Thinking, modifier = Modifier.fillMaxWidth().height(120.dp))
 }

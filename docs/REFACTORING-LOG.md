@@ -20,6 +20,29 @@
 
 ---
 
+## Wave 30 / M1 Phase 2: Tingwu Chapters Display ✅ (2026-01-09)
+
+**Completed Chapters & Summary Visualization (Inline Markdown)**
+
+**Problem:**
+- Tingwu API returned rich metadata (chapters, summary), but UI showed only raw text.
+- `TingwuChapter` model missed `Headline` and `Summary` fields.
+- Parsers (`TranscriptPublisher`, `TingwuRunner`) didn't extract these fields.
+- `composeFinalMarkdown` was intentionally commented out/unused.
+
+**Changes:**
+- **Model Update**: Added `headline` and `summary` to `TingwuChapter` data class.
+- **Parser Fix**: Updated both parsers to correctly extract `Headline` and `Summary` from Tingwu JSON.
+- **Logic Fix**: Re-enabled `composeFinalMarkdown` in `TingwuRunner` to append structured sections (`## 摘要`, `## 章节`) to the transcript markdown.
+- **Result**: User sees full rich content in chat without complex UI changes (leveraging existing Markdown renderer).
+
+**Impact:**
+- Immediate value delivery (M1 Phase 2 complete).
+- **Zero UI code changes** (pure data layer fix).
+- Deferred "M2B Structured Metadata" (interactive timeline) to Phase 3/M3.
+
+---
+
 ## Wave 29: M9 ViewModel Refactoring Complete ✅ (2026-01-07)
 
 **HomeViewModel extraction phase complete: 2,126 → 1,654 lines (-22.2%)**

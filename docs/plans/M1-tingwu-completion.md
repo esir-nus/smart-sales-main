@@ -25,7 +25,7 @@ Complete Tingwu transcription pipeline per Orchestrator-V1.md §6.
 | LLM Parser for chapters | ❌ Missing |
 | publishedPrefixBatchIndex persistence | ❌ Missing |
 | State Recovery (§13) | ❌ Missing |
-| Chapters/Summary UI | ❓ Unknown |
+| Chapters/Summary UI | ✅ Done (Inline Markdown) |
 
 ---
 
@@ -41,9 +41,9 @@ Complete Tingwu transcription pipeline per Orchestrator-V1.md §6.
 ### Phase 2: Chapters & Summary Display
 > "User sees organized chapters, not just raw text"
 
-- [ ] Verify Tingwu returns chapters/summary
-- [ ] Create M2B TranscriptMetadata structure
-- [ ] Wire to UI (chapter timeline, summary card)
+- [x] Verify Tingwu returns chapters/summary — 2026-01-09
+- [x] Create M2B TranscriptMetadata structure — (Deferred to Phase 3, using Inline Markdown for display)
+- [x] Wire to UI (chapter timeline, summary card) — (Implemented via Inline Markdown)
 
 ### Phase 3: LLM Parser Integration
 > "AI extracts structured insights from transcription"
@@ -63,9 +63,9 @@ Complete Tingwu transcription pipeline per Orchestrator-V1.md §6.
 
 ## Completed
 
-- [x] Fixed transcription rendering bug (V1 window filter disabled) — 2026-01-09
 - [x] Fixed Debug HUD Tingwu trace wiring — 2026-01-09
 - [x] Removed XFyun from Debug HUD — 2026-01-09
+- [x] **M1 Phase 2 Complete**: Enabled Chapters/Summary display (Inline Markdown) — 2026-01-09
 
 ---
 

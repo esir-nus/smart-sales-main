@@ -6,6 +6,22 @@ Spec versioning history for Orchestrator-V1 and related contracts.
 
 ---
 
+## V1.3.0 - 2026-01-09
+
+### Summary
+Completed M1 Phase 2 (Tingwu Chapters & Summary Display). Implemented "Option A" (Inline Markdown) for immediate visualization of rich transcription metadata.
+
+### Features
+- **Rich Transcript Display**: Chat now renders:
+  - `## 摘要（Summarization）`: Full summary with paragraphs, speaker lists, and Q&A.
+  - `## 章节（AutoChapters）`: Timeline with timestamps, headlines, and summaries.
+  - `## 自定义转写（CustomPrompt）`: Raw JSON result debugging.
+- **Tingwu API Integration**:
+  - Updated parsers to extract `Headline` and `Summary` fields (previously missing).
+  - Wired `composeFinalMarkdown` to generate comprehensive markdown output.
+
+---
+
 ## V1.2.0 - 2026-01-05
 
 ### Summary

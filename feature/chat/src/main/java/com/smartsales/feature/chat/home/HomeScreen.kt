@@ -736,13 +736,9 @@ fun HomeScreen(
                             }
                         }
                         
-                        // Active Chroma Wave (Listening/Thinking/Error)
-                        // Don't show Idle wave at bottom if we are showing the Welcome Hero (which has its own big wave)
-                        val bottomWaveState = if (state.showWelcomeHero && state.waveState == MotionState.Idle) {
-                            MotionState.Hidden
-                        } else {
-                            state.waveState
-                        }
+                        // Active Chroma Wave (Listening/Thinking/Error/Idle)
+                        // Always show the bottom wave as the persistent "Living Intelligence" indicator
+                        val bottomWaveState = state.waveState
                         if (bottomWaveState != MotionState.Hidden) {
                             ChromaWave(
                                 state = bottomWaveState,

@@ -820,6 +820,15 @@ class HomeViewModel @Inject constructor(
                     isTitleUserEdited = summary?.isTitleUserEdited
                 )
                 debugCoordinator.refreshTraces()
+                // Wire traces from DebugUiState to HomeUiState for HUD display
+                val debugState = debugCoordinator.debugState.value
+                _uiState.update {
+                    it.copy(
+                        tingwuTrace = debugState.tingwuTrace,
+                        xfyunTrace = debugState.xfyunTrace,
+                        debugSnapshot = debugState.snapshot
+                    )
+                }
             }
         }
     }
@@ -837,6 +846,15 @@ class HomeViewModel @Inject constructor(
     fun refreshXfyunTrace() {
         if (!CHAT_DEBUG_HUD_ENABLED) return
         debugCoordinator.refreshTraces()
+        // Wire traces from DebugUiState to HomeUiState for HUD display
+        val debugState = debugCoordinator.debugState.value
+        _uiState.update {
+            it.copy(
+                tingwuTrace = debugState.tingwuTrace,
+                xfyunTrace = debugState.xfyunTrace,
+                debugSnapshot = debugState.snapshot
+            )
+        }
     }
 
     private fun updateDebugSessionMetadata(

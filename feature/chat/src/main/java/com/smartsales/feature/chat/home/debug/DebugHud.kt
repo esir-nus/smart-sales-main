@@ -42,7 +42,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.smartsales.data.aicore.debug.TingwuTraceSnapshot
-import com.smartsales.data.aicore.debug.XfyunTraceSnapshot
 import com.smartsales.feature.chat.BuildConfig
 import com.smartsales.feature.chat.home.CHAT_DEBUG_HUD_ENABLED
 import com.smartsales.feature.chat.home.HomeScreenTestTags
@@ -51,9 +50,7 @@ import java.io.File
 @Composable
 internal fun DebugSessionMetadataHud(
     snapshot: com.smartsales.data.aicore.debug.DebugSnapshot?,
-    xfyunTrace: XfyunTraceSnapshot?,
     tingwuTrace: TingwuTraceSnapshot?,
-    onRefreshXfyun: () -> Unit,
     onClose: () -> Unit,
     onCopy: (String) -> Unit,
     showRawAssistantOutput: Boolean,
@@ -147,10 +144,6 @@ internal fun DebugSessionMetadataHud(
             if (CHAT_DEBUG_HUD_ENABLED) {
                 TingwuTraceSection(
                     trace = tingwuTrace,
-                )
-                XfyunTraceSection(
-                    trace = xfyunTrace,
-                    onRefresh = onRefreshXfyun,
                 )
             }
         }
@@ -284,116 +277,5 @@ private fun TingwuTraceSection(
         ) {
             Text(text = "导出 Transcript")
         }
-    }
-}
-
-@Composable
-private fun XfyunTraceSection(
-    trace: XfyunTraceSnapshot?,
-    onRefresh: () -> Unit,
-) {
-    val context = LocalContext.current
-    var confirmShare by remember { mutableStateOf(false) }
-
-    Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "XFyun 调试",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = onRefresh) { Text(text = "刷新") }
-                if (trace?.rawDumpPath?.isNotBlank() == true) {
-                    TextButton(onClick = { confirmShare = true }) {
-                        Text(text = "分享 dump")
-                    }
-                }
-            }
-        }
-        if (trace == null) {
-            Text(
-                text = "暂无 XFyun 调用记录",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            return
-        }
-
-        val rawDumpPath = trace.rawDumpPath
-        val rawFile = rawDumpPath?.let { path -> File(path) }?.takeIf { it.exists() && it.isFile }
-        val rawStatus = if (rawFile == null) "missing" else "available"
-        Text(
-            text = "raw.json: $rawStatus",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        trace.orderId?.takeIf { it.isNotBlank() }?.let { orderId ->
-            Text(
-                text = "orderId: ${orderId.take(64)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-
-    if (trace != null && confirmShare) {
-        AlertDialog(
-            onDismissRequest = { confirmShare = false },
-            title = { Text(text = "分享 XFyun 原始返回") },
-            text = {
-                Text(text = "将导出并分享 XFyun 原始返回 JSON，可能包含转写文本。是否继续？")
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        confirmShare = false
-                        val path = trace.rawDumpPath
-                        if (path.isNullOrBlank()) {
-                            Toast.makeText(context, "暂无可分享的 dump 文件", Toast.LENGTH_SHORT).show()
-                            return@TextButton
-                        }
-                        val file = File(path)
-                        if (!file.exists() || !file.isFile) {
-                            Toast.makeText(context, "dump 文件不存在，无法分享", Toast.LENGTH_SHORT).show()
-                            return@TextButton
-                        }
-                        runCatching {
-                            // 重要：
-                            // - 使用 FileProvider 生成 content:// Uri，避免 file:// 在新系统上被拦截崩溃。
-                            // - 授予临时读权限，便于微信等第三方 App 读取文件内容。
-                            val authority = "${context.packageName}.chatfileprovider"
-                            val uri = FileProvider.getUriForFile(context, authority, file)
-                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = "application/json"
-                                putExtra(Intent.EXTRA_STREAM, uri)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            val chooser = Intent.createChooser(intent, "分享 ${file.name}").apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            context.startActivity(chooser)
-                        }.onFailure { throwable ->
-                            Toast.makeText(context, throwable.message ?: "分享失败", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                ) {
-                    Text(text = "继续")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmShare = false }) {
-                    Text(text = "取消")
-                }
-            }
-        )
     }
 }

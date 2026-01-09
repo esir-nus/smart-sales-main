@@ -19,7 +19,7 @@ data class SpeakerDisplayConfig(
 data class AiCoreConfig(
     val preferFakeAiChat: Boolean = false,
     val enableV1ChatPublisher: Boolean = false,
-    val enableV1TingwuMacroWindowFilter: Boolean = true,
+    val enableV1TingwuMacroWindowFilter: Boolean = false, // TODO(bug): Disabled - time window mismatch strips content. See incident log.
     val dashscopeMaxRetries: Int = 1,
     val dashscopeRequestTimeoutMillis: Long = 15_000,
     val dashscopeEnableStreaming: Boolean = false,

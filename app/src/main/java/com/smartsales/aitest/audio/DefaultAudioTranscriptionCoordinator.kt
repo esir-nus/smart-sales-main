@@ -120,10 +120,12 @@ class DefaultAudioTranscriptionCoordinator @Inject constructor(
     }
 
     override fun observeBatches(jobId: String): Flow<AudioTranscriptionBatchEvent> = channelFlow {
+        Log.d(TAG, "observeBatches: starting channelFlow for jobId=$jobId")
         tingwuCoordinator.observeJob(jobId)
             .filterIsInstance<TingwuJobState.Completed>()
             .take(1)
             .collect { state ->
+                Log.d(TAG, "observeBatches: received Completed state, markdown长度=${state.transcriptMarkdown.length}")
                 val planWithWindows = buildBatchPlanWithWindowsForTingwu(
                     markdown = state.transcriptMarkdown,
                     audioDurationMs = durationByJobId[state.jobId],
@@ -132,8 +134,10 @@ class DefaultAudioTranscriptionCoordinator @Inject constructor(
                 )
                 // 说明：窗口计划仅用于后续 V1 锚点接入，当前展示逻辑不变。
                 val plan = planWithWindows?.plan ?: TranscriptionBatchPlanner.plan(state.transcriptMarkdown)
+                Log.d(TAG, "observeBatches: batch plan created, totalBatches=${plan.totalBatches}")
                 val v1TotalBatches = planWithWindows?.windows?.size
                 if (plan.totalBatches <= 0) {
+                    Log.w(TAG, "observeBatches: plan.totalBatches <= 0, returning without emitting batches")
                     durationByJobId.remove(state.jobId)
                     return@collect
                 }
@@ -238,6 +242,7 @@ class DefaultAudioTranscriptionCoordinator @Inject constructor(
     }
 
     private companion object {
+        private const val TAG = "DefaultAudioTranscriptionCoordinator"
         // 说明：为 V1 时间窗口预留的保守默认值（当前仅生成窗口，不影响展示）。
         private const val V1_BATCH_DURATION_MS = 600_000L
         private const val V1_OVERLAP_MS = 10_000L

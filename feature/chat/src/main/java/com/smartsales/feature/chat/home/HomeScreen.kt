@@ -778,9 +778,7 @@ fun HomeScreen(
                             )
                             DebugSessionMetadataHud(
                                 snapshot = state.debugSnapshot,
-                                xfyunTrace = state.xfyunTrace,
                                 tingwuTrace = state.tingwuTrace,
-                                onRefreshXfyun = onRefreshXfyunTrace,
                                 onClose = {
                                     onToggleDebugMetadata()
                                 },

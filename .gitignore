@@ -131,7 +131,6 @@ workflows/
 !.agent/workflows/
 
 # Plans (internal)
-plans/
 
 # Test outputs
 *.ap_

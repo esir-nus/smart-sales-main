@@ -7,5 +7,12 @@ package com.smartsales.data.aicore
 data class TingwuChapter(
     val title: String,
     val startMs: Long,
-    val endMs: Long? = null
-)
+    val endMs: Long? = null,
+    /** Tingwu API returns Headline field, which is the chapter title */
+    val headline: String? = null,
+    /** Tingwu API returns Summary field for chapter summary */
+    val summary: String? = null
+) {
+    /** Get the display title - prefer headline over title */
+    fun displayTitle(): String = headline?.takeIf { it.isNotBlank() } ?: title
+}

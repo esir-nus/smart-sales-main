@@ -657,21 +657,28 @@ class TingwuRunner @Inject constructor(
         AiCoreLogger.d(TAG, "转写 JSON 解析成功：jobId=$jobId markdown长度=${markdown.length}")
         val chapters = chaptersUrl?.let { transcriptPublisher.fetchChaptersSafe(it, jobId) }
         val smartSummary = transcriptPublisher.fetchSmartSummarySafe(resultLinks, jobId)
+        val artifacts = fallbackArtifacts?.copy(
+            transcriptionUrl = signedUrl,
+            autoChaptersUrl = fallbackArtifacts.autoChaptersUrl,
+            customPromptUrl = resultLinks?.get(CUSTOM_PROMPT_KEY) ?: fallbackArtifacts.customPromptUrl,
+            extraResultUrls = fallbackArtifacts.extraResultUrls,
+            chapters = chapters ?: fallbackArtifacts.chapters,
+            smartSummary = smartSummary ?: fallbackArtifacts.smartSummary,
+            diarizedSegments = diarizedSegments.takeIf { it.isNotEmpty() }
+                ?: fallbackArtifacts.diarizedSegments,
+            recordingOriginDiarizedSegments = recordingOriginSegments.takeIf { it.isNotEmpty() }
+                ?: fallbackArtifacts.recordingOriginDiarizedSegments,
+            speakerLabels = if (speakerLabels.isNotEmpty()) speakerLabels else fallbackArtifacts.speakerLabels
+        ) ?: fallbackArtifacts
+        // M1 Phase 2: Include chapters + summary in final markdown (fallback path)
+        val finalMarkdown = composeFinalMarkdown(
+            transcriptMarkdown = enhancedMarkdown,
+            artifacts = artifacts,
+            resultLinks = resultLinks
+        )
         TranscriptResult(
-            markdown = enhancedMarkdown,
-            artifacts = fallbackArtifacts?.copy(
-                transcriptionUrl = signedUrl,
-                autoChaptersUrl = fallbackArtifacts.autoChaptersUrl,
-                customPromptUrl = resultLinks?.get(CUSTOM_PROMPT_KEY) ?: fallbackArtifacts.customPromptUrl,
-                extraResultUrls = fallbackArtifacts.extraResultUrls,
-                chapters = chapters ?: fallbackArtifacts.chapters,
-                smartSummary = smartSummary ?: fallbackArtifacts.smartSummary,
-                diarizedSegments = diarizedSegments.takeIf { it.isNotEmpty() }
-                    ?: fallbackArtifacts.diarizedSegments,
-                recordingOriginDiarizedSegments = recordingOriginSegments.takeIf { it.isNotEmpty() }
-                    ?: fallbackArtifacts.recordingOriginDiarizedSegments,
-                speakerLabels = if (speakerLabels.isNotEmpty()) speakerLabels else fallbackArtifacts.speakerLabels
-            ) ?: fallbackArtifacts,
+            markdown = finalMarkdown,
+            artifacts = artifacts,
             chapters = chapters,
             diarizedSegments = diarizedSegments.takeIf { it.isNotEmpty() }
         )
@@ -1362,8 +1369,8 @@ class TingwuRunner @Inject constructor(
             parsedChapters.map {
                 ChapterDisplay(
                     startMs = it.startMs ?: 0,
-                    headline = it.title,
-                    summary = null
+                    headline = it.displayTitle(),
+                    summary = it.summary
                 )
             }
         } else {
@@ -1566,7 +1573,9 @@ class TingwuRunner @Inject constructor(
         builder.appendLine("## 章节（AutoChapters）")
         builder.appendLine(chaptersText.trim()).appendLine()
 
-        return builder.toString().trimEnd()
+        val result = builder.toString().trimEnd()
+        AiCoreLogger.d(TAG, "composeFinalMarkdown 生成完成：总长度=${result.length} 包含摘要=${result.contains("摘要")} 包含章节=${result.contains("章节")}")
+        return result
     }
 
     companion object {
@@ -1646,7 +1655,8 @@ internal fun parseAutoChaptersPayload(json: String): List<TingwuChapter> {
         root.isJsonArray -> root.asJsonArray
         root.isJsonObject -> {
             val obj = root.asJsonObject
-            obj.getAsJsonArray("Chapters")
+            obj.getAsJsonArray("AutoChapters")
+                ?: obj.getAsJsonArray("Chapters")
                 ?: obj.getAsJsonArray("chapters")
                 ?: obj.getAsJsonArray("Items")
                 ?: obj.getAsJsonArray("items")
@@ -1657,10 +1667,12 @@ internal fun parseAutoChaptersPayload(json: String): List<TingwuChapter> {
     return target.mapNotNull { element ->
         if (!element.isJsonObject) return@mapNotNull null
         val obj = element.asJsonObject
+        val headline = obj.getPrimitiveString("Headline")
         val title = obj.getPrimitiveString("Title")
             ?: obj.getPrimitiveString("title")
             ?: obj.getPrimitiveString("Name")
             ?: obj.getPrimitiveString("name")
+        val summary = obj.getPrimitiveString("Summary")
         val startRaw = obj.getPrimitiveNumber("Start")
             ?: obj.getPrimitiveNumber("StartTime")
             ?: obj.getPrimitiveNumber("StartMs")
@@ -1669,8 +1681,15 @@ internal fun parseAutoChaptersPayload(json: String): List<TingwuChapter> {
             ?: obj.getPrimitiveNumber("EndMs")
         val startMs = startRaw?.let { toMillis(it) }
         val endMs = endRaw?.let { toMillis(it) }
-        if (title.isNullOrBlank() || startMs == null) return@mapNotNull null
-        TingwuChapter(title = title, startMs = startMs, endMs = endMs)
+        val displayTitle = headline ?: title
+        if (displayTitle.isNullOrBlank() || startMs == null) return@mapNotNull null
+        TingwuChapter(
+            title = displayTitle,
+            startMs = startMs,
+            endMs = endMs,
+            headline = headline,
+            summary = summary
+        )
     }
 }
 

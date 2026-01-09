@@ -125,10 +125,20 @@ class TranscriptPublisher @Inject constructor(
             val chapters = root.getAsJsonArray("AutoChapters")
                 ?.mapNotNull { it.asJsonObject }
                 ?.map { chapter ->
+                    val headline = chapter.getPrimitiveString("Headline")
+                    val title = chapter.getPrimitiveString("Title") ?: ""
+                    val summary = chapter.getPrimitiveString("Summary")
+                    val startMs = chapter.get("Start")?.asDouble?.toLong()
+                        ?: chapter.get("StartTime")?.asDouble?.toLong()
+                        ?: 0L
+                    val endMs = chapter.get("End")?.asDouble?.toLong()
+                        ?: chapter.get("EndTime")?.asDouble?.toLong()
                     TingwuChapter(
-                        title = chapter.getPrimitiveString("Title") ?: "",
-                        startMs = chapter.get("StartTime")?.asDouble?.toLong() ?: 0L,
-                        endMs = chapter.get("EndTime")?.asDouble?.toLong()
+                        title = headline ?: title,
+                        startMs = startMs,
+                        endMs = endMs,
+                        headline = headline,
+                        summary = summary
                     )
                 }
                 ?: emptyList()

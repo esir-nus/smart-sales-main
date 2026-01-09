@@ -65,6 +65,8 @@ interface BleGateway {
     
     suspend fun sendGifCommand(session: BleSession, command: GifCommand): GifCommandResult
     
+    suspend fun sendWavCommand(session: BleSession, command: WavCommand): WavCommandResult
+    
     fun forget(peripheral: BlePeripheral)
 }
 
@@ -72,3 +74,18 @@ enum class GifCommand(val blePayload: String) {
     START("jpg#send"),
     END("jpg#end")
 }
+
+enum class WavCommand(val blePayload: String) {
+    GET("wav#get"),
+    END("wav#end")
+}
+
+sealed interface WavCommandResult {
+    data object Ready : WavCommandResult           // wav#send
+    data object Done : WavCommandResult            // wav#ok
+    data class PermissionDenied(val permissions: Set<String>) : WavCommandResult
+    data class Timeout(val timeoutMillis: Long) : WavCommandResult
+    data class TransportError(val reason: String) : WavCommandResult
+    data class DeviceMissing(val peripheralId: String) : WavCommandResult
+}
+

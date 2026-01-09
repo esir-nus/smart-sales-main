@@ -27,6 +27,10 @@ interface MediaModule {
     @Binds
     @Singleton
     fun bindGifTransferCoordinator(impl: DefaultGifTransferCoordinator): GifTransferCoordinator
+
+    @Binds
+    @Singleton
+    fun bindWavDownloadCoordinator(impl: DefaultWavDownloadCoordinator): WavDownloadCoordinator
 }
 
 @Module

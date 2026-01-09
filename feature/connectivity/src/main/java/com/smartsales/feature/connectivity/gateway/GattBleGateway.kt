@@ -128,6 +128,27 @@ class GattBleGateway @Inject constructor(
             }
         }
 
+    override suspend fun sendWavCommand(
+        session: BleSession,
+        command: WavCommand
+    ): WavCommandResult =
+        when (val outcome = execute(session.peripheralId) { gattContext, config ->
+            val payload = command.blePayload.toByteArray(Charsets.UTF_8)
+            gattContext.writeCharacteristic(config.credentialCharacteristicUuid, payload)
+            val response = gattContext.awaitNotificationOrRead(config.provisioningStatusCharacteristicUuid)
+            parseWavResponse(command, response)
+        }) {
+            is GatewayOutcome.Success -> outcome.value
+            is GatewayOutcome.Failure -> when (val error = outcome.error) {
+                is BleGatewayResult.PermissionDenied -> WavCommandResult.PermissionDenied(error.permissions)
+                BleGatewayResult.Timeout -> WavCommandResult.Timeout(DEFAULT_OPERATION_TIMEOUT_MS)
+                is BleGatewayResult.TransportError -> WavCommandResult.TransportError(error.reason)
+                is BleGatewayResult.CredentialRejected -> WavCommandResult.TransportError(error.reason)
+                is BleGatewayResult.DeviceMissing -> WavCommandResult.DeviceMissing(error.peripheralId)
+                is BleGatewayResult.Success -> WavCommandResult.TransportError("无效错误类型")
+            }
+        }
+
     override fun forget(peripheral: BlePeripheral) {
         configCache.remove(peripheral.id)
     }
@@ -420,6 +441,25 @@ class GattBleGateway @Inject constructor(
             "receive" -> GifCommandResult.Ready
             "display" -> GifCommandResult.DisplayOk
             else -> throw IllegalStateException("未知GIF响应：$raw")
+        }
+    }
+
+    private fun parseWavResponse(command: WavCommand, payload: ByteArray): WavCommandResult {
+        val raw = payload.decodeToString().trim()
+        if (raw.isBlank()) throw IllegalStateException("WAV响应为空")
+        
+        val parts = raw.split("#")
+        if (parts.size < 2) throw IllegalStateException("WAV响应格式错误：$raw")
+        
+        // Expected responses: "wav#send" or "wav#ok"
+        if (!parts[0].equals("wav", true)) {
+            throw IllegalStateException("WAV响应类型不符：$raw")
+        }
+        
+        return when (parts[1].lowercase()) {
+            "send" -> WavCommandResult.Ready
+            "ok" -> WavCommandResult.Done
+            else -> throw IllegalStateException("未知WAV响应：$raw")
         }
     }
 

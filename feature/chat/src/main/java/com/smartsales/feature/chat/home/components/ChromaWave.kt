@@ -21,11 +21,6 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.toArgb
-import android.graphics.ComposeShader
-import android.graphics.LinearGradient
-import android.graphics.PorterDuff
-import android.graphics.Shader
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -110,147 +105,101 @@ fun ChromaWave(
             val twistFactor: Float, // Shift between top/bottom of SAME ribbon
             val strokeWidth: Float
         )
-
         // Colors (AuraFlow Neon Palette)
         val cyanNeon = Color(0xFF00F0FF) // Cyber Cyan
         val purpleNeon = Color(0xFFBD00FF) // Cyber Purple
         val blueDeep = Color(0xFF0057FF)   // Deep Blue for depth
 
-        val layers = listOf(
-            // Ribbon 1 (Back): Purple/Magenta -> Deep Blue
-            RibbonLayer(
-                frequency = 1.0f,
-                phaseAnim = phase1 * speedMult,
-                colorStroke = purpleNeon,
-                colorFillTop = purpleNeon.copy(alpha = 0.3f),
-                colorFillBottom = blueDeep.copy(alpha = 0.0f),
-                twistFactor = 0.5f,
-                strokeWidth = 3.dp.toPx()
-            ),
-            // Ribbon 2 (Front): Cyan -> Transparent
-            RibbonLayer(
-                frequency = 1.5f, // Higher freq creates the "weaving" look
-                phaseAnim = phase2 * speedMult,
-                colorStroke = cyanNeon,
-                colorFillTop = cyanNeon.copy(alpha = 0.4f),
-                colorFillBottom = cyanNeon.copy(alpha = 0.0f),
-                twistFactor = 0.8f, // More twist on the front ribbon
-                strokeWidth = 4.dp.toPx()
+            // V9: Floating Volumetric Ribbons (The "Siri Standard")
+            // Implements the approved Web Prototype logic:
+            // 1. 3 Distinct Ribbons (Cyan, Pink, Blue) for Alpha Stacking
+            // 2. Floating Geometry (Dual Sine Waves) - No flat bottom
+            // 3. Vertical Alpha Gradient per ribbon for soft edges
+
+            // Layer Config (Matches Prototype)
+            data class V9Layer(
+                val color: Color,
+                val alpha: Float,
+                val freq: Float,
+                val speed: Float,
+                val amp: Float,
+                val twist: Float
             )
-        )
 
-        for (layer in layers) {
-            val pathFill = Path()
-            val pathStroke = Path()
-            
-            // Arrays to store points for the return trip (bottom edge)
-            val bottomPointsX = FloatArray((width.toInt() / 10) + 5)
-            val bottomPointsY = FloatArray((width.toInt() / 10) + 5)
-            var pointIndex = 0
+            val v9Layers = listOf(
+                // Back: Deep Blue (Slow, Wide)
+                V9Layer(Color(0xFF0057FF), 0.3f, 0.8f, 0.02f, 0.4f, 0.5f),
+                // Mid: Neon Pink (Body)
+                V9Layer(Color(0xFFBD00FF), 0.4f, 1.0f, 0.03f, 0.6f, 1.0f),
+                // Front: Cyan (Fast, Detail)
+                V9Layer(Color(0xFF00C6FF), 0.5f, 1.5f, 0.05f, 0.5f, 1.5f)
+            )
 
-            pathFill.moveTo(0f, centerY)
-            pathStroke.moveTo(0f, centerY)
+            for (layer in v9Layers) {
+                // Determine Phase (State-based speed + Layer intrinsic speed)
+                val layerPhase = (if (layer.freq > 1.0f) phase2 else phase1) * layer.speed * 20f
 
-            val step = 10
-            // Draw slightly past width to avoid gaps
-            for (x in 0..width.toInt() + step step step) {
-                val xPos = x.toFloat()
-                val nX = xPos / width
-
-                // Window taper (Bell curve) to fade edges smoothly
-                val window = sin(PI * nX).toFloat()
-
-                // Top Wave (The "spine" of the ribbon)
-                val yTopOffset = maxAmpPx * amplitude * window * 
-                                 sin(2 * PI * layer.frequency * nX + layer.phaseAnim).toFloat()
-                val yTop = centerY + yTopOffset
-
-                // Bottom Wave (The "belly" of the ribbon)
-                // Twist logic: The bottom creates a visual "turn" by lagging/leading the top
-                val twist = sin(2 * PI * layer.frequency * nX + layer.phaseAnim + layer.twistFactor).toFloat()
+                val path = Path()
                 
-                // Variable thickness enhances the 3D twist illusion
-                val currentThickness = ribbonThickness * (1.0f + 0.5f * twist) 
-                val yBottom = yTop + currentThickness
+                // Point lists for constructing the closed shape
+                val topPoints = ArrayList<Offset>()
+                val bottomPoints = ArrayList<Offset>()
+                
+                val step = 10
+                for (x in 0..size.width.toInt() step step) {
+                    val xPos = x.toFloat()
+                    val nX = xPos / size.width
+                    
+                    // Gaussian Window (Bell Curve) to fade edges to 0
+                    val xCentered = nX - 0.5f
+                    // Note: In Compose we can use a simpler sine window for performance if needed, 
+                    // but the prototype used this math for the specific "Siri" look.
+                    // Converting JS: 4.0 / (2.0 + 9.0 * (xCentered * xCentered)) - 0.2
+                    val window = maxOf(0.0f, 4.0f / (2.0f + 9.0f * (xCentered * xCentered)) - 0.2f)
+                    
+                    // Wave Math
+                    val sineTop = sin(2 * PI * layer.freq * nX + layerPhase).toFloat()
+                    val sineBottom = sin(2 * PI * layer.freq * nX + layerPhase + layer.twist).toFloat()
 
-                if (x == 0) {
-                    pathFill.moveTo(xPos, yTop)
-                    pathStroke.moveTo(xPos, yTop)
-                } else {
-                    pathFill.lineTo(xPos, yTop)
-                    pathStroke.lineTo(xPos, yTop)
+                    // Top Edge
+                    val yTop = centerY + (maxAmpPx * layer.amp) * window * sineTop
+                    
+                    // Bottom Edge (Floating!)
+                    // Thickness tapers with the window too
+                    // ribbonThickness is already Float (pixels), do not use .toPx()
+                    val thickness = (ribbonThickness * 3f) * window 
+                    val yBottom = yTop + thickness + (10f * window * sineBottom)
+
+                    topPoints.add(Offset(xPos, yTop))
+                    bottomPoints.add(Offset(xPos, yBottom))
+                }
+                
+                // Construct Path: Left->Right (Top), then Right->Left (Bottom)
+                if (topPoints.isNotEmpty()) {
+                    path.moveTo(topPoints.first().x, topPoints.first().y)
+                    for (p in topPoints) path.lineTo(p.x, p.y)
+                    
+                    for (i in bottomPoints.indices.reversed()) {
+                        val p = bottomPoints[i]
+                        path.lineTo(p.x, p.y)
+                    }
+                    path.close()
                 }
 
-                if (pointIndex < bottomPointsX.size) {
-                    bottomPointsX[pointIndex] = xPos
-                    bottomPointsY[pointIndex] = yBottom
-                    pointIndex++
-                }
-            }
-
-            // V8: Volumetric Aura with Dark Substrate (The "Siri" Look)
-
-            // 1. Dark Substrate (Contrast Layer)
-            // Draws a subtle dark radial gradient BEHIND the wave to allow the glow to pop
-            // even on light backgrounds.
-            drawRect(
-                brush = Brush.radialGradient(
+                // Vertical Gradient Brush (Transparent -> Color -> Transparent)
+                // This creates the "Glow" within the ribbon itself
+                val ribbonBrush = Brush.verticalGradient(
                     colors = listOf(
-                        Color.Black.copy(alpha = 0.4f), // Core darkness
-                        Color.Transparent              // Fades out
+                        layer.color.copy(alpha = 0f),
+                        layer.color.copy(alpha = layer.alpha * 1.5f), // Boost blend
+                        layer.color.copy(alpha = 0f)
                     ),
-                    center = Offset(size.width / 2, centerY),
-                    radius = size.width * 0.7f
-                ),
-                blendMode = BlendMode.Darken // Ensure it doesn't look like a grey stain
-            )
+                    startY = centerY - maxAmpPx,
+                    endY = centerY + maxAmpPx
+                )
 
-            // 2. Volumetric Shader Brush
-            // Combines Horizontal Color (Rainbow) with Vertical Alpha (Soft Edges)
-            
-            // Shader A: Horizontal Color (SkyBlue -> Orchid)
-            val colorShader = LinearGradient(
-                0f, 0f, size.width, 0f,
-                intArrayOf(
-                    Color(0xFF00C6FF).toArgb(), // Bright Cyan
-                    Color(0xFF0072FF).toArgb(), // Deep Blue
-                    Color(0xFFDA70D6).toArgb()  // Orchid
-                ),
-                null, // positions
-                Shader.TileMode.CLAMP
-            )
-
-            // Shader B: Vertical Glow (Transparent -> Black -> Transparent)
-            val alphaShader = LinearGradient(
-                0f, centerY - maxAmpPx * 1.5f,
-                0f, centerY + maxAmpPx * 1.5f,
-                intArrayOf(
-                    Color.Transparent.toArgb(),
-                    Color.Black.toArgb(),
-                    Color.Transparent.toArgb()
-                ),
-                null, // positions
-                Shader.TileMode.CLAMP
-            )
-
-            // Combined: Color * Alpha Mask
-            val combinedShader = ComposeShader(colorShader, alphaShader, PorterDuff.Mode.DST_IN)
-            val volumetricBrush = ShaderBrush(combinedShader)
-
-            // 3. Draw Organic Ribbons
-            val pathFillComplete = Path()
-            pathFillComplete.addPath(pathFill)
-            for (i in pointIndex - 1 downTo 0) {
-                pathFillComplete.lineTo(bottomPointsX[i], bottomPointsY[i])
+                drawPath(path, brush = ribbonBrush)
             }
-            pathFillComplete.close()
-
-            drawPath(
-                path = pathFillComplete,
-                brush = volumetricBrush,
-                style = Fill
-            )
-        }
     }
 }
 

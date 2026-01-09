@@ -5,7 +5,7 @@ package com.smartsales.feature.media
 // 说明：协调GIF传输流程：BLE命令 + HTTP上传帧
 // 作者：创建于 2026-01-09
 
-import android.content.ContentResolver
+import android.content.Context
 import android.net.Uri
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
@@ -16,8 +16,10 @@ import com.smartsales.feature.connectivity.gateway.GifCommandResult
 import com.smartsales.feature.connectivity.BadgeHttpClient
 import com.smartsales.feature.connectivity.WifiProvisioner
 import com.smartsales.feature.media.processing.GifFrameExtractor
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
@@ -52,7 +54,7 @@ sealed class GifTransferState {
 
 @Singleton
 class DefaultGifTransferCoordinator @Inject constructor(
-    private val contentResolver: ContentResolver,
+    @ApplicationContext private val context: Context,
     private val bleGateway: BleGateway,
     private val wifiProvisioner: WifiProvisioner,
     private val httpClient: BadgeHttpClient,
@@ -63,87 +65,100 @@ class DefaultGifTransferCoordinator @Inject constructor(
     override fun transfer(
         session: BleSession,
         gifUri: Uri
-    ): Flow<GifTransferState> = flow {
-        withContext(dispatchers.io) {
-            emit(GifTransferState.Preparing)
+    ): Flow<GifTransferState> = callbackFlow {
+        val cacheDir = File(context.cacheDir, "gif_frames")
+        
+        try {
+            trySend(GifTransferState.Preparing)
             
             // Step 1: Query network to get badge IP
-            val networkResult = wifiProvisioner.queryNetworkStatus(session)
+            val networkResult = withContext(dispatchers.io) {
+                wifiProvisioner.queryNetworkStatus(session)
+            }
             if (networkResult is Result.Error) {
-                emit(GifTransferState.Error("无法查询设备网络状态: ${networkResult.throwable.message}"))
-                return@withContext
+                trySend(GifTransferState.Error("无法查询设备网络状态: ${networkResult.throwable.message}"))
+                close()
+                return@callbackFlow
             }
             val networkStatus = (networkResult as Result.Success).data
             val baseUrl = "http://${networkStatus.ipAddress}:8088"
             
             // Pre-flight check: is badge reachable?
-            if (!httpClient.isReachable(baseUrl)) {
-                emit(GifTransferState.Error("徽章HTTP服务不可达"))
-                return@withContext
+            val reachable = withContext(dispatchers.io) { httpClient.isReachable(baseUrl) }
+            if (!reachable) {
+                trySend(GifTransferState.Error("徽章HTTP服务不可达"))
+                close()
+                return@callbackFlow
             }
             
             // Step 2: Extract GIF frames
-            val cacheDir = File(contentResolver.openInputStream(gifUri)?.let {
-                it.close()
-                // Use app cache directory
-                "/data/user/0/com.smartsales.aitest/cache/gif_frames"
-            } ?: run {
-                emit(GifTransferState.Error("无法读取GIF文件"))
-                return@withContext
-            })
-            
-            val extractResult = frameExtractor.extractFrames(
-                source = gifUri,
-                outputDir = cacheDir,
-                onProgress = { current, total ->
-                    // Emit extraction progress
-                    emit(GifTransferState.Extracting(current, total))
-                }
-            )
+            val extractResult = withContext(dispatchers.io) {
+                frameExtractor.extractFrames(
+                    source = gifUri,
+                    outputDir = cacheDir,
+                    onProgress = { current, total ->
+                        trySend(GifTransferState.Extracting(current, total))
+                    }
+                )
+            }
             
             if (extractResult is Result.Error) {
-                emit(GifTransferState.Error("帧提取失败: ${extractResult.throwable.message}"))
-                return@withContext
+                trySend(GifTransferState.Error("帧提取失败: ${extractResult.throwable.message}"))
+                close()
+                return@callbackFlow
             }
             
             val frames = (extractResult as Result.Success).data
             if (frames.isEmpty()) {
-                emit(GifTransferState.Error("未提取到任何帧"))
-                return@withContext
+                trySend(GifTransferState.Error("未提取到任何帧"))
+                close()
+                return@callbackFlow
             }
             
             // Step 3: BLE command - jpg#send
-            emit(GifTransferState.Connecting)
-            val startResult = bleGateway.sendGifCommand(session, GifCommand.START)
+            trySend(GifTransferState.Connecting)
+            val startResult = withContext(dispatchers.io) {
+                bleGateway.sendGifCommand(session, GifCommand.START)
+            }
             if (startResult !is GifCommandResult.Ready) {
-                emit(GifTransferState.Error("徽章未准备好接收: $startResult"))
-                return@withContext
+                trySend(GifTransferState.Error("徽章未准备好接收: $startResult"))
+                close()
+                return@callbackFlow
             }
             
             // Step 4: HTTP upload frames
             for ((index, frame) in frames.withIndex()) {
-                emit(GifTransferState.Uploading(index + 1, frames.size))
+                trySend(GifTransferState.Uploading(index + 1, frames.size))
                 
-                val uploadResult = httpClient.uploadJpg(baseUrl, frame)
+                val uploadResult = withContext(dispatchers.io) {
+                    httpClient.uploadJpg(baseUrl, frame)
+                }
                 if (uploadResult is Result.Error) {
-                    emit(GifTransferState.Error("上传第${index + 1}帧失败: ${uploadResult.throwable.message}"))
-                    return@withContext
+                    trySend(GifTransferState.Error("上传第${index + 1}帧失败: ${uploadResult.throwable.message}"))
+                    close()
+                    return@callbackFlow
                 }
             }
             
             // Step 5: BLE command - jpg#end
-            emit(GifTransferState.Finalizing)
-            val endResult = bleGateway.sendGifCommand(session, GifCommand.END)
+            trySend(GifTransferState.Finalizing)
+            val endResult = withContext(dispatchers.io) {
+                bleGateway.sendGifCommand(session, GifCommand.END)
+            }
             if (endResult !is GifCommandResult.DisplayOk) {
-                emit(GifTransferState.Error("徽章显示失败: $endResult"))
-                return@withContext
+                trySend(GifTransferState.Error("徽章显示失败: $endResult"))
+                close()
+                return@callbackFlow
             }
             
-            // Clean up
-            frames.forEach { it.delete() }
-            cacheDir.deleteRecursively()
+            trySend(GifTransferState.Complete)
+            close()
             
-            emit(GifTransferState.Complete)
+        } finally {
+            // Always cleanup cache, even on error
+            cacheDir.deleteRecursively()
         }
+        
+        awaitClose { }
     }
 }

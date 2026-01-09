@@ -37,21 +37,23 @@ fun ChromaWave(
     val infiniteTransition = rememberInfiniteTransition(label = "WaveAnimation")
 
     // --- Phase Animations (2 main ribbons) ---
+    // Phase 1 (Purple/Back): Slower, base wave
     val phase1 by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = (2 * PI).toFloat(),
         animationSpec = infiniteRepeatable(
-            animation = tween(3000, easing = LinearEasing),
+            animation = tween(4000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "Phase1"
     )
 
+    // Phase 2 (Cyan/Front): Slightly faster, creates the "crossing" effect
     val phase2 by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = (2 * PI).toFloat(),
         animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = LinearEasing),
+            animation = tween(3000, easing = LinearEasing), // 3s vs 4s creates interference pattern
             repeatMode = RepeatMode.Restart
         ),
         label = "Phase2"
@@ -60,24 +62,24 @@ fun ChromaWave(
     // --- Visual Parameters ---
     // Amplitude: Height of the wave peaks
     val amplitude = when (state) {
-        ChromaWaveVisualState.Listening -> 0.6f
-        ChromaWaveVisualState.Thinking -> 0.4f
+        ChromaWaveVisualState.Listening -> 0.7f // Higher energy
+        ChromaWaveVisualState.Thinking -> 0.5f  // Balanced flow
         ChromaWaveVisualState.Error -> 0.3f
         else -> 0f
     }
 
     // Ribbon Thickness: How "wide" the ribbon is
     val ribbonThickness = when (state) {
-        ChromaWaveVisualState.Listening -> 40f
-        ChromaWaveVisualState.Thinking -> 30f
+        ChromaWaveVisualState.Listening -> 35f
+        ChromaWaveVisualState.Thinking -> 25f   // Elegant thin ribbon
         else -> 20f
     }
 
     // Speed Multiplier
     val speedMult = when (state) {
-        ChromaWaveVisualState.Listening -> 1.5f
-        ChromaWaveVisualState.Thinking -> 2.5f // Faster shimmer
-        ChromaWaveVisualState.Error -> 5.0f // Jitter
+        ChromaWaveVisualState.Listening -> 2.0f // Energetic
+        ChromaWaveVisualState.Thinking -> 1.0f  // Smooth, hypnotic
+        ChromaWaveVisualState.Error -> 5.0f     // Jitter
         else -> 1f
     }
 
@@ -85,7 +87,7 @@ fun ChromaWave(
         val width = size.width
         val height = size.height
         val centerY = height * 0.5f
-        val maxAmpPx = height * 0.3f
+        val maxAmpPx = height * 0.35f // Use more vertical space
 
         // Layer Data
         data class RibbonLayer(
@@ -94,33 +96,35 @@ fun ChromaWave(
             val colorStroke: Color, // Bright Neon
             val colorFillTop: Color, // Aurora Start
             val colorFillBottom: Color, // Aurora End
-            val twistFactor: Float // How much the bottom lags the top (creating 3D twist)
+            val twistFactor: Float, // Shift between top/bottom of SAME ribbon
+            val strokeWidth: Float
         )
 
-        // Colors (iOS/Siri Vibrant Style)
-        val cyanNeon = Color(0xFF5AC8FA) // iOS System Cyan
-        val purpleNeon = Color(0xFFBF5AF2) // iOS System Purple
-        val pinkNeon = Color(0xFFFF2D55) // iOS System Pink
-        val blueNeon = Color(0xFF007AFF) // iOS System Blue
+        // Colors (AuraFlow Neon Palette)
+        val cyanNeon = Color(0xFF00F0FF) // Cyber Cyan
+        val purpleNeon = Color(0xFFBD00FF) // Cyber Purple
+        val blueDeep = Color(0xFF0057FF)   // Deep Blue for depth
 
         val layers = listOf(
-            // Ribbon 1 (Back): Purple/Pink
+            // Ribbon 1 (Back): Purple/Magenta -> Deep Blue
             RibbonLayer(
                 frequency = 1.0f,
                 phaseAnim = phase1 * speedMult,
                 colorStroke = purpleNeon,
                 colorFillTop = purpleNeon.copy(alpha = 0.3f),
-                colorFillBottom = pinkNeon.copy(alpha = 0.0f), // Fade to transp
-                twistFactor = 0.5f
+                colorFillBottom = blueDeep.copy(alpha = 0.0f),
+                twistFactor = 0.5f,
+                strokeWidth = 3.dp.toPx()
             ),
-            // Ribbon 2 (Front): Cyan/Blue
+            // Ribbon 2 (Front): Cyan -> Transparent
             RibbonLayer(
-                frequency = 1.5f,
+                frequency = 1.5f, // Higher freq creates the "weaving" look
                 phaseAnim = phase2 * speedMult,
                 colorStroke = cyanNeon,
-                colorFillTop = cyanNeon.copy(alpha = 0.4f), 
-                colorFillBottom = blueNeon.copy(alpha = 0.0f), // Fade to transp
-                twistFactor = 0.8f
+                colorFillTop = cyanNeon.copy(alpha = 0.4f),
+                colorFillBottom = cyanNeon.copy(alpha = 0.0f),
+                twistFactor = 0.8f, // More twist on the front ribbon
+                strokeWidth = 4.dp.toPx()
             )
         )
 
@@ -128,37 +132,34 @@ fun ChromaWave(
             val pathFill = Path()
             val pathStroke = Path()
             
-            // We need to construct the ribbon shape.
-            // VerticesTop: (x, yTop)
-            // VerticesBottom: (x, yBottom)
-            // Path Fill = Top L->R, then Bottom R->L
-            
-            // Arrays to store points for the return trip
-            val bottomPointsX = FloatArray((width.toInt() / 10) + 2)
-            val bottomPointsY = FloatArray((width.toInt() / 10) + 2)
+            // Arrays to store points for the return trip (bottom edge)
+            val bottomPointsX = FloatArray((width.toInt() / 10) + 5)
+            val bottomPointsY = FloatArray((width.toInt() / 10) + 5)
             var pointIndex = 0
 
-            pathFill.moveTo(0f, centerY) // Start approx
+            pathFill.moveTo(0f, centerY)
             pathStroke.moveTo(0f, centerY)
 
             val step = 10
-            for (x in 0..width.toInt() step step) {
+            // Draw slightly past width to avoid gaps
+            for (x in 0..width.toInt() + step step step) {
                 val xPos = x.toFloat()
                 val nX = xPos / width
 
-                // Window taper
+                // Window taper (Bell curve) to fade edges smoothly
                 val window = sin(PI * nX).toFloat()
 
-                // Top Wave
+                // Top Wave (The "spine" of the ribbon)
                 val yTopOffset = maxAmpPx * amplitude * window * 
                                  sin(2 * PI * layer.frequency * nX + layer.phaseAnim).toFloat()
                 val yTop = centerY + yTopOffset
 
-                // Bottom Wave (Twisting Ribbon)
-                // yBottom = yTop + thickness * (variation)
-                // Variation creates the "twist" - sometimes thick, sometimes thin
+                // Bottom Wave (The "belly" of the ribbon)
+                // Twist logic: The bottom creates a visual "turn" by lagging/leading the top
                 val twist = sin(2 * PI * layer.frequency * nX + layer.phaseAnim + layer.twistFactor).toFloat()
-                val currentThickness = ribbonThickness * (1.2f + 0.4f * twist) // 0.8 to 1.6x thickness
+                
+                // Variable thickness enhances the 3D twist illusion
+                val currentThickness = ribbonThickness * (1.0f + 0.5f * twist) 
                 val yBottom = yTop + currentThickness
 
                 if (x == 0) {
@@ -176,40 +177,49 @@ fun ChromaWave(
                 }
             }
 
-            // Draw Stroke (Neon Line) on Top Edge Only
-            drawPath(
-                path = pathStroke,
-                color = layer.colorStroke,
-                style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round),
-                alpha = 0.9f
-            )
-
-            // Complete the Fill Path (Go backwards along bottom edge)
+            // 1. Draw Fill (Aurora) First (Behind the stroke)
+            // Save state to close the path for filling without affecting stroke
+            val pathFillComplete = Path()
+            pathFillComplete.addPath(pathFill)
             for (i in pointIndex - 1 downTo 0) {
-                pathFill.lineTo(bottomPointsX[i], bottomPointsY[i])
+                pathFillComplete.lineTo(bottomPointsX[i], bottomPointsY[i])
             }
-            pathFill.close()
+            pathFillComplete.close()
 
-            // Draw Fill (Aurora)
-            // Vertical Gradient from Top Color to Bottom Color
+            // Vertical Brush for that "hanging light" look
             val brush = Brush.verticalGradient(
                 colors = listOf(layer.colorFillTop, layer.colorFillBottom),
                 startY = centerY - maxAmpPx,
-                endY = centerY + maxAmpPx + ribbonThickness
+                endY = centerY + maxAmpPx + (ribbonThickness * 2)
             )
 
             drawPath(
-                path = pathFill,
+                path = pathFillComplete,
                 brush = brush,
-                style = Fill,
-                alpha = 1.0f // Alpha controls built into colors
+                style = Fill
+            )
+
+            // 2. Draw Stroke (Neon Core) - The "Light Source"
+            // Bloom Effect: Draw a wider, softer stroke behind the sharp one?
+            // For performance, we stick to a single sharp stroke with shadow/glow if possible,
+            // or just rely on the high-contrast color.
+            drawPath(
+                path = pathStroke,
+                color = layer.colorStroke,
+                style = Stroke(
+                    width = layer.strokeWidth, 
+                    cap = StrokeCap.Round,
+                    join = StrokeJoin.Round
+                ),
+                alpha = 0.95f // High alpha for the "neon tube" look
             )
         }
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF1C1C1E) // Dark mode preview
+@Preview(showBackground = true, backgroundColor = 0xFF000000)
 @Composable
 fun PreviewChromaWaveV5() {
-    ChromaWave(state = ChromaWaveVisualState.Thinking, modifier = Modifier.fillMaxWidth().height(120.dp))
+    // Preview the "Thinking" state to verify interweaving
+    ChromaWave(state = ChromaWaveVisualState.Thinking, modifier = Modifier.fillMaxWidth().height(200.dp))
 }

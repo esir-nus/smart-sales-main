@@ -114,13 +114,24 @@ idle
 ### Transcription Flow
 
 | State | Trigger | User Sees | Microcopy |
-|-------|---------|-----------|-----------|
-| `loading` | enter transcript view | Skeleton/spinner | "Loading transcript..." |
-| `partial` | batches arriving | Growing transcript | — |
-| `complete` | all batches received | Full transcript | — |
-| `chapters_loading` | analysis pending | Chapter skeleton | "Analyzing..." |
-| `chapters_ready` | analysis complete | Chapter list | — |
-| `error` | API fail | Error state | "Couldn't load transcript." |
+|-------|---------|-----------|-----------| 
+| `uploading` | 开始上传音频 | 上传进度条 | "上传中... {progress}%" |
+| `submitted` | 上传完成，提交转写 | 等待提示 | "正在转写音频文件 {fileName} ..." |
+| `in_progress` | Tingwu 开始处理 | 进度百分比 | "正在转写音频文件 {fileName} ... {progress}%" |
+| `batches_arriving` | 批次到达 | 逐步显示转写内容 | — |
+| `complete` | 所有批次接收完成 | 完整转写结果 + 完成提示 | "转写完成：{fileName}" |
+| `error:upload` | 上传失败 | 错误 Snackbar | "音频处理失败" |
+| `error:transcription` | Tingwu 错误 | 错误提示 | "转写失败：{reason}" |
+
+#### Invariants
+
+| Rule | How to Verify |
+|------|---------------|
+| 批次必须在完成回调前处理完 | Sequential flow in `TranscriptionCoordinatorImpl.runTranscription()` |
+| StateFlow 观察者顺序不可依赖 | Avoid parallel launch for same event; use sequential collection |
+| HUD 数据来源于 `DebugSnapshot` | `DebugOrchestrator` populates section1/2/3 text |
+| 转写内容由 `handleProcessedBatch` 创建新消息 | Check `currentMessageId` logic |
+| 完成消息覆盖进度消息 | `onCompleted` updates same `progressMessageId` |
 
 ### L3 SmartAnalysis Card
 

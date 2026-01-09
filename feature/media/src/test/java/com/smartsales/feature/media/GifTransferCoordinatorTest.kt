@@ -100,9 +100,9 @@ class GifTransferCoordinatorTest {
         assertEquals(GifTransferState.Complete, states.last())
         
         // Verify fake interactions
-        assertEquals(GifCommand.START, fakeBleGateway.lastGifCommandParam)
+        // Verify fake interactions
+        assertEquals(listOf(GifCommand.START, GifCommand.END), fakeBleGateway.commands)
         assertEquals(2, fakeHttpClient.uploadedFiles.size) // Fake extractor returns 2 files
-        assertEquals(GifCommand.END, fakeBleGateway.lastGifCommandParam) // Should end with END
     }
 
     @Test
@@ -154,11 +154,11 @@ class GifTransferCoordinatorTest {
 // === Fakes ===
 
 class FakeBleGateway : BleGateway {
-    var lastGifCommandParam: GifCommand? = null
+    val commands = mutableListOf<GifCommand>()
     var shouldFailGifCommand = false
 
     override suspend fun sendGifCommand(session: BleSession, command: GifCommand): GifCommandResult {
-        lastGifCommandParam = command
+        commands.add(command)
         if (shouldFailGifCommand) return GifCommandResult.TransportError("Fake error")
         return when (command) {
             GifCommand.START -> GifCommandResult.Ready

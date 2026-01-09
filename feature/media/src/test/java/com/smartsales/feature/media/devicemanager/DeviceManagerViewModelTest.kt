@@ -17,6 +17,13 @@ import com.smartsales.feature.connectivity.ProvisioningStatus
 import com.smartsales.feature.connectivity.WifiCredentials
 import com.smartsales.feature.media.audiofiles.DeviceHttpEndpointProvider
 import com.smartsales.feature.media.devicemanager.DeviceManagerEvent
+import com.smartsales.feature.media.GifTransferCoordinator
+import com.smartsales.feature.media.WavDownloadCoordinator
+import com.smartsales.feature.media.GifTransferState
+import com.smartsales.feature.media.WavListState
+import com.smartsales.feature.media.WavDownloadState
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.flowOf
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -58,7 +65,9 @@ class DeviceManagerViewModelTest {
             gateway,
             connectionManager,
             FakeDispatcherProvider(dispatcher),
-            endpointProvider
+            endpointProvider,
+            FakeGifTransferCoordinator(),
+            FakeWavDownloadCoordinator()
         )
     }
 
@@ -505,5 +514,13 @@ class DeviceManagerViewModelTest {
         override suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus> = networkStatusResult
         override fun scheduleAutoReconnectIfNeeded() {}
         override fun forceReconnectNow() {}
+    }
+    private class FakeGifTransferCoordinator : GifTransferCoordinator {
+        override fun transfer(session: BleSession, gifUri: android.net.Uri) = flowOf<GifTransferState>()
+    }
+
+    private class FakeWavDownloadCoordinator : WavDownloadCoordinator {
+        override fun listFiles(session: BleSession) = flowOf<WavListState>()
+        override fun downloadFiles(session: BleSession, files: List<String>, destDir: File) = flowOf<WavDownloadState>()
     }
 }

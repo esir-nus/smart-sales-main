@@ -6,6 +6,9 @@ package com.smartsales.feature.media.devicemanager
 // 作者：提取于 2026-01-06
 
 import android.net.Uri
+import com.smartsales.feature.media.GifTransferState
+import com.smartsales.feature.media.WavListState
+import com.smartsales.feature.media.WavDownloadState
 
 internal const val DEFAULT_MEDIA_SERVER_PORT = 8000
 internal const val DEFAULT_MEDIA_SERVER_BASE_URL = "http://10.0.2.2:$DEFAULT_MEDIA_SERVER_PORT"
@@ -33,7 +36,12 @@ data class DeviceManagerUiState(
     val isLoading: Boolean = false,
     val isUploading: Boolean = false,
     val errorMessage: String? = null,
-    val loadErrorMessage: String? = null
+    val loadErrorMessage: String? = null,
+    
+    // New coordinator states
+    val gifTransferState: GifTransferState? = null,
+    val wavListState: WavListState? = null,
+    val wavDownloadState: WavDownloadState? = null
 )
 
 /**

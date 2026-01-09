@@ -14,6 +14,11 @@ import com.smartsales.feature.connectivity.ConnectivityError
 import com.smartsales.feature.connectivity.ConnectionState
 import com.smartsales.feature.connectivity.DeviceConnectionManager
 import com.smartsales.feature.media.audiofiles.DeviceHttpEndpointProvider
+import com.smartsales.feature.media.GifTransferCoordinator
+import com.smartsales.feature.media.WavDownloadCoordinator
+import com.smartsales.feature.media.GifTransferState
+import com.smartsales.feature.media.WavListState
+import com.smartsales.feature.media.WavDownloadState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
 import javax.inject.Inject
@@ -36,7 +41,9 @@ class DeviceManagerViewModel @Inject constructor(
     private val mediaGateway: DeviceMediaGateway,
     private val connectionManager: DeviceConnectionManager,
     private val dispatcherProvider: DispatcherProvider,
-    private val endpointProvider: DeviceHttpEndpointProvider
+    private val endpointProvider: DeviceHttpEndpointProvider,
+    private val gifTransferCoordinator: GifTransferCoordinator,
+    private val wavDownloadCoordinator: WavDownloadCoordinator
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DeviceManagerUiState())
@@ -205,6 +212,72 @@ class DeviceManagerViewModel @Inject constructor(
 
     fun onClearError() {
         _uiState.update { it.copy(errorMessage = null, loadErrorMessage = null) }
+    }
+
+    // === GIF Transfer ===
+
+    fun uploadGif(uri: Uri) {
+        val session = (connectionManager.state.value as? ConnectionState.Connected)?.session
+            ?: (connectionManager.state.value as? ConnectionState.WifiProvisioned)?.session
+            ?: (connectionManager.state.value as? ConnectionState.Syncing)?.session
+        
+        if (session == null) {
+            _uiState.update { it.copy(errorMessage = "设备未连接，无法上传") }
+            return
+        }
+
+        viewModelScope.launch(dispatcherProvider.io) {
+            gifTransferCoordinator.transfer(session, uri)
+                .collect { state ->
+                    _uiState.update { it.copy(gifTransferState = state) }
+                }
+        }
+    }
+
+    fun clearGifState() {
+        _uiState.update { it.copy(gifTransferState = null) }
+    }
+
+    // === WAV Operations ===
+
+    fun listWavFiles() {
+        val session = (connectionManager.state.value as? ConnectionState.Connected)?.session
+            ?: (connectionManager.state.value as? ConnectionState.WifiProvisioned)?.session
+            ?: (connectionManager.state.value as? ConnectionState.Syncing)?.session
+
+        if (session == null) {
+            _uiState.update { it.copy(errorMessage = "设备未连接") }
+            return
+        }
+
+        viewModelScope.launch(dispatcherProvider.io) {
+            wavDownloadCoordinator.listFiles(session)
+                .collect { state ->
+                    _uiState.update { it.copy(wavListState = state) }
+                }
+        }
+    }
+
+    fun downloadWavFiles(files: List<String>, destDir: File) {
+         val session = (connectionManager.state.value as? ConnectionState.Connected)?.session
+            ?: (connectionManager.state.value as? ConnectionState.WifiProvisioned)?.session
+            ?: (connectionManager.state.value as? ConnectionState.Syncing)?.session
+
+        if (session == null) {
+            _uiState.update { it.copy(errorMessage = "设备未连接") }
+            return
+        }
+
+        viewModelScope.launch(dispatcherProvider.io) {
+            wavDownloadCoordinator.downloadFiles(session, files, destDir)
+                .collect { state ->
+                    _uiState.update { it.copy(wavDownloadState = state) }
+                }
+        }
+    }
+    
+    fun clearWavState() {
+        _uiState.update { it.copy(wavListState = null, wavDownloadState = null) }
     }
 
     private fun loadFiles(baseUrl: String) {

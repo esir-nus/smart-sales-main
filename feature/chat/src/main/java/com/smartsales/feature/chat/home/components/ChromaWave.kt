@@ -4,18 +4,28 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.toArgb
+import android.graphics.ComposeShader
+import android.graphics.LinearGradient
+import android.graphics.PorterDuff
+import android.graphics.Shader
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -178,9 +188,56 @@ fun ChromaWave(
                 }
             }
 
-            // V7: Soft Gradient Aura (No Strokes)
+            // V8: Volumetric Aura with Dark Substrate (The "Siri" Look)
+
+            // 1. Dark Substrate (Contrast Layer)
+            // Draws a subtle dark radial gradient BEHIND the wave to allow the glow to pop
+            // even on light backgrounds.
+            drawRect(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color.Black.copy(alpha = 0.4f), // Core darkness
+                        Color.Transparent              // Fades out
+                    ),
+                    center = Offset(size.width / 2, centerY),
+                    radius = size.width * 0.7f
+                ),
+                blendMode = BlendMode.Darken // Ensure it doesn't look like a grey stain
+            )
+
+            // 2. Volumetric Shader Brush
+            // Combines Horizontal Color (Rainbow) with Vertical Alpha (Soft Edges)
             
-            // 1. Construct the closed shape for filling
+            // Shader A: Horizontal Color (SkyBlue -> Orchid)
+            val colorShader = LinearGradient(
+                0f, 0f, size.width, 0f,
+                intArrayOf(
+                    Color(0xFF00C6FF).toArgb(), // Bright Cyan
+                    Color(0xFF0072FF).toArgb(), // Deep Blue
+                    Color(0xFFDA70D6).toArgb()  // Orchid
+                ),
+                null, // positions
+                Shader.TileMode.CLAMP
+            )
+
+            // Shader B: Vertical Glow (Transparent -> Black -> Transparent)
+            val alphaShader = LinearGradient(
+                0f, centerY - maxAmpPx * 1.5f,
+                0f, centerY + maxAmpPx * 1.5f,
+                intArrayOf(
+                    Color.Transparent.toArgb(),
+                    Color.Black.toArgb(),
+                    Color.Transparent.toArgb()
+                ),
+                null, // positions
+                Shader.TileMode.CLAMP
+            )
+
+            // Combined: Color * Alpha Mask
+            val combinedShader = ComposeShader(colorShader, alphaShader, PorterDuff.Mode.DST_IN)
+            val volumetricBrush = ShaderBrush(combinedShader)
+
+            // 3. Draw Organic Ribbons
             val pathFillComplete = Path()
             pathFillComplete.addPath(pathFill)
             for (i in pointIndex - 1 downTo 0) {
@@ -188,23 +245,9 @@ fun ChromaWave(
             }
             pathFillComplete.close()
 
-            // 2. Soft Gradient Brush
-            // Fades from Transparent -> Bright Color -> Transparent
-            // This creates the "Floating Light" effect with no hard edges
-            val brush = Brush.verticalGradient(
-                colors = listOf(
-                    layer.colorFillTop.copy(alpha = 0.0f), // Top: Transparent
-                    layer.colorFillTop.copy(alpha = 0.8f), // Center: Bright Aura
-                    layer.colorFillBottom.copy(alpha = 0.0f) // Bottom: Transparent
-                ),
-                startY = centerY - maxAmpPx,
-                endY = centerY + maxAmpPx + (ribbonThickness * 2.5f)
-            )
-
-            // 3. Draw ONLY the Fill (No Wires)
             drawPath(
                 path = pathFillComplete,
-                brush = brush,
+                brush = volumetricBrush,
                 style = Fill
             )
         }

@@ -323,7 +323,7 @@ No line metrics. Responsibility is the only measure.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  M0: STABILIZE         │  Fix regressions from refactor    │ ← CURRENT
+│  M0: STABILIZE         │  Fix regressions from refactor    │ ✅ COMPLETE
 ├─────────────────────────────────────────────────────────────┤
 │  M1: FEATURE COMPLETE  │  All features work end-to-end     │
 ├─────────────────────────────────────────────────────────────┤
@@ -335,21 +335,26 @@ No line metrics. Responsibility is the only measure.
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### M0: Stabilize ← YOU ARE HERE
+### M0: Stabilize ✅ COMPLETE
 
 > Fix regressions before building new features. Broken code compounds.
 
-**Exit Criteria:**
-- [ ] All unit tests passing
-- [ ] Core flows work (chat, transcription, connectivity)
-- [ ] No P0 crashes or blockers
-- [ ] Build passes clean
+**Completed 2026-01-09**
 
-**Note:** Fixing regressions IS the deviation check. Don't skip this.
+**Fixes Applied:**
+- Transcription rendering bug: Disabled V1TingwuMacroWindowFilter (time mismatch stripped 99% content)
+- Debug HUD Tingwu trace: Wired DebugUiState → HomeUiState
+- Debug HUD XFyun removal: Removed unused XFyun section (110 lines deleted)
+
+**Exit Criteria:**
+- [x] All unit tests passing
+- [x] Core flows work (chat, transcription, connectivity)
+- [x] No P0 crashes or blockers
+- [x] Build passes clean
 
 ---
 
-### M1: Feature Complete
+### M1: Feature Complete ← YOU ARE HERE
 
 **Exit Criteria:**
 - [ ] All Orchestrator-V1 features implemented

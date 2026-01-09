@@ -44,6 +44,15 @@ sealed interface NetworkQueryResult {
     data class DeviceMissing(val peripheralId: String) : NetworkQueryResult
 }
 
+sealed interface GifCommandResult {
+    data object Ready : GifCommandResult           // jpg#receive
+    data object DisplayOk : GifCommandResult       // jpg#display
+    data class PermissionDenied(val permissions: Set<String>) : GifCommandResult
+    data class Timeout(val timeoutMillis: Long) : GifCommandResult
+    data class TransportError(val reason: String) : GifCommandResult
+    data class DeviceMissing(val peripheralId: String) : GifCommandResult
+}
+
 interface BleGateway {
     suspend fun provision(
         session: BleSession,
@@ -53,5 +62,13 @@ interface BleGateway {
     suspend fun requestHotspot(session: BleSession): HotspotResult
 
     suspend fun queryNetwork(session: BleSession): NetworkQueryResult
+    
+    suspend fun sendGifCommand(session: BleSession, command: GifCommand): GifCommandResult
+    
     fun forget(peripheral: BlePeripheral)
+}
+
+enum class GifCommand(val blePayload: String) {
+    START("jpg#send"),
+    END("jpg#end")
 }

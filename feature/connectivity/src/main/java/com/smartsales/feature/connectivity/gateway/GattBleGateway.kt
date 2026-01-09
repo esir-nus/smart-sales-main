@@ -107,6 +107,27 @@ class GattBleGateway @Inject constructor(
             }
         }
 
+    override suspend fun sendGifCommand(
+        session: BleSession,
+        command: GifCommand
+    ): GifCommandResult =
+        when (val outcome = execute(session.peripheralId) { gattContext, config ->
+            val payload = command.blePayload.toByteArray(Charsets.UTF_8)
+            gattContext.writeCharacteristic(config.credentialCharacteristicUuid, payload)
+            val response = gattContext.awaitNotificationOrRead(config.provisioningStatusCharacteristicUuid)
+            parseGifResponse(command, response)
+        }) {
+            is GatewayOutcome.Success -> outcome.value
+            is GatewayOutcome.Failure -> when (val error = outcome.error) {
+                is BleGatewayResult.PermissionDenied -> GifCommandResult.PermissionDenied(error.permissions)
+                BleGatewayResult.Timeout -> GifCommandResult.Timeout(DEFAULT_OPERATION_TIMEOUT_MS)
+                is BleGatewayResult.TransportError -> GifCommandResult.TransportError(error.reason)
+                is BleGatewayResult.CredentialRejected -> GifCommandResult.TransportError(error.reason)
+                is BleGatewayResult.DeviceMissing -> GifCommandResult.DeviceMissing(error.peripheralId)
+                is BleGatewayResult.Success -> GifCommandResult.TransportError("无效错误类型")
+            }
+        }
+
     override fun forget(peripheral: BlePeripheral) {
         configCache.remove(peripheral.id)
     }
@@ -381,6 +402,25 @@ class GattBleGateway @Inject constructor(
             phoneWifiName = phoneWifi,
             rawResponse = raw
         )
+    }
+
+    private fun parseGifResponse(command: GifCommand, payload: ByteArray): GifCommandResult {
+        val raw = payload.decodeToString().trim()
+        if (raw.isBlank()) throw IllegalStateException("GIF响应为空")
+        
+        val parts = raw.split("#")
+        if (parts.size < 2) throw IllegalStateException("GIF响应格式错误：$raw")
+        
+        // Expected responses: "jpg#receive" or "jpg#display"
+        if (!parts[0].equals("jpg", true)) {
+            throw IllegalStateException("GIF响应类型不符：$raw")
+        }
+        
+        return when (parts[1].lowercase()) {
+            "receive" -> GifCommandResult.Ready
+            "display" -> GifCommandResult.DisplayOk
+            else -> throw IllegalStateException("未知GIF响应：$raw")
+        }
     }
 
     private fun sha256(input: String): String {

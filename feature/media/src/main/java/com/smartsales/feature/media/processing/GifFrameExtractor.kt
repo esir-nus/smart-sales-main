@@ -44,7 +44,7 @@ interface GifFrameExtractor {
         outputDir: File,
         targetWidth: Int = DEFAULT_WIDTH,
         targetHeight: Int = DEFAULT_HEIGHT,
-        onProgress: (current: Int, total: Int) -> Unit = { _, _ -> }
+        onProgress: suspend (current: Int, total: Int) -> Unit = { _, _ -> }
     ): Result<List<File>>
 
     companion object {
@@ -74,7 +74,7 @@ class DefaultGifFrameExtractor @Inject constructor(
         outputDir: File,
         targetWidth: Int,
         targetHeight: Int,
-        onProgress: (current: Int, total: Int) -> Unit
+        onProgress: suspend (current: Int, total: Int) -> Unit
     ): Result<List<File>> = withContext(dispatchers.io) {
         runCatching {
             // Ensure output directory exists

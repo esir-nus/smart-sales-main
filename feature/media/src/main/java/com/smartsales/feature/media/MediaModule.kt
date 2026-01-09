@@ -23,6 +23,10 @@ interface MediaModule {
     @Binds
     @Singleton
     fun bindMediaSyncCoordinator(impl: FakeMediaSyncCoordinator): MediaSyncCoordinator
+
+    @Binds
+    @Singleton
+    fun bindGifTransferCoordinator(impl: DefaultGifTransferCoordinator): GifTransferCoordinator
 }
 
 @Module

@@ -20,10 +20,10 @@ Communication happens via:
 |---|----------|--------|----------------|
 | 1 | WiFi Status Query | ✅ Implemented | `GattBleGateway.queryNetwork()` |
 | 2 | WiFi Connect | ⚠️ Format Mismatch | Need to verify with hardware |
-| 3 | GIF/JPG Upload | ❌ Not Implemented | `POST /upload` |
-| 4 | WAV Download | ❌ Not Implemented | `GET /list`, `GET /download` |
-| 5 | WAV Delete | ❌ Not Implemented | `POST /delete` |
-| 6 | Time Sync | ❌ Not Implemented | `time#get` listener |
+| 3 | GIF/JPG Upload | ✅ Implemented | `GifTransferCoordinator` + `BadgeHttpClient.uploadJpg()` |
+| 4 | WAV Download | ✅ Implemented | `WavDownloadCoordinator` + `BadgeHttpClient.downloadWav()` |
+| 5 | WAV Delete | ✅ Implemented | `BadgeHttpClient.deleteWav()` |
+| 6 | Time Sync | ✅ Implemented | `GattBleGateway.listenForTimeSync()` |
 
 ---
 

@@ -149,6 +149,38 @@ class GattBleGateway @Inject constructor(
             }
         }
 
+    override fun listenForTimeSync(session: BleSession): kotlinx.coroutines.flow.Flow<TimeSyncEvent> =
+        kotlinx.coroutines.flow.flow {
+            try {
+                val outcome = execute(session.peripheralId) { gattContext, config ->
+                    while (kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]?.isActive != false) {
+                        val notification = gattContext.awaitNotificationOrRead(config.provisioningStatusCharacteristicUuid)
+                        val value = notification.decodeToString().trim()
+                        
+                        if (value.startsWith("time#get", ignoreCase = true)) {
+                            val timestamp = formatCurrentTime()
+                            val response = "time#$timestamp"
+                            gattContext.writeCharacteristic(
+                                config.credentialCharacteristicUuid,
+                                response.toByteArray(Charsets.UTF_8)
+                            )
+                            emit(TimeSyncEvent.Responded(timestamp))
+                        }
+                    }
+                }
+                if (outcome is GatewayOutcome.Failure) {
+                    emit(TimeSyncEvent.Error(outcome.error.toString()))
+                }
+            } catch (e: Exception) {
+                emit(TimeSyncEvent.Error(e.message ?: "Unknown error"))
+            }
+        }
+
+    private fun formatCurrentTime(): String {
+        val sdf = java.text.SimpleDateFormat("yyyyMMddHHmmss", java.util.Locale.US)
+        return sdf.format(java.util.Date())
+    }
+
     override fun forget(peripheral: BlePeripheral) {
         configCache.remove(peripheral.id)
     }

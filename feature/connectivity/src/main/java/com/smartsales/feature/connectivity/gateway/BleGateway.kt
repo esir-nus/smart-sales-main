@@ -4,6 +4,7 @@ import com.smartsales.feature.connectivity.BlePeripheral
 import com.smartsales.feature.connectivity.BleSession
 import com.smartsales.feature.connectivity.DeviceNetworkStatus
 import com.smartsales.feature.connectivity.WifiCredentials
+import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 
 // 文件：feature/connectivity/src/main/java/com/smartsales/feature/connectivity/gateway/BleGateway.kt
@@ -67,6 +68,12 @@ interface BleGateway {
     
     suspend fun sendWavCommand(session: BleSession, command: WavCommand): WavCommandResult
     
+    /**
+     * Listen for and respond to time sync requests from badge.
+     * Badge sends "time#get", app responds with "time#YYYYMMDDHHMMSS".
+     */
+    fun listenForTimeSync(session: BleSession): Flow<TimeSyncEvent>
+    
     fun forget(peripheral: BlePeripheral)
 }
 
@@ -89,3 +96,7 @@ sealed interface WavCommandResult {
     data class DeviceMissing(val peripheralId: String) : WavCommandResult
 }
 
+sealed class TimeSyncEvent {
+    data class Responded(val timestamp: String) : TimeSyncEvent()
+    data class Error(val message: String) : TimeSyncEvent()
+}

@@ -144,6 +144,8 @@ import com.smartsales.feature.chat.home.input.QuickSkillRow
 import com.smartsales.feature.chat.home.input.ExportGateHint
 import com.smartsales.feature.chat.home.messages.MessageBubble
 import com.smartsales.feature.chat.home.components.ChromaWave
+import com.smartsales.feature.chat.home.components.ChromaWaveRules
+import com.smartsales.feature.chat.home.components.ChromaWaveVisualState
 import com.smartsales.feature.chat.home.components.MotionState
 
 
@@ -736,17 +738,21 @@ fun HomeScreen(
                             }
                         }
                         
-                        // Active Chroma Wave (Listening/Thinking/Error/Idle)
-                        // Always show the bottom wave as the persistent "Living Intelligence" indicator
-                        val bottomWaveState = state.waveState
-                        if (bottomWaveState != MotionState.Hidden) {
+                        // Active Chroma Wave (Listening/Thinking/Error)
+                        // Uses Strict Rules: Hidden on Hero, Hidden in Idle
+                        val visualState = ChromaWaveRules.mapToVisualState(
+                            showWelcomeHero = state.showWelcomeHero,
+                            waveState = state.waveState
+                        )
+
+                        if (visualState != ChromaWaveVisualState.Hidden) {
                             ChromaWave(
-                                state = bottomWaveState,
+                                state = visualState,
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
                                     .fillMaxWidth()
-                                    .height(120.dp) // Taller for bottom integration
-                                    .padding(bottom = 0.dp) // Flush with bottom
+                                    .height(120.dp) // Floating ribbon height
+                                    .padding(bottom = 0.dp)
                             )
                         }
 
@@ -854,10 +860,6 @@ private fun EmptyStateContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                ChromaWave(
-                    state = MotionState.Idle,
-                    modifier = Modifier.fillMaxWidth().height(120.dp)
-                )
                 Text(
                     text = "你好，$userName",
                     style = MaterialTheme.typography.titleLarge,

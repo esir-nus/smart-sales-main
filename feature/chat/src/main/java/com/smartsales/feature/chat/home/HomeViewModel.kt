@@ -224,6 +224,7 @@ class HomeViewModel @Inject constructor(
                                 isStreaming = true
                             )
                         }
+                        updateWaveState()
                     }
                     is com.smartsales.domain.chat.ChatEvent.StreamDelta -> {
                         // Update assistant message with token
@@ -253,10 +254,12 @@ class HomeViewModel @Inject constructor(
 
     fun onInputChanged(text: String) {
         _uiState.update { it.copy(inputText = text) }
+        updateWaveState()
     }
 
     fun onInputFocusChanged(focused: Boolean) {
         _uiState.update { it.copy(isInputFocused = focused) }
+        updateWaveState()
     }
 
     fun onSendMessage() {
@@ -334,6 +337,7 @@ class HomeViewModel @Inject constructor(
                 inputText = "" // Clear input after sending
             )
         }
+        updateWaveState()
         
         // Invoke ChatCoordinator
         chatCoordinator.sendMessage(params)
@@ -788,6 +792,7 @@ class HomeViewModel @Inject constructor(
 
     fun onDismissError() {
         _uiState.update { it.copy(snackbarMessage = null, chatErrorMessage = null) }
+        updateWaveState()
     }
 
     /**
@@ -1611,6 +1616,7 @@ class HomeViewModel @Inject constructor(
                 isBusy = false
             ) 
         }
+        updateWaveState()
 
         // Update session summary
         val previewText = result.metadata?.shortSummary?.takeIf { it.isNotBlank() } ?: result.displayText
@@ -1638,6 +1644,40 @@ class HomeViewModel @Inject constructor(
                 chatErrorMessage = error.toUserMessage()
             )
         }
+        updateWaveState()
+    }
+
+    // Wave Sync Helper
+    private fun calculateWaveState(
+        isSending: Boolean,
+        isStreaming: Boolean,
+        hasError: Boolean,
+        inputText: String,
+        isInputFocused: Boolean
+    ): com.smartsales.feature.chat.home.components.MotionState {
+        return when {
+            hasError -> com.smartsales.feature.chat.home.components.MotionState.Error
+            isStreaming -> com.smartsales.feature.chat.home.components.MotionState.Listening // Streaming = Listening/Absorbing
+            isSending -> com.smartsales.feature.chat.home.components.MotionState.Thinking // Sending = Thinking/Processing
+            // If user is typing or focused, we could be "Listening" but for now let's keep it Idle or handle externally
+            isInputFocused && inputText.isNotBlank() -> com.smartsales.feature.chat.home.components.MotionState.Idle // subtle pulsing?
+            else -> com.smartsales.feature.chat.home.components.MotionState.Idle
+        }
+    }
+
+    private fun updateWaveState() {
+        _uiState.update { current ->
+            current.copy(
+                waveState = calculateWaveState(
+                    isSending = current.isSending,
+                    isStreaming = current.isStreaming,
+                    hasError = current.chatErrorMessage != null,
+                    inputText = current.inputText,
+                    isInputFocused = current.isInputFocused
+                )
+            )
+        }
     }
 }
+
 

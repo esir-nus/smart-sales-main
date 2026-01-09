@@ -71,5 +71,5 @@ Complete Tingwu transcription pipeline per Orchestrator-V1.md §6.
 
 ## Reference
 
-- Spec: [Orchestrator-V1.md §6](file:///home/cslh-frank/main_app/docs/Orchestrator-V1.md)
+- Spec: [Orchestrator-V1.md §6](file:///home/cslh-frank/main_app/docs/specs/Orchestrator-V1.md)
 - Architecture: [RealizeTheArchi.md](file:///home/cslh-frank/main_app/docs/RealizeTheArchi.md)

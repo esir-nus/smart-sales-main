@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.sp
 // Body → bodyMedium，Caption → bodySmall 或 label*。
 val Inter = FontFamily.SansSerif
 
-val AppTypography = Typography(
+val MaterialTypography = Typography(
     displayLarge = TextStyle(
         fontFamily = Inter,
         fontWeight = FontWeight.Bold,

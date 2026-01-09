@@ -24,10 +24,10 @@ Before refactoring, **read these in order**:
 
 | Priority | Document | Purpose |
 |----------|----------|---------|
-| 1 | [`docs/Orchestrator-V1.md`](file:///home/cslh-frank/main_app/docs/Orchestrator-V1.md) | System architecture spec (SoT) |
-| 2 | [`docs/RealizeTheArchi.md`](file:///home/cslh-frank/main_app/docs/RealizeTheArchi.md) | Current module state & target structure |
-| 3 | [`docs/ux-contract.md`](file:///home/cslh-frank/main_app/docs/ux-contract.md) | Data contracts (what system presents) |
-| 4 | [`docs/ux-experience.md`](file:///home/cslh-frank/main_app/docs/ux-experience.md) | UX states & microcopy (how it's presented) |
+| 1 | [`docs/Orchestrator-V1.md`](file:///home/cslh-frank/main_app/docs/specs/Orchestrator-V1.md) | System architecture spec (SoT) |
+| 2 | [`docs/RealizeTheArchi.md`](file:///home/cslh-frank/main_app/docs/plans/RealizeTheArchi.md) | Current module state & target structure |
+| 3 | [`docs/ux-contract.md`](file:///home/cslh-frank/main_app/docs/specs/ux-contract.md) | Data contracts (what system presents) |
+| 4 | [`docs/ux-experience.md`](file:///home/cslh-frank/main_app/docs/guides/ux-experience.md) | UX states & microcopy (how it's presented) |
 
 **SoT Hierarchy**: V1 Spec > RealizeTheArchi > ux-contract > ux-experience > code
 
@@ -233,6 +233,6 @@ Leave this mode when:
 - **App audience**: Chinese (microcopy in Chinese)
 - **M0 milestone**: Stabilization phase
 - **Reference docs**:
-  - [`docs/ux-experience.md`](file:///home/cslh-frank/main_app/docs/ux-experience.md)
-  - [`docs/ux-contract.md`](file:///home/cslh-frank/main_app/docs/ux-contract.md)
-  - [`docs/api-contracts.md`](file:///home/cslh-frank/main_app/docs/api-contracts.md)
+  - [`docs/ux-experience.md`](file:///home/cslh-frank/main_app/docs/guides/ux-experience.md)
+  - [`docs/ux-contract.md`](file:///home/cslh-frank/main_app/docs/specs/ux-contract.md)
+  - [`docs/api-contracts.md`](file:///home/cslh-frank/main_app/docs/specs/api-contracts.md)

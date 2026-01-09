@@ -1,19 +1,18 @@
 # SmartSales Mobile UI Style Guide
 
-> **Scope & Precedence**
+> **Scope & Ownership**
 >
-> This document defines the **visual language** for **SmartSales mobile**:
+> **Status**: 📝 **LIVING DOCUMENT** (Owned by UI Designer Persona)
 >
-> - React web prototype (`/ui`, Tailwind-based) – **visual reference only**
-> - Android app (Jetpack Compose) – **primary implementation target**
+> This document defines the **visual language** for SmartSales mobile.
 >
-> **Behavior, layout, flows, and states are defined in `docs/ux-contract.md`.**  
-> This style guide:
+> **Ownership Logic:**
+> 1. This file starts as a **legacy reference**.
+> 2. The **UI Designer Persona (@[/12-ui-designer])** has explicit authority to **EDIT** this file to document optimal design practices discovered during development.
+> 3. If the code (`Android Compose`) implements a better visual pattern than this doc, **update this doc** to match the code.
+> 4. If this doc contradicts `docs/specs/ux-contract.md` (behavior), **`ux-contract.md` wins**, but you should propose a visual update here that respects the contract.
 >
-> - Describes **colors, typography, spacing, shapes, and component visual patterns**.
-> - Uses React `/ui` only as a **visual example**, not as a behavioral spec.
-> - Must **never override `docs/ux-contract.md`**.  
->   If React or this guide disagree with `ux-contract`, **`ux-contract` wins** and this file (and React) must be updated.
+> **Goal**: Evolve this from a static legacy artifact into a dynamic source of truth for our visual system.
 >
 > Documentation language: all documentation prose must be English. Chinese is allowed only inside fenced code blocks as code comments, and should be Simplified Chinese.
 
@@ -44,9 +43,15 @@
 
    - Primary blue for actions.
    - Neutral surfaces for content.
-   - Red only for errors and destructive actions.
+   - **Chroma Wave** gradients for AI presence (not UI chrome).
 
-5. **Consistent patterns across pages**
+5. **Living Intelligence**
+
+   - The app feels alive, not static.
+   - Use the **Chroma Wave** to indicate state (idle, thinking, listening).
+   - "Smart, not cute" — no robots or mascots.
+
+6. **Consistent patterns across pages**
 
    - Hero, quick skills row, input bar, cards, drawers, and lists **look and behave the same** everywhere.
    - When in doubt, reuse an existing pattern instead of inventing a new one.
@@ -55,48 +60,55 @@
 
 ## 2. Color System
 
-### 2.1 Palette Tokens
+### 2.1 Concept: "Living Intelligence"
+The palette uses clean, neutral surfaces to let the **AI Intelligence** (Chroma Wave) shine.
 
-| Token / Role        | Hex        | Typical Usage                                                                 |
-| ------------------- | ---------- | ---------------------------------------------------------------------------- |
-| **AppBackground**   | `#F2F2F7` | Global page background, chat content background, drawer backgrounds.        |
-| **SurfaceCard**     | `#FFFFFF` | Cards, chat bubbles (base), drawers, dialogs, Home hero surface.           |
-| **SurfaceMuted**    | `#F2F2F7` | Muted cards, secondary surfaces, empty-state blocks.                        |
-| **BorderDefault**   | `#E5E5EA` | Card borders, input borders, section dividers, ChatInput top border.       |
-| **AccentPrimary**   | `#007AFF` | Primary actions, hero accent text, quick skill chips, links.               |
-| **TextPrimary**     | `#000000` | Main titles, important labels.                                              |
-| **TextSecondary**   | `#3A3A3C` | Secondary headings, descriptive body text, “Let’s get started”.             |
-| **TextMuted**       | `#8E8E93` | Helper text, bullets, subtitles, timestamps, input placeholder.            |
-| **DangerText**      | `#EF4444` | Destructive actions (Delete, Sign out), error labels.                       |
-| **DangerSurface**   | `#FEF2F2` | Error banners, destructive confirm dialog backgrounds.                      |
-| **BackdropOverlay** | `rgba(0,0,0,0.3)` | Scrim behind drawers, dialogs, and full-screen overlays.          |
+### 2.2 Palette Tokens
 
-### 2.2 Android Mapping
+| Token / Role        | Light Mode | Dark Mode | Usage |
+| ------------------- | ---------- | --------- | ----- |
+| **AppBackground**   | `#F7F7F7`  | `#0D0D12` | Global page background. |
+| **SurfaceCard**     | `#FFFFFF`  | `#1C1C1E` | Cards, chat bubbles (assistant), drawers, dialogs. |
+| **SurfaceMuted**    | `#F2F2F7`  | `#2C2C2E` | Secondary surfaces, input bar background. |
+| **BorderDefault**   | `#E5E5EA`  | `#38383A` | Subtle dividers, card borders. |
+| **AccentPrimary**   | `#007AFF`  | `#0A84FF` | Primary actions, links, user bubbles. |
+| **TextPrimary**     | `#000000`  | `#FFFFFF` | Main titles, important labels. |
+| **TextSecondary**   | `#3A3A3C`  | `#EBEBF5` | Subtitles, body text. |
+| **TextMuted**       | `#8E8E93`  | `#98989D` | Helper text, timestamps, placeholders. |
+| **DangerText**      | `#EF4444`  | `#FF453A` | Destructive actions, errors. |
+| **GradientBrand**   | `Blue-Purple` | `Blue-Cyan` | Brand icon gradient, some hero text. |
 
-Use `MaterialTheme.colorScheme` or an `AppColors` object mapping these roles. Example:
+### 2.3 Chroma Wave Gradients (The Signature)
+
+**Behavior Rule**: The wave is **TRANSIENT**. It is not a fixed footer.
+* **Enters**: Gracefully when AI starts listening or processing.
+* **Exits**: Gracefully fades out when generation is done.
+* **Exception**: On the Home Hero, a subtle "breathing" version may appear briefly to show the app is ready, but should not persist annoyingly.
+
+| State | Colors (Gradient Stops) | Behavior |
+|-------|-------------------------|----------|
+| **Hidden** | Transparent | Default state when waiting for user. |
+| **Listening** | `#34C759` → `#00C7BE` (Teal-Green) | Expansion ripple effect from bottom. |
+| **Thinking** | `#AF52DE` → `#FF2D55` (Purple-Pink) | Active lateral flow / shimmer. |
+| **Error** | `#D70015` → `#FF3B30` (Red-Orange) | Brief tint then fade out. |
+
+### 2.4 Android Mapping
 
 ```kotlin
 object AppColors {
-    val AppBackground   = Color(0xFFF2F2F7)
-    val SurfaceCard     = Color(0xFFFFFFFF)
-    val SurfaceMuted    = Color(0xFFF2F2F7)
-    val BorderDefault   = Color(0xFFE5E5EA)
-    val AccentPrimary   = Color(0xFF007AFF)
-    val TextPrimary     = Color(0xFF000000)
-    val TextSecondary   = Color(0xFF3A3A3C)
-    val TextMuted       = Color(0xFF8E8E93)
-    val DangerText      = Color(0xFFEF4444)
-    val DangerSurface   = Color(0xFFFEF2F2)
-    val BackdropOverlay = Color(0x4D000000) // 30% black
+    // Light
+    val LightBackground = Color(0xFFF7F7F7)
+    val LightSurface    = Color(0xFFFFFFFF)
+    
+    // Dark
+    val DarkBackground  = Color(0xFF0D0D12)
+    val DarkSurface     = Color(0xFF1C1C1E)
+    
+    // Wave Gradients
+    val WaveIdle = Brush.horizontalGradient(listOf(Color(0xFF007AFF), Color(0xFFA259FF)))
+    val WaveActive = Brush.horizontalGradient(listOf(Color(0xFFAF52DE), Color(0xFFFF2D55)))
 }
-````
-
-**Rules:**
-
-* Background of `Scaffold`: `AppBackground`.
-* Cards, chat bubbles, drawers: `SurfaceCard` with `BorderDefault` border where relevant.
-* Primary buttons & interactive text: `AccentPrimary`.
-* Error banners and critical confirmations: `DangerText` on `DangerSurface`.
+```
 
 ---
 
@@ -207,7 +219,7 @@ Keep radii soft and consistent; avoid sharp corners and mixed styles on the same
 ## 6. Component Patterns
 
 > **Reminder:**
-> Behavior and exact states are defined in `docs/ux-contract.md`.
+> Behavior and exact states are defined in `docs/specs/ux-contract.md`.
 > This section describes **how components look** when in those states.
 
 ### 6.1 App Shell (Top Bar & Background)
@@ -236,37 +248,35 @@ TopAppBar(
 Full details: `ux-contract.md` §6.
 
 * Hero appears **only when the current session is empty**:
-
-  * No user messages, no assistant messages, no imported transcripts.
-* Once any content exists, the hero **is not rendered** for that session at all.
 * Hero is **not a chat bubble** and never appears in the scrollable message list.
 
 **Visual structure:**
 
 * Layout: centered `Column` inside a full-size `Box`.
+* **Knot Symbol**: The visual anchor. A knot/infinity symbol (geometric, soft corners).
+  * Color: `GradientBrand` (Blue-Purple).
+  * Size: 64–80 dp.
+  * **No text "LOGO"**.
 
 * Elements (top → bottom):
 
-  1. `LOGO` text or brand mark — `HeroBrand`, `AccentPrimary`.
+  1. **Brand Mark** (The Knot Symbol) - animated on entry.
 
-  2. Greeting — `HeroGreeting`, `TextPrimary`
-     “Hello, {userName}”
+  2. **Greeting** — `HeroGreeting`, `TextPrimary`
+     “你好” (Hello)
 
-  3. Subtitle — `HeroSubtitle`, `AccentPrimary`
-     “I am your sales assistant”
+  3. **Subtitle** — `HeroSubtitle`, `TextSecondary`
+     “我是您的智能助手” (I am your intelligent assistant)
 
-  4. Bullet block (Body + TextMuted):
+  4. **Action Grid** (2x2):
+     * Replaces the old bullet list.
+     * 4 cards: "New Task", "Summarize", "Ideas", "Schedule".
+     * Style: `SurfaceCard` with subtle shadow, icon + text.
 
-     * Title: “I can help you:”
-     * Items:
-
-       * “• Analyze user profile, intent, and pain points.”
-       * “• Generate PDF/CSV documents and mind maps.”
-
-  5. Ending line — `HeroSubtitle`, `TextSecondary`
-     “Let’s get started”
-
-* Under the hero: **one** `QuickSkillRow` followed by a divider.
+* **Chroma Wave Integration**:
+  * Position: Bottom of screen (overlay).
+  * Behavior: **Reactive**. Shows only during interaction (Thinking/Listening).
+  * Implies "I am working on your request."
 
 ### 6.3 Chat Input & Quick Skill Row
 
@@ -427,7 +437,7 @@ Before shipping a screen, verify:
 
 1. **Doc precedence**
 
-   * Behavior / layout matches `docs/ux-contract.md` and `docs/Orchestrator-V1.md` (CURRENT). Archived versions are for historical reference only.
+   * Behavior / layout matches `docs/specs/ux-contract.md` and `docs/specs/Orchestrator-V1.md` (CURRENT). Archived versions are for historical reference only.
    * This style guide has been used **only** for visuals.
    * React `/ui` was used as reference, not as the behavioral source of truth.
 
@@ -460,4 +470,4 @@ Before shipping a screen, verify:
    * Quick skill row placement matches the empty vs active rules.
    * Dialogs, drawers, lists, and buttons reuse the patterns from this guide.
 
-If any conflict is found between this file and `docs/ux-contract.md`, **update this file and React** to match the UX contract, not the other way around.
+If any conflict is found between this file and `docs/specs/ux-contract.md`, **update this file and React** to match the UX contract, not the other way around.

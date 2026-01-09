@@ -22,10 +22,10 @@ A **mindset** for implementing new features with senior engineering discipline.
 
 | Priority | Document | Purpose |
 |----------|----------|---------|
-| 1 | [`docs/Orchestrator-V1.md`](file:///home/cslh-frank/main_app/docs/Orchestrator-V1.md) | What to build (spec) |
-| 2 | [`docs/RealizeTheArchi.md`](file:///home/cslh-frank/main_app/docs/RealizeTheArchi.md) | Where it goes (structure) |
+| 1 | [`docs/Orchestrator-V1.md`](file:///home/cslh-frank/main_app/docs/specs/Orchestrator-V1.md) | What to build (spec) |
+| 2 | [`docs/RealizeTheArchi.md`](file:///home/cslh-frank/main_app/docs/plans/RealizeTheArchi.md) | Where it goes (structure) |
 | 3 | JSON schemas in `docs/` | Data contracts |
-| 4 | [`docs/api-contracts.md`](file:///home/cslh-frank/main_app/docs/api-contracts.md) | Interface patterns |
+| 4 | [`docs/api-contracts.md`](file:///home/cslh-frank/main_app/docs/specs/api-contracts.md) | Interface patterns |
 
 **SoT Hierarchy**: V1 Spec > JSON Schema > api-contracts > existing code
 

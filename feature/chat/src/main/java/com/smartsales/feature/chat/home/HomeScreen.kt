@@ -143,6 +143,8 @@ import com.smartsales.feature.chat.home.input.HomeInputArea
 import com.smartsales.feature.chat.home.input.QuickSkillRow
 import com.smartsales.feature.chat.home.input.ExportGateHint
 import com.smartsales.feature.chat.home.messages.MessageBubble
+import com.smartsales.feature.chat.home.components.ChromaWave
+import com.smartsales.feature.chat.home.components.MotionState
 
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreen.kt
@@ -733,7 +735,26 @@ fun HomeScreen(
                                 }
                             }
                         }
-                        chatErrorMessage?.let { message ->
+                        
+                        // Active Chroma Wave (Listening/Thinking/Error)
+                        // Don't show Idle wave at bottom if we are showing the Welcome Hero (which has its own big wave)
+                        val bottomWaveState = if (state.showWelcomeHero && state.waveState == MotionState.Idle) {
+                            MotionState.Hidden
+                        } else {
+                            state.waveState
+                        }
+                        if (bottomWaveState != MotionState.Hidden) {
+                            ChromaWave(
+                                state = bottomWaveState,
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .fillMaxWidth()
+                                    .height(120.dp) // Taller for bottom integration
+                                    .padding(bottom = 0.dp) // Flush with bottom
+                            )
+                        }
+
+                        if (chatErrorMessage != null) {
                             SnackbarHost(
                                 hostState = remember { SnackbarHostState() },
                                 modifier = Modifier
@@ -741,7 +762,7 @@ fun HomeScreen(
                                     .padding(bottom = 96.dp)
                             ) {
                                 Text(
-                                    text = message,
+                                    text = chatErrorMessage,
                                     color = MaterialTheme.colorScheme.error,
                                     style = MaterialTheme.typography.bodyMedium
                                 )
@@ -837,10 +858,9 @@ private fun EmptyStateContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "LOGO",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
+                ChromaWave(
+                    state = MotionState.Idle,
+                    modifier = Modifier.fillMaxWidth().height(120.dp)
                 )
                 Text(
                     text = "你好，$userName",

@@ -2,7 +2,7 @@
 
 ## Source of Truth (SoT) and Archived Docs
 
-- SoT: The only authoritative spec is `docs/Orchestrator-V1.md` (CURRENT) plus the V1 schema/examples.
+- SoT: The only authoritative spec is `docs/specs/Orchestrator-V1.md` (CURRENT) plus the V1 schema/examples.
 - Ignore `docs/archived/**` for implementation behavior and contracts. Archived docs are historical only and must not be used as a target spec.
 - Ignore non-normative docs such as `docs/current-state.md` and `docs/T-Task.md` for implementation behavior; use SoT.
 
@@ -11,18 +11,18 @@
 ## Doc Sources and Precedence (Docs > Code > Guessing)
 
 - Orchestrator contract sources (CURRENT):
-  - `docs/Orchestrator-V1.md` (the only current authoritative spec)
+  - `docs/specs/Orchestrator-V1.md` (the only current authoritative spec)
 - V1 JSON (CURRENT):
-  - `docs/orchestrator-v1.schema.json`
-  - `docs/orchestrator-v1.examples.json`
+  - `docs/specs/orchestrator-v1.schema.json`
+  - `docs/specs/orchestrator-v1.examples.json`
 - ARCHIVED (historical reference only; not target behavior):
   - Archived specs live under `docs/archived/**` (historical only).
 
 - UX contract source precedence:
-  1. `docs/Orchestrator-V1.md` (reasoning and pipeline structure/boundaries)
-  2. `docs/ux-contract.md` (🔒 canonical: data contracts, pipelines, feature boundaries — locked, requires Product/Eng approval)
-  3. `docs/ux-experience.md` (📝 experience: state inventories, microcopy, timing, layout — UX-owned, modifiable)
-  4. `docs/style-guide.md` (visual and code style rules)
+  1. `docs/specs/Orchestrator-V1.md` (reasoning and pipeline structure/boundaries)
+  2. `docs/specs/ux-contract.md` (🔒 canonical: data contracts, pipelines, feature boundaries — locked, requires Product/Eng approval)
+  3. `docs/guides/ux-experience.md` (📝 experience: state inventories, microcopy, timing, layout — UX-owned, modifiable)
+  4. `docs/guides/style-guide.md` (visual and code style rules)
   5. Existing Android implementation and tests
   6. Archived UI/history implementations for reference only
 
@@ -37,11 +37,11 @@
 
 ## Third-Party Integration Registry
 
-- The role of `docs/source-repo.json` and `docs/source-repo.schema.json`:
+- The role of `docs/specs/source-repo.json` and `docs/source-repo.schema.json`:
   - Third-party service integration reference only (OSS / Tingwu / XFyun / Dashscope + placeholders)
   - Records: endpoint, key request/response fields, guardrails, failure modes, test evidence, and code location index
   - Prohibited: Orchestrator/MetaHub product specs, M1/M2/M3 schema, business semantics definitions
-- The only authoritative source for XFyun REST details remains `docs/xfyun-asr-rest-api.md`
+- The only authoritative source for XFyun REST details remains `docs/archived/xfyun-asr-rest-api.md` (deprecated; XFyun lane is disabled by default)
   - Do not duplicate its parameter tables in other docs (only link + conclusion summary)
 
 ---

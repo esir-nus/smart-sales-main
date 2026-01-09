@@ -1,7 +1,7 @@
 # API Contracts (V1-Verified)
 
-> **Source of Truth**: [Orchestrator-V1.md](file:///home/cslh-frank/main_app/docs/Orchestrator-V1.md)  
-> **Data Schemas**: [orchestrator-v1.schema.json](file:///home/cslh-frank/main_app/docs/orchestrator-v1.schema.json)  
+> **Source of Truth**: [Orchestrator-V1.md](file:///home/cslh-frank/main_app/docs/specs/Orchestrator-V1.md)  
+> **Data Schemas**: [orchestrator-v1.schema.json](file:///home/cslh-frank/main_app/docs/specs/orchestrator-v1.schema.json)  
 > **Last Verified**: 2026-01-08
 
 This document describes the **actual implemented** domain coordinator interfaces. For V1 artifact schemas (DisectorPlan, TingwuBatchArtifact, MachineArtifact, etc.), see the JSON schema.
@@ -109,7 +109,7 @@ For V1 artifact types, use the JSON schema directly:
 
 | Schema | Purpose |
 |--------|---------|
-| [orchestrator-v1.schema.json](file:///home/cslh-frank/main_app/docs/orchestrator-v1.schema.json) | DisectorPlan, TingwuBatchArtifact, PublishedTranscript, MachineArtifact, M1-M4 |
+| [orchestrator-v1.schema.json](file:///home/cslh-frank/main_app/docs/specs/orchestrator-v1.schema.json) | DisectorPlan, TingwuBatchArtifact, PublishedTranscript, MachineArtifact, M1-M4 |
 | [orchestrator-v1.examples.json](file:///home/cslh-frank/main_app/docs/orchestrator-v1.examples.json) | Payload examples |
 | [source-repo.schema.json](file:///home/cslh-frank/main_app/docs/source-repo.schema.json) | Third-party provider registry |
 
@@ -131,6 +131,6 @@ For V1 artifact types, use the JSON schema directly:
 
 | Document | Role |
 |----------|------|
-| [Orchestrator-V1.md](file:///home/cslh-frank/main_app/docs/Orchestrator-V1.md) | V1 spec (behavioral invariants) |
-| [ux-contract.md](file:///home/cslh-frank/main_app/docs/ux-contract.md) | UX contracts (what UI must show) |
-| [RealizeTheArchi.md](file:///home/cslh-frank/main_app/docs/RealizeTheArchi.md) | Architecture realization status |
+| [Orchestrator-V1.md](file:///home/cslh-frank/main_app/docs/specs/Orchestrator-V1.md) | V1 spec (behavioral invariants) |
+| [ux-contract.md](file:///home/cslh-frank/main_app/docs/specs/ux-contract.md) | UX contracts (what UI must show) |
+| [RealizeTheArchi.md](file:///home/cslh-frank/main_app/docs/plans/RealizeTheArchi.md) | Architecture realization status |

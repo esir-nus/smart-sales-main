@@ -22,5 +22,6 @@
   },
   
   // 启用实验性文件监听器（可能使用轮询作为后备方案）
-  "files.useExperimentalFileWatcher": true
+  "files.useExperimentalFileWatcher": true,
+  "java.configuration.updateBuildConfiguration": "automatic"
 }

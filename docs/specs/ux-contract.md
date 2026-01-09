@@ -13,9 +13,9 @@
 
 ## Version Notes
 
-- The only current spec is `docs/Orchestrator-V1.md`.
+- The only current spec is `docs/specs/Orchestrator-V1.md`.
 - V7 is archived; do not use V7 as UX basis.
-- Stable data objects follow `docs/orchestrator-v1.schema.json`.
+- Stable data objects follow `docs/specs/orchestrator-v1.schema.json`.
 
 ---
 

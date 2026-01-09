@@ -1,4 +1,4 @@
-<!-- File path: docs/Orchestrator-V1.md -->
+<!-- File path: docs/specs/Orchestrator-V1.md -->
 <!-- Purpose: Orchestrator-V1 architecture spec (single authority / AI coding SoT) -->
 <!-- Notes:
   - V7 is deprecated and archived (ARCHIVED) and must not be used as behavior/contract basis.
@@ -209,7 +209,7 @@ To avoid duplicate Tingwu calls, distinguish "content identity" vs "plan identit
 
 ### 6.2 M2B TranscriptionDerivedState
 
-M2B uses canonical structure: `chapters[]` + `keyPoints[]` (see `docs/orchestrator-v1.schema.json`).
+M2B uses canonical structure: `chapters[]` + `keyPoints[]` (see `docs/specs/orchestrator-v1.schema.json`).
 
 **Hard rules**:
 - LLM Parser writes M2B; Publisher must not modify transcript truth.
@@ -237,7 +237,7 @@ M2B uses canonical structure: `chapters[]` + `keyPoints[]` (see `docs/orchestrat
 
 ## 7) Data Contracts (implementation-level structure)
 
-> DTO/Schema are defined in `docs/orchestrator-v1.schema.json`. The following are key fields only (not exhaustive).
+> DTO/Schema are defined in `docs/specs/orchestrator-v1.schema.json`. The following are key fields only (not exhaustive).
 
 ### 7.1 PublishedChatTurn (UI consumer object)
 

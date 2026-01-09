@@ -9,6 +9,7 @@ import com.smartsales.data.aicore.debug.XfyunTraceSnapshot
 import com.smartsales.domain.debug.DebugSessionMetadata
 
 import com.smartsales.domain.export.ExportGateState
+import com.smartsales.feature.chat.home.components.MotionState
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeUiState.kt
 // 模块：:feature:chat
@@ -73,5 +74,6 @@ data class HomeUiState(
     val smartReasoningText: String? = null,
     val isInputFocused: Boolean = false,
     val salesPersona: SalesPersona? = null,
-    val showRawAssistantOutput: Boolean = false
+    val showRawAssistantOutput: Boolean = false,
+    val waveState: MotionState = MotionState.Idle
 )

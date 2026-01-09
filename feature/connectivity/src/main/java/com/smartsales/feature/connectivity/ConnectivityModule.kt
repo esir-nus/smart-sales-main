@@ -56,6 +56,12 @@ object ConnectivityProvidesModule {
 
     @Provides
     @Singleton
+    fun provideBadgeHttpClient(
+        dispatchers: DispatcherProvider
+    ): BadgeHttpClient = DefaultBadgeHttpClient(dispatchers)
+
+    @Provides
+    @Singleton
     fun provideBleProfiles(): List<BleProfileConfig> {
         val overrides = parseProfileOverrides(BuildConfig.BLE_PROFILE_OVERRIDES)
         if (!overrides.isNullOrEmpty()) {

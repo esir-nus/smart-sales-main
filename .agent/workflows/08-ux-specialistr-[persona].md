@@ -227,9 +227,9 @@ When this workflow produces changes:
 ## Reference Documents
 
 Before making changes, read:
-1. [`docs/ux-contract.md`](file:///home/cslh-frank/main_app/docs/ux-contract.md) — Canonical constraints (locked)
-2. [`docs/ux-experience.md`](file:///home/cslh-frank/main_app/docs/ux-experience.md) — Experience specs (modifiable)
-3. [`docs/style-guide.md`](file:///home/cslh-frank/main_app/docs/style-guide.md) — Visual patterns (if exists)
+1. [`docs/ux-contract.md`](file:///home/cslh-frank/main_app/docs/specs/ux-contract.md) — Canonical constraints (locked)
+2. [`docs/ux-experience.md`](file:///home/cslh-frank/main_app/docs/guides/ux-experience.md) — Experience specs (modifiable)
+3. [`docs/style-guide.md`](file:///home/cslh-frank/main_app/docs/guides/style-guide.md) — Visual patterns (if exists)
 
 ---
 

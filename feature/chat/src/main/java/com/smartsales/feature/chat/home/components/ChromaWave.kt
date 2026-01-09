@@ -178,7 +178,9 @@ fun ChromaWave(
                 }
             }
 
-            // 1. Draw Fill (Aurora) First (Behind the strokes)
+            // V7: Soft Gradient Aura (No Strokes)
+            
+            // 1. Construct the closed shape for filling
             val pathFillComplete = Path()
             pathFillComplete.addPath(pathFill)
             for (i in pointIndex - 1 downTo 0) {
@@ -186,57 +188,24 @@ fun ChromaWave(
             }
             pathFillComplete.close()
 
-            // Vertical Brush for "hanging light" look - Make it more opaque for ambient feel
+            // 2. Soft Gradient Brush
+            // Fades from Transparent -> Bright Color -> Transparent
+            // This creates the "Floating Light" effect with no hard edges
             val brush = Brush.verticalGradient(
                 colors = listOf(
-                    layer.colorFillTop.copy(alpha = 0.35f), // Stronger fill
-                    layer.colorFillBottom
+                    layer.colorFillTop.copy(alpha = 0.0f), // Top: Transparent
+                    layer.colorFillTop.copy(alpha = 0.8f), // Center: Bright Aura
+                    layer.colorFillBottom.copy(alpha = 0.0f) // Bottom: Transparent
                 ),
                 startY = centerY - maxAmpPx,
                 endY = centerY + maxAmpPx + (ribbonThickness * 2.5f)
             )
 
+            // 3. Draw ONLY the Fill (No Wires)
             drawPath(
                 path = pathFillComplete,
                 brush = brush,
                 style = Fill
-            )
-
-            // 2. Multi-Pass Bloom (Ambient Glow Effect)
-            // Draw the SAME path 3 times at decreasing widths = faux Gaussian blur
-            
-            // Pass 1: Outer Glow (Wide, Faint)
-            drawPath(
-                path = pathStroke,
-                color = layer.colorStroke.copy(alpha = 0.12f),
-                style = Stroke(
-                    width = 28.dp.toPx(),
-                    cap = StrokeCap.Round,
-                    join = StrokeJoin.Round
-                )
-            )
-            
-            // Pass 2: Mid Glow (Medium)
-            drawPath(
-                path = pathStroke,
-                color = layer.colorStroke.copy(alpha = 0.25f),
-                style = Stroke(
-                    width = 14.dp.toPx(),
-                    cap = StrokeCap.Round,
-                    join = StrokeJoin.Round
-                )
-            )
-            
-            // Pass 3: Core (Sharp, Bright)
-            drawPath(
-                path = pathStroke,
-                color = layer.colorStroke,
-                style = Stroke(
-                    width = layer.strokeWidth,
-                    cap = StrokeCap.Round,
-                    join = StrokeJoin.Round
-                ),
-                alpha = 0.95f
             )
         }
     }

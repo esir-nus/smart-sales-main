@@ -178,8 +178,7 @@ fun ChromaWave(
                 }
             }
 
-            // 1. Draw Fill (Aurora) First (Behind the stroke)
-            // Save state to close the path for filling without affecting stroke
+            // 1. Draw Fill (Aurora) First (Behind the strokes)
             val pathFillComplete = Path()
             pathFillComplete.addPath(pathFill)
             for (i in pointIndex - 1 downTo 0) {
@@ -187,11 +186,14 @@ fun ChromaWave(
             }
             pathFillComplete.close()
 
-            // Vertical Brush for that "hanging light" look
+            // Vertical Brush for "hanging light" look - Make it more opaque for ambient feel
             val brush = Brush.verticalGradient(
-                colors = listOf(layer.colorFillTop, layer.colorFillBottom),
+                colors = listOf(
+                    layer.colorFillTop.copy(alpha = 0.35f), // Stronger fill
+                    layer.colorFillBottom
+                ),
                 startY = centerY - maxAmpPx,
-                endY = centerY + maxAmpPx + (ribbonThickness * 2)
+                endY = centerY + maxAmpPx + (ribbonThickness * 2.5f)
             )
 
             drawPath(
@@ -200,19 +202,41 @@ fun ChromaWave(
                 style = Fill
             )
 
-            // 2. Draw Stroke (Neon Core) - The "Light Source"
-            // Bloom Effect: Draw a wider, softer stroke behind the sharp one?
-            // For performance, we stick to a single sharp stroke with shadow/glow if possible,
-            // or just rely on the high-contrast color.
+            // 2. Multi-Pass Bloom (Ambient Glow Effect)
+            // Draw the SAME path 3 times at decreasing widths = faux Gaussian blur
+            
+            // Pass 1: Outer Glow (Wide, Faint)
+            drawPath(
+                path = pathStroke,
+                color = layer.colorStroke.copy(alpha = 0.12f),
+                style = Stroke(
+                    width = 28.dp.toPx(),
+                    cap = StrokeCap.Round,
+                    join = StrokeJoin.Round
+                )
+            )
+            
+            // Pass 2: Mid Glow (Medium)
+            drawPath(
+                path = pathStroke,
+                color = layer.colorStroke.copy(alpha = 0.25f),
+                style = Stroke(
+                    width = 14.dp.toPx(),
+                    cap = StrokeCap.Round,
+                    join = StrokeJoin.Round
+                )
+            )
+            
+            // Pass 3: Core (Sharp, Bright)
             drawPath(
                 path = pathStroke,
                 color = layer.colorStroke,
                 style = Stroke(
-                    width = layer.strokeWidth, 
+                    width = layer.strokeWidth,
                     cap = StrokeCap.Round,
                     join = StrokeJoin.Round
                 ),
-                alpha = 0.95f // High alpha for the "neon tube" look
+                alpha = 0.95f
             )
         }
     }

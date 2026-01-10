@@ -91,14 +91,18 @@ For each element in the Registry, verify:
 
 | Element | States | In Legacy | Target Status | Notes |
 |---------|--------|-----------|---------------|-------|
-| `TopBar` | visible | ✅ | ✅ Styled | Menu + Title + Profile |
+| `TopBar` | visible | ✅ | ✅ Styled | Menu + Title + DeviceStatus + DebugToggle + NewChat(+) |
+| `DebugHudToggle` | visible (hudEnabled), hidden | ✅ | ⏳ Pending | Round dot, toggles Debug HUD overlay |
+| `DeviceStatusIndicator` | connected, disconnected | ✅ | ⏳ Pending | Pill with connection state |
 | `HeroSection` | visible (empty), hidden (active) | ✅ | ✅ Styled | Only when no messages |
-| `KnotSymbol` | idle | ❌ | ✅ Styled | NEW in Target (approved) |
-| `HeroGreeting` | visible | ✅ | ✅ Styled | "你好, User" |
-| `HeroSubtitle` | visible | ✅ | ✅ Styled | — |
-| `ActionGrid` | visible (empty) | ❌ | ✅ Styled | Replaces Legacy bullet list |
-| `QuickSkillRow` | visible | ✅ | ⏳ Pending | Keep for functionality, restyle |
+| `KnotSymbol` | idle | ✅ | ✅ Styled | Brand mark (approved) |
+| `HeroGreeting` | visible | ✅ | ⏳ Pending | "你好，User" |
+| `HeroSubtitle` | visible | ✅ | ⏳ Pending | "我是您的销售助手" |
+| `LegacyCopyBullets` | visible | ✅ | ⏳ Pending | "分析用户画像" + "思维导图" (RESTORED) |
+| `ActionGrid` | — | ❌ REMOVED | 🗑️ Deprecated | Had dead callbacks, removed 2026-01-10 |
+| `QuickSkillRow` | visible | ✅ | ⏳ Pending | [智能分析] [PDF] [CSV] — functional |
 | `InputBar` | idle, focused, sending, disabled | ✅ | ⏳ Pending | Floating pill |
+| `AttachmentMenu` | open, closed | ✅ | ⏳ Pending | "+" button → Audio/Image picker |
 | `HistoryDrawer` | open, closed | ✅ | ❌ Not Started | |
 
 ---
@@ -152,7 +156,8 @@ For each element in the Registry, verify:
 | Element | Proposal | By | Date | Status |
 |---------|----------|-----|------|--------|
 | `KnotSymbol` | Add brand mark to Hero | UI | 2026-01-10 | ✅ Approved |
-| `ActionGrid` | Replace bullet list with cards | UI | 2026-01-10 | ✅ Approved |
+| `ActionGrid` | Replace bullet list with cards | UI | 2026-01-10 | ❌ REJECTED (dead callbacks) |
+| `LegacyActionGrid` | Card-based grid for REAL skills only | UI | 2026-01-10 | 🔄 Proposed |
 
 ---
 
@@ -163,3 +168,6 @@ For each element in the Registry, verify:
 | 2026-01-10 | Initial registry | Agent |
 | 2026-01-10 | Added Typewriter, role=alert | Audit |
 | 2026-01-10 | Added Legacy ↔ Target model, Alignment Check | UX+UI+Senior Review |
+| 2026-01-10 | **REVERTED ActionGrid** (dead callbacks), restored Legacy Copy | Senior Review |
+| 2026-01-10 | Added DeviceStatusIndicator, AttachmentMenu, LegacyCopyBullets | UI Designer |
+| 2026-01-10 | Added DebugHudToggle (round dot in TopBar) | UI Designer |

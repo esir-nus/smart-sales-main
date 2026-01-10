@@ -1,11 +1,20 @@
-# Realize The Archi (RTA)
+# Smart Sales Architecture Tracker
 
-> **Purpose**: Blueprint for Smart Sales architecture REALIZATION  
-> **Paradigm**: Reference existing code + Orchestrator-V1 → write toward target state  
-> **Target**: Cross-Platform (Android/iOS/HarmonyOS) Ready  
-> **Spec Alignment**: Orchestrator-V1.md (v1.2.0)  
-> **Status**: M6 + M7 Complete — Domain Layer Realized ✅  
-> **Last Updated**: 2026-01-07
+> **Purpose**: Living tracker for Smart Sales architecture and feature status  
+> **AI Agents**: Use the Quick Index below to navigate — don't read irrelevant sections  
+> **Last Updated**: 2026-01-10
+
+---
+
+## Quick Index
+
+| Domain | Jump To | Last Updated |
+|--------|---------|--------------|
+| **Architecture** | [§2 Realized Tree](#2-realized-architecture-tree) | 2026-01-07 |
+| **Orchestrator** | [§3 V1 Module Mapping](#3-v1-module-mapping) | 2026-01-07 |
+| **Connectivity** | [§Feature Tree → connectivity](#feature-tree-connectivity) | 2026-01-10 |
+| **UX** | See `plans/ux-tracker.md` | 2026-01-10 |
+| **Milestones** | [§10 Roadmap](#10-product-milestone-roadmap) | 2026-01-10 |
 
 > [!IMPORTANT]
 > **Architecture Realization Principle**:  

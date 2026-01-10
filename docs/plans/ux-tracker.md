@@ -214,6 +214,32 @@ idle
 | Cancel available during download | UI inspection |
 | Completed files saved to app storage | File system check |
 
+### Device Setup Flow
+
+> **Context**: Initial onboarding to pair ESP32 badge via BLE and provision WiFi.
+
+| State | Trigger | User Sees | Microcopy |
+|-------|---------|-----------|-----------|
+| `preflight` | entry | Requirements list | "请确保：\n1. 蓝牙已开启\n2. 徽章已开机" |
+| `scanning` | tap start | Radar animation | "正在搜索附近的徽章..." |
+| `found` | device discovered | Device card | "发现设备：SmartBadge" |
+| `wifi_input` | select device | WiFi form | "请输入 WiFi 密码" |
+| `provisioning` | submit form | Progress steps | "正在配置网络..." |
+| `waiting_online`| wifi sent | Spinner | "等待设备上线..." |
+| `ready` | cloud confirmed | Success check | "配网成功！" |
+| `error:scan_timeout`| 10s no device | Error card | "未找到徽章，请重试" |
+| `error:wifi_fail` | provision error | Error card | "配置失败，请检查密码" |
+| `error:offline` | timeout waiting | Error card | "设备未上线，请检查网络" |
+
+#### Invariants
+
+| Rule | How to Verify |
+|------|---------------|
+| Scan timeout = 10s | Stopwatch test |
+| WiFi SSID auto-filled if connected | UI inspection |
+| Password masked by default | UI inspection |
+| Back button warns during provisioning | "中断配网" dialog |
+
 ---
 
 ## Layout Invariants
@@ -303,6 +329,7 @@ Track unresolved UX decisions here for Product/Eng review:
 
 | Date | Flow | Change | Reason |
 |------|------|--------|--------|
+| 2026-01-10 | Device Setup | Added state inventory (10 states) and invariants | M1 Feature Complete audit |
 | 2026-01-10 | GIF Upload | Added `extracting` and `finalizing` states | Code-spec alignment audit |
 | 2026-01-09 | Badge Transfer | Added GIF Upload Flow and WAV Download Flow state inventories | ESP32 connectivity audit; pre-implementation UX spec |
 | 2026-01-09 | Chat | Refined streaming states (waiting/active/stalled), error sub-states (recoverable/terminal), error recovery sub-flow | UX Specialist review: intermediate states needed for production-grade feedback |

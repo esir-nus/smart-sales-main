@@ -187,5 +187,5 @@ AGENT: [NOW creates KnotSymbol.kt and related files]
 | Document | Purpose |
 |----------|---------|
 | `docs/specs/ui-architecture-v1.md` | Component structure for Kotlin implementation |
-| `docs/guides/style-guide.md` | Design tokens (colors, spacing, typography) |
+| `docs/specs/style-guide.md` | Design tokens (colors, spacing, typography) |
 | `docs/plans/M2-ui-architecture.md` | Execution plan for Strangler Fig migration |

@@ -89,7 +89,7 @@ When reviewing for AI-assisted development (vibe coding), specifically evaluate:
 ```
 ┌─────────────────────────────────────────┐
 │ Is code ALIGNED with target arch?       │
-│ (Check RealizeTheArchi.md / specs)      │
+│ (Check tracker.md / specs)      │
 └───────────────┬─────────────────────────┘
                 │
         ┌───────┴───────┐

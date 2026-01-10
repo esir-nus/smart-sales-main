@@ -214,7 +214,7 @@ Keep asking throughout the session:
 
 | Document | Permission | Notes |
 |----------|------------|-------|
-| `docs/ux-experience.md` | ✅ **May modify** | State inventories, microcopy, timing, layout |
+| `docs/ux-tracker.md` | ✅ **May modify** | State inventories, microcopy, timing, layout |
 | `docs/specs/ui-element-registry.md` | ✅ **May modify** | Add/remove elements, define states, update requirements |
 | `docs/ux-contract.md` | ❌ **May not modify** | Data contracts, pipelines, boundaries |
 
@@ -228,7 +228,7 @@ The Registry is the **contract between UX and UI**. When you define a new flow o
 
 1.  **Add elements** to [`ui-element-registry.md`](file:///home/cslh-frank/main_app/docs/specs/ui-element-registry.md)
 2.  **Define states** for each element
-3.  **Link to UX Ref** (section in `ux-experience.md`)
+3.  **Link to UX Ref** (section in `ux-tracker.md`)
 4.  **Set UI Status** to ❌ (Not Started) for new elements
 5.  **Review proposals** from UI Designer in the Proposals Queue
 
@@ -243,12 +243,12 @@ UX adds element → User adds Notes → UI styles it → UI updates status to �
 When UI Designer proposes a UX change:
 
 1. Review the proposal in the Proposals Queue
-2. If **approved**: Update the Registry + `ux-experience.md`
+2. If **approved**: Update the Registry + `ux-tracker.md`
 3. If **rejected**: Clear the proposal, add rejection reason
 4. Notify UI Designer of decision
 
 When this workflow produces changes:
-1. Update state inventories directly in `ux-experience.md`
+1. Update state inventories directly in `ux-tracker.md`
 2. **Update the UI Element Registry** to match
 3. Add entries to the Changelog section
 4. If a change requires modifying `ux-contract.md`, add to **Open Questions** for Product/Eng review
@@ -259,8 +259,8 @@ When this workflow produces changes:
 
 Before making changes, read:
 1. [`docs/ux-contract.md`](file:///home/cslh-frank/main_app/docs/specs/ux-contract.md) — Canonical constraints (locked)
-2. [`docs/ux-experience.md`](file:///home/cslh-frank/main_app/docs/guides/ux-experience.md) — Experience specs (modifiable)
-3. [`docs/style-guide.md`](file:///home/cslh-frank/main_app/docs/guides/style-guide.md) — Visual patterns (if exists)
+2. [`docs/ux-tracker.md`](file:///home/cslh-frank/main_app/docs/plans/ux-tracker.md) — Experience specs (modifiable)
+3. [`docs/style-guide.md`](file:///home/cslh-frank/main_app/docs/specs/style-guide.md) — Visual patterns (if exists)
 
 ---
 
@@ -272,4 +272,4 @@ Before making changes, read:
 - ❌ Make product decisions (use Open Questions)
 - ❌ Modify `ux-contract.md` (canonical document)
 
-This workflow produces **implementation-ready UX specs** and updates `ux-experience.md`. The implementation agent takes over from there.
+This workflow produces **implementation-ready UX specs** and updates `ux-tracker.md`. The implementation agent takes over from there.

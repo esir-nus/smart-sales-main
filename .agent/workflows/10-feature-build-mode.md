@@ -23,7 +23,7 @@ A **mindset** for implementing new features with senior engineering discipline.
 | Priority | Document | Purpose |
 |----------|----------|---------|
 | 1 | [`docs/Orchestrator-V1.md`](file:///home/cslh-frank/main_app/docs/specs/Orchestrator-V1.md) | What to build (spec) |
-| 2 | [`docs/RealizeTheArchi.md`](file:///home/cslh-frank/main_app/docs/plans/RealizeTheArchi.md) | Where it goes (structure) |
+| 2 | [`docs/tracker.md`](file:///home/cslh-frank/main_app/docs/plans/tracker.md) | Where it goes (structure) |
 | 3 | JSON schemas in `docs/` | Data contracts |
 | 4 | [`docs/api-contracts.md`](file:///home/cslh-frank/main_app/docs/specs/api-contracts.md) | Interface patterns |
 
@@ -82,7 +82,7 @@ Only exit when user explicitly requests:
 grep -rn "FeatureName" feature/
 
 # Check where it should go
-view_file docs/RealizeTheArchi.md
+view_file docs/tracker.md
 ```
 
 **Before claiming done:**
@@ -119,7 +119,7 @@ Code = Reality (what IS)
 4. Build → data layer first, then domain, then UI
 5. Wire → connect layers, test data flows
 6. Test → build + tests pass
-7. Ship → commit, push, update RealizeTheArchi.md
+7. Ship → commit, push, update tracker.md
 ```
 
 **Helper workflows:**
@@ -135,7 +135,7 @@ Leave this mode when:
 - [ ] Feature works end-to-end
 - [ ] Build passes
 - [ ] Tests added for happy path
-- [ ] Docs updated (RealizeTheArchi.md)
+- [ ] Docs updated (tracker.md)
 - [ ] **Metrics summary produced**
 
 ---

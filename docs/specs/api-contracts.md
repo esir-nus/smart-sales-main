@@ -133,4 +133,4 @@ For V1 artifact types, use the JSON schema directly:
 |----------|------|
 | [Orchestrator-V1.md](file:///home/cslh-frank/main_app/docs/specs/Orchestrator-V1.md) | V1 spec (behavioral invariants) |
 | [ux-contract.md](file:///home/cslh-frank/main_app/docs/specs/ux-contract.md) | UX contracts (what UI must show) |
-| [RealizeTheArchi.md](file:///home/cslh-frank/main_app/docs/plans/RealizeTheArchi.md) | Architecture realization status |
+| [tracker.md](file:///home/cslh-frank/main_app/docs/plans/tracker.md) | Architecture realization status |

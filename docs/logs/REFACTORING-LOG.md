@@ -1,6 +1,6 @@
 # Architecture Refactoring Log
 
-> Detailed history of architecture refactoring waves. North Star is in [RealizeTheArchi.md](./RealizeTheArchi.md).
+> Detailed history of architecture refactoring waves. North Star is in [tracker.md](../plans/tracker.md).
 
 > [!NOTE]
 > **Historical entries may reference deleted code.** Earlier waves (e.g., Wave 20-25) mention `ConversationViewModel`, `StreamingCallbacks`, and `HomeScreenViewModel` — these were deleted in Wave 29 (M9) as part of dead code cleanup.

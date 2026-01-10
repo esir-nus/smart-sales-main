@@ -44,7 +44,7 @@ USER: "Make the home screen more premium"
                │ Brief
                ▼
 ┌────────────────────────────────────┐
-│  /ui-craftsman                     │
+│  /ui-ux-pro-max                     │
 │  - Executes brief literally        │
 │  - Produces prototype/code         │
 │  - Delivers Version A (strict)     │
@@ -108,7 +108,7 @@ These MUST remain intact regardless of visual changes:
 - [App/URL]: [What to borrow from it]
 
 ## Handoff
-Invoke `/ui-craftsman` with this brief.
+Invoke `/ui-ux-pro-max` with this brief.
 ```
 
 ---
@@ -168,6 +168,6 @@ You are the **Guardian of the Style Guide**.
 
 | Need | Use |
 |------|-----|
-| Execute design brief | `/ui-craftsman` |
+| Execute design brief | `/ui-ux-pro-max` |
 | UX flow review | `/ux-specialist` |
 | Code quality review | `/senior-reviewer` |

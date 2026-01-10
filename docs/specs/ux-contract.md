@@ -5,7 +5,7 @@
 > This file defines **WHAT** the system presents—data contracts, pipeline ownership, and feature boundaries.
 > Changes require Product/Engineering approval. Do not modify without explicit sign-off.
 >
-> For **HOW** things are presented (states, microcopy, timing, layout), see [`ux-experience.md`](ux-experience.md).
+> For **HOW** things are presented (states, microcopy, timing, layout), see [`ux-tracker.md`](../plans/ux-tracker.md).
 >
 > **Last verified against Orchestrator-V1.md**: 2026-01-08 ✅
 
@@ -61,7 +61,7 @@ The system classifies LLM responses. UI adapts based on classification.
 > - All GENERAL chat first-replies (including L3-style 状态C responses) produce `<Rename>` for session naming
 > - The SMART_ANALYSIS pipeline (`quickSkillId = "SMART_ANALYSIS"`) is separate: it uses JSON-only output and derives session title from `main_person` + `summary_title_6chars` fields instead of `<Rename>` tags
 
-> **Experience spec**: See [ux-experience.md#l3-smartanalysis-card](ux-experience.md#l3-smartanalysis-card) for card layout details.
+> **Experience spec**: See [ux-tracker.md#l3-smartanalysis-card](../plans/ux-tracker.md#l3-smartanalysis-card) for card layout details.
 
 ---
 
@@ -123,8 +123,8 @@ No chain-of-thought display.
 
 | Topic | Experience Spec |
 |-------|-----------------|
-| Chat flow states | [ux-experience.md#chat-flow](ux-experience.md#chat-flow) |
-| Audio upload flow states | [ux-experience.md#audio-upload-flow](ux-experience.md#audio-upload-flow) |
-| Transcription flow states | [ux-experience.md#transcription-flow](ux-experience.md#transcription-flow) |
-| Layout invariants | [ux-experience.md#layout-invariants](ux-experience.md#layout-invariants) |
-| Timing rules | [ux-experience.md#timing--feedback](ux-experience.md#timing--feedback) |
+| Chat flow states | [ux-tracker.md#chat-flow](../plans/ux-tracker.md#chat-flow) |
+| Audio upload flow states | [ux-tracker.md#audio-upload-flow](../plans/ux-tracker.md#audio-upload-flow) |
+| Transcription flow states | [ux-tracker.md#transcription-flow](../plans/ux-tracker.md#transcription-flow) |
+| Layout invariants | [ux-tracker.md#layout-invariants](../plans/ux-tracker.md#layout-invariants) |
+| Timing rules | [ux-tracker.md#timing--feedback](../plans/ux-tracker.md#timing--feedback) |

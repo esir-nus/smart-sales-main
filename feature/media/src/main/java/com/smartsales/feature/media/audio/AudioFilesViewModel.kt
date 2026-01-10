@@ -81,6 +81,21 @@ class AudioFilesViewModel @Inject constructor(
         }
     }
 
+    fun onImportFromPhone(uri: android.net.Uri) {
+        viewModelScope.launch(dispatchers.io) {
+            _uiState.update { it.copy(isSyncing = true) }
+            runCatching { audioStorageRepository.importFromPhone(uri) }
+                .onSuccess { 
+                    val base = currentBaseUrl
+                    if (base != null) {
+                        loadRecordings(base, showLoading = false)
+                    }
+                }
+                .onFailure { emitError(it.message ?: "导入失败") }
+            _uiState.update { it.copy(isSyncing = false) }
+        }
+    }
+
     fun onRecordingClicked(id: String) {
         _uiState.update { it.copy(selectedRecordingId = id) }
     }

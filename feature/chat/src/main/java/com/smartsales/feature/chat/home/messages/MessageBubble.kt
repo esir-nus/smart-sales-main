@@ -36,6 +36,9 @@ import com.smartsales.feature.chat.home.ChatMessageUi
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.chat.home.MarkdownMessageText
 import kotlinx.coroutines.delay
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.semantics
 
 @Composable
 internal fun MessageBubble(
@@ -46,10 +49,18 @@ internal fun MessageBubble(
     onCopyAssistant: (String) -> Unit = {},
     showRawAssistantOutput: Boolean = false
 ) {
+    // Audit Finding: Accessibility semantics for Error states
+    val errorSemantics = if (message.hasError) {
+        Modifier.semantics {
+            liveRegion = LiveRegionMode.Assertive
+        }
+    } else Modifier
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 6.dp)
+            .then(errorSemantics)
             .then(if (alignEnd) Modifier.testTag(HomeScreenTestTags.USER_MESSAGE) else modifier),
         contentAlignment = if (alignEnd) Alignment.CenterEnd else Alignment.CenterStart
     ) {
@@ -98,14 +109,43 @@ internal fun MessageBubble(
                         }
                     }
                 }
+                
+                // Typewriter Logic for Assistant (Streaming)
+                var displayedText by remember(message.id) { mutableStateOf(if (message.isStreaming) "" else message.content) }
+                
+                LaunchedEffect(message.content, message.isStreaming) {
+                    if (message.isStreaming) {
+                        val target = message.content
+                        if (displayedText.length < target.length) {
+                             // Smooth reveal
+                             for (i in displayedText.length until target.length) {
+                                 displayedText += target[i]
+                                 delay(10) // 10ms per char for smooth effect
+                             }
+                        } else {
+                             // Correct any mismatch
+                             displayedText = target
+                        }
+                    } else {
+                        // Instant update if not streaming
+                        displayedText = message.content
+                    }
+                }
+                
+                val finalContent = if (!alignEnd) {
+                    if (message.isStreaming) "$displayedText ▋" else displayedText
+                } else {
+                    message.content
+                }
+
                 val renderMarkdown = !alignEnd && !message.isSmartAnalysis && !message.hasError && !showRawAssistantOutput
                 if (renderMarkdown) {
                     MarkdownMessageText(
-                        text = message.content
+                        text = finalContent
                     )
                 } else {
                     Text(
-                        text = message.content,
+                        text = finalContent,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )

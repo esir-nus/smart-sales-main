@@ -168,8 +168,10 @@ idle
 |-------|---------|-----------|-----------|
 | `idle` | default | "发送到徽章" button | — |
 | `preparing` | tap send | Spinner | "处理中..." |
+| `extracting` | frame extraction | Spinner + count | "提取帧 {n}/{total}..." |
 | `connecting` | BLE jpg#send | Spinner | "正在连接徽章..." |
 | `uploading:N/M` | frame ready | Progress bar | "正在上传 {n}/{total}..." |
+| `finalizing` | last frame uploaded | Spinner | "正在完成..." |
 | `complete` | jpg#display received | Success toast | "发送成功！" |
 | `error:ble` | BLE disconnect | Error card | "徽章连接断开，请重试" |
 | `error:network` | HTTP fail | Error card | "网络错误，请检查WiFi" |
@@ -301,6 +303,7 @@ Track unresolved UX decisions here for Product/Eng review:
 
 | Date | Flow | Change | Reason |
 |------|------|--------|--------|
+| 2026-01-10 | GIF Upload | Added `extracting` and `finalizing` states | Code-spec alignment audit |
 | 2026-01-09 | Badge Transfer | Added GIF Upload Flow and WAV Download Flow state inventories | ESP32 connectivity audit; pre-implementation UX spec |
 | 2026-01-09 | Chat | Refined streaming states (waiting/active/stalled), error sub-states (recoverable/terminal), error recovery sub-flow | UX Specialist review: intermediate states needed for production-grade feedback |
 | 2026-01-08 | Chat | Chinese microcopy for all error states | Sync with implementation, Chinese Priority policy |

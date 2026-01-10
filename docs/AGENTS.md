@@ -31,7 +31,7 @@
 ## Documentation language
 
 - Documentation prose must be English.
-- Chinese is allowed only inside fenced code blocks as code comments, and should be Simplified Chinese.
+- Chinese is mandatory inside fenced code blocks as code comments, and should be Simplified Chinese.
 
 ---
 
@@ -177,7 +177,7 @@ Valid status values:
      ```kotlin
      // File: <relative path>
      // Module: <:moduleName>
-     // Summary: <short English summary>
+     // Summary: <short Chinese summary>
      // Author: created on <YYYY-MM-DD> # use real time, do not invent or guess
      ```
 

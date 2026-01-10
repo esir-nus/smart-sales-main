@@ -44,8 +44,40 @@ The prototype MUST render inside a phone-shaped container, not occupy the entire
     box-shadow: 0 20px 60px rgba(0,0,0,0.5);
     background: #000;
   ">
-    <!-- App Content Goes HERE -->
-    <div class="app-container" style="width: 100%; height: 100%; overflow: hidden; background: var(--bg-color);">
+    <!-- Status Bar (REQUIRED) -->
+    <div class="status-bar" style="
+      height: 44px;
+      padding: 12px 24px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: white;
+      background: transparent;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+    ">
+      <span class="time">9:41</span>
+      <div class="notch" style="width: 126px; height: 34px; background: #000; border-radius: 0 0 20px 20px;"></div>
+      <div class="icons" style="display: flex; gap: 4px; align-items: center;">
+        <span>📶</span>
+        <span>📡</span>
+        <span>🔋</span>
+      </div>
+    </div>
+
+    <!-- App Content Goes HERE (with top padding for status bar) -->
+    <div class="app-container" style="
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-color);
+      padding-top: 44px;
+    ">
       ...
     </div>
   </div>

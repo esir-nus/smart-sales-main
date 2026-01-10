@@ -169,3 +169,49 @@ When reviewing for AI-assisted development (vibe coding), specifically evaluate:
 | 50-line well-factored utility | ✅ Good | Low | EXTRACT |
 
 **If you're debating, audit first.**
+
+---
+
+## Plan Review (Merged from /03-plan-review)
+
+When reviewing an implementation plan, verify assumptions with evidence.
+
+### Assumption Audit
+
+For every assumption in the plan:
+```markdown
+### Assumption: [Statement]
+**Verification**: `[exact command run]`
+**Result**: VERIFIED / INVALIDATED / UNKNOWN
+**Evidence**: [command output summary]
+```
+
+**Minimum**: 3 assumptions verified with tool use (grep, find, view_file)
+
+### Evidence Quality
+
+| Level | Criteria |
+|-------|----------|
+| **HIGH** | 3+ tool verifications, read actual files, checked specs |
+| **MEDIUM** | 1-2 verifications, some reliance on context |
+| **LOW** | Mostly assumptions, no tool verification |
+
+### Readiness Score
+
+```
+Readiness = (Verified/Total Assumptions × 60) + Evidence(0-20) + Risk(0-20)
+```
+
+| Score | Action |
+|-------|--------|
+| **100%** | ✅ Execute immediately |
+| **90-99%** | ⚠️ Proceed with noted gaps |
+| **70-89%** | 🔍 Need additional research |
+| **<70%** | ❌ NOT READY — rework needed |
+
+### Quick Checklist
+
+- [ ] Searched for existing implementations
+- [ ] Read relevant spec/doc sections
+- [ ] Verified file/class existence
+- [ ] Checked for dependencies

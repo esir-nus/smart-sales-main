@@ -871,29 +871,51 @@ private fun EmptyStateContent(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "你好, $userName",
-                    style = AppTypography.HeroGreeting,
-                    color = AppColors.LightTextPrimary
+                    text = "你好，$userName",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "我是您的智能销售助手",
-                    style = AppTypography.HeroSubtitle,
-                    color = AppColors.LightTextSecondary
+                    text = "我是您的销售助手",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // 3. Action Grid (Replaces Bullet List)
-            ActionGrid(
-                onNewTask = { /* Deferred: Feature not yet implemented */ },
-                onSummarize = { onSkillSelected(QuickSkillId.SMART_ANALYSIS) },
-                onIdeas = { /* Deferred */ },
-                onSchedule = { /* Deferred */ },
-                modifier = Modifier.fillMaxWidth()
+            // 3. Legacy Capabilities Copy (Restored)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text(
+                    text = "我可以帮您：",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "• 分析用户画像、意图、痛点。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "• 生成 PDF、CSV 文档及思维导图。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text(
+                text = "让我们开始吧",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
             // 4. Legacy Quick Skills (Functional Entry Points)
             // We keep these for now as they trigger the actual export logic

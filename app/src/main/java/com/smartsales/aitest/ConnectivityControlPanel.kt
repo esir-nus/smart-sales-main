@@ -108,7 +108,7 @@ fun ConnectivityControlPanel(
                     )
                 }
                 if (state.peripherals.isEmpty() && !state.isScanning) {
-                    Text(text = "尚未发现设备，点击开始扫描寻找 BT311 / Demo Pod。")
+                    Text(text = "尚未发现设备，点击开始扫描寻找 CHLE / Demo Pod。")
                 }
             }
             Text(text = "Wi-Fi 名称配置 (wifi#connect#name#password)", style = MaterialTheme.typography.titleSmall)

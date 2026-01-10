@@ -147,6 +147,10 @@ import com.smartsales.feature.chat.home.components.ChromaWave
 import com.smartsales.feature.chat.home.components.ChromaWaveRules
 import com.smartsales.feature.chat.home.components.ChromaWaveVisualState
 import com.smartsales.feature.chat.home.components.MotionState
+import com.smartsales.feature.chat.home.components.KnotSymbol
+import com.smartsales.feature.chat.home.components.ActionGrid
+import com.smartsales.feature.chat.home.theme.AppColors
+import com.smartsales.feature.chat.home.theme.AppTypography
 
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreen.kt
@@ -848,55 +852,51 @@ private fun EmptyStateContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 24.dp)
+            .padding(horizontal = 24.dp, vertical = 32.dp)
             .testTag(HomeScreenTestTags.HERO)
     ) {
         Column(
             modifier = Modifier.align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.Center
         ) {
+            // 1. Brand Mark
+            KnotSymbol(modifier = Modifier.size(80.dp))
+            
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 2. Greeting
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "你好，$userName",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface
+                    text = "你好, $userName",
+                    style = AppTypography.HeroGreeting,
+                    color = AppColors.LightTextPrimary
                 )
                 Text(
-                    text = "我是您的销售助手",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    text = "我是您的智能销售助手",
+                    style = AppTypography.HeroSubtitle,
+                    color = AppColors.LightTextSecondary
                 )
             }
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                horizontalAlignment = Alignment.Start
-            ) {
-                Text(
-                    text = "我可以帮您：",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "• 分析用户画像、意图、痛点。",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "• 生成 PDF、CSV 文档及思维导图。",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Text(
-                text = "让我们开始吧",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // 3. Action Grid (Replaces Bullet List)
+            ActionGrid(
+                onNewTask = { /* Deferred: Feature not yet implemented */ },
+                onSummarize = { onSkillSelected(QuickSkillId.SMART_ANALYSIS) },
+                onIdeas = { /* Deferred */ },
+                onSchedule = { /* Deferred */ },
+                modifier = Modifier.fillMaxWidth()
             )
+
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            // 4. Legacy Quick Skills (Functional Entry Points)
+            // We keep these for now as they trigger the actual export logic
             QuickSkillRow(
                 skills = skills,
                 selectedSkillId = selectedSkillId,
@@ -905,8 +905,10 @@ private fun EmptyStateContent(
                 onExportPdfClicked = onExportPdfClicked,
                 onExportCsvClicked = onExportCsvClicked
             )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
             ExportGateHint(exportGateState = exportGateState)
-            Divider(modifier = Modifier.fillMaxWidth())
         }
     }
 }
@@ -1152,9 +1154,9 @@ private fun DeviceStatusIndicator(snapshot: DeviceSnapshotUi?) {
     }
 }
 
-@Suppress("UnusedParameter")
 @Composable
 private fun HistoryDeviceStatus(snapshot: DeviceSnapshotUi?) {
+    val isConnected = snapshot?.connectionState == DeviceConnectionStateUi.CONNECTED
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -1177,25 +1179,42 @@ private fun HistoryDeviceStatus(snapshot: DeviceSnapshotUi?) {
                 Icon(
                     imageVector = Icons.Filled.DeviceHub,
                     contentDescription = "设备状态",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = if (isConnected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
-                    text = "设备状态",
+                    text = if (isConnected && snapshot?.deviceName != null) {
+                        snapshot.deviceName
+                    } else {
+                        "设备状态"
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                if (isConnected) {
+                    Text(
+                        text = "● 已连接",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
             Text(
-                text = "设备状态将在硬件接入后展示",
+                text = snapshot?.statusText ?: "设备状态将在硬件接入后展示",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Text(
-                text = "硬件上线后将在此显示连接、电量与存储信息",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (!isConnected) {
+                Text(
+                    text = "硬件上线后将在此显示连接信息",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

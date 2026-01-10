@@ -349,7 +349,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
         const val HEARTBEAT_INTERVAL_MS = 1_500L
         const val AUTO_RETRY_DELAY_MS = 2_000L
         const val AUTO_RETRY_MAX_ATTEMPTS = 2
-        const val DEFAULT_MEDIA_SERVER_PORT = 8000
+        const val DEFAULT_MEDIA_SERVER_PORT = 8088
     }
 }
 

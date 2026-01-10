@@ -206,7 +206,7 @@ private fun AiFeatureTestApp(
             }
             scope.launch {
                 try {
-                    snackbarHostState.showSnackbar("缺少 BLE 或定位权限，无法扫描 BT311。")
+                    snackbarHostState.showSnackbar("缺少 BLE 或定位权限，无法扫描 CHLE。")
                 } catch (e: Exception) {
                     // 忽略已取消的协程异常，避免崩溃
                 }

@@ -105,7 +105,7 @@ fun WifiBleTesterPage(
                 OutlinedButton(onClick = onStopConnection, modifier = Modifier.weight(1f)) { Text("停止连接") }
             }
         }
-        SectionCard(title = "BT311 扫描状态") {
+        SectionCard(title = "CHLE 扫描状态") {
             Text(
                 text = state.matchingStatus ?: "点击“开始扫描”以寻找目标设备。",
                 style = MaterialTheme.typography.bodyMedium
@@ -137,7 +137,7 @@ fun WifiBleTesterPage(
                 Spacer(modifier = Modifier.height(6.dp))
             }
             if (state.peripherals.isEmpty() && !state.isScanning) {
-                Text(text = "尚未发现 BT311，系统会持续扫描。", style = MaterialTheme.typography.bodySmall)
+                Text(text = "尚未发现 CHLE，系统会持续扫描。", style = MaterialTheme.typography.bodySmall)
             }
         }
         SectionCard(title = "WiFi 名称配置 (wifi#connect#name#password)") {

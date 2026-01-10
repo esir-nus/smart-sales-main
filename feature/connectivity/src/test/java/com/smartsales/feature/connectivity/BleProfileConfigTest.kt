@@ -12,20 +12,20 @@ import java.util.UUID
 
 class BleProfileConfigTest {
     private val baseProfile = BleProfileConfig(
-        id = "bt311",
-        displayName = "BT311",
-        nameKeywords = listOf("BT311", "BT-311"),
+        id = "chle",
+        displayName = "CHLE Intelligent",
+        nameKeywords = listOf("CHLE_Intelligent"),
         scanServiceUuids = listOf(UUID.fromString("6E400001-B5A3-F393-E0A9-E50E24DCCA9E"))
     )
 
     @Test
-    fun `matches accepts hyphenated bt311 name`() {
-        assertTrue(baseProfile.matches("BT-311_DEV", emptyList()))
+    fun `matches accepts chle name`() {
+        assertTrue(baseProfile.matches("CHLE_Intelligent_DEV", emptyList()))
     }
 
     @Test
     fun `matches accepts folded name without hyphen`() {
-        assertTrue(baseProfile.matches("bt311_dev", emptyList()))
+        assertTrue(baseProfile.matches("chleintelligent_dev", emptyList()))
     }
 
     @Test

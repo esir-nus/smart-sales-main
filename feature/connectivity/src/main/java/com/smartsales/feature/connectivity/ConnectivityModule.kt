@@ -72,9 +72,9 @@ object ConnectivityProvidesModule {
         // Nordic UART 常见变体 UUID，部分 BT311 固件使用该值广播
         val altUartService = UUID.fromString("49535343-FE7D-4AE5-8FA9-9FAFD205E455")
         val defaultProfile = BleProfileConfig(
-            id = "bt311",
-            displayName = "BT311 / Nordic UART",
-            nameKeywords = listOf("BT311", "BT-311", "BT 311"),
+            id = "chle",
+            displayName = "CHLE Intelligent",
+            nameKeywords = listOf("CHLE_Intelligent"),
             scanServiceUuids = listOf(defaultService, altUartService)
         )
         return listOf(defaultProfile)

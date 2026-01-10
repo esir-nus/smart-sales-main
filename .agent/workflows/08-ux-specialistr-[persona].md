@@ -215,12 +215,43 @@ Keep asking throughout the session:
 | Document | Permission | Notes |
 |----------|------------|-------|
 | `docs/ux-experience.md` | ✅ **May modify** | State inventories, microcopy, timing, layout |
+| `docs/specs/ui-element-registry.md` | ✅ **May modify** | Add/remove elements, define states, update requirements |
 | `docs/ux-contract.md` | ❌ **May not modify** | Data contracts, pipelines, boundaries |
+
+---
+
+## UI Element Registry Ownership
+
+> **You own the UI Element Registry.**
+
+The Registry is the **contract between UX and UI**. When you define a new flow or update states:
+
+1.  **Add elements** to [`ui-element-registry.md`](file:///home/cslh-frank/main_app/docs/specs/ui-element-registry.md)
+2.  **Define states** for each element
+3.  **Link to UX Ref** (section in `ux-experience.md`)
+4.  **Set UI Status** to ❌ (Not Started) for new elements
+5.  **Review proposals** from UI Designer in the Proposals Queue
+
+### Registry Flow
+
+```
+UX adds element → User adds Notes → UI styles it → UI updates status to ✅
+```
+
+### Handling UI Proposals
+
+When UI Designer proposes a UX change:
+
+1. Review the proposal in the Proposals Queue
+2. If **approved**: Update the Registry + `ux-experience.md`
+3. If **rejected**: Clear the proposal, add rejection reason
+4. Notify UI Designer of decision
 
 When this workflow produces changes:
 1. Update state inventories directly in `ux-experience.md`
-2. Add entries to the Changelog section
-3. If a change requires modifying `ux-contract.md`, add to **Open Questions** for Product/Eng review
+2. **Update the UI Element Registry** to match
+3. Add entries to the Changelog section
+4. If a change requires modifying `ux-contract.md`, add to **Open Questions** for Product/Eng review
 
 ---
 

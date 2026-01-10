@@ -5,14 +5,16 @@ package com.smartsales.aitest.audio
 // 说明：桥接 AudioFilesViewModel 与 Compose 界面的 Route
 // 作者：创建于 2025-11-21
 
+import android.app.ActivityManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import android.app.ActivityManager
-import com.smartsales.aitest.BuildConfig
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.smartsales.aitest.BuildConfig
 import com.smartsales.feature.media.audio.AudioFilesScreen
 import com.smartsales.feature.media.audio.AudioFilesViewModel
 
@@ -24,6 +26,12 @@ fun AudioFilesRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { viewModel.onImportFromPhone(it) }
+    }
+
     LaunchedEffect(Unit) {
         if (ActivityManager.isRunningInTestHarness() || BuildConfig.DEBUG) {
             viewModel.seedDemoDataIfEmpty()
@@ -34,6 +42,7 @@ fun AudioFilesRoute(
         uiState = uiState,
         onRefresh = viewModel::onRefresh,
         onSyncClicked = viewModel::onSyncClicked,
+        onImportLocalClicked = { importLauncher.launch(arrayOf("audio/*")) },
         onRecordingClicked = viewModel::onRecordingClicked,
         onPlayPauseClicked = viewModel::onPlayPauseClicked,
         onDeleteClicked = viewModel::onDeleteClicked,
@@ -55,3 +64,4 @@ fun AudioFilesRoute(
         modifier = modifier
     )
 }
+

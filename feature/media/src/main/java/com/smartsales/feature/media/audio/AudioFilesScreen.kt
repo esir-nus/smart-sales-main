@@ -27,6 +27,7 @@ import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Upload
@@ -76,6 +77,7 @@ fun AudioFilesScreen(
     uiState: AudioFilesUiState,
     onRefresh: () -> Unit,
     onSyncClicked: () -> Unit,
+    onImportLocalClicked: () -> Unit,
     onRecordingClicked: (String) -> Unit,
     onPlayPauseClicked: (String) -> Unit,
     onDeleteClicked: (String) -> Unit,
@@ -101,6 +103,13 @@ fun AudioFilesScreen(
             TopAppBar(
                 title = { Text(text = "录音文件") },
                 actions = {
+                    IconButton(
+                        onClick = onImportLocalClicked,
+                        enabled = !uiState.isSyncing,
+                        modifier = Modifier.testTag(AudioFilesTestTags.IMPORT_LOCAL_BUTTON)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "导入本地")
+                    }
                     IconButton(
                         onClick = onSyncClicked,
                         enabled = !uiState.isSyncing,
@@ -229,6 +238,7 @@ fun AudioFilesScreen(
 object AudioFilesTestTags {
     const val ROOT = "audio_files_screen_root"
     const val SYNC_BUTTON = "audio_files_sync_button"
+    const val IMPORT_LOCAL_BUTTON = "audio_files_import_local_button"
     const val EMPTY_STATE = "audio_files_empty_state"
     const val ERROR_BANNER = "audio_files_error_banner"
     const val RECORDING_LIST = "audio_files_recording_list"

@@ -69,4 +69,20 @@ object AppTypography {
         fontWeight = FontWeight.Normal,
         lineHeight = 16.sp
     )
+
+    // Action Grid Labels (Medium weight)
+    val ActionLabel = TextStyle(
+        fontFamily = DefaultFont,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Medium,
+        lineHeight = 20.sp
+    )
+
+    // Button text
+    val Button = TextStyle(
+        fontFamily = DefaultFont,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.SemiBold,
+        lineHeight = 20.sp
+    )
 }

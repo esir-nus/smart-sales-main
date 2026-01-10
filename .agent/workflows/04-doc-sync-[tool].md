@@ -42,6 +42,39 @@ Read each potentially relevant doc to understand its purpose and current state.
 
 ---
 
+## Step 2.5: Cross-Reference Validation (CRITICAL)
+
+Before proposing updates, audit for broken references:
+
+```bash
+# Check for deprecated paths
+grep -rn "docs/guides/" docs/ .agent/workflows/
+grep -rn "RealizeTheArchi" docs/ .agent/workflows/
+grep -rn "ux-experience\.md" docs/ .agent/workflows/
+grep -rn "modules/" docs/ .agent/workflows/
+
+# Check for any file references that don't exist
+# Look for patterns like: [text](path) or file:///path
+```
+
+### Known Deprecated References
+
+| Old Path | New Path |
+|----------|----------|
+| `docs/guides/ux-experience.md` | `docs/plans/ux-tracker.md` |
+| `docs/guides/style-guide.md` | `docs/specs/style-guide.md` |
+| `docs/plans/RealizeTheArchi.md` | `docs/plans/tracker.md` |
+| `docs/modules/connectivity.md` | `docs/specs/connectivity-spec.md` |
+| `docs/modules/media.md` | `docs/archived/media-spec-outdated.md` |
+
+### If Broken Refs Found
+
+1. Add them to the sync proposal
+2. Fix deprecated refs → new paths
+3. Report: "Found N deprecated references, included in sync"
+
+---
+
 ## Step 3: Analyze and Propose (USER CONFIRMATION REQUIRED)
 
 Based on context, create a sync proposal:
@@ -51,6 +84,12 @@ Based on context, create a sync proposal:
 
 ### Context
 <Brief summary of work completed>
+
+### Cross-Reference Audit
+- [ ] No deprecated `docs/guides/` refs
+- [ ] No `RealizeTheArchi` refs (now `tracker.md`)
+- [ ] No `ux-experience.md` refs (now `ux-tracker.md`)
+- [ ] All file links point to existing files
 
 ### Docs to Update
 
@@ -101,3 +140,4 @@ git commit -m "docs: sync after <work_summary>"
 3. **User confirmation** - Always get approval before modifying docs
 4. **Preserve style** - Match existing doc formatting
 5. **Conservative** - When unsure if a doc needs updating, ask user
+6. **Reference integrity** - Always validate cross-doc refs before syncing

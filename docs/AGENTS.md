@@ -46,6 +46,38 @@
 
 ---
 
+---
+
+## Purification Mindset
+
+> These rules apply to ALL coding work. Not a "mode" — a default behavior.
+
+### Pre-Coding Audit
+Before modifying code, always:
+1. Read the relevant tracker for architecture status
+2. Read the relevant spec for module contracts
+3. `grep` to verify assumptions — never guess
+
+### Rewrite > Extract
+When touching legacy code:
+- **Rewrite**: When code is misaligned with target architecture or tightly coupled
+- **Extract**: Only when code is already aligned and loosely coupled
+- **Default to rewrite** — old patterns don't deserve preservation
+
+### Organic Debt Payment
+- Fix debt **when it blocks** feature delivery, not proactively
+- Mark deviations in tracker, don't hunt them
+- Ship features first, refactor post-ship
+
+### Evidence-Based Decisions
+| Before | Do This |
+|--------|---------|
+| Claiming "X exists" | `grep -rn "X" feature/` |
+| Claiming "complete" | Build passes |
+| Modifying a file | `view_file` to read it first |
+
+---
+
 ## Architecture Workflow Order
 
 **Priority**: Finish spec → Ship features → Check deviations

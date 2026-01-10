@@ -39,6 +39,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -97,6 +98,8 @@ import kotlinx.coroutines.flow.collectLatest
 fun DeviceManagerRoute(
     modifier: Modifier = Modifier,
     onNavigateToDeviceSetup: () -> Unit = {},
+    onNavigateToWavDownload: () -> Unit = {},
+    onNavigateToGifUpload: () -> Unit = {},
     viewModelOverride: DeviceManagerViewModel? = null
 ) {
     val viewModel: DeviceManagerViewModel = viewModelOverride ?: hiltViewModel()
@@ -128,6 +131,8 @@ fun DeviceManagerRoute(
         onBaseUrlChange = viewModel::onBaseUrlChanged,
         onUseAutoBaseUrl = viewModel::onUseAutoBaseUrl,
         onClearError = viewModel::onClearError,
+        onNavigateToWavDownload = onNavigateToWavDownload,
+        onNavigateToGifUpload = onNavigateToGifUpload,
         modifier = modifier.testTag(DeviceManagerRouteTestTags.ROOT)
     )
 }
@@ -147,6 +152,8 @@ fun DeviceManagerScreen(
     onBaseUrlChange: (String) -> Unit,
     onUseAutoBaseUrl: () -> Unit,
     onClearError: () -> Unit,
+    onNavigateToWavDownload: () -> Unit = {},
+    onNavigateToGifUpload: () -> Unit = {},
     showCloseButton: Boolean = false,
     onCloseRequested: () -> Unit = {},
     onBack: (() -> Unit)? = null,
@@ -188,6 +195,8 @@ fun DeviceManagerScreen(
             onBaseUrlChange = onBaseUrlChange,
             onUseAutoBaseUrl = onUseAutoBaseUrl,
             onClearError = onClearError,
+            onNavigateToWavDownload = onNavigateToWavDownload,
+            onNavigateToGifUpload = onNavigateToGifUpload,
             showCloseButton = showCloseButton,
             onCloseRequested = onCloseRequested,
             modifier = Modifier
@@ -211,6 +220,8 @@ fun DeviceManagerContent(
     onBaseUrlChange: (String) -> Unit,
     onUseAutoBaseUrl: () -> Unit,
     onClearError: () -> Unit,
+    onNavigateToWavDownload: () -> Unit = {},
+    onNavigateToGifUpload: () -> Unit = {},
     showCloseButton: Boolean = false,
     onCloseRequested: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -254,6 +265,40 @@ fun DeviceManagerContent(
                 onDismiss = onClearError,
                 modifier = Modifier.testTag(DeviceManagerTestTags.ERROR_BANNER)
             )
+        }
+
+        // Media transfer action row - only visible when connected
+        if (state.isConnected) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = onNavigateToWavDownload,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(imageVector = Icons.Filled.AudioFile, contentDescription = null)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "下载录音")
+                    }
+                    Button(
+                        onClick = onNavigateToGifUpload,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(imageVector = Icons.Filled.CloudUpload, contentDescription = null)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "发送图片")
+                    }
+                }
+            }
         }
 
         if (!state.isConnected && state.canRetryConnect) {

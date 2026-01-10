@@ -8,6 +8,7 @@ package com.smartsales.aitest.navigation
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Tune
@@ -24,6 +25,8 @@ sealed class Screen(
     data object User : Screen("user_center", "我的", Icons.Filled.Person)
     data object ChatHistory : Screen("chat_history", "聊天记录", Icons.Filled.Chat)
     data object DebugStream : Screen("debug_llm_stream", "流式调试", Icons.Filled.Tune)
+    data object WavDownload : Screen("wav_download", "下载录音", Icons.Filled.AudioFile)
+    data object GifUpload : Screen("gif_upload", "发送图片", Icons.Filled.CloudUpload)
 
     companion object {
         val items = listOf(Home, Audio, Device, User)

@@ -1,6 +1,6 @@
 # UI Element Registry
 
-> **Purpose**: The **contract** between UX (who defines elements) and UI (who styles them).
+> **Purpose**: Contract between **Legacy UI** (functional reference) and **Target UI** (cosmetic redesign).
 >
 > **Owner**: UX Specialist (`/08-ux-specialist`)
 >
@@ -8,99 +8,151 @@
 
 ---
 
-## How This Works
+## Core Concepts
 
-| Role | Can Do | Cannot Do |
-|------|--------|-----------|
-| **UX Specialist** | Add/remove rows, define states, update requirements | Style elements |
-| **UI Designer** | Style listed elements, update UI Status | Add new elements, invent features |
-| **Web Prototype** | Render listed elements only | Create elements not in registry |
-| **User** | Add Notes, requirements, approve UX proposals | — |
+### The Two-UI Model
+
+| Term | Definition |
+|------|------------|
+| **Legacy UI** | Current app implementation. Ugly but functional. Represents *what elements exist*. |
+| **Target UI** | Cosmetic redesign (Web Prototype). Beautiful. Represents *what elements should look like*. |
+| **Registry** | Translation layer. Maps Legacy → Target with authority rules. |
+
+```
+Legacy UI (Feature Dev)  →  Registry (Contract)  →  Target UI (Web Prototype)
+      ↓                           ↓                         ↓
+   "What exists"           "What's allowed"           "How it looks"
+```
 
 ---
 
-## Registry
+## Authority Model
+
+### Cosmetic Authority (UI Designer Can Unilaterally Change)
+
+| Category | Examples | No Approval Needed |
+|----------|----------|-------------------|
+| **Colors** | Gradients, opacity, tints, dark mode | ✅ |
+| **Spacing** | Padding, margins, gaps | ✅ |
+| **Typography** | Font weights, sizes, line heights | ✅ |
+| **Shapes** | Border radius, shadows, elevation | ✅ |
+| **Icons** | Swap icons (same semantic meaning) | ✅ |
+| **Animation** | Transitions, easing, duration | ✅ |
+| **Proportions** | Card sizes, button widths, layout ratios | ✅ |
+
+### Proposal Required (Needs User Approval)
+
+| Category | Examples | Requires Proposal |
+|----------|----------|------------------|
+| **Add Element** | New button, new section, new card | 🔄 Proposal |
+| **Remove Element** | Delete a button, hide a section | 🔄 Proposal |
+| **Rename Label** | "Summarize" → "Quick Summary" | 🔄 Proposal |
+| **Change Flow** | Reorder steps, merge screens | 🔄 Proposal |
+| **Add State** | New loading state, new error type | 🔄 Proposal |
+
+---
+
+## Alignment Check Workflow
+
+> **Trigger**: Invoke when comparing Legacy UI to Target UI before implementation.
+
+### Step 1: Element Inventory Audit
+
+For each element in the Registry, verify:
+
+```markdown
+| Element | In Legacy? | In Target? | Alignment |
+|---------|------------|------------|-----------|
+| TopBar  | ✅ Yes     | ✅ Yes     | ✅ Aligned |
+| ActionGrid | ✅ Yes  | ✅ Yes     | ✅ Aligned |
+| QuickSkillRow | ✅ Yes | ❌ No    | 🔄 Deprecated in Target |
+| NewCard | ❌ No      | ✅ Yes     | 🔄 UI Proposal Needed |
+```
+
+### Step 2: Cosmetic Diff
+
+| Element | Legacy Look | Target Look | Change Type |
+|---------|-------------|-------------|-------------|
+| `InputBar` | Square corners | Pill shape | ✅ Cosmetic |
+| `ActionGrid` | Text buttons | Card grid | ✅ Cosmetic |
+| `TopBar` | White bg | Blur glass | ✅ Cosmetic |
+
+### Step 3: Functional Diff (Requires Proposal)
+
+| Element | Legacy Behavior | Target Difference | Status |
+|---------|-----------------|-------------------|--------|
+| — | — | — | — |
+
+---
+
+## Registry Tables
 
 ### HomeScreen
 
-| Element | States | UX Ref | UI Status | Notes |
-|---------|--------|--------|-----------|-------|
-| `TopBar` | visible | [Layout Invariants](file:///home/cslh-frank/main_app/docs/guides/ux-experience.md#layout-invariants) | ✅ Styled | Menu + Title + Profile |
-| `HeroSection` | visible (empty session), hidden (active session) | [Layout Invariants](file:///home/cslh-frank/main_app/docs/guides/ux-experience.md#layout-invariants) | ✅ Styled | Only shown when no messages |
-| `KnotSymbol` | idle | [style-guide.md](file:///home/cslh-frank/main_app/docs/guides/style-guide.md) | ✅ Styled | Infinity/Lemniscate logo |
-| `HeroGreeting` | visible | — | ✅ Styled | "你好, User" |
-| `HeroSubtitle` | visible | — | ✅ Styled | "我是您的智能销售助手" |
-| `ActionGrid` | visible (empty session) | [Layout Invariants](file:///home/cslh-frank/main_app/docs/guides/ux-experience.md#layout-invariants) | ✅ Styled | 2x2 grid: New Task, Summarize, Ideas, Schedule |
-| `InputBar` | idle, focused, sending, disabled | [Chat Flow](file:///home/cslh-frank/main_app/docs/guides/ux-experience.md#chat-flow) | ⏳ Pending | Floating pill with + button |
-| `HistoryDrawer` | open, closed | [Layout Invariants](file:///home/cslh-frank/main_app/docs/guides/ux-experience.md#layout-invariants) | ❌ Not Started | |
+| Element | States | In Legacy | Target Status | Notes |
+|---------|--------|-----------|---------------|-------|
+| `TopBar` | visible | ✅ | ✅ Styled | Menu + Title + Profile |
+| `HeroSection` | visible (empty), hidden (active) | ✅ | ✅ Styled | Only when no messages |
+| `KnotSymbol` | idle | ❌ | ✅ Styled | NEW in Target (approved) |
+| `HeroGreeting` | visible | ✅ | ✅ Styled | "你好, User" |
+| `HeroSubtitle` | visible | ✅ | ✅ Styled | — |
+| `ActionGrid` | visible (empty) | ❌ | ✅ Styled | Replaces Legacy bullet list |
+| `QuickSkillRow` | visible | ✅ | ⏳ Pending | Keep for functionality, restyle |
+| `InputBar` | idle, focused, sending, disabled | ✅ | ⏳ Pending | Floating pill |
+| `HistoryDrawer` | open, closed | ✅ | ❌ Not Started | |
 
 ---
 
 ### ChatScreen
 
-| Element | States | UX Ref | UI Status | Notes |
-|---------|--------|--------|-----------|-------|
-| `UserBubble` | sent, error | [Chat Flow](file:///home/cslh-frank/main_app/docs/guides/ux-experience.md#chat-flow) | ⏳ Pending | Right-aligned, accent color. Error requires `role=alert`. |
-| `AssistantBubble` | streaming:waiting, streaming:active, streaming:stalled, complete, error | [Chat Flow](file:///home/cslh-frank/main_app/docs/guides/ux-experience.md#chat-flow) | ⏳ Pending | Left-aligned, surface color. **Typewriter Effect** required for streaming (token-by-token). Error requires `role=alert`. |
-| `TypingIndicator` | visible, hidden | [Chat Flow](file:///home/cslh-frank/main_app/docs/guides/ux-experience.md#chat-flow) | ❌ Not Started | Shown during streaming:waiting |
-| `RetryButton` | visible (recoverable error), hidden | [Chat Flow](file:///home/cslh-frank/main_app/docs/guides/ux-experience.md#chat-flow) | ❌ Not Started | |
-| `SmartAnalysisCard` | collapsed, expanded | [L3 SmartAnalysis](file:///home/cslh-frank/main_app/docs/guides/ux-experience.md#l3-smartanalysis-card) | ❌ Not Started | |
+| Element | States | In Legacy | Target Status | Notes |
+|---------|--------|-----------|---------------|-------|
+| `UserBubble` | sent, error | ✅ | ⏳ Pending | Right-aligned |
+| `AssistantBubble` | streaming, complete, error | ✅ | ⏳ Pending | Typewriter effect |
+| `TypingIndicator` | visible, hidden | ✅ | ❌ Not Started | |
+| `RetryButton` | visible, hidden | ❌ | ❌ Not Started | |
+| `SmartAnalysisCard` | collapsed, expanded | ✅ | ❌ Not Started | |
 
 ---
 
 ### TranscriptionFlow
 
-| Element | States | UX Ref | UI Status | Notes |
-|---------|--------|--------|-----------|-------|
-| `UploadProgressBar` | uploading, complete, error | [Audio Upload](file:///home/cslh-frank/main_app/docs/guides/ux-experience.md#audio-upload-flow) | ❌ Not Started | |
-| `TranscriptionProgress` | submitted, in_progress, batches_arriving, complete, error | [Transcription Flow](file:///home/cslh-frank/main_app/docs/guides/ux-experience.md#transcription-flow) | ❌ Not Started | |
-| `TranscriptBubble` | streaming, complete | — | ❌ Not Started | |
+| Element | States | In Legacy | Target Status | Notes |
+|---------|--------|-----------|---------------|-------|
+| `UploadProgressBar` | uploading, complete, error | ✅ | ❌ Not Started | |
+| `TranscriptionProgress` | submitted, in_progress, complete, error | ✅ | ❌ Not Started | |
+| `TranscriptBubble` | streaming, complete | ✅ | ❌ Not Started | |
 
 ---
 
 ### BadgeFlow (GIF/WAV)
 
-| Element | States | UX Ref | UI Status | Notes |
-|---------|--------|--------|-----------|-------|
-| `GifUploadProgress` | preparing, connecting, uploading:N/M, complete, error:ble, error:network, error:frame, error:timeout | [GIF Upload Flow](file:///home/cslh-frank/main_app/docs/guides/ux-experience.md#gif-upload-flow-badge) | ❌ Not Started | Error states require `role=alert` for accessibility. |
-| `WavDownloadList` | scanning, files_found, downloading, complete, empty, error:ble, error:network, error:sd | [WAV Download Flow](file:///home/cslh-frank/main_app/docs/guides/ux-experience.md#wav-download-flow-badge) | ❌ Not Started | Error states require `role=alert` for accessibility. |
-| `BadgeStatusCard` | connected, disconnected, syncing | — | ❌ Not Started | In HistoryDrawer |
+| Element | States | In Legacy | Target Status | Notes |
+|---------|--------|-----------|---------------|-------|
+| `GifUploadProgress` | preparing, uploading:N/M, complete, error:* | ✅ | ❌ Not Started | |
+| `WavDownloadList` | scanning, downloading, complete, error:* | ✅ | ❌ Not Started | |
+| `BadgeStatusCard` | connected, disconnected, syncing | ✅ | ❌ Not Started | |
 
 ---
 
-## UI Status Legend
+## Status Legend
 
 | Status | Meaning |
 |--------|---------|
-| ✅ Styled | Element is designed and matches style-guide |
-| ⏳ Pending | Element is defined but not yet styled |
-| ❌ Not Started | Element is in UX spec but no UI work done |
-| 🔄 Proposed | UI persona proposed a change, awaiting UX approval |
-
----
-
-## UX → UI Handoff Protocol
-
-```
-1. UX adds element to this registry (with states + UX Ref)
-2. User (Frank) adds Notes if needed
-3. UI Designer reads registry, styles element
-4. UI Designer updates UI Status to ✅
-5. If UI proposes a change → set status to 🔄 and add comment in Notes
-6. User approves/rejects → UX updates registry accordingly
-```
+| ✅ Styled | Target UI complete, ready for Kotlin |
+| ⏳ Pending | In Registry, not yet designed in Target |
+| ❌ Not Started | Exists in Legacy, no Target work |
+| 🔄 Proposed | UI proposes change, awaiting approval |
+| 🗑️ Deprecated | Legacy-only, being removed in Target |
 
 ---
 
 ## UI Proposals Queue
 
-When UI Designer wants to propose a UX change (e.g., "This button should be in a different place"):
-
-| Element | Proposal | Proposed By | Date | Status |
-|---------|----------|-------------|------|--------|
-| *Example: InputBar* | *Move + button to right side* | *UI Designer* | *2026-01-10* | *Pending Review* |
-
-> **Rule**: UI cannot implement proposals. Only after User approves and UX updates the registry.
+| Element | Proposal | By | Date | Status |
+|---------|----------|-----|------|--------|
+| `KnotSymbol` | Add brand mark to Hero | UI | 2026-01-10 | ✅ Approved |
+| `ActionGrid` | Replace bullet list with cards | UI | 2026-01-10 | ✅ Approved |
 
 ---
 
@@ -108,5 +160,6 @@ When UI Designer wants to propose a UX change (e.g., "This button should be in a
 
 | Date | Change | By |
 |------|--------|-----|
-| 2026-01-10 | Initial registry created | Agent |
-| 2026-01-10 | Added audit findings: Typewriter Effect for streaming, `role=alert` for error states | UI/UX Pro Max Audit |
+| 2026-01-10 | Initial registry | Agent |
+| 2026-01-10 | Added Typewriter, role=alert | Audit |
+| 2026-01-10 | Added Legacy ↔ Target model, Alignment Check | UX+UI+Senior Review |

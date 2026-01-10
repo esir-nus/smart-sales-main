@@ -16,7 +16,9 @@ import com.smartsales.aitest.devicemanager.DeviceManagerRoute
 @Composable
 fun DeviceManagerShell(
     viewModel: com.smartsales.feature.media.devicemanager.DeviceManagerViewModel? = null,
-    onNavigateToDeviceSetup: () -> Unit = {}
+    onNavigateToDeviceSetup: () -> Unit = {},
+    onNavigateToWavDownload: () -> Unit = {},
+    onNavigateToGifUpload: () -> Unit = {}
 ) {
     Box(
         modifier = Modifier
@@ -26,6 +28,8 @@ fun DeviceManagerShell(
         DeviceManagerRoute(
             modifier = Modifier.fillMaxSize(),
             onNavigateToDeviceSetup = onNavigateToDeviceSetup,
+            onNavigateToWavDownload = onNavigateToWavDownload,
+            onNavigateToGifUpload = onNavigateToGifUpload,
             viewModelOverride = viewModel
         )
     }

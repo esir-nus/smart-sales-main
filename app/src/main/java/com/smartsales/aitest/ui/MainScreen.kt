@@ -31,6 +31,8 @@ import com.smartsales.feature.chat.home.HomeScreenRoute
 import com.smartsales.feature.chat.home.HomeViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.smartsales.feature.media.devicemanager.DeviceManagerViewModel
+import com.smartsales.feature.media.WavDownloadScreen
+import com.smartsales.feature.media.GifUploadScreen
 
 @Composable
 fun MainScreen() {
@@ -98,7 +100,9 @@ fun MainScreen() {
             }
             composable(Screen.Device.route) {
                 DeviceManagerShell(
-                    viewModel = deviceManagerViewModel
+                    viewModel = deviceManagerViewModel,
+                    onNavigateToWavDownload = { navController.navigate(Screen.WavDownload.route) },
+                    onNavigateToGifUpload = { navController.navigate(Screen.GifUpload.route) }
                 )
             }
             composable(Screen.User.route) {
@@ -125,6 +129,12 @@ fun MainScreen() {
             }
             composable(Screen.DebugStream.route) {
                 DebugDashscopeStreamScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Screen.WavDownload.route) {
+                WavDownloadScreen()
+            }
+            composable(Screen.GifUpload.route) {
+                GifUploadScreen()
             }
         }
     }

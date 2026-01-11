@@ -115,6 +115,53 @@ class DisectorTest {
         }
     }
 
+    // V1 Appendix A.3 spec examples (must match)
+
+    @Test
+    fun createPlan_26Minutes_splitsToBatches_10_16_specA3() {
+        // Spec A.3: 26 minutes -> (10, 16) because rem 6 < 7, merge
+        val plan = disector.createPlan(
+            totalMs = 26 * 60 * 1000L,
+            audioAssetId = "audio123",
+            recordingSessionId = "session456"
+        )
+
+        assertEquals(2, plan.batches.size)
+        assertEquals(10 * 60 * 1000L, plan.batches[0].absEndMs - plan.batches[0].absStartMs)
+        assertEquals(16 * 60 * 1000L, plan.batches[1].absEndMs - plan.batches[1].absStartMs)
+    }
+
+    @Test
+    fun createPlan_36Minutes_splitsToBatches_10_10_16_specA3() {
+        // Spec A.3: 36 minutes -> (10, 10, 16) because rem 6 < 7, merge
+        val plan = disector.createPlan(
+            totalMs = 36 * 60 * 1000L,
+            audioAssetId = "audio123",
+            recordingSessionId = "session456"
+        )
+
+        assertEquals(3, plan.batches.size)
+        assertEquals(10 * 60 * 1000L, plan.batches[0].absEndMs - plan.batches[0].absStartMs)
+        assertEquals(10 * 60 * 1000L, plan.batches[1].absEndMs - plan.batches[1].absStartMs)
+        assertEquals(16 * 60 * 1000L, plan.batches[2].absEndMs - plan.batches[2].absStartMs)
+    }
+
+    @Test
+    fun createPlan_39Minutes_splitsToBatches_10_10_10_9_specA3() {
+        // Spec A.3: 39 minutes -> (10, 10, 10, 9) because rem 9 >= 7, new batch
+        val plan = disector.createPlan(
+            totalMs = 39 * 60 * 1000L,
+            audioAssetId = "audio123",
+            recordingSessionId = "session456"
+        )
+
+        assertEquals(4, plan.batches.size)
+        assertEquals(10 * 60 * 1000L, plan.batches[0].absEndMs - plan.batches[0].absStartMs)
+        assertEquals(10 * 60 * 1000L, plan.batches[1].absEndMs - plan.batches[1].absStartMs)
+        assertEquals(10 * 60 * 1000L, plan.batches[2].absEndMs - plan.batches[2].absStartMs)
+        assertEquals(9 * 60 * 1000L, plan.batches[3].absEndMs - plan.batches[3].absStartMs)
+    }
+
     // ==== Overlap calculation tests =====
 
     @Test

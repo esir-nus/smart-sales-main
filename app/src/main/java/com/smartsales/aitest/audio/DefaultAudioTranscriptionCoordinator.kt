@@ -71,7 +71,8 @@ class DefaultAudioTranscriptionCoordinator @Inject constructor(
             language = language,
             ossObjectKey = uploadPayload.objectKey,
             fileUrl = uploadPayload.presignedUrl,
-            sessionId = sessionId
+            sessionId = sessionId,
+            durationMs = durationMs
         )
         val result = tingwuCoordinator.submit(request)
         if (result is Result.Success) {

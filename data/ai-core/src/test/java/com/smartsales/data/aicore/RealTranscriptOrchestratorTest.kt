@@ -43,7 +43,13 @@ class RealTranscriptOrchestratorTest {
               "summary_title_6chars": "核心纪要",
               "location": "上海",
               "stage": "DISCOVERY",
-              "risk_level": "HIGH"
+              "risk_level": "HIGH",
+              "chapters": [
+                 {"title": "开场", "start_ms": 0, "end_ms": 1000, "summary": "简短摘要"}
+              ],
+              "key_points": [
+                 {"text": "重点", "time_range": {"start_ms": 100, "end_ms": 500}}
+              ]
             }
             ```
             """.trimIndent()
@@ -72,6 +78,15 @@ class RealTranscriptOrchestratorTest {
         assertEquals("核心纪要", session?.summaryTitle6Chars)
         assertEquals(SessionStage.DISCOVERY, session?.stage)
         assertEquals(RiskLevel.HIGH, session?.riskLevel)
+
+        assertEquals(1, result?.chapters?.size)
+        assertEquals("开场", result?.chapters?.first()?.title)
+        assertEquals(0L, result?.chapters?.first()?.startMs)
+        assertEquals("简短摘要", result?.chapters?.first()?.summary)
+
+        assertEquals(1, result?.keyPoints?.size)
+        assertEquals("重点", result?.keyPoints?.first()?.text)
+        assertEquals(100L, result?.keyPoints?.first()?.timeRange?.startMs)
     }
 
     @Test
@@ -263,6 +278,105 @@ class RealTranscriptOrchestratorTest {
 
         assertEquals("客户X", result?.speakerMap?.get("spk_x")?.displayName)
         assertEquals("上海", result?.location)
+    }
+
+    @Test
+    fun `chapters with invalid timestamps are silently skipped`() = runTest(dispatcher) {
+        val metaHub = InMemoryMetaHub()
+        val ai = RecordingAiChatService(
+            """
+            {
+              "speaker_map": {},
+              "chapters": [
+                 {"title": "正常章节", "start_ms": 0, "end_ms": 1000},
+                 {"title": "倒序时间", "start_ms": 5000, "end_ms": 1000},
+                 {"title": "负数开始", "start_ms": -100, "end_ms": 500},
+                 {"title": "缺少结束", "start_ms": 0}
+              ]
+            }
+            """.trimIndent()
+        )
+        val orchestrator = RealTranscriptOrchestrator(metaHub, dispatchers, ai)
+
+        val result = orchestrator.inferTranscriptMetadata(
+            TranscriptMetadataRequest(
+                transcriptId = "t-edge-1",
+                sessionId = "s-edge-1",
+                diarizedSegments = listOf(DiarizedSegment("spk_1", 0, 0, 1_000, "测试")),
+                speakerLabels = emptyMap()
+            )
+        )
+        advanceUntilIdle()
+
+        // Only the valid chapter should be parsed
+        assertEquals(1, result?.chapters?.size)
+        assertEquals("正常章节", result?.chapters?.first()?.title)
+    }
+
+    @Test
+    fun `empty or missing chapters and keyPoints arrays return empty lists`() = runTest(dispatcher) {
+        val metaHub = InMemoryMetaHub()
+        val ai = RecordingAiChatService(
+            """
+            {
+              "speaker_map": {"spk_1": {"display_name": "客户"}},
+              "chapters": [],
+              "main_person": "客户"
+            }
+            """.trimIndent()
+        )
+        val orchestrator = RealTranscriptOrchestrator(metaHub, dispatchers, ai)
+
+        val result = orchestrator.inferTranscriptMetadata(
+            TranscriptMetadataRequest(
+                transcriptId = "t-edge-2",
+                sessionId = "s-edge-2",
+                diarizedSegments = listOf(DiarizedSegment("spk_1", 0, 0, 1_000, "测试")),
+                speakerLabels = emptyMap()
+            )
+        )
+        advanceUntilIdle()
+
+        assertEquals(0, result?.chapters?.size)
+        assertEquals(0, result?.keyPoints?.size)
+        assertEquals("客户", result?.speakerMap?.get("spk_1")?.displayName)
+    }
+
+    @Test
+    fun `keyPoints without time_range are still parsed`() = runTest(dispatcher) {
+        val metaHub = InMemoryMetaHub()
+        val ai = RecordingAiChatService(
+            """
+            {
+              "speaker_map": {},
+              "key_points": [
+                 {"text": "有时间范围", "time_range": {"start_ms": 100, "end_ms": 200}},
+                 {"text": "无时间范围"},
+                 {"text": "无效时间范围", "time_range": {"start_ms": 500, "end_ms": 100}}
+              ]
+            }
+            """.trimIndent()
+        )
+        val orchestrator = RealTranscriptOrchestrator(metaHub, dispatchers, ai)
+
+        val result = orchestrator.inferTranscriptMetadata(
+            TranscriptMetadataRequest(
+                transcriptId = "t-edge-3",
+                sessionId = "s-edge-3",
+                diarizedSegments = listOf(DiarizedSegment("spk_1", 0, 0, 1_000, "测试")),
+                speakerLabels = emptyMap()
+            )
+        )
+        advanceUntilIdle()
+
+        // All 3 keyPoints are parsed (text is the only required field)
+        assertEquals(3, result?.keyPoints?.size)
+        assertEquals("有时间范围", result?.keyPoints?.get(0)?.text)
+        assertEquals(100L, result?.keyPoints?.get(0)?.timeRange?.startMs)
+        assertEquals("无时间范围", result?.keyPoints?.get(1)?.text)
+        assertNull(result?.keyPoints?.get(1)?.timeRange)
+        assertEquals("无效时间范围", result?.keyPoints?.get(2)?.text)
+        assertNull(result?.keyPoints?.get(2)?.timeRange) // Invalid range becomes null
     }
 
     private class RecordingAiChatService(

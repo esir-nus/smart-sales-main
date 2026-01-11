@@ -21,6 +21,9 @@ data class TranscriptMetadata(
     val location: String? = null,
     val stage: SessionStage? = null,
     val riskLevel: RiskLevel? = null,
+
+    val chapters: List<ChapterMeta> = emptyList(),
+    val keyPoints: List<KeyPointMeta> = emptyList(),
     val extra: Map<String, Any?> = emptyMap()
 ) {
     /**
@@ -37,8 +40,12 @@ data class TranscriptMetadata(
         shortSummary = other.shortSummary ?: shortSummary,
         summaryTitle6Chars = other.summaryTitle6Chars ?: summaryTitle6Chars,
         location = other.location ?: location,
+
         stage = other.stage ?: stage,
         riskLevel = other.riskLevel ?: riskLevel,
+        // List fields: replace if new list is not empty, otherwise keep old
+        chapters = if (other.chapters.isNotEmpty()) other.chapters else chapters,
+        keyPoints = if (other.keyPoints.isNotEmpty()) other.keyPoints else keyPoints,
         extra = extra + other.extra
     )
 
@@ -91,3 +98,26 @@ enum class TranscriptSource {
     TINGWU_LLM,
     UNKNOWN
 }
+
+/**
+ * M2B Chapter structure (M1 Deferred implementation)
+ */
+data class ChapterMeta(
+    val title: String,
+    val startMs: Long,
+    val endMs: Long,
+    val summary: String? = null
+)
+
+/**
+ * M2B KeyPoint structure (M1 Deferred implementation)
+ */
+data class KeyPointMeta(
+    val text: String,
+    val timeRange: TimeRange? = null
+)
+
+data class TimeRange(
+    val startMs: Long,
+    val endMs: Long
+)

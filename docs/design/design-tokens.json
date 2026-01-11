@@ -212,6 +212,14 @@
       "$comment": "Subtle background gradient for hero sections",
       "type": "radial",
       "colors": ["#0066CC", "#4B0082", "#2F4F4F"]
+    },
+    "chromaticText": {
+      "type": "linear",
+      "angle": 135,
+      "stops": [
+        { "color": "#00C6FF", "position": 0 },
+        { "color": "#0072FF", "position": 100 }
+      ]
     }
   },
 
@@ -240,6 +248,11 @@
   },
 
   "components": {
+    "header": {
+        "debugDotSize": 8,
+        "debugDotActive": "#34C759",
+        "debugDotInactive": "{primitives.colors.gray.500}"
+    },
     "inputBar": {
       "height": 64,
       "paddingHorizontal": "{spacing.computed.sm}",

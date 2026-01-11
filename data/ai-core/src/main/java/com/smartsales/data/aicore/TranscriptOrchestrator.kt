@@ -13,6 +13,9 @@ import com.smartsales.core.metahub.SpeakerMeta
 import com.smartsales.core.metahub.SpeakerRole
 import com.smartsales.core.metahub.TranscriptMetadata
 import com.smartsales.core.metahub.TranscriptSource
+import com.smartsales.core.metahub.ChapterMeta
+import com.smartsales.core.metahub.KeyPointMeta
+import com.smartsales.core.metahub.TimeRange
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
 import com.smartsales.core.util.LogTags
@@ -141,7 +144,13 @@ class RealTranscriptOrchestrator @Inject constructor(
   "stage": "DISCOVERY|NEGOTIATION|PROPOSAL|CLOSING|POST_SALE|UNKNOWN",
   "risk_level": "LOW|MEDIUM|HIGH|UNKNOWN",
   "highlights": [],
-  "actionable_tips": []
+  "actionable_tips": [],
+  "chapters": [
+     {"title": "开场寒暄", "start_ms": 0, "end_ms": 60000, "summary": "简短摘要"}
+  ],
+  "key_points": [
+     {"text": "关键信息点", "time_range": {"start_ms": 100, "end_ms": 5000}}
+  ]
 }"""
             )
             existingLabels?.let {
@@ -209,6 +218,9 @@ class RealTranscriptOrchestrator @Inject constructor(
         }.orEmpty()
         val tags = (highlights + actionable).filter { it.isNotBlank() }.toSet()
 
+        val chapters = parseChapters(obj.optJSONArray("chapters"))
+        val keyPoints = parseKeyPoints(obj.optJSONArray("key_points"))
+
         val transcript = TranscriptMetadata(
             transcriptId = request.transcriptId,
             sessionId = request.sessionId,
@@ -222,6 +234,8 @@ class RealTranscriptOrchestrator @Inject constructor(
             location = location,
             stage = stage,
             riskLevel = risk,
+            chapters = chapters,
+            keyPoints = keyPoints,
             extra = mapOf("sampledSegments" to sampledCount)
         )
         val sessionMeta = request.sessionId?.let { sessionId ->
@@ -271,6 +285,39 @@ class RealTranscriptOrchestrator @Inject constructor(
             }
         }
         return map
+    }
+
+    private fun parseChapters(array: org.json.JSONArray?): List<ChapterMeta> {
+        if (array == null) return emptyList()
+        val list = mutableListOf<ChapterMeta>()
+        for (i in 0 until array.length()) {
+            val item = array.optJSONObject(i) ?: continue
+            val title = item.optString("title").takeIf { !it.isNullOrBlank() } ?: continue
+            val start = item.optLong("start_ms", -1)
+            val end = item.optLong("end_ms", -1)
+            val summary = item.optString("summary").takeIf { !it.isNullOrBlank() }
+            if (start >= 0 && end >= start) {
+                list.add(ChapterMeta(title, start, end, summary))
+            }
+        }
+        return list
+    }
+
+    private fun parseKeyPoints(array: org.json.JSONArray?): List<KeyPointMeta> {
+        if (array == null) return emptyList()
+        val list = mutableListOf<KeyPointMeta>()
+        for (i in 0 until array.length()) {
+            val item = array.optJSONObject(i) ?: continue
+            val text = item.optString("text").takeIf { !it.isNullOrBlank() } ?: continue
+            val rangeObj = item.optJSONObject("time_range")
+            val range = if (rangeObj != null) {
+                val start = rangeObj.optLong("start_ms", -1)
+                val end = rangeObj.optLong("end_ms", -1)
+                if (start >= 0 && end >= start) TimeRange(start, end) else null
+            } else null
+            list.add(KeyPointMeta(text, range))
+        }
+        return list
     }
 
     private suspend fun persistMetadata(parsed: ParsedMetadata): TranscriptMetadata {

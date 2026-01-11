@@ -31,7 +31,15 @@ When invoked without arguments, execute the full transplant pipeline:
                │
                ▼
 ┌─────────────────────────────────┐
-│ Phase 2: TOKEN SYNC             │
+│ Phase 2: GAP ANALYSIS & PLAN    │
+│ - Compare visuals systematically│
+│ - List all discrepancies        │
+│ - **PAUSE FOR USER APPROVAL**   │
+└──────────────┬──────────────────┘
+               │
+               ▼
+┌─────────────────────────────────┐
+│ Phase 3: TOKEN SYNC             │
 │ - Map prototype → tokens        │
 │ - ADD missing tokens (auto)     │
 │ - Update AppSpacing.kt etc.     │
@@ -39,7 +47,7 @@ When invoked without arguments, execute the full transplant pipeline:
                │
                ▼
 ┌─────────────────────────────────┐
-│ Phase 3: IMPLEMENT              │
+│ Phase 4: IMPLEMENT              │
 │ - Write Compose code            │
 │ - Follow existing patterns      │
 │ - Use tokens, NOT hardcoded     │
@@ -47,25 +55,48 @@ When invoked without arguments, execute the full transplant pipeline:
                │
                ▼
 ┌─────────────────────────────────┐
-│ Phase 4: VERIFY                 │
+│ Phase 5: VERIFY & REPORT        │
 │ - Build check                   │
 │ - Token compliance audit        │
 │ - Localization check            │
+│ - Produce summary report        │
 └──────────────┬──────────────────┘
                │
                ▼
 ┌─────────────────────────────────┐
-│ Phase 5: REPORT & COMMIT        │
-│ - Produce summary               │
+│ Phase 6: COMMIT                 │
 │ - Commit changes                │
 │ - Push if requested             │
 └─────────────────────────────────┘
 ```
 
-**Only pause if:**
-1. **Conflict detected** — Prototype value contradicts existing token
-2. **Design disagreement** — Transplant would violate style-guide principles
-3. **Ambiguity** — Cannot determine correct value from prototype
+**CRITICAL: You MUST Pause after Phase 2.**
+Do not proceed to implementation until the user has reviewed the Gap Analysis and Task List.
+
+---
+
+## 🛑 Gap Analysis (Mandatory Output)
+
+Before implementing, you must output a **Gap Analysis Report**:
+
+```markdown
+## 🔍 Gap Analysis: [Component]
+
+### Visual Discrepancies
+| Element | Prototype (Target) | Android (Current) | Action |
+|---------|--------------------|-------------------|--------|
+| Header | Has debug dot | Missing | [ ] Add Debug Dot |
+| Color | Gradient Text | Solid Blue | [ ] Update Brush |
+
+### Implementation Tasks
+1. [ ] Update `design-tokens.json` with new values
+2. [ ] Modify `[File.kt]` to matching token X
+3. [ ] ...
+
+**waiting for approval...**
+```
+
+Only proceed when user says "Approved" or "Continue".
 
 ---
 

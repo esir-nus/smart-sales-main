@@ -31,9 +31,9 @@ fun KnotSymbol(
     val infiniteTransition = rememberInfiniteTransition(label = "knot_breathing")
     val breathScale by infiniteTransition.animateFloat(
         initialValue = 1.0f,
-        targetValue = 1.15f,
+        targetValue = 1.35f, // Fix T5: Deeper breath (Match Prototype ~1.4x)
         animationSpec = infiniteRepeatable(
-            animation = tween(2500, easing = LinearEasing),
+            animation = tween(2000, easing = LinearEasing), // Match Prototype ~2s
             repeatMode = RepeatMode.Reverse
         ),
         label = "scale"

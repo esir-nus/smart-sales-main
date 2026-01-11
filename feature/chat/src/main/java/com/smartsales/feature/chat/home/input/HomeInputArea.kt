@@ -169,8 +169,8 @@ internal fun HomeInputArea(
                     drawRect(brush = brush, blendMode = BlendMode.Overlay)
                 }
                 .background(
-                    // T3: Frosted Glass (0.65 alpha) - relying on shadow for separation
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.65f), 
+                    // T3: Frosted Glass (0.50 alpha) - enhanced transparency for Aurora visibility
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.50f), 
                     shape = RoundedCornerShape(AppRadius.Pill)
                 )
                 .border(
@@ -435,13 +435,7 @@ internal fun QuickSkillRow(
                 modifier = Modifier
                     .testTag(skillTag)
                     .height(AppDimensions.QuickSkillChipHeight)
-                    .offset(y = liftOffset) // T4: Chip Lift
-                    // T1: Glass Chip Shadow
-                    .shadow(
-                        elevation = if (isPressed) 6.dp else 4.dp,
-                        shape = RoundedCornerShape(AppRadius.Pill),
-                        spotColor = AppColors.GlassShadow.copy(alpha = 0.15f)
-                    ),
+                    .offset(y = liftOffset), // T4: Chip Lift (No shadow - clean glass per V8)
                 label = {
                     Text(
                         text = skill.label,
@@ -453,7 +447,7 @@ internal fun QuickSkillRow(
                     containerColor = if (isSelected) {
                         MaterialTheme.colorScheme.primaryContainer
                     } else {
-                        // T1: Glass Style (Translucent Surface)
+                        // T1: Glass Style (0.65 alpha) - Match Web Prototype --glass-bg
                         MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)
                     },
                     labelColor = when {
@@ -467,8 +461,8 @@ internal fun QuickSkillRow(
                     color = if (isSelected) {
                         MaterialTheme.colorScheme.primary
                     } else {
-                        // T1: Subtle Glass Border
-                        MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                        // T1: Cut Glass Border - Match Web Prototype --glass-border (White @ 0.4)
+                        Color.White.copy(alpha = 0.4f)
                     }
                 ),
                 shape = RoundedCornerShape(AppRadius.Pill)

@@ -33,8 +33,8 @@ fun AuroraBackground(
         initialValue = 0f,
         targetValue = 6.28f, // 2*PI
         animationSpec = infiniteRepeatable(
-            animation = tween(10000, easing = LinearEasing), // 10s cycle (was 20s)
-            repeatMode = RepeatMode.Restart
+            animation = tween(12000, easing = LinearEasing), // 12s cycle - Slower for premium feel
+            repeatMode = RepeatMode.Reverse // Fix: Seamless loop (Pendulum)
         ),
         label = "time"
     )
@@ -44,30 +44,30 @@ fun AuroraBackground(
         val h = size.height
         
         // Blob 1: Top Left-ish
-        val x1 = w * 0.3f + cos(t) * (w * 0.1f)
-        val y1 = h * 0.3f + sin(t) * (h * 0.1f)
+        val x1 = w * 0.3f + cos(t) * (w * 0.15f) // Increased from 0.1
+        val y1 = h * 0.3f + sin(t) * (h * 0.15f)
         drawAuroraBlob(
             center = Offset(x1, y1),
             radius = w * 0.7f,
-            color = AppColors.AuroraTopLeft.copy(alpha = 0.80f) // Boosted to 0.80
+            color = AppColors.AuroraTopLeft // Alpha controlled in AppColors
         )
 
         // Blob 2: Center Right-ish
-        val x2 = w * 0.7f + cos(t * 0.8f) * (w * 0.15f)
-        val y2 = h * 0.6f + sin(t * 1.2f) * (h * 0.15f)
+        val x2 = w * 0.7f + cos(t * 0.8f) * (w * 0.20f) // Increased from 0.15
+        val y2 = h * 0.6f + sin(t * 1.2f) * (h * 0.20f)
         drawAuroraBlob(
             center = Offset(x2, y2),
             radius = w * 0.8f,
-            color = AppColors.AuroraCenterRight.copy(alpha = 0.75f) // Boosted to 0.75
+            color = AppColors.AuroraCenterRight // Alpha controlled in AppColors
         )
 
         // Blob 3: Bottom Left-ish
-        val x3 = w * 0.4f + sin(t * 0.5f) * (w * 0.1f)
-        val y3 = h * 0.8f + cos(t) * (h * 0.1f)
+        val x3 = w * 0.4f + sin(t * 0.5f) * (w * 0.15f) // Increased from 0.1
+        val y3 = h * 0.8f + cos(t) * (h * 0.15f)
         drawAuroraBlob(
             center = Offset(x3, y3),
             radius = w * 0.6f,
-            color = AppColors.AuroraBottomLeft.copy(alpha = 0.70f) // Boosted to 0.70
+            color = AppColors.AuroraBottomLeft // Alpha controlled in AppColors
         )
     }
 }

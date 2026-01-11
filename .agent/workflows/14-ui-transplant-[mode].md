@@ -28,6 +28,47 @@ The **Executor (`/ui-ux-pro-max`)** determines the best platform-specific implem
 
 ---
 
+## 🚨 Source of Truth Hierarchy (CRITICAL)
+
+**NEVER INVENT VALUES. ALWAYS EXTRACT FROM SOURCE.**
+
+| Priority | Source | Use For |
+|----------|--------|---------|
+| 1️⃣ | **Prototype Source Code** (HTML/CSS/JS) | Exact values: colors, alphas, durations, easing |
+| 2️⃣ | **`design-tokens.json`** | Semantic tokens, spacing scale, typography |
+| 3️⃣ | **Screenshots / User Feedback** | Gap detection, visual bugs, "feels wrong" signals |
+
+### The Anti-Pattern: Inventing
+
+| ❌ Inventing | ✅ Extracting |
+|--------------|---------------|
+| "Try alpha 0.70f, that seems right" | "Prototype CSS: `--glass-bg: rgba(255,255,255,0.65)` → Use 0.65f" |
+| "Scale should be about 1.2x" | "Prototype JS: `breathe = Math.sin(t) * 2 + 12` → Amplitude is ~1.4x" |
+| "Make the animation faster" | "Prototype: `tween(2500)` → Use 2500ms" |
+
+**If no prototype source exists**, ask the user for the reference file before proceeding.
+
+---
+
+## 🔄 Translation Protocol (Web → Compose)
+
+Prototype and production are different languages. You MUST consider translation:
+
+| Web (Prototype) | Compose (Production) | Notes |
+|-----------------|----------------------|-------|
+| `rgba(255,255,255,0.65)` | `Color.White.copy(alpha=0.65f)` | Direct mapping |
+| `animation: 2s infinite` | `tween(2000), RepeatMode.Restart` | `s` → `ms` |
+| `animation: ... alternate` | `RepeatMode.Reverse` | Alternate = Reverse |
+| `transform: scale(1.4)` | `graphicsLayer { scaleX = 1.4f }` | Same concept |
+| `Math.sin(t) * amplitude` | `sin(t) * amplitude` | Kotlin math is similar |
+| `requestAnimationFrame` | `rememberInfiniteTransition` | Compose's declarative equivalent |
+| `box-shadow: 0 8px 32px` | `Modifier.shadow(elevation = 8.dp)` | Approximate (Compose shadow is simpler) |
+| `backdrop-filter: blur(20px)` | **No direct equivalent** | Use `Modifier.background` + alpha overlay |
+
+**When translation is not 1:1**, document the approximation in the Gap Analysis.
+
+---
+
 ## 🚀 Workflow
 
 ```
@@ -35,11 +76,20 @@ The **Executor (`/ui-ux-pro-max`)** determines the best platform-specific implem
          │
          ▼
 ┌─────────────────────────────────┐
-│ Phase 1: SCAN                   │
-│ - Read prototype HTML/CSS       │
-│ - Read current Android code     │
+│ Phase 0: LOCATE PROTOTYPE       │  ← NEW
+│ - Ask: "Where is the source?"   │
+│ - Find HTML/CSS/JS prototype    │
+│ - If not found, STOP and ask    │
+└──────────────┬──────────────────┘
+               │
+               ▼
+┌─────────────────────────────────┐
+│ Phase 1: SCAN (Extract Values)  │
+│ - Read prototype HTML/CSS/JS    │
+│ - Extract: colors, alphas, ms   │
 │ - Read design-tokens.json       │
-│ - Take/receive screenshots      │
+│ - Read current Android code     │
+│ - Review screenshots for gaps   │
 └──────────────┬──────────────────┘
                │
                ▼
@@ -48,6 +98,7 @@ The **Executor (`/ui-ux-pro-max`)** determines the best platform-specific implem
 │ - Compare element by element    │
 │ - Describe visual discrepancies │
 │ - Extract VISUAL SPECIFICATIONS │
+│ - Document Web→Compose mapping  │
 │ - Identify missing tokens       │
 └──────────────┬──────────────────┘
                │
@@ -55,6 +106,7 @@ The **Executor (`/ui-ux-pro-max`)** determines the best platform-specific implem
 ┌─────────────────────────────────┐
 │ Phase 3: OUTPUT REPORT          │
 │ - Visual Spec for each gap      │
+│ - Prototype Line References     │
 │ - Acceptance Criteria (visual)  │
 │ - Token updates needed          │
 │ - **STOP FOR USER APPROVAL**    │

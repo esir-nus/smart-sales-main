@@ -562,15 +562,9 @@ class TingwuTranscriptProcessor @Inject constructor(
         data: TingwuResultData?,
         action: String
     ): TingwuResultData {
-        if (code != "200" && code != "OK" && code != "Success") {
-             // Some APIs might return OK or Success or 200. Check spec if needed.
-             // Assuming 200 based on usage.
-             // But let's be safe: if data is null, it's definitely an error or empty.
-             // If code is error code (not 200), throw.
-        }
-        
-        // Strict check:
-        if (code != "200" || data == null) {
+        // Tingwu API uses "0" as success code (Chinese API convention)
+        val isSuccess = code == "0" || code == "200" || code == "OK" || code == "Success"
+        if (!isSuccess || data == null) {
              throw com.smartsales.data.aicore.AiCoreException(
                  source = com.smartsales.data.aicore.AiCoreErrorSource.TINGWU,
                  reason = com.smartsales.data.aicore.AiCoreErrorReason.REMOTE,

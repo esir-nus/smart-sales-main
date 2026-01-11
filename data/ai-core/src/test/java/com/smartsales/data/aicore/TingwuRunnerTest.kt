@@ -216,12 +216,7 @@ class TingwuRunnerTest {
         advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
 
-        // Debug: Get value directly from StateFlow without suspending
-        val flow = coordinator.observeJob(jobId) as kotlinx.coroutines.flow.StateFlow<TingwuJobState>
-        println("DEBUG: Current value = ${flow.value}")
-        
-        // Wait for completion
-        val completed = flow.first { it is TingwuJobState.Completed } as TingwuJobState.Completed
+        val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
         assertTrue(completed.transcriptMarkdown.contains("测试成功"))
         assertEquals("https://example.com/transcription.json", completed.artifacts?.transcriptionUrl)
         assertEquals("https://example.com/chapters.json", completed.artifacts?.autoChaptersUrl)

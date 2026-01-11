@@ -11,6 +11,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.BoxWithConstraints // Added
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -67,12 +68,16 @@ fun HomeTopBar(
     showDebugMetadata: Boolean,
     onToggleDebugMetadata: () -> Unit,
 ) {
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .height(56.dp) // Standard AppBar height
     ) {
+        // Fix V6: Responsive Logic
+        // If width < 380dp (e.g. Nexus 5), hide the badge text to save 60dp+ of space
+        val isCompact = maxWidth < 380.dp 
+
         // Left Actions: Menu + Badge
         Row(
             modifier = Modifier.align(Alignment.CenterStart),
@@ -88,7 +93,8 @@ fun HomeTopBar(
             
             DeviceStatusIndicator(
                 snapshot = deviceSnapshot,
-                onClick = onDeviceClick
+                onClick = onDeviceClick,
+                showLabel = !isCompact // Fix V6: Responsive hiding
             )
         }
 
@@ -98,14 +104,20 @@ fun HomeTopBar(
         } else {
             title
         }
+        
+        // Fix V6: Dynamic padding based on potential collision
+        // Badge (Icon+Text) ~ 100dp width. Badge (Icon) ~ 40dp width.
+        // We need 110dp padding to be SAFE-SAFE if badge is visible.
+        val safetyPadding = if (isCompact) 60.dp else 110.dp
+
         Text(
             text = displayTitle,
             modifier = Modifier
                 .align(Alignment.Center)
-                .padding(horizontal = 90.dp) // Fix V6: Safety padding to avoid colliding with Badge
+                .padding(horizontal = safetyPadding) 
                 .testTag(HomeScreenTestTags.SESSION_TITLE),
             style = MaterialTheme.typography.titleLarge.copy(
-                fontWeight = FontWeight.Bold // Fix V6: Match target boldness
+                fontWeight = FontWeight.Bold 
             ),
             textAlign = TextAlign.Center,
             maxLines = 1,
@@ -153,7 +165,8 @@ fun HomeTopBar(
 @Composable
 fun DeviceStatusIndicator(
     snapshot: DeviceSnapshotUi?,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    showLabel: Boolean = true // Fix V6: Optional label
 ) {
     // 14.1 SmartBadge Implementation
     Surface(
@@ -181,11 +194,13 @@ fun DeviceStatusIndicator(
                 modifier = Modifier.size(16.dp) 
             )
             
-            Text(
-                text = "智能工牌", // Localized "Smart Badge"
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (showLabel) {
+                Text(
+                    text = "智能工牌", // Localized "Smart Badge"
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             // Green Pulse Dot (Authentic Animation)
             // 15.2 State Mapping: Verify if connected. For now we assume this badge IMPLIES connection or searching.

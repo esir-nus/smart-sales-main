@@ -54,7 +54,9 @@ fun HeroSection(
             ) {
                 // Greetings with Chromatic Effect
                 val greetingText = buildAnnotatedString {
-                    append("你好, ") // Plain text
+                    withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface)) {
+                         append("你好, ") // Plain text
+                    }
                     withStyle(SpanStyle(brush = AppColors.ChromaticText)) {
                         append("SmartSales 用户") // Chromatic text
                     }

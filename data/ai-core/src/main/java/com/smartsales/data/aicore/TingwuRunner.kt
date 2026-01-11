@@ -87,7 +87,7 @@ class TingwuRunner @Inject constructor(
     private val artifactFetcher: TingwuArtifactFetcher,
     private val postTingwuTranscriptEnhancer: PostTingwuTranscriptEnhancer,
     private val aiParaSettingsProvider: AiParaSettingsProvider,
-    private val tingwuRunner: com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository,
+    private val tingwuRunner: com.smartsales.data.aicore.tingwu.polling.TingwuRunnerRepository,
     private val transcriptProcessor: com.smartsales.data.aicore.tingwu.processor.TingwuTranscriptProcessor,
     private val pipelineTracer: com.smartsales.data.aicore.debug.PipelineTracer,
 

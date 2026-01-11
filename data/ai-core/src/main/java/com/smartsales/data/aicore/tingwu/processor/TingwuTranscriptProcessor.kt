@@ -18,7 +18,7 @@ import com.smartsales.data.aicore.TingwuJobArtifacts
 import com.smartsales.data.aicore.debug.PipelineStage
 import com.smartsales.data.aicore.debug.PipelineTracer
 import com.smartsales.data.aicore.debug.TingwuTraceStore
-import com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository
+import com.smartsales.data.aicore.tingwu.polling.TingwuRunnerRepository
 import com.smartsales.data.aicore.tingwu.api.TingwuApi
 import com.smartsales.data.aicore.tingwu.api.TingwuResultResponse
 import com.smartsales.data.aicore.tingwu.api.TingwuResultData

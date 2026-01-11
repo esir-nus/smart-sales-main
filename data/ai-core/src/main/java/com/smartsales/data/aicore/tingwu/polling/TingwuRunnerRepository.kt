@@ -3,7 +3,7 @@
 // Summary: Low-level Tingwu API utilities (validation, polling, error mapping)
 // Author: created on 2026-01-05
 
-package com.smartsales.data.aicore.tingwu.runner
+package com.smartsales.data.aicore.tingwu.polling
 
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result

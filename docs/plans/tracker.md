@@ -76,10 +76,20 @@ smart-sales/
 │
 ├── data/ai-core/                    # Provider Layer
 │   ├── DashscopeAiChatService.kt       # AI Chatter (V1 §3.1.1) ✅
-│   ├── TingwuRunner.kt                 # Impl of TingwuCoordinator (V1 §3.2.2) ✅
-│   ├── TranscriptFormatter.kt         # V1 §3.2.3 Sanitizer (data layer impl) ✅ [DEVIATION]
-│   └── tingwu/
-│       └── TranscriptPublisher.kt      # V1 §3.2.4 ✅
+│   ├── TingwuRunner.kt                 # TingwuCoordinator (V1 §3.2.2) ✅
+│   ├── tingwu/
+│   │   ├── api/                        # Network layer ✅
+│   │   ├── artifact/                   # I/O utilities ✅
+│   │   ├── processor/                  # V1 §3.2.3 Sanitizer ✅
+│   │   │   └── TranscriptFormatter.kt
+│   │   ├── publisher/                  # V1 §3.2.4 ✅
+│   │   │   └── TranscriptPublisher.kt
+│   │   └── polling/                    # Low-level API utilities ✅
+│   ├── disector/                       # V1 §10 Batch splitting (placeholder)
+│   ├── metahub/                        # V1 §4 Storage (placeholder)
+│   │   ├── storage/
+│   │   └── model/
+│   └── parser/                         # V1 §3.1.3 LLM Parser (placeholder)
 │
 ├── feature/chat/src/main/java/com/smartsales/
 │   ├── domain/                      # Portable Brain (Pure Kotlin, Zero Android)

@@ -75,5 +75,14 @@ object AppColors {
     val DebugDotInactive = Color.Gray
     
     // Glass Effects
+    // Glass Effects
     val GlassShadow = Color(0xFF007AFF) // Blue glow for input shadow
+    
+    // Chat Bubbles (Aurora)
+    val BubbleGradient = Brush.linearGradient(
+        colors = listOf(Color(0xFF007AFF), Color(0xFF5856D6)),
+        start = androidx.compose.ui.geometry.Offset.Zero,
+        end = androidx.compose.ui.geometry.Offset.Infinite
+    )
+    val BubbleShadow = Color(0xFF007AFF).copy(alpha = 0.25f) // User bubble shadow
 }

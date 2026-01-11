@@ -36,9 +36,16 @@ import com.smartsales.feature.chat.home.ChatMessageUi
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.chat.home.MarkdownMessageText
 import kotlinx.coroutines.delay
-import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import com.smartsales.feature.chat.home.theme.AppColors
+import com.smartsales.feature.chat.home.theme.AppRadius
 
 @Composable
 internal fun MessageBubble(
@@ -64,17 +71,65 @@ internal fun MessageBubble(
             .then(if (alignEnd) Modifier.testTag(HomeScreenTestTags.USER_MESSAGE) else modifier),
         contentAlignment = if (alignEnd) Alignment.CenterEnd else Alignment.CenterStart
     ) {
-        val shape = RoundedCornerShape(14.dp)
+        // Aurora Styling (V9)
+        val backgroundColor = if (alignEnd) {
+            Color.Transparent
+        } else {
+            MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)
+        }
+
+        val border = if (alignEnd) {
+            null
+        } else {
+            BorderStroke(1.dp, Color.White.copy(alpha = 0.4f))
+        }
+
+        val shape = if (alignEnd) {
+            RoundedCornerShape(
+                topStart = AppRadius.BubbleCornerLarge,
+                topEnd = AppRadius.BubbleCornerSmall,
+                bottomEnd = AppRadius.BubbleCornerLarge,
+                bottomStart = AppRadius.BubbleCornerLarge
+            )
+        } else {
+            RoundedCornerShape(
+                topStart = AppRadius.BubbleCornerSmall,
+                topEnd = AppRadius.BubbleCornerLarge,
+                bottomEnd = AppRadius.BubbleCornerLarge,
+                bottomStart = AppRadius.BubbleCornerLarge
+            )
+        }
+
         Surface(
-            modifier = Modifier.fillMaxWidth(0.9f),
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .then(
+                    if (alignEnd) {
+                         // User Bubble Gradient + Shadow
+                         Modifier
+                             .shadow(
+                                 elevation = 4.dp,
+                                 shape = shape,
+                                 spotColor = AppColors.GlassShadow,
+                                 ambientColor = AppColors.GlassShadow
+                             )
+                             .background(
+                                 brush = AppColors.BubbleGradient,
+                                 shape = shape
+                             )
+                    } else {
+                        // Assistant Bubble Shadow
+                        Modifier.shadow(
+                             elevation = 1.dp,
+                             shape = shape,
+                             spotColor = MaterialTheme.colorScheme.onSurface.copy(alpha=0.1f)
+                        )
+                    }
+                ),
             shape = shape,
-            tonalElevation = if (alignEnd) 2.dp else 3.dp,
-            shadowElevation = 0.dp,
-            color = if (alignEnd) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
+            color = backgroundColor,
+            border = border,
+            shadowElevation = 0.dp // Handled manually for control
         ) {
             Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
                 if (!alignEnd) {
@@ -147,7 +202,7 @@ internal fun MessageBubble(
                     Text(
                         text = finalContent,
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = if (alignEnd) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurface
                     )
                 }
                 if (!alignEnd && !message.hasError && !reasoningText.isNullOrBlank()) {

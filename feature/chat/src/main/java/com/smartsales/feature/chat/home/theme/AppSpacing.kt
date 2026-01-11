@@ -43,6 +43,10 @@ object AppRadius {
     val XL = 16.dp
     val XXL = 24.dp
     val Pill = 9999.dp  // Use with .clip(CircleShape) or RoundedCornerShape(Pill)
+    
+    // Asymmetric Bubbles
+    val BubbleCornerLarge = 20.dp
+    val BubbleCornerSmall = 4.dp
 }
 
 /**

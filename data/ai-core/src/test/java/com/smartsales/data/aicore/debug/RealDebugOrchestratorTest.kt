@@ -47,6 +47,10 @@ class RealDebugOrchestratorTest {
         assertTrue(snapshot.section1EffectiveRunText.contains("lane.selected: TINGWU"))
         assertTrue(snapshot.section1EffectiveRunText.contains("lane.disabledReason: XFYUN_DISABLED_BY_SETTING"))
         assertTrue(snapshot.section1EffectiveRunText.contains("exportGate.ready"))
+        // M2B Observability lines
+        assertTrue(snapshot.section1EffectiveRunText.contains("--- M2B TranscriptionDerivedState ---"))
+        assertTrue(snapshot.section1EffectiveRunText.contains("m2b.chaptersCount:"))
+        assertTrue(snapshot.section1EffectiveRunText.contains("m2b.keyPointsCount:"))
         assertTrue(snapshot.section2RawTranscriptionText.contains("Tingwu:"))
         assertTrue(snapshot.section3PreprocessedText.contains("Preprocessed"))
     }

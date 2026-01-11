@@ -7,6 +7,7 @@ package com.smartsales.data.aicore.debug
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.metahub.ExportNameResolver
 import com.smartsales.core.metahub.MetaHub
+import com.smartsales.core.metahub.TranscriptMetadata
 import com.smartsales.data.aicore.params.AiParaSettingsRepository
 import com.smartsales.data.aicore.params.AiParaSettingsSnapshot
 import com.smartsales.data.aicore.params.TranscriptionLaneSelector
@@ -52,6 +53,8 @@ class RealDebugOrchestrator @Inject constructor(
                 isTitleUserEdited = isTitleUserEdited,
                 meta = sessionMeta
             )
+            // M2B: Fetch TranscriptMetadata for chapters/keyPoints visibility
+            val transcriptMeta = runCatching { metaHub.getTranscriptBySession(sessionId) }.getOrNull()
 
             // 重要：HUD 三段文本由 Orchestrator 统一拼装与脱敏，UI 只做展示。
             val section1 = DebugSnapshotRedactor.redact(
@@ -64,6 +67,7 @@ class RealDebugOrchestrator @Inject constructor(
                     exportGateReady = exportGateReady,
                     exportGateReason = exportGateReason,
                     exportName = exportName,
+                    transcriptMeta = transcriptMeta,
                 )
             )
             val section2 = DebugSnapshotRedactor.redact(
@@ -97,6 +101,7 @@ class RealDebugOrchestrator @Inject constructor(
         exportGateReady: Boolean,
         exportGateReason: String,
         exportName: com.smartsales.core.metahub.ExportNameResolution,
+        transcriptMeta: TranscriptMetadata?,
     ): String {
         val settings = settingsSnapshot.transcription
         return buildString {
@@ -119,6 +124,16 @@ class RealDebugOrchestrator @Inject constructor(
             appendLine("export.nameSource: ${exportName.source}")
             appendLine("llmPromptPack: (missing: not recorded)")
             appendLine("m4: (missing: not available)")
+            // M2B Observability
+            appendLine("--- M2B TranscriptionDerivedState ---")
+            appendLine("m2b.source: ${transcriptMeta?.source ?: "-"}")
+            appendLine("m2b.chaptersCount: ${transcriptMeta?.chapters?.size ?: 0}")
+            appendLine("m2b.keyPointsCount: ${transcriptMeta?.keyPoints?.size ?: 0}")
+            appendLine("m2b.speakerMapSize: ${transcriptMeta?.speakerMap?.size ?: 0}")
+            appendLine("m2b.shortSummary: ${transcriptMeta?.shortSummary?.take(50) ?: "-"}")
+            if ((transcriptMeta?.chapters?.size ?: 0) > 0) {
+                appendLine("m2b.chapters[0].title: ${transcriptMeta?.chapters?.firstOrNull()?.title ?: "-"}")
+            }
         }.trimEnd()
     }
 

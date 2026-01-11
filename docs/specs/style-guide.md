@@ -229,6 +229,57 @@ Used in history, audio library, device files, etc.
   * **Pulse Indicator**: A 6dp Green Circle (`#4CD964`).
     * Animation: `alpha` oscillates 0.4 -> 1.0 (authentic pulse).
 
+### 6.10 Aurora Background (V16)
+
+**Concept**: The Aurora consists of three distinct, animated radial gradient blobs that create a subtle, living atmosphere. NOT a mesh gradient—each blob is a separate light source.
+
+* **Geometry**:
+  * **Blob 1 (Top-Left)**: `center = (w * 0.2f, h * 0.1f)`, `radius = w * 0.5f`
+  * **Blob 2 (Center-Right)**: `center = (w * 0.8f, h * 0.45f)`, `radius = w * 0.5f`
+  * **Blob 3 (Bottom-Left)**: `center = (w * 0.3f, h * 0.85f)`, `radius = w * 0.5f`
+
+* **Colors (with Alpha)**:
+  | Blob | Color | Alpha |
+  |------|-------|-------|
+  | Top-Left | `#0A84FF` (Blue) | `0.28f` |
+  | Center-Right | `#5E5CE6` (Indigo) | `0.24f` |
+  | Bottom-Left | `#64D2FF` (Cyan) | `0.20f` |
+
+* **Animation**: Blobs drift slowly via `sin/cos` offsets to create organic movement.
+
+* **Design Principle**: "Distinct Blobs"—intentionally reduce radius and spread positions to prevent muddy overlap. Each blob should be recognizable as a separate light source.
+
+### 6.11 Knot FAB & Tip Bubble (V18) — "Living Intelligence Avatar"
+
+**Concept**: The Knot is the UI's "soul"—an always-visible, breathing infinity symbol that represents the AI assistant. Tapping it reveals a contextual tip.
+
+* **Knot FAB**:
+  * **Position**: Fixed, bottom-right, `160dp` from bottom, `24dp` from edge.
+  * **Container**: `56dp` touch target, transparent background.
+  * **Icon**: `50dp` KnotSymbol (leaves breathing room).
+  * **Stroke**: Core `1.5dp`, Glow `3dp` (atmosphere layer at `0.5f` alpha).
+  * **Animation**: "Breathing" scale (`1.0f` → `1.35f`, 2s cycle). Spins when `isThinking = true`.
+  * **Ripple**: Standard Material 3 ripple on tap.
+
+* **Tip Bubble**:
+  * **Position**: Floats above the Knot (`64dp` padding above FAB).
+  * **Shape**: Asymmetric rounded corners `(16, 16, 4, 16)` to imply speech.
+  * **Style**: Glassmorphism (`surface.copy(alpha = 0.9f)`, `8dp` shadow, subtle border).
+  * **Content**: Rotates through localized tips on open (e.g., "试试 '帮我分析财报'").
+  * **Animation**: `fadeIn + scaleIn` from bottom-right origin.
+
+### 6.12 Input Placeholder Shimmer (V17)
+
+**Concept**: A subtle "text scan" effect on the placeholder text ("输入消息...") that suggests the input is ready and attentive.
+
+* **Target**: Placeholder text ONLY, not the entire input bar container.
+* **Implementation**: Animated `Brush.horizontalGradient` applied via `TextStyle(brush = shimmerBrush)`.
+* **Colors**:
+  * Base: `onSurfaceVariant.copy(alpha = 0.4f)`
+  * Shine: `onSurfaceVariant.copy(alpha = 1.0f)` (bright white peak)
+* **Animation**: `shimmerOffset` animates from `-200f` to `600f` over 2 seconds, with 500ms delay between cycles.
+* **Gradient Width**: `150f` pixels for the shine band.
+
 ---
 
 ## 7. Motion & Interaction

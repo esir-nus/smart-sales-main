@@ -254,8 +254,8 @@ internal fun HomeInputArea(
                                     ),
                                     label = "shimmerOffset"
                                 )
-                                val baseColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                val shineColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                val baseColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                val shineColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 1.0f) // Brighter shine (User feedback)
                                 val shimmerBrush = Brush.horizontalGradient(
                                     colors = listOf(baseColor, shineColor, baseColor),
                                     startX = shimmerOffset,

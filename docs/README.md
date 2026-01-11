@@ -50,7 +50,7 @@ docs/
 | File | Purpose |
 |------|---------|
 | [tracker.md](./plans/tracker.md) | **Main tracker** — architecture, modules, milestones |
-| [ux-tracker.md](./plans/ux-tracker.md) | UX state inventories, microcopy, component status |
+| [ux-experience.md](./plans/ux-experience.md) | UX state inventories, microcopy, component status |
 
 ---
 
@@ -79,7 +79,7 @@ When documents conflict, follow this precedence:
 
 ### I'm designing UI/UX
 1. Check [ux-contract.md](./specs/ux-contract.md) for constraints
-2. Check [ux-tracker.md](./plans/ux-tracker.md) for state inventories
+2. Check [ux-experience.md](./plans/ux-experience.md) for state inventories
 3. Apply [style-guide.md](./specs/style-guide.md) for visuals
 
 ### I'm refactoring code

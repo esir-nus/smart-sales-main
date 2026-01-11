@@ -64,6 +64,15 @@
 | `title:user_confirmed` | tap Confirm in dialog | Dialog closes, title updates | — |
 | `title:user_locked` | user manually renamed | Future auto-candidates ignored | — |
 
+#### Knot FAB Sub-Flow (V18) — "Living Intelligence"
+
+| State | Trigger | User Sees | Microcopy |
+|-------|---------|-----------|-----------|
+| `knot:idle` | default | Knot breathing, no bubble | — |
+| `knot:thinking` | AI processing | Knot spinning | — |
+| `knot:tip_shown` | tap Knot | Tip Bubble fades in | Contextual tip (e.g., "试试 '帮我分析财报'") |
+| `knot:tip_dismissed` | tap Knot again or timeout | Tip Bubble fades out | — |
+
 #### Flow Diagram
 
 ```
@@ -105,6 +114,8 @@ idle
 | Rename dialog requires non-empty text | Confirm button disabled when blank |
 | Title update is a smooth transition (no flash) | UI review: no jarring reflow |
 | Error microcopy fits within bubble without truncation | UI review with long strings |
+| Knot FAB always visible (never hides) | UI inspection |
+| Tapping Knot toggles Tip Bubble | Interaction test |
 
 > [!NOTE]
 > **Tingwu renaming is DEFERRED.** The Tingwu pipeline uses a different flow (audio upload → transcription) and may derive session title from transcript metadata in a future iteration.
@@ -426,6 +437,7 @@ Track unresolved UX decisions here for Product/Eng review:
 
 | Date | Flow | Change | Reason |
 |------|------|--------|--------|
+| 2026-01-11 | Chat (Knot FAB) | Added V18 Tip Bubble sub-flow, added Knot visibility invariants | UI Polish V16-V18 DocSync |
 | 2026-01-11 | AudioFiles | Added state inventory (17 states, 5 invariants) | M1 UX gap-fill |
 | 2026-01-11 | DeviceManager | Added state inventory (13 states, 4 invariants) | M1 UX gap-fill |
 | 2026-01-10 | Device Setup | Added state inventory (10 states) and invariants | M1 Feature Complete audit |

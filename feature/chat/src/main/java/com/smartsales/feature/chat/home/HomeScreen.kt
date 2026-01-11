@@ -16,9 +16,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.* // Added
 import androidx.compose.ui.graphics.Brush // Added
-import androidx.compose.ui.graphics.Color // Added
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip // Added
 import androidx.compose.ui.graphics.graphicsLayer // Added
+import androidx.compose.ui.Modifier // Added missing Modifier import
 import androidx.compose.ui.text.SpanStyle // Added
 import androidx.compose.ui.text.buildAnnotatedString // Added
 import androidx.compose.ui.text.withStyle // Added
@@ -110,7 +111,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.TransformOrigin // Added
+import androidx.compose.foundation.layout.widthIn // Added
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -564,25 +566,69 @@ fun HomeScreen(
                 // 14.5 Knot FAB (Persistent Living Intelligence) - V14 Spec
                 // Logic: ALWAYS VISIBLE. The AI never hides.
                 
-                // Floating Knot Bubble
+                // V18: Tip Bubble State
+                var showTipBubble by remember { mutableStateOf(false) }
+                val tips = remember { listOf(
+                    "试试 '帮我分析这份财报'",
+                    "点 '+' 号上传 CSV 文件",
+                    "我可以帮你生成 PDF 报告",
+                    "我是您的智能销售助手",
+                    "试试 '这个客户的风险点在哪'"
+                ) }
+                var currentTip by remember { mutableStateOf(tips[0]) }
+
+                // Floating Knot Bubble Container
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(bottom = 160.dp, end = 24.dp) // P2 Spec: High float
-                        .size(56.dp) // Container: 56dp standard touch target
-                        .background(
-                            color = Color.Transparent, // Clean (no bg)
-                            shape = CircleShape
-                        )
-                        // V14: Added Ripple Interaction (Standard M3)
-                        .clip(CircleShape)
-                        .clickable { /* TODO: Trigger Tip Bubble */ },
-                    contentAlignment = Alignment.Center
+                        .padding(bottom = 160.dp, end = 24.dp), // P2 Spec: High float
+                    contentAlignment = Alignment.BottomEnd
                 ) {
-                     KnotSymbol(
-                        isThinking = chatBusy,
-                        modifier = Modifier.size(50.dp) // V14: 50dp icon inside 56dp box (Breathing room)
-                    )
+                    // V18: Tip Bubble (Appears above the Knot)
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = showTipBubble,
+                        enter = fadeIn() + scaleIn(transformOrigin = TransformOrigin(1f, 1f)),
+                        exit = fadeOut() + scaleOut(transformOrigin = TransformOrigin(1f, 1f)),
+                        modifier = Modifier
+                            .padding(bottom = 64.dp) // Sit above the 56dp FAB
+                            .align(Alignment.CenterEnd) // Align right
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp), // Speech bubble shape
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f), // Glass
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                            shadowElevation = 8.dp,
+                            modifier = Modifier.widthIn(max = 200.dp)
+                        ) {
+                            Text(
+                                text = currentTip,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
+                    }
+
+                    // Knot FAB
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp) // Container: 56dp standard touch target
+                            .background(Color.Transparent, CircleShape)
+                            .clip(CircleShape)
+                            .clickable { 
+                                if (!showTipBubble) {
+                                    // Rotate tip on open
+                                    currentTip = tips.random()
+                                }
+                                showTipBubble = !showTipBubble 
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                         KnotSymbol(
+                            isThinking = chatBusy,
+                            modifier = Modifier.size(50.dp) // V14: 50dp icon
+                        )
+                    }
                 }
             }
         }

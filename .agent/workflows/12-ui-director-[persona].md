@@ -238,7 +238,7 @@ You are the **Guardian of the Design Tokens**.
 |----------|---------|
 | [`design-tokens.json`](file:///home/cslh-frank/main_app/docs/design/design-tokens.json) | Master token file |
 | [`style-guide.md`](file:///home/cslh-frank/main_app/docs/specs/style-guide.md) | Design system docs |
-| [`ux-tracker.md`](file:///home/cslh-frank/main_app/docs/plans/ux-tracker.md) | UX states inventory |
+| [`ux-experience.md`](file:///home/cslh-frank/main_app/docs/plans/ux-experience.md) | UX states inventory |
 
 ---
 

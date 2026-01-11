@@ -13,7 +13,7 @@
 | **Architecture** | [§2 Realized Tree](#2-realized-architecture-tree) | 2026-01-10 |
 | **Orchestrator** | [§3 V1 Module Mapping](#3-v1-module-mapping) | 2026-01-10 |
 | **Connectivity** | [§Feature Tree → connectivity](#feature-tree-connectivity) | 2026-01-10 |
-| **UX** | See `plans/ux-tracker.md` | 2026-01-10 |
+| **UX** | See `plans/ux-experience.md` | 2026-01-10 |
 | **Milestones** | [§10 Roadmap](#10-product-milestone-roadmap) | 2026-01-10 |
 
 > [!IMPORTANT]

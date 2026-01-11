@@ -324,7 +324,7 @@ OSS_ENDPOINT=https://oss-cn-beijing.aliyuncs.com
 ### 3.2 参考阅读（按需）
 5. **`docs/specs/api-contracts.md`** - API 契约文档
 6. **`docs/specs/ux-contract.md`** - UX 契约文档
-7. **`docs/plans/ux-tracker.md`** - UX 状态追踪
+7. **`docs/plans/ux-experience.md`** - UX 状态追踪
 
 ---
 

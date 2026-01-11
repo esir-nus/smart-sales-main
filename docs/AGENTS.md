@@ -21,7 +21,7 @@
 - UX contract source precedence:
   1. `docs/specs/Orchestrator-V1.md` (reasoning and pipeline structure/boundaries)
   2. `docs/specs/ux-contract.md` (🔒 canonical: data contracts, pipelines, feature boundaries — locked, requires Product/Eng approval)
-  3. `docs/plans/ux-tracker.md` (📝 experience: state inventories, microcopy, timing, layout — UX-owned, modifiable)
+  3. `docs/plans/ux-experience.md` (📝 experience: state inventories, microcopy, timing, layout — UX-owned, modifiable)
   4. `docs/specs/style-guide.md` (visual and code style rules)
   5. Existing Android implementation and tests
   6. Archived UI/history implementations for reference only

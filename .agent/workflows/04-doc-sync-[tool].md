@@ -61,9 +61,10 @@ grep -rn "modules/" docs/ .agent/workflows/
 
 | Old Path | New Path |
 |----------|----------|
-| `docs/guides/ux-experience.md` | `docs/plans/ux-tracker.md` |
+| `docs/guides/ux-experience.md` | `docs/plans/ux-experience.md` |
 | `docs/guides/style-guide.md` | `docs/specs/style-guide.md` |
 | `docs/plans/RealizeTheArchi.md` | `docs/plans/tracker.md` |
+| `docs/plans/ux-tracker.md` | `docs/plans/ux-experience.md` |
 | `docs/modules/connectivity.md` | `docs/specs/connectivity-spec.md` |
 | `docs/modules/media.md` | `docs/archived/media-spec-outdated.md` |
 
@@ -88,7 +89,7 @@ Based on context, create a sync proposal:
 ### Cross-Reference Audit
 - [ ] No deprecated `docs/guides/` refs
 - [ ] No `RealizeTheArchi` refs (now `tracker.md`)
-- [ ] No `ux-experience.md` refs (now `ux-tracker.md`)
+- [ ] No `ux-tracker.md` refs (now `ux-experience.md`)
 - [ ] All file links point to existing files
 
 ### Docs to Update

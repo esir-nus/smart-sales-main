@@ -393,27 +393,33 @@ class HomeViewModel @Inject constructor(
 
     fun onSelectQuickSkill(skillId: QuickSkillId) {
         if (_uiState.value.isSending || _uiState.value.isStreaming) return
+        
+        // 15.3 Real Actions: Export is handled via specialized callbacks (onExportPdfClicked),
+        // but if they come through here, we should delegate or ignore.
         if (skillId == QuickSkillId.EXPORT_PDF || skillId == QuickSkillId.EXPORT_CSV) {
-            // Export handled by ExportViewModel now
             return
         }
+
         val definition = quickSkillDefinitionsById[skillId]
         if (definition == null) {
             _uiState.update { it.copy(snackbarMessage = "无法识别的快捷技能") }
             return
         }
+        
         when (skillId) {
             QuickSkillId.SMART_ANALYSIS -> {
+                // 15.3 Toggle Smart Analysis Mode
                 _uiState.update { state ->
                     val toggled = !state.isSmartAnalysisMode
                     state.copy(
                         isSmartAnalysisMode = toggled,
                         selectedSkill = if (toggled) definition.toUiModel() else null,
-                        inputText = state.inputText
+                        inputText = if (toggled) "" else state.inputText // Clear input on toggle off? Or keep?
                     )
                 }
             }
             else -> {
+                // Standard Quick Skill: Pre-fill input
                 _uiState.update { state ->
                     state.copy(
                         selectedSkill = definition.toUiModel(),

@@ -242,6 +242,103 @@ idle
 
 ---
 
+### AudioFiles Flow
+
+> **Context**: User browses, plays, and transcribes audio recordings from device or local storage.
+
+#### Main Screen States
+
+| State | Trigger | User Sees | Microcopy |
+|-------|---------|-----------|-----------|
+| `loading` | screen entry | Spinner | — |
+| `empty` | no recordings | Empty state | "暂无录音" |
+| `list` | recordings loaded | List of recordings | — |
+| `syncing` | tap sync | Refresh indicator | "同步中..." |
+| `selected` | tap recording | Highlight + detail | — |
+| `error:load` | fetch failed | Error banner | "{loadErrorMessage}" |
+| `error:action` | action failed | Snackbar | "{errorMessage}" |
+
+#### Recording Item States
+
+| State | Trigger | User Sees | Microcopy |
+|-------|---------|-----------|-----------|
+| `idle` | default | Recording row | — |
+| `playing` | tap play | Play indicator | — |
+| `paused` | tap pause | Pause icon | — |
+| `transcribing` | tap transcribe | Progress indicator | "转写中..." |
+| `transcript_ready` | transcription done | Transcript preview | "{preview}" |
+| `transcript_error` | transcription failed | Error badge | "转写失败" |
+
+#### Transcription Sub-Flow
+
+| State | Trigger | User Sees | Microcopy |
+|-------|---------|-----------|-----------|
+| `none` | default | "转写" button enabled | — |
+| `in_progress` | submit to Tingwu | Spinner on row | "转写中..." |
+| `done` | job complete | Preview text, "查看" | "{transcriptPreview}" |
+| `error` | job failed | Error badge | "转写失败，请重试" |
+
+#### Invariants
+
+| Rule | How to Verify |
+|------|---------------|
+| Audio extensions: `.mp3`, `.wav`, `.m4a`, `.aac`, `.flac`, `.ogg` | Code: `AUDIO_EXTENSIONS` set |
+| Cached transcripts reused (no re-submit) | `cachedTranscript.isNullOrBlank()` check |
+| Error messages shown via Snackbar | `_uiState.update { it.copy(errorMessage = ...) }` |
+| Session binding cleared on error | `clearSessionBinding(id)` called |
+| Transcript preview max 120 chars | `MAX_PREVIEW_LENGTH = 120` |
+
+---
+
+### DeviceManager Flow
+
+> **Context**: User browses and manages files on BT311 device via HTTP.
+
+#### Connection States
+
+| State | Trigger | User Sees | Microcopy |
+|-------|---------|-----------|-----------|
+| `disconnected` | default / error | "设备未连接" card | "连接设备以管理文件" |
+| `connecting` | auto-detect | Spinner | "正在检测设备网络..." |
+| `connected` | endpoint resolved | Device name | "已连接 {deviceName}" |
+
+#### File Browser States
+
+| State | Trigger | User Sees | Microcopy |
+|-------|---------|-----------|-----------|
+| `loading` | refresh | Spinner | "加载中..." |
+| `empty` | no files | Empty state | "暂无文件" |
+| `list` | files loaded | Tab-filtered list | — |
+| `selected` | tap file | Highlight | — |
+| `viewing` | open viewer | Full preview | — |
+| `applying` | tap apply | Progress on row | "应用中..." |
+| `uploading` | file upload | Progress bar | "上传中..." |
+| `error:load` | fetch failed | Error banner | "{loadErrorMessage}" |
+| `error:action` | action failed | Snackbar | "{errorMessage}" |
+
+#### Media Tabs
+
+| Tab | Filter |
+|-----|--------|
+| Videos | video/* |
+| Gifs | image/gif |
+| Images | image/* (non-gif) |
+
+#### GIF/WAV Sub-States
+
+See §GIF Upload Flow and §WAV Download Flow for transfer-specific states.
+
+#### Invariants
+
+| Rule | How to Verify |
+|------|---------------|
+| Default port = 8000 | `DEFAULT_MEDIA_SERVER_PORT = 8000` |
+| File actions require connected state | `connectionStatus.isReadyForFiles()` |
+| Apply shows per-file progress | `applyInProgressId` state |
+| Auto-detect shows status | `autoDetectStatus` microcopy |
+
+---
+
 ## Layout Invariants
 
 | Component | Rule | Visual Spec Ref |
@@ -329,6 +426,8 @@ Track unresolved UX decisions here for Product/Eng review:
 
 | Date | Flow | Change | Reason |
 |------|------|--------|--------|
+| 2026-01-11 | AudioFiles | Added state inventory (17 states, 5 invariants) | M1 UX gap-fill |
+| 2026-01-11 | DeviceManager | Added state inventory (13 states, 4 invariants) | M1 UX gap-fill |
 | 2026-01-10 | Device Setup | Added state inventory (10 states) and invariants | M1 Feature Complete audit |
 | 2026-01-10 | GIF Upload | Added `extracting` and `finalizing` states | Code-spec alignment audit |
 | 2026-01-09 | Badge Transfer | Added GIF Upload Flow and WAV Download Flow state inventories | ESP32 connectivity audit; pre-implementation UX spec |

@@ -9,7 +9,7 @@ This doc defines the **contract** for the connectivity layer and the UI flows th
 ## 1. Goals
 
 1. **Single source of truth** for connectivity:
-   `DeviceConnectionState` is the only “is the device connected?” signal.
+   `ConnectionState` is the only “is the device connected?” signal.
 2. **Deterministic setup flow:**
    DeviceSetup follows a linear step pipeline (Step 0…Step 6). UI and backend agree on which step we are in and what can happen next.
 3. **Robust auto-reconnect:**
@@ -62,8 +62,8 @@ This doc defines the **contract** for the connectivity layer and the UI flows th
 * UI/ViewModels:
 
   * May call public methods on `DeviceConnectionManager` (e.g. `scheduleAutoReconnectIfNeeded`, `forceReconnectNow`, “connect with new device”).
-  * Must treat `DeviceConnectionState` as **read-only** state, never as a local boolean copy.
-  * Must not create their own notion of “connected” beyond mapping from `DeviceConnectionState`.
+  * Must treat `ConnectionState` as **read-only** state, never as a local boolean copy.
+  * Must not create their own notion of “connected” beyond mapping from `ConnectionState`.
 
 ---
 
@@ -190,7 +190,7 @@ Errors:
   * Move to `SavingSession`.
 * Failure:
 
-  * `DeviceConnectionState.Error(EndpointUnreachable)`
+  * `ConnectionState.Error(EndpointUnreachable)`
   * DeviceSetup: `step = Error` with reason `EndpointUnreachable` + “重试连接媒体服务” button.
 
 #### Step 5 – Save session & mark connected
@@ -199,7 +199,7 @@ Errors:
 * Connectivity core:
 
   * Persists session (device identity + HTTP base URL + any other metadata).
-  * Sets `DeviceConnectionState.Connected(session)`.
+  * Sets `ConnectionState.Connected(session)`.
 * When VM observes `Connected`:
 
   * `step = Completed`.
@@ -210,9 +210,9 @@ Errors:
 * UI shows success message and “返回首页”.
 * Host activity navigates back to Home overlay stack. DeviceManager will treat `Connected` as “ready”.
 
-### 3.2 Interaction with `DeviceConnectionState`
+### 3.2 Interaction with `ConnectionState`
 
-DeviceSetup must **observe** `DeviceConnectionState`:
+DeviceSetup must **observe** `ConnectionState`:
 
 * When in any setup step and connection state becomes `Connected`:
 
@@ -224,13 +224,13 @@ DeviceSetup must **observe** `DeviceConnectionState`:
 
   * It is safe to run DeviceSetup (no session stored).
 
-DeviceSetup must **not** set `DeviceConnectionState` directly. It should call public APIs on `DeviceConnectionManager` and trust the manager to emit the correct state.
+DeviceSetup must **not** set `ConnectionState` directly. It should call public APIs on `DeviceConnectionManager` and trust the manager to emit the correct state.
 
 ---
 
 ## 4. Connection state machine (global contract)
 
-`DeviceConnectionState` is the global connectivity truth.
+`ConnectionState` is the global connectivity truth.
 
 ### 4.1 States
 
@@ -290,11 +290,11 @@ DeviceSetup must **not** set `DeviceConnectionState` directly. It should call pu
 
 ## 5. DeviceManager behavior contract
 
-DeviceManager is the primary consumer of `DeviceConnectionState` after setup.
+DeviceManager is the primary consumer of `ConnectionState` after setup.
 
 ### 5.1 NeedsSetup
 
-* `DeviceConnectionState = NeedsSetup`
+* `ConnectionState = NeedsSetup`
 * UI:
 
   * Top card: “设备未连接，需要先完成设备配网”.
@@ -411,7 +411,7 @@ At least:
 **Do:**
 
 * Always route connectivity operations through `DeviceConnectionManager`.
-* Use `DeviceConnectionState` as the only truth for “connected”.
+* Use `ConnectionState` as the only truth for “connected”.
 * Drive DeviceSetup UI from `SetupStep`, not from scattered booleans.
 * Maintain back-compat with BT311 backend (`wifi.py`) when changing HTTP logic.
 
@@ -429,5 +429,5 @@ This document is the contract for the connectivity layer going forward.
 When adding new devices or flows, extend the same patterns:
 
 * Add a new `BleProfileConfig` for the device.
-* Reuse `DeviceConnectionState` and the setup step pipeline.
+* Reuse `ConnectionState` and the setup step pipeline.
 * Keep UI and backend aligned through these shared models.

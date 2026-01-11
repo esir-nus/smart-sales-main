@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size // Added import
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -55,6 +56,20 @@ import com.smartsales.domain.config.QuickSkillId
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.chat.home.QuickSkillUi
 import com.smartsales.domain.export.ExportGateState
+import com.smartsales.feature.chat.home.components.KnotSymbol // Imported
+import androidx.compose.animation.core.*
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.layout.height
 
 @Composable
 internal fun HomeInputArea(
@@ -79,24 +94,19 @@ internal fun HomeInputArea(
     val canSend = enabled && !busy && (
         inputValue.isNotBlank() || selectedSkill != null
         )
-    Surface(
-        tonalElevation = 6.dp,
-        shadowElevation = 6.dp,
-        shape = RoundedCornerShape(20.dp)
+    val showSendButton = inputValue.isNotBlank() // Only show Send button when typing
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .imePadding()
+            .padding(horizontal = 16.dp, vertical = 24.dp), // Increased bottom padding for floating feel
+        verticalArrangement = Arrangement.spacedBy(16.dp) // Gap between skills and input
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .imePadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                thickness = 1.dp
-            )
-            if (showQuickSkills) {
+        // 1. Quick Skills Docked ABOVE Input (Design Brief Requirement)
+        if (showQuickSkills) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 QuickSkillRow(
                     skills = quickSkills,
                     selectedSkillId = selectedSkill?.id,
@@ -107,18 +117,44 @@ internal fun HomeInputArea(
                 )
                 ExportGateHint(exportGateState = exportGateState)
             }
+        }
+
+        // 2. Glass Pill Input Bar
+        // Simulated Glass: Translucent Surface + Shadow (Blur would require Android 12+ RenderEffect or library)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp) // Fixed height for pill
+                .shadow(elevation = 8.dp, shape = CircleShape, spotColor = Color(0x40000000))
+                .background(
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f), // Translucent glass base
+                    shape = CircleShape
+                )
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                    shape = CircleShape
+                )
+                .padding(horizontal = 8.dp), // Internal padding
+            contentAlignment = Alignment.CenterStart
+        ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                // Left: Attachment Button
                 Box {
                     IconButton(
                         onClick = { uploadMenuExpanded = true },
-                        enabled = enabled && !busy
+                        enabled = enabled && !busy,
+                        modifier = Modifier.size(48.dp)
                     ) {
-                        Icon(imageVector = Icons.Outlined.Add, contentDescription = "上传或附件")
+                        Icon(
+                            imageVector = Icons.Outlined.Add, 
+                            contentDescription = "上传或附件",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     DropdownMenu(
                         expanded = uploadMenuExpanded,
@@ -142,44 +178,113 @@ internal fun HomeInputArea(
                         )
                     }
                 }
-                OutlinedTextField(
-                    value = inputValue,
-                    onValueChange = onInputChanged,
-                    modifier = Modifier
-                        .weight(1f)
-                        .onFocusChanged { onInputFocusChanged(it.isFocused) }
-                        .testTag(HomeScreenTestTags.INPUT_FIELD),
-                    placeholder = {
-                        val hint = if (isSmartAnalysisMode) {
-                            "说明你想分析什么（默认分析最近的一段长内容）"
-                        } else {
-                            "上传文件或输入消息..."
-                        }
-                        Text(text = hint)
-                    },
-                    shape = MaterialTheme.shapes.large,
-                    enabled = enabled,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
-                    ),
-                    singleLine = false,
-                    minLines = 2
-                )
-                TextButton(
-                    onClick = onSendClicked,
-                    enabled = canSend,
-                    modifier = Modifier.testTag(HomeScreenTestTags.SEND_BUTTON)
+
+                // Middle: Input Field (Transparent)
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.CenterStart
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = if (busy) "发送中" else "发送")
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = if (busy) "发送中..." else "发送")
+                   BasicTextField(
+                        value = inputValue,
+                        onValueChange = onInputChanged,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { onInputFocusChanged(it.isFocused) }
+                            .testTag(HomeScreenTestTags.INPUT_FIELD),
+                        enabled = enabled,
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        maxLines = 1,
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        decorationBox = { innerTextField ->
+                            if (inputValue.isEmpty()) {
+                                Text(
+                                    text = if (isSmartAnalysisMode) "说明你想分析什么..." else "输入消息...",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                )
+                            }
+                            innerTextField()
+                        }
+                   )
+                }
+
+                // Right: Knot Symbol OR Send Button
+                // Transition: Crossfade could be nice, but simple if/else works for now
+                if (showSendButton) {
+                    IconButton(
+                        onClick = onSendClicked,
+                        enabled = canSend,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .testTag(HomeScreenTestTags.SEND_BUTTON)
+                            .background(
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = CircleShape
+                            )
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "发送",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                } else {
+                    // Knot Symbol (Breathing)
+                   Box(
+                        modifier = Modifier.size(48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                       KnotSymbol(modifier = Modifier.size(40.dp))
+                    }
                 }
             }
+            
+            // 14.4 Input Scan Shine (Zero State) inside the glass pill
+             if (!busy && inputValue.isEmpty() && showQuickSkills) {
+                 InputScanShine()
+             }
         }
     }
+}
+
+@Composable
+private fun InputScanShine() {
+    val transition = rememberInfiniteTransition(label = "scan_shine")
+    val translateAnim by transition.animateFloat(
+        initialValue = -100f, // Start off-screen left
+        targetValue = 1000f,  // End off-screen right
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing, delayMillis = 1000),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "translate"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .drawWithContent {
+                drawContent()
+                translate(left = translateAnim) {
+                    drawRect(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.White.copy(alpha = 0.3f), // Shine color
+                                Color.Transparent
+                            ),
+                            startX = 0f,
+                            endX = 200f // Width of shine
+                        ),
+                        // Assuming the Box fills the parent (Input Area Surface)
+                        // Verify size.width is sufficient
+                    )
+                }
+            }
+    )
 }
 
 @Composable

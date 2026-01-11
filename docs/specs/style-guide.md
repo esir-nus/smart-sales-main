@@ -67,263 +67,63 @@ The palette uses clean, neutral surfaces to let the **AI Intelligence** (Chroma 
 
 | Token / Role        | Light Mode | Dark Mode | Usage |
 | ------------------- | ---------- | --------- | ----- |
-| **AppBackground**   | `#F7F7F7`  | `#0D0D12` | Global page background. |
-| **SurfaceCard**     | `#FFFFFF`  | `#1C1C1E` | Cards, chat bubbles (assistant), drawers, dialogs. |
-| **SurfaceMuted**    | `#F2F2F7`  | `#2C2C2E` | Secondary surfaces, input bar background. |
-| **BorderDefault**   | `#E5E5EA`  | `#38383A` | Subtle dividers, card borders. |
-| **AccentPrimary**   | `#007AFF`  | `#0A84FF` | Primary actions, links, user bubbles. |
-| **TextPrimary**     | `#000000`  | `#FFFFFF` | Main titles, important labels. |
-| **TextSecondary**   | `#3A3A3C`  | `#EBEBF5` | Subtitles, body text. |
-| **TextMuted**       | `#8E8E93`  | `#98989D` | Helper text, timestamps, placeholders. |
-| **DangerText**      | `#EF4444`  | `#FF453A` | Destructive actions, errors. |
-| **GradientBrand**   | `Blue-Purple` | `Blue-Cyan` | Brand icon gradient, some hero text. |
+| **AppBackground**   | `Aurora`   | `#0D0D12` | **Target UI**: Soft Blue/Cyan Mesh Gradient. |
+| **SurfaceCard**     | `#FFFFFF`  | `#1C1C1E` | Cards, chat bubbles (assistant), drawers. |
+| **FloatingCapsule** | `#FFFFFF`  | `#2C2C2E` | **Target UI**: High-elevation Input Bar. |
+| **BorderDefault**   | `#E5E5EA`  | `#38383A` | Subtle dividers. |
+| **AccentPrimary**   | `#007AFF`  | `#0A84FF` | Primary actions. |
 
-### 2.3 Chroma Wave Gradients (The Signature)
+...
 
-**Visual Reference**: ![Chroma Wave V3](file:///home/cslh-frank/main_app/docs/home_chroma_wave_v3_1767947501094.png)
-
-**Design Intent**: The wave is a **Harmonic, Multi-Layered Signal**, not a solid bar.
-- **Organic**: Uses filled gradients with sinusoidal curves.
-- **Depth**: Multiple layers (3+) moving at different speeds/phases.
-- **Fluidity**: Transitions are water-like, not mechanical.
-
-**Behavior Rule**: The wave is **TRANSIENT**. It is not a fixed footer.
-* **Enters**: Gracefully when AI starts listening or processing.
-* **Exits**: Gracefully fades out when generation is done.
-* **Exception**: On the Home Hero, a subtle "breathing" version may appear briefly to show the app is ready, but should not persist annoyingly.
-
-| State | Colors (Gradient Stops) | Behavior |
-|-------|-------------------------|----------|
-| **Hidden** | Transparent | Default state when waiting for user. |
-| **Listening** | `#34C759` → `#00C7BE` (Teal-Green) | Expansion ripple effect from bottom. |
-| **Thinking** | `#AF52DE` → `#FF2D55` (Purple-Pink) | Active lateral flow / shimmer. |
-| **Error** | `#D70015` → `#FF3B30` (Red-Orange) | Brief tint then fade out. |
-
-### 2.4 Android Mapping
+### 2.4 Android Mapping (Aurora Update)
 
 ```kotlin
 object AppColors {
-    // Light
-    val LightBackground = Color(0xFFF7F7F7)
-    val LightSurface    = Color(0xFFFFFFFF)
-    
-    // Dark
-    val DarkBackground  = Color(0xFF0D0D12)
-    val DarkSurface     = Color(0xFF1C1C1E)
-    
-    // Wave Gradients
-    val WaveIdle = Brush.horizontalGradient(listOf(Color(0xFF007AFF), Color(0xFFA259FF)))
-    val WaveActive = Brush.horizontalGradient(listOf(Color(0xFFAF52DE), Color(0xFFFF2D55)))
+    // Backgrounds
+    val AuroraBrush = Brush.verticalGradient(
+        colors = listOf(
+            Color(0xFFE0F7FA), // Top (Cyan tint)
+            Color(0xFFF7F7F7), // Middle
+            Color(0xFFFFFFFF)  // Bottom
+        )
+    )
+    // ...
 }
 ```
 
----
-
-## 3. Typography
-
-We follow a semantic type scale. Tailwind classes are examples for React `/ui`; Android uses `AppTypography`.
-
-### 3.1 Roles
-
-| Role             | Tailwind size | Approx px | Usage                                         |
-| ---------------- | ------------- | --------- | --------------------------------------------- |
-| **AppTitle**     | `text-lg`     | 17–18 px  | Top bar title: “AI Assistant”, “Chat History”.     |
-| **HeroBrand**    | `text-4xl`    | 32–36 px  | “LOGO” in `ChatWelcome`.                      |
-| **HeroGreeting** | `text-2xl`    | 24 px     | “Hello, {userName}”.                             |
-| **HeroSubtitle** | `text-xl`     | 20 px     | “I am your sales assistant”.                     |
-| **SectionTitle** | `text-base`   | 16 px     | Section headers: “Device Manager”, “Audio Library”, “Export”. |
-| **Body**         | `text-sm`     | 14–15 px  | Normal descriptive text, bullets, row labels. |
-| **Caption**      | `text-xs`     | 12–13 px  | Timestamps, subtle metadata, helper tips.     |
-
-### 3.2 Android Mapping
-
-Example `AppTypography`:
-
-```kotlin
-object AppTypography {
-    val AppTitle      = TextStyle(fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-    val HeroBrand     = TextStyle(fontSize = 32.sp, fontWeight = FontWeight.Bold)
-    val HeroGreeting  = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Bold)
-    val HeroSubtitle  = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Medium)
-    val SectionTitle  = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-    val Body          = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Normal)
-    val Caption       = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Normal)
-}
-```
-
-**Rules:**
-
-* Top bar titles: **AppTitle** + `TextPrimary`.
-* Hero text: `HeroBrand`, `HeroGreeting`, `HeroSubtitle` with Accent/Primary colors.
-* Buttons & quick skills: **SectionTitle** or **Body** with `fontWeight = Medium`.
-* Timestamps & subtle metadata: **Caption** + `TextMuted`.
-
----
-
-## 4. Spacing & Layout
-
-### 4.1 Base Spacing Scale
-
-Everything is built on a 4-pt rhythm.
-
-| Token         | Value    | Usage                                   |
-| ------------- | -------- | --------------------------------------- |
-| **SpacingXS** | 4 dp     | Tiny gaps, icon padding.                |
-| **SpacingS**  | 8 dp     | Between label & value, small chip gaps. |
-| **SpacingM**  | 12 dp    | Inside chips/buttons.                   |
-| **SpacingL**  | 16 dp    | Standard between sections & list items. |
-| **SpacingXL** | 20–24 dp | Block spacing, hero vertical gaps.      |
-
-### 4.2 Screen Padding
-
-* Horizontal padding for most screens: **16 dp**.
-* Top padding below app bar: **12–16 dp**.
-* Bottom padding above ChatInput / primary button: **12–16 dp**.
-
-Example:
-
-```kotlin
-val ScreenHorizontalPadding = 16.dp
-val ScreenVerticalPadding   = 16.dp
-```
-
-Apply to `Column` / `LazyColumn` content consistently.
-
-### 4.3 Layout Rules
-
-* **Single scrollable column** per screen.
-  Avoid nested `verticalScroll` + `LazyColumn` that cause infinite height issues.
-* Top bar is **pinned** in `Scaffold`.
-* For drawers/overlays, the drawer content scrolls within its own column; background stays fixed.
-
----
-
-## 5. Shape & Elevation
-
-### 5.1 Radius
-
-| Component               | Radius                               |
-| ----------------------- | ------------------------------------ |
-| App header buttons      | 8–12 dp (rounded)                    |
-| Quick skill chips       | 16 dp (pill-like)                    |
-| Chat bubbles            | 16 dp (top) / 20 dp (bottom corners) |
-| Cards & list rows       | 12–16 dp                             |
-| ChatInput container     | 16–20 dp                             |
-| Drawers / bottom sheets | 16–20 dp top corners                 |
-| Dialogs                 | 16–20 dp                             |
-
-Keep radii soft and consistent; avoid sharp corners and mixed styles on the same surface.
-
-### 5.2 Shadows / Elevation
-
-* Cards: subtle `shadow-sm` equivalent.
-* Floating bars (ChatInput, header avatar): slightly stronger, like `shadow-md`.
-* Drawers: small shadow against background plus **BackdropOverlay** scrim.
-* Avoid heavy/dark shadows; keep them soft and short-range.
-
----
-
-## 6. Component Patterns
-
-> **Reminder:**
-> Behavior and exact states are defined in `docs/specs/ux-contract.md`.
-> This section describes **how components look** when in those states.
-
-### 6.1 App Shell (Top Bar & Background)
-
-* Background: `SurfaceCard` over `AppBackground`.
-* Title: `AppTitle` + `TextPrimary`.
-* Left icon: menu/hamburger for history drawer.
-* Right icons: device manager, audio library, user/profile.
-* Bottom border: `BorderDefault` 1 dp.
-
-Android example (visual intent only):
-
-```kotlin
-TopAppBar(
-    colors = TopAppBarDefaults.topAppBarColors(
-        containerColor = AppColors.SurfaceCard,
-        titleContentColor = AppColors.TextPrimary
-    ),
-    /* ... */
-)
-```
+...
 
 ### 6.2 Home Hero (`ChatWelcome`)
 
-**Behavior summary (for quick reference)**
-Full details: `ux-contract.md` §6.
+**Visual structure (Target UI):**
 
-* Hero appears **only when the current session is empty**:
-* Hero is **not a chat bubble** and never appears in the scrollable message list.
+* Layout: Centered.
+* **Greeting**: "你好, [SmartSales 用户]" (Gradient Text).
+* **Subtitle**: "我是您的销售助手" (Body, Secondary).
+* **No "Let's Start"**.
+* **Hero Actions (Pills)**:
+  * Replaces discrete chips.
+  * Style: Large, translucent pills (`SurfaceCard` + alpha).
+  * Layout: Row of 3 (`Smart Analysis`, `PDF`, `CSV`).
 
-**Visual structure:**
+### 6.3 Chat Input (Floating Capsule)
 
-* Layout: centered `Column` inside a full-size `Box`.
-* **Knot Symbol**: The visual anchor. A knot/infinity symbol (geometric, soft corners).
-  * Color: `GradientBrand` (Blue-Purple).
-  * Size: 64–80 dp.
-  * **No text "LOGO"**.
+**Target UI Pattern**:
 
-* Elements (top → bottom):
+* **Container**:
+  * Shape: **Stadium / Capsule** (Fully rounded sides).
+  * Elevation: High (Floating above content).
+  * Insets: Floats 16dp above bottom, 16dp from sides.
+  * Content: `+` Button (Left) | Text Field (Center) | Knot Symbol (Right).
 
-  1. **Brand Mark** (The Knot Symbol) - animated on entry.
+* **Knot Symbol Integration**:
+  * Size: 40dp x 40dp (Fit inside capsule).
+  * **Fix**: Ensure Lemniscate path scales to fit 40dp without clipping.
+  * Interaction: Acts as status indicator. Morph to "Send" icon when typing (or overlay).
 
-  2. **Greeting** — `HeroGreeting`, `TextPrimary`
-     “你好” (Hello)
+* **Scan Shine**:
+  * Subtle sheen traversing the capsule in idle state.
 
-  3. **Subtitle** — `HeroSubtitle`, `TextSecondary`
-     “我是您的智能助手” (I am your intelligent assistant)
-
-  4. **Action Grid** (2x2):
-     * Replaces the old bullet list.
-     * 4 cards: "New Task", "Summarize", "Ideas", "Schedule".
-     * Style: `SurfaceCard` with subtle shadow, icon + text.
-
-* **Chroma Wave Integration**:
-  * Position: Bottom of screen (overlay).
-  * Behavior: **Reactive**. Shows only during interaction (Thinking/Listening).
-  * Implies "I am working on your request."
-
-### 6.3 Chat Input & Quick Skill Row
-
-**Shared visual rules:**
-
-* ChatInput container:
-
-  * Background: `SurfaceCard`.
-  * Top border: `BorderDefault`.
-  * Shadow: medium (slightly lifted above content).
-  * Radius: 16–20 dp.
-* Text field:
-
-  * Fill width, height ~48–56 dp.
-  * Placeholder: `TextMuted`.
-* Send button:
-
-  * Primary state: filled chip with `AccentPrimary` background, white text.
-  * Disabled state: lower opacity, no strong border.
-
-**Quick skill chips:**
-
-* Background: `SurfaceMuted` or `SurfaceCard` with subtle border.
-* Text: `Body` + `TextSecondary`.
-* Selected/active state: border and text in `AccentPrimary`, subtle background tint.
-
-**Placement (must align with `ux-contract.md`):**
-
-* **Empty session (hero visible):**
-
-  * `Hero` (full screen)
-    ↓
-    `QuickSkillRow` directly under hero
-    ↓
-    ChatInput bar
-* **Active session:**
-
-  * No hero.
-  * `QuickSkillRow` is rendered **inside the input area**, directly above the text field.
-* There is **never more than one quick skill row visible**.
 
 ### 6.4 Chat Messages (User & Assistant)
 
@@ -398,6 +198,20 @@ Used in history, audio library, device files, etc.
   * Title or short message (Body/SectionTitle).
   * Optional short tip in `Caption` + `TextMuted`.
 * No heavy colors; keep it soft and informative.
+
+### 6.9 Smart Badge (Header Status)
+
+**Concept**: Replaces the generic "Device Status" text with a specialized, localized badge that pulses to indicate life.
+
+* **Container**:
+  * Shape: Pill / Capsule (`RoundedCornerShape(14.dp)`).
+  * Background: `SurfaceVariant` (low alpha) or transparent with border.
+  * Border: `BorderDefault` (subtle).
+* **Content**:
+  * Icon: Badge/ID-card icon (16dp).
+  * Text: "智能工牌" (Smart Badge).
+  * **Pulse Indicator**: A 6dp Green Circle (`#4CD964`).
+    * Animation: `alpha` oscillates 0.4 -> 1.0 (authentic pulse).
 
 ---
 

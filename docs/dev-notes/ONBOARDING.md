@@ -304,28 +304,27 @@ OSS_ENDPOINT=https://oss-cn-beijing.aliyuncs.com
 **按以下顺序阅读**：
 
 ### 3.1 必须阅读（核心理解）
-1. **`docs/role-contract.md`** ⭐⭐⭐
-   - 理解多代理工作流程（Operator/Orchestrator/Codex）
-   - 了解代码提交规范
+1. **`docs/README.md`** ⭐⭐⭐
+   - 文档导航中心，了解文档结构
+   - 快速找到所需文档
 
-2. **`README.md`** ⭐⭐⭐
-   - 项目概述和模块说明
-   - 构建命令
-   - Tingwu base URL 配置说明
+2. **`docs/AGENTS.md`** ⭐⭐⭐
+   - AI 代理行为规范
+   - 代码风格和提交规范
+   - Purification Mindset（净化心态）
 
-3. **`docs/current-state.md`** ⭐⭐⭐
-   - 当前系统状态
-   - 模块成熟度（T0-T3）
-   - 已知风险和限制
+3. **`docs/specs/Orchestrator-V1.md`** ⭐⭐⭐
+   - V1 架构规范（当前 SoT）
+   - 模块契约和数据流
 
-4. **`AGENTS.md`** ⭐⭐
-   - 代码风格规范
-   - 提交格式要求
+4. **`docs/plans/tracker.md`** ⭐⭐
+   - 架构实现蓝图
+   - 当前里程碑状态
 
 ### 3.2 参考阅读（按需）
-5. **`docs/progress-log.md`** - 项目历史变更
-6. **`api-contracts.md`** - API 契约文档
-7. **`plans/dev_plan.md`** - 开发计划（了解未来方向）
+5. **`docs/specs/api-contracts.md`** - API 契约文档
+6. **`docs/specs/ux-contract.md`** - UX 契约文档
+7. **`docs/plans/ux-tracker.md`** - UX 状态追踪
 
 ---
 
@@ -466,10 +465,10 @@ adb logcat | findstr "SmartSales AiFeatureTest"
 
 ### 6.1 了解工作流程
 
-根据 `docs/role-contract.md`：
-1. **Operator** (你) - 执行实际代码工作
-2. **Orchestrator** - 创建规范和任务
-3. **Codex** - 实现代码（在明确指导下）
+根据 `docs/AGENTS.md` 和 `docs/specs/Orchestrator-V1.md`：
+1. **PLANNING** - 研究代码库，理解需求，设计方案
+2. **EXECUTION** - 编写代码，实现设计
+3. **VERIFICATION** - 测试变更，验证正确性
 
 ### 6.2 推荐的第一个任务
 
@@ -583,11 +582,11 @@ export JAVA_HOME="/c/Program Files/Java/jdk-17"
 - 不影响大部分开发和测试工作
 
 ### Q5: 如何查看某个功能如何工作？
-1. 查看 `docs/current-state.md` 了解模块状态
+1. 查看 `docs/plans/tracker.md` 了解模块状态和架构
 2. 查看相关模块的 README（如 `feature/chat/README.md`）
 3. 阅读代码中的注释和文件头
 4. 查看测试代码了解预期行为
-5. 查看 `docs/progress-log.md` 了解最近的变更
+5. 查看 `docs/specs/Orchestrator-V1.md` 了解核心架构契约
 
 ### Q7: macOS 上 adb 命令找不到
 **解决方案**：
@@ -653,11 +652,11 @@ find . -name "*Test.kt"
 - [ ] 应用在设备/模拟器上运行
 - [ ] 单元测试通过 (`./gradlew testDebugUnitTest`)
 - [ ] UI 测试通过（如可能，`./gradlew :app:connectedDebugAndroidTest`）
-- [ ] 阅读了 `docs/role-contract.md`
-- [ ] 阅读了 `docs/current-state.md`
+- [ ] 阅读了 `docs/AGENTS.md`
+- [ ] 阅读了 `docs/plans/tracker.md`
 - [ ] 理解了模块结构（chat, media, connectivity, usercenter）
 - [ ] 配置了 `local.properties`（或了解如何配置）
-- [ ] 了解了项目当前成熟度（T0-T1 阶段）
+- [ ] 了解了项目当前里程碑（M1 Feature Complete）
 
 ---
 

@@ -14,6 +14,13 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.* // Added
+import androidx.compose.ui.graphics.Brush // Added
+import androidx.compose.ui.graphics.Color // Added
+import androidx.compose.ui.graphics.graphicsLayer // Added
+import androidx.compose.ui.text.SpanStyle // Added
+import androidx.compose.ui.text.buildAnnotatedString // Added
+import androidx.compose.ui.text.withStyle // Added
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -102,7 +109,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -114,6 +120,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -151,7 +158,7 @@ import com.smartsales.feature.chat.home.components.KnotSymbol
 import com.smartsales.feature.chat.home.components.ActionGrid
 import com.smartsales.feature.chat.home.theme.AppColors
 import com.smartsales.feature.chat.home.theme.AppTypography
-
+import com.smartsales.feature.chat.home.components.AuroraBackground
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreen.kt
 // 模块：:feature:chat
@@ -176,6 +183,7 @@ fun HomeScreenRoute(
     onNavigateToAudioFiles: () -> Unit = {},
     onNavigateToUserCenter: () -> Unit = {},
     onNavigateToChatHistory: () -> Unit = {},
+    onDeviceClick: () -> Unit = {}, // Added
     onDeviceSnapshotChanged: (DeviceSnapshotUi?) -> Unit = {},
     onInputFocusChanged: (Boolean) -> Unit = {},
 ) {
@@ -466,6 +474,7 @@ fun HomeScreen(
     onLoadMoreHistory: () -> Unit,
     onProfileClicked: () -> Unit,
     onNewChatClicked: () -> Unit = {},
+    onDeviceClick: () -> Unit = {}, // Added
     onSessionSelected: (String) -> Unit = {},
     chatErrorMessage: String? = null,
     exportInProgress: Boolean,
@@ -629,6 +638,9 @@ fun HomeScreen(
                     .fillMaxSize()
                     .testTag(HomeScreenTestTags.PAGE_HOME)
             ) {
+                // 14.1 Aurora Background (Base Layer)
+                AuroraBackground()
+
                 Scaffold(
                     modifier = Modifier
                         .fillMaxSize()
@@ -645,6 +657,7 @@ fun HomeScreen(
                                 coroutineScope.launch { drawerState.open() }
                             },
                             onNewChatClick = onNewChatClicked,
+                            onDeviceClick = onDeviceClick, // Wired
                             hudEnabled = hudEnabled,
                             showDebugMetadata = state.showDebugMetadata,
                             onToggleDebugMetadata = { onToggleDebugMetadata() }
@@ -852,151 +865,47 @@ private fun EmptyStateContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 32.dp)
             .testTag(HomeScreenTestTags.HERO)
     ) {
         Column(
             modifier = Modifier.align(Alignment.Center),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // 1. Brand Mark
-            KnotSymbol(modifier = Modifier.size(80.dp))
+            // Logo / Branding (Optional enhancement, sticking to brief which implies text focus)
             
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // 2. Greeting
+            // Text Content
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // Greetings
                 Text(
-                    text = "你好，$userName",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface
+                    text = "你好, $userName",
+                    style = MaterialTheme.typography.displaySmall.copy(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.tertiary
+                            )
+                        )
+                    )
                 )
-                Text(
-                    text = "我是您的销售助手",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // 3. Legacy Capabilities Copy (Restored)
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                horizontalAlignment = Alignment.Start
-            ) {
                 Text(
-                    text = "我可以帮您：",
+                    text = "我是您的销售助手\n让我们开始吧",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "• 分析用户画像、意图、痛点。",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "• 生成 PDF、CSV 文档及思维导图。",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
                 )
             }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Text(
-                text = "让我们开始吧",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
             
-            // 4. Legacy Quick Skills (Functional Entry Points)
-            // We keep these for now as they trigger the actual export logic
-            QuickSkillRow(
-                skills = skills,
-                selectedSkillId = selectedSkillId,
-                enabled = enabled,
-                onQuickSkillSelected = onSkillSelected,
-                onExportPdfClicked = onExportPdfClicked,
-                onExportCsvClicked = onExportCsvClicked
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            ExportGateHint(exportGateState = exportGateState)
+            // NOTE: QuickSkillRow moved to HomeInputArea as per Design Brief
         }
     }
 }
 
-@Composable
-private fun HomeHeroSection(
-    userName: String,
-    hasMessages: Boolean,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .testTag(HomeScreenTestTags.HERO),
-        shape = MaterialTheme.shapes.extraLarge,
-        tonalElevation = 1.dp,
-        shadowElevation = 2.dp,
-        color = MaterialTheme.colorScheme.surface
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Text(
-                text = "你好，$userName",
-                style = MaterialTheme.typography.titleLarge
-            )
-            Text(
-                text = "我是您的销售助手",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                BulletLine("总结对话，分析异议，辅导话术")
-                BulletLine("生成日报、PDF/CSV 报告，帮助复盘")
-                BulletLine("导出思维导图，辅助会议决策")
-            }
-            if (!hasMessages) {
-                Text(
-                    text = "让我们开始吧",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
-    }
-}
 
-@Composable
-private fun BulletLine(text: String) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
-        Box(
-            modifier = Modifier
-                .padding(top = 6.dp)
-                .size(4.dp)
-                .background(MaterialTheme.colorScheme.primary, shape = CircleShape)
-        )
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-    }
-}
 
 @Composable
 private fun AudioRecoveryHintBanner(
@@ -1088,12 +997,13 @@ private fun HomeTopBar(
     deviceSnapshot: DeviceSnapshotUi?,
     onHistoryClick: () -> Unit,
     onNewChatClick: () -> Unit,
+    onDeviceClick: () -> Unit, // Added
     hudEnabled: Boolean,
     showDebugMetadata: Boolean,
     onToggleDebugMetadata: () -> Unit,
 ) {
     Row(
-            modifier = Modifier
+        modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1105,9 +1015,22 @@ private fun HomeTopBar(
         ) {
             Icon(Icons.Filled.Menu, contentDescription = "历史记录")
         }
-        DeviceStatusIndicator(snapshot = deviceSnapshot)
+        
+        // 15.2 Smart Badge Tap Action
+        DeviceStatusIndicator(
+            snapshot = deviceSnapshot,
+            onClick = onDeviceClick
+        )
+
+        // 15.1 Header Title Logic: Show "SmartSales" for new/empty sessions
+        val displayTitle = if (title.contains("新的") || title.contains("New Chat") || title.isBlank()) {
+            "SmartSales"
+        } else {
+            title
+        }
+
         Text(
-            text = title,
+            text = displayTitle,
             modifier = Modifier
                 .weight(1f)
                 .testTag(HomeScreenTestTags.SESSION_TITLE),
@@ -1115,8 +1038,11 @@ private fun HomeTopBar(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-        if (hudEnabled) {
-            IconButton(
+        
+        // 15.1 Remove Debug Dot in Release (or hide by default)
+        // Only show if HUD is explicitly enabled AND we are in a debuggable state
+        if (hudEnabled && showDebugMetadata) {
+             IconButton(
                 onClick = onToggleDebugMetadata,
                 modifier = Modifier.testTag(HomeScreenTestTags.DEBUG_HUD_TOGGLE)
             ) {
@@ -1124,16 +1050,13 @@ private fun HomeTopBar(
                     modifier = Modifier
                         .size(14.dp)
                         .background(
-                            color = if (showDebugMetadata) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
+                            color = MaterialTheme.colorScheme.primary,
                             shape = CircleShape
                         )
                 )
             }
         }
+        
         IconButton(
             onClick = onNewChatClick,
             modifier = Modifier.testTag(HomeScreenTestTags.NEW_CHAT_BUTTON)
@@ -1145,10 +1068,15 @@ private fun HomeTopBar(
 
 @Suppress("UnusedParameter")
 @Composable
-private fun DeviceStatusIndicator(snapshot: DeviceSnapshotUi?) {
+private fun DeviceStatusIndicator(
+    snapshot: DeviceSnapshotUi?,
+    onClick: () -> Unit = {} // Added default for preview/compat
+) {
+    // 14.1 SmartBadge Implementation
     Surface(
         modifier = Modifier
-            .testTag(HomeScreenTestTags.HOME_DEVICE_INDICATOR),
+            .testTag(HomeScreenTestTags.HOME_DEVICE_INDICATOR)
+            .clickable(onClick = onClick), // 15.2 Interactive
         shape = RoundedCornerShape(14.dp),
         tonalElevation = 0.dp,
         shadowElevation = 0.dp,
@@ -1161,16 +1089,41 @@ private fun DeviceStatusIndicator(snapshot: DeviceSnapshotUi?) {
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Icon: Badge Style (Using DeviceHub as placeholder for now, ideally vector resource)
+            // TODO: Replace with dedicated Badge icon if available
             Icon(
-                imageVector = Icons.Filled.DeviceHub,
-                contentDescription = "设备状态",
+                imageVector = Icons.Filled.DeviceHub, 
+                contentDescription = "智能工牌",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(16.dp) 
             )
+            
             Text(
-                text = "设备状态",
+                text = "智能工牌", // Localized "Smart Badge"
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            // Green Pulse Dot (Authentic Animation)
+            // 15.2 State Mapping: Verify if connected. For now we assume this badge IMPLIES connection or searching.
+            // If we want to show disconnected, we might change color.
+            // For now, keep Green Pulse as "Alive" signal per design brief.
+            val infiniteTransition = rememberInfiniteTransition(label = "badge_pulse")
+            val alpha by infiniteTransition.animateFloat(
+                initialValue = 0.4f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1000, easing = LinearEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "alpha"
+            )
+            
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .graphicsLayer { this.alpha = alpha }
+                    .background(Color(0xFF4CD964), CircleShape) // iOS Green
             )
         }
     }

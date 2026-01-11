@@ -29,6 +29,27 @@ You DO:
 
 ---
 
+## 🇨🇳 Localization & Theme Focus
+
+### Mandatory: 100% Chinese Localization
+All user-facing text in prototypes and production UI **MUST be in Simplified Chinese**.
+
+| ❌ Anti-Pattern | ✅ Correct |
+|-----------------|-----------|
+| "Hello, User" | "你好，用户" |
+| "Type a message..." | "输入消息..." |
+| "SmartSales" (as greeting) | "SmartSales" (Brand OK) or "智能销售" |
+| "I am your assistant" | "我是您的销售助手" |
+
+**Exception**: Brand names (e.g., "SmartSales" as app title) may remain in English.
+
+### Theme Priority: Aurora Only
+- **Primary Focus**: Aurora theme (Light & Dark).
+- **Skip**: Neo-Brutalism, GlassOS variants (unless explicitly requested).
+- **Reason**: Aurora is the production theme; others are for exploration only.
+
+---
+
 ## Collaboration Flow
 
 ```

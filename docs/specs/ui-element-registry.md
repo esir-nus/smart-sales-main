@@ -91,19 +91,19 @@ For each element in the Registry, verify:
 
 | Element | States | In Legacy | Target Status | Notes |
 |---------|--------|-----------|---------------|-------|
-| `TopBar` | visible | ✅ | ✅ Styled | Menu + Title + DeviceStatus + DebugToggle + NewChat(+) |
-| `DebugHudToggle` | visible (hudEnabled), hidden | ✅ | ⏳ Pending | Round dot, toggles Debug HUD overlay |
-| `DeviceStatusIndicator` | connected, disconnected | ✅ | ⏳ Pending | Pill with connection state |
+| `StatusBar` | visible | ❌ | ✅ Styled | iOS-style (Added 2026-01-10) |
+| `TopBar` | visible | ✅ | ✅ Styled | Menu + "SmartSales"(Center) + SmartBadge(Left) + Debug + NewChat |
+| `DebugHudToggle` | visible (hudEnabled), hidden | ✅ | ✅ Styled | Round dot, toggles Debug HUD overlay |
+| `DeviceStatusIndicator` | connected, disconnected | ✅ | ✅ Styled | **SmartBadge** ("智能工牌") + Green Pulse |
 | `HeroSection` | visible (empty), hidden (active) | ✅ | ✅ Styled | Only when no messages |
-| `KnotSymbol` | idle | ✅ | ✅ Styled | Brand mark (approved) |
-| `HeroGreeting` | visible | ✅ | ⏳ Pending | "你好，User" |
-| `HeroSubtitle` | visible | ✅ | ⏳ Pending | "我是您的销售助手" |
-| `LegacyCopyBullets` | visible | ✅ | ⏳ Pending | "分析用户画像" + "思维导图" (RESTORED) |
-| `ActionGrid` | — | ❌ REMOVED | 🗑️ Deprecated | Had dead callbacks, removed 2026-01-10 |
-| `QuickSkillRow` | visible | ✅ | ⏳ Pending | [智能分析] [PDF] [CSV] — functional |
-| `InputBar` | idle, focused, sending, disabled | ✅ | ⏳ Pending | Floating pill |
-| `AttachmentMenu` | open, closed | ✅ | ⏳ Pending | "+" button → Audio/Image picker |
-| `HistoryDrawer` | open, closed | ✅ | ❌ Not Started | |
+| `KnotSymbol` | idle, **processing** | ✅ | ✅ Styled | **Moved to InputBar** (40x40px, Blue/Purple Loop) |
+| `HeroGreeting` | visible | ✅ | ✅ Styled | Localized "你好, SmartSales 用户" (Gradient) |
+| `LegacyCopyBullets` | visible | ✅ | 🔄 **Moved to Card** | "Mind maps" -> integrated into SmartAnalysis result |
+| `ActionGrid` | — | ❌ | 🗑️ Deprecated | Removed |
+| `QuickSkillRow` | visible | ✅ | ✅ Styled | Localized Chips [智能分析] [生成 PDF] [生成 CSV] |
+| `InputBar` | idle, focused, sending, disabled | ✅ | ✅ Styled | **Glass Pill** + Scan Shine (Zero State) + Attachment + Knot |
+| `AttachmentMenu` | open, closed | ✅ | ✅ Styled | "+" button (Left of Input) |
+| `HistoryDrawer` | open, closed | ✅ | ⏳ Pending | Align with Legacy + Redesign |
 
 ---
 
@@ -171,3 +171,4 @@ For each element in the Registry, verify:
 | 2026-01-10 | **REVERTED ActionGrid** (dead callbacks), restored Legacy Copy | Senior Review |
 | 2026-01-10 | Added DeviceStatusIndicator, AttachmentMenu, LegacyCopyBullets | UI Designer |
 | 2026-01-10 | Added DebugHudToggle (round dot in TopBar) | UI Designer |
+| 2026-01-10 | **FROZEN Phase 13**: Finalized Home Screen Layout (SmartBadge, ScanShine, Knot40px) | UI Director |

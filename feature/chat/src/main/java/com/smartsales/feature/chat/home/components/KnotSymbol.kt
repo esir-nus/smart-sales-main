@@ -97,18 +97,19 @@ fun KnotSymbol(
         path.close()
 
         // Pass 1: Atmosphere (Glow)
+        // Pass 1: Atmosphere (Glow)
         drawPath(
             path = path,
             brush = currentBrush, // Dynamic Brush
             alpha = 0.5f, // Increased alpha for glow
-            style = Stroke(width = 5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round) // 5dp glow
+            style = Stroke(width = 3.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round) // V14: 3dp glow (refined)
         )
 
         // Pass 2: Core (Stroke)
         drawPath(
             path = path,
             brush = currentBrush, // Dynamic Brush
-            style = Stroke(width = 2.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round) // 2.5dp core
+            style = Stroke(width = 1.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round) // V14: 1.5dp core (elegant)
         )
     }
 }

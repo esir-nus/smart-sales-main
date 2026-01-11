@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.ArrowUpward // Added
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.outlined.Add
@@ -242,10 +243,27 @@ internal fun HomeInputArea(
                         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                         decorationBox = { innerTextField ->
                             if (inputValue.isEmpty()) {
+                                // V17: Shimmer Placeholder
+                                val shimmerTransition = rememberInfiniteTransition(label = "shimmer")
+                                val shimmerOffset by shimmerTransition.animateFloat(
+                                    initialValue = -200f,
+                                    targetValue = 600f,
+                                    animationSpec = infiniteRepeatable(
+                                        animation = tween(2000, easing = LinearEasing, delayMillis = 500),
+                                        repeatMode = RepeatMode.Restart
+                                    ),
+                                    label = "shimmerOffset"
+                                )
+                                val baseColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                val shineColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                val shimmerBrush = Brush.horizontalGradient(
+                                    colors = listOf(baseColor, shineColor, baseColor),
+                                    startX = shimmerOffset,
+                                    endX = shimmerOffset + 150f
+                                )
                                 Text(
                                     text = if (isSmartAnalysisMode) "说明你想分析什么..." else "输入消息...",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    style = MaterialTheme.typography.bodyLarge.copy(brush = shimmerBrush)
                                 )
                             }
                             innerTextField()
@@ -267,31 +285,15 @@ internal fun HomeInputArea(
                             )
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Send,
+                            imageVector = Icons.Default.ArrowUpward,
                             contentDescription = "发送",
                             tint = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(24.dp)
                         )
                     }
-                } else {
-                    // Knot Symbol (Breathing/Spinning)
-                   Box(
-                        modifier = Modifier.size(AppDimensions.InputBarIconSize),
-                        contentAlignment = Alignment.Center
-                    ) {
-                       // Fix T5: Bind animation state
-                       KnotSymbol(
-                           isThinking = busy,
-                           modifier = Modifier.size(AppDimensions.KnotSymbolSmall)
-                       ) // 40dp
-                    }
-                }
             }
-            
-            // 14.4 Input Scan Shine (Zero State) inside the glass pill
-             if (!busy && inputValue.isEmpty() && showQuickSkills) {
-                 InputScanShine()
-             }
+            }
+            // V17: Removed bar-level InputScanShine(). Shimmer is now on placeholder text only.
         }
     }
 }

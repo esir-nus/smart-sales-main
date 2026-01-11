@@ -17,6 +17,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.* // Added
 import androidx.compose.ui.graphics.Brush // Added
 import androidx.compose.ui.graphics.Color // Added
+import androidx.compose.ui.draw.clip // Added
 import androidx.compose.ui.graphics.graphicsLayer // Added
 import androidx.compose.ui.text.SpanStyle // Added
 import androidx.compose.ui.text.buildAnnotatedString // Added
@@ -27,6 +28,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.scaleIn // Added
+import androidx.compose.animation.scaleOut // Added
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -555,6 +558,32 @@ fun HomeScreen(
                 }
 
 
+                // 14.5 Knot FAB (Floating Assistant) - P2 Spec
+                // Logic: Show when not typing (input blank) and not focused
+                // Fix T5: Bind to chatBusy so it spins when thinking
+                // 14.5 Knot FAB (Persistent Living Intelligence) - V14 Spec
+                // Logic: ALWAYS VISIBLE. The AI never hides.
+                
+                // Floating Knot Bubble
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = 160.dp, end = 24.dp) // P2 Spec: High float
+                        .size(56.dp) // Container: 56dp standard touch target
+                        .background(
+                            color = Color.Transparent, // Clean (no bg)
+                            shape = CircleShape
+                        )
+                        // V14: Added Ripple Interaction (Standard M3)
+                        .clip(CircleShape)
+                        .clickable { /* TODO: Trigger Tip Bubble */ },
+                    contentAlignment = Alignment.Center
+                ) {
+                     KnotSymbol(
+                        isThinking = chatBusy,
+                        modifier = Modifier.size(50.dp) // V14: 50dp icon inside 56dp box (Breathing room)
+                    )
+                }
             }
         }
     )

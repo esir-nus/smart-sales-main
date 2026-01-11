@@ -65,10 +65,10 @@ object AppColors {
         end = androidx.compose.ui.geometry.Offset.Infinite
     )
 
-    // Aurora Background Colors (Radial) - Boosted for Visibility
-    val AuroraTopLeft = Color(0xFF007AFF).copy(alpha = 0.15f) // Brighter Tech Blue
-    val AuroraCenterRight = Color(0xFF5E5CE6).copy(alpha = 0.15f) // Deep Indigo
-    val AuroraBottomLeft = Color(0xFF00C7BE).copy(alpha = 0.15f) // Teal/Cyan pop
+    // Aurora Background Colors (Radial) - Boosted for Visibility (V16 Polish)
+    val AuroraTopLeft = Color(0xFF007AFF).copy(alpha = 0.28f) // Brighter Tech Blue (Balanced)
+    val AuroraCenterRight = Color(0xFF5E5CE6).copy(alpha = 0.24f) // Deep Indigo (Balanced)
+    val AuroraBottomLeft = Color(0xFF00C7BE).copy(alpha = 0.20f) // Teal/Cyan pop (Balanced)
 
     // Debug HUD
     val DebugDotActive = Color(0xFF34C759)

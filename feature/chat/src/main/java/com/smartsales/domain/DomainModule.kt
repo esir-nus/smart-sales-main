@@ -11,8 +11,6 @@ import com.smartsales.domain.export.ExportCoordinator
 import com.smartsales.domain.export.ExportCoordinatorImpl
 import com.smartsales.domain.sessions.SessionsManager
 import com.smartsales.domain.sessions.SessionsManagerImpl
-import com.smartsales.domain.transcription.Disector
-import com.smartsales.domain.transcription.DisectorImpl
 import com.smartsales.domain.transcription.TranscriptionCoordinator
 import com.smartsales.domain.transcription.TranscriptionCoordinatorImpl
 import dagger.Binds
@@ -26,14 +24,12 @@ import javax.inject.Singleton
  * 
  * Purpose: Decouple javax.inject from domain layer interfaces.
  * Pattern: Interface in domain/, Impl with @Inject/@Singleton in impl/
+ * 
+ * Note: Disector binding moved to AiCoreModule (data/ai-core)
  */
 @Module
 @InstallIn(SingletonComponent::class)
 interface DomainModule {
-
-    @Binds
-    @Singleton
-    fun bindDisector(impl: DisectorImpl): Disector
 
     @Binds
     @Singleton

@@ -43,30 +43,30 @@ fun AuroraBackground(
         val w = size.width
         val h = size.height
         
-        // Blob 1: Top Left-ish
-        val x1 = w * 0.3f + cos(t) * (w * 0.15f) // Increased from 0.1
+        // Blob 1: Top Left-ish (Pushed spread)
+        val x1 = w * 0.2f + cos(t) * (w * 0.15f) // V16: w*0.2 (was 0.3)
         val y1 = h * 0.3f + sin(t) * (h * 0.15f)
         drawAuroraBlob(
             center = Offset(x1, y1),
-            radius = w * 0.7f,
+            radius = w * 0.5f, // V16: Reduced from 0.7 to 0.5 for distinctness
             color = AppColors.AuroraTopLeft // Alpha controlled in AppColors
         )
 
-        // Blob 2: Center Right-ish
-        val x2 = w * 0.7f + cos(t * 0.8f) * (w * 0.20f) // Increased from 0.15
+        // Blob 2: Center Right-ish (Pushed spread)
+        val x2 = w * 0.8f + cos(t * 0.8f) * (w * 0.20f) // V16: w*0.8 (was 0.7)
         val y2 = h * 0.6f + sin(t * 1.2f) * (h * 0.20f)
         drawAuroraBlob(
             center = Offset(x2, y2),
-            radius = w * 0.8f,
+            radius = w * 0.5f, // V16: Reduced from 0.8 to 0.5
             color = AppColors.AuroraCenterRight // Alpha controlled in AppColors
         )
 
         // Blob 3: Bottom Left-ish
-        val x3 = w * 0.4f + sin(t * 0.5f) * (w * 0.15f) // Increased from 0.1
+        val x3 = w * 0.4f + sin(t * 0.5f) * (w * 0.15f) 
         val y3 = h * 0.8f + cos(t) * (h * 0.15f)
         drawAuroraBlob(
             center = Offset(x3, y3),
-            radius = w * 0.6f,
+            radius = w * 0.5f, // V16: Reduced from 0.6 to 0.5
             color = AppColors.AuroraBottomLeft // Alpha controlled in AppColors
         )
     }

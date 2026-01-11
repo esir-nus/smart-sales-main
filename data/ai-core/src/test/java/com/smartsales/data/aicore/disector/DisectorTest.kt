@@ -1,9 +1,9 @@
-package com.smartsales.domain.transcription
+package com.smartsales.data.aicore.disector
 
-// File: feature/chat/src/test/java/com/smartsales/domain/transcription/DisectorTest.kt
-// Module: :feature:chat
+// File: data/ai-core/src/test/java/com/smartsales/data/aicore/disector/DisectorTest.kt
+// Module: :data:ai-core
 // Summary: Unit tests for Disector (V1 Appendix A batch splitting rules)
-// Author: created on 2026-01-06
+// Author: migrated from feature:chat on 2026-01-11
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

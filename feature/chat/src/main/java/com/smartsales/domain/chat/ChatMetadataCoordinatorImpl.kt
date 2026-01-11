@@ -17,11 +17,8 @@ import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.feature.chat.core.publisher.ArtifactStatus
 import com.smartsales.feature.chat.core.publisher.V1FinalizeResult
 import org.json.JSONObject
-import android.util.Log
 import javax.inject.Inject
 import javax.inject.Singleton
-
-private const val TAG = "ChatMetadataCoordinator"
 
 /**
  * ChatMetadataCoordinatorImpl: Extracts and persists chat metadata.
@@ -60,7 +57,6 @@ class ChatMetadataCoordinatorImpl @Inject constructor(
         val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
         val merged = existing?.mergeWith(patch) ?: patch
         runCatching { metaHub.upsertSession(merged) }
-            .onFailure { Log.w(TAG, "M3 upsertSession failed for $sessionId", it) }
         // Also write M2 patch for chat-derived signals
         appendChatM2Patch(sessionId, merged)
         return merged
@@ -88,7 +84,6 @@ class ChatMetadataCoordinatorImpl @Inject constructor(
         val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
         val merged = existing?.mergeWith(patch) ?: patch
         runCatching { metaHub.upsertSession(merged) }
-            .onFailure { Log.w(TAG, "M3 upsertSession failed for $sessionId", it) }
         // Also write M2 patch for chat-derived signals
         appendChatM2Patch(sessionId, merged)
         return merged
@@ -107,7 +102,6 @@ class ChatMetadataCoordinatorImpl @Inject constructor(
             latestMajorAnalysisSource = source
         )
         runCatching { metaHub.upsertSession(updated) }
-            .onFailure { Log.w(TAG, "M3 upsertSession failed for $sessionId", it) }
         return updated
     }
 
@@ -139,7 +133,6 @@ class ChatMetadataCoordinatorImpl @Inject constructor(
             payload = ConversationDerivedStateDelta(rawSignals = rawSignals)
         )
         runCatching { metaHub.appendM2Patch(sessionId, patch) }
-            .onFailure { Log.w(TAG, "M2 appendM2Patch failed for $sessionId", it) }
     }
 
     private fun SessionMetadata.hasMeaningfulGeneralFields(): Boolean =

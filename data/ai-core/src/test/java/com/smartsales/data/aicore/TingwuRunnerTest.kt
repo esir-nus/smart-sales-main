@@ -167,6 +167,7 @@ class TingwuRunnerTest {
             tingwuRunner = runnerRepo,
             transcriptProcessor = processor,
             pipelineTracer = tracer,
+            disector = com.smartsales.data.aicore.disector.DisectorImpl(),
             optionalConfig = optionalConfig
         ).also { createdCoordinators += it }
     }

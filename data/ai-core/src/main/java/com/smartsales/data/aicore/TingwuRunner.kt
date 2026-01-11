@@ -90,6 +90,7 @@ class TingwuRunner @Inject constructor(
     private val tingwuRunner: com.smartsales.data.aicore.tingwu.polling.TingwuRunnerRepository,
     private val transcriptProcessor: com.smartsales.data.aicore.tingwu.processor.TingwuTranscriptProcessor,
     private val pipelineTracer: com.smartsales.data.aicore.debug.PipelineTracer,
+    private val disector: com.smartsales.data.aicore.disector.Disector,
 
     optionalConfig: Optional<AiCoreConfig>
 ) : TingwuCoordinator {
@@ -146,6 +147,30 @@ class TingwuRunner @Inject constructor(
             logVerbose {
                 "创建 Tingwu 任务：taskKey=$taskKey fileUrl=$resolvedUrl lang=$requestedLanguage source=$sourceLanguage model=$model diarizationEnabled=${request.diarizationEnabled}"
             }
+            
+            // V1 Appendix A: Disector batch planning (if duration provided)
+            val disectorPlan = request.durationMs?.let { durationMs ->
+                val audioAssetId = request.ossObjectKey ?: taskKey
+                val recordingSessionId = request.sessionId ?: taskKey
+                disector.createPlan(durationMs, audioAssetId, recordingSessionId).also { plan ->
+                    if (plan.batches.size > 1) {
+                        // Multi-batch: emit trace, defer full implementation to Phase 2
+                        pipelineTracer.emit(
+                            stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_UPLOAD,
+                            status = "MULTI_BATCH_DETECTED",
+                            message = "planId=${plan.disectorPlanId} batches=${plan.batches.size} durationMs=$durationMs"
+                        )
+                        AiCoreLogger.d(TAG, "Disector: 多批次检测 - ${plan.batches.size} batches for ${durationMs}ms audio")
+                    } else {
+                        pipelineTracer.emit(
+                            stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_UPLOAD,
+                            status = "SINGLE_BATCH",
+                            message = "planId=${plan.disectorPlanId} durationMs=$durationMs"
+                        )
+                    }
+                }
+            }
+            
             runCatching {
                 val diarizationEnabled = request.diarizationEnabled && tingwuSettings.transcription.diarizationEnabled
                 val diarizationParameters = if (diarizationEnabled) {

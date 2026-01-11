@@ -26,7 +26,9 @@ data class TingwuRequest(
     val sessionId: String? = null,
     val customPromptEnabled: Boolean = false,
     val customPromptName: String? = null,
-    val customPromptText: String? = null
+    val customPromptText: String? = null,
+    /** Audio duration in milliseconds for Disector batch planning. Nullable for backward compat. */
+    val durationMs: Long? = null
 )
 
 data class TingwuJobArtifacts(

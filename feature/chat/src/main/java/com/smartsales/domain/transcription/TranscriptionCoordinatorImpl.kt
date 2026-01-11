@@ -5,7 +5,7 @@
 
 package com.smartsales.domain.transcription
 
-import android.util.Log
+
 import com.smartsales.data.aicore.AiCoreConfig
 import com.smartsales.domain.transcription.V1BatchIndexPrefixGate
 import com.smartsales.domain.transcription.V1TingwuWindowedChunkBuilder
@@ -42,25 +42,17 @@ class TranscriptionCoordinatorImpl @Inject constructor(
     private val enableV1TingwuMacroWindowFilter =
         optionalConfig.orElse(AiCoreConfig()).enableV1TingwuMacroWindowFilter
 
-    companion object {
-        private const val TAG = "TranscriptionCoordinatorImpl"
-    }
 
     override fun observeJob(jobId: String): Flow<AudioTranscriptionJobState> {
         return transcriptionCoordinator.observeJob(jobId)
     }
 
     override fun observeProcessedBatches(jobId: String): Flow<ProcessedBatch> = flow {
-        Log.d(TAG, "observeProcessedBatches: starting collection for jobId=$jobId")
         transcriptionCoordinator.observeBatches(jobId).collect { event ->
-            Log.d(TAG, "observeProcessedBatches: received event type=${event::class.simpleName}")
             when (event) {
                 is AudioTranscriptionBatchEvent.BatchReleased -> {
-                    Log.d(TAG, "observeProcessedBatches: BatchReleased index=${event.batchIndex}/${event.totalBatches} chunk长度=${event.markdownChunk.length}")
                     // Check if already marked final
                     if (_state.value.isFinal) {
-                        // Batch received after final - skip
-                        Log.d(TAG, "observeProcessedBatches: skipping - already marked final")
                         return@collect
                     }
 
@@ -170,11 +162,9 @@ class TranscriptionCoordinatorImpl @Inject constructor(
         onCompleted: (messageId: String) -> Unit,
         onFailed: (reason: String, messageId: String) -> Unit
     ) {
-        Log.d(TAG, "runTranscription: starting for jobId=$jobId fileName=$fileName")
         // Observe job state until terminal state (Completed/Failed)
         val terminalState = observeJob(jobId)
             .onEach { state ->
-                Log.d(TAG, "runTranscription: observeJob emitted state=${state::class.simpleName}")
                 when (state) {
                     is AudioTranscriptionJobState.InProgress -> {
                         onProgressUpdate(state.progressPercent, progressMessageId)
@@ -184,17 +174,13 @@ class TranscriptionCoordinatorImpl @Inject constructor(
             }
             .first { it is AudioTranscriptionJobState.Completed || it is AudioTranscriptionJobState.Failed }
 
-        Log.d(TAG, "runTranscription: terminal state reached = ${terminalState::class.simpleName}")
         // Now process all batches (they're available after Completed)
         when (terminalState) {
             is AudioTranscriptionJobState.Completed -> {
-                Log.d(TAG, "runTranscription: Completed state, starting batch collection")
                 // Collect all batches first
                 observeProcessedBatches(jobId).collect { batch ->
-                    Log.d(TAG, "runTranscription: batch received index=${batch.batchIndex} chunk长度=${batch.effectiveChunk.length}")
                     onBatchReceived(batch)
                 }
-                Log.d(TAG, "runTranscription: batch collection complete, calling onCompleted")
                 // Then signal completion
                 onCompleted(progressMessageId)
             }

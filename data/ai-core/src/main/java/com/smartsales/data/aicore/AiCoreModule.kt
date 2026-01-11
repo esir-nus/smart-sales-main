@@ -107,6 +107,12 @@ abstract class AiCoreModule {
 
     @Binds
     @Singleton
+    abstract fun bindDisector(
+        impl: com.smartsales.data.aicore.disector.DisectorImpl
+    ): com.smartsales.data.aicore.disector.Disector
+
+    @Binds
+    @Singleton
     abstract fun bindAiParaSettingsProvider(
         impl: DefaultAiParaSettingsProvider
     ): AiParaSettingsProvider

@@ -70,6 +70,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.layout.height
+import com.smartsales.feature.chat.home.theme.AppSpacing
+import com.smartsales.feature.chat.home.theme.AppRadius
+import com.smartsales.feature.chat.home.theme.AppElevation
+import com.smartsales.feature.chat.home.theme.AppDimensions
 
 @Composable
 internal fun HomeInputArea(
@@ -101,12 +105,15 @@ internal fun HomeInputArea(
             .fillMaxWidth()
             .navigationBarsPadding()
             .imePadding()
-            .padding(horizontal = 16.dp, vertical = 24.dp), // Increased bottom padding for floating feel
-        verticalArrangement = Arrangement.spacedBy(16.dp) // Gap between skills and input
+            .padding(
+                horizontal = AppSpacing.MD, 
+                vertical = AppSpacing.LG
+            ), // 24dp vertical per prototype
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.MD) // 16dp gap
     ) {
-        // 1. Quick Skills Docked ABOVE Input (Design Brief Requirement)
+        // 1. Quick Skills Docked ABOVE Input
         if (showQuickSkills) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.SM)) {
                 QuickSkillRow(
                     skills = quickSkills,
                     selectedSkillId = selectedSkill?.id,
@@ -120,35 +127,39 @@ internal fun HomeInputArea(
         }
 
         // 2. Glass Pill Input Bar
-        // Simulated Glass: Translucent Surface + Shadow (Blur would require Android 12+ RenderEffect or library)
+        // Simulated Glass: Translucent Surface + Shadow
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp) // Fixed height for pill
-                .shadow(elevation = 8.dp, shape = CircleShape, spotColor = Color(0x40000000))
+                .height(AppDimensions.InputBarHeight) // 64.dp
+                .shadow(
+                    elevation = AppElevation.LG, // 8dp
+                    shape = RoundedCornerShape(AppRadius.Pill), 
+                    spotColor = Color(0x40000000)
+                )
                 .background(
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f), // Translucent glass base
-                    shape = CircleShape
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = AppDimensions.InputBarGlassAlpha),
+                    shape = RoundedCornerShape(AppRadius.Pill)
                 )
                 .border(
                     width = 1.dp,
                     color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                    shape = CircleShape
+                    shape = RoundedCornerShape(AppRadius.Pill)
                 )
-                .padding(horizontal = 8.dp), // Internal padding
+                .padding(horizontal = AppSpacing.SM), // 8dp internal padding
             contentAlignment = Alignment.CenterStart
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(AppSpacing.XS) // 4dp gap
             ) {
                 // Left: Attachment Button
                 Box {
                     IconButton(
                         onClick = { uploadMenuExpanded = true },
                         enabled = enabled && !busy,
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(AppDimensions.InputBarIconSize) // 48dp
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Add, 
@@ -211,13 +222,12 @@ internal fun HomeInputArea(
                 }
 
                 // Right: Knot Symbol OR Send Button
-                // Transition: Crossfade could be nice, but simple if/else works for now
                 if (showSendButton) {
                     IconButton(
                         onClick = onSendClicked,
                         enabled = canSend,
                         modifier = Modifier
-                            .size(48.dp)
+                            .size(AppDimensions.InputBarIconSize)
                             .testTag(HomeScreenTestTags.SEND_BUTTON)
                             .background(
                                 color = MaterialTheme.colorScheme.primary,
@@ -234,10 +244,10 @@ internal fun HomeInputArea(
                 } else {
                     // Knot Symbol (Breathing)
                    Box(
-                        modifier = Modifier.size(48.dp),
+                        modifier = Modifier.size(AppDimensions.InputBarIconSize),
                         contentAlignment = Alignment.Center
                     ) {
-                       KnotSymbol(modifier = Modifier.size(40.dp))
+                       KnotSymbol(modifier = Modifier.size(AppDimensions.KnotSymbolSmall)) // 40dp
                     }
                 }
             }
@@ -358,8 +368,8 @@ internal fun QuickSkillRow(
 ) {
     if (skills.isEmpty()) return
     LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(horizontal = 8.dp)
+        horizontalArrangement = Arrangement.spacedBy(AppSpacing.SM), // 8dp
+        contentPadding = PaddingValues(horizontal = AppSpacing.SM) // 8dp
     ) {
         items(skills, key = { it.id }) { skill ->
             val skillTag = "home_quick_skill_${skill.id}"
@@ -396,7 +406,7 @@ internal fun QuickSkillRow(
                 enabled = skillEnabled,
                 modifier = Modifier
                     .testTag(skillTag)
-                    .padding(vertical = 2.dp),
+                    .height(AppDimensions.QuickSkillChipHeight), // 36dp
                 label = {
                     Text(
                         text = skill.label,
@@ -413,7 +423,8 @@ internal fun QuickSkillRow(
                     } else {
                         MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
                     }
-                )
+                ),
+                shape = RoundedCornerShape(AppRadius.Pill)
             )
         }
     }
@@ -426,6 +437,6 @@ internal fun ExportGateHint(exportGateState: ExportGateState?) {
         text = exportGateState.reason,
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 8.dp)
+        modifier = Modifier.padding(horizontal = AppSpacing.SM)
     )
 }

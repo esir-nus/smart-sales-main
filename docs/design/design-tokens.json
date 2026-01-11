@@ -75,8 +75,15 @@
       "textPrimary": "{primitives.colors.white}",
       "textSecondary": "#EBEBF5",
       "textMuted": "#98989D",
-      "textDanger": "#FF453A"
+      "textDanger": "#FF453A",
+      "neuralBeacon": "#00E676",
+      "crystalCardBg": "rgba(255, 255, 255, 0.05)",
+      "technicalBorder": "rgba(255, 255, 255, 0.2)"
     }
+  },
+  "primitives": {
+    "colors": {
+       "mint": { "500": "#00E676" },
   },
 
   "spacing": {

@@ -7,6 +7,7 @@ package com.smartsales.feature.chat.history
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,12 +20,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -32,6 +35,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -39,6 +44,7 @@ import com.smartsales.feature.chat.history.ChatHistoryTestTags
 import com.smartsales.feature.chat.home.DeviceSnapshotUi
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.chat.home.SessionListItemUi
+import com.smartsales.feature.chat.home.theme.AppColors
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
@@ -138,38 +144,81 @@ internal fun HistoryDrawerContent(
 
 @Composable
 private fun HistoryUserCenter(onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 10.dp)
-            .testTag(HomeScreenTestTags.HISTORY_USER_CENTER),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically
+    // Profile Dock Container
+    Surface(
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f), // Frosted
+        shadowElevation = 16.dp, // Upward shadow depth
+        modifier = Modifier.fillMaxWidth().clickable { onClick() }
     ) {
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            tonalElevation = 0.dp
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Person,
-                contentDescription = "个人中心",
-                modifier = Modifier.padding(8.dp),
-                tint = MaterialTheme.colorScheme.onSurface
-            )
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = "个人中心",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "查看账号设置与偏好",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+         Box(
+             modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+                .drawBehind {
+                    // Top Border (1px)
+                    drawLine(
+                        color = Color.White.copy(alpha = 0.2f),
+                        start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                        end = androidx.compose.ui.geometry.Offset(size.width, 0f),
+                        strokeWidth = 1.dp.toPx()
+                    )
+                }
+                .padding(24.dp) // Profile Dock Padding
+         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().testTag(HomeScreenTestTags.HISTORY_USER_CENTER),
+                horizontalArrangement = Arrangement.SpaceBetween, // Dock Layout
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                   horizontalArrangement = Arrangement.spacedBy(16.dp),
+                   verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        tonalElevation = 0.dp
+                    ) {
+                        Text(
+                            text = "F",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "Frank",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "高级销售经理",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                
+                // Settings Icon (Gear)
+                SettingsGlyph()
+            }
+         }
+    }
+}
+
+@Composable
+private fun SettingsGlyph() {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .background(Color.Black.copy(alpha = 0.05f), CircleShape)
+            .padding(10.dp), // Icon padding
+        contentAlignment = Alignment.Center
+    ) {
+         Icon(
+            imageVector = Icons.Filled.Settings, // Fixed: Correct usage of Icons.Filled.Settings
+            contentDescription = "设置",
+            tint = MaterialTheme.colorScheme.onSurface
+         )
     }
 }

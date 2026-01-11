@@ -78,6 +78,12 @@ object AppColors {
     // Glass Effects
     val GlassShadow = Color(0xFF007AFF) // Blue glow for input shadow
     
+    // Crystal Schematic Tokens (Pro Max)
+    val AuroraMint = Color(0xFF00E676)
+    val CrystalCardBg = Color(0xFFFFFFFF).copy(alpha = 0.05f)
+    val TechnicalBorder = Color(0xFFFFFFFF).copy(alpha = 0.2f)
+    val DeepCrystalBg = Color(0xFF0A0A0C).copy(alpha = 0.4f) // Dark mode fallback variant
+
     // Chat Bubbles (Aurora)
     val BubbleGradient = Brush.linearGradient(
         colors = listOf(Color(0xFF007AFF), Color(0xFF5856D6)),

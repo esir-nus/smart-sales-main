@@ -1074,8 +1074,7 @@ class TingwuRunnerTest {
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
         assertEquals("https://example.com/custom_prompt", completed.artifacts?.customPromptUrl)
         assertTrue(completed.transcriptMarkdown.contains("逐字稿"))
-        assertFalse(completed.transcriptMarkdown.contains("自定义转写"))
-        assertFalse(completed.transcriptMarkdown.contains("定制结果文本"))
+        // NOTE: Assertions removed — commit 1f0fb2b4 intentionally added 自定义转写 sections to markdown
     }
 
     @Test
@@ -1145,8 +1144,8 @@ class TingwuRunnerTest {
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
         assertTrue(completed.transcriptMarkdown.contains("逐字稿"))
-        assertFalse(completed.transcriptMarkdown.contains("摘要"))
-        assertFalse(completed.transcriptMarkdown.contains("{"))
+        // NOTE: 摘要 assertion removed — commit 1f0fb2b4 intentionally added 摘要 sections
+        assertFalse(completed.transcriptMarkdown.contains("{"))  // Raw JSON should still not leak
     }
 
     @Test
@@ -1227,8 +1226,7 @@ class TingwuRunnerTest {
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
         val markdown = completed.transcriptMarkdown
         assertTrue(markdown.contains("逐字稿"))
-        assertFalse(markdown.contains("摘要（Summarization）"))
-        assertFalse(markdown.contains("发言人总结"))
+        // NOTE: Assertions removed — commit 1f0fb2b4 intentionally added 摘要 sections
     }
 
     @Test
@@ -1306,7 +1304,7 @@ class TingwuRunnerTest {
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
         val markdown = completed.transcriptMarkdown
         assertTrue(markdown.contains("逐字稿"))
-        assertFalse(markdown.contains("章节（AutoChapters）"))
+        // NOTE: 章节 assertion removed — commit 1f0fb2b4 intentionally added 章节 sections
     }
 
     @Test
@@ -1377,7 +1375,7 @@ class TingwuRunnerTest {
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
         val markdown = completed.transcriptMarkdown
         assertTrue(markdown.contains("逐字稿"))
-        assertFalse(markdown.contains("自定义转写"))
+        // NOTE: 自定义转写 assertion removed — commit 1f0fb2b4 intentionally added 自定义转写 sections
     }
 
     private class RecordingTranscriptOrchestrator(
@@ -1559,9 +1557,7 @@ class TingwuRunnerTest {
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
         val markdown = completed.transcriptMarkdown
         assertTrue(markdown.contains("逐字稿"))
-        assertFalse(markdown.contains("自定义转写"))
-        assertFalse(markdown.contains("Summarization"))
-        assertFalse(markdown.contains("AutoChapters"))
+        // NOTE: Section assertions removed — commit 1f0fb2b4 intentionally added these sections
     }
 
     @Test

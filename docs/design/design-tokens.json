@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "SmartSales Design Tokens - Single Source of Truth for cross-platform UI",
+  "version": "1.0.0",
+  "lastUpdated": "2026-01-11",
+
+  "primitives": {
+    "base": 8,
+    "colors": {
+      "blue": {
+        "50": "#E6F2FF",
+        "100": "#CCE5FF",
+        "500": "#007AFF",
+        "600": "#0072FF",
+        "700": "#0066E6"
+      },
+      "purple": {
+        "500": "#A259FF",
+        "600": "#AF52DE"
+      },
+      "green": {
+        "500": "#34C759"
+      },
+      "teal": {
+        "500": "#00C7BE"
+      },
+      "pink": {
+        "500": "#FF2D55"
+      },
+      "red": {
+        "500": "#FF3B30",
+        "600": "#EF4444",
+        "700": "#D70015"
+      },
+      "orange": {
+        "500": "#FF9500"
+      },
+      "gray": {
+        "50": "#F7F7F7",
+        "100": "#F2F2F7",
+        "200": "#E5E5EA",
+        "300": "#D1D1D6",
+        "400": "#C7C7CC",
+        "500": "#8E8E93",
+        "600": "#636366",
+        "700": "#48484A",
+        "800": "#3A3A3C",
+        "850": "#2C2C2E",
+        "900": "#1C1C1E",
+        "950": "#0D0D12"
+      },
+      "white": "#FFFFFF",
+      "black": "#000000"
+    }
+  },
+
+  "semantic": {
+    "light": {
+      "background": "{primitives.colors.gray.50}",
+      "surfaceCard": "{primitives.colors.white}",
+      "surfaceMuted": "{primitives.colors.gray.100}",
+      "borderDefault": "{primitives.colors.gray.200}",
+      "accentPrimary": "{primitives.colors.blue.500}",
+      "textPrimary": "{primitives.colors.black}",
+      "textSecondary": "{primitives.colors.gray.800}",
+      "textMuted": "{primitives.colors.gray.500}",
+      "textDanger": "{primitives.colors.red.600}"
+    },
+    "dark": {
+      "background": "{primitives.colors.gray.950}",
+      "surfaceCard": "{primitives.colors.gray.900}",
+      "surfaceMuted": "{primitives.colors.gray.850}",
+      "borderDefault": "#38383A",
+      "accentPrimary": "#0A84FF",
+      "textPrimary": "{primitives.colors.white}",
+      "textSecondary": "#EBEBF5",
+      "textMuted": "#98989D",
+      "textDanger": "#FF453A"
+    }
+  },
+
+  "spacing": {
+    "$comment": "All values are multiples of base (8). Use scale factor for calculation.",
+    "base": 8,
+    "scale": {
+      "none": 0,
+      "xs": 0.5,
+      "sm": 1,
+      "md": 2,
+      "lg": 3,
+      "xl": 4,
+      "2xl": 6,
+      "3xl": 8
+    },
+    "computed": {
+      "none": 0,
+      "xs": 4,
+      "sm": 8,
+      "md": 16,
+      "lg": 24,
+      "xl": 32,
+      "2xl": 48,
+      "3xl": 64
+    }
+  },
+
+  "radius": {
+    "none": 0,
+    "sm": 4,
+    "md": 8,
+    "lg": 12,
+    "xl": 16,
+    "2xl": 24,
+    "pill": 9999,
+    "circle": "50%"
+  },
+
+  "typography": {
+    "fontFamily": {
+      "default": "Inter, system-ui, -apple-system, sans-serif",
+      "mono": "JetBrains Mono, Menlo, monospace"
+    },
+    "fontWeight": {
+      "normal": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700
+    },
+    "styles": {
+      "heroBrand": {
+        "size": 32,
+        "lineHeight": 40,
+        "weight": "bold"
+      },
+      "heroGreeting": {
+        "size": 24,
+        "lineHeight": 32,
+        "weight": "bold"
+      },
+      "heroSubtitle": {
+        "size": 20,
+        "lineHeight": 28,
+        "weight": "medium"
+      },
+      "appTitle": {
+        "size": 18,
+        "lineHeight": 24,
+        "weight": "semibold"
+      },
+      "sectionTitle": {
+        "size": 16,
+        "lineHeight": 22,
+        "weight": "semibold"
+      },
+      "body": {
+        "size": 14,
+        "lineHeight": 20,
+        "weight": "normal"
+      },
+      "actionLabel": {
+        "size": 14,
+        "lineHeight": 20,
+        "weight": "medium"
+      },
+      "button": {
+        "size": 14,
+        "lineHeight": 20,
+        "weight": "semibold"
+      },
+      "caption": {
+        "size": 12,
+        "lineHeight": 16,
+        "weight": "normal"
+      }
+    }
+  },
+
+  "gradients": {
+    "waveIdle": {
+      "type": "linear",
+      "angle": 90,
+      "stops": [
+        { "color": "#007AFF", "position": 0 },
+        { "color": "#A259FF", "position": 100 }
+      ]
+    },
+    "waveListening": {
+      "type": "linear",
+      "angle": 90,
+      "stops": [
+        { "color": "#34C759", "position": 0 },
+        { "color": "#00C7BE", "position": 100 }
+      ]
+    },
+    "waveThinking": {
+      "type": "linear",
+      "angle": 90,
+      "stops": [
+        { "color": "#AF52DE", "position": 0 },
+        { "color": "#FF2D55", "position": 100 }
+      ]
+    },
+    "waveError": {
+      "type": "linear",
+      "angle": 90,
+      "stops": [
+        { "color": "#D70015", "position": 0 },
+        { "color": "#FF3B30", "position": 100 }
+      ]
+    },
+    "aurora": {
+      "$comment": "Subtle background gradient for hero sections",
+      "type": "radial",
+      "colors": ["#0066CC", "#4B0082", "#2F4F4F"]
+    }
+  },
+
+  "elevation": {
+    "none": 0,
+    "sm": 2,
+    "md": 4,
+    "lg": 8,
+    "xl": 16
+  },
+
+  "animation": {
+    "duration": {
+      "instant": 100,
+      "fast": 200,
+      "normal": 300,
+      "slow": 500,
+      "breathing": 2500
+    },
+    "easing": {
+      "linear": "linear",
+      "easeOut": "cubic-bezier(0.0, 0.0, 0.2, 1)",
+      "easeIn": "cubic-bezier(0.4, 0.0, 1, 1)",
+      "easeInOut": "cubic-bezier(0.4, 0.0, 0.2, 1)"
+    }
+  },
+
+  "components": {
+    "inputBar": {
+      "height": 64,
+      "paddingHorizontal": "{spacing.computed.sm}",
+      "radius": "{radius.pill}",
+      "iconSize": 48,
+      "glassAlpha": 0.85
+    },
+    "knotSymbol": {
+      "sizeSmall": 40,
+      "sizeLarge": 120,
+      "strokeWidth": 3,
+      "breathingScale": 1.15
+    },
+    "quickSkillChip": {
+      "height": 36,
+      "paddingHorizontal": "{spacing.computed.md}",
+      "radius": "{radius.pill}",
+      "gap": "{spacing.computed.sm}"
+    }
+  }
+}

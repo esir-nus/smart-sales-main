@@ -18,6 +18,22 @@
 
 ---
 
+## 🎨 Design Tokens (Source of Truth)
+
+All color, spacing, typography, and component values are defined in:
+
+| File | Purpose |
+|------|---------|
+| [`design-tokens.json`](file:///home/cslh-frank/main_app/docs/design/design-tokens.json) | **Master token file** — primitives, semantics, scales |
+| [`AppColors.kt`](file:///home/cslh-frank/main_app/feature/chat/src/main/java/com/smartsales/feature/chat/home/theme/AppColors.kt) | Compose color consumers |
+| [`AppTypography.kt`](file:///home/cslh-frank/main_app/feature/chat/src/main/java/com/smartsales/feature/chat/home/theme/AppTypography.kt) | Compose typography consumers |
+| [`AppSpacing.kt`](file:///home/cslh-frank/main_app/feature/chat/src/main/java/com/smartsales/feature/chat/home/theme/AppSpacing.kt) | Compose spacing/radius/elevation consumers |
+
+> [!IMPORTANT]
+> When updating design values, edit `design-tokens.json` first, then update the Kotlin consumers to match.
+
+---
+
 ## 1. Design Principles
 
 1. **Single-column, calm surfaces**

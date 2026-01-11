@@ -116,6 +116,10 @@ android {
             "TrustAllX509TrustManager" // 第三方 Aliyun SDK 内部实现
         )
     }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 kotlin {

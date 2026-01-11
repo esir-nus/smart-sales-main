@@ -34,10 +34,10 @@ sealed class SliceOutcome {
     data class Failure(val error: SliceError) : SliceOutcome()
 }
 
-class AudioSlicer(
+open class AudioSlicer(
     private val tempDir: File
 ) {
-    fun sliceAudio(
+    open fun sliceAudio(
         source: File,
         requestedCaptureStartMs: Long,
         captureEndMs: Long,

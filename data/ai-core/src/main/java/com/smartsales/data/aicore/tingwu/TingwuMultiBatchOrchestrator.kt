@@ -63,6 +63,8 @@ class TingwuMultiBatchOrchestrator @Inject constructor(
         for ((index, batch) in plan.batches.withIndex()) {
             val progressBase = (index * 100) / totalBatches
             onProgress(progressBase)
+            
+            com.smartsales.data.aicore.AiCoreLogger.d(TAG, "Batch ${index + 1}/$totalBatches started: batchId=${batch.batchAssetId} range=[${batch.captureStartMs}-${batch.captureEndMs}ms]")
 
             // 1. Slice
             val sliceOutcome = audioSlicer.sliceAudio(
@@ -110,12 +112,18 @@ class TingwuMultiBatchOrchestrator @Inject constructor(
             // 4. Wait for completion and collect segments (Option C)
             val finalState = waitForJob(jobId)
             when (finalState) {
-                is TingwuJobState.Failed -> return@coroutineScope Result.Error(finalState.error)
+                is TingwuJobState.Failed -> {
+                    com.smartsales.data.aicore.AiCoreLogger.e(TAG, "Batch ${index + 1}/$totalBatches FAILED: jobId=$jobId error=${finalState.error.message}")
+                    return@coroutineScope Result.Error(finalState.error)
+                }
                 is TingwuJobState.Completed -> {
                     val segments = finalState.artifacts?.recordingOriginDiarizedSegments.orEmpty()
                     batchResults.add(batch to segments)
+                    com.smartsales.data.aicore.AiCoreLogger.d(TAG, "Batch ${index + 1}/$totalBatches completed: jobId=$jobId segments=${segments.size}")
                 }
-                else -> { /* InProgress/Idle shouldn't happen after waitForJob */ }
+                else -> {
+                    com.smartsales.data.aicore.AiCoreLogger.w(TAG, "Batch ${index + 1}/$totalBatches unexpected state after waitForJob: $finalState")
+                }
             }
             
             // Cleanup transient slice
@@ -129,6 +137,11 @@ class TingwuMultiBatchOrchestrator @Inject constructor(
         
         // Return success with parent ID; stitched segments available via callback if needed
         val parentJobId = "multi_${plan.disectorPlanId}"
+        com.smartsales.data.aicore.AiCoreLogger.d(TAG, "Multi-batch complete: planId=${plan.disectorPlanId} batches=$totalBatches stitchedSegments=${stitchedSegments.size}")
         Result.Success(parentJobId)
+    }
+
+    companion object {
+        private const val TAG = "MultiBatchOrchestrator"
     }
 }

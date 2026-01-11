@@ -2,9 +2,9 @@
 // Description: Recording-origin segments conversion tests (2025-12-30)
 package com.smartsales.data.aicore
 
-import com.smartsales.data.aicore.tingwu.TingwuTranscriptSegment
-import com.smartsales.data.aicore.tingwu.TingwuTranscription
-import com.smartsales.data.aicore.tingwu.TingwuSpeaker
+import com.smartsales.data.aicore.tingwu.api.TingwuTranscriptSegment
+import com.smartsales.data.aicore.tingwu.api.TingwuTranscription
+import com.smartsales.data.aicore.tingwu.api.TingwuSpeaker
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

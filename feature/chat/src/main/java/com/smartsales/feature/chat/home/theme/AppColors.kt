@@ -84,5 +84,5 @@ object AppColors {
         start = androidx.compose.ui.geometry.Offset.Zero,
         end = androidx.compose.ui.geometry.Offset.Infinite
     )
-    val BubbleShadow = Color(0xFF007AFF).copy(alpha = 0.25f) // User bubble shadow
+    val BubbleShadow = Color(0xFF007AFF).copy(alpha = 0.25f) // User bubble shadow (Softer)
 }

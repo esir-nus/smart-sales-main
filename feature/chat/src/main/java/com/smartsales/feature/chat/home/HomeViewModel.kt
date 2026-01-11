@@ -167,6 +167,7 @@ class HomeViewModel @Inject constructor(
     private val mediaInputCoordinator: com.smartsales.feature.chat.platform.MediaInputCoordinator,
 
     private val chatCoordinator: com.smartsales.domain.chat.ChatCoordinator,
+    private val chatMetadataCoordinator: com.smartsales.domain.chat.ChatMetadataCoordinator,
     optionalConfig: Optional<AiCoreConfig> = Optional.empty(),
 ) : ViewModel() {
 
@@ -1287,26 +1288,8 @@ class HomeViewModel @Inject constructor(
         value = transform(value)
     }
 
-    private suspend fun persistLatestAnalysisMarker(
-        source: AnalysisSource,
-        messageId: String
-    ) {
-        val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-        val base = existing ?: SessionMetadata(sessionId = sessionId)
-
-        val updated = base.copy(
-            latestMajorAnalysisMessageId = messageId,
-            latestMajorAnalysisAt = System.currentTimeMillis(),
-            latestMajorAnalysisSource = source
-        )
-
-        runCatching { metaHub.upsertSession(updated) }
-            .onSuccess {
-                updateDebugSessionMetadata(updated)
-                // Export gate is now checked on-demand via exportViewModel.checkExportGate()
-            }
-    }
-
+    // NOTE: handleGeneralChatMetadata, handleV1GeneralChatMetadata, persistLatestAnalysisMarker
+    // moved to ChatMetadataCoordinatorImpl (2026-01-11 extraction)
 
     private fun onAnalysisCompleted(summary: String, messageId: String) {
         latestAnalysisMarkdown = summary
@@ -1318,94 +1301,6 @@ class HomeViewModel @Inject constructor(
             // 不再插入额外的对话气泡，避免打断会话流和影响"单条智能分析卡片"结构。
         }
     }
-
-
-
-    private fun buildSmartAnalysisUserMessage(
-        mainContent: String,
-        context: String?,
-        goal: String
-    ): String =
-        com.smartsales.domain.chat.ChatMessageBuilder.buildSmartAnalysisUserMessage(mainContent, context, goal)
-
-    // Per Orchestrator-V1 Section 5.2: Publisher renders only <visible2user> content, no heuristic cleanup
-
-    /**
-     * 处理 GENERAL 首条回复的元数据：
-     * - 优先尝试 <Metadata> 标签内的 JSON，失败则回退到末尾 JSON 块（兼容旧格式）
-     * - 仅当存在有效字段时写入 MetaHub
-     */
-
-    private suspend fun handleGeneralChatMetadata(
-        rawFullText: String,
-        metadataJson: String?
-    ): SessionMetadata? {
-        val candidates = buildList {
-            metadataJson?.takeIf { it.isNotBlank() }?.let { add(it) }
-            com.smartsales.domain.chat.MetadataParser.findLastJsonBlock(rawFullText)?.text?.let { tail ->
-                if (tail != metadataJson) add(tail)
-            }
-        }
-        val parsed = candidates.firstNotNullOfOrNull { com.smartsales.domain.chat.MetadataParser.parseGeneralChatMetadata(it, sessionId) }
-        val metadata = parsed?.takeIf { it.hasMeaningfulGeneralFields() } ?: return null
-        val patch = metadata.copy(
-            latestMajorAnalysisSource = AnalysisSource.GENERAL_FIRST_REPLY,
-            latestMajorAnalysisAt = System.currentTimeMillis()
-        )
-        val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-        val merged = existing?.mergeWith(patch) ?: patch
-        runCatching { metaHub.upsertSession(merged) }
-            .onSuccess { updateDebugSessionMetadata(merged) }
-            .onFailure {
-                warnLog(
-                    event = "metahub_upsert_failed",
-                    data = mapOf("sessionId" to sessionId, "target" to "session"),
-                    throwable = it
-                )
-                appendDebugNote("sessionMetaUpsertFailed")
-            }
-        return merged
-    }
-
-    private suspend fun handleV1GeneralChatMetadata(
-        result: V1FinalizeResult?
-    ): SessionMetadata? {
-        if (result == null) return null
-        // 仅 L3 才允许写入元数据：与 V1 解析器输入一致，避免 L1/L2 误触发更新。
-        // INVALID/FAILED 必须禁止写入，避免污染 MetadataHub 的确定性状态。
-        if (result.artifactStatus != ArtifactStatus.VALID) return null
-        val artifactJson = result.artifactJson?.takeIf { it.isNotBlank() } ?: return null
-        val obj = runCatching { org.json.JSONObject(artifactJson) }.getOrNull() ?: return null
-        if (obj.optString("mode") != "L3") return null
-        // 禁止启发式/legacy <Metadata> 触发写入；V1 仅允许 MachineArtifact.metadataPatch。
-        val patchObj = obj.optJSONObject("metadataPatch") ?: return null
-        val metadata = com.smartsales.domain.chat.MetadataParser.parseGeneralChatMetadata(patchObj.toString(), sessionId)
-            ?.takeIf { it.hasMeaningfulGeneralFields() }
-            ?: return null
-        val patch = metadata.copy(
-            latestMajorAnalysisSource = AnalysisSource.GENERAL_FIRST_REPLY,
-            latestMajorAnalysisAt = System.currentTimeMillis()
-        )
-        val existing = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-        val merged = existing?.mergeWith(patch) ?: patch
-        runCatching { metaHub.upsertSession(merged) }
-            .onSuccess { updateDebugSessionMetadata(merged) }
-            .onFailure {
-                warnLog(
-                    event = "metahub_upsert_failed",
-                    data = mapOf("sessionId" to sessionId, "target" to "session"),
-                    throwable = it
-                )
-                appendDebugNote("sessionMetaUpsertFailed")
-            }
-        return merged
-    }
-
-    private fun SessionMetadata.hasMeaningfulGeneralFields(): Boolean =
-        !mainPerson.isNullOrBlank() ||
-            !shortSummary.isNullOrBlank() ||
-            !summaryTitle6Chars.isNullOrBlank() ||
-            !location.isNullOrBlank()
 
     
     private fun debugLog(event: String, data: Map<String, Any?> = emptyMap()) {
@@ -1630,7 +1525,10 @@ class HomeViewModel @Inject constructor(
 
         // Handle SmartAnalysis completion
         if (result.isSmartAnalysis) {
-            persistLatestAnalysisMarker(AnalysisSource.SMART_ANALYSIS_USER, result.assistantId)
+            val updatedMeta = chatMetadataCoordinator.persistLatestAnalysisMarker(
+                sessionId, AnalysisSource.SMART_ANALYSIS_USER, result.assistantId
+            )
+            if (updatedMeta != null) updateDebugSessionMetadata(updatedMeta)
             onAnalysisCompleted(result.displayText, result.assistantId)
         }
     }

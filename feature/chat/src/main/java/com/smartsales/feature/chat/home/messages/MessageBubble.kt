@@ -108,10 +108,10 @@ internal fun MessageBubble(
                          // User Bubble Gradient + Shadow
                          Modifier
                              .shadow(
-                                 elevation = 4.dp,
+                                 elevation = 2.dp, // Reduced from 4.dp for softer look
                                  shape = shape,
-                                 spotColor = AppColors.GlassShadow,
-                                 ambientColor = AppColors.GlassShadow
+                                 spotColor = AppColors.BubbleShadow,
+                                 ambientColor = AppColors.BubbleShadow
                              )
                              .background(
                                  brush = AppColors.BubbleGradient,

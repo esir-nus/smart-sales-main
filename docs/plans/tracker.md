@@ -2,7 +2,7 @@
 
 > **Purpose**: Living tracker for Smart Sales architecture and feature status  
 > **AI Agents**: Use the Quick Index below to navigate — don't read irrelevant sections  
-> **Last Updated**: 2026-01-10
+> **Last Updated**: 2026-01-11
 
 ---
 
@@ -68,7 +68,7 @@ graph TD
 smart-sales/
 ├── core/util/src/main/java/com/smartsales/core/metahub/  # Metadata Hub (V1 §4)
 │   ├── ConversationDerivedState.kt     # M2 ✅
-│   ├── TranscriptMetadata.kt           # M2B ✅
+│   ├── TranscriptMetadata.kt           # M2B ✅ (ChapterMeta w/ source pointers 2026-01-11)
 │   ├── SessionMetadata.kt              # M3 ✅
 │   ├── ExportMetadata.kt               # Export metadata ✅
 │   ├── MetaHub.kt                      # Hub interface ✅
@@ -85,11 +85,13 @@ smart-sales/
 │   │   ├── publisher/                  # V1 §3.2.4 ✅
 │   │   │   └── TranscriptPublisher.kt
 │   │   └── polling/                    # Low-level API utilities ✅
-│   ├── disector/                       # V1 §10 Batch splitting (placeholder)
 │   ├── metahub/                        # V1 §4 Storage (placeholder)
 │   │   ├── storage/
 │   │   └── model/
 │   └── parser/                         # V1 §3.1.3 LLM Parser (placeholder)
+│
+│   # NOTE: ai-core/disector/ placeholder DELETED 2026-01-11
+│   # Disector is fully implemented in domain/transcription/ (see line 104)
 │
 ├── feature/chat/src/main/java/com/smartsales/
 │   ├── domain/                      # Portable Brain (Pure Kotlin, Zero Android)
@@ -98,6 +100,8 @@ smart-sales/
 │   │   ├── chat/
 │   │   │   ├── ChatPublisher.kt        # ChatPublisher (V1 §3.2.4) ✅
 │   │   │   ├── ChatMessageBuilder.kt   # Message assembly ✅
+│   │   │   ├── ChatMetadataCoordinator.kt    # Metadata extraction coordinator ✅ (2026-01-11)
+│   │   │   ├── ChatMetadataCoordinatorImpl.kt # M2+M3 patches ✅ (2026-01-11)
 │   │   │   ├── InputClassifier.kt      # Input type detection ✅
 │   │   │   └── MetadataParser.kt       # Metadata extraction ✅
 │   │   ├── transcription/

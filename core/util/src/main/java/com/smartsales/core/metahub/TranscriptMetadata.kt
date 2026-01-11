@@ -100,13 +100,19 @@ enum class TranscriptSource {
 }
 
 /**
- * M2B Chapter structure (M1 Deferred implementation)
+ * M2B Chapter structure per V1 §6.2
+ * 
+ * Source pointers required for linking back to recording timeline.
  */
 data class ChapterMeta(
     val title: String,
     val startMs: Long,
     val endMs: Long,
-    val summary: String? = null
+    val summary: String? = null,
+    // V1 §6.2 source pointers
+    val audioAssetId: String? = null,
+    val recordingSessionId: String? = null,
+    val chapterId: String? = null
 )
 
 /**

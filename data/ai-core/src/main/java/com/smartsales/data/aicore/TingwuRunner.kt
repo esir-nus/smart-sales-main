@@ -486,6 +486,7 @@ class TingwuRunner @Inject constructor(
     }
 
     // 将 Tingwu 转写产出的摘要/标签写入 MetaHub，标记最新分析来源。
+    // V1 §6.2: Also writes chapters to M2B TranscriptMetadata with source pointers.
     private suspend fun upsertSessionMetadataFromTingwu(
         jobId: String,
         artifacts: TingwuJobArtifacts?,
@@ -493,6 +494,10 @@ class TingwuRunner @Inject constructor(
         chapters: List<TingwuChapter>?
     ) {
         val sessionId = jobContext[jobId]?.sessionId ?: return
+        val request = jobContext[jobId]
+        val audioAssetId = request?.ossObjectKey ?: request?.fileUrl ?: jobId
+        val recordingSessionId = sessionId
+        
         val smartSummary = artifacts?.smartSummary
         val chapterTitle = (artifacts?.chapters ?: chapters).orEmpty().firstOrNull()?.title
         val summary = smartSummary?.summary
@@ -525,6 +530,36 @@ class TingwuRunner @Inject constructor(
             metaHub.upsertSession(merged)
         }.onFailure {
             AiCoreLogger.w(TAG, "Tingwu 元数据写入 MetaHub 失败：${it.message}")
+        }
+        
+        // V1 §6.2: Write chapters to M2B TranscriptMetadata with source pointers
+        val allChapters = (artifacts?.chapters ?: chapters).orEmpty()
+        if (allChapters.isNotEmpty()) {
+            val chapterMetas = allChapters.mapIndexed { index, tingwuChapter ->
+                com.smartsales.core.metahub.ChapterMeta(
+                    title = tingwuChapter.displayTitle(),
+                    startMs = tingwuChapter.startMs,
+                    endMs = tingwuChapter.endMs ?: tingwuChapter.startMs,
+                    summary = tingwuChapter.summary,
+                    audioAssetId = audioAssetId,
+                    recordingSessionId = recordingSessionId,
+                    chapterId = "${jobId}_ch${index + 1}"
+                )
+            }
+            val transcriptUpdate = TranscriptMetadata(
+                transcriptId = jobId,
+                sessionId = sessionId,
+                source = com.smartsales.core.metahub.TranscriptSource.TINGWU,
+                shortSummary = summary,
+                summaryTitle6Chars = titleHint,
+                mainPerson = mainPerson,
+                chapters = chapterMetas
+            )
+            runCatching {
+                metaHub.upsertTranscript(transcriptUpdate)
+            }.onFailure {
+                AiCoreLogger.w(TAG, "Tingwu M2B 章节写入 MetaHub 失败：${it.message}")
+            }
         }
     }
 

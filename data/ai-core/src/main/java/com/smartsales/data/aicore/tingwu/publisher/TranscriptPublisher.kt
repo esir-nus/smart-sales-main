@@ -3,7 +3,7 @@
 // Summary: Transcript URL extraction and download helpers
 // Author: created on 2026-01-05
 
-package com.smartsales.data.aicore.tingwu
+package com.smartsales.data.aicore.tingwu.publisher
 
 import com.smartsales.data.aicore.AiCoreConfig
 import com.smartsales.data.aicore.AiCoreException
@@ -31,7 +31,7 @@ import javax.inject.Singleton
 class TranscriptPublisher @Inject constructor(
     private val config: AiCoreConfig,
     private val pipelineTracer: PipelineTracer,
-    private val artifactFetcher: TingwuArtifactFetcher,
+    private val artifactFetcher: com.smartsales.data.aicore.tingwu.artifact.TingwuArtifactFetcher,
 ) {
 
     fun extractTranscriptionUrl(resultLinks: Map<String, String>?): String? {

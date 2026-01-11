@@ -16,8 +16,8 @@ import com.smartsales.data.aicore.OssSignedUrlProvider
 import com.smartsales.data.aicore.TingwuCredentials
 import com.smartsales.data.aicore.TingwuCredentialsProvider
 import com.smartsales.data.aicore.TingwuRequest
-import com.smartsales.data.aicore.tingwu.TingwuApi
-import com.smartsales.data.aicore.tingwu.TingwuStatusResponse
+import com.smartsales.data.aicore.tingwu.api.TingwuApi
+import com.smartsales.data.aicore.tingwu.api.TingwuStatusResponse
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext

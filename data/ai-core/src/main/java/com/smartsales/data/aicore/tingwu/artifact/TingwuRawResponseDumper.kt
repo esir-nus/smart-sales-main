@@ -2,7 +2,7 @@
 // 模块：:data:ai-core
 // 说明：将 Tingwu 转写原始响应体落盘（先脱敏，再原子写入）
 // 作者：创建于 2025-12-22
-package com.smartsales.data.aicore.tingwu
+package com.smartsales.data.aicore.tingwu.artifact
 
 import com.smartsales.data.aicore.AiCoreLogger
 import java.io.File

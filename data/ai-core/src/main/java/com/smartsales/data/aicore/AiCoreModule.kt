@@ -18,8 +18,8 @@ import com.smartsales.data.aicore.params.DefaultAiParaSettingsProvider
 import com.smartsales.data.aicore.params.InMemoryAiParaSettingsRepository
 import com.smartsales.data.aicore.posttingwu.PostTingwuTranscriptEnhancer
 import com.smartsales.data.aicore.posttingwu.RealPostTingwuTranscriptEnhancer
-import com.smartsales.data.aicore.tingwu.DefaultTingwuRawDumpDirectoryProvider
-import com.smartsales.data.aicore.tingwu.TingwuRawDumpDirectoryProvider
+import com.smartsales.data.aicore.tingwu.artifact.DefaultTingwuRawDumpDirectoryProvider
+import com.smartsales.data.aicore.tingwu.artifact.TingwuRawDumpDirectoryProvider
 import com.smartsales.data.aicore.xfyun.DefaultXfyunRawDumpDirectoryProvider
 import com.smartsales.data.aicore.xfyun.XfyunRawDumpDirectoryProvider
 import dagger.Binds
@@ -54,8 +54,8 @@ abstract class AiCoreModule {
     @Binds
     @Singleton
     abstract fun bindTingwuArtifactFetcher(
-        impl: com.smartsales.data.aicore.tingwu.RealTingwuArtifactFetcher
-    ): com.smartsales.data.aicore.tingwu.TingwuArtifactFetcher
+        impl: com.smartsales.data.aicore.tingwu.artifact.RealTingwuArtifactFetcher
+    ): com.smartsales.data.aicore.tingwu.artifact.TingwuArtifactFetcher
 
     @Binds
     @Singleton
@@ -217,7 +217,7 @@ abstract class AiCoreModule {
         ): okhttp3.Dns {
             val config = optionalConfig.orElse(AiCoreConfig())
             return if (config.enableTingwuHttpDns && resolver != null) {
-                com.smartsales.data.aicore.tingwu.TingwuDns(resolver)
+                com.smartsales.data.aicore.tingwu.api.TingwuDns(resolver)
             } else {
                 okhttp3.Dns.SYSTEM
             }
@@ -226,7 +226,7 @@ abstract class AiCoreModule {
         @Provides
         @Singleton
         fun provideOkHttpEventListenerFactory(): EventListener.Factory =
-            com.smartsales.data.aicore.tingwu.TingwuOkHttpEventListener.Factory()
+            com.smartsales.data.aicore.tingwu.api.TingwuOkHttpEventListener.Factory()
 
         @Provides
         @Singleton

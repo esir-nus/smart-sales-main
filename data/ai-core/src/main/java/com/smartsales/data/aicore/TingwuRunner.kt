@@ -13,30 +13,30 @@ import com.smartsales.core.metahub.TranscriptMetadata
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.LogTags
 import com.smartsales.core.util.Result
-import com.smartsales.data.aicore.tingwu.TingwuApi
-import com.smartsales.data.aicore.tingwu.TingwuCreateTaskRequest
-import com.smartsales.data.aicore.tingwu.TingwuResultData
-import com.smartsales.data.aicore.tingwu.TingwuResultResponse
-import com.smartsales.data.aicore.tingwu.TingwuStatusData
-import com.smartsales.data.aicore.tingwu.TingwuStatusResponse
+import com.smartsales.data.aicore.tingwu.api.TingwuApi
+import com.smartsales.data.aicore.tingwu.api.TingwuCreateTaskRequest
+import com.smartsales.data.aicore.tingwu.api.TingwuResultData
+import com.smartsales.data.aicore.tingwu.api.TingwuResultResponse
+import com.smartsales.data.aicore.tingwu.api.TingwuStatusData
+import com.smartsales.data.aicore.tingwu.api.TingwuStatusResponse
 import com.smartsales.data.aicore.TingwuChapter
-import com.smartsales.data.aicore.tingwu.TingwuTaskInput
-import com.smartsales.data.aicore.tingwu.TingwuTaskParameters
-import com.smartsales.data.aicore.tingwu.TingwuTranscription
-import com.smartsales.data.aicore.tingwu.TingwuTranscriptSegment
-import com.smartsales.data.aicore.tingwu.TingwuTranscriptionParameters
-import com.smartsales.data.aicore.tingwu.TingwuDiarizationParameters
-import com.smartsales.data.aicore.tingwu.TingwuSummarizationParameters
-import com.smartsales.data.aicore.tingwu.TingwuTranscodingParameters
+import com.smartsales.data.aicore.tingwu.api.TingwuTaskInput
+import com.smartsales.data.aicore.tingwu.api.TingwuTaskParameters
+import com.smartsales.data.aicore.tingwu.api.TingwuTranscription
+import com.smartsales.data.aicore.tingwu.api.TingwuTranscriptSegment
+import com.smartsales.data.aicore.tingwu.api.TingwuTranscriptionParameters
+import com.smartsales.data.aicore.tingwu.api.TingwuDiarizationParameters
+import com.smartsales.data.aicore.tingwu.api.TingwuSummarizationParameters
+import com.smartsales.data.aicore.tingwu.api.TingwuTranscodingParameters
 import com.smartsales.data.aicore.TranscriptMetadataRequest
-import com.smartsales.data.aicore.tingwu.TingwuCustomPrompt
-import com.smartsales.data.aicore.tingwu.TingwuCustomPromptContent
+import com.smartsales.data.aicore.tingwu.api.TingwuCustomPrompt
+import com.smartsales.data.aicore.tingwu.api.TingwuCustomPromptContent
 import com.smartsales.data.aicore.params.AiParaSettingsProvider
 import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.metahub.TingwuPreprocessPatchBuilder
 import com.smartsales.data.aicore.tingwu.TingwuSuspiciousBoundaryDetector
 
-import com.smartsales.data.aicore.tingwu.TingwuArtifactFetcher
+import com.smartsales.data.aicore.tingwu.artifact.TingwuArtifactFetcher
 import com.smartsales.data.aicore.posttingwu.EnhancerInput
 import com.smartsales.data.aicore.posttingwu.EnhancerUtterance
 import com.smartsales.data.aicore.posttingwu.PostTingwuTranscriptEnhancer
@@ -88,7 +88,7 @@ class TingwuRunner @Inject constructor(
     private val postTingwuTranscriptEnhancer: PostTingwuTranscriptEnhancer,
     private val aiParaSettingsProvider: AiParaSettingsProvider,
     private val tingwuRunner: com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository,
-    private val transcriptProcessor: com.smartsales.data.aicore.tingwu.TingwuTranscriptProcessor,
+    private val transcriptProcessor: com.smartsales.data.aicore.tingwu.processor.TingwuTranscriptProcessor,
     private val pipelineTracer: com.smartsales.data.aicore.debug.PipelineTracer,
 
     optionalConfig: Optional<AiCoreConfig>
@@ -556,7 +556,7 @@ class TingwuRunner @Inject constructor(
         jobId: String,
         resultLinks: Map<String, String>?,
         fallbackArtifacts: TingwuJobArtifacts?
-    ): com.smartsales.data.aicore.tingwu.TingwuTranscriptProcessor.TranscriptResult {
+    ): com.smartsales.data.aicore.tingwu.processor.TingwuTranscriptProcessor.TranscriptResult {
         return transcriptProcessor.fetchTranscript(
             jobId = jobId,
             resultLinks = resultLinks,

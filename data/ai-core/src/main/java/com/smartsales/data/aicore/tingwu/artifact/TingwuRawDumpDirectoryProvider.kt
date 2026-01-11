@@ -2,7 +2,7 @@
 // 模块：:data:ai-core
 // 说明：提供 Tingwu 原始转写落盘目录（app 私有目录）
 // 作者：创建于 2025-12-22
-package com.smartsales.data.aicore.tingwu
+package com.smartsales.data.aicore.tingwu.artifact
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext

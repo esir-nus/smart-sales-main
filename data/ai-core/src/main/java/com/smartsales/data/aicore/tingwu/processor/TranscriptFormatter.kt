@@ -3,9 +3,10 @@
 // Summary: Transcript formatting logic extracted from TingwuRunner (V1 spec §3.2.3 Sanitizer)
 // Author: created on 2026-01-07
 
-package com.smartsales.data.aicore
+package com.smartsales.data.aicore.tingwu.processor
 
-import com.smartsales.data.aicore.tingwu.TingwuTranscription
+import com.smartsales.data.aicore.DiarizedSegment
+import com.smartsales.data.aicore.tingwu.api.TingwuTranscription
 import java.text.DecimalFormat
 import java.util.LinkedHashMap
 import javax.inject.Inject

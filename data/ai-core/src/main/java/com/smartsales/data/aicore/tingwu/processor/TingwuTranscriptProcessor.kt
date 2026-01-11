@@ -1,4 +1,4 @@
-package com.smartsales.data.aicore.tingwu
+package com.smartsales.data.aicore.tingwu.processor
 
 import com.google.gson.Gson
 import com.google.gson.JsonArray
@@ -19,8 +19,14 @@ import com.smartsales.data.aicore.debug.PipelineStage
 import com.smartsales.data.aicore.debug.PipelineTracer
 import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository
-import com.smartsales.data.aicore.TranscriptFormatter
-import com.smartsales.data.aicore.tingwu.TingwuResultResponse
+import com.smartsales.data.aicore.tingwu.api.TingwuApi
+import com.smartsales.data.aicore.tingwu.api.TingwuResultResponse
+import com.smartsales.data.aicore.tingwu.api.TingwuResultData
+import com.smartsales.data.aicore.tingwu.api.TingwuTranscription
+import com.smartsales.data.aicore.tingwu.api.TingwuTranscriptSegment
+import com.smartsales.data.aicore.tingwu.artifact.TingwuArtifactFetcher
+import com.smartsales.data.aicore.tingwu.artifact.TingwuRawResponseDumper
+import com.smartsales.data.aicore.tingwu.publisher.TranscriptPublisher
 import java.io.IOException
 import java.net.URL
 import javax.inject.Inject

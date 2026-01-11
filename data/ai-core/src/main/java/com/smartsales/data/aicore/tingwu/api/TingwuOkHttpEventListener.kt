@@ -1,4 +1,4 @@
-package com.smartsales.data.aicore.tingwu
+package com.smartsales.data.aicore.tingwu.api
 
 import com.smartsales.data.aicore.AiCoreLogger
 import okhttp3.Call

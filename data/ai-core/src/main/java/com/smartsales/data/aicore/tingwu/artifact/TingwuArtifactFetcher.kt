@@ -1,4 +1,4 @@
-package com.smartsales.data.aicore.tingwu
+package com.smartsales.data.aicore.tingwu.artifact
 
 // 文件：data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/TingwuArtifactFetcher.kt
 // 模块：:data:ai-core

@@ -1,4 +1,4 @@
-package com.smartsales.data.aicore.tingwu
+package com.smartsales.data.aicore.tingwu.api
 
 import com.smartsales.data.aicore.AiCoreConfig
 import com.smartsales.data.aicore.TingwuCredentialsProvider

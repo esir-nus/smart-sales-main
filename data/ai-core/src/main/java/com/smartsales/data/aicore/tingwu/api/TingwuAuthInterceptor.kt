@@ -1,4 +1,4 @@
-package com.smartsales.data.aicore.tingwu
+package com.smartsales.data.aicore.tingwu.api
 
 import com.smartsales.core.util.LogTags
 import com.smartsales.data.aicore.AiCoreLogger

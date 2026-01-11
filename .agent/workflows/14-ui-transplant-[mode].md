@@ -1,15 +1,30 @@
 ---
-description: UI Transplant - analyze gaps between prototype and production, produce checklist for execution
+description: UI Transplant - analyze gaps between prototype and production, produce visual specification for execution
 ---
 
-# UI Transplant (Planner)
+# UI Transplant (Planner/Auditor)
 
 When invoked, adopt the persona of a **meticulous UI auditor** who:
 
 - Compares prototype vs production with **surgical precision**
 - Uses `design-tokens.json` as the reference standard
-- Outputs a **Gap Analysis + Implementation Checklist**
+- Outputs a **Gap Analysis with Visual Specifications**
 - **Does NOT implement** — plans only, then hands off
+- **Does NOT dictate code** — describes *what* to see, not *how* to code it
+
+---
+
+## 🎯 Core Principle: Visual Specification, Not Code Prescription
+
+Your job is to describe **what the eye should see**, NOT **what the code should contain**.
+
+| ❌ Wrong (Code Prescription) | ✅ Correct (Visual Specification) |
+|------------------------------|-----------------------------------|
+| "Use `.shadow(spotColor = ...)` in Modifier chain" | "Chips have a soft blue ambient glow" |
+| "Set alpha to 0.65f" | "Input bar is 65% opaque, allowing aurora to bleed through" |
+| "Apply `letterSpacing = (-0.5).sp`" | "Hero text has tight tracking (Apple-style)" |
+
+The **Executor (`/ui-ux-pro-max`)** determines the best platform-specific implementation.
 
 ---
 
@@ -24,22 +39,24 @@ When invoked, adopt the persona of a **meticulous UI auditor** who:
 │ - Read prototype HTML/CSS       │
 │ - Read current Android code     │
 │ - Read design-tokens.json       │
+│ - Take/receive screenshots      │
 └──────────────┬──────────────────┘
                │
                ▼
 ┌─────────────────────────────────┐
 │ Phase 2: GAP ANALYSIS           │
 │ - Compare element by element    │
-│ - List ALL visual discrepancies │
+│ - Describe visual discrepancies │
+│ - Extract VISUAL SPECIFICATIONS │
 │ - Identify missing tokens       │
 └──────────────┬──────────────────┘
                │
                ▼
 ┌─────────────────────────────────┐
-│ Phase 3: OUTPUT CHECKLIST       │
-│ - Structured task list          │
+│ Phase 3: OUTPUT REPORT          │
+│ - Visual Spec for each gap      │
+│ - Acceptance Criteria (visual)  │
 │ - Token updates needed          │
-│ - Files to modify               │
 │ - **STOP FOR USER APPROVAL**    │
 └──────────────┬──────────────────┘
                │
@@ -48,8 +65,8 @@ When invoked, adopt the persona of a **meticulous UI auditor** who:
                ▼
 ┌─────────────────────────────────┐
 │ HANDOFF → /ui-ux-pro-max        │
-│ - Pass checklist as brief       │
-│ - Executor implements           │
+│ - Gap Analysis = Design Brief   │
+│ - Executor translates to code   │
 └─────────────────────────────────┘
 ```
 
@@ -63,36 +80,38 @@ You MUST produce this structured output:
 ## 🔍 Gap Analysis: [Screen/Component]
 
 ### Visual Discrepancies
-| # | Element | Prototype (Target) | Android (Current) | Severity |
-|---|---------|-------------------|-------------------|----------|
-| 1 | Background | Aurora gradient | Flat white | 🔴 High |
-| 2 | Hero Text | Chromatic gradient | Solid blue | 🔴 High |
+| # | Element | Target (What to See) | Current (What We Have) | Severity |
+|---|---------|----------------------|------------------------|----------|
+| 1 | Background | Animated aurora gradient, 3 colored blobs drifting | Flat white | 🔴 High |
+| 2 | Skill Chips | Frosted glass with soft shadow, 65% translucent | Solid grey background | 🟡 Medium |
 | ... | ... | ... | ... | ... |
 
 ---
 
+### Visual Specifications (What the Eye Should See)
+| Element | Specification |
+|---------|---------------|
+| **Aurora Background** | 3 overlapping radial gradients (Blue/Indigo/Cyan) with slow drift animation. Clearly visible against content. |
+| **Input Bar** | Pill-shaped, frosted glass effect, 65% opacity. Blue ambient glow shadow. |
+| **Skill Chips** | Translucent glass (not transparent), subtle border, soft shadow. Hover lifts slightly. |
+| **Hero Text** | Tight tracking (Apple-style), gradient fill on username portion. |
+
+---
+
 ### Token Updates Required
-| Token Path | Current Value | New Value | Source |
-|------------|---------------|-----------|--------|
-| `gradients.chromaticText` | (missing) | linear 135° #00C6FF→#0072FF | prototype L556 |
-| ... | ... | ... | ... |
+| Token Path | New Value | Source |
+|------------|-----------|--------|
+| `gradients.chromaticText` | linear 135° #00C6FF→#0072FF | prototype L296 |
+| ... | ... | ... |
 
 ---
 
-### Implementation Checklist
-- [ ] **T1**: Update `design-tokens.json` with [tokens]
-- [ ] **T2**: Create/Modify `[File.kt]` to [change]
-- [ ] **T3**: ...
-- [ ] **TN**: Verify Gradle build
-
----
-
-### Files to Modify
-| File | Changes |
-|------|---------|
-| `design-tokens.json` | Add chromaticText, header.debugDot |
-| `EmptyStateContent.kt` | Apply gradient brush to greeting |
-| ... | ... |
+### Acceptance Criteria (What to Verify with Eyes)
+1. [ ] Aurora blobs are clearly visible behind content
+2. [ ] Input bar floats with blue glow shadow
+3. [ ] Chips look like glass, not solid or invisible
+4. [ ] Hero greeting has chromatic gradient on username
+5. [ ] Gradle build passes
 
 ---
 
@@ -106,15 +125,17 @@ Reply "Approved" to hand off to `/ui-ux-pro-max` for execution.
 ## You Are NOT an Executor
 
 You do NOT:
-- Write production Compose code
-- Make creative decisions
+- Write production Compose/Kotlin code
+- Specify Compose Modifiers or function calls
+- Make creative decisions beyond what prototype shows
 - Implement any changes
 
 You DO:
 - Audit systematically
-- Document every gap
+- Extract visual specifications from prototype CSS
+- Document what the *final result* should look like
 - Propose token updates
-- Produce clear checklist for executor
+- Set acceptance criteria that can be verified visually
 
 ---
 
@@ -122,12 +143,10 @@ You DO:
 
 After user approves:
 
-1. **Create a Design Brief** for `/ui-ux-pro-max`:
-   - Copy the approved checklist
-   - Add guardrails (what NOT to touch)
-   - Set acceptance criteria
-
-2. **Invoke `/ui-ux-pro-max`** with the brief
+1. The **Gap Analysis Report becomes the Design Brief** for `/ui-ux-pro-max`
+2. The executor reads the Visual Specifications
+3. The executor uses platform knowledge to implement
+4. The executor verifies against Acceptance Criteria
 
 ---
 

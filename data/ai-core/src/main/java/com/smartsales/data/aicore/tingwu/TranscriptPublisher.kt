@@ -12,6 +12,8 @@ import com.smartsales.data.aicore.AiCoreErrorSource
 import com.smartsales.data.aicore.AiCoreLogger
 import com.smartsales.data.aicore.TingwuChapter
 import com.smartsales.data.aicore.TingwuSmartSummary
+import com.smartsales.data.aicore.debug.PipelineStage
+import com.smartsales.data.aicore.debug.PipelineTracer
 import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
@@ -27,7 +29,9 @@ import javax.inject.Singleton
  */
 @Singleton
 class TranscriptPublisher @Inject constructor(
-    private val config: AiCoreConfig
+    private val config: AiCoreConfig,
+    private val pipelineTracer: PipelineTracer,
+    private val artifactFetcher: TingwuArtifactFetcher,
 ) {
 
     fun extractTranscriptionUrl(resultLinks: Map<String, String>?): String? {
@@ -74,24 +78,19 @@ class TranscriptPublisher @Inject constructor(
 
     fun downloadChapters(url: String, jobId: String): List<TingwuChapter> {
         AiCoreLogger.d(TAG, "开始下载章节 JSON：jobId=$jobId url=${url.take(100)}...")
-        return try {
-            val connection = URL(url).openConnection().apply {
-                connectTimeout = config.tingwuReadTimeoutMillis.toInt()
-                readTimeout = config.tingwuReadTimeoutMillis.toInt()
+        pipelineTracer.emit(PipelineStage.TRANSCRIPT_PUBLISH, "STARTED", "jobId=$jobId type=chapters")
+        val payload = artifactFetcher.fetchText(url, timeoutMs = config.tingwuReadTimeoutMillis.toInt(), maxChars = 1_000_000)
+            ?: run {
+                pipelineTracer.emit(PipelineStage.TRANSCRIPT_PUBLISH, "FAILED", "jobId=$jobId type=chapters error=null payload")
+                throw AiCoreException(
+                    source = AiCoreErrorSource.TINGWU,
+                    reason = AiCoreErrorReason.NETWORK,
+                    message = "下载章节失败：ArtifactFetcher 返回 null"
+                )
             }
-            connection.getInputStream().bufferedReader(Charsets.UTF_8).use { reader ->
-                val payload = reader.readText()
-                parseAutoChaptersPayload(payload)
-            }
-        } catch (io: IOException) {
-            AiCoreLogger.e(TAG, "下载章节失败：jobId=$jobId error=${io.message}", io)
-            throw AiCoreException(
-                source = AiCoreErrorSource.TINGWU,
-                reason = AiCoreErrorReason.NETWORK,
-                message = "下载章节失败：${io.message}",
-                cause = io
-            )
-        }
+        val chapters = parseAutoChaptersPayload(payload)
+        pipelineTracer.emit(PipelineStage.TRANSCRIPT_PUBLISH, "COMPLETED", "jobId=$jobId type=chapters count=${chapters.size}")
+        return chapters
     }
 
     fun fetchSmartSummarySafe(resultLinks: Map<String, String>?, jobId: String): TingwuSmartSummary? {
@@ -103,19 +102,12 @@ class TranscriptPublisher @Inject constructor(
 
     fun downloadSmartSummary(url: String, jobId: String): TingwuSmartSummary? {
         AiCoreLogger.d(TAG, "开始下载智能摘要：jobId=$jobId url=${url.take(100)}...")
-        return try {
-            val connection = URL(url).openConnection().apply {
-                connectTimeout = config.tingwuReadTimeoutMillis.toInt()
-                readTimeout = config.tingwuReadTimeoutMillis.toInt()
+        val payload = artifactFetcher.fetchText(url, timeoutMs = config.tingwuReadTimeoutMillis.toInt(), maxChars = 500_000)
+            ?: run {
+                AiCoreLogger.w(TAG, "下载智能摘要失败：jobId=$jobId error=ArtifactFetcher 返回 null")
+                return null
             }
-            connection.getInputStream().bufferedReader(Charsets.UTF_8).use { reader ->
-                val payload = reader.readText()
-                parseSmartSummaryPayload(payload)
-            }
-        } catch (io: IOException) {
-            AiCoreLogger.w(TAG, "下载智能摘要失败：jobId=$jobId error=${io.message}")
-            null
-        }
+        return parseSmartSummaryPayload(payload)
     }
 
     private fun parseAutoChaptersPayload(payload: String): List<TingwuChapter> {

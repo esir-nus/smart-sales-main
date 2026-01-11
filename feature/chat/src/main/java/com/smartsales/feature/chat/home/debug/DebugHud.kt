@@ -62,6 +62,7 @@ internal fun DebugSessionMetadataHud(
     val section1Text = snapshot?.section1EffectiveRunText ?: "加载中..."
     val section2Text = snapshot?.section2RawTranscriptionText ?: "加载中..."
     val section3Text = snapshot?.section3PreprocessedText ?: "加载中..."
+    val section4Text = snapshot?.section4PipelineTraceText ?: "加载中..."
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -137,6 +138,12 @@ internal fun DebugSessionMetadataHud(
             DebugSnapshotBlock(
                 title = "Section 3 — Preprocessed Snapshot",
                 content = section3Text,
+                onCopy = onCopy,
+                testTag = null,
+            )
+            DebugSnapshotBlock(
+                title = "Section 4 — Pipeline Trace",
+                content = section4Text,
                 onCopy = onCopy,
                 testTag = null,
             )

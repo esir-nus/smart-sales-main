@@ -82,11 +82,13 @@ class RealDebugOrchestrator @Inject constructor(
                     tingwuTrace = tingwuTrace,
                 )
             )
+            val section4 = DebugSnapshotRedactor.redact(buildSection4())
 
             DebugSnapshot(
                 section1EffectiveRunText = section1,
                 section2RawTranscriptionText = section2,
                 section3PreprocessedText = section3,
+                section4PipelineTraceText = section4,
                 generatedAtMs = System.currentTimeMillis(),
                 sessionId = sessionId,
                 jobId = jobId,
@@ -292,8 +294,8 @@ class RealDebugOrchestrator @Inject constructor(
         }
 
     private fun buildSection4(): String = buildString {
-        appendLine("[Section4: Pipeline Trace (last 10)]")
-        val events = pipelineTracer.events.value.takeLast(10)
+        appendLine("[Section4: Pipeline Trace]")
+        val events = pipelineTracer.events.value
         if (events.isEmpty()) {
             appendLine("(no events yet)")
         } else {

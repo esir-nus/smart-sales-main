@@ -21,6 +21,14 @@ object AppSpacing {
     val XL = 32.dp      // Base * 4
     val XXL = 48.dp     // Base * 6
     val XXXL = 64.dp    // Base * 8
+
+    // Animation Durations
+    const val AuroraCycleMs = 10000 // 10s (was 20s) - Faster, more alive
+    const val ScanCycleMs = 4000   // 4s - Subtle sweep
+    
+    // Layout
+    val ScreenHorizontalPadding = 16.dp
+    val ContentVerticalPadding = 24.dp
 }
 
 /**
@@ -55,8 +63,9 @@ object AppElevation {
  */
 object AppDimensions {
     // Input Bar
-    val InputBarHeight = 64.dp
-    val InputBarIconSize = 48.dp
+    // Input Bar
+    val InputBarHeight = 56.dp // T1: Reduced from 64dp
+    val InputBarIconSize = 44.dp // Slightly smaller button
     const val InputBarGlassAlpha = 0.85f
 
     // Knot Symbol

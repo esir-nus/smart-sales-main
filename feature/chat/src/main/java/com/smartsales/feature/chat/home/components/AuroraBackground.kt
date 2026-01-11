@@ -33,7 +33,7 @@ fun AuroraBackground(
         initialValue = 0f,
         targetValue = 6.28f, // 2*PI
         animationSpec = infiniteRepeatable(
-            animation = tween(20000, easing = LinearEasing),
+            animation = tween(10000, easing = LinearEasing), // 10s cycle (was 20s)
             repeatMode = RepeatMode.Restart
         ),
         label = "time"
@@ -49,7 +49,7 @@ fun AuroraBackground(
         drawAuroraBlob(
             center = Offset(x1, y1),
             radius = w * 0.7f,
-            color = AppColors.AuroraTopLeft.copy(alpha = 0.40f) // Boosted from 0.25
+            color = AppColors.AuroraTopLeft.copy(alpha = 0.80f) // Boosted to 0.80
         )
 
         // Blob 2: Center Right-ish
@@ -58,7 +58,7 @@ fun AuroraBackground(
         drawAuroraBlob(
             center = Offset(x2, y2),
             radius = w * 0.8f,
-            color = AppColors.AuroraCenterRight.copy(alpha = 0.35f) // Boosted from 0.20
+            color = AppColors.AuroraCenterRight.copy(alpha = 0.75f) // Boosted to 0.75
         )
 
         // Blob 3: Bottom Left-ish
@@ -67,7 +67,7 @@ fun AuroraBackground(
         drawAuroraBlob(
             center = Offset(x3, y3),
             radius = w * 0.6f,
-            color = AppColors.AuroraBottomLeft.copy(alpha = 0.30f) // Boosted from 0.20
+            color = AppColors.AuroraBottomLeft.copy(alpha = 0.70f) // Boosted to 0.70
         )
     }
 }

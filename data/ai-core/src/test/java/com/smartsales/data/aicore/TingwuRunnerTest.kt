@@ -104,14 +104,51 @@ class TingwuRunnerTest {
     }
     private val defaultSettingsProvider = FakeAiParaSettingsProvider()
 
+    // Track created coordinators for cleanup
+    private val createdCoordinators = mutableListOf<TingwuRunner>()
+
+    @org.junit.After
+    fun tearDown() {
+        createdCoordinators.forEach { it.cancel() }
+        createdCoordinators.clear()
+    }
+
     private fun newCoordinator(
         api: TingwuApi,
         optionalConfig: Optional<AiCoreConfig> = Optional.empty(),
         enhancer: PostTingwuTranscriptEnhancer = noopEnhancer,
         settingsProvider: AiParaSettingsProvider = defaultSettingsProvider,
-        metaHub: com.smartsales.core.metahub.MetaHub = InMemoryMetaHub()
+        metaHub: com.smartsales.core.metahub.MetaHub = InMemoryMetaHub(),
+        credentialsProvider: TingwuCredentialsProvider = this.credentialsProvider,
+        signedUrlProvider: OssSignedUrlProvider = this.signedUrlProvider,
+        transcriptOrchestrator: TranscriptOrchestrator = this.transcriptOrchestrator,
+        artifactFetcher: TingwuArtifactFetcher = noopFetcher
     ): TingwuRunner {
         val config = optionalConfig.orElse(AiCoreConfig())
+        val tracer = FakePipelineTracer()
+        val runnerRepo = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(
+            api,
+            credentialsProvider,
+            signedUrlProvider,
+            dispatchers,
+            config
+        )
+        val publisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(config, tracer, artifactFetcher)
+        val formatter = TranscriptFormatter()
+
+        val processor = com.smartsales.data.aicore.tingwu.TingwuTranscriptProcessor(
+            dispatchers = dispatchers,
+            api = api,
+            optionalConfig = optionalConfig,
+            formatter = formatter,
+            tingwuRunnerRepository = runnerRepo,
+            artifactFetcher = artifactFetcher,
+            transcriptPublisher = publisher,
+            tingwuRawResponseDumper = rawResponseDumper,
+            tingwuTraceStore = traceStore,
+            pipelineTracer = tracer
+        )
+
         return TingwuRunner(
             dispatchers = dispatchers,
             api = api,
@@ -120,16 +157,14 @@ class TingwuRunnerTest {
             transcriptOrchestrator = transcriptOrchestrator,
             metaHub = metaHub,
             tingwuTraceStore = traceStore,
-            tingwuRawResponseDumper = rawResponseDumper,
-            artifactFetcher = noopFetcher,
+            artifactFetcher = artifactFetcher,
             postTingwuTranscriptEnhancer = enhancer,
             aiParaSettingsProvider = settingsProvider,
-            tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, config),
-            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(config),
-            formatter = TranscriptFormatter(),
-            pipelineTracer = FakePipelineTracer(),
+            tingwuRunner = runnerRepo,
+            transcriptProcessor = processor,
+            pipelineTracer = tracer,
             optionalConfig = optionalConfig
-        )
+        ).also { createdCoordinators += it }
     }
     @Test
     fun submit_emitsCompletedTranscript() = runTest(dispatcher) {
@@ -178,13 +213,19 @@ class TingwuRunnerTest {
         )
         assertTrue(result is Result.Success)
         val jobId = (result as Result.Success).data
-        advanceTimeBy(20)
+        advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
 
-        val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
+        // Debug: Get value directly from StateFlow without suspending
+        val flow = coordinator.observeJob(jobId) as kotlinx.coroutines.flow.StateFlow<TingwuJobState>
+        println("DEBUG: Current value = ${flow.value}")
+        
+        // Wait for completion
+        val completed = flow.first { it is TingwuJobState.Completed } as TingwuJobState.Completed
         assertTrue(completed.transcriptMarkdown.contains("测试成功"))
         assertEquals("https://example.com/transcription.json", completed.artifacts?.transcriptionUrl)
         assertEquals("https://example.com/chapters.json", completed.artifacts?.autoChaptersUrl)
+        coordinator.cancel()
     }
 
     @Test
@@ -350,7 +391,7 @@ class TingwuRunnerTest {
         )
         assertTrue(result is Result.Success)
         val jobId = (result as Result.Success).data
-        advanceTimeBy(20)
+        advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
@@ -396,7 +437,7 @@ class TingwuRunnerTest {
                     ),
                     language = "zh",
                     duration = 3.0,
-                    url = "https://example.com/transcription.json"
+                    url = null
                 ),
                 resultLinks = emptyMap(),
                 outputMp3Path = null,
@@ -423,7 +464,7 @@ class TingwuRunnerTest {
         )
         assertTrue(result is Result.Success)
         val jobId = (result as Result.Success).data
-        advanceTimeBy(20)
+        advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
@@ -437,6 +478,7 @@ class TingwuRunnerTest {
             assertFalse(line.contains("销售"))
             assertFalse(line.contains("发言人"))
         }
+        coordinator.cancel()
     }
 
     @Test
@@ -483,7 +525,7 @@ class TingwuRunnerTest {
         )
         assertTrue(result is Result.Success)
         val jobId = (result as Result.Success).data
-        advanceTimeBy(20)
+        advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
@@ -563,7 +605,7 @@ class TingwuRunnerTest {
         )
         assertTrue(result is Result.Success)
         val jobId = (result as Result.Success).data
-        advanceTimeBy(20)
+        advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
@@ -642,7 +684,7 @@ class TingwuRunnerTest {
             )
         )
         assertTrue(result is Result.Success)
-        advanceTimeBy(20)
+        advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
 
         val saved = metaHub.getSession("session-meta")
@@ -696,7 +738,7 @@ class TingwuRunnerTest {
         )
         assertTrue(result is Result.Success)
         val jobId = (result as Result.Success).data
-        advanceTimeBy(20)
+        advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
@@ -732,7 +774,7 @@ class TingwuRunnerTest {
         )
         assertTrue(result is Result.Success)
         val jobId = (result as Result.Success).data
-        advanceTimeBy(20)
+        advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
         val failed = coordinator.observeJob(jobId).first { it is TingwuJobState.Failed } as TingwuJobState.Failed
         assertEquals("语音太短", failed.reason)
@@ -741,8 +783,7 @@ class TingwuRunnerTest {
 
     @Test
     fun submit_returnsErrorWhenCredentialsMissing() = runTest(dispatcher) {
-        val coordinator = TingwuRunner(
-            dispatchers = dispatchers,
+        val coordinator = newCoordinator(
             api = FakeTingwuApi(),
             credentialsProvider = object : TingwuCredentialsProvider {
                 override fun obtain(): TingwuCredentials = TingwuCredentials(
@@ -755,34 +796,6 @@ class TingwuRunnerTest {
                     model = "tingwu"
                 )
             },
-            signedUrlProvider = signedUrlProvider,
-            transcriptOrchestrator = transcriptOrchestrator,
-            metaHub = InMemoryMetaHub(),
-            tingwuTraceStore = traceStore,
-            tingwuRawResponseDumper = rawResponseDumper,
-            artifactFetcher = noopFetcher,
-            postTingwuTranscriptEnhancer = noopEnhancer,
-            aiParaSettingsProvider = defaultSettingsProvider,
-            tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(
-                api = FakeTingwuApi(),
-                credentialsProvider = object : TingwuCredentialsProvider {
-                    override fun obtain(): TingwuCredentials = TingwuCredentials(
-                        apiKey = "",
-                        baseUrl = "https://tingwu.cn/",
-                        appKey = "",
-                        accessKeyId = "",
-                        accessKeySecret = "",
-                        securityToken = null,
-                        model = "tingwu"
-                    )
-                },
-                signedUrlProvider = signedUrlProvider,
-                dispatchers = dispatchers,
-                config = AiCoreConfig()
-            ),
-            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig()),
-            formatter = TranscriptFormatter(),
-            pipelineTracer = FakePipelineTracer(),
             optionalConfig = Optional.empty()
         )
 
@@ -843,7 +856,7 @@ class TingwuRunnerTest {
             )
         )
         assertTrue(submitResult is Result.Success)
-        advanceTimeBy(20)
+        advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
         val completed = coordinator.observeJob("job-1").first { it is TingwuJobState.Completed } as TingwuJobState.Completed
         assertTrue(completed.transcriptMarkdown.contains("Link 模式"))
@@ -891,22 +904,9 @@ class TingwuRunnerTest {
                 )
             )
         )
-        val coordinator = TingwuRunner(
-            dispatchers = dispatchers,
+        val coordinator = newCoordinator(
             api = api,
-            credentialsProvider = credentialsProvider,
-            signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = orchestrator,
-            metaHub = InMemoryMetaHub(),
-            tingwuTraceStore = traceStore,
-            tingwuRawResponseDumper = rawResponseDumper,
-            artifactFetcher = noopFetcher,
-            postTingwuTranscriptEnhancer = noopEnhancer,
-            aiParaSettingsProvider = defaultSettingsProvider,
-            tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            formatter = TranscriptFormatter(),
-            pipelineTracer = FakePipelineTracer(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -919,7 +919,7 @@ class TingwuRunnerTest {
         )
         assertTrue(submit is Result.Success)
         val jobId = (submit as Result.Success).data
-        advanceTimeBy(20)
+        advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
@@ -967,22 +967,9 @@ class TingwuRunnerTest {
             )
         )
         val orchestrator = RecordingTranscriptOrchestrator(throwable = IllegalStateException("llm fail"))
-        val coordinator = TingwuRunner(
-            dispatchers = dispatchers,
+        val coordinator = newCoordinator(
             api = api,
-            credentialsProvider = credentialsProvider,
-            signedUrlProvider = signedUrlProvider,
             transcriptOrchestrator = orchestrator,
-            metaHub = InMemoryMetaHub(),
-            tingwuTraceStore = traceStore,
-            tingwuRawResponseDumper = rawResponseDumper,
-            artifactFetcher = noopFetcher,
-            postTingwuTranscriptEnhancer = noopEnhancer,
-            aiParaSettingsProvider = defaultSettingsProvider,
-            tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            formatter = TranscriptFormatter(),
-            pipelineTracer = FakePipelineTracer(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -995,7 +982,7 @@ class TingwuRunnerTest {
         )
         assertTrue(submit is Result.Success)
         val jobId = (submit as Result.Success).data
-        advanceTimeBy(20)
+        advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
@@ -1047,22 +1034,9 @@ class TingwuRunnerTest {
                 outputSpectrumPath = null
             )
         )
-        val coordinator = TingwuRunner(
-            dispatchers = dispatchers,
+        val coordinator = newCoordinator(
             api = api,
-            credentialsProvider = credentialsProvider,
-            signedUrlProvider = signedUrlProvider,
-            transcriptOrchestrator = transcriptOrchestrator,
-            metaHub = InMemoryMetaHub(),
-            tingwuTraceStore = traceStore,
-            tingwuRawResponseDumper = rawResponseDumper,
             artifactFetcher = fetcher,
-            postTingwuTranscriptEnhancer = noopEnhancer,
-            aiParaSettingsProvider = defaultSettingsProvider,
-            tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            formatter = TranscriptFormatter(),
-            pipelineTracer = FakePipelineTracer(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1074,7 +1048,7 @@ class TingwuRunnerTest {
         )
         assertTrue(submit is Result.Success)
         val jobId = (submit as Result.Success).data
-        advanceTimeBy(20)
+        advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
@@ -1119,22 +1093,9 @@ class TingwuRunnerTest {
                 outputSpectrumPath = null
             )
         )
-        val coordinator = TingwuRunner(
-            dispatchers = dispatchers,
+        val coordinator = newCoordinator(
             api = api,
-            credentialsProvider = credentialsProvider,
-            signedUrlProvider = signedUrlProvider,
-            transcriptOrchestrator = transcriptOrchestrator,
-            metaHub = InMemoryMetaHub(),
-            tingwuTraceStore = traceStore,
-            tingwuRawResponseDumper = rawResponseDumper,
             artifactFetcher = fetcher,
-            postTingwuTranscriptEnhancer = noopEnhancer,
-            aiParaSettingsProvider = defaultSettingsProvider,
-            tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            formatter = TranscriptFormatter(),
-            pipelineTracer = FakePipelineTracer(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1146,7 +1107,7 @@ class TingwuRunnerTest {
         )
         assertTrue(submit is Result.Success)
         val jobId = (submit as Result.Success).data
-        advanceTimeBy(20)
+        advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
@@ -1201,22 +1162,9 @@ class TingwuRunnerTest {
                 outputSpectrumPath = null
             )
         )
-        val coordinator = TingwuRunner(
-            dispatchers = dispatchers,
+        val coordinator = newCoordinator(
             api = api,
-            credentialsProvider = credentialsProvider,
-            signedUrlProvider = signedUrlProvider,
-            transcriptOrchestrator = transcriptOrchestrator,
-            metaHub = InMemoryMetaHub(),
-            tingwuTraceStore = traceStore,
-            tingwuRawResponseDumper = rawResponseDumper,
             artifactFetcher = fetcher,
-            postTingwuTranscriptEnhancer = noopEnhancer,
-            aiParaSettingsProvider = defaultSettingsProvider,
-            tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            formatter = TranscriptFormatter(),
-            pipelineTracer = FakePipelineTracer(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1228,7 +1176,7 @@ class TingwuRunnerTest {
         )
         assertTrue(submit is Result.Success)
         val jobId = (submit as Result.Success).data
-        advanceTimeBy(20)
+        advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
@@ -1280,22 +1228,9 @@ class TingwuRunnerTest {
                 outputSpectrumPath = null
             )
         )
-        val coordinator = TingwuRunner(
-            dispatchers = dispatchers,
+        val coordinator = newCoordinator(
             api = api,
-            credentialsProvider = credentialsProvider,
-            signedUrlProvider = signedUrlProvider,
-            transcriptOrchestrator = transcriptOrchestrator,
-            metaHub = InMemoryMetaHub(),
-            tingwuTraceStore = traceStore,
-            tingwuRawResponseDumper = rawResponseDumper,
             artifactFetcher = fetcher,
-            postTingwuTranscriptEnhancer = noopEnhancer,
-            aiParaSettingsProvider = defaultSettingsProvider,
-            tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            formatter = TranscriptFormatter(),
-            pipelineTracer = FakePipelineTracer(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1307,7 +1242,7 @@ class TingwuRunnerTest {
         )
         assertTrue(submit is Result.Success)
         val jobId = (submit as Result.Success).data
-        advanceTimeBy(20)
+        advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
@@ -1352,22 +1287,9 @@ class TingwuRunnerTest {
                 outputSpectrumPath = null
             )
         )
-        val coordinator = TingwuRunner(
-            dispatchers = dispatchers,
+        val coordinator = newCoordinator(
             api = api,
-            credentialsProvider = credentialsProvider,
-            signedUrlProvider = signedUrlProvider,
-            transcriptOrchestrator = transcriptOrchestrator,
-            metaHub = InMemoryMetaHub(),
-            tingwuTraceStore = traceStore,
-            tingwuRawResponseDumper = rawResponseDumper,
             artifactFetcher = fetcher,
-            postTingwuTranscriptEnhancer = noopEnhancer,
-            aiParaSettingsProvider = defaultSettingsProvider,
-            tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
-            formatter = TranscriptFormatter(),
-            pipelineTracer = FakePipelineTracer(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1379,7 +1301,7 @@ class TingwuRunnerTest {
         )
         assertTrue(submit is Result.Success)
         val jobId = (submit as Result.Success).data
-        advanceTimeBy(20)
+        advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
@@ -1561,7 +1483,7 @@ class TingwuRunnerTest {
         )
         assertTrue(submit is Result.Success)
         val jobId = (submit as Result.Success).data
-        advanceTimeBy(20)
+        advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
@@ -1644,7 +1566,7 @@ class TingwuRunnerTest {
         )
         assertTrue(submit is Result.Success)
         val jobId = (submit as Result.Success).data
-        advanceTimeBy(20)
+        advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
@@ -1713,7 +1635,7 @@ class TingwuRunnerTest {
         )
         assertTrue(submit is Result.Success)
         val jobId = (submit as Result.Success).data
-        advanceTimeBy(20)
+        advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
 
         val completed = coordinator.observeJob(jobId).first { it is TingwuJobState.Completed } as TingwuJobState.Completed
@@ -1763,7 +1685,7 @@ class TingwuRunnerTest {
         )
         assertTrue(submit is Result.Success)
         val jobId = (submit as Result.Success).data
-        advanceTimeBy(20)
+        advanceTimeBy(2000)  // Must exceed 500ms minimum poll interval
         advanceUntilIdle()
 
         val snapshot = traceStore.getSnapshot()

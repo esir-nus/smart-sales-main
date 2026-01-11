@@ -52,17 +52,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.smartsales.domain.config.QuickSkillId
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.chat.home.QuickSkillUi
 import com.smartsales.domain.export.ExportGateState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.remember
 import com.smartsales.feature.chat.home.components.KnotSymbol // Imported
 import androidx.compose.animation.core.*
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
@@ -139,6 +145,29 @@ internal fun HomeInputArea(
                     spotColor = AppColors.GlassShadow.copy(alpha = 0.5f), // T2: Blue Glow
                     ambientColor = AppColors.GlassShadow.copy(alpha = 0.3f)
                 )
+                // Scan Animation Overlay
+                .drawWithContent {
+                    drawContent()
+                    // Translate animation: -100% to 200% width
+                    val progress = (System.currentTimeMillis() % 4000L) / 4000f // Simple cycle
+                    val startX = -size.width
+                    val endX = size.width * 2
+                    val currentX = startX + (endX - startX) * progress
+
+                    // Only draw scan line if within the active sweep phase (0-30% of cycle)
+                    // The prototype has a wait period. Mapping to simple linear for now as "good enough" for MVP V4.
+                    
+                    val brush = Brush.linearGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.White.copy(alpha = 0.15f),
+                            Color.Transparent
+                        ),
+                        start = Offset(currentX, 0f),
+                        end = Offset(currentX + 100f.dp.toPx(), 0f) // approximate 60px width
+                    )
+                    drawRect(brush = brush, blendMode = BlendMode.Overlay)
+                }
                 .background(
                     // T3: Frosted Glass (0.65 alpha) - relying on shadow for separation
                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.65f), 
@@ -375,8 +404,8 @@ internal fun QuickSkillRow(
 ) {
     if (skills.isEmpty()) return
     LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(AppSpacing.SM), // 8dp
-        contentPadding = PaddingValues(horizontal = AppSpacing.SM) // 8dp
+        horizontalArrangement = Arrangement.spacedBy(12.dp), // T4: Increased Gap to 12dp
+        contentPadding = PaddingValues(horizontal = 12.dp)
     ) {
         items(skills, key = { it.id }) { skill ->
             val isExportSkill = skill.id == QuickSkillId.EXPORT_PDF || skill.id == QuickSkillId.EXPORT_CSV
@@ -384,10 +413,14 @@ internal fun QuickSkillRow(
             val skillEnabled = enabled
             val skillTag = if (isExportSkill) "export_skill_${skill.id}" else "quick_skill_${skill.id}"
             
+            // Interaction State for Lift Effect
+            val interactionSource = remember { MutableInteractionSource() }
+            val isPressed by interactionSource.collectIsPressedAsState()
+            val liftOffset by animateDpAsState(if (isPressed) (-2).dp else 0.dp, label = "lift")
+
             AssistChip(
                 onClick = {
                     if (isExportSkill) {
-                        // 导出类技能为立即动作：不改变输入框/选中态。
                         when (skill.id) {
                             QuickSkillId.EXPORT_PDF -> onExportPdfClicked()
                             QuickSkillId.EXPORT_CSV -> onExportCsvClicked()
@@ -398,12 +431,14 @@ internal fun QuickSkillRow(
                     }
                 },
                 enabled = skillEnabled,
+                interactionSource = interactionSource,
                 modifier = Modifier
                     .testTag(skillTag)
-                    .height(AppDimensions.QuickSkillChipHeight) // 36dp
+                    .height(AppDimensions.QuickSkillChipHeight)
+                    .offset(y = liftOffset) // T4: Chip Lift
                     // T1: Glass Chip Shadow
                     .shadow(
-                        elevation = 4.dp,
+                        elevation = if (isPressed) 6.dp else 4.dp,
                         shape = RoundedCornerShape(AppRadius.Pill),
                         spotColor = AppColors.GlassShadow.copy(alpha = 0.15f)
                     ),

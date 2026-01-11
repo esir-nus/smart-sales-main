@@ -14,9 +14,14 @@ import com.smartsales.core.metahub.TranscriptMetadata
 import com.smartsales.core.metahub.ConversationDerivedState
 import com.smartsales.core.metahub.M2PatchRecord
 import com.smartsales.core.metahub.applyM2PatchHistory
+import com.smartsales.data.aicore.debug.PipelineStage
+import com.smartsales.data.aicore.debug.PipelineTracer
+import com.smartsales.data.aicore.debug.PipelineEvent
 import com.smartsales.feature.chat.core.AiChatService
 import com.smartsales.feature.chat.core.ChatRequest
 import com.smartsales.feature.chat.core.ChatStreamEvent
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import com.smartsales.domain.config.QuickSkillId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -58,7 +63,7 @@ class HomeOrchestratorImplTest {
             ```
             """.trimIndent()
         )
-        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub)
+        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub, FakePipelineTracer())
 
         val events = mutableListOf<ChatStreamEvent>()
         orchestrator.streamChat(
@@ -97,7 +102,7 @@ class HomeOrchestratorImplTest {
             ```
             """.trimIndent()
         )
-        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub)
+        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub, FakePipelineTracer())
 
         orchestrator.streamChat(
             ChatRequest(
@@ -122,7 +127,7 @@ class HomeOrchestratorImplTest {
             ```
             """.trimIndent()
         )
-        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub)
+        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub, FakePipelineTracer())
 
         val events = mutableListOf<ChatStreamEvent>()
         orchestrator.streamChat(
@@ -161,7 +166,7 @@ class HomeOrchestratorImplTest {
             ```
         """.trimIndent()
         val aiChatService = CompletedAiChatService(messy)
-        val orchestrator = HomeOrchestratorImpl(aiChatService, RecordingMetaHub())
+        val orchestrator = HomeOrchestratorImpl(aiChatService, RecordingMetaHub(), FakePipelineTracer())
 
         val events = mutableListOf<ChatStreamEvent>()
         orchestrator.streamChat(
@@ -197,7 +202,7 @@ class HomeOrchestratorImplTest {
             ```
             """.trimIndent()
         )
-        val orchestrator = HomeOrchestratorImpl(aiChatService, RecordingMetaHub())
+        val orchestrator = HomeOrchestratorImpl(aiChatService, RecordingMetaHub(), FakePipelineTracer())
 
         val events = mutableListOf<ChatStreamEvent>()
         orchestrator.streamChat(
@@ -237,7 +242,7 @@ class HomeOrchestratorImplTest {
             ```
             """.trimIndent()
         )
-        val orchestrator = HomeOrchestratorImpl(aiChatService, RecordingMetaHub())
+        val orchestrator = HomeOrchestratorImpl(aiChatService, RecordingMetaHub(), FakePipelineTracer())
 
         val events = mutableListOf<ChatStreamEvent>()
         orchestrator.streamChat(
@@ -281,7 +286,7 @@ class HomeOrchestratorImplTest {
             ```
             """.trimIndent()
         )
-        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub)
+        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub, FakePipelineTracer())
 
         orchestrator.streamChat(
             ChatRequest(
@@ -299,7 +304,7 @@ class HomeOrchestratorImplTest {
     fun `malformed json returns failure and skips meta updates`() = runTest(dispatcher) {
         val metaHub = RecordingMetaHub()
         val aiChatService = CompletedAiChatService("{ \"main_person\": \"客户\"") // 缺失大括号导致解析失败
-        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub)
+        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub, FakePipelineTracer())
 
         val events = mutableListOf<ChatStreamEvent>()
         orchestrator.streamChat(
@@ -325,7 +330,7 @@ class HomeOrchestratorImplTest {
             ```
             """.trimIndent()
         )
-        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub)
+        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub, FakePipelineTracer())
 
         val events = mutableListOf<ChatStreamEvent>()
         orchestrator.streamChat(
@@ -348,7 +353,7 @@ class HomeOrchestratorImplTest {
     fun `returns friendly failure markdown when json is missing`() = runTest(dispatcher) {
         val metaHub = RecordingMetaHub()
         val aiChatService = CompletedAiChatService("没有生成结构化结果")
-        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub)
+        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub, FakePipelineTracer())
 
         val events = mutableListOf<ChatStreamEvent>()
         orchestrator.streamChat(
@@ -377,7 +382,7 @@ class HomeOrchestratorImplTest {
             ```
             """.trimIndent()
         )
-        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub)
+        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub, FakePipelineTracer())
 
         val events = mutableListOf<ChatStreamEvent>()
         orchestrator.streamChat(
@@ -417,7 +422,7 @@ class HomeOrchestratorImplTest {
             ```
             """.trimIndent()
         )
-        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub)
+        val orchestrator = HomeOrchestratorImpl(aiChatService, metaHub, FakePipelineTracer())
 
         orchestrator.streamChat(
             ChatRequest(
@@ -464,7 +469,7 @@ class HomeOrchestratorImplTest {
             ```
             """.trimIndent()
         )
-        val orchestrator = HomeOrchestratorImpl(aiChatService, RecordingMetaHub())
+        val orchestrator = HomeOrchestratorImpl(aiChatService, RecordingMetaHub(), FakePipelineTracer())
 
         val events = mutableListOf<ChatStreamEvent>()
         orchestrator.streamChat(
@@ -502,7 +507,7 @@ class HomeOrchestratorImplTest {
             ```
             """.trimIndent()
         )
-        val orchestrator = HomeOrchestratorImpl(aiChatService, RecordingMetaHub())
+        val orchestrator = HomeOrchestratorImpl(aiChatService, RecordingMetaHub(), FakePipelineTracer())
 
         val events = mutableListOf<ChatStreamEvent>()
         orchestrator.streamChat(
@@ -532,7 +537,7 @@ class HomeOrchestratorImplTest {
             ```
             """.trimIndent()
         )
-        val orchestrator = HomeOrchestratorImpl(aiChatService, RecordingMetaHub())
+        val orchestrator = HomeOrchestratorImpl(aiChatService, RecordingMetaHub(), FakePipelineTracer())
 
         val events = mutableListOf<ChatStreamEvent>()
         orchestrator.streamChat(
@@ -602,5 +607,12 @@ class HomeOrchestratorImplTest {
             }
         }
         return collected.filter { it.isNotBlank() }
+    }
+
+    private class FakePipelineTracer : PipelineTracer {
+        override val enabled: Boolean = false
+        override val events: StateFlow<List<PipelineEvent>> = MutableStateFlow(emptyList())
+        override fun emit(stage: PipelineStage, status: String, message: String) {}
+        override fun clear() {}
     }
 }

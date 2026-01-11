@@ -10,6 +10,8 @@ import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.RiskLevel
 import com.smartsales.core.metahub.SessionMetadata
 import com.smartsales.core.metahub.SessionStage
+import com.smartsales.data.aicore.debug.PipelineStage
+import com.smartsales.data.aicore.debug.PipelineTracer
 import com.smartsales.domain.analysis.SmartAnalysisParser
 import com.smartsales.domain.analysis.SmartAnalysisResult
 import com.smartsales.feature.chat.core.AiChatService
@@ -29,7 +31,8 @@ private const val SMART_ANALYSIS_FAILURE_MESSAGE = "本次智能分析暂时不�
 @Singleton
 class HomeOrchestratorImpl @Inject constructor(
     private val aiChatService: AiChatService,
-    private val metaHub: MetaHub
+    private val metaHub: MetaHub,
+    private val pipelineTracer: PipelineTracer,
 ) : HomeOrchestrator {
     override fun streamChat(request: ChatRequest): Flow<ChatStreamEvent> {
         return flow {
@@ -50,12 +53,23 @@ class HomeOrchestratorImpl @Inject constructor(
         assistantText: String
     ): SmartAnalysisResult {
         val source = resolveAnalysisSource(request)
-        return SmartAnalysisParser.parseAndBuild(
+        pipelineTracer.emit(
+            PipelineStage.LLM_PARSE,
+            "STARTED",
+            "sessionId=${request.sessionId} source=${source?.name ?: "null"}"
+        )
+        val result = SmartAnalysisParser.parseAndBuild(
             rawText = assistantText,
             sessionId = request.sessionId,
             metaHub = metaHub,
             source = source
         )
+        pipelineTracer.emit(
+            PipelineStage.LLM_PARSE,
+            if (result.metadata != null) "COMPLETED" else "FAILED",
+            "sessionId=${request.sessionId} hasMetadata=${result.metadata != null}"
+        )
+        return result
     }
 
     private fun shouldParseMetadata(request: ChatRequest): Boolean {

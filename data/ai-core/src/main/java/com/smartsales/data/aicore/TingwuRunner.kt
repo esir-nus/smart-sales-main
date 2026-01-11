@@ -52,8 +52,12 @@ import java.util.Locale
 import java.util.LinkedHashMap
 import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
+import com.smartsales.data.aicore.tingwu.TingwuMultiBatchOrchestrator
+import com.smartsales.data.aicore.tingwu.MultiBatchStitcher
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlin.math.max
 import kotlin.math.min
 import kotlinx.coroutines.CancellationException
@@ -91,6 +95,7 @@ class TingwuRunner @Inject constructor(
     private val transcriptProcessor: com.smartsales.data.aicore.tingwu.processor.TingwuTranscriptProcessor,
     private val pipelineTracer: com.smartsales.data.aicore.debug.PipelineTracer,
     private val disector: com.smartsales.data.aicore.disector.Disector,
+    private val multiBatchOrchestrator: com.smartsales.data.aicore.tingwu.TingwuMultiBatchOrchestrator,
 
     optionalConfig: Optional<AiCoreConfig>
 ) : TingwuCoordinator {
@@ -154,13 +159,29 @@ class TingwuRunner @Inject constructor(
                 val recordingSessionId = request.sessionId ?: taskKey
                 disector.createPlan(durationMs, audioAssetId, recordingSessionId).also { plan ->
                     if (plan.batches.size > 1) {
-                        // Multi-batch: emit trace, defer full implementation to Phase 2
                         pipelineTracer.emit(
                             stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_UPLOAD,
-                            status = "MULTI_BATCH_DETECTED",
-                            message = "planId=${plan.disectorPlanId} batches=${plan.batches.size} durationMs=$durationMs"
+                            status = "MULTI_BATCH_DELEGATION",
+                            message = "Delegating to TingwuMultiBatchOrchestrator planId=${plan.disectorPlanId}"
                         )
-                        AiCoreLogger.d(TAG, "Disector: 多批次检测 - ${plan.batches.size} batches for ${durationMs}ms audio")
+                        
+                        val audioFile = request.audioFilePath
+                            ?: return@withContext Result.Error(
+                                AiCoreException(
+                                    source = AiCoreErrorSource.TINGWU,
+                                    reason = AiCoreErrorReason.IO,
+                                    message = "Multi-batch submission requires local 'audioFilePath'"
+                                )
+                            )
+
+                        return@withContext multiBatchOrchestrator.executeBatchLoop(
+                            plan = plan,
+                            originalRequest = request,
+                            sourceFile = audioFile,
+                            submitSingleBatch = { req -> submit(req) },
+                            waitForJob = { id -> waitForJob(id) },
+                            onProgress = { /* Progress unused for now */ }
+                        )
                     } else {
                         pipelineTracer.emit(
                             stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_UPLOAD,
@@ -296,6 +317,12 @@ class TingwuRunner @Inject constructor(
                 onFailure = { Result.Error(tingwuRunner.mapError(it)) }
             )
         }
+
+    private suspend fun waitForJob(jobId: String): TingwuJobState {
+        return observeJob(jobId)
+            .filter { it is TingwuJobState.Completed || it is TingwuJobState.Failed }
+            .first()
+    }
 
     override fun observeJob(jobId: String): Flow<TingwuJobState> =
         getOrCreateJobFlow(jobId).asStateFlow()

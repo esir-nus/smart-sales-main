@@ -1,4 +1,4 @@
-package com.smartsales.aitest.audio
+package com.smartsales.data.aicore.util
 
 import android.media.MediaCodec
 import android.media.MediaExtractor
@@ -7,8 +7,8 @@ import android.media.MediaMuxer
 import java.io.File
 import java.nio.ByteBuffer
 
-// 文件：app/src/main/java/com/smartsales/aitest/audio/AudioSlicer.kt
-// 模块：:app
+// 文件：data/ai-core/src/main/java/com/smartsales/data/aicore/util/AudioSlicer.kt
+// 模块：:data:ai-core
 // 说明：V1 音频切片工具（预热窗口），只做确定性裁切与复用编码轨。
 
 data class SliceResult(
@@ -112,7 +112,7 @@ class AudioSlicer(
                 bufferInfo.offset = 0
                 bufferInfo.size = size
                 bufferInfo.flags = extractor.sampleFlags
-                bufferInfo.presentationTimeUs = sampleTimeUs - (firstSampleTimeUs ?: sampleTimeUs)
+                bufferInfo.presentationTimeUs = sampleTimeUs - firstSampleTimeUs!!
                 muxer.writeSampleData(muxerTrackIndex, buffer, bufferInfo)
                 lastSampleTimeUs = sampleTimeUs
                 extractor.advance()
@@ -139,15 +139,15 @@ class AudioSlicer(
             } catch (_: Exception) {
             }
             if (muxerStarted) {
+                try {
+                    muxerRef?.stop()
+                } catch (_: Exception) {
+                }
+            }
             try {
-                muxerRef?.stop()
+                muxerRef?.release()
             } catch (_: Exception) {
             }
-        }
-        try {
-            muxerRef?.release()
-        } catch (_: Exception) {
-        }
             if (shouldDeleteOutput) {
                 runCatching { outputFile.delete() }
             }

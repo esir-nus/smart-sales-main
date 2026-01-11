@@ -243,7 +243,12 @@
       "linear": "linear",
       "easeOut": "cubic-bezier(0.0, 0.0, 0.2, 1)",
       "easeIn": "cubic-bezier(0.4, 0.0, 1, 1)",
-      "easeInOut": "cubic-bezier(0.4, 0.0, 0.2, 1)"
+      "easeInOut": "cubic-bezier(0.4, 0.0, 0.2, 1)",
+      "easeOutExpo": "cubic-bezier(0.19, 1, 0.22, 1)"
+    },
+    "effects": {
+      "glassBlurHuge": 30,
+      "glassSaturation": 1.8
     }
   },
 
@@ -271,6 +276,11 @@
       "paddingHorizontal": "{spacing.computed.md}",
       "radius": "{radius.pill}",
       "gap": "{spacing.computed.sm}"
+    },
+    "drawer": {
+      "width": 320,
+      "staggerDelay": 50,
+      "glassBlur": "{animation.effects.glassBlurHuge}"
     }
   }
 }

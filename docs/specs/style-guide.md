@@ -181,20 +181,30 @@ Visual only; conversational behavior in `ux-contract.md`.
 
 The Home screenshot pattern (two stacked cards) is the baseline card style.
 
-### 6.6 Drawers & Overlays (History, Audio, Device)
+### 6.6 History Drawer ("Memory Stream")
 
-Visual behavior shared by all drawers; specific flows in `ux-contract.md`.
+**Concept**: A deep glass overlay that feels like peering into the system's memory. It features organic "Aurora" light bleeding in from the edge.
 
-* Background: `SurfaceCard`.
-* Scrim: `BackdropOverlay` behind drawer.
-* Width: 80–90% of screen width (for side drawers).
-* Top corners: 16–20 dp on modal / bottom sheets.
-* Internal layout:
+* **Container**:
+  * Width: Fixed `320dp`.
+  * Background: `Surface` with `alpha = 0.75`.
+  * **Effect**: `glassBlurHuge` (30dp) + `glassSaturation` (1.8x).
+  * Radius: `24dp` (Top-Right, Bottom-Right).
+  * Shadow: `Elevation.xl` + expanding shadow on open.
 
-  * Header row: `SectionTitle` + optional filter/actions.
-  * Content: `LazyColumn` with list items.
-  * Empty state text: `Body` + `TextMuted` centered or top-aligned.
-  * History drawer uses a full-height column layout, with a device-status placeholder card at the top and a profile entry at the bottom; both use `SurfaceCard` style and align to drawer width.
+* **Structure**:
+  1.  **Neural Link Card** (Top):
+      *   Visual: Glass surface with green pulse if connected.
+      *   Content: Smart Badge status.
+  2.  **Memory Stream** (Middle):
+      *   List of past sessions.
+      *   **Animation**: Staggered slide-in (`easeOutExpo`, `50ms` delay per item).
+  3.  **User Profile** (Bottom):
+      *   Fixed footer with settings entry.
+
+* **Behavior**:
+  *   Scrim tap closes drawer.
+  *   Aurora bleed overlay (`mix-blend-mode: screen`) adds depth.
 
 ### 6.7 Lists & Rows
 

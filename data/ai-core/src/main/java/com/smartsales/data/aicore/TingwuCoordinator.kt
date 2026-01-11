@@ -28,7 +28,9 @@ data class TingwuRequest(
     val customPromptName: String? = null,
     val customPromptText: String? = null,
     /** Audio duration in milliseconds for Disector batch planning. Nullable for backward compat. */
-    val durationMs: Long? = null
+    val durationMs: Long? = null,
+    /** Local file path required for multi-batch slicing (client-side pre-processing). */
+    val audioFilePath: java.io.File? = null
 )
 
 data class TingwuJobArtifacts(

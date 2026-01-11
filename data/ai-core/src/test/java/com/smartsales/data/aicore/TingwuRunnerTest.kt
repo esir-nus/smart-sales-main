@@ -47,6 +47,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.assertNotNull
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -126,6 +127,7 @@ class TingwuRunnerTest {
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, config),
             transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(config),
             formatter = TranscriptFormatter(),
+            pipelineTracer = FakePipelineTracer(),
             optionalConfig = optionalConfig
         )
     }
@@ -780,6 +782,7 @@ class TingwuRunnerTest {
             ),
             transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig()),
             formatter = TranscriptFormatter(),
+            pipelineTracer = FakePipelineTracer(),
             optionalConfig = Optional.empty()
         )
 
@@ -903,6 +906,7 @@ class TingwuRunnerTest {
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             formatter = TranscriptFormatter(),
+            pipelineTracer = FakePipelineTracer(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -978,6 +982,7 @@ class TingwuRunnerTest {
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             formatter = TranscriptFormatter(),
+            pipelineTracer = FakePipelineTracer(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1057,6 +1062,7 @@ class TingwuRunnerTest {
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             formatter = TranscriptFormatter(),
+            pipelineTracer = FakePipelineTracer(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1128,6 +1134,7 @@ class TingwuRunnerTest {
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             formatter = TranscriptFormatter(),
+            pipelineTracer = FakePipelineTracer(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1209,6 +1216,7 @@ class TingwuRunnerTest {
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             formatter = TranscriptFormatter(),
+            pipelineTracer = FakePipelineTracer(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1287,6 +1295,7 @@ class TingwuRunnerTest {
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             formatter = TranscriptFormatter(),
+            pipelineTracer = FakePipelineTracer(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1358,6 +1367,7 @@ class TingwuRunnerTest {
             tingwuRunner = com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository(api, credentialsProvider, signedUrlProvider, dispatchers, AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             transcriptPublisher = com.smartsales.data.aicore.tingwu.TranscriptPublisher(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200)),
             formatter = TranscriptFormatter(),
+            pipelineTracer = FakePipelineTracer(),
             optionalConfig = Optional.of(AiCoreConfig(tingwuPollIntervalMillis = 10, tingwuPollTimeoutMillis = 200))
         )
 
@@ -1829,3 +1839,19 @@ private fun statusResponse(
         meetingJoinUrl = null
     )
 )
+
+// Fake PipelineTracer for testing
+class FakePipelineTracer : com.smartsales.data.aicore.debug.PipelineTracer {
+    override val enabled: Boolean = true
+    private val _events = kotlinx.coroutines.flow.MutableStateFlow<List<com.smartsales.data.aicore.debug.PipelineEvent>>(emptyList())
+    override val events: kotlinx.coroutines.flow.StateFlow<List<com.smartsales.data.aicore.debug.PipelineEvent>> = _events.asStateFlow()
+    
+    override fun emit(stage: com.smartsales.data.aicore.debug.PipelineStage, status: String, message: String) {
+        val event = com.smartsales.data.aicore.debug.PipelineEvent(stage, status, message)
+        _events.value = (_events.value + event).takeLast(50)
+    }
+    
+    override fun clear() {
+        _events.value = emptyList()
+    }
+}

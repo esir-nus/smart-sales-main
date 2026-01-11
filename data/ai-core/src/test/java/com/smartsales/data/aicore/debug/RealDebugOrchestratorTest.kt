@@ -13,6 +13,7 @@ import com.smartsales.core.metahub.Provenance
 import com.smartsales.data.aicore.params.InMemoryAiParaSettingsRepository
 import com.smartsales.data.aicore.params.TranscriptionSettings
 import com.smartsales.data.aicore.params.TRANSCRIPTION_PROVIDER_XFYUN
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
@@ -34,6 +35,7 @@ class RealDebugOrchestratorTest {
             metaHub = InMemoryMetaHub(),
             aiParaSettingsRepository = settingsRepository,
             tingwuTraceStore = TingwuTraceStore(),
+            pipelineTracer = FakePipelineTracer(),
             dispatchers = DefaultDispatcherProvider,
         )
 
@@ -77,6 +79,7 @@ class RealDebugOrchestratorTest {
             metaHub = metaHub,
             aiParaSettingsRepository = settingsRepository,
             tingwuTraceStore = TingwuTraceStore(),
+            pipelineTracer = FakePipelineTracer(),
             dispatchers = DefaultDispatcherProvider,
         )
 
@@ -129,6 +132,7 @@ class RealDebugOrchestratorTest {
             metaHub = metaHub,
             aiParaSettingsRepository = settingsRepository,
             tingwuTraceStore = traceStore,
+            pipelineTracer = FakePipelineTracer(),
             dispatchers = DefaultDispatcherProvider,
         )
 
@@ -146,3 +150,20 @@ class RealDebugOrchestratorTest {
         assertFalse(section3.contains("rule=derived;"))
     }
 }
+
+// Fake PipelineTracer for testing
+class FakePipelineTracer : com.smartsales.data.aicore.debug.PipelineTracer {
+    override val enabled: Boolean = true
+    private val _events = kotlinx.coroutines.flow.MutableStateFlow<List<com.smartsales.data.aicore.debug.PipelineEvent>>(emptyList())
+    override val events: kotlinx.coroutines.flow.StateFlow<List<com.smartsales.data.aicore.debug.PipelineEvent>> = _events.asStateFlow()
+    
+    override fun emit(stage: com.smartsales.data.aicore.debug.PipelineStage, status: String, message: String) {
+        val event = com.smartsales.data.aicore.debug.PipelineEvent(stage, status, message)
+        _events.value = (_events.value + event).takeLast(50)
+    }
+    
+    override fun clear() {
+        _events.value = emptyList()
+    }
+}
+

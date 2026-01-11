@@ -8,6 +8,7 @@ data class DebugSnapshot(
     val section1EffectiveRunText: String,
     val section2RawTranscriptionText: String,
     val section3PreprocessedText: String,
+    val section4PipelineTraceText: String = "",
     val generatedAtMs: Long = System.currentTimeMillis(),
     val sessionId: String,
     val jobId: String? = null,

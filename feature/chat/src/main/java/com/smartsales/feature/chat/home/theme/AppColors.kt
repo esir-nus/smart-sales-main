@@ -54,4 +54,26 @@ object AppColors {
     val WaveError = Brush.horizontalGradient(
         listOf(Color(0xFFD70015), Color(0xFFFF3B30))
     )
+
+    // ========================================================================
+    // Hero Gradients
+    // ========================================================================
+    // Chromatic Text: #00C6FF -> #0072FF (Diagonal 135 deg approx)
+    val ChromaticText = Brush.linearGradient(
+        colors = listOf(Color(0xFF00C6FF), Color(0xFF0055FF)), // Slightly deeper end blue
+        start = androidx.compose.ui.geometry.Offset.Zero,
+        end = androidx.compose.ui.geometry.Offset.Infinite
+    )
+
+    // Aurora Background Colors (Radial) - Boosted for Visibility
+    val AuroraTopLeft = Color(0xFF007AFF) // Brighter Tech Blue
+    val AuroraCenterRight = Color(0xFF5E5CE6) // Deep Indigo
+    val AuroraBottomLeft = Color(0xFF00C7BE) // Teal/Cyan pop
+
+    // Debug HUD
+    val DebugDotActive = Color(0xFF34C759)
+    val DebugDotInactive = Color.Gray
+    
+    // Glass Effects
+    val GlassShadow = Color(0xFF007AFF) // Blue glow for input shadow
 }

@@ -24,13 +24,14 @@ import kotlin.math.pow
  */
 @Composable
 fun KnotSymbol(
+    isThinking: Boolean = false, // Fix T5: Accept state
     modifier: Modifier = Modifier
 ) {
-    // Authentic Breathing Animation (Idle State)
+    // Animation 1: Breathing (Idle)
     val infiniteTransition = rememberInfiniteTransition(label = "knot_breathing")
-    val scale by infiniteTransition.animateFloat(
+    val breathScale by infiniteTransition.animateFloat(
         initialValue = 1.0f,
-        targetValue = 1.15f, // Slightly more pronounced breathing
+        targetValue = 1.15f,
         animationSpec = infiniteRepeatable(
             animation = tween(2500, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
@@ -38,10 +39,30 @@ fun KnotSymbol(
         label = "scale"
     )
 
+    // Animation 2: Spinning (Thinking)
+    val spinTransition = rememberInfiniteTransition(label = "knot_spinning")
+    val rotation by spinTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rotation"
+    )
+
+    // State Selection
+    val currentScale = if (isThinking) 1.0f else breathScale
+    val currentRotation = if (isThinking) rotation else 0f
+    
+    // Brush Selection
+    val currentBrush = if (isThinking) AppColors.WaveThinking else AppColors.WaveIdle
+
     Canvas(
         modifier = modifier.graphicsLayer {
-            scaleX = scale
-            scaleY = scale
+            scaleX = currentScale
+            scaleY = currentScale
+            rotationZ = currentRotation
         }
     ) {
         val w = size.width
@@ -50,7 +71,6 @@ fun KnotSymbol(
         val cy = h / 2
         
         // Scale Factor: Fits lemniscate within the bounds
-        // For 40dp size (approx 120px), we need radius around 15-20px
         val scalePx = size.minDimension * 0.35f 
         
         val path = Path()
@@ -79,16 +99,16 @@ fun KnotSymbol(
         // Pass 1: Atmosphere (Glow)
         drawPath(
             path = path,
-            brush = AppColors.WaveIdle,
-            alpha = 0.4f,
-            style = Stroke(width = 3.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            brush = currentBrush, // Dynamic Brush
+            alpha = 0.5f, // Increased alpha for glow
+            style = Stroke(width = 5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round) // 5dp glow
         )
 
         // Pass 2: Core (Stroke)
         drawPath(
             path = path,
-            brush = AppColors.WaveIdle,
-            style = Stroke(width = 1.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            brush = currentBrush, // Dynamic Brush
+            style = Stroke(width = 2.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round) // 2.5dp core
         )
     }
 }

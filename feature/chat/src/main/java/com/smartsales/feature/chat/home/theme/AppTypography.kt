@@ -27,7 +27,8 @@ object AppTypography {
         fontFamily = DefaultFont,
         fontSize = 32.sp, 
         fontWeight = FontWeight.Bold,
-        lineHeight = 40.sp
+        lineHeight = 40.sp,
+        letterSpacing = (-0.5).sp // T2: Tight tracking
     )
 
     // "Hello, {userName}"
@@ -35,15 +36,16 @@ object AppTypography {
         fontFamily = DefaultFont,
         fontSize = 24.sp, 
         fontWeight = FontWeight.Bold,
-        lineHeight = 32.sp
+        lineHeight = 32.sp,
+        letterSpacing = (-0.5).sp // T2: Tight tracking
     )
 
     // "I am your sales assistant"
     val HeroSubtitle = TextStyle(
         fontFamily = DefaultFont,
-        fontSize = 20.sp, 
+        fontSize = 17.sp, // T2: Refined size (was 20.sp)
         fontWeight = FontWeight.Medium,
-        lineHeight = 28.sp
+        lineHeight = 24.sp
     )
 
     // Section headers: "Device Manager", etc.

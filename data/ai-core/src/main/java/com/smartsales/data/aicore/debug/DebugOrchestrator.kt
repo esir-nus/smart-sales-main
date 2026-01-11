@@ -30,6 +30,7 @@ class RealDebugOrchestrator @Inject constructor(
     private val metaHub: MetaHub,
     private val aiParaSettingsRepository: AiParaSettingsRepository,
     private val tingwuTraceStore: TingwuTraceStore,
+    private val pipelineTracer: PipelineTracer,
     private val dispatchers: DispatcherProvider,
 ) : DebugOrchestrator {
 
@@ -289,6 +290,20 @@ class RealDebugOrchestrator @Inject constructor(
                 }
             }
         }
+
+    private fun buildSection4(): String = buildString {
+        appendLine("[Section4: Pipeline Trace (last 10)]")
+        val events = pipelineTracer.events.value.takeLast(10)
+        if (events.isEmpty()) {
+            appendLine("(no events yet)")
+        } else {
+            events.forEach { event ->
+                val time = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US)
+                    .format(java.util.Date(event.timestampMs))
+                appendLine("$time ${event.stage.name} ${event.status} ${event.message}")
+            }
+        }
+    }.trimEnd()
 
     private companion object {
     private const val MAX_PREVIEW_LINES = 20

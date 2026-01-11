@@ -156,8 +156,10 @@ import com.smartsales.feature.chat.home.components.ChromaWaveVisualState
 import com.smartsales.feature.chat.home.components.MotionState
 import com.smartsales.feature.chat.home.components.KnotSymbol
 import com.smartsales.feature.chat.home.components.ActionGrid
-import com.smartsales.feature.chat.home.theme.AppColors
+import com.smartsales.feature.chat.home.theme.AppColors // Restored
 import com.smartsales.feature.chat.home.theme.AppTypography
+import com.smartsales.feature.chat.home.theme.AppSpacing
+import com.smartsales.feature.chat.home.theme.AppDimensions
 import com.smartsales.feature.chat.home.components.AuroraBackground
 
 // 文件：feature/chat/src/main/java/com/smartsales/feature/chat/home/HomeScreen.kt
@@ -668,7 +670,7 @@ fun HomeScreen(
                         HomeInputArea(
                             quickSkills = allowedSkills,
                             selectedSkill = state.selectedSkill,
-                            showQuickSkills = !state.showWelcomeHero,
+                            showQuickSkills = true, // Fix T3: Always show chips
                             enabled = inputEnabled,
                             busy = chatBusy,
                             inputValue = state.inputText,
@@ -883,17 +885,12 @@ private fun EmptyStateContent(
                 Text(
                     text = "你好, $userName",
                     style = MaterialTheme.typography.displaySmall.copy(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primary,
-                                MaterialTheme.colorScheme.tertiary
-                            )
-                        )
+                        brush = AppColors.ChromaticText // Fix T2: Use Chromatic Gradient Token
                     )
                 )
 
                 Text(
-                    text = "我是您的销售助手\n让我们开始吧",
+                    text = "我是您的销售助手", // Fix T2: Removed "让我们开始吧"
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -1041,16 +1038,19 @@ private fun HomeTopBar(
         
         // 15.1 Remove Debug Dot in Release (or hide by default)
         // Only show if HUD is explicitly enabled AND we are in a debuggable state
-        if (hudEnabled && showDebugMetadata) {
+        // 15.1 Remove Debug Dot in Release (or hide by default)
+        // Only show if HUD is explicitly enabled
+        // Fix T6: Show dot ALWAYS if HUD enabled. Grey = Off, Green = On.
+        if (hudEnabled) {
              IconButton(
                 onClick = onToggleDebugMetadata,
                 modifier = Modifier.testTag(HomeScreenTestTags.DEBUG_HUD_TOGGLE)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(14.dp)
+                        .size(AppDimensions.DebugDotSize) // Fix: Use AppDimensions directly
                         .background(
-                            color = MaterialTheme.colorScheme.primary,
+                            color = if (showDebugMetadata) AppColors.DebugDotActive else AppColors.DebugDotInactive,
                             shape = CircleShape
                         )
                 )

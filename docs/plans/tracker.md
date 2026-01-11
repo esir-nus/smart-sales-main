@@ -303,6 +303,25 @@ HomeViewModel delegates to coordinators:
 **Effort:** 4-6 hours  
 **Trigger:** Run when KMP migration starts
 
+### TingwuRunner: Organic Cleanup
+
+**Philosophy**: Purify legacy organically when adding features. No big-bang refactor.
+
+**Current State**: 1745 lines, 64 functions
+- Implements `TingwuCoordinator` ✅
+- Already delegates to `TingwuRunnerRepository` for reusable logic ✅
+
+**Known Legacies** (purify when touched):
+| Legacy | Lines | Action |
+|--------|-------|--------|
+| `LegacyTranscription*` classes | 870-904 | Delete if unused (grep first) |
+| 4 parsing paths in `parseDownloadedTranscription` | 729-783 | Audit which are live, delete dead |
+| Pure helper functions | various | Consider companion/extension extraction |
+
+**Decision**: Apply **Rewrite Over Extract** if coupling is high.
+
+**Trigger**: When adding PipelineTracer instrumentation
+
 ---
 
 ## 8. Quality Guardrails
@@ -313,7 +332,31 @@ HomeViewModel delegates to coordinators:
 | **Import Test** | `grep "import android." domain/` = 0 |
 | **Audit Before Assume** | Verify with grep/find, no guessing |
 | **V1 Alignment** | Every module maps to spec section |
-| **Doc Verification** | Before marking "[ADD X]", run `grep -rn "X" .` to check if X already exists |
+| **Doc Verification** | Before marking "[ADD X]", run `grep -rn "X" ."` to check if X already exists |
+
+### Organic Purification Philosophy
+
+> **Purify legacy deviations organically along the way — not big-bang refactor, not ignore.**
+
+When touching a file for feature work:
+1. **Clean adjacent legacy** while you're there
+2. **No separate refactor ticket** — do it inline
+3. **Don't compound debt** by ignoring obvious cleanup
+
+### Rewrite Over Extract
+
+**Prioritize rewrite when:**
+- Code is **hard to decouple** (grep shows high coupling)
+- Code is **complex to purify** (multiple intertwined concerns)
+- Extraction would take longer than rewrite
+
+**Use the fresh-write flow:**
+1. Read old code to understand **what** (not how)
+2. Write new code following **current architecture**
+3. Delete old code entirely
+4. Verify behavior
+
+> **Rule**: If extraction feels like archaeology, rewrite from spec.
 
 ---
 

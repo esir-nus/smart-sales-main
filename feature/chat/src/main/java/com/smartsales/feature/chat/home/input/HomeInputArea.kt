@@ -5,6 +5,7 @@
 
 package com.smartsales.feature.chat.home.input
 
+import com.smartsales.feature.chat.home.theme.AppColors // Added for GlassShadow
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -133,12 +134,14 @@ internal fun HomeInputArea(
                 .fillMaxWidth()
                 .height(AppDimensions.InputBarHeight) // 64.dp
                 .shadow(
-                    elevation = AppElevation.LG, // 8dp
+                    elevation = 12.dp, // Increased elevation for float
                     shape = RoundedCornerShape(AppRadius.Pill), 
-                    spotColor = Color(0x40000000)
+                    spotColor = AppColors.GlassShadow.copy(alpha = 0.5f), // T2: Blue Glow
+                    ambientColor = AppColors.GlassShadow.copy(alpha = 0.3f)
                 )
                 .background(
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = AppDimensions.InputBarGlassAlpha),
+                    // T3: Frosted Glass (0.65 alpha) - relying on shadow for separation
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.65f), 
                     shape = RoundedCornerShape(AppRadius.Pill)
                 )
                 .border(
@@ -242,12 +245,16 @@ internal fun HomeInputArea(
                         )
                     }
                 } else {
-                    // Knot Symbol (Breathing)
+                    // Knot Symbol (Breathing/Spinning)
                    Box(
                         modifier = Modifier.size(AppDimensions.InputBarIconSize),
                         contentAlignment = Alignment.Center
                     ) {
-                       KnotSymbol(modifier = Modifier.size(AppDimensions.KnotSymbolSmall)) // 40dp
+                       // Fix T5: Bind animation state
+                       KnotSymbol(
+                           isThinking = busy,
+                           modifier = Modifier.size(AppDimensions.KnotSymbolSmall)
+                       ) // 40dp
                     }
                 }
             }
@@ -372,24 +379,11 @@ internal fun QuickSkillRow(
         contentPadding = PaddingValues(horizontal = AppSpacing.SM) // 8dp
     ) {
         items(skills, key = { it.id }) { skill ->
-            val skillTag = "home_quick_skill_${skill.id}"
             val isExportSkill = skill.id == QuickSkillId.EXPORT_PDF || skill.id == QuickSkillId.EXPORT_CSV
             val isSelected = !isExportSkill && skill.id == selectedSkillId
             val skillEnabled = enabled
-            val colors = AssistChipDefaults.assistChipColors(
-                containerColor = if (isSelected) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant
-                },
-                labelColor = when {
-                    isSelected -> MaterialTheme.colorScheme.onPrimaryContainer
-                    // 智能分析未选中时保持中性色，避免误导
-                    skill.id == QuickSkillId.SMART_ANALYSIS -> MaterialTheme.colorScheme.onSurface
-                    skill.isRecommended -> MaterialTheme.colorScheme.primary
-                    else -> MaterialTheme.colorScheme.onSurface
-                }
-            )
+            val skillTag = if (isExportSkill) "export_skill_${skill.id}" else "quick_skill_${skill.id}"
+            
             AssistChip(
                 onClick = {
                     if (isExportSkill) {
@@ -406,7 +400,13 @@ internal fun QuickSkillRow(
                 enabled = skillEnabled,
                 modifier = Modifier
                     .testTag(skillTag)
-                    .height(AppDimensions.QuickSkillChipHeight), // 36dp
+                    .height(AppDimensions.QuickSkillChipHeight) // 36dp
+                    // T1: Glass Chip Shadow
+                    .shadow(
+                        elevation = 4.dp,
+                        shape = RoundedCornerShape(AppRadius.Pill),
+                        spotColor = AppColors.GlassShadow.copy(alpha = 0.15f)
+                    ),
                 label = {
                     Text(
                         text = skill.label,
@@ -414,14 +414,26 @@ internal fun QuickSkillRow(
                         overflow = TextOverflow.Ellipsis
                     )
                 },
-                // 快捷技能作为快捷填充，无需额外气泡
-                colors = colors,
+                colors = AssistChipDefaults.assistChipColors(
+                    containerColor = if (isSelected) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        // T1: Glass Style (Translucent Surface)
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)
+                    },
+                    labelColor = when {
+                        isSelected -> MaterialTheme.colorScheme.onPrimaryContainer
+                        skill.id == QuickSkillId.SMART_ANALYSIS -> MaterialTheme.colorScheme.primary // Highlight analysis
+                        else -> MaterialTheme.colorScheme.onSurface
+                    }
+                ),
                 border = BorderStroke(
                     width = 1.dp,
                     color = if (isSelected) {
                         MaterialTheme.colorScheme.primary
                     } else {
-                        MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                        // T1: Subtle Glass Border
+                        MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                     }
                 ),
                 shape = RoundedCornerShape(AppRadius.Pill)

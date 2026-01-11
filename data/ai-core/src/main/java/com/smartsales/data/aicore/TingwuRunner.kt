@@ -88,6 +88,7 @@ class TingwuRunner @Inject constructor(
     private val tingwuRunner: com.smartsales.data.aicore.tingwu.runner.TingwuRunnerRepository,
     private val transcriptPublisher: com.smartsales.data.aicore.tingwu.TranscriptPublisher,
     private val formatter: TranscriptFormatter,
+    private val pipelineTracer: com.smartsales.data.aicore.debug.PipelineTracer,
     optionalConfig: Optional<AiCoreConfig>
 ) : TingwuCoordinator {
 
@@ -257,6 +258,11 @@ class TingwuRunner @Inject constructor(
                 jobContext[taskId] = request
                 startPolling(taskId)
                 AiCoreLogger.d(TAG, "Tingwu 任务创建成功：jobId=$taskId")
+                pipelineTracer.emit(
+                    stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_UPLOAD,
+                    status = "COMPLETED",
+                    message = "jobId=$taskId"
+                )
                 taskId
             }.fold(
                 onSuccess = { Result.Success(it) },
@@ -293,6 +299,11 @@ class TingwuRunner @Inject constructor(
             if (initialDelay > 0) {
                 delay(initialDelay)
             }
+            pipelineTracer.emit(
+                stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_POLL,
+                status = "STARTED",
+                message = "jobId=$jobId"
+            )
             try {
                 while (isActive) {
                     if (System.currentTimeMillis() - start > effectiveTimeout) {
@@ -435,6 +446,11 @@ class TingwuRunner @Inject constructor(
                                 transcriptMarkdown = transcriptResult.markdown
                             )
                             AiCoreLogger.d(TAG, "转写结果拉取成功：jobId=$jobId markdown长度=${transcriptResult.markdown.length}")
+                            pipelineTracer.emit(
+                                stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_POLL,
+                                status = "COMPLETED",
+                                message = "jobId=$jobId chapters=${transcriptResult.chapters?.size ?: 0}"
+                            )
                             flow.value = TingwuJobState.Completed(
                                 jobId = jobId,
                                 transcriptMarkdown = transcriptResult.markdown,
@@ -541,6 +557,11 @@ class TingwuRunner @Inject constructor(
     ): TranscriptResult = withContext(dispatchers.io) {
         AiCoreLogger.d(TAG, "开始拉取转写结果：jobId=$jobId")
         logVerbose { "拉取转写：jobId=$jobId resultLinks=${resultLinks?.size ?: 0} 个键" }
+        pipelineTracer.emit(
+            stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_FETCH,
+            status = "STARTED",
+            message = "jobId=$jobId"
+        )
         val chaptersUrl = transcriptPublisher.extractAutoChaptersUrl(resultLinks) ?: fallbackArtifacts?.autoChaptersUrl
         // First try the /transcription endpoint
         AiCoreLogger.d(TAG, "尝试使用 /transcription 接口：jobId=$jobId")
@@ -610,6 +631,11 @@ class TingwuRunner @Inject constructor(
                         artifacts = artifacts,
                         resultLinks = data.resultLinks
                     )
+                    pipelineTracer.emit(
+                        stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_FETCH,
+                        status = "COMPLETED",
+                        message = "jobId=$jobId source=inline"
+                    )
                     TranscriptResult(
                         markdown = finalMarkdown,
                         artifacts = artifacts,
@@ -675,6 +701,11 @@ class TingwuRunner @Inject constructor(
             transcriptMarkdown = enhancedMarkdown,
             artifacts = artifacts,
             resultLinks = resultLinks
+        )
+        pipelineTracer.emit(
+            stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_FETCH,
+            status = "COMPLETED",
+            message = "jobId=$jobId source=download"
         )
         TranscriptResult(
             markdown = finalMarkdown,

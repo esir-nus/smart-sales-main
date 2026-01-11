@@ -101,6 +101,12 @@ abstract class AiCoreModule {
 
     @Binds
     @Singleton
+    abstract fun bindPipelineTracer(
+        impl: com.smartsales.data.aicore.debug.RealPipelineTracer
+    ): com.smartsales.data.aicore.debug.PipelineTracer
+
+    @Binds
+    @Singleton
     abstract fun bindAiParaSettingsProvider(
         impl: DefaultAiParaSettingsProvider
     ): AiParaSettingsProvider

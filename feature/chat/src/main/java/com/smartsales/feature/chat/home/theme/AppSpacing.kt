@@ -67,4 +67,7 @@ object AppDimensions {
 
     // Quick Skill Chips
     val QuickSkillChipHeight = 36.dp
+
+    // Header
+    val DebugDotSize = 8.dp
 }

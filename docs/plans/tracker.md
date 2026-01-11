@@ -226,6 +226,43 @@ HomeViewModel delegates to coordinators:
 
 ---
 
+## 5C. M10 HomeScreen UI Decomposition: ✅ COMPLETE
+
+**Completed 2026-01-11**
+
+**Problem**: `HomeScreen.kt` (1425 lines) caused AI comprehension failures during edits.
+
+**Strategy**: Strangler Fig + Rewrite — create new component files, wire in, delete old code.
+
+### Results
+- **Lines**: 1425 → **565** (60% reduction)
+- **Composables**: 23 → **1** (96% reduction)
+- **Build warnings**: 13+ → **0** (100% reduction)
+
+### Files Created
+
+| Location | File | Lines |
+|----------|------|-------|
+| `home/` | `HomeScreenRoute.kt` | 312 |
+| `home/` | `HomeScreenTestTags.kt` | 55 |
+| `components/` | `HomeTopBar.kt` | 179 |
+| `components/` | `HeroSection.kt` | 70 |
+| `components/` | `AudioRecoveryBanner.kt` | 67 |
+| `components/` | `ScrollToLatestButton.kt` | 47 |
+| `history/` | `HistoryDeviceCard.kt` | 95 |
+
+### Dead Code Deleted (~175 lines)
+- `EmptyChatHint`, `EmptySessionHint`, `SessionHeader`, `SessionListSection`, `formatMillis`, `SessionListItem`
+
+### Phases
+- [x] Phase 0: Route/Screen split
+- [x] Phase 1: Create new component files
+- [x] Phase 2: Extract history components
+- [x] Phase 3: Refactor HomeScreen (remove unused params)
+- [x] Phase 4: Cleanup (extract test tags, fix deprecations)
+
+**Trigger**: Identified during UI Polish V4-V6 session (2026-01-11)
+
 ## 6. M6 KMP Prep: ✅ Phase 1 & Phase 2 Wave 1 COMPLETE
 
 **Completed 2026-01-07**

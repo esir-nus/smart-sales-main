@@ -1,4 +1,8 @@
-# Architecture Alignment & Purification Protocol
+---
+description: Align code with tracker.md, purify god files, sync docs bidirectionally
+---
+
+# God Purification Protocol
 
 **Goal**: Keep code and documentation in sync. Shrink god files. Resolve deviations. Maintain clean architecture.
 
@@ -129,3 +133,38 @@ For each gap, ask:
 - ❌ Making code changes without running tests
 - ❌ Big-bang refactor instead of incremental purification
 - ❌ Assuming tracker is always right (it's often aspirational)
+
+---
+
+## Required Deliverables
+
+At workflow completion, you MUST produce:
+
+### 1. Gap Analysis Table
+```markdown
+| Item | Tracker | Reality | Decision | Status |
+|------|---------|---------|----------|--------|
+| ... | ... | ... | Fix Code / Fix Tracker | ✅/❌ |
+```
+
+### 2. Actions Taken
+- List of files moved/renamed/created/deleted
+- List of tracker.md sections updated
+- God file line count before/after
+
+### 3. Verification Evidence
+```bash
+# Build result
+./gradlew :module:assembleDebug  # ✅ SUCCESS
+
+# Test result  
+./gradlew :module:testDebugUnitTest  # ✅ X tests passed
+```
+
+### 4. Commits Made
+```
+abc1234 refactor(module): extract X from Y
+def5678 docs: sync tracker.md with module structure
+```
+
+**Exit Criteria**: Workflow not complete until all 4 deliverables are documented.

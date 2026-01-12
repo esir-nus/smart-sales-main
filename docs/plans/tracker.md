@@ -2,7 +2,7 @@
 
 > **Purpose**: Living tracker for Smart Sales architecture and feature status  
 > **AI Agents**: Use the Quick Index below to navigate — don't read irrelevant sections  
-> **Last Updated**: 2026-01-11
+> **Last Updated**: 2026-01-12
 
 ---
 
@@ -369,6 +369,14 @@ HomeViewModel delegates to coordinators:
 | `TingwuMultiBatchOrchestrator` | ✅ Slice → Upload → Submit loop | 5 |
 | `MultiBatchStitcher` | ✅ Timestamp correction, speaker dedup | 9 |
 | `AudioSlicer` | ✅ Moved to `:data:ai-core` | 7 |
+
+#### Polling Loop Refactor ✅ (2026-01-12)
+
+| Component | Status | Tests |
+|-----------|--------|-------|
+| `TingwuPollingLoop` | ✅ Extracted from TingwuRunner | 5 |
+| `TingwuRunner` | ✅ Delegates to PollingLoop | 10+ |
+| `FakeTingwuApi` | ✅ Extracted for test reuse | N/A |
 
 **Gap Resolved (2026-01-11):** `onComplete` callback added to surface stitched segments to `TingwuJobState.Completed`.
 

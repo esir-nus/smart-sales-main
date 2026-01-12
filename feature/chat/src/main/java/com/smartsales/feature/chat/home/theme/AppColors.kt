@@ -110,4 +110,8 @@ object AppColors {
 
     // Status Dots (V8 Polish)
     val StatusDotDisconnectedRing = Color(0xFFFF453A).copy(alpha = 0.2f)
+
+    // Device Card (V9 Polish)
+    val DeviceCardBgLight = Color.Black.copy(alpha = 0.02f) // V10: Reduced from 0.04f
+    val DeviceCardBorderLight = Color.Black.copy(alpha = 0.08f) // V10: Reduced from 0.1f
 }

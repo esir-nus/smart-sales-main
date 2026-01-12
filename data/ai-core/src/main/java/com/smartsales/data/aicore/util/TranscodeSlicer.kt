@@ -5,6 +5,7 @@ import android.media.MediaCodecInfo
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMuxer
+import android.util.Log
 import java.io.File
 import java.nio.ByteBuffer
 
@@ -62,6 +63,7 @@ open class TranscodeSlicer(
         var shouldDeleteOutput = true
 
         try {
+            Log.d(TAG, "transcodeSlice: source=${source.absolutePath} range=${requestedStartMs}-${endMs}ms")
             // 1. Setup extractor
             extractor = MediaExtractor().apply { setDataSource(source.absolutePath) }
             val audioTrackIndex = findAudioTrack(extractor)
@@ -83,7 +85,9 @@ open class TranscodeSlicer(
             val outputFormat = MediaFormat.createAudioFormat(OUTPUT_MIME, sampleRate, channelCount).apply {
                 setInteger(MediaFormat.KEY_BIT_RATE, OUTPUT_BIT_RATE)
                 setInteger(MediaFormat.KEY_AAC_PROFILE, OUTPUT_AAC_PROFILE)
+                setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 16384) // Required for some devices
             }
+            Log.d(TAG, "transcodeSlice: inputMime=$inputMime sampleRate=$sampleRate channels=$channelCount")
             encoder = MediaCodec.createEncoderByType(OUTPUT_MIME)
             encoder.configure(outputFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
             encoder.start()
@@ -224,7 +228,8 @@ open class TranscodeSlicer(
                 )
             )
         } catch (e: Exception) {
-            return SliceOutcome.Failure(SliceError.IoFailure(e.message))
+            Log.e(TAG, "transcodeSlice failed: ${e.message}", e)
+            return SliceOutcome.Failure(SliceError.IoFailure("${e.javaClass.simpleName}: ${e.message}"))
         } finally {
             runCatching { decoder?.stop() }
             runCatching { decoder?.release() }

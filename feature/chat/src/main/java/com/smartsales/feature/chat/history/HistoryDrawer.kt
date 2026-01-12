@@ -37,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
@@ -124,7 +125,15 @@ internal fun HistoryDrawerContent(
                                         onClick = { onSessionSelected(session.id) },
                                         onLongClick = { onSessionLongPress(session.id) }
                                     )
-                                    .testTag("${HomeScreenTestTags.HISTORY_ITEM_PREFIX}${session.id}"),
+                                    .testTag("${HomeScreenTestTags.HISTORY_ITEM_PREFIX}${session.id}")
+                                    .then(
+                                        if (isCurrent) Modifier.shadow(
+                                            elevation = 4.dp, // V10: Refined from 8dp
+                                            shape = RoundedCornerShape(12.dp),
+                                            spotColor = AppColors.LightAccentPrimary,
+                                            ambientColor = AppColors.LightAccentPrimary
+                                        ) else Modifier
+                                    ),
                                 color = if (isCurrent) AppColors.SessionRowActiveBg else Color.Transparent, // V8: Floating text
                                 tonalElevation = 0.dp, // V8: Flat
                                 border = null, // V8: No border

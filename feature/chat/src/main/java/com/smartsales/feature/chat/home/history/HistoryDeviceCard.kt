@@ -70,15 +70,16 @@ fun HistoryDeviceCard(snapshot: DeviceSnapshotUi?) {
     }
     val borderColor = when {
         !isConnected -> Color.Transparent
-        isDark -> Color.White.copy(alpha = 0.40f)
-        else -> Color.Black.copy(alpha = 0.20f)
+        isDark -> Color.White.copy(alpha = 0.40f) // Technical definition
+        else -> AppColors.DeviceCardBorderLight // V9: Subtle grey
     }
     val scrimColor = when {
         !isConnected -> Color.Transparent
         isDark -> Color.White.copy(alpha = 0.02f)
         else -> Color.Black.copy(alpha = 0.05f)
     }
-    val cardBgColor = if (isDark) AppColors.CrystalCardBg else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.60f) // Solid plate look (was 0.30)
+    // V9: Light Mode Crystal - use tint instead of heavy surfaceVariant
+    val cardBgColor = if (isDark) AppColors.CrystalCardBg else AppColors.DeviceCardBgLight
 
     Surface(
         modifier = Modifier
@@ -158,7 +159,7 @@ private fun PrecisionBeacon(isConnected: Boolean) {
              // Static Ring (Disconnected)
             Box(
                 modifier = Modifier
-                    .size(6.dp)
+                    .size(12.dp) // V10: Increased from 6dp to visible ring
                     .border(1.dp, AppColors.StatusDotDisconnectedRing, CircleShape)
             )
             // Core Dot

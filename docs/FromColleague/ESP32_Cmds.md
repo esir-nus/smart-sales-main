@@ -2,13 +2,13 @@ this is the communication protocal between the app (we are builidng) and the har
 ESP32 doesn't have an UI, it s only backend
 
 1.App查询wifi status from the badge：
-    thorugh BLE, APP发送：wifi#address#ip#name
+    thorugh BLE, APP发送：wifi#address#ip#name   //the message is fixed, (wifi, address, ip, name are a placehoders saved for actaully wifi name)
     ESP32返回：   
         第一条指令：IP#192.168.0.101   //the app and badge transmit files to each other via the same wifi network, so this is to help verify if the two ends stay in teh same network. the actual address depends
         第二条指令：SD#MstRobot    //this tells app the name of the network the badge is in.  the actual network name/or wifi name depends
 2.Badge 连接新wifi指令：
-    第一条指令：SD#MstRobot // the app has a interface to which the user can manually input the wifi name(not ssid, the user has no idea what ssid is)
-    第二条指令：PD#Cai123456 // the app has a interface to which the user can manually input the wifi password
+    第一条指令：SD#MstRobot // the app has a interface to which the user can manually input the wifi name(not ssid, the user has no idea what ssid is)(MstRobot is a placehoder saved for actaully wifi name)
+    第二条指令：PD#Cai123456 // the app has a interface to which the user can manually input the wifi password, (Cai123456 is a placehoder saved for actaully wifi name)
 3.App发送gif照片集合to teh badge 指令流程步骤
     1. APP发送：jpg#send  // fixed command
     2. Esp32返回：jpg#receive // fixed command

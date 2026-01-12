@@ -60,8 +60,14 @@ class GattBleGateway @Inject constructor(
         credentials: WifiCredentials
     ): BleGatewayResult =
         when (val outcome = execute(session.peripheralId) { gattContext, config ->
-            val payload = buildCredentialsPayload(credentials)
-            gattContext.writeCharacteristic(config.credentialCharacteristicUuid, payload)
+            // ESP32 protocol: send SD#<ssid> then PD#<password> as two separate commands
+            val ssidPayload = buildSsidPayload(credentials.ssid)
+            gattContext.writeCharacteristic(config.credentialCharacteristicUuid, ssidPayload)
+            
+            val passwordPayload = buildPasswordPayload(credentials.password)
+            gattContext.writeCharacteristic(config.credentialCharacteristicUuid, passwordPayload)
+            
+            // Wait for badge to connect and respond
             val ackBytes = gattContext.awaitNotificationOrRead(config.provisioningStatusCharacteristicUuid)
             parseProvisioningAck(credentials, ackBytes)
         }) {
@@ -321,11 +327,20 @@ class GattBleGateway @Inject constructor(
         )
     }
 
-    private fun buildCredentialsPayload(credentials: WifiCredentials): ByteArray {
-        val sanitizedSsid = sanitizeSegment(credentials.ssid)
-        val sanitizedPassword = sanitizeSegment(credentials.password)
-        val payload = listOf("wifi", "connect", sanitizedSsid, sanitizedPassword).joinToString("#")
-        return payload.toByteArray(Charsets.UTF_8)
+    /**
+     * Build SSID command per ESP32 protocol: SD#<ssid>
+     */
+    private fun buildSsidPayload(ssid: String): ByteArray {
+        val sanitized = sanitizeSegment(ssid)
+        return "SD#$sanitized".toByteArray(Charsets.UTF_8)
+    }
+
+    /**
+     * Build password command per ESP32 protocol: PD#<password>
+     */
+    private fun buildPasswordPayload(password: String): ByteArray {
+        val sanitized = sanitizeSegment(password)
+        return "PD#$sanitized".toByteArray(Charsets.UTF_8)
     }
 
     private fun buildNetworkQueryPayload(): ByteArray =

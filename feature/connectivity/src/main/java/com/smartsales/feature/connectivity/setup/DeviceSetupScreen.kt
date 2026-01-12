@@ -113,7 +113,8 @@ fun DeviceSetupScreen(
                             password = state.wifiPassword,
                             onSsidChange = onWifiSsidChanged,
                             onPasswordChange = onWifiPasswordChanged,
-                            enabled = state.isPrimaryEnabled || state.step == DeviceSetupStep.Pairing
+                            // Enable input when waiting for user input, disable during provisioning
+                            enabled = state.step == DeviceSetupStep.WifiInput
                         )
                     }
                     if (state.errorMessage != null && (state.step == DeviceSetupStep.Error || state.setupStep == SetupStep.Error)) {

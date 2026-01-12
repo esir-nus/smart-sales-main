@@ -175,7 +175,8 @@ class TingwuRunnerTest {
                      override suspend fun uploadAudio(request: com.smartsales.data.aicore.OssUploadRequest): Result<com.smartsales.data.aicore.OssUploadResult> =
                          Result.Success(com.smartsales.data.aicore.OssUploadResult("key", "url"))
                  },
-                 stitcher = com.smartsales.data.aicore.tingwu.MultiBatchStitcher()
+                 stitcher = com.smartsales.data.aicore.tingwu.MultiBatchStitcher(),
+                 pipelineTracer = tracer
             ),
             optionalConfig = optionalConfig
         ).also { createdCoordinators += it }

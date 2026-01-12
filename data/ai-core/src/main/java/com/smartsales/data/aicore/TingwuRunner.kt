@@ -174,25 +174,60 @@ class TingwuRunner @Inject constructor(
                                 )
                             )
 
-                        return@withContext multiBatchOrchestrator.executeBatchLoop(
-                            plan = plan,
-                            originalRequest = request,
-                            sourceFile = audioFile,
-                            submitSingleBatch = { req -> submit(req) },
-                            waitForJob = { id -> waitForJob(id) },
-                            onProgress = { /* Progress unused for now */ },
-                            onComplete = { parentJobId, stitchedSegments ->
-                                // Surface stitched segments to job state for UI consumption
-                                val flow = getOrCreateJobFlow(parentJobId)
-                                flow.value = TingwuJobState.Completed(
-                                    jobId = parentJobId,
-                                    transcriptMarkdown = "",  // Deferred: assemble markdown from segments
-                                    artifacts = TingwuJobArtifacts(
-                                        recordingOriginDiarizedSegments = stitchedSegments
+                        // Emit progress immediately so UI shows "processing" state
+                        val parentJobId = "multi_${plan.disectorPlanId}"
+                        val parentFlow = getOrCreateJobFlow(parentJobId)
+                        parentFlow.value = TingwuJobState.InProgress(
+                            jobId = parentJobId,
+                            progressPercent = 5,
+                            statusLabel = "MULTI_BATCH_STARTED"
+                        )
+
+                        // Launch batch processing in background (non-blocking)
+                        scope.launch {
+                            val result = multiBatchOrchestrator.executeBatchLoop(
+                                plan = plan,
+                                originalRequest = request,
+                                sourceFile = audioFile,
+                                submitSingleBatch = { req -> submit(req) },
+                                waitForJob = { id -> waitForJob(id) },
+                                onProgress = { progress ->
+                                    // Update parent job progress
+                                    parentFlow.value = TingwuJobState.InProgress(
+                                        jobId = parentJobId,
+                                        progressPercent = progress,
+                                        statusLabel = "PROCESSING_BATCHES"
                                     )
+                                },
+                                onComplete = { _, stitchedSegments ->
+                                    // Surface stitched segments to job state for UI consumption
+                                    parentFlow.value = TingwuJobState.Completed(
+                                        jobId = parentJobId,
+                                        transcriptMarkdown = "",  // Deferred: assemble markdown from segments
+                                        artifacts = TingwuJobArtifacts(
+                                            recordingOriginDiarizedSegments = stitchedSegments
+                                        )
+                                    )
+                                }
+                            )
+                            
+                            // Handle failure explicitly
+                            if (result is Result.Error) {
+                                val error = result.throwable as? AiCoreException
+                                    ?: AiCoreException(
+                                        source = AiCoreErrorSource.TINGWU,
+                                        reason = AiCoreErrorReason.UNKNOWN,
+                                        message = result.throwable.message ?: "Multi-batch processing failed"
+                                    )
+                                parentFlow.value = TingwuJobState.Failed(
+                                    jobId = parentJobId,
+                                    error = error
                                 )
                             }
-                        )
+                        }
+                        
+                        // Return immediately so UI can start observing
+                        return@withContext Result.Success(parentJobId)
                     } else {
                         pipelineTracer.emit(
                             stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_UPLOAD,

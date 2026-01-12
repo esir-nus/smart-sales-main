@@ -131,8 +131,8 @@ internal fun HistoryDrawerContent(
                                         if (isCurrent) Modifier.shadow(
                                             elevation = 6.dp, // Gap V13: Matches 12px blur
                                             shape = RoundedCornerShape(12.dp),
-                                            spotColor = AppColors.LightAccentPrimary,
-                                            ambientColor = AppColors.LightAccentPrimary
+                                            spotColor = AppColors.BubbleShadow, // V14: Soft glow (25%)
+                                            ambientColor = AppColors.BubbleShadow
                                         ) else Modifier
                                     ),
                                 color = if (isCurrent) AppColors.SessionRowActiveBg else Color.Transparent, // V8: Floating text
@@ -178,7 +178,7 @@ private fun HistoryUserCenter(onClick: () -> Unit) {
     // Profile Dock Container
     Surface(
         color = footerBg.copy(alpha = 0.6f), // Frosted Glass Tint
-        shadowElevation = 16.dp, // Upward shadow depth
+        shadowElevation = 0.dp, // V14: Flat integration (Legacy removal)
         modifier = Modifier.fillMaxWidth().clickable { onClick() }
     ) {
          Box(

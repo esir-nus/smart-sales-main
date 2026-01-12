@@ -15,9 +15,11 @@ import com.smartsales.data.aicore.util.SliceOutcome
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Orchestrates multi-batch transcription logic (Slice -> Upload -> Submit Loop).
@@ -66,68 +68,74 @@ class TingwuMultiBatchOrchestrator @Inject constructor(
         }
 
         val totalBatches = plan.batches.size
-        com.smartsales.data.aicore.AiCoreLogger.d(TAG, "Starting PARALLEL multi-batch: ${totalBatches} batches")
+        com.smartsales.data.aicore.AiCoreLogger.d(TAG, "Starting PARALLEL multi-batch (TRUE PIPELINE): ${totalBatches} batches")
         
-        // ========== PHASE 1: Slice all batches (sequential for file I/O) ==========
+        // Progress tracking: 15% Slicing, 30% Upload, 45% Polling (Total 90% + 10% Setup/Finish)
+        // We use AtomicInteger to safely update progress from concurrent coroutines
+        val progressCounter = AtomicInteger(5) // Start at 5%
+        val sliceWeight = 15.0 / totalBatches
+        val uploadWeight = 30.0 / totalBatches
+        val pollWeight = 45.0 / totalBatches
+        
         onProgress(5)
-        val sliceResults = mutableListOf<Pair<DisectorBatch, File>>()
-        
-        for ((index, batch) in plan.batches.withIndex()) {
-            pipelineTracer.emit(
-                stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_POLL,
-                status = "BATCH_SLICING",
-                message = "batch=${index + 1}/$totalBatches batchId=${batch.batchAssetId}"
-            )
-            
-            val sliceOutcome = audioSlicer.sliceAudio(
-                source = sourceFile,
-                requestedCaptureStartMs = batch.captureStartMs,
-                captureEndMs = batch.captureEndMs,
-                windowKey = batch.batchAssetId
-            )
-            
-            val sliceFile = when (sliceOutcome) {
-                is SliceOutcome.Success -> sliceOutcome.result.sliceFile
-                is SliceOutcome.Failure -> return@coroutineScope Result.Error(
-                    AiCoreException(
-                        source = AiCoreErrorSource.TINGWU,
-                        reason = AiCoreErrorReason.IO,
-                        message = "Audio slicing failed for batch ${batch.batchIndex}: ${sliceOutcome.error.reasonCode}"
-                    )
-                )
-            }
-            sliceResults.add(batch to sliceFile)
-        }
-        
-        onProgress(20)
-        com.smartsales.data.aicore.AiCoreLogger.d(TAG, "Slicing complete: ${sliceResults.size} slices")
-        
-        // ========== PHASE 2: Upload + Submit all batches (PARALLEL) ==========
-        pipelineTracer.emit(
-            stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_UPLOAD,
-            status = "PARALLEL_UPLOAD_START",
-            message = "batches=$totalBatches"
-        )
-        
-        val submissionJobs = sliceResults.mapIndexed { index, (batch, sliceFile) ->
-            async {
+
+        // Single pipelined job per batch (Slice -> Upload -> Submit -> Poll)
+        val batchJobs = plan.batches.mapIndexed { index, batch ->
+            async(Dispatchers.Default) {
+                // 1. Slice
                 pipelineTracer.emit(
                     stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_POLL,
-                    status = "BATCH_STARTED",
+                    status = "BATCH_SLICING",
                     message = "batch=${index + 1}/$totalBatches batchId=${batch.batchAssetId}"
                 )
                 
-                // Upload
+                val sliceOutcome = audioSlicer.sliceAudio(
+                    source = sourceFile,
+                    requestedCaptureStartMs = batch.captureStartMs,
+                    captureEndMs = batch.captureEndMs,
+                    windowKey = batch.batchAssetId
+                )
+                
+                val sliceFile = when (sliceOutcome) {
+                    is SliceOutcome.Success -> sliceOutcome.result.sliceFile
+                    is SliceOutcome.Failure -> return@async Result.Error(
+                        AiCoreException(
+                            source = AiCoreErrorSource.TINGWU,
+                            reason = AiCoreErrorReason.IO,
+                            message = "Audio slicing failed for batch ${batch.batchIndex}: ${sliceOutcome.error.reasonCode}"
+                        )
+                    )
+                }
+                
+                // Update progress after slice
+                onProgress(progressCounter.addAndGet(sliceWeight.toInt()))
+
+                // 2. Upload
+                pipelineTracer.emit(
+                    stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_POLL,
+                    status = "BATCH_STARTED", // Semantically "Batch Processing Started" (Upload+Submit phase)
+                    message = "batch=${index + 1}/$totalBatches batchId=${batch.batchAssetId}"
+                )
+
                 val ossKey = "${plan.audioAssetId}/${batch.batchAssetId}.m4a"
                 val uploadResult = ossUploadClient.uploadAudio(
                     OssUploadRequest(file = sliceFile, objectKey = ossKey)
                 )
+                
                 val ossData = when (uploadResult) {
                     is Result.Success -> uploadResult.data
-                    is Result.Error -> return@async Triple(batch, null as String?, uploadResult.throwable)
+                    is Result.Error -> return@async Result.Error(uploadResult.throwable)
                 }
                 
-                // Submit
+                onProgress(progressCounter.addAndGet(uploadWeight.toInt()))
+
+                // 3. Submit
+                // Note: We delete the slice file regardless of submission outcome to prevent leak,
+                // but we do it after submission just to be safe (though submission only needs URL).
+                // Actually, submission needs URL, file is on OSS. We can delete local file now or later.
+                // Let's delete later in finally block or runCatching if we want to be safe.
+                // For now, follow previous logic: clean up after usage.
+                
                 val batchRequest = originalRequest.copy(
                     ossObjectKey = ossData.objectKey,
                     fileUrl = ossData.presignedUrl,
@@ -138,88 +146,80 @@ class TingwuMultiBatchOrchestrator @Inject constructor(
                 val submission = submitSingleBatch(batchRequest)
                 val jobId = when (submission) {
                     is Result.Success -> submission.data
-                    is Result.Error -> return@async Triple(batch, null as String?, submission.throwable)
+                    is Result.Error -> {
+                        sliceFile.delete() // Cleanup
+                        return@async Result.Error(submission.throwable)
+                    }
                 }
                 
-                // Cleanup slice file after upload
+                // Cleanup local slice execution
                 runCatching { sliceFile.delete() }
+
+                // 4. Poll
+                val finalState = waitForJob(jobId)
                 
-                Triple(batch, jobId, null as Throwable?)
-            }
-        }
-        
-        val submissionResults = submissionJobs.awaitAll()
-        
-        // Check for any upload/submit failures
-        val firstError = submissionResults.firstOrNull { it.third != null }
-        if (firstError != null) {
-            return@coroutineScope Result.Error(firstError.third!!)
-        }
-        
-        onProgress(50)
-        com.smartsales.data.aicore.AiCoreLogger.d(TAG, "Upload+Submit complete: ${submissionResults.size} jobs submitted")
-        
-        // ========== PHASE 3: Poll all jobs (PARALLEL) ==========
-        pipelineTracer.emit(
-            stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_POLL,
-            status = "PARALLEL_POLL_START",
-            message = "jobs=${submissionResults.size}"
-        )
-        
-        val pollingJobs = submissionResults.map { (batch, jobId, _) ->
-            async {
-                val finalState = waitForJob(jobId!!)
-                batch to finalState
-            }
-        }
-        
-        val pollResults = pollingJobs.awaitAll()
-        
-        onProgress(90)
-        
-        // ========== PHASE 4: Collect results and stitch ==========
-        val batchResults = mutableListOf<Pair<DisectorBatch, List<com.smartsales.data.aicore.DiarizedSegment>>>()
-        
-        for ((index, result) in pollResults.withIndex()) {
-            val (batch, finalState) = result
-            when (finalState) {
-                is TingwuJobState.Failed -> {
-                    com.smartsales.data.aicore.AiCoreLogger.e(TAG, "Batch ${index + 1}/$totalBatches FAILED: ${finalState.error.message}")
-                    return@coroutineScope Result.Error(finalState.error)
-                }
-                is TingwuJobState.Completed -> {
-                    val segments = finalState.artifacts?.recordingOriginDiarizedSegments.orEmpty()
-                    batchResults.add(batch to segments)
-                    pipelineTracer.emit(
-                        stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_POLL,
-                        status = "BATCH_COMPLETED",
-                        message = "batch=${index + 1}/$totalBatches jobId=${finalState.jobId} segments=${segments.size}"
-                    )
-                    com.smartsales.data.aicore.AiCoreLogger.d(TAG, "Batch ${index + 1}/$totalBatches completed: segments=${segments.size}")
-                }
-                else -> {
-                    com.smartsales.data.aicore.AiCoreLogger.w(TAG, "Batch ${index + 1}/$totalBatches unexpected state: $finalState")
+                onProgress(progressCounter.addAndGet(pollWeight.toInt()))
+
+                when (finalState) {
+                    is TingwuJobState.Completed -> {
+                        val segments = finalState.artifacts?.recordingOriginDiarizedSegments.orEmpty()
+                        pipelineTracer.emit(
+                            stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_POLL,
+                            status = "BATCH_COMPLETED",
+                            message = "batch=${index + 1}/$totalBatches jobId=${finalState.jobId} segments=${segments.size}"
+                        )
+                        com.smartsales.data.aicore.AiCoreLogger.d(TAG, "Batch ${index + 1}/$totalBatches completed: segments=${segments.size}")
+                        Result.Success(batch to segments)
+                    }
+                    is TingwuJobState.Failed -> {
+                        com.smartsales.data.aicore.AiCoreLogger.e(TAG, "Batch ${index + 1}/$totalBatches FAILED: ${finalState.error.message}")
+                        Result.Error(finalState.error)
+                    }
+                    else -> {
+                        // Should be terminal state by now
+                        Result.Error(AiCoreException(
+                            source = AiCoreErrorSource.TINGWU,
+                            reason = AiCoreErrorReason.UNKNOWN,
+                            message = "Batch ${index + 1} ended in non-terminal state: $finalState"
+                        ))
+                    }
                 }
             }
         }
         
-        onProgress(100)
+        // Wait for all pipelines to complete
+        val results = batchJobs.awaitAll()
         
-        // Stitch all segments
-        val stitchedSegments = stitcher.stitchSegments(batchResults)
+        // Check for failures
+        val firstError = results.firstOrNull { it is Result.Error }
+        if (firstError is Result.Error) {
+            return@coroutineScope Result.Error(firstError.throwable)
+        }
+        
+        // Collect successful results
+        val successResults = results.mapNotNull { (it as? Result.Success)?.data }
+        
+        // Sort by batch index to ensure stitching order
+        val sortedResults = successResults.sortedBy { it.first.batchIndex }
+        
+        onProgress(95)
+        
+        // Stitch
+        val stitchedSegments = stitcher.stitchSegments(sortedResults)
         
         val parentJobId = "multi_${plan.disectorPlanId}"
         
-        // Invoke callback safely
         runCatching { onComplete(parentJobId, stitchedSegments) }
             .onFailure { com.smartsales.data.aicore.AiCoreLogger.w(TAG, "onComplete callback failed: ${it.message}") }
-        
+            
         pipelineTracer.emit(
             stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_POLL,
             status = "MULTI_BATCH_COMPLETE",
             message = "planId=${plan.disectorPlanId} batches=$totalBatches stitchedSegments=${stitchedSegments.size}"
         )
-        com.smartsales.data.aicore.AiCoreLogger.d(TAG, "Multi-batch PARALLEL complete: batches=$totalBatches stitchedSegments=${stitchedSegments.size}")
+        onProgress(100)
+        
+        com.smartsales.data.aicore.AiCoreLogger.d(TAG, "Multi-batch TRUE PIPELINE complete: batches=$totalBatches stitchedSegments=${stitchedSegments.size}")
         Result.Success(parentJobId)
     }
 

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -59,7 +60,7 @@ internal fun HistoryDrawerContent(
     sessions: List<SessionListItemUi>,
     currentSessionId: String,
     deviceSnapshot: DeviceSnapshotUi?,
-    formatSessionTime: (Long) -> String,
+    // formatSessionTime removed as per V12 spec (Minimalist)
     historyDeviceStatus: @Composable (DeviceSnapshotUi?) -> Unit,
     onSessionSelected: (String) -> Unit,
     onSessionLongPress: (String) -> Unit,
@@ -112,7 +113,7 @@ internal fun HistoryDrawerContent(
                                     fontSize = 11.sp
                                 ),
                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                                modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 2.dp)
+                                modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 6.dp) // Gap V13: Prototype spacing
                             )
                         }
                         
@@ -128,7 +129,7 @@ internal fun HistoryDrawerContent(
                                     .testTag("${HomeScreenTestTags.HISTORY_ITEM_PREFIX}${session.id}")
                                     .then(
                                         if (isCurrent) Modifier.shadow(
-                                            elevation = 4.dp, // V10: Refined from 8dp
+                                            elevation = 6.dp, // Gap V13: Matches 12px blur
                                             shape = RoundedCornerShape(12.dp),
                                             spotColor = AppColors.LightAccentPrimary,
                                             ambientColor = AppColors.LightAccentPrimary
@@ -139,30 +140,22 @@ internal fun HistoryDrawerContent(
                                 border = null, // V8: No border
                                 shape = RoundedCornerShape(12.dp)
                             ) {
-                                Column(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(min = 48.dp) // Fixed height for touch target
+                                        .padding(horizontal = 16.dp), // Per prototype
+                                    contentAlignment = Alignment.CenterStart
                                 ) {
                                     Text(
                                         text = session.title,
-                                        style = MaterialTheme.typography.bodyLarge,
+                                        style = MaterialTheme.typography.bodyLarge.copy(
+                                            fontWeight = FontWeight.Medium,
+                                            fontSize = 15.sp // Gap V13: Exact match to prototype
+                                        ),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    if (session.lastMessagePreview.isNotBlank()) {
-                                        Text(
-                                            text = session.lastMessagePreview,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Text(
-                                        text = formatSessionTime(session.updatedAtMillis),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }

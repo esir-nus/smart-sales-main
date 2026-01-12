@@ -340,9 +340,8 @@ fun HomeScreen(
                 HistoryDrawerContent(
                     sessions = historySessions,
                     currentSessionId = state.currentSession.id,
-                    // TODO(hardware): 接入真实设备状态后更新此处占位卡片
                     deviceSnapshot = audioState.deviceSnapshot,
-                    formatSessionTime = ::formatSessionTime,
+                    // formatSessionTime removed
                     historyDeviceStatus = { HistoryDeviceCard(snapshot = it) },
                     onSessionSelected = onHistorySessionSelected,
                     onSessionLongPress = onHistorySessionLongPress,
@@ -635,10 +634,7 @@ fun HomeScreen(
     )
 }
 
-private fun formatSessionTime(timestamp: Long): String {
-    val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
-    return formatter.format(Date(timestamp))
-}
+// formatSessionTime removed
 
 
 

@@ -33,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -45,6 +46,11 @@ import com.smartsales.feature.chat.home.DeviceSnapshotUi
 import com.smartsales.feature.chat.home.HomeScreenTestTags
 import com.smartsales.feature.chat.home.SessionListItemUi
 import com.smartsales.feature.chat.home.theme.AppColors
+import com.smartsales.feature.chat.history.SessionGrouper
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.em
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
@@ -61,99 +67,122 @@ internal fun HistoryDrawerContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .testTag(ChatHistoryTestTags.PAGE),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .testTag(ChatHistoryTestTags.PAGE)
     ) {
-        historyDeviceStatus(deviceSnapshot)
-        if (sessions.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f, fill = true)
-            ) {
-                Text(
-                    text = "暂无历史会话，先开始一次对话吧。",
+        // Scrollable Content Area (Weighted)
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(bottom = 8.dp), // Space before docked footer
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            historyDeviceStatus(deviceSnapshot)
+            
+            if (sessions.isEmpty()) {
+                Box(
                     modifier = Modifier
-                        .padding(horizontal = 12.dp)
-                        .testTag(HomeScreenTestTags.HISTORY_EMPTY),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f, fill = true),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                items(items = sessions, key = { it.id }) { session ->
-                    val isCurrent = session.id == currentSessionId
-                    Surface(
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "暂无历史会话，先开始一次对话吧。",
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .combinedClickable(
-                                onClick = { onSessionSelected(session.id) },
-                                onLongClick = { onSessionLongPress(session.id) }
-                            )
-                            .testTag("${HomeScreenTestTags.HISTORY_ITEM_PREFIX}${session.id}"),
-                        color = MaterialTheme.colorScheme.surface,
-                        tonalElevation = if (isCurrent) 4.dp else 1.dp,
-                        border = BorderStroke(
-                            width = 1.dp,
-                            color = if (isCurrent) {
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-                            } else {
-                                MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                            }
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
+                            .padding(horizontal = 12.dp)
+                            .testTag(HomeScreenTestTags.HISTORY_EMPTY),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                val groups = remember(sessions) { SessionGrouper.groupSessions(sessions) }
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp), // V8: Tight spacing
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 16.dp) // V8: More vertical padding
+                ) {
+                    groups.forEach { group ->
+                        item(key = "header-${group.label}") {
                             Text(
-                                text = session.title,
-                                style = MaterialTheme.typography.bodyLarge,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                color = MaterialTheme.colorScheme.onSurface
+                                text = group.label,
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    letterSpacing = 0.05.em,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp
+                                ),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 2.dp)
                             )
-                            if (session.lastMessagePreview.isNotBlank()) {
-                                Text(
-                                    text = session.lastMessagePreview,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                        }
+                        
+                        items(items = group.items, key = { it.id }) { session ->
+                            val isCurrent = session.id == currentSessionId
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = { onSessionSelected(session.id) },
+                                        onLongClick = { onSessionLongPress(session.id) }
+                                    )
+                                    .testTag("${HomeScreenTestTags.HISTORY_ITEM_PREFIX}${session.id}"),
+                                color = if (isCurrent) AppColors.SessionRowActiveBg else Color.Transparent, // V8: Floating text
+                                tonalElevation = 0.dp, // V8: Flat
+                                border = null, // V8: No border
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = session.title,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    if (session.lastMessagePreview.isNotBlank()) {
+                                        Text(
+                                            text = session.lastMessagePreview,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Text(
+                                        text = formatSessionTime(session.updatedAtMillis),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
-                            Text(
-                                text = formatSessionTime(session.updatedAtMillis),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                         }
                     }
                 }
             }
         }
-        Spacer(modifier = Modifier.height(8.dp))
+        
+        // Pinned Profile Dock (No Spacer needed, straight to footer)
         HistoryUserCenter(onClick = onUserCenterClick)
     }
 }
 
 @Composable
 private fun HistoryUserCenter(onClick: () -> Unit) {
+    val isDark = isSystemInDarkTheme()
+    val footerBg = if (isDark) AppColors.DrawerFooterDark else AppColors.DrawerFooterLight
+
     // Profile Dock Container
     Surface(
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f), // Frosted
+        color = footerBg.copy(alpha = 0.6f), // Frosted Glass Tint
         shadowElevation = 16.dp, // Upward shadow depth
         modifier = Modifier.fillMaxWidth().clickable { onClick() }
     ) {
          Box(
              modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
+                .background(footerBg.copy(alpha = 0.6f))
                 .drawBehind {
                     // Top Border (1px)
                     drawLine(
@@ -174,21 +203,23 @@ private fun HistoryUserCenter(onClick: () -> Unit) {
                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        tonalElevation = 0.dp
+                    // Avatar with Gradient
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp) // Slightly larger touch target
+                            .background(AppColors.AvatarBlue, CircleShape),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "F",
                             style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(12.dp)
+                            color = Color.White // Always white on gradient
                         )
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
                             text = "Frank",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
@@ -208,17 +239,21 @@ private fun HistoryUserCenter(onClick: () -> Unit) {
 
 @Composable
 private fun SettingsGlyph() {
+    val isDark = isSystemInDarkTheme()
+    val tint = if (isDark) AppColors.SettingsIconTintDark else AppColors.SettingsIconTintLight
+    val bg = if (isDark) AppColors.SettingsIconBgDark else AppColors.SettingsIconBgLight
+
     Box(
         modifier = Modifier
             .size(40.dp)
-            .background(Color.Black.copy(alpha = 0.05f), CircleShape)
+            .background(bg, CircleShape)
             .padding(10.dp), // Icon padding
         contentAlignment = Alignment.Center
     ) {
          Icon(
-            imageVector = Icons.Filled.Settings, // Fixed: Correct usage of Icons.Filled.Settings
+            imageVector = Icons.Filled.Settings,
             contentDescription = "设置",
-            tint = MaterialTheme.colorScheme.onSurface
+            tint = tint
          )
     }
 }

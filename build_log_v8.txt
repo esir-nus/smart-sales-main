@@ -1,0 +1,897 @@
+Initialized native services in: /home/cslh-frank/.gradle/native
+Initialized jansi services in: /home/cslh-frank/.gradle/native
+Removing 0 daemon stop events from registry
+Previous Daemon (5716) stopped at Mon Jan 12 09:15:17 CST 2026 other compatible daemons were started and after being idle for 0 minutes and not recently used
+Previous Daemon (16165) stopped at Mon Jan 12 09:31:08 CST 2026 other compatible daemons were started and after being idle for 0 minutes and not recently used and after being idle for 0 minutes and not recently used and to reclaim system physical memory
+Previous Daemon (6330) stopped at Mon Jan 12 09:31:42 CST 2026 after being idle for 16 minutes and not recently used and to reclaim system physical memory
+Previous Daemon (23433) stopped at Mon Jan 12 09:53:09 CST 2026 after being idle for 13 minutes and not recently used and to reclaim system physical memory
+Previous Daemon (16211) stopped at Mon Jan 12 09:55:48 CST 2026 after being idle for 1 minutes and not recently used and to reclaim system physical memory
+Previous Daemon (33726) stopped at Mon Jan 12 10:02:24 CST 2026 after being idle for 5 minutes and not recently used and to reclaim system physical memory
+Previous Daemon (56608) stopped at Mon Jan 12 09:14:03 CST 2026 by user or operating system
+Starting a Gradle Daemon, 6 busy and 7 stopped Daemons could not be reused, use --status for details
+Starting process 'command '/home/cslh-frank/jdks/jdk-17.0.11+9/bin/java''. Working directory: /home/cslh-frank/.gradle/.tmp/tmp-jvm8631710353399856031probe Command: /home/cslh-frank/jdks/jdk-17.0.11+9/bin/java -Xmx32m -Xms32m -cp . JavaProbe
+Successfully started process 'command '/home/cslh-frank/jdks/jdk-17.0.11+9/bin/java''
+Received JVM installation metadata from '/home/cslh-frank/jdks/jdk-17.0.11+9': {JAVA_HOME=/home/cslh-frank/jdks/jdk-17.0.11+9, JAVA_VERSION=17.0.11, JAVA_VENDOR=Eclipse Adoptium, RUNTIME_NAME=OpenJDK Runtime Environment, RUNTIME_VERSION=17.0.11+9, VM_NAME=OpenJDK 64-Bit Server VM, VM_VERSION=17.0.11+9, VM_VENDOR=Eclipse Adoptium, OS_ARCH=amd64}
+Starting process 'Gradle build daemon'. Working directory: /home/cslh-frank/.gradle/daemon/8.13 Command: /home/cslh-frank/jdks/jdk-17.0.11+9/bin/java --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED --add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.prefs/java.util.prefs=ALL-UNNAMED --add-opens=java.base/java.nio.charset=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.xml/javax.xml.namespace=ALL-UNNAMED -Xmx4g -Dfile.encoding=UTF-8 -Duser.country=US -Duser.language=en -Duser.variant -cp /home/cslh-frank/.gradle/wrapper/dists/gradle-8.13-bin/5xuhj0ry160q40clulazy9h7d/gradle-8.13/lib/gradle-daemon-main-8.13.jar -javaagent:/home/cslh-frank/.gradle/wrapper/dists/gradle-8.13-bin/5xuhj0ry160q40clulazy9h7d/gradle-8.13/lib/agents/gradle-instrumentation-agent-8.13.jar org.gradle.launcher.daemon.bootstrap.GradleDaemon 8.13
+Successfully started process 'Gradle build daemon'
+An attempt to start the daemon took 4.266 secs.
+The client will now receive all logging from the daemon (pid: 40128). The daemon log file: /home/cslh-frank/.gradle/daemon/8.13/daemon-40128.out.log
+Starting build in new daemon [memory: 4 GiB]
+Using 12 worker leases.
+Received JVM installation metadata from '/home/cslh-frank/jdks/jdk-17.0.11+9': {JAVA_HOME=/home/cslh-frank/jdks/jdk-17.0.11+9, JAVA_VERSION=17.0.11, JAVA_VENDOR=Eclipse Adoptium, RUNTIME_NAME=OpenJDK Runtime Environment, RUNTIME_VERSION=17.0.11+9, VM_NAME=OpenJDK 64-Bit Server VM, VM_VERSION=17.0.11+9, VM_VENDOR=Eclipse Adoptium, OS_ARCH=amd64}
+Watching the file system is configured to be enabled if available
+Now considering [/home/cslh-frank/main_app] as hierarchies to watch
+File system watching is active
+Starting Build
+Invalidating in-memory cache of /home/cslh-frank/.gradle/caches/8.13/fileHashes/fileHashes.bin
+Invalidating in-memory cache of /home/cslh-frank/.gradle/caches/8.13/fileHashes/resourceHashesCache.bin
+Invalidating in-memory cache of /home/cslh-frank/.gradle/caches/journal-1/file-access.bin
+Settings evaluated using settings file '/home/cslh-frank/main_app/settings.gradle.kts'.
+Using local directory build cache for the root build (location = /home/cslh-frank/.gradle/caches/build-cache-1, remove unused entries = after 7 days).
+Type-safe project accessors is an incubating feature.
+Projects loaded. Root project using build file '/home/cslh-frank/main_app/build.gradle.kts'.
+Included projects: [root project 'main_app', project ':app', project ':core', project ':data', project ':feature', project ':tingwuTestApp', project ':core:test', project ':core:util', project ':data:ai-core', project ':feature:chat', project ':feature:connectivity', project ':feature:media', project ':feature:usercenter']
+
+> Configure project :
+Evaluating root project 'main_app' using build file '/home/cslh-frank/main_app/build.gradle.kts'.
+Resolved plugin [id: 'com.android.application', version: '8.13.0', apply: false]
+Resolved plugin [id: 'com.android.library', version: '8.13.0', apply: false]
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '1.9.25', apply: false]
+Resolved plugin [id: 'org.jetbrains.kotlin.kapt', version: '1.9.25', apply: false]
+Resolved plugin [id: 'com.google.dagger.hilt.android', version: '2.52', apply: false]
+Resolved plugin [id: 'org.jlleitschuh.gradle.ktlint', version: '12.1.1', apply: false]
+Invalidating in-memory cache of /home/cslh-frank/.gradle/caches/journal-1/file-access.bin
+Invalidating in-memory cache of /home/cslh-frank/main_app/.gradle/8.13/fileHashes/fileHashes.bin
+Invalidating in-memory cache of /home/cslh-frank/main_app/.gradle/8.13/fileHashes/resourceHashesCache.bin
+
+> Configure project :app
+Evaluating project ':app' using build file '/home/cslh-frank/main_app/app/build.gradle.kts'.
+Resolved plugin [id: 'com.android.application', version: '8.13.0']
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '1.9.25']
+Resolved plugin [id: 'org.jetbrains.kotlin.kapt', version: '1.9.25']
+Resolved plugin [id: 'com.google.dagger.hilt.android', version: '2.52']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+Starting process 'command '/usr/lib/jvm/java-21-openjdk-amd64/bin/java''. Working directory: /home/cslh-frank/.gradle/.tmp/tmp-jvm432157334107289799probe Command: /usr/lib/jvm/java-21-openjdk-amd64/bin/java -Xmx32m -Xms32m -cp . JavaProbe
+Successfully started process 'command '/usr/lib/jvm/java-21-openjdk-amd64/bin/java''
+Received JVM installation metadata from '/usr/lib/jvm/java-21-openjdk-amd64': {JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64, JAVA_VERSION=21.0.9, JAVA_VENDOR=Ubuntu, RUNTIME_NAME=OpenJDK Runtime Environment, RUNTIME_VERSION=21.0.9+10-Ubuntu-124.04, VM_NAME=OpenJDK 64-Bit Server VM, VM_VERSION=21.0.9+10-Ubuntu-124.04, VM_VENDOR=Ubuntu, OS_ARCH=amd64}
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+
+> Configure project :core
+Evaluating project ':core' using build file '/home/cslh-frank/main_app/core/build.gradle'.
+
+> Configure project :data
+Evaluating project ':data' using build file '/home/cslh-frank/main_app/data/build.gradle'.
+
+> Configure project :feature
+Evaluating project ':feature' using build file '/home/cslh-frank/main_app/feature/build.gradle'.
+
+> Configure project :tingwuTestApp
+Evaluating project ':tingwuTestApp' using build file '/home/cslh-frank/main_app/tingwuTestApp/build.gradle.kts'.
+Invalidating in-memory cache of /home/cslh-frank/.gradle/caches/8.13/fileHashes/fileHashes.bin
+Invalidating in-memory cache of /home/cslh-frank/.gradle/caches/8.13/fileHashes/resourceHashesCache.bin
+Invalidating in-memory cache of /home/cslh-frank/.gradle/caches/journal-1/file-access.bin
+Resolved plugin [id: 'com.android.library']
+Resolved plugin [id: 'org.jetbrains.kotlin.android']
+Resolved plugin [id: 'org.jetbrains.kotlin.kapt']
+Resolved plugin [id: 'com.google.dagger.hilt.android']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+Invalidating in-memory cache of /home/cslh-frank/.gradle/caches/8.13/fileHashes/fileHashes.bin
+Invalidating in-memory cache of /home/cslh-frank/.gradle/caches/8.13/fileHashes/resourceHashesCache.bin
+Invalidating in-memory cache of /home/cslh-frank/.gradle/caches/journal-1/file-access.bin
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+
+> Configure project :core:test
+Evaluating project ':core:test' using build file '/home/cslh-frank/main_app/core/test/build.gradle.kts'.
+Invalidating in-memory cache of /home/cslh-frank/.gradle/caches/8.13/fileHashes/fileHashes.bin
+Invalidating in-memory cache of /home/cslh-frank/.gradle/caches/8.13/fileHashes/resourceHashesCache.bin
+Invalidating in-memory cache of /home/cslh-frank/.gradle/caches/journal-1/file-access.bin
+Resolved plugin [id: 'com.android.library', version: '8.13.0']
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '1.9.25']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+Invalidating in-memory cache of /home/cslh-frank/.gradle/caches/journal-1/file-access.bin
+Invalidating in-memory cache of /home/cslh-frank/.gradle/caches/8.13/fileHashes/fileHashes.bin
+Invalidating in-memory cache of /home/cslh-frank/.gradle/caches/8.13/fileHashes/resourceHashesCache.bin
+
+> Configure project :core:util
+Evaluating project ':core:util' using build file '/home/cslh-frank/main_app/core/util/build.gradle.kts'.
+Resolved plugin [id: 'com.android.library', version: '8.13.0']
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '1.9.25']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+
+> Configure project :data:ai-core
+Evaluating project ':data:ai-core' using build file '/home/cslh-frank/main_app/data/ai-core/build.gradle.kts'.
+Resolved plugin [id: 'com.android.library', version: '8.13.0']
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '1.9.25']
+Resolved plugin [id: 'org.jetbrains.kotlin.kapt', version: '1.9.25']
+Resolved plugin [id: 'com.google.dagger.hilt.android', version: '2.52']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+
+> Configure project :feature:chat
+Evaluating project ':feature:chat' using build file '/home/cslh-frank/main_app/feature/chat/build.gradle.kts'.
+Resolved plugin [id: 'com.android.library', version: '8.13.0']
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '1.9.25']
+Resolved plugin [id: 'org.jetbrains.kotlin.kapt', version: '1.9.25']
+Resolved plugin [id: 'com.google.dagger.hilt.android', version: '2.52']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+
+> Configure project :feature:connectivity
+Evaluating project ':feature:connectivity' using build file '/home/cslh-frank/main_app/feature/connectivity/build.gradle.kts'.
+Resolved plugin [id: 'com.android.library', version: '8.13.0']
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '1.9.25']
+Resolved plugin [id: 'org.jetbrains.kotlin.kapt', version: '1.9.25']
+Resolved plugin [id: 'com.google.dagger.hilt.android', version: '2.52']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+
+> Configure project :feature:media
+Evaluating project ':feature:media' using build file '/home/cslh-frank/main_app/feature/media/build.gradle.kts'.
+Resolved plugin [id: 'com.android.library', version: '8.13.0']
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '1.9.25']
+Resolved plugin [id: 'org.jetbrains.kotlin.kapt', version: '1.9.25']
+Resolved plugin [id: 'com.google.dagger.hilt.android', version: '2.52']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+
+> Configure project :feature:usercenter
+Evaluating project ':feature:usercenter' using build file '/home/cslh-frank/main_app/feature/usercenter/build.gradle.kts'.
+Resolved plugin [id: 'com.android.library', version: '8.13.0']
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '1.9.25']
+Resolved plugin [id: 'org.jetbrains.kotlin.kapt', version: '1.9.25']
+Resolved plugin [id: 'com.google.dagger.hilt.android', version: '2.52']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+All projects evaluated.
+Task path ':feature:chat:kaptGenerateStubsDebugKotlin' matched project ':feature:chat'
+Task name matched 'kaptGenerateStubsDebugKotlin'
+Selected primary task 'kaptGenerateStubsDebugKotlin' from project :feature:chat
+Tasks to be executed: [task ':core:util:checkKotlinGradlePluginConfigurationErrors', task ':core:util:preBuild', task ':core:util:preDebugBuild', task ':core:util:generateDebugResValues', task ':core:util:generateDebugResources', task ':core:util:packageDebugResources', task ':core:util:processDebugNavigationResources', task ':core:util:parseDebugLocalResources', task ':core:util:generateDebugRFile', task ':core:util:compileDebugKotlin', task ':core:util:javaPreCompileDebug', task ':core:util:compileDebugJavaWithJavac', task ':core:util:bundleLibCompileToJarDebug', task ':data:ai-core:preBuild', task ':data:ai-core:preDebugBuild', task ':data:ai-core:generateDebugResValues', task ':data:ai-core:generateDebugResources', task ':data:ai-core:packageDebugResources', task ':data:ai-core:processDebugNavigationResources', task ':data:ai-core:parseDebugLocalResources', task ':data:ai-core:generateDebugRFile', task ':core:util:bundleLibRuntimeToJarDebug', task ':data:ai-core:checkKotlinGradlePluginConfigurationErrors', task ':data:ai-core:generateDebugBuildConfig', task ':data:ai-core:kaptGenerateStubsDebugKotlin', task ':data:ai-core:kaptDebugKotlin', task ':data:ai-core:compileDebugKotlin', task ':data:ai-core:javaPreCompileDebug', task ':data:ai-core:compileDebugJavaWithJavac', task ':data:ai-core:transformDebugClassesWithAsm', task ':data:ai-core:bundleLibCompileToJarDebug', task ':feature:chat:checkKotlinGradlePluginConfigurationErrors', task ':feature:chat:preBuild', task ':feature:chat:preDebugBuild', task ':feature:chat:generateDebugBuildConfig', task ':feature:chat:generateDebugResValues', task ':feature:chat:generateDebugResources', task ':feature:chat:packageDebugResources', task ':feature:chat:processDebugNavigationResources', task ':feature:chat:parseDebugLocalResources', task ':feature:chat:generateDebugRFile', task ':feature:connectivity:preBuild', task ':feature:connectivity:preDebugBuild', task ':feature:connectivity:generateDebugResValues', task ':feature:connectivity:generateDebugResources', task ':feature:connectivity:packageDebugResources', task ':feature:connectivity:processDebugNavigationResources', task ':feature:connectivity:parseDebugLocalResources', task ':feature:connectivity:generateDebugRFile', task ':feature:connectivity:checkKotlinGradlePluginConfigurationErrors', task ':feature:connectivity:generateDebugBuildConfig', task ':feature:connectivity:kaptGenerateStubsDebugKotlin', task ':feature:connectivity:kaptDebugKotlin', task ':feature:connectivity:compileDebugKotlin', task ':feature:connectivity:javaPreCompileDebug', task ':feature:connectivity:compileDebugJavaWithJavac', task ':feature:connectivity:transformDebugClassesWithAsm', task ':feature:connectivity:bundleLibCompileToJarDebug', task ':feature:media:preBuild', task ':feature:media:preDebugBuild', task ':feature:media:generateDebugResValues', task ':feature:media:generateDebugResources', task ':feature:media:packageDebugResources', task ':feature:media:processDebugNavigationResources', task ':feature:media:parseDebugLocalResources', task ':feature:media:generateDebugRFile', task ':feature:connectivity:bundleLibRuntimeToJarDebug', task ':feature:media:checkKotlinGradlePluginConfigurationErrors', task ':feature:media:kaptGenerateStubsDebugKotlin', task ':feature:media:kaptDebugKotlin', task ':feature:media:compileDebugKotlin', task ':feature:media:javaPreCompileDebug', task ':feature:media:compileDebugJavaWithJavac', task ':feature:media:transformDebugClassesWithAsm', task ':feature:media:bundleLibCompileToJarDebug', task ':feature:usercenter:preBuild', task ':feature:usercenter:preDebugBuild', task ':feature:usercenter:generateDebugResValues', task ':feature:usercenter:generateDebugResources', task ':feature:usercenter:packageDebugResources', task ':feature:usercenter:processDebugNavigationResources', task ':feature:usercenter:parseDebugLocalResources', task ':feature:usercenter:generateDebugRFile', task ':feature:usercenter:checkKotlinGradlePluginConfigurationErrors', task ':feature:usercenter:kaptGenerateStubsDebugKotlin', task ':feature:usercenter:kaptDebugKotlin', task ':feature:usercenter:compileDebugKotlin', task ':feature:usercenter:javaPreCompileDebug', task ':feature:usercenter:compileDebugJavaWithJavac', task ':feature:usercenter:transformDebugClassesWithAsm', task ':feature:usercenter:bundleLibCompileToJarDebug', task ':feature:chat:kaptGenerateStubsDebugKotlin']
+Tasks that were excluded: []
+Resolve mutations for :core:util:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker,5,main]) started.
+Resolve mutations for :feature:chat:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 2,5,main]) started.
+Resolve mutations for :data:ai-core:preBuild (Thread[Execution worker Thread 3,5,main]) started.
+Resolve mutations for :feature:connectivity:preBuild (Thread[Execution worker Thread 4,5,main]) started.
+Resolve mutations for :feature:media:preBuild (Thread[Execution worker Thread 5,5,main]) started.
+Resolve mutations for :feature:usercenter:preBuild (Thread[Execution worker Thread 7,5,main]) started.
+:feature:usercenter:preBuild (Thread[Execution worker Thread 7,5,main]) started.
+:core:util:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker,5,main]) started.
+:feature:media:preBuild (Thread[Execution worker Thread 5,5,main]) started.
+:feature:chat:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 2,5,main]) started.
+:feature:connectivity:preBuild (Thread[included builds,5,main]) started.
+:data:ai-core:preBuild (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :feature:media:preBuild UP-TO-DATE
+Skipping task ':feature:media:preBuild' as it has no actions.
+
+> Task :feature:connectivity:preBuild UP-TO-DATE
+Skipping task ':feature:connectivity:preBuild' as it has no actions.
+
+> Task :feature:usercenter:preBuild UP-TO-DATE
+Skipping task ':feature:usercenter:preBuild' as it has no actions.
+
+> Task :data:ai-core:preBuild UP-TO-DATE
+Skipping task ':data:ai-core:preBuild' as it has no actions.
+Resolve mutations for :feature:connectivity:preDebugBuild (Thread[Execution worker Thread 9,5,main]) started.
+Resolve mutations for :feature:media:preDebugBuild (Thread[Execution worker Thread 5,5,main]) started.
+Resolve mutations for :data:ai-core:preDebugBuild (Thread[Execution worker Thread 3,5,main]) started.
+Resolve mutations for :feature:usercenter:preDebugBuild (Thread[Execution worker Thread 7,5,main]) started.
+:feature:connectivity:preDebugBuild (Thread[Execution worker Thread 9,5,main]) started.
+:feature:media:preDebugBuild (Thread[Execution worker Thread 5,5,main]) started.
+:feature:usercenter:preDebugBuild (Thread[Execution worker Thread 7,5,main]) started.
+
+> Task :feature:media:preDebugBuild UP-TO-DATE
+Skipping task ':feature:media:preDebugBuild' as it has no actions.
+:data:ai-core:preDebugBuild (Thread[Execution worker Thread 4,5,main]) started.
+Resolve mutations for :feature:media:generateDebugResValues (Thread[Execution worker Thread 5,5,main]) started.
+
+> Task :feature:connectivity:preDebugBuild UP-TO-DATE
+Skipping task ':feature:connectivity:preDebugBuild' as it has no actions.
+
+> Task :data:ai-core:preDebugBuild UP-TO-DATE
+Skipping task ':data:ai-core:preDebugBuild' as it has no actions.
+Resolve mutations for :data:ai-core:generateDebugResValues (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :feature:usercenter:preDebugBuild UP-TO-DATE
+Skipping task ':feature:usercenter:preDebugBuild' as it has no actions.
+Resolve mutations for :feature:usercenter:generateDebugResValues (Thread[Execution worker Thread 7,5,main]) started.
+Resolve mutations for :feature:connectivity:generateDebugResValues (Thread[Execution worker Thread 3,5,main]) started.
+:feature:usercenter:generateDebugResValues (Thread[Execution worker Thread 7,5,main]) started.
+:feature:media:generateDebugResValues (Thread[Execution worker Thread 9,5,main]) started.
+:data:ai-core:generateDebugResValues (Thread[Execution worker Thread 4,5,main]) started.
+:feature:connectivity:generateDebugResValues (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :feature:chat:checkKotlinGradlePluginConfigurationErrors
+Caching disabled for task ':feature:chat:checkKotlinGradlePluginConfigurationErrors' because:
+  This task renders reported diagnostics; caching this task will hide diagnostics and obscure issues in the build
+Task ':feature:chat:checkKotlinGradlePluginConfigurationErrors' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Resolve mutations for :feature:chat:preBuild (Thread[Execution worker Thread 2,5,main]) started.
+:feature:chat:preBuild (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :feature:chat:preBuild UP-TO-DATE
+Skipping task ':feature:chat:preBuild' as it has no actions.
+Resolve mutations for :feature:chat:preDebugBuild (Thread[Execution worker Thread 2,5,main]) started.
+:feature:chat:preDebugBuild (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :core:util:checkKotlinGradlePluginConfigurationErrors
+Caching disabled for task ':core:util:checkKotlinGradlePluginConfigurationErrors' because:
+  This task renders reported diagnostics; caching this task will hide diagnostics and obscure issues in the build
+Task ':core:util:checkKotlinGradlePluginConfigurationErrors' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+
+> Task :feature:chat:preDebugBuild UP-TO-DATE
+Skipping task ':feature:chat:preDebugBuild' as it has no actions.
+Resolve mutations for :core:util:preBuild (Thread[Execution worker,5,main]) started.
+:core:util:preBuild (Thread[Execution worker,5,main]) started.
+
+> Task :core:util:preBuild UP-TO-DATE
+Skipping task ':core:util:preBuild' as it has no actions.
+Resolve mutations for :core:util:preDebugBuild (Thread[Execution worker,5,main]) started.
+:core:util:preDebugBuild (Thread[Execution worker,5,main]) started.
+
+> Task :core:util:preDebugBuild UP-TO-DATE
+Skipping task ':core:util:preDebugBuild' as it has no actions.
+Resolve mutations for :core:util:generateDebugResValues (Thread[Execution worker,5,main]) started.
+Resolve mutations for :feature:chat:generateDebugBuildConfig (Thread[Execution worker Thread 2,5,main]) started.
+:core:util:generateDebugResValues (Thread[Execution worker,5,main]) started.
+:feature:chat:generateDebugBuildConfig (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :core:util:generateDebugResValues UP-TO-DATE
+Build cache key for task ':core:util:generateDebugResValues' is 3444e91c421050ec356155f9df792e3c
+Skipping task ':core:util:generateDebugResValues' as it is up-to-date.
+Resolve mutations for :core:util:generateDebugResources (Thread[Execution worker,5,main]) started.
+
+> Task :feature:media:generateDebugResValues UP-TO-DATE
+Build cache key for task ':feature:media:generateDebugResValues' is 3444e91c421050ec356155f9df792e3c
+Skipping task ':feature:media:generateDebugResValues' as it is up-to-date.
+:core:util:generateDebugResources (Thread[Execution worker,5,main]) started.
+Resolve mutations for :feature:media:generateDebugResources (Thread[Execution worker Thread 9,5,main]) started.
+:feature:media:generateDebugResources (Thread[Execution worker Thread 9,5,main]) started.
+
+> Task :feature:chat:generateDebugBuildConfig UP-TO-DATE
+Invalidating in-memory cache of /home/cslh-frank/main_app/.gradle/8.13/fileHashes/fileHashes.bin
+Invalidating in-memory cache of /home/cslh-frank/main_app/.gradle/8.13/fileHashes/resourceHashesCache.bin
+Build cache key for task ':feature:chat:generateDebugBuildConfig' is eba0b8245b8a1b625db5607f53e99083
+Skipping task ':feature:chat:generateDebugBuildConfig' as it is up-to-date.
+Resolve mutations for :feature:chat:generateDebugResValues (Thread[Execution worker Thread 2,5,main]) started.
+:feature:chat:generateDebugResValues (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :data:ai-core:generateDebugResValues UP-TO-DATE
+Build cache key for task ':data:ai-core:generateDebugResValues' is 3444e91c421050ec356155f9df792e3c
+Skipping task ':data:ai-core:generateDebugResValues' as it is up-to-date.
+Resolve mutations for :data:ai-core:generateDebugResources (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :feature:connectivity:generateDebugResValues UP-TO-DATE
+Invalidating in-memory cache of /home/cslh-frank/main_app/.gradle/buildOutputCleanup/outputFiles.bin
+Build cache key for task ':feature:connectivity:generateDebugResValues' is 3444e91c421050ec356155f9df792e3c
+Skipping task ':feature:connectivity:generateDebugResValues' as it is up-to-date.
+Resolve mutations for :feature:connectivity:generateDebugResources (Thread[Execution worker Thread 3,5,main]) started.
+:data:ai-core:generateDebugResources (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :feature:usercenter:generateDebugResValues UP-TO-DATE
+Build cache key for task ':feature:usercenter:generateDebugResValues' is 3444e91c421050ec356155f9df792e3c
+Skipping task ':feature:usercenter:generateDebugResValues' as it is up-to-date.
+Resolve mutations for :feature:usercenter:generateDebugResources (Thread[Execution worker Thread 7,5,main]) started.
+:feature:usercenter:generateDebugResources (Thread[Execution worker Thread 11,5,main]) started.
+:feature:connectivity:generateDebugResources (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :feature:chat:generateDebugResValues UP-TO-DATE
+Build cache key for task ':feature:chat:generateDebugResValues' is 3444e91c421050ec356155f9df792e3c
+Skipping task ':feature:chat:generateDebugResValues' as it is up-to-date.
+Resolve mutations for :feature:chat:generateDebugResources (Thread[Execution worker Thread 2,5,main]) started.
+:feature:chat:generateDebugResources (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :feature:connectivity:generateDebugResources UP-TO-DATE
+Build cache key for task ':feature:connectivity:generateDebugResources' is b8c2186b757a43933d493017f9c23781
+Skipping task ':feature:connectivity:generateDebugResources' as it is up-to-date.
+Resolve mutations for :feature:connectivity:packageDebugResources (Thread[Execution worker Thread 7,5,main]) started.
+:feature:connectivity:packageDebugResources (Thread[Execution worker Thread 7,5,main]) started.
+
+> Task :data:ai-core:generateDebugResources UP-TO-DATE
+Build cache key for task ':data:ai-core:generateDebugResources' is b8c2186b757a43933d493017f9c23781
+Skipping task ':data:ai-core:generateDebugResources' as it is up-to-date.
+Resolve mutations for :data:ai-core:packageDebugResources (Thread[Execution worker Thread 4,5,main]) started.
+:data:ai-core:packageDebugResources (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :feature:usercenter:generateDebugResources UP-TO-DATE
+Build cache key for task ':feature:usercenter:generateDebugResources' is b8c2186b757a43933d493017f9c23781
+Skipping task ':feature:usercenter:generateDebugResources' as it is up-to-date.
+Resolve mutations for :feature:usercenter:packageDebugResources (Thread[Execution worker Thread 11,5,main]) started.
+:feature:usercenter:packageDebugResources (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :core:util:generateDebugResources UP-TO-DATE
+Build cache key for task ':core:util:generateDebugResources' is b8c2186b757a43933d493017f9c23781
+Skipping task ':core:util:generateDebugResources' as it is up-to-date.
+Resolve mutations for :core:util:packageDebugResources (Thread[Execution worker,5,main]) started.
+
+> Task :feature:media:generateDebugResources UP-TO-DATE
+Build cache key for task ':feature:media:generateDebugResources' is b8c2186b757a43933d493017f9c23781
+Skipping task ':feature:media:generateDebugResources' as it is up-to-date.
+
+> Task :feature:chat:generateDebugResources UP-TO-DATE
+Build cache key for task ':feature:chat:generateDebugResources' is 22f5d992444373737a0057ecf0e32317
+Skipping task ':feature:chat:generateDebugResources' as it is up-to-date.
+Resolve mutations for :feature:media:packageDebugResources (Thread[Execution worker Thread 9,5,main]) started.
+Resolve mutations for :feature:chat:packageDebugResources (Thread[Execution worker Thread 2,5,main]) started.
+:feature:chat:packageDebugResources (Thread[Execution worker Thread 2,5,main]) started.
+:core:util:packageDebugResources (Thread[Execution worker,5,main]) started.
+:feature:media:packageDebugResources (Thread[Execution worker Thread 9,5,main]) started.
+
+> Task :data:ai-core:packageDebugResources UP-TO-DATE
+Build cache key for task ':data:ai-core:packageDebugResources' is 468737b2d6ba97b7e0b5bab7ce9bbe74
+Skipping task ':data:ai-core:packageDebugResources' as it is up-to-date.
+Resolve mutations for :data:ai-core:processDebugNavigationResources (Thread[Execution worker Thread 3,5,main]) started.
+:data:ai-core:processDebugNavigationResources (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :feature:connectivity:packageDebugResources UP-TO-DATE
+Build cache key for task ':feature:connectivity:packageDebugResources' is 00abe63f8ef7f2fe507ec6f5c971f551
+Skipping task ':feature:connectivity:packageDebugResources' as it is up-to-date.
+Resolve mutations for :feature:connectivity:processDebugNavigationResources (Thread[Execution worker Thread 7,5,main]) started.
+:feature:connectivity:processDebugNavigationResources (Thread[Execution worker Thread 7,5,main]) started.
+
+> Task :core:util:packageDebugResources UP-TO-DATE
+Build cache key for task ':core:util:packageDebugResources' is 49a8a35fae529ecded0e24793983b33a
+Skipping task ':core:util:packageDebugResources' as it is up-to-date.
+Resolve mutations for :core:util:processDebugNavigationResources (Thread[Execution worker,5,main]) started.
+:core:util:processDebugNavigationResources (Thread[Execution worker,5,main]) started.
+
+> Task :feature:usercenter:packageDebugResources UP-TO-DATE
+Build cache key for task ':feature:usercenter:packageDebugResources' is c7c2434a195bb7d73d8a2d70c4e5f68c
+Skipping task ':feature:usercenter:packageDebugResources' as it is up-to-date.
+Resolve mutations for :feature:usercenter:processDebugNavigationResources (Thread[Execution worker Thread 11,5,main]) started.
+:feature:usercenter:processDebugNavigationResources (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :feature:media:packageDebugResources UP-TO-DATE
+Build cache key for task ':feature:media:packageDebugResources' is f78fcf58b9fdecbc850374b680837b37
+Skipping task ':feature:media:packageDebugResources' as it is up-to-date.
+Resolve mutations for :feature:media:processDebugNavigationResources (Thread[Execution worker Thread 9,5,main]) started.
+:feature:media:processDebugNavigationResources (Thread[Execution worker Thread 9,5,main]) started.
+
+> Task :data:ai-core:processDebugNavigationResources UP-TO-DATE
+Build cache key for task ':data:ai-core:processDebugNavigationResources' is e2793778066222ee705ba96c140dab7d
+Skipping task ':data:ai-core:processDebugNavigationResources' as it is up-to-date.
+Resolve mutations for :data:ai-core:parseDebugLocalResources (Thread[Execution worker Thread 4,5,main]) started.
+:data:ai-core:parseDebugLocalResources (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :feature:media:processDebugNavigationResources UP-TO-DATE
+Build cache key for task ':feature:media:processDebugNavigationResources' is e2793778066222ee705ba96c140dab7d
+Skipping task ':feature:media:processDebugNavigationResources' as it is up-to-date.
+
+> Task :feature:connectivity:processDebugNavigationResources UP-TO-DATE
+Build cache key for task ':feature:connectivity:processDebugNavigationResources' is e2793778066222ee705ba96c140dab7d
+Skipping task ':feature:connectivity:processDebugNavigationResources' as it is up-to-date.
+
+> Task :core:util:processDebugNavigationResources UP-TO-DATE
+Build cache key for task ':core:util:processDebugNavigationResources' is e2793778066222ee705ba96c140dab7d
+Skipping task ':core:util:processDebugNavigationResources' as it is up-to-date.
+Resolve mutations for :core:util:parseDebugLocalResources (Thread[Execution worker,5,main]) started.
+
+> Task :feature:chat:packageDebugResources UP-TO-DATE
+Build cache key for task ':feature:chat:packageDebugResources' is 4ee48f68ef8c27749a0fe3aaf3680ca3
+Skipping task ':feature:chat:packageDebugResources' as it is up-to-date.
+Resolve mutations for :feature:chat:processDebugNavigationResources (Thread[Execution worker Thread 2,5,main]) started.
+:core:util:parseDebugLocalResources (Thread[Execution worker,5,main]) started.
+:feature:chat:processDebugNavigationResources (Thread[Execution worker Thread 2,5,main]) started.
+Resolve mutations for :feature:media:parseDebugLocalResources (Thread[Execution worker Thread 9,5,main]) started.
+Resolve mutations for :feature:connectivity:parseDebugLocalResources (Thread[included builds,5,main]) started.
+:feature:media:parseDebugLocalResources (Thread[Execution worker Thread 9,5,main]) started.
+:feature:connectivity:parseDebugLocalResources (Thread[included builds,5,main]) started.
+
+> Task :feature:usercenter:processDebugNavigationResources UP-TO-DATE
+Build cache key for task ':feature:usercenter:processDebugNavigationResources' is e2793778066222ee705ba96c140dab7d
+Skipping task ':feature:usercenter:processDebugNavigationResources' as it is up-to-date.
+Resolve mutations for :feature:usercenter:parseDebugLocalResources (Thread[Execution worker Thread 8,5,main]) started.
+:feature:usercenter:parseDebugLocalResources (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :feature:chat:processDebugNavigationResources UP-TO-DATE
+Build cache key for task ':feature:chat:processDebugNavigationResources' is 1f96a7ef85f3b589691aabed2c208952
+Skipping task ':feature:chat:processDebugNavigationResources' as it is up-to-date.
+Resolve mutations for :feature:chat:parseDebugLocalResources (Thread[Execution worker Thread 2,5,main]) started.
+:feature:chat:parseDebugLocalResources (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :feature:media:parseDebugLocalResources UP-TO-DATE
+Build cache key for task ':feature:media:parseDebugLocalResources' is 72eb92740f9ba6d0e4507583f08bda31
+Skipping task ':feature:media:parseDebugLocalResources' as it is up-to-date.
+Resolve mutations for :feature:media:generateDebugRFile (Thread[Execution worker Thread 9,5,main]) started.
+
+> Task :feature:connectivity:parseDebugLocalResources UP-TO-DATE
+Build cache key for task ':feature:connectivity:parseDebugLocalResources' is 72eb92740f9ba6d0e4507583f08bda31
+Skipping task ':feature:connectivity:parseDebugLocalResources' as it is up-to-date.
+:feature:media:generateDebugRFile (Thread[Execution worker Thread 9,5,main]) started.
+Resolve mutations for :feature:connectivity:generateDebugRFile (Thread[included builds,5,main]) started.
+:feature:connectivity:generateDebugRFile (Thread[included builds,5,main]) started.
+
+> Task :core:util:parseDebugLocalResources UP-TO-DATE
+Build cache key for task ':core:util:parseDebugLocalResources' is 72eb92740f9ba6d0e4507583f08bda31
+Skipping task ':core:util:parseDebugLocalResources' as it is up-to-date.
+Resolve mutations for :core:util:generateDebugRFile (Thread[Execution worker,5,main]) started.
+:core:util:generateDebugRFile (Thread[Execution worker,5,main]) started.
+
+> Task :feature:connectivity:generateDebugRFile UP-TO-DATE
+Build cache key for task ':feature:connectivity:generateDebugRFile' is fd322bb19540e4b8101f6cbdca192384
+Skipping task ':feature:connectivity:generateDebugRFile' as it is up-to-date.
+Resolve mutations for :feature:connectivity:checkKotlinGradlePluginConfigurationErrors (Thread[included builds,5,main]) started.
+
+> Task :feature:chat:parseDebugLocalResources UP-TO-DATE
+Build cache key for task ':feature:chat:parseDebugLocalResources' is 5f9769050d885b1272a56a42f13c57c1
+Skipping task ':feature:chat:parseDebugLocalResources' as it is up-to-date.
+Resolve mutations for :feature:chat:generateDebugRFile (Thread[included builds,5,main]) started.
+:feature:connectivity:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 4,5,main]) started.
+:feature:chat:generateDebugRFile (Thread[included builds,5,main]) started.
+
+> Task :core:util:generateDebugRFile UP-TO-DATE
+Build cache key for task ':core:util:generateDebugRFile' is 9435fe80ff068729bc99e25580442ef0
+Skipping task ':core:util:generateDebugRFile' as it is up-to-date.
+Resolve mutations for :core:util:compileDebugKotlin (Thread[Execution worker,5,main]) started.
+
+> Task :feature:connectivity:checkKotlinGradlePluginConfigurationErrors
+Caching disabled for task ':feature:connectivity:checkKotlinGradlePluginConfigurationErrors' because:
+  This task renders reported diagnostics; caching this task will hide diagnostics and obscure issues in the build
+Task ':feature:connectivity:checkKotlinGradlePluginConfigurationErrors' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Resolve mutations for :feature:connectivity:generateDebugBuildConfig (Thread[Execution worker Thread 4,5,main]) started.
+:core:util:compileDebugKotlin (Thread[Execution worker,5,main]) started.
+:feature:connectivity:generateDebugBuildConfig (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :feature:usercenter:parseDebugLocalResources UP-TO-DATE
+Build cache key for task ':feature:usercenter:parseDebugLocalResources' is 72eb92740f9ba6d0e4507583f08bda31
+Skipping task ':feature:usercenter:parseDebugLocalResources' as it is up-to-date.
+Resolve mutations for :feature:usercenter:generateDebugRFile (Thread[Execution worker Thread 8,5,main]) started.
+:feature:usercenter:generateDebugRFile (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :data:ai-core:parseDebugLocalResources UP-TO-DATE
+Build cache key for task ':data:ai-core:parseDebugLocalResources' is 72eb92740f9ba6d0e4507583f08bda31
+Skipping task ':data:ai-core:parseDebugLocalResources' as it is up-to-date.
+Resolve mutations for :data:ai-core:generateDebugRFile (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :feature:media:generateDebugRFile UP-TO-DATE
+Build cache key for task ':feature:media:generateDebugRFile' is ea32f427e0890ee0a487a43331dc0fe5
+Skipping task ':feature:media:generateDebugRFile' as it is up-to-date.
+:data:ai-core:generateDebugRFile (Thread[Execution worker Thread 3,5,main]) started.
+Resolve mutations for :feature:media:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 2,5,main]) started.
+:feature:media:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :feature:media:checkKotlinGradlePluginConfigurationErrors
+Caching disabled for task ':feature:media:checkKotlinGradlePluginConfigurationErrors' because:
+  This task renders reported diagnostics; caching this task will hide diagnostics and obscure issues in the build
+Task ':feature:media:checkKotlinGradlePluginConfigurationErrors' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Resolve mutations for :feature:media:javaPreCompileDebug (Thread[Execution worker Thread 2,5,main]) started.
+:feature:media:javaPreCompileDebug (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :feature:connectivity:generateDebugBuildConfig UP-TO-DATE
+Build cache key for task ':feature:connectivity:generateDebugBuildConfig' is 2b70e091cbe2e6868c8e496750bb1fcb
+Skipping task ':feature:connectivity:generateDebugBuildConfig' as it is up-to-date.
+Resolve mutations for :feature:connectivity:javaPreCompileDebug (Thread[Execution worker Thread 4,5,main]) started.
+:feature:connectivity:javaPreCompileDebug (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :feature:chat:generateDebugRFile UP-TO-DATE
+Build cache key for task ':feature:chat:generateDebugRFile' is e34c44ad3989472b127986cb1968b1a6
+Skipping task ':feature:chat:generateDebugRFile' as it is up-to-date.
+
+> Task :data:ai-core:generateDebugRFile UP-TO-DATE
+Build cache key for task ':data:ai-core:generateDebugRFile' is 8d72de4488175d5e887eb607f5188510
+Skipping task ':data:ai-core:generateDebugRFile' as it is up-to-date.
+Resolve mutations for :data:ai-core:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :feature:usercenter:generateDebugRFile UP-TO-DATE
+Build cache key for task ':feature:usercenter:generateDebugRFile' is 551d6b386b602a6954d89f49c5a044c2
+Skipping task ':feature:usercenter:generateDebugRFile' as it is up-to-date.
+:data:ai-core:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :data:ai-core:checkKotlinGradlePluginConfigurationErrors
+Caching disabled for task ':data:ai-core:checkKotlinGradlePluginConfigurationErrors' because:
+  This task renders reported diagnostics; caching this task will hide diagnostics and obscure issues in the build
+Task ':data:ai-core:checkKotlinGradlePluginConfigurationErrors' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Resolve mutations for :data:ai-core:generateDebugBuildConfig (Thread[Execution worker Thread 3,5,main]) started.
+:data:ai-core:generateDebugBuildConfig (Thread[Execution worker Thread 3,5,main]) started.
+Resolve mutations for :feature:usercenter:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 8,5,main]) started.
+:feature:usercenter:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :feature:usercenter:checkKotlinGradlePluginConfigurationErrors
+Caching disabled for task ':feature:usercenter:checkKotlinGradlePluginConfigurationErrors' because:
+  This task renders reported diagnostics; caching this task will hide diagnostics and obscure issues in the build
+Task ':feature:usercenter:checkKotlinGradlePluginConfigurationErrors' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Resolve mutations for :feature:usercenter:javaPreCompileDebug (Thread[Execution worker Thread 8,5,main]) started.
+:feature:usercenter:javaPreCompileDebug (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :data:ai-core:generateDebugBuildConfig UP-TO-DATE
+Build cache key for task ':data:ai-core:generateDebugBuildConfig' is 45ae1751e761d3057adaae07fade824e
+Skipping task ':data:ai-core:generateDebugBuildConfig' as it is up-to-date.
+Resolve mutations for :data:ai-core:javaPreCompileDebug (Thread[Execution worker Thread 3,5,main]) started.
+:data:ai-core:javaPreCompileDebug (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :feature:media:javaPreCompileDebug UP-TO-DATE
+Build cache key for task ':feature:media:javaPreCompileDebug' is 264b41a3b2c2a566da1a85095c6892b6
+Skipping task ':feature:media:javaPreCompileDebug' as it is up-to-date.
+
+> Task :feature:usercenter:javaPreCompileDebug UP-TO-DATE
+Build cache key for task ':feature:usercenter:javaPreCompileDebug' is 264b41a3b2c2a566da1a85095c6892b6
+Skipping task ':feature:usercenter:javaPreCompileDebug' as it is up-to-date.
+
+> Task :feature:connectivity:javaPreCompileDebug UP-TO-DATE
+Build cache key for task ':feature:connectivity:javaPreCompileDebug' is 264b41a3b2c2a566da1a85095c6892b6
+Skipping task ':feature:connectivity:javaPreCompileDebug' as it is up-to-date.
+
+> Task :data:ai-core:javaPreCompileDebug UP-TO-DATE
+Build cache key for task ':data:ai-core:javaPreCompileDebug' is 264b41a3b2c2a566da1a85095c6892b6
+Skipping task ':data:ai-core:javaPreCompileDebug' as it is up-to-date.
+
+> Task :core:util:compileDebugKotlin UP-TO-DATE
+Build cache key for task ':core:util:compileDebugKotlin' is b550d87570eb4fb0abf7e5c62c9ffc67
+Skipping task ':core:util:compileDebugKotlin' as it is up-to-date.
+Resolve mutations for :core:util:javaPreCompileDebug (Thread[Execution worker Thread 2,5,main]) started.
+:core:util:javaPreCompileDebug (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :core:util:javaPreCompileDebug UP-TO-DATE
+Build cache key for task ':core:util:javaPreCompileDebug' is 83d95603eede92732d99005e5f764c06
+Skipping task ':core:util:javaPreCompileDebug' as it is up-to-date.
+Resolve mutations for :core:util:compileDebugJavaWithJavac (Thread[Execution worker,5,main]) started.
+:core:util:compileDebugJavaWithJavac (Thread[Execution worker,5,main]) started.
+
+> Task :core:util:compileDebugJavaWithJavac NO-SOURCE
+Skipping task ':core:util:compileDebugJavaWithJavac' as it has no source files and no previous output files.
+Resolve mutations for :core:util:bundleLibCompileToJarDebug (Thread[Execution worker,5,main]) started.
+:core:util:bundleLibCompileToJarDebug (Thread[Execution worker,5,main]) started.
+
+> Task :core:util:bundleLibCompileToJarDebug UP-TO-DATE
+Caching disabled for task ':core:util:bundleLibCompileToJarDebug' because:
+  Simple merging task
+Skipping task ':core:util:bundleLibCompileToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :core:util) (Thread[Execution worker Thread 11,5,main]) started.
+Resolve mutations for :core:util:bundleLibRuntimeToJarDebug (Thread[Execution worker Thread 11,5,main]) started.
+:core:util:bundleLibRuntimeToJarDebug (Thread[Execution worker Thread 11,5,main]) started.
+Resolve mutations for :data:ai-core:kaptGenerateStubsDebugKotlin (Thread[Execution worker Thread 2,5,main]) started.
+:data:ai-core:kaptGenerateStubsDebugKotlin (Thread[Execution worker Thread 2,5,main]) started.
+Resolve mutations for :feature:connectivity:kaptGenerateStubsDebugKotlin (Thread[Execution worker,5,main]) started.
+Resolve mutations for :feature:usercenter:kaptGenerateStubsDebugKotlin (Thread[Execution worker Thread 9,5,main]) started.
+:feature:connectivity:kaptGenerateStubsDebugKotlin (Thread[Execution worker,5,main]) started.
+:feature:usercenter:kaptGenerateStubsDebugKotlin (Thread[Execution worker Thread 9,5,main]) started.
+
+> Task :core:util:bundleLibRuntimeToJarDebug UP-TO-DATE
+Caching disabled for task ':core:util:bundleLibRuntimeToJarDebug' because:
+  Simple merging task
+Skipping task ':core:util:bundleLibRuntimeToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :core:util) (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :feature:usercenter:kaptGenerateStubsDebugKotlin UP-TO-DATE
+Build cache key for task ':feature:usercenter:kaptGenerateStubsDebugKotlin' is 468cd580c7a77547df1a58b4fe07d89a
+Skipping task ':feature:usercenter:kaptGenerateStubsDebugKotlin' as it is up-to-date.
+Resolve mutations for :feature:usercenter:kaptDebugKotlin (Thread[Execution worker Thread 9,5,main]) started.
+:feature:usercenter:kaptDebugKotlin (Thread[Execution worker Thread 9,5,main]) started.
+
+> Task :feature:connectivity:kaptGenerateStubsDebugKotlin UP-TO-DATE
+Build cache key for task ':feature:connectivity:kaptGenerateStubsDebugKotlin' is e0f7ba6f0896293273f2fc6fba8c8811
+Skipping task ':feature:connectivity:kaptGenerateStubsDebugKotlin' as it is up-to-date.
+Resolve mutations for :feature:connectivity:kaptDebugKotlin (Thread[Execution worker,5,main]) started.
+:feature:connectivity:kaptDebugKotlin (Thread[Execution worker,5,main]) started.
+
+> Task :feature:usercenter:kaptDebugKotlin UP-TO-DATE
+file or directory '/home/cslh-frank/main_app/feature/usercenter/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/usercenter/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/usercenter/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/feature/usercenter/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/feature/usercenter/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/usercenter/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/feature/usercenter/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/usercenter/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/usercenter/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/usercenter/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/usercenter/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/usercenter/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/usercenter/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/usercenter/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/usercenter/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/feature/usercenter/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/feature/usercenter/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/usercenter/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/feature/usercenter/src/debug/java', not found
+Build cache key for task ':feature:usercenter:kaptDebugKotlin' is 2168a8d823ed4c2df38fd6da36e29b6e
+Skipping task ':feature:usercenter:kaptDebugKotlin' as it is up-to-date.
+Resolve mutations for :feature:usercenter:compileDebugKotlin (Thread[Execution worker Thread 5,5,main]) started.
+:feature:usercenter:compileDebugKotlin (Thread[Execution worker Thread 5,5,main]) started.
+
+> Task :feature:connectivity:kaptDebugKotlin UP-TO-DATE
+file or directory '/home/cslh-frank/main_app/feature/connectivity/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/connectivity/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/connectivity/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/feature/connectivity/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/feature/connectivity/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/connectivity/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/feature/connectivity/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/connectivity/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/connectivity/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/connectivity/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/connectivity/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/connectivity/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/connectivity/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/connectivity/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/connectivity/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/feature/connectivity/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/feature/connectivity/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/connectivity/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/feature/connectivity/src/debug/java', not found
+Build cache key for task ':feature:connectivity:kaptDebugKotlin' is bf9042ef6efd92246ac9a1577b2de830
+Skipping task ':feature:connectivity:kaptDebugKotlin' as it is up-to-date.
+Resolve mutations for :feature:connectivity:compileDebugKotlin (Thread[Execution worker Thread 9,5,main]) started.
+:feature:connectivity:compileDebugKotlin (Thread[Execution worker Thread 9,5,main]) started.
+
+> Task :data:ai-core:kaptGenerateStubsDebugKotlin UP-TO-DATE
+Build cache key for task ':data:ai-core:kaptGenerateStubsDebugKotlin' is fdc98bf6aa067708a1c1b18a4d47000a
+Skipping task ':data:ai-core:kaptGenerateStubsDebugKotlin' as it is up-to-date.
+Resolve mutations for :data:ai-core:kaptDebugKotlin (Thread[Execution worker,5,main]) started.
+:data:ai-core:kaptDebugKotlin (Thread[Execution worker,5,main]) started.
+
+> Task :feature:usercenter:compileDebugKotlin UP-TO-DATE
+Build cache key for task ':feature:usercenter:compileDebugKotlin' is bd43429a0c82c3de051e5eca832ea022
+Skipping task ':feature:usercenter:compileDebugKotlin' as it is up-to-date.
+Resolve mutations for :feature:usercenter:compileDebugJavaWithJavac (Thread[Execution worker Thread 2,5,main]) started.
+:feature:usercenter:compileDebugJavaWithJavac (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :feature:connectivity:compileDebugKotlin UP-TO-DATE
+Build cache key for task ':feature:connectivity:compileDebugKotlin' is 6375faa970ba21285e67a955a0a0c37c
+Skipping task ':feature:connectivity:compileDebugKotlin' as it is up-to-date.
+Resolve mutations for :feature:connectivity:compileDebugJavaWithJavac (Thread[Execution worker Thread 5,5,main]) started.
+:feature:connectivity:compileDebugJavaWithJavac (Thread[Execution worker Thread 5,5,main]) started.
+
+> Task :feature:usercenter:compileDebugJavaWithJavac UP-TO-DATE
+Custom actions are attached to task ':feature:usercenter:compileDebugJavaWithJavac'.
+Build cache key for task ':feature:usercenter:compileDebugJavaWithJavac' is 4da629820ddda161a80bfa64a6878d08
+Skipping task ':feature:usercenter:compileDebugJavaWithJavac' as it is up-to-date.
+No compile result for :feature:usercenter:compileDebugJavaWithJavac
+Resolve mutations for :feature:usercenter:transformDebugClassesWithAsm (Thread[Execution worker Thread 3,5,main]) started.
+:feature:usercenter:transformDebugClassesWithAsm (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :feature:connectivity:compileDebugJavaWithJavac UP-TO-DATE
+Custom actions are attached to task ':feature:connectivity:compileDebugJavaWithJavac'.
+Build cache key for task ':feature:connectivity:compileDebugJavaWithJavac' is 2d5b4e41bd4c2f905c5f5ec7606c6b05
+Skipping task ':feature:connectivity:compileDebugJavaWithJavac' as it is up-to-date.
+No compile result for :feature:connectivity:compileDebugJavaWithJavac
+Resolve mutations for :feature:connectivity:transformDebugClassesWithAsm (Thread[Execution worker Thread 5,5,main]) started.
+:feature:connectivity:transformDebugClassesWithAsm (Thread[Execution worker Thread 5,5,main]) started.
+
+> Task :data:ai-core:kaptDebugKotlin UP-TO-DATE
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/java', not found
+Build cache key for task ':data:ai-core:kaptDebugKotlin' is f45369e26b1fbbc44546a7b408dd2e09
+Skipping task ':data:ai-core:kaptDebugKotlin' as it is up-to-date.
+Resolve mutations for :data:ai-core:compileDebugKotlin (Thread[Execution worker Thread 2,5,main]) started.
+:data:ai-core:compileDebugKotlin (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :feature:usercenter:transformDebugClassesWithAsm UP-TO-DATE
+Build cache key for task ':feature:usercenter:transformDebugClassesWithAsm' is 59623a98ea1b902fc09f4c05e79fe85e
+Skipping task ':feature:usercenter:transformDebugClassesWithAsm' as it is up-to-date.
+Resolve mutations for :feature:usercenter:bundleLibCompileToJarDebug (Thread[Execution worker Thread 2,5,main]) started.
+:feature:usercenter:bundleLibCompileToJarDebug (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :feature:usercenter:bundleLibCompileToJarDebug UP-TO-DATE
+Caching disabled for task ':feature:usercenter:bundleLibCompileToJarDebug' because:
+  Simple merging task
+Skipping task ':feature:usercenter:bundleLibCompileToJarDebug' as it is up-to-date.
+
+> Task :feature:connectivity:transformDebugClassesWithAsm UP-TO-DATE
+Build cache key for task ':feature:connectivity:transformDebugClassesWithAsm' is eaad08b6ca75fe24a9fe10103fd4fb41
+Skipping task ':feature:connectivity:transformDebugClassesWithAsm' as it is up-to-date.
+work action resolve classes.jar (project :feature:usercenter) (Thread[Execution worker Thread 3,5,main]) started.
+Resolve mutations for :feature:connectivity:bundleLibCompileToJarDebug (Thread[Execution worker Thread 7,5,main]) started.
+:feature:connectivity:bundleLibCompileToJarDebug (Thread[Execution worker Thread 7,5,main]) started.
+
+> Task :feature:connectivity:bundleLibCompileToJarDebug UP-TO-DATE
+Caching disabled for task ':feature:connectivity:bundleLibCompileToJarDebug' because:
+  Simple merging task
+Skipping task ':feature:connectivity:bundleLibCompileToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :feature:connectivity) (Thread[Execution worker Thread 7,5,main]) started.
+Resolve mutations for :feature:connectivity:bundleLibRuntimeToJarDebug (Thread[Execution worker Thread 7,5,main]) started.
+:feature:connectivity:bundleLibRuntimeToJarDebug (Thread[Execution worker Thread 7,5,main]) started.
+Resolve mutations for :feature:media:kaptGenerateStubsDebugKotlin (Thread[Execution worker Thread 5,5,main]) started.
+:feature:media:kaptGenerateStubsDebugKotlin (Thread[Execution worker Thread 5,5,main]) started.
+
+> Task :feature:connectivity:bundleLibRuntimeToJarDebug UP-TO-DATE
+Caching disabled for task ':feature:connectivity:bundleLibRuntimeToJarDebug' because:
+  Simple merging task
+Skipping task ':feature:connectivity:bundleLibRuntimeToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :feature:connectivity) (Thread[Execution worker Thread 7,5,main]) started.
+
+> Task :data:ai-core:compileDebugKotlin UP-TO-DATE
+Build cache key for task ':data:ai-core:compileDebugKotlin' is 9b0098a85db580a4a0468e643a366cf3
+Skipping task ':data:ai-core:compileDebugKotlin' as it is up-to-date.
+Resolve mutations for :data:ai-core:compileDebugJavaWithJavac (Thread[Execution worker Thread 8,5,main]) started.
+:data:ai-core:compileDebugJavaWithJavac (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :data:ai-core:compileDebugJavaWithJavac UP-TO-DATE
+Custom actions are attached to task ':data:ai-core:compileDebugJavaWithJavac'.
+Build cache key for task ':data:ai-core:compileDebugJavaWithJavac' is e0ed9a7bf7f010685abc155654dcd6f7
+Skipping task ':data:ai-core:compileDebugJavaWithJavac' as it is up-to-date.
+No compile result for :data:ai-core:compileDebugJavaWithJavac
+Resolve mutations for :data:ai-core:transformDebugClassesWithAsm (Thread[Execution worker Thread 8,5,main]) started.
+:data:ai-core:transformDebugClassesWithAsm (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :data:ai-core:transformDebugClassesWithAsm UP-TO-DATE
+Build cache key for task ':data:ai-core:transformDebugClassesWithAsm' is 831b819950f3019e4e1f58736007f508
+Skipping task ':data:ai-core:transformDebugClassesWithAsm' as it is up-to-date.
+Resolve mutations for :data:ai-core:bundleLibCompileToJarDebug (Thread[Execution worker Thread 9,5,main]) started.
+:data:ai-core:bundleLibCompileToJarDebug (Thread[Execution worker Thread 9,5,main]) started.
+
+> Task :data:ai-core:bundleLibCompileToJarDebug UP-TO-DATE
+Caching disabled for task ':data:ai-core:bundleLibCompileToJarDebug' because:
+  Simple merging task
+Skipping task ':data:ai-core:bundleLibCompileToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :data:ai-core) (Thread[Execution worker Thread 9,5,main]) started.
+
+> Task :feature:media:kaptGenerateStubsDebugKotlin UP-TO-DATE
+Build cache key for task ':feature:media:kaptGenerateStubsDebugKotlin' is 89b00711d0176a022c81c8104d01338b
+Skipping task ':feature:media:kaptGenerateStubsDebugKotlin' as it is up-to-date.
+Resolve mutations for :feature:media:kaptDebugKotlin (Thread[Execution worker Thread 5,5,main]) started.
+:feature:media:kaptDebugKotlin (Thread[Execution worker Thread 5,5,main]) started.
+
+> Task :feature:media:kaptDebugKotlin UP-TO-DATE
+file or directory '/home/cslh-frank/main_app/feature/media/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/media/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/media/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/feature/media/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/feature/media/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/media/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/feature/media/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/media/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/media/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/media/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/media/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/media/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/media/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/media/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/media/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/feature/media/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/feature/media/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/media/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/feature/media/src/debug/java', not found
+Build cache key for task ':feature:media:kaptDebugKotlin' is 1c3056390aff9fd31ee349650b7b8a5e
+Skipping task ':feature:media:kaptDebugKotlin' as it is up-to-date.
+Resolve mutations for :feature:media:compileDebugKotlin (Thread[Execution worker Thread 4,5,main]) started.
+:feature:media:compileDebugKotlin (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :feature:media:compileDebugKotlin UP-TO-DATE
+Build cache key for task ':feature:media:compileDebugKotlin' is 07fcfed1391ec6c15034f108dcd12b48
+Skipping task ':feature:media:compileDebugKotlin' as it is up-to-date.
+Resolve mutations for :feature:media:compileDebugJavaWithJavac (Thread[Execution worker Thread 5,5,main]) started.
+:feature:media:compileDebugJavaWithJavac (Thread[Execution worker Thread 5,5,main]) started.
+
+> Task :feature:media:compileDebugJavaWithJavac UP-TO-DATE
+Custom actions are attached to task ':feature:media:compileDebugJavaWithJavac'.
+Build cache key for task ':feature:media:compileDebugJavaWithJavac' is b3837d5b9963b2ae4067446bd3651b53
+Skipping task ':feature:media:compileDebugJavaWithJavac' as it is up-to-date.
+No compile result for :feature:media:compileDebugJavaWithJavac
+Resolve mutations for :feature:media:transformDebugClassesWithAsm (Thread[Execution worker Thread 2,5,main]) started.
+:feature:media:transformDebugClassesWithAsm (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :feature:media:transformDebugClassesWithAsm UP-TO-DATE
+Build cache key for task ':feature:media:transformDebugClassesWithAsm' is e5f7e3c43458025b6c2beac0cb9b9158
+Skipping task ':feature:media:transformDebugClassesWithAsm' as it is up-to-date.
+Resolve mutations for :feature:media:bundleLibCompileToJarDebug (Thread[Execution worker Thread 5,5,main]) started.
+:feature:media:bundleLibCompileToJarDebug (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :feature:media:bundleLibCompileToJarDebug UP-TO-DATE
+Caching disabled for task ':feature:media:bundleLibCompileToJarDebug' because:
+  Simple merging task
+Skipping task ':feature:media:bundleLibCompileToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :feature:media) (Thread[Execution worker Thread 11,5,main]) started.
+Resolve mutations for :feature:chat:kaptGenerateStubsDebugKotlin (Thread[Execution worker Thread 11,5,main]) started.
+:feature:chat:kaptGenerateStubsDebugKotlin (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :feature:chat:kaptGenerateStubsDebugKotlin
+Build cache key for task ':feature:chat:kaptGenerateStubsDebugKotlin' is 6ab94c7d42fd66587e96908fe38619cc
+Task ':feature:chat:kaptGenerateStubsDebugKotlin' is not up-to-date because:
+  Task has failed previously.
+The input changes require a full rebuild for incremental task ':feature:chat:kaptGenerateStubsDebugKotlin'.
+file or directory '/home/cslh-frank/main_app/feature/chat/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/feature/chat/src/debug/kotlin', not found
+Using Kotlin/JVM incremental compilation
+[KOTLIN] Kotlin compilation 'jdkHome' argument: null
+i: found daemon on port 17269 (1745288 ms old), trying to connect
+i: connected to the daemon
+Options for KOTLIN DAEMON: IncrementalCompilationOptions(super=CompilationOptions(compilerMode=INCREMENTAL_COMPILER, targetPlatform=JVM, reportCategories=[0, 3], reportSeverity=2, requestedCompilationResults=[0], kotlinScriptExtensions=[]), areFileChangesKnown=false, modifiedFiles=null, deletedFiles=null, classpathChanges=NotAvailableForNonIncrementalRun, workingDir=/home/cslh-frank/main_app/feature/chat/build/kotlin/kaptGenerateStubsDebugKotlin/cacheable, multiModuleICSettings=MultiModuleICSettings(buildHistoryFile=/home/cslh-frank/main_app/feature/chat/build/kotlin/kaptGenerateStubsDebugKotlin/local-state/build-history.bin, useModuleDetection=true), usePreciseJavaTracking=true, outputFiles=[/home/cslh-frank/main_app/feature/chat/build/tmp/kapt3/incrementalData/debug, /home/cslh-frank/main_app/feature/chat/build/tmp/kapt3/stubs/debug, /home/cslh-frank/main_app/feature/chat/build/kotlin/kaptGenerateStubsDebugKotlin/cacheable, /home/cslh-frank/main_app/feature/chat/build/kotlin/kaptGenerateStubsDebugKotlin/local-state])
+e: file:///home/cslh-frank/main_app/feature/chat/src/main/java/com/smartsales/feature/chat/history/HistoryDrawer.kt:163:18 Expecting ')'
+
+> Task :feature:chat:kaptGenerateStubsDebugKotlin FAILED
+
+[Incubating] Problems report is available at: file:///home/cslh-frank/main_app/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':feature:chat:kaptGenerateStubsDebugKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.13/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 55s
+79 actionable tasks: 7 executed, 72 up-to-date

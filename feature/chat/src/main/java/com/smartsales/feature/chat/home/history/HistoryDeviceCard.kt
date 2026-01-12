@@ -14,6 +14,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,59 +58,94 @@ import com.smartsales.feature.chat.home.theme.AppColors
 fun HistoryDeviceCard(snapshot: DeviceSnapshotUi?) {
     val isConnected = snapshot?.connectionState == DeviceConnectionStateUi.CONNECTED
     
-    // Crystal Schematic Container
-    Box(
+    // Adaptive Crystal Logic (Pro Max Theme Awareness)
+    val isDark = isSystemInDarkTheme()
+    
+    // Light Mode: "Obsidian Schematic" (High Contrast for Visibility)
+    // Dark Mode: "Crystal Schematic" (White/Glass technical details)
+    val gridColor = when {
+        !isConnected -> Color.Transparent
+        isDark -> Color.White.copy(alpha = 0.10f)
+        else -> Color.Black.copy(alpha = 0.12f)
+    }
+    val borderColor = when {
+        !isConnected -> Color.Transparent
+        isDark -> Color.White.copy(alpha = 0.40f)
+        else -> Color.Black.copy(alpha = 0.20f)
+    }
+    val scrimColor = when {
+        !isConnected -> Color.Transparent
+        isDark -> Color.White.copy(alpha = 0.02f)
+        else -> Color.Black.copy(alpha = 0.05f)
+    }
+    val cardBgColor = if (isDark) AppColors.CrystalCardBg else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.60f) // Solid plate look (was 0.30)
+
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 24.dp) // Padded for separation
+            .padding(horizontal = 12.dp, vertical = 24.dp)
             .testTag(HomeScreenTestTags.HISTORY_DEVICE_STATUS)
-            .border(1.dp, AppColors.TechnicalBorder, RoundedCornerShape(20.dp))
-            .background(AppColors.CrystalCardBg, RoundedCornerShape(20.dp))
-            .clip(RoundedCornerShape(20.dp))
-            .drawBehind {
-                 // Technical Mesh Overlay (0.03 opacity, 20.dp grid)
-                 val strokeColor = Color.White.copy(alpha = 0.03f)
-                 val gridSize = 20.dp.toPx()
-                 
-                 // Vertical lines
-                 for (x in 0..size.width.toInt() step gridSize.toInt()) {
-                     drawLine(
-                         color = strokeColor,
-                         start = androidx.compose.ui.geometry.Offset(x.toFloat(), 0f),
-                         end = androidx.compose.ui.geometry.Offset(x.toFloat(), size.height),
-                         strokeWidth = 1f
-                     )
-                 }
-                 // Horizontal lines
-                 for (y in 0..size.height.toInt() step gridSize.toInt()) {
-                     drawLine(
-                         color = strokeColor,
-                         start = androidx.compose.ui.geometry.Offset(0f, y.toFloat()),
-                         end = androidx.compose.ui.geometry.Offset(size.width, y.toFloat()),
-                         strokeWidth = 1f
-                     )
-                 }
-            }
-            .padding(16.dp) // Inner content padding
+            .shadow(
+                elevation = if (isDark) 0.dp else 2.dp, // Subtle shadow in light mode for lift
+                shape = RoundedCornerShape(20.dp),
+                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            ),
+        shape = RoundedCornerShape(20.dp),
+        color = Color.Transparent, // Managed by Glass Stack
+        border = BorderStroke(1.dp, borderColor)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        Box(
+            modifier = Modifier
+                .background(cardBgColor, RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(20.dp))
+                .drawBehind {
+                     // Glass Scrim (Simulates Blur density)
+                     drawRect(scrimColor)
+
+                     // Technical Mesh Overlay (Adaptive)
+                     val gridSize = 20.dp.toPx()
+                     
+                     // Vertical lines
+                     for (x in 0..size.width.toInt() step gridSize.toInt()) {
+                         drawLine(
+                             color = gridColor,
+                             start = androidx.compose.ui.geometry.Offset(x.toFloat(), 0f),
+                             end = androidx.compose.ui.geometry.Offset(x.toFloat(), size.height),
+                             strokeWidth = 1f
+                         )
+                     }
+                     // Horizontal lines
+                     for (y in 0..size.height.toInt() step gridSize.toInt()) {
+                         drawLine(
+                             color = gridColor,
+                             start = androidx.compose.ui.geometry.Offset(0f, y.toFloat()),
+                             end = androidx.compose.ui.geometry.Offset(size.width, y.toFloat()),
+                             strokeWidth = 1f
+                         )
+                     }
+                }
+                .clickable(onClick = { /* TODO: Device Manager */ })
+                .padding(20.dp)
         ) {
-            // Precision Beacon
-            PrecisionBeacon(isConnected = isConnected)
-            
-            Column {
-                Text(
-                    text = snapshot?.deviceName ?: "SmartBadge",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = if (isConnected) "已连接 • 电量 85%" else "未连接",
-                    style = MaterialTheme.typography.labelSmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Precision Beacon
+                PrecisionBeacon(isConnected = isConnected)
+                
+                Column {
+                    Text(
+                        text = snapshot?.deviceName ?: "SmartBadge",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = if (isConnected) "已连接 • 电量 85%" else "未连接",
+                        style = MaterialTheme.typography.labelSmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
@@ -117,11 +154,20 @@ fun HistoryDeviceCard(snapshot: DeviceSnapshotUi?) {
 @Composable
 private fun PrecisionBeacon(isConnected: Boolean) {
     if (!isConnected) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .background(AppColors.LightDangerText, CircleShape)
-        )
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(16.dp)) {
+             // Static Ring (Disconnected)
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .border(1.dp, AppColors.StatusDotDisconnectedRing, CircleShape)
+            )
+            // Core Dot
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .background(AppColors.LightDangerText, CircleShape)
+            )
+        }
         return
     }
 

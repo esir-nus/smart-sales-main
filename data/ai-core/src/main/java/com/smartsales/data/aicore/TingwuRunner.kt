@@ -180,7 +180,18 @@ class TingwuRunner @Inject constructor(
                             sourceFile = audioFile,
                             submitSingleBatch = { req -> submit(req) },
                             waitForJob = { id -> waitForJob(id) },
-                            onProgress = { /* Progress unused for now */ }
+                            onProgress = { /* Progress unused for now */ },
+                            onComplete = { parentJobId, stitchedSegments ->
+                                // Surface stitched segments to job state for UI consumption
+                                val flow = getOrCreateJobFlow(parentJobId)
+                                flow.value = TingwuJobState.Completed(
+                                    jobId = parentJobId,
+                                    transcriptMarkdown = "",  // Deferred: assemble markdown from segments
+                                    artifacts = TingwuJobArtifacts(
+                                        recordingOriginDiarizedSegments = stitchedSegments
+                                    )
+                                )
+                            }
                         )
                     } else {
                         pipelineTracer.emit(

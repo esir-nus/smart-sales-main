@@ -362,6 +362,16 @@ HomeViewModel delegates to coordinators:
 - Implements `TingwuCoordinator` ✅
 - Already delegates to `TingwuRunnerRepository` for reusable logic ✅
 
+#### Multi-Batch Stitching ✅ (2026-01-11)
+
+| Component | Status | Tests |
+|-----------|--------|-------|
+| `TingwuMultiBatchOrchestrator` | ✅ Slice → Upload → Submit loop | 5 |
+| `MultiBatchStitcher` | ✅ Timestamp correction, speaker dedup | 9 |
+| `AudioSlicer` | ✅ Moved to `:data:ai-core` | 7 |
+
+**Gap Resolved (2026-01-11):** `onComplete` callback added to surface stitched segments to `TingwuJobState.Completed`.
+
 **Known Legacies** (purify when touched):
 | Legacy | Lines | Action |
 |--------|-------|--------|
@@ -463,8 +473,8 @@ No line metrics. Responsibility is the only measure.
 - [ ] All Orchestrator-V1 features implemented
 - [ ] Connectivity (BLE/WiFi) pairing flow works
 - [ ] Media sync and audio management works
-- [ ] All happy-path tests passing
-- [ ] Build passes, no blocking errors
+- [x] All happy-path tests passing (verified 2026-01-11)
+- [x] Build passes, no blocking errors (verified 2026-01-11)
 
 **NOT required:** Polish, edge cases, performance tuning
 

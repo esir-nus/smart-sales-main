@@ -37,7 +37,33 @@ sealed class SliceOutcome {
 open class AudioSlicer(
     private val tempDir: File
 ) {
+    // Fallback transcoder for formats not supported by direct mux (MP3, WAV, etc.)
+    private val transcodeSlicer: TranscodeSlicer by lazy { TranscodeSlicer(tempDir) }
+
     open fun sliceAudio(
+        source: File,
+        requestedCaptureStartMs: Long,
+        captureEndMs: Long,
+        windowKey: String
+    ): SliceOutcome {
+        // Try direct mux first (fast path)
+        val directResult = tryDirectSlice(source, requestedCaptureStartMs, captureEndMs, windowKey)
+        if (directResult is SliceOutcome.Success) {
+            return directResult
+        }
+        
+        // Fallback to transcode for unsupported formats (MP3, WAV, etc.)
+        if (directResult is SliceOutcome.Failure && directResult.error is SliceError.UnsupportedFormat) {
+            return transcodeSlicer.transcodeSlice(source, requestedCaptureStartMs, captureEndMs, windowKey)
+        }
+        
+        return directResult
+    }
+
+    /**
+     * Direct mux path - only works for formats compatible with MPEG4 muxer (M4A, MP4, AAC).
+     */
+    private fun tryDirectSlice(
         source: File,
         requestedCaptureStartMs: Long,
         captureEndMs: Long,

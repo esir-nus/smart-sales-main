@@ -17,6 +17,12 @@ import com.smartsales.data.aicore.util.AudioSlicer
 import com.smartsales.data.aicore.util.SliceError
 import com.smartsales.data.aicore.util.SliceOutcome
 import com.smartsales.data.aicore.util.SliceResult
+import com.smartsales.data.aicore.debug.PipelineTracer
+import com.smartsales.data.aicore.debug.PipelineStage
+import com.smartsales.data.aicore.debug.PipelineEvent
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -41,6 +47,7 @@ class TingwuMultiBatchOrchestratorTest {
     private lateinit var sourceFile: File
     private lateinit var fakeAudioSlicer: FakeAudioSlicer
     private lateinit var fakeOssClient: FakeOssUploadClient
+    private lateinit var fakePipelineTracer: FakePipelineTracer
     private lateinit var stitcher: MultiBatchStitcher
     private lateinit var orchestrator: TingwuMultiBatchOrchestrator
 
@@ -50,8 +57,9 @@ class TingwuMultiBatchOrchestratorTest {
         sourceFile = tempFolder.newFile("source.m4a").apply { writeBytes(ByteArray(1024)) }
         fakeAudioSlicer = FakeAudioSlicer(tempDir)
         fakeOssClient = FakeOssUploadClient()
+        fakePipelineTracer = FakePipelineTracer()
         stitcher = MultiBatchStitcher()
-        orchestrator = TingwuMultiBatchOrchestrator(fakeAudioSlicer, fakeOssClient, stitcher)
+        orchestrator = TingwuMultiBatchOrchestrator(fakeAudioSlicer, fakeOssClient, stitcher, fakePipelineTracer)
     }
 
     // --- Test Helpers ---
@@ -109,6 +117,10 @@ class TingwuMultiBatchOrchestratorTest {
             },
             onProgress = { progressValues.add(it) }
         )
+        
+        // Check trace events
+        assertEquals(3, fakePipelineTracer.emittedEvents.size) // 2x STARTED + MULTI_BATCH_COMPLETE
+        assertTrue(fakePipelineTracer.emittedEvents.any { it.status == "MULTI_BATCH_COMPLETE" })
 
         assertTrue(result is Result.Success)
         assertEquals("multi_plan_123", (result as Result.Success).data)
@@ -249,6 +261,21 @@ class TingwuMultiBatchOrchestratorTest {
                     presignedUrl = "https://fake.oss.url/${request.objectKey}"
                 )
             )
+        }
+    }
+
+    private class FakePipelineTracer : PipelineTracer {
+        val emittedEvents = mutableListOf<PipelineEvent>()
+        
+        override val enabled: Boolean = true
+        override val events: StateFlow<List<PipelineEvent>> = MutableStateFlow(emptyList())
+
+        override fun emit(stage: PipelineStage, status: String, message: String) {
+            emittedEvents.add(PipelineEvent(stage, status, message))
+        }
+
+        override fun clear() {
+            emittedEvents.clear()
         }
     }
 }

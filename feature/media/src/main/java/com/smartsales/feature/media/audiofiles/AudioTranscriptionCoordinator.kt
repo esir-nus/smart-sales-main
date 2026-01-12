@@ -33,6 +33,7 @@ interface AudioTranscriptionCoordinator {
 data class AudioUploadPayload(
     val objectKey: String,
     val presignedUrl: String,
+    val localFile: File? = null
 )
 
 // 说明：时间基准为录音起点 0ms（非 captureStartMs）。

@@ -80,9 +80,9 @@ object AppColors {
     
     // Crystal Schematic Tokens (Pro Max)
     val AuroraMint = Color(0xFF00E676)
-    val CrystalCardBg = Color(0xFFFFFFFF).copy(alpha = 0.05f)
-    val TechnicalBorder = Color(0xFFFFFFFF).copy(alpha = 0.2f)
-    val DeepCrystalBg = Color(0xFF0A0A0C).copy(alpha = 0.4f) // Dark mode fallback variant
+    val CrystalCardBg = Color(0xFFFFFFFF).copy(alpha = 0.08f) // Boosted for visibility (was 0.05)
+    val TechnicalBorder = Color(0xFFFFFFFF).copy(alpha = 0.4f) // Boosted contrast (was 0.2)
+    val DeepCrystalBg = Color(0xFF0A0A0C).copy(alpha = 0.6f) // Darker fallback for blur simulation
 
     // Chat Bubbles (Aurora)
     val BubbleGradient = Brush.linearGradient(
@@ -90,5 +90,24 @@ object AppColors {
         start = androidx.compose.ui.geometry.Offset.Zero,
         end = androidx.compose.ui.geometry.Offset.Infinite
     )
+    val AvatarBlue = Brush.linearGradient(
+        colors = listOf(Color(0xFF5856D6), Color(0xFF007AFF)), // Indigo (TL) -> Blue (BR)
+        start = androidx.compose.ui.geometry.Offset.Zero,
+        end = androidx.compose.ui.geometry.Offset.Infinite
+    )
     val BubbleShadow = Color(0xFF007AFF).copy(alpha = 0.25f) // User bubble shadow (Softer)
+    // History Drawer
+    val DrawerFooterLight = Color(0xFFE6E6F0) // Slight blue-ish grey tint
+    val DrawerFooterDark = Color(0xFF141218) // Deep purple/black tint
+    val SettingsIconTintLight = Color.Black.copy(alpha = 0.4f)
+    val SettingsIconTintDark = Color.White.copy(alpha = 0.4f)
+    val SettingsIconBgLight = Color.Black.copy(alpha = 0.05f)
+    val SettingsIconBgDark = Color.White.copy(alpha = 0.1f)
+
+    // History Session Rows (V8 Polish)
+    val SessionRowActiveBg = Color(0xFF007AFF).copy(alpha = 0.1f)
+    val SessionRowHoverBg = Color.White.copy(alpha = 0.05f)
+
+    // Status Dots (V8 Polish)
+    val StatusDotDisconnectedRing = Color(0xFFFF453A).copy(alpha = 0.2f)
 }

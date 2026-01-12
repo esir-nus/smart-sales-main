@@ -47,6 +47,7 @@ class DefaultAudioTranscriptionCoordinator @Inject constructor(
                 AudioUploadPayload(
                     objectKey = upload.data.objectKey,
                     presignedUrl = upload.data.presignedUrl,
+                    localFile = file
                 ).also { payload ->
                     // 仅记录时长，不记录内容；用于后续 V1 时间窗口生成。
                     readDurationMillis(file)?.let { durationMs ->
@@ -72,7 +73,8 @@ class DefaultAudioTranscriptionCoordinator @Inject constructor(
             ossObjectKey = uploadPayload.objectKey,
             fileUrl = uploadPayload.presignedUrl,
             sessionId = sessionId,
-            durationMs = durationMs
+            durationMs = durationMs,
+            audioFilePath = uploadPayload.localFile
         )
         val result = tingwuCoordinator.submit(request)
         if (result is Result.Success) {

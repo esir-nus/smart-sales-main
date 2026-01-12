@@ -26,7 +26,8 @@ import kotlinx.coroutines.coroutineScope
 class TingwuMultiBatchOrchestrator @Inject constructor(
     private val audioSlicer: AudioSlicer,
     private val ossUploadClient: OssUploadClient,
-    private val stitcher: MultiBatchStitcher
+    private val stitcher: MultiBatchStitcher,
+    private val pipelineTracer: com.smartsales.data.aicore.debug.PipelineTracer
 ) {
 
     /**
@@ -34,8 +35,7 @@ class TingwuMultiBatchOrchestrator @Inject constructor(
      *
      * @param submitSingleBatch Callback to submit a single batch request (delegated to TingwuRunner).
      * @param onProgress Callback for overall progress updates (0-100).
-     * @param onError Callback for failure handling.
-     * @param onComplete Callback for completion with stitched result (not implemented in MVP yet, usually returns virtual ID).
+     * @param onComplete Callback for completion with stitched result (parentJobId, stitchedSegments).
      */
     suspend fun executeBatchLoop(
         plan: DisectorPlan,
@@ -43,7 +43,8 @@ class TingwuMultiBatchOrchestrator @Inject constructor(
         sourceFile: File,
         submitSingleBatch: suspend (TingwuRequest) -> Result<String>,
         waitForJob: suspend (String) -> TingwuJobState,
-        onProgress: (Int) -> Unit
+        onProgress: (Int) -> Unit,
+        onComplete: (String, List<com.smartsales.data.aicore.DiarizedSegment>) -> Unit = { _, _ -> }
     ): Result<String> = coroutineScope {
         // Validation
         if (!sourceFile.exists()) {
@@ -64,6 +65,11 @@ class TingwuMultiBatchOrchestrator @Inject constructor(
             val progressBase = (index * 100) / totalBatches
             onProgress(progressBase)
             
+            pipelineTracer.emit(
+                stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_POLL,
+                status = "BATCH_STARTED",
+                message = "batch=${index + 1}/$totalBatches batchId=${batch.batchAssetId}"
+            )
             com.smartsales.data.aicore.AiCoreLogger.d(TAG, "Batch ${index + 1}/$totalBatches started: batchId=${batch.batchAssetId} range=[${batch.captureStartMs}-${batch.captureEndMs}ms]")
 
             // 1. Slice
@@ -119,6 +125,11 @@ class TingwuMultiBatchOrchestrator @Inject constructor(
                 is TingwuJobState.Completed -> {
                     val segments = finalState.artifacts?.recordingOriginDiarizedSegments.orEmpty()
                     batchResults.add(batch to segments)
+                    pipelineTracer.emit(
+                        stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_POLL,
+                        status = "BATCH_COMPLETED",
+                        message = "batch=${index + 1}/$totalBatches jobId=$jobId segments=${segments.size}"
+                    )
                     com.smartsales.data.aicore.AiCoreLogger.d(TAG, "Batch ${index + 1}/$totalBatches completed: jobId=$jobId segments=${segments.size}")
                 }
                 else -> {
@@ -135,8 +146,18 @@ class TingwuMultiBatchOrchestrator @Inject constructor(
         // 5. Stitch all segments (Option C)
         val stitchedSegments = stitcher.stitchSegments(batchResults)
         
-        // Return success with parent ID; stitched segments available via callback if needed
+        // Return success with parent ID; surface stitched segments via callback
         val parentJobId = "multi_${plan.disectorPlanId}"
+        
+        // Invoke callback safely (don't let callback failure poison the loop)
+        runCatching { onComplete(parentJobId, stitchedSegments) }
+            .onFailure { com.smartsales.data.aicore.AiCoreLogger.w(TAG, "onComplete callback failed: ${it.message}") }
+        
+        pipelineTracer.emit(
+            stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_POLL,
+            status = "MULTI_BATCH_COMPLETE",
+            message = "planId=${plan.disectorPlanId} batches=$totalBatches stitchedSegments=${stitchedSegments.size}"
+        )
         com.smartsales.data.aicore.AiCoreLogger.d(TAG, "Multi-batch complete: planId=${plan.disectorPlanId} batches=$totalBatches stitchedSegments=${stitchedSegments.size}")
         Result.Success(parentJobId)
     }

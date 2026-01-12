@@ -8,13 +8,23 @@ package com.smartsales.feature.connectivity.setup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -72,6 +82,19 @@ fun DeviceSetupScreen(
                         .padding(horizontal = 16.dp, vertical = 18.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // State icon + loading indicator
+                    StateIcon(step = state.step)
+                    
+                    if (state.isActionInProgress) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            strokeWidth = 3.dp
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
                     Text(
                         text = state.title,
                         style = MaterialTheme.typography.titleLarge,
@@ -226,4 +249,26 @@ private fun RowActions(
             Text(text = secondaryLabel)
         }
     }
+}
+
+@Composable
+private fun StateIcon(step: DeviceSetupStep) {
+    val (icon, tint) = when (step) {
+        DeviceSetupStep.Idle,
+        DeviceSetupStep.Scanning,
+        DeviceSetupStep.Found,
+        DeviceSetupStep.Pairing -> Icons.Default.Bluetooth to MaterialTheme.colorScheme.primary
+        DeviceSetupStep.CheckingNetwork,
+        DeviceSetupStep.WifiInput,
+        DeviceSetupStep.WifiProvisioning,
+        DeviceSetupStep.WaitingForDeviceOnline -> Icons.Default.Wifi to MaterialTheme.colorScheme.secondary
+        DeviceSetupStep.Ready -> Icons.Default.CheckCircle to MaterialTheme.colorScheme.primary
+        DeviceSetupStep.Error -> Icons.Default.Close to MaterialTheme.colorScheme.error
+    }
+    Icon(
+        imageVector = icon,
+        contentDescription = null,
+        tint = tint,
+        modifier = Modifier.size(56.dp)
+    )
 }

@@ -132,14 +132,28 @@ smart-sales/
 │       └── HomeViewModel.kt            # Wiring Shell ✅
 │
 ├── feature/connectivity/               # Device Connectivity
-│   ├── DeviceConnectionManager.kt      # BLE/WiFi state machine
+│   ├── DeviceConnectionManager.kt      # BLE/WiFi state machine (368 lines)
 │   ├── WifiProvisioner.kt              # WiFi provisioning interface
 │   ├── AndroidBleWifiProvisioner.kt    # Android BLE+WiFi impl
+│   ├── SimulatedWifiProvisioner.kt     # Fake impl for testing
 │   ├── BleProfile.kt                   # BLE profile definitions
 │   ├── ConnectionModels.kt             # Connection state types
-│   ├── gateway/                        # Gateway communication
-│   ├── scan/                           # Device scanning
-│   └── setup/                          # Device setup wizard
+│   ├── ConnectivityModule.kt           # Hilt DI module
+│   ├── ConnectivityLogger.kt           # Logging utilities
+│   ├── BadgeHttpClient.kt              # HTTP client for badge API
+│   ├── FakeBadgeHttpClient.kt          # Fake impl for testing
+│   ├── HttpEndpointChecker.kt          # Endpoint availability check
+│   ├── ProvisioningException.kt        # Provisioning error types
+│   ├── gateway/
+│   │   ├── BleGateway.kt               # Gateway interface
+│   │   └── GattBleGateway.kt           # GATT driver (815 lines) ⚠️
+│   ├── scan/
+│   │   ├── BleScanner.kt               # Scanner interface
+│   │   └── AndroidBleScanner.kt        # Android BLE scanning impl
+│   └── setup/
+│       ├── DeviceSetupModels.kt        # Setup state types
+│       ├── DeviceSetupScreen.kt        # Setup wizard UI
+│       └── DeviceSetupViewModel.kt     # Setup wizard VM (609 lines)
 │
 ├── feature/media/                       # Media Management
 │   ├── MediaSyncCoordinator.kt         # Media sync orchestration

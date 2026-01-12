@@ -194,6 +194,7 @@ class DeviceSetupViewModelRobustnessTest {
     private class FakeBleScanner : BleScanner {
         override val devices: MutableStateFlow<List<BlePeripheral>> = MutableStateFlow(emptyList())
         override val isScanning: MutableStateFlow<Boolean> = MutableStateFlow(false)
+        override val isBluetoothEnabled: Boolean = true
 
         override fun start() {
             isScanning.value = true

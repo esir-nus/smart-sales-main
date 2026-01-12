@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 interface BleScanner {
     val devices: StateFlow<List<BlePeripheral>>
     val isScanning: StateFlow<Boolean>
+    val isBluetoothEnabled: Boolean
 
     fun start()
     fun stop()

@@ -48,6 +48,8 @@ class AndroidBleScanner @Inject constructor(
     override val devices: StateFlow<List<BlePeripheral>> = _devices
     private val _isScanning = MutableStateFlow(false)
     override val isScanning: StateFlow<Boolean> = _isScanning
+    override val isBluetoothEnabled: Boolean
+        get() = adapter?.isEnabled == true
 
     private var debugLoggedCount = 0
 

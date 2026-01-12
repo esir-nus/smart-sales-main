@@ -9,6 +9,7 @@ enum class DeviceSetupStep {
     Idle,
     Scanning,
     Found,
+    CheckingNetwork,   // NEW: querying badge network status after BLE connect
     WifiInput,
     Pairing,
     WifiProvisioning,

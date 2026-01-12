@@ -54,6 +54,7 @@ class DeviceSetupViewModel @Inject constructor(
         DeviceSetupStep.Idle -> SetupStep.Preflight
         DeviceSetupStep.Scanning -> SetupStep.Scanning
         DeviceSetupStep.Found -> SetupStep.ConnectingBle
+        DeviceSetupStep.CheckingNetwork -> SetupStep.CheckingStatus  // NEW
         DeviceSetupStep.WifiInput -> SetupStep.WifiForm
         DeviceSetupStep.Pairing -> SetupStep.ProvisioningWifi
         DeviceSetupStep.WifiProvisioning -> SetupStep.ProvisioningWifi
@@ -64,6 +65,11 @@ class DeviceSetupViewModel @Inject constructor(
 
     private fun startAutoScan() {
         if (_uiState.value.isScanning) return
+        // Pre-flight check: Bluetooth enabled?
+        if (!bleScanner.isBluetoothEnabled) {
+            setError("请先开启蓝牙", DeviceSetupErrorReason.Unknown)
+            return
+        }
         pendingPeripheral = null
         updateUi {
             it.copy(
@@ -107,6 +113,7 @@ class DeviceSetupViewModel @Inject constructor(
                 if (ssid.isBlank() || password.isBlank()) return
                 onProvisionWifi(ssid, password)
             }
+            DeviceSetupStep.CheckingNetwork,
             DeviceSetupStep.Pairing,
             DeviceSetupStep.WifiProvisioning,
             DeviceSetupStep.WaitingForDeviceOnline -> Unit
@@ -296,16 +303,52 @@ class DeviceSetupViewModel @Inject constructor(
 
                     is ConnectionState.Connected -> {
                         cancelScanTimeout()
+                        // Show "Checking network status" before WiFi form
                         updateUi {
                             it.copy(
-                                step = DeviceSetupStep.WifiInput,
-                                setupStep = DeviceSetupStep.WifiInput.toSetupStep(),
+                                step = DeviceSetupStep.CheckingNetwork,
+                                setupStep = DeviceSetupStep.CheckingNetwork.toSetupStep(),
                                 deviceName = state.session.peripheralName,
-                                isActionInProgress = false,
+                                isActionInProgress = true,
                                 isScanning = false,
                                 canRetryScan = false,
-                                showWifiForm = true
+                                showWifiForm = false
                             )
+                        }
+                        // Query network status to check if badge already has IP
+                        viewModelScope.launch {
+                            val result = runCatching { connectionManager.queryNetworkStatus() }
+                                .getOrElse { Result.Error(Exception("查询失败")) }
+                            when (result) {
+                                is Result.Success -> {
+                                    val ip = result.data.ipAddress
+                                    if (!ip.isNullOrBlank()) {
+                                        // Badge already online! Skip WiFi form
+                                        setReady(ip)
+                                    } else {
+                                        // Badge needs WiFi provisioning
+                                        updateUi {
+                                            it.copy(
+                                                step = DeviceSetupStep.WifiInput,
+                                                setupStep = DeviceSetupStep.WifiInput.toSetupStep(),
+                                                isActionInProgress = false,
+                                                showWifiForm = true
+                                            )
+                                        }
+                                    }
+                                }
+                                is Result.Error -> {
+                                    // Query failed, show WiFi form anyway
+                                    updateUi {
+                                        it.copy(
+                                            step = DeviceSetupStep.WifiInput,
+                                            setupStep = DeviceSetupStep.WifiInput.toSetupStep(),
+                                            isActionInProgress = false,
+                                            showWifiForm = true
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -555,6 +598,14 @@ class DeviceSetupViewModel @Inject constructor(
                 "返回首页",
                 true,
                 wifiSsid.isNotBlank() && wifiPassword.isNotBlank()
+            )
+
+            DeviceSetupStep.CheckingNetwork -> Tuple5(
+                "正在检查设备网络状态…",
+                "正在检查…",
+                "返回首页",
+                false,
+                false
             )
 
             DeviceSetupStep.Pairing,

@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import com.smartsales.feature.connectivity.ConnectivityLogger
 
 // 文件：feature/connectivity/src/main/java/com/smartsales/feature/connectivity/setup/DeviceSetupViewModel.kt
 // 模块：:feature:connectivity
@@ -315,15 +317,18 @@ class DeviceSetupViewModel @Inject constructor(
                                 showWifiForm = false
                             )
                         }
-                        // Query network status to check if badge already has IP
+                        // Query network status to check if badge already has IP (5s timeout)
                         viewModelScope.launch {
-                            val result = runCatching { connectionManager.queryNetworkStatus() }
-                                .getOrElse { Result.Error(Exception("查询失败")) }
+                            val result = withTimeoutOrNull(NETWORK_QUERY_TIMEOUT_MS) {
+                                runCatching { connectionManager.queryNetworkStatus() }
+                                    .getOrElse { Result.Error(Exception("查询失败")) }
+                            } ?: Result.Error(Exception("查询超时"))
                             when (result) {
                                 is Result.Success -> {
                                     val ip = result.data.ipAddress
                                     if (!ip.isNullOrBlank()) {
                                         // Badge already online! Skip WiFi form
+                                        ConnectivityLogger.i("快速路径：徽章已在线 ($ip)，跳过 WiFi 表单")
                                         setReady(ip)
                                     } else {
                                         // Badge needs WiFi provisioning
@@ -338,7 +343,8 @@ class DeviceSetupViewModel @Inject constructor(
                                     }
                                 }
                                 is Result.Error -> {
-                                    // Query failed, show WiFi form anyway
+                                    // Query failed or timed out, show WiFi form anyway
+                                    ConnectivityLogger.w("网络查询失败/超时，显示 WiFi 表单")
                                     updateUi {
                                         it.copy(
                                             step = DeviceSetupStep.WifiInput,
@@ -516,6 +522,7 @@ class DeviceSetupViewModel @Inject constructor(
     companion object {
         private const val NETWORK_CHECK_INTERVAL_MS = 1_500L
         private const val NETWORK_CHECK_ATTEMPTS = 3
+        private const val NETWORK_QUERY_TIMEOUT_MS = 5_000L
         private const val SCAN_TIMEOUT_MS = 12_000L
     }
 

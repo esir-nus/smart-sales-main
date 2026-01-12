@@ -19,7 +19,7 @@ Communication happens via:
 | # | Protocol | Status | App-Side Notes |
 |---|----------|--------|----------------|
 | 1 | WiFi Status Query | ✅ Implemented | `GattBleGateway.queryNetwork()` |
-| 2 | WiFi Connect | ⚠️ Format Mismatch | Need to verify with hardware |
+| 2 | WiFi Connect | ✅ Implemented | `SD#<ssid>` + `PD#<password>` format |
 | 3 | GIF/JPG Upload | ✅ Implemented | `GifTransferCoordinator` + `BadgeHttpClient.uploadJpg()` |
 | 4 | WAV Download | ✅ Implemented | `WavDownloadCoordinator` + `BadgeHttpClient.downloadWav()` |
 | 5 | WAV Delete | ✅ Implemented | `BadgeHttpClient.deleteWav()` |

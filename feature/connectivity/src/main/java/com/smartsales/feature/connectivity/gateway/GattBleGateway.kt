@@ -60,12 +60,10 @@ class GattBleGateway @Inject constructor(
         credentials: WifiCredentials
     ): BleGatewayResult =
         when (val outcome = execute(session.peripheralId) { gattContext, config ->
-            // ESP32 protocol: send SD#<ssid> then PD#<password> as two separate commands
-            val ssidPayload = buildSsidPayload(credentials.ssid)
-            gattContext.writeCharacteristic(config.credentialCharacteristicUuid, ssidPayload)
-            
-            val passwordPayload = buildPasswordPayload(credentials.password)
-            gattContext.writeCharacteristic(config.credentialCharacteristicUuid, passwordPayload)
+            // ESP32 protocol (per bluetooch.py): wifi#connect#<ssid>#<password>
+            val payload = buildCredentialsPayload(credentials)
+            ConnectivityLogger.i("BLE Provision: sending WiFi connect command: ${payload.decodeToString()}")
+            gattContext.writeCharacteristic(config.credentialCharacteristicUuid, payload)
             
             // Wait for badge to connect and respond
             val ackBytes = gattContext.awaitNotificationOrRead(config.provisioningStatusCharacteristicUuid)
@@ -328,19 +326,14 @@ class GattBleGateway @Inject constructor(
     }
 
     /**
-     * Build SSID command per ESP32 protocol: SD#<ssid>
+     * Build WiFi connect command per ESP32 protocol: wifi#connect#<ssid>#<password>
+     * SOT: reference-source/bluetooch.py lines 307-319
      */
-    private fun buildSsidPayload(ssid: String): ByteArray {
-        val sanitized = sanitizeSegment(ssid)
-        return "SD#$sanitized".toByteArray(Charsets.UTF_8)
-    }
-
-    /**
-     * Build password command per ESP32 protocol: PD#<password>
-     */
-    private fun buildPasswordPayload(password: String): ByteArray {
-        val sanitized = sanitizeSegment(password)
-        return "PD#$sanitized".toByteArray(Charsets.UTF_8)
+    private fun buildCredentialsPayload(credentials: WifiCredentials): ByteArray {
+        val sanitizedSsid = sanitizeSegment(credentials.ssid)
+        val sanitizedPassword = sanitizeSegment(credentials.password)
+        val payload = "wifi#connect#$sanitizedSsid#$sanitizedPassword"
+        return payload.toByteArray(Charsets.UTF_8)
     }
 
     private fun buildNetworkQueryPayload(): ByteArray =

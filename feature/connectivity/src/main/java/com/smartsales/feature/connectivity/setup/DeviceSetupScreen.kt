@@ -19,6 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DeviceHub
+import androidx.compose.material.icons.filled.SignalCellularAlt
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -70,70 +72,193 @@ fun DeviceSetupScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 18.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // State icon + loading indicator
-                    StateIcon(step = state.step)
-                    
-                    if (state.isActionInProgress) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(32.dp),
-                            strokeWidth = 3.dp
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    Text(
-                        text = state.title,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.testTag(DeviceSetupTestTags.TITLE)
-                    )
-                    Text(
-                        text = state.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.testTag(DeviceSetupTestTags.DESCRIPTION)
-                    )
-                    if (state.showWifiForm || state.setupStep == SetupStep.WifiForm) {
-                        WifiForm(
-                            ssid = state.wifiSsid,
-                            password = state.wifiPassword,
-                            onSsidChange = onWifiSsidChanged,
-                            onPasswordChange = onWifiPasswordChanged,
-                            // Enable input when waiting for user input, disable during provisioning
-                            enabled = state.step == DeviceSetupStep.WifiInput
-                        )
-                    }
-                    if (state.errorMessage != null && (state.step == DeviceSetupStep.Error || state.setupStep == SetupStep.Error)) {
-                        ErrorBanner(
-                            message = state.errorMessage,
-                            onRetry = onRetry,
-                            onBack = {
-                                onDismissError()
-                                onSecondaryClick()
-                            }
-                        )
-                    }
-                    PrimaryButtons(
-                        state = state,
-                        onPrimaryClick = onPrimaryClick,
-                        onSecondaryClick = onSecondaryClick
-                    )
-                }
+            // Branch: Device Found state gets specialized UI
+            if (state.step == DeviceSetupStep.Found) {
+                DeviceFoundCard(
+                    deviceName = state.deviceName,
+                    onConnect = onPrimaryClick,
+                    onRescan = onSecondaryClick
+                )
+            } else {
+                // Default generic card for all other states
+                GenericSetupCard(
+                    state = state,
+                    onPrimaryClick = onPrimaryClick,
+                    onSecondaryClick = onSecondaryClick,
+                    onRetry = onRetry,
+                    onDismissError = onDismissError,
+                    onWifiSsidChanged = onWifiSsidChanged,
+                    onWifiPasswordChanged = onWifiPasswordChanged
+                )
             }
+        }
+    }
+}
+
+/**
+ * Specialized card for the "Device Found" state.
+ * 
+ * Distinct layout with:
+ * - Large device icon
+ * - Prominent device name
+ * - Signal strength indicator (mock)
+ * - Connect/Rescan actions
+ */
+@Composable
+private fun DeviceFoundCard(
+    deviceName: String?,
+    onConnect: () -> Unit,
+    onRescan: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Large device icon
+            Icon(
+                imageVector = Icons.Default.DeviceHub,
+                contentDescription = "Device found",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(72.dp)
+            )
+            
+            // Device name
+            Text(
+                text = deviceName ?: "未知设备",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.testTag(DeviceSetupTestTags.TITLE)
+            )
+            
+            // Signal strength indicator (mock for now)
+            androidx.compose.foundation.layout.Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.SignalCellularAlt,
+                    contentDescription = "Signal strength",
+                    tint = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    text = "信号良好",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Primary action: Connect
+            Button(
+                onClick = onConnect,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(DeviceSetupTestTags.PRIMARY_BUTTON)
+            ) {
+                Text("连接设备")
+            }
+            
+            // Secondary action: Rescan
+            TextButton(
+                onClick = onRescan,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(DeviceSetupTestTags.SECONDARY_BUTTON)
+            ) {
+                Text("重新扫描")
+            }
+        }
+    }
+}
+
+/**
+ * Generic setup card for all states except "Found".
+ * 
+ * Preserves the original layout logic.
+ */
+@Composable
+private fun GenericSetupCard(
+    state: DeviceSetupUiState,
+    onPrimaryClick: () -> Unit,
+    onSecondaryClick: () -> Unit,
+    onRetry: () -> Unit,
+    onDismissError: () -> Unit,
+    onWifiSsidChanged: (String) -> Unit,
+    onWifiPasswordChanged: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // State icon + loading indicator
+            StateIcon(step = state.step)
+            
+            if (state.isActionInProgress) {
+                Spacer(modifier = Modifier.height(8.dp))
+                CircularProgressIndicator(
+                    modifier = Modifier.size(32.dp),
+                    strokeWidth = 3.dp
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Text(
+                text = state.title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.testTag(DeviceSetupTestTags.TITLE)
+            )
+            Text(
+                text = state.description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag(DeviceSetupTestTags.DESCRIPTION)
+            )
+            if (state.showWifiForm || state.setupStep == SetupStep.WifiForm) {
+                WifiForm(
+                    ssid = state.wifiSsid,
+                    password = state.wifiPassword,
+                    onSsidChange = onWifiSsidChanged,
+                    onPasswordChange = onWifiPasswordChanged,
+                    // Enable input when waiting for user input, disable during provisioning
+                    enabled = state.step == DeviceSetupStep.WifiInput
+                )
+            }
+            if (state.errorMessage != null && (state.step == DeviceSetupStep.Error || state.setupStep == SetupStep.Error)) {
+                ErrorBanner(
+                    message = state.errorMessage,
+                    onRetry = onRetry,
+                    onBack = {
+                        onDismissError()
+                        onSecondaryClick()
+                    }
+                )
+            }
+            PrimaryButtons(
+                state = state,
+                onPrimaryClick = onPrimaryClick,
+                onSecondaryClick = onSecondaryClick
+            )
         }
     }
 }

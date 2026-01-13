@@ -96,6 +96,7 @@ class TingwuRunner @Inject constructor(
     private val pipelineTracer: com.smartsales.data.aicore.debug.PipelineTracer,
     private val disector: com.smartsales.data.aicore.disector.Disector,
     private val multiBatchOrchestrator: com.smartsales.data.aicore.tingwu.TingwuMultiBatchOrchestrator,
+    private val pollingLoop: com.smartsales.data.aicore.tingwu.polling.TingwuPollingLoop,
 
     optionalConfig: Optional<AiCoreConfig>
 ) : TingwuCoordinator {
@@ -387,9 +388,7 @@ class TingwuRunner @Inject constructor(
     private fun getOrCreateJobFlow(jobId: String): MutableStateFlow<TingwuJobState> =
         jobStates.getOrPut(jobId) { MutableStateFlow<TingwuJobState>(TingwuJobState.Idle) }
 
-    // V1 spec §8.1: Tingwu retry policy with backoff
-    private suspend fun pollWithRetry(jobId: String): TingwuStatusResponse =
-        tingwuRunner.pollWithRetry(jobId)
+
 
 
 
@@ -399,188 +398,131 @@ class TingwuRunner @Inject constructor(
         if (existing != null && existing.isActive) {
             return
         }
-        val pollInterval = max(config.tingwuPollIntervalMillis, 500L)
-        val perTaskTimeout = max(config.tingwuPollTimeoutMillis, pollInterval * 2)
-        val globalTimeout = config.tingwuGlobalPollTimeoutMillis.takeIf { it > 0 }
-        val effectiveTimeout = min(perTaskTimeout, globalTimeout ?: Long.MAX_VALUE)
-        val initialDelay = max(config.tingwuInitialPollDelayMillis, 0L)
+        
+        pipelineTracer.emit(
+            stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_POLL,
+            status = "STARTED",
+            message = "jobId=$jobId (delegated to TingwuPollingLoop)"
+        )
+
+        val flow = getOrCreateJobFlow(jobId)
+
         val job = scope.launch {
-            val flow = getOrCreateJobFlow(jobId)
-            val start = System.currentTimeMillis()
-            if (initialDelay > 0) {
-                delay(initialDelay)
-            }
-            pipelineTracer.emit(
-                stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_POLL,
-                status = "STARTED",
-                message = "jobId=$jobId"
-            )
-            try {
-                while (isActive) {
-                    if (System.currentTimeMillis() - start > effectiveTimeout) {
-                        flow.value = TingwuJobState.Failed(
-                            jobId,
-                            AiCoreException(
-                                source = AiCoreErrorSource.TINGWU,
-                                reason = AiCoreErrorReason.TIMEOUT,
-                                message = "Tingwu 轮询超时",
-                                suggestion = "可调大 AiCoreConfig.tingwuPollTimeoutMillis"
-                            )
-                        )
-                        break
-                    }
-                    val response = try {
-                        pollWithRetry(jobId)
-                    } catch (error: Throwable) {
-                        if (error is CancellationException) throw error
-                        val mapped = tingwuRunner.mapError(error)
-                        AiCoreLogger.e(TAG, "查询 Tingwu 状态失败（已耗尽重试）：${mapped.message}", mapped)
-                        flow.value = TingwuJobState.Failed(jobId, mapped)
-                        return@launch
-                    }
-                    val data = try {
-                        requireData(
-                            code = response.code,
-                            message = response.message,
-                            requestId = response.requestId,
-                            data = response.data,
-                            action = "GetTaskInfo"
-                        )
-                    } catch (error: AiCoreException) {
-                        flow.value = TingwuJobState.Failed(jobId, error)
-                        return@launch
-                    }
-                    runCatching {
-                        tingwuTraceStore.record(
-                            taskId = jobId,
-                            getTaskInfoJson = gson.toJson(response),
-                            resultUrls = data.resultLinks.orEmpty()
-                        )
-                    }
-                    logVerbose {
-                        "轮询结果：jobId=$jobId status=${data.taskStatus} progress=${data.taskProgress} requestId=${response.requestId}"
-                    }
-                    // Log Result field contents for debugging
-                    if (data.resultLinks != null) {
-                        val resultKeys = data.resultLinks.keys.joinToString(", ")
-                        logVerbose { "Result 字段包含的键：[$resultKeys]" }
-                        data.resultLinks.forEach { (key, value) ->
-                            logVerbose { "  Result.$key = ${value.take(100)}..." }
+            pollingLoop.poll(
+                jobId = jobId,
+                stateFlow = flow,
+                onTerminal = { terminalState ->
+                    // Handle terminal state (Completed or Failed)
+                    try {
+                        if (terminalState is TingwuJobState.Completed) {
+                            handleJobCompletion(jobId, terminalState, flow)
+                        } else if (terminalState is TingwuJobState.Failed) {
+                            handleJobFailure(jobId, terminalState)
                         }
-                    } else {
-                        logVerbose { "Result 字段为 null 或空" }
+                    } finally {
+                        pollingJobs.remove(jobId)
+                        jobContext.remove(jobId)
                     }
-                    val normalizedStatus = data.taskStatus?.uppercase(Locale.US) ?: "UNKNOWN"
-                    val artifacts = data.toArtifacts()
-                    val shouldContinue = when (normalizedStatus) {
-                        "FAILED", "ERROR" -> {
-                            flow.value = TingwuJobState.Failed(
-                                jobId,
-                                AiCoreException(
-                                    source = AiCoreErrorSource.TINGWU,
-                                    reason = AiCoreErrorReason.REMOTE,
-                                    message = data.errorMessage ?: "Tingwu 返回失败"
-                                ),
-                                errorCode = data.errorCode
-                            )
-                            false
-                        }
-                        "SUCCEEDED", "COMPLETED", "FINISHED" -> {
-                            AiCoreLogger.d(TAG, "任务状态为 COMPLETED，开始拉取转写结果：jobId=$jobId")
-                            logVerbose { "状态完成，准备拉取结果：jobId=$jobId" }
-                            if (data.resultLinks != null) {
-                                AiCoreLogger.d(TAG, "Result 字段可用，包含 ${data.resultLinks.size} 个键")
-                            } else {
-                                AiCoreLogger.w(TAG, "Result 字段为空，将尝试 /transcription 接口")
-                            }
-                    val transcriptResult = try {
-                        fetchTranscript(
-                            jobId = jobId,
-                            resultLinks = data.resultLinks,
-                            fallbackArtifacts = artifacts
-                        )
-                    } catch (error: Throwable) {
-                        if (error is CancellationException) throw error
-                        val mapped = tingwuRunner.mapError(error)
-                        AiCoreLogger.e(TAG, "拉取转写结果失败：${mapped.message}", mapped)
-                        flow.value = TingwuJobState.Failed(jobId, mapped)
-                        return@launch
-                    }
-                    val mergedArtifacts = transcriptResult.artifacts
-                            val transcriptMeta = refineSpeakerLabels(
-                                transcriptId = jobId,
-                                diarizedSegments = transcriptResult.diarizedSegments.orEmpty(),
-                                speakerLabels = mergedArtifacts?.speakerLabels.orEmpty()
-                            )
-                            val mergedSpeakerLabels = mergeSpeakerLabels(
-                                base = mergedArtifacts?.speakerLabels.orEmpty(),
-                                incoming = transcriptMeta?.speakerMap.orEmpty()
-                            )
-                            val artifactsWithMetadata = mergedArtifacts?.copy(
-                                speakerLabels = mergedSpeakerLabels
-                            ) ?: mergedArtifacts
-                            upsertSessionMetadataFromTingwu(
-                                jobId = jobId,
-                                artifacts = artifactsWithMetadata,
-                                transcriptMeta = transcriptMeta,
-                                chapters = transcriptResult.chapters
-                            )
-                            // 说明：Tingwu 完成后记录可疑边界，供 M2 预处理补丁使用。
-                            runCatching {
-                                val boundaries = TingwuSuspiciousBoundaryDetector.detect(
-                                    transcriptMarkdown = transcriptResult.markdown
-                                )
-                                tingwuTraceStore.record(
-                                    taskId = jobId,
-                                    suspiciousBoundaries = boundaries
-                                )
-                            }.onFailure { error ->
-                                AiCoreLogger.w(TAG, "Tingwu 可疑边界记录失败：${error.message}")
-                                tingwuTraceStore.record(
-                                    taskId = jobId,
-                                    suspiciousBoundaries = emptyList()
-                                )
-                            }
-                            appendTingwuPreprocessPatch(
-                                jobId = jobId,
-                                transcriptMarkdown = transcriptResult.markdown
-                            )
-                            AiCoreLogger.d(TAG, "转写结果拉取成功：jobId=$jobId markdown长度=${transcriptResult.markdown.length}")
-                            pipelineTracer.emit(
-                                stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_POLL,
-                                status = "COMPLETED",
-                                message = "jobId=$jobId chapters=${transcriptResult.chapters?.size ?: 0}"
-                            )
-                            flow.value = TingwuJobState.Completed(
-                                jobId = jobId,
-                                transcriptMarkdown = transcriptResult.markdown,
-                                artifacts = artifactsWithMetadata,
-                                statusLabel = normalizedStatus
-                            )
-                            false
-                        }
-                        else -> {
-                            val progress = inferProgress(data)
-                            flow.value = TingwuJobState.InProgress(
-                                jobId,
-                                progress,
-                                statusLabel = normalizedStatus,
-                                artifacts = artifacts
-                            )
-                            true
-                        }
-                    }
-                    if (!shouldContinue) {
-                        break
-                    }
-                    delay(pollInterval)
                 }
-            } finally {
-                pollingJobs.remove(jobId)
-                jobContext.remove(jobId)
-            }
+            )
         }
         pollingJobs[jobId] = job
+    }
+
+    private suspend fun handleJobCompletion(
+        jobId: String,
+        state: TingwuJobState.Completed,
+        flow: MutableStateFlow<TingwuJobState>
+    ) {
+        AiCoreLogger.d(TAG, "任务状态为 COMPLETED，开始拉取转写结果：jobId=$jobId")
+        
+        // Fetch full transcript content (not included in polling status)
+        val transcriptResult = try {
+            fetchTranscript(
+                jobId = jobId,
+                resultLinks = state.artifacts?.extraResultUrls,
+                fallbackArtifacts = state.artifacts
+            )
+        } catch (error: Throwable) {
+            if (error is CancellationException) throw error
+            val mapped = tingwuRunner.mapError(error)
+            AiCoreLogger.e(TAG, "拉取转写结果失败：${mapped.message}", mapped)
+            flow.value = TingwuJobState.Failed(jobId, mapped)
+            
+            pipelineTracer.emit(
+                stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_POLL,
+                status = "FAILED",
+                message = "Fetch transcript failed: ${mapped.message}"
+            )
+            return
+        }
+
+        val mergedArtifacts = transcriptResult.artifacts
+        val transcriptMeta = refineSpeakerLabels(
+            transcriptId = jobId,
+            diarizedSegments = transcriptResult.diarizedSegments.orEmpty(),
+            speakerLabels = mergedArtifacts?.speakerLabels.orEmpty()
+        )
+        val mergedSpeakerLabels = mergeSpeakerLabels(
+            base = mergedArtifacts?.speakerLabels.orEmpty(),
+            incoming = transcriptMeta?.speakerMap.orEmpty()
+        )
+        val artifactsWithMetadata = mergedArtifacts?.copy(
+            speakerLabels = mergedSpeakerLabels
+        ) ?: mergedArtifacts
+
+        upsertSessionMetadataFromTingwu(
+            jobId = jobId,
+            artifacts = artifactsWithMetadata,
+            transcriptMeta = transcriptMeta,
+            chapters = transcriptResult.chapters
+        )
+
+        // 说明：Tingwu 完成后记录可疑边界，供 M2 预处理补丁使用。
+        runCatching {
+            val boundaries = TingwuSuspiciousBoundaryDetector.detect(
+                transcriptMarkdown = transcriptResult.markdown
+            )
+            tingwuTraceStore.record(
+                taskId = jobId,
+                suspiciousBoundaries = boundaries
+            )
+        }.onFailure { error ->
+            AiCoreLogger.w(TAG, "Tingwu 可疑边界记录失败：${error.message}")
+            tingwuTraceStore.record(
+                taskId = jobId,
+                suspiciousBoundaries = emptyList()
+            )
+        }
+
+        appendTingwuPreprocessPatch(
+            jobId = jobId,
+            transcriptMarkdown = transcriptResult.markdown
+        )
+
+        AiCoreLogger.d(TAG, "转写结果拉取成功：jobId=$jobId markdown长度=${transcriptResult.markdown.length}")
+        
+        pipelineTracer.emit(
+            stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_POLL,
+            status = "COMPLETED",
+            message = "jobId=$jobId chapters=${transcriptResult.chapters?.size ?: 0}"
+        )
+
+        // Emit final Completed state with full content
+        flow.value = TingwuJobState.Completed(
+            jobId = jobId,
+            transcriptMarkdown = transcriptResult.markdown,
+            artifacts = artifactsWithMetadata,
+            statusLabel = state.statusLabel
+        )
+    }
+
+    private fun handleJobFailure(jobId: String, state: TingwuJobState.Failed) {
+        pipelineTracer.emit(
+            stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_POLL,
+            status = "FAILED",
+            message = "jobId=$jobId error=${state.error.message}"
+        )
     }
 
     // 将 Tingwu 转写产出的摘要/标签写入 MetaHub，标记最新分析来源。
@@ -765,17 +707,7 @@ class TingwuRunner @Inject constructor(
     }
 
 
-    private fun inferProgress(status: TingwuStatusData): Int {
-        val normalized = status.taskStatus?.uppercase(Locale.US) ?: "PENDING"
-        val progress = status.taskProgress ?: when (normalized) {
-            "PENDING" -> 5
-            "QUEUED" -> 10
-            "PROCESSING", "RUNNING" -> 50
-            "TRANSCRIBING" -> 75
-            else -> 20
-        }
-        return min(max(progress, 0), 95)
-    }
+
 
     private fun resolveMissingUrlError(): AiCoreException = AiCoreException(
         source = AiCoreErrorSource.TINGWU,

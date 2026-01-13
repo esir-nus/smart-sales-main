@@ -1,0 +1,2 @@
+// This should be done via replace_file_content on settings.gradle.kts, but I need to read it first.
+// I will skip this write and read settings.gradle.kts in next step.

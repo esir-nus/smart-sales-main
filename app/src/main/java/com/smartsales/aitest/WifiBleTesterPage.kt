@@ -58,6 +58,9 @@ fun WifiBleTesterRoute(
         onOpenMediaManager = viewModel::openMediaManager,
         onRequestHotspot = viewModel::requestHotspot,
         onServiceAddressChange = viewModel::updateMediaServerBaseUrl,
+        onToggleBleHud = viewModel::toggleBleTrafficHud,
+        onToggleBleVerbose = viewModel::toggleBleTrafficVerbose,
+        onClearBleTraffic = viewModel::clearBleTrafficLogs,
         mediaPanel = {
             MediaServerPanel(
                 baseUrl = state.mediaServerBaseUrl,
@@ -90,6 +93,9 @@ fun WifiBleTesterPage(
     onOpenMediaManager: () -> Unit,
     onRequestHotspot: () -> Unit,
     onServiceAddressChange: (String) -> Unit,
+    onToggleBleHud: () -> Unit,
+    onToggleBleVerbose: () -> Unit,
+    onClearBleTraffic: () -> Unit,
     mediaPanel: @Composable ColumnScope.() -> Unit
 ) {
     Column(
@@ -140,7 +146,7 @@ fun WifiBleTesterPage(
                 Text(text = "尚未发现 CHLE，系统会持续扫描。", style = MaterialTheme.typography.bodySmall)
             }
         }
-        SectionCard(title = "WiFi 名称配置 (wifi#connect#name#password)") {
+        SectionCard(title = "WiFi 名称配置 (SD#ssid + PD#password)") {
             OutlinedTextField(
                 value = state.wifiSsid,
                 onValueChange = onWifiNameChanged,
@@ -231,6 +237,55 @@ fun WifiBleTesterPage(
                     text = logs.joinToString(separator = "\n"),
                     style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
                 )
+            }
+        }
+        // BLE Traffic Debug HUD
+        SectionCard(title = "BLE 流量调试 (TX/RX)") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = onToggleBleHud,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(if (state.showBleTrafficHud) "隐藏流量" else "显示流量")
+                }
+                OutlinedButton(
+                    onClick = onToggleBleVerbose,
+                    enabled = state.showBleTrafficHud
+                ) {
+                    Text(if (state.bleTrafficVerbose) "简洁" else "详细")
+                }
+                OutlinedButton(
+                    onClick = onClearBleTraffic,
+                    enabled = state.showBleTrafficHud
+                ) {
+                    Text("清空")
+                }
+            }
+            if (state.showBleTrafficHud) {
+                Spacer(modifier = Modifier.height(8.dp))
+                val trafficLogs = state.bleTrafficLogs
+                if (trafficLogs.isEmpty()) {
+                    Text(
+                        text = "等待 BLE 通信...\n发送凭据或查询网络以查看流量",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Text(
+                        text = trafficLogs.take(20).joinToString(separator = "\n"),
+                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
+                    )
+                    if (trafficLogs.size > 20) {
+                        Text(
+                            text = "... 还有 ${trafficLogs.size - 20} 条记录",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }

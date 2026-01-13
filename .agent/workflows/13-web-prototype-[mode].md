@@ -10,10 +10,33 @@ This mode establishes a **visual-first development workflow** where all UI chang
 
 ## Mode Rules
 
-### Rule 1: Single Persistent Prototype File
-- **DO**: Update the existing `design_system_prototype.html` file.
-- **DON'T**: Create new HTML files for each design iteration.
+### Rule 1: ONE Master Prototype (CRITICAL)
+
+> **🛑 HARD RULE: There is exactly ONE master prototype file.**
+
+- **Master File**: `design_system_prototype.html`
 - **Location**: `/home/cslh-frank/.gemini/antigravity/brain/{current_session_id}/design_system_prototype.html`
+- **Cross-Session Inheritance**: If a previous session's prototype exists and is referenced by the user or a handoff artifact, **copy it to the current session's artifacts folder** before modifying.
+
+**Enforcement:**
+1. **DO**: Always update the single `design_system_prototype.html` in the current session's artifact folder.
+2. **DO**: If resuming work from a previous session, first check for an existing prototype in that session's artifacts and copy it forward.
+3. **DON'T**: Create `prototype_v2.html`, `memory_drawer.html`, `persona_test.html`, etc.
+4. **DON'T**: Create multiple HTML files for different features—all features go into the ONE master file.
+
+**Before Modifying:**
+```
+1. Check: Does design_system_prototype.html exist in current session?
+   - YES → Update it.
+   - NO → Check if referenced in handoff/previous session → Copy it forward.
+   - NO → Create a new one (rare, first-time only).
+```
+
+| ❌ FORBIDDEN | ✅ CORRECT |
+|--------------|-----------|
+| `memory_drawer.html` | Add to `design_system_prototype.html` |
+| `persona_flow_test.html` | Add as a page/gallery in master |
+| `design_v2.html` | Update existing `design_system_prototype.html` |
 
 ### Rule 2: Phone Emulator Frame (NOT Full Page)
 The prototype MUST render inside a phone-shaped container, not occupy the entire browser viewport.

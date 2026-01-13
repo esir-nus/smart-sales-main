@@ -60,13 +60,26 @@ class GattBleGateway @Inject constructor(
         credentials: WifiCredentials
     ): BleGatewayResult =
         when (val outcome = execute(session.peripheralId) { gattContext, config ->
-            // ESP32 protocol (per bluetooch.py): wifi#connect#<ssid>#<password>
-            val payload = buildCredentialsPayload(credentials)
-            ConnectivityLogger.i("BLE Provision: sending WiFi connect command: ${payload.decodeToString()}")
-            gattContext.writeCharacteristic(config.credentialCharacteristicUuid, payload)
+            // ESP32 two-step WiFi provisioning protocol:
+            // Step 1: SD#<ssid>  (Send SSID)
+            // Step 2: PD#<password>  (Send Password)
+            val ssidPayload = buildSsidPayload(credentials.ssid)
+            val passwordPayload = buildPasswordPayload(credentials.password)
+            
+            ConnectivityLogger.i("BLE Provision: Step 1 - sending SSID: ${ssidPayload.decodeToString()}")
+            ConnectivityLogger.tx("SSID", ssidPayload)
+            gattContext.writeCharacteristic(config.credentialCharacteristicUuid, ssidPayload)
+            
+            // Brief delay between commands for badge to process
+            kotlinx.coroutines.delay(100)
+            
+            ConnectivityLogger.i("BLE Provision: Step 2 - sending password: PD#****")
+            ConnectivityLogger.tx("Password", passwordPayload)
+            gattContext.writeCharacteristic(config.credentialCharacteristicUuid, passwordPayload)
             
             // Wait for badge to connect and respond
             val ackBytes = gattContext.awaitNotificationOrRead(config.provisioningStatusCharacteristicUuid)
+            ConnectivityLogger.rx("ProvisionAck", ackBytes)
             parseProvisioningAck(credentials, ackBytes)
         }) {
             is GatewayOutcome.Success -> outcome.value
@@ -78,6 +91,7 @@ class GattBleGateway @Inject constructor(
     ): HotspotResult =
         when (val outcome = execute(session.peripheralId) { gattContext, config ->
             val response = gattContext.readCharacteristic(config.hotspotCharacteristicUuid)
+            ConnectivityLogger.rx("Hotspot", response)
             parseHotspot(response)
         }) {
             is GatewayOutcome.Success -> HotspotResult.Success(outcome.value)
@@ -96,8 +110,10 @@ class GattBleGateway @Inject constructor(
     ): NetworkQueryResult =
         when (val outcome = execute(session.peripheralId) { gattContext, config ->
             val command = buildNetworkQueryPayload()
+            ConnectivityLogger.tx("NetworkQuery", command)
             gattContext.writeCharacteristic(config.credentialCharacteristicUuid, command)
             val response = gattContext.awaitNotificationOrRead(config.provisioningStatusCharacteristicUuid)
+            ConnectivityLogger.rx("NetworkResponse", response)
             parseNetworkResponse(response)
         }) {
             is GatewayOutcome.Success -> NetworkQueryResult.Success(outcome.value)
@@ -326,14 +342,21 @@ class GattBleGateway @Inject constructor(
     }
 
     /**
-     * Build WiFi connect command per ESP32 protocol: wifi#connect#<ssid>#<password>
-     * SOT: reference-source/bluetooch.py lines 307-319
+     * Build SSID payload for ESP32 two-step WiFi provisioning.
+     * Format: SD#<ssid>
      */
-    private fun buildCredentialsPayload(credentials: WifiCredentials): ByteArray {
-        val sanitizedSsid = sanitizeSegment(credentials.ssid)
-        val sanitizedPassword = sanitizeSegment(credentials.password)
-        val payload = "wifi#connect#$sanitizedSsid#$sanitizedPassword"
-        return payload.toByteArray(Charsets.UTF_8)
+    private fun buildSsidPayload(ssid: String): ByteArray {
+        val sanitized = sanitizeSegment(ssid)
+        return "SD#$sanitized".toByteArray(Charsets.UTF_8)
+    }
+
+    /**
+     * Build password payload for ESP32 two-step WiFi provisioning.
+     * Format: PD#<password>
+     */
+    private fun buildPasswordPayload(password: String): ByteArray {
+        val sanitized = sanitizeSegment(password)
+        return "PD#$sanitized".toByteArray(Charsets.UTF_8)
     }
 
     private fun buildNetworkQueryPayload(): ByteArray =

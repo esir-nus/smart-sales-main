@@ -111,7 +111,7 @@ fun ConnectivityControlPanel(
                     Text(text = "尚未发现设备，点击开始扫描寻找 CHLE / Demo Pod。")
                 }
             }
-            Text(text = "Wi-Fi 名称配置 (wifi#connect#name#password)", style = MaterialTheme.typography.titleSmall)
+            Text(text = "Wi-Fi 名称配置 (SD#ssid + PD#password)", style = MaterialTheme.typography.titleSmall)
             OutlinedTextField(
                 value = state.wifiSsid,
                 onValueChange = onSsidChanged,
@@ -140,9 +140,10 @@ fun ConnectivityControlPanel(
                     )
                 }
             }
-            val preview = buildPreviewCommand(state)
+            val previewSsid = buildPreviewSsid(state)
+            val previewPwd = buildPreviewPassword(state)
             Text(
-                text = "发送格式（wifi#connect#name#password）：$preview",
+                text = "发送格式：SD#$previewSsid 然后 PD#$previewPwd",
                 style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
             )
             Button(
@@ -192,10 +193,12 @@ private fun HeaderRow(
     }
 }
 
-private fun buildPreviewCommand(state: ConnectivityControlState): String {
-    val ssid = sanitizeSegment(state.wifiSsid.ifBlank { "<ssid>" })
-    val password = sanitizeSegment(state.wifiPassword.ifBlank { "<password>" })
-    return "wifi#connect#$ssid#$password"
+private fun buildPreviewSsid(state: ConnectivityControlState): String {
+    return sanitizeSegment(state.wifiSsid.ifBlank { "<ssid>" })
+}
+
+private fun buildPreviewPassword(state: ConnectivityControlState): String {
+    return sanitizeSegment(state.wifiPassword.ifBlank { "<password>" })
 }
 
 private fun sanitizeSegment(value: String): String = value.replace("#", "-")

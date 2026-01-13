@@ -1,100 +1,129 @@
 Type-safe project accessors is an incubating feature.
-> Task :core:util:checkKotlinGradlePluginConfigurationErrors
-> Task :core:util:preBuild UP-TO-DATE
-> Task :core:util:preDebugBuild UP-TO-DATE
-> Task :core:util:generateDebugResValues UP-TO-DATE
-> Task :feature:usercenter:preBuild UP-TO-DATE
-> Task :feature:usercenter:preDebugBuild UP-TO-DATE
-> Task :feature:usercenter:generateDebugResValues UP-TO-DATE
-> Task :feature:media:preBuild UP-TO-DATE
-> Task :feature:media:preDebugBuild UP-TO-DATE
-> Task :feature:usercenter:generateDebugResources UP-TO-DATE
 > Task :data:ai-core:preBuild UP-TO-DATE
 > Task :data:ai-core:preDebugBuild UP-TO-DATE
-> Task :feature:usercenter:packageDebugResources UP-TO-DATE
-> Task :feature:media:generateDebugResValues UP-TO-DATE
-> Task :feature:usercenter:processDebugNavigationResources UP-TO-DATE
+> Task :core:test:checkKotlinGradlePluginConfigurationErrors
+> Task :core:util:checkKotlinGradlePluginConfigurationErrors
+> Task :core:util:preBuild UP-TO-DATE
+> Task :core:test:preBuild UP-TO-DATE
+> Task :core:util:preDebugBuild UP-TO-DATE
+> Task :core:test:preDebugBuild UP-TO-DATE
 > Task :data:ai-core:generateDebugResValues UP-TO-DATE
-> Task :core:util:generateDebugResources UP-TO-DATE
-> Task :feature:connectivity:preBuild UP-TO-DATE
-> Task :feature:chat:checkKotlinGradlePluginConfigurationErrors
-> Task :feature:media:generateDebugResources UP-TO-DATE
-> Task :feature:chat:preBuild UP-TO-DATE
-> Task :feature:chat:preDebugBuild UP-TO-DATE
-> Task :feature:connectivity:preDebugBuild UP-TO-DATE
-> Task :feature:connectivity:generateDebugResValues UP-TO-DATE
-> Task :feature:connectivity:generateDebugResources UP-TO-DATE
+> Task :core:util:generateDebugResValues UP-TO-DATE
+> Task :core:test:generateDebugResValues UP-TO-DATE
 > Task :data:ai-core:generateDebugResources UP-TO-DATE
-> Task :feature:media:packageDebugResources UP-TO-DATE
-> Task :feature:chat:generateDebugBuildConfig UP-TO-DATE
-> Task :feature:usercenter:parseDebugLocalResources UP-TO-DATE
-> Task :feature:chat:generateDebugResValues UP-TO-DATE
-> Task :feature:connectivity:packageDebugResources UP-TO-DATE
-> Task :feature:media:processDebugNavigationResources UP-TO-DATE
-> Task :data:ai-core:packageDebugResources UP-TO-DATE
-> Task :feature:chat:generateDebugResources UP-TO-DATE
+> Task :core:util:generateDebugResources UP-TO-DATE
+> Task :core:test:generateDebugResources UP-TO-DATE
 > Task :core:util:packageDebugResources UP-TO-DATE
-> Task :feature:connectivity:processDebugNavigationResources UP-TO-DATE
+> Task :core:test:packageDebugResources UP-TO-DATE
 > Task :core:util:processDebugNavigationResources UP-TO-DATE
-> Task :feature:media:parseDebugLocalResources UP-TO-DATE
-> Task :feature:connectivity:parseDebugLocalResources UP-TO-DATE
-> Task :feature:usercenter:generateDebugRFile UP-TO-DATE
-> Task :feature:usercenter:checkKotlinGradlePluginConfigurationErrors
+> Task :core:test:processDebugNavigationResources UP-TO-DATE
+> Task :data:ai-core:packageDebugResources UP-TO-DATE
 > Task :data:ai-core:processDebugNavigationResources UP-TO-DATE
-> Task :feature:chat:packageDebugResources UP-TO-DATE
-> Task :core:util:parseDebugLocalResources UP-TO-DATE
-> Task :feature:connectivity:generateDebugRFile UP-TO-DATE
-> Task :feature:media:generateDebugRFile UP-TO-DATE
-> Task :feature:chat:processDebugNavigationResources UP-TO-DATE
-> Task :feature:connectivity:checkKotlinGradlePluginConfigurationErrors
-> Task :feature:media:checkKotlinGradlePluginConfigurationErrors
-> Task :feature:connectivity:generateDebugBuildConfig UP-TO-DATE
-> Task :feature:chat:parseDebugLocalResources UP-TO-DATE
-> Task :core:util:generateDebugRFile UP-TO-DATE
 > Task :data:ai-core:parseDebugLocalResources UP-TO-DATE
+> Task :core:util:parseDebugLocalResources UP-TO-DATE
+> Task :core:test:parseDebugLocalResources UP-TO-DATE
+> Task :core:util:generateDebugRFile UP-TO-DATE
+> Task :core:test:generateDebugRFile UP-TO-DATE
 > Task :data:ai-core:generateDebugRFile UP-TO-DATE
 > Task :data:ai-core:checkKotlinGradlePluginConfigurationErrors
-> Task :feature:chat:generateDebugRFile UP-TO-DATE
 > Task :data:ai-core:generateDebugBuildConfig UP-TO-DATE
-> Task :feature:connectivity:javaPreCompileDebug UP-TO-DATE
+> Task :core:test:javaPreCompileDebug UP-TO-DATE
 > Task :data:ai-core:javaPreCompileDebug UP-TO-DATE
-> Task :feature:usercenter:javaPreCompileDebug UP-TO-DATE
-> Task :feature:media:javaPreCompileDebug UP-TO-DATE
+> Task :data:ai-core:preDebugUnitTestBuild UP-TO-DATE
+> Task :data:ai-core:generateDebugUnitTestStubRFile UP-TO-DATE
 > Task :core:util:compileDebugKotlin UP-TO-DATE
 > Task :core:util:javaPreCompileDebug UP-TO-DATE
 > Task :core:util:compileDebugJavaWithJavac NO-SOURCE
 > Task :core:util:bundleLibCompileToJarDebug UP-TO-DATE
 > Task :core:util:bundleLibRuntimeToJarDebug UP-TO-DATE
-> Task :feature:usercenter:kaptGenerateStubsDebugKotlin UP-TO-DATE
-> Task :feature:connectivity:kaptGenerateStubsDebugKotlin UP-TO-DATE
-> Task :feature:usercenter:kaptDebugKotlin UP-TO-DATE
-> Task :feature:connectivity:kaptDebugKotlin UP-TO-DATE
+> Task :core:test:compileDebugKotlin UP-TO-DATE
+> Task :core:test:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:test:bundleLibCompileToJarDebug UP-TO-DATE
 > Task :data:ai-core:kaptGenerateStubsDebugKotlin UP-TO-DATE
-> Task :feature:usercenter:compileDebugKotlin UP-TO-DATE
-> Task :feature:connectivity:compileDebugKotlin UP-TO-DATE
-> Task :feature:connectivity:compileDebugJavaWithJavac UP-TO-DATE
-> Task :feature:usercenter:compileDebugJavaWithJavac UP-TO-DATE
 > Task :data:ai-core:kaptDebugKotlin UP-TO-DATE
 > Task :data:ai-core:compileDebugKotlin UP-TO-DATE
-> Task :feature:connectivity:transformDebugClassesWithAsm UP-TO-DATE
-> Task :feature:usercenter:transformDebugClassesWithAsm UP-TO-DATE
-> Task :feature:usercenter:bundleLibCompileToJarDebug UP-TO-DATE
-> Task :feature:connectivity:bundleLibCompileToJarDebug UP-TO-DATE
-> Task :feature:connectivity:bundleLibRuntimeToJarDebug UP-TO-DATE
 > Task :data:ai-core:compileDebugJavaWithJavac UP-TO-DATE
 > Task :data:ai-core:transformDebugClassesWithAsm UP-TO-DATE
 > Task :data:ai-core:bundleLibCompileToJarDebug UP-TO-DATE
-> Task :feature:media:kaptGenerateStubsDebugKotlin UP-TO-DATE
-> Task :feature:media:kaptDebugKotlin UP-TO-DATE
-> Task :feature:media:compileDebugKotlin UP-TO-DATE
-> Task :feature:media:compileDebugJavaWithJavac UP-TO-DATE
-> Task :feature:media:transformDebugClassesWithAsm UP-TO-DATE
-> Task :feature:media:bundleLibCompileToJarDebug UP-TO-DATE
-> Task :feature:chat:kaptGenerateStubsDebugKotlin UP-TO-DATE
-> Task :feature:chat:kaptDebugKotlin UP-TO-DATE
-> Task :feature:chat:compileDebugKotlin UP-TO-DATE
+> Task :data:ai-core:kaptGenerateStubsDebugUnitTestKotlin UP-TO-DATE
+> Task :data:ai-core:kaptDebugUnitTestKotlin UP-TO-DATE
+
+> Task :data:ai-core:compileDebugUnitTestKotlin FAILED
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:21:12 Unresolved reference: mockito
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:22:12 Unresolved reference: mockito
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:23:12 Unresolved reference: mockito
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:35:22 Unresolved reference: mock
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:44:17 'unconfined' overrides nothing
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:63:17 No value passed for parameter 'errorCode'
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:63:17 No value passed for parameter 'errorMessage'
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:63:17 No value passed for parameter 'outputMp3Path'
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:63:17 No value passed for parameter 'outputMp4Path'
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:63:17 No value passed for parameter 'outputThumbnailPath'
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:63:17 No value passed for parameter 'outputSpectrumPath'
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:63:17 No value passed for parameter 'resultLinks'
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:63:17 No value passed for parameter 'meetingJoinUrl'
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:66:9 Unresolved reference: whenever
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:90:17 No value passed for parameter 'taskProgress'
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:90:17 No value passed for parameter 'outputMp3Path'
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:90:17 No value passed for parameter 'outputMp4Path'
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:90:17 No value passed for parameter 'outputThumbnailPath'
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:90:17 No value passed for parameter 'outputSpectrumPath'
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:90:17 No value passed for parameter 'resultLinks'
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:90:17 No value passed for parameter 'meetingJoinUrl'
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:93:9 Unresolved reference: whenever
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:105:73 No value passed for parameter 'source'
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:107:9 Unresolved reference: whenever
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:108:9 Unresolved reference: whenever
+e: file:///home/cslh-frank/main_app/data/ai-core/src/test/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoopTest.kt:108:38 Unresolved reference. None of the following candidates is applicable because of receiver type mismatch: 
+public fun <T> Array<out TypeVariable(T)>.any(): Boolean defined in kotlin.collections
+public inline fun <T> Array<out TypeVariable(T)>.any(predicate: (TypeVariable(T)) -> Boolean): Boolean defined in kotlin.collections
+public fun BooleanArray.any(): Boolean defined in kotlin.collections
+public inline fun BooleanArray.any(predicate: (Boolean) -> Boolean): Boolean defined in kotlin.collections
+public fun ByteArray.any(): Boolean defined in kotlin.collections
+public inline fun ByteArray.any(predicate: (Byte) -> Boolean): Boolean defined in kotlin.collections
+public fun CharArray.any(): Boolean defined in kotlin.collections
+public inline fun CharArray.any(predicate: (Char) -> Boolean): Boolean defined in kotlin.collections
+public fun CharSequence.any(): Boolean defined in kotlin.text
+public inline fun CharSequence.any(predicate: (Char) -> Boolean): Boolean defined in kotlin.text
+public fun DoubleArray.any(): Boolean defined in kotlin.collections
+public inline fun DoubleArray.any(predicate: (Double) -> Boolean): Boolean defined in kotlin.collections
+public fun FloatArray.any(): Boolean defined in kotlin.collections
+public inline fun FloatArray.any(predicate: (Float) -> Boolean): Boolean defined in kotlin.collections
+public fun IntArray.any(): Boolean defined in kotlin.collections
+public inline fun IntArray.any(predicate: (Int) -> Boolean): Boolean defined in kotlin.collections
+public fun LongArray.any(): Boolean defined in kotlin.collections
+public inline fun LongArray.any(predicate: (Long) -> Boolean): Boolean defined in kotlin.collections
+public fun ShortArray.any(): Boolean defined in kotlin.collections
+public inline fun ShortArray.any(predicate: (Short) -> Boolean): Boolean defined in kotlin.collections
+public inline fun UByteArray.any(): Boolean defined in kotlin.collections
+public inline fun UByteArray.any(predicate: (UByte) -> Boolean): Boolean defined in kotlin.collections
+public inline fun UIntArray.any(): Boolean defined in kotlin.collections
+public inline fun UIntArray.any(predicate: (UInt) -> Boolean): Boolean defined in kotlin.collections
+public inline fun ULongArray.any(): Boolean defined in kotlin.collections
+public inline fun ULongArray.any(predicate: (ULong) -> Boolean): Boolean defined in kotlin.collections
+public inline fun UShortArray.any(): Boolean defined in kotlin.collections
+public inline fun UShortArray.any(predicate: (UShort) -> Boolean): Boolean defined in kotlin.collections
+public fun <T> Iterable<TypeVariable(T)>.any(): Boolean defined in kotlin.collections
+public inline fun <T> Iterable<TypeVariable(T)>.any(predicate: (TypeVariable(T)) -> Boolean): Boolean defined in kotlin.collections
+public fun <K, V> Map<out TypeVariable(K), TypeVariable(V)>.any(): Boolean defined in kotlin.collections
+public inline fun <K, V> Map<out TypeVariable(K), TypeVariable(V)>.any(predicate: (Map.Entry<TypeVariable(K), TypeVariable(V)>) -> Boolean): Boolean defined in kotlin.collections
+public fun <T> Sequence<TypeVariable(T)>.any(): Boolean defined in kotlin.sequences
+public inline fun <T> Sequence<TypeVariable(T)>.any(predicate: (TypeVariable(T)) -> Boolean): Boolean defined in kotlin.sequences
 
 [Incubating] Problems report is available at: file:///home/cslh-frank/main_app/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':data:ai-core:compileDebugUnitTestKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
 
 Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
 
@@ -102,5 +131,5 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/8.13/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD SUCCESSFUL in 2s
-81 actionable tasks: 6 executed, 75 up-to-date
+BUILD FAILED in 2s
+40 actionable tasks: 4 executed, 36 up-to-date

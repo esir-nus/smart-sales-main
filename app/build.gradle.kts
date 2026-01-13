@@ -118,4 +118,5 @@ dependencies {
     androidTestImplementation(libs.hilt.android.testing)
     kaptAndroidTest(libs.hilt.compiler)
     debugImplementation(libs.compose.ui.test.manifest)
+    debugImplementation(projects.feature.designLab)
 }

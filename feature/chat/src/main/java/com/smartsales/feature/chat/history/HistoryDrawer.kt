@@ -131,11 +131,11 @@ internal fun HistoryDrawerContent(
                                         if (isCurrent) Modifier.shadow(
                                             elevation = 6.dp, // Gap V13: Matches 12px blur
                                             shape = RoundedCornerShape(12.dp),
-                                            spotColor = AppColors.BubbleShadow, // V14: Soft glow (25%)
-                                            ambientColor = AppColors.BubbleShadow
+                                            spotColor = AppColors.BubbleShadow,
+                                            ambientColor = Color.Transparent // V15: Pure glow, no hard box edges
                                         ) else Modifier
                                     ),
-                                color = if (isCurrent) AppColors.SessionRowActiveBg else Color.Transparent, // V8: Floating text
+                                color = Color.Transparent, // V15: Removed "box" fill (Organic)
                                 tonalElevation = 0.dp, // V8: Flat
                                 border = null, // V8: No border
                                 shape = RoundedCornerShape(12.dp)
@@ -172,19 +172,19 @@ internal fun HistoryDrawerContent(
 
 @Composable
 private fun HistoryUserCenter(onClick: () -> Unit) {
-    val isDark = isSystemInDarkTheme()
-    val footerBg = if (isDark) AppColors.DrawerFooterDark else AppColors.DrawerFooterLight
+
+    // footerBg removed as per V15 (fully transparent)
 
     // Profile Dock Container
     Surface(
-        color = footerBg.copy(alpha = 0.6f), // Frosted Glass Tint
+        color = Color.Transparent, // V15: Seamless (No card overlay)
         shadowElevation = 0.dp, // V14: Flat integration (Legacy removal)
         modifier = Modifier.fillMaxWidth().clickable { onClick() }
     ) {
-         Box(
+        Box(
              modifier = Modifier
                 .fillMaxWidth()
-                .background(footerBg.copy(alpha = 0.6f))
+                .background(Color.Transparent) // V15: Seamless
                 .drawBehind {
                     // Top Border (1px)
                     drawLine(

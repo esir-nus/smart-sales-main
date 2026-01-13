@@ -477,7 +477,7 @@ No line metrics. Responsibility is the only measure.
 **Completed 2026-01-09**
 
 **Fixes Applied:**
-- Transcription rendering bug: Disabled V1TingwuMacroWindowFilter (time mismatch stripped 99% content)
+- Transcription rendering bug: Disabled V1TingwuMacroWindowFilter (time mismatch stripped 99% content) → **RE-ENABLED 2026-01-13** (root cause: segment normalization, fixed in buildRecordingOriginSegments)
 - Debug HUD Tingwu trace: Wired DebugUiState → HomeUiState
 - Debug HUD XFyun removal: Removed unused XFyun section (110 lines deleted)
 

@@ -44,19 +44,21 @@ Badge: wifi#address#192.168.0.101#MstRobot
 
 > **SOT**: `bluetooch.py` lines 320-324
 
-### 2. WiFi Connect
+### 2. WiFi Connect (Two-Step Protocol)
 
 ```
-App sends:    wifi#connect#<ssid>#<password>
-Badge:        (connects to WiFi, then responds to query)
+Step 1: App sends:  SD#<ssid>
+Step 2: App sends:  PD#<password>
+Badge:              (connects to WiFi, then responds to query)
 ```
 
 **Example:**
 ```
-App: wifi#connect#MstRobot#Cai123456
+App: SD#MstRobot
+App: PD#Cai123456
 ```
 
-> **SOT**: `bluetooch.py` lines 307-319
+> **Note**: `bluetooch.py` is legacy. Two-step protocol confirmed by hardware team.
 
 ### 3. GIF Transfer Flow
 

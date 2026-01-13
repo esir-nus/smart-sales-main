@@ -18,6 +18,19 @@ android {
         buildConfig = true
     }
 
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+        debug {
+            // Debug variant
+        }
+    }
+
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.15"
     }

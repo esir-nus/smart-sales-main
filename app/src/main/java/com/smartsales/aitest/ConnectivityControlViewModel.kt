@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.smartsales.core.util.Result
 import com.smartsales.feature.connectivity.BlePeripheral
 import com.smartsales.feature.connectivity.BleProfileConfig
+import com.smartsales.feature.connectivity.BleTrafficObserver
 import com.smartsales.feature.connectivity.ConnectionState
 import com.smartsales.feature.connectivity.DeviceConnectionManager
 import com.smartsales.feature.connectivity.WifiCredentials
@@ -59,7 +60,11 @@ data class ConnectivityControlState(
     val networkMatched: Boolean? = null,
     val consoleStatusMessage: String? = null,
     val mediaServerBaseUrl: String = DEFAULT_MEDIA_SERVER_BASE_URL,
-    val bleLogs: List<String> = emptyList()
+    val bleLogs: List<String> = emptyList(),
+    // BLE Traffic Debug HUD
+    val showBleTrafficHud: Boolean = false,
+    val bleTrafficLogs: List<String> = emptyList(),
+    val bleTrafficVerbose: Boolean = false
 ) {
     val canSendCredentials: Boolean
         get() = !isTransferring &&
@@ -129,6 +134,21 @@ class ConnectivityControlViewModel @Inject constructor(
         viewModelScope.launch {
             bleScanner.isScanning.collect { scanning ->
                 _uiState.update { it.copy(isScanning = scanning) }
+            }
+        }
+        // Collect BLE traffic events for debug HUD
+        viewModelScope.launch {
+            BleTrafficObserver.events.collect { event ->
+                val formatted = if (_uiState.value.bleTrafficVerbose) {
+                    event.formatVerbose()
+                } else {
+                    event.formatForHud()
+                }
+                _uiState.update { state ->
+                    state.copy(
+                        bleTrafficLogs = (listOf(formatted) + state.bleTrafficLogs).take(100)
+                    )
+                }
             }
         }
         startScan()
@@ -222,7 +242,7 @@ class ConnectivityControlViewModel @Inject constructor(
             )
             when (val result = connectionManager.startPairing(peripheral, credentials)) {
                 is Result.Success -> {
-                    appendLog("凭据已发送到 ${peripheral.name}：wifi#connect#${credentials.ssid}#${credentials.password}")
+                    appendLog("凭据已发送到 ${peripheral.name}：SD#${credentials.ssid} + PD#***")
                     _uiState.update {
                         it.copy(
                             isTransferring = false,
@@ -346,6 +366,18 @@ class ConnectivityControlViewModel @Inject constructor(
         val base = _uiState.value.mediaServerBaseUrl
         appendLog("打开媒体管理器 $base")
         _uiState.update { it.copy(consoleStatusMessage = "媒体管理入口已触发：$base") }
+    }
+
+    fun toggleBleTrafficHud() {
+        _uiState.update { it.copy(showBleTrafficHud = !it.showBleTrafficHud) }
+    }
+
+    fun toggleBleTrafficVerbose() {
+        _uiState.update { it.copy(bleTrafficVerbose = !it.bleTrafficVerbose) }
+    }
+
+    fun clearBleTrafficLogs() {
+        _uiState.update { it.copy(bleTrafficLogs = emptyList()) }
     }
 
     override fun onCleared() {

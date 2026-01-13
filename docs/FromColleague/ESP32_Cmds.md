@@ -20,16 +20,20 @@ Badge: wifi#address#192.168.0.101#MstRobot
 
 ## 2. App tells badge to connect to new WiFi
 
+**Two-step protocol:**
+
 ```
-App sends (BLE): wifi#connect#<ssid>#<password>
+Step 1: App sends (BLE): SD#<ssid>
+Step 2: App sends (BLE): PD#<password>
 ```
 
 Example:
 ```
-App: wifi#connect#MstRobot#Cai123456
+App: SD#MstRobot
+App: PD#Cai123456
 ```
 
-After sending, poll `wifi#address#ip#name` until badge returns an IP.
+After sending both commands, poll `wifi#address#ip#name` until badge returns an IP.
 
 ## 3. GIF/JPG transfer flow
 

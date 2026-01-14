@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 @Singleton
 class TingwuMultiBatchOrchestrator @Inject constructor(
-    private val audioSlicer: AudioSlicer,
+    private val audioSlicer: com.smartsales.data.aicore.util.Slicer,
     private val ossUploadClient: OssUploadClient,
     private val stitcher: MultiBatchStitcher,
     private val pipelineTracer: com.smartsales.data.aicore.debug.PipelineTracer,

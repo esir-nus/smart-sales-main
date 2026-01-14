@@ -34,13 +34,25 @@ sealed class SliceOutcome {
     data class Failure(val error: SliceError) : SliceOutcome()
 }
 
+/**
+ * Slicer: Lattice interface for audio slicing.
+ */
+interface Slicer {
+    fun sliceAudio(
+        source: File,
+        requestedCaptureStartMs: Long,
+        captureEndMs: Long,
+        windowKey: String
+    ): SliceOutcome
+}
+
 open class AudioSlicer(
     private val tempDir: File
-) {
+) : Slicer {
     // Fallback transcoder for formats not supported by direct mux (MP3, WAV, etc.)
     private val transcodeSlicer: TranscodeSlicer by lazy { TranscodeSlicer(tempDir) }
 
-    open fun sliceAudio(
+    override fun sliceAudio(
         source: File,
         requestedCaptureStartMs: Long,
         captureEndMs: Long,

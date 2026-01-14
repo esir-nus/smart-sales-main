@@ -268,7 +268,7 @@ abstract class AiCoreModule {
 
         @Provides
         @Singleton
-        fun provideAudioSlicer(@dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context): com.smartsales.data.aicore.util.AudioSlicer {
+        fun provideAudioSlicer(@dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context): com.smartsales.data.aicore.util.Slicer {
             // Directory for storing transient audio slices
             val tempDir = java.io.File(context.cacheDir, "audio_slices")
             if (!tempDir.exists()) tempDir.mkdirs()

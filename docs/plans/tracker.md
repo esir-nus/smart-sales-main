@@ -451,6 +451,7 @@ HomeViewModel delegates to coordinators:
 | **Pipeline** | PollingLoop | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Pipeline** | TranscriptProcessor | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Pipeline** | Publisher | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Pipeline** | Slicer | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Pipeline** | AudioPreparerService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
 | **Pipeline** | TranscriptionService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
 | **Pipeline** | MetadataExtractorService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |

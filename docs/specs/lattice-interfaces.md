@@ -72,7 +72,20 @@ This document catalogs the Lattice Service interfaces (boxes) and Orchestrators.
 
 ---
 
-### 2.2 AudioPreparerService 🔲
+### 2.2 PollingLoop ✅
+
+**File**: [`TingwuPollingLoop.kt`](file:///home/cslh-frank/main_app/data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/polling/TingwuPollingLoop.kt)  
+**Status**: ✅ Interface added (high locality pattern)
+
+| Member | Signature | Purpose |
+|--------|-----------|---------|
+| `poll()` | `suspend fun poll(jobId, stateFlow, onTerminal)` | Poll Tingwu status until terminal state |
+
+**Fake**: [`FakePollingLoop.kt`](file:///home/cslh-frank/main_app/data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/polling/FakePollingLoop.kt) — stubTerminalState, call tracking, reset
+
+---
+
+### 2.3 AudioPreparerService 🔲
 
 **Responsibility**: Audio slicing and OSS upload
 

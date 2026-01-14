@@ -27,10 +27,28 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Pure polling loop for Tingwu job status.
+ * PollingLoop: Lattice interface for Tingwu job status polling.
  * 
  * Responsibility: Poll → parse status → emit state
  * Does NOT handle: MetaHub updates, trace recording (caller's responsibility via callback)
+ */
+interface PollingLoop {
+    /**
+     * Poll until terminal state (Completed or Failed).
+     * 
+     * @param jobId Tingwu job ID
+     * @param stateFlow Flow to emit progress/completion/failure states
+     * @param onTerminal Callback when terminal state reached
+     */
+    suspend fun poll(
+        jobId: String,
+        stateFlow: MutableStateFlow<TingwuJobState>,
+        onTerminal: suspend (TingwuJobState) -> Unit
+    )
+}
+
+/**
+ * TingwuPollingLoop: Real implementation of PollingLoop.
  * 
  * V1 spec §8.1: Uses TingwuRunnerRepository.pollWithRetry() for retry policy compliance.
  */
@@ -39,7 +57,7 @@ class TingwuPollingLoop @Inject constructor(
     private val repository: TingwuRunnerRepository,
     optionalConfig: Optional<AiCoreConfig>,
     private val dispatchers: DispatcherProvider
-) {
+) : PollingLoop {
     private val config = optionalConfig.orElse(AiCoreConfig())
 
     /**
@@ -49,7 +67,7 @@ class TingwuPollingLoop @Inject constructor(
      * @param stateFlow Flow to emit progress/completion/failure states
      * @param onTerminal Callback when terminal state reached (for MetaHub, trace, cleanup)
      */
-    suspend fun poll(
+    override suspend fun poll(
         jobId: String,
         stateFlow: MutableStateFlow<TingwuJobState>,
         onTerminal: suspend (TingwuJobState) -> Unit

@@ -448,6 +448,7 @@ HomeViewModel delegates to coordinators:
 | **Chatter** | AiChatService | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Pipeline** | Disector | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Pipeline** | TingwuSubmissionService | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Pipeline** | PollingLoop | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Pipeline** | AudioPreparerService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
 | **Pipeline** | TranscriptionService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
 | **Pipeline** | MetadataExtractorService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |

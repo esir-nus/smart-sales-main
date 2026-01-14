@@ -95,7 +95,7 @@ class TingwuRunner @Inject constructor(
     private val pipelineTracer: com.smartsales.data.aicore.debug.PipelineTracer,
     private val disector: com.smartsales.data.aicore.disector.Disector,
     private val multiBatchOrchestrator: com.smartsales.data.aicore.tingwu.TingwuMultiBatchOrchestrator,
-    private val pollingLoop: com.smartsales.data.aicore.tingwu.polling.TingwuPollingLoop,
+    private val pollingLoop: com.smartsales.data.aicore.tingwu.polling.PollingLoop,
     private val jobStore: TingwuJobStore,
     private val submissionService: com.smartsales.data.aicore.tingwu.submission.TingwuSubmissionService,
 

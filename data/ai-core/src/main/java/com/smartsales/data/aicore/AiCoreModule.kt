@@ -121,6 +121,12 @@ abstract class AiCoreModule {
 
     @Binds
     @Singleton
+    abstract fun bindPollingLoop(
+        impl: com.smartsales.data.aicore.tingwu.polling.TingwuPollingLoop
+    ): com.smartsales.data.aicore.tingwu.polling.PollingLoop
+
+    @Binds
+    @Singleton
     abstract fun bindAiParaSettingsProvider(
         impl: DefaultAiParaSettingsProvider
     ): AiParaSettingsProvider

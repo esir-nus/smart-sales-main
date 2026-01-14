@@ -11,7 +11,6 @@ import com.smartsales.data.aicore.debug.DebugOrchestrator
 import com.smartsales.data.aicore.debug.DebugSnapshot
 import com.smartsales.data.aicore.params.AiParaSettingsRepository
 import com.smartsales.data.aicore.debug.TingwuTraceStore
-import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.feature.chat.AiSessionRepository
 import com.smartsales.core.metahub.SessionMetadataLabelProvider
 import com.smartsales.data.aicore.params.TranscriptionLaneSelector
@@ -31,7 +30,6 @@ class DebugCoordinatorImpl @Inject constructor(
     private val metaHub: MetaHub,
     private val sessionRepository: AiSessionRepository,
     private val debugOrchestrator: DebugOrchestrator,
-    private val xfyunTraceStore: XfyunTraceStore,
     private val tingwuTraceStore: TingwuTraceStore,
     private val aiParaSettingsRepository: AiParaSettingsRepository,
 ) : DebugCoordinator {
@@ -81,7 +79,6 @@ class DebugCoordinatorImpl @Inject constructor(
     override fun refreshTraces() {
         _debugState.update {
             it.copy(
-                xfyunTrace = xfyunTraceStore.getSnapshot(),
                 tingwuTrace = tingwuTraceStore.getSnapshot()
             )
         }
@@ -133,7 +130,7 @@ class DebugCoordinatorImpl @Inject constructor(
             .timeLabel(meta?.latestMajorAnalysisAt)
             .takeIf { it.isNotBlank() }
 
-        // Important: HUD needs to show transcription lane selection and disabled reason, avoid "looks switched but not actually effective".
+        // Important: HUD needs to show transcription lane selection and disabled reason.
         val laneDecision = TranscriptionLaneSelector.resolve(aiParaSettingsRepository.snapshot())
 
         val debug = DebugSessionMetadata(
@@ -150,7 +147,6 @@ class DebugCoordinatorImpl @Inject constructor(
             transcriptionProviderRequested = laneDecision.requestedProvider,
             transcriptionProviderSelected = laneDecision.selectedProvider,
             transcriptionProviderDisabledReason = laneDecision.disabledReason,
-            transcriptionXfyunEnabledSetting = laneDecision.xfyunEnabledSetting,
             notes = mergedNotes
         )
 

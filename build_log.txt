@@ -1,108 +1,113 @@
 Type-safe project accessors is an incubating feature.
-> Task :feature:usercenter:preBuild UP-TO-DATE
-> Task :feature:media:preBuild UP-TO-DATE
 > Task :feature:connectivity:preBuild UP-TO-DATE
-> Task :data:ai-core:preBuild UP-TO-DATE
-> Task :feature:media:preDebugBuild UP-TO-DATE
-> Task :data:ai-core:preDebugBuild UP-TO-DATE
-> Task :feature:usercenter:preDebugBuild UP-TO-DATE
-> Task :feature:connectivity:preDebugBuild UP-TO-DATE
-> Task :feature:chat:checkKotlinGradlePluginConfigurationErrors
-> Task :core:util:checkKotlinGradlePluginConfigurationErrors
 > Task :core:util:preBuild UP-TO-DATE
-> Task :feature:chat:preBuild UP-TO-DATE
+> Task :connectivity-debugger:preBuild UP-TO-DATE
 > Task :core:util:preDebugBuild UP-TO-DATE
-> Task :feature:chat:preDebugBuild UP-TO-DATE
+> Task :feature:connectivity:preDebugBuild UP-TO-DATE
+> Task :connectivity-debugger:preDebugBuild UP-TO-DATE
+> Task :feature:connectivity:writeDebugAarMetadata UP-TO-DATE
+> Task :core:util:writeDebugAarMetadata UP-TO-DATE
+> Task :connectivity-debugger:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :feature:connectivity:processDebugNavigationResources UP-TO-DATE
+> Task :connectivity-debugger:checkKotlinGradlePluginConfigurationErrors
+> Task :core:util:processDebugNavigationResources UP-TO-DATE
 > Task :feature:connectivity:generateDebugResValues UP-TO-DATE
-> Task :data:ai-core:generateDebugResValues UP-TO-DATE
-> Task :feature:usercenter:generateDebugResValues UP-TO-DATE
+> Task :connectivity-debugger:generateDebugBuildConfig UP-TO-DATE
 > Task :core:util:generateDebugResValues UP-TO-DATE
-> Task :feature:chat:generateDebugBuildConfig UP-TO-DATE
-> Task :data:ai-core:generateDebugResources UP-TO-DATE
-> Task :feature:usercenter:generateDebugResources UP-TO-DATE
 > Task :feature:connectivity:generateDebugResources UP-TO-DATE
 > Task :core:util:generateDebugResources UP-TO-DATE
-> Task :feature:chat:generateDebugResValues UP-TO-DATE
-> Task :feature:chat:generateDebugResources UP-TO-DATE
 > Task :feature:connectivity:packageDebugResources UP-TO-DATE
-> Task :data:ai-core:packageDebugResources UP-TO-DATE
-> Task :feature:media:generateDebugResValues UP-TO-DATE
 > Task :core:util:packageDebugResources UP-TO-DATE
-> Task :data:ai-core:processDebugNavigationResources UP-TO-DATE
-> Task :feature:connectivity:processDebugNavigationResources UP-TO-DATE
-> Task :feature:media:generateDebugResources UP-TO-DATE
-> Task :feature:chat:packageDebugResources UP-TO-DATE
-> Task :feature:usercenter:packageDebugResources UP-TO-DATE
-> Task :core:util:processDebugNavigationResources UP-TO-DATE
-> Task :feature:usercenter:processDebugNavigationResources UP-TO-DATE
-> Task :feature:chat:processDebugNavigationResources UP-TO-DATE
-> Task :feature:media:packageDebugResources UP-TO-DATE
-> Task :feature:media:processDebugNavigationResources UP-TO-DATE
+> Task :core:util:extractDeepLinksDebug UP-TO-DATE
+> Task :feature:connectivity:extractDeepLinksDebug UP-TO-DATE
+> Task :feature:connectivity:processDebugManifest UP-TO-DATE
+> Task :core:util:processDebugManifest UP-TO-DATE
+> Task :feature:connectivity:compileDebugLibraryResources UP-TO-DATE
+> Task :core:util:compileDebugLibraryResources UP-TO-DATE
 > Task :core:util:parseDebugLocalResources UP-TO-DATE
-> Task :data:ai-core:parseDebugLocalResources UP-TO-DATE
-> Task :feature:chat:parseDebugLocalResources UP-TO-DATE
 > Task :feature:connectivity:parseDebugLocalResources UP-TO-DATE
-> Task :feature:usercenter:parseDebugLocalResources UP-TO-DATE
-> Task :feature:media:parseDebugLocalResources UP-TO-DATE
 > Task :core:util:generateDebugRFile UP-TO-DATE
 > Task :feature:connectivity:generateDebugRFile UP-TO-DATE
-> Task :feature:chat:generateDebugRFile UP-TO-DATE
-> Task :data:ai-core:generateDebugRFile UP-TO-DATE
-> Task :feature:usercenter:generateDebugRFile UP-TO-DATE
+> Task :core:util:checkKotlinGradlePluginConfigurationErrors
 > Task :feature:connectivity:checkKotlinGradlePluginConfigurationErrors
-> Task :feature:usercenter:checkKotlinGradlePluginConfigurationErrors
 > Task :feature:connectivity:generateDebugBuildConfig UP-TO-DATE
-> Task :data:ai-core:checkKotlinGradlePluginConfigurationErrors
-> Task :feature:media:generateDebugRFile UP-TO-DATE
-> Task :feature:media:checkKotlinGradlePluginConfigurationErrors
-> Task :data:ai-core:generateDebugBuildConfig UP-TO-DATE
 > Task :feature:connectivity:javaPreCompileDebug UP-TO-DATE
-> Task :feature:media:javaPreCompileDebug UP-TO-DATE
-> Task :feature:usercenter:javaPreCompileDebug UP-TO-DATE
-> Task :data:ai-core:javaPreCompileDebug UP-TO-DATE
+> Task :feature:connectivity:mergeDebugShaders UP-TO-DATE
+> Task :feature:connectivity:compileDebugShaders NO-SOURCE
+> Task :feature:connectivity:generateDebugAssets UP-TO-DATE
+> Task :feature:connectivity:mergeDebugAssets UP-TO-DATE
+> Task :feature:connectivity:mergeDebugJniLibFolders UP-TO-DATE
+> Task :feature:connectivity:mergeDebugNativeLibs NO-SOURCE
+> Task :feature:connectivity:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :connectivity-debugger:checkDebugAarMetadata UP-TO-DATE
+> Task :connectivity-debugger:processDebugNavigationResources UP-TO-DATE
+> Task :connectivity-debugger:compileDebugNavigationResources UP-TO-DATE
+> Task :connectivity-debugger:generateDebugResValues UP-TO-DATE
+> Task :connectivity-debugger:mapDebugSourceSetPaths UP-TO-DATE
+> Task :connectivity-debugger:generateDebugResources UP-TO-DATE
 > Task :core:util:compileDebugKotlin UP-TO-DATE
+> Task :connectivity-debugger:mergeDebugResources UP-TO-DATE
 > Task :core:util:javaPreCompileDebug UP-TO-DATE
 > Task :core:util:compileDebugJavaWithJavac NO-SOURCE
 > Task :core:util:bundleLibCompileToJarDebug UP-TO-DATE
 > Task :core:util:bundleLibRuntimeToJarDebug UP-TO-DATE
-> Task :feature:usercenter:kaptGenerateStubsDebugKotlin UP-TO-DATE
+> Task :core:util:mergeDebugShaders UP-TO-DATE
+> Task :connectivity-debugger:packageDebugResources UP-TO-DATE
+> Task :core:util:compileDebugShaders NO-SOURCE
+> Task :core:util:generateDebugAssets UP-TO-DATE
+> Task :core:util:mergeDebugAssets UP-TO-DATE
+> Task :core:util:processDebugJavaRes UP-TO-DATE
+> Task :core:util:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :connectivity-debugger:parseDebugLocalResources UP-TO-DATE
+> Task :connectivity-debugger:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :core:util:mergeDebugJniLibFolders UP-TO-DATE
+> Task :connectivity-debugger:extractDeepLinksDebug UP-TO-DATE
+> Task :core:util:mergeDebugNativeLibs NO-SOURCE
+> Task :core:util:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :connectivity-debugger:processDebugMainManifest UP-TO-DATE
+> Task :connectivity-debugger:processDebugManifest UP-TO-DATE
+> Task :connectivity-debugger:processDebugManifestForPackage UP-TO-DATE
 > Task :feature:connectivity:kaptGenerateStubsDebugKotlin UP-TO-DATE
-> Task :feature:usercenter:kaptDebugKotlin UP-TO-DATE
+> Task :connectivity-debugger:processDebugResources UP-TO-DATE
+> Task :connectivity-debugger:javaPreCompileDebug UP-TO-DATE
+> Task :connectivity-debugger:mergeDebugShaders UP-TO-DATE
+> Task :connectivity-debugger:compileDebugShaders NO-SOURCE
 > Task :feature:connectivity:kaptDebugKotlin UP-TO-DATE
-> Task :feature:usercenter:compileDebugKotlin UP-TO-DATE
+> Task :connectivity-debugger:generateDebugAssets UP-TO-DATE
+> Task :connectivity-debugger:mergeDebugAssets UP-TO-DATE
+> Task :connectivity-debugger:compressDebugAssets UP-TO-DATE
+> Task :connectivity-debugger:desugarDebugFileDependencies UP-TO-DATE
 > Task :feature:connectivity:compileDebugKotlin UP-TO-DATE
-> Task :feature:usercenter:compileDebugJavaWithJavac UP-TO-DATE
+> Task :connectivity-debugger:checkDebugDuplicateClasses UP-TO-DATE
 > Task :feature:connectivity:compileDebugJavaWithJavac UP-TO-DATE
-> Task :data:ai-core:kaptGenerateStubsDebugKotlin UP-TO-DATE
+> Task :connectivity-debugger:mergeExtDexDebug UP-TO-DATE
+> Task :connectivity-debugger:mergeDebugJniLibFolders UP-TO-DATE
 > Task :feature:connectivity:transformDebugClassesWithAsm UP-TO-DATE
-> Task :feature:usercenter:transformDebugClassesWithAsm UP-TO-DATE
 > Task :feature:connectivity:bundleLibCompileToJarDebug UP-TO-DATE
-> Task :feature:usercenter:bundleLibCompileToJarDebug UP-TO-DATE
 > Task :feature:connectivity:bundleLibRuntimeToJarDebug UP-TO-DATE
-> Task :data:ai-core:kaptDebugKotlin UP-TO-DATE
-> Task :feature:media:kaptGenerateStubsDebugKotlin UP-TO-DATE
-> Task :feature:media:kaptDebugKotlin UP-TO-DATE
-> Task :data:ai-core:compileDebugKotlin UP-TO-DATE
-> Task :feature:media:compileDebugKotlin UP-TO-DATE
-> Task :data:ai-core:compileDebugJavaWithJavac UP-TO-DATE
-> Task :feature:media:compileDebugJavaWithJavac UP-TO-DATE
-> Task :data:ai-core:transformDebugClassesWithAsm UP-TO-DATE
-> Task :data:ai-core:bundleLibCompileToJarDebug UP-TO-DATE
-> Task :feature:media:transformDebugClassesWithAsm UP-TO-DATE
-> Task :feature:media:bundleLibCompileToJarDebug UP-TO-DATE
-> Task :feature:chat:kaptGenerateStubsDebugKotlin UP-TO-DATE
-> Task :feature:chat:kaptDebugKotlin UP-TO-DATE
+> Task :feature:connectivity:processDebugJavaRes UP-TO-DATE
+> Task :feature:connectivity:bundleLibRuntimeToDirDebug UP-TO-DATE
+> Task :connectivity-debugger:mergeDebugNativeLibs UP-TO-DATE
+> Task :connectivity-debugger:kaptGenerateStubsDebugKotlin UP-TO-DATE
+> Task :connectivity-debugger:kaptDebugKotlin UP-TO-DATE
+> Task :connectivity-debugger:mergeLibDexDebug UP-TO-DATE
+> Task :connectivity-debugger:stripDebugDebugSymbols UP-TO-DATE
+> Task :connectivity-debugger:validateSigningDebug UP-TO-DATE
+> Task :connectivity-debugger:writeDebugAppMetadata UP-TO-DATE
+> Task :connectivity-debugger:writeDebugSigningConfigVersions UP-TO-DATE
 
-> Task :feature:chat:compileDebugKotlin FAILED
-e: file:///home/cslh-frank/main_app/feature/chat/src/main/java/com/smartsales/feature/chat/history/HistoryDrawer.kt:175:9 Conflicting declarations: val isDark: Boolean, val isDark: Boolean
-e: file:///home/cslh-frank/main_app/feature/chat/src/main/java/com/smartsales/feature/chat/history/HistoryDrawer.kt:176:9 Conflicting declarations: val isDark: Boolean, val isDark: Boolean
+> Task :connectivity-debugger:compileDebugKotlin FAILED
+e: file:///home/cslh-frank/main_app/connectivity-debugger/src/main/java/com/smartsales/connectivity/debugger/ConnectivityControlViewModel.kt:15:31 Unresolved reference: media
+e: file:///home/cslh-frank/main_app/connectivity-debugger/src/main/java/com/smartsales/connectivity/debugger/ConnectivityControlViewModel.kt:82:35 Unresolved reference: DeviceHttpEndpointProvider
+e: file:///home/cslh-frank/main_app/connectivity-debugger/src/main/java/com/smartsales/connectivity/debugger/DebuggerMainActivity.kt:82:83 Unresolved reference: dp
+e: file:///home/cslh-frank/main_app/connectivity-debugger/src/main/java/com/smartsales/connectivity/debugger/MediaSyncScreen.kt:73:51 No value passed for parameter 'dispatchers'
 
 [Incubating] Problems report is available at: file:///home/cslh-frank/main_app/build/reports/problems/problems-report.html
 
 FAILURE: Build failed with an exception.
 
 * What went wrong:
-Execution failed for task ':feature:chat:compileDebugKotlin'.
+Execution failed for task ':connectivity-debugger:compileDebugKotlin'.
 > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
    > Compilation error. See log for more details
 
@@ -118,5 +123,5 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/8.13/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 1s
-81 actionable tasks: 7 executed, 74 up-to-date
+BUILD FAILED in 3s
+81 actionable tasks: 4 executed, 77 up-to-date

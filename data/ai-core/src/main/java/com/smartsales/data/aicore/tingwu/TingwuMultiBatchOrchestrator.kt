@@ -12,6 +12,11 @@ import com.smartsales.data.aicore.disector.DisectorPlan
 import com.smartsales.data.aicore.disector.DisectorBatch
 import com.smartsales.data.aicore.util.AudioSlicer
 import com.smartsales.data.aicore.util.SliceOutcome
+import com.smartsales.data.aicore.tingwu.store.TingwuJobStore
+import com.smartsales.data.aicore.tingwu.store.PersistedJob
+import com.smartsales.data.aicore.tingwu.store.PersistedBatch
+import com.smartsales.data.aicore.tingwu.store.JobStatus
+import com.smartsales.data.aicore.tingwu.store.BatchStatus
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -32,7 +37,8 @@ class TingwuMultiBatchOrchestrator @Inject constructor(
     private val audioSlicer: AudioSlicer,
     private val ossUploadClient: OssUploadClient,
     private val stitcher: MultiBatchStitcher,
-    private val pipelineTracer: com.smartsales.data.aicore.debug.PipelineTracer
+    private val pipelineTracer: com.smartsales.data.aicore.debug.PipelineTracer,
+    private val jobStore: TingwuJobStore
 ) {
 
     /**
@@ -79,6 +85,31 @@ class TingwuMultiBatchOrchestrator @Inject constructor(
         
         onProgress(5)
 
+        // Initialize job in store with all batches as PENDING
+        val parentJobId = "multi_${plan.disectorPlanId}"
+        val initialBatches = plan.batches.map { batch ->
+            PersistedBatch(
+                batchIndex = batch.batchIndex,
+                status = BatchStatus.PENDING,
+                captureStartMs = batch.captureStartMs,
+                captureEndMs = batch.captureEndMs
+            )
+        }
+        val persistedJob = PersistedJob(
+            jobId = parentJobId,
+            audioAssetName = originalRequest.audioAssetName,
+            audioFilePath = sourceFile.absolutePath,
+            ossObjectKey = originalRequest.ossObjectKey,
+            fileUrl = originalRequest.fileUrl,
+            totalDurationMs = originalRequest.durationMs,
+            language = originalRequest.language,
+            status = JobStatus.IN_PROGRESS,
+            createdAtMs = System.currentTimeMillis(),
+            updatedAtMs = System.currentTimeMillis(),
+            batches = initialBatches
+        )
+        runCatching { jobStore.saveJob(persistedJob) }
+
         // Single pipelined job per batch (Slice -> Upload -> Submit -> Poll)
         val batchJobs = plan.batches.mapIndexed { index, batch ->
             async(Dispatchers.Default) {
@@ -96,15 +127,22 @@ class TingwuMultiBatchOrchestrator @Inject constructor(
                     windowKey = batch.batchAssetId
                 )
                 
+                // Update batch status: SLICING -> result
                 val sliceFile = when (sliceOutcome) {
-                    is SliceOutcome.Success -> sliceOutcome.result.sliceFile
-                    is SliceOutcome.Failure -> return@async Result.Error(
-                        AiCoreException(
-                            source = AiCoreErrorSource.TINGWU,
-                            reason = AiCoreErrorReason.IO,
-                            message = "Audio slicing failed for batch ${batch.batchIndex}: ${sliceOutcome.error.reasonCode}"
+                    is SliceOutcome.Success -> {
+                        runCatching { jobStore.updateBatchStatus(parentJobId, batch.batchIndex, BatchStatus.UPLOADING) }
+                        sliceOutcome.result.sliceFile
+                    }
+                    is SliceOutcome.Failure -> {
+                        runCatching { jobStore.updateBatchStatus(parentJobId, batch.batchIndex, BatchStatus.FAILED, error = sliceOutcome.error.reasonCode) }
+                        return@async Result.Error(
+                            AiCoreException(
+                                source = AiCoreErrorSource.TINGWU,
+                                reason = AiCoreErrorReason.IO,
+                                message = "Audio slicing failed for batch ${batch.batchIndex}: ${sliceOutcome.error.reasonCode}"
+                            )
                         )
-                    )
+                    }
                 }
                 
                 // Update progress after slice
@@ -124,7 +162,10 @@ class TingwuMultiBatchOrchestrator @Inject constructor(
                 
                 val ossData = when (uploadResult) {
                     is Result.Success -> uploadResult.data
-                    is Result.Error -> return@async Result.Error(uploadResult.throwable)
+                    is Result.Error -> {
+                        runCatching { jobStore.updateBatchStatus(parentJobId, batch.batchIndex, BatchStatus.FAILED, error = "upload_failed") }
+                        return@async Result.Error(uploadResult.throwable)
+                    }
                 }
                 
                 onProgress(progressCounter.addAndGet(uploadWeight.toInt()))
@@ -145,15 +186,22 @@ class TingwuMultiBatchOrchestrator @Inject constructor(
                 
                 val submission = submitSingleBatch(batchRequest)
                 val jobId = when (submission) {
-                    is Result.Success -> submission.data
+                    is Result.Success -> {
+                        runCatching { jobStore.updateBatchStatus(parentJobId, batch.batchIndex, BatchStatus.SUBMITTED, tingwuJobId = submission.data) }
+                        submission.data
+                    }
                     is Result.Error -> {
+                        runCatching { jobStore.updateBatchStatus(parentJobId, batch.batchIndex, BatchStatus.FAILED, error = "submit_failed") }
                         sliceFile.delete() // Cleanup
                         return@async Result.Error(submission.throwable)
                     }
                 }
                 
-                // Cleanup local slice execution
+                // Cleanup local slice file
                 runCatching { sliceFile.delete() }
+
+                // Update status to RUNNING during poll
+                runCatching { jobStore.updateBatchStatus(parentJobId, batch.batchIndex, BatchStatus.RUNNING, tingwuJobId = jobId) }
 
                 // 4. Poll
                 val finalState = waitForJob(jobId)
@@ -163,6 +211,13 @@ class TingwuMultiBatchOrchestrator @Inject constructor(
                 when (finalState) {
                     is TingwuJobState.Completed -> {
                         val segments = finalState.artifacts?.recordingOriginDiarizedSegments.orEmpty()
+                        runCatching { 
+                            jobStore.updateBatchStatus(
+                                parentJobId, batch.batchIndex, BatchStatus.SUCCEEDED, 
+                                tingwuJobId = finalState.jobId,
+                                diarizedSegmentsCount = segments.size
+                            ) 
+                        }
                         pipelineTracer.emit(
                             stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_POLL,
                             status = "BATCH_COMPLETED",
@@ -172,6 +227,7 @@ class TingwuMultiBatchOrchestrator @Inject constructor(
                         Result.Success(batch to segments)
                     }
                     is TingwuJobState.Failed -> {
+                        runCatching { jobStore.updateBatchStatus(parentJobId, batch.batchIndex, BatchStatus.FAILED, tingwuJobId = finalState.jobId, error = finalState.error.message) }
                         com.smartsales.data.aicore.AiCoreLogger.e(TAG, "Batch ${index + 1}/$totalBatches FAILED: ${finalState.error.message}")
                         Result.Error(finalState.error)
                     }
@@ -193,6 +249,7 @@ class TingwuMultiBatchOrchestrator @Inject constructor(
         // Check for failures
         val firstError = results.firstOrNull { it is Result.Error }
         if (firstError is Result.Error) {
+            runCatching { jobStore.completeJob(parentJobId, JobStatus.PARTIAL_FAILURE) }
             return@coroutineScope Result.Error(firstError.throwable)
         }
         
@@ -207,7 +264,7 @@ class TingwuMultiBatchOrchestrator @Inject constructor(
         // Stitch
         val stitchedSegments = stitcher.stitchSegments(sortedResults)
         
-        val parentJobId = "multi_${plan.disectorPlanId}"
+        runCatching { jobStore.completeJob(parentJobId, JobStatus.SUCCEEDED) }
         
         runCatching { onComplete(parentJobId, stitchedSegments) }
             .onFailure { com.smartsales.data.aicore.AiCoreLogger.w(TAG, "onComplete callback failed: ${it.message}") }

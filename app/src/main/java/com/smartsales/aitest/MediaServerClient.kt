@@ -50,34 +50,15 @@ class MediaServerClient @Inject constructor(
     suspend fun fetchFiles(baseUrl: String): Result<List<MediaServerFile>> = withContext(Dispatchers.IO) {
         val normalized = normalizeBaseUrl(baseUrl) ?: return@withContext Result.Error(IllegalArgumentException("无效地址"))
         runCatching {
-            val connection = (URL("$normalized/files").openConnection() as HttpURLConnection).apply {
+            // Try /list first (what real badge implements)
+            val connection = (URL("$normalized/list").openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
                 connectTimeout = 10_000
                 readTimeout = 10_000
             }
             connection.useAndRead { stream ->
                 val payload = stream.bufferedReader().use { it.readText() }
-                val root = JSONObject(payload)
-                val filesArray = root.optJSONArray("files") ?: return@useAndRead emptyList()
-                val result = mutableListOf<MediaServerFile>()
-                for (i in 0 until filesArray.length()) {
-                    val obj = filesArray.getJSONObject(i)
-                    val name = obj.getString("name")
-                    result.add(
-                        MediaServerFile(
-                            name = name,
-                            sizeBytes = obj.optLong("sizeBytes"),
-                            mimeType = obj.optString("mimeType", "application/octet-stream"),
-                            modifiedAtMillis = obj.optLong("modifiedAtMillis"),
-                            mediaUrl = absoluteUrl(normalized, obj.optString("mediaUrl", "")),
-                            downloadUrl = absoluteUrl(normalized, obj.optString("downloadUrl", "")),
-                            durationMillis = obj.optLongOrNull("durationMillis"),
-                            location = obj.optStringOrNull("location"),
-                            source = obj.optStringOrNull("source")
-                        )
-                    )
-                }
-                result
+                parseFilesResponse(normalized, payload)
             }
         }.fold(
             onSuccess = { Result.Success(it) },
@@ -85,8 +66,97 @@ class MediaServerClient @Inject constructor(
         )
     }
 
+    /**
+     * Parse response from badge /list endpoint.
+     * Handles two formats:
+     * 1. Simple array (badge): ["rec1.wav", "rec2.wav"]
+     * 2. Structured (emulator): {"files": [{"name": "...", ...}]}
+     */
+    private fun parseFilesResponse(baseUrl: String, payload: String): List<MediaServerFile> {
+        val trimmed = payload.trim()
+        
+        // Handle structured format: {"files": [...]}
+        if (trimmed.startsWith("{")) {
+            val root = JSONObject(trimmed)
+            val filesArray = root.optJSONArray("files") ?: return emptyList()
+            val result = mutableListOf<MediaServerFile>()
+            for (i in 0 until filesArray.length()) {
+                val obj = filesArray.getJSONObject(i)
+                val name = obj.getString("name")
+                result.add(
+                    MediaServerFile(
+                        name = name,
+                        sizeBytes = obj.optLong("sizeBytes"),
+                        mimeType = obj.optString("mimeType", guessMimeType(name)),
+                        modifiedAtMillis = obj.optLong("modifiedAtMillis"),
+                        mediaUrl = absoluteUrl(baseUrl, obj.optString("mediaUrl", "/download?file=$name")),
+                        downloadUrl = absoluteUrl(baseUrl, obj.optString("downloadUrl", "/download?file=$name")),
+                        durationMillis = obj.optLongOrNull("durationMillis"),
+                        location = obj.optStringOrNull("location"),
+                        source = obj.optStringOrNull("source")
+                    )
+                )
+            }
+            return result
+        }
+        
+        // Handle simple array format: ["file1.wav", "file2.wav"]
+        if (trimmed.startsWith("[")) {
+            val result = mutableListOf<MediaServerFile>()
+            val inner = trimmed.removeSurrounding("[", "]")
+            if (inner.isBlank()) return emptyList()
+            
+            inner.split(",").forEach { element ->
+                val name = element.trim().removeSurrounding("\"")
+                if (name.isNotBlank()) {
+                    result.add(
+                        MediaServerFile(
+                            name = name,
+                            sizeBytes = 0L,
+                            mimeType = guessMimeType(name),
+                            modifiedAtMillis = 0L,
+                            mediaUrl = "$baseUrl/download?file=$name",
+                            downloadUrl = "$baseUrl/download?file=$name"
+                        )
+                    )
+                }
+            }
+            return result
+        }
+        
+        return emptyList()
+    }
+
+    private fun guessMimeType(filename: String): String = when {
+        filename.endsWith(".wav", true) -> "audio/wav"
+        filename.endsWith(".mp3", true) -> "audio/mpeg"
+        filename.endsWith(".jpg", true) || filename.endsWith(".jpeg", true) -> "image/jpeg"
+        filename.endsWith(".png", true) -> "image/png"
+        filename.endsWith(".gif", true) -> "image/gif"
+        filename.endsWith(".mp4", true) -> "video/mp4"
+        else -> "application/octet-stream"
+    }
+
     suspend fun deleteFile(baseUrl: String, fileName: String): Result<Unit> = withContext(Dispatchers.IO) {
-        sendSimpleRequest(baseUrl, "/delete/${encode(fileName)}", "DELETE")
+        val normalized = normalizeBaseUrl(baseUrl) ?: return@withContext Result.Error(IllegalArgumentException("无效地址"))
+        runCatching {
+            val connection = (URL("$normalized/delete").openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                doOutput = true
+                connectTimeout = 10_000
+                readTimeout = 10_000
+                setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+            }
+            // Badge expects body: filename=<name>
+            val body = "filename=${encode(fileName)}"
+            connection.outputStream.use { it.write(body.toByteArray()) }
+            val code = connection.responseCode
+            connection.disconnect()
+            if (code in 200..299) Unit else throw IllegalStateException("删除失败 $code")
+        }.fold(
+            onSuccess = { Result.Success(Unit) },
+            onFailure = { Result.Error(it) }
+        )
     }
 
     suspend fun applyFile(baseUrl: String, fileName: String): Result<Unit> = withContext(Dispatchers.IO) {

@@ -1,7 +1,6 @@
 package com.smartsales.domain.debug
 
 import com.smartsales.data.aicore.debug.DebugSnapshot
-import com.smartsales.data.aicore.debug.XfyunTraceSnapshot
 import com.smartsales.data.aicore.debug.TingwuTraceSnapshot
 
 // 文件：feature/chat/src/main/java/com/smartsales/domain/debug/DebugUiState.kt
@@ -16,7 +15,6 @@ data class DebugUiState(
     val visible: Boolean = false,
     val sessionMetadata: DebugSessionMetadata? = null,
     val snapshot: DebugSnapshot? = null,
-    val xfyunTrace: XfyunTraceSnapshot? = null,
     val tingwuTrace: TingwuTraceSnapshot? = null,
 )
 
@@ -37,6 +35,5 @@ data class DebugSessionMetadata(
     val transcriptionProviderRequested: String? = null,
     val transcriptionProviderSelected: String? = null,
     val transcriptionProviderDisabledReason: String? = null,
-    val transcriptionXfyunEnabledSetting: Boolean? = null,
     val notes: List<String> = emptyList()
 )

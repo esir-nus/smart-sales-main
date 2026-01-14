@@ -312,9 +312,11 @@ class DefaultBadgeHttpClient @Inject constructor(
     override suspend fun isReachable(baseUrl: String): Boolean =
         withContext(dispatchers.io) {
             runCatching {
+                // Use GET / (health check endpoint) instead of HEAD /list
+                // ESP32 returns {"status":"ok","version":"1.1.0"} on GET /
                 val request = Request.Builder()
-                    .url("$baseUrl/list")
-                    .head()
+                    .url("$baseUrl/")
+                    .get()
                     .build()
 
                 val reachableClient = client.newBuilder()

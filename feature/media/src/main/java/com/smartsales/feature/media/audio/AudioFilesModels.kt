@@ -32,6 +32,7 @@ data class AudioRecordingUi(
     val transcriptPreview: String? = null,
     val fullTranscriptMarkdown: String? = null,
     val isPlaying: Boolean = false,
+    val isFlagged: Boolean = false,  // V17: Star flag
     val hasLocalCopy: Boolean = false,
     val transcriptionUrl: String? = null,
     val autoChaptersUrl: String? = null,

@@ -95,32 +95,7 @@ class DeviceManagerViewModel @Inject constructor(
         _uiState.update { it.copy(viewerFile = null) }
     }
 
-    fun onUploadFile(source: DeviceUploadSource) {
-        if (_uiState.value.isUploading) return
-        if (!_uiState.value.isConnected) {
-            _uiState.update { it.copy(errorMessage = "设备未连接，无法上传。") }
-            return
-        }
-        val baseUrl = _uiState.value.baseUrl
-        viewModelScope.launch(dispatcherProvider.io) {
-            _uiState.update { it.copy(isUploading = true, errorMessage = null) }
-            when (val result = mediaGateway.uploadFile(baseUrl, source)) {
-                is Result.Success -> {
-                    _uiState.update { it.copy(isUploading = false) }
-                    fetchFilesInternal(baseUrl)
-                }
 
-                is Result.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            isUploading = false,
-                            errorMessage = result.throwable.message ?: "上传失败"
-                        )
-                    }
-                }
-            }
-        }
-    }
 
     fun onRetryLoad() {
         if (_uiState.value.isConnected) {
@@ -132,7 +107,7 @@ class DeviceManagerViewModel @Inject constructor(
 
     fun onApplyFile(fileId: String) {
         if (!_uiState.value.isConnected) {
-            _uiState.update { it.copy(errorMessage = "设备未连接，无法应用。") }
+            _uiState.update { it.copy(errorMessage = "设备未连接，无法操作。") }
             return
         }
         val file = cachedFiles.firstOrNull { it.id == fileId }
@@ -142,17 +117,26 @@ class DeviceManagerViewModel @Inject constructor(
         }
         viewModelScope.launch(dispatcherProvider.io) {
             _uiState.update { it.copy(applyInProgressId = fileId) }
-            when (val result = mediaGateway.applyFile(_uiState.value.baseUrl, fileId)) {
-                is Result.Success -> {
+            
+            // ESP32 doesn't have /apply endpoint. Behavior depends on file type:
+            // - Audio: Should use "下载录音" button which triggers WAV download flow
+            // - Image: Already on badge, just update local UI state
+            when (file.mediaType) {
+                DeviceMediaTab.Audio -> {
+                    // Audio files should be downloaded via the dedicated WAV download flow
+                    // (the "下载录音" button at the top of the screen)
+                    _uiState.update {
+                        it.copy(
+                            errorMessage = "请使用「下载录音」按钮下载音频文件",
+                            applyInProgressId = null
+                        )
+                    }
+                }
+                else -> {
+                    // For images: files are already on the badge (uploaded via JPG flow)
+                    // Just update local UI state to mark as "applied"
                     updateAppliedFile(fileId, applied = true)
                     _uiState.update { it.copy(applyInProgressId = null) }
-                }
-
-                is Result.Error -> _uiState.update {
-                    it.copy(
-                        errorMessage = result.throwable.message ?: "应用失败",
-                        applyInProgressId = null
-                    )
                 }
             }
         }

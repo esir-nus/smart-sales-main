@@ -12,7 +12,6 @@ import com.smartsales.core.metahub.PreprocessSnapshot
 import com.smartsales.core.metahub.Provenance
 import com.smartsales.data.aicore.params.InMemoryAiParaSettingsRepository
 import com.smartsales.data.aicore.params.TranscriptionSettings
-import com.smartsales.data.aicore.params.TRANSCRIPTION_PROVIDER_XFYUN
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertTrue
@@ -26,8 +25,7 @@ class RealDebugOrchestratorTest {
         settingsRepository.update {
             it.copy(
                 transcription = TranscriptionSettings(
-                    provider = TRANSCRIPTION_PROVIDER_XFYUN,
-                    xfyunEnabled = false,
+                    provider = "UNKNOWN_PROVIDER",
                 )
             )
         }
@@ -47,7 +45,7 @@ class RealDebugOrchestratorTest {
         )
         assertTrue(snapshot.section1EffectiveRunText.contains("sessionId: s-1"))
         assertTrue(snapshot.section1EffectiveRunText.contains("lane.selected: TINGWU"))
-        assertTrue(snapshot.section1EffectiveRunText.contains("lane.disabledReason: XFYUN_DISABLED_BY_SETTING"))
+        assertTrue(snapshot.section1EffectiveRunText.contains("lane.disabledReason: PROVIDER_UNKNOWN:UNKNOWN_PROVIDER"))
         assertTrue(snapshot.section1EffectiveRunText.contains("exportGate.ready"))
         // M2B Observability lines
         assertTrue(snapshot.section1EffectiveRunText.contains("--- M2B TranscriptionDerivedState ---"))

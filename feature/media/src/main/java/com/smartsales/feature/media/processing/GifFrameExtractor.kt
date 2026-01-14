@@ -82,64 +82,27 @@ class DefaultGifFrameExtractor @Inject constructor(
                 throw GifExtractionException.IoException("无法创建输出目录: ${outputDir.absolutePath}")
             }
 
-            // Read GIF data
-            val gifData = contentResolver.openInputStream(source)?.use { it.readBytes() }
-                ?: throw GifExtractionException.InvalidFormatException("无法打开GIF文件")
+            // Read image data
+            val imageData = contentResolver.openInputStream(source)?.use { it.readBytes() }
+                ?: throw GifExtractionException.InvalidFormatException("无法打开图片文件")
 
-            // Decode using Movie class (works on all API levels)
-            val movie = Movie.decodeByteArray(gifData, 0, gifData.size)
-                ?: throw GifExtractionException.DecodeException("无法解析GIF")
-
-            val duration = movie.duration()
-            if (duration <= 0) {
-                // Static image or unsupported format
-                throw GifExtractionException.InvalidFormatException("不是有效的动画GIF")
-            }
-
-            // Estimate frame count (assume ~100ms per frame typical)
-            val frameInterval = 100 // ms
-            val estimatedFrameCount = maxOf(1, duration / frameInterval)
+            // Detect MIME type from data header
+            val mimeType = contentResolver.getType(source) ?: detectMimeType(imageData)
             
-            val extractedFrames = mutableListOf<File>()
-            var frameIndex = 1
-
-            // Extract frames at regular intervals
-            var time = 0
-            while (time < duration) {
-                movie.setTime(time)
-                
-                // Create bitmap for this frame
-                val bitmap = Bitmap.createBitmap(
-                    movie.width(),
-                    movie.height(),
-                    Bitmap.Config.ARGB_8888
-                )
-                val canvas = Canvas(bitmap)
-                movie.draw(canvas, 0f, 0f)
-
-                // Resize to target dimensions (center crop)
-                val resized = resizeCenterCrop(bitmap, targetWidth, targetHeight)
-                bitmap.recycle()
-
-                // Save as JPEG
-                val outFile = File(outputDir, "$frameIndex.jpg")
-                FileOutputStream(outFile).use { fos ->
-                    resized.compress(Bitmap.CompressFormat.JPEG, GifFrameExtractor.JPEG_QUALITY, fos)
+            when {
+                mimeType.contains("gif", ignoreCase = true) -> {
+                    extractGifFrames(imageData, outputDir, targetWidth, targetHeight, onProgress)
                 }
-                resized.recycle()
-
-                extractedFrames.add(outFile)
-                onProgress(frameIndex, estimatedFrameCount)
-
-                frameIndex++
-                time += frameInterval
+                mimeType.contains("jpeg", ignoreCase = true) || 
+                mimeType.contains("jpg", ignoreCase = true) ||
+                mimeType.contains("image/", ignoreCase = true) -> {
+                    // Static image: decode, resize, save as single frame
+                    extractStaticImage(imageData, outputDir, targetWidth, targetHeight, onProgress)
+                }
+                else -> {
+                    throw GifExtractionException.InvalidFormatException("不支持的图片格式: $mimeType")
+                }
             }
-
-            if (extractedFrames.isEmpty()) {
-                throw GifExtractionException.DecodeException("未能提取任何帧")
-            }
-
-            extractedFrames.toList()
         }.fold(
             onSuccess = { Result.Success(it) },
             onFailure = { e ->
@@ -149,6 +112,143 @@ class DefaultGifFrameExtractor @Inject constructor(
                 }
             }
         )
+    }
+    
+    /**
+     * Detect MIME type from image data header bytes.
+     */
+    private fun detectMimeType(data: ByteArray): String {
+        if (data.size < 3) return "unknown"
+        return when {
+            // GIF: 47 49 46 (GIF)
+            data[0] == 0x47.toByte() && data[1] == 0x49.toByte() && data[2] == 0x46.toByte() -> "image/gif"
+            // JPEG: FF D8 FF
+            data[0] == 0xFF.toByte() && data[1] == 0xD8.toByte() && data[2] == 0xFF.toByte() -> "image/jpeg"
+            // PNG: 89 50 4E 47
+            data.size >= 4 && data[0] == 0x89.toByte() && data[1] == 0x50.toByte() -> "image/png"
+            else -> "image/unknown"
+        }
+    }
+    
+    /**
+     * Extract frames from animated GIF.
+     */
+    private suspend fun extractGifFrames(
+        gifData: ByteArray,
+        outputDir: File,
+        targetWidth: Int,
+        targetHeight: Int,
+        onProgress: suspend (current: Int, total: Int) -> Unit
+    ): List<File> {
+        // Decode using Movie class (works on all API levels)
+        val movie = Movie.decodeByteArray(gifData, 0, gifData.size)
+            ?: throw GifExtractionException.DecodeException("无法解析GIF")
+
+        val duration = movie.duration()
+        if (duration <= 0) {
+            // Static GIF: treat as single frame
+            return extractSingleGifFrame(movie, outputDir, targetWidth, targetHeight, onProgress)
+        }
+
+        // Estimate frame count (assume ~100ms per frame typical)
+        val frameInterval = 100 // ms
+        val estimatedFrameCount = maxOf(1, duration / frameInterval)
+        
+        val extractedFrames = mutableListOf<File>()
+        var frameIndex = 1
+
+        // Extract frames at regular intervals
+        var time = 0
+        while (time < duration) {
+            movie.setTime(time)
+            
+            // Create bitmap for this frame
+            val bitmap = Bitmap.createBitmap(
+                movie.width(),
+                movie.height(),
+                Bitmap.Config.ARGB_8888
+            )
+            val canvas = Canvas(bitmap)
+            movie.draw(canvas, 0f, 0f)
+
+            // Resize to target dimensions (center crop)
+            val resized = resizeCenterCrop(bitmap, targetWidth, targetHeight)
+            bitmap.recycle()
+
+            // Save as JPEG
+            val outFile = File(outputDir, "$frameIndex.jpg")
+            FileOutputStream(outFile).use { fos ->
+                resized.compress(Bitmap.CompressFormat.JPEG, GifFrameExtractor.JPEG_QUALITY, fos)
+            }
+            resized.recycle()
+
+            extractedFrames.add(outFile)
+            onProgress(frameIndex, estimatedFrameCount)
+
+            frameIndex++
+            time += frameInterval
+        }
+
+        if (extractedFrames.isEmpty()) {
+            throw GifExtractionException.DecodeException("未能提取任何帧")
+        }
+
+        return extractedFrames.toList()
+    }
+    
+    /**
+     * Extract single frame from static GIF.
+     */
+    private suspend fun extractSingleGifFrame(
+        movie: Movie,
+        outputDir: File,
+        targetWidth: Int,
+        targetHeight: Int,
+        onProgress: suspend (current: Int, total: Int) -> Unit
+    ): List<File> {
+        movie.setTime(0)
+        val bitmap = Bitmap.createBitmap(movie.width(), movie.height(), Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        movie.draw(canvas, 0f, 0f)
+        
+        val resized = resizeCenterCrop(bitmap, targetWidth, targetHeight)
+        bitmap.recycle()
+        
+        val outFile = File(outputDir, "1.jpg")
+        FileOutputStream(outFile).use { fos ->
+            resized.compress(Bitmap.CompressFormat.JPEG, GifFrameExtractor.JPEG_QUALITY, fos)
+        }
+        resized.recycle()
+        
+        onProgress(1, 1)
+        return listOf(outFile)
+    }
+    
+    /**
+     * Process static image (JPG/JPEG/PNG) as single frame.
+     */
+    private suspend fun extractStaticImage(
+        imageData: ByteArray,
+        outputDir: File,
+        targetWidth: Int,
+        targetHeight: Int,
+        onProgress: suspend (current: Int, total: Int) -> Unit
+    ): List<File> {
+        val bitmap = BitmapFactory.decodeByteArray(imageData, 0, imageData.size)
+            ?: throw GifExtractionException.DecodeException("无法解析图片")
+        
+        val resized = resizeCenterCrop(bitmap, targetWidth, targetHeight)
+        bitmap.recycle()
+        
+        // Save as single JPEG frame (1.jpg per ESP32 spec)
+        val outFile = File(outputDir, "1.jpg")
+        FileOutputStream(outFile).use { fos ->
+            resized.compress(Bitmap.CompressFormat.JPEG, GifFrameExtractor.JPEG_QUALITY, fos)
+        }
+        resized.recycle()
+        
+        onProgress(1, 1)
+        return listOf(outFile)
     }
 
     /**

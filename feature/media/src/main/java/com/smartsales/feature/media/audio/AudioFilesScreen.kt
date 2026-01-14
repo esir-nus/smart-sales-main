@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
@@ -58,8 +59,11 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -83,6 +87,7 @@ fun AudioFilesScreen(
     onDeleteClicked: (String) -> Unit,
     onTranscribeClicked: (String) -> Unit,
     onTranscriptClicked: (String) -> Unit,
+    onFlagToggle: (String) -> Unit,  // V17: Star flag toggle
     onAskAiClicked: (AudioRecordingUi) -> Unit,
     onTranscriptDismissed: () -> Unit,
     onErrorDismissed: () -> Unit,
@@ -94,6 +99,17 @@ fun AudioFilesScreen(
         refreshing = uiState.isSyncing || uiState.isLoading,
         onRefresh = onSyncClicked
     )
+
+    // P2: One-time swipe hint animation
+    var swipeHintShown by remember { mutableStateOf(false) }
+    val firstNoneIndex = uiState.recordings.indexOfFirst { it.transcriptionStatus == TranscriptionStatus.NONE }
+    androidx.compose.runtime.LaunchedEffect(uiState.recordings.isNotEmpty()) {
+        if (uiState.recordings.isNotEmpty() && !swipeHintShown) {
+            kotlinx.coroutines.delay(600)
+            swipeHintShown = true
+        }
+    }
+
     Scaffold(
         modifier = modifier
             .fillMaxSize()
@@ -206,14 +222,17 @@ fun AudioFilesScreen(
                             .testTag(AudioFilesTestTags.RECORDING_LIST),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        items(uiState.recordings, key = { it.id }) { recording ->
-                            AudioRecordingItem(
+                        itemsIndexed(uiState.recordings, key = { _, item -> item.id }) { index, recording ->
+                            // V17: SwipeableRecordingCard with gesture-based actions
+                            SwipeableRecordingCard(
                                 recording = recording,
-                                onClick = onRecordingClicked,
-                                onPlayPauseClicked = onPlayPauseClicked,
-                                onDeleteClicked = onDeleteClicked,
-                                onTranscribeClicked = onTranscribeClicked,
-                                onTranscriptClicked = onTranscriptClicked
+                                onTap = { onTranscriptClicked(recording.id) },  // V17: Opens transcript sheet
+                                onPlayClicked = { onPlayPauseClicked(recording.id) },
+                                onTranscribeClicked = { onTranscribeClicked(recording.id) },
+                                onDeleteClicked = { onDeleteClicked(recording.id) },
+                                onFlagToggle = { onFlagToggle(recording.id) },
+                                onLongPress = { /* Multi-select deferred */ },
+                                showHint = !swipeHintShown && index == firstNoneIndex && firstNoneIndex >= 0
                             )
                         }
                     }
@@ -230,6 +249,7 @@ fun AudioFilesScreen(
         TranscriptViewerSheet(
             recording = recording,
             onDismiss = onTranscriptDismissed,
+            onPlayClicked = onPlayPauseClicked,
             onAskAiClicked = onAskAiClicked
         )
     }
@@ -251,248 +271,8 @@ object AudioFilesTestTags {
     const val ASK_AI_BUTTON = "audio_files_ask_ai_button"
 }
 
-@Composable
-private fun AudioRecordingItem(
-    recording: AudioRecordingUi,
-    onClick: (String) -> Unit,
-    onPlayPauseClicked: (String) -> Unit,
-    onDeleteClicked: (String) -> Unit,
-    onTranscribeClicked: (String) -> Unit,
-    onTranscriptClicked: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val designTokens = AppDesignTokens.current()
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = designTokens.cardShape,
-        elevation = CardDefaults.cardElevation(defaultElevation = designTokens.cardElevation),
-        border = BorderStroke(1.dp, designTokens.cardBorder)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    StatusIcon(recording = recording, onClick = onClick)
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = recording.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        recording.locationText?.takeIf { it.isNotBlank() }?.let { location ->
-                            Text(
-                                text = location,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                }
-                StatusBadges(recording = recording, onTranscriptClicked = onTranscriptClicked)
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = { onPlayPauseClicked(recording.id) }) {
-                    Icon(
-                        imageVector = if (recording.isPlaying) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,
-                        contentDescription = if (recording.isPlaying) "暂停" else "播放"
-                    )
-                }
-                Column {
-                    Text(
-                        text = formatDuration(recording.durationMillis),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = recording.createdAtText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Spacer(modifier = Modifier.weight(1f))
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = recording.fileName,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    SourceLabel(label = recording.sourceLabel)
-                }
-            }
-            HorizontalDivider()
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                ActionButtons(
-                    recording = recording,
-                    onTranscribeClicked = onTranscribeClicked,
-                    onTranscriptClicked = onTranscriptClicked,
-                    onDeleteClicked = onDeleteClicked
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatusIcon(recording: AudioRecordingUi, onClick: (String) -> Unit) {
-    val container = when (recording.transcriptionStatus) {
-        TranscriptionStatus.DONE -> MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-        TranscriptionStatus.ERROR -> MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
-        TranscriptionStatus.IN_PROGRESS -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
-        else -> MaterialTheme.colorScheme.surfaceVariant
-    }
-    val tint = when (recording.transcriptionStatus) {
-        TranscriptionStatus.DONE -> MaterialTheme.colorScheme.primary
-        TranscriptionStatus.ERROR -> MaterialTheme.colorScheme.error
-        TranscriptionStatus.IN_PROGRESS -> MaterialTheme.colorScheme.tertiary
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .background(container, shape = MaterialTheme.shapes.medium)
-            .clickable { onClick(recording.id) },
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-            contentDescription = null,
-            tint = tint
-        )
-    }
-}
-
-@Composable
-private fun StatusBadges(
-    recording: AudioRecordingUi,
-    onTranscriptClicked: (String) -> Unit
-) {
-    val mapping = transcriptionUiMapping(recording.transcriptionStatus)
-    val color = when (recording.transcriptionStatus) {
-        TranscriptionStatus.DONE -> MaterialTheme.colorScheme.primary
-        TranscriptionStatus.IN_PROGRESS -> MaterialTheme.colorScheme.tertiary
-        TranscriptionStatus.ERROR -> MaterialTheme.colorScheme.error
-        TranscriptionStatus.NONE -> MaterialTheme.colorScheme.secondary
-    }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ElevatedAssistChip(
-            modifier = Modifier.testTag("${AudioFilesTestTags.STATUS_CHIP_PREFIX}${recording.id}"),
-            enabled = recording.transcriptionStatus == TranscriptionStatus.DONE,
-            onClick = { onTranscriptClicked(recording.id) },
-            label = { Text(text = mapping.badgeLabel, color = color) },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                    contentDescription = null,
-                    tint = color
-                )
-            }
-        )
-    }
-}
-
-@Composable
-private fun SourceLabel(label: String) {
-    if (label.isBlank()) return
-    ElevatedAssistChip(
-        onClick = {},
-        enabled = false,
-        label = { Text(text = label) },
-        colors = AssistChipDefaults.assistChipColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    )
-}
-
-@Composable
-private fun ActionButtons(
-    recording: AudioRecordingUi,
-    onTranscribeClicked: (String) -> Unit,
-    onTranscriptClicked: (String) -> Unit,
-    onDeleteClicked: (String) -> Unit
-) {
-    val mapping = transcriptionUiMapping(recording.transcriptionStatus)
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            when (mapping.action) {
-                TranscriptionAction.START -> {
-                    TextButton(
-                        onClick = { onTranscribeClicked(recording.id) },
-                        modifier = Modifier.testTag("${AudioFilesTestTags.TRANSCRIBE_BUTTON_PREFIX}${recording.id}")
-                    ) {
-                        Text(text = mapping.actionLabel)
-                    }
-                }
-
-                TranscriptionAction.OPEN -> {
-                    TextButton(
-                        onClick = { onTranscriptClicked(recording.id) },
-                        modifier = Modifier.testTag("${AudioFilesTestTags.TRANSCRIPT_BUTTON_PREFIX}${recording.id}")
-                    ) {
-                        Text(text = mapping.actionLabel)
-                    }
-                }
-
-                TranscriptionAction.NONE -> {
-                    Text(
-                        text = mapping.actionLabel,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.tertiary
-                    )
-                }
-
-                TranscriptionAction.RETRY -> {
-                    TextButton(onClick = { onTranscribeClicked(recording.id) }) {
-                        Text(
-                            text = mapping.actionLabel,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            TextButton(onClick = { onDeleteClicked(recording.id) }) {
-                Text(text = "删除")
-            }
-        }
-    }
-}
+// V17: Dead code deleted - AudioRecordingItem, StatusIcon, StatusBadges, SourceLabel, ActionButtons
+// These were replaced by SwipeableRecordingCard.kt
 
 @Composable
 private fun EmptyState(onRefresh: () -> Unit, modifier: Modifier = Modifier) {
@@ -544,328 +324,4 @@ private fun ErrorBanner(
     }
 }
 
-@Composable
-@OptIn(ExperimentalMaterial3Api::class)
-private fun TranscriptViewerSheet(
-    recording: AudioRecordingUi,
-    onDismiss: () -> Unit,
-    onAskAiClicked: (AudioRecordingUi) -> Unit
-) {
-    val scrollState = rememberScrollState()
-    androidx.compose.material3.ModalBottomSheet(
-        modifier = Modifier.testTag(AudioFilesTestTags.TRANSCRIPT_DIALOG),
-        onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface
-    ) {
-        val coroutineScope = rememberCoroutineScope()
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-                .verticalScroll(scrollState)
-        ) {
-            Text(
-                text = "通话转写",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            PlayerStub(
-                title = recording.fileName,
-                duration = formatDuration(recording.durationMillis),
-                onPlayPause = { /* 播放占位 */ }
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            val summary = recording.smartSummary?.takeIf { it.isMeaningful() }
-            summary?.let {
-                SummaryBlock(summary = it, modifier = Modifier.testTag(AudioFilesTestTags.TRANSCRIPT_SUMMARY))
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-            val content = when (recording.transcriptionStatus) {
-                TranscriptionStatus.IN_PROGRESS -> "转写进行中，请稍后查看。"
-                TranscriptionStatus.ERROR -> "转写失败，请重试创建转写任务或检查网络。"
-                else -> recording.fullTranscriptMarkdown ?: recording.transcriptPreview ?: "暂无内容"
-            }
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(AudioFilesTestTags.TRANSCRIPT_CONTENT),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                content.lines().forEach { line ->
-                    Text(
-                        text = formatMarkdownLite(line),
-                        style = when {
-                            line.startsWith("##") -> MaterialTheme.typography.titleSmall
-                            line.startsWith("#") -> MaterialTheme.typography.titleMedium
-                            line.startsWith("- ") -> MaterialTheme.typography.bodyMedium
-                            else -> MaterialTheme.typography.bodyMedium
-                        }
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            if (recording.transcriptionStatus == TranscriptionStatus.DONE) {
-                GradientCtaButton(
-                    label = "用 AI 分析本次通话",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag(AudioFilesTestTags.ASK_AI_BUTTON),
-                    onClick = {
-                        onDismiss()
-                        onAskAiClicked(recording)
-                    }
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            recording.chapters?.let { chapters ->
-                Text(
-                    text = "章节",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                if (chapters.isEmpty()) {
-                    Text(
-                        text = "暂无章节信息",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        chapters.forEachIndexed { index: Int, chapter: TingwuChapterUi ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        coroutineScope.launch {
-                                            val target = (index * 200).coerceAtLeast(0)
-                                            scrollState.animateScrollTo(target)
-                                        }
-                                    }
-                                    .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = formatChapterTime(chapter.startMs),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = chapter.title,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
-                Text(text = "关闭")
-            }
-        }
-    }
-}
-
-@Composable
-private fun formatMarkdownLite(line: String): String =
-    line.trimStart('#', ' ', '\t')
-
-private fun formatChapterTime(startMs: Long): String {
-    val totalSeconds = (startMs / 1000).coerceAtLeast(0)
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return "%02d:%02d".format(minutes, seconds)
-}
-
-@Composable
-private fun SummaryBlock(
-    summary: TingwuSmartSummaryUi,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Text(
-            text = "智能总结",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        summary.summary?.takeIf { it.isNotBlank() }?.let {
-            Text(
-                text = it,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-        if (summary.keyPoints.isNotEmpty()) {
-            Text(text = "要点", style = MaterialTheme.typography.bodySmall)
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                summary.keyPoints.forEach { point ->
-                    Text(
-                        text = "• $point",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-        if (summary.actionItems.isNotEmpty()) {
-            Text(text = "行动项", style = MaterialTheme.typography.bodySmall)
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                summary.actionItems.forEach { item ->
-                    Text(
-                        text = "• $item",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
-}
-
-private fun TingwuSmartSummaryUi.isMeaningful(): Boolean =
-    !summary.isNullOrBlank() || keyPoints.isNotEmpty() || actionItems.isNotEmpty()
-
-@Composable
-private fun PlayerStub(
-    title: String,
-    duration: String,
-    onPlayPause: () -> Unit
-) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = MaterialTheme.shapes.large,
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            IconButton(
-                onClick = onPlayPause,
-                modifier = Modifier
-                    .size(48.dp)
-                    .border(
-                        BorderStroke(
-                            1.dp,
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                        ),
-                        shape = MaterialTheme.shapes.medium
-                    ),
-                colors = IconButtonDefaults.iconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.PlayArrow,
-                    contentDescription = "播放"
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = "转写摘要",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Text(
-                text = duration,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun GradientCtaButton(
-    label: String,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    val designTokens = AppDesignTokens.current()
-    Box(
-        modifier = modifier
-            .background(
-                brush = Brush.horizontalGradient(
-                    colors = designTokens.ctaGradient
-                ),
-                shape = MaterialTheme.shapes.large
-            )
-            .clickable(onClick = onClick)
-            .padding(vertical = 16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onPrimary
-        )
-    }
-}
-
-private data class TranscriptionUiMapping(
-    val badgeLabel: String,
-    val actionLabel: String,
-    val action: TranscriptionAction
-)
-
-private enum class TranscriptionAction {
-    START,
-    OPEN,
-    RETRY,
-    NONE
-}
-
-private fun transcriptionUiMapping(status: TranscriptionStatus): TranscriptionUiMapping =
-    when (status) {
-        TranscriptionStatus.NONE -> TranscriptionUiMapping(
-            badgeLabel = "未转写",
-            actionLabel = "转写",
-            action = TranscriptionAction.START
-        )
-
-        TranscriptionStatus.IN_PROGRESS -> TranscriptionUiMapping(
-            badgeLabel = "转写中…",
-            actionLabel = "等待转写完成",
-            action = TranscriptionAction.NONE
-        )
-
-        TranscriptionStatus.DONE -> TranscriptionUiMapping(
-            badgeLabel = "转写完成",
-            actionLabel = "查看转写",
-            action = TranscriptionAction.OPEN
-        )
-
-        TranscriptionStatus.ERROR -> TranscriptionUiMapping(
-            badgeLabel = "转写失败",
-            actionLabel = "转写失败，重试",
-            action = TranscriptionAction.RETRY
-        )
-    }
-
-private fun formatDuration(durationMillis: Long?): String {
-    if (durationMillis == null || durationMillis <= 0) return "--:--"
-    val totalSeconds = (durationMillis / 1000).coerceAtLeast(0)
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return "%02d:%02d".format(minutes, seconds)
-}
+// 312-635 extracted to TranscriptViewerSheet.kt

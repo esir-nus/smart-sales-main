@@ -20,8 +20,10 @@ import com.smartsales.data.aicore.posttingwu.PostTingwuTranscriptEnhancer
 import com.smartsales.data.aicore.posttingwu.RealPostTingwuTranscriptEnhancer
 import com.smartsales.data.aicore.tingwu.artifact.DefaultTingwuRawDumpDirectoryProvider
 import com.smartsales.data.aicore.tingwu.artifact.TingwuRawDumpDirectoryProvider
-import com.smartsales.data.aicore.xfyun.DefaultXfyunRawDumpDirectoryProvider
-import com.smartsales.data.aicore.xfyun.XfyunRawDumpDirectoryProvider
+import com.smartsales.data.aicore.tingwu.store.FileBasedTingwuJobStore
+import com.smartsales.data.aicore.tingwu.store.TingwuJobStore
+import javax.inject.Named
+
 import dagger.Binds
 import dagger.BindsOptionalOf
 import dagger.Module
@@ -123,11 +125,7 @@ abstract class AiCoreModule {
         impl: InMemoryAiParaSettingsRepository,
     ): AiParaSettingsRepository
 
-    @Binds
-    @Singleton
-    abstract fun bindXfyunRawDumpDirectoryProvider(
-        impl: DefaultXfyunRawDumpDirectoryProvider,
-    ): XfyunRawDumpDirectoryProvider
+
 
     @Binds
     @Singleton
@@ -142,6 +140,12 @@ abstract class AiCoreModule {
     abstract fun bindNetworkChecker(
         impl: AndroidNetworkChecker
     ): NetworkChecker
+
+    @Binds
+    @Singleton
+    abstract fun bindTingwuJobStore(
+        impl: FileBasedTingwuJobStore
+    ): TingwuJobStore
 
     @BindsOptionalOf
     abstract fun optionalAiCoreConfig(): AiCoreConfig
@@ -245,6 +249,16 @@ abstract class AiCoreModule {
             val tempDir = java.io.File(context.cacheDir, "audio_slices")
             if (!tempDir.exists()) tempDir.mkdirs()
             return com.smartsales.data.aicore.util.AudioSlicer(tempDir)
+        }
+
+        @Provides
+        @Singleton
+        @Named("TingwuStoreDir")
+        fun provideTingwuStoreDir(@dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context): java.io.File {
+            // Permanent storage for job manifest and batch artifacts
+            val dir = java.io.File(context.filesDir, "tingwu_jobs")
+            if (!dir.exists()) dir.mkdirs()
+            return dir
         }
 
     }

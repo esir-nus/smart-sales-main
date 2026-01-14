@@ -10,7 +10,7 @@ import com.smartsales.feature.media.GifTransferState
 import com.smartsales.feature.media.WavListState
 import com.smartsales.feature.media.WavDownloadState
 
-internal const val DEFAULT_MEDIA_SERVER_PORT = 8000
+internal const val DEFAULT_MEDIA_SERVER_PORT = 8088
 internal const val DEFAULT_MEDIA_SERVER_BASE_URL = "http://10.0.2.2:$DEFAULT_MEDIA_SERVER_PORT"
 internal const val AUTO_DETECT_WAITING_MESSAGE = "等待设备联网..."
 
@@ -68,7 +68,8 @@ data class DeviceFileUi(
 enum class DeviceMediaTab {
     Videos,
     Gifs,
-    Images;
+    Images,
+    Audio;
 }
 
 /**

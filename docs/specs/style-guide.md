@@ -69,8 +69,9 @@ All color, spacing, typography, and component values are defined in:
 
 6. **Consistent patterns across pages**
 
-   - Hero, quick skills row, input bar, cards, drawers, and lists **look and behave the same** everywhere.
-   - When in doubt, reuse an existing pattern instead of inventing a new one.
+7. **Zero-Chrome & Glass Slabs**
+   - **Zero-Chrome**: The web prototype must hide all browser artifacts (scrollbars, focus rings). Content should feel like a native app.
+   - **Glass Slabs**: Light mode UI must use "Frosted Ice" (High blur + White Border) to separate layers, avoiding the "flat gray" web look.
 
 ---
 
@@ -83,8 +84,8 @@ The palette uses clean, neutral surfaces to let the **AI Intelligence** (Chroma 
 
 | Token / Role        | Light Mode | Dark Mode | Usage |
 | ------------------- | ---------- | --------- | ----- |
-| **AppBackground**   | `Aurora`   | `#0D0D12` | **Target UI**: Soft Blue/Cyan Mesh Gradient. |
-| **SurfaceCard**     | `#FFFFFF`  | `#1C1C1E` | Cards, chat bubbles (assistant), drawers. |
+| **AppBackground**   | `Aurora`   | `#0D0D12` | **Target UI**: Soft Blue/Cyan Mesh Gradient (Dark Default). |
+| **SurfaceCard**     | `FrostedIce` | `#1C1C1E` | Light Mode = High Saturation Blur + White Border. |
 | **FloatingCapsule** | `#FFFFFF`  | `#2C2C2E` | **Target UI**: High-elevation Input Bar. |
 | **BorderDefault**   | `#E5E5EA`  | `#38383A` | Subtle dividers. |
 | **AccentPrimary**   | `#007AFF`  | `#0A84FF` | Primary actions. |
@@ -102,6 +103,10 @@ object AppColors {
             Color(0xFFF7F7F7), // Middle
             Color(0xFFFFFFFF)  // Bottom
         )
+    )
+    // Frosted Ice (Light Mode Slab)
+    val FrostedIceBorder = Color(0xFFFFFFFF).copy(alpha = 0.65f)
+    val FrostedIceShadow = Color(0x14000000) // 8% opacity black
     )
     // ...
 }

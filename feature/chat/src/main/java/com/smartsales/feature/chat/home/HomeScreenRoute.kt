@@ -223,7 +223,7 @@ fun HomeScreenRoute(
         onHistorySessionSelected = sessionListViewModel::onSessionSelected,
         onHistorySessionLongPress = sessionListViewModel::onSessionLongPress,
         onToggleDebugMetadata = viewModel::toggleDebugMetadata,
-            onRefreshXfyunTrace = viewModel::refreshXfyunTrace,
+            onRefreshTrace = viewModel::refreshXfyunTrace,
             onToggleRawAssistantOutput = viewModel::setShowRawAssistantOutput,
             onDismissKeyboard = dismissKeyboard,
             onInputFocusChanged = { focused ->

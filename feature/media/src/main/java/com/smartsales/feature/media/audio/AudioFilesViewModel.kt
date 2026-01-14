@@ -40,6 +40,7 @@ class AudioFilesViewModel @Inject constructor(
     private val transcriptionCoordinator: AudioTranscriptionCoordinator,
     private val endpointProvider: DeviceHttpEndpointProvider,
     private val audioStorageRepository: AudioStorageRepository,
+    private val flaggedRecordingsStore: FlaggedRecordingsStore,
     private val dispatchers: DispatcherProvider
 ) : ViewModel() {
 
@@ -109,6 +110,21 @@ class AudioFilesViewModel @Inject constructor(
                 selectedRecordingId = newPlaying ?: state.selectedRecordingId,
                 recordings = state.recordings.map { item ->
                     item.copy(isPlaying = item.id == newPlaying)
+                }
+            )
+        }
+    }
+
+    /**
+     * V17: Toggle star/flag on a recording.
+     */
+    fun onFlagToggle(id: String) {
+        val newFlagged = !flaggedRecordingsStore.isFlagged(id)
+        flaggedRecordingsStore.setFlagged(id, newFlagged)
+        _uiState.update { state ->
+            state.copy(
+                recordings = state.recordings.map { item ->
+                    if (item.id == id) item.copy(isFlagged = newFlagged) else item
                 }
             )
         }
@@ -564,7 +580,8 @@ class AudioFilesViewModel @Inject constructor(
         base: AudioRecordingUi,
         previous: AudioRecordingUi?
     ): AudioRecordingUi {
-        if (previous == null) return base
+        val isFlagged = flaggedRecordingsStore.isFlagged(base.id)
+        if (previous == null) return base.copy(isFlagged = isFlagged)
         return base.copy(
             transcriptionStatus = previous.transcriptionStatus,
             transcriptPreview = previous.transcriptPreview ?: base.transcriptPreview,
@@ -574,7 +591,8 @@ class AudioFilesViewModel @Inject constructor(
             transcriptionUrl = previous.transcriptionUrl ?: base.transcriptionUrl,
             autoChaptersUrl = previous.autoChaptersUrl ?: base.autoChaptersUrl,
             chapters = previous.chapters ?: base.chapters,
-            smartSummary = previous.smartSummary ?: base.smartSummary
+            smartSummary = previous.smartSummary ?: base.smartSummary,
+            isFlagged = isFlagged
         )
     }
 

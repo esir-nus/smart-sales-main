@@ -5,7 +5,6 @@ import com.smartsales.domain.config.QuickSkillId
 import com.smartsales.feature.usercenter.SalesPersona
 import com.smartsales.data.aicore.debug.DebugSnapshot
 import com.smartsales.data.aicore.debug.TingwuTraceSnapshot
-import com.smartsales.data.aicore.debug.XfyunTraceSnapshot
 import com.smartsales.domain.debug.DebugSessionMetadata
 
 import com.smartsales.domain.export.ExportGateState
@@ -57,18 +56,17 @@ data class HomeUiState(
     val chatErrorMessage: String? = null,
     val navigationRequest: HomeNavigationRequest? = null,
     val currentSession: CurrentSessionUi = CurrentSessionUi(
-        id = "new_chat", // DEFAULT_SESSION_ID constant not visible here, hardcoding or using string
-        title = "新对话", // DEFAULT_SESSION_TITLE
+        id = "new_chat",
+        title = "新对话",
         isTranscription = false
     ),
     val userName: String = "用户",
     val showWelcomeHero: Boolean = true,
     val isSmartAnalysisMode: Boolean = false,
-    val smartAnalysisGoal: String? = null,  // P3.8: Synced from ConversationState via bridge
+    val smartAnalysisGoal: String? = null,
     val showDebugMetadata: Boolean = false,
     val debugSessionMetadata: DebugSessionMetadata? = null,
     val debugSnapshot: DebugSnapshot? = null,
-    val xfyunTrace: XfyunTraceSnapshot? = null,
     val tingwuTrace: TingwuTraceSnapshot? = null,
 
     val smartReasoningText: String? = null,

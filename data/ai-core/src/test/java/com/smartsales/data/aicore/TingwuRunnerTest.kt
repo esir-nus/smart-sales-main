@@ -182,9 +182,11 @@ class TingwuRunnerTest {
                          Result.Success(com.smartsales.data.aicore.OssUploadResult("key", "url"))
                  },
                  stitcher = com.smartsales.data.aicore.tingwu.MultiBatchStitcher(),
-                 pipelineTracer = tracer
+                 pipelineTracer = tracer,
+                 jobStore = FakeJobStoreForRunner()
             ),
             pollingLoop = pollingLoop,
+            jobStore = FakeJobStoreForRunner(),
             optionalConfig = optionalConfig
         ).also { createdCoordinators += it }
     }
@@ -1701,4 +1703,19 @@ class FakePipelineTracer : com.smartsales.data.aicore.debug.PipelineTracer {
     override fun clear() {
         _events.value = emptyList()
     }
+}
+
+// Fake job store for TingwuRunner tests
+class FakeJobStoreForRunner : com.smartsales.data.aicore.tingwu.store.TingwuJobStore {
+    override suspend fun saveJob(job: com.smartsales.data.aicore.tingwu.store.PersistedJob) {}
+    override suspend fun loadJob(jobId: String) = null
+    override suspend fun loadAll() = emptyList<com.smartsales.data.aicore.tingwu.store.PersistedJob>()
+    override suspend fun updateBatchStatus(
+        jobId: String, batchIndex: Int, status: com.smartsales.data.aicore.tingwu.store.BatchStatus,
+        tingwuJobId: String?, artifactPath: String?, diarizedSegmentsCount: Int?, error: String?
+    ) {}
+    override suspend fun completeJob(jobId: String, status: com.smartsales.data.aicore.tingwu.store.JobStatus) {}
+    override suspend fun getRetryableJobs() = emptyList<com.smartsales.data.aicore.tingwu.store.PersistedJob>()
+    override suspend fun clearAll() {}
+    override suspend fun clearOlderThan(ageMs: Long) {}
 }

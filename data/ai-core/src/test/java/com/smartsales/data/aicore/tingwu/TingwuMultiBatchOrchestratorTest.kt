@@ -20,6 +20,11 @@ import com.smartsales.data.aicore.util.SliceResult
 import com.smartsales.data.aicore.debug.PipelineTracer
 import com.smartsales.data.aicore.debug.PipelineStage
 import com.smartsales.data.aicore.debug.PipelineEvent
+import com.smartsales.data.aicore.tingwu.store.TingwuJobStore
+import com.smartsales.data.aicore.tingwu.store.PersistedJob
+import com.smartsales.data.aicore.tingwu.store.PersistedBatch
+import com.smartsales.data.aicore.tingwu.store.JobStatus
+import com.smartsales.data.aicore.tingwu.store.BatchStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,6 +53,7 @@ class TingwuMultiBatchOrchestratorTest {
     private lateinit var fakeAudioSlicer: FakeAudioSlicer
     private lateinit var fakeOssClient: FakeOssUploadClient
     private lateinit var fakePipelineTracer: FakePipelineTracer
+    private lateinit var fakeJobStore: FakeTingwuJobStore
     private lateinit var stitcher: MultiBatchStitcher
     private lateinit var orchestrator: TingwuMultiBatchOrchestrator
 
@@ -58,8 +64,9 @@ class TingwuMultiBatchOrchestratorTest {
         fakeAudioSlicer = FakeAudioSlicer(tempDir)
         fakeOssClient = FakeOssUploadClient()
         fakePipelineTracer = FakePipelineTracer()
+        fakeJobStore = FakeTingwuJobStore()
         stitcher = MultiBatchStitcher()
-        orchestrator = TingwuMultiBatchOrchestrator(fakeAudioSlicer, fakeOssClient, stitcher, fakePipelineTracer)
+        orchestrator = TingwuMultiBatchOrchestrator(fakeAudioSlicer, fakeOssClient, stitcher, fakePipelineTracer, fakeJobStore)
     }
 
     // --- Test Helpers ---
@@ -277,5 +284,40 @@ class TingwuMultiBatchOrchestratorTest {
         override fun clear() {
             emittedEvents.clear()
         }
+    }
+
+    private class FakeTingwuJobStore : TingwuJobStore {
+        val savedJobs = mutableMapOf<String, PersistedJob>()
+        val batchUpdates = mutableListOf<String>()
+
+        override suspend fun saveJob(job: PersistedJob) {
+            savedJobs[job.jobId] = job
+        }
+
+        override suspend fun loadJob(jobId: String): PersistedJob? = savedJobs[jobId]
+
+        override suspend fun loadAll(): List<PersistedJob> = savedJobs.values.toList()
+
+        override suspend fun updateBatchStatus(
+            jobId: String,
+            batchIndex: Int,
+            status: BatchStatus,
+            tingwuJobId: String?,
+            artifactPath: String?,
+            diarizedSegmentsCount: Int?,
+            error: String?
+        ) {
+            batchUpdates.add("$jobId:$batchIndex:$status")
+        }
+
+        override suspend fun completeJob(jobId: String, status: JobStatus) {
+            savedJobs[jobId]?.let { savedJobs[jobId] = it.copy(status = status) }
+        }
+
+        override suspend fun getRetryableJobs(): List<PersistedJob> = emptyList()
+
+        override suspend fun clearAll() { savedJobs.clear() }
+
+        override suspend fun clearOlderThan(ageMs: Long) {}
     }
 }

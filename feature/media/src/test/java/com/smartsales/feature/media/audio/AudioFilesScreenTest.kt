@@ -68,6 +68,7 @@ class AudioFilesScreenTest {
                     onAskAiClicked = {},
                     onTranscriptDismissed = {},
                     onErrorDismissed = {},
+                    onFlagToggle = {},
                     modifier = Modifier
                 )
             }
@@ -113,6 +114,7 @@ class AudioFilesScreenTest {
                     onAskAiClicked = {},
                     onTranscriptDismissed = {},
                     onErrorDismissed = {},
+                    onFlagToggle = {},
                     modifier = Modifier
                 )
             }
@@ -168,6 +170,7 @@ class AudioFilesScreenTest {
                     onAskAiClicked = { asked = true },
                     onTranscriptDismissed = {},
                     onErrorDismissed = {},
+                    onFlagToggle = {},
                     modifier = Modifier
                 )
             }
@@ -226,6 +229,7 @@ class AudioFilesScreenTest {
                     onAskAiClicked = {},
                     onTranscriptDismissed = {},
                     onErrorDismissed = {},
+                    onFlagToggle = {},
                     modifier = Modifier
                 )
             }
@@ -276,6 +280,7 @@ class AudioFilesScreenTest {
                     onAskAiClicked = {},
                     onTranscriptDismissed = {},
                     onErrorDismissed = {},
+                    onFlagToggle = {},
                     modifier = Modifier
                 )
             }

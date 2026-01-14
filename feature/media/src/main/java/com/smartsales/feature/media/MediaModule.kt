@@ -3,6 +3,8 @@ package com.smartsales.feature.media
 import android.content.ContentResolver
 import android.content.Context
 import com.smartsales.core.util.DispatcherProvider
+import com.smartsales.feature.media.audio.FlaggedRecordingsStore
+import com.smartsales.feature.media.audio.SharedPrefsFlaggedRecordingsStore
 import com.smartsales.feature.media.processing.DefaultGifFrameExtractor
 import com.smartsales.feature.media.processing.GifFrameExtractor
 import dagger.Binds
@@ -31,6 +33,10 @@ interface MediaModule {
     @Binds
     @Singleton
     fun bindWavDownloadCoordinator(impl: DefaultWavDownloadCoordinator): WavDownloadCoordinator
+
+    @Binds
+    @Singleton
+    fun bindFlaggedRecordingsStore(impl: SharedPrefsFlaggedRecordingsStore): FlaggedRecordingsStore
 }
 
 @Module

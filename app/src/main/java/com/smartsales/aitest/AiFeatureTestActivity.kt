@@ -381,7 +381,9 @@ private fun AiFeatureTestApp(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER),
-                                onNavigateToDeviceSetup = { setPage(TestHomePage.DeviceSetup) }
+                                onNavigateToDeviceSetup = { setPage(TestHomePage.DeviceSetup) },
+                                onNavigateToGifUpload = { setPage(TestHomePage.GifUpload) },
+                                onNavigateToWavDownload = { setPage(TestHomePage.WavDownload) }
                             )
 
                             TestHomePage.DeviceSetup -> DeviceSetupRoute(
@@ -433,6 +435,14 @@ private fun AiFeatureTestApp(
                                 onLogout = { goHome() },
                                 onOpenDeviceManager = { setPage(TestHomePage.DeviceManager) },
                                 onOpenPrivacy = { goHome() }
+                            )
+
+                            TestHomePage.GifUpload -> com.smartsales.feature.media.GifUploadScreen(
+                                modifier = Modifier.fillMaxSize()
+                            )
+
+                            TestHomePage.WavDownload -> com.smartsales.feature.media.WavDownloadScreen(
+                                modifier = Modifier.fillMaxSize()
                             )
                         }
                     }
@@ -565,6 +575,14 @@ private fun OverlayScaffold(
                         modifier = Modifier.fillMaxSize(),
                         onNavigateToDeviceSetup = {
                             setPage(TestHomePage.DeviceSetup)
+                            onOverlayChange(HomeOverlay.Home)
+                        },
+                        onNavigateToGifUpload = {
+                            setPage(TestHomePage.GifUpload)
+                            onOverlayChange(HomeOverlay.Home)
+                        },
+                        onNavigateToWavDownload = {
+                            setPage(TestHomePage.WavDownload)
                             onOverlayChange(HomeOverlay.Home)
                         }
                     )
@@ -900,6 +918,8 @@ private fun titleForPage(page: TestHomePage): String = when (page) {
     TestHomePage.ChatHistory -> "聊天记录"
     TestHomePage.UserCenter -> "用户中心"
     TestHomePage.WifiBleTester -> "连接测试"
+    TestHomePage.GifUpload -> "发送图片"
+    TestHomePage.WavDownload -> "下载录音"
 }
 
 enum class TestHomePage {
@@ -909,7 +929,9 @@ enum class TestHomePage {
     DeviceSetup,
     ChatHistory,
     AudioFiles,
-    UserCenter
+    UserCenter,
+    GifUpload,
+    WavDownload
 }
 
 @Composable

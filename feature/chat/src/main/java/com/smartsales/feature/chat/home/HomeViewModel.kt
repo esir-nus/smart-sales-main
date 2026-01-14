@@ -44,8 +44,6 @@ import com.smartsales.domain.debug.DebugSessionMetadata
 import com.smartsales.domain.export.ExportGateState
 import com.smartsales.data.aicore.debug.TingwuTraceSnapshot
 import com.smartsales.data.aicore.debug.TingwuTraceStore
-import com.smartsales.data.aicore.debug.XfyunTraceSnapshot
-import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.data.aicore.AiCoreConfig
 import com.smartsales.feature.chat.title.SessionTitleResolver
 import com.smartsales.feature.chat.title.TitleResolver
@@ -156,7 +154,6 @@ class HomeViewModel @Inject constructor(
     private val shareHandler: ChatShareHandler,
     private val metaHub: MetaHub,
     private val debugOrchestrator: DebugOrchestrator,
-    private val xfyunTraceStore: XfyunTraceStore,
     private val tingwuTraceStore: TingwuTraceStore,
     private val aiParaSettingsRepository: AiParaSettingsRepository,
 
@@ -837,7 +834,6 @@ class HomeViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         tingwuTrace = debugState.tingwuTrace,
-                        xfyunTrace = debugState.xfyunTrace,
                         debugSnapshot = debugState.snapshot
                     )
                 }
@@ -863,7 +859,6 @@ class HomeViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 tingwuTrace = debugState.tingwuTrace,
-                xfyunTrace = debugState.xfyunTrace,
                 debugSnapshot = debugState.snapshot
             )
         }
@@ -914,7 +909,6 @@ class HomeViewModel @Inject constructor(
             transcriptionProviderRequested = laneDecision.requestedProvider,
             transcriptionProviderSelected = laneDecision.selectedProvider,
             transcriptionProviderDisabledReason = laneDecision.disabledReason,
-            transcriptionXfyunEnabledSetting = laneDecision.xfyunEnabledSetting,
             notes = mergedNotes
         )
         val messageId = meta?.latestMajorAnalysisMessageId

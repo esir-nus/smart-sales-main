@@ -6,7 +6,6 @@ package com.smartsales.data.aicore.params
 
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class InMemoryAiParaSettingsRepositoryTest {
@@ -15,23 +14,15 @@ class InMemoryAiParaSettingsRepositoryTest {
     fun update_updatesSnapshot() = runTest {
         val repo = InMemoryAiParaSettingsRepository()
         assertEquals(TRANSCRIPTION_PROVIDER_TINGWU, repo.snapshot().transcription.provider)
-        assertEquals(true, repo.snapshot().transcription.xfyun.upload.engSmoothProc)
-        assertEquals(false, repo.snapshot().transcription.xfyunEnabled)
 
         repo.update {
             it.copy(
                 transcription = it.transcription.copy(
-                    provider = TRANSCRIPTION_PROVIDER_XFYUN,
-                    xfyunEnabled = true,
-                    xfyun = it.transcription.xfyun.copy(
-                        upload = it.transcription.xfyun.upload.copy(engSmoothProc = false)
-                    )
+                    provider = "UPDATED_PROVIDER"
                 ),
             )
         }
 
-        assertEquals(TRANSCRIPTION_PROVIDER_XFYUN, repo.snapshot().transcription.provider)
-        assertFalse(repo.snapshot().transcription.xfyun.upload.engSmoothProc)
-        assertEquals(true, repo.snapshot().transcription.xfyunEnabled)
+        assertEquals("UPDATED_PROVIDER", repo.snapshot().transcription.provider)
     }
 }

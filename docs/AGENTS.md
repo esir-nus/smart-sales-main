@@ -2,7 +2,8 @@
 
 ## Source of Truth (SoT) and Archived Docs
 
-- SoT: The only authoritative spec is `docs/specs/Orchestrator-V1.md` (CURRENT) plus the V1 schema/examples.
+- **Current SoT**: `docs/specs/Orchestrator-Lattice.md` — Lattice Box-API architecture
+- **Algorithm Appendices**: `docs/specs/Orchestrator-V1.md` — Disector, Publisher, State Recovery rules (DEPRECATED for architecture decisions)
 - Ignore `docs/archived/**` for implementation behavior and contracts. Archived docs are historical only and must not be used as a target spec.
 - Ignore non-normative docs such as `docs/current-state.md` and `docs/T-Task.md` for implementation behavior; use SoT.
 
@@ -11,20 +12,21 @@
 ## Doc Sources and Precedence (Docs > Code > Guessing)
 
 - Orchestrator contract sources (CURRENT):
-  - `docs/specs/Orchestrator-V1.md` (the only current authoritative spec)
-- V1 JSON (CURRENT):
-  - `docs/specs/orchestrator-v1.schema.json`
-  - `docs/specs/orchestrator-v1.examples.json`
+  - `docs/specs/Orchestrator-Lattice.md` (the authoritative architecture spec)
+  - `docs/specs/Orchestrator-V1.md` Appendices (algorithm specs only)
+- Lattice JSON (CURRENT):
+  - `docs/specs/orchestrator-v1.schema.json` (data model schema — evolving to Lattice)
 - ARCHIVED (historical reference only; not target behavior):
   - Archived specs live under `docs/archived/**` (historical only).
 
 - UX contract source precedence:
-  1. `docs/specs/Orchestrator-V1.md` (reasoning and pipeline structure/boundaries)
-  2. `docs/specs/ux-contract.md` (🔒 canonical: data contracts, pipelines, feature boundaries — locked, requires Product/Eng approval)
-  3. `docs/plans/ux-experience.md` (📝 experience: state inventories, microcopy, timing, layout — UX-owned, modifiable)
-  4. `docs/specs/style-guide.md` (visual and code style rules)
-  5. Existing Android implementation and tests
-  6. Archived UI/history implementations for reference only
+  1. `docs/specs/Orchestrator-Lattice.md` (architecture and module boundaries)
+  2. `docs/specs/Orchestrator-V1.md` Appendices (algorithm specs: Disector, Publisher, State Recovery)
+  3. `docs/specs/ux-contract.md` (🔒 canonical: data contracts, pipelines, feature boundaries — locked, requires Product/Eng approval)
+  4. `docs/plans/ux-experience.md` (📝 experience: state inventories, microcopy, timing, layout — UX-owned, modifiable)
+  5. `docs/specs/style-guide.md` (visual and code style rules)
+  6. Existing Android implementation and tests
+  7. Archived UI/history implementations for reference only
 
 ---
 
@@ -84,7 +86,7 @@ When touching legacy code:
 
 ### Workflow Rules
 
-1. **Spec-First**: Finish `Orchestrator-V1.md` before major purity refactors
+1. **Spec-First**: Finish `Orchestrator-Lattice.md` specs before major purity refactors
    - Writing spec surfaces design gaps early
    - Don't refactor toward incomplete/aspirational specs
 

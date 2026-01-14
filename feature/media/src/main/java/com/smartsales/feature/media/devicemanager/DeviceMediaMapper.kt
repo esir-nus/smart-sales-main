@@ -10,15 +10,16 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * 将设备媒体文件映射为 UI 模型，如果不是支持的媒体类型则返回 null
+ * 将设备媒体文件映射为 UI 模型
+ * 接受所有固件返回的文件类型，不做额外过滤
  */
 fun DeviceMediaFile.toUiOrNull(): DeviceFileUi? {
     val tab = when {
-        isAudio() -> return null
+        isAudio() -> DeviceMediaTab.Audio
         isVideo() -> DeviceMediaTab.Videos
         isGif() -> DeviceMediaTab.Gifs
         isImage() -> DeviceMediaTab.Images
-        else -> return null
+        else -> DeviceMediaTab.Audio // 未知类型默认归为音频
     }
     return DeviceFileUi(
         id = name,
@@ -30,6 +31,7 @@ fun DeviceMediaFile.toUiOrNull(): DeviceFileUi? {
             DeviceMediaTab.Videos -> "视频"
             DeviceMediaTab.Gifs -> "GIF"
             DeviceMediaTab.Images -> "图片"
+            DeviceMediaTab.Audio -> "音频"
         },
         modifiedAtText = formatTimestamp(modifiedAtMillis),
         mediaUrl = mediaUrl,

@@ -2,7 +2,7 @@
 
 > **Purpose**: Living tracker for Smart Sales architecture and feature status  
 > **AI Agents**: Use the Quick Index below to navigate — don't read irrelevant sections  
-> **Last Updated**: 2026-01-12
+> **Last Updated**: 2026-01-14
 
 ---
 
@@ -10,6 +10,7 @@
 
 | Domain | Jump To | Last Updated |
 |--------|---------|--------------|
+| **Lattice** | [§7.1 Module Extraction](#71-lattice-module-extraction-status) | 2026-01-14 |
 | **Architecture** | [§2 Realized Tree](#2-realized-architecture-tree) | 2026-01-10 |
 | **Orchestrator** | [§3 V1 Module Mapping](#3-v1-module-mapping) | 2026-01-10 |
 | **Connectivity** | [§Feature Tree → connectivity](#feature-tree-connectivity) | 2026-01-10 |
@@ -84,7 +85,11 @@ smart-sales/
 │   │   │   └── TranscriptFormatter.kt
 │   │   ├── publisher/                  # V1 §3.2.4 ✅
 │   │   │   └── TranscriptPublisher.kt
-│   │   └── polling/                    # Low-level API utilities ✅
+│   │   ├── polling/                    # Low-level API utilities ✅
+│   │   └── store/                      # V1 Appendix D ✅ (2026-01-14)
+│   │       ├── TingwuJobManifest.kt    # Data classes
+│   │       ├── TingwuJobStore.kt       # Interface
+│   │       └── FileBasedTingwuJobStore.kt  # Impl w/ atomic writes
 │   ├── metahub/                        # V1 §4 Storage (placeholder)
 │   │   ├── storage/
 │   │   └── model/
@@ -157,8 +162,18 @@ smart-sales/
 │
 ├── feature/media/                       # Media Management
 │   ├── MediaSyncCoordinator.kt         # Media sync orchestration
-│   ├── audio/                          # Audio playback/recording
-│   ├── audiofiles/                     # Audio file management
+│   ├── audio/                          # UI: Playback/Recording Screen
+│   │   ├── AudioFilesScreen.kt         # Main UI
+│   │   ├── TranscriptViewerSheet.kt    # Transcript Bottom Sheet (Extracted 2026-01-14) ✅
+│   │   ├── SwipeableRecordingCard.kt   # V17 Card UI ✅
+│   │   ├── AudioFilesViewModel.kt      # State holder
+│   │   └── AudioFilesModels.kt         # UI models
+│   │
+│   ├── audiofiles/                     # Domain: Audio file management
+│   │   ├── AudioPlaybackController.kt
+│   │   ├── AudioStorageRepository.kt
+│   │   └── AudioTranscriptionCoordinator.kt
+│   │
 │   └── devicemanager/                  # Device media management
 │
 └── feature/usercenter/                  # User Settings
@@ -179,6 +194,8 @@ smart-sales/
 | Sanitizer | §3.2.3 | `TranscriptFormatter.kt` (data layer) | ⚠️ DEVIATION |
 | ChatPublisher | §3.2.4 | `ChatPublisher.kt` | ✅ |
 | TranscriptPublisher | §3.2.4 | `TranscriptPublisher.kt` | ✅ |
+| Job Persistence | Appendix D.2 | `tingwu/store/` | ✅ (2026-01-14) |
+| Targeted Retry | Appendix D.2 | `TingwuRunner.retryJob()` | ✅ (2026-01-14) |
 | M2/M2B/M3 | §4 | `core/metahub/` | ✅ |
 
 ---
@@ -372,9 +389,9 @@ HomeViewModel delegates to coordinators:
 
 **Philosophy**: Purify legacy organically when adding features. No big-bang refactor.
 
-**Current State**: 1745 lines, 64 functions
+**Current State**: 1252 lines (purified 2026-01-13, -117 lines)
 - Implements `TingwuCoordinator` ✅
-- Already delegates to `TingwuRunnerRepository` for reusable logic ✅
+- Delegates to `TingwuPollingLoop`, `TingwuTranscriptProcessor`, `TingwuMultiBatchOrchestrator` ✅
 
 #### Multi-Batch Stitching ✅ (2026-01-11)
 
@@ -397,13 +414,57 @@ HomeViewModel delegates to coordinators:
 **Known Legacies** (purify when touched):
 | Legacy | Lines | Action |
 |--------|-------|--------|
-| `LegacyTranscription*` classes | 870-904 | Delete if unused (grep first) |
+| `LegacyTranscription*` classes | ~~870-904~~ | ✅ DELETED 2026-01-13 (-50 lines) |
 | 4 parsing paths in `parseDownloadedTranscription` | 729-783 | Audit which are live, delete dead |
 | Pure helper functions | various | Consider companion/extension extraction |
 
 **Decision**: Apply **Rewrite Over Extract** if coupling is high.
 
 **Trigger**: When adding PipelineTracer instrumentation
+
+---
+
+## 7.1 Lattice Module Extraction Status
+
+> **Architecture**: Lattice (Box-API pattern)  
+> **Spec**: [`Orchestrator-Lattice.md`](../specs/Orchestrator-Lattice.md)  
+> **Canonical Pattern**: [`AiChatService.kt`](file:///home/cslh-frank/main_app/data/ai-core/src/main/java/com/smartsales/data/aicore/AiChatService.kt)
+
+### Extraction Phases
+
+| Phase | Scope | Status |
+|-------|-------|--------|
+| P0 | Documentation foundation | ✅ Complete (2026-01-14) |
+| P1 | Pipeline Layer extraction | 🔲 Not started |
+| P2 | Memory Layer extraction | 🔲 Not started |
+| P3 | Chatter Layer formalization | 🔲 Not started |
+| P4 | Connectivity Layer formalization | 🔲 Not started |
+| P5 | God object decommission | 🔲 Not started |
+
+### Per-Module Checklist
+
+| Layer | Module | Interface | Impl | Fake | Wired | Tests |
+|-------|--------|-----------|------|------|-------|-------|
+| **Chatter** | AiChatService | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Pipeline** | AudioPreparerService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
+| **Pipeline** | TranscriptionService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
+| **Pipeline** | MetadataExtractorService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
+| **Pipeline** | PublisherService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
+| **Memory** | SessionMemoryService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
+| **Memory** | LongTermMemoryService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
+| **Memory** | KnowledgeBaseService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
+| **Connectivity** | BleService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
+| **Connectivity** | WiFiService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
+| **Connectivity** | BadgeSyncService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
+| **Connectivity** | AudioTransferService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
+
+### Migration Strategy
+
+**Strangler Fig**: Extract one box at a time, god object delegates to new boxes.
+
+**P1 First Target**: `AudioPreparerService` — slice + upload logic from `TingwuRunner`
+
+**Decommission Trigger**: All boxes extracted → `TingwuRunner` is empty shell → delete
 
 ---
 

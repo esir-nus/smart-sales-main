@@ -95,6 +95,18 @@ sealed class TingwuJobState {
 interface TingwuCoordinator {
     suspend fun submit(request: TingwuRequest): Result<String>
     fun observeJob(jobId: String): Flow<TingwuJobState>
+    
+    /**
+     * Retry a failed/interrupted job. Only re-processes failed/pending batches.
+     * @param jobId The persisted job ID to retry
+     * @return Result with new parent job ID, or error if job not found or no batches to retry
+     */
+    suspend fun retryJob(jobId: String): Result<String>
+    
+    /**
+     * Get list of jobs that can be retried (have FAILED or PENDING batches).
+     */
+    suspend fun getRetryableJobs(): List<com.smartsales.data.aicore.tingwu.store.PersistedJob>
 }
 
 @Singleton
@@ -128,4 +140,17 @@ class FakeTingwuCoordinator @Inject constructor(
 
     override fun observeJob(jobId: String): Flow<TingwuJobState> =
         jobStates.getOrPut(jobId) { MutableStateFlow<TingwuJobState>(TingwuJobState.Idle) }.asStateFlow()
+
+    override suspend fun retryJob(jobId: String): Result<String> {
+        // Fake: just return error for now
+        return Result.Error(AiCoreException(
+            source = AiCoreErrorSource.TINGWU,
+            reason = AiCoreErrorReason.UNKNOWN,
+            message = "Fake coordinator does not support retry"
+        ))
+    }
+
+    override suspend fun getRetryableJobs(): List<com.smartsales.data.aicore.tingwu.store.PersistedJob> {
+        return emptyList()
+    }
 }

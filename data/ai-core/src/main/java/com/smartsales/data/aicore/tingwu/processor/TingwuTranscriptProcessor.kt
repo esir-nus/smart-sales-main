@@ -294,20 +294,6 @@ class TingwuTranscriptProcessor @Inject constructor(
                     AiCoreLogger.d(TAG, "TingwuTranscription 内容为空，继续尝试 Paragraph 格式：jobId=$jobId")
                 }
             }
-        // Try parsing as legacy format
-        val legacy = runCatching { gson.fromJson(json, LegacyTranscriptionResponse::class.java) }.getOrNull()
-        legacy?.transcription?.toOfficial()?.let { transcription ->
-            val hasContent = !transcription.text.isNullOrBlank() || !transcription.segments.isNullOrEmpty()
-            AiCoreLogger.d(
-                TAG,
-                "解析成功（Legacy 格式）：jobId=$jobId text长度=${transcription.text?.length ?: 0} segments=${transcription.segments?.size ?: 0}"
-            )
-            if (hasContent) {
-                return transcription
-            } else {
-                AiCoreLogger.d(TAG, "Legacy 内容为空，继续尝试 Paragraph 格式：jobId=$jobId")
-            }
-        }
         // Try parsing as paragraph style
         AiCoreLogger.d(TAG, "尝试解析为 Paragraph 格式：jobId=$jobId")
         val paragraphResult = parseParagraphStyle(json, jobId)
@@ -493,42 +479,6 @@ class TingwuTranscriptProcessor @Inject constructor(
         )
     }
 
-    // DTO Classes moved from TingwuRunner
-    private data class LegacyTranscriptionResponse(
-        @SerializedName("task_id") val taskId: String?,
-        @SerializedName("transcription") val transcription: LegacyTranscription?
-    )
-
-    private data class LegacyTranscription(
-        @SerializedName("text") val text: String?,
-        @SerializedName("segments") val segments: List<LegacySegment>?,
-        @SerializedName("language") val language: String? = null,
-        @SerializedName("duration") val duration: Double? = null
-    ) {
-        fun toOfficial(): TingwuTranscription = TingwuTranscription(
-            text = text,
-            segments = segments?.map { legacy ->
-                TingwuTranscriptSegment(
-                    id = legacy.id,
-                    start = legacy.start,
-                    end = legacy.end,
-                    text = legacy.text,
-                    speaker = legacy.speaker
-                )
-            },
-            speakers = null,
-            language = language,
-            duration = duration
-        )
-    }
-
-    private data class LegacySegment(
-        @SerializedName("id") val id: Int?,
-        @SerializedName("start") val start: Double?,
-        @SerializedName("end") val end: Double?,
-        @SerializedName("text") val text: String?,
-        @SerializedName("speaker") val speaker: String?
-    )
 
     private data class ParagraphTranscriptionResponse(
         @SerializedName("TaskId") val taskId: String?,

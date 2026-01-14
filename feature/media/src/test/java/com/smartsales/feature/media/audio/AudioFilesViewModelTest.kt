@@ -55,6 +55,7 @@ class AudioFilesViewModelTest {
     private lateinit var endpointProvider: FakeDeviceHttpEndpointProvider
     private lateinit var transcriptionCoordinator: FakeTranscriptionCoordinator
     private lateinit var audioStorageRepository: FakeAudioStorageRepository
+    private lateinit var flaggedRecordingsStore: FakeFlaggedRecordingsStore
     private lateinit var viewModel: AudioFilesViewModel
 
     @Before
@@ -65,12 +66,14 @@ class AudioFilesViewModelTest {
         endpointProvider = FakeDeviceHttpEndpointProvider()
         transcriptionCoordinator = FakeTranscriptionCoordinator()
         audioStorageRepository = FakeAudioStorageRepository()
+        flaggedRecordingsStore = FakeFlaggedRecordingsStore()
         viewModel = AudioFilesViewModel(
             mediaGateway = gateway,
             mediaSyncCoordinator = syncCoordinator,
             transcriptionCoordinator = transcriptionCoordinator,
             endpointProvider = endpointProvider,
             audioStorageRepository = audioStorageRepository,
+            flaggedRecordingsStore = flaggedRecordingsStore,
             dispatchers = FakeDispatcherProvider(dispatcher)
         )
     }
@@ -519,5 +522,13 @@ class AudioFilesViewModelTest {
         }
 
         override suspend fun delete(audioId: String) {}
+    }
+
+    private class FakeFlaggedRecordingsStore : FlaggedRecordingsStore {
+        private val flaggedIds = mutableSetOf<String>()
+        override fun getFlaggedIds(): Set<String> = flaggedIds.toSet()
+        override fun setFlagged(id: String, flagged: Boolean) {
+            if (flagged) flaggedIds.add(id) else flaggedIds.remove(id)
+        }
     }
 }

@@ -1,11 +1,19 @@
 <!-- File path: docs/specs/Orchestrator-V1.md -->
-<!-- Purpose: Orchestrator-V1 architecture spec (single authority / AI coding SoT) -->
+<!-- Purpose: Orchestrator-V1 architecture spec (DEPRECATED — transitional reference) -->
 <!-- Notes:
-  - V7 is deprecated and archived (ARCHIVED) and must not be used as behavior/contract basis.
-  - This file is the single source of truth (SoT) for the new architecture.
+  - DEPRECATED: See Orchestrator-Lattice.md for current architecture
+  - This file is kept for ALGORITHM APPENDICES only (Disector, Publisher, Time invariants, State recovery)
+  - Do NOT use this file for architecture decisions — use Lattice
 -->
 
-# Orchestrator-V1 Architecture Spec (CURRENT)
+> [!CAUTION]
+> **DEPRECATED**: This spec describes the monolithic V1 architecture.
+> 
+> **Current Architecture**: [`Orchestrator-Lattice.md`](./Orchestrator-Lattice.md)
+> 
+> **Use this file ONLY for**: Algorithm appendices (§11-§14) — Disector rules, Publisher de-dup, time invariants, state recovery.
+
+# Orchestrator-V1 Architecture Spec (DEPRECATED)
 
 Version: 1.2.0  
 Status: CURRENT (active spec)  

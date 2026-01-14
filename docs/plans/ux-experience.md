@@ -301,6 +301,126 @@ idle
 
 ---
 
+### Recording Card V17 (Streamlined)
+
+> **Context**: Redesigned recording card for minimal visual clutter. Actions hidden behind gestures.
+
+#### Card Anatomy
+
+```
+┌────────────────────────────────────────────┐
+│ ☆  Q4_年度预算审计.m4a            10:42 │  ← Star + Title + Duration
+│                                            │
+│    财务部关于Q4预算的最终审核意见，重点    │  ← Summary (or hint/progress)
+│    讨论了SaaS订阅收入的确认方式...        │
+└────────────────────────────────────────────┘
+```
+
+#### Gesture Model
+
+| Gesture | Action |
+|---------|--------|
+| **Tap** | → Open Transcript View |
+| **Swipe Left** | → Reveal action tray (播放/转写/删除) |
+| **Long Press** | → Enter multi-select mode |
+
+#### Swipe Hint (Onboarding)
+
+| Property | Value |
+|----------|-------|
+| Type | Pulsing arrow / shimmer sweep (left-facing) |
+| Trigger | First 5 drawer opens (counter in SharedPrefs) |
+| Location | Ghost overlay on first card's right edge |
+| Duration | 2 seconds, then fades |
+
+#### Card States
+
+| State | Summary Area Shows | Microcopy |
+|-------|-------------------|-----------|
+| `not_transcribed` | Swipe hint animation (first 5x) or empty | — |
+| `transcribing` | Inline progress bar | `正在转写...` |
+| `transcribed` | First 2 lines of summary | — |
+| `error` | Error text (red) | `转写失败` |
+
+#### Star/Flag States
+
+| State | Icon | Tap Action |
+|-------|------|------------|
+| `unflagged` | ☆ (outline) | → `flagged` |
+| `flagged` | ★ (filled, #FFD60A) | → `unflagged` |
+
+#### Multi-Select Mode
+
+| State | Trigger | User Sees | Microcopy |
+|-------|---------|-----------|-----------|
+| `normal` | default | Standard cards | — |
+| `selecting` | long-press any card | Checkboxes appear, bottom action bar | — |
+| `selected:N` | toggle checkboxes | Header shows count | `已选 {n} 项` |
+| `action:delete` | tap delete | Confirmation dialog | `确定删除 {n} 条录音？` |
+
+#### Drawer Header (Multi-Select Button)
+
+| Element | Position | Microcopy |
+|---------|----------|-----------|
+| Select button | Top-right | `选择` |
+| Done button (in mode) | Top-right | `完成` |
+
+---
+
+### Transcript View (V17)
+
+> **Context**: Detail screen opened by tapping a recording card.
+
+#### Screen Layout
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  ← 返回                               Q4_年度预算审计.m4a  │
+│                                                        │
+│  ▶ ─────────●──────────── 10:42                        │ ← Audio player
+│                                                        │
+│  ┌────────────────────────────────────────────────────┐│
+│  │ [Transcript body - scrollable]                     ││
+│  └────────────────────────────────────────────────────┘│
+│                                                        │
+│        ┌─────────────────────────────────┐             │
+│        │     🧠 AI 分析                  │             │ ← Primary CTA
+│        └─────────────────────────────────┘             │
+└─────────────────────────────────────────────────────────┘
+```
+
+#### States
+
+| State | Condition | User Sees | Microcopy |
+|-------|-----------|-----------|-----------|
+| `loading` | Fetching transcript | Skeleton shimmer | — |
+| `ready` | Transcript loaded | Full transcript + AI button | — |
+| `not_transcribed` | No transcript | Empty state + CTA | `尚未转写` + `开始转写` button |
+| `transcribing` | In progress | Progress bar | `正在转写...` |
+| `error` | Transcription failed | Error state + retry | `转写失败` + `重试` button |
+
+#### AI Analysis Button
+
+| State | Visible | Enabled |
+|-------|---------|---------|
+| Transcript ready | ✅ | ✅ |
+| Not transcribed | ❌ | — |
+| Transcribing | ❌ | — |
+| Error | ❌ | — |
+
+#### Invariants
+
+| Rule | How to Verify |
+|------|---------------|
+| Swipe hint shows ≤5 times total | Check `swipe_hint_shown_count` in SharedPrefs |
+| Long-press enters selection, never reveals tray | Gesture test |
+| Tap always navigates to Transcript View | Never triggers inline action |
+| AI 分析 button only visible if transcript exists | Conditional render check |
+| Star toggle is instant (no loading) | Immediate UI update |
+
+---
+
+
 ### DeviceManager Flow
 
 > **Context**: User browses and manages files on BT311 device via HTTP.
@@ -437,6 +557,7 @@ Track unresolved UX decisions here for Product/Eng review:
 
 | Date | Flow | Change | Reason |
 |------|------|--------|--------|
+| 2026-01-14 | Recording Card V17 | New streamlined card design: gesture-based actions, star flag, swipe tray, Transcript View | UX Specialist collab session |
 | 2026-01-11 | Chat (Knot FAB) | Added V18 Tip Bubble sub-flow, added Knot visibility invariants | UI Polish V16-V18 DocSync |
 | 2026-01-11 | AudioFiles | Added state inventory (17 states, 5 invariants) | M1 UX gap-fill |
 | 2026-01-11 | DeviceManager | Added state inventory (13 states, 4 invariants) | M1 UX gap-fill |

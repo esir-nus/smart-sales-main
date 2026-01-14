@@ -20,59 +20,8 @@ class AiParaSettingsViewModel @Inject constructor(
 
     fun setTranscriptionProvider(provider: TranscriptionProvider) {
         repository.update { current ->
-            val shouldEnableXfyun = provider == TranscriptionProvider.XFYUN
             current.copy(
                 transcription = current.transcription.copy(provider = provider.name)
-                    .let { transcription ->
-                        // 重要：用户显式选择 XFyun 时才打开开关，避免默认链路被切走。
-                        if (shouldEnableXfyun) {
-                            transcription.copy(xfyunEnabled = true)
-                        } else {
-                            transcription
-                        }
-                    }
-            )
-        }
-    }
-
-    fun setXfyunEngSmoothproc(enabled: Boolean) {
-        repository.update { current ->
-            val transcription = current.transcription
-            val xfyun = transcription.xfyun
-            current.copy(
-                transcription = transcription.copy(
-                    xfyun = xfyun.copy(
-                        upload = xfyun.upload.copy(engSmoothProc = enabled)
-                    )
-                )
-            )
-        }
-    }
-
-    fun setXfyunRoleType(value: Int) {
-        repository.update { current ->
-            val transcription = current.transcription
-            val xfyun = transcription.xfyun
-            current.copy(
-                transcription = transcription.copy(
-                    xfyun = xfyun.copy(
-                        upload = xfyun.upload.copy(roleType = value)
-                    )
-                )
-            )
-        }
-    }
-
-    fun setXfyunRoleNum(value: Int) {
-        repository.update { current ->
-            val transcription = current.transcription
-            val xfyun = transcription.xfyun
-            current.copy(
-                transcription = transcription.copy(
-                    xfyun = xfyun.copy(
-                        upload = xfyun.upload.copy(roleNum = value)
-                    )
-                )
             )
         }
     }

@@ -29,6 +29,11 @@ import com.smartsales.data.aicore.tingwu.api.TingwuDiarizationParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuSummarizationParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuTranscodingParameters
 import com.smartsales.data.aicore.TranscriptMetadataRequest
+import com.smartsales.data.aicore.tingwu.store.TingwuJobStore
+import com.smartsales.data.aicore.tingwu.store.PersistedJob
+import com.smartsales.data.aicore.tingwu.store.BatchStatus
+import com.smartsales.data.aicore.disector.DisectorPlan
+import com.smartsales.data.aicore.disector.DisectorBatch
 import com.smartsales.data.aicore.tingwu.api.TingwuCustomPrompt
 import com.smartsales.data.aicore.tingwu.api.TingwuCustomPromptContent
 import com.smartsales.data.aicore.params.AiParaSettingsProvider
@@ -43,12 +48,8 @@ import com.smartsales.data.aicore.posttingwu.PostTingwuTranscriptEnhancer
 import com.smartsales.data.aicore.posttingwu.applyEnhancerOutput
 import com.smartsales.data.aicore.posttingwu.renderEnhancedMarkdown
 
-import java.io.IOException
-import java.net.SocketTimeoutException
-import java.net.UnknownHostException
 import java.net.URL
 import java.text.DecimalFormat
-import java.util.Locale
 import java.util.LinkedHashMap
 import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
@@ -72,8 +73,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import retrofit2.HttpException
-import javax.net.ssl.SSLException
 // 文件：data/ai-core/src/main/java/com/smartsales/data/aicore/TingwuRunner.kt
 // 模块：:data:ai-core
 // 说明：通过真实 Tingwu HTTP API 提交、轮询并拉取转写结果
@@ -97,6 +96,7 @@ class TingwuRunner @Inject constructor(
     private val disector: com.smartsales.data.aicore.disector.Disector,
     private val multiBatchOrchestrator: com.smartsales.data.aicore.tingwu.TingwuMultiBatchOrchestrator,
     private val pollingLoop: com.smartsales.data.aicore.tingwu.polling.TingwuPollingLoop,
+    private val jobStore: TingwuJobStore,
 
     optionalConfig: Optional<AiCoreConfig>
 ) : TingwuCoordinator {
@@ -373,6 +373,122 @@ class TingwuRunner @Inject constructor(
 
     override fun observeJob(jobId: String): Flow<TingwuJobState> =
         getOrCreateJobFlow(jobId).asStateFlow()
+
+    override suspend fun retryJob(jobId: String): Result<String> = withContext(dispatchers.io) {
+        // Load persisted job
+        val persistedJob = jobStore.loadJob(jobId)
+            ?: return@withContext Result.Error(AiCoreException(
+                source = AiCoreErrorSource.TINGWU,
+                reason = AiCoreErrorReason.UNKNOWN,
+                message = "Job not found: $jobId"
+            ))
+
+        // Filter failed/pending batches
+        val failedBatches = persistedJob.batches.filter { batch ->
+            batch.status == BatchStatus.FAILED || batch.status == BatchStatus.PENDING
+        }
+        if (failedBatches.isEmpty()) {
+            return@withContext Result.Error(AiCoreException(
+                source = AiCoreErrorSource.TINGWU,
+                reason = AiCoreErrorReason.UNKNOWN,
+                message = "No failed batches to retry in job: $jobId"
+            ))
+        }
+
+        // Verify source file exists
+        val sourceFile = persistedJob.audioFilePath?.let { java.io.File(it) }
+        if (sourceFile == null || !sourceFile.exists()) {
+            return@withContext Result.Error(AiCoreException(
+                source = AiCoreErrorSource.TINGWU,
+                reason = AiCoreErrorReason.IO,
+                message = "Source audio file not found for retry: ${persistedJob.audioFilePath}"
+            ))
+        }
+
+        AiCoreLogger.d(TAG, "Retrying job $jobId: ${failedBatches.size} failed batches of ${persistedJob.batches.size} total")
+
+        // Build DisectorPlan for failed batches only
+        val retryPlan = DisectorPlan(
+            disectorPlanId = "${persistedJob.jobId}_retry",
+            audioAssetId = persistedJob.audioAssetName,
+            recordingSessionId = persistedJob.jobId,
+            totalMs = persistedJob.totalDurationMs ?: 0,
+            batches = failedBatches.map { batch ->
+                DisectorBatch(
+                    batchAssetId = "${batch.batchIndex}_retry",
+                    batchIndex = batch.batchIndex,
+                    absStartMs = batch.captureStartMs ?: 0,
+                    absEndMs = batch.captureEndMs ?: 0,
+                    captureStartMs = batch.captureStartMs ?: 0,
+                    captureEndMs = batch.captureEndMs ?: 0
+                )
+            }
+        )
+
+        // Rebuild original request for batch submission
+        val request = TingwuRequest(
+            audioAssetName = persistedJob.audioAssetName,
+            language = persistedJob.language,
+            ossObjectKey = persistedJob.ossObjectKey,
+            fileUrl = persistedJob.fileUrl,
+            audioFilePath = sourceFile
+        )
+
+        // Create flow for retry job
+        val retryJobId = retryPlan.disectorPlanId
+        val flow = getOrCreateJobFlow(retryJobId)
+        flow.value = TingwuJobState.InProgress(retryJobId, 5, "正在重试失败的批次...")
+
+        // Execute batch loop for failed batches
+        val result = multiBatchOrchestrator.executeBatchLoop(
+            plan = retryPlan,
+            originalRequest = request,
+            sourceFile = sourceFile,
+            submitSingleBatch = { batchRequest -> submit(batchRequest) },
+            waitForJob = { batchJobId -> waitForJob(batchJobId) },
+            onProgress = { percent ->
+                flow.value = TingwuJobState.InProgress(retryJobId, percent)
+            },
+            onComplete = { _, segments ->
+                // Stitch with existing succeeded segments
+                val existingSegments = persistedJob.batches
+                    .filter { it.status == BatchStatus.SUCCEEDED }
+                    .flatMap { 
+                        // TODO: Load cached segments from artifact files
+                        emptyList<DiarizedSegment>()
+                    }
+                val allSegments = (existingSegments + segments).sortedBy { it.startMs }
+                val markdown = com.smartsales.data.aicore.tingwu.processor.TranscriptFormatter()
+                    .buildMarkdown(null, allSegments, emptyMap())
+                flow.value = TingwuJobState.Completed(
+                    jobId = retryJobId,
+                    transcriptMarkdown = markdown,
+                    artifacts = TingwuJobArtifacts(
+                        recordingOriginDiarizedSegments = allSegments
+                    )
+                )
+            }
+        )
+
+        when (result) {
+            is Result.Success -> Result.Success(retryJobId)
+            is Result.Error -> {
+                flow.value = TingwuJobState.Failed(
+                    jobId = retryJobId,
+                    error = result.throwable as? AiCoreException ?: AiCoreException(
+                        source = AiCoreErrorSource.TINGWU,
+                        reason = AiCoreErrorReason.UNKNOWN,
+                        message = result.throwable.message ?: "Retry failed"
+                    )
+                )
+                Result.Error(result.throwable)
+            }
+        }
+    }
+
+    override suspend fun getRetryableJobs(): List<PersistedJob> = withContext(dispatchers.io) {
+        jobStore.getRetryableJobs()
+    }
 
     /**
      * Cancels the internal coroutine scope. Call this in tests after each test
@@ -706,37 +822,6 @@ class TingwuRunner @Inject constructor(
         return merged
     }
 
-
-
-
-    private fun resolveMissingUrlError(): AiCoreException = AiCoreException(
-        source = AiCoreErrorSource.TINGWU,
-        reason = AiCoreErrorReason.IO,
-        message = "未检测到可访问的音频 URL",
-        suggestion = "请先上传音频或配置可访问的 fileUrl"
-    )
-
-    private suspend fun resolveFileUrl(request: TingwuRequest): Result<String> {
-        val direct = request.fileUrl?.trim()?.takeIf { it.isNotBlank() }
-        if (direct != null) {
-            return Result.Success(direct)
-        }
-        val objectKey = request.ossObjectKey?.takeIf { it.isNotBlank() }
-            ?: return Result.Error(resolveMissingUrlError())
-        AiCoreLogger.d(TAG, "未提供 fileUrl，开始为 $objectKey 生成预签名 URL")
-        return signedUrlProvider.generate(objectKey, config.tingwuPresignUrlValiditySeconds)
-    }
-
-    private fun buildTaskKey(request: TingwuRequest): String {
-        val baseName = request.ossObjectKey
-            ?.substringAfterLast("/")
-            ?.substringBefore(".")
-            ?.takeIf { it.isNotBlank() }
-            ?: request.audioAssetName
-        val sanitized = baseName.replace(Regex("[^a-zA-Z0-9]"), "_")
-        return sanitized + "_" + System.currentTimeMillis()
-    }
-
     private fun TingwuStatusData.toArtifacts(): TingwuJobArtifacts? =
         buildArtifacts(
             mp3 = outputMp3Path,
@@ -853,86 +938,6 @@ class TingwuRunner @Inject constructor(
             reason = AiCoreErrorReason.REMOTE,
             message = "Tingwu $action 响应缺少 Data",
             suggestion = "确认 API 是否返回 Data.* 字段，requestId=$requestId"
-        )
-    }
-
-    private fun mapSourceLanguage(language: String): String {
-        val normalized = language.lowercase(Locale.US)
-        return when {
-            normalized.startsWith("zh") || normalized.startsWith("cn") -> "cn"
-            normalized.startsWith("en") -> "en"
-            normalized.startsWith("ja") -> "ja"
-            normalized.startsWith("yue") -> "yue"
-            normalized.startsWith("fspk") -> "fspk"
-            else -> DEFAULT_SOURCE_LANGUAGE
-        }
-    }
-
-    private fun validateCredentials(credentials: TingwuCredentials): AiCoreException? {
-        val missing = when {
-            credentials.appKey.isBlank() -> "TINGWU_APP_KEY"
-            credentials.baseUrl.isBlank() -> "TINGWU_BASE_URL"
-            credentials.accessKeyId.isBlank() -> "ALIBABA_CLOUD_ACCESS_KEY_ID"
-            credentials.accessKeySecret.isBlank() -> "ALIBABA_CLOUD_ACCESS_KEY_SECRET"
-            config.requireTingwuSecurityToken && credentials.securityToken.isNullOrBlank() -> "TINGWU_SECURITY_TOKEN"
-            else -> null
-        }
-        return missing?.let {
-            AiCoreException(
-                source = AiCoreErrorSource.TINGWU,
-                reason = AiCoreErrorReason.MISSING_CREDENTIALS,
-                message = "Tingwu 配置缺失（$it）",
-                suggestion = "在 local.properties 配置 $it"
-            )
-        }
-    }
-
-    private fun mapError(error: Throwable): AiCoreException = when (error) {
-        is AiCoreException -> error
-        is HttpException -> {
-            val code = error.code()
-            val body = error.response()?.errorBody()?.string()
-            AiCoreException(
-                source = AiCoreErrorSource.TINGWU,
-                reason = AiCoreErrorReason.REMOTE,
-                message = "Tingwu HTTP $code：${body ?: error.message()}",
-                suggestion = "请检查 OSS URL 是否可访问或 Tingwu 配置是否正确",
-                cause = error
-            )
-        }
-        is SocketTimeoutException -> AiCoreException(
-            source = AiCoreErrorSource.TINGWU,
-            reason = AiCoreErrorReason.TIMEOUT,
-            message = "Tingwu 请求超时",
-            suggestion = "检查网络或增加 AiCoreConfig.tingwuPollTimeoutMillis",
-            cause = error
-        )
-        is UnknownHostException -> AiCoreException(
-            source = AiCoreErrorSource.TINGWU,
-            reason = AiCoreErrorReason.NETWORK,
-            message = "Tingwu 域名解析失败：${error.message ?: "UnknownHost"}",
-            suggestion = "检查设备 DNS 或启用 AiCoreConfig.enableTingwuHttpDns",
-            cause = error
-        )
-        is SSLException -> AiCoreException(
-            source = AiCoreErrorSource.TINGWU,
-            reason = AiCoreErrorReason.NETWORK,
-            message = "Tingwu SSL 握手失败：${error.message ?: "SSLException"}",
-            suggestion = "确认系统 CA 证书与网络代理设置",
-            cause = error
-        )
-        is IOException -> AiCoreException(
-            source = AiCoreErrorSource.TINGWU,
-            reason = AiCoreErrorReason.NETWORK,
-            message = "Tingwu 网络异常：${error.message ?: "未知"}",
-            suggestion = "确认设备可访问 Tingwu 域名或网关",
-            cause = error
-        )
-        else -> AiCoreException(
-            source = AiCoreErrorSource.TINGWU,
-            reason = AiCoreErrorReason.UNKNOWN,
-            message = error.message ?: "Tingwu 未知错误",
-            cause = error
         )
     }
 

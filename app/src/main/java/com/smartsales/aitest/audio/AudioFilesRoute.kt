@@ -48,6 +48,7 @@ fun AudioFilesRoute(
         onDeleteClicked = viewModel::onDeleteClicked,
         onTranscribeClicked = viewModel::onTranscribeClicked,
         onTranscriptClicked = viewModel::onTranscriptClicked,
+        onFlagToggle = viewModel::onFlagToggle,  // V17: Star flag toggle
         onAskAiClicked = { recording ->
             viewModel.onTranscriptDismissed()
             onAskAiAboutTranscript(

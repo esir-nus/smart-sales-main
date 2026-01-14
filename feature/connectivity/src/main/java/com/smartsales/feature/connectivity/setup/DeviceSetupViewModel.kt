@@ -435,6 +435,10 @@ class DeviceSetupViewModel @Inject constructor(
             repeat(NETWORK_CHECK_ATTEMPTS) {
                 val result = runCatching { connectionManager.queryNetworkStatus() }
                     .getOrElse { throwable ->
+                        // Ignore cancellation - this is expected when transitioning between states
+                        if (throwable is kotlinx.coroutines.CancellationException) {
+                            return@launch
+                        }
                         setError(
                             message = "设备网络异常，请重试",
                             reason = DeviceSetupErrorReason.DeviceNotOnline

@@ -5,15 +5,19 @@ package com.smartsales.aitest.devicemanager
 // 说明：设备管理页面的 Route 与 Compose UI
 // 作者：创建于 2025-12-03
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -33,13 +37,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AudioFile
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -47,6 +56,7 @@ import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -56,10 +66,12 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -69,6 +81,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -76,7 +89,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -85,6 +100,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.smartsales.aitest.AiFeatureTestTags
 import com.smartsales.core.util.AppDesignTokens
+import com.smartsales.feature.connectivity.BleTrafficEvent
+import com.smartsales.feature.connectivity.BleTrafficObserver
 import com.smartsales.feature.media.devicemanager.DeviceConnectionUiState
 import com.smartsales.feature.media.devicemanager.DeviceFileUi
 import com.smartsales.feature.media.devicemanager.DeviceManagerEvent
@@ -93,6 +110,9 @@ import com.smartsales.feature.media.devicemanager.DeviceManagerViewModel
 import com.smartsales.feature.media.devicemanager.DeviceMediaTab
 import com.smartsales.feature.media.devicemanager.DeviceUploadSource
 import kotlinx.coroutines.flow.collectLatest
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun DeviceManagerRoute(
@@ -104,13 +124,7 @@ fun DeviceManagerRoute(
 ) {
     val viewModel: DeviceManagerViewModel = viewModelOverride ?: hiltViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val uploadLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            viewModel.onUploadFile(DeviceUploadSource.AndroidUri(uri))
-        }
-    }
+
     LaunchedEffect(viewModel) {
         viewModel.events.collectLatest { event ->
             when (event) {
@@ -127,7 +141,7 @@ fun DeviceManagerRoute(
         onDismissViewer = viewModel::onCloseViewer,
         onApplyFile = viewModel::onApplyFile,
         onDeleteFile = viewModel::onDeleteFile,
-        onRequestUpload = { uploadLauncher.launch(arrayOf("video/*", "image/*")) },
+
         onBaseUrlChange = viewModel::onBaseUrlChanged,
         onUseAutoBaseUrl = viewModel::onUseAutoBaseUrl,
         onClearError = viewModel::onClearError,
@@ -148,7 +162,7 @@ fun DeviceManagerScreen(
     onDismissViewer: () -> Unit,
     onApplyFile: (String) -> Unit,
     onDeleteFile: (String) -> Unit,
-    onRequestUpload: () -> Unit,
+
     onBaseUrlChange: (String) -> Unit,
     onUseAutoBaseUrl: () -> Unit,
     onClearError: () -> Unit,
@@ -191,7 +205,7 @@ fun DeviceManagerScreen(
             onDismissViewer = onDismissViewer,
             onApplyFile = onApplyFile,
             onDeleteFile = onDeleteFile,
-            onRequestUpload = onRequestUpload,
+
             onBaseUrlChange = onBaseUrlChange,
             onUseAutoBaseUrl = onUseAutoBaseUrl,
             onClearError = onClearError,
@@ -216,7 +230,7 @@ fun DeviceManagerContent(
     onDismissViewer: () -> Unit,
     onApplyFile: (String) -> Unit,
     onDeleteFile: (String) -> Unit,
-    onRequestUpload: () -> Unit,
+
     onBaseUrlChange: (String) -> Unit,
     onUseAutoBaseUrl: () -> Unit,
     onClearError: () -> Unit,
@@ -231,92 +245,140 @@ fun DeviceManagerContent(
     val isBusy = state.isLoading || state.isUploading
     val refreshAction = if (state.loadErrorMessage != null) onRetryLoad else onRefresh
 
-    Column(
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
         modifier = modifier
             .fillMaxSize()
             .background(designTokens.mutedSurface)
-            .padding(horizontal = 12.dp, vertical = 12.dp)
             .testTag(AiFeatureTestTags.PAGE_DEVICE_MANAGER),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        DeviceManagerHeader(
-            state = state,
-            isBusy = isBusy,
-            onRefresh = refreshAction,
-            onStartSetup = onStartSetup,
-            onBaseUrlChange = onBaseUrlChange,
-            onUseAutoBaseUrl = onUseAutoBaseUrl,
-            showCloseButton = showCloseButton,
-            onCloseRequested = onCloseRequested
-        )
-        state.loadErrorMessage?.let {
-            ErrorBanner(
-                message = it,
-                primaryActionLabel = "重试",
-                onPrimaryAction = onRetryLoad,
-                onDismiss = onClearError,
-                modifier = Modifier.testTag(DeviceManagerTestTags.ERROR_BANNER)
-            )
-        } ?: state.errorMessage?.let {
-            ErrorBanner(
-                message = it,
-                primaryActionLabel = null,
-                onPrimaryAction = null,
-                onDismiss = onClearError,
-                modifier = Modifier.testTag(DeviceManagerTestTags.ERROR_BANNER)
+        // 1. Header (Full Width)
+        item(span = { GridItemSpan(2) }) {
+            DeviceManagerHeader(
+                state = state,
+                isBusy = isBusy,
+                onRefresh = refreshAction,
+                onStartSetup = onStartSetup,
+                onBaseUrlChange = onBaseUrlChange,
+                onUseAutoBaseUrl = onUseAutoBaseUrl,
+                showCloseButton = showCloseButton,
+                onCloseRequested = onCloseRequested
             )
         }
 
-        // Media transfer action row - only visible when connected
-        if (state.isConnected) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+        // 2. BLE HUD (Full Width)
+        item(span = { GridItemSpan(2) }) {
+            BleTrafficHud()
+        }
+
+        // 3. Error Banners (Full Width)
+        state.loadErrorMessage?.let { message ->
+            item(span = { GridItemSpan(2) }) {
+                ErrorBanner(
+                    message = message,
+                    primaryActionLabel = "重试",
+                    onPrimaryAction = onRetryLoad,
+                    onDismiss = onClearError,
+                    modifier = Modifier.testTag(DeviceManagerTestTags.ERROR_BANNER)
                 )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+            }
+        } ?: state.errorMessage?.let { message ->
+            item(span = { GridItemSpan(2) }) {
+                ErrorBanner(
+                    message = message,
+                    primaryActionLabel = null,
+                    onPrimaryAction = null,
+                    onDismiss = onClearError,
+                    modifier = Modifier.testTag(DeviceManagerTestTags.ERROR_BANNER)
+                )
+            }
+        }
+
+        // 4. Action Buttons (Full Width)
+        if (state.isConnected) {
+            item(span = { GridItemSpan(2) }) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                    )
                 ) {
-                    Button(
-                        onClick = onNavigateToWavDownload,
-                        modifier = Modifier.weight(1f)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(imageVector = Icons.Filled.AudioFile, contentDescription = null)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "下载录音")
-                    }
-                    Button(
-                        onClick = onNavigateToGifUpload,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(imageVector = Icons.Filled.CloudUpload, contentDescription = null)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "发送图片")
+                        Button(
+                            onClick = onNavigateToWavDownload,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(imageVector = Icons.Filled.AudioFile, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(text = "下载录音")
+                        }
+                        Button(
+                            onClick = onNavigateToGifUpload,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(imageVector = Icons.Filled.CloudUpload, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(text = "发送图片")
+                        }
                     }
                 }
             }
         }
 
+        // 5. Connection Hint OR (Simulator + File List)
         if (!state.isConnected && state.canRetryConnect) {
-            DisconnectedHint(onRetryLoad)
+            item(span = { GridItemSpan(2) }) {
+                DisconnectedHint(onRetryLoad)
+            }
         } else {
-            DeviceSimulatorCard(
-                file = state.selectedFile,
-                onCloseViewer = onDismissViewer
-            )
-            FileListSection(
-                state = state,
-                actionsEnabled = state.isConnected && !isBusy,
-                onRequestUpload = onRequestUpload,
-                onSelectFile = onSelectFile,
-                onApplyFile = onApplyFile,
-                onDeleteFile = { deleteTarget = it },
-                modifier = Modifier.weight(1f, fill = true)
-            )
+            // Simulator
+            item(span = { GridItemSpan(2) }) {
+                DeviceSimulatorCard(
+                    file = state.selectedFile,
+                    onCloseViewer = onDismissViewer
+                )
+            }
+
+            // File List Header
+            item(span = { GridItemSpan(2) }) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "文件列表 (${state.files.size})",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            }
+
+            // File List Content
+            if (state.isLoading) {
+                item(span = { GridItemSpan(2) }) { LoadingBanner() }
+            } else if (state.visibleFiles.isEmpty()) {
+                item(span = { GridItemSpan(2) }) { EmptyFilesCard() }
+            } else {
+                items(state.visibleFiles, key = { it.id }) { file ->
+                    DeviceFileCard(
+                        file = file,
+                        isSelected = state.selectedFile?.id == file.id,
+                        isApplying = state.applyInProgressId == file.id,
+                        actionsEnabled = state.isConnected && !isBusy,
+                        onSelect = { onSelectFile(file.id) },
+                        onApply = { onApplyFile(file.id) },
+                        onDelete = { deleteTarget = file }
+                    )
+                }
+            }
         }
     }
 
@@ -356,7 +418,7 @@ private fun DeviceSimulatorCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(220.dp)
+            .height(140.dp)
             .testTag(DeviceManagerTestTags.PREVIEW_CARD),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
@@ -480,73 +542,6 @@ private fun DeviceSimulatorCard(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.align(Alignment.BottomEnd)
-            )
-        }
-    }
-}
-
-@Composable
-private fun FileListSection(
-    state: DeviceManagerUiState,
-    actionsEnabled: Boolean,
-    onRequestUpload: () -> Unit,
-    onSelectFile: (String) -> Unit,
-    onApplyFile: (String) -> Unit,
-    onDeleteFile: (DeviceFileUi) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "文件列表 (${state.files.size})",
-            style = MaterialTheme.typography.titleMedium
-        )
-        Button(
-            onClick = onRequestUpload,
-            enabled = actionsEnabled && state.isConnected,
-            modifier = Modifier.testTag(DeviceManagerTestTags.UPLOAD_BUTTON)
-        ) {
-            Icon(imageVector = Icons.Filled.CloudUpload, contentDescription = null)
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(text = if (state.isUploading) "上传中..." else "上传新文件")
-        }
-    }
-    if (state.isLoading) {
-        LoadingBanner()
-        return
-    }
-
-    if (state.visibleFiles.isEmpty()) {
-        UploadTile(onUpload = onRequestUpload)
-        EmptyFilesCard()
-        return
-    }
-
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 200.dp)
-            .testTag(DeviceManagerTestTags.FILE_LIST),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(vertical = 6.dp)
-    ) {
-        item {
-            UploadTile(onUpload = onRequestUpload)
-        }
-        items(state.visibleFiles, key = { it.id }) { file ->
-            DeviceFileCard(
-                file = file,
-                isSelected = state.selectedFile?.id == file.id,
-                isApplying = state.applyInProgressId == file.id,
-                actionsEnabled = actionsEnabled,
-                onSelect = { onSelectFile(file.id) },
-                onApply = { onApplyFile(file.id) },
-                onDelete = { onDeleteFile(file) }
             )
         }
     }
@@ -787,7 +782,8 @@ private fun DeviceFileCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            if (file.isApplied) {
+            // Only show "当前展示" for non-audio files (images/videos)
+            if (file.isApplied && file.mediaType != com.smartsales.feature.media.devicemanager.DeviceMediaTab.Audio) {
                 AssistChip(
                     onClick = {},
                     enabled = false,
@@ -803,14 +799,18 @@ private fun DeviceFileCard(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                FilledIconButton(
-                    onClick = onApply,
-                    enabled = actionsEnabled && !isApplying,
-                    modifier = Modifier.height(40.dp)
-                ) {
-                    Text(text = if (isApplying) "应用中..." else "应用")
+                val isAudio = file.mediaType == com.smartsales.feature.media.devicemanager.DeviceMediaTab.Audio
+                // Only show Apply button for images (not audio - use "下载录音" header button for WAV download)
+                if (!isAudio) {
+                    FilledIconButton(
+                        onClick = onApply,
+                        enabled = actionsEnabled && !isApplying,
+                        modifier = Modifier.height(40.dp)
+                    ) {
+                        Text(text = if (isApplying) "应用中..." else "应用")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
                 }
-                Spacer(modifier = Modifier.width(8.dp))
                 IconButton(
                     onClick = onDelete,
                     enabled = actionsEnabled
@@ -1074,43 +1074,6 @@ private fun VideoViewerContent(url: String) {
 }
 
 @Composable
-private fun UploadTile(
-    onUpload: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .height(140.dp)
-            .clickable(onClick = onUpload),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = MaterialTheme.shapes.large,
-        border = BorderStroke(
-            1.dp,
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = Icons.Filled.CloudUpload,
-                contentDescription = "上传文件",
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "上传新文件",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-    }
-}
-
-@Composable
 private fun TypeBadge(label: String, modifier: Modifier = Modifier) {
     if (label.isBlank()) return
     AssistChip(
@@ -1150,3 +1113,186 @@ private fun DurationBadge(duration: String, modifier: Modifier = Modifier) {
         )
     )
 }
+
+/**
+ * Embedded BLE Traffic HUD for hardware team debugging.
+ * Toggle to show/hide, collect TX/RX events, export via share sheet.
+ */
+@Composable
+private fun BleTrafficHud() {
+    val context = LocalContext.current
+    var isExpanded by remember { mutableStateOf(false) }
+    var isCollecting by remember { mutableStateOf(true) }
+    val trafficEvents = remember { mutableStateListOf<BleTrafficEvent>() }
+
+    // Collect BLE traffic events when expanded
+    LaunchedEffect(isCollecting, isExpanded) {
+        if (isCollecting && isExpanded) {
+            BleTrafficObserver.events.collect { event ->
+                trafficEvents.add(0, event)
+                if (trafficEvents.size > 100) {
+                    trafficEvents.removeAt(trafficEvents.lastIndex)
+                }
+            }
+        }
+    }
+
+    // Export function
+    fun exportLogs() {
+        if (trafficEvents.isEmpty()) return
+        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val header = buildString {
+            appendLine("=== SmartSales BLE 流量日志 ===")
+            appendLine("导出时间: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())}")
+            appendLine("记录数量: ${trafficEvents.size}")
+            appendLine("=============================")
+            appendLine()
+        }
+        val body = trafficEvents.reversed().joinToString("\n\n") { it.formatVerbose() }
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "BLE_Traffic_$timestamp.txt")
+            putExtra(Intent.EXTRA_TEXT, header + body)
+        }
+        context.startActivity(Intent.createChooser(intent, "导出 BLE 日志"))
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isExpanded) {
+                MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f)
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            }
+        )
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            // Toggle header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { isExpanded = !isExpanded },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.BugReport,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.tertiary
+                    )
+                    Text(
+                        text = if (isExpanded) "BLE 流量监控" else "BLE 调试",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    if (trafficEvents.isNotEmpty()) {
+                        Text(
+                            text = "(${trafficEvents.size})",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                Text(
+                    text = if (isExpanded) "收起 ▲" else "展开 ▼",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            // Collapsible content
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(
+                    modifier = Modifier.padding(top = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Controls
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { isCollecting = !isCollecting },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = if (isCollecting) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(if (isCollecting) "暂停" else "继续")
+                        }
+                        OutlinedButton(
+                            onClick = { trafficEvents.clear() },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("清空")
+                        }
+                        FilledTonalButton(
+                            onClick = { exportLogs() },
+                            enabled = trafficEvents.isNotEmpty(),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Share,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("导出")
+                        }
+                    }
+
+                    // Traffic log display
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 60.dp, max = 100.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(8.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            if (trafficEvents.isEmpty()) {
+                                Text(
+                                    text = if (isCollecting) "等待 BLE 通信..." else "已暂停监听",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            } else {
+                                Text(
+                                    text = trafficEvents.joinToString("\n") { it.formatForHud() },
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    // Legend
+                    Text(
+                        text = "→ TX (App→设备)  ← RX (设备→App)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+

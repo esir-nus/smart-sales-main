@@ -194,7 +194,7 @@ class DeviceHttpEndpointProviderImpl @Inject constructor(
     }
 
     private companion object {
-        private const val DEFAULT_MEDIA_SERVER_PORT = 8000
+        private const val DEFAULT_MEDIA_SERVER_PORT = 8088
         private const val MAX_ATTEMPTS = 3
         // 重试节奏：首次立即，其后 1s、2s 退避，避免频繁敲打设备
         private val RETRY_DELAYS_MS = longArrayOf(1_000L, 2_000L)

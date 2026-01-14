@@ -41,5 +41,16 @@
             android:name=".DummyTestActivity"
             android:exported="false"
             android:label="DummyTestActivity" />
+        <!-- Standalone BLE Debug HUD - launch via adb or launcher -->
+        <activity
+            android:name=".BleDebugActivity"
+            android:exported="true"
+            android:label="BLE 调试"
+            android:theme="@style/Theme.AiFeatureTest">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
     </application>
 </manifest>

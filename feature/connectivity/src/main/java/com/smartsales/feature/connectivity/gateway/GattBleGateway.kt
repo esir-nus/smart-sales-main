@@ -70,8 +70,9 @@ class GattBleGateway @Inject constructor(
             ConnectivityLogger.tx("SSID", ssidPayload)
             gattContext.writeCharacteristic(config.credentialCharacteristicUuid, ssidPayload)
             
-            // Brief delay between commands for badge to process
-            kotlinx.coroutines.delay(100)
+            // Delay between commands for ESP32 to process SSID before password
+            // 300ms is more reliable than 100ms based on field testing
+            kotlinx.coroutines.delay(300)
             
             ConnectivityLogger.i("BLE Provision: Step 2 - sending password: PD#****")
             ConnectivityLogger.tx("Password", passwordPayload)
@@ -80,7 +81,26 @@ class GattBleGateway @Inject constructor(
             // Wait for badge to connect and respond
             val ackBytes = gattContext.awaitNotificationOrRead(config.provisioningStatusCharacteristicUuid)
             ConnectivityLogger.rx("ProvisionAck", ackBytes)
-            parseProvisioningAck(credentials, ackBytes)
+            val ackResult = parseProvisioningAck(credentials, ackBytes)
+            
+            // WORKAROUND: Firmware may return "failed" before WiFi connection completes.
+            // If we got CredentialRejected, poll network status to verify.
+            if (ackResult is BleGatewayResult.CredentialRejected) {
+                ConnectivityLogger.i("ACK returned 'failed', polling to verify actual connection status...")
+                val actuallyConnected = pollForConnection(gattContext, config, 5, 1000)
+                if (actuallyConnected) {
+                    ConnectivityLogger.i("Poll confirmed: WiFi actually connected despite 'failed' ACK")
+                    BleGatewayResult.Success(
+                        handshakeId = java.util.UUID.randomUUID().toString(),
+                        credentialsHash = sha256("${credentials.ssid}${credentials.password}")
+                    )
+                } else {
+                    ConnectivityLogger.w("Poll confirmed: WiFi truly failed to connect")
+                    ackResult
+                }
+            } else {
+                ackResult
+            }
         }) {
             is GatewayOutcome.Success -> outcome.value
             is GatewayOutcome.Failure -> outcome.error
@@ -472,6 +492,20 @@ class GattBleGateway @Inject constructor(
 
     private fun parseDelimitedNetworkResponse(raw: String): DeviceNetworkStatus {
         val parts = raw.split("#")
+        
+        // Handle simple "IP#<address>" format (what badge actually returns)
+        if (parts.size == 2 && parts[0].equals("IP", true)) {
+            val ip = parts[1].takeIf { it.isNotBlank() && it != "0.0.0.0" }
+                ?: throw IllegalStateException("设备未连接WiFi：$raw")
+            return DeviceNetworkStatus(
+                ipAddress = ip,
+                deviceWifiName = "未知Wi-Fi",
+                phoneWifiName = "未知Wi-Fi",
+                rawResponse = raw
+            )
+        }
+        
+        // Handle full "wifi#address#ip#name" format
         if (parts.size < 4) throw IllegalStateException("网络响应格式错误：$raw")
         if (!parts[0].equals("wifi", true) || !parts[1].equals("address", true)) {
             throw IllegalStateException("网络响应类型不符：$raw")
@@ -524,6 +558,46 @@ class GattBleGateway @Inject constructor(
             "ok" -> WavCommandResult.Done
             else -> throw IllegalStateException("未知WAV响应：$raw")
         }
+    }
+
+    /**
+     * Poll network status to check if WiFi actually connected.
+     * Used as workaround for firmware returning premature 'failed' ACK.
+     *
+     * @param attempts Number of poll attempts
+     * @param intervalMs Delay between attempts
+     * @return true if valid IP detected, false if still 0.0.0.0 after all attempts
+     */
+    private suspend fun pollForConnection(
+        gattContext: GattContext,
+        config: BleGatewayConfig,
+        attempts: Int,
+        intervalMs: Long
+    ): Boolean {
+        repeat(attempts) { attempt ->
+            kotlinx.coroutines.delay(intervalMs)
+            try {
+                val command = buildNetworkQueryPayload()
+                ConnectivityLogger.tx("PollQuery", command)
+                gattContext.writeCharacteristic(config.credentialCharacteristicUuid, command)
+                val response = gattContext.awaitNotificationOrRead(config.provisioningStatusCharacteristicUuid)
+                ConnectivityLogger.rx("PollResponse", response)
+                
+                val raw = response.decodeToString().trim()
+                // Check for IP#<address> format
+                if (raw.startsWith("IP#", ignoreCase = true)) {
+                    val ip = raw.substringAfter("#").trim()
+                    if (ip.isNotBlank() && ip != "0.0.0.0") {
+                        ConnectivityLogger.i("Poll ${attempt + 1}/$attempts: Connected with IP=$ip")
+                        return true
+                    }
+                }
+                ConnectivityLogger.d("Poll ${attempt + 1}/$attempts: No valid IP yet ($raw)")
+            } catch (ex: Exception) {
+                ConnectivityLogger.w("Poll ${attempt + 1}/$attempts: Error - ${ex.message}")
+            }
+        }
+        return false
     }
 
     private fun sha256(input: String): String {
@@ -579,14 +653,21 @@ private class GattContext(
         ensureConnectPermission()
         val characteristic = findCharacteristic(uuid)
         if (!gatt.setCharacteristicNotification(characteristic, true)) {
-            throw IllegalStateException("无法打开通知：$uuid")
+            ConnectivityLogger.w("Cannot enable notifications for $uuid, will use polling")
+            return // Gracefully skip - will use polling instead
         }
         val descriptor = characteristic.getDescriptor(CLIENT_CHARACTERISTIC_CONFIG_UUID)
-            ?: throw IllegalStateException("找不到通知描述符 $uuid")
+        if (descriptor == null) {
+            // Badge doesn't have CCCD descriptor - notifications not supported
+            // This is OK, we'll fall back to polling/read in awaitNotificationOrRead
+            ConnectivityLogger.d("No CCCD descriptor for $uuid, notifications not available (will poll)")
+            return
+        }
         callback.prepareDescriptor(uuid)
         descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
         if (!gatt.writeDescriptorCompat(appContext, descriptor)) {
-            throw IllegalStateException("写入通知描述符失败：$uuid")
+            ConnectivityLogger.w("Failed to write CCCD for $uuid, will use polling")
+            return // Gracefully skip
         }
         withTimeout(operationTimeoutMillis) {
             callback.awaitDescriptorResult(uuid)
@@ -835,6 +916,11 @@ private suspend fun GattContext.awaitNotificationOrRead(uuid: UUID): ByteArray =
     try {
         awaitNotification(uuid)
     } catch (ex: TimeoutCancellationException) {
+        ConnectivityLogger.d("Notification timeout for $uuid, falling back to read")
+        readCharacteristic(uuid)
+    } catch (ex: IllegalStateException) {
+        // Badge doesn't support notifications (no CCCD descriptor), fall back to read
+        ConnectivityLogger.d("Notification not supported for $uuid (${ex.message}), falling back to read")
         readCharacteristic(uuid)
     }
 

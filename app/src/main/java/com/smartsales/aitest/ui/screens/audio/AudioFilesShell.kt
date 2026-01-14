@@ -6,99 +6,26 @@ package com.smartsales.aitest.ui.screens.audio
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.aitest.AiFeatureTestTags
 import com.smartsales.aitest.audio.AudioFilesRoute
-import com.smartsales.aitest.audio.TranscriptionProvider
 import com.smartsales.feature.chat.home.HomeViewModel
 import com.smartsales.feature.chat.home.TranscriptionChatRequest
-import java.util.Locale
 
 @Composable
 fun AudioFilesShell(
     homeViewModel: HomeViewModel,
     onNavigateHome: () -> Unit
 ) {
-    val settingsViewModel: AiParaSettingsViewModel = hiltViewModel()
-    val settings by settingsViewModel.settings.collectAsStateWithLifecycle()
-    val provider = TranscriptionProvider.entries.firstOrNull {
-        it.name == settings.transcription.provider.trim().uppercase(Locale.US)
-    } ?: TranscriptionProvider.TINGWU // 重要：V7 默认链路是 Tingwu+OSS，fallback 不得让 XFyun 变成默认。
-
     Column(
         modifier = Modifier
             .fillMaxSize()
             .testTag(AiFeatureTestTags.PAGE_AUDIO_FILES)
     ) {
-        // 重要：测试壳写入 AiParaSettings，作为转写运行时开关的唯一来源，不侵入 feature/media API。
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-        ) {
-            Text(
-                text = "转写提供方：",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(end = 8.dp)
-            )
-            FilterChip(
-                selected = provider == TranscriptionProvider.XFYUN,
-                onClick = {
-                    settingsViewModel.setTranscriptionProvider(TranscriptionProvider.XFYUN)
-                },
-                label = { Text("XFyun") },
-                leadingIcon = if (provider == TranscriptionProvider.XFYUN) {
-                    { Icon(Icons.Default.Check, contentDescription = null) }
-                } else null
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            FilterChip(
-                selected = provider == TranscriptionProvider.TINGWU,
-                onClick = {
-                    settingsViewModel.setTranscriptionProvider(TranscriptionProvider.TINGWU)
-                },
-                label = { Text("Tingwu") },
-                leadingIcon = if (provider == TranscriptionProvider.TINGWU) {
-                    { Icon(Icons.Default.Check, contentDescription = null) }
-                } else null
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = "顺滑：",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(end = 8.dp)
-            )
-            FilterChip(
-                selected = settings.transcription.xfyun.upload.engSmoothProc,
-                onClick = {
-                    val currentEnabled = settings.transcription.xfyun.upload.engSmoothProc
-                    settingsViewModel.setXfyunEngSmoothproc(!currentEnabled)
-                },
-                label = { Text("eng_smoothproc") },
-                leadingIcon = if (settings.transcription.xfyun.upload.engSmoothProc) {
-                    { Icon(Icons.Default.Check, contentDescription = null) }
-                } else null
-            )
-        }
         Box(modifier = Modifier.weight(1f)) {
             AudioFilesRoute(
                 modifier = Modifier.fillMaxSize(),

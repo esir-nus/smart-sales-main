@@ -141,7 +141,6 @@ import com.smartsales.domain.config.QuickSkillId
 import java.io.File
 import com.smartsales.feature.chat.history.ChatHistoryTestTags
 import com.smartsales.data.aicore.debug.TingwuTraceSnapshot
-import com.smartsales.data.aicore.debug.XfyunTraceSnapshot
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -215,7 +214,7 @@ fun HomeScreen(
     onHistorySessionSelected: (String) -> Unit = {},
     onHistorySessionLongPress: (String) -> Unit = {},
     onToggleDebugMetadata: () -> Unit = {},
-    onRefreshXfyunTrace: () -> Unit = {},
+    onRefreshTrace: () -> Unit = {},
     onToggleRawAssistantOutput: (Boolean) -> Unit = {},
     onDismissKeyboard: () -> Unit = {},
     onInputFocusChanged: (Boolean) -> Unit = {}
@@ -516,7 +515,7 @@ fun HomeScreen(
                             )
                         }
                         if (hudEnabled && showDebugPanel) {
-                            LaunchedEffect(showDebugPanel) { onRefreshXfyunTrace() }
+                            LaunchedEffect(showDebugPanel) { onRefreshTrace() }
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()

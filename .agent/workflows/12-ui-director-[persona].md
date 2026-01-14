@@ -87,8 +87,13 @@ All user-facing text in prototypes and production UI **MUST be in Simplified Chi
 
 ### Theme Priority: Aurora Only
 - **Primary Focus**: Aurora theme (Light & Dark).
+- **Mandatory Equality**: Light Mode must use "Frosted Ice" (High Blur + Borders). Dark Mode must use "Deep Space" (Aurora). One cannot be a "crutch" for the other.
 - **Skip**: Neo-Brutalism, GlassOS variants (unless explicitly requested).
-- **Reason**: Aurora is the production theme; others are for exploration only.
+
+### Mandatory: Zero-Chrome Policy (The "App-Like" Rule)
+- **No Browser Artifacts**: Layouts must prevent visible scrollbars globally (`::-webkit-scrollbar { display: none }`).
+- **No Native Inputs**: Use custom-styled inputs, not default browser fields.
+- **Goal**: The prototype must differ from a native app only in hosting technology, not in visual feel.
 
 ---
 
@@ -185,13 +190,26 @@ These MUST remain intact regardless of visual changes:
 
 ## Review Protocol
 
-### When Reviewing Deliverables
+### When Reviewing Deliverables: The 4-Layer Audit
 
-Ask:
-1. Does Version A meet all acceptance criteria?
-2. Are all guardrails respected?
-3. Were any elements deleted or merged improperly?
-4. If Version B exists, is it worth adopting?
+#### Layer 1: The Vibe Check (Soul & Emotion)
+1. **The "Wow" Factor**: Does it feel "Cool" and "Alive", or just functional?
+2. **Premium Weight**: Does it feel substantial (like physical glass/metal) or flimsy (like a web page)?
+3. **Living Intelligence**: Does it convey the "Neural" narrative (breathing, motion), or is it static?
+
+#### Layer 2: Visual Fidelity (The "Paint")
+4. **Is "Zero-Chrome" enforced?** (No scrollbars, no focus rings).
+5. **Is Light Mode premium?** (Checks against "default white" laziness).
+
+#### Layer 3: Composition & Layout (The "Bones")
+6. **Visual Hierarchy**: Is the primary action visibly dominant? (Size/Contrast > 2x secondary).
+7. **Touch Targets**: Are all tappable elements >48dp (or have 48dp hitboxes)?
+8. **Whitespace Ratios**: Is spacing intentional? (Check for "accidental tightness" vs "breathing room"). Avoid "Bootstrap tight" layouts.
+9. **Alignment**: Are grids respected? (Do not mix center/left align arbitrarily).
+
+#### Layer 4: Guardrails (The Law)
+10. Does Version A meet all acceptance criteria?
+11. Are all functional invariants respected?
 
 ### Provide Feedback As:
 

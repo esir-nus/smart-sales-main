@@ -5,10 +5,11 @@
 package com.smartsales.data.aicore.tingwu
 
 import com.smartsales.core.metahub.SuspiciousBoundary
-import com.smartsales.data.aicore.params.PostXfyunSettings
 
 internal object TingwuSuspiciousBoundaryDetector {
-    private val defaultGapThresholdMs: Long = PostXfyunSettings().suspiciousGapThresholdMs
+    // Default threshold for gap detection (200ms)
+    private const val DEFAULT_GAP_THRESHOLD_MS: Long = 200L
+    private val defaultGapThresholdMs: Long = DEFAULT_GAP_THRESHOLD_MS
 
     fun detect(
         transcriptMarkdown: String,

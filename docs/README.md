@@ -1,7 +1,8 @@
 # Smart Sales Documentation Index
 
-> **Navigation hub for AI agents and developers**
-> **Last Updated**: 2026-01-10
+> **Navigation hub for AI agents and developers**  
+> **Architecture**: Lattice (Box-API pattern)  
+> **Last Updated**: 2026-01-14
 
 ---
 
@@ -36,12 +37,13 @@ docs/
 
 | File | Domain | Purpose |
 |------|--------|---------|
-| [Orchestrator-V1.md](./specs/Orchestrator-V1.md) | Orchestrator | AI/intelligence behavior spec |
+| [Orchestrator-Lattice.md](./specs/Orchestrator-Lattice.md) | Architecture | **CURRENT** — Lattice Box-API architecture |
+| [Orchestrator-V1.md](./specs/Orchestrator-V1.md) | Algorithms | DEPRECATED — V1 appendices only (Disector, Publisher) |
 | [ux-contract.md](./specs/ux-contract.md) | UX | Data contracts, feature boundaries |
 | [style-guide.md](./specs/style-guide.md) | UI | Visual design system, typography, components |
 | [connectivity-spec.md](./specs/connectivity-spec.md) | Connectivity | BLE/WiFi/HTTP contracts |
 | [esp32-protocol.md](./specs/esp32-protocol.md) | Connectivity | Hardware protocol |
-| [api-contracts.md](./specs/api-contracts.md) | All | Interface signatures |
+| [lattice-interfaces.md](./specs/lattice-interfaces.md) | All | Lattice Service interface catalog |
 
 ---
 
@@ -58,11 +60,12 @@ docs/
 
 When documents conflict, follow this precedence:
 
-1. **Orchestrator-V1.md** — V1 architecture spec
-2. **orchestrator-v1.schema.json** — JSON schema for data models
-3. **ux-contract.md** — UI behavior boundaries
-4. **style-guide.md** — Visual design
-5. Existing implementation and tests
+1. **Orchestrator-Lattice.md** — Current architecture spec (Box-API pattern)
+2. **Orchestrator-V1.md Appendices** — Algorithm specs (Disector, Publisher, State Recovery)
+3. **orchestrator-v1.schema.json** — JSON schema for data models
+4. **ux-contract.md** — UI behavior boundaries
+5. **style-guide.md** — Visual design
+6. Existing implementation and tests
 
 ---
 
@@ -70,7 +73,7 @@ When documents conflict, follow this precedence:
 
 ### I'm implementing a feature
 1. Read [tracker.md](./plans/tracker.md) for current status
-2. Read [Orchestrator-V1.md](./specs/Orchestrator-V1.md) for module boundaries
+2. Read [Orchestrator-Lattice.md](./specs/Orchestrator-Lattice.md) for architecture and module boundaries
 3. Follow [AGENTS.md](./AGENTS.md) for coding rules
 
 ### I'm working on connectivity

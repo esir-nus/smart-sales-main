@@ -8,7 +8,6 @@ import com.smartsales.data.aicore.debug.DebugOrchestrator
 import com.smartsales.data.aicore.debug.DebugSnapshot
 import com.smartsales.data.aicore.params.AiParaSettingsRepository
 import com.smartsales.data.aicore.debug.TingwuTraceStore
-import com.smartsales.data.aicore.debug.XfyunTraceStore
 import com.smartsales.feature.chat.AiSessionRepository
 import com.smartsales.core.metahub.SessionMetadataLabelProvider
 import com.smartsales.data.aicore.params.TranscriptionLaneSelector
@@ -34,14 +33,13 @@ import javax.inject.Inject
  * - 管理调试面板可见性
  * - 获取会话调试元数据
  * - 获取 HUD 调试快照
- * - 刷新 Xfyun/Tingwu 追踪数据
+ * - 刷新 Tingwu 追踪数据
  */
 @HiltViewModel
 class DebugViewModel @Inject constructor(
     private val metaHub: MetaHub,
     private val sessionRepository: AiSessionRepository,
     private val debugOrchestrator: DebugOrchestrator,
-    private val xfyunTraceStore: XfyunTraceStore,
     private val tingwuTraceStore: TingwuTraceStore,
     private val aiParaSettingsRepository: AiParaSettingsRepository,
 ) : ViewModel() {
@@ -107,12 +105,11 @@ class DebugViewModel @Inject constructor(
     }
 
     /**
-     * 刷新追踪快照（Xfyun + Tingwu）。
+     * 刷新追踪快照（Tingwu）。
      */
     fun refreshTraces() {
         _debugState.update {
             it.copy(
-                xfyunTrace = xfyunTraceStore.getSnapshot(),
                 tingwuTrace = tingwuTraceStore.getSnapshot()
             )
         }
@@ -173,7 +170,7 @@ class DebugViewModel @Inject constructor(
             .timeLabel(meta?.latestMajorAnalysisAt)
             .takeIf { it.isNotBlank() }
 
-        // 重要：HUD 需展示转写链路选择与禁用原因，避免"看起来切了但实际没生效"。
+        // 重要：HUD 需展示转写链路选择与禁用原因。
         val laneDecision = TranscriptionLaneSelector.resolve(aiParaSettingsRepository.snapshot())
 
         val debug = DebugSessionMetadata(
@@ -190,7 +187,6 @@ class DebugViewModel @Inject constructor(
             transcriptionProviderRequested = laneDecision.requestedProvider,
             transcriptionProviderSelected = laneDecision.selectedProvider,
             transcriptionProviderDisabledReason = laneDecision.disabledReason,
-            transcriptionXfyunEnabledSetting = laneDecision.xfyunEnabledSetting,
             notes = mergedNotes
         )
 

@@ -449,6 +449,7 @@ HomeViewModel delegates to coordinators:
 | **Pipeline** | Disector | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Pipeline** | TingwuSubmissionService | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Pipeline** | PollingLoop | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Pipeline** | TranscriptProcessor | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Pipeline** | AudioPreparerService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
 | **Pipeline** | TranscriptionService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
 | **Pipeline** | MetadataExtractorService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |

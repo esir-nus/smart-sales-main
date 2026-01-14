@@ -85,7 +85,22 @@ This document catalogs the Lattice Service interfaces (boxes) and Orchestrators.
 
 ---
 
-### 2.3 AudioPreparerService 🔲
+### 2.3 TranscriptProcessor ✅
+
+**File**: [`TingwuTranscriptProcessor.kt`](file:///home/cslh-frank/main_app/data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/processor/TingwuTranscriptProcessor.kt)  
+**Status**: ✅ Interface added (high locality pattern)
+
+| Member | Signature | Purpose |
+|--------|-----------|---------|
+| `fetchTranscript()` | `suspend fun fetchTranscript(jobId, resultLinks, fallbackArtifacts, runEnhancer, composeFinalMarkdown): TranscriptResult` | Fetch and process Tingwu transcript |
+
+**DTO**: `TranscriptResult` (markdown, artifacts, chapters, diarizedSegments)
+
+**Fake**: [`FakeTranscriptProcessor.kt`](file:///home/cslh-frank/main_app/data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/processor/FakeTranscriptProcessor.kt) — stubResult, stubError, call tracking, reset
+
+---
+
+### 2.4 AudioPreparerService 🔲
 
 **Responsibility**: Audio slicing and OSS upload
 

@@ -91,7 +91,7 @@ class TingwuRunner @Inject constructor(
     private val postTingwuTranscriptEnhancer: PostTingwuTranscriptEnhancer,
     private val aiParaSettingsProvider: AiParaSettingsProvider,
     private val tingwuRunner: com.smartsales.data.aicore.tingwu.polling.TingwuRunnerRepository,
-    private val transcriptProcessor: com.smartsales.data.aicore.tingwu.processor.TingwuTranscriptProcessor,
+    private val transcriptProcessor: com.smartsales.data.aicore.tingwu.processor.TranscriptProcessor,
     private val pipelineTracer: com.smartsales.data.aicore.debug.PipelineTracer,
     private val disector: com.smartsales.data.aicore.disector.Disector,
     private val multiBatchOrchestrator: com.smartsales.data.aicore.tingwu.TingwuMultiBatchOrchestrator,
@@ -636,7 +636,7 @@ class TingwuRunner @Inject constructor(
         jobId: String,
         resultLinks: Map<String, String>?,
         fallbackArtifacts: TingwuJobArtifacts?
-    ): com.smartsales.data.aicore.tingwu.processor.TingwuTranscriptProcessor.TranscriptResult {
+    ): com.smartsales.data.aicore.tingwu.processor.TranscriptResult {
         return transcriptProcessor.fetchTranscript(
             jobId = jobId,
             resultLinks = resultLinks,

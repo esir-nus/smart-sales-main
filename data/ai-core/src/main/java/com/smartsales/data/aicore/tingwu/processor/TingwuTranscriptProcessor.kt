@@ -35,6 +35,34 @@ import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 import java.text.DecimalFormat
 
+/**
+ * TranscriptResult: Output of transcript fetching/processing.
+ */
+data class TranscriptResult(
+    val markdown: String,
+    val artifacts: TingwuJobArtifacts?,
+    val chapters: List<TingwuChapter>?,
+    val diarizedSegments: List<DiarizedSegment>?
+)
+
+/**
+ * TranscriptProcessor: Lattice interface for transcript fetching and transformation.
+ * 
+ * Responsibility: Fetch Tingwu result → parse → transform to markdown
+ */
+interface TranscriptProcessor {
+    /**
+     * Fetch and process transcript for a completed Tingwu job.
+     */
+    suspend fun fetchTranscript(
+        jobId: String,
+        resultLinks: Map<String, String>?,
+        fallbackArtifacts: TingwuJobArtifacts?,
+        runEnhancer: suspend (TingwuTranscription?, List<DiarizedSegment>, Map<String, String>, String) -> String,
+        composeFinalMarkdown: (String, TingwuJobArtifacts?, Map<String, String>?) -> String
+    ): TranscriptResult
+}
+
 @Singleton
 class TingwuTranscriptProcessor @Inject constructor(
     private val dispatchers: DispatcherProvider,
@@ -47,19 +75,12 @@ class TingwuTranscriptProcessor @Inject constructor(
     private val tingwuRawResponseDumper: TingwuRawResponseDumper,
     private val tingwuTraceStore: TingwuTraceStore,
     private val pipelineTracer: PipelineTracer
-) {
+) : TranscriptProcessor {
     private val config = optionalConfig.orElse(AiCoreConfig())
     private val gson = Gson()
     private val timeFormatter = DecimalFormat("00")
 
-    data class TranscriptResult(
-        val markdown: String,
-        val artifacts: TingwuJobArtifacts?,
-        val chapters: List<TingwuChapter>?,
-        val diarizedSegments: List<DiarizedSegment>?
-    )
-
-    suspend fun fetchTranscript(
+    override suspend fun fetchTranscript(
         jobId: String,
         resultLinks: Map<String, String>?,
         fallbackArtifacts: TingwuJobArtifacts?,

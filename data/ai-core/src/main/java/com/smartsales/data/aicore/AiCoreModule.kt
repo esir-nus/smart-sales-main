@@ -127,6 +127,12 @@ abstract class AiCoreModule {
 
     @Binds
     @Singleton
+    abstract fun bindTranscriptProcessor(
+        impl: com.smartsales.data.aicore.tingwu.processor.TingwuTranscriptProcessor
+    ): com.smartsales.data.aicore.tingwu.processor.TranscriptProcessor
+
+    @Binds
+    @Singleton
     abstract fun bindAiParaSettingsProvider(
         impl: DefaultAiParaSettingsProvider
     ): AiParaSettingsProvider

@@ -187,6 +187,14 @@ class TingwuRunnerTest {
             ),
             pollingLoop = pollingLoop,
             jobStore = FakeJobStoreForRunner(),
+            submissionService = com.smartsales.data.aicore.tingwu.submission.RealTingwuSubmissionService(
+                api = api,
+                credentialsProvider = credentialsProvider,
+                aiParaSettingsProvider = settingsProvider,
+                tingwuTraceStore = traceStore,
+                dispatchers = dispatchers,
+                gson = Gson()
+            ),
             optionalConfig = optionalConfig
         ).also { createdCoordinators += it }
     }

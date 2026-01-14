@@ -446,6 +446,8 @@ HomeViewModel delegates to coordinators:
 | Layer | Module | Interface | Impl | Fake | Wired | Tests |
 |-------|--------|-----------|------|------|-------|-------|
 | **Chatter** | AiChatService | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Pipeline** | Disector | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Pipeline** | TingwuSubmissionService | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Pipeline** | AudioPreparerService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
 | **Pipeline** | TranscriptionService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
 | **Pipeline** | MetadataExtractorService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |

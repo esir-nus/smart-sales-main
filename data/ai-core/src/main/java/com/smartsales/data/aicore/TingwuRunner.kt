@@ -97,6 +97,7 @@ class TingwuRunner @Inject constructor(
     private val multiBatchOrchestrator: com.smartsales.data.aicore.tingwu.TingwuMultiBatchOrchestrator,
     private val pollingLoop: com.smartsales.data.aicore.tingwu.polling.TingwuPollingLoop,
     private val jobStore: TingwuJobStore,
+    private val submissionService: com.smartsales.data.aicore.tingwu.submission.TingwuSubmissionService,
 
     optionalConfig: Optional<AiCoreConfig>
 ) : TingwuCoordinator {
@@ -129,29 +130,8 @@ class TingwuRunner @Inject constructor(
             val taskKey = tingwuRunner.buildTaskKey(request)
             val requestedLanguage = request.language.ifBlank { DEFAULT_LANGUAGE }
             val sourceLanguage = tingwuRunner.mapSourceLanguage(requestedLanguage)
-            val model = config.tingwuModelOverride?.takeIf { it.isNotBlank() } ?: credentials.model
-            val defaultCustomPrompt = tingwuSettings.customPrompt.contents.firstOrNull()
-            val resolvedName = request.customPromptName?.takeIf { it.isNotBlank() }
-                ?: defaultCustomPrompt?.name
-            val resolvedPrompt = request.customPromptText?.takeIf { it.isNotBlank() }
-                ?: defaultCustomPrompt?.prompt
-            val customPromptContent = if (resolvedName != null && resolvedPrompt != null) {
-                TingwuCustomPromptContent(
-                    name = resolvedName,
-                    prompt = resolvedPrompt,
-                    model = defaultCustomPrompt?.model,
-                    transType = defaultCustomPrompt?.transType
-                )
-            } else {
-                null
-            }
-            val customPromptEnabled: Boolean? = if (tingwuSettings.customPrompt.enabled && customPromptContent != null) {
-                true
-            } else {
-                null
-            }
             logVerbose {
-                "创建 Tingwu 任务：taskKey=$taskKey fileUrl=$resolvedUrl lang=$requestedLanguage source=$sourceLanguage model=$model diarizationEnabled=${request.diarizationEnabled}"
+                "创建 Tingwu 任务：taskKey=$taskKey fileUrl=$resolvedUrl lang=$requestedLanguage source=$sourceLanguage diarizationEnabled=${request.diarizationEnabled}"
             }
             
             // V1 Appendix A: Disector batch planning (if duration provided)
@@ -239,130 +219,39 @@ class TingwuRunner @Inject constructor(
                 }
             }
             
-            runCatching {
-                val diarizationEnabled = request.diarizationEnabled && tingwuSettings.transcription.diarizationEnabled
-                val diarizationParameters = if (diarizationEnabled) {
-                    TingwuDiarizationParameters(
-                        speakerCount = tingwuSettings.transcription.diarizationSpeakerCount,
-                        outputLevel = tingwuSettings.transcription.diarizationOutputLevel
-                    )
-                } else {
-                    null
-                }
-                // 重要：Tingwu CreateTask 使用 Input.FileUrl，严禁改写字段名或引入未证实的请求结构。
-                val response = api.createTranscriptionTask(
-                    body = TingwuCreateTaskRequest(
-                        appKey = credentials.appKey,
-                        input = TingwuTaskInput(
-                            sourceLanguage = sourceLanguage,
-                            taskKey = taskKey,
-                            fileUrl = resolvedUrl
-                        ),
-                        parameters = TingwuTaskParameters(
-                            transcription = TingwuTranscriptionParameters(
-                                diarizationEnabled = diarizationEnabled,
-                                diarization = diarizationParameters,
-                                audioEventDetectionEnabled = tingwuSettings.transcription.audioEventDetectionEnabled,
-                                model = model
-                            ),
-                            summarizationEnabled = tingwuSettings.summarization.enabled,
-                            summarization = TingwuSummarizationParameters(
-                                types = tingwuSettings.summarization.types
-                            ),
-                            autoChaptersEnabled = tingwuSettings.autoChaptersEnabled,
-                            textPolishEnabled = tingwuSettings.textPolishEnabled,
-                            pptExtractionEnabled = tingwuSettings.pptExtractionEnabled,
-                            customPromptEnabled = customPromptEnabled,
-                            customPrompt = customPromptEnabled?.let { TingwuCustomPrompt(contents = listOf(customPromptContent!!)) },
-                            transcoding = TingwuTranscodingParameters(
-                                targetAudioFormat = tingwuSettings.transcoding.targetAudioFormat
-                            )
-                        )
-                    )
+            // Delegate to TingwuSubmissionService (Lattice Box)
+            val submissionResult = submissionService.submit(
+                com.smartsales.data.aicore.tingwu.submission.SubmissionInput(
+                    fileUrl = resolvedUrl,
+                    taskKey = taskKey,
+                    sourceLanguage = sourceLanguage,
+                    diarizationEnabled = request.diarizationEnabled,
+                    customPromptName = request.customPromptName,
+                    customPromptText = request.customPromptText
                 )
-                runCatching {
-                    tingwuTraceStore.record(
-                        taskId = taskKey,
-                        createRequestJson = gson.toJson(
-                            TingwuCreateTaskRequest(
-                                appKey = credentials.appKey,
-                                input = TingwuTaskInput(
-                                    sourceLanguage = sourceLanguage,
-                                    taskKey = taskKey,
-                                    fileUrl = resolvedUrl
-                                ),
-                                parameters = TingwuTaskParameters(
-                                    transcription = TingwuTranscriptionParameters(
-                                        diarizationEnabled = diarizationEnabled,
-                                        diarization = diarizationParameters,
-                                        audioEventDetectionEnabled = tingwuSettings.transcription.audioEventDetectionEnabled,
-                                        model = model
-                                    ),
-                                    summarizationEnabled = tingwuSettings.summarization.enabled,
-                                    summarization = TingwuSummarizationParameters(
-                                        types = tingwuSettings.summarization.types
-                                    ),
-                                    autoChaptersEnabled = tingwuSettings.autoChaptersEnabled,
-                                    textPolishEnabled = tingwuSettings.textPolishEnabled,
-                                    pptExtractionEnabled = tingwuSettings.pptExtractionEnabled,
-                                    customPromptEnabled = customPromptEnabled,
-                                    customPrompt = customPromptEnabled?.let { TingwuCustomPrompt(contents = listOf(customPromptContent!!)) },
-                                    transcoding = TingwuTranscodingParameters(
-                                        targetAudioFormat = tingwuSettings.transcoding.targetAudioFormat
-                                    )
-                                )
-                            )
-                        )
-                    )
-                }
-                val data = requireData(
-                    code = response.code,
-                    message = response.message,
-                    requestId = response.requestId,
-                    data = response.data,
-                    action = "CreateTask"
-                )
-                val taskId = data.taskId?.takeIf { it.isNotBlank() } ?: run {
-                    val exception = AiCoreException(
-                        source = AiCoreErrorSource.TINGWU,
-                        reason = AiCoreErrorReason.REMOTE,
-                        message = "Tingwu CreateTask 未返回 TaskId",
-                        suggestion = "请根据 tingwu-doc.md 核对请求体字段"
-                    )
-                    AiCoreLogger.e(
-                        TAG,
-                        "Tingwu 任务创建响应缺少 taskId：requestId=${response.requestId} code=${response.code}"
-                    )
-                    return@withContext Result.Error(exception)
-                }
-                logVerbose {
-                    "Tingwu 任务响应：taskId=$taskId status=${data.taskStatus} requestId=${response.requestId}"
-                }
-                runCatching {
-                    tingwuTraceStore.record(
-                        taskId = taskId,
-                        createResponseJson = gson.toJson(response)
-                    )
-                }
-                val flow = getOrCreateJobFlow(taskId)
-                flow.value = TingwuJobState.InProgress(
-                    jobId = taskId,
-                    progressPercent = SUBMITTED_PROGRESS,
-                    statusLabel = "SUBMITTED"
-                )
-                jobContext[taskId] = request
-                startPolling(taskId)
-                AiCoreLogger.d(TAG, "Tingwu 任务创建成功：jobId=$taskId")
-                pipelineTracer.emit(
-                    stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_UPLOAD,
-                    status = "COMPLETED",
-                    message = "jobId=$taskId"
-                )
-                taskId
-            }.fold(
-                onSuccess = { Result.Success(it) },
-                onFailure = { Result.Error(tingwuRunner.mapError(it)) }
             )
+            
+            when (submissionResult) {
+                is Result.Success -> {
+                    val taskId = submissionResult.data.taskId
+                    val flow = getOrCreateJobFlow(taskId)
+                    flow.value = TingwuJobState.InProgress(
+                        jobId = taskId,
+                        progressPercent = SUBMITTED_PROGRESS,
+                        statusLabel = "SUBMITTED"
+                    )
+                    jobContext[taskId] = request
+                    startPolling(taskId)
+                    AiCoreLogger.d(TAG, "Tingwu 任务创建成功：jobId=$taskId")
+                    pipelineTracer.emit(
+                        stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_UPLOAD,
+                        status = "COMPLETED",
+                        message = "jobId=$taskId"
+                    )
+                    Result.Success(taskId)
+                }
+                is Result.Error -> submissionResult
+            }
         }
 
     private suspend fun waitForJob(jobId: String): TingwuJobState {

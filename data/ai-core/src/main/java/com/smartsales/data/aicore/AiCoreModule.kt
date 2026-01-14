@@ -115,6 +115,12 @@ abstract class AiCoreModule {
 
     @Binds
     @Singleton
+    abstract fun bindTingwuSubmissionService(
+        impl: com.smartsales.data.aicore.tingwu.submission.RealTingwuSubmissionService
+    ): com.smartsales.data.aicore.tingwu.submission.TingwuSubmissionService
+
+    @Binds
+    @Singleton
     abstract fun bindAiParaSettingsProvider(
         impl: DefaultAiParaSettingsProvider
     ): AiParaSettingsProvider

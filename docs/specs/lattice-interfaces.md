@@ -32,11 +32,47 @@ This document catalogs the Lattice Service interfaces (boxes) and Orchestrators.
 
 ---
 
-## 2) Pipeline Layer 🔲
+## 2) Pipeline Layer
 
-> **Status**: Planned — boxes to be extracted from `TingwuRunner`
+> **Status**: Extraction in progress
 
-### 2.1 AudioPreparerService 🔲
+### 2.0 Disector ✅
+
+**File**: [`Disector.kt`](file:///home/cslh-frank/main_app/data/ai-core/src/main/java/com/smartsales/data/aicore/disector/Disector.kt)  
+**Status**: ✅ Extracted (first Pipeline Layer box)
+
+| Member | Signature | Purpose |
+|--------|-----------|---------|
+| `createPlan()` | `fun createPlan(totalMs: Long, audioAssetId: String, recordingSessionId: String): DisectorPlan` | V1 Appendix A batch planning |
+
+**DTOs** (in same file):
+- `DisectorPlan` — planId, audioAssetId, recordingSessionId, totalMs, batches
+- `DisectorBatch` — batchIndex, batchAssetId, absStartMs, absEndMs, captureStartMs, captureEndMs
+
+**Fake**: [`FakeDisector.kt`](file:///home/cslh-frank/main_app/data/ai-core/src/main/java/com/smartsales/data/aicore/disector/FakeDisector.kt) — stubPlan override, call tracking, reset
+
+**Impl**: [`DisectorImpl.kt`](file:///home/cslh-frank/main_app/data/ai-core/src/main/java/com/smartsales/data/aicore/disector/DisectorImpl.kt)
+
+---
+
+### 2.1 TingwuSubmissionService ✅
+
+**File**: [`TingwuSubmissionService.kt`](file:///home/cslh-frank/main_app/data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/submission/TingwuSubmissionService.kt)  
+**Status**: ✅ Extracted from TingwuRunner
+
+| Member | Signature | Purpose |
+|--------|-----------|---------|
+| `submit()` | `suspend fun submit(input: SubmissionInput): Result<SubmissionOutput>` | Call Tingwu createTranscriptionTask API |
+
+**DTOs**: `SubmissionInput` (fileUrl, taskKey, sourceLanguage, diarizationEnabled), `SubmissionOutput` (taskId, requestId)
+
+**Fake**: `FakeTingwuSubmissionService` — stubOutput override, call tracking, reset
+
+**Impl**: [`RealTingwuSubmissionService.kt`](file:///home/cslh-frank/main_app/data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/submission/RealTingwuSubmissionService.kt)
+
+---
+
+### 2.2 AudioPreparerService 🔲
 
 **Responsibility**: Audio slicing and OSS upload
 

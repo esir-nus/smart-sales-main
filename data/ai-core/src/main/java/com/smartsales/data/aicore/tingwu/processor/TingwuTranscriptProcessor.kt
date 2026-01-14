@@ -26,7 +26,7 @@ import com.smartsales.data.aicore.tingwu.api.TingwuTranscription
 import com.smartsales.data.aicore.tingwu.api.TingwuTranscriptSegment
 import com.smartsales.data.aicore.tingwu.artifact.TingwuArtifactFetcher
 import com.smartsales.data.aicore.tingwu.artifact.TingwuRawResponseDumper
-import com.smartsales.data.aicore.tingwu.publisher.TranscriptPublisher
+import com.smartsales.data.aicore.tingwu.publisher.Publisher
 import java.io.IOException
 import java.net.URL
 import javax.inject.Inject
@@ -71,7 +71,7 @@ class TingwuTranscriptProcessor @Inject constructor(
     private val formatter: TranscriptFormatter,
     private val tingwuRunnerRepository: TingwuRunnerRepository,
     private val artifactFetcher: TingwuArtifactFetcher,
-    private val transcriptPublisher: TranscriptPublisher,
+    private val transcriptPublisher: Publisher,
     private val tingwuRawResponseDumper: TingwuRawResponseDumper,
     private val tingwuTraceStore: TingwuTraceStore,
     private val pipelineTracer: PipelineTracer

@@ -133,6 +133,12 @@ abstract class AiCoreModule {
 
     @Binds
     @Singleton
+    abstract fun bindPublisher(
+        impl: com.smartsales.data.aicore.tingwu.publisher.TranscriptPublisher
+    ): com.smartsales.data.aicore.tingwu.publisher.Publisher
+
+    @Binds
+    @Singleton
     abstract fun bindAiParaSettingsProvider(
         impl: DefaultAiParaSettingsProvider
     ): AiParaSettingsProvider

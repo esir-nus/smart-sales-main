@@ -100,7 +100,26 @@ This document catalogs the Lattice Service interfaces (boxes) and Orchestrators.
 
 ---
 
-### 2.4 AudioPreparerService 🔲
+### 2.4 Publisher ✅
+
+**File**: [`TranscriptPublisher.kt`](file:///home/cslh-frank/main_app/data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/publisher/TranscriptPublisher.kt)  
+**Status**: ✅ Interface added (high locality pattern)
+
+| Member | Purpose |
+|--------|---------|
+| `extractTranscriptionUrl()` | Extract transcription URL from resultLinks |
+| `extractAutoChaptersUrl()` | Extract auto-chapters URL |
+| `extractSmartSummaryUrl()` | Extract smart summary URL |
+| `fetchChaptersSafe()` | Download chapters (safe) |
+| `downloadChapters()` | Download chapters (throws) |
+| `fetchSmartSummarySafe()` | Download smart summary (safe) |
+| `downloadSmartSummary()` | Download smart summary (throws) |
+
+**Fake**: [`FakeTranscriptPublisher.kt`](file:///home/cslh-frank/main_app/data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/publisher/FakeTranscriptPublisher.kt) — stubs, call tracking, reset
+
+---
+
+### 2.5 AudioPreparerService 🔲
 
 **Responsibility**: Audio slicing and OSS upload
 

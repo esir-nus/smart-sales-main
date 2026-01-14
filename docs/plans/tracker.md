@@ -450,6 +450,7 @@ HomeViewModel delegates to coordinators:
 | **Pipeline** | TingwuSubmissionService | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Pipeline** | PollingLoop | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Pipeline** | TranscriptProcessor | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Pipeline** | Publisher | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Pipeline** | AudioPreparerService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
 | **Pipeline** | TranscriptionService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
 | **Pipeline** | MetadataExtractorService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |

@@ -25,16 +25,29 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Transcript URL extraction and download utilities.
+ * Publisher: Lattice interface for transcript artifact extraction and download.
+ */
+interface Publisher {
+    fun extractTranscriptionUrl(resultLinks: Map<String, String>?): String?
+    fun extractAutoChaptersUrl(resultLinks: Map<String, String>?): String?
+    fun extractSmartSummaryUrl(resultLinks: Map<String, String>?): String?
+    fun fetchChaptersSafe(url: String, jobId: String): List<TingwuChapter>?
+    fun downloadChapters(url: String, jobId: String): List<TingwuChapter>
+    fun fetchSmartSummarySafe(resultLinks: Map<String, String>?, jobId: String): TingwuSmartSummary?
+    fun downloadSmartSummary(url: String, jobId: String): TingwuSmartSummary?
+}
+
+/**
+ * TranscriptPublisher: Real implementation of Publisher.
  */
 @Singleton
 class TranscriptPublisher @Inject constructor(
     private val config: AiCoreConfig,
     private val pipelineTracer: PipelineTracer,
     private val artifactFetcher: com.smartsales.data.aicore.tingwu.artifact.TingwuArtifactFetcher,
-) {
+) : Publisher {
 
-    fun extractTranscriptionUrl(resultLinks: Map<String, String>?): String? {
+    override fun extractTranscriptionUrl(resultLinks: Map<String, String>?): String? {
         if (resultLinks == null) {
             AiCoreLogger.w(TAG, "extractTranscriptionUrl: resultLinks 为 null")
             return null
@@ -58,12 +71,12 @@ class TranscriptPublisher @Inject constructor(
         return transcriptionUrl
     }
 
-    fun extractAutoChaptersUrl(resultLinks: Map<String, String>?): String? {
+    override fun extractAutoChaptersUrl(resultLinks: Map<String, String>?): String? {
         if (resultLinks.isNullOrEmpty()) return null
         return resultLinks.entries.firstOrNull { it.key.equals("AutoChapters", ignoreCase = true) }?.value
     }
 
-    fun extractSmartSummaryUrl(resultLinks: Map<String, String>?): String? {
+    override fun extractSmartSummaryUrl(resultLinks: Map<String, String>?): String? {
         if (resultLinks.isNullOrEmpty()) return null
         val keys = listOf("MeetingAssistance", "Summarization", "SmartSummary", "Summary")
         return resultLinks.entries.firstOrNull { entry ->
@@ -71,12 +84,12 @@ class TranscriptPublisher @Inject constructor(
         }?.value
     }
 
-    fun fetchChaptersSafe(url: String, jobId: String): List<TingwuChapter>? =
+    override fun fetchChaptersSafe(url: String, jobId: String): List<TingwuChapter>? =
         runCatching { downloadChapters(url, jobId) }.onFailure {
             AiCoreLogger.w(TAG, "下载章节失败，将忽略：jobId=$jobId url=${url.take(80)} error=${it.message}")
         }.getOrNull()
 
-    fun downloadChapters(url: String, jobId: String): List<TingwuChapter> {
+    override fun downloadChapters(url: String, jobId: String): List<TingwuChapter> {
         AiCoreLogger.d(TAG, "开始下载章节 JSON：jobId=$jobId url=${url.take(100)}...")
         pipelineTracer.emit(PipelineStage.TRANSCRIPT_PUBLISH, "STARTED", "jobId=$jobId type=chapters")
         val payload = artifactFetcher.fetchText(url, timeoutMs = config.tingwuReadTimeoutMillis.toInt(), maxChars = 1_000_000)
@@ -93,14 +106,14 @@ class TranscriptPublisher @Inject constructor(
         return chapters
     }
 
-    fun fetchSmartSummarySafe(resultLinks: Map<String, String>?, jobId: String): TingwuSmartSummary? {
+    override fun fetchSmartSummarySafe(resultLinks: Map<String, String>?, jobId: String): TingwuSmartSummary? {
         val url = extractSmartSummaryUrl(resultLinks) ?: return null
         return runCatching { downloadSmartSummary(url, jobId) }.onFailure {
             AiCoreLogger.w(TAG, "下载智能摘要失败，将忽略：jobId=$jobId url=${url.take(80)} error=${it.message}")
         }.getOrNull()
     }
 
-    fun downloadSmartSummary(url: String, jobId: String): TingwuSmartSummary? {
+    override fun downloadSmartSummary(url: String, jobId: String): TingwuSmartSummary? {
         AiCoreLogger.d(TAG, "开始下载智能摘要：jobId=$jobId url=${url.take(100)}...")
         val payload = artifactFetcher.fetchText(url, timeoutMs = config.tingwuReadTimeoutMillis.toInt(), maxChars = 500_000)
             ?: run {

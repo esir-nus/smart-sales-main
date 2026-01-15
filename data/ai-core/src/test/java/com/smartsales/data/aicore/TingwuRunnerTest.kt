@@ -196,6 +196,11 @@ class TingwuRunnerTest {
                 gson = Gson()
             ),
             metaHubWriter = com.smartsales.data.aicore.tingwu.metadata.FakeMetaHubWriter(),
+            resultProcessor = com.smartsales.data.aicore.tingwu.result.RealResultProcessor(
+                artifactFetcher = artifactFetcher,
+                transcriptOrchestrator = transcriptOrchestrator,
+                gson = Gson()
+            ),
             optionalConfig = optionalConfig
         ).also { createdCoordinators += it }
     }

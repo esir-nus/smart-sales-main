@@ -102,6 +102,7 @@ class TingwuRunner @Inject constructor(
     private val jobStore: TingwuJobStore,
     private val submissionService: com.smartsales.data.aicore.tingwu.submission.TingwuSubmissionService,
     private val metaHubWriter: com.smartsales.data.aicore.tingwu.metadata.MetaHubWriter,
+    private val resultProcessor: com.smartsales.data.aicore.tingwu.result.ResultProcessor,
 
     optionalConfig: Optional<AiCoreConfig>
 ) : TingwuCoordinator {
@@ -467,12 +468,13 @@ class TingwuRunner @Inject constructor(
         }
 
         val mergedArtifacts = transcriptResult.artifacts
-        val transcriptMeta = refineSpeakerLabels(
+        val transcriptMeta = resultProcessor.refineSpeakerLabels(
             transcriptId = jobId,
+            sessionId = jobContext[jobId]?.sessionId,
             diarizedSegments = transcriptResult.diarizedSegments.orEmpty(),
             speakerLabels = mergedArtifacts?.speakerLabels.orEmpty()
         )
-        val mergedSpeakerLabels = mergeSpeakerLabels(
+        val mergedSpeakerLabels = resultProcessor.mergeSpeakerLabels(
             base = mergedArtifacts?.speakerLabels.orEmpty(),
             incoming = transcriptMeta?.speakerMap.orEmpty()
         )
@@ -572,137 +574,9 @@ class TingwuRunner @Inject constructor(
 
 
 
-    private suspend fun refineSpeakerLabels(
-        transcriptId: String,
-        diarizedSegments: List<DiarizedSegment>,
-        speakerLabels: Map<String, String>,
-    ): TranscriptMetadata? {
-        val request = TranscriptMetadataRequest(
-            transcriptId = transcriptId,
-            sessionId = jobContext[transcriptId]?.sessionId,
-            diarizedSegments = diarizedSegments,
-            speakerLabels = speakerLabels,
-            force = true
-        )
-        return runCatching { transcriptOrchestrator.inferTranscriptMetadata(request) }
-            .onFailure { AiCoreLogger.w(TAG, "写入转写元数据失败：${it.message}") }
-            .getOrNull()
-    }
 
-    private fun mergeSpeakerLabels(
-        base: Map<String, String>,
-        incoming: Map<String, SpeakerMeta>,
-        minConfidence: Float = 0.6f
-    ): Map<String, String> {
-        if (incoming.isEmpty()) return base
-        val merged = LinkedHashMap(base)
-        incoming.forEach { (id, meta) ->
-            val name = meta.displayName?.takeIf { it.isNotBlank() }
-            val confidence = meta.confidence ?: 0f
-            if (name != null && confidence >= minConfidence) {
-                merged[id] = name
-            } else if (name != null && !merged.containsKey(id)) {
-                merged[id] = name
-            }
-        }
-        return merged
-    }
 
-    private fun TingwuStatusData.toArtifacts(): TingwuJobArtifacts? =
-        buildArtifacts(
-            mp3 = outputMp3Path,
-            mp4 = outputMp4Path,
-            thumb = outputThumbnailPath,
-            spectrum = outputSpectrumPath,
-            links = resultLinks,
-            customPromptUrl = resultLinks?.get(CUSTOM_PROMPT_KEY)
-        )
 
-    private fun TingwuResultData.toArtifacts(
-        fallbackArtifacts: TingwuJobArtifacts? = null,
-        transcriptionUrl: String? = null,
-        autoChaptersUrl: String? = null,
-        customPromptUrl: String? = null,
-        extraResultUrls: Map<String, String> = emptyMap(),
-        chapters: List<TingwuChapter>? = null,
-        smartSummary: TingwuSmartSummary? = null,
-        diarizedSegments: List<DiarizedSegment>? = null,
-        recordingOriginDiarizedSegments: List<DiarizedSegment>? = null,
-        speakerLabels: Map<String, String> = emptyMap(),
-    ): TingwuJobArtifacts? =
-        buildArtifacts(
-            mp3 = outputMp3Path ?: fallbackArtifacts?.outputMp3Path,
-            mp4 = outputMp4Path ?: fallbackArtifacts?.outputMp4Path,
-            thumb = outputThumbnailPath ?: fallbackArtifacts?.outputThumbnailPath,
-            spectrum = outputSpectrumPath ?: fallbackArtifacts?.outputSpectrumPath,
-            links = resultLinks ?: fallbackArtifacts?.resultLinks?.associate { it.label to it.url },
-            transcriptionUrl = transcriptionUrl ?: fallbackArtifacts?.transcriptionUrl,
-            autoChaptersUrl = autoChaptersUrl ?: fallbackArtifacts?.autoChaptersUrl,
-            customPromptUrl = customPromptUrl ?: fallbackArtifacts?.customPromptUrl,
-            extraResultUrls = if (extraResultUrls.isNotEmpty()) extraResultUrls else fallbackArtifacts?.extraResultUrls.orEmpty(),
-            chapters = chapters ?: fallbackArtifacts?.chapters,
-            smartSummary = smartSummary ?: fallbackArtifacts?.smartSummary,
-            diarizedSegments = diarizedSegments ?: fallbackArtifacts?.diarizedSegments,
-            recordingOriginDiarizedSegments = recordingOriginDiarizedSegments
-                ?: fallbackArtifacts?.recordingOriginDiarizedSegments,
-            speakerLabels = if (speakerLabels.isNotEmpty()) speakerLabels else fallbackArtifacts?.speakerLabels.orEmpty(),
-        )
-
-    private fun buildArtifacts(
-        mp3: String?,
-        mp4: String?,
-        thumb: String?,
-        spectrum: String?,
-        links: Map<String, String>?,
-        transcriptionUrl: String? = null,
-        autoChaptersUrl: String? = null,
-        customPromptUrl: String? = null,
-        extraResultUrls: Map<String, String> = emptyMap(),
-        chapters: List<TingwuChapter>? = null,
-        smartSummary: TingwuSmartSummary? = null,
-        diarizedSegments: List<DiarizedSegment>? = null,
-        recordingOriginDiarizedSegments: List<DiarizedSegment>? = null,
-        speakerLabels: Map<String, String> = emptyMap(),
-    ): TingwuJobArtifacts? {
-        if (
-            mp3.isNullOrBlank() &&
-            mp4.isNullOrBlank() &&
-            thumb.isNullOrBlank() &&
-            spectrum.isNullOrBlank() &&
-            links.isNullOrEmpty() &&
-            transcriptionUrl.isNullOrBlank() &&
-            autoChaptersUrl.isNullOrBlank() &&
-            customPromptUrl.isNullOrBlank() &&
-            extraResultUrls.isEmpty() &&
-            chapters.isNullOrEmpty() &&
-            smartSummary == null &&
-            diarizedSegments.isNullOrEmpty() &&
-            recordingOriginDiarizedSegments.isNullOrEmpty() &&
-            speakerLabels.isEmpty()
-        ) {
-            return null
-        }
-        val resultLinks = links.orEmpty()
-            .mapNotNull { (label, url) ->
-                url.takeIf { it.isNotBlank() }?.let { TingwuResultLink(label, it) }
-            }
-        return TingwuJobArtifacts(
-            outputMp3Path = mp3,
-            outputMp4Path = mp4,
-            outputThumbnailPath = thumb,
-            outputSpectrumPath = spectrum,
-            resultLinks = resultLinks,
-            transcriptionUrl = transcriptionUrl,
-            autoChaptersUrl = autoChaptersUrl,
-            customPromptUrl = customPromptUrl ?: links?.get(CUSTOM_PROMPT_KEY),
-            extraResultUrls = extraResultUrls,
-            chapters = chapters,
-            smartSummary = smartSummary,
-            diarizedSegments = diarizedSegments,
-            recordingOriginDiarizedSegments = recordingOriginDiarizedSegments,
-            speakerLabels = speakerLabels,
-        )
-    }
 
     private fun <T> requireData(
         code: String?,
@@ -754,126 +628,6 @@ class TingwuRunner @Inject constructor(
         return trimmed.takeIf { it.isNotBlank() }
     }
 
-    private fun fetchSummarizationText(resultLinks: Map<String, String>?): String? {
-        val url = resultLinks?.entries
-            ?.firstOrNull { it.key.equals("Summarization", ignoreCase = true) }
-            ?.value
-            ?.takeIf { it.isNotBlank() }
-            ?: return null
-        val raw = artifactFetcher.fetchText(url) ?: return null
-        val parsed = runCatching {
-            val json = JsonParser.parseString(raw)
-            if (!json.isJsonObject) return@runCatching null
-            val obj = json.asJsonObject
-            val summaryObj = obj.getAsJsonObject("Summarization") ?: obj
-            val paragraphTitle = summaryObj.getPrimitiveString("ParagraphTitle")
-            val paragraphSummary = summaryObj.getPrimitiveString("ParagraphSummary")
-            val conversational = summaryObj.getAsJsonArray("ConversationalSummary")
-                ?.mapNotNull { element ->
-                    element.asJsonObjectOrNull()?.let { item ->
-                        val speaker = item.getPrimitiveString("SpeakerName")
-                            ?: item.getPrimitiveString("SpeakerId")
-                        val summary = item.getPrimitiveString("Summary")
-                        if (summary.isNullOrBlank()) null else speaker to summary
-                    }
-                }.orEmpty()
-            val qa = summaryObj.getAsJsonArray("QuestionsAnsweringSummary")
-                ?.mapNotNull { element ->
-                    element.asJsonObjectOrNull()?.let { item ->
-                        val q = item.getPrimitiveString("Question")?.takeIf { it.isNotBlank() }
-                        val a = item.getPrimitiveString("Answer")?.takeIf { it.isNotBlank() }
-                        if (q == null && a == null) null else q to a
-                    }
-                }.orEmpty()
-            if (
-                paragraphTitle.isNullOrBlank() &&
-                paragraphSummary.isNullOrBlank() &&
-                conversational.isEmpty() &&
-                qa.isEmpty()
-            ) null
-            else {
-                buildString {
-                    if (!paragraphTitle.isNullOrBlank() || !paragraphSummary.isNullOrBlank()) {
-                        appendLine("### 段落摘要")
-                        paragraphTitle?.let { appendLine("**$it**") }
-                        paragraphSummary?.let { appendLine(it) }
-                        appendLine()
-                    }
-                    if (conversational.isNotEmpty()) {
-                        appendLine("### 发言人总结")
-                        conversational.forEach { (speaker, summary) ->
-                            val label = speaker ?: "说话人"
-                            appendLine("- **$label**：$summary")
-                        }
-                        appendLine()
-                    }
-                    if (qa.isNotEmpty()) {
-                        appendLine("### 问答回顾")
-                        qa.forEach { (q, a) ->
-                            q?.let { appendLine("- **Q：** $it") }
-                            a?.let { appendLine("  **A：** $it") }
-                        }
-                        appendLine()
-                    }
-                }.trim()
-            }
-        }.getOrNull()
-        return parsed
-    }
-
-    private fun buildChaptersText(
-        artifacts: TingwuJobArtifacts?,
-        resultLinks: Map<String, String>?
-    ): String? {
-        val parsedChapters = artifacts?.chapters
-        val chapters = if (!parsedChapters.isNullOrEmpty()) {
-            parsedChapters.map {
-                ChapterDisplay(
-                    startMs = it.startMs,
-                    headline = it.displayTitle(),
-                    summary = it.summary
-                )
-            }
-        } else {
-            fetchAutoChapters(resultLinks)
-        }
-        if (chapters.isNullOrEmpty()) return null
-        return buildString {
-            chapters.forEach { chapter ->
-                val start = com.smartsales.data.aicore.tingwu.util.TingwuPayloadParser.formatTimeMs(chapter.startMs ?: 0)
-                appendLine("- [$start] ${chapter.headline}")
-                chapter.summary?.takeIf { it.isNotBlank() }?.let { appendLine("  - $it") }
-            }
-        }.trim()
-    }
-
-    private fun fetchAutoChapters(resultLinks: Map<String, String>?): List<ChapterDisplay>? {
-        val url = resultLinks?.entries
-            ?.firstOrNull { it.key.equals("AutoChapters", ignoreCase = true) }
-            ?.value
-            ?.takeIf { it.isNotBlank() }
-            ?: return null
-        val raw = artifactFetcher.fetchText(url) ?: return null
-        return runCatching {
-            val root = JsonParser.parseString(raw)
-            val arr = when {
-                root.isJsonObject -> root.asJsonObject.getAsJsonArray("AutoChapters")
-                root.isJsonArray -> root.asJsonArray
-                else -> null
-            } ?: return@runCatching null
-            arr.mapNotNull { element ->
-                val obj = element.asJsonObjectOrNull() ?: return@mapNotNull null
-                val headline = obj.getPrimitiveString("Headline") ?: obj.getPrimitiveString("Title")
-                val summary = obj.getPrimitiveString("Summary")
-                val start = obj.get("Start")?.asLongOrNull()
-                    ?: obj.get("StartTime")?.asLongOrNull()
-                    ?: obj.get("StartMs")?.asLongOrNull()
-                if (headline.isNullOrBlank()) null
-                else ChapterDisplay(startMs = start ?: 0, headline = headline, summary = summary)
-            }.takeIf { it.isNotEmpty() }
-        }.getOrNull()
-    }
-
     private fun normalizeStageDirection(text: String?): String? {
         val raw = text?.trim().orEmpty()
         if (raw.isBlank()) return null
@@ -886,14 +640,6 @@ class TingwuRunner @Inject constructor(
         val result = builder.toString().trim()
         return result.ifBlank { null }
     }
-
-    private data class ChapterDisplay(
-        val startMs: Long?,
-        val headline: String,
-        val summary: String?
-    )
-
-
 
     private suspend fun runEnhancerIfEnabled(
         jobId: String,
@@ -975,9 +721,9 @@ class TingwuRunner @Inject constructor(
         val customPromptText = normalizeStageDirection(
             artifacts?.customPromptUrl?.let { fetchCustomPromptResult(it) }
         ) ?: "自定义转写暂无可用内容"
-        val summarizationText = fetchSummarizationText(resultLinks)
+        val summarizationText = resultProcessor.fetchSummarizationText(resultLinks)
             ?: "摘要暂无可用内容"
-        val chaptersText = buildChaptersText(artifacts, resultLinks)
+        val chaptersText = resultProcessor.buildChaptersText(artifacts, resultLinks)
             ?: "章节暂无可用内容"
 
         builder.appendLine("## 自定义转写（CustomPrompt）")

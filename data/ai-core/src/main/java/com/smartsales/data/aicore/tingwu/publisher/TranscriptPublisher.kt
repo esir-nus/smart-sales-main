@@ -124,39 +124,10 @@ class TranscriptPublisher @Inject constructor(
     }
 
     private fun parseAutoChaptersPayload(payload: String): List<TingwuChapter> =
-        com.smartsales.data.aicore.parseAutoChaptersPayload(payload)
+        com.smartsales.data.aicore.tingwu.util.TingwuPayloadParser.parseAutoChapters(payload)
 
-    private fun parseSmartSummaryPayload(payload: String): TingwuSmartSummary? {
-        return try {
-            val obj = JsonParser.parseString(payload).asJsonObject
-            val summary = obj.getPrimitiveString("Summary")
-                ?: obj.getPrimitiveString("Abstract")
-                ?: obj.getPrimitiveString("Summarization")
-            val keyPoints = obj.getAsJsonArray("KeyPoints")
-                ?: obj.getAsJsonArray("Highlights")
-                ?: obj.getAsJsonArray("Keypoints")
-            val actionItems = obj.getAsJsonArray("ActionItems")
-                ?: obj.getAsJsonArray("Todos")
-                ?: obj.getAsJsonArray("Tasks")
-            val keys = keyPoints?.mapNotNull { it.asStringOrNull() } ?: emptyList()
-            val actions = actionItems?.mapNotNull { it.asStringOrNull() } ?: emptyList()
-            if (summary.isNullOrBlank() && keys.isEmpty() && actions.isEmpty()) return null
-            TingwuSmartSummary(
-                summary = summary,
-                keyPoints = keys,
-                actionItems = actions
-            )
-        } catch (e: Exception) {
-            AiCoreLogger.w(TAG, "解析智能摘要失败：${e.message}")
-            null
-        }
-    }
-
-    private fun JsonObject.getPrimitiveString(key: String): String? =
-        get(key)?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }?.asString
-
-    private fun JsonElement.asStringOrNull(): String? =
-        takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }?.asString
+    private fun parseSmartSummaryPayload(payload: String): TingwuSmartSummary? =
+        com.smartsales.data.aicore.tingwu.util.TingwuPayloadParser.parseSmartSummary(payload)
 
     companion object {
         private const val TAG = "TranscriptPublisher"

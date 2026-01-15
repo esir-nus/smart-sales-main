@@ -40,6 +40,9 @@ import com.smartsales.data.aicore.params.AiParaSettingsProvider
 import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.metahub.TingwuPreprocessPatchBuilder
 import com.smartsales.data.aicore.tingwu.TingwuSuspiciousBoundaryDetector
+import com.smartsales.data.aicore.tingwu.util.TingwuPayloadParser.getPrimitiveString
+import com.smartsales.data.aicore.tingwu.util.TingwuPayloadParser.asJsonObjectOrNull
+import com.smartsales.data.aicore.tingwu.util.TingwuPayloadParser.asLongOrNull
 
 import com.smartsales.data.aicore.tingwu.artifact.TingwuArtifactFetcher
 import com.smartsales.data.aicore.posttingwu.EnhancerInput
@@ -660,20 +663,6 @@ class TingwuRunner @Inject constructor(
 
 
 
-    /** Helper: formats milliseconds to time string for chapter display. */
-    private fun formatTimeMs(value: Long): String {
-        if (value <= 0) return "00:00"
-        val totalSeconds = (value / 1000).toInt()
-        val hours = totalSeconds / 3600
-        val minutes = (totalSeconds % 3600) / 60
-        val seconds = totalSeconds % 60
-        return if (hours > 0) {
-            "${timeFormatter.format(hours)}:${timeFormatter.format(minutes)}:${timeFormatter.format(seconds)}"
-        } else {
-            "${timeFormatter.format(minutes)}:${timeFormatter.format(seconds)}"
-        }
-    }
-
 
     private suspend fun refineSpeakerLabels(
         transcriptId: String,
@@ -943,7 +932,7 @@ class TingwuRunner @Inject constructor(
         if (chapters.isNullOrEmpty()) return null
         return buildString {
             chapters.forEach { chapter ->
-                val start = formatTimeMs(chapter.startMs ?: 0)
+                val start = com.smartsales.data.aicore.tingwu.util.TingwuPayloadParser.formatTimeMs(chapter.startMs ?: 0)
                 appendLine("- [$start] ${chapter.headline}")
                 chapter.summary?.takeIf { it.isNotBlank() }?.let { appendLine("  - $it") }
             }
@@ -1167,97 +1156,3 @@ internal fun buildRecordingOriginSegmentsWithOffset(
     }
     return merged
 }
-
-internal fun parseAutoChaptersPayload(json: String): List<TingwuChapter> {
-    val root = runCatching { JsonParser.parseString(json) }.getOrNull() ?: return emptyList()
-    val array: JsonArray? = when {
-        root.isJsonArray -> root.asJsonArray
-        root.isJsonObject -> {
-            val obj = root.asJsonObject
-            obj.getAsJsonArray("AutoChapters")
-                ?: obj.getAsJsonArray("Chapters")
-                ?: obj.getAsJsonArray("chapters")
-                ?: obj.getAsJsonArray("Items")
-                ?: obj.getAsJsonArray("items")
-        }
-        else -> null
-    }
-    val target = array ?: return emptyList()
-    return target.mapNotNull { element ->
-        if (!element.isJsonObject) return@mapNotNull null
-        val obj = element.asJsonObject
-        val headline = obj.getPrimitiveString("Headline")
-        val title = obj.getPrimitiveString("Title")
-            ?: obj.getPrimitiveString("title")
-            ?: obj.getPrimitiveString("Name")
-            ?: obj.getPrimitiveString("name")
-        val summary = obj.getPrimitiveString("Summary")
-        val startRaw = obj.getPrimitiveNumber("Start")
-            ?: obj.getPrimitiveNumber("StartTime")
-            ?: obj.getPrimitiveNumber("StartMs")
-        val endRaw = obj.getPrimitiveNumber("End")
-            ?: obj.getPrimitiveNumber("EndTime")
-            ?: obj.getPrimitiveNumber("EndMs")
-        val startMs = startRaw?.let { toMillis(it) }
-        val endMs = endRaw?.let { toMillis(it) }
-        val displayTitle = headline ?: title
-        if (displayTitle.isNullOrBlank() || startMs == null) return@mapNotNull null
-        TingwuChapter(
-            title = displayTitle,
-            startMs = startMs,
-            endMs = endMs,
-            headline = headline,
-            summary = summary
-        )
-    }
-}
-
-private fun JsonObject.getPrimitiveString(key: String): String? =
-    this.get(key)?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }?.asString
-
-private fun JsonObject.getPrimitiveNumber(key: String): Number? =
-    this.get(key)?.takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isNumber }?.asNumber
-
-private fun JsonElement.asJsonObjectOrNull(): JsonObject? =
-    takeIf { it.isJsonObject }?.asJsonObject
-
-private fun JsonElement.asLongOrNull(): Long? {
-    return runCatching {
-        when {
-            isJsonPrimitive && this.asJsonPrimitive.isNumber -> this.asLong
-            isJsonPrimitive && this.asJsonPrimitive.isString -> this.asJsonPrimitive.asString.toLongOrNull()
-            else -> null
-        }
-    }.getOrNull()
-}
-
-private fun toMillis(number: Number): Long {
-    val value = number.toDouble()
-    return if (value > 100000) value.toLong() else (value * 1000).toLong()
-}
-
-internal fun parseSmartSummaryPayload(json: String): TingwuSmartSummary? {
-    val root = runCatching { JsonParser.parseString(json) }.getOrNull() ?: return null
-    if (!root.isJsonObject) return null
-    val obj = root.asJsonObject
-    val summary = obj.getPrimitiveString("Summary")
-        ?: obj.getPrimitiveString("Abstract")
-        ?: obj.getPrimitiveString("Summarization")
-    val keyPoints = obj.getAsJsonArray("KeyPoints")
-        ?: obj.getAsJsonArray("Highlights")
-        ?: obj.getAsJsonArray("Keypoints")
-    val actionItems = obj.getAsJsonArray("ActionItems")
-        ?: obj.getAsJsonArray("Todos")
-        ?: obj.getAsJsonArray("Tasks")
-    val keys = keyPoints?.mapNotNull { it.asStringOrNull() } ?: emptyList()
-    val actions = actionItems?.mapNotNull { it.asStringOrNull() } ?: emptyList()
-    if (summary.isNullOrBlank() && keys.isEmpty() && actions.isEmpty()) return null
-    return TingwuSmartSummary(
-        summary = summary,
-        keyPoints = keys,
-        actionItems = actions
-    )
-}
-
-private fun JsonElement.asStringOrNull(): String? =
-    takeIf { it.isJsonPrimitive && it.asJsonPrimitive.isString }?.asString

@@ -42,8 +42,8 @@ class TranscriptFormatter @Inject constructor() {
                 val label = segment.speakerId?.let { id ->
                     speakerLabels[id]?.takeIf { it.isNotBlank() } ?: id
                 }
-                val begin = formatTimeMs(segment.startMs)
-                val end = formatTimeMs(segment.endMs)
+                val begin = com.smartsales.data.aicore.tingwu.util.TingwuPayloadParser.formatTimeMs(segment.startMs)
+                val end = com.smartsales.data.aicore.tingwu.util.TingwuPayloadParser.formatTimeMs(segment.endMs)
                 val hasValidRange = segment.endMs > segment.startMs &&
                     segment.endMs - segment.startMs <= MAX_SUBTITLE_DURATION_MS
                 builder.append("- ")
@@ -186,18 +186,6 @@ class TranscriptFormatter @Inject constructor() {
         return "${timeFormatter.format(minutes)}:${timeFormatter.format(seconds)}"
     }
 
-    private fun formatTimeMs(value: Long): String {
-        if (value <= 0) return "00:00"
-        val totalSeconds = (value / 1000).toInt()
-        val hours = totalSeconds / 3600
-        val minutes = (totalSeconds % 3600) / 60
-        val seconds = totalSeconds % 60
-        return if (hours > 0) {
-            "${timeFormatter.format(hours)}:${timeFormatter.format(minutes)}:${timeFormatter.format(seconds)}"
-        } else {
-            "${timeFormatter.format(minutes)}:${timeFormatter.format(seconds)}"
-        }
-    }
 
     /** 判断两段是否可以安全合并为一行字幕。 */
     private fun shouldMergeAsSubtitle(previous: DiarizedSegment, next: DiarizedSegment): Boolean {

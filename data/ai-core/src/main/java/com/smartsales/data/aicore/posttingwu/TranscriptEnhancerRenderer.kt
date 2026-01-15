@@ -82,7 +82,7 @@ fun renderEnhancedMarkdown(lines: List<RenderedLine>): String {
     lines.forEach { line ->
         if (line.timestampMs != null) {
             builder.append("- [")
-                .append(formatTimeMs(line.timestampMs))
+                .append(com.smartsales.data.aicore.tingwu.util.TingwuPayloadParser.formatTimeMs(line.timestampMs))
                 .append("] ")
         } else {
             builder.append("  ")
@@ -135,17 +135,4 @@ private fun cleanupText(text: String): String {
     if (trimmed.isEmpty()) return trimmed
     val withoutFiller = trimmed.replace(fillerRegex, "").trim()
     return if (withoutFiller.isNotEmpty()) withoutFiller else trimmed
-}
-
-private fun formatTimeMs(value: Long): String {
-    if (value <= 0) return "00:00"
-    val totalSeconds = max(value / 1000, 0)
-    val hours = (totalSeconds / 3600).toInt()
-    val minutes = ((totalSeconds % 3600) / 60).toInt()
-    val seconds = (totalSeconds % 60).toInt()
-    return if (hours > 0) {
-        "${timeFormatter.format(hours)}:${timeFormatter.format(minutes)}:${timeFormatter.format(seconds)}"
-    } else {
-        "${timeFormatter.format(minutes)}:${timeFormatter.format(seconds)}"
-    }
 }

@@ -1372,7 +1372,7 @@ class TingwuRunnerTest {
               ]
             }
         """.trimIndent()
-        val chapters = parseAutoChaptersPayload(json)
+        val chapters = com.smartsales.data.aicore.tingwu.util.TingwuPayloadParser.parseAutoChapters(json)
         assertEquals(2, chapters.size)
         assertEquals("开场", chapters.first().title)
         assertEquals(0L, chapters.first().startMs)
@@ -1387,7 +1387,7 @@ class TingwuRunnerTest {
               "ActionItems": ["行动A"]
             }
         """.trimIndent()
-        val summary = parseSmartSummaryPayload(json)
+        val summary = com.smartsales.data.aicore.tingwu.util.TingwuPayloadParser.parseSmartSummary(json)
         assertEquals("会议概览", summary?.summary)
         assertEquals(listOf("要点1", "要点2"), summary?.keyPoints)
         assertEquals(listOf("行动A"), summary?.actionItems)

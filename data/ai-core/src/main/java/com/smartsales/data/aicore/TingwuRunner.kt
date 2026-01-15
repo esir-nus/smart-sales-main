@@ -36,7 +36,7 @@ import com.smartsales.data.aicore.disector.DisectorPlan
 import com.smartsales.data.aicore.disector.DisectorBatch
 import com.smartsales.data.aicore.tingwu.api.TingwuCustomPrompt
 import com.smartsales.data.aicore.tingwu.api.TingwuCustomPromptContent
-import com.smartsales.data.aicore.params.AiParaSettingsProvider
+
 import com.smartsales.data.aicore.debug.TingwuTraceStore
 import com.smartsales.data.aicore.metahub.TingwuPreprocessPatchBuilder
 import com.smartsales.data.aicore.tingwu.TingwuSuspiciousBoundaryDetector
@@ -45,11 +45,7 @@ import com.smartsales.data.aicore.tingwu.util.TingwuPayloadParser.asJsonObjectOr
 import com.smartsales.data.aicore.tingwu.util.TingwuPayloadParser.asLongOrNull
 
 import com.smartsales.data.aicore.tingwu.artifact.TingwuArtifactFetcher
-import com.smartsales.data.aicore.posttingwu.EnhancerInput
-import com.smartsales.data.aicore.posttingwu.EnhancerUtterance
-import com.smartsales.data.aicore.posttingwu.PostTingwuTranscriptEnhancer
-import com.smartsales.data.aicore.posttingwu.applyEnhancerOutput
-import com.smartsales.data.aicore.posttingwu.renderEnhancedMarkdown
+
 
 import java.net.URL
 import java.text.DecimalFormat
@@ -91,8 +87,7 @@ class TingwuRunner @Inject constructor(
     private val tingwuTraceStore: TingwuTraceStore,
 
     private val artifactFetcher: TingwuArtifactFetcher,
-    private val postTingwuTranscriptEnhancer: PostTingwuTranscriptEnhancer,
-    private val aiParaSettingsProvider: AiParaSettingsProvider,
+
     private val apiRepository: com.smartsales.data.aicore.tingwu.polling.TingwuApiRepository,
     private val transcriptProcessor: com.smartsales.data.aicore.tingwu.processor.TranscriptProcessor,
     private val pipelineTracer: com.smartsales.data.aicore.debug.PipelineTracer,
@@ -109,7 +104,7 @@ class TingwuRunner @Inject constructor(
 ) : TingwuCoordinator {
 
     private val config = optionalConfig.orElse(AiCoreConfig())
-    private val tingwuSettings get() = aiParaSettingsProvider.snapshot().tingwu
+
     private val scope = CoroutineScope(SupervisorJob() + dispatchers.default)
     private val jobStates = ConcurrentHashMap<String, MutableStateFlow<TingwuJobState>>()
     private val pollingJobs = ConcurrentHashMap<String, Job>()

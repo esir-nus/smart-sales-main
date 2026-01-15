@@ -169,8 +169,7 @@ class TingwuRunnerTest {
             metaHub = metaHub,
             tingwuTraceStore = traceStore,
             artifactFetcher = artifactFetcher,
-            postTingwuTranscriptEnhancer = enhancer,
-            aiParaSettingsProvider = settingsProvider,
+
             apiRepository = runnerRepo,
             transcriptProcessor = processor,
             pipelineTracer = tracer,

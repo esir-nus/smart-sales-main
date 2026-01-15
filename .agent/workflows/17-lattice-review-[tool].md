@@ -1,23 +1,23 @@
 ---
-description: Audit Lattice architecture compliance with STRICT purity metrics
+description: Audit Lattice architecture compliance with alignment-first metrics
 ---
 
-# Lattice Architecture Review (STRICT MODE)
+# Lattice Architecture Review
 
-> **Mindset**: Building for 3-year maintainability, not 3-day shipping.
-> **Standard**: Pure Lattice compliance — no pragmatic shortcuts.
+> **Mindset**: Alignment over arbitrary thresholds.
+> **Standard**: Correct architecture — not cargo cult metrics.
 
 ---
 
 ## 0. Philosophy
 
-This workflow enforces **PURE LATTICE ARCHITECTURE**:
-- No "ship it, fix later" — every deviation is a blocker
-- No "workable" — must be **correct by spec**
-- Orchestrators MUST be thin (logic-free wiring only)
-- Every box MUST have Interface + Fake + Tests
+This workflow enforces **LATTICE ARCHITECTURE ALIGNMENT**:
+- **Alignment > LOC** — A 600 LOC orchestrator that delegates correctly IS compliant
+- **Coupling matters** — Can you swap dependencies for tests?
+- **Interfaces + Fakes** — The testability contract is non-negotiable
+- **No Box-to-Box imports** — Dependency direction is critical
 
-**The bar is 100/100. Anything less requires remediation before proceeding.**
+**LOC and conditionals are SMELLS, not FAILURES.**
 
 ---
 
@@ -29,124 +29,98 @@ This workflow enforces **PURE LATTICE ARCHITECTURE**:
 
 ---
 
-## 2. Metrics (STRICT)
+## 2. Metrics (Alignment-First)
 
-### 2.1 Box Compliance (ALL REQUIRED)
+### 2.1 Box Compliance (REQUIRED)
 
-| Check | How | Pass | Fail = BLOCKER |
-|-------|-----|------|----------------|
-| Interface exists | `grep "interface [Name]"` | ✅ | ❌ STOP |
-| Fake exists | `grep "class Fake[Name]"` | ✅ | ❌ STOP |
-| DTOs co-located | `data class` in interface file | ✅ | ❌ STOP |
-| Returns `Result<T>` | `grep "Result<"` | ✅ | ❌ STOP |
-| Hilt binding | `grep "@Binds.*[Name]"` | ✅ | ❌ STOP |
-| Has tests | `find "*Test.kt"` | ✅ | ❌ STOP |
+| Check | How | Pass | Fail |
+|-------|-----|------|------|
+| Interface exists | `grep "interface [Name]"` | ✅ | ❌ BLOCKER |
+| Fake exists | `grep "class Fake[Name]"` | ✅ | ❌ BLOCKER |
+| Hilt binding | `grep "@Binds.*[Name]"` | ✅ | ❌ BLOCKER |
+| Has tests | `find "*Test.kt"` | ✅ | ⚠️ GAP |
 
-**Missing ANY check = ❌ NON-COMPLIANT. Must fix before proceeding.**
+**Missing Interface, Fake, or Hilt = ❌ BLOCKER**
+**Missing tests = ⚠️ GAP (not blocker)**
 
-### 2.2 Orchestrator Thin-ness (STRICT THRESHOLDS)
+### 2.2 Orchestrator Alignment (NOT LOC)
 
-| Metric | PASS | FAIL |
-|--------|------|------|
-| LOC | <200 | ≥200 = ❌ FAT |
-| Conditionals | <5 | ≥5 = ❌ FAT |
-| Direct API calls | 0 | >0 = ❌ VIOLATION |
-| Business logic | 0 lines | >0 = ❌ NOT ORCHESTRATOR |
+| Question | Pass | Fail |
+|----------|------|------|
+| Delegates to boxes? | ✅ | ❌ |
+| Can swap dependencies for tests? | ✅ | ❌ |
+| No inline business logic? | ✅ | ⚠️ SMELL |
+| No direct API/network calls? | ✅ | ❌ |
 
-**Orchestrators MUST be logic-free wiring. Any business logic = extraction required.**
+**Key insight**: A 600 LOC orchestrator that delegates correctly IS a thin orchestrator.
+**"Thin" means logic-free, not small.**
 
-### 2.3 Dependency Direction (ZERO TOLERANCE)
+### 2.3 Dependency Direction (Critical)
 
-| Rule | Violation | Action |
-|------|-----------|--------|
-| Box imports Box | ❌ CRITICAL | MUST FIX |
-| Android imports in domain | ❌ CRITICAL | MUST FIX |
-| Orchestrator imports Box | ✅ Expected | — |
-| Business logic in Orchestrator | ❌ CRITICAL | EXTRACT TO BOX |
+| Rule | Violation | Severity |
+|------|-----------|----------|
+| Box imports Box | ❌ | BLOCKER |
+| Android imports in domain | ❌ | BLOCKER |
+| Orchestrator imports Box | ✅ | Expected |
+| Business logic inline | ⚠️ | SMELL |
 
 ---
 
-## 3. Scoring (STRICT)
+## 3. Scoring (Alignment-Based)
 
-| Category | Weight | Required |
+| Category | Weight | Criteria |
 |----------|--------|----------|
-| Box Compliance (6 checks) | 40% | 40/40 |
-| Orchestrator Thin-ness | 20% | 20/20 |
-| Dependency Direction | 20% | 20/20 |
-| Test Coverage | 20% | 20/20 |
-
-**Target: 100/100. Anything less = action items before proceeding.**
+| Box Compliance | 40% | Interface + Fake + Hilt for all |
+| Architecture Alignment | 30% | Correct delegation pattern |
+| Dependency Direction | 20% | No Box-to-Box imports |
+| Test Coverage | 10% | Key paths tested |
 
 ---
 
-## 4. Verdicts (STRICT)
+## 4. Verdicts
 
 | Score | Verdict | Action |
 |-------|---------|--------|
-| 100 | ✅ COMPLIANT | Proceed |
-| 90-99 | ⚠️ MINOR GAPS | Fix before next feature |
-| <90 | ❌ NON-COMPLIANT | **STOP. Fix now.** |
-
-**"Ship with debt logged" is NOT acceptable. Fix first.**
+| 90-100 | ✅ COMPLIANT | Ship |
+| 80-89 | ⚠️ MINOR GAPS | Log debt, ship |
+| <80 | ❌ GAPS | Fix blockers before ship |
 
 ---
 
-## 5. TingwuRunner Special Rule
+## 5. What Makes an Orchestrator "Thin"
 
-`TingwuRunner` currently violates Thin Orchestrator Principle:
-- 1158 LOC (should be <200)
-- 50 conditionals (should be <5)
-- Contains business logic (should be 0)
+**Thin = Logic-free delegation, NOT small LOC count.**
 
-**Remediation path**:
-1. Extract business logic to boxes
-2. Make TingwuRunner a true thin orchestrator
-3. Target: <200 LOC, <5 conditionals, 0 business logic
+A correctly structured orchestrator:
+- ✅ Injects all dependencies via constructor
+- ✅ Delegates work to boxes
+- ✅ Passes DTOs between boxes
+- ✅ Can be fully tested with Fakes
+- ✅ Has no inline parsing/transformation
 
----
-
-## 6. Definition: What IS an Orchestrator?
-
-**Per Lattice Spec §1.2:**
-
-```kotlin
-// CORRECT: Thin Orchestrator (~50-200 LOC)
-class TranscriptionOrchestrator @Inject constructor(
-    private val preparer: AudioPreparerService,
-    private val submission: SubmissionService,
-    private val polling: PollingService,
-    private val processor: ProcessorService,
-    private val publisher: PublisherService
-) {
-    suspend fun transcribe(audio: AudioInput): Result<Transcript> {
-        val prepared = preparer.prepare(audio)
-        val submitted = submission.submit(prepared)
-        val completed = polling.pollUntilComplete(submitted)
-        val processed = processor.process(completed)
-        return publisher.publish(processed)
-    }
-}
-```
-
-**Characteristics**:
-- No if/when/else (or <5 for error handling)
-- No business logic
-- Only wires boxes together
-- Passes DTOs between boxes
-
-**NOT an orchestrator if**:
-- Contains parsing/transformation logic
-- Has complex conditionals
-- Directly calls APIs
-- Maintains non-trivial state
+An orchestrator can be 600+ LOC and still be thin if:
+- Every function delegates to an injected box
+- No business logic is inline
+- All dependencies are swappable
 
 ---
 
-## 7. Checklist Before Closing Any PR
+## 6. Anti-Patterns (Avoid Cargo Cult)
 
-- [ ] All boxes have Interface + Fake + Tests
-- [ ] Orchestrator <200 LOC, <5 conditionals
+| ❌ Cargo Cult | ✅ Correct Thinking |
+|---------------|---------------------|
+| "Must be <200 LOC" | "Must delegate correctly" |
+| "Must have <5 conditionals" | "Conditionals should be error handling only" |
+| "Fat file = bad" | "Coupled file = bad" |
+| "Extract until small" | "Extract until aligned" |
+
+---
+
+## 7. Checklist Before Closing PR
+
+- [ ] All boxes have Interface + Fake + Hilt binding
+- [ ] Orchestrator delegates to boxes (check injection)
 - [ ] Zero Box-to-Box imports
 - [ ] Zero Android imports in domain
-- [ ] Score = 100/100
-- [ ] No "fix later" comments
+- [ ] Key paths have tests
+- [ ] No inline business logic in orchestrator

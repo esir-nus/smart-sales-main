@@ -2,7 +2,7 @@
 
 > **Purpose**: Living tracker for Smart Sales architecture and feature status  
 > **AI Agents**: Use the Quick Index below to navigate — don't read irrelevant sections  
-> **Last Updated**: 2026-01-14
+> **Last Updated**: 2026-01-15
 
 ---
 
@@ -457,9 +457,7 @@ HomeViewModel delegates to coordinators:
 | **Pipeline** | TranscriptionService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
 | **Pipeline** | MetadataExtractorService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
 | **Pipeline** | PublisherService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
-| **Memory** | SessionMemoryService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
-| **Memory** | LongTermMemoryService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
-| **Memory** | KnowledgeBaseService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
+| **Memory** | MetaHub | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Chat** | ChatController | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Chat** | AiChatService | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Chat** | HomeOrchestrator | ✅ | ✅ | ✅ | ✅ | ✅ |

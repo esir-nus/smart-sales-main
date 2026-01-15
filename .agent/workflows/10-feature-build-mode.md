@@ -61,7 +61,7 @@ Only exit when user explicitly requests:
 | ❌ Don't | ✅ Do |
 |----------|------|
 | "Let me add abstraction layer for future" | "Ship now, abstract if needed later" |
-| "This needs 5 interfaces" | "One interface if any, start concrete" |
+| "This needs 5 interfaces for one box" | "One interface per box — Lattice rule" |
 | "Let me handle 12 edge cases" | "Happy path first, edge cases in follow-up" |
 
 ### 2. Follow Spec

@@ -116,16 +116,66 @@ Code = Reality (what IS)
 1. Define objective → what feature, which spec section?
 2. Audit codebase → find related modules, patterns to follow
 3. Plan → implementation plan artifact, verify assumptions
-4. Build → data layer first, then domain, then UI
-5. Wire → connect layers, test data flows
-6. Test → build + tests pass
-7. Ship → commit, push, update tracker.md
+4. Build → Interface first, then Impl, then Fake
+5. Wire → connect layers via Hilt, test data flows
+6. Test → build + tests pass (using Fakes)
+7. Lattice Check → /17-lattice-review
+8. Ship → commit, push, update tracker.md
 ```
 
 **Helper workflows:**
-- `/3-plan-review` — Verify assumptions before execute
-- `/1-senior-review` — Sanity check decisions
-- `/6-audit` — Evidence-based code analysis
+- `/01-senior-review` — Sanity check decisions
+- `/06-audit` — Evidence-based code analysis
+- `/17-lattice-review` — Verify Lattice compliance before ship
+
+---
+
+## Lattice Architecture Checkpoint
+
+> **Every new box MUST have: Interface + Impl + Fake + Hilt binding**
+
+### Box Creation Order
+
+```
+1. Interface → Define contract (what it does)
+2. Fake → Test double (for consumer tests)
+3. Impl → Real implementation
+4. Hilt → @Binds or @Provides
+5. Tests → Test with Fakes
+```
+
+### Pre-Ship Lattice Checklist
+
+Before marking feature complete, verify:
+
+```bash
+# Interface exists
+grep -rn "interface [BoxName]" feature/
+
+# Fake exists
+grep -rn "class Fake[BoxName]" feature/
+
+# Hilt binding exists
+grep -rn "@Binds.*[BoxName]\|@Provides.*[BoxName]" app/
+
+# Zero Android imports in domain
+grep -rn "import android\." feature/chat/src/main/java/com/smartsales/domain/
+```
+
+| Check | Pass | Fail |
+|-------|------|------|
+| Interface exists | ✅ | ❌ BLOCKER |
+| Fake exists | ✅ | ❌ BLOCKER |
+| Hilt binding | ✅ | ❌ BLOCKER |
+| Zero Android in domain | ✅ | ❌ BLOCKER |
+| Tests use Fakes | ✅ | ⚠️ Log debt |
+
+### When to Skip Lattice
+
+Only skip if:
+- Pure utility function (no state, no I/O)
+- UI-only change (Composables, ViewModels)
+- Quick bugfix (not touching architecture)
 
 ---
 
@@ -134,7 +184,8 @@ Code = Reality (what IS)
 Leave this mode when:
 - [ ] Feature works end-to-end
 - [ ] Build passes
-- [ ] Tests added for happy path
+- [ ] Tests added for happy path (using Fakes)
+- [ ] **Lattice compliant** (ran `/17-lattice-review`)
 - [ ] Docs updated (tracker.md)
 - [ ] **Metrics summary produced**
 
@@ -151,7 +202,9 @@ Leave this mode when:
 |--------|-------|
 | Files added | X |
 | Lines added | +XX |
+| Boxes added | X (Interface+Fake+Impl) |
 | Tests added | X |
+| Lattice Score | XX/100 |
 | Docs updated | X files |
 
 ### Files Created/Modified
@@ -177,4 +230,7 @@ Leave this mode when:
 | "I'll handle all edge cases now" | "Happy path first, edge cases follow" |
 | "The spec says X but I think Y is better" | "Flag concern, get approval, then diverge" |
 | "I remember how this works" | "grep to verify, then implement" |
-| "Let me build the whole module at once" | "One layer at a time: data → domain → UI" |
+| "Let me build the whole module at once" | "One layer at a time: Interface → Fake → Impl → Hilt" |
+| "I'll add tests later" | "Fake first, then test, then ship" |
+| "Box doesn't need interface" | "Every box with I/O or state needs Interface+Fake" |
+| "Skip Lattice check, it's a small change" | "Run /17-lattice-review before every ship" |

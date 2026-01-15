@@ -1,10 +1,23 @@
 ---
-description: Audit Lattice architecture compliance with evidence-based metrics
+description: Audit Lattice architecture compliance with STRICT purity metrics
 ---
 
-# Lattice Architecture Review
+# Lattice Architecture Review (STRICT MODE)
 
-Generic compliance audit for any Lattice layer, module, or box. User provides target path.
+> **Mindset**: Building for 3-year maintainability, not 3-day shipping.
+> **Standard**: Pure Lattice compliance — no pragmatic shortcuts.
+
+---
+
+## 0. Philosophy
+
+This workflow enforces **PURE LATTICE ARCHITECTURE**:
+- No "ship it, fix later" — every deviation is a blocker
+- No "workable" — must be **correct by spec**
+- Orchestrators MUST be thin (logic-free wiring only)
+- Every box MUST have Interface + Fake + Tests
+
+**The bar is 100/100. Anything less requires remediation before proceeding.**
 
 ---
 
@@ -14,130 +27,126 @@ Generic compliance audit for any Lattice layer, module, or box. User provides ta
 /17-lattice-review [target_path]
 ```
 
-**Examples**:
-```bash
-/17-lattice-review data/ai-core/src/main/.../tingwu
-/17-lattice-review feature/chat/src/main/.../coordinator
-/17-lattice-review core/domain/src/main/...
+---
+
+## 2. Metrics (STRICT)
+
+### 2.1 Box Compliance (ALL REQUIRED)
+
+| Check | How | Pass | Fail = BLOCKER |
+|-------|-----|------|----------------|
+| Interface exists | `grep "interface [Name]"` | ✅ | ❌ STOP |
+| Fake exists | `grep "class Fake[Name]"` | ✅ | ❌ STOP |
+| DTOs co-located | `data class` in interface file | ✅ | ❌ STOP |
+| Returns `Result<T>` | `grep "Result<"` | ✅ | ❌ STOP |
+| Hilt binding | `grep "@Binds.*[Name]"` | ✅ | ❌ STOP |
+| Has tests | `find "*Test.kt"` | ✅ | ❌ STOP |
+
+**Missing ANY check = ❌ NON-COMPLIANT. Must fix before proceeding.**
+
+### 2.2 Orchestrator Thin-ness (STRICT THRESHOLDS)
+
+| Metric | PASS | FAIL |
+|--------|------|------|
+| LOC | <200 | ≥200 = ❌ FAT |
+| Conditionals | <5 | ≥5 = ❌ FAT |
+| Direct API calls | 0 | >0 = ❌ VIOLATION |
+| Business logic | 0 lines | >0 = ❌ NOT ORCHESTRATOR |
+
+**Orchestrators MUST be logic-free wiring. Any business logic = extraction required.**
+
+### 2.3 Dependency Direction (ZERO TOLERANCE)
+
+| Rule | Violation | Action |
+|------|-----------|--------|
+| Box imports Box | ❌ CRITICAL | MUST FIX |
+| Android imports in domain | ❌ CRITICAL | MUST FIX |
+| Orchestrator imports Box | ✅ Expected | — |
+| Business logic in Orchestrator | ❌ CRITICAL | EXTRACT TO BOX |
+
+---
+
+## 3. Scoring (STRICT)
+
+| Category | Weight | Required |
+|----------|--------|----------|
+| Box Compliance (6 checks) | 40% | 40/40 |
+| Orchestrator Thin-ness | 20% | 20/20 |
+| Dependency Direction | 20% | 20/20 |
+| Test Coverage | 20% | 20/20 |
+
+**Target: 100/100. Anything less = action items before proceeding.**
+
+---
+
+## 4. Verdicts (STRICT)
+
+| Score | Verdict | Action |
+|-------|---------|--------|
+| 100 | ✅ COMPLIANT | Proceed |
+| 90-99 | ⚠️ MINOR GAPS | Fix before next feature |
+| <90 | ❌ NON-COMPLIANT | **STOP. Fix now.** |
+
+**"Ship with debt logged" is NOT acceptable. Fix first.**
+
+---
+
+## 5. TingwuRunner Special Rule
+
+`TingwuRunner` currently violates Thin Orchestrator Principle:
+- 1158 LOC (should be <200)
+- 50 conditionals (should be <5)
+- Contains business logic (should be 0)
+
+**Remediation path**:
+1. Extract business logic to boxes
+2. Make TingwuRunner a true thin orchestrator
+3. Target: <200 LOC, <5 conditionals, 0 business logic
+
+---
+
+## 6. Definition: What IS an Orchestrator?
+
+**Per Lattice Spec §1.2:**
+
+```kotlin
+// CORRECT: Thin Orchestrator (~50-200 LOC)
+class TranscriptionOrchestrator @Inject constructor(
+    private val preparer: AudioPreparerService,
+    private val submission: SubmissionService,
+    private val polling: PollingService,
+    private val processor: ProcessorService,
+    private val publisher: PublisherService
+) {
+    suspend fun transcribe(audio: AudioInput): Result<Transcript> {
+        val prepared = preparer.prepare(audio)
+        val submitted = submission.submit(prepared)
+        val completed = polling.pollUntilComplete(submitted)
+        val processed = processor.process(completed)
+        return publisher.publish(processed)
+    }
+}
 ```
 
-The agent will:
-1. Discover scope (Layer, Module, or Box) from path
-2. Apply appropriate metrics
-3. Generate compliance report
+**Characteristics**:
+- No if/when/else (or <5 for error handling)
+- No business logic
+- Only wires boxes together
+- Passes DTOs between boxes
+
+**NOT an orchestrator if**:
+- Contains parsing/transformation logic
+- Has complex conditionals
+- Directly calls APIs
+- Maintains non-trivial state
 
 ---
 
-## 2. Scope Detection
+## 7. Checklist Before Closing Any PR
 
-| Path Pattern | Scope | Audit Type |
-|--------------|-------|------------|
-| `feature/*/`, `data/*/` | Layer | Aggregate all modules |
-| `.../tingwu/`, `.../chat/` | Module | Audit all boxes |
-| Single file or interface | Box | Single component check |
-
----
-
-## 3. Metrics
-
-### 3.1 Box Compliance (Per Component)
-
-| Check | How | Pass |
-|-------|-----|------|
-| Interface exists | `grep "interface [Name]"` | ✅ |
-| Fake exists | `grep "class Fake[Name]"` | ✅ |
-| DTOs co-located | `data class` in interface file | ✅ |
-| Returns `Result<T>` | `grep "Result<"` | ✅ |
-| Hilt binding | `grep "@Binds.*[Name]"` | ✅ |
-| Has tests | `find "*Test.kt"` | ✅ |
-
-### 3.2 Orchestrator Thin-ness
-
-| Metric | Command | Threshold |
-|--------|---------|-----------|
-| Conditionals | `grep -c "if \|when "` | <5 THIN, 5-15 MEDIUM, >15 FAT |
-| Direct API calls | `grep -c "\.api\."` | 0 expected |
-| LOC | `wc -l` | <200 THIN, <300 MEDIUM, >300 FAT |
-
-### 3.3 Dependency Direction
-
-| Rule | Violation |
-|------|-----------|
-| Box imports Box | ❌ CRITICAL |
-| Android imports in domain | ❌ Layer leak |
-| Orchestrator imports Box | ✅ Expected |
-
----
-
-## 4. Scoring
-
-| Category | Weight |
-|----------|--------|
-| Box Compliance (6 checks) | 40% |
-| Orchestrator Thin-ness | 20% |
-| Dependency Direction | 20% |
-| Test Coverage | 20% |
-
-**Aggregate**: For multi-module scope, average module scores.
-
----
-
-## 5. Output Format
-
-```markdown
-# Lattice Compliance Report
-
-**Target**: [path provided]  
-**Scope**: Layer / Module / Box  
-**Score**: X/100  
-**Verdict**: ✅ COMPLIANT / ⚠️ NEEDS WORK / ❌ NON-COMPLIANT
-
----
-
-## Inventory
-
-| Component | Interface | Fake | DTOs | Result | Hilt | Tests |
-|-----------|-----------|------|------|--------|------|-------|
-| [Name] | ✅/❌ | ✅/❌ | ✅/❌ | ✅/❌ | ✅/❌ | N |
-
-## Orchestrator Audit
-
-| Name | LOC | Conditionals | API Calls | Verdict |
-|------|-----|--------------|-----------|---------|
-| [Name] | N | N | N | ✅/⚠️/❌ |
-
-## Violations
-
-| Severity | Issue | Location |
-|----------|-------|----------|
-| 🔴 | [desc] | [file:line] |
-| 🟡 | [desc] | [file:line] |
-
-## Scoring Breakdown
-
-| Category | Score |
-|----------|-------|
-| Box Compliance | X/40 |
-| Orchestrator | X/20 |
-| Dependencies | X/20 |
-| Tests | X/20 |
-| **TOTAL** | **X/100** |
-
-## Action Items
-
-### 🔴 Must Fix
-1. [item]
-
-### 🟡 Should Fix
-1. [item]
-```
-
----
-
-## 6. Verdicts
-
-| Score | Verdict | Ship? |
-|-------|---------|-------|
-| 90-100 | ✅ COMPLIANT | Yes |
-| 75-89 | ⚠️ NEEDS WORK | With debt logged |
-| <75 | ❌ NON-COMPLIANT | No |
+- [ ] All boxes have Interface + Fake + Tests
+- [ ] Orchestrator <200 LOC, <5 conditionals
+- [ ] Zero Box-to-Box imports
+- [ ] Zero Android imports in domain
+- [ ] Score = 100/100
+- [ ] No "fix later" comments

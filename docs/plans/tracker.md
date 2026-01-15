@@ -18,13 +18,12 @@
 | **Milestones** | [§10 Roadmap](#10-product-milestone-roadmap) | 2026-01-10 |
 
 > [!IMPORTANT]
-> **Architecture Realization Principle**:  
-> This doc is *aspirational*, not *prescriptive*.  
-> - **Reality may differ** from the target tree — that's expected  
-> - **Differences are work items**, not failures  
-> - **The doc shows the corrective path**: what to rewrite, move, or create  
-> - **Use the right tool**: rewrite > extract > surgical fix  
-> - **Always verify** with `grep`/`find` before assuming state matches doc
+> **Lattice Purity Standard (3-Year Build Mindset)**:  
+> - **We are NOT shipping in 3 days** — we are building for 3-year maintainability
+> - **100/100 compliance required** — anything less is a blocker, not debt
+> - **No pragmatic shortcuts** — "ship it, fix later" is NOT acceptable
+> - **Pure Lattice** — Thin Orchestrators, Box isolation, zero violations
+> - **Always verify** with `/17-lattice-review` before closing any work
 
 ---
 

@@ -114,9 +114,33 @@ An orchestrator can be 600+ LOC and still be thin if:
 | "Fat file = bad" | "Coupled file = bad" |
 | "Extract until small" | "Extract until aligned" |
 
+## 7. Naming Hygiene
+
+**Consistent naming makes architecture self-documenting.**
+
+### Required Patterns
+
+| Component | Pattern | Good | Bad |
+|-----------|---------|------|-----|
+| Interface | `[Concern]` | `ResultProcessor` | `IResultProcessor`, `ResultProcessorInterface` |
+| Fake | `Fake[Concern]` | `FakeResultProcessor` | `MockResultProcessor`, `StubProcessor` |
+| Real Impl | `Real[Concern]` | `RealResultProcessor` | `ResultProcessorImpl` |
+| Orchestrator | `[Domain]Runner` or `[Domain]Coordinator` | `TingwuRunner` | `TingwuManager`, `TingwuHelper` |
+| Service Box | `[Verb][Noun]Service` or `[Noun]Processor` | `SubmissionService` | `Submitter`, `SubmitHelper` |
+| Integration Box | `[Concern]Integration` | `EnhancerIntegration` | `EnhancerWrapper` |
+
+### Naming Audit Checklist
+
+- [ ] No `*Manager` classes (use `*Coordinator` or `*Runner`)
+- [ ] No `*Helper` classes (use `*Service` or `*Processor`)
+- [ ] No `*Util` classes in domain (use `*Service`)
+- [ ] Fakes prefixed with `Fake`, not `Mock` or `Stub`
+- [ ] Real implementations prefixed with `Real`
+- [ ] Interfaces have no prefix (no `I*`)
+
 ---
 
-## 7. Checklist Before Closing PR
+## 8. Checklist Before Closing PR
 
 - [ ] All boxes have Interface + Fake + Hilt binding
 - [ ] Orchestrator delegates to boxes (check injection)

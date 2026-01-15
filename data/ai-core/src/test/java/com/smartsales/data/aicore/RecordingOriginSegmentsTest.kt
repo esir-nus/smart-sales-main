@@ -5,6 +5,7 @@ package com.smartsales.data.aicore
 import com.smartsales.data.aicore.tingwu.api.TingwuTranscriptSegment
 import com.smartsales.data.aicore.tingwu.api.TingwuTranscription
 import com.smartsales.data.aicore.tingwu.api.TingwuSpeaker
+import com.smartsales.data.aicore.tingwu.util.buildRecordingOriginSegmentsWithOffset
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

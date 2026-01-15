@@ -163,6 +163,33 @@ Before delivering, verify:
 
 ---
 
+## 🛡️ Regression Prevention (Web Prototypes)
+
+When modifying web prototypes iteratively, prevent these common regressions:
+
+### Before Injecting Content
+| Check | How |
+|-------|-----|
+| **No Double Icons** | Search for existing icon markup BEFORE adding new ones. Use regex to REMOVE all first, then add back cleanly. |
+| **No Double CSS Rules** | Check if the rule block already exists before injecting. Use unique comment markers. |
+| **CSS Class Targeting** | Verify the ACTUAL class names in HTML match your CSS selectors. Inspect DOM, don't assume. |
+
+### Idempotent Script Pattern
+```python
+# ALWAYS remove existing content before adding new
+content = re.sub(r'<span class="icon[^"]*">[^<]+</span>\s*', '', content)  # Clean slate
+content = content.replace('Icon Text', '<span class="icon">Icon Text</span>')  # Then add
+```
+
+### Common Regressions to Avoid
+| Regression | Cause | Prevention |
+|------------|-------|------------|
+| **Double stars** (★★) | Script adds star without removing existing | Remove ALL stars first, then add ONE per card |
+| **Text wrapping** | CSS targets wrong class (`.v17-summary` vs `.v17-card-summary`) | Inspect actual DOM, use wildcard selectors like `div[class*="summary"]` |
+| **Animation direction wrong** | Keyframe direction not matching gesture | Document expected direction in brief, verify visually |
+
+---
+
 ## Cross-References
 
 | Need | Use |

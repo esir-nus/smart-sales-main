@@ -435,11 +435,16 @@ HomeViewModel delegates to coordinators:
 | Phase | Scope | Status |
 |-------|-------|--------|
 | P0 | Documentation foundation | ✅ Complete (2026-01-14) |
-| P1 | Pipeline Layer extraction | 🔲 Not started |
-| P2 | Memory Layer extraction | 🔲 Not started |
-| P3 | Chatter Layer formalization | 🔲 Not started |
-| P4 | Connectivity Layer formalization | 🔲 Not started |
-| P5 | God object decommission | 🔲 Not started |
+| P1 | Pipeline Layer extraction | ✅ Core boxes complete (2026-01-15) |
+| P2 | Memory Layer extraction | ✅ Complete (2026-01-15) |
+| P3 | Chatter Layer formalization | ✅ Complete (2026-01-15) |
+| P4 | Connectivity Layer formalization | ⚠️ Fakes complete, Hilt debt |
+| P5 | God object decommission | 🔲 Deferred (TingwuRunner is 635 LOC, delegates correctly) |
+
+> **Logged Debt (2026-01-15)**:
+> - **Connectivity**: 5/6 interfaces missing `@Binds` (Fakes work via constructor injection)
+> - **Pipeline**: 4 placeholder services for future extraction (`AudioPreparerService`, `TranscriptionService`, `MetadataExtractorService`, `PublisherService`)
+> - **P5**: `TingwuRunner` purified to 635 LOC, delegates to 7+ boxes — decommission deferred
 
 ### Per-Module Checklist
 

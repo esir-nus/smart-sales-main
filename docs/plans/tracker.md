@@ -452,6 +452,7 @@ HomeViewModel delegates to coordinators:
 | **Pipeline** | TranscriptProcessor | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Pipeline** | Publisher | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Pipeline** | Slicer | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Pipeline** | PostTingwuTranscriptEnhancer | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Pipeline** | AudioPreparerService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
 | **Pipeline** | TranscriptionService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
 | **Pipeline** | MetadataExtractorService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |

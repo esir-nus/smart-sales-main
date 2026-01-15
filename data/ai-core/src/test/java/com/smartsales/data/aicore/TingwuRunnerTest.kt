@@ -201,6 +201,10 @@ class TingwuRunnerTest {
                 transcriptOrchestrator = transcriptOrchestrator,
                 gson = Gson()
             ),
+            enhancerIntegration = com.smartsales.data.aicore.tingwu.enhancer.RealEnhancerIntegration(
+                tingwuSettings = settingsProvider,
+                postTingwuTranscriptEnhancer = enhancer
+            ),
             optionalConfig = optionalConfig
         ).also { createdCoordinators += it }
     }

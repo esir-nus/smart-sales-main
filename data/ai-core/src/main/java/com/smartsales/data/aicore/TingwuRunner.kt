@@ -103,6 +103,7 @@ class TingwuRunner @Inject constructor(
     private val submissionService: com.smartsales.data.aicore.tingwu.submission.TingwuSubmissionService,
     private val metaHubWriter: com.smartsales.data.aicore.tingwu.metadata.MetaHubWriter,
     private val resultProcessor: com.smartsales.data.aicore.tingwu.result.ResultProcessor,
+    private val enhancerIntegration: com.smartsales.data.aicore.tingwu.enhancer.EnhancerIntegration,
 
     optionalConfig: Optional<AiCoreConfig>
 ) : TingwuCoordinator {
@@ -508,7 +509,7 @@ class TingwuRunner @Inject constructor(
             resultLinks = resultLinks,
             fallbackArtifacts = fallbackArtifacts,
             runEnhancer = { trans, diarized, speakers, fallback ->
-                runEnhancerIfEnabled(jobId, trans, diarized, speakers, fallback)
+                enhancerIntegration.enhanceIfEnabled(jobId, trans, diarized, speakers, fallback)
             },
             composeFinalMarkdown = { markdown, artifacts, links ->
                 composeFinalMarkdown(markdown, artifacts, links)
@@ -593,71 +594,6 @@ class TingwuRunner @Inject constructor(
         val result = builder.toString().trim()
         return result.ifBlank { null }
     }
-
-    private suspend fun runEnhancerIfEnabled(
-        jobId: String,
-        transcription: TingwuTranscription?,
-        diarizedSegments: List<DiarizedSegment>,
-        speakerLabels: Map<String, String>,
-        fallback: String
-    ): String {
-        val settings = tingwuSettings.postTingwuEnhancer
-        if (!settings.enabled) return fallback
-        // 注意：增强仅基于转写 JSON（含时间戳/说话人），不使用 CustomPrompt 输出
-        val utterances = buildEnhancerUtterances(diarizedSegments, transcription)
-        if (utterances.isEmpty()) return fallback
-        val output = runCatching {
-            postTingwuTranscriptEnhancer.enhance(
-                EnhancerInput(
-                    jobId = jobId,
-                    language = transcription?.language,
-                    utterances = utterances
-                )
-            )
-        }.onFailure {
-            AiCoreLogger.w(TAG, "转写增强调用失败：${it.message}")
-        }.getOrNull() ?: return fallback
-        val lines = applyEnhancerOutput(
-            utterances = utterances,
-            output = output,
-            baseSpeakerLabels = speakerLabels
-        )
-        if (lines.isEmpty()) return fallback
-        return renderEnhancedMarkdown(lines)
-    }
-
-    private fun buildEnhancerUtterances(
-        diarizedSegments: List<DiarizedSegment>,
-        transcription: TingwuTranscription?
-    ): List<EnhancerUtterance> {
-        if (diarizedSegments.isNotEmpty()) {
-            return diarizedSegments.sortedBy { it.startMs }.mapIndexed { index, segment ->
-                EnhancerUtterance(
-                    index = index,
-                    startMs = segment.startMs,
-                    endMs = segment.endMs,
-                    speakerId = segment.speakerId,
-                    text = segment.text
-                )
-            }
-        }
-        val segments = transcription?.segments.orEmpty()
-        if (segments.isNotEmpty()) {
-            return segments
-                .sortedBy { it.start ?: 0.0 }
-                .mapIndexed { index, segment ->
-                    EnhancerUtterance(
-                        index = index,
-                        startMs = segment.start?.times(1000)?.toLong(),
-                        endMs = segment.end?.times(1000)?.toLong(),
-                        speakerId = segment.speaker,
-                        text = segment.text?.trim().orEmpty()
-                    )
-                }
-        }
-        return emptyList()
-    }
-
 
 
     /**

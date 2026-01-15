@@ -6,13 +6,13 @@
 >
 > This document defines the **visual language** for SmartSales mobile.
 >
-> **Ownership Logic:**
-> 1. This file starts as a **legacy reference**.
-> 2. The **UI Designer Persona (@[/12-ui-designer])** has explicit authority to **EDIT** this file to document optimal design practices discovered during development.
-> 3. If the code (`Android Compose`) implements a better visual pattern than this doc, **update this doc** to match the code.
-> 4. If this doc contradicts `docs/specs/ux-contract.md` (behavior), **`ux-contract.md` wins**, but you should propose a visual update here that respects the contract.
+> **Ownership & Hierarchy Logic:**
+> 1. **Golden Master**: The **"Valid Design" App Prototype Screenshots** are the ultimate source of visual truth. If this text contradicts the *vibe* of the screenshots (blur softness, shadow tint, gradient blend), **the screenshots win**.
+> 2. **UI Designer Authority**: The **UI Director (@[/12-ui-director])** owns this file.
+> 3. **Code Matches Design**: If code implements a pattern that looks *better* than the doc/screenshots (and is approved), update this doc.
+> 4. **Behavior vs. Visuals**: `ux-contract.md` owns *behavior*. This doc owns *pixels*.
 >
-> **Goal**: Evolve this from a static legacy artifact into a dynamic source of truth for our visual system.
+> **Goal**: A living, authoritative definition of the "SmartSales" premium aesthetic.
 >
 > Documentation language: all documentation prose must be English. Chinese is allowed only inside fenced code blocks as code comments, and should be Simplified Chinese.
 
@@ -69,9 +69,9 @@ All color, spacing, typography, and component values are defined in:
 
 6. **Consistent patterns across pages**
 
-7. **Zero-Chrome & Glass Slabs**
-   - **Zero-Chrome**: The web prototype must hide all browser artifacts (scrollbars, focus rings). Content should feel like a native app.
-   - **Glass Slabs**: Light mode UI must use "Frosted Ice" (High blur + White Border) to separate layers, avoiding the "flat gray" web look.
+7. **MANDATE: Zero-Chrome & Glass Slabs**
+   - **Zero-Chrome**: ABSOLUTELY NO browser artifacts. No scrollbars, no focus rings, no selection highlights. The web prototype is an *emulator* of a native app.
+   - **Glass Slabs**: Light mode UI must use "Frosted Ice" (High blur + White Border) to separate layers. Never use flat gray.
 
 ---
 
@@ -79,6 +79,8 @@ All color, spacing, typography, and component values are defined in:
 
 ### 2.1 Concept: "Living Intelligence"
 The palette uses clean, neutral surfaces to let the **AI Intelligence** (Chroma Wave) shine.
+
+> **Performance Note**: The Aurora gradients are complex. On low-end devices, implementing the `AuroraBrush` directly may cause overdraw. **Caching the background as a bitmap** is a valid optimization if frame rates drop below 60fps.
 
 ### 2.2 Palette Tokens
 
@@ -120,6 +122,7 @@ object AppColors {
 
 * Layout: Centered.
 * **Greeting**: "你好, [SmartSales 用户]" (Gradient Text).
+  * **Weight**: **ExtraBold** or **Black**. The gradient is only visible on thick strokes.
 * **Subtitle**: "我是您的销售助手" (Body, Secondary).
 * **No "Let's Start"**.
 * **Hero Actions (Pills)**:
@@ -133,14 +136,15 @@ object AppColors {
 
 * **Container**:
   * Shape: **Stadium / Capsule** (Fully rounded sides).
-  * Elevation: High (Floating above content).
+  * **Shadow**: **Custom Blue-Tinted Shadow** (NOT standard gray elevation). Use a soft, diffuse shadow (`spotColor = Color(0xFF007AFF)`) to make it feel like it's levitating in the Aurora.
   * Insets: Floats 16dp above bottom, 16dp from sides.
   * Content: `+` Button (Left) | Text Field (Center) | Knot Symbol (Right).
 
 * **Knot Symbol Integration**:
-  * Size: 40dp x 40dp (Fit inside capsule).
-  * **Fix**: Ensure Lemniscate path scales to fit 40dp without clipping.
-  * Interaction: Acts as status indicator. Morph to "Send" icon when typing (or overlay).
+  * **Visual Truth**: Check the specific screenshot for the context.
+  * **Voice Mode**: Knot often acts as a FAB in the corner (V18 style).
+  * **Text Mode**: Knot may integrate into the capsule as a status indicator.
+  * **Rule**: If the screenshot shows a simple "Send" arrow, implement that for the specific flow, but keep the Knot available for the "Thinking" state.
 
 * **Scan Shine**:
   * Subtle sheen traversing the capsule in idle state.

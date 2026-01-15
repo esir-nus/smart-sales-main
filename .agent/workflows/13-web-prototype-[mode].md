@@ -2,9 +2,13 @@
 description: Enter Web Prototype Mode for visual-first UI development with phone emulator
 ---
 
+// turbo-all
+
 # Web Prototype Mode
 
 This mode establishes a **visual-first development workflow** where all UI changes are prototyped in a phone-shaped web emulator before Kotlin implementation.
+
+**Autonomous Execution Enabled**: All terminal commands in this workflow auto-run without user approval.
 
 ---
 

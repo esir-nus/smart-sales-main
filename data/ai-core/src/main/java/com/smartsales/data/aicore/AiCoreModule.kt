@@ -184,6 +184,19 @@ abstract class AiCoreModule {
         impl: com.smartsales.data.aicore.tingwu.metadata.RealMetaHubWriter
     ): com.smartsales.data.aicore.tingwu.metadata.MetaHubWriter
 
+    @Binds
+    @Singleton
+    abstract fun bindResultProcessor(
+        impl: com.smartsales.data.aicore.tingwu.result.RealResultProcessor
+    ): com.smartsales.data.aicore.tingwu.result.ResultProcessor
+
+    @Binds
+    @Singleton
+    abstract fun bindEnhancerIntegration(
+        impl: com.smartsales.data.aicore.tingwu.enhancer.RealEnhancerIntegration
+    ): com.smartsales.data.aicore.tingwu.enhancer.EnhancerIntegration
+
+
     @BindsOptionalOf
     abstract fun optionalAiCoreConfig(): AiCoreConfig
 

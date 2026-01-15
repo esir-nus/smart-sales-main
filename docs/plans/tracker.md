@@ -460,10 +460,18 @@ HomeViewModel delegates to coordinators:
 | **Memory** | SessionMemoryService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
 | **Memory** | LongTermMemoryService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
 | **Memory** | KnowledgeBaseService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
-| **Connectivity** | BleService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
-| **Connectivity** | WiFiService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
-| **Connectivity** | BadgeSyncService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
-| **Connectivity** | AudioTransferService | 🔲 | 🔲 | 🔲 | 🔲 | 🔲 |
+| **Chat** | ChatController | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Chat** | AiChatService | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Chat** | HomeOrchestrator | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Chat** | ChatHistoryRepository | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Connectivity** | BleGateway | ✅ | ✅ | ✅ | ⚠️ | ✅ |
+| **Connectivity** | BleScanner | ✅ | ✅ | ✅ | ⚠️ | ✅ |
+| **Connectivity** | DeviceConnectionManager | ✅ | ✅ | ✅ | ⚠️ | ✅ |
+| **Connectivity** | HttpEndpointChecker | ✅ | ✅ | ✅ | ⚠️ | ✅ |
+| **Connectivity** | WifiProvisioner | ✅ | ✅ | ✅ | ⚠️ | ✅ |
+| **Connectivity** | BadgeHttpClient | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+> **DEBT (2026-01-15)**: Connectivity layer has Fakes but missing Hilt @Binds for 5/6 interfaces.
 
 ### Migration Strategy
 

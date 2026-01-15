@@ -195,6 +195,7 @@ class TingwuRunnerTest {
                 dispatchers = dispatchers,
                 gson = Gson()
             ),
+            metaHubWriter = com.smartsales.data.aicore.tingwu.metadata.FakeMetaHubWriter(),
             optionalConfig = optionalConfig
         ).also { createdCoordinators += it }
     }

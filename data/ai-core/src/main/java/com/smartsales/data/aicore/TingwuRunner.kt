@@ -101,6 +101,7 @@ class TingwuRunner @Inject constructor(
     private val pollingLoop: com.smartsales.data.aicore.tingwu.polling.PollingLoop,
     private val jobStore: TingwuJobStore,
     private val submissionService: com.smartsales.data.aicore.tingwu.submission.TingwuSubmissionService,
+    private val metaHubWriter: com.smartsales.data.aicore.tingwu.metadata.MetaHubWriter,
 
     optionalConfig: Optional<AiCoreConfig>
 ) : TingwuCoordinator {
@@ -479,11 +480,17 @@ class TingwuRunner @Inject constructor(
             speakerLabels = mergedSpeakerLabels
         ) ?: mergedArtifacts
 
-        upsertSessionMetadataFromTingwu(
-            jobId = jobId,
-            artifacts = artifactsWithMetadata,
-            transcriptMeta = transcriptMeta,
-            chapters = transcriptResult.chapters
+        val request = jobContext[jobId]
+        val audioAssetId = request?.ossObjectKey ?: request?.fileUrl ?: jobId
+        metaHubWriter.writeSessionMetadata(
+            com.smartsales.data.aicore.tingwu.metadata.SessionMetadataWriteInput(
+                jobId = jobId,
+                sessionId = jobContext[jobId]?.sessionId ?: "",
+                audioAssetId = audioAssetId,
+                artifacts = artifactsWithMetadata,
+                transcriptMeta = transcriptMeta,
+                chapters = transcriptResult.chapters
+            )
         )
 
         // 说明：Tingwu 完成后记录可疑边界，供 M2 预处理补丁使用。
@@ -503,9 +510,12 @@ class TingwuRunner @Inject constructor(
             )
         }
 
-        appendTingwuPreprocessPatch(
-            jobId = jobId,
-            transcriptMarkdown = transcriptResult.markdown
+        metaHubWriter.writePreprocessPatch(
+            com.smartsales.data.aicore.tingwu.metadata.PreprocessPatchInput(
+                jobId = jobId,
+                sessionId = jobContext[jobId]?.sessionId ?: "",
+                transcriptMarkdown = transcriptResult.markdown
+            )
         )
 
         AiCoreLogger.d(TAG, "转写结果拉取成功：jobId=$jobId markdown长度=${transcriptResult.markdown.length}")
@@ -531,108 +541,6 @@ class TingwuRunner @Inject constructor(
             status = "FAILED",
             message = "jobId=$jobId error=${state.error.message}"
         )
-    }
-
-    // 将 Tingwu 转写产出的摘要/标签写入 MetaHub，标记最新分析来源。
-    // V1 §6.2: Also writes chapters to M2B TranscriptMetadata with source pointers.
-    private suspend fun upsertSessionMetadataFromTingwu(
-        jobId: String,
-        artifacts: TingwuJobArtifacts?,
-        transcriptMeta: TranscriptMetadata?,
-        chapters: List<TingwuChapter>?
-    ) {
-        val sessionId = jobContext[jobId]?.sessionId ?: return
-        val request = jobContext[jobId]
-        val audioAssetId = request?.ossObjectKey ?: request?.fileUrl ?: jobId
-        val recordingSessionId = sessionId
-        
-        val smartSummary = artifacts?.smartSummary
-        val chapterTitle = (artifacts?.chapters ?: chapters).orEmpty().firstOrNull()?.title
-        val summary = smartSummary?.summary
-            ?: transcriptMeta?.shortSummary
-            ?: chapterTitle
-        val titleHint = chapterTitle ?: transcriptMeta?.summaryTitle6Chars
-        val mainPerson = transcriptMeta?.mainPerson
-        val tags = buildSet {
-            smartSummary?.keyPoints?.forEach { add(it) }
-            smartSummary?.actionItems?.forEach { add(it) }
-        }.filter { it.isNotBlank() }.toSet().takeIf { it.isNotEmpty() }
-        val input = TingwuMetadataInput(
-            sessionId = sessionId,
-            callSummary = summary,
-            shortTitleHint = titleHint,
-            mainPersonName = mainPerson,
-            tags = tags,
-            completedAt = System.currentTimeMillis()
-        )
-        val patch = TingwuSessionMetadataMapper.toMetadataPatch(input) ?: return
-        val patchWithSource = patch.copy(
-            latestMajorAnalysisSource = AnalysisSource.TINGWU,
-            latestMajorAnalysisAt = input.completedAt,
-            lastUpdatedAt = maxOf(patch.lastUpdatedAt, input.completedAt)
-        )
-        val merged = runCatching { metaHub.getSession(sessionId) }.getOrNull()
-            ?.mergeWith(patchWithSource) ?: patchWithSource
-        runCatching {
-            // Tingwu 转写完成后，将摘要等信息写入 MetaHub，标记为通话转写来源。
-            metaHub.upsertSession(merged)
-        }.onFailure {
-            AiCoreLogger.w(TAG, "Tingwu 元数据写入 MetaHub 失败：${it.message}")
-        }
-        
-        // V1 §6.2: Write chapters to M2B TranscriptMetadata with source pointers
-        val allChapters = (artifacts?.chapters ?: chapters).orEmpty()
-        if (allChapters.isNotEmpty()) {
-            val chapterMetas = allChapters.mapIndexed { index, tingwuChapter ->
-                com.smartsales.core.metahub.ChapterMeta(
-                    title = tingwuChapter.displayTitle(),
-                    startMs = tingwuChapter.startMs,
-                    endMs = tingwuChapter.endMs ?: tingwuChapter.startMs,
-                    summary = tingwuChapter.summary,
-                    audioAssetId = audioAssetId,
-                    recordingSessionId = recordingSessionId,
-                    chapterId = "${jobId}_ch${index + 1}"
-                )
-            }
-            val transcriptUpdate = TranscriptMetadata(
-                transcriptId = jobId,
-                sessionId = sessionId,
-                source = com.smartsales.core.metahub.TranscriptSource.TINGWU,
-                shortSummary = summary,
-                summaryTitle6Chars = titleHint,
-                mainPerson = mainPerson,
-                chapters = chapterMetas
-            )
-            runCatching {
-                metaHub.upsertTranscript(transcriptUpdate)
-            }.onFailure {
-                AiCoreLogger.w(TAG, "Tingwu M2B 章节写入 MetaHub 失败：${it.message}")
-            }
-        }
-    }
-
-    // Tingwu 转写完成后写入 M2 预处理补丁（内部派生），用于 HUD 预处理快照展示。
-    private suspend fun appendTingwuPreprocessPatch(
-        jobId: String,
-        transcriptMarkdown: String
-    ) {
-        val sessionId = jobContext[jobId]?.sessionId ?: return
-        val createdAt = System.currentTimeMillis()
-        val traceSnapshot = tingwuTraceStore.getSnapshot()
-            .takeIf { it.lastTaskId == jobId }
-        val patch = TingwuPreprocessPatchBuilder.build(
-            sessionId = sessionId,
-            jobId = jobId,
-            transcriptMarkdown = transcriptMarkdown,
-            createdAt = createdAt,
-            traceBatchPlan = traceSnapshot?.batchPlan,
-            traceSuspiciousBoundaries = traceSnapshot?.suspiciousBoundaries
-        )
-        runCatching {
-            metaHub.appendM2Patch(sessionId, patch)
-        }.onFailure {
-            AiCoreLogger.w(TAG, "Tingwu 预处理补丁写入 MetaHub 失败：${it.message}")
-        }
     }
 
     private suspend fun fetchTranscript(

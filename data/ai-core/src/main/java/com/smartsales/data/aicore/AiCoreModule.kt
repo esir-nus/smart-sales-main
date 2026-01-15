@@ -178,6 +178,12 @@ abstract class AiCoreModule {
         impl: FileBasedTingwuJobStore
     ): TingwuJobStore
 
+    @Binds
+    @Singleton
+    abstract fun bindMetaHubWriter(
+        impl: com.smartsales.data.aicore.tingwu.metadata.RealMetaHubWriter
+    ): com.smartsales.data.aicore.tingwu.metadata.MetaHubWriter
+
     @BindsOptionalOf
     abstract fun optionalAiCoreConfig(): AiCoreConfig
 

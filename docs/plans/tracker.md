@@ -389,9 +389,10 @@ HomeViewModel delegates to coordinators:
 
 **Philosophy**: Purify legacy organically when adding features. No big-bang refactor.
 
-**Current State**: 1252 lines (purified 2026-01-13, -117 lines)
+**Current State**: 1158 lines (purified 2026-01-15, Phase 3 vibe coding split)
 - Implements `TingwuCoordinator` ✅
 - Delegates to `TingwuPollingLoop`, `TingwuTranscriptProcessor`, `TingwuMultiBatchOrchestrator` ✅
+- Parsing logic extracted to `tingwu/util/TingwuPayloadParser.kt` ✅ (2026-01-15)
 
 #### Multi-Batch Stitching ✅ (2026-01-11)
 

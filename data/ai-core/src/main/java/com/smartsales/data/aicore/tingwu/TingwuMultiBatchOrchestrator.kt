@@ -25,6 +25,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.launch
 
 /**
  * Orchestrates multi-batch transcription logic (Slice -> Upload -> Submit Loop).
@@ -278,6 +279,81 @@ class TingwuMultiBatchOrchestrator @Inject constructor(
         
         com.smartsales.data.aicore.AiCoreLogger.d(TAG, "Multi-batch TRUE PIPELINE complete: batches=$totalBatches stitchedSegments=${stitchedSegments.size}")
         Result.Success(parentJobId)
+    }
+
+    /**
+     * Submits a multi-batch job if the plan requires multiple batches.
+     * Returns the parent job ID if multi-batch processing was started, null otherwise.
+     *
+     * This method encapsulates all the flow setup and background launch logic
+     * that was previously in TingwuRunner.submit().
+     */
+    fun submitMultiBatch(
+        plan: DisectorPlan,
+        request: TingwuRequest,
+        audioFile: java.io.File,
+        scope: kotlinx.coroutines.CoroutineScope,
+        getOrCreateJobFlow: (String) -> kotlinx.coroutines.flow.MutableStateFlow<TingwuJobState>,
+        submitSingleBatch: suspend (TingwuRequest) -> Result<String>,
+        waitForJob: suspend (String) -> TingwuJobState
+    ): String? {
+        if (plan.batches.size <= 1) return null
+
+        pipelineTracer.emit(
+            stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_UPLOAD,
+            status = "MULTI_BATCH_DELEGATION",
+            message = "Delegating to TingwuMultiBatchOrchestrator planId=${plan.disectorPlanId}"
+        )
+
+        val parentJobId = "multi_${plan.disectorPlanId}"
+        val parentFlow = getOrCreateJobFlow(parentJobId)
+        parentFlow.value = TingwuJobState.InProgress(
+            jobId = parentJobId,
+            progressPercent = 5,
+            statusLabel = "MULTI_BATCH_STARTED"
+        )
+
+        // Launch batch processing in background (non-blocking)
+        scope.launch {
+            val result = executeBatchLoop(
+                plan = plan,
+                originalRequest = request,
+                sourceFile = audioFile,
+                submitSingleBatch = submitSingleBatch,
+                waitForJob = waitForJob,
+                onProgress = { progress ->
+                    parentFlow.value = TingwuJobState.InProgress(
+                        jobId = parentJobId,
+                        progressPercent = progress,
+                        statusLabel = "PROCESSING_BATCHES"
+                    )
+                },
+                onComplete = { _, stitchedSegments ->
+                    parentFlow.value = TingwuJobState.Completed(
+                        jobId = parentJobId,
+                        transcriptMarkdown = "",
+                        artifacts = com.smartsales.data.aicore.TingwuJobArtifacts(
+                            recordingOriginDiarizedSegments = stitchedSegments
+                        )
+                    )
+                }
+            )
+
+            if (result is Result.Error) {
+                val error = result.throwable as? AiCoreException
+                    ?: AiCoreException(
+                        source = AiCoreErrorSource.TINGWU,
+                        reason = AiCoreErrorReason.UNKNOWN,
+                        message = result.throwable.message ?: "Multi-batch processing failed"
+                    )
+                parentFlow.value = TingwuJobState.Failed(
+                    jobId = parentJobId,
+                    error = error
+                )
+            }
+        }
+
+        return parentJobId
     }
 
     companion object {

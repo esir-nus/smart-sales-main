@@ -144,76 +144,29 @@ class TingwuRunner @Inject constructor(
                 val audioAssetId = request.ossObjectKey ?: taskKey
                 val recordingSessionId = request.sessionId ?: taskKey
                 disector.createPlan(durationMs, audioAssetId, recordingSessionId).also { plan ->
-                    if (plan.batches.size > 1) {
-                        pipelineTracer.emit(
-                            stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_UPLOAD,
-                            status = "MULTI_BATCH_DELEGATION",
-                            message = "Delegating to TingwuMultiBatchOrchestrator planId=${plan.disectorPlanId}"
+                    // Delegate multi-batch submission to orchestrator
+                    val audioFile = request.audioFilePath
+                    if (plan.batches.size > 1 && audioFile != null) {
+                        val parentJobId = multiBatchOrchestrator.submitMultiBatch(
+                            plan = plan,
+                            request = request,
+                            audioFile = audioFile,
+                            scope = scope,
+                            getOrCreateJobFlow = ::getOrCreateJobFlow,
+                            submitSingleBatch = { req -> submit(req) },
+                            waitForJob = { id -> waitForJob(id) }
                         )
-                        
-                        val audioFile = request.audioFilePath
-                            ?: return@withContext Result.Error(
-                                AiCoreException(
-                                    source = AiCoreErrorSource.TINGWU,
-                                    reason = AiCoreErrorReason.IO,
-                                    message = "Multi-batch submission requires local 'audioFilePath'"
-                                )
-                            )
-
-                        // Emit progress immediately so UI shows "processing" state
-                        val parentJobId = "multi_${plan.disectorPlanId}"
-                        val parentFlow = getOrCreateJobFlow(parentJobId)
-                        parentFlow.value = TingwuJobState.InProgress(
-                            jobId = parentJobId,
-                            progressPercent = 5,
-                            statusLabel = "MULTI_BATCH_STARTED"
-                        )
-
-                        // Launch batch processing in background (non-blocking)
-                        scope.launch {
-                            val result = multiBatchOrchestrator.executeBatchLoop(
-                                plan = plan,
-                                originalRequest = request,
-                                sourceFile = audioFile,
-                                submitSingleBatch = { req -> submit(req) },
-                                waitForJob = { id -> waitForJob(id) },
-                                onProgress = { progress ->
-                                    // Update parent job progress
-                                    parentFlow.value = TingwuJobState.InProgress(
-                                        jobId = parentJobId,
-                                        progressPercent = progress,
-                                        statusLabel = "PROCESSING_BATCHES"
-                                    )
-                                },
-                                onComplete = { _, stitchedSegments ->
-                                    // Surface stitched segments to job state for UI consumption
-                                    parentFlow.value = TingwuJobState.Completed(
-                                        jobId = parentJobId,
-                                        transcriptMarkdown = "",  // Deferred: assemble markdown from segments
-                                        artifacts = TingwuJobArtifacts(
-                                            recordingOriginDiarizedSegments = stitchedSegments
-                                        )
-                                    )
-                                }
-                            )
-                            
-                            // Handle failure explicitly
-                            if (result is Result.Error) {
-                                val error = result.throwable as? AiCoreException
-                                    ?: AiCoreException(
-                                        source = AiCoreErrorSource.TINGWU,
-                                        reason = AiCoreErrorReason.UNKNOWN,
-                                        message = result.throwable.message ?: "Multi-batch processing failed"
-                                    )
-                                parentFlow.value = TingwuJobState.Failed(
-                                    jobId = parentJobId,
-                                    error = error
-                                )
-                            }
+                        if (parentJobId != null) {
+                            return@withContext Result.Success(parentJobId)
                         }
-                        
-                        // Return immediately so UI can start observing
-                        return@withContext Result.Success(parentJobId)
+                    } else if (plan.batches.size > 1 && audioFile == null) {
+                        return@withContext Result.Error(
+                            AiCoreException(
+                                source = AiCoreErrorSource.TINGWU,
+                                reason = AiCoreErrorReason.IO,
+                                message = "Multi-batch submission requires local 'audioFilePath'"
+                            )
+                        )
                     } else {
                         pipelineTracer.emit(
                             stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_UPLOAD,

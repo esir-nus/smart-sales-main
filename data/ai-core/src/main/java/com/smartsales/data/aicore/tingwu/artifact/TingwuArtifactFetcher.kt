@@ -32,3 +32,32 @@ class RealTingwuArtifactFetcher @Inject constructor() : TingwuArtifactFetcher {
         }.getOrNull()
     }
 }
+
+/**
+ * FakeTingwuArtifactFetcher: Test double for TingwuArtifactFetcher.
+ * 
+ * Lattice compliance: Every box must have a corresponding Fake.
+ */
+class FakeTingwuArtifactFetcher : TingwuArtifactFetcher {
+    private val responses = mutableMapOf<String, String?>()
+    var fetchCount = 0
+        private set
+    
+    fun stubResponse(url: String, response: String?) {
+        responses[url] = response
+    }
+    
+    fun stubDefaultResponse(response: String?) {
+        responses["*"] = response
+    }
+    
+    override fun fetchText(url: String, timeoutMs: Int, maxChars: Int): String? {
+        fetchCount++
+        return responses[url] ?: responses["*"]
+    }
+    
+    fun reset() {
+        responses.clear()
+        fetchCount = 0
+    }
+}

@@ -29,7 +29,7 @@ import java.util.Optional
 class TingwuPollingLoopTest {
 
     private lateinit var api: FakeTingwuApi
-    private lateinit var repository: TingwuRunnerRepository
+    private lateinit var repository: RealTingwuApiRepository
     private lateinit var config: AiCoreConfig
     private lateinit var loop: TingwuPollingLoop
     
@@ -55,7 +55,7 @@ class TingwuPollingLoopTest {
             override val default = testDispatcher
         }
         
-        repository = TingwuRunnerRepository(
+        repository = RealTingwuApiRepository(
             api = tingwuApi,
             credentialsProvider = credentialsProvider,
             signedUrlProvider = signedUrlProvider,

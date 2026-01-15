@@ -90,7 +90,7 @@ class TingwuRunner @Inject constructor(
     private val artifactFetcher: TingwuArtifactFetcher,
     private val postTingwuTranscriptEnhancer: PostTingwuTranscriptEnhancer,
     private val aiParaSettingsProvider: AiParaSettingsProvider,
-    private val tingwuRunner: com.smartsales.data.aicore.tingwu.polling.TingwuRunnerRepository,
+    private val apiRepository: com.smartsales.data.aicore.tingwu.polling.TingwuApiRepository,
     private val transcriptProcessor: com.smartsales.data.aicore.tingwu.processor.TranscriptProcessor,
     private val pipelineTracer: com.smartsales.data.aicore.debug.PipelineTracer,
     private val disector: com.smartsales.data.aicore.disector.Disector,
@@ -116,20 +116,20 @@ class TingwuRunner @Inject constructor(
     override suspend fun submit(request: TingwuRequest): Result<String> =
         withContext(dispatchers.io) {
             val credentials = credentialsProvider.obtain()
-            tingwuRunner.validateCredentials(credentials)?.let { return@withContext Result.Error(it) }
+            apiRepository.validateCredentials(credentials)?.let { return@withContext Result.Error(it) }
             val sourceDesc = request.ossObjectKey ?: request.fileUrl ?: request.audioAssetName
             AiCoreLogger.d(
                 TAG,
                 "提交 Tingwu 请求：source=$sourceDesc, lang=${request.language}"
             )
-            val fileUrlResult = tingwuRunner.resolveFileUrl(request)
+            val fileUrlResult = apiRepository.resolveFileUrl(request)
             val resolvedUrl = when (fileUrlResult) {
                 is Result.Success -> fileUrlResult.data
                 is Result.Error -> return@withContext Result.Error(fileUrlResult.throwable)
             }
-            val taskKey = tingwuRunner.buildTaskKey(request)
+            val taskKey = apiRepository.buildTaskKey(request)
             val requestedLanguage = request.language.ifBlank { DEFAULT_LANGUAGE }
-            val sourceLanguage = tingwuRunner.mapSourceLanguage(requestedLanguage)
+            val sourceLanguage = apiRepository.mapSourceLanguage(requestedLanguage)
             logVerbose {
                 "创建 Tingwu 任务：taskKey=$taskKey fileUrl=$resolvedUrl lang=$requestedLanguage source=$sourceLanguage diarizationEnabled=${request.diarizationEnabled}"
             }
@@ -450,7 +450,7 @@ class TingwuRunner @Inject constructor(
             )
         } catch (error: Throwable) {
             if (error is CancellationException) throw error
-            val mapped = tingwuRunner.mapError(error)
+            val mapped = apiRepository.mapError(error)
             AiCoreLogger.e(TAG, "拉取转写结果失败：${mapped.message}", mapped)
             flow.value = TingwuJobState.Failed(jobId, mapped)
             

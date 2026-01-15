@@ -127,6 +127,13 @@ abstract class AiCoreModule {
 
     @Binds
     @Singleton
+    abstract fun bindTingwuApiRepository(
+        impl: com.smartsales.data.aicore.tingwu.polling.RealTingwuApiRepository
+    ): com.smartsales.data.aicore.tingwu.polling.TingwuApiRepository
+
+
+    @Binds
+    @Singleton
     abstract fun bindTranscriptProcessor(
         impl: com.smartsales.data.aicore.tingwu.processor.TingwuTranscriptProcessor
     ): com.smartsales.data.aicore.tingwu.processor.TranscriptProcessor

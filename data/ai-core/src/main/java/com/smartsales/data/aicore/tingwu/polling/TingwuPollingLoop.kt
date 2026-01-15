@@ -50,11 +50,11 @@ interface PollingLoop {
 /**
  * TingwuPollingLoop: Real implementation of PollingLoop.
  * 
- * V1 spec §8.1: Uses TingwuRunnerRepository.pollWithRetry() for retry policy compliance.
+ * V1 spec §8.1: Uses TingwuApiRepository.pollWithRetry() for retry policy compliance.
  */
 @Singleton
 class TingwuPollingLoop @Inject constructor(
-    private val repository: TingwuRunnerRepository,
+    private val repository: TingwuApiRepository,
     optionalConfig: Optional<AiCoreConfig>,
     private val dispatchers: DispatcherProvider
 ) : PollingLoop {

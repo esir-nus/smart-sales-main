@@ -123,37 +123,8 @@ class TranscriptPublisher @Inject constructor(
         return parseSmartSummaryPayload(payload)
     }
 
-    private fun parseAutoChaptersPayload(payload: String): List<TingwuChapter> {
-        val gson = Gson()
-        return try {
-            val root = JsonParser.parseString(payload).asJsonObject
-            val chapters = root.getAsJsonArray("AutoChapters")
-                ?.mapNotNull { it.asJsonObject }
-                ?.map { chapter ->
-                    val headline = chapter.getPrimitiveString("Headline")
-                    val title = chapter.getPrimitiveString("Title") ?: ""
-                    val summary = chapter.getPrimitiveString("Summary")
-                    val startMs = chapter.get("Start")?.asDouble?.toLong()
-                        ?: chapter.get("StartTime")?.asDouble?.toLong()
-                        ?: 0L
-                    val endMs = chapter.get("End")?.asDouble?.toLong()
-                        ?: chapter.get("EndTime")?.asDouble?.toLong()
-                    TingwuChapter(
-                        title = headline ?: title,
-                        startMs = startMs,
-                        endMs = endMs,
-                        headline = headline,
-                        summary = summary
-                    )
-                }
-                ?: emptyList()
-            AiCoreLogger.d(TAG, "解析章节成功：共 ${chapters.size} 个")
-            chapters
-        } catch (e: Exception) {
-            AiCoreLogger.w(TAG, "解析章节失败：${e.message}")
-            emptyList()
-        }
-    }
+    private fun parseAutoChaptersPayload(payload: String): List<TingwuChapter> =
+        com.smartsales.data.aicore.parseAutoChaptersPayload(payload)
 
     private fun parseSmartSummaryPayload(payload: String): TingwuSmartSummary? {
         return try {

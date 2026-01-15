@@ -18,7 +18,7 @@ import com.smartsales.data.aicore.TingwuJobArtifacts
 import com.smartsales.data.aicore.debug.PipelineStage
 import com.smartsales.data.aicore.debug.PipelineTracer
 import com.smartsales.data.aicore.debug.TingwuTraceStore
-import com.smartsales.data.aicore.tingwu.polling.TingwuRunnerRepository
+import com.smartsales.data.aicore.tingwu.polling.TingwuApiRepository
 import com.smartsales.data.aicore.tingwu.api.TingwuApi
 import com.smartsales.data.aicore.tingwu.api.TingwuResultResponse
 import com.smartsales.data.aicore.tingwu.api.TingwuResultData
@@ -69,7 +69,7 @@ class TingwuTranscriptProcessor @Inject constructor(
     private val api: TingwuApi,
     optionalConfig: java.util.Optional<AiCoreConfig>,
     private val formatter: TranscriptFormatter,
-    private val tingwuRunnerRepository: TingwuRunnerRepository,
+    private val apiRepository: TingwuApiRepository,
     private val artifactFetcher: TingwuArtifactFetcher,
     private val transcriptPublisher: Publisher,
     private val tingwuRawResponseDumper: TingwuRawResponseDumper,
@@ -184,7 +184,7 @@ class TingwuTranscriptProcessor @Inject constructor(
                     AiCoreLogger.w(TAG, "官方 /transcription 接口不可用，改用 Result.Transcription 链接")
                     null
                 } else {
-                    val mapped = tingwuRunnerRepository.mapError(error)
+                    val mapped = apiRepository.mapError(error)
                     AiCoreLogger.e(TAG, "拉取 Tingwu 结果失败：${mapped.message}", mapped)
                     throw mapped
                 }

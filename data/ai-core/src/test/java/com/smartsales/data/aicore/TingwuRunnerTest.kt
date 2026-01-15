@@ -131,7 +131,7 @@ class TingwuRunnerTest {
     ): TingwuRunner {
         val config = optionalConfig.orElse(AiCoreConfig())
         val tracer = FakePipelineTracer()
-        val runnerRepo = com.smartsales.data.aicore.tingwu.polling.TingwuRunnerRepository(
+        val runnerRepo = com.smartsales.data.aicore.tingwu.polling.RealTingwuApiRepository(
             api,
             credentialsProvider,
             signedUrlProvider,
@@ -146,7 +146,7 @@ class TingwuRunnerTest {
             api = api,
             optionalConfig = optionalConfig,
             formatter = formatter,
-            tingwuRunnerRepository = runnerRepo,
+            apiRepository = runnerRepo,
             artifactFetcher = artifactFetcher,
             transcriptPublisher = publisher,
             tingwuRawResponseDumper = rawResponseDumper,
@@ -171,7 +171,7 @@ class TingwuRunnerTest {
             artifactFetcher = artifactFetcher,
             postTingwuTranscriptEnhancer = enhancer,
             aiParaSettingsProvider = settingsProvider,
-            tingwuRunner = runnerRepo,
+            apiRepository = runnerRepo,
             transcriptProcessor = processor,
             pipelineTracer = tracer,
             disector = com.smartsales.data.aicore.disector.DisectorImpl(),

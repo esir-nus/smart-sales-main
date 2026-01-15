@@ -1,7 +1,7 @@
-// File: data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/runner/TingwuRunnerRepository.kt
+// File: data/ai-core/src/main/java/com/smartsales/data/aicore/tingwu/polling/RealTingwuApiRepository.kt
 // Module: :data:ai-core
-// Summary: Low-level Tingwu API utilities (validation, polling, error mapping)
-// Author: created on 2026-01-05
+// Summary: Real implementation of TingwuApiRepository - polling, validation, error mapping
+// Author: created on 2026-01-05, renamed 2026-01-15
 
 package com.smartsales.data.aicore.tingwu.polling
 
@@ -31,20 +31,21 @@ import javax.inject.Singleton
 import javax.net.ssl.SSLException
 
 /**
- * Low-level Tingwu API utilities.
+ * RealTingwuApiRepository: Real implementation of TingwuApiRepository.
  * Handles validation, polling with retries, and error mapping.
  */
 @Singleton
-class TingwuRunnerRepository @Inject constructor(
+class RealTingwuApiRepository @Inject constructor(
     private val api: TingwuApi,
     private val credentialsProvider: TingwuCredentialsProvider,
     private val signedUrlProvider: OssSignedUrlProvider,
     private val dispatchers: DispatcherProvider,
     private val config: AiCoreConfig
-) {
+) : TingwuApiRepository {
+
 
     // V1 spec §8.1: Tingwu retry policy with backoff
-    suspend fun pollWithRetry(jobId: String): TingwuStatusResponse {
+    override suspend fun pollWithRetry(jobId: String): TingwuStatusResponse {
         val maxRetries = config.tingwuMaxRetries
         val backoffSeconds = config.tingwuRetryBackoffSeconds
         var lastError: Throwable? = null
@@ -72,7 +73,7 @@ class TingwuRunnerRepository @Inject constructor(
     }
 
     // V1 spec §8.1: Retryable = 429, 5xx, timeout, network; Non-retryable = 4xx except 429
-    fun isRetryableError(error: Throwable): Boolean = when (error) {
+    override fun isRetryableError(error: Throwable): Boolean = when (error) {
         is HttpException -> {
             val code = error.code()
             code == 429 || code >= 500
@@ -84,7 +85,7 @@ class TingwuRunnerRepository @Inject constructor(
         else -> false
     }
 
-    fun validateCredentials(credentials: TingwuCredentials): AiCoreException? {
+    override fun validateCredentials(credentials: TingwuCredentials): AiCoreException? {
         val missing = when {
             credentials.appKey.isBlank() -> "TINGWU_APP_KEY"
             credentials.baseUrl.isBlank() -> "TINGWU_BASE_URL"
@@ -103,7 +104,7 @@ class TingwuRunnerRepository @Inject constructor(
         }
     }
 
-    fun mapError(error: Throwable): AiCoreException = when (error) {
+    override fun mapError(error: Throwable): AiCoreException = when (error) {
         is AiCoreException -> error
         is HttpException -> {
             val code = error.code()
@@ -152,7 +153,7 @@ class TingwuRunnerRepository @Inject constructor(
         )
     }
 
-    suspend fun resolveFileUrl(request: TingwuRequest): Result<String> {
+    override suspend fun resolveFileUrl(request: TingwuRequest): Result<String> {
         val direct = request.fileUrl?.trim()?.takeIf { it.isNotBlank() }
         if (direct != null) {
             return Result.Success(direct)
@@ -163,7 +164,7 @@ class TingwuRunnerRepository @Inject constructor(
         return signedUrlProvider.generate(objectKey, config.tingwuPresignUrlValiditySeconds)
     }
 
-    fun buildTaskKey(request: TingwuRequest): String {
+    override fun buildTaskKey(request: TingwuRequest): String {
         val baseName = request.ossObjectKey
             ?.substringAfterLast("/")
             ?.substringBefore(".")
@@ -173,7 +174,7 @@ class TingwuRunnerRepository @Inject constructor(
         return sanitized + "_" + System.currentTimeMillis()
     }
 
-    fun mapSourceLanguage(language: String): String {
+    override fun mapSourceLanguage(language: String): String {
         val normalized = language.lowercase(Locale.US)
         return when {
             normalized.startsWith("zh") || normalized.startsWith("cn") -> "cn"
@@ -193,7 +194,7 @@ class TingwuRunnerRepository @Inject constructor(
     )
 
     companion object {
-        private const val TAG = "TingwuRunnerRepository"
+        private const val TAG = "RealTingwuApiRepository"
         private const val DEFAULT_SOURCE_LANGUAGE = "cn"
     }
 }

@@ -172,7 +172,13 @@ class TranscriptionCoordinatorImpl @Inject constructor(
                     else -> Unit
                 }
             }
-            .first { it is AudioTranscriptionJobState.Completed || it is AudioTranscriptionJobState.Failed }
+            .first { state ->
+                when (state) {
+                    is AudioTranscriptionJobState.Completed -> state.transcriptMarkdown.isNotBlank()
+                    is AudioTranscriptionJobState.Failed -> true
+                    else -> false
+                }
+            }
 
         // Now process all batches (they're available after Completed)
         when (terminalState) {

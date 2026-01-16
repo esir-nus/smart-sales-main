@@ -684,11 +684,12 @@ class HomeViewModel @Inject constructor(
                         
                         // Client-side typewriter animation (launch since callback isn't suspend)
                         viewModelScope.launch {
-                            TextAnimator.animateOverDuration(text).collect { animatedText ->
+                            // Compute display format once (outside loop)
+                            val displayText = displayAssistantText(raw = text, sanitized = text)
+                            TextAnimator.animateOverDuration(displayText).collect { animatedText ->
                                 updateAssistantMessage(messageId, persistAfterUpdate = false) { msg ->
-                                    val display = displayAssistantText(raw = animatedText, sanitized = animatedText)
                                     msg.copy(
-                                        content = display,
+                                        content = animatedText,
                                         rawContent = animatedText,
                                         sanitizedContent = animatedText,
                                         isStreaming = true
@@ -1419,13 +1420,12 @@ class HomeViewModel @Inject constructor(
     }
 
     private suspend fun handleChatEventCompleted(result: com.smartsales.domain.chat.ChatCompletionResult) {
-        // Get buffered content or use result display text
-        val bufferedText = streamBuffer.remove(result.assistantId)?.toString()
-        val fullText = bufferedText ?: result.displayText
+        // Clear buffer and prepare display text
+        streamBuffer.remove(result.assistantId)
         val displayText = displayAssistantText(raw = result.rawFullText, sanitized = result.displayText)
         
-        // Animate the text reveal using TextAnimator
-        TextAnimator.animateOverDuration(displayText).collect { animatedText ->
+        // Animate at constant speed (natural reading pace for chat)
+        TextAnimator.animateAtSpeed(displayText).collect { animatedText ->
             updateAssistantMessage(result.assistantId, persistAfterUpdate = false) { msg ->
                 msg.copy(
                     content = animatedText,

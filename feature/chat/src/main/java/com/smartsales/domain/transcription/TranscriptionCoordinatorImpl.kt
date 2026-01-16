@@ -83,7 +83,10 @@ class TranscriptionCoordinatorImpl @Inject constructor(
                 }
             }
             .first { state ->
-                state is AudioTranscriptionJobState.Completed || state is AudioTranscriptionJobState.Failed
+                // Wait for Completed with non-blank content (TingwuRunner emits twice:
+                // first empty from PollingLoop, then populated after transcript fetch)
+                (state is AudioTranscriptionJobState.Completed && state.transcriptMarkdown.isNotBlank())
+                    || state is AudioTranscriptionJobState.Failed
             }
 
         when (terminalState) {

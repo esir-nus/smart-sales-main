@@ -178,6 +178,9 @@ class HomeViewModel @Inject constructor(
     // 低信息智能分析提示是否已经出现过
     private var hasShownLowInfoSmartAnalysisHint: Boolean = false
     private var hasShownAnalysisExportHint: Boolean = false
+    
+    // Buffer for chat streaming tokens (buffer-then-animate pattern)
+    private val streamBuffer = mutableMapOf<String, StringBuilder>()
     private var lastTranscriptionJobId: String? = null // kept for debug snapshot
     private var activelyTranscribing: Boolean = false // kept for recovery hint logic
     // 标记当前会话是否已处理首条助手回复，用于“首条决定标题”规则
@@ -1411,24 +1414,30 @@ class HomeViewModel @Inject constructor(
     // ====== ChatCoordinator Event Handlers (Wave 4) ======
 
     private fun updateAssistantMessageWithToken(assistantId: String, token: String) {
-        updateAssistantMessage(assistantId) { msg ->
-            val merged = streamingDeduplicator.mergeSnapshot(
-                current = msg.content,
-                incoming = token
-            )
-            msg.copy(
-                content = merged,
-                isStreaming = true
-            )
-        }
+        // Buffer tokens instead of updating UI (buffer-then-animate pattern)
+        streamBuffer.getOrPut(assistantId) { StringBuilder() }.append(token)
     }
 
     private suspend fun handleChatEventCompleted(result: com.smartsales.domain.chat.ChatCompletionResult) {
-        // Update message with final content
+        // Get buffered content or use result display text
+        val bufferedText = streamBuffer.remove(result.assistantId)?.toString()
+        val fullText = bufferedText ?: result.displayText
+        val displayText = displayAssistantText(raw = result.rawFullText, sanitized = result.displayText)
+        
+        // Animate the text reveal using TextAnimator
+        TextAnimator.animateOverDuration(displayText).collect { animatedText ->
+            updateAssistantMessage(result.assistantId, persistAfterUpdate = false) { msg ->
+                msg.copy(
+                    content = animatedText,
+                    isStreaming = true
+                )
+            }
+        }
+        
+        // Finalize message with full content
         updateAssistantMessage(result.assistantId, persistAfterUpdate = true) { msg ->
-            val display = displayAssistantText(raw = result.rawFullText, sanitized = result.displayText)
             msg.copy(
-                content = display,
+                content = displayText,
                 rawContent = result.rawFullText,
                 sanitizedContent = result.displayText,
                 isStreaming = false,

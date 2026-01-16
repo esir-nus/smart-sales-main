@@ -185,14 +185,14 @@ class TingwuPayloadParserTest {
 
     @Test
     fun formatTimeMs_handlesZeroAndNegative() {
-        assertEquals("00:00", TingwuPayloadParser.formatTimeMs(0))
-        assertEquals("00:00", TingwuPayloadParser.formatTimeMs(-100))
+        assertEquals("00:00:00", TingwuPayloadParser.formatTimeMs(0))
+        assertEquals("00:00:00", TingwuPayloadParser.formatTimeMs(-100))
     }
 
     @Test
     fun formatTimeMs_formatsSecondsOnly() {
-        assertEquals("00:05", TingwuPayloadParser.formatTimeMs(5000))
-        assertEquals("01:30", TingwuPayloadParser.formatTimeMs(90000))
+        assertEquals("00:00:05", TingwuPayloadParser.formatTimeMs(5000))
+        assertEquals("00:01:30", TingwuPayloadParser.formatTimeMs(90000))
     }
 
     @Test

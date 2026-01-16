@@ -384,8 +384,13 @@ class TingwuTranscriptProcessor @Inject constructor(
                 if (chunks.isEmpty()) return@forEach
                 val sorted = chunks.sortedBy { it.get("Start")?.asDouble ?: 0.0 }
                 val text = sorted.joinToString(separator = "") { it.get("Text")?.asString.orEmpty() }
-                val start = sorted.first().get("Start")?.asDouble ?: 0.0
-                val end = sorted.last().get("End")?.asDouble ?: start
+                // NOTE: Paragraph JSON's Words.Start/End are in MILLISECONDS,
+                // but TingwuTranscriptSegment.start/end expect SECONDS.
+                // Convert ms → seconds to match expected unit.
+                val startMs = sorted.first().get("Start")?.asDouble ?: 0.0
+                val endMs = sorted.last().get("End")?.asDouble ?: startMs
+                val start = startMs / 1000.0
+                val end = endMs / 1000.0
                 val speaker = sorted.firstNotNullOfOrNull { it.get("SpeakerId")?.asString } ?: paragraphSpeaker
                 sentenceSegments += TingwuTranscriptSegment(
                     id = sorted.first().get("SentenceId")?.asInt ?: sorted.first().get("Id")?.asInt,

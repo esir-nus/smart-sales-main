@@ -604,14 +604,17 @@ class TingwuRunner @Inject constructor(
         builder.appendLine(normalizedTranscript).appendLine()
         val customPromptText = normalizeStageDirection(
             artifacts?.customPromptUrl?.let { fetchCustomPromptResult(it) }
-        ) ?: "自定义转写暂无可用内容"
+        )
         val summarizationText = resultProcessor.fetchSummarizationText(resultLinks)
             ?: "摘要暂无可用内容"
         val chaptersText = resultProcessor.buildChaptersText(artifacts, resultLinks)
             ?: "章节暂无可用内容"
 
-        builder.appendLine("## 自定义转写（CustomPrompt）")
-        builder.appendLine(customPromptText.trim()).appendLine()
+        // Only show CustomPrompt section if there's actual content
+        if (!customPromptText.isNullOrBlank()) {
+            builder.appendLine("## 自定义转写（CustomPrompt）")
+            builder.appendLine(customPromptText.trim()).appendLine()
+        }
 
         builder.appendLine("## 摘要（Summarization）")
         builder.appendLine(summarizationText.trim()).appendLine()

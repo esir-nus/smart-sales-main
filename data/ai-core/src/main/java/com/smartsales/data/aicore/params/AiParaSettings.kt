@@ -86,7 +86,7 @@ data class TingwuSummarizationSettings(
 )
 
 data class TingwuCustomPromptSettings(
-    val enabled: Boolean = true,
+    val enabled: Boolean = false,
     val contents: List<TingwuCustomPromptContentSettings> = listOf(
         TingwuCustomPromptContentSettings(
             name = "speaker-role-relabel-v1",

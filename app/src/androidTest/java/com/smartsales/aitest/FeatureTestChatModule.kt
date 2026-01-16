@@ -6,6 +6,9 @@ package com.smartsales.aitest
 // 作者：创建于 2025-12-10
 
 import com.smartsales.core.metahub.MetaHub
+import com.smartsales.data.aicore.debug.PipelineStage
+import com.smartsales.data.aicore.debug.PipelineTracer
+import com.smartsales.data.aicore.debug.PipelineEvent
 import com.smartsales.feature.chat.core.AiChatService
 import com.smartsales.feature.chat.core.ChatRequest
 import com.smartsales.feature.chat.core.ChatStreamEvent
@@ -78,8 +81,21 @@ object FeatureTestChatModule {
     @Singleton
     fun provideHomeOrchestrator(
         aiChatService: AiChatService,
-        metaHub: MetaHub
-    ): HomeOrchestrator = HomeOrchestratorImpl(aiChatService, metaHub)
+        metaHub: MetaHub,
+        pipelineTracer: PipelineTracer
+    ): HomeOrchestrator = HomeOrchestratorImpl(aiChatService, metaHub, pipelineTracer)
+
+    /** 提供 Fake PipelineTracer */
+    @Provides
+    @Singleton
+    fun providePipelineTracer(): PipelineTracer {
+        return object : PipelineTracer {
+            override val enabled = true
+            override val events = kotlinx.coroutines.flow.MutableStateFlow(emptyList<PipelineEvent>())
+            override fun emit(stage: PipelineStage, status: String, message: String) {}
+            override fun clear() {}
+        }
+    }
 
     /** 默认快捷技能目录。 */
     @Provides

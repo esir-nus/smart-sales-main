@@ -26,6 +26,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertTrue
@@ -69,6 +70,7 @@ class AudioFilesScreenTest {
                     onAskAiClicked = {},
                     onTranscriptDismissed = {},
                     onErrorDismissed = {},
+                    onFlagToggle = {},
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -111,6 +113,7 @@ class AudioFilesScreenTest {
                     onAskAiClicked = {},
                     onTranscriptDismissed = {},
                     onErrorDismissed = {},
+                    onFlagToggle = {},
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -140,6 +143,7 @@ class AudioFilesScreenTest {
                     onAskAiClicked = {},
                     onTranscriptDismissed = {},
                     onErrorDismissed = {},
+                    onFlagToggle = {},
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -173,6 +177,7 @@ class AudioFilesScreenTest {
                     onAskAiClicked = {},
                     onTranscriptDismissed = {},
                     onErrorDismissed = { uiState = uiState.copy(errorMessage = null) },
+                    onFlagToggle = {},
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -211,6 +216,7 @@ class AudioFilesScreenTest {
                     onAskAiClicked = {},
                     onTranscriptDismissed = {},
                     onErrorDismissed = {},
+                    onFlagToggle = {},
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -247,6 +253,7 @@ class AudioFilesScreenTest {
                     onAskAiClicked = {},
                     onTranscriptDismissed = {},
                     onErrorDismissed = {},
+                    onFlagToggle = {},
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -279,6 +286,7 @@ class AudioFilesScreenTest {
                     onAskAiClicked = {},
                     onTranscriptDismissed = {},
                     onErrorDismissed = {},
+                    onFlagToggle = {},
                     modifier = Modifier.fillMaxSize()
                 )
             }

@@ -43,17 +43,11 @@ class TranscriptFormatter @Inject constructor() {
                     speakerLabels[id]?.takeIf { it.isNotBlank() } ?: id
                 }
                 val begin = com.smartsales.data.aicore.tingwu.util.TingwuPayloadParser.formatTimeMs(segment.startMs)
-                val end = com.smartsales.data.aicore.tingwu.util.TingwuPayloadParser.formatTimeMs(segment.endMs)
-                val hasValidRange = segment.endMs > segment.startMs &&
-                    segment.endMs - segment.startMs <= MAX_SUBTITLE_DURATION_MS
                 builder.append("- ")
                 if (segment.startMs > 0 || segment.endMs > 0) {
                     builder.append("[")
                         .append(begin)
-                    if (hasValidRange) {
-                        builder.append(" - ").append(end)
-                    }
-                    builder.append("] ")
+                        .append("] ")
                 }
                 label?.let { builder.append(it).append("：") }
                 builder.append(segment.text.ifBlank { "（空白）" }).append("\n")

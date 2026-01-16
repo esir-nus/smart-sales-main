@@ -155,7 +155,8 @@ class RealResultProcessor @Inject constructor(
                     if (!paragraphTitle.isNullOrBlank() || !paragraphSummary.isNullOrBlank()) {
                         appendLine("### 段落摘要")
                         paragraphTitle?.let { appendLine("**$it**") }
-                        paragraphSummary?.let { appendLine(it) }
+                        // Skip paragraphSummary if it's too long (likely raw transcript, not a summary)
+                        paragraphSummary?.takeIf { it.length <= 500 }?.let { appendLine(it) }
                         appendLine()
                     }
                     if (conversational.isNotEmpty()) {

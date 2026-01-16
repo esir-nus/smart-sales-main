@@ -190,43 +190,91 @@ These MUST remain intact regardless of visual changes:
 
 ## Review Protocol
 
-### When Reviewing Deliverables: The 4-Layer Audit
+### The 4-Layer Audit Checklist
+
+Use this checklist for **every** deliverable review. Do not "guess"—audit systematically.
+
+---
 
 #### Layer 1: The Vibe Check (Soul & Emotion)
-1. **The "Wow" Factor**: Does it feel "Cool" and "Alive", or just functional?
-2. **Premium Weight**: Does it feel substantial (like physical glass/metal) or flimsy (like a web page)?
-3. **Living Intelligence**: Does it convey the "Neural" narrative (breathing, motion), or is it static?
+**Does it feel like Premium Tech or a Web Page?**
+
+| # | Check | Pass? |
+|---|-------|-------|
+| 1 | **"Wow" Factor**: Does it trigger an immediate "this is cool" reaction within 2 seconds? | [ ] |
+| 2 | **Premium Weight**: Does it feel substantial (glass/metal physics) or flimsy (like a cheap web page)? | [ ] |
+| 3 | **Living Intelligence**: Is there subtle motion/breathing? (No dead static screens — at minimum, a pulse or shimmer somewhere). | [ ] |
+
+**Layer 1 Verdict**: [ ] Pass / [ ] Fail — If Fail, STOP. Do not proceed to Layer 2.
+
+---
 
 #### Layer 2: Visual Fidelity (The "Paint")
-4. **Is "Zero-Chrome" enforced?** (No scrollbars, no focus rings).
-5. **Is Light Mode premium?** (Checks against "default white" laziness).
+**Is the execution crisp?**
+
+| # | Check | Pass? |
+|---|-------|-------|
+| 4 | **Zero-Chrome Enforced**: ABSOLUTELY NO visible scrollbars, default focus rings, or browser artifacts (`:focus-visible` rings, `outline: auto`). | [ ] |
+| 5 | **Light Mode Premium**: Is Light Mode "Frosted Ice" (blur + subtle borders), NOT just "Default White" (#FFF background with no treatment)? | [ ] |
+| 6 | **Tokens Respected**: Are colors/spacings derived from `design-tokens.json`? No raw hex codes that are not tokenized. | [ ] |
+
+**Layer 2 Verdict**: [ ] Pass / [ ] Fail
+
+---
 
 #### Layer 3: Composition & Layout (The "Bones")
-6. **Visual Hierarchy**: Is the primary action visibly dominant? (Size/Contrast > 2x secondary).
-7. **Touch Targets**: Are all tappable elements >48dp (or have 48dp hitboxes)?
-8. **Whitespace Ratios**: Is spacing intentional? (Check for "accidental tightness" vs "breathing room"). Avoid "Bootstrap tight" layouts.
-9. **Alignment**: Are grids respected? (Do not mix center/left align arbitrarily).
+**Is the structure sound?**
 
-#### Layer 4: Guardrails (The Law)
-10. Does Version A meet all acceptance criteria?
-11. Are all functional invariants respected?
+| # | Check | Pass? |
+|---|-------|-------|
+| 7 | **Hierarchy**: Is the primary action (e.g., Mic Button, Send Button) at least 2x more visually dominant (size/contrast) than secondary actions? | [ ] |
+| 8 | **Touch Targets**: Are ALL tappable elements ≥48dp? (No "mouse-only" tiny buttons). Measure if uncertain. | [ ] |
+| 9 | **Whitespace**: Is there intentional "breathing room"? (Avoid "Bootstrap tightness" — elements should not touch edges or each other). | [ ] |
+| 10 | **Alignment**: Is the grid respected? (No arbitrary mixing of center/left alignment within the same visual block). | [ ] |
+| 11 | **Text Legibility**: Is all text readable? (Contrast ratio ≥4.5:1 for body text, ≥3:1 for large text). | [ ] |
 
-### Provide Feedback As:
+**Layer 3 Verdict**: [ ] Pass / [ ] Fail
+
+---
+
+#### Layer 4: Guardrails & Safety (The Law)
+**Did we break anything?**
+
+| # | Check | Pass? |
+|---|-------|-------|
+| 12 | **Acceptance Criteria Met**: Does Version A meet ALL items listed in the Design Brief's Acceptance Criteria? | [ ] |
+| 13 | **Functional Invariants Respected**: Were any buttons accidentally deleted? Are all flows still accessible? | [ ] |
+
+**Layer 4.5: Regression Check (for iterative work on existing files)**
+
+| # | Check | Pass? |
+|---|-------|-------|
+| 14 | **No Duplicate Elements**: Are there any double icons, stars, or badges? | [ ] |
+| 15 | **CSS Syntax Valid**: Is CSS brace balance verified (no unclosed `@keyframes` or `{`)? | [ ] |
+| 16 | **Text Truncation Working**: Do long titles/summaries truncate to one line with ellipsis? | [ ] |
+| 17 | **Animation Direction Correct**: Do animations match physical gesture directions (e.g., swipe left→right = shimmer left→right)? | [ ] |
+| 18 | **JS Functions Callable**: Are critical functions (`toggleDrawer`, `toggleMultiSelect`, etc.) still defined and working? | [ ] |
+
+**Layer 4 Verdict**: [ ] Pass / [ ] Fail
+
+---
+
+### Final Verdict Template
 
 ```markdown
 ## 🔴 Rejected (Must Fix)
-[What violated guardrails or acceptance criteria]
+[List specific violations of Layers 1-4. Be explicit about what failed and why.]
 
 ## 🟡 Revisions Needed
-[Polish issues, minor adjustments]
+[Polish issues, minor adjustments that don't block approval but should be addressed.]
 
 ## 🟢 Approved
-[What met or exceeded expectations]
+[What met or exceeded expectations. Celebrate good work.]
 
 ## Decision
 - [ ] Approve Version A
 - [ ] Approve Version B (creative)
-- [ ] Request revision: [specific changes]
+- [ ] Request revision: [specific changes required]
 
 ## Token Updates Required
 - [ ] Add/update tokens in design-tokens.json
@@ -234,7 +282,9 @@ These MUST remain intact regardless of visual changes:
 
 ## Next Step
 - [ ] Ready for transplant → Invoke `/14-ui-transplant`
+- [ ] Needs another review cycle
 ```
+
 
 ---
 

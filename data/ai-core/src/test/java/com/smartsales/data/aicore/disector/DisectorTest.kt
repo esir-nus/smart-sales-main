@@ -54,13 +54,13 @@ class DisectorTest {
 
         assertEquals(2, plan.batches.size)
 
-        // Batch 1 (index=1): abs [0, 10min), capture [0, 10min) - no overlap
+        // Batch 1 (index=1): abs [0, 10min), capture [0, 10:10) - has post-roll overlap
         val batch1 = plan.batches[0]
         assertEquals(1, batch1.batchIndex)
         assertEquals(0L, batch1.absStartMs)
         assertEquals(10 * 60 * 1000L, batch1.absEndMs)
         assertEquals(0L, batch1.captureStartMs)
-        assertEquals(10 * 60 * 1000L, batch1.captureEndMs)
+        assertEquals(10 * 60 * 1000L + 10000L, batch1.captureEndMs)  // 10s post-roll
 
         // Batch 2 (index=2): abs [10min, 21min), but 21-20=1min < 7min so merged
         // Actually creates 2 batches: (10min, 11min merged)
@@ -186,7 +186,7 @@ class DisectorTest {
     }
 
     @Test
-    fun createPlan_firstBatch_hasNoOverlap() {
+    fun createPlan_firstBatch_hasNoPreRollOverlap() {
         val plan = disector.createPlan(
             totalMs = 35 * 60 * 1000L,
             audioAssetId = "audio123",
@@ -194,8 +194,10 @@ class DisectorTest {
         )
 
         val firstBatch = plan.batches[0]
+        // First batch has no pre-roll overlap
         assertEquals(firstBatch.absStartMs, firstBatch.captureStartMs)
-        assertEquals(firstBatch.absEndMs, firstBatch.captureEndMs)
+        // But has post-roll overlap since it's not the last batch
+        assertEquals(firstBatch.absEndMs + 10000L, firstBatch.captureEndMs)
     }
 
     // ===== Metadata tests =====

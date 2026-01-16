@@ -56,8 +56,8 @@ class MultiBatchStitcher @Inject constructor() {
                 // Convert absolute seconds back to millis for comparison with batch constraints
                 val absStartMs = (absStart * 1000).toLong()
                 
-                // Strict window filtering
-                if (absStartMs >= batch.absStartMs && absStartMs < batch.absEndMs) {
+                // Capture window filtering (§B.1: allows anchor duplication at boundaries)
+                if (absStartMs >= batch.captureStartMs && absStartMs < batch.captureEndMs) {
                     stitchedSegments.add(
                         segment.copy(
                             start = absStart,
@@ -103,8 +103,8 @@ class MultiBatchStitcher @Inject constructor() {
                 val absStartMs = segment.startMs + offsetMs
                 val absEndMs = segment.endMs + offsetMs
 
-                // Filter: only keep segments within batch window
-                if (absStartMs >= batch.absStartMs && absStartMs < batch.absEndMs) {
+                // Filter: keep segments within capture window (§B.1: allows anchor duplication)
+                if (absStartMs >= batch.captureStartMs && absStartMs < batch.captureEndMs) {
                     stitched.add(
                         segment.copy(
                             startMs = absStartMs,

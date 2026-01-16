@@ -5,9 +5,7 @@
 
 package com.smartsales.domain.transcription
 
-import com.smartsales.feature.media.audiofiles.AudioTranscriptionBatchEvent
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
-import com.smartsales.feature.chat.home.transcription.ProcessedBatch
 import com.smartsales.feature.chat.home.transcription.TranscriptionUiState
 import kotlinx.coroutines.flow.*
 
@@ -35,21 +33,6 @@ interface TranscriptionCoordinator {
     fun observeJob(jobId: String): Flow<AudioTranscriptionJobState>
 
     /**
-     * Observe processed batches (after gate and window filtering).
-     *
-     * This flow automatically handles:
-     * - Batch gate (ensure ordered release)
-     * - Window filtering (if enabled)
-     * - Tingwu trace recording
-     */
-    fun observeProcessedBatches(jobId: String): Flow<ProcessedBatch>
-
-    /**
-     * Process batch data: apply window filtering, return effective markdown chunk.
-     */
-    fun processChunk(event: AudioTranscriptionBatchEvent.BatchReleased): String
-
-    /**
      * Reset transcription state (call when starting new transcription).
      */
     fun reset()
@@ -70,15 +53,9 @@ interface TranscriptionCoordinator {
     fun startTranscription(jobId: String)
 
     /**
-     * Merge transcription chunks for streaming display.
-     */
-    fun mergeChunks(existing: String, incoming: String): String
-
-    /**
      * Run transcription with callbacks for UI updates.
      *
      * Handles observation loops internally:
-     * - Observes processed batches
      * - Observes job state (progress/completed/failed)
      * - Calls back to ViewModel for UI updates
      *
@@ -86,7 +63,6 @@ interface TranscriptionCoordinator {
      * @param fileName Audio file name (for progress messages)
      * @param progressMessageId Message ID for progress updates
      * @param onProgressUpdate Called when progress percentage changes
-     * @param onBatchReceived Called when batch is received
      * @param onCompleted Called when transcription completes (with transcript markdown)
      * @param onFailed Called when transcription fails
      */
@@ -95,7 +71,6 @@ interface TranscriptionCoordinator {
         fileName: String,
         progressMessageId: String,
         onProgressUpdate: (percent: Int, messageId: String) -> Unit,
-        onBatchReceived: (ProcessedBatch) -> Unit,
         onCompleted: (transcriptMarkdown: String, messageId: String) -> Unit,
         onFailed: (reason: String, messageId: String) -> Unit
     )

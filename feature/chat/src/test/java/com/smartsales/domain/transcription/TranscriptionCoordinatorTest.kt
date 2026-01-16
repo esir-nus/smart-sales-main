@@ -8,17 +8,13 @@ package com.smartsales.domain.transcription
 
 import com.smartsales.data.aicore.AiCoreConfig
 import com.smartsales.data.aicore.debug.TingwuTraceStore
-import com.smartsales.feature.chat.home.transcription.ProcessedBatch
-import com.smartsales.feature.media.audiofiles.AudioTranscriptionBatchEvent
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.take
-import kotlinx.coroutines.flow.toList
+
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -52,118 +48,7 @@ class TranscriptionCoordinatorTest {
         assertEquals(jobState, deferred.await())
     }
 
-    @Test
-    fun observeProcessedBatches_orderedBatches_emitsImmediately() = runTest(UnconfinedTestDispatcher()) {
-        // Given: Ordered batches
-        coordinator.reset()
-        val results = mutableListOf<com.smartsales.feature.chat.home.transcription.ProcessedBatch>()
 
-        // When: Start collecting in background, then emit batches
-        val job = launch {
-            coordinator.observeProcessedBatches("job1").take(3).toList(results)
-        }
-
-        // Emit batches after collector starts
-        fakeCoordinator.batchFlow.emit(createBatchEvent(1, "Batch 1"))
-        fakeCoordinator.batchFlow.emit(createBatchEvent(2, "Batch 2"))
-        fakeCoordinator.batchFlow.emit(createBatchEvent(3, "Batch 3", isFinal = true))
-
-        job.join()
-
-        // Then: Should emit all batches immediately
-        assertEquals(3, results.size)
-        assertEquals(1, results[0].batchIndex)
-        assertEquals(2, results[1].batchIndex)
-        assertEquals(3, results[2].batchIndex)
-    }
-
-    @Test
-    fun observeProcessedBatches_outOfOrder_buffersUntilPrefix() = runTest(UnconfinedTestDispatcher()) {
-        // Given: Out-of-order batches
-        coordinator.reset()
-        val results = mutableListOf<com.smartsales.feature.chat.home.transcription.ProcessedBatch>()
-
-        // When: Start collecting in background
-        val job = launch {
-            coordinator.observeProcessedBatches("job1").take(3).toList(results)
-        }
-
-        // Emit batch 2 first, then batch 1 (out of order)
-        fakeCoordinator.batchFlow.emit(createBatchEvent(2, "Batch 2"))
-        fakeCoordinator.batchFlow.emit(createBatchEvent(1, "Batch 1"))
-        fakeCoordinator.batchFlow.emit(createBatchEvent(3, "Batch 3", isFinal = true))
-
-        job.join()
-
-        // Then: Should buffer batch 2 until batch 1 arrives, then emit both
-        assertEquals(3, results.size)
-        assertEquals(1, results[0].batchIndex)
-        assertEquals(2, results[1].batchIndex)
-        assertEquals(3, results[2].batchIndex)
-    }
-
-    @Test
-    fun observeProcessedBatches_afterFinal_ignoresBatches() = runTest(UnconfinedTestDispatcher()) {
-        // Given: Reset and prepare
-        coordinator.reset()
-        
-        // When: Start collecting in background, emit final batch
-        val deferred = async {
-            coordinator.observeProcessedBatches("job1").first()
-        }
-
-        fakeCoordinator.batchFlow.emit(createBatchEvent(1, "Batch 1", isFinal = true))
-        
-        // Verify first batch is final
-        val firstBatch = deferred.await()
-        assertEquals(true, firstBatch.isFinal)
-
-        // After final, additional batches to same flow would be a new collection
-        // This test verifies the isFinal flag is set correctly
-    }
-
-    @Test
-    fun processChunk_windowFilterDisabled_fallbackToMarkdown() = runTest {
-        // Given: Window filtering disabled
-        val event = createBatchEvent(1, "Original markdown")
-
-        // When: Process chunk
-        val result = coordinator.processChunk(event)
-
-        // Then: Should return original markdown
-        assertEquals("Original markdown", result)
-    }
-
-    @Test
-    fun processChunk_windowFilterEnabled_appliesFilter() = runTest {
-        // Given: Coordinator with window filtering enabled
-        val coordinatorWithFilter = TranscriptionCoordinatorImpl(
-            transcriptionCoordinator = fakeCoordinator,
-            tingwuTraceStore = traceStore,
-            optionalConfig = Optional.of(AiCoreConfig(enableV1TingwuMacroWindowFilter = true))
-        )
-
-        val event = createBatchEvent(1, "Original markdown").copy(
-            v1Window = com.smartsales.feature.media.audiofiles.V1TranscriptionBatchWindow(
-                batchIndex = 1,
-                absStartMs = 0L,
-                absEndMs = 10000L,
-                overlapMs = 0L,
-                captureStartMs = 0L
-            ),
-            timedSegments = listOf(
-                com.smartsales.feature.media.audiofiles.V1TimedTextSegment(0L, 5000L, "Segment 1"),
-                com.smartsales.feature.media.audiofiles.V1TimedTextSegment(5000L, 10000L, "Segment 2")
-            )
-        )
-
-        // When: Process chunk
-        val result = coordinatorWithFilter.processChunk(event)
-
-        // Then: Should apply window filtering (V1TingwuWindowedChunkBuilder)
-        // Note: Without actual filtering logic, it returns filtered markdown
-        assertEquals("Segment 1\nSegment 2", result)
-    }
 
     @Test
     fun reset_clearsGateAndState() = runTest {
@@ -214,25 +99,11 @@ class TranscriptionCoordinatorTest {
 
     // ===== Helpers =====
 
-    private fun createBatchEvent(
-        batchIndex: Int,
-        markdown: String,
-        isFinal: Boolean = false
-    ) = AudioTranscriptionBatchEvent.BatchReleased(
-        jobId = "job1",
-        batchIndex = batchIndex,
-        totalBatches = 3,
-        markdownChunk = markdown,
-        isFinal = isFinal,
-        batchSize = 100,
-        lineCount = 10,
-        ruleLabel = "test-rule"
-    )
+
 
     // ===== Fake Implementations =====
 
     private class FakeAudioTranscriptionCoordinator : AudioTranscriptionCoordinator {
-        val batchFlow = MutableSharedFlow<AudioTranscriptionBatchEvent>()
         val jobStateFlow = MutableSharedFlow<AudioTranscriptionJobState>()
 
         override suspend fun uploadAudio(file: java.io.File) =
@@ -249,6 +120,6 @@ class TranscriptionCoordinatorTest {
 
         override fun observeJob(jobId: String): Flow<AudioTranscriptionJobState> = jobStateFlow
 
-        override fun observeBatches(jobId: String): Flow<AudioTranscriptionBatchEvent> = batchFlow
+
     }
 }

@@ -375,6 +375,7 @@ HUD is a debug panel with three copyable sections (for both Chat and Transcripti
 
 ### A.3 Examples (must match)
 
+**Macro window examples** (authoritative timeline):
 - 21 minutes -> (10, 11)
 - 26 minutes -> (10, 16) (rem 6 < 7, merge)
 - 27 minutes -> (10, 10, 7)
@@ -382,29 +383,51 @@ HUD is a debug panel with three copyable sections (for both Chat and Transcripti
 - 37 minutes -> (10, 10, 10, 7)
 - 39 minutes -> (10, 10, 10, 9)
 
-### A.4 Micro overlap strategy (pre-roll only, deterministic)
+**Capture window example** (27 min audio, 3 batches):
 
-- `overlapMs = 10_000`
+| Batch | Macro Window | Capture Window |
+|-------|--------------|----------------|
+| 1 | 0:00-10:00 | 0:00-10:10 |
+| 2 | 10:00-20:00 | 9:50-20:10 |
+| 3 | 20:00-27:00 | 19:50-27:00 |
+
+### A.4 Micro overlap strategy (pre-roll + post-roll, deterministic)
+
+- `overlapMs = 10_000` (10 seconds)
 - **Macro window** (authoritative timeline): `absStartMs..absEndMs`, half-open interval: `abs in [absStartMs, absEndMs)`
 - **Capture window** (submitted audio):
-  - First batch: `captureStartMs = absStartMs`
-  - Other batches: `captureStartMs = max(0, absStartMs - overlapMs)`
-  - **All batches**: `captureEndMs = absEndMs` (no post-roll)
+  - First batch: `captureStartMs = absStartMs`, `captureEndMs = absEndMs + overlapMs`
+  - Middle batches: `captureStartMs = absStartMs - overlapMs`, `captureEndMs = absEndMs + overlapMs`
+  - Last batch: `captureStartMs = absStartMs - overlapMs`, `captureEndMs = absEndMs`
+- **Total overlap per boundary**: 20 seconds (10s tail from batch N + 10s warmup from batch N+1)
 - Intent and constraints:
-  - Provide pre-warm for later batches; no suffix overlap for previous batch.
-  - Must not do "front+back 10s" (20s overlap).
+  - **Pre-roll (warmup)**: Provides ASR context warm-up for later batches
+  - **Post-roll (tail)**: Prevents abrupt sentence cutoff at batch boundaries
+  - **Anchor sentence**: Last complete sentence before tail cutoff serves as docking point for next batch
+
+**Visual timeline (27 min audio, 3 batches)**:
+```
+Macro:   [0:00────10:00] [10:00────20:00] [20:00────27:00]
+Capture: [0:00────10:10] [9:50─────20:10] [19:50────27:00]
+              tail↗  ↖warmup    tail↗  ↖warmup
+```
+
+> **Timestamp restoration**: Tingwu returns timestamps relative to capture start. Add `captureStartMs` during formatting to restore absolute timeline.
 
 ---
 
 ## 11) Appendix B: TranscriptPublisher (deterministic publish and de-dup)
 
-### B.1 Overlap de-dup (V1 strategy, deterministic)
+### B.1 Overlap handling (anchor duplication strategy)
 
-- Default strategy uses **range filtering only** (no text similarity).
-- Rules:
+- **Anchor duplication is intentional** — duplicate sentences at batch boundaries provide context continuity.
+- **Last Sentence Rule**: The last complete sentence from batch N appears again at the start of batch N+1.
+  - Sentence boundaries detected by punctuation (。！？.!?) during formatting.
+  - This duplication is a feature, not a bug — no cleanup required.
+- **Range filtering** (optional, for advanced dedup if needed):
   - If `(absStart, absEnd)` known: publish iff `absEnd > batch.absStartMs && absStart < batch.absEndMs`
   - If only `absStart`: publish iff `absStart in [batch.absStartMs, batch.absEndMs)`
-- If no relative segment info: publish as "batch block" (one block per batch), accept pre-roll duplication.
+- **Default behavior**: Accept anchor duplication for user context continuity.
 
 ### B.2 Continuous prefix publish (hard invariant)
 

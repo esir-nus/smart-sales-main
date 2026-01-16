@@ -190,9 +190,37 @@ These MUST remain intact regardless of visual changes:
 
 ## Review Protocol
 
-### The 4-Layer Audit Checklist
+### The 5-Layer Audit Checklist
 
 Use this checklist for **every** deliverable review. Do not "guess"—audit systematically.
+
+> **Platform Context**: SmartSales is a **Mobile Phone App**. All reviews must assume a **~375-430px wide viewport** (iPhone/Android standard). Desktop layouts are irrelevant unless explicitly requested.
+
+### 📱 Reference Device Table (Required for Layer 0)
+
+| Platform | Device | Logical Width | Logical Height | Aspect Ratio |
+|----------|--------|---------------|----------------|--------------|
+| **iOS** | iPhone SE (3rd Gen) | 375px | 667px | ~16:9 |
+| **iOS** | iPhone 14 / 15 | 390px | 844px | ~19.5:9 |
+| **iOS** | iPhone 14 Pro Max / 15 Pro Max | 430px | 932px | ~19.5:9 |
+| **Android** | Pixel 7 | 412px | 892px | ~19.5:9 |
+| **Android** | Samsung Galaxy S23 | 360px | 780px | ~19.5:9 |
+
+**Evaluation Rule**: Prototype MUST be verified at **minimum 2 devices** (one iOS, one Android) before approval.
+
+---
+
+#### Layer 0: Platform Sanity (The Foundation)
+**Are we designing for the right device?**
+
+| # | Check | Pass? |
+|---|-------|-------|
+| 0a | **Phone Viewport Width**: Is the layout designed for ~375-430px? (NOT 1920px desktop). | [ ] |
+| 0b | **Element Proportions**: Do elements fill reasonable % of the phone width? (Cards ~85-95%, Drawers ~70-85%). Empty space should be intentional, not "lost real estate." | [ ] |
+| 0c | **Content Density**: Is there enough content visible above-the-fold? (No "one item and a void"). | [ ] |
+| 0d | **Thumb Zone Awareness**: Are primary actions (CTAs) in the bottom 1/3 of the screen (thumb-reachable zone)? | [ ] |
+
+**Layer 0 Verdict**: [ ] Pass / [ ] Fail — If Fail, the layout is fundamentally wrong for mobile.
 
 ---
 
@@ -333,6 +361,78 @@ When UI Director reviews deliverables, add this check to Layer 4:
 13. Is CSS brace balance verified (no syntax errors)?
 14. Do summaries truncate to one line?
 15. Do animations match physical gesture directions?
+```
+
+---
+
+## 🔄 Serial Fix Protocol (One Issue at a Time)
+
+> **Lesson Learned**: Fixing multiple issues in a single pass causes **regression cascades**, where solving Problem A creates Problem B.
+> 
+> **Example**: Fixing "layout centering" moved the Aurora Canvas outside its visible container, turning the screen opaque black.
+
+### The Rule: **Audit First, Fix One, Verify, Repeat**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  PHASE 1: FULL AUDIT                                    │
+│  Capture screenshot → Run 5-Layer Checklist → List ALL  │
+│  issues as a prioritized queue (Critical → Polish)      │
+└───────────────────────────┬─────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────┐
+│  PHASE 2: SERIAL EXECUTION (Loop)                       │
+│  For each issue in queue:                               │
+│    1. Create brief for THIS issue only                  │
+│    2. Execute fix                                       │
+│    3. Capture screenshot                                │
+│    4. Re-run 5-Layer Audit (spot-check)                 │
+│    5. If new issue appears → ADD to queue, don't fix    │
+│    6. Mark issue DONE → Next                            │
+└───────────────────────────┬─────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────┐
+│  PHASE 3: FINAL VERIFICATION                            │
+│  Full 5-Layer Audit → Update Walkthrough                │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Priority Order
+
+| Priority | Layer | Example |
+|----------|-------|---------|
+| P0 | Layer 1 (Vibe) | "Screen is black / no aurora" |
+| P1 | Layer 0 (Platform) | "Layout not phone-sized" |
+| P2 | Layer 2 (Fidelity) | "Scrollbars visible" |
+| P3 | Layer 3 (Composition) | "Buttons too small" |
+| P4 | Layer 4 (Polish) | "Animation direction wrong" |
+
+### Anti-Patterns
+
+| ❌ Don't | ✅ Do |
+|----------|------|
+| "I'll fix centering AND aurora AND input bar in one script" | "Fix centering. Verify. Then fix aurora. Verify." |
+| "The fix worked, moving on" | "The fix worked. Screenshot. Next issue." |
+| "I see a new bug, let me fix that too" | "I see a new bug. Adding to queue. Continuing current fix." |
+
+### Issue Queue Template
+
+When auditing, produce:
+
+```markdown
+## Issue Queue (Prioritized)
+
+| # | Priority | Layer | Issue | Status |
+|---|----------|-------|-------|--------|
+| 1 | P0 | L1 | Aurora Canvas not visible (opaque black screen) | 🔴 TODO |
+| 2 | P1 | L0 | Device frame not centered | ✅ DONE |
+| 3 | P2 | L2 | Light mode lacks frosted glass effect | 🔴 TODO |
+| 4 | P3 | L3 | FAB knot overlaps input bar on iPhone SE | 🔴 TODO |
+
+**Current Fix**: #1 (Aurora Canvas)
+**Next Fix**: #3 (Light Mode Glass)
 ```
 
 ---

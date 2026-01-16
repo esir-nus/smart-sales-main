@@ -57,8 +57,8 @@ import com.smartsales.domain.error.toUserMessage
 import com.smartsales.feature.connectivity.DeviceConnectionManager
 import com.smartsales.feature.chat.ChatShareHandler
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
-import com.smartsales.feature.media.audiofiles.AudioTranscriptionBatchEvent
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
+import com.smartsales.core.util.TextAnimator
 import com.smartsales.feature.media.audiofiles.AudioStorageRepository
 import com.smartsales.feature.media.MediaClipStatus
 import com.smartsales.feature.media.MediaSyncCoordinator
@@ -94,8 +94,7 @@ import com.smartsales.feature.chat.core.publisher.GeneralChatV1Finalizer
 import com.smartsales.feature.chat.core.publisher.ArtifactStatus
 import com.smartsales.feature.chat.core.publisher.V1FinalizeResult
 import com.smartsales.domain.stream.StreamingCoordinator
-import com.smartsales.domain.transcription.V1BatchIndexPrefixGate
-import com.smartsales.domain.transcription.V1TingwuWindowedChunkBuilder
+
 import com.smartsales.feature.chat.core.v1.V1GeneralCompletionEvaluator
 import com.smartsales.feature.chat.core.v1.V1GeneralRetryPolicy
 import com.smartsales.feature.chat.core.v1.V1GeneralRetryEffects
@@ -676,24 +675,35 @@ class HomeViewModel @Inject constructor(
                             )
                         }
                     },
-                    onBatchReceived = { batch -> handleProcessedBatch(batch) },
                     onCompleted = { transcriptMarkdown, messageId ->
-                        // Use transcript markdown if available, otherwise show completion notice
-                        val raw = if (transcriptMarkdown.isNotBlank()) {
-                            transcriptMarkdown
-                        } else {
-                            "转写完成：${request.fileName}"
-                        }
-                        updateAssistantMessage(messageId, persistAfterUpdate = true) { msg ->
-                            val display = displayAssistantText(raw = raw, sanitized = raw)
-                            msg.copy(
-                                content = display,
-                                rawContent = raw,
-                                sanitizedContent = raw,
-                                isStreaming = false
-                            )
-                        }
+                        val text = transcriptMarkdown.ifBlank { "转写完成：${request.fileName}" }
                         activelyTranscribing = false
+                        
+                        // Client-side typewriter animation (launch since callback isn't suspend)
+                        viewModelScope.launch {
+                            TextAnimator.animateOverDuration(text).collect { animatedText ->
+                                updateAssistantMessage(messageId, persistAfterUpdate = false) { msg ->
+                                    val display = displayAssistantText(raw = animatedText, sanitized = animatedText)
+                                    msg.copy(
+                                        content = display,
+                                        rawContent = animatedText,
+                                        sanitizedContent = animatedText,
+                                        isStreaming = true
+                                    )
+                                }
+                            }
+                            
+                            // Finalize after animation completes
+                            updateAssistantMessage(messageId, persistAfterUpdate = true) { msg ->
+                                val display = displayAssistantText(raw = text, sanitized = text)
+                                msg.copy(
+                                    content = display,
+                                    rawContent = text,
+                                    sanitizedContent = text,
+                                    isStreaming = false
+                                )
+                            }
+                        }
                     },
                     onFailed = { reason, messageId ->
                         updateAssistantMessage(messageId, persistAfterUpdate = true) { msg ->
@@ -715,78 +725,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    // Simplified batch handler - receives processed batches from TranscriptionViewModel
-    private fun handleProcessedBatch(batch: com.smartsales.feature.chat.home.transcription.ProcessedBatch) {
-        val effectiveChunk = batch.effectiveChunk
-        val isFinal = batch.isFinal
-        val currentMessageId = tingwuCoordinator.state.value.currentMessageId
 
-        // Skip empty chunks unless we have an existing message
-        if (effectiveChunk.isBlank() && currentMessageId == null) {
-            if (isFinal) {
-                tingwuCoordinator.markFinal()
-            }
-            return
-        }
-
-        val merged = if (currentMessageId == null) {
-            effectiveChunk
-        } else {
-            tingwuCoordinator.mergeChunks(
-                existing = _uiState.value.chatMessages.firstOrNull { it.id == currentMessageId }?.rawContent
-                    ?: _uiState.value.chatMessages.firstOrNull { it.id == currentMessageId }?.content
-                    ?: "",
-                incoming = effectiveChunk
-            )
-        }
-
-        if (currentMessageId == null) {
-            // Create new message
-            val messageId = nextMessageId()
-            tingwuCoordinator.setCurrentMessageId(messageId)
-            val display = displayAssistantText(raw = merged, sanitized = merged)
-            _uiState.update {
-                it.copy(
-                    chatMessages = it.chatMessages + ChatMessageUi(
-                        id = messageId,
-                        role = ChatMessageRole.ASSISTANT,
-                        content = display,
-                        rawContent = merged,
-                        sanitizedContent = merged,
-                        timestampMillis = System.currentTimeMillis(),
-                        isStreaming = !isFinal
-                    ),
-                    showWelcomeHero = false
-                )
-            }
-            if (isFinal) {
-                persistMessagesAsync()
-                viewModelScope.launch { updateSessionSummary(merged) }
-            }
-        } else {
-            // Update existing message
-            updateAssistantMessage(currentMessageId, persistAfterUpdate = isFinal) { msg ->
-                val display = displayAssistantText(raw = merged, sanitized = merged)
-                msg.copy(
-                    content = display,
-                    rawContent = merged,
-                    sanitizedContent = merged,
-                    isStreaming = !isFinal
-                )
-            }
-            if (isFinal) {
-                viewModelScope.launch { updateSessionSummary(merged) }
-            }
-        }
-
-        if (isFinal) {
-            tingwuCoordinator.markFinal()
-        }
-
-        if (CHAT_DEBUG_HUD_ENABLED && _uiState.value.showDebugMetadata) {
-            debugCoordinator.refreshTraces()
-        }
-    }
 
 
     fun onOpenDrawer() {

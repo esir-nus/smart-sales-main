@@ -2,7 +2,7 @@
 
 > **Purpose**: Living tracker for Smart Sales architecture and feature status  
 > **AI Agents**: Use the Quick Index below to navigate — don't read irrelevant sections  
-> **Last Updated**: 2026-01-15
+> **Last Updated**: 2026-01-16
 
 ---
 
@@ -73,6 +73,9 @@ smart-sales/
 │   ├── ExportMetadata.kt               # Export metadata ✅
 │   ├── MetaHub.kt                      # Hub interface ✅
 │   └── InMemoryMetaHub.kt              # Hub impl ✅
+│
+├── core/util/src/main/java/com/smartsales/core/util/
+│   └── TextAnimator.kt                 # Client-side text animation (2026-01-16) ✅
 │
 ├── data/ai-core/                    # Provider Layer
 │   ├── DashscopeAiChatService.kt       # AI Chatter (V1 §3.1.1) ✅

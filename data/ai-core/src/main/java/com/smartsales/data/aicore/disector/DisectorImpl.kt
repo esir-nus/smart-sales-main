@@ -89,12 +89,21 @@ class DisectorImpl @Inject constructor() : Disector {
             )
         }
 
+        // Two-pass: add post-roll overlap to all batches except last (§A.4)
+        val finalBatches = batches.mapIndexed { index, batch ->
+            if (index < batches.lastIndex) {
+                batch.copy(captureEndMs = minOf(batch.absEndMs + OVERLAP_MS, totalMs))
+            } else {
+                batch
+            }
+        }
+
         return DisectorPlan(
             disectorPlanId = generatePlanId(audioAssetId, totalMs),
             audioAssetId = audioAssetId,
             recordingSessionId = recordingSessionId,
             totalMs = totalMs,
-            batches = batches
+            batches = finalBatches
         )
     }
 

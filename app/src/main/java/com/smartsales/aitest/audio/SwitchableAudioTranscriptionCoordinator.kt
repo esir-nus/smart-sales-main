@@ -6,7 +6,7 @@ package com.smartsales.aitest.audio
 
 import com.smartsales.core.util.Result
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
-import com.smartsales.feature.media.audiofiles.AudioTranscriptionBatchEvent
+
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionJobState
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
 import java.io.File
@@ -41,6 +41,5 @@ class SwitchableAudioTranscriptionCoordinator @Inject constructor(
     override fun observeJob(jobId: String): Flow<AudioTranscriptionJobState> =
         tingwuDelegate.observeJob(jobId)
 
-    override fun observeBatches(jobId: String): Flow<AudioTranscriptionBatchEvent> =
-        tingwuDelegate.observeBatches(jobId)
+
 }

@@ -13,7 +13,7 @@ import com.smartsales.feature.media.MediaClipStatus
 import com.smartsales.feature.media.MediaSyncCoordinator
 import com.smartsales.feature.media.MediaSyncState
 import com.smartsales.feature.media.audiofiles.AudioTranscriptionCoordinator
-import com.smartsales.feature.media.audiofiles.AudioTranscriptionBatchEvent
+
 import com.smartsales.feature.media.audiofiles.AudioUploadPayload
 import com.smartsales.feature.media.audiofiles.DeviceHttpEndpointProvider
 import com.smartsales.feature.media.audiofiles.AudioStorageRepository
@@ -499,9 +499,7 @@ class AudioFilesViewModelTest {
             return jobStates.getOrPut(jobId) { MutableStateFlow<AudioTranscriptionJobState>(AudioTranscriptionJobState.Idle) }
         }
 
-        override fun observeBatches(jobId: String): Flow<AudioTranscriptionBatchEvent> {
-            return emptyFlow()
-        }
+
 
         fun emitState(jobId: String, state: AudioTranscriptionJobState) {
             val flow = jobStates.getOrPut(jobId) { MutableStateFlow<AudioTranscriptionJobState>(AudioTranscriptionJobState.Idle) }

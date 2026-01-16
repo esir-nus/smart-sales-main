@@ -677,9 +677,14 @@ class HomeViewModel @Inject constructor(
                         }
                     },
                     onBatchReceived = { batch -> handleProcessedBatch(batch) },
-                    onCompleted = { messageId ->
+                    onCompleted = { transcriptMarkdown, messageId ->
+                        // Use transcript markdown if available, otherwise show completion notice
+                        val raw = if (transcriptMarkdown.isNotBlank()) {
+                            transcriptMarkdown
+                        } else {
+                            "转写完成：${request.fileName}"
+                        }
                         updateAssistantMessage(messageId, persistAfterUpdate = true) { msg ->
-                            val raw = "转写完成：${request.fileName}"
                             val display = displayAssistantText(raw = raw, sanitized = raw)
                             msg.copy(
                                 content = display,

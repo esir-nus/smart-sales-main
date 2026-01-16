@@ -238,7 +238,54 @@ These MUST remain intact regardless of visual changes:
 
 ---
 
-## Design Token Authority
+## 🛡️ Regression Prevention Guardrails
+
+When briefing iterative work on existing files (especially web prototypes), the Design Brief MUST include these mandatory checks:
+
+### Mandatory Acceptance Criteria for Iterative Work
+
+Every brief for modifying existing files MUST include:
+
+```markdown
+### 🔁 Regression Prevention Criteria
+- [ ] **No Duplicate Elements**: Verify no double icons, stars, or badges appear after change
+- [ ] **CSS Syntax Valid**: Style block has balanced braces (no unclosed @keyframes)
+- [ ] **Summary Truncation Intact**: Text truncation rules still apply (white-space: nowrap)
+- [ ] **Animation Direction Correct**: Animations match physical gesture direction (e.g., swipe left→right = shimmer left→right)
+- [ ] **JavaScript Functions Defined**: Critical functions (toggleDrawer, etc.) remain callable
+```
+
+### CSS Injection Rules (for briefs targeting web prototypes)
+
+| Rule | Rationale |
+|------|-----------|
+| **TOP Injection** | Critical CSS MUST be injected at TOP of first `<style>` block, not bottom. Broken keyframes downstream will not corrupt upstream rules. |
+| **Clean Slate Pattern** | Brief MUST specify: "Remove ALL existing instances before adding new" for icons, stars, badges. |
+| **Class Targeting Audit** | Brief MUST require executor to INSPECT actual class names in DOM, not assume from code. |
+| **Brace Balance Check** | After modification, run brace count verification: `{ count == } count`. |
+
+### Lessons Learned (Avoid These)
+
+| Regression | Root Cause | Prevention in Brief |
+|------------|------------|---------------------|
+| Double stars (★★) | Script added new star without removing existing SVG/span | Specify: "Remove ALL star elements first (SVG, span, raw text), then add ONE per card" |
+| Summary wrapping | CSS targeted `.v17-summary` but HTML used `.v17-card-summary` | Specify: "Executor MUST inspect DOM for actual class names before writing CSS" |
+| Shimmer wrong direction | Animation `200% → 0%` moves right-to-left when intent was left-to-right | Specify gesture direction explicitly: "Light sweeps LEFT→RIGHT (matching finger direction)" |
+| CSS rules ignored | Broken `@keyframes` blocks with missing `}` corrupted entire style block | Specify: "Inject critical fixes at TOP of style block" |
+
+### Review Checklist Addition
+
+When UI Director reviews deliverables, add this check to Layer 4:
+
+```markdown
+#### Layer 4.5: Regression Check
+12. Are there any duplicate UI elements (stars, badges, icons)?
+13. Is CSS brace balance verified (no syntax errors)?
+14. Do summaries truncate to one line?
+15. Do animations match physical gesture directions?
+```
+
+---
 
 You are the **Guardian of the Design Tokens**.
 

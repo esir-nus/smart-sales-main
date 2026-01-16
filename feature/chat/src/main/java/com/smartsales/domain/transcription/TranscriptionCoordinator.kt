@@ -87,7 +87,7 @@ interface TranscriptionCoordinator {
      * @param progressMessageId Message ID for progress updates
      * @param onProgressUpdate Called when progress percentage changes
      * @param onBatchReceived Called when batch is received
-     * @param onCompleted Called when transcription completes
+     * @param onCompleted Called when transcription completes (with transcript markdown)
      * @param onFailed Called when transcription fails
      */
     suspend fun runTranscription(
@@ -96,7 +96,7 @@ interface TranscriptionCoordinator {
         progressMessageId: String,
         onProgressUpdate: (percent: Int, messageId: String) -> Unit,
         onBatchReceived: (ProcessedBatch) -> Unit,
-        onCompleted: (messageId: String) -> Unit,
+        onCompleted: (transcriptMarkdown: String, messageId: String) -> Unit,
         onFailed: (reason: String, messageId: String) -> Unit
     )
 }

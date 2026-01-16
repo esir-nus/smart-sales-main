@@ -163,30 +163,66 @@ Before delivering, verify:
 
 ---
 
-## 🛡️ Regression Prevention (Web Prototypes)
+## 🛡️ Regression Prevention (Web Prototypes) — MANDATORY
 
-When modifying web prototypes iteratively, prevent these common regressions:
+When modifying web prototypes iteratively, these checks are **MANDATORY**, not optional.
 
-### Before Injecting Content
-| Check | How |
-|-------|-----|
-| **No Double Icons** | Search for existing icon markup BEFORE adding new ones. Use regex to REMOVE all first, then add back cleanly. |
-| **No Double CSS Rules** | Check if the rule block already exists before injecting. Use unique comment markers. |
-| **CSS Class Targeting** | Verify the ACTUAL class names in HTML match your CSS selectors. Inspect DOM, don't assume. |
+### 🚨 Pre-Flight Checks (BEFORE Writing Any Code)
 
-### Idempotent Script Pattern
+| Check | Action | HARD FAIL If Skipped |
+|-------|--------|---------------------|
+| **Inspect DOM** | Run `browser_subagent` to READ actual class names before writing CSS | CSS may target non-existent classes |
+| **Count Existing Elements** | Search for existing icons/stars/badges in file | Double elements will appear |
+| **Check Brace Balance** | Count `{` and `}` in target style block | Broken CSS will corrupt entire style block |
+
+### 🔒 CSS Injection Rules (HARD RULES)
+
+| Rule | Violation Consequence |
+|------|----------------------|
+| **TOP Injection**: Inject critical CSS at TOP of `<style>` block, not bottom | Broken keyframes downstream will swallow your rules |
+| **Clean Slate Pattern**: REMOVE ALL existing elements before adding new | Double stars, double icons, duplicate effects |
+| **Class Audit**: Inspect actual DOM classes, don't assume from previous code | CSS rules apply to nothing |
+| **Brace Count**: Verify `{` count equals `}` count after modification | Entire style block breaks |
+
+### Idempotent Script Pattern (ALWAYS USE)
+
 ```python
-# ALWAYS remove existing content before adding new
-content = re.sub(r'<span class="icon[^"]*">[^<]+</span>\s*', '', content)  # Clean slate
-content = content.replace('Icon Text', '<span class="icon">Icon Text</span>')  # Then add
+# 1. REMOVE ALL existing instances (SVG, span, raw text)
+content = re.sub(r'<svg[^>]*class="[^"]*star[^"]*"[^>]*>.*?</svg>\s*', '', content, flags=re.DOTALL)
+content = re.sub(r'<span class="v17-star[^"]*">\s*★\s*</span>\s*', '', content)
+content = content.replace('★', '').replace('⭐', '')
+
+# 2. THEN add exactly one per card
+for title, new_html in replacements.items():
+    content = content.replace(title, new_html)
+
+# 3. INJECT CSS at TOP of style block, not bottom
+content = re.sub(r'(<style[^>]*>)', r'\1\n' + critical_css, content, count=1)
 ```
 
-### Common Regressions to Avoid
-| Regression | Cause | Prevention |
-|------------|-------|------------|
-| **Double stars** (★★) | Script adds star without removing existing | Remove ALL stars first, then add ONE per card |
-| **Text wrapping** | CSS targets wrong class (`.v17-summary` vs `.v17-card-summary`) | Inspect actual DOM, use wildcard selectors like `div[class*="summary"]` |
-| **Animation direction wrong** | Keyframe direction not matching gesture | Document expected direction in brief, verify visually |
+### Known Regression Patterns (MEMORIZE THESE)
+
+| Regression | Root Cause | Prevention |
+|------------|------------|------------|
+| **Double stars** (★★) | Script added span star without removing existing SVG star | Remove ALL star formats (SVG, span, raw text) FIRST |
+| **Summary wrapping** | CSS targeted `.v17-summary`, HTML used `.v17-card-summary` | Inspect DOM for actual class names; use wildcards `[class*="summary"]` |
+| **Shimmer wrong direction** | `background-position: 200% → 0%` moves right-to-left | For left→right gesture, use `from: 200%` to `to: 0%` (light appears to move left→right) |
+| **CSS rules ignored** | Unclosed `@keyframes` with missing `}` corrupted style block | Inject at TOP of style block; run brace balance check |
+| **toggleDrawer undefined** | CSS syntax error broke JavaScript parsing | Fix CSS syntax errors; verify JS functions callable |
+
+### Post-Modification Verification (MANDATORY)
+
+After ANY modification to a web prototype, you MUST run `browser_subagent` to verify:
+
+```markdown
+1. [ ] No duplicate elements visually
+2. [ ] CSS computed styles match expected (e.g., white-space: nowrap)
+3. [ ] Animations running in correct direction
+4. [ ] JavaScript functions callable (no ReferenceError)
+5. [ ] Brace balance in style block (count { == count })
+```
+
+**If any check fails, DO NOT report success. Fix and re-verify.**
 
 ---
 

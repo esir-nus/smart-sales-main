@@ -68,7 +68,7 @@ class FakeTranscriptionCoordinator : TranscriptionCoordinator {
         progressMessageId: String,
         onProgressUpdate: (percent: Int, messageId: String) -> Unit,
         onBatchReceived: (ProcessedBatch) -> Unit,
-        onCompleted: (messageId: String) -> Unit,
+        onCompleted: (transcriptMarkdown: String, messageId: String) -> Unit,
         onFailed: (reason: String, messageId: String) -> Unit
     ) {
         // No-op in fake

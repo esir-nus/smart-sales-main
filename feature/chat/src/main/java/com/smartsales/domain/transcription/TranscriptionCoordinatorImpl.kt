@@ -159,7 +159,7 @@ class TranscriptionCoordinatorImpl @Inject constructor(
         progressMessageId: String,
         onProgressUpdate: (percent: Int, messageId: String) -> Unit,
         onBatchReceived: (ProcessedBatch) -> Unit,
-        onCompleted: (messageId: String) -> Unit,
+        onCompleted: (transcriptMarkdown: String, messageId: String) -> Unit,
         onFailed: (reason: String, messageId: String) -> Unit
     ) {
         // Observe job state until terminal state (Completed/Failed)
@@ -181,8 +181,8 @@ class TranscriptionCoordinatorImpl @Inject constructor(
                 observeProcessedBatches(jobId).collect { batch ->
                     onBatchReceived(batch)
                 }
-                // Then signal completion
-                onCompleted(progressMessageId)
+                // Then signal completion with transcript markdown
+                onCompleted(terminalState.transcriptMarkdown, progressMessageId)
             }
             is AudioTranscriptionJobState.Failed -> {
                 onFailed(terminalState.reason.ifBlank { "转写失败" }, progressMessageId)

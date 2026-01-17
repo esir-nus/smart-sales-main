@@ -2,7 +2,12 @@ package com.smartsales.feature.connectivity
 
 import com.smartsales.core.test.FakeDispatcherProvider
 import com.smartsales.core.util.Result
+import com.smartsales.feature.connectivity.badge.BadgeState
+import com.smartsales.feature.connectivity.badge.BadgeStateMonitor
+import com.smartsales.feature.connectivity.badge.BadgeStatus
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -308,12 +313,41 @@ class DefaultDeviceConnectionManagerTest {
         }
     ): DefaultDeviceConnectionManager {
         val dispatcherProvider = FakeDispatcherProvider(dispatcher)
+        val fakeBadgeMonitor = FakeBadgeStateMonitor()
         return DefaultDeviceConnectionManager(
             provisioner = provisioner,
             dispatchers = dispatcherProvider,
             httpChecker = httpChecker,
+            badgeStateMonitor = fakeBadgeMonitor,
             externalScope = backgroundScope
         )
+    }
+
+    /** Fake that does nothing — just needed for DI */
+    private class FakeBadgeStateMonitor : BadgeStateMonitor(
+        provisioner = NoOpProvisioner,
+        dispatchers = FakeDispatcherProvider(StandardTestDispatcher()),
+        externalScope = null
+    ) {
+        private val _status = MutableStateFlow(BadgeStatus.UNKNOWN)
+        override val status: StateFlow<BadgeStatus> = _status
+
+        override fun onBleConnected(session: BleSession) {
+            _status.value = BadgeStatus(state = BadgeState.PAIRED, bleConnected = true)
+        }
+
+        override fun onBleDisconnected() {
+            _status.value = BadgeStatus.UNKNOWN
+        }
+    }
+
+    private object NoOpProvisioner : WifiProvisioner {
+        override suspend fun provision(session: BleSession, credentials: WifiCredentials) =
+            Result.Error(IllegalStateException("not used"))
+        override suspend fun requestHotspotCredentials(session: BleSession) =
+            Result.Error(IllegalStateException("not used"))
+        override suspend fun queryNetworkStatus(session: BleSession) =
+            Result.Error(IllegalStateException("not used"))
     }
 
     private companion object {

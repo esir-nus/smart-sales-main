@@ -2,6 +2,7 @@ package com.smartsales.feature.connectivity
 
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
+import com.smartsales.feature.connectivity.badge.BadgeStateMonitor
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -41,6 +42,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
     private val provisioner: WifiProvisioner,
     private val dispatchers: DispatcherProvider,
     private val httpChecker: HttpEndpointChecker,
+    private val badgeStateMonitor: BadgeStateMonitor,
     private val externalScope: CoroutineScope = CoroutineScope(SupervisorJob() + dispatchers.default)
 ) : DeviceConnectionManager {
 
@@ -61,6 +63,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
         val session = BleSession.fromPeripheral(peripheral)
         currentSession = session
         _state.value = ConnectionState.Connected(session)
+        badgeStateMonitor.onBleConnected(session)
         ConnectivityLogger.d(
             "Select peripheral id=${peripheral.id} name=${peripheral.name} profile=${peripheral.profileId ?: "dynamic"}"
         )
@@ -111,6 +114,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
         heartbeatJob?.cancel()
         heartbeatJob = null
         cancelAutoRetry()
+        badgeStateMonitor.onBleDisconnected()
         currentSession = null
         lastCredentials = null
         reconnectMeta = AutoReconnectMeta()

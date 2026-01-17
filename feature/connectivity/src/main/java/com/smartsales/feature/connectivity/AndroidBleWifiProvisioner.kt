@@ -93,13 +93,31 @@ class AndroidBleWifiProvisioner @Inject constructor(
             }
         }
 
+    // Rate limiter for queryNetworkStatus — prevents ESP32 overload
+    private var lastNetworkQueryMs = 0L
+    private var cachedNetworkStatus: DeviceNetworkStatus? = null
+
     override suspend fun queryNetworkStatus(session: BleSession): Result<DeviceNetworkStatus> =
         withContext(dispatchers.io) {
+            // Rate limiting: return cached result within TTL
+            val now = System.currentTimeMillis()
+            val cached = cachedNetworkStatus
+            if (cached != null && now - lastNetworkQueryMs < NETWORK_QUERY_TTL_MS) {
+                ConnectivityLogger.d(
+                    "network query CACHED (${now - lastNetworkQueryMs}ms old) device=${session.peripheralName}"
+                )
+                return@withContext Result.Success(cached)
+            }
+
             ConnectivityLogger.d(
                 "network query device=${session.peripheralName}"
             )
+            lastNetworkQueryMs = now
             when (val result = gateway.queryNetwork(session)) {
-                is NetworkQueryResult.Success -> Result.Success(result.status)
+                is NetworkQueryResult.Success -> {
+                    cachedNetworkStatus = result.status
+                    Result.Success(result.status)
+                }
                 is NetworkQueryResult.PermissionDenied -> Result.Error(
                     ProvisioningException.PermissionDenied(result.permissions)
                 )
@@ -117,5 +135,9 @@ class AndroidBleWifiProvisioner @Inject constructor(
                 )
             }
         }
+
+    companion object {
+        private const val NETWORK_QUERY_TTL_MS = 2_000L
+    }
 
 }

@@ -27,26 +27,53 @@ import kotlinx.coroutines.launch
  * - Automatic stop after consecutive failures
  * - Passive observer pattern (IoC compliant)
  */
+interface BadgeStateMonitor {
+    /** Observable badge status */
+    val status: StateFlow<BadgeStatus>
+
+    /** Called when BLE connection is established */
+    fun onBleConnected(session: BleSession)
+
+    /** Called when BLE connection is lost */
+    fun onBleDisconnected()
+
+    /** Start rate-limited polling loop */
+    fun startPolling()
+
+    /** Stop the polling loop */
+    fun stopPolling()
+
+    companion object {
+        /** Normal polling interval (10 seconds) */
+        const val POLL_INTERVAL_MS = 10_000L
+
+        /** Minimum gap between polls (5 seconds) - protects ESP32 */
+        const val MIN_POLL_GAP_MS = 5_000L
+
+        /** Stop polling after this many consecutive failures */
+        const val MAX_CONSECUTIVE_FAILURES = 3
+    }
+}
+
+/**
+ * Real implementation of [BadgeStateMonitor].
+ */
 @Singleton
-open class BadgeStateMonitor @Inject constructor(
+class RealBadgeStateMonitor @Inject constructor(
     private val provisioner: WifiProvisioner,
     private val dispatchers: DispatcherProvider,
     externalScope: CoroutineScope? = null
-) {
+) : BadgeStateMonitor {
     private val scope = externalScope ?: CoroutineScope(SupervisorJob() + dispatchers.default)
 
     private val _status = MutableStateFlow(BadgeStatus.UNKNOWN)
-    open val status: StateFlow<BadgeStatus> = _status.asStateFlow()
+    override val status: StateFlow<BadgeStatus> = _status.asStateFlow()
 
     private var pollingJob: Job? = null
     private var lastPollMs = 0L
     private var currentSession: BleSession? = null
 
-    /**
-     * Called when BLE connection is established.
-     * Transitions to PAIRED state and starts polling.
-     */
-    open fun onBleConnected(session: BleSession) {
+    override fun onBleConnected(session: BleSession) {
         currentSession = session
         _status.value = BadgeStatus(
             state = BadgeState.PAIRED,
@@ -57,22 +84,14 @@ open class BadgeStateMonitor @Inject constructor(
         startPolling()
     }
 
-    /**
-     * Called when BLE connection is lost.
-     * Transitions to UNKNOWN state and stops polling.
-     */
-    open fun onBleDisconnected() {
+    override fun onBleDisconnected() {
         currentSession = null
         stopPolling()
         _status.value = BadgeStatus.UNKNOWN
         ConnectivityLogger.i("BadgeStateMonitor: BLE disconnected")
     }
 
-    /**
-     * Start rate-limited polling loop.
-     * Polling interval: 10s normal, 5s minimum between queries.
-     */
-    fun startPolling() {
+    override fun startPolling() {
         if (pollingJob?.isActive == true) return
         pollingJob = scope.launch(dispatchers.io) {
             while (isActive) {
@@ -80,8 +99,8 @@ open class BadgeStateMonitor @Inject constructor(
 
                 // Rate limiting: enforce minimum gap
                 val elapsed = now - lastPollMs
-                if (elapsed < MIN_POLL_GAP_MS) {
-                    delay(MIN_POLL_GAP_MS - elapsed)
+                if (elapsed < BadgeStateMonitor.MIN_POLL_GAP_MS) {
+                    delay(BadgeStateMonitor.MIN_POLL_GAP_MS - elapsed)
                 }
 
                 val session = currentSession
@@ -94,20 +113,17 @@ open class BadgeStateMonitor @Inject constructor(
                 pollNetworkStatus(session)
 
                 // Stop polling after too many consecutive failures
-                if (_status.value.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                if (_status.value.consecutiveFailures >= BadgeStateMonitor.MAX_CONSECUTIVE_FAILURES) {
                     ConnectivityLogger.w("BadgeStateMonitor: Max failures reached, stopping poll")
                     break
                 }
 
-                delay(POLL_INTERVAL_MS)
+                delay(BadgeStateMonitor.POLL_INTERVAL_MS)
             }
         }
     }
 
-    /**
-     * Stop the polling loop.
-     */
-    fun stopPolling() {
+    override fun stopPolling() {
         pollingJob?.cancel()
         pollingJob = null
         lastPollMs = 0L
@@ -144,16 +160,5 @@ open class BadgeStateMonitor @Inject constructor(
             lastCheckMs = System.currentTimeMillis()
         )
         ConnectivityLogger.w("BadgeStateMonitor: poll failed, count=${_status.value.consecutiveFailures}")
-    }
-
-    companion object {
-        /** Normal polling interval (10 seconds) */
-        const val POLL_INTERVAL_MS = 10_000L
-
-        /** Minimum gap between polls (5 seconds) - protects ESP32 */
-        const val MIN_POLL_GAP_MS = 5_000L
-
-        /** Stop polling after this many consecutive failures */
-        const val MAX_CONSECUTIVE_FAILURES = 3
     }
 }

@@ -5,6 +5,8 @@ import android.content.Context
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.feature.connectivity.BleProfileConfig
 import com.smartsales.feature.connectivity.BuildConfig
+import com.smartsales.feature.connectivity.badge.BadgeStateMonitor
+import com.smartsales.feature.connectivity.badge.RealBadgeStateMonitor
 import com.smartsales.feature.connectivity.gateway.BleGateway
 import com.smartsales.feature.connectivity.gateway.GattBleGateway
 import com.smartsales.feature.connectivity.scan.AndroidBleScanner
@@ -28,6 +30,10 @@ interface ConnectivityModule {
     @Binds
     @Singleton
     fun bindDeviceConnectionManager(impl: DefaultDeviceConnectionManager): DeviceConnectionManager
+
+    @Binds
+    @Singleton
+    fun bindBadgeStateMonitor(impl: RealBadgeStateMonitor): BadgeStateMonitor
 }
 
 @Module

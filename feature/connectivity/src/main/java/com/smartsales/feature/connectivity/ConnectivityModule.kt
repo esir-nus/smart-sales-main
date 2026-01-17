@@ -50,11 +50,18 @@ object ConnectivityProvidesModule {
 
     @Provides
     @Singleton
-    fun provideBleGateway(
+    @com.smartsales.feature.connectivity.gateway.RealGateway
+    fun provideRealBleGateway(
         @ApplicationContext context: Context,
         bluetoothManager: BluetoothManager,
         dispatchers: DispatcherProvider
     ): BleGateway = GattBleGateway(context, bluetoothManager, dispatchers)
+
+    @Provides
+    @Singleton
+    fun provideBleGateway(
+        @com.smartsales.feature.connectivity.gateway.RealGateway realGateway: BleGateway
+    ): BleGateway = com.smartsales.feature.connectivity.gateway.RateLimitedBleGateway(realGateway)
 
     @Provides
     @Singleton

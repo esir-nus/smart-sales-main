@@ -40,7 +40,6 @@ import android.bluetooth.BluetoothStatusCodes
 private const val NETWORK_QUERY_COMMAND = "wifi#address#ip#name"
 private const val DEFAULT_CONNECTION_TIMEOUT_MS = 10_000L
 private const val DEFAULT_OPERATION_TIMEOUT_MS = 5_000L
-private const val NETWORK_QUERY_TTL_MS = 5_000L  // Rate limiter: 5s between network queries
 
 // 文件：feature/connectivity/src/main/java/com/smartsales/feature/connectivity/gateway/GattBleGateway.kt
 // 模块：:feature:connectivity
@@ -55,11 +54,6 @@ class GattBleGateway @Inject constructor(
 
     private val lock = Mutex()
     private val configCache = mutableMapOf<String, BleGatewayConfig>()
-
-    // Rate limiter for network queries — prevents ESP32 overload
-    private val networkQueryLock = Mutex()
-    private var lastNetworkQueryMs = 0L
-    private var cachedNetworkResult: DeviceNetworkStatus? = null
 
     override suspend fun provision(
         session: BleSession,
@@ -133,18 +127,7 @@ class GattBleGateway @Inject constructor(
 
     override suspend fun queryNetwork(
         session: BleSession
-    ): NetworkQueryResult = networkQueryLock.withLock {
-        // Rate limiting: return cached result within TTL
-        val now = System.currentTimeMillis()
-        val cached = cachedNetworkResult
-        if (cached != null && now - lastNetworkQueryMs < NETWORK_QUERY_TTL_MS) {
-            ConnectivityLogger.d(
-                "GattBleGateway: network query CACHED (${now - lastNetworkQueryMs}ms old)"
-            )
-            return@withLock NetworkQueryResult.Success(cached)
-        }
-
-        lastNetworkQueryMs = now
+    ): NetworkQueryResult =
         when (val outcome = execute(session.peripheralId) { gattContext, config ->
             val command = buildNetworkQueryPayload()
             ConnectivityLogger.tx("NetworkQuery", command)
@@ -153,10 +136,7 @@ class GattBleGateway @Inject constructor(
             ConnectivityLogger.rx("NetworkResponse", response)
             parseNetworkResponse(response)
         }) {
-            is GatewayOutcome.Success -> {
-                cachedNetworkResult = outcome.value
-                NetworkQueryResult.Success(outcome.value)
-            }
+            is GatewayOutcome.Success -> NetworkQueryResult.Success(outcome.value)
             is GatewayOutcome.Failure -> when (val error = outcome.error) {
                 is BleGatewayResult.PermissionDenied -> NetworkQueryResult.PermissionDenied(error.permissions)
                 BleGatewayResult.Timeout -> NetworkQueryResult.Timeout(DEFAULT_OPERATION_TIMEOUT_MS)
@@ -166,7 +146,6 @@ class GattBleGateway @Inject constructor(
                 is BleGatewayResult.Success -> NetworkQueryResult.TransportError("无效错误类型")
             }
         }
-    }
 
     override suspend fun sendGifCommand(
         session: BleSession,

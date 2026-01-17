@@ -120,7 +120,7 @@ class RateLimitedBleGateway @Inject constructor(
     )
 
     companion object {
-        /** 5 seconds between network queries to protect ESP32 */
-        const val DEFAULT_NETWORK_QUERY_TTL_MS = 5_000L
+        /** 10 seconds between network queries to protect ESP32 (matches poll interval) */
+        const val DEFAULT_NETWORK_QUERY_TTL_MS = 10_000L
     }
 }

@@ -69,8 +69,9 @@ class RateLimitedBleGateway @Inject constructor(
 
     // === Rate-limited method ===
 
-    override suspend fun queryNetwork(session: BleSession): NetworkQueryResult =
-        networkQueryMutex.withLock {
+    override suspend fun queryNetwork(session: BleSession): NetworkQueryResult {
+        ConnectivityLogger.i(">>> RateLimitedBleGateway.queryNetwork ENTRY")
+        return networkQueryMutex.withLock {
             val now = System.currentTimeMillis()
             val timeSinceLastQuery = now - lastQueryMs
             
@@ -99,6 +100,7 @@ class RateLimitedBleGateway @Inject constructor(
                 }
             }
         }
+    }
 
     /**
      * Clears the cached network status. Useful for testing or after

@@ -81,26 +81,9 @@ class GattBleGateway @Inject constructor(
             // Wait for badge to connect and respond
             val ackBytes = gattContext.awaitNotificationOrRead(config.provisioningStatusCharacteristicUuid)
             ConnectivityLogger.rx("ProvisionAck", ackBytes)
-            val ackResult = parseProvisioningAck(credentials, ackBytes)
-            
-            // WORKAROUND: Firmware may return "failed" before WiFi connection completes.
-            // If we got CredentialRejected, poll network status to verify.
-            if (ackResult is BleGatewayResult.CredentialRejected) {
-                ConnectivityLogger.i("ACK returned 'failed', polling to verify actual connection status...")
-                val actuallyConnected = pollForConnection(gattContext, config, 5, 1000)
-                if (actuallyConnected) {
-                    ConnectivityLogger.i("Poll confirmed: WiFi actually connected despite 'failed' ACK")
-                    BleGatewayResult.Success(
-                        handshakeId = java.util.UUID.randomUUID().toString(),
-                        credentialsHash = sha256("${credentials.ssid}${credentials.password}")
-                    )
-                } else {
-                    ConnectivityLogger.w("Poll confirmed: WiFi truly failed to connect")
-                    ackResult
-                }
-            } else {
-                ackResult
-            }
+            parseProvisioningAck(credentials, ackBytes)
+            // NOTE: pollForConnection workaround removed — it bypassed rate limiter and caused ESP32 freezes.
+            // If firmware returns "failed", the user can retry provisioning.
         }) {
             is GatewayOutcome.Success -> outcome.value
             is GatewayOutcome.Failure -> outcome.error
@@ -560,45 +543,6 @@ class GattBleGateway @Inject constructor(
         }
     }
 
-    /**
-     * Poll network status to check if WiFi actually connected.
-     * Used as workaround for firmware returning premature 'failed' ACK.
-     *
-     * @param attempts Number of poll attempts
-     * @param intervalMs Delay between attempts
-     * @return true if valid IP detected, false if still 0.0.0.0 after all attempts
-     */
-    private suspend fun pollForConnection(
-        gattContext: GattContext,
-        config: BleGatewayConfig,
-        attempts: Int,
-        intervalMs: Long
-    ): Boolean {
-        repeat(attempts) { attempt ->
-            kotlinx.coroutines.delay(intervalMs)
-            try {
-                val command = buildNetworkQueryPayload()
-                ConnectivityLogger.tx("PollQuery", command)
-                gattContext.writeCharacteristic(config.credentialCharacteristicUuid, command)
-                val response = gattContext.awaitNotificationOrRead(config.provisioningStatusCharacteristicUuid)
-                ConnectivityLogger.rx("PollResponse", response)
-                
-                val raw = response.decodeToString().trim()
-                // Check for IP#<address> format
-                if (raw.startsWith("IP#", ignoreCase = true)) {
-                    val ip = raw.substringAfter("#").trim()
-                    if (ip.isNotBlank() && ip != "0.0.0.0") {
-                        ConnectivityLogger.i("Poll ${attempt + 1}/$attempts: Connected with IP=$ip")
-                        return true
-                    }
-                }
-                ConnectivityLogger.d("Poll ${attempt + 1}/$attempts: No valid IP yet ($raw)")
-            } catch (ex: Exception) {
-                ConnectivityLogger.w("Poll ${attempt + 1}/$attempts: Error - ${ex.message}")
-            }
-        }
-        return false
-    }
 
     private fun sha256(input: String): String {
         val digest = MessageDigest.getInstance("SHA-256").digest(input.toByteArray(Charsets.UTF_8))

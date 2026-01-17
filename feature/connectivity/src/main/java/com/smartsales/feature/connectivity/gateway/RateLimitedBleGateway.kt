@@ -72,17 +72,21 @@ class RateLimitedBleGateway @Inject constructor(
     override suspend fun queryNetwork(session: BleSession): NetworkQueryResult =
         networkQueryMutex.withLock {
             val now = System.currentTimeMillis()
+            val timeSinceLastQuery = now - lastQueryMs
+            
+            // Rate limiting: return cached result if within TTL
             val cached = cachedResult
-            if (cached != null && now - lastQueryMs < config.networkQueryTtlMs) {
+            if (cached != null && timeSinceLastQuery < config.networkQueryTtlMs) {
                 ConnectivityLogger.d(
-                    "RateLimitedBleGateway: CACHED (${now - lastQueryMs}ms old)"
+                    "RateLimitedBleGateway: CACHED (${timeSinceLastQuery}ms old)"
                 )
                 return@withLock NetworkQueryResult.Success(cached)
             }
 
-            lastQueryMs = now
             when (val result = delegate.queryNetwork(session)) {
                 is NetworkQueryResult.Success -> {
+                    // Only update timestamp and cache on success
+                    lastQueryMs = now
                     cachedResult = result.status
                     ConnectivityLogger.d(
                         "RateLimitedBleGateway: fresh query, caching result"
@@ -90,7 +94,7 @@ class RateLimitedBleGateway @Inject constructor(
                     result
                 }
                 else -> {
-                    // Don't cache errors
+                    // Don't cache errors, don't update lastQueryMs (allow retries)
                     result
                 }
             }

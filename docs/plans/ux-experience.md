@@ -301,125 +301,65 @@ idle
 
 ---
 
-### Recording Card V17 (Streamlined)
+### Audio Drawer V12 (Alpha)
 
-> **Context**: Redesigned recording card for minimal visual clutter. Actions hidden behind gestures.
+> **Context**: The Audio Drawer is a top-layer "Dynamic Island" drawer that exists above the App Shell. It features "True Physics" interactions and Adaptive Theming.
 
-#### Card Anatomy
+#### 1. Drawer Metaphor (Pull-to-Recall)
 
-```
-┌────────────────────────────────────────────┐
-│ ☆  Q4_年度预算审计.m4a            10:42 │  ← Star + Title + Duration
-│                                            │
-│    财务部关于Q4预算的最终审核意见，重点    │  ← Summary (or hint/progress)
-│    讨论了SaaS订阅收入的确认方式...        │
-└────────────────────────────────────────────┘
-```
+| Interaction | Logic | Visual Result |
+|-------------|-------|---------------|
+| **Trigger** | Pull DOWN from top audio pill or tap "Recorder" icon | App Shell scales down (0.95) + Dims (Blur 10px) |
+| **Physics** | Rubber-band resistance (0-20%), Spring snap (>20%) | Drawer slides down with inertia |
+| **Dismiss** | Pull drawer handle down or tap scrim | Drawer slides up, App Shell restores |
 
-#### Gesture Model
+#### 2. Card Anatomy (V12 Adaptive)
 
-| Gesture | Action |
-|---------|--------|
-| **Tap** | → Open Transcript View |
-| **Swipe Left** | → Reveal action tray (播放/转写/删除) |
-| **Long Press** | → Enter multi-select mode |
+| # | Element | Source | Behavior |
+|---|---------|--------|----------|
+| 1 | **Surface** | System | Light: "Frosted Ice" (White 85% + Blur 20px) <br> Dark: "Deep Space" (Gradient #1E1E2D) |
+| 2 | **Star** | Local | Tap to toggle ★/☆ |
+| 3 | **Filename** | Metadata | Truncate middle (`Budget...Report.wav`) |
+| 4 | **Status** | Logic | • (Transcribing) / Hidden (Done) |
+| 5 | **Swipe** | Gesture | 1:1 Physics tracking (No fake snaps) |
 
-#### Swipe Hint (Onboarding)
+#### 3. Swipe Actions (True Physics)
 
-| Property | Value |
-|----------|-------|
-| Type | Pulsing arrow / shimmer sweep (left-facing) |
-| Trigger | First 5 drawer opens (counter in SharedPrefs) |
-| Location | Ghost overlay on first card's right edge |
-| Duration | 2 seconds, then fades |
+| Gesture | Logic |
+|---------|-------|
+| **Swipe Left** | Card translates 1:1 with finger. |
+| **Threshold** | > -60px: Snaps close (0px). <br> < -60px: Snaps open (-180px). |
+| **Tray** | Reveals: `[ Delete (Red) ]` `[ Transcribe (Green) ]` `[ Play (Blue) ]` |
 
-#### Card States
+#### 4. Multi-Select Flow
 
-| State | Summary Area Shows | Microcopy |
-|-------|-------------------|-----------|
-| `not_transcribed` | Swipe hint animation (first 5x) or empty | — |
-| `transcribing` | Inline progress bar | `正在转写...` |
-| `transcribed` | First 2 lines of summary | — |
-| `error` | Error text (red) | `转写失败` |
+**Step 1: Entry**
+- **Trigger**: Long-press any card (500ms) OR tap `Edit` in header.
+- **Transition**:
+  - Stars (★) fade OUT → Checkboxes (○) fade IN.
+  - Swipe gestures **LOCKED** (Disabled).
+  - Header transforms: `Cancel` | `Selected: 0` | `Delete`.
 
-#### Star/Flag States
+**Step 2: Selection**
+- **Action**: Tap card body.
+- **Result**: Checkbox fills (●), Card highlights (`v12-selection-highlight`).
 
-| State | Icon | Tap Action |
-|-------|------|------------|
-| `unflagged` | ☆ (outline) | → `flagged` |
-| `flagged` | ★ (filled, #FFD60A) | → `unflagged` |
+**Step 3: Execution**
+- **Action**: Tap `Delete`.
+- **Result**: Alert "Delete N recordings?", Confirm → Collapse animation.
 
-#### Multi-Select Mode
+**Step 4: Exit**
+- **Trigger**: `Cancel` or successful action.
+- **Result**: Checkboxes fade OUT → Stars fade IN, Swipes unlocked.
 
-| State | Trigger | User Sees | Microcopy |
-|-------|---------|-----------|-----------|
-| `normal` | default | Standard cards | — |
-| `selecting` | long-press any card | Checkboxes appear, bottom action bar | — |
-| `selected:N` | toggle checkboxes | Header shows count | `已选 {n} 项` |
-| `action:delete` | tap delete | Confirmation dialog | `确定删除 {n} 条录音？` |
-
-#### Drawer Header (Multi-Select Button)
-
-| Element | Position | Microcopy |
-|---------|----------|-----------|
-| Select button | Top-right | `选择` |
-| Done button (in mode) | Top-right | `完成` |
-
----
-
-### Transcript View (V17)
-
-> **Context**: Detail screen opened by tapping a recording card.
-
-#### Screen Layout
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  ← 返回                               Q4_年度预算审计.m4a  │
-│                                                        │
-│  ▶ ─────────●──────────── 10:42                        │ ← Audio player
-│                                                        │
-│  ┌────────────────────────────────────────────────────┐│
-│  │ [Transcript body - scrollable]                     ││
-│  └────────────────────────────────────────────────────┘│
-│                                                        │
-│        ┌─────────────────────────────────┐             │
-│        │     🧠 AI 分析                  │             │ ← Primary CTA
-│        └─────────────────────────────────┘             │
-└─────────────────────────────────────────────────────────┘
-```
-
-#### States
-
-| State | Condition | User Sees | Microcopy |
-|-------|-----------|-----------|-----------|
-| `loading` | Fetching transcript | Skeleton shimmer | — |
-| `ready` | Transcript loaded | Full transcript + AI button | — |
-| `not_transcribed` | No transcript | Empty state + CTA | `尚未转写` + `开始转写` button |
-| `transcribing` | In progress | Progress bar | `正在转写...` |
-| `error` | Transcription failed | Error state + retry | `转写失败` + `重试` button |
-
-#### AI Analysis Button
-
-| State | Visible | Enabled |
-|-------|---------|---------|
-| Transcript ready | ✅ | ✅ |
-| Not transcribed | ❌ | — |
-| Transcribing | ❌ | — |
-| Error | ❌ | — |
-
-#### Invariants
+#### 5. Invariants
 
 | Rule | How to Verify |
 |------|---------------|
-| Swipe hint shows ≤5 times total | Check `swipe_hint_shown_count` in SharedPrefs |
-| Long-press enters selection, never reveals tray | Gesture test |
-| Tap always navigates to Transcript View | Never triggers inline action |
-| AI 分析 button only visible if transcript exists | Conditional render check |
-| Star toggle is instant (no loading) | Immediate UI update |
-
----
-
+| **Swipe Lock** | Try swiping during Multi-Select (must be dead). |
+| **Physics** | Drag card 10px and hold; it should stay (1:1), not snap immediately. |
+| **Theme** | Light Mode must show blur behind cards; Dark Mode must use gradient. |
+| **Safety** | Delete always requires confirmation dialog. |
 
 ### DeviceManager Flow
 

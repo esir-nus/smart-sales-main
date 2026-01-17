@@ -142,7 +142,8 @@ class AndroidBleWifiProvisioner @Inject constructor(
         }
 
     companion object {
-        private const val NETWORK_QUERY_TTL_MS = 2_000L
+        /** 5 second cache to protect ESP32 from rapid queries */
+        private const val NETWORK_QUERY_TTL_MS = 5_000L
     }
 
 }

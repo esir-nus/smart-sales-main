@@ -27,6 +27,20 @@ Communication happens via:
 
 ---
 
+## Rate Limiting Policy
+
+> **Purpose**: Prevent ESP32 freeze from BLE command overload
+
+| Parameter | Value | Enforced By |
+|-----------|-------|-------------|
+| **Network query TTL** | 2s | `DeviceConnectionManager.queryNetworkStatus()` |
+| **Polling interval** | 10s | `BadgeStateMonitor.POLL_INTERVAL_MS` |
+| **Min poll gap** | 5s | `BadgeStateMonitor.MIN_POLL_GAP_MS` |
+| **Max consecutive failures** | 3 | `BadgeStateMonitor.MAX_CONSECUTIVE_FAILURES` |
+| **Inter-command gap** | 300ms | `GattBleGateway` (WiFi provision steps) |
+
+**Offline detection**: Response of `wifi#address#0.0.0.0#...` indicates badge has no WiFi.
+
 ## BLE Protocol
 
 ### 1. WiFi Status Query

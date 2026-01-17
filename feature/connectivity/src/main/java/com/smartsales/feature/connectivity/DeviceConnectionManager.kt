@@ -59,6 +59,10 @@ class DefaultDeviceConnectionManager @Inject constructor(
     private var autoRetryAttempts = 0
     private var reconnectMeta = AutoReconnectMeta()
 
+    // Rate limiter for queryNetworkStatus — prevents ESP32 overload
+    private var lastNetworkQueryMs = 0L
+    private var cachedNetworkStatus: DeviceNetworkStatus? = null
+
     override fun selectPeripheral(peripheral: BlePeripheral) {
         val session = BleSession.fromPeripheral(peripheral)
         currentSession = session
@@ -201,12 +205,21 @@ class DefaultDeviceConnectionManager @Inject constructor(
             if (session == null) {
                 Result.Error(IllegalStateException("No active session"))
             } else {
+                // Rate limiter: return cached result within TTL
+                val now = System.currentTimeMillis()
+                val cached = cachedNetworkStatus
+                if (cached != null && now - lastNetworkQueryMs < NETWORK_QUERY_TTL_MS) {
+                    ConnectivityLogger.d("queryNetworkStatus: returning cached (${now - lastNetworkQueryMs}ms old)")
+                    return@withContext Result.Success(cached)
+                }
+
+                lastNetworkQueryMs = now
                 when (val result = provisioner.queryNetworkStatus(session)) {
                     is Result.Success -> {
+                        cachedNetworkStatus = result.data
                         handleNetworkStatusSuccess(session, result.data)
                         result
                     }
-
                     is Result.Error -> result
                 }
             }
@@ -354,6 +367,8 @@ class DefaultDeviceConnectionManager @Inject constructor(
         const val AUTO_RETRY_DELAY_MS = 2_000L
         const val AUTO_RETRY_MAX_ATTEMPTS = 2
         const val DEFAULT_MEDIA_SERVER_PORT = 8088
+        /** Minimum time between network queries to protect ESP32 */
+        const val NETWORK_QUERY_TTL_MS = 2_000L
     }
 }
 

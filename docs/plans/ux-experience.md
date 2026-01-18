@@ -315,6 +315,20 @@ idle
 
 #### 2. Card Anatomy (V12 Adaptive)
 
+```
+┌─────────────────────────────────────────────────────────────┐
+│   ☆   Q4_年度预算会议_Final.wav                    14:20   │
+│                                                             │
+│   财务部关于Q4预算的最终审核意见，重点讨论了SaaS...        │
+└─────────────────────────────────────────────────────────────┘
+     │         │                                      │
+     │         │                                      └── [3] TIME
+     │         └── [2] FILENAME (truncate middle)
+     └── [1] STAR (tap to toggle)
+                                                      
+             [4] SUMMARY (2 lines max, from MetaHub)
+```
+
 | # | Element | Source | Behavior |
 |---|---------|--------|----------|
 | 1 | **Surface** | System | Light: "Frosted Ice" (White 85% + Blur 20px) <br> Dark: "Deep Space" (Gradient #1E1E2D) |
@@ -324,6 +338,12 @@ idle
 | 5 | **Swipe** | Gesture | 1:1 Physics tracking (No fake snaps) |
 
 #### 3. Swipe Actions (True Physics)
+
+```
+┌──────────────────────────────────┬───────────────────────────┐
+│   CARD (slides left)             │  删除  │  转写  │  播放  │
+└──────────────────────────────────┴───────────────────────────┘
+```
 
 | Gesture | Logic |
 |---------|-------|
@@ -338,15 +358,31 @@ idle
 - **Transition**:
   - Stars (★) fade OUT → Checkboxes (○) fade IN.
   - Swipe gestures **LOCKED** (Disabled).
-  - Header transforms: `Cancel` | `Selected: 0` | `Delete`.
+
+```
+NORMAL MODE:                    MULTI-SELECT MODE:
+┌───────────────────────┐       ┌───────────────────────┐
+│ ★  文件名.wav         │  ──►  │ ○  文件名.wav         │
+│    摘要...            │       │    摘要...            │
+└───────────────────────┘       └───────────────────────┘
+      Star                            Checkbox
+```
 
 **Step 2: Selection**
 - **Action**: Tap card body.
 - **Result**: Checkbox fills (●), Card highlights (`v12-selection-highlight`).
 
-**Step 3: Execution**
-- **Action**: Tap `Delete`.
-- **Result**: Alert "Delete N recordings?", Confirm → Collapse animation.
+**Step 3: Header Changes**
+
+```
+NORMAL:       录音管理                      [🔍] [编辑]
+                                                    ↑
+                                              Edit Button
+
+MULTI-SELECT: 已选择 3 项                   [取消] [删除]
+                 ↑                             ↑      ↑
+           Selected Count               Cancel   Delete
+```
 
 **Step 4: Exit**
 - **Trigger**: `Cancel` or successful action.

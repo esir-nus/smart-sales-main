@@ -32,9 +32,8 @@ annotation class RealGateway
  * @param delegate The real BLE gateway to wrap
  * @param config Rate limiting configuration (TTL, etc.)
  */
-@Singleton
-class RateLimitedBleGateway @Inject constructor(
-    @RealGateway private val delegate: BleGateway,
+class RateLimitedBleGateway(
+    private val delegate: BleGateway,
     private val config: RateLimitConfig = RateLimitConfig()
 ) : BleGateway {
 

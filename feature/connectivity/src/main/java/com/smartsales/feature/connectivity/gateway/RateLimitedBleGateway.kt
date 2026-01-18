@@ -85,25 +85,41 @@ class RateLimitedBleGateway(
                 return@withLock NetworkQueryResult.Success(cached)
             }
 
+            // Enforce minimum interval even for 0.0.0.0 to protect ESP32
+            if (timeSinceLastQuery < MIN_QUERY_INTERVAL_MS) {
+                ConnectivityLogger.d(
+                    "RateLimitedBleGateway: THROTTLED (${timeSinceLastQuery}ms < ${MIN_QUERY_INTERVAL_MS}ms floor)"
+                )
+                // Return last result or timeout if none
+                val lastResult = cachedResult
+                return@withLock if (lastResult != null) {
+                    NetworkQueryResult.Success(lastResult)
+                } else {
+                    NetworkQueryResult.Timeout(MIN_QUERY_INTERVAL_MS)
+                }
+            }
+            
+            // Always update lastQueryMs to enforce minimum interval
+            lastQueryMs = now
+            
             when (val result = delegate.queryNetwork(session)) {
                 is NetworkQueryResult.Success -> {
                     val ip = result.status.ipAddress
                     // Only cache valid IPs — don't cache 0.0.0.0 (device not connected yet)
                     if (!ip.isNullOrBlank() && ip != "0.0.0.0") {
-                        lastQueryMs = now
                         cachedResult = result.status
                         ConnectivityLogger.d(
                             "RateLimitedBleGateway: fresh query, caching IP=$ip"
                         )
                     } else {
                         ConnectivityLogger.d(
-                            "RateLimitedBleGateway: got $ip, NOT caching (allow retry)"
+                            "RateLimitedBleGateway: got $ip, NOT caching (retry after ${MIN_QUERY_INTERVAL_MS}ms)"
                         )
                     }
                     result
                 }
                 else -> {
-                    // Don't cache errors, don't update lastQueryMs (allow retries)
+                    // Don't cache errors
                     result
                 }
             }
@@ -130,5 +146,8 @@ class RateLimitedBleGateway(
     companion object {
         /** 10 seconds between network queries to protect ESP32 (matches poll interval) */
         const val DEFAULT_NETWORK_QUERY_TTL_MS = 10_000L
+        
+        /** Minimum 2s between ANY queries, even for 0.0.0.0 responses */
+        const val MIN_QUERY_INTERVAL_MS = 2_000L
     }
 }

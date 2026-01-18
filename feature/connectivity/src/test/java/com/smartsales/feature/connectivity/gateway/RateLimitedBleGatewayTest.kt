@@ -149,6 +149,61 @@ class RateLimitedBleGatewayTest {
         assertEquals(1, fakeGateway.requestHotspotCallCount)
     }
 
+    @Test
+    fun `0_0_0_0 responses are not cached`() = runTest {
+        // First query returns 0.0.0.0 (device not connected yet)
+        fakeGateway.networkResult = NetworkQueryResult.Success(
+            DeviceNetworkStatus(
+                ipAddress = "0.0.0.0",
+                deviceWifiName = "",
+                phoneWifiName = "",
+                rawResponse = "IP#0.0.0.0"
+            )
+        )
+
+        rateLimitedGateway.queryNetwork(testSession)
+        
+        // Second query should still hit delegate (0.0.0.0 not cached)
+        fakeGateway.networkResult = NetworkQueryResult.Success(
+            DeviceNetworkStatus(
+                ipAddress = "192.168.1.100",
+                deviceWifiName = "TestWiFi",
+                phoneWifiName = "",
+                rawResponse = "IP#192.168.1.100"
+            )
+        )
+        val result = rateLimitedGateway.queryNetwork(testSession)
+
+        // 2 calls to delegate because 0.0.0.0 was not cached
+        assertEquals(2, fakeGateway.queryNetworkCallCount)
+        assertTrue(result is NetworkQueryResult.Success)
+        assertEquals("192.168.1.100", (result as NetworkQueryResult.Success).status.ipAddress)
+    }
+
+    @Test
+    fun `provision clears cache`() = runTest {
+        fakeGateway.networkResult = NetworkQueryResult.Success(
+            DeviceNetworkStatus(
+                ipAddress = "192.168.1.100",
+                deviceWifiName = "TestWiFi",
+                phoneWifiName = "",
+                rawResponse = "IP#192.168.1.100"
+            )
+        )
+
+        // First query caches result
+        rateLimitedGateway.queryNetwork(testSession)
+        
+        // Provision should clear cache
+        val creds = WifiCredentials(ssid = "NewWiFi", password = "pass")
+        rateLimitedGateway.provision(testSession, creds)
+        
+        // Next query should hit delegate (cache was cleared)
+        rateLimitedGateway.queryNetwork(testSession)
+
+        assertEquals(2, fakeGateway.queryNetworkCallCount)
+    }
+
     // Recording fake for testing
     private class RecordingBleGateway : BleGateway {
         var networkResult: NetworkQueryResult = NetworkQueryResult.Timeout(5000)

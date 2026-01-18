@@ -301,17 +301,19 @@ idle
 
 ---
 
-### Audio Drawer V12 (Alpha)
+### Audio Drawer V12 (Clean)
 
-> **Context**: The Audio Drawer is a top-layer "Dynamic Island" drawer that exists above the App Shell. It features "True Physics" interactions and Adaptive Theming.
+> **Context**: A minimal, top-layer list for managing badge recordings. No recording features (badge only).
 
-#### 1. Drawer Metaphor (Pull-to-Recall)
+#### 1. Drawer Metaphor (Pull-to-Sync)
 
-| Interaction | Logic | Visual Result |
-|-------------|-------|---------------|
-| **Trigger** | Pull DOWN from top audio pill or tap "Recorder" icon | App Shell scales down (0.95) + Dims (Blur 10px) |
-| **Physics** | Rubber-band resistance (0-20%), Spring snap (>20%) | Drawer slides down with inertia |
-| **Dismiss** | Pull drawer handle down or tap scrim | Drawer slides up, App Shell restores |
+| Component | Logic |
+|-----------|-------|
+| **Activator** | Pull DOWN from top pill. **Auto-triggers Sync** on open. |
+| **Refresh** | Pull down *further* (Over-scroll) to force Re-Sync. |
+| **Feedback** | **Sync Icon**: Simple rotating spinner (↻) cancels to Check (✓) on success. |
+| **Header** | **Minimal**. No title. Single `[ Edit ]` button (top-right). |
+| **Exit** | Swipe UP or tap scrim bottom. |
 
 #### 2. Card Anatomy (V12 Adaptive)
 
@@ -321,81 +323,54 @@ idle
 │                                                             │
 │   财务部关于Q4预算的最终审核意见，重点讨论了SaaS...        │
 └─────────────────────────────────────────────────────────────┘
-     │         │                                      │
-     │         │                                      └── [3] TIME
-     │         └── [2] FILENAME (truncate middle)
-     └── [1] STAR (tap to toggle)
-                                                      
-             [4] SUMMARY (2 lines max, from MetaHub)
 ```
 
-| # | Element | Source | Behavior |
-|---|---------|--------|----------|
-| 1 | **Surface** | System | Light: "Frosted Ice" (White 85% + Blur 20px) <br> Dark: "Deep Space" (Gradient #1E1E2D) |
-| 2 | **Star** | Local | Tap to toggle ★/☆ |
-| 3 | **Filename** | Metadata | Truncate middle (`Budget...Report.wav`) |
-| 4 | **Status** | Logic | • (Transcribing) / Hidden (Done) |
-| 5 | **Swipe** | Gesture | 1:1 Physics tracking (No fake snaps) |
+#### 3. Dual-Direction Gestures
 
-#### 3. Swipe Actions (True Physics)
+**A. Swipe Right → Instant Transcribe**
+- **Action**: User pulls card to the RIGHT.
+- **Visual**: Reveals shimmer background `[ Left Swipe to Transcribe >>> ]`.
+- **Threshold**: Snap > 30% triggers "Transcribe" state immediatey.
 
 ```
-┌──────────────────────────────────┬───────────────────────────┐
-│   CARD (slides left)             │  删除  │  转写  │  播放  │
-└──────────────────────────────────┴───────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  ░░░░░ (Shimmer) 转写 >>> ░░░░     Card Content ->          │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-| Gesture | Logic |
-|---------|-------|
-| **Swipe Left** | Card translates 1:1 with finger. |
-| **Threshold** | > -60px: Snaps close (0px). <br> < -60px: Snaps open (-180px). |
-| **Tray** | Reveals: `[ Delete (Red) ]` `[ Transcribe (Green) ]` `[ Play (Blue) ]` |
+**B. Swipe Left → Management Tray**
+- **Action**: User pulls card to the LEFT.
+- **Tray**: `[ Rename (Gray) ]` `[ Delete (Red) ]` `[ Play (Blue) ]`.
 
-#### 4. Multi-Select Flow
+```
+┌───────────────────────────┬─────────┬─────────┬─────────┐
+│   Card Content            │ Rename  │ Delete  │  Play   │
+└───────────────────────────┴─────────┴─────────┴─────────┘
+```
+
+#### 4. Multi-Select Flow (Clean)
 
 **Step 1: Entry**
-- **Trigger**: Long-press any card (500ms) OR tap `Edit` in header.
-- **Transition**:
-  - Stars (★) fade OUT → Checkboxes (○) fade IN.
-  - Swipe gestures **LOCKED** (Disabled).
-
-```
-NORMAL MODE:                    MULTI-SELECT MODE:
-┌───────────────────────┐       ┌───────────────────────┐
-│ ★  文件名.wav         │  ──►  │ ○  文件名.wav         │
-│    摘要...            │       │    摘要...            │
-└───────────────────────┘       └───────────────────────┘
-      Star                            Checkbox
-```
+- **Trigger**: Tap `[ Edit ]` or **Long Press** any card.
+- **Header Transition**:
+  - `[ Edit ]` fades out.
+  - `[ Cancel ]` `[ Selected: 0 ]` `[ Delete ]` fades in.
+- **Card Transition**: Stars (★) → Checkboxes (○).
 
 **Step 2: Selection**
-- **Action**: Tap card body.
-- **Result**: Checkbox fills (●), Card highlights (`v12-selection-highlight`).
+- **Action**: Tap card body to check (●). Swipes are **LOCKED**.
 
-**Step 3: Header Changes**
-
-```
-NORMAL:       录音管理                      [🔍] [编辑]
-                                                    ↑
-                                              Edit Button
-
-MULTI-SELECT: 已选择 3 项                   [取消] [删除]
-                 ↑                             ↑      ↑
-           Selected Count               Cancel   Delete
-```
-
-**Step 4: Exit**
-- **Trigger**: `Cancel` or successful action.
-- **Result**: Checkboxes fade OUT → Stars fade IN, Swipes unlocked.
+**Step 3: Exit**
+- **Trigger**: `[ Cancel ]` or successful delete.
+- **Result**: Header reverts to minimal `[ Edit ]`.
 
 #### 5. Invariants
-
 | Rule | How to Verify |
 |------|---------------|
-| **Swipe Lock** | Try swiping during Multi-Select (must be dead). |
-| **Physics** | Drag card 10px and hold; it should stay (1:1), not snap immediately. |
-| **Theme** | Light Mode must show blur behind cards; Dark Mode must use gradient. |
-| **Safety** | Delete always requires confirmation dialog. |
+| **No Recorder** | App cannot record audio (Badge responsibility). |
+| **Swipe Right** | Only triggers if not already transcribed. |
+| **Swipe Left** | Shows Rename/Delete/Play. No Transcribe button. |
+| **Header** | Default state is empty except for `Edit` button. |
 
 ### DeviceManager Flow
 

@@ -8,9 +8,7 @@ import com.smartsales.feature.connectivity.WifiCredentials
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import javax.inject.Inject
 import javax.inject.Qualifier
-import javax.inject.Singleton
 
 /**
  * Qualifier for the real (undecorated) BLE gateway implementation.
@@ -46,7 +44,11 @@ class RateLimitedBleGateway(
     override suspend fun provision(
         session: BleSession,
         credentials: WifiCredentials
-    ): BleGatewayResult = delegate.provision(session, credentials)
+    ): BleGatewayResult {
+        // Clear cache before provisioning — old network status will be stale
+        clearCache()
+        return delegate.provision(session, credentials)
+    }
 
     override suspend fun requestHotspot(session: BleSession): HotspotResult =
         delegate.requestHotspot(session)
@@ -85,12 +87,19 @@ class RateLimitedBleGateway(
 
             when (val result = delegate.queryNetwork(session)) {
                 is NetworkQueryResult.Success -> {
-                    // Only update timestamp and cache on success
-                    lastQueryMs = now
-                    cachedResult = result.status
-                    ConnectivityLogger.d(
-                        "RateLimitedBleGateway: fresh query, caching result"
-                    )
+                    val ip = result.status.ipAddress
+                    // Only cache valid IPs — don't cache 0.0.0.0 (device not connected yet)
+                    if (!ip.isNullOrBlank() && ip != "0.0.0.0") {
+                        lastQueryMs = now
+                        cachedResult = result.status
+                        ConnectivityLogger.d(
+                            "RateLimitedBleGateway: fresh query, caching IP=$ip"
+                        )
+                    } else {
+                        ConnectivityLogger.d(
+                            "RateLimitedBleGateway: got $ip, NOT caching (allow retry)"
+                        )
+                    }
                     result
                 }
                 else -> {

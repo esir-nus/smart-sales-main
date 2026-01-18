@@ -372,52 +372,63 @@ idle
 | **Swipe Left** | Shows Rename/Delete/Play. No Transcribe button. |
 | **Header** | Default state is empty except for `Edit` button. |
 
-### DeviceManager Flow
+### Device Manager V12 (Staging Gallery)
 
-> **Context**: User browses and manages files on BT311 device via HTTP.
+> **Context**: A dedicated "Screen Cast" drawer for managing the badge display. Replaces the "Bottom Drag" gesture.
+> **Architecture**: Local Staging (App Cache) → Apply → Badge.
 
-#### Connection States
+#### 1. Drawer Anatomy
 
-| State | Trigger | User Sees | Microcopy |
-|-------|---------|-----------|-----------|
-| `disconnected` | default / error | "设备未连接" card | "连接设备以管理文件" |
-| `connecting` | auto-detect | Spinner | "正在检测设备网络..." |
-| `connected` | endpoint resolved | Device name | "已连接 {deviceName}" |
+| Zone | Component | Logic |
+|------|-----------|-------|
+| **Header** | **Smart Title** | Connected: "SmartBadge" <br> Disconnected: `[ Re-pair Device ]` (Clickable) |
+| **Status** | **Icon Row** | `[🔋]` `[📶]` `[⚡]` (No text labels) |
+| **Body** | **Emulator** | Live preview of the selected image/GIF on the badge. |
+| **Bottom** | **Gallery** | **Carousel Staging Area**. Horizontal scroll. |
 
-#### File Browser States
+#### 2. Gallery (Local Staging)
 
-| State | Trigger | User Sees | Microcopy |
-|-------|---------|-----------|-----------|
-| `loading` | refresh | Spinner | "加载中..." |
-| `empty` | no files | Empty state | "暂无文件" |
-| `list` | files loaded | Tab-filtered list | — |
-| `selected` | tap file | Highlight | — |
-| `viewing` | open viewer | Full preview | — |
-| `applying` | tap apply | Progress on row | "应用中..." |
-| `uploading` | file upload | Progress bar | "上传中..." |
-| `error:load` | fetch failed | Error banner | "{loadErrorMessage}" |
-| `error:action` | action failed | Snackbar | "{errorMessage}" |
+> **Buffer Zone**: Holds preprocessed images (JPG/GIF -> 240x280) before upload.
 
-#### Media Tabs
+```
+┌─────┐  ┌─────┐  ┌─────┐  ┌─────┐
+│  +  │  │ IMG │  │ GIF │  │ IMG │
+└─────┘  └─────┘  └─────┘  └─────┘
+ Add      Idle     Select   Idle
+```
 
-| Tab | Filter |
-|-----|--------|
-| Videos | video/* |
-| Gifs | image/gif |
-| Images | image/* (non-gif) |
+| State | Visual | Action |
+|-------|--------|--------|
+| **Placeholder** | First slot `[ + ]` | Opens System Picker. |
+| **Card (Idle)** | Clean preview thumbnail. | Tap to Select. |
+| **Card (Select)** | **Highlighted Border**. `[ Apply ]` overlay. | Tap Apply -> Uploads to Badge. |
+| **Card (Swipe)** | Swipe Left | Reveals `[ Delete ]` button. |
 
-#### GIF/WAV Sub-States
+#### 3. UX Flows
 
-See §GIF Upload Flow and §WAV Download Flow for transfer-specific states.
+**A. Upload & Dissect**
+- **Trigger**: Tap `[ + ]`.
+- **Process**: System Picker -> `GifFrameExtractor` -> Local Cache.
+- **Feedback**: Progress bar "Processing..." if slow.
+- **Result**: New card appears in Gallery (Selected).
 
-#### Invariants
+**B. Apply to Badge**
+- **Trigger**: Tap `[ Apply ]` on a selected card.
+- **Process**: `BadgeHttpClient` uploads binary to ESP32.
+- **Emulator**: Updates to show the selected image (optimistic or confirmed).
+
+**C. Re-Pairing**
+- **Trigger**: Tap "Re-pair Device" title (only visible if disconnected).
+- **Process**: Initiates BLE/WiFi handshake sequence.
+
+#### 4. Invariants
 
 | Rule | How to Verify |
 |------|---------------|
-| Default port = 8000 | `DEFAULT_MEDIA_SERVER_PORT = 8000` |
-| File actions require connected state | `connectionStatus.isReadyForFiles()` |
-| Apply shows per-file progress | `applyInProgressId` state |
-| Auto-detect shows status | `autoDetectStatus` microcopy |
+| **Entrance** | Accessible via Main Header or History Drawer. **NO Bottom Drag.** |
+| **Resolution** | All staged images must be pre-processed to **240x280**. |
+| **Status** | Icons only. No text descriptions. |
+| **Emulator** | Reflects the *last applied* image, even if disconnected (persisted state). |
 
 ---
 

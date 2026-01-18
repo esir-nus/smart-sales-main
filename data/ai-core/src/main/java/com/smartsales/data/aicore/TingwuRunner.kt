@@ -32,8 +32,6 @@ import com.smartsales.data.aicore.TranscriptMetadataRequest
 import com.smartsales.data.aicore.tingwu.store.TingwuJobStore
 import com.smartsales.data.aicore.tingwu.store.PersistedJob
 import com.smartsales.data.aicore.tingwu.store.BatchStatus
-import com.smartsales.data.aicore.disector.DisectorPlan
-import com.smartsales.data.aicore.disector.DisectorBatch
 import com.smartsales.data.aicore.tingwu.api.TingwuCustomPrompt
 import com.smartsales.data.aicore.tingwu.api.TingwuCustomPromptContent
 
@@ -52,8 +50,6 @@ import java.text.DecimalFormat
 import java.util.LinkedHashMap
 import java.util.Optional
 import java.util.concurrent.ConcurrentHashMap
-import com.smartsales.data.aicore.tingwu.TingwuMultiBatchOrchestrator
-import com.smartsales.data.aicore.tingwu.MultiBatchStitcher
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.filter
@@ -91,8 +87,6 @@ class TingwuRunner @Inject constructor(
     private val apiRepository: com.smartsales.data.aicore.tingwu.polling.TingwuApiRepository,
     private val transcriptProcessor: com.smartsales.data.aicore.tingwu.processor.TranscriptProcessor,
     private val pipelineTracer: com.smartsales.data.aicore.debug.PipelineTracer,
-    private val disector: com.smartsales.data.aicore.disector.Disector,
-    private val multiBatchOrchestrator: com.smartsales.data.aicore.tingwu.TingwuMultiBatchOrchestrator,
     private val pollingLoop: com.smartsales.data.aicore.tingwu.polling.PollingLoop,
     private val jobStore: TingwuJobStore,
     private val submissionService: com.smartsales.data.aicore.tingwu.submission.TingwuSubmissionService,
@@ -135,43 +129,12 @@ class TingwuRunner @Inject constructor(
                 "创建 Tingwu 任务：taskKey=$taskKey fileUrl=$resolvedUrl lang=$requestedLanguage source=$sourceLanguage diarizationEnabled=${request.diarizationEnabled}"
             }
             
-            // V1 Appendix A: Disector batch planning (if duration provided)
-            val disectorPlan = request.durationMs?.let { durationMs ->
-                val audioAssetId = request.ossObjectKey ?: taskKey
-                val recordingSessionId = request.sessionId ?: taskKey
-                disector.createPlan(durationMs, audioAssetId, recordingSessionId).also { plan ->
-                    // Delegate multi-batch submission to orchestrator
-                    val audioFile = request.audioFilePath
-                    if (plan.batches.size > 1 && audioFile != null) {
-                        val parentJobId = multiBatchOrchestrator.submitMultiBatch(
-                            plan = plan,
-                            request = request,
-                            audioFile = audioFile,
-                            scope = scope,
-                            getOrCreateJobFlow = ::getOrCreateJobFlow,
-                            submitSingleBatch = { req -> submit(req) },
-                            waitForJob = { id -> waitForJob(id) }
-                        )
-                        if (parentJobId != null) {
-                            return@withContext Result.Success(parentJobId)
-                        }
-                    } else if (plan.batches.size > 1 && audioFile == null) {
-                        return@withContext Result.Error(
-                            AiCoreException(
-                                source = AiCoreErrorSource.TINGWU,
-                                reason = AiCoreErrorReason.IO,
-                                message = "Multi-batch submission requires local 'audioFilePath'"
-                            )
-                        )
-                    } else {
-                        pipelineTracer.emit(
-                            stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_UPLOAD,
-                            status = "SINGLE_BATCH",
-                            message = "planId=${plan.disectorPlanId} durationMs=$durationMs"
-                        )
-                    }
-                }
-            }
+            // Log submission (batch slicing removed - single job only)
+            pipelineTracer.emit(
+                stage = com.smartsales.data.aicore.debug.PipelineStage.TINGWU_UPLOAD,
+                status = "SINGLE_JOB",
+                message = "taskKey=$taskKey"
+            )
             
             // Delegate to TingwuSubmissionService (Lattice Box)
             val submissionResult = submissionService.submit(
@@ -218,115 +181,12 @@ class TingwuRunner @Inject constructor(
         getOrCreateJobFlow(jobId).asStateFlow()
 
     override suspend fun retryJob(jobId: String): Result<String> = withContext(dispatchers.io) {
-        // Load persisted job
-        val persistedJob = jobStore.loadJob(jobId)
-            ?: return@withContext Result.Error(AiCoreException(
-                source = AiCoreErrorSource.TINGWU,
-                reason = AiCoreErrorReason.UNKNOWN,
-                message = "Job not found: $jobId"
-            ))
-
-        // Filter failed/pending batches
-        val failedBatches = persistedJob.batches.filter { batch ->
-            batch.status == BatchStatus.FAILED || batch.status == BatchStatus.PENDING
-        }
-        if (failedBatches.isEmpty()) {
-            return@withContext Result.Error(AiCoreException(
-                source = AiCoreErrorSource.TINGWU,
-                reason = AiCoreErrorReason.UNKNOWN,
-                message = "No failed batches to retry in job: $jobId"
-            ))
-        }
-
-        // Verify source file exists
-        val sourceFile = persistedJob.audioFilePath?.let { java.io.File(it) }
-        if (sourceFile == null || !sourceFile.exists()) {
-            return@withContext Result.Error(AiCoreException(
-                source = AiCoreErrorSource.TINGWU,
-                reason = AiCoreErrorReason.IO,
-                message = "Source audio file not found for retry: ${persistedJob.audioFilePath}"
-            ))
-        }
-
-        AiCoreLogger.d(TAG, "Retrying job $jobId: ${failedBatches.size} failed batches of ${persistedJob.batches.size} total")
-
-        // Build DisectorPlan for failed batches only
-        val retryPlan = DisectorPlan(
-            disectorPlanId = "${persistedJob.jobId}_retry",
-            audioAssetId = persistedJob.audioAssetName,
-            recordingSessionId = persistedJob.jobId,
-            totalMs = persistedJob.totalDurationMs ?: 0,
-            batches = failedBatches.map { batch ->
-                DisectorBatch(
-                    batchAssetId = "${batch.batchIndex}_retry",
-                    batchIndex = batch.batchIndex,
-                    absStartMs = batch.captureStartMs ?: 0,
-                    absEndMs = batch.captureEndMs ?: 0,
-                    captureStartMs = batch.captureStartMs ?: 0,
-                    captureEndMs = batch.captureEndMs ?: 0
-                )
-            }
-        )
-
-        // Rebuild original request for batch submission
-        val request = TingwuRequest(
-            audioAssetName = persistedJob.audioAssetName,
-            language = persistedJob.language,
-            ossObjectKey = persistedJob.ossObjectKey,
-            fileUrl = persistedJob.fileUrl,
-            audioFilePath = sourceFile
-        )
-
-        // Create flow for retry job
-        val retryJobId = retryPlan.disectorPlanId
-        val flow = getOrCreateJobFlow(retryJobId)
-        flow.value = TingwuJobState.InProgress(retryJobId, 5, "正在重试失败的批次...")
-
-        // Execute batch loop for failed batches
-        val result = multiBatchOrchestrator.executeBatchLoop(
-            plan = retryPlan,
-            originalRequest = request,
-            sourceFile = sourceFile,
-            submitSingleBatch = { batchRequest -> submit(batchRequest) },
-            waitForJob = { batchJobId -> waitForJob(batchJobId) },
-            onProgress = { percent ->
-                flow.value = TingwuJobState.InProgress(retryJobId, percent)
-            },
-            onComplete = { _, segments ->
-                // Stitch with existing succeeded segments
-                val existingSegments = persistedJob.batches
-                    .filter { it.status == BatchStatus.SUCCEEDED }
-                    .flatMap { 
-                        // TODO: Load cached segments from artifact files
-                        emptyList<DiarizedSegment>()
-                    }
-                val allSegments = (existingSegments + segments).sortedBy { it.startMs }
-                val markdown = com.smartsales.data.aicore.tingwu.processor.TranscriptFormatter()
-                    .buildMarkdown(null, allSegments, emptyMap())
-                flow.value = TingwuJobState.Completed(
-                    jobId = retryJobId,
-                    transcriptMarkdown = markdown,
-                    artifacts = TingwuJobArtifacts(
-                        recordingOriginDiarizedSegments = allSegments
-                    )
-                )
-            }
-        )
-
-        when (result) {
-            is Result.Success -> Result.Success(retryJobId)
-            is Result.Error -> {
-                flow.value = TingwuJobState.Failed(
-                    jobId = retryJobId,
-                    error = result.throwable as? AiCoreException ?: AiCoreException(
-                        source = AiCoreErrorSource.TINGWU,
-                        reason = AiCoreErrorReason.UNKNOWN,
-                        message = result.throwable.message ?: "Retry failed"
-                    )
-                )
-                Result.Error(result.throwable)
-            }
-        }
+        // Batch retry removed (multi-batch slicing deprecated 2026-01-18)
+        Result.Error(AiCoreException(
+            source = AiCoreErrorSource.TINGWU,
+            reason = AiCoreErrorReason.UNKNOWN,
+            message = "Batch retry no longer supported - resubmit full audio"
+        ))
     }
 
     override suspend fun getRetryableJobs(): List<PersistedJob> = withContext(dispatchers.io) {

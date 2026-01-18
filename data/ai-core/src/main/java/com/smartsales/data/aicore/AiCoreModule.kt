@@ -109,12 +109,6 @@ abstract class AiCoreModule {
 
     @Binds
     @Singleton
-    abstract fun bindDisector(
-        impl: com.smartsales.data.aicore.disector.DisectorImpl
-    ): com.smartsales.data.aicore.disector.Disector
-
-    @Binds
-    @Singleton
     abstract fun bindTingwuSubmissionService(
         impl: com.smartsales.data.aicore.tingwu.submission.RealTingwuSubmissionService
     ): com.smartsales.data.aicore.tingwu.submission.TingwuSubmissionService
@@ -291,15 +285,6 @@ abstract class AiCoreModule {
         @Provides
         @Singleton
         fun provideDefaultHttpDnsResolver(): HttpDnsResolver? = null
-
-        @Provides
-        @Singleton
-        fun provideAudioSlicer(@dagger.hilt.android.qualifiers.ApplicationContext context: android.content.Context): com.smartsales.data.aicore.util.Slicer {
-            // Directory for storing transient audio slices
-            val tempDir = java.io.File(context.cacheDir, "audio_slices")
-            if (!tempDir.exists()) tempDir.mkdirs()
-            return com.smartsales.data.aicore.util.AudioSlicer(tempDir)
-        }
 
         @Provides
         @Singleton

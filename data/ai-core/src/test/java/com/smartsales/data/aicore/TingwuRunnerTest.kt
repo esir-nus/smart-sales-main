@@ -126,8 +126,7 @@ class TingwuRunnerTest {
         credentialsProvider: TingwuCredentialsProvider = this.credentialsProvider,
         signedUrlProvider: OssSignedUrlProvider = this.signedUrlProvider,
         transcriptOrchestrator: TranscriptOrchestrator = this.transcriptOrchestrator,
-        artifactFetcher: TingwuArtifactFetcher = noopFetcher,
-        multiBatchOrchestrator: com.smartsales.data.aicore.tingwu.TingwuMultiBatchOrchestrator? = null
+        artifactFetcher: TingwuArtifactFetcher = noopFetcher
     ): TingwuRunner {
         val config = optionalConfig.orElse(AiCoreConfig())
         val tracer = FakePipelineTracer()
@@ -173,17 +172,6 @@ class TingwuRunnerTest {
             apiRepository = runnerRepo,
             transcriptProcessor = processor,
             pipelineTracer = tracer,
-            disector = com.smartsales.data.aicore.disector.DisectorImpl(),
-            multiBatchOrchestrator = multiBatchOrchestrator ?: com.smartsales.data.aicore.tingwu.TingwuMultiBatchOrchestrator(
-                 audioSlicer = com.smartsales.data.aicore.util.AudioSlicer(File(System.getProperty("java.io.tmpdir"))),
-                 ossUploadClient = object : com.smartsales.data.aicore.OssUploadClient {
-                     override suspend fun uploadAudio(request: com.smartsales.data.aicore.OssUploadRequest): Result<com.smartsales.data.aicore.OssUploadResult> =
-                         Result.Success(com.smartsales.data.aicore.OssUploadResult("key", "url"))
-                 },
-                 stitcher = com.smartsales.data.aicore.tingwu.MultiBatchStitcher(),
-                 pipelineTracer = tracer,
-                 jobStore = FakeJobStoreForRunner()
-            ),
             pollingLoop = pollingLoop,
             jobStore = FakeJobStoreForRunner(),
             submissionService = com.smartsales.data.aicore.tingwu.submission.RealTingwuSubmissionService(

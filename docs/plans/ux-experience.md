@@ -180,6 +180,7 @@ idle
 | `idle` | default | "发送到徽章" button | — |
 | `preparing` | tap send | Spinner | "处理中..." |
 | `extracting` | frame extraction | Spinner + count | "提取帧 {n}/{total}..." |
+| | | | *(Plain language: Breaking animated GIF into individual images for badge display. Progress shows frames processed.)* |
 | `connecting` | BLE jpg#send | Spinner | "正在连接徽章..." |
 | `uploading:N/M` | frame ready | Progress bar | "正在上传 {n}/{total}..." |
 | `finalizing` | last frame uploaded | Spinner | "正在完成..." |
@@ -237,6 +238,7 @@ idle
 | `wifi_input` | select device | WiFi form | "请输入 WiFi 密码" |
 | `provisioning` | submit form | Progress steps | "正在配置网络..." |
 | `waiting_online`| wifi sent | Spinner | "等待设备上线..." |
+| | | | *(Plain language: Badge received WiFi credentials, now connecting to router and cloud. User waits.)* |
 | `ready` | cloud confirmed | Success check | "配网成功！" |
 | `error:scan_timeout`| 10s no device | Error card | "未找到徽章，请重试" |
 | `error:wifi_fail` | provision error | Error card | "配置失败，请检查密码" |
@@ -430,14 +432,253 @@ idle
 | **Status** | Icons only. No text descriptions. |
 | **Emulator** | Reflects the *last applied* image, even if disconnected (persisted state). |
 
+### History Drawer V12 (Side Menu)
+
+> **Context**: Standard left-side navigation drawer. Contains User Profile, History, and **Gadget Status**.
+
+#### 1. Gadget Status Card (Top)
+> **Purpose**: At-a-glance device health.
+> **Elements**: 3-Icon Row (No text labels).
+
+| Icon | State Logic |
+|------|-------------|
+| **Battery** `[🔋]` | Level: >20% (Green), <20% (Red), Charging (Bolt). |
+| **WiFi** `[📶]` | Connected (Solid), Scanning (Blinking), Error (Slash). |
+| **BLE** `[⚡]` | Connected (Blue), Disconnected (Gray). |
+
+#### 2. Visual Invariants
+
+| Rule | How to Verify |
+|------|---------------|
+| **Clean Edges** | **NO visible hint** (white bar/shadow) when drawer is closed. Screen edge must be 100% clean. |
+| **Full Width** | Status card spans full width of the drawer. |
+
+### User Center V12 (Settings)
+
+> **Context**: Central hub for profile, preferences, and account management.
+
+#### 1. Page Layout
+
+```
+┌─────────────────────────────────────────────────────┐
+│  [👤 PROFILE CARD]                                  │
+│  Avatar | Name | Position | Level | Plan Badge     │
+│                            [ Edit Profile ]         │
+├─────────────────────────────────────────────────────┤
+│  § Preferences                                      │
+│    [ Theme: Dark / Light / System ]                 │
+│    [ AI Lab: Memory & Learning ]                    │
+│    [ Notifications & Pop-ups ]                      │
+├─────────────────────────────────────────────────────┤
+│  § Storage                                          │
+│    [ Used: 120MB ]  [ Clear Cache ]                 │
+├─────────────────────────────────────────────────────┤
+│  § Security                                         │
+│    [ Change Password ]  [ Biometric ]               │
+│    [ Logout All Devices ]                           │
+├─────────────────────────────────────────────────────┤
+│  § Support                                          │
+│    [ Help Center ]  [ Contact & Feedback ]          │
+├─────────────────────────────────────────────────────┤
+│  § About SmartSales                                 │
+│    v1.0.0  [ Updates ]  [ Privacy ]  [ Licenses ]   │
+└─────────────────────────────────────────────────────┘
+                      [ Log Out ]
+```
+
+#### 2. Profile Card
+
+| Element | Source | Behavior |
+|---------|--------|----------|
+| **Avatar** | User Upload | Tap to change photo. |
+| **Name** | Metadata | Editable. Used by AI context. |
+| **Position** | Metadata | e.g., "Senior Sales Rep". |
+| **Level** | Metadata | e.g., "3 Years Experience". |
+| **Plan Badge** | Backend | "Free Trial" / "Pro" / "Enterprise". |
+
+#### 3. Preferences Section
+
+| Setting | Type | Logic |
+|---------|------|-------|
+| **Theme** | Segmented | `Dark` / `Light` / `Follow System`. |
+| **AI Memory** | Toggle | ON: AI learns from conversation history. |
+| **Personalized Insights** | Toggle | ON: Proactive suggestions based on usage. |
+| **Pop-ups & Messages** | Toggle | Controls in-app tips, onboarding hints. |
+
+#### 4. Storage Section
+
+| Item | Action |
+|------|--------|
+| **Usage Meter** | Shows local cache size (Transcripts, Media). |
+| **Clear Cache** | Destructive action. Confirmation dialog required. |
+| **Manage Recordings** | Deep link to Audio Manager. |
+
+#### 5. Security Section
+
+| Item | Action |
+|------|--------|
+| **Change Password** | Opens password reset flow. |
+| **Biometric Unlock** | Toggle for FaceID/Fingerprint. |
+| **Logout All Devices** | Invalidates all sessions. Confirmation required. |
+
+#### 6. About SmartSales
+
+| Item | Action |
+|------|--------|
+| **Version** | Display only. |
+| **Check for Updates** | Opens App Store / manual check. |
+| **Privacy Policy** | Opens webview/browser. |
+| **Terms of Use** | Opens webview/browser. |
+| **Open-Source Licenses** | Opens local list. |
+
+#### 7. Invariants
+
+| Rule | How to Verify |
+|------|---------------|
+| **Profile Always Top** | Profile Card is fixed header, not scrollable. |
+| **Destructive Actions** | "Clear Cache" and "Logout All" require confirmation. |
+| **Plan Badge** | Reflects backend subscription status, not editable. |
+
+### Onboarding V12 (Mandatory Badge Flow)
+
+> **Context**: First-run experience. Badge pairing is **required** for AI features.
+
+#### 1. Flow Diagram
+
+```
+splash
+├── logged_in + paired → home
+├── logged_in + unpaired → badge_gate
+└── not_logged_in → welcome
+                    └── "开始" → profile (2 steps)
+                                 └── "完成" → badge_pairing
+                                              ├── Success → home
+                                              └── Skip/Fail → badge_gate
+```
+
+#### 2. Step Screens
+
+**Screen 1: Welcome**
+```
+┌─────────────────────────────────────────────────┐
+│          ( Aurora Animation )                   │
+│                                                 │
+│       欢迎使用 SmartSales 助手                   │
+│       你的智能销售伙伴                           │
+│                                                 │
+│       [ 开始设置 ]                               │
+└─────────────────────────────────────────────────┘
+```
+
+**Screen 2: Profile (Step 1/2)**
+```
+┌─────────────────────────────────────────────────┐
+│  (•──○)  1/2                                    │
+│                                                 │
+│  告诉我们你是谁                                  │
+│                                                 │
+│  [ 姓名 ________________ ]                      │
+│  [ 职位 ________________ ]                      │
+│                                                 │
+│                               [ 下一步 ]         │
+└─────────────────────────────────────────────────┘
+```
+
+**Screen 3: Profile (Step 2/2)**
+```
+┌─────────────────────────────────────────────────┐
+│  (•──•)  2/2                                    │
+│                                                 │
+│  你的工作风格                                    │
+│                                                 │
+│  [ 行业 ________________ ]                      │
+│  [ 经验 ▼ 0-1年 / 1-3年 / 3年以上 ]              │
+│  [ 备注 ________________ ]                      │
+│    Placeholder: "如：主要沟通渠道、工作习惯等"    │
+│                                                 │
+│                               [ 完成 ]           │
+└─────────────────────────────────────────────────┘
+```
+
+**Screen 4: Badge Pairing**
+```
+┌─────────────────────────────────────────────────┐
+│        ( SmartBadge Illustration )              │
+│                                                 │
+│  连接你的 SmartBadge                             │
+│  实时录音 • 自动转写 • 智能总结                   │
+│                                                 │
+│  [ 开始配对 ]                                    │
+│  [ 稍后再说 ]                                    │
+└─────────────────────────────────────────────────┘
+```
+
+**Screen 5: Badge Gate (Unpaired Blocker)**
+> Shown if user skips pairing or enters Home without badge.
+
+```
+┌─────────────────────────────────────────────────┐
+│                                                 │
+│        ( Locked Icon + Badge Illustration )     │
+│                                                 │
+│  请先连接 SmartBadge                             │
+│  AI 功能需要配合徽章使用                          │
+│                                                 │
+│  [ 立即配对 ]                                    │
+└─────────────────────────────────────────────────┘
+```
+
+#### 3. State Inventory
+
+| State | Trigger | User Sees | Microcopy |
+|-------|---------|-----------|-----------|
+| `welcome` | First launch | Hero + button | "欢迎使用 SmartSales 助手" |
+| `profile_1` | Tap "开始设置" | Name + Role fields | "告诉我们你是谁" |
+| `profile_2` | Tap "下一步" | Industry + Experience + Notes | "你的工作风格" |
+| `badge_pairing` | Complete profile | Badge illustration | "连接你的 SmartBadge" |
+| `pairing` | Tap "开始配对" | BLE/WiFi flow | (Existing DeviceSetup) |
+| `badge_gate` | Skip pairing / Unpaired | Blocker page | "请先连接 SmartBadge" |
+| `home` | Paired success | Main chat | — |
+| `saving` | Tap "完成" | Button disabled | "保存中…" |
+| `error` | Save failed | Error banner | "保存失败，请重试" |
+
+#### 4. Invariants
+
+| Rule | How to Verify |
+|------|---------------|
+| **AI Gate** | Unpaired users cannot access Chat. Badge Gate shown instead. |
+| **Progress Dots** | Visible on profile screens (1/2, 2/2). |
+| **Notes Field** | Free-text with placeholder: "如：主要沟通渠道、工作习惯等". |
+| **Dropdowns** | Experience uses picker, not free text. |
+| **Skip Behavior** | "稍后再说" leads to Badge Gate, not Home. |
+
+#### 5. Visual Guidance (For UI Designer)
+
+> **Note**: These are UX requirements based on industry best practices. UI Designer decides actual implementation (colors, animations, illustrations).
+
+| Screen | Visual Requirement | Industry Rationale |
+|--------|-------------------|-------------------|
+| **Welcome** | Hero illustration or motion asset. Must feel "alive" (animation, parallax, or breathing effect). | First impression sets quality expectation. Static = cheap. |
+| **Profile Steps** | Progress indicator (dots, bar, or step count). Must persist across profile screens. | Users need to know "how much longer" to reduce abandonment. |
+| **Badge Pairing** | Device illustration showing the physical badge. Clear visual of what user is pairing with. | Reduces confusion: "What am I connecting to?" |
+| **Badge Gate** | Locked/gated visual (padlock, barrier, or frosted overlay). Must feel "blocked but not punished". | User should understand they're missing a feature, not being rejected. |
+| **All Screens** | Consistent safe-area padding. No content touching screen edges. | Professional polish; protects notch/home-indicator areas. |
+
+**Anti-Patterns to Avoid:**
+- ❌ Plain white/gray backgrounds with no visual treatment
+- ❌ Stock photos or generic icons
+- ❌ Progress indicators that jump (must animate smoothly)
+- ❌ Badge Gate feeling like an "error" page
+
 ---
 
 ## Layout Invariants
 
 | Component | Rule | Visual Spec Ref |
 |-----------|------|-----------------|
-| **Home Hero** | Visible ONLY when session is empty (no messages, no imported transcripts). Never rendered as chat bubble. | §6.2 |
-| **Quick Skill Row** | Under hero when empty; above text field when active. **Never more than one row visible.** | §6.3 |
+| **Home Hero** | Visible ONLY when session is empty. Shows Greeting + Action Pills. | §6.2 |
+| **Top Bar** | Contains Left: Hamburger/Device, Center: Title, Right: NewSession. | §6.2 |
+| **Knot FAB** | Fixed bottom-right. Always visible unless keyboard up. | §6.11 |
 | **History Drawer** | Device-status card at top, profile entry at bottom. Both use full drawer width. | §6.6 |
 
 ---
@@ -519,6 +760,8 @@ Track unresolved UX decisions here for Product/Eng review:
 
 | Date | Flow | Change | Reason |
 |------|------|--------|--------|
+| 2026-01-18 | Onboarding V12 | Added Visual Guidance table for UI Designer (industry best practices) | UX Specialist audit |
+| 2026-01-18 | Device Setup, GIF Upload | Added plain-language annotations for technical states (`waiting_online`, `extracting`) | Clarity for AI/devs |
 | 2026-01-14 | Recording Card V17 | New streamlined card design: gesture-based actions, star flag, swipe tray, Transcript View | UX Specialist collab session |
 | 2026-01-11 | Chat (Knot FAB) | Added V18 Tip Bubble sub-flow, added Knot visibility invariants | UI Polish V16-V18 DocSync |
 | 2026-01-11 | AudioFiles | Added state inventory (17 states, 5 invariants) | M1 UX gap-fill |

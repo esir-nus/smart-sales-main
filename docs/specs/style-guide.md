@@ -116,38 +116,33 @@ object AppColors {
 
 ...
 
-### 6.2 Home Hero (`ChatWelcome`)
+### 6.2 Home Hero (`ChatWelcome`) (V12 Blueprint)
 
-**Visual structure (Target UI):**
+**A. Top Bar Layout (Target UI):**
+*   **Left**: `[≡]` Hamburger (Open History Drawer) + `[⚡]` Device Icon (Device Status/Manager).
+*   **Center**: `New Session` (Placeholder Title) or Current Session Title.
+*   **Right**: `[+]` Icon (Create New Session).
+*   **Removed**: Avatar (moved to Drawer), Profile Pill.
 
-* Layout: Centered.
-* **Greeting**: "你好, [SmartSales 用户]" (Gradient Text).
-  * **Weight**: **ExtraBold** or **Black**. The gradient is only visible on thick strokes.
-* **Subtitle**: "我是您的销售助手" (Body, Secondary).
-* **No "Let's Start"**.
-* **Hero Actions (Pills)**:
-  * Replaces discrete chips.
-  * Style: Large, translucent pills (`SurfaceCard` + alpha).
-  * Layout: Row of 3 (`Smart Analysis`, `PDF`, `CSV`).
+**B. Hero Content (Center Canvas):**
+*   **Visibility**: Only active when session is empty.
+*   **Greeting**: "你好, [SmartSales 用户]" (Gradient Text).
+*   **Subtitle**: "我是您的销售助手" (Body, Secondary).
+*   **Hero Actions**: Row of 3 Large Translucent Pills (`Smart Analysis`, `PDF`, `CSV`).
 
 ### 6.3 Chat Input (Floating Capsule)
 
 **Target UI Pattern**:
 
-* **Container**:
-  * Shape: **Stadium / Capsule** (Fully rounded sides).
-  * **Shadow**: **Custom Blue-Tinted Shadow** (NOT standard gray elevation). Use a soft, diffuse shadow (`spotColor = Color(0xFF007AFF)`) to make it feel like it's levitating in the Aurora.
-  * Insets: Floats 16dp above bottom, 16dp from sides.
-  * Content: `+` Button (Left) | Text Field (Center) | Knot Symbol (Right).
+*   **Container**:
+    *   Shape: **Stadium / Capsule** (Fully rounded sides).
+    *   **Shadow**: **Custom Blue-Tinted Shadow** (`spotColor = Color(0xFF007AFF)`) — Levitation effect.
+    *   Insets: Floats 16dp above bottom, 16dp from sides.
+    *   Content: `+` Button (Left) | Text Field (Center).
+    *   **NO Knot**: Knot is moved to external FAB.
 
-* **Knot Symbol Integration**:
-  * **Visual Truth**: Check the specific screenshot for the context.
-  * **Voice Mode**: Knot often acts as a FAB in the corner (V18 style).
-  * **Text Mode**: Knot may integrate into the capsule as a status indicator.
-  * **Rule**: If the screenshot shows a simple "Send" arrow, implement that for the specific flow, but keep the Knot available for the "Thinking" state.
-
-* **Scan Shine**:
-  * Subtle sheen traversing the capsule in idle state.
+*   **Affordance**:
+    *   **Scan Shine**: Subtle sheen traversing the placeholder text "输入消息..." in idle state.
 
 
 ### 6.4 Chat Messages (User & Assistant)
@@ -273,9 +268,10 @@ Used in history, audio library, device files, etc.
 **Concept**: The Knot is the UI's "soul"—an always-visible, breathing infinity symbol that represents the AI assistant. Tapping it reveals a contextual tip.
 
 * **Knot FAB**:
-  * **Position**: Fixed, bottom-right, `160dp` from bottom, `24dp` from edge.
-  * **Container**: `56dp` touch target, transparent background.
-  * **Icon**: `50dp` KnotSymbol (leaves breathing room).
+  *   **Type**: External Floating Action Button (FAB).
+  *   **Position**: Fixed, bottom-right, `160dp` from bottom, `24dp` from edge.
+  *   **Container**: `56dp` touch target, transparent background.
+  *   **Icon**: `50dp` KnotSymbol (leaves breathing room).
   * **Stroke**: Core `1.5dp`, Glow `3dp` (atmosphere layer at `0.5f` alpha).
   * **Animation**: "Breathing" scale (`1.0f` → `1.35f`, 2s cycle). Spins when `isThinking = true`.
   * **Ripple**: Standard Material 3 ripple on tap.

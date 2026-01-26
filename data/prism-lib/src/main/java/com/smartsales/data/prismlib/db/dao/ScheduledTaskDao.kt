@@ -17,6 +17,9 @@ interface ScheduledTaskDao {
     @Query("SELECT * FROM scheduled_tasks WHERE scheduledAt BETWEEN :start AND :end ORDER BY scheduledAt ASC")
     suspend fun getForDateRange(start: Long, end: Long): List<RoomScheduledTask>
 
+    @Query("SELECT * FROM scheduled_tasks ORDER BY scheduledAt ASC")
+    suspend fun getAll(): List<RoomScheduledTask>
+
     @Query("DELETE FROM scheduled_tasks WHERE id = :id")
     suspend fun delete(id: String)
 }

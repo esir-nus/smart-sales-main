@@ -9,34 +9,32 @@ import com.smartsales.domain.prism.core.entities.InspirationSource
 data class RoomInspiration(
     @PrimaryKey
     val id: String,
-    val title: String,
-    val description: String,
+    val content: String,
     val source: InspirationSource,
-    val sourceRefId: String?,
-    val tags: List<String>,
-    val createdAt: Long,
-    val isDismissed: Boolean // If we want to track dismissed inspirations
+    val relatedEntityIds: List<String>,
+    val isPromoted: Boolean,
+    val promotedTaskId: String?,
+    val createdAt: Long
 ) {
     fun toDomain(): Inspiration = Inspiration(
         id = id,
-        title = title,
-        description = description,
+        content = content,
         source = source,
-        sourceRefId = sourceRefId,
-        tags = tags,
+        relatedEntityIds = relatedEntityIds,
+        isPromoted = isPromoted,
+        promotedTaskId = promotedTaskId,
         createdAt = createdAt
     )
 
     companion object {
         fun fromDomain(domain: Inspiration): RoomInspiration = RoomInspiration(
             id = domain.id,
-            title = domain.title,
-            description = domain.description,
+            content = domain.content,
             source = domain.source,
-            sourceRefId = domain.sourceRefId,
-            tags = domain.tags,
-            createdAt = domain.createdAt,
-            isDismissed = false // Default
+            relatedEntityIds = domain.relatedEntityIds,
+            isPromoted = domain.isPromoted,
+            promotedTaskId = domain.promotedTaskId,
+            createdAt = domain.createdAt
         )
     }
 }

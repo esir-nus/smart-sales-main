@@ -14,7 +14,8 @@ data class RoomSession(
     val createdAt: Long,
     val updatedAt: Long,
     val isPinned: Boolean,
-    val previewText: String?
+    val messageCount: Int,
+    val lastMessagePreview: String?
 ) {
     fun toDomain(): Session = Session(
         id = id,
@@ -23,7 +24,8 @@ data class RoomSession(
         createdAt = createdAt,
         updatedAt = updatedAt,
         isPinned = isPinned,
-        previewText = previewText
+        messageCount = messageCount,
+        lastMessagePreview = lastMessagePreview
     )
 
     companion object {
@@ -34,7 +36,8 @@ data class RoomSession(
             createdAt = domain.createdAt,
             updatedAt = domain.updatedAt,
             isPinned = domain.isPinned,
-            previewText = domain.previewText
+            messageCount = domain.messageCount,
+            lastMessagePreview = domain.lastMessagePreview
         )
     }
 }

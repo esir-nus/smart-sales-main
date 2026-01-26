@@ -58,3 +58,10 @@
 *Patterns that seemed good but didn't hold up:*
 
 <!-- Add with rejection reason -->
+
+### [CANDIDATE] "Physics/Geometry Alignment"
+- **Date**: 2026-01-26
+- **Context**: Scheduler Drawer had Top-Drawer geometry (rounded bottom) but Bottom-Sheet physics (slide up).
+- **Evidence**: User called it a "dumb mistake". Fixed by aligning animation (y: -100%) to geometry.
+- **Frank's Insight**: Visual affordances must match physical behavior. If it looks like it hangs, it must slide down.
+- **Observations**: 1

@@ -31,4 +31,12 @@ class RoomScheduledTaskRepository @Inject constructor(
     override suspend fun delete(id: String) {
         dao.delete(id)
     }
+
+    override suspend fun getAll(): List<ScheduledTask> {
+        return dao.getAll().map { it.toDomain() }
+    }
+
+    override suspend fun update(task: ScheduledTask) {
+        dao.insert(RoomScheduledTask.fromDomain(task)) // REPLACE via upsert
+    }
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, type PanInfo, useAnimation } from 'framer-motion';
+import { motion, type PanInfo, AnimatePresence } from 'framer-motion';
 import { MoreHorizontal, Clock, AlertTriangle } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -8,8 +8,24 @@ interface SchedulerDrawerProps {
   onClose: () => void;
 }
 
+const slideVariants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? 300 : -300,
+    opacity: 0
+  }),
+  center: {
+    x: 0,
+    opacity: 1
+  },
+  exit: (direction: number) => ({
+    x: direction < 0 ? 300 : -300,
+    opacity: 0
+  })
+};
+
 export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClose }) => { 
   const [isExpanded, setIsExpanded] = React.useState(false);
+  const [direction, setDirection] = React.useState(0);
   
   const [currentWeekStart, setCurrentWeekStart] = React.useState(() => {
     const d = new Date();
@@ -37,8 +53,19 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
       onClose();
     } 
   };
+  
+  // Week Swipe Handler (Horizontal)
+  const handleWeekSwipe = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+      const swipeThreshold = 50;
+      if (info.offset.x < -swipeThreshold) {
+          changeWeek(1);
+      } else if (info.offset.x > swipeThreshold) {
+          changeWeek(-1);
+      }
+  };
 
   const changeWeek = (offset: number) => {
+    setDirection(offset);
     const newStart = new Date(currentWeekStart);
     newStart.setDate(newStart.getDate() + (offset * 7));
     setCurrentWeekStart(newStart);
@@ -67,8 +94,8 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
 
   return (
     <motion.div
-      initial={{ y: '100%' }}
-      animate={{ y: isOpen ? 0 : '100%' }}
+      initial={{ y: '-100%' }}
+      animate={{ y: isOpen ? 0 : '-100%' }}
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
       onDragEnd={handleDragEnd}
       drag="y"
@@ -91,13 +118,9 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
                     <span className="text-gray-400 font-medium tracking-normal text-lg">{currentWeekStart.getFullYear()}年</span>
                     <span className="text-gray-900">{currentWeekStart.getMonth() + 1}月</span>
                 </h2>
-                <div className="flex gap-2">
-                    <button onClick={() => changeWeek(-1)} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-900 transition-colors">
-                        ←
-                    </button>
-                    <button onClick={() => changeWeek(1)} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-900 transition-colors">
-                        →
-                    </button>
+                {/* Arrow Buttons Removed in favor of Swipe */}
+                <div className="flex gap-2 opacity-0 pointer-events-none w-0 h-0 overflow-hidden"> 
+                   {/* Kept hidden for a11y structure but visually removed */}
                 </div>
             </div>
             
@@ -137,42 +160,58 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
                     <div key={d} className="text-center text-[10px] uppercase tracking-wider text-gray-400 font-semibold py-3">{d}</div>
                 ))}
                 
-                {/* Dates */}
-                {(isExpanded ? monthGrid : days).map((d, i) => {
-                    const isSelected = d.getDate() === selectedDate;
-                    const hasTask = d.getDate() % 3 === 0; 
-                    const isCurrentMonth = d.getMonth() === currentWeekStart.getMonth();
-                    
-                    return (
-                        <motion.div 
-                            layout
-                            key={`${d.getMonth()}-${d.getDate()}`} 
-                            onClick={() => setSelectedDate(d.getDate())}
-                            className={clsx(
-                                "flex flex-col items-center justify-center h-12 rounded-2xl transition-all cursor-pointer relative group",
-                                !isSelected && "hover:bg-white/50"
-                            )}
-                        >
-                            <div className={clsx(
-                                "w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-300 relative z-10",
-                                isSelected ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/40 translate-y-[-2px]" : "text-gray-700",
-                                !isCurrentMonth && !isSelected && "text-gray-300"
-                            )}>
-                                <span className={clsx("text-sm font-semibold", isSelected && "font-bold")}>
-                                    {d.getDate()}
-                                </span>
-                            </div>
+                {/* Animated Dates Container */}
+                <AnimatePresence mode="popLayout" custom={direction}>
+                    <motion.div
+                        key={isExpanded ? 'month-view' : currentWeekStart.toISOString()}
+                        variants={slideVariants}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        custom={direction}
+                        drag={!isExpanded ? "x" : false} // Swipe only on Week View
+                        dragConstraints={{ left: 0, right: 0 }}
+                        dragElastic={0.2}
+                        onDragEnd={handleWeekSwipe}
+                        className="col-span-7 grid grid-cols-7 gap-y-2 w-full"
+                    >
+                        {(isExpanded ? monthGrid : days).map((d, i) => {
+                            const isSelected = d.getDate() === selectedDate;
+                            const hasTask = d.getDate() % 3 === 0; 
+                            const isCurrentMonth = d.getMonth() === currentWeekStart.getMonth();
+                            
+                            return (
+                                <motion.div 
+                                    layout
+                                    key={`${d.getMonth()}-${d.getDate()}`} 
+                                    onClick={() => setSelectedDate(d.getDate())}
+                                    className={clsx(
+                                        "flex flex-col items-center justify-center h-12 rounded-2xl transition-all cursor-pointer relative group",
+                                        !isSelected && "hover:bg-white/50"
+                                    )}
+                                >
+                                    <div className={clsx(
+                                        "w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-300 relative z-10",
+                                        isSelected ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/40 translate-y-[-2px]" : "text-gray-700",
+                                        !isCurrentMonth && !isSelected && "text-gray-300"
+                                    )}>
+                                        <span className={clsx("text-sm font-semibold", isSelected && "font-bold")}>
+                                            {d.getDate()}
+                                        </span>
+                                    </div>
 
-                            {/* Task Indicator */}
-                            {hasTask && (
-                                <div className={clsx(
-                                    "w-1 h-1 rounded-full mt-1 transition-all", 
-                                    isSelected ? "bg-white/60" : "bg-blue-400 group-hover:scale-125"
-                                )} />
-                            )}
-                        </motion.div>
-                    );
-                })}
+                                    {/* Task Indicator */}
+                                    {hasTask && (
+                                        <div className={clsx(
+                                            "w-1 h-1 rounded-full mt-1 transition-all", 
+                                            isSelected ? "bg-white/60" : "bg-blue-400 group-hover:scale-125"
+                                        )} />
+                                    )}
+                                </motion.div>
+                            );
+                        })}
+                    </motion.div>
+                </AnimatePresence>
              </div>
              
              {/* Gradient Mask for Week View */}

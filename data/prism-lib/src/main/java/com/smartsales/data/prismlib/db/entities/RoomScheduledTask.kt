@@ -2,7 +2,7 @@ package com.smartsales.data.prismlib.db.entities
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.smartsales.domain.prism.core.entities.ReminderConfig
+import com.smartsales.domain.prism.core.entities.AlarmType
 import com.smartsales.domain.prism.core.entities.ScheduledTask
 import com.smartsales.domain.prism.core.entities.TaskPriority
 import com.smartsales.domain.prism.core.entities.TaskStatus
@@ -16,8 +16,11 @@ data class RoomScheduledTask(
     val scheduledAt: Long,
     val priority: TaskPriority,
     val status: TaskStatus,
-    val isAllDay: Boolean,
-    val reminderConfig: ReminderConfig? // Requires TypeConverter
+    val hasAlarm: Boolean,
+    val alarmType: AlarmType,
+    val relatedEntityIds: List<String>,
+    val createdAt: Long,
+    val updatedAt: Long
 ) {
     fun toDomain(): ScheduledTask = ScheduledTask(
         id = id,
@@ -26,8 +29,11 @@ data class RoomScheduledTask(
         scheduledAt = scheduledAt,
         priority = priority,
         status = status,
-        isAllDay = isAllDay,
-        reminderConfig = reminderConfig
+        hasAlarm = hasAlarm,
+        alarmType = alarmType,
+        relatedEntityIds = relatedEntityIds,
+        createdAt = createdAt,
+        updatedAt = updatedAt
     )
 
     companion object {
@@ -38,8 +44,11 @@ data class RoomScheduledTask(
             scheduledAt = domain.scheduledAt,
             priority = domain.priority,
             status = domain.status,
-            isAllDay = domain.isAllDay,
-            reminderConfig = domain.reminderConfig
+            hasAlarm = domain.hasAlarm,
+            alarmType = domain.alarmType,
+            relatedEntityIds = domain.relatedEntityIds,
+            createdAt = domain.createdAt,
+            updatedAt = domain.updatedAt
         )
     }
 }

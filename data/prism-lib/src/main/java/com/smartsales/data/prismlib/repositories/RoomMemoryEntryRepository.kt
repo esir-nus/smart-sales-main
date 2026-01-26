@@ -32,7 +32,15 @@ class RoomMemoryEntryRepository @Inject constructor(
         dao.archive(id)
     }
 
-    override suspend fun getBySession(sessionId: String): List<MemoryEntryEntity> {
+    override suspend fun getBySessionId(sessionId: String): List<MemoryEntryEntity> {
         return dao.getBySession(sessionId).map { it.toDomain() }
+    }
+
+    override suspend fun update(entry: MemoryEntryEntity) {
+        dao.insert(RoomMemoryEntry.fromDomain(entry)) // REPLACE via upsert
+    }
+
+    override suspend fun delete(id: String) {
+        dao.delete(id)
     }
 }

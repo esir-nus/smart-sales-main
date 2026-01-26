@@ -35,4 +35,8 @@ class RoomSessionsRepository @Inject constructor(
     override suspend fun delete(id: String) {
         dao.delete(id)
     }
+
+    override suspend fun update(session: Session) {
+        dao.insert(RoomSession.fromDomain(session)) // REPLACE via upsert
+    }
 }

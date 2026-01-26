@@ -10,14 +10,17 @@ interface UserProfileDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(profile: RoomUserProfile)
 
-    @Query("SELECT * FROM user_profile WHERE userId = :userId")
-    suspend fun getById(userId: String): RoomUserProfile?
+    @Query("SELECT * FROM user_profile LIMIT 1")
+    suspend fun get(): RoomUserProfile?
 }
 
 @Dao
 interface UserHabitDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(habit: RoomUserHabit)
+
+    @Query("SELECT * FROM user_habits")
+    suspend fun getAll(): List<RoomUserHabit>
 
     @Query("SELECT * FROM user_habits WHERE habitKey = :key")
     suspend fun getByKey(key: String): RoomUserHabit?
@@ -39,6 +42,12 @@ interface InspirationDao {
 
     @Query("SELECT * FROM inspirations ORDER BY createdAt DESC")
     suspend fun getAll(): List<RoomInspiration>
+
+    @Query("SELECT * FROM inspirations WHERE isPromoted = 0 ORDER BY createdAt DESC")
+    suspend fun getUnpromoted(): List<RoomInspiration>
+
+    @Query("UPDATE inspirations SET isPromoted = 1, promotedTaskId = :taskId WHERE id = :id")
+    suspend fun promoteToTask(id: String, taskId: String)
     
     @Query("DELETE FROM inspirations WHERE id = :id")
     suspend fun delete(id: String)

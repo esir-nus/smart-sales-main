@@ -113,10 +113,14 @@ class Converters {
     fun toInspirationSource(value: String): InspirationSource = InspirationSource.valueOf(value)
 
     @TypeConverter
-    fun fromReminderConfig(config: ReminderConfig?): String? = config?.let { gson.toJson(it) }
+    fun fromAlarmType(type: AlarmType): String = type.name
 
     @TypeConverter
-    fun toReminderConfig(value: String?): ReminderConfig? = value?.let { gson.fromJson(it, ReminderConfig::class.java) }
-    
+    fun toAlarmType(value: String): AlarmType = AlarmType.valueOf(value)
 
+    @TypeConverter
+    fun fromExperienceLevel(level: ExperienceLevel): String = level.name
 
+    @TypeConverter
+    fun toExperienceLevel(value: String): ExperienceLevel = ExperienceLevel.valueOf(value)
+}

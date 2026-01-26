@@ -2,32 +2,39 @@ package com.smartsales.data.prismlib.db.entities
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.smartsales.domain.prism.core.entities.ExperienceLevel
 import com.smartsales.domain.prism.core.entities.UserProfile
 
 @Entity(tableName = "user_profile")
 data class RoomUserProfile(
     @PrimaryKey
-    val userId: String,
+    val id: Int,
     val displayName: String,
-    val role: String,
-    val preferences: Map<String, String>,
-    val lastActiveAt: Long
+    val preferredLanguage: String,
+    val experienceLevel: ExperienceLevel,
+    val industry: String?,
+    val role: String?,
+    val updatedAt: Long
 ) {
     fun toDomain(): UserProfile = UserProfile(
-        userId = userId,
+        id = id,
         displayName = displayName,
+        preferredLanguage = preferredLanguage,
+        experienceLevel = experienceLevel,
+        industry = industry,
         role = role,
-        preferences = preferences,
-        lastActiveAt = lastActiveAt
+        updatedAt = updatedAt
     )
 
     companion object {
         fun fromDomain(domain: UserProfile): RoomUserProfile = RoomUserProfile(
-            userId = domain.userId,
+            id = domain.id,
             displayName = domain.displayName,
+            preferredLanguage = domain.preferredLanguage,
+            experienceLevel = domain.experienceLevel,
+            industry = domain.industry,
             role = domain.role,
-            preferences = domain.preferences,
-            lastActiveAt = domain.lastActiveAt
+            updatedAt = domain.updatedAt
         )
     }
 }

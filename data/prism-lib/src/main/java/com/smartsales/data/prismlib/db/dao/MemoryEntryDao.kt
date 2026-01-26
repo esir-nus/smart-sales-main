@@ -22,4 +22,7 @@ interface MemoryEntryDao {
     
     @Query("SELECT * FROM memory_entries WHERE sessionId = :sessionId")
     suspend fun getBySession(sessionId: String): List<RoomMemoryEntry>
+
+    @Query("DELETE FROM memory_entries WHERE id = :id")
+    suspend fun delete(id: String)
 }

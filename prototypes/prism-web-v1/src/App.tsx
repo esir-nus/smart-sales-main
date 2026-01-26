@@ -88,6 +88,12 @@ function App() {
 
   // Dashboard Handler
   const handleDashboardNav = (destination: string) => {
+      // 1. Universal Cleanup: Always close drawer & overlays unless specific mode requests them
+      if (destination !== 'Scheduler') {
+          setIsDrawerOpen(false);
+      }
+
+      // 2. State Specific Logic
       if (destination === 'Home') {
           setIsOnboarding(false);
           setMode('coach');
@@ -99,9 +105,15 @@ function App() {
       }
       if (destination === 'Analyst') {
           setIsOnboarding(false);
-          runScenario('plan');
+          // Force reset messages if switching from another deep state? No, keep context or reset?
+          // Brief implies "Analyst Mode" should trigger the plan scenario.
+          if (mode !== 'analyst') {
+             runScenario('plan');
+          }
       }
       if (destination === 'Scheduler') {
+          // Scheduler can overlay on top of anything, but design brief says "Clean State"
+          // So we might want to hide onboarding if it's open?
           setIsOnboarding(false);
           setIsDrawerOpen(true);
       }

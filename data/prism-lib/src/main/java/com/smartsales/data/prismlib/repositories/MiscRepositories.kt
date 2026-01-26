@@ -19,11 +19,11 @@ import javax.inject.Singleton
 class RoomUserProfileRepository @Inject constructor(
     private val dao: UserProfileDao
 ) : UserProfileRepository {
-    override suspend fun insert(profile: UserProfile) {
-        dao.insert(RoomUserProfile.fromDomain(profile))
+    override suspend fun get(): UserProfile? {
+        return dao.get()?.toDomain()
     }
-    override suspend fun getById(userId: String): UserProfile? {
-        return dao.getById(userId)?.toDomain()
+    override suspend fun save(profile: UserProfile) {
+        dao.insert(RoomUserProfile.fromDomain(profile))
     }
 }
 
@@ -31,17 +31,20 @@ class RoomUserProfileRepository @Inject constructor(
 class RoomUserHabitRepository @Inject constructor(
     private val dao: UserHabitDao
 ) : UserHabitRepository {
-    override suspend fun upsert(habit: UserHabit) {
-        dao.upsert(RoomUserHabit.fromDomain(habit))
+    override suspend fun getAll(): List<UserHabit> {
+        return dao.getAll().map { it.toDomain() }
     }
-    override suspend fun getByKey(key: String): UserHabit? {
-        return dao.getByKey(key)?.toDomain()
+    override suspend fun getByKey(habitKey: String): UserHabit? {
+        return dao.getByKey(habitKey)?.toDomain()
     }
     override suspend fun getForEntity(entityId: String): List<UserHabit> {
         return dao.getForEntity(entityId).map { it.toDomain() }
     }
-    override suspend fun delete(key: String) {
-        dao.delete(key)
+    override suspend fun upsert(habit: UserHabit) {
+        dao.upsert(RoomUserHabit.fromDomain(habit))
+    }
+    override suspend fun delete(habitKey: String) {
+        dao.delete(habitKey)
     }
 }
 
@@ -49,14 +52,20 @@ class RoomUserHabitRepository @Inject constructor(
 class RoomInspirationRepository @Inject constructor(
     private val dao: InspirationDao
 ) : InspirationRepository {
-    override suspend fun insert(inspiration: Inspiration) {
-        dao.insert(RoomInspiration.fromDomain(inspiration))
+    override suspend fun getAll(): List<Inspiration> {
+        return dao.getAll().map { it.toDomain() }
     }
     override suspend fun getById(id: String): Inspiration? {
         return dao.getById(id)?.toDomain()
     }
-    override suspend fun getAll(): List<Inspiration> {
-        return dao.getAll().map { it.toDomain() }
+    override suspend fun getUnpromoted(): List<Inspiration> {
+        return dao.getUnpromoted().map { it.toDomain() }
+    }
+    override suspend fun insert(inspiration: Inspiration) {
+        dao.insert(RoomInspiration.fromDomain(inspiration))
+    }
+    override suspend fun promoteToTask(id: String, taskId: String) {
+        dao.promoteToTask(id, taskId)
     }
     override suspend fun delete(id: String) {
         dao.delete(id)

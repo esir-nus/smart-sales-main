@@ -1,43 +1,51 @@
-## Design Brief: Scheduler Drawer Gap
+## Design Brief: Scheduler Aesthetic & Gesture Polish
 
 ### User Goal
-Reduce the "gap" of the Scheduler Drawer to 5%.
+"The date numbers look misaligned (bad aesthetics). Also, since the drawer pulls down from the top, the 'Expansion' gesture (pulling down *more*) needs to feel natural and not conflict with closing."
 
 ### Translation
-Currently, the Scheduler Drawer slides down from the top (`y: 0` relative to container).
-Observation from code: `h-[650px]` (Fixed height).
-Observation from screenshot: The drawer leaves a significant gap at the bottom (or top depending on interpretation).
-**Interpretation**: "Gap" usually refers to the space *not* covered by the drawer. Since it's a top-drawer (pull down?), or bottom drawer?
-Actually code says `initial={{ y: '-100%' }}` (comes from top).
-If it comes from top, and `h=650`, and phone is ~850. The bottom gap is ~200px.
-Verify screenshot to confirm.
+1.  **Grid Alignment**: Ensure Date Numbers are mathematically centered under Weekday Headers.
+2.  **Gesture Hierarchy**: 
+    - **Header Drag**: Should control Expansion.
+    - **Handle Bar**: Primary drag target.
+    - **Drawer Body**: Should NOT drag the drawer (allow scrolling content).
+3.  **Visual Polish**: Lighter fonts, cleaner active states.
 
-**Assumption**: User wants the drawer to be **taller** or positioned such that the gap (likely at the bottom, or the top margin if it's a floating card) is smaller.
-Given "scheduler drawer" often implies a full-screen-ish calendar.
-"Gap reduced to 5%" -> Likely means "Make it cover 95% of the screen" or "Top margin 5%".
+---
 
-Let's assume **Top Margin 5% (leaving a sliver of context) and Height 95% (or filling rest)**.
-OR if it's a bottom sheet...
-Code says `top-0`.
-If it's `top-0`, it starts at top.
-Wait, if `y: -100%` -> `y: 0`. It hangs from the top.
-If the user wants "gap reduced", and it is `top-0`, there is NO gap at the top.
-Maybe they mean the *bottom* gap?
-"Gap can be further reduced" implies there IS a gap.
-If height is fixed 650px on a 850px screen, bottom gap is large (~25%).
-Reduced to 5% matches "Make it almost full height".
-
-**Visual Spec**:
-- **Height**: Dynamic `h-[95%]` or `bottom-[5%]` instead of fixed `650px`.
-- **Top**: `top-0` (Keep anchored to top).
-- **Rounding**: Ensure bottom corners are rounded.
+## Guardrails (WHAT TO TOUCH)
 
 ### ✅ In Scope
-- **SchedulerDrawer.tsx**: Change height/layout props.
+- **`SchedulerDrawer.tsx`**:
+    - **CSS Grid**: Verify `place-items-center` or Flex centering for the Date cells.
+    - **Typography**: Verify `font-mono` vs `sans` alignment. Center text explicitly.
+    - **Drag Logic**: Restrict `dragListener` to specific handles if possible, or refine constraints.
+    - **Animation**: Smoother spring for expansion.
 
 ### 🚫 Out of Scope
-- Internal content layout (Calendar/Tasks) - allow to scroll if needed.
+- **Week Swipe**: Keep the left/right swipe logic (it works).
+- **Content Cards**: Leave as is.
+
+---
+
+## Visual Specifications
+
+### 1. Date Grid Alignment
+- **Problem**: Current `flex-col` might be off-center.
+- **Fix**: Use `grid place-items-center` for the cell container. Ensure the number itself is `text-center`.
+- **Target**: The center of the '8' must align vertically with the center of '日'.
+
+### 2. Gesture Optimization
+- **Conflict**: Pulling down to expand vs Pulling up to close.
+- **Rule**:
+    - **Pull Down (> 50px)**: Expand to Month View.
+    - **Pull Up (< -50px) whilst Expanded**: Collapse to Week View.
+    - **Pull Up (< -100px) whilst Collapsed**: Close Drawer (Fold away).
 
 ## Acceptance Criteria
-1. [ ] Drawer extends further down, leaving only ~5% gap at the bottom (or top if my interpretation is flipped, but bottom makes sense for "reduced gap" on a partial sheet).
-2. [ ] Screenshot confirms taller drawer.
+1. [ ] Date numbers are perfectly centered under weekday headers.
+2. [ ] Expansion gesture feels distinct from Closing gesture.
+3. [ ] Aesthetics look "tighter" (better spacing/alignment).
+
+## Handoff
+Execute with `/ui-ux-pro-max`.

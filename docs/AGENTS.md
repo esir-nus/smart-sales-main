@@ -1,206 +1,126 @@
-# Repository Guidelines
+# Repository Guidelines (Human Reference)
 
-## Source of Truth (SoT) and Archived Docs
-
-- **Current SoT**: `docs/specs/Orchestrator-Lattice.md` — Lattice Box-API architecture
-- **Algorithm Appendices**: `docs/specs/Orchestrator-V1.md` — Disector, Publisher, State Recovery rules (DEPRECATED for architecture decisions)
-- Ignore `docs/archived/**` for implementation behavior and contracts. Archived docs are historical only and must not be used as a target spec.
-- Ignore non-normative docs such as `docs/current-state.md` and `docs/T-Task.md` for implementation behavior; use SoT.
+> ⚠️ **Note for Agents**: This file is for **human onboarding only**. Agent rules are in `.agent/rules/smart-sales.md` which is auto-loaded. Do not treat this file as authoritative config.
 
 ---
 
-## Doc Sources and Precedence (Docs > Code > Guessing)
+## Purpose
 
-- Orchestrator contract sources (CURRENT):
-  - `docs/specs/Orchestrator-Lattice.md` (the authoritative architecture spec)
-  - `docs/specs/Orchestrator-V1.md` Appendices (algorithm specs only)
-- Lattice JSON (CURRENT):
-  - `docs/specs/orchestrator-v1.schema.json` (data model schema — evolving to Lattice)
-- ARCHIVED (historical reference only; not target behavior):
-  - Archived specs live under `docs/archived/**` (historical only).
+This document provides human-readable guidelines for:
+- New team members joining the project
+- Chinese dev colleagues who need full context
+- Reference when `.agent/` rules need clarification
 
-- UX contract source precedence:
-  1. `docs/specs/Orchestrator-Lattice.md` (architecture and module boundaries)
-  2. `docs/specs/Orchestrator-V1.md` Appendices (algorithm specs: Disector, Publisher, State Recovery)
-  3. `docs/specs/ux-contract.md` (🔒 canonical: data contracts, pipelines, feature boundaries — locked, requires Product/Eng approval)
-  4. `docs/plans/ux-experience.md` (📝 experience: state inventories, microcopy, timing, layout — UX-owned, modifiable)
-  5. `docs/specs/style-guide.md` (visual and code style rules)
-  6. Existing Android implementation and tests
-  7. Archived UI/history implementations for reference only
+**For agents**: Read `.agent/rules/*.md` instead — those are auto-loaded.
 
 ---
 
-## Documentation language
+## Language Rules
 
-- Documentation prose must be English.
-- Chinese is mandatory inside fenced code blocks as code comments, and should be Simplified Chinese.
-
----
-
-## Third-Party Integration Registry
-
-- The role of `docs/specs/source-repo.json` and `docs/source-repo.schema.json`:
-  - Third-party service integration reference only (OSS / Tingwu / XFyun / Dashscope + placeholders)
-  - Records: endpoint, key request/response fields, guardrails, failure modes, test evidence, and code location index
-  - Prohibited: Orchestrator/MetaHub product specs, M1/M2/M3 schema, business semantics definitions
-- The only authoritative source for XFyun REST details remains `docs/archived/xfyun-asr-rest-api.md` (deprecated; XFyun lane is disabled by default)
-  - Do not duplicate its parameter tables in other docs (only link + conclusion summary)
+| Context | Language | Notes |
+|---------|----------|-------|
+| Agent communication | **English** | All conversations with agents |
+| Documentation prose | **English** | Specs, plans, READMEs |
+| Code comments | **Simplified Chinese** | 方便中文开发同事阅读 |
+| File headers | **Simplified Chinese** | Summary行使用中文 |
+| Inline annotations | **Simplified Chinese** | 代码块内使用中文 |
 
 ---
+
+## Doc Sources and Precedence
+
+**Docs > Code > Guessing**
+
+1. Architecture SOT: `docs/specs/Prism-V1.md`
+2. UX SOT: `docs/specs/prism-ui-ux-contract.md`
+3. Tracker: `docs/plans/tracker.md`
+4. Archived docs (`docs/archived/**`) are historical only
+
+### Spec-Code Alignment
+
+When code diverges from spec:
+- **Favor CODE** if it's battle-tested and intentional
+- **Favor SPEC** if code is a quick hack that shipped
+- Document the decision and update the appropriate source
 
 ---
 
 ## Purification Mindset
 
-> These rules apply to ALL coding work. Not a "mode" — a default behavior.
+> These rules apply to ALL coding work.
 
 ### Pre-Coding Audit
-Before modifying code, always:
 1. Read the relevant tracker for architecture status
 2. Read the relevant spec for module contracts
 3. `grep` to verify assumptions — never guess
 
 ### Rewrite > Extract
-When touching legacy code:
-- **Rewrite**: When code is misaligned with target architecture or tightly coupled
+- **Rewrite**: When code is misaligned or tightly coupled
 - **Extract**: Only when code is already aligned and loosely coupled
 - **Default to rewrite** — old patterns don't deserve preservation
 
 ### Organic Debt Payment
 - Fix debt **when it blocks** feature delivery, not proactively
-- Mark deviations in tracker, don't hunt them
 - Ship features first, refactor post-ship
 
-### Evidence-Based Decisions
-| Before | Do This |
-|--------|---------|
-| Claiming "X exists" | `grep -rn "X" feature/` |
-| Claiming "complete" | Build passes |
-| Modifying a file | `view_file` to read it first |
+---
+
+## Vibe Coding Guidelines
+
+For AI-assisted development:
+
+| Criterion | What to Check |
+|-----------|---------------|
+| **Context clarity** | Can agent understand without reading 10 files? |
+| **Locality** | Is related logic close together? |
+| **Naming** | Do names tell the story without comments? |
+| **Debuggability** | When this breaks at 2am, can you find it fast? |
+
+### Anti-Patterns
+- **No line count goals** — responsibility is the only measure
+- **No premature abstraction** — one implementation doesn't need an interface
+- **No clever code** — simple wins over elegant
 
 ---
 
-## Architecture Workflow Order
+## Code Style
 
-**Priority**: Finish spec → Ship features → Check deviations
+All source files must include a unified file header:
 
-### Workflow Rules
-
-1. **Spec-First**: Finish `Orchestrator-Lattice.md` specs before major purity refactors
-   - Writing spec surfaces design gaps early
-   - Don't refactor toward incomplete/aspirational specs
-
-2. **Ship Features**: Implement features following current patterns
-   - Structure guardrails prevent new god files
-   - Purity issues will surface organically during development
-
-3. **Post-Ship Deviation Check**: After feature complete, audit spec vs reality
-   - Only fix deviations that **hurt** (coupling, duplication, complexity)
-   - Document acceptable deviations inline in spec
-
-### Module Status Convention
-
-When documenting V1 modules in specs, include implementation status:
-
-```markdown
-### 3.2.3 Sanitizer
-**Status:** IMPLEMENTED as TranscriptFormatter in data:ai-core
-**Deviation:** Not a separate module; coupled to TingwuRunner
-**Reason:** Single consumer, no benefit to extraction yet
+```kotlin
+// File: <relative path>
+// Module: <:moduleName>
+// Summary: <简短中文摘要>
+// Author: created on <YYYY-MM-DD>
 ```
 
-Valid status values:
-- `IMPLEMENTED` — fully realized per spec
-- `PARTIAL` — partially implemented
-- `DEVIATION` — implemented differently than spec (document reason)
-- `DEFERRED` — not yet implemented (document trigger condition)
-- `DEPRECATED` — spec section no longer applies
-
-### Anti-Pattern
-
-❌ **Don't** refactor toward theoretical purity in incomplete specs  
-✅ **Do** refactor toward working software with documented deviations
+Style conventions:
+- Kotlin: 4-space indentation, trailing commas, `val`-first
+- Packages: `com.smartsales.<layer>`
+- Resource IDs: lower snake case
 
 ---
 
-## Provider Policy (V1)
+## Build Commands
 
-1) Default transcription lane
-- Default provider lane: Tingwu + OSS
-- XFyun lane: disabled by default; enable only when explicitly turned on and validated available
-
-2) Transfer-only guardrail (must be consistent)
-- Translate/predict/analysis are treated as unavailable/disabled by default
-- Must block before request; do not "send first and see" (avoid quota/capability mismatch failures)
-
----
-
-## Core Behavior Requirements (for AI Agents)
-
-1) Prefer clean, simple, modular code
-- Small functions, small classes, clear module boundaries.
-- Avoid excessive abstraction and deep inheritance.
-- Use simple solutions when they work; no flashy design.
-
-2) Use simple, clear language
-- Code comments use Simplified Chinese.
-- Keep sentences short; avoid long or complex structures.
-- Variable names must be clear and reflect real meaning.
-- All important code blocks must include short Simplified Chinese comments for quick understanding.
-
-3) Do not be lazy; always read relevant files fully
-- Before modifying a file, read the whole file.
-- Before referencing a doc, read the whole doc.
-- Do not decide based on guesses or fragments.
-
-4) China network environment first
-- When changing build scripts or dependency config:
-  - Prefer Aliyun mirror or other domestic mirrors.
-  - Avoid overseas sources that are slow or frequently time out.
-- In guidance, you may provide example mirror settings but do not force existing scripts to change.
-
-5) Kotlin project: use helpers appropriately
-- Use helper scripts/tools per best practice; follow code style, tests, and dependency rules.
-- Do not skip quality checks for convenience; helpers accelerate, not replace, review and validation.
-
-6) Limited-perception strategy (must follow)
-- If failure looks like network/sandbox/credential limits (e.g., dependency download failure, DNS/TLS errors, 401/403, 429 rate limit, host blocked), try only 1-2 times (max 1 normal attempt + 1 minimal recheck/retry).
-- Do not try to bypass (no repeated retries, mirror changes, proxying, dependency version changes, upgrades/downgrades, etc.) - stop first.
-- Output an "evidence pack" and request minimal human intervention from Operator: include command, key error lines, suspected restricted host/endpoint, and the minimal action needed (e.g., confirm network/credentials/allowlist/mirror).
-- Do not leak secrets/tokens/personal info in evidence.
+```bash
+./gradlew :app:assembleDebug
+./gradlew :app:installDebug
+./gradlew testDebugUnitTest
+./gradlew lint
+```
 
 ---
-
-## Code Style and Language Rules
-
-- All source files must:
-  1. Include a unified file header at the top, for example:
-
-     ```kotlin
-     // File: <relative path>
-     // Module: <:moduleName>
-     // Summary: <short Chinese summary>
-     // Author: created on <YYYY-MM-DD> # use real time, do not invent or guess
-     ```
-
-## Project Structure and Module Organization
-The workspace is defined in `settings.gradle.kts` and intentionally lean. `app/` hosts the Compose shell and remains the single entry point, `tingwuTestApp/` provides Tingwu upload helpers, `data/ai-core/` wraps DashScope/Tingwu/OSS clients, and `core/util` plus `core/test` hold reusable primitives and JVM fixtures. Feature code stays inside `feature/chat`, `feature/media`, and `feature/connectivity`. Assets live in `app/src/main/res/`, docs and plans go under `docs/` and `plans/`, and cached artifacts belong in `third_party/maven-repo/`.
-
-## Build, Test, and Development Commands
-Run Gradle from the repo root:
-- `./gradlew :app:assembleDebug`
-- `./gradlew :app:installDebug && adb shell am start com.smartsales.aitest/.AiFeatureTestActivity`
-- `./gradlew testDebugUnitTest`
-- `./gradlew lint`
-
-## Coding Style and Naming Conventions
-Write Kotlin with four-space indentation, trailing commas in multi-line parameters, and `val`-first data classes. Keep Compose functions file-private unless reused and match filenames to their primary type. Packages stay under `com.smartsales.<layer>`, resource IDs use lower snake case (`media_server_card_title`), and Gradle modules should preserve the existing `:feature:*` / `:core:*` naming pattern.
 
 ## Testing Guidelines
-Place unit tests in `<module>/src/test/` with JUnit 4 and `kotlinx-coroutines-test`, reusing helpers from `core/test` for fake dispatchers or result assertions. Instrumented or Compose UI tests belong in `<module>/src/androidTest/`; run them with `./gradlew :app:connectedDebugAndroidTest` on an emulator that has BLE, storage, and microphone permissions granted. Name suites after the behavior under test (`DeviceConnectionManagerTest`, `TingwuRequestMapperTest`).
 
-## Commit and Pull Request Guidelines
-Keep commit titles in `Scope: Imperative summary` style. PRs must outline affected modules, reproduction steps, test/lint commands, and screenshots or logs for UI, BLE, or transcription changes. Link issues or TODO IDs and highlight dependency or credential updates explicitly.
+- Unit tests: `<module>/src/test/` with JUnit 4
+- UI tests: `<module>/src/androidTest/`
+- Name suites after behavior (`DeviceConnectionManagerTest`)
 
-## Security and Configuration Tips
-Never commit `local.properties`; it stores DashScope, Tingwu, and OSS keys consumed by `data/ai-core`. `TINGWU_BASE_URL` automatically appends `/openapi/tingwu/v2/` unless you pass a proxy URL - note any overrides in PR descriptions. Verify `JAVA_HOME` before running Gradle. Prefer the cached `third_party/maven-repo/` when network access is limited and scrub logs so transcripts or payloads do not leak into commits.
+---
+
+## Security
+
+- Never commit `local.properties` (contains API keys)
+- Scrub logs so transcripts don't leak into commits

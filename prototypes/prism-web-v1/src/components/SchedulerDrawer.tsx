@@ -93,6 +93,7 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
   }, [currentWeekStart]);
 
   return (
+
     <motion.div
       initial={{ y: '-100%' }}
       animate={{ y: isOpen ? 0 : '-100%' }}
@@ -101,13 +102,8 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
       drag="y"
       dragConstraints={{ top: -800, bottom: 0 }}
       dragElastic={0.1}
-      className="absolute top-0 left-0 right-0 h-[95%] bg-white/95 backdrop-blur-2xl rounded-b-[40px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] z-40 border-b border-white/20 flex flex-col pt-4 text-gray-900 overflow-hidden"
+      className="absolute top-0 left-0 right-0 h-[95%] bg-white/95 backdrop-blur-2xl rounded-b-[40px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] z-40 border-b border-white/20 flex flex-col pt-8 text-gray-900 overflow-hidden pb-8"
     >
-        {/* Drawer Handle (Top) - Controls Drawer Move */}
-        <div className="w-full flex justify-center pb-2 pt-2 cursor-grab active:cursor-grabbing hover:bg-black/5 transition-colors group">
-            <div className="w-12 h-1.5 bg-gray-300 rounded-full group-hover:bg-gray-400 transition-colors shadow-sm" />
-        </div>
-
         {/* Month Header & Carousel */}
         <div className="px-6 py-2 flex flex-col gap-4">
             <div className="flex justify-between items-center">
@@ -146,15 +142,15 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
 
         {/* Expandable Calendar Grid */}
         <motion.div 
-            animate={{ height: isExpanded ? 340 : 130 }} // Increased base height for handle
+            animate={{ height: isExpanded ? 360 : 140 }} // Increased base height for handle
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="overflow-hidden relative flex flex-col"
+            className="overflow-hidden relative flex flex-col w-full"
         >
              {/* Grid */}
              <div className="px-4 grid grid-cols-7 gap-y-2 place-items-center w-full">
                 {/* Headers */}
                 {['一','二','三','四','五','六','日'].map(d => (
-                    <div key={d} className="w-full text-center text-[10px] uppercase tracking-wider text-gray-400 font-semibold py-3">{d}</div>
+                    <div key={d} className="w-full text-center text-[10px] uppercase tracking-wider text-gray-400 font-semibold py-3 flex justify-center">{d}</div>
                 ))}
                 
                 {/* Animated Dates Container */}
@@ -183,12 +179,12 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
                                     key={`${d.getMonth()}-${d.getDate()}`} 
                                     onClick={() => setSelectedDate(d.getDate())}
                                     className={clsx(
-                                        "flex flex-col items-center justify-center w-9 h-12 rounded-2xl transition-all cursor-pointer relative group",
+                                        "flex flex-col items-center justify-center w-full h-12 rounded-2xl transition-all cursor-pointer relative group",
                                         !isSelected && "hover:bg-black/5"
                                     )}
                                 >
                                     <div className={clsx(
-                                        "w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 relative z-10",
+                                        "w-9 h-9 flex items-center justify-center rounded-full transition-all duration-300 relative z-10",
                                         isSelected ? "bg-gray-900 text-white shadow-lg scale-110" : "text-gray-700",
                                         !isCurrentMonth && !isSelected && "text-gray-300"
                                     )}>
@@ -211,21 +207,17 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
                 </AnimatePresence>
              </div>
              
-             {/* Calendar Expansion Handle (Bottom) */}
+             {/* Calendar Expansion Handle (Bottom Pill) */}
              <div 
-                className="w-full flex justify-center py-2 mt-auto cursor-pointer hover:bg-black/5 active:scale-95 transition-all"
+                className="w-full flex justify-center py-4 mt-auto cursor-grab active:cursor-grabbing hover:bg-black/5 transition-all"
                 onClick={() => setIsExpanded(!isExpanded)}
              >
-                 {isExpanded ? (
-                     <ChevronUp className="text-gray-400 w-5 h-5 animate-pulse" />
-                 ) : (
-                     <ChevronDown className="text-gray-400 w-5 h-5 animate-bounce" />
-                 )}
+                 <div className="w-8 h-1 bg-gray-200 rounded-full" />
              </div>
         </motion.div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-12">
             
             {/* Task Card 1 */}
             <div className="flex gap-4">
@@ -266,52 +258,13 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
 
         </div>
 
-    </motion.div>
-  );
-};
-
-        {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            
-            {/* Task Card 1 */}
-            <div className="flex gap-4">
-                <span className="text-xs text-gray-400 font-mono pt-2">09:00</span>
-                <div className="flex-1 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                    <div className="flex justify-between items-start mb-1">
-                         <h3 className="font-semibold text-gray-900">审查 Q4 预算</h3>
-                         <MoreHorizontal size={16} className="text-gray-400" />
-                    </div>
-                    <p className="text-xs text-gray-500 mb-3 flex items-center gap-1">
-                        <Clock size={12} /> 45 分钟
-                    </p>
-                    <div className="flex gap-2">
-                         <span className="px-2 py-1 bg-green-100 text-green-700 text-[10px] rounded-md font-medium">财务</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Mock Conflict (Static for now) */}
-             <div className="flex gap-4">
-                <span className="text-xs text-gray-400 font-mono pt-2">11:00</span>
-                <div className="flex-1 p-4 bg-orange-50/50 rounded-2xl border border-orange-100 shadow-sm relative overflow-hidden">
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-400" />
-                    <div className="flex justify-between items-start mb-2">
-                         <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                            <AlertTriangle size={16} className="text-orange-500" /> 
-                            日程冲突
-                         </h3>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-3">
-                        项目同步会与客户电话会议冲突。
-                    </p>
-                    <button className="bg-white px-3 py-1.5 rounded-lg text-xs font-medium text-gray-900 border border-gray-200 shadow-sm">
-                        重新安排
-                    </button>
-                </div>
-            </div>
-
+        {/* Drawer Global Handle (Absolute Bottom) */}
+        <div className="absolute bottom-3 left-0 right-0 flex justify-center cursor-grab active:cursor-grabbing hover:bg-black/5 py-2 transition-colors">
+             <div className="w-16 h-1.5 bg-gray-400 rounded-full shadow-sm" />
         </div>
 
     </motion.div>
   );
 };
+
+

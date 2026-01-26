@@ -8,6 +8,13 @@
 
 <!-- Add new candidates at the top -->
 
+### [CANDIDATE] "Automate Architectural Boundaries"
+- **Date**: 2026-01-26
+- **Context**: Prism isolation from legacy code — Frank worried about contamination
+- **Evidence**: Created CI workflow to fail build if legacy imports detected in Prism modules
+- **Frank's Insight**: Discipline is fragile, automation is reliable. If it's a rule, make it break the build.
+- **Observations**: 1
+
 ### [CANDIDATE] "Business Time is Chunked"
 - **Date**: 2026-01-26
 - **Context**: Scheduler prototyping.

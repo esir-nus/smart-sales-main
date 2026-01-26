@@ -8,6 +8,13 @@
 
 <!-- Add new candidates at the top -->
 
+### [CANDIDATE] "Business Time is Chunked"
+- **Date**: 2026-01-26
+- **Context**: Scheduler prototyping.
+- **Evidence**: User requested "Fixed Week" tiles instead of rolling carousel.
+- **Frank's Insight**: For productivity apps, users think in "Weeks" (batches), not "Days" (streams). Align UI with the mental chunking.
+- **Observations**: 1
+
 ### [CANDIDATE] "Safe Area Math"
 - **Date**: 2026-01-26
 - **Context**: Content obscured by Notch in prototype.

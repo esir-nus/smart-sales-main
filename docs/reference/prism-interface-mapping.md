@@ -21,14 +21,14 @@
 
 | Spec Section | Interface | Data Class | Repository | Fake | Real | Status |
 |--------------|-----------|------------|------------|------|------|--------|
-| §2.2 #1 | `ContextBuilder` | `EnhancedContext` | — | `FakeContextBuilder` | `RealContextBuilder` | 🔲 |
-| §2.2 #1b | `SessionCache` | `SessionCacheSnapshot` | — | `FakeSessionCache` | `RoomSessionCache` | 🔲 |
-| §2.2 #2 | `Orchestrator` | `Mode` | — | `FakeOrchestrator` | `PrismOrchestrator` | 🔲 |
-| §2.2 #3 | `Executor` | `ExecutorResult` | — | `FakeExecutor` | `DashscopeExecutor` | 🔲 |
-| §2.2 #4 | `ModePublisher` | `UiState` | — | `FakeChatPublisher`, `FakeAnalystPublisher`, `FakeSchedulePublisher` | `ChatPublisher`, `AnalystPublisher`, `SchedulePublisher` | 🔲 |
-| §2.2 #5 | `MemoryWriter` | — | `MemoryEntryRepository` | `FakeMemoryWriter` | `RoomMemoryWriter` | 🔲 |
-| §2.2 #6 | `Linter` (sealed) | `LintResult`, `LintError` | — | `FakeEntityLinter`, `FakePlanLinter`, `FakeSchedulerLinter`, `FakeRelevancyLinter` | `EntityLinter`, `PlanLinter`, `SchedulerLinter`, `RelevancyLinter` | 🔲 |
-| §2.2 #7 | `MemoryCenterNotifier` | `MemoryNotification` | — | `FakeMemoryCenterNotifier` | `SnackbarMemoryCenterNotifier` | 🔲 |
+| §2.2 #1 | `ContextBuilder` | `EnhancedContext` | — | `FakeContextBuilder` | `RealContextBuilder` | 🏗️ |
+| §2.2 #1b | `SessionCache` | `SessionCacheSnapshot` | — | `FakeSessionCache` | `RoomSessionCache` | 🏗️ |
+| §2.2 #2 | `Orchestrator` | `Mode` | — | `FakeOrchestrator` | `PrismOrchestrator` | 🏗️ |
+| §2.2 #3 | `Executor` | `ExecutorResult` | — | `FakeExecutor` | `DashscopeExecutor` | 🏗️ |
+| §2.2 #4 | `ModePublisher` | `UiState` | — | `FakeModePublisher` | `ChatPublisher`, `AnalystPublisher`, `SchedulePublisher` | 🏗️ |
+| §2.2 #5 | `MemoryWriter` | — | `MemoryEntryRepository` | `FakeMemoryWriter` | `RoomMemoryWriter` | 🏗️ |
+| §2.2 #6 | `Linter` (sealed) | `LintResult`, `LintError` | — | `EntityLinter`, `PlanLinter`, `SchedulerLinter`, `RelevancyLinter` | (Real = same classes) | 🏗️ |
+| §2.2 #7 | `MemoryCenterNotifier` | `MemoryNotification` | — | `FakeMemoryCenterNotifier` | `SnackbarMemoryCenterNotifier` | 🏗️ |
 
 ---
 
@@ -36,10 +36,10 @@
 
 | Spec Section | Interface | Data Class | Repository | Fake | Real | Status |
 |--------------|-----------|------------|------------|------|------|--------|
-| §2.2 #1 | `TingwuRunner` | `TranscriptBlock` | — | `FakeTingwuRunner` | `AliyunTingwuRunner` | 🔲 |
-| §2.2 #1 | `VisionAnalyzer` | `VisionResult` | — | `FakeVisionAnalyzer` | `QwenVLAnalyzer` | 🔲 |
-| §2.2 #1 | `UrlFetcher` | `UrlContent` | — | `FakeUrlFetcher` | `OkHttpUrlFetcher` | 🔲 |
-| ESP32 Protocol | `BleConnector` | `BleFileInfo` | — | `FakeBleConnector` | `Esp32BleConnector` | 🔲 |
+| §2.2 #1 | `TingwuRunner` | `TranscriptBlock` | — | `FakeTingwuRunner` | `AliyunTingwuRunner` | 🏗️ |
+| §2.2 #1 | `VisionAnalyzer` | `VisionResult` | — | `FakeVisionAnalyzer` | `QwenVLAnalyzer` | 🏗️ |
+| §2.2 #1 | `UrlFetcher` | `UrlContent` | — | `FakeUrlFetcher` | `OkHttpUrlFetcher` | 🏗️ |
+| ESP32 Protocol | `BleConnector` | `BleFileInfo` | — | `FakeBleConnector` | `Esp32BleConnector` | 🏗️ |
 
 ---
 
@@ -47,11 +47,11 @@
 
 | Spec Section | Interface | Data Class | Repository | Fake | Real | Status |
 |--------------|-----------|------------|------------|------|------|--------|
-| §4.1 Coach | — (uses `Executor`) | `ChatMessage` | — | — | — | 🔲 |
-| §4.5 Analyst | `Planner` | `ExecutionPlan` | — | `FakePlanner` | `DashscopePlanner` | 🔲 |
+| §4.1 Coach | — (uses `Executor`) | `ChatMessage` | — | — | — | 🏗️ |
+| §4.5 Analyst | `Planner` | `ExecutionPlan` | — | `FakePlanner` | `DashscopePlanner` | 🏗️ |
 | §4.6 Plan Card | — | `PlanCardState` | — | — | — | 🔲 |
-| §4.3 Scheduler | — | `SchedulerCommand` | `ScheduledTaskRepository`, `InspirationRepository` | `FakeScheduledTaskRepository`, `FakeInspirationRepository` | `RoomScheduledTaskRepository`, `RoomInspirationRepository` | 🔲 |
-| §4.7 Conflict | — | `ConflictCard` | — | — | — | 🔲 |
+| §4.3 Scheduler | — | `SchedulerCommand` | `ScheduledTaskRepository`, `InspirationRepository` | `FakeScheduledTaskRepository`, `FakeInspirationRepository` | `RoomScheduledTaskRepository`, `RoomInspirationRepository` | 🏗️ |
+| §4.7 Conflict | — | `ConflictCard` | — | — | — | 🏗️ |
 
 ---
 
@@ -59,15 +59,15 @@
 
 | Spec Section | Interface | Data Class | Repository | Fake | Real | Status |
 |--------------|-----------|------------|------------|------|------|--------|
-| §5.1 Hot Zone | — | `MemoryEntryEntity` | `MemoryEntryRepository` | `FakeMemoryEntryRepository` | `RoomMemoryEntryRepository` | 🔲 |
-| §5.2 Relevancy | — | `RelevancyEntry` | `RelevancyRepository` | `FakeRelevancyRepository` | `RoomRelevancyRepository` | 🔲 |
-| §5.4 Alias | — | `AliasMapping` | — | — | — | 🔲 |
+| §5.1 Hot Zone | — | `MemoryEntryEntity` | `MemoryEntryRepository` | `FakeMemoryEntryRepository` | `RoomMemoryEntryRepository` | 🏗️ |
+| §5.2 Relevancy | — | `RelevancyEntry` | `RelevancyRepository` | `FakeRelevancyRepository` | `RoomRelevancyRepository` | 🏗️ |
+| §5.4 Alias | — | `AliasMapping` | — | — | — | 🏗️ |
 | §5.5 Supporting | — | `EntryRef`, `DecisionRecord` | — | — | — | 🔲 |
-| §5.6 Structured | — | `ExtractedEntity` | — | — | — | 🔲 |
-| §5.7 MemoryEntry | — | `MemoryEntryEntity` | `MemoryEntryRepository` | — | — | 🔲 |
-| §5.7 Artifacts | — | `ArtifactMeta` | `ArtifactRepository` | `FakeArtifactRepository` | `FileSystemArtifactRepository` | 🔲 |
-| §5.8 UserProfile | — | `UserProfile` | `UserProfileRepository` | `FakeUserProfileRepository` | `RoomUserProfileRepository` | 🔲 |
-| §5.9 UserHabit | — | `UserHabit` | `UserHabitRepository` | `FakeUserHabitRepository` | `RoomUserHabitRepository` | 🔲 |
+| §5.6 Structured | — | `ExtractedEntity` | — | — | — | 🏗️ |
+| §5.7 MemoryEntry | — | `MemoryEntryEntity` | `MemoryEntryRepository` | — | — | 🏗️ |
+| §5.7 Artifacts | — | `ArtifactMeta` | `ArtifactRepository` | `FakeArtifactRepository` | `FileSystemArtifactRepository` | 🏗️ |
+| §5.8 UserProfile | — | `UserProfile` | `UserProfileRepository` | `FakeUserProfileRepository` | `RoomUserProfileRepository` | 🏗️ |
+| §5.9 UserHabit | — | `UserHabit` | `UserHabitRepository` | `FakeUserHabitRepository` | `RoomUserHabitRepository` | 🏗️ |
 
 ---
 
@@ -75,9 +75,9 @@
 
 | Workflow | Data Class | Spec Reference | Status |
 |----------|------------|----------------|--------|
-| **Coach** | `ChatMessage`, `CoachPayload` | §5.7 payloadJson | 🔲 |
-| **Analyst** | `AnalysisChapter`, `AnalystPayload` | §5.7 payloadJson | 🔲 |
-| **Scheduler** | `ScheduledTask`, `SchedulerPayload` | §5.7 payloadJson | 🔲 |
+| **Coach** | `ChatMessage`, `CoachPayload` | §5.7 payloadJson | 🏗️ |
+| **Analyst** | `AnalysisChapter`, `AnalystPayload` | §5.7 payloadJson | 🏗️ |
+| **Scheduler** | `ScheduledTask`, `SchedulerPayload` | §5.7 payloadJson | 🏗️ |
 
 ---
 

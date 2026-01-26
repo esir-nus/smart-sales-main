@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, type PanInfo, AnimatePresence } from 'framer-motion';
-import { MoreHorizontal, Clock, AlertTriangle } from 'lucide-react';
+import { MoreHorizontal, Clock, AlertTriangle, ChevronDown, ChevronUp, GripHorizontal } from 'lucide-react';
 import { clsx } from 'clsx';
 
 interface SchedulerDrawerProps {
@@ -101,14 +101,11 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
       drag="y"
       dragConstraints={{ top: -800, bottom: 0 }}
       dragElastic={0.1}
-      className="absolute top-0 left-0 right-0 h-[95%] bg-white/90 backdrop-blur-2xl rounded-b-[40px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] z-40 border-b border-white/20 flex flex-col pt-12 text-gray-900"
+      className="absolute top-0 left-0 right-0 h-[95%] bg-white/95 backdrop-blur-2xl rounded-b-[40px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] z-40 border-b border-white/20 flex flex-col pt-4 text-gray-900 overflow-hidden"
     >
-        {/* Handle Bar (Drag Trigger) */}
-        <div className="w-full flex justify-center pb-2 cursor-grab active:cursor-grabbing hover:bg-white/20 py-4 transition-colors group" onClick={() => setIsExpanded(!isExpanded)}>
-            <div className={clsx(
-                "w-12 h-1.5 rounded-full transition-all duration-300 shadow-sm",
-                isExpanded ? "bg-prism-accent w-16 shadow-blue-500/50" : "bg-gray-300 group-hover:bg-gray-400"
-            )} />
+        {/* Drawer Handle (Top) - Controls Drawer Move */}
+        <div className="w-full flex justify-center pb-2 pt-2 cursor-grab active:cursor-grabbing hover:bg-black/5 transition-colors group">
+            <div className="w-12 h-1.5 bg-gray-300 rounded-full group-hover:bg-gray-400 transition-colors shadow-sm" />
         </div>
 
         {/* Month Header & Carousel */}
@@ -149,15 +146,15 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
 
         {/* Expandable Calendar Grid */}
         <motion.div 
-            animate={{ height: isExpanded ? 340 : 100 }}
+            animate={{ height: isExpanded ? 340 : 130 }} // Increased base height for handle
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="overflow-hidden relative"
+            className="overflow-hidden relative flex flex-col"
         >
              {/* Grid */}
-             <div className="px-4 grid grid-cols-7 gap-y-2">
+             <div className="px-4 grid grid-cols-7 gap-y-2 place-items-center w-full">
                 {/* Headers */}
                 {['一','二','三','四','五','六','日'].map(d => (
-                    <div key={d} className="text-center text-[10px] uppercase tracking-wider text-gray-400 font-semibold py-3">{d}</div>
+                    <div key={d} className="w-full text-center text-[10px] uppercase tracking-wider text-gray-400 font-semibold py-3">{d}</div>
                 ))}
                 
                 {/* Animated Dates Container */}
@@ -173,7 +170,7 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
                         dragConstraints={{ left: 0, right: 0 }}
                         dragElastic={0.2}
                         onDragEnd={handleWeekSwipe}
-                        className="col-span-7 grid grid-cols-7 gap-y-2 w-full"
+                        className="col-span-7 grid grid-cols-7 gap-y-2 w-full place-items-center"
                     >
                         {(isExpanded ? monthGrid : days).map((d, i) => {
                             const isSelected = d.getDate() === selectedDate;
@@ -186,16 +183,16 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
                                     key={`${d.getMonth()}-${d.getDate()}`} 
                                     onClick={() => setSelectedDate(d.getDate())}
                                     className={clsx(
-                                        "flex flex-col items-center justify-center h-12 rounded-2xl transition-all cursor-pointer relative group",
-                                        !isSelected && "hover:bg-white/50"
+                                        "flex flex-col items-center justify-center w-9 h-12 rounded-2xl transition-all cursor-pointer relative group",
+                                        !isSelected && "hover:bg-black/5"
                                     )}
                                 >
                                     <div className={clsx(
-                                        "w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-300 relative z-10",
-                                        isSelected ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/40 translate-y-[-2px]" : "text-gray-700",
+                                        "w-8 h-8 flex items-center justify-center rounded-full transition-all duration-300 relative z-10",
+                                        isSelected ? "bg-gray-900 text-white shadow-lg scale-110" : "text-gray-700",
                                         !isCurrentMonth && !isSelected && "text-gray-300"
                                     )}>
-                                        <span className={clsx("text-sm font-semibold", isSelected && "font-bold")}>
+                                        <span className={clsx("text-sm font-medium", isSelected && "font-bold")}>
                                             {d.getDate()}
                                         </span>
                                     </div>
@@ -214,9 +211,64 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
                 </AnimatePresence>
              </div>
              
-             {/* Gradient Mask for Week View */}
-             {!isExpanded && <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />}
+             {/* Calendar Expansion Handle (Bottom) */}
+             <div 
+                className="w-full flex justify-center py-2 mt-auto cursor-pointer hover:bg-black/5 active:scale-95 transition-all"
+                onClick={() => setIsExpanded(!isExpanded)}
+             >
+                 {isExpanded ? (
+                     <ChevronUp className="text-gray-400 w-5 h-5 animate-pulse" />
+                 ) : (
+                     <ChevronDown className="text-gray-400 w-5 h-5 animate-bounce" />
+                 )}
+             </div>
         </motion.div>
+
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            
+            {/* Task Card 1 */}
+            <div className="flex gap-4">
+                <span className="text-xs text-gray-400 font-mono pt-2">09:00</span>
+                <div className="flex-1 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                    <div className="flex justify-between items-start mb-1">
+                         <h3 className="font-semibold text-gray-900">审查 Q4 预算</h3>
+                         <MoreHorizontal size={16} className="text-gray-400" />
+                    </div>
+                    <p className="text-xs text-gray-500 mb-3 flex items-center gap-1">
+                        <Clock size={12} /> 45 分钟
+                    </p>
+                    <div className="flex gap-2">
+                         <span className="px-2 py-1 bg-green-100 text-green-700 text-[10px] rounded-md font-medium">财务</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Mock Conflict (Static for now) */}
+             <div className="flex gap-4">
+                <span className="text-xs text-gray-400 font-mono pt-2">11:00</span>
+                <div className="flex-1 p-4 bg-orange-50/50 rounded-2xl border border-orange-100 shadow-sm relative overflow-hidden">
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-400" />
+                    <div className="flex justify-between items-start mb-2">
+                         <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                            <AlertTriangle size={16} className="text-orange-500" /> 
+                            日程冲突
+                         </h3>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">
+                        项目同步会与客户电话会议冲突。
+                    </p>
+                    <button className="bg-white px-3 py-1.5 rounded-lg text-xs font-medium text-gray-900 border border-gray-200 shadow-sm">
+                        重新安排
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </motion.div>
+  );
+};
 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">

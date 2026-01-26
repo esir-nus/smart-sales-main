@@ -1,15 +1,13 @@
-## Design Brief: Scheduler Aesthetic & Gesture Polish
+## Design Brief: Scheduler "Double Handler" & Centering
 
 ### User Goal
-"The date numbers look misaligned (bad aesthetics). Also, since the drawer pulls down from the top, the 'Expansion' gesture (pulling down *more*) needs to feel natural and not conflict with closing."
+"The gestures are confusing. I want explicit **Visual Handlers** to tell me where to pull for the Drawer vs. where to pull for the Calendar Expansion. Also, fix the date alignment."
 
 ### Translation
-1.  **Grid Alignment**: Ensure Date Numbers are mathematically centered under Weekday Headers.
-2.  **Gesture Hierarchy**: 
-    - **Header Drag**: Should control Expansion.
-    - **Handle Bar**: Primary drag target.
-    - **Drawer Body**: Should NOT drag the drawer (allow scrolling content).
-3.  **Visual Polish**: Lighter fonts, cleaner active states.
+1.  **Visual Affordances**: Implement two distinct "Grabbers".
+    - **Drawer Handler**: Top of the card. Indicates "This whole thing moves".
+    - **Calendar Handler**: Bottom of the calendar container. Indicates "This specific part expands".
+2.  **Alignment Fix**: Mathematical centering of date numbers.
 
 ---
 
@@ -17,35 +15,42 @@
 
 ### ✅ In Scope
 - **`SchedulerDrawer.tsx`**:
-    - **CSS Grid**: Verify `place-items-center` or Flex centering for the Date cells.
-    - **Typography**: Verify `font-mono` vs `sans` alignment. Center text explicitly.
-    - **Drag Logic**: Restrict `dragListener` to specific handles if possible, or refine constraints.
-    - **Animation**: Smoother spring for expansion.
+    - **Drawer Handle**: Existing top handle. Ensure it looks like a semantic "Drawer Grip".
+    - **Calendar Handle**: **[NEW]** Add a visual indicator (small pill or chevron) *below* the Date Grid / Gradient Mask. This handle triggers the expansion.
+    - **Typography**: Fix the `flex` vs `grid` issue in date cells.
+    - **Gesture Logic**:
+        - Dragging **Drawer Handle** -> Moves Drawer (Top-Down Enter/Exit).
+        - Dragging **Calendar Handle** -> Expands/Collapses Month View.
 
 ### 🚫 Out of Scope
-- **Week Swipe**: Keep the left/right swipe logic (it works).
-- **Content Cards**: Leave as is.
+- **Swipe Logic**: Keep the week swipe.
 
 ---
 
 ## Visual Specifications
 
-### 1. Date Grid Alignment
-- **Problem**: Current `flex-col` might be off-center.
-- **Fix**: Use `grid place-items-center` for the cell container. Ensure the number itself is `text-center`.
-- **Target**: The center of the '8' must align vertically with the center of '日'.
+### 1. The "Double Handle" System
+- **Handle A (Drawer)**:
+    - Location: Top Center (inside the white card).
+    - Style: Wide, thick pill (`w-12 h-1.5 bg-gray-300`).
+    - Action: Dragging here moves the `y` of the whole drawer.
+- **Handle B (Calendar)**:
+    - Location: Bottom Center of the *collapsed* week view (or bottom of expanded view).
+    - Style: Small, subtle pill (`w-8 h-1 bg-gray-200`) or "Chevron".
+    - Action: Dragging here expands `height` (Week -> Month).
+    - **Visual Placement**: Should sit *on top* of the gradient mask or just below the dates.
 
-### 2. Gesture Optimization
-- **Conflict**: Pulling down to expand vs Pulling up to close.
-- **Rule**:
-    - **Pull Down (> 50px)**: Expand to Month View.
-    - **Pull Up (< -50px) whilst Expanded**: Collapse to Week View.
-    - **Pull Up (< -100px) whilst Collapsed**: Close Drawer (Fold away).
+### 2. Date Alignment (The Fix)
+- **Container**: Change from `flex` to `grid`.
+- **Align**: `place-items-center`.
+- **Text**: `text-center`.
+- **Objective**: The vertical axis of the digit must match the vertical axis of the day header.
 
 ## Acceptance Criteria
-1. [ ] Date numbers are perfectly centered under weekday headers.
-2. [ ] Expansion gesture feels distinct from Closing gesture.
-3. [ ] Aesthetics look "tighter" (better spacing/alignment).
+1. [ ] User sees TWO distinct handles.
+2. [ ] Pulling Top Handle = Moves Drawer.
+3. [ ] Pulling Bottom Handle = Expands Calendar.
+4. [ ] Date numbers are perfectly centered.
 
 ## Handoff
 Execute with `/ui-ux-pro-max`.

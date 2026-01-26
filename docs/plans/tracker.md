@@ -10,7 +10,7 @@
 | Phase | Status | Notes |
 |-------|--------|-------|
 | **Planning** | ✅ | Prism-V1.md + UI/UX Contract finalized |
-| **Execution** | 🏗️ | Phase 2 In Progress (Chunk B Repositories Committed) |
+| **Execution** | 🏗️ | Phase 2 In Progress (Chunk B Complete, Build Fixed) |
 | **Verification** | 🔲 | — |
 
 ---
@@ -158,6 +158,7 @@
 - [x] All 8 repository interfaces defined
 - [x] All 8 Fakes implemented
 - [x] All 8 Real Room implementations created (Chunk B)
+- [x] Build fixed — entities aligned with domain contracts
 
 ---
 

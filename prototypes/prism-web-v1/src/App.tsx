@@ -28,15 +28,15 @@ const PlanCard = () => (
     >
         <div className="flex justify-between items-center mb-3">
              <h3 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
-                <span className="text-xl">📋</span> Analysis Plan
+                <span className="text-xl">📋</span> 分析计划
              </h3>
-             <span className="text-xs font-mono text-gray-500">RUNNING</span>
+             <span className="text-xs font-mono text-gray-500">运行中</span>
         </div>
         <div className="space-y-2">
             {[
-                { label: 'Extract audio key points', status: 'done' },
-                { label: 'OCR Analysis (5 Images)', status: 'running' },
-                { label: 'Synthesis Decision Model', status: 'pending' },
+                { label: '提取音频关键点', status: 'done' },
+                { label: 'OCR 图表分析 (5张)', status: 'running' },
+                { label: '综合决策模型', status: 'pending' },
             ].map((step, i) => (
                 <div key={i} className="flex items-center gap-3 text-sm">
                     {step.status === 'done' ? (
@@ -68,8 +68,8 @@ const OnboardingScreen = () => (
         <div className="w-24 h-24 rounded-full bg-blue-50 mb-8 flex items-center justify-center animate-pulse">
              <Rocket size={48} className="text-blue-500" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome to SmartSales</h1>
-        <p className="text-gray-500 mb-8">Setting up your AI sales assistant...</p>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">欢迎使用 智能销售</h1>
+        <p className="text-gray-500 mb-8">正在初始化您的 AI 销售助手...</p>
         <div className="w-full max-w-xs h-1 disabled bg-gray-100 rounded-full overflow-hidden">
             <div className="h-full bg-blue-500 animate-[width_2s_ease-out_forwards] w-3/4" />
         </div>
@@ -80,7 +80,7 @@ function App() {
   const [mode, setMode] = useState<Mode>('coach');
   const [isOnboarding, setIsOnboarding] = useState(false); // New State
   const [messages, setMessages] = useState<Message[]>([
-    { id: '1', role: 'assistant', content: 'Good afternoon, Frank. Ready to prep for the Q4 review?' }
+    { id: '1', role: 'assistant', content: '下午好，Frank。准备好回顾 Q4 了吗？' }
   ]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [showPlan, setShowPlan] = useState(false);
@@ -92,7 +92,7 @@ function App() {
           setIsOnboarding(false);
           setMode('coach');
           setShowPlan(false);
-          setMessages([{ id: '1', role: 'assistant', content: 'Good afternoon, Frank. Ready to prep for the Q4 review?' }]);
+          setMessages([{ id: '1', role: 'assistant', content: '下午好，Frank。准备好回顾 Q4 了吗？' }]);
       }
       if (destination === 'Onboarding') {
           setIsOnboarding(true);
@@ -110,11 +110,11 @@ function App() {
   // Mock Scenario Trigger
   const runScenario = (type: 'plan' | 'schedule') => {
       if (type === 'plan') {
-          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: 'Run deep analysis on the A3 project.' }]);
+          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: '对 A3 项目进行深度分析。' }]);
           setTimeout(() => {
               setMode('analyst');
               setShowPlan(true); 
-              setMessages(prev => [...prev, { id: 'sys', role: 'assistant', content: 'Constructing analysis context...', isTyping: true }]);
+              setMessages(prev => [...prev, { id: 'sys', role: 'assistant', content: '正在构建分析上下文...', isTyping: true }]);
           }, 600);
       }
       if (type === 'schedule') {
@@ -174,7 +174,7 @@ function App() {
              <InputBar /> 
              {/* Instruction Overlay */}
              <div className="absolute -top-12 left-0 right-0 text-center text-xs text-gray-400 font-mono pointer-events-none">
-                Tap bar to simulate: {mode === 'coach' ? 'ANALYST REQUEST' : 'OPEN SCHEDULER'}
+                点击输入栏模拟: {mode === 'coach' ? '发起分析请求' : '打开日程安排'}
              </div>
           </div>
 

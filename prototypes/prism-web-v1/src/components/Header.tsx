@@ -5,7 +5,7 @@ interface HeaderProps {
     title?: string;
 }
 
-export const Header: React.FC<HeaderProps> = ({ title = "SmartSales" }) => {
+export const Header: React.FC<HeaderProps> = ({ title = "智能销售" }) => {
   return (
     <header className="flex items-center justify-between h-auto min-h-[56px] px-4 pt-12 pb-2 z-20 relative">
         <div className="flex items-center gap-4">

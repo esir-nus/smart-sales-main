@@ -92,4 +92,31 @@ class Converters {
         val type = object : TypeToken<List<DecisionRecord>>() {}.type
         return gson.fromJson(value, type)
     }
-}
+
+    // Task & Inspiration Enums
+    @TypeConverter
+    fun fromTaskPriority(priority: TaskPriority): String = priority.name
+
+    @TypeConverter
+    fun toTaskPriority(value: String): TaskPriority = TaskPriority.valueOf(value)
+
+    @TypeConverter
+    fun fromTaskStatus(status: TaskStatus): String = status.name
+
+    @TypeConverter
+    fun toTaskStatus(value: String): TaskStatus = TaskStatus.valueOf(value)
+
+    @TypeConverter
+    fun fromInspirationSource(source: InspirationSource): String = source.name
+
+    @TypeConverter
+    fun toInspirationSource(value: String): InspirationSource = InspirationSource.valueOf(value)
+
+    @TypeConverter
+    fun fromReminderConfig(config: ReminderConfig?): String? = config?.let { gson.toJson(it) }
+
+    @TypeConverter
+    fun toReminderConfig(value: String?): ReminderConfig? = value?.let { gson.fromJson(it, ReminderConfig::class.java) }
+    
+
+

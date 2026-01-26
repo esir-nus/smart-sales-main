@@ -32,8 +32,13 @@ android {
     }
 }
 
+kotlin {
+    jvmToolchain(17)
+}
+
 dependencies {
     implementation(projects.domain.prismCore)
+    implementation(projects.core.util)
     
     // Hilt
     implementation(libs.hilt.android)

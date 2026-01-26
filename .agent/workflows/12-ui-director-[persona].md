@@ -95,6 +95,12 @@ All user-facing text in prototypes and production UI **MUST be in Simplified Chi
 - **No Native Inputs**: Use custom-styled inputs, not default browser fields.
 - **Goal**: The prototype must differ from a native app only in hosting technology, not in visual feel.
 
+### Mandatory: Navigation Dashboard (The "State Travel" Rule)
+Prototypes MUST include a persistent **Developer Dashboard** outside the phone frame.
+- **Purpose**: Instant access to hidden states (Onboarding, deep-link pages) without clicking through flows.
+- **Visuals**: Locked to side/bottom of browser window. NEVER hidden behind a toggle.
+- **Content**: One-click buttons for every major state (Home, Settings, Edge Cases).
+
 ---
 
 ## Collaboration Flow

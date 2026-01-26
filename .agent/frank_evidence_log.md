@@ -8,6 +8,20 @@
 
 <!-- Add new candidates at the top -->
 
+### [CANDIDATE] "Safe Area Math"
+- **Date**: 2026-01-26
+- **Context**: Content obscured by Notch in prototype.
+- **Evidence**: User screenshot showing overlap.
+- **Frank's Insight**: Always do the math for fixed overlays (Notch/Status Bar) before styling content.
+- **Observations**: 1
+
+### [CANDIDATE] "Bidirectional Spec-Interface Mapping Table"
+- **Date**: 2026-01-26
+- **Context**: Phase 1 skeleton was claimed 100% but missed 22% of spec items
+- **Evidence**: Creating exhaustive mapping table revealed 9 missing interfaces, 5 missing data classes
+- **Frank's Insight**: Before claiming skeleton complete, create table: Spec Section → Interface → Data Class → Repository. Prevents gaps.
+- **Observations**: 1
+
 ### [CANDIDATE] "When unsure about file organization, measure token load, not line count"
 - **Date**: 2025-01-25
 - **Context**: Debating whether to split Prism-V1.md (1000+ lines)

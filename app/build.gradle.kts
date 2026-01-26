@@ -77,6 +77,7 @@ kapt {
 
 dependencies {
     implementation(projects.data.aiCore)
+    implementation(projects.domain.prismCore)
     implementation(projects.tingwuTestApp)
     implementation(projects.feature.chat)
     implementation(projects.feature.media)

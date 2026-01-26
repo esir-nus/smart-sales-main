@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden; /* Prevent scrolling on body */
+  background-color: #000; /* Outer void color */
+  touch-action: none; /* Prevent browser gestures */
+  overscroll-behavior: none;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #111;
+}
+
+/* Zero-Chrome Scrollbar Hiding */
+::-webkit-scrollbar {
+    display: none;
+}
+
+/* Utilities */
+.glass-panel {
+    @apply bg-white/65 backdrop-blur-xl border border-white/50 shadow-glass;
+}
+
+.glass-card {
+    @apply bg-white/80 backdrop-blur-md border border-white/40 shadow-sm rounded-2xl;
+}
+
+.aurora-blob {
+    @apply absolute rounded-full mix-blend-multiply filter blur-[80px] opacity-70 animate-breathing;
+}
+
+/* Typography map */
+.t-hero { @apply text-2xl font-bold tracking-tight text-gray-900; }
+.t-title { @apply text-lg font-semibold text-gray-900; }
+.t-body { @apply text-[15px] leading-relaxed text-gray-800; }
+.t-caption { @apply text-xs text-gray-500; }

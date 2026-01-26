@@ -1,0 +1,15 @@
+package com.smartsales.domain.prism.core
+
+/**
+ * Pipeline UI 状态密封类
+ * @see Prism-V1.md §2.2 #4, prism-ui-ux-contract.md
+ */
+sealed class UiState {
+    object Idle : UiState()
+    object Loading : UiState()
+    data class Thinking(val hint: String? = null) : UiState()
+    data class Streaming(val partialContent: String) : UiState()
+    data class Response(val content: String, val structuredJson: String?) : UiState()
+    data class PlanCard(val plan: ExecutionPlan, val completedSteps: Set<Int> = emptySet()) : UiState()
+    data class Error(val message: String, val retryable: Boolean = true) : UiState()
+}

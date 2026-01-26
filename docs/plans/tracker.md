@@ -10,7 +10,7 @@
 | Phase | Status | Notes |
 |-------|--------|-------|
 | **Planning** | ✅ | Prism-V1.md + UI/UX Contract finalized |
-| **Execution** | 🔲 | Implementation pending |
+| **Execution** | 🏗️ | Phase 2 In Progress (Real Impls) |
 | **Verification** | 🔲 | — |
 
 ---
@@ -224,6 +224,7 @@
 - [ ] `FakeCoreModule` — Hilt @Binds for all Fakes
 - [ ] Build variant toggle (Fake vs Real via flavors)
 - [ ] `RealCoreModule` (placeholder, swapped in Phase 3)
+- [x] `:data:prism-lib` module created (Phase 2)
 
 ---
 

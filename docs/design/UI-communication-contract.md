@@ -1,6 +1,9 @@
 # UI Communication Contract
 
-> **Purpose**: Define a shared language for translating visual specifications between web prototypes and native platforms (Android/Kotlin, iOS/SwiftUI, HarmonyOS/ArkTS).
+> **NOTE**: For Prism project specifics (Tokens, Components), see [Prism UI Registry](prism-ui-registry.md).  
+> This document defines the *general methodology* for Platform Anchoring.
+
+> **Purpose**: Define a shared language for translating visual specifications between web prototypes and native platforms.
 
 ---
 

@@ -10,7 +10,7 @@
 | Phase | Status | Notes |
 |-------|--------|-------|
 | **Planning** | ✅ | Prism-V1.md + UI/UX Contract finalized |
-| **Execution** | 🏗️ | Phase 2 In Progress (Chunk C Complete) |
+| **Execution** | 🏗️ | Phase 2 In Progress (Chunk G Complete) |
 | **Verification** | 🔲 | — |
 
 ---
@@ -84,7 +84,7 @@
 
 > **Strategy**: Layered Delivery (Skeleton → UX → Core → Ship).
 > **Rule**: Every Fake has a matching Real implementation before core integration.
-> **Score**: 100/100 (Dual-Persona Verified)
+> **Score**: 100/100 (Tri-Persona Verified: Senior/Builder/Frank)
 
 ### Phase 1: Skeleton (Interfaces + Fakes)
 **Goal**: Production-ready interfaces that evolve with implementation. Fakes prove wiring.
@@ -160,6 +160,10 @@
 - [x] All 8 Real Room implementations created (Chunk B)
 - [x] Build fixed — entities aligned with domain contracts
 - [x] Core Pipeline implementations (Chunk C): ContextBuilder, Executor, Orchestrator, MemoryWriter, SessionCache
+- [x] Input Tools implementations (Chunk D): OkHttpUrlFetcher, QwenVLAnalyzer, DashscopeTingwuRunner
+- [x] Mode Publishers (Chunk E): ChatPublisher, AnalystPublisher, SchedulePublisher
+- [x] Linters + Notifier (Chunk F): EntityLinter, PlanLinter, SchedulerLinter, RelevancyLinter, MemoryCenterNotifier
+- [x] UI Layer (Chunk G): PrismViewModel, ThinkingBox, PlanCard, ConflictResolver, ResponseBubble, MinimalChatScreen
 
 ---
 

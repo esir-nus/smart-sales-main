@@ -21,12 +21,12 @@
 
 | Spec Section | Interface | Data Class | Repository | Fake | Real | Status |
 |--------------|-----------|------------|------------|------|------|--------|
-| §2.2 #1 | `ContextBuilder` | `EnhancedContext` | — | `FakeContextBuilder` | `RealContextBuilder` | 🏗️ |
-| §2.2 #1b | `SessionCache` | `SessionCacheSnapshot` | — | `FakeSessionCache` | `RoomSessionCache` | 🏗️ |
-| §2.2 #2 | `Orchestrator` | `Mode` | — | `FakeOrchestrator` | `PrismOrchestrator` | 🏗️ |
-| §2.2 #3 | `Executor` | `ExecutorResult` | — | `FakeExecutor` | `DashscopeExecutor` | 🏗️ |
+| §2.2 #1 | `ContextBuilder` | `EnhancedContext` | — | `FakeContextBuilder` | `RealContextBuilder` | ✅ |
+| §2.2 #1b | `SessionCache` | `SessionCacheSnapshot` | — | `FakeSessionCache` | `InMemorySessionCache` | ✅ |
+| §2.2 #2 | `Orchestrator` | `Mode` | — | `FakeOrchestrator` | `PrismOrchestrator` | ✅ |
+| §2.2 #3 | `Executor` | `ExecutorResult` | — | `FakeExecutor` | `DashscopeExecutor` | ✅ |
 | §2.2 #4 | `ModePublisher` | `UiState` | — | `FakeModePublisher` | `ChatPublisher`, `AnalystPublisher`, `SchedulePublisher` | 🏗️ |
-| §2.2 #5 | `MemoryWriter` | — | `MemoryEntryRepository` | `FakeMemoryWriter` | `RoomMemoryWriter` | 🏗️ |
+| §2.2 #5 | `MemoryWriter` | — | `MemoryEntryRepository` | `FakeMemoryWriter` | `RoomMemoryWriter` | ✅ |
 | §2.2 #6 | `Linter` (sealed) | `LintResult`, `LintError` | — | `EntityLinter`, `PlanLinter`, `SchedulerLinter`, `RelevancyLinter` | (Real = same classes) | 🏗️ |
 | §2.2 #7 | `MemoryCenterNotifier` | `MemoryNotification` | — | `FakeMemoryCenterNotifier` | `SnackbarMemoryCenterNotifier` | 🏗️ |
 

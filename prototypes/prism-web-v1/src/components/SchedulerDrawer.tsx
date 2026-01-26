@@ -196,7 +196,7 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
                                     {/* Task Indicator */}
                                     {hasTask && (
                                         <div className={clsx(
-                                            "w-1 h-1 rounded-full mt-1 transition-all", 
+                                            "absolute bottom-1 w-1 h-1 rounded-full transition-all left-1/2 -translate-x-1/2", 
                                             isSelected ? "bg-white/60" : "bg-blue-400 group-hover:scale-125"
                                         )} />
                                     )}

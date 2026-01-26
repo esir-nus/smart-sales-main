@@ -8,6 +8,13 @@
 
 <!-- Add new candidates at the top -->
 
+### [CANDIDATE] "The DMZ Contract"
+- **Date**: 2026-01-26
+- **Context**: Decoupling Phase 2 (Logic) from Chunk G (UI).
+- **Evidence**: `ui-alignment-table.md` acts as the single source of truth, allowing UI and Backend to work in parallel without blocking.
+- **Frank's Insight**: Don't wire UI directly to Backend code. Wire both to a shared Table. If the Table is right, integration is O(1).
+- **Observations**: 1
+
 ### [CANDIDATE] "Automate Architectural Boundaries"
 - **Date**: 2026-01-26
 - **Context**: Prism isolation from legacy code — Frank worried about contamination

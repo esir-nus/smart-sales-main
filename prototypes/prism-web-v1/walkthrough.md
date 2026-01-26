@@ -22,6 +22,13 @@
 This prototype simulates the **Prism V1** interaction model using hardcoded scenarios.
 
 ### 1. The Vibe Check (Layer 1)
+![Top Drawer Fixed](/home/cslh-frank/.gemini/antigravity/brain/7f638731-ae8f-4b61-8c6c-b0a347b1f160/scheduler_top_drawer_final_1769415617621.png)
+<!-- slide -->
+![Swipe Gesture](/home/cslh-frank/.gemini/antigravity/brain/7f638731-ae8f-4b61-8c6c-b0a347b1f160/scheduler_swipe_active_1769416320459.png)
+<!-- slide -->
+![Absolute No Drift](/home/cslh-frank/.gemini/antigravity/brain/7f638731-ae8f-4b61-8c6c-b0a347b1f160/scheduler_absolute_no_drift_1769418758505.png)
+<!-- slide -->
+![Premium Polish](/home/cslh-frank/.gemini/antigravity/brain/7f638731-ae8f-4b61-8c6c-b0a347b1f160/scheduler_pretty_v2_1769413740817.png)
 *   **Aurora**: Observe the background. It should be a breathing mesh of Blue, Indigo, and Cyan (NOT plain white).
 *   **Knot FAB**: Look at the bottom right. The "Knot" should complete a breathing cycle every 4 seconds.
 *   **Zero-Chrome**: The app runs in a 375px phone frame. There should be no scrollbars.

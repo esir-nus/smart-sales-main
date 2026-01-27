@@ -6,15 +6,15 @@ plugins {
 }
 
 android {
-    namespace = "com.smartsales.aitest"
+    namespace = "com.smartsales.prism"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.smartsales.aitest"
+        applicationId = "com.smartsales.prism"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "0.1.0-prism"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }
@@ -61,10 +61,6 @@ android {
             )
         }
     }
-
-    testOptions {
-        unitTests.isReturnDefaultValues = true
-    }
 }
 
 kotlin {
@@ -80,48 +76,31 @@ configurations.all {
 }
 
 dependencies {
-    implementation(projects.data.aiCore)
-    // REMOVED: projects.domain.prismCore (archived - see archived/ folder)
-    implementation(projects.tingwuTestApp)
-    implementation(projects.feature.chat)
-    implementation(projects.feature.media)
-    implementation(projects.feature.connectivity)
-    implementation(projects.feature.usercenter)
-    implementation(projects.core.util)
-
+    // =============================================
+    // PRISM MONOLITH - Everything inline, no external prism modules
+    // Domain layer built inside this module (see domain/ package)
+    // =============================================
+    
+    // =============================================
+    // Shared Infrastructure
+    // =============================================
+    implementation(projects.data.aiCore)  // DashScope, Tingwu, credentials
     implementation(platform(libs.compose.bom))
     implementation(libs.bundles.compose.ui)
     implementation(libs.compose.material3)
     implementation(libs.compose.foundation)
     implementation(libs.compose.material.icons.extended)
-    implementation("androidx.navigation:navigation-compose")
     implementation(libs.material)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.hilt.navigation.compose)
     implementation(libs.androidx.core.ktx)
     implementation(libs.coroutines.android)
     implementation(libs.hilt.android)
-    implementation(libs.gson)
-    implementation(libs.coil.compose)
-    implementation(libs.coil.gif)
     kapt(libs.hilt.compiler)
 
+    // Test
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
-    testImplementation(projects.core.test)
-
-    androidTestImplementation(platform(libs.compose.bom))
-    androidTestImplementation(libs.compose.ui.test.junit4)
-    androidTestImplementation(libs.compose.ui.test)
-    androidTestImplementation("androidx.compose.ui:ui-test-android")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4-android")
-    androidTestImplementation(libs.androidx.test.ext)
-    androidTestImplementation(libs.androidx.test.espresso)
-    androidTestImplementation(libs.androidx.test.rules)
-    androidTestImplementation(libs.hilt.android)
-    androidTestImplementation(libs.hilt.android.testing)
-    kaptAndroidTest(libs.hilt.compiler)
-    debugImplementation(libs.compose.ui.test.manifest)
-    debugImplementation(projects.feature.designLab)
 }

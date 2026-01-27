@@ -69,6 +69,7 @@ kapt {
 
 dependencies {
     implementation(projects.data.aiCore)
+    // REMOVED: projects.data.prismLib, projects.domain.prismCore (archived - see archived/ folder)
     implementation(projects.core.util)
     implementation(projects.feature.connectivity)
     implementation(projects.feature.media)

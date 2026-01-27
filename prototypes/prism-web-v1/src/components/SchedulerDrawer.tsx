@@ -1,31 +1,68 @@
 import React from 'react';
 import { motion, type PanInfo, AnimatePresence } from 'framer-motion';
-import { MoreHorizontal, Clock, AlertTriangle, ChevronDown, ChevronUp, GripHorizontal } from 'lucide-react';
+import { Clock, BellRing, Trash2, Sparkles, X, Check } from 'lucide-react';
 import { clsx } from 'clsx';
+import { InspirationCard } from './InspirationCard';
+import { ConflictCard } from './ConflictCard';
 
 interface SchedulerDrawerProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const slideVariants = {
-  enter: (direction: number) => ({
-    x: direction > 0 ? 300 : -300,
-    opacity: 0
-  }),
-  center: {
-    x: 0,
-    opacity: 1
-  },
-  exit: (direction: number) => ({
-    x: direction < 0 ? 300 : -300,
-    opacity: 0
-  })
+import { ChatExpandedView } from './ChatExpandedView';
+
+const ExpandedTaskCard = ({ item }: { item: any }) => {
+    const [expanded, setExpanded] = React.useState(false);
+    
+    // Mock Alarm Logic
+    const hasAlarm = React.useMemo(() => Math.random() > 0.5, []);
+
+    return (
+        <motion.div 
+            onClick={() => !expanded && setExpanded(true)}
+            animate={{ height: expanded ? 'auto' : 'auto' }}
+            className="p-4 bg-white rounded-2xl border border-gray-100 shadow-sm transition-all overflow-hidden"
+        >
+            <div className="flex justify-between items-center mb-2" onClick={() => expanded && setExpanded(false)}>
+                <h3 className="font-semibold text-gray-900">{item.title}</h3>
+                <div className="flex items-center gap-2">
+                    {/* Alarm State Visual */}
+                    {hasAlarm && (
+                        <div className="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100/50">
+                             <BellRing size={10} className="animate-pulse" />
+                             <span>08:50</span>
+                        </div>
+                    )}
+                    
+                    <span className="text-xs text-gray-400 flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-full">
+                        <Clock size={10} /> {item.duration}
+                    </span>
+                </div>
+            </div>
+            
+            {/* Expanded Content (Contextual Agent Input) */}
+            <AnimatePresence>
+                {expanded && (
+                    <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="pt-2 mt-2 border-t border-gray-50"
+                    >
+                        <ChatExpandedView 
+                            initialMessage={`已为您安排 ${item.time}。地点：北京办公室。发现 3 份相关历史文档。需要摘要吗？`}
+                            onSend={(text) => console.log('Task update:', text)}
+                        />
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
+    );
 };
 
 export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClose }) => { 
   const [isExpanded, setIsExpanded] = React.useState(false);
-  const [direction, setDirection] = React.useState(0);
   
   const [currentWeekStart, setCurrentWeekStart] = React.useState(() => {
     const d = new Date();
@@ -35,6 +72,58 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
   });
 
   const [selectedDate, setSelectedDate] = React.useState(new Date().getDate());
+
+  // Task List State (for Swipe-to-Delete)
+  const [schedulerItems, setSchedulerItems] = React.useState([
+      { id: '1', type: 'task', time: '09:00', title: '审查 Q4 预算', duration: '45 分钟', tag: null }, 
+      { id: '2', type: 'conflict', time: '12:00', title: '冲突：审查预算 vs 团队午餐' }, 
+      { id: '3', type: 'inspiration', time: '13:00', title: '灵感：竞品定价策略' }, 
+      { id: '4', type: 'task', time: '14:30', title: '客户拜访 (张总)', duration: '1 小时', tag: null }
+  ]);
+
+  const handleDeleteItem = (id: string) => {
+      setSchedulerItems(prev => prev.filter(item => item.id !== id));
+      console.log(`Deleted item ${id}`);
+  };
+
+  // ---------------------------------------------------------------------------
+  // Multi-Select Logic (Lifted State)
+  // ---------------------------------------------------------------------------
+  const [selectionMode, setSelectionMode] = React.useState(false);
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+
+  // Enter Mode (triggered by Sparkles on any card)
+  const handleEnterSelectionMode = (initialId: string) => {
+    setSelectionMode(true);
+    setSelectedIds(new Set([initialId]));
+  };
+
+  // Toggle Item Selection
+  const handleToggleSelection = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+      // If last item deselected, potentially exit mode? For now, keep mode open.
+    } else {
+      newSet.add(id);
+    }
+    setSelectedIds(newSet);
+  };
+
+  // Exit Mode
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  };
+
+  // Mock Analysis
+  const handleBatchAnalyze = () => {
+    console.log(`Analyzing ${selectedIds.size} items:`, Array.from(selectedIds));
+    const count = selectedIds.size;
+    exitSelectionMode();
+    // Simulate Toast
+    alert(`💡 正在分析 ${count} 个灵感点...`); 
+  };
 
   // Toggle Expansion behavior
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
@@ -53,31 +142,7 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
       onClose();
     } 
   };
-  
-  // Week Swipe Handler (Horizontal)
-  const handleWeekSwipe = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-      const swipeThreshold = 50;
-      if (info.offset.x < -swipeThreshold) {
-          changeWeek(1);
-      } else if (info.offset.x > swipeThreshold) {
-          changeWeek(-1);
-      }
-  };
 
-  const changeWeek = (offset: number) => {
-    setDirection(offset);
-    const newStart = new Date(currentWeekStart);
-    newStart.setDate(newStart.getDate() + (offset * 7));
-    setCurrentWeekStart(newStart);
-  };
-
-  const days = React.useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(currentWeekStart);
-      d.setDate(d.getDate() + i);
-      return d;
-    });
-  }, [currentWeekStart]);
 
   // Generate Month Grid (Simple 5 weeks)
   const monthGrid = React.useMemo(() => {
@@ -106,19 +171,14 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
     >
         {/* Month Header & Carousel */}
         <div className="px-6 py-2 flex flex-col gap-4">
-            <div className="flex justify-between items-center">
-                 <h2 className="text-2xl font-bold flex items-center gap-2 tracking-tight">
-                    <span className="text-gray-400 font-medium tracking-normal text-lg">{currentWeekStart.getFullYear()}年</span>
-                    <span className="text-gray-900">{currentWeekStart.getMonth() + 1}月</span>
+            <div className="flex justify-between items-center mb-2">
+                 <h2 className="text-xl font-bold flex items-center gap-2 tracking-tight">
+                    <span className="text-gray-400 font-medium tracking-normal text-sm">{currentWeekStart.getFullYear()}年</span>
+                    <span className="text-gray-900 text-2xl">{currentWeekStart.getMonth() + 1}月</span>
                 </h2>
-                {/* Arrow Buttons Removed in favor of Swipe */}
-                <div className="flex gap-2 opacity-0 pointer-events-none w-0 h-0 overflow-hidden"> 
-                   {/* Kept hidden for a11y structure but visually removed */}
-                </div>
             </div>
             
-            {/* Restored Month Carousel */}
-             <div className="overflow-x-auto flex gap-3 no-scrollbar pb-2 mask-linear-fade">
+             <div className="overflow-x-auto flex gap-3 no-scrollbar pb-2 mask-linear-fade snap-x snap-mandatory scroll-pl-6">
                 {Array.from({length: 12}, (_, i) => i + 1).map((m) => {
                     const isActive = (currentWeekStart.getMonth() + 1) === m;
                     return (
@@ -130,10 +190,10 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
                             setCurrentWeekStart(d);
                             }}
                             className={clsx(
-                            "font-medium text-[13px] px-4 py-2 rounded-full whitespace-nowrap transition-all duration-300",
+                            "font-medium text-[13px] px-5 py-2.5 rounded-full whitespace-nowrap transition-all duration-300 snap-center border",
                             isActive 
-                                ? "bg-gray-900 text-white shadow-lg shadow-gray-900/20 scale-105" 
-                                : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+                                ? "bg-black text-white border-black shadow-md scale-105" 
+                                : "bg-white text-gray-500 border-gray-100 hover:bg-gray-50"
                         )}>{m}月</button>
                     )
                 })}
@@ -153,58 +213,78 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
                     <div key={d} className="w-full text-center text-[10px] uppercase tracking-wider text-gray-400 font-semibold py-3 flex justify-center">{d}</div>
                 ))}
                 
-                {/* Animated Dates Container */}
-                <AnimatePresence mode="popLayout" custom={direction}>
-                    <motion.div
-                        key={isExpanded ? 'month-view' : currentWeekStart.toISOString()}
-                        variants={slideVariants}
-                        initial="enter"
-                        animate="center"
-                        exit="exit"
-                        custom={direction}
-                        drag={!isExpanded ? "x" : false} // Swipe only on Week View
-                        dragConstraints={{ left: 0, right: 0 }}
-                        dragElastic={0.2}
-                        onDragEnd={handleWeekSwipe}
-                        className="col-span-7 grid grid-cols-7 gap-y-2 w-full place-items-center"
-                    >
-                        {(isExpanded ? monthGrid : days).map((d, i) => {
-                            const isSelected = d.getDate() === selectedDate;
-                            const hasTask = d.getDate() % 3 === 0; 
-                            const isCurrentMonth = d.getMonth() === currentWeekStart.getMonth();
-                            
-                            return (
-                                <motion.div 
-                                    layout
-                                    key={`${d.getMonth()}-${d.getDate()}`} 
-                                    onClick={() => setSelectedDate(d.getDate())}
-                                    className={clsx(
-                                        "flex flex-col items-center justify-center w-full h-12 rounded-2xl transition-all cursor-pointer relative group",
-                                        !isSelected && "hover:bg-black/5"
-                                    )}
-                                >
-                                    <div className={clsx(
-                                        "w-9 h-9 flex items-center justify-center rounded-full transition-all duration-300 relative z-10",
-                                        isSelected ? "bg-gray-900 text-white shadow-lg scale-110" : "text-gray-700",
-                                        !isCurrentMonth && !isSelected && "text-gray-300"
-                                    )}>
-                                        <span className={clsx("text-sm font-medium", isSelected && "font-bold")}>
-                                            {d.getDate()}
-                                        </span>
-                                    </div>
-
-                                    {/* Task Indicator */}
-                                    {hasTask && (
+                {/* Animated Dates Container - Single Source of Truth */}
+                <motion.div
+                    animate={{ 
+                        height: isExpanded ? 300 : 56, // 5 rows * 56px = 280px + buffer
+                    }} 
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    className="overflow-hidden w-full relative col-span-7"
+                >
+                     {/* The Full Month Grid - Always Rendered */}
+                     <motion.div
+                        animate={{
+                            y: isExpanded ? 0 : -(
+                                (() => {
+                                    // Find index of selected date in the grid
+                                    const index = monthGrid.findIndex(d => 
+                                        d.getDate() === selectedDate && 
+                                        d.getMonth() === currentWeekStart.getMonth()
+                                    );
+                                    const safeIndex = index === -1 ? 0 : index;
+                                    return Math.floor(safeIndex / 7) * 56; // 56px per row (48px height + 8px gap)
+                                })()
+                            )
+                        }}
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                     >
+                        <div className="grid grid-cols-7 gap-y-2 place-items-center w-full">
+                            {monthGrid.map((d) => {
+                                const isCurrentMonth = d.getMonth() === currentWeekStart.getMonth();
+                                const isSelectedDay = d.getDate() === selectedDate && isCurrentMonth; 
+                                const hasTask = d.getDate() % 3 === 0; 
+                                
+                                return (
+                                    <motion.div 
+                                        // Removed layout prop to prevent overlap regression during expansion
+                                        key={d.toISOString()} 
+                                        onClick={() => {
+                                            // Update selected date
+                                            setSelectedDate(d.getDate());
+                                            // Also update month context if clicking a gray date
+                                            if (!isCurrentMonth) {
+                                                const newDate = new Date(d);
+                                                setCurrentWeekStart(newDate);
+                                            }
+                                        }}
+                                        className={clsx(
+                                            "flex flex-col items-center justify-center w-full h-12 rounded-2xl transition-all cursor-pointer relative group",
+                                            !isSelectedDay && "hover:bg-black/5"
+                                        )}
+                                    >
                                         <div className={clsx(
-                                            "absolute bottom-1 w-1 h-1 rounded-full transition-all left-1/2 -translate-x-1/2", 
-                                            isSelected ? "bg-white/60" : "bg-blue-400 group-hover:scale-125"
-                                        )} />
-                                    )}
-                                </motion.div>
-                            );
-                        })}
-                    </motion.div>
-                </AnimatePresence>
+                                            "w-9 h-9 flex items-center justify-center rounded-full transition-all duration-300 relative z-10 font-mono",
+                                            isSelectedDay ? "bg-blue-600 text-white shadow-lg scale-110" : "text-gray-700", // blue-600 token
+                                            !isCurrentMonth && !isSelectedDay && "text-gray-300"
+                                        )}>
+                                            <span className={clsx("text-sm", isSelectedDay ? "font-bold" : "font-medium")}>
+                                                {d.getDate()}
+                                            </span>
+                                        </div>
+
+                                        {/* Task Indicator */}
+                                        {hasTask && (
+                                            <div className={clsx(
+                                                "absolute bottom-1 w-1 h-1 rounded-full transition-all left-1/2 -translate-x-1/2", 
+                                                isSelectedDay ? "bg-white/80" : "bg-blue-400 group-hover:scale-125"
+                                            )} />
+                                        )}
+                                    </motion.div>
+                                );
+                            })}
+                        </div>
+                     </motion.div>
+                </motion.div>
              </div>
              
              {/* Calendar Expansion Handle (Bottom Pill) */}
@@ -217,51 +297,103 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
         </motion.div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-12">
-            
-            {/* Task Card 1 */}
-            <div className="flex gap-4">
-                <span className="text-xs text-gray-400 font-mono pt-2">09:00</span>
-                <div className="flex-1 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                    <div className="flex justify-between items-start mb-1">
-                         <h3 className="font-semibold text-gray-900">审查 Q4 预算</h3>
-                         <MoreHorizontal size={16} className="text-gray-400" />
-                    </div>
-                    <p className="text-xs text-gray-500 mb-3 flex items-center gap-1">
-                        <Clock size={12} /> 45 分钟
-                    </p>
-                    <div className="flex gap-2">
-                         <span className="px-2 py-1 bg-green-100 text-green-700 text-[10px] rounded-md font-medium">财务</span>
-                    </div>
-                </div>
-            </div>
+        {/* Content Area */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-24 no-scrollbar">
+            <AnimatePresence initial={false} mode='popLayout'>
+            {schedulerItems.map((item) => (
+                <motion.div 
+                    layout
+                    key={item.id} 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex gap-4 relative group items-start"
+                >
+                     {/* Time Label - Refined Typography */}
+                     <span className="text-xs text-gray-400 font-mono pt-3 w-10 text-right shrink-0 tracking-wide">{item.time}</span>
+                     
+                     {/* Swipe Container */}
+                     <div className="flex-1 relative">
+                        {/* Timeline Connector */}
+                        <div className="absolute left-0 top-3 bottom-0 w-0.5 bg-gray-100 rounded-full" /> 
+                        
+                        {/* Swipe Wrapper (Delete Background) */}
+                        <div className="relative ml-3 bg-red-500 rounded-[20px] overflow-hidden">
+                            {/* Delete Icon (Behind) */}
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-white flex items-center gap-1 font-medium z-0">
+                                <Trash2 size={16} />
+                                <span className="text-xs">删除</span>
+                            </div>
 
-            {/* Mock Conflict (Static for now) */}
-             <div className="flex gap-4">
-                <span className="text-xs text-gray-400 font-mono pt-2">11:00</span>
-                <div className="flex-1 p-4 bg-orange-50/50 rounded-2xl border border-orange-100 shadow-sm relative overflow-hidden">
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-400" />
-                    <div className="flex justify-between items-start mb-2">
-                         <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                            <AlertTriangle size={16} className="text-orange-500" /> 
-                            日程冲突
-                         </h3>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-3">
-                        项目同步会与客户电话会议冲突。
-                    </p>
-                    <button className="bg-white px-3 py-1.5 rounded-lg text-xs font-medium text-gray-900 border border-gray-200 shadow-sm">
-                        重新安排
-                    </button>
-                </div>
-            </div>
-
+                            {/* Foreground Card */}
+                            <motion.div 
+                                drag="x"
+                                dragConstraints={{ left: 0, right: 0 }} // Snap back if released early
+                                dragElastic={{ left: 0.5, right: 0 }} // Only allow left drag
+                                onDragEnd={(_, info) => {
+                                    if (info.offset.x < -100) {
+                                        handleDeleteItem(item.id);
+                                    }
+                                }}
+                                whileDrag={{ scale: 1.02, left: -20 }} // Subtle feedback
+                                className="relative bg-white rounded-[20px] z-10 shadow-sm"
+                                style={{ touchAction: "none" }}
+                            >
+                                {item.type === 'conflict' ? (
+                                    <ConflictCard item={item} />
+                                ) : item.type === 'inspiration' ? (
+                                    <InspirationCard 
+                                        item={item} 
+                                        selectionMode={selectionMode}
+                                        isSelected={selectedIds.has(item.id)}
+                                        onEnterMode={() => handleEnterSelectionMode(item.id)}
+                                        onToggle={() => handleToggleSelection(item.id)}
+                                    />
+                                ) : (
+                                    // Standard Task Card with Expand Logic
+                                    <ExpandedTaskCard item={item} />
+                                )}
+                            </motion.div>
+                        </div>
+                     </div>
+                </motion.div>
+            ))}
+            </AnimatePresence>
         </div>
 
         {/* Drawer Global Handle (Absolute Bottom) */}
         <div className="absolute bottom-3 left-0 right-0 flex justify-center cursor-grab active:cursor-grabbing hover:bg-black/5 py-2 transition-colors">
              <div className="w-16 h-1.5 bg-gray-400 rounded-full shadow-sm" />
         </div>
+
+        {/* Batch Action Bar (Floating) */}
+        <AnimatePresence>
+            {selectionMode && (
+                <motion.div
+                    initial={{ y: 100, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 100, opacity: 0 }}
+                    className="absolute bottom-6 left-6 right-6 z-50 flex items-center justify-between bg-gray-900/90 backdrop-blur-md text-white p-4 rounded-full shadow-2xl"
+                >
+                    <div className="flex items-center gap-3 pl-2">
+                        <button onClick={exitSelectionMode} className="p-1 rounded-full hover:bg-white/10 transition-colors">
+                            <X size={20} className="text-gray-400" />
+                        </button>
+                        <span className="font-medium">{selectedIds.size} 个已选择</span>
+                    </div>
+
+                    <button 
+                        onClick={handleBatchAnalyze}
+                        disabled={selectedIds.size === 0}
+                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-full font-medium transition-all disabled:opacity-50 disabled:grayscale"
+                    >
+                        <Sparkles size={16} fill="currentColor" />
+                        <span>开始分析</span>
+                    </button>
+                </motion.div>
+            )}
+        </AnimatePresence>
 
     </motion.div>
   );

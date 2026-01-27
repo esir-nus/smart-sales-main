@@ -31,6 +31,7 @@ fun includeModule(path: String) {
 }
 
 includeModule(":app")
+includeModule(":app-prism")  // Prism Clean Room (isolated from legacy)
 includeModule(":tingwuTestApp")
 includeModule(":data:ai-core")
 includeModule(":core:util")
@@ -40,5 +41,4 @@ includeModule(":feature:media")
 includeModule(":feature:connectivity")
 includeModule(":feature:usercenter")
 includeModule(":feature:design-lab")
-includeModule(":domain:prism-core")
-includeModule(":data:prism-lib")
+// ARCHIVED: domain:prism-core, data:prism-lib (see archived/ folder)

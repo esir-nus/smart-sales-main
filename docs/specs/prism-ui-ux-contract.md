@@ -127,30 +127,46 @@ Tip Shown:
 ```
 ┌────────────────────────────────────────────────────────────┐
 │  ══════════ MONTH CAROUSEL ══════════                      │
-│  ‹ 2025    [ Jan ] [ Feb ] [Mar▼] [ Apr ] ...    2027 ›    │
+│  ‹ 2025    [ 1月 ] [ 2月 ] [3月▼] [ 4月 ] ...    2027 ›    │
+│  (Click updates grid instantly)                            │
 ├────────────────────────────────────────────────────────────┤
-│  ══════════ DAY CAROUSEL ══════════                        │
-│  [ 22 ] [ 23 ] [24▼] [ 25 ] [ 26 ] [ 27 ] [ 28 ] [ 29 ]    │
+│  ══════════ CALENDAR GRID (Foldable) ════════════════════  │
+│                                                            │
+│  [ 一 ] [ 二 ] [ 三 ] [ 四 ] [ 五 ] [ 六 ] [ 日 ]  ← Headers  │
+│                                                            │
+│  [26 ] [27 ] [28 ] [ 1 ] [ 2 ] [ 3 ] [ 4 ]  ← Active Week  │
+│                                                            │
+│  ─────── [ Handle ] (Pull > 50px to Expand) ───────        │
+│                                                            │
+│  (Expanded: Reveals full month grid above/below)           │
 ├────────────────────────────────────────────────────────────┤
-│ TIME │ CARDS                                               │
-│──────┼─────────────────────────────────────────────────────│
-│      │ ┌─────────────────────────────────────────────────┐ │
-│ 08:00│ │ ☐ 与张总会议 (A3项目)                   [⏰][⋮]│ │ ← TASK
-│      │ └─────────────────────────────────────────────────┘ │
-│ 09:00│                                                     │
-│      │ ┌─────────────────────────────────────────────────┐ │
-│ 10:00│ │ 💡 研究竞品报价策略                    [问AI][⋮]│ │ ← INSPIRATION
-│      │ └─────────────────────────────────────────────────┘ │
-│ 11:00│                                                     │
-│      │ ┌──────────────────────────────── ⚠️ CONFLICT ────┐ │
-│ 12:00│ │ 李总电话 vs 午餐会议                     [展开] │ │ ← CONFLICT
-│      │ └─────────────────────────────────────────────────┘ │
-│ 13:00│                                                     │
-│      │ ┌─────────────────────────────────────────────────┐ │
-│ 14:00│ │ ✓ 提交季度报告 (已完成)                        │ │ ← DONE
-│      │ └─────────────────────────────────────────────────┘ │
+│  ══════════ TIMELINE (Adaptive Stack) ════════════════════ │
+│                                                            │
+│  08:00  ┌─────────────────────────────────────────────────┐│
+│         │ ☐ 与张总会议 (A3项目)               [⏰][⋮]    ││
+│         └─────────────────────────────────────────────────┘│
+│                          ↕ gap-4                           │
+│  10:30  ┌─────────────────────────────────────────────────┐│
+│         │ 💡 研究竞品报价策略                 [问AI][⋮]  ││
+│         └─────────────────────────────────────────────────┘│
+│                          ↕ gap-4                           │
+│  12:00  ┌─────────────────── ⚠️ CONFLICT ─────────────────┐│
+│         │ 李总电话 vs 午餐会议                 [展开]     ││
+│         └─────────────────────────────────────────────────┘│
+│                          ↕ gap-4                           │
+│  14:00  ┌─────────────────────────────────────────────────┐│
+│         │ ✓ 提交季度报告 (已完成)                        ││
+│         └─────────────────────────────────────────────────┘│
+│                                                            │
+│  (No empty hour slots - cards stack at actual times)       │
 └────────────────────────────────────────────────────────────┘
 ```
+
+**Interaction Model (Natural Expansion):**
+- **Folded (Default):** Shows only the **Active Week** (1 row).
+- **Expanded:** Drag Handle down to reveal the **Full Month** (5 rows).
+- **Object Permanence:** The Active Week row stays in place; other rows appear above/below it.
+- **Data Source:** Single Unified 35-day Grid (no data swapping).
 
 **Card Types:**
 
@@ -168,49 +184,62 @@ Tip Shown:
 ```
 ┌───────────────────────────────────────────────────────────┐
 │  COLLAPSED (Default)                                      │
-├───────────────────────────────────────────────────────────┤
+│  ───────────────────────────────────────────────────────  │
 │  ☐ 与张总会议 (A3项目)                           [⏰][⋮] │
+│  (Gestures: Swipe Left → Delete)                          │
 └───────────────────────────────────────────────────────────┘
         │
         │ tap card body
         ▼
 ┌───────────────────────────────────────────────────────────┐
-│  EXPANDED                                                 │
-├───────────────────────────────────────────────────────────┤
+│  EXPANDED (Chat & Context Mode)                           │
+│  ───────────────────────────────────────────────────────  │
 │  ☐ 与张总会议 (A3项目)                           [⏰][⋮] │
 │  ─────────────────────────────────────────────────────── │
-│  📍 北京办公室                                            │
-│  🕐 08:00 - 09:00                                         │
-│  📝 讨论A3打印机方案，准备报价单                          │
-│  ─────────────────────────────────────────────────────── │
-│  [ 标记完成 ]   [ 问AI ]   [ 编辑 ]                       │
+│  [AI - System]                                            │
+│  已为您安排 08:00。地点：北京办公室。发现3份相关历史文档。   │
+│  需要摘要吗？                                              │
+│                                                           │
+│  [USER - Blue Bubble]                                     │
+│  Yes, summary please.                                     │
+│                                                           │
+│  [ Input: "Ask for details or change..." ]        [Mic]   │
 └───────────────────────────────────────────────────────────┘
 ```
 
+**Interactions:**
+1.  **Swipe Left**: **Delete** immediately (with undo toast).
+2.  **Tap Body**: **Expand** to **Unified Chat Interface**.
+3.  **Agent Input**: Natural language modification (e.g., "Reschedule to 3pm", "Show me related docs").
+4.  **Inspiration**: Icon-Only Action (Sparkles).
+4.  **Ask AI Icon**: Only on **Inspiration Cards**. Triggers synthesis/brainstorming mode.
+
 ---
 
-### Conflict Card (Expanded State)
+### Conflict Card (Expanded Chat Resolution)
 
 ```
 ┌───────────────────────────────────────────────────────────┐
 │  ⚠️ 冲突：李总电话 vs 午餐会议                            │
 ├───────────────────────────────────────────────────────────┤
+│  [AI - System]                                            │
+│  ⚠️ 发现日程冲突。'团队午餐' (12:00) 优先级较低。建议保留    │
+│  '审查预算' (12:00)。是否自动调整午餐时间？                 │
 │                                                           │
-│  ┌─────────────────┐    ┌─────────────────┐               │
-│  │ 📞 李总电话      │    │ 🍽️ 午餐会议      │               │
-│  │ 12:00-12:30     │    │ 12:00-13:00     │               │
-│  │ 紧急：报价确认   │    │ 团队周例会      │               │
-│  └─────────────────┘    └─────────────────┘               │
+│  [USER - Blue Bubble]                                     │
+│  保留预算                                                  │
 │                                                           │
-│  ───────── 解决方案 ─────────                             │
+│  [AI - System]                                            │
+│  好的，已更新。                                            │
 │                                                           │
-│  ○ 李总电话 优先 (午餐会议取消)                            │
-│  ○ 午餐会议 优先 (李总电话延后)                            │
-│  ○ 我来重新安排...                                        │
-│                                                           │
-│  [ 确认 ]                                                 │
+│  [ Input: "Reply..." ]                            [Mic]   │
 └───────────────────────────────────────────────────────────┘
 ```
+
+**Resolution Flow:**
+1.  **Detection**: AI proactively explains the conflict.
+2.  **Proposal**: AI suggests a resolution based on priority/context.
+3.  **Action**: User replies naturally (e.g., "Yes", "Keep lunch").
 
 ---
 
@@ -265,6 +294,10 @@ STEP 4: Tap [问AI (N)] → Opens Coach with combined context
 |-----------|-----------|--------|----------------|
 | **Month Carousel** | Scrollable month pills | `idle`, `scrolling`, `selected` | Updates `selectedMonth` |
 | **Day Carousel** | Scrollable day pills | `idle`, `scrolling`, `selected` | Updates `selectedDay` |
+| **Grid Container** | 56px Row Grid | `folded` (H=56), `expanded` (H=300) | Animates Height/Y |
+| **Handle Bar** | Gray-200 Pill | `idle`, `dragging` (Pull >50px) | Triggers Expansion/Collapse |
+| **Task Dot** | Blue/White Dot | `idle` (Blue), `selected` (White) | Indicates task presence |
+| **Time Label** | Mono Font Text | `visible` (Adaptive), `hidden` | Shows only near existing items |
 | **Task Card** | Collapsible card | `collapsed`, `expanded`, `editing`, `done` | Links to `MemoryEntry` |
 | **Inspiration Card** | Selectable card | `collapsed`, `selected`, `multi-selected` | `isArchived=false`, no `scheduledAt` |
 | **Conflict Card** | Expandable resolver | `collapsed`, `expanded`, `resolving` | Triggers Prism §4.7 Rethink |

@@ -80,11 +80,89 @@
 
 ---
 
-## Prism Rebuild Roadmap (4-Phase Model)
+## Prism Clean Room Roadmap (5-Phase Model)
 
-> **Strategy**: Layered Delivery (Skeleton → UX → Core → Ship).
-> **Rule**: Every Fake has a matching Real implementation before core integration.
-> **Score**: 100/100 (Tri-Persona Verified: Senior/Builder/Frank)
+> **Strategy**: Contract-First Architecture Reset  
+> **Mandate**: NO old code extraction — fresh rewrite only (learn WHAT from legacy, write HOW fresh)  
+> **Current**: Phase 1 ✅ → Phase 2 🔲
+
+---
+
+### Phase 0: Infrastructure Audit ✅
+
+**Goal**: Identify reusable shared infrastructure (NOT legacy Prism code)
+
+| Exit Criterion | Status |
+|----------------|--------|
+| Audit `:data:ai-core` for DashScope/Tingwu clients | ✅ |
+| Audit `:core:util` for clean utilities | ✅ |
+| Confirm NO legacy Prism imports needed | ✅ |
+| Lock dependency list for `app-prism` | ✅ |
+
+**Spike Artifact**: `RealOrchestrator.kt` (Phase 3 prototype, may revise later)
+
+---
+
+### Phase 1: Skeleton + Contracts ✅
+
+**Goal**: Interfaces + Fakes that prove Prism-V1 architecture compiles
+
+| Exit Criterion | Status |
+|----------------|--------|
+| Core pipeline interfaces (ContextBuilder, Executor, Publisher) | ✅ |
+| Memory interfaces (MemoryWriter, MemoryRepository, RelevancyRepository) | ✅ |
+| UI state models (base: 5 states, more in Phase 2) | ✅ |
+| All Fakes return valid mock data | ✅ |
+| Build passes: `./gradlew :app-prism:compileDebugKotlin` | ✅ |
+| Zero Android imports in domain layer | ✅ |
+
+**Artifacts**: 14 new files in `domain/core/` and `domain/memory/`
+
+---
+
+### Phase 2: UX Layer + UI Skeletons 🔲
+
+**Goal**: Android prototype runs end-to-end with Fake I/O
+
+| Exit Criterion | Status |
+|----------------|--------|
+| Home Screen (Session List, Knot FAB) | 🔲 |
+| Chat Interface (Coach/Analyst mode toggle) | 🔲 |
+| Audio Drawer (bottom gesture, card states) | 🔲 |
+| Scheduler Drawer (top gesture, carousels) | 🔲 |
+| All 3 modes navigable with fake responses | 🔲 |
+| UI matches prism-ui-ux-contract.md | 🔲 |
+
+---
+
+### Phase 3: Real Implementation (Swap Fakes) 🔲
+
+**Goal**: Real LLM, real DB, real hardware integration
+
+| Exit Criterion | Status |
+|----------------|--------|
+| DashScope API (Coach mode working) | ⚡ Prototype exists |
+| Room persistence (RelevancyEntry, MemoryEntry) | 🔲 |
+| Tingwu integration (audio transcription) | 🔲 |
+| ESP32 BLE (badge communication) | 🔲 |
+| Memory Writer (fire-and-forget persistence) | 🔲 |
+| All integration tests pass | 🔲 |
+
+---
+
+### Phase 4: Beta Shipping 🔲
+
+**Goal**: APK out, bug triage, edge case handling
+
+| Exit Criterion | Status |
+|----------------|--------|
+| APK size < 50MB | 🔲 |
+| Crash-free rate > 99% (Firebase) | 🔲 |
+| Cold start < 3s | 🔲 |
+| All critical user journeys tested | 🔲 |
+| Beta distribution via internal channel | 🔲 |
+
+---
 
 ### Phase 1: Skeleton (Interfaces + Fakes)
 **Goal**: Production-ready interfaces that evolve with implementation. Fakes prove wiring.
@@ -237,10 +315,10 @@
 
 #### 1.8 Verification
 
-- [ ] Integration test: ViewModel → FakeOrchestrator → UiState
-- [ ] Contamination check: `grep -rn "android\." domain/` returns empty
-- [ ] All interfaces compile: `./gradlew :domain:compileKotlin`
-- [ ] App assembles: `./gradlew :app:assembleDebug`
+- [x] Integration test: ViewModel → FakeOrchestrator → UiState (5 tests passed)
+- [x] Contamination check: `grep -rn "android\." domain/prism-core/` returns empty
+- [x] All interfaces compile: `./gradlew :domain:prism-core:compileDebugKotlin`
+- [x] App assembles: `./gradlew :app:assembleDebug` ✅
 
 ---
 

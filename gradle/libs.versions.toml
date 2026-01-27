@@ -25,6 +25,7 @@ aliyun-oss = "2.9.13"
 aliyun-sdk-core = "4.6.0"
 tingwu-sdk = "2.0.24"
 bcprov = "1.83"
+jsoup = "1.17.2"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity-compose" }
@@ -72,6 +73,7 @@ aliyun-oss-sdk = { module = "com.aliyun.dpa:oss-android-sdk", version.ref = "ali
 aliyun-java-sdk-core = { module = "com.aliyun:aliyun-java-sdk-core", version.ref = "aliyun-sdk-core" }
 aliyun-tingwu-sdk = { module = "com.aliyun:alibabacloud-tingwu20230930", version.ref = "tingwu-sdk" }
 bcprov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bcprov" }
+jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 
 [bundles]
 compose-ui = ["compose-ui", "compose-ui-graphics", "compose-ui-tooling-preview"]

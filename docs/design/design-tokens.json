@@ -64,7 +64,8 @@
       "textPrimary": "{primitives.colors.black}",
       "textSecondary": "{primitives.colors.gray.800}",
       "textMuted": "{primitives.colors.gray.500}",
-      "textDanger": "{primitives.colors.red.600}"
+      "textDanger": "{primitives.colors.red.600}",
+      "calendarToday": "{primitives.colors.blue.600}"
     },
     "dark": {
       "background": "{primitives.colors.gray.950}",
@@ -80,10 +81,6 @@
       "crystalCardBg": "rgba(255, 255, 255, 0.05)",
       "technicalBorder": "rgba(255, 255, 255, 0.2)"
     }
-  },
-  "primitives": {
-    "colors": {
-       "mint": { "500": "#00E676" },
   },
 
   "spacing": {
@@ -107,7 +104,8 @@
       "lg": 24,
       "xl": 32,
       "2xl": 48,
-      "3xl": 64
+      "3xl": 64,
+      "calendarRow": 56
     }
   },
 

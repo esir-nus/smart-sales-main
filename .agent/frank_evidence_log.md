@@ -8,6 +8,34 @@
 
 <!-- Add new candidates at the top -->
 
+### [CANDIDATE] "Icon-First Intelligence"
+- **Date**: 2026-01-26
+- **Context**: Scheduler Inspiration Card.
+- **Evidence**: User rejected "Ask AI" label AND "Click to generate" helper text.
+- **Frank's Insight**: True intelligence doesn't explain itself. A high-confidence icon (Sparkle) anchored to the top-right is sufficient. If you have to explain "Click to generate", the UI is weak. Trust the semantic weight of the icon.
+- **Observations**: 2
+
+### [CANDIDATE] "The Intrusive Minimap"
+- **Date**: 2026-01-26
+- **Context**: Scheduler Conflict Card Refinement.
+- **Evidence**: User rejected text buttons ("Reschedule") in favor of a purely visual "Intrusive Icon".
+- **Frank's Insight**: For high-friction states like conflicts, a "Traffic Light" (Icon/Color) is faster than text. Trust the user to explore (Unfold) for resolution. Don't clutter the timeline with buttons.
+- **Observations**: 1
+
+### [CANDIDATE] "The Static Mock Trap"
+- **Date**: 2026-01-26
+- **Context**: Auditing Scheduler functionality.
+- **Evidence**: Prototype implemented a "Static Mock" for Conflict Resolution (hardcoded div) instead of the Logic-Driven UI (Radio Group) required by spec.
+- **Frank's Insight**: Static mocks in advanced prototypes are dangerous. They look "done" but hide 100% of the complexity. Always demand "Logic-Driven UI" for core interaction paths like Conflict Resolution.
+- **Observations**: 1
+
+### [CANDIDATE] "Consolidated Truth"
+- **Date**: 2026-01-26
+- **Context**: Consolidating fractured specs (`scheduler-ui-spec.md`) back into the main contract.
+- **Evidence**: `prism-ui-ux-contract.md` is now the Single Source of Truth.
+- **Frank's Insight**: Fragmentation kills alignment. When details hide in side-files, the main contract drifts. Forcing everything into one readable doc exposes the rot.
+- **Observations**: 1
+
 ### [CANDIDATE] "The DMZ Contract"
 - **Date**: 2026-01-26
 - **Context**: Decoupling Phase 2 (Logic) from Chunk G (UI).

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, MoreHorizontal, Plus, FileAudio, RefreshCw, Smartphone, PlayCircle, Sparkles } from 'lucide-react';
+import { Play, Plus, FileAudio, RefreshCw, Smartphone, Sparkles, Star } from 'lucide-react';
 import { clsx } from 'clsx';
 
 type AudioFile = {
@@ -151,7 +151,7 @@ export const AudioDrawer = ({ isOpen, onClose }: AudioDrawerProps) => {
                                                         file.status === 'completed' ? "bg-blue-50 text-blue-500" : 
                                                         file.status === 'transcribing' ? "bg-amber-50 text-amber-500" : "bg-slate-100 text-slate-400"
                                                     )}>
-                                                        {file.status === 'completed' ? <PlayCircle size={20} /> : <FileAudio size={20} />}
+                                                        {file.status === 'completed' ? <Star size={20} fill="currentColor" className="text-blue-500" /> : <FileAudio size={20} />}
                                                     </div>
                                                     <div>
                                                         <div className="font-medium text-slate-900 text-sm truncate max-w-[180px]">{file.name}</div>
@@ -166,9 +166,6 @@ export const AudioDrawer = ({ isOpen, onClose }: AudioDrawerProps) => {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <button className="text-slate-300 hover:text-slate-600 p-1">
-                                                    <MoreHorizontal size={18} />
-                                                </button>
                                             </div>
 
                                             {/* EXPANDED CONTENT: Metadata & Ask AI */}

@@ -8,9 +8,9 @@ import javax.inject.Singleton
  * 返回硬编码示例会话
  */
 @Singleton
-class FakeHistoryRepository @Inject constructor() {
+class FakeHistoryRepository @Inject constructor() : HistoryRepository {
 
-    fun getSessions(): List<SessionPreview> {
+    override fun getSessions(): List<SessionPreview> {
         val now = System.currentTimeMillis()
         val oneDay = 24 * 60 * 60 * 1000L
         
@@ -67,7 +67,7 @@ class FakeHistoryRepository @Inject constructor() {
     /**
      * 按日期分组会话
      */
-    fun getGroupedSessions(): Map<String, List<SessionPreview>> {
+    override fun getGroupedSessions(): Map<String, List<SessionPreview>> {
         val sessions = getSessions()
         val now = System.currentTimeMillis()
         val oneDay = 24 * 60 * 60 * 1000L

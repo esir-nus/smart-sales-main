@@ -14,7 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.smartsales.prism.domain.core.FakeHistoryRepository
+import com.smartsales.prism.domain.core.HistoryRepository
 import com.smartsales.prism.ui.drawers.HistoryDrawer
 import com.smartsales.prism.ui.drawers.SchedulerDrawer
 
@@ -26,7 +26,7 @@ import com.smartsales.prism.ui.drawers.SchedulerDrawer
  */
 @Composable
 fun PrismShell(
-    historyRepository: FakeHistoryRepository
+    historyRepository: HistoryRepository
 ) {
     var schedulerOpen by remember { mutableStateOf(true) } // 启动时自动下拉
     var historyOpen by remember { mutableStateOf(false) }

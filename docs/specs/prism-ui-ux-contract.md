@@ -555,7 +555,7 @@ STEP 4: Tap [问AI (N)] → Opens Coach with combined context
 │  ══════════════════ PILL HANDLE ══════════════════════════ │
 │                         ───                                │
 ├────────────────────────────────────────────────────────────┤
-│  [ ↻ 同步中... ]                                    [编辑] │ ← Header (sync auto on open)
+│  [ ↻ 同步中... ]                                           │ ← Header (sync auto on open)
 ├────────────────────────────────────────────────────────────┤
 │                                                            │
 │  ┌────────────────────────────────────────────────────────┐│
@@ -636,7 +636,6 @@ STEP 4: Tap [问AI (N)] → Opens Coach with combined context
 | **Swipe LEFT ←** | Reveal tray: `[Play]` `[Delete]` `[Rename]` | Quick actions |
 | **Tap Body** | Expand Card | Shows detailed player + transcript |
 | **Tap [问AI]** | Open Coach with transcript as context | Located in metadata section |
-| **Hard Press** | Multi-select mode | For batch delete |
 
 ```
 Swipe RIGHT (Not Transcribed) → Instant Transcribe:
@@ -651,13 +650,6 @@ Swipe LEFT → Management Tray:
 │                           │ (Blue)  │ (Red)   │   (Gray)    │
 └───────────────────────────┴─────────┴─────────┴─────────────┘
 ```
-
-**Multi-Select Flow (from ux-experience.md):**
-1. **Entry:** Tap `[Edit]` or **long press** any card
-2. **Header:** `[Edit]` → `[Cancel]` `[Selected: N]` `[Delete]`
-3. **Cards:** Stars (☆) → Checkboxes (○)/(●)
-4. **Swipes:** LOCKED during multi-select
-5. **Exit:** `[Cancel]` or successful delete
 
 ---
 

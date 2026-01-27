@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.smartsales.prism.domain.core.FakeHistoryRepository
+import com.smartsales.prism.domain.core.HistoryRepository
 import com.smartsales.prism.ui.PrismShell
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -23,7 +23,7 @@ import javax.inject.Inject
 class PrismMainActivity : ComponentActivity() {
     
     @Inject
-    lateinit var historyRepository: FakeHistoryRepository
+    lateinit var historyRepository: HistoryRepository
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

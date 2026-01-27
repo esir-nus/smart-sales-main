@@ -22,13 +22,28 @@ class FakeOrchestrator @Inject constructor() : Orchestrator {
         delay(500)
         
         // 根据模式返回不同的模拟响应
-        val response = when (_currentMode.value) {
-            Mode.COACH -> "🎯 [Coach 模式]\n\n收到: \"$input\"\n\n这是模拟的销售建议响应。实际实现将连接 DashScope API。"
-            Mode.ANALYST -> "📊 [Analyst 模式]\n\n收到: \"$input\"\n\n这是模拟的数据分析响应。实际实现将查询历史数据。"
-            Mode.SCHEDULER -> "📅 [Scheduler 模式]\n\n收到: \"$input\"\n\n这是模拟的日程规划响应。实际实现将管理任务和提醒。"
+        return when (_currentMode.value) {
+            Mode.COACH -> {
+                val response = "🎯 [Coach 模式]\n\n收到: \"$input\"\n\n这是模拟的销售建议响应。实际实现将连接 DashScope API。"
+                UiState.Response(response)
+            }
+            Mode.ANALYST -> {
+                // Analyst 模式返回执行计划卡片
+                val plan = ExecutionPlan(
+                    retrievalScope = RetrievalScope.HOT_AND_CEMENT,
+                    deliverables = listOf(
+                        DeliverableType.KEY_INSIGHT,
+                        DeliverableType.CHART,
+                        DeliverableType.CHAT_RESPONSE
+                    )
+                )
+                UiState.PlanCard(plan)
+            }
+            Mode.SCHEDULER -> {
+                val response = "📅 [Scheduler 模式]\n\n收到: \"$input\"\n\n这是模拟的日程规划响应。实际实现将管理任务和提醒。"
+                UiState.Response(response)
+            }
         }
-        
-        return UiState.Response(response)
     }
     
     override suspend fun switchMode(newMode: Mode) {

@@ -28,6 +28,7 @@ export default {
         'slide-down': 'slideDown 0.3s ease-out',
         'pulse-fast': 'pulseFast 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'scan-shine': 'shine 3s linear infinite', // V12 Scan Shine
+        'shimmer': 'shimmer 2s infinite',
       },
       keyframes: {
         breathing: {
@@ -52,6 +53,10 @@ export default {
         pulseFast: {
             '0%, 100%': { opacity: '1' },
             '50%': { opacity: '0.5' },
+        },
+        shimmer: {
+          '0%': { transform: 'translateX(-150%) skewX(-12deg)' },
+          '100%': { transform: 'translateX(150%) skewX(-12deg)' },
         }
       }
     },

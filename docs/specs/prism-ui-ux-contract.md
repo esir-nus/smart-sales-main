@@ -9,15 +9,16 @@
 
 ## Table of Contents
 
-| Section | Description | Lines |
-|---------|-------------|-------|
-| [Global Gesture Model](#global-gesture-model) | Swipe directions for drawers | 10-18 |
-| [§1 Interface Blueprints](#1-interface-blueprints) | Home Screen, Scheduler Drawer ASCII layouts | 20-247 |
-| [Component Registry (Scheduler)](#component-registry-scheduler) | Task/Inspiration/Conflict card states, Smart Alarm | 248-404 |
-| [Component Registry (Audio Drawer)](#component-registry-audio-drawer) | Audio file states, swipe gestures, transcription | 405-647 |
-| [Component Registry (Chat Interface)](#component-registry-chat-interface) | Chat bubbles, streaming states | 648-663 |
-| [§3 User Flows](#3-user-flows) | Disambiguation, Correction/Rethink, Notifications, Coach/Analyst modes | 664-1004 |
-| [§4 Prism Spec Validation](#4-prism-spec-validation-matrix) | Cross-reference matrix to Prism-V1.md | 1005-1021 |
+| Section | Description |
+|---------|-------------|
+| [Global Gesture Model](#global-gesture-model) | Swipe directions for drawers |
+| [§1 Interface Blueprints](#1-interface-blueprints) | Home, Scheduler, History, Knot, Onboarding, Audio |
+| [Component Registry (Scheduler)](#component-registry-scheduler) | Task/Inspiration/Conflict card states |
+| [Component Registry (Audio Drawer)](#component-registry-audio-drawer) | Audio file states, swipe gestures |
+| [Component Registry (Chat Interface)](#component-registry-chat-interface) | Chat bubbles, streaming states |
+| [§3 User Flows](#3-user-flows) | Disambiguation, Coach/Analyst modes |
+| [§4 System Notifications](#4-system-notifications-snackbar) | Snackbars for Clarification, Conflict, Relevancy |
+| [§5 Prism Spec Validation](#5-prism-spec-validation-matrix) | Cross-reference matrix to Prism-V1.md |
 
 ---
 
@@ -27,97 +28,139 @@
 |-----------|---------|-------|-------|
 | **↓ Top → Down** | Pull from top edge | Scheduler Drawer | Calendar + Timeline |
 | **↑ Bottom → Up** | Pull from bottom edge | Audio Drawer | Recordings |
-| **→ Left → Right** | Swipe from left edge | History Drawer | Sessions |
 
 ---
 
 ## §1. Interface Blueprints
 
-### 1.1 Home Screen (Session List)
+### 1.1 Home Screen (Chat-Centric Executive Desk)
 
 **Layout Structure:**
 ```
 ┌────────────────────────────────────────────────────────────┐
-│  [☰]  [📱]   SmartSales Assistant                  [✏️]    │ ← Header
-├────────────────────────────────────────────────────────────┤
+│ [☰] [📶]  Session: CEO Wang_ Procurement...   [🐞]  [➕]   │ ← Header
+│  ↑   ↑          (Editable Title)               ↑     ↑     │
+│  │   └─ Device State (BLE/WiFi)             Debug   New    │
+│  └─ History Drawer Trigger                          Session│
 │                                                            │
-│  ┌────────────────────────────────────────────────────────┐│
-│  │ 📅 今天 14:30                                          ││
-│  │ 客户Q4预算会谈摘要                                      ││ ← Today
-│  │ 财务部需要我们在下周一前提供新的报价方案...              ││
-│  └────────────────────────────────────────────────────────┘│
+│ ========================================================== │
+│ ||               TOP DRAWER: SCHEDULER                  || │
+│ ||           (Auto-Drops on Launch)                     || │
+│ ||            [ v Pull Handle ]                         || │
+│ ========================================================== │
+│                                                     [≣]    │ ← Menu (Tingwu)
 │                                                            │
-│  ┌────────────────────────────────────────────────────────┐│
-│  │ 📅 昨天                                                ││
-│  │ 💡 灵感：竞品分析策略                                   ││ ← Yesterday
-│  │ 需要重点关注A公司在华东市场的价格变动...                 ││
-│  └────────────────────────────────────────────────────────┘│
+│               [ BASE LAYER: HOME HERO ]             [📦]   │ ← Artifacts
 │                                                            │
-│  ┌────────────────────────────────────────────────────────┐│
-│  │ 📅 2026-01-20                                          ││
-│  │ 张总初次拜访记录                                        ││ ← Older
-│  │ 客户对A3打印机的兴趣度较高，但担心售后...                ││
-│  └────────────────────────────────────────────────────────┘│
+│                [  Breathing Aura  ]                        │
+│                     (✨)                                   │
+│            "下午好, Frank"                         │
 │                                                            │
-│                                                 [  🦠  ]   │ ← Knot FAB
+│             [ Toggle: Coach | Analyst ]                    │
+│ ────────────────────────────────────────────────────────── │
+│  [ 📎 ]  |  Type something to start... (Shimmering)     |  │
+│ ────────────────────────────────────────────────────────── │
+│                                                            │
+│ ========================================================== │
+│ ||            BOTTOM DRAWER: AUDIO MANAGER              || │
+│ ||              (Triggered by Mic FAB?)                 || │
+│ ========================================================== │
 └────────────────────────────────────────────────────────────┘
 ```
 
----
+**Key Interactions:**
+1.  **Header:**
+    *   `[☰]`: Opens **History Drawer** (Left).
+    *   `[📶]`: Device Connection State (Green/Gray).
+    *   `Title`: Tap to rename current session.
+    *   `[🐞]`: Toggle Debug HUD (Beta only).
+    *   `[➕]`: Start New Session (Clears context).
+2.  **Right Toolbar:**
+    *   `[≣]`: Menu (Tingwu Chapter Preview / Highlights).
+    *   `[📦]`: Artifacts Drawer (PDF/CSV/generated assets).
+3.  **Input Area:**
+    *   **Mode Toggle:** Sets *Intent* only (`Coach` = Purple, `Analyst` = Blue). Does **NOT** navigate.
+    *   **Input Interaction:** On Tap/Focus → Navigate to Chat Interface using the selected mode intent.
+    *   **Upload `[📎]`**: Attach Images/Audio.
+    *   **Shimmering Placeholder**: "输入消息..." (Localized).
+4.  **Auto-Drop Scheduler:**
+    *   On App Launch: Scheduler Drawer drops *over* this interface.
+    *   Dismissing Scheduler reveals this "Clean Desk".
 
-### Home Hero (Empty State)
 
-Visible only when session list is empty (new install or all cleared).
-
-```
-┌────────────────────────────────────────────────────────────┐
-│  [☰]  [📱]   SmartSales Assistant                  [✏️]    │
-├────────────────────────────────────────────────────────────┤
-│                                                            │
-│                                                            │
-│          ( Aurora / Breathing Animation )                  │
-│                                                            │
-│          欢迎回来，Frank                                    │
-│          今天想聊点什么？                                   │
-│                                                            │
-│  [ 📅 安排日程 ]   [ 💡 记录灵感 ]   [ 📊 分析数据 ]      │
-│                                                            │
-│                                                            │
-└────────────────────────────────────────────────────────────┘
-```
-
----
-
-### Knot FAB ("Living Intelligence")
-
-Top-layer Floating Action Button. Always visible.
-
-| State | Visual | Interaction |
-|-------|--------|-------------|
-| **Idle** | Breathing organic shape | Tap → Suggest Tip |
-| **Thinking** | Fast spin/pulse | (Non-interactive) |
-| **Tip Shown** | Tooltip bubble visible | Tap → Dismiss |
-
-```
-Tip Shown:
-                   ┌──────────────────────────┐
-                   │ 试试 "帮我总结昨天会议"    │
-                   └──────────┬───────────────┘
-                              │
-                          [  🦠  ]
-```
-
----
 
 ### Component Registry (Home Screen)
 
 | Component | User Sees | States | Internal Logic |
 |-----------|-----------|--------|----------------|
-| **Session Card** | Preview text + Date | `idle`, `swided-left`, `selected` | Opens Chat View |
-| **New Session [✏️]** | Pencil icon | `idle`, `pressed` | Creates new empty session |
-| **Knot FAB** | Organic orb | `breathing`, `spinning`, `tip` | Context-aware suggestions |
-| **History Drawer [☰]**| Hamburger icon | `idle`, `open` | Opens left drawer |
-| **Device Status [📱]**| Phone/Badge icon | `connected` (green), `disconnected` (gray) | Deep link to Device Manager |
+| **History Trigger [☰]** | Hamburger icon | `idle`, `open` | Opens Left Drawer (Sessions) |
+| **Device Status [📶]** | Signal icon | `on` (Green), `off` (Gray) | Opens **Connectivity Modal** (Truncated Onboarding) |
+| **Session Title** | Text "Session:..." | `read`, `edit` | Renames current session ID |
+| **Debug Toggle [🐞]** | Bug icon | `off`, `on` | Toggles overlay stats |
+| **New Session [➕]** | Plus icon | `idle`, `pressed` | 1. Clear Context 2. Gen new UUID |
+| **Tingwu Menu [≣]** | Text icon | `idle`, `pressed` | Opens Right Drawer (Transcript) |
+| **Artifacts [📦]** | Box icon | `idle`, `has-items` (Dot) | Opens Right Drawer (Files) |
+| **Mode Toggle** | Pill Switch | `coach` (Purple), `analyst` (Blue) | Sets `inputIntent` state. Navigation occurs on Input focus. |
+
+---
+
+
+
+
+### 1.2 Chat Interface (Coach/Analyst Toggle)
+
+**Coach Mode** — Fast, conversational. No visible "thinking" trace.
+
+**Layout Structure:**
+```
+┌────────────────────────────────────────────────────────────┐
+│  [☰]  [📱]   销售技巧交流                          [+]    │ ← Header
+├────────────────────────────────────────────────────────────┤
+│                                                            │
+│  ┌────────────────────────────────────────────────────────┐│
+│  │ [USER]                                                 ││
+│  │ 帮我分析一下张总这个客户的购买意向                      ││
+│  └────────────────────────────────────────────────────────┘│
+│                                                            │
+│  ┌────────────────────────────────────────────────────────┐│
+│  │ [AI - Coach]                                           ││
+│  │                                                        ││
+│  │ 根据您与张总的交流记录，我发现他对A3打印机方案表现出   ││ ← Direct Response
+│  │ 较高兴趣，但对售后服务有顾虑。建议下次拜访时重点强调   ││
+│  │ 我们的本地化服务团队...                                ││
+│  │                                                        ││
+│  │ ┌─────────────────────────────────────────────────┐   ││
+│  │ │ 💡 这看起来需要深度分析，建议切换到分析师模式     │   ││ ← Analyst suggestion
+│  │ │          [ 切换到分析师 ]                        │   ││   (optional, LLM decides)
+│  │ └─────────────────────────────────────────────────┘   ││
+│  └────────────────────────────────────────────────────────┘│
+│                                                            │
+│          [  💬 Coach▼ |  🔬 Analyst  ]                    │ ← Mode Toggle
+│                                                            │
+│  ┌────────────────────────────────────────────────────────┐│
+│  │ [+] │    输入消息...                            [➤]  ││ ← Input Bar
+│  └────────────────────────────────────────────────────────┘│
+└────────────────────────────────────────────────────────────┘
+```
+
+**Coach Mode Logic (Internal, Invisible to User):**
+1. Parse user intent
+2. Query Relevancy Library if needed (no UI feedback)
+3. Generate response directly
+4. Decide if deeper analysis is warranted → append suggestion block
+
+> **Note:** Coach does NOT show Thinking Box. The Thinking Box is reserved for **Analyst Mode** (Planner trace).
+
+### Component Registry (Chat Interface)
+
+| Component | User Sees | States | Internal Logic |
+|-----------|-----------|--------|----------------|
+| **Mode Toggle** | Segmented control | `coach`, `analyst`, `switching` | Sets `currentMode` in Orchestrator |
+| **Thinking Box** | Foldable trace | `hidden`, `folded`, `unfolded`, `complete` | DashScope native streaming |
+| **Plan Card** | Persistent checklist | `visible`, `executing`, `complete` | Prism §4.6 Planner-Centric |
+| **Tool Button** | Clickable item | `idle`, `running`, `done` | Executes plan step |
+| **In-Chat Conflict**| Unified Card | `visible`, `resolved` | §1.3 Conflict Component |
+| **Resolution** | Chat Options | `listening`, `processed` | 4-Option Selection (§3.10) |
 
 ---
 
@@ -201,9 +244,9 @@ Tip Shown:
 │  需要摘要吗？                                              │
 │                                                           │
 │  [USER - Blue Bubble]                                     │
-│  Yes, summary please.                                     │
+│  好的，请生成摘要。                                        │
 │                                                           │
-│  [ Input: "Ask for details or change..." ]        [Mic]   │
+│  [ 输入: "询问详情或调整..." ]                    [Mic]   │
 └───────────────────────────────────────────────────────────┘
 ```
 
@@ -310,7 +353,201 @@ STEP 4: Tap [问AI (N)] → Opens Coach with combined context
 
 ---
 
-### 1.4 Audio Drawer (Bottom-Up)
+### 1.4 History Drawer (Left-Side)
+
+**Reference Visual:**
+> See: `uploaded_media_1769512598007.png` (History Drawer Visual)
+
+**Layout Structure:**
+```
+┌────────────────────────────────────────────────────────────┐
+│  [🔋 85%]                  [📶 SmartBadge]                 │ 
+│  已连接 • 正常                                              │ 
+├────────────────────────────────────────────────────────────┤
+│  📌 置顶                                                   │
+│  张总_Q4预算审查                                           │
+│                                                            │
+│  📅 今天                                                   │
+│  王经理_A3项目跟进                                         │
+├────────────────────────────────────────────────────────────┤
+│  🗓️ 最近30天                                               │
+│  李财务_采购谈判中                                         │
+│  陈主任_竞品价格分析                                       │
+├────────────────────────────────────────────────────────────┤
+│  🗂️ 2025-12                                                │
+│  赵总_合作意向确认                                         │
+│  孙经理_产品演示汇报                                       │
+│                                                            │
+│            (Scrollable List - Minimalist Text)             │
+├────────────────────────────────────────────────────────────┤
+│  [👤 Avatar]   Frank Chen              [⚙️]                 │
+│                [PRO Badge]                                 │
+└────────────────────────────────────────────────────────────┘
+```
+
+**Key Components:**
+
+1.  **Device State Header (2-Row)**:
+    *   **Left**: Battery Icon + Percentage (Green text, e.g., "85%").
+    *   **Right**: WiFi Icon + Beaker Name (Gray text, e.g., "SmartBadge").
+    *   ** Connection Status Text (Gray, small, e.g., "已连接 • 正常").
+    *   **Action**: Opens **Connectivity Modal** (Truncated Onboarding) .
+
+2.  **Session List (Grouped)**:
+    *   **Groups**: `[Pin Icon] 置顶` (Pinned), `[Calendar Icon] 今天` (Today), `[Calendar Icon] 最近30天` (Last 30 Days), `[Folder Icon] YYYY-MM` (Month Archives).
+    *   **Item Style**: Minimalist text block. No heavy card borders.
+    *   **Content Format**: `[Client/Person Name]_[Summary]`
+        *   **Name Part**: Bold, primary color. The person/client you spoke with.
+        *   **Summary Part**: Regular weight, gray. **Max 6 Chinese characters**, topic/outcome of conversation.
+            **renaming logic**:related to session metadata mapping.
+    *   **Typography**: Single line total. Two-tone styling (bold name + gray summary).
+    *   **Examples**:
+        *   `张总_Q4预算审查` (Client: 张总, Topic: Q4 budget review)
+        *   `王经理_A3项目跟进` (Client: 王经理, Topic: A3 project follow-up)
+        *   `李财务_采购谈判中` (Client: 李财务, Topic: Procurement negotiation)
+
+3.  **User Footer**:
+    *   **Left**: Avatar Circle (approx 40dp).
+    *   **Middle**: Stacked Info.
+        *   Top: User Name ("Frank Chen").
+        *   Bottom: Plan Badge ("PRO" - **Teal/Green** rounded rect with white text).
+    *   **Right**: Settings Icon `[⚙️]` (Gray).
+
+**Interactions:**
+*   **Trigger**: **Hamburger Button `[☰]` ONLY**. (No Edge Swipe to open).
+*   **Closing**:
+    *   Tap Scrim (Outside area).
+    *   Swipe Drawer Left (Push back).
+*   **Session Actions**:
+    *   **Tap**: Load Session (Closes drawer).
+    *   **Long Press**: Context Menu (Pin, Rename, Delete).
+
+---
+
+### 1.5 Knot FAB (Optimization Pending)
+
+> **Status:** **Deferred to V2 Polish**. Feature is approved but low priority for V1 skeleton.
+
+**Concept:** "Living Intelligence". A floating orb that breathes and spins.
+**Location:** Bottom Right (above Input Bar).
+
+**States:**
+*   `Idle`: Breathing animation.
+*   `Thinking`: Spinning (during Analyst processing).
+*   `Tip Shown`: Tapping toggles a contextual tip bubble.
+
+---
+
+### 1.6 Onboarding Flow (Mandatory Badge Pairing)
+
+> **Source of Truth:** Ported from V12 Legacy Designs.
+
+**Screen 1: Welcome**
+```
+┌─────────────────────────────────────────────────┐
+│          ( Aurora Animation )                   │
+│                                                 │
+│       欢迎使用 SmartSales 助手                   │
+│       你的智能销售伙伴                           │
+│                                                 │
+│       [ 开始设置 ]                               │
+└─────────────────────────────────────────────────┘
+```
+
+**Screen 2: Profile (Step 1/2)**
+```
+┌─────────────────────────────────────────────────┐
+│  (•──○)  1/2                                    │
+│                                                 │
+│  告诉我们你是谁                                  │
+│                                                 │
+│  [ 姓名 ________________ ]                      │
+│  [ 职位 ________________ ]                      │
+│                                                 │
+│                               [ 下一步 ]         │
+└─────────────────────────────────────────────────┘
+```
+
+**Screen 3: Profile (Step 2/2)**
+```
+┌─────────────────────────────────────────────────┐
+│  (•──•)  2/2                                    │
+│                                                 │
+│  你的工作风格                                    │
+│                                                 │
+│  [ 行业 ________________ ]                      │
+│  [ 经验 ▼ 0-1年 / 1-3年 / 3年以上 ]              │
+│  [ 备注 ________________ ]                      │
+│    Placeholder: "如：主要沟通渠道、工作习惯等"    │
+│                                                 │
+│                               [ 完成 ]           │
+└─────────────────────────────────────────────────┘
+```
+
+**Screen 4: Badge Pairing**
+```
+┌─────────────────────────────────────────────────┐
+│        ( SmartBadge Illustration )              │
+│                                                 │
+│  连接你的 SmartBadge                             │
+│  实时录音 • 自动转写 • 智能总结                   │
+│                                                 │
+│  [ 开始配对 ]                                    │
+│  [ 稍后再说 ]                                    │
+└─────────────────────────────────────────────────┘
+```
+
+**Screen 5: Badge Gate (Unpaired Blocker)**
+> Shown if user skips pairing or enters Home without badge.
+
+```
+┌─────────────────────────────────────────────────┐
+│                                                 │
+│        ( Locked Icon + Badge Illustration )     │
+│                                                 │
+│  请先连接 SmartBadge                             │
+│  AI 功能需要配合徽章使用                          │
+│                                                 │
+│  [ 立即配对 ]                                    │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
+### 1.7 User Center (Settings Blueprint)
+
+**Page Layout:**
+```
+┌─────────────────────────────────────────────────────┐
+│  [👤 PROFILE CARD]                                  │
+│  Avatar | Name | Position | Level | Plan Badge     │
+│                            [ Edit Profile ]         │
+├─────────────────────────────────────────────────────┤
+│  § Preferences                                      │
+│    [ Theme: Dark / Light / System ]                 │
+│    [ AI Lab: Memory & Learning ]                    │
+│    [ Notifications & Pop-ups ]                      │
+├─────────────────────────────────────────────────────┤
+│  § Storage                                          │
+│    [ Used: 120MB ]  [ Clear Cache ]                 │
+├─────────────────────────────────────────────────────┤
+│  § Security                                         │
+│    [ Change Password ]  [ Biometric ]               │
+│    [ Logout All Devices ]                           │
+├─────────────────────────────────────────────────────┤
+│  § Support                                          │
+│    [ Help Center ]  [ Contact & Feedback ]          │
+├─────────────────────────────────────────────────────┤
+│  § About SmartSales                                 │
+│    v1.0.0  [ Updates ]  [ Privacy ]  [ Licenses ]   │
+└─────────────────────────────────────────────────────┘
+                      [ Log Out ]
+```
+
+
+---
+
+### 1.8 Audio Drawer (Bottom-Up)
 
 **Layout Structure:**
 ```
@@ -345,6 +582,14 @@ STEP 4: Tap [问AI (N)] → Opens Coach with combined context
 │                                                            │
 └────────────────────────────────────────────────────────────┘
 ```
+
+```
+
+**Interactions:**
+1.  **Open**: Pull up from bottom edge (>50px drag threshold) OR button tap.
+2.  **Dismiss**: Drag down (>100px offset) OR tap scrim OR tap pill handle.
+3.  **Height**: `95vh` (leaves 5% gap at top, mirroring Scheduler's 5% gap at bottom).
+4.  **Spring Animation**: `damping: 25, stiffness: 200` (consistent with Scheduler).
 
 ---
 
@@ -459,51 +704,7 @@ Drawer Opens
 | **Transcript Box** | Foldable text | `folded`, `unfolded`, `streaming` | Simulated streaming |
 | **Upload Button** | [+] row | `idle`, `picking`, `uploading` | Local file picker |
 
----
 
-### 1.2 Chat Interface (Coach/Analyst Toggle)
-
-**Coach Mode** — Fast, conversational. No visible "thinking" trace.
-
-**Layout Structure:**
-```
-┌────────────────────────────────────────────────────────────┐
-│  [☰]  [📱]   销售技巧交流                          [+]    │ ← Header
-├────────────────────────────────────────────────────────────┤
-│                                                            │
-│  ┌────────────────────────────────────────────────────────┐│
-│  │ [USER]                                                 ││
-│  │ 帮我分析一下张总这个客户的购买意向                      ││
-│  └────────────────────────────────────────────────────────┘│
-│                                                            │
-│  ┌────────────────────────────────────────────────────────┐│
-│  │ [AI - Coach]                                           ││
-│  │                                                        ││
-│  │ 根据您与张总的交流记录，我发现他对A3打印机方案表现出   ││ ← Direct Response
-│  │ 较高兴趣，但对售后服务有顾虑。建议下次拜访时重点强调   ││
-│  │ 我们的本地化服务团队...                                ││
-│  │                                                        ││
-│  │ ┌─────────────────────────────────────────────────┐   ││
-│  │ │ 💡 这看起来需要深度分析，建议切换到分析师模式     │   ││ ← Analyst suggestion
-│  │ │          [ 切换到分析师 ]                        │   ││   (optional, LLM decides)
-│  │ └─────────────────────────────────────────────────┘   ││
-│  └────────────────────────────────────────────────────────┘│
-│                                                            │
-│          [  💬 Coach▼ |  🔬 Analyst  ]                    │ ← Mode Toggle
-│                                                            │
-│  ┌────────────────────────────────────────────────────────┐│
-│  │ [+] │    输入消息...                            [➤]  ││ ← Input Bar
-│  └────────────────────────────────────────────────────────┘│
-└────────────────────────────────────────────────────────────┘
-```
-
-**Coach Mode Logic (Internal, Invisible to User):**
-1. Parse user intent
-2. Query Relevancy Library if needed (no UI feedback)
-3. Generate response directly
-4. Decide if deeper analysis is warranted → append suggestion block
-
-> **Note:** Coach does NOT show Thinking Box. The Thinking Box is reserved for **Analyst Mode** (Planner trace).
 
 ---
 
@@ -666,17 +867,28 @@ When AI detects a conflict (from Relevancy Library):
 ┌────────────────────────────────────────────────────────────┐
 │ [AI - Coach]                                               │
 │                                                            │
-│ 我注意到您之前提到周三要拜访李总，但现在又安排了张总会议。  │
-│                                                            │
 │ ┌───────────────── ⚠️ 时间冲突 ─────────────────────────┐ │
 │ │                                                        │ │
-│ │  ○ 保留李总拜访，取消张总会议                          │ │
-│ │  ○ 保留张总会议，延后李总拜访                          │ │
-│ │  ○ 我来重新安排...                                     │ │
+│ │  新请求: 与张总会面 (14:00)                              │ │
+│ │  Existing:    Lunch with Team    (14:00)               │ │
 │ │                                                        │ │
-│ │                                      [ 确认 ]          │ │
 │ └────────────────────────────────────────────────────────┘ │
+│                                                            │
+│ 发现日程冲突。根据您的历史偏好，我有以下建议：              │
+│                                                            │
+│ 1. 优先客户：取消团队午餐，保留张总会议 (推荐)              │
+│ 2. 兼顾双方：将午餐提前到 12:00，会议推迟到 14:30           │
+│ 3. 维持原状：拒绝张总会议                                   │
+│ 4. 听您的：手动调整... (自定义)                             │
+│                                                            │
+│ (您可以通过语音或打字选择，例如"选方案1" 或 "按推荐办")      │
 └────────────────────────────────────────────────────────────┘
+```
+
+**User Interaction:**
+*   **Chat-First Choice**: User selects via natural language ("Option 1", "Move lunch").
+*   **AI Reasoning**: Options are derived from `RelevancyLibrary` (e.g., "Client First" rule).
+*   **No Raw Buttons**: Interaction remains purely conversational.
 ```
 
 ---
@@ -713,7 +925,7 @@ When AI detects a conflict (from Relevancy Library):
 ### Scheduler Flows
 
 #### 3.1 ESP32 Voice → Transcribe → Schedule
-**Scenario:** User records "Schedule a meeting with Zhang next Tuesday at 3pm." via badge.
+**Scenario:** User records "帮我约张总下周二下午3点的会" (Schedule meeting with Zhang) via badge.
 
 ```
 USER (Audio)     SYSTEM (Background)                USER INTERFACE
@@ -727,7 +939,7 @@ Records Voice -> Badge Uploads WAV -> Syncs ->      Audio Drawer [Cards: +1]
                  Scheduler Adds Pending Task ->     Scheduler Drawer Opens (Auto)
                                                     Card Appears:
                                                     ┌───────────────────────────────┐
-                                                    │ ☐ Meeting with Zhang  [Pending]│
+                                                    │ ☐ 与张总会面          [待确认] │
                                                     │   Tue, 3:00 PM                │
                                                     │   [Confirm]  [Edit]           │
                                                     └───────────────────────────────┘
@@ -765,7 +977,7 @@ Records Fix ->   Tingwu Transcribes ->
   ┌─────────────────────────┐   ┌─────────────────────────────┐
   │ ☐ Meeting Zhang [Updated]│   │ ⚠️ Meeting Zhang  [Conflict]│
   │   Tue, 4:00 PM           │   │   Tue, 4:00 PM              │
-  │   📝 3:00 → 4:00 PM      │   │   ──────────────────────────│
+  │   📝 3:00 PM (Start)     │   │   ──────────────────────────│
   │   [Confirm] [Edit]       │   │   ⚠️ 与李总电话冲突 (4:00 PM)│
   └─────────────────────────┘   │   [解决冲突] [仍然保留]      │
                                  └─────────────────────────────┘
@@ -833,7 +1045,7 @@ USER ACTION
 ───────────                          
 Tap [Expand] on Conflict Card        Card Expands:
                                      ┌───────────────────────────────────┐
-                                     │ ⚠️ Conflict: Lunch vs Call        │
+                                     │ ⚠️ 冲突: 与张总午餐 vs 电话会议   │
                                      │ ○ Keep Lunch (Cancel Call)        │
                                      │ ○ Keep Call (Postpone Lunch)      │
                                      │ ○ Manual Reschedule...            │
@@ -896,7 +1108,7 @@ STATE: Active                        [⏰ 智能提醒] Visible
    ↓
 (Time Reached) -> System Notification + Full Screen Pop-up
                   ┌────────────────────────┐
-                  │ ⏰ Meeting with Zhang  │
+                  │ ⏰ 与张总会面          │
                   │    3:00 PM             │
                   │ [Dismiss] [Snooze 10m] │
                   └────────────────────────┘
@@ -940,7 +1152,7 @@ Top-layer chat UI. No special cards.
 
 ### Analyst Flows
 
-#### 3.11 Full Analysis Analysis (Plan Card)
+#### 3.11 Full Analysis (Plan Card with Chat Hints)
 **Scenario:** User: "Analyze Zhang's buying cycle."
 
 ```
@@ -949,17 +1161,26 @@ USER ACTION                          SYSTEM RESPONSE
 Switch to Analyst Mode               Theme: Blue. Right Dock Visible.
 Input: "Analyze Zhang..."            Thinking Box: Active (Streaming)
                                      
-                                     Generate Plan Card:
+                                     Create Plan Card:
                                      ┌──────────────────────────────┐
-                                     │ 📋 Analysis Plan             │
-                                     │ ☑ 1. Profile Summary  [Done] │
-                                     │ ☐ 2. Cycle Calc       [Run]  │
-                                     │ ☐ 3. Strategy Gen     [Run]  │
+                                     │ 📋 分析计划 (Analysis Plan)   │
+                                     │ ☑ 1. 概况总结 (Summary) [完成] │
+                                     │ ☐ 2. 周期计算         [等待] │
+                                     │ ☐ 3. 策略生成         [等待] │
                                      └──────────────────────────────┘
                                      
-Tap [Run] on Step 2                  Tool executes. Result appears below.
-                                     Card updates: Step 2 [Done]
+                                     [AI - Analyst]:
+                                     "计划已生成。第一步已完成。
+                                     是否继续进行周期计算？"
+                                     
+Input: "Yes, go ahead."              Tool executes Step 2.
+                                     Card updates: Step 2 [完成]
 ```
+
+**Chat-Hint Interaction:**
+*   Instead of `[Run]` buttons, the AI **verbally proposes** the next action.
+*   User confirms via text/voice ("Yes", "Run next", "Do it").
+*   **Why?** Maintains conversational flow & authority of the Analyst.
 
 #### 3.12 Follow-up Chat
 **Scenario:** User asks question while Plan is active.
@@ -1049,7 +1270,33 @@ When confidence is low or user taps `[更改]`:
 
 ---
 
-## §4. Prism Spec Validation Matrix
+---
+
+## §4 System Notifications (Snackbar)
+
+> **Philosophy**: Transparent system status updates without blocking the user flow.
+> **Behavior**: Appears at bottom (above keyboard/nav), auto-dismisses after 4s.
+
+| Notification Type | Trigger Condition | Content Format |
+|-------------------|-------------------|----------------|
+| **Clarification Needed** | Ambiguous entity (low confidence score) | `⚠️ 需要澄清: [Entity Name] (歧义请求)` |
+| **Conflict Spotted** | Schedule overlap detected | `⚠️ 发现冲突: [Event A] vs [Event B]` |
+| **Relevancy Found** | Background library match | `✨ 发现关联: [Entity Name] (置信度: [Score]%)` |
+| **Client Info Updated** | Profile enrichment via Relevancy Lib | `👤 客户信息更新: [Name] (新增偏好/职位...)` |
+| **Knowledge Added** | New fact learned from context | `📚 知识库扩充: [Topic] (来源: [Source])` |
+| **Relationship Change** | Entity connection detected | `🔗 关系网变动: [Person A] -> [Person B]` |
+| **Refreshed Memory** | User profile/context updated | `🧠 记忆已更新: [Key Information]` |
+| **Tingwu Complete** | Transcription finished in background | `📝 转写完成: [File Name] (点击查看)` |
+| **Task Created** | Voice command processed | `✅ 日程已创建: [Task Name] [Time]` |
+
+**Visual Style:**
+*   **Conflict/Warning**: Amber/Yellow accent.
+*   **Relevancy/Info**: Prism Blue/Purple accent.
+*   **Action**: Tapping the snackbar jumps to the relevant card or context.
+
+---
+
+## §5 Prism Spec Validation Matrix
 
 | Flow ID | Prism Section | Component/Mechanic | Status |
 |---------|---------------|--------------------|--------|

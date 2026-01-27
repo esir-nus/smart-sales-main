@@ -8,17 +8,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.smartsales.prism.ui.PrismChatScreen
+import com.smartsales.prism.domain.core.FakeHistoryRepository
+import com.smartsales.prism.ui.PrismShell
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 /**
  * Prism Main Activity
  * 
  * Entry point for the Prism Clean Room application.
- * Hosts the PrismChatScreen with FakeOrchestrator.
+ * Hosts the PrismShell with Scheduler/History drawers.
  */
 @AndroidEntryPoint
 class PrismMainActivity : ComponentActivity() {
+    
+    @Inject
+    lateinit var historyRepository: FakeHistoryRepository
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -28,7 +34,7 @@ class PrismMainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    PrismChatScreen()
+                    PrismShell(historyRepository = historyRepository)
                 }
             }
         }

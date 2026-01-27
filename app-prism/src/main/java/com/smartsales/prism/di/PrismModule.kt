@@ -1,7 +1,7 @@
 package com.smartsales.prism.di
 
+import com.smartsales.prism.domain.core.FakeOrchestrator
 import com.smartsales.prism.domain.core.Orchestrator
-import com.smartsales.prism.domain.core.RealOrchestrator
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -12,7 +12,8 @@ import javax.inject.Singleton
  * Prism DI Module
  * 
  * Provides Orchestrator binding for the Prism monolith.
- * Phase 3: Using RealOrchestrator with DashScope API.
+ * Phase 2: Using FakeOrchestrator for skeleton development.
+ * TODO: Switch back to RealOrchestrator in Phase 3.
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -20,6 +21,5 @@ abstract class PrismModule {
     
     @Binds
     @Singleton
-    abstract fun bindOrchestrator(real: RealOrchestrator): Orchestrator
+    abstract fun bindOrchestrator(fake: FakeOrchestrator): Orchestrator
 }
-

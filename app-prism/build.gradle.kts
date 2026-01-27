@@ -95,6 +95,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.hilt.navigation.compose)
+    implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation(libs.androidx.core.ktx)
     implementation(libs.coroutines.android)
     implementation(libs.hilt.android)

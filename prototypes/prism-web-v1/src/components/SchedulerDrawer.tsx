@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, type PanInfo, AnimatePresence } from 'framer-motion';
-import { Clock, BellRing, Trash2, Sparkles, X, Check } from 'lucide-react';
+import { BellRing, Trash2, Sparkles, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { InspirationCard } from './InspirationCard';
 import { ConflictCard } from './ConflictCard';
@@ -34,10 +34,6 @@ const ExpandedTaskCard = ({ item }: { item: any }) => {
                              <span>08:50</span>
                         </div>
                     )}
-                    
-                    <span className="text-xs text-gray-400 flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-full">
-                        <Clock size={10} /> {item.duration}
-                    </span>
                 </div>
             </div>
             
@@ -146,8 +142,19 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
 
   // Generate Month Grid (Simple 5 weeks)
   const monthGrid = React.useMemo(() => {
-    const start = new Date(currentWeekStart.getFullYear(), currentWeekStart.getMonth(), 1);
-    const offset = start.getDay() === 0 ? 6 : start.getDay() - 1; // Start Mon
+    // Always anchor to the Month of the selected currentWeekStart
+    // But we need to ensure the grid covers the view
+    const year = currentWeekStart.getFullYear();
+    const month = currentWeekStart.getMonth();
+    const start = new Date(year, month, 1);
+    
+    // Calculate start offset (Monday = 0)
+    // getDay(): Sun=0, Mon=1...Sat=6
+    // We want Mon=0...Sun=6. 
+    // If Sun(0), offset is 6. If Mon(1), offset is 0.
+    const day = start.getDay();
+    const offset = day === 0 ? 6 : day - 1; 
+
     start.setDate(start.getDate() - offset);
     
     return Array.from({ length: 35 }, (_, i) => {
@@ -156,6 +163,35 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
       return d;
     });
   }, [currentWeekStart]);
+
+  // Calculate Y Offset for Calendar
+  const calendarYOffset = React.useMemo(() => {
+      if (isExpanded) return 0;
+      
+      const index = monthGrid.findIndex(d => 
+          d.getDate() === selectedDate && 
+          d.getMonth() === currentWeekStart.getMonth()
+      );
+      
+      const safeIndex = index === -1 ? 0 : index;
+      return -(Math.floor(safeIndex / 7) * 56);
+  }, [isExpanded, monthGrid, selectedDate, currentWeekStart]);
+
+  // Handle Swipe (Left/Right) to change week/month
+  const handleCalendarDragEnd = (_: any, info: PanInfo) => {
+      const SWIPE_THRESHOLD = 50;
+      if (Math.abs(info.offset.x) > SWIPE_THRESHOLD) {
+          const direction = info.offset.x > 0 ? -1 : 1; // Drag Right -> Prev, Drag Left -> Next
+          
+          if (!isExpanded) {
+             // Week Swipe
+             const newDate = new Date(currentWeekStart);
+             newDate.setDate(newDate.getDate() + (direction * 7));
+             setCurrentWeekStart(newDate);
+             // Note: We keep the selectedDate (int) as is, effectively selecting the same weekday in the new week.
+          }
+      }
+  };
 
   return (
 
@@ -224,19 +260,14 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
                      {/* The Full Month Grid - Always Rendered */}
                      <motion.div
                         animate={{
-                            y: isExpanded ? 0 : -(
-                                (() => {
-                                    // Find index of selected date in the grid
-                                    const index = monthGrid.findIndex(d => 
-                                        d.getDate() === selectedDate && 
-                                        d.getMonth() === currentWeekStart.getMonth()
-                                    );
-                                    const safeIndex = index === -1 ? 0 : index;
-                                    return Math.floor(safeIndex / 7) * 56; // 56px per row (48px height + 8px gap)
-                                })()
-                            )
+                            y: calendarYOffset
                         }}
                         transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        drag={isExpanded ? false : "x"} // Enable drag only when folded
+                        dragConstraints={{ left: 0, right: 0 }}
+                        dragElastic={0.2}
+                        onDragEnd={handleCalendarDragEnd}
+                        className="touch-pan-y" // Allow vertical scrolling still?
                      >
                         <div className="grid grid-cols-7 gap-y-2 place-items-center w-full">
                             {monthGrid.map((d) => {
@@ -289,10 +320,13 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
              
              {/* Calendar Expansion Handle (Bottom Pill) */}
              <div 
-                className="w-full flex justify-center py-4 mt-auto cursor-grab active:cursor-grabbing hover:bg-black/5 transition-all"
-                onClick={() => setIsExpanded(!isExpanded)}
+                className="w-full flex justify-center py-4 mt-auto cursor-pointer active:scale-95 hover:bg-black/5 transition-all z-20"
+                onClick={(e) => {
+                    e.stopPropagation(); // Prevent parent drag handlers
+                    setIsExpanded(!isExpanded);
+                }}
              >
-                 <div className="w-8 h-1 bg-gray-200 rounded-full" />
+                 <div className="w-8 h-1 bg-gray-300 rounded-full" />
              </div>
         </motion.div>
 

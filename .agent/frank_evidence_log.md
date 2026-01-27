@@ -8,6 +8,22 @@
 
 <!-- Add new candidates at the top -->
 
+### [CANDIDATE] "Literal Spec Alignment Audit"
+- **Date**: 2026-01-27
+- **Context**: History Drawer audit falsely claimed "Match" on grouping buckets. Agent summarized spec instead of comparing verbatim.
+- **Evidence**: Spec said `今天, 最近30天, YYYY-MM`. Code said `今天, 昨天, 过去7天`. Agent marked it ✅.
+- **Frank's Insight**: Never summarize specs. Create a Literal Comparison Table with exact spec strings vs exact code strings. Any mismatch is a HARD NO.
+- **Observations**: 1
+
+### [CANDIDATE] "Evidence-Based Extract vs Rewrite"
+- **Date**: 2026-01-27
+- **Context**: Phase 2 UX Layer plan — initial plan proposed rewriting ThinkingBox/PlanCard from scratch.
+- **Evidence**: Senior review found 493 lines of tested code in `/archived/`. Grep verification showed package mismatch requiring rename but logic was sound.
+- **Frank's Insight**: Before proposing a rewrite, grep for existing implementations. If alignment is good and coupling is low, EXTRACT. Don't let "archived" mean "forgotten".
+- **Observations**: 1
+
+
+
 ### [CANDIDATE] "Icon-First Intelligence"
 - **Date**: 2026-01-26
 - **Context**: Scheduler Inspiration Card.
@@ -106,4 +122,11 @@
 - **Context**: Scheduler Drawer had Top-Drawer geometry (rounded bottom) but Bottom-Sheet physics (slide up).
 - **Evidence**: User called it a "dumb mistake". Fixed by aligning animation (y: -100%) to geometry.
 - **Frank's Insight**: Visual affordances must match physical behavior. If it looks like it hangs, it must slide down.
+- **Observations**: 1
+
+### [CANDIDATE] "Pragmatic Friction Reduction over Physics Polish"
+- **Date**: 2026-01-27
+- **Context**: Scheduler Drawer interaction felt "poorly designed". Choice between implementing complex `AnchoredDraggable` physics (Foundation 1.6+) vs simple Scrim Dismiss.
+- **Evidence**: Senior review flagged `AnchoredDraggable` as overkill for skeleton. Implemented Scrim (10 lines) which solved the "reachability" friction immediately.
+- **Frank's Insight**: "You're tracking pixels when you should be tracking intent. Tapping outside is the ultimate intent signal. Ship the scrim, defer the physics."
 - **Observations**: 1

@@ -253,3 +253,15 @@ Readiness = (Verified/Total Assumptions × 60) + Evidence(0-20) + Risk(0-20)
 - [ ] Verified file/class existence
 - [ ] Checked for dependencies
 - [ ] **Verified config is in native `.agent/` structure**
+- [ ] **[UI/UX] Ran Literal Spec Alignment Audit (`/06-audit`)** — No ❌ in comparison table
+
+### Spec Alignment Gate (UI/UX Plans)
+
+> **For any implementation plan touching UI/UX code, run `/06-audit` with the Literal Spec Alignment section BEFORE approval.**
+
+If the Literal Comparison Table contains ANY ❌:
+- **BLOCK** the plan
+- Require spec change OR code change to resolve
+- Do NOT proceed until all rows are ✅
+
+**Motto**: "Spec says `最近30天`, code says `最近30天`. No synonyms."

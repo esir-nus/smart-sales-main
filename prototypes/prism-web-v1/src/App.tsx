@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { MobileFrame } from './components/MobileFrame';
 import { AuroraBackground } from './components/AuroraBackground';
 import { Header } from './components/Header';
@@ -10,8 +10,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Circle, Rocket } from 'lucide-react';
 import { clsx } from 'clsx';
 
+import { HomeScreen } from './components/HomeScreen';
+import { HistoryDrawer } from './components/HistoryDrawer';
+import { AudioDrawer } from './components/AudioDrawer';
+import { RightToolbar } from './components/RightToolbar';
+import { ModeToggle } from './components/ModeToggle';
+
 // Types
-type Mode = 'coach' | 'analyst';
+type Mode = 'coach' | 'analyst' | 'home';
 type Message = {
     id: string;
     role: 'user' | 'assistant';
@@ -77,12 +83,24 @@ const OnboardingScreen = () => (
 );
 
 function App() {
-  const [mode, setMode] = useState<Mode>('coach');
+  const [mode, setMode] = useState<Mode>('home'); // View Mode
+  const [inputIntent, setInputIntent] = useState<'coach' | 'analyst'>('coach'); // Toggle State
   const [isOnboarding, setIsOnboarding] = useState(false); // New State
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false); // History Drawer State
+  const [isAudioOpen, setIsAudioOpen] = useState(false); // Audio Drawer State
+  
+  // Auto-expand Scheduler on first launch (Clean Desk Paradigm)
+  useEffect(() => {
+    // Small delay to allow initial render to settle
+    const timber = setTimeout(() => {
+        setIsDrawerOpen(true);
+    }, 500);
+    return () => clearTimeout(timber);
+  }, []);
   const [messages, setMessages] = useState<Message[]>([
     { id: '1', role: 'assistant', content: '下午好，Frank。准备好回顾 Q4 了吗？' }
   ]);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [showPlan, setShowPlan] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -96,9 +114,10 @@ function App() {
       // 2. State Specific Logic
       if (destination === 'Home') {
           setIsOnboarding(false);
-          setMode('coach');
+          setMode('home');
           setShowPlan(false);
-          setMessages([{ id: '1', role: 'assistant', content: '下午好，Frank。准备好回顾 Q4 了吗？' }]);
+          // Don't reset messages if just viewing home, but if starting fresh...
+          // For prototype, keep messages as context unless explicit reset
       }
       if (destination === 'Onboarding') {
           setIsOnboarding(true);
@@ -108,7 +127,7 @@ function App() {
           // Force reset messages if switching from another deep state? No, keep context or reset?
           // Brief implies "Analyst Mode" should trigger the plan scenario.
           if (mode !== 'analyst') {
-             runScenario('plan');
+             runScenario('analyst');
           }
       }
       if (destination === 'Scheduler') {
@@ -117,19 +136,29 @@ function App() {
           setIsOnboarding(false);
           setIsDrawerOpen(true);
       }
+      if (destination === 'Audio') {
+          setIsOnboarding(false);
+          setIsAudioOpen(true);
+      }
   };
 
   // Mock Scenario Trigger
-  const runScenario = (type: 'plan' | 'schedule') => {
-      if (type === 'plan') {
+  const runScenario = (targetMode?: 'coach' | 'analyst' | 'schedule') => {
+      const target = targetMode || inputIntent;
+      
+      if (target === 'analyst') {
+          // Analyst Flow
           setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: '对 A3 项目进行深度分析。' }]);
           setTimeout(() => {
               setMode('analyst');
               setShowPlan(true); 
               setMessages(prev => [...prev, { id: 'sys', role: 'assistant', content: '正在构建分析上下文...', isTyping: true }]);
           }, 600);
-      }
-      if (type === 'schedule') {
+      } else if (target === 'coach') {
+          // Coach Flow
+          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: '帮我回顾一下今天的重点。' }]);
+          setMode('coach');
+      } else if (target === 'schedule') {
           setIsDrawerOpen(true);
       }
   };
@@ -137,57 +166,124 @@ function App() {
   return (
     <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center pl-64 transition-all duration-300">
         
+
         {/* Persistent Dashboard Sidebar */}
         <PrototypeDashboard onNavigate={handleDashboardNav} />
 
         {/* Mobile Frame (Centered in remaining space) */}
+
         <MobileFrame>
           <AuroraBackground />
-          <Header />
+          <Header 
+            title={mode === 'home' ? "Session: CEO Wang..." : "智能销售"} 
+            showHomeActions={mode === 'home'}
+            onReset={() => setMessages([])}
+            onMenuClick={() => setIsHistoryOpen(true)}
+          />
           
           {/* Onboarding Overlay */}
           <AnimatePresence>
             {isOnboarding && <OnboardingScreen />}
           </AnimatePresence>
 
+          {/* History Drawer (Left) */}
+          <AnimatePresence>
+            {isHistoryOpen && (
+                <HistoryDrawer 
+                    isOpen={isHistoryOpen} 
+                    onClose={() => setIsHistoryOpen(false)} 
+                    onSelectSession={(id) => {
+                        console.log('Selected session:', id);
+                        setIsHistoryOpen(false);
+                    }}
+                />
+            )}
+          </AnimatePresence>
+
+          {/* Audio Drawer (Bottom) */}
+          <AudioDrawer 
+            isOpen={isAudioOpen} 
+            onClose={() => setIsAudioOpen(false)} 
+          />
+
           {/* Scheduler Drawer (Overlay) */}
           <SchedulerDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
 
           {/* Main Chat Area */}
-          <div className="flex-1 overflow-y-auto p-4 pb-32 space-y-4 z-10 no-scrollbar" ref={scrollRef}>
-            
-            {/* Analyst Plan Card (Persists at top) */}
-            <AnimatePresence>
-                {showPlan && <PlanCard />}
-            </AnimatePresence>
+          <div className="flex-1 overflow-hidden flex flex-col z-10 relative">
+             <AnimatePresence mode='wait'>
+                {mode === 'home' ? (
+                    <motion.div 
+                        key="home"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex-1 h-full"
+                    >
+                        <HomeScreen onNavigate={handleDashboardNav} />
+                    </motion.div>
+                ) : (
+                    <motion.div 
+                        key="chat" 
+                        initial={{ opacity: 0 }} 
+                        animate={{ opacity: 1 }} 
+                        exit={{ opacity: 0 }}
+                        className="flex-1 overflow-y-auto p-4 pb-32 space-y-4 no-scrollbar" 
+                        ref={scrollRef}
+                    >
+                        {/* Analyst Plan Card (Persists at top) */}
+                        <AnimatePresence>
+                            {showPlan && <PlanCard />}
+                        </AnimatePresence>
 
-            {messages.map((msg) => (
-                <motion.div 
-                    key={msg.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={clsx(
-                        "max-w-[85%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed shadow-sm",
-                        msg.role === 'user' 
-                            ? "bg-prism-accent text-white self-end ml-auto rounded-tr-sm" 
-                            : "glass-card text-gray-800 self-start mr-auto rounded-tl-sm"
-                    )}
-                >
-                    {msg.content}
-                </motion.div>
-            ))}
+                        {messages.map((msg) => (
+                            <motion.div 
+                                key={msg.id}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className={clsx(
+                                    "max-w-[85%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed shadow-sm",
+                                    msg.role === 'user' 
+                                        ? "bg-prism-accent text-white self-end ml-auto rounded-tr-sm" 
+                                        : "glass-card text-gray-800 self-start mr-auto rounded-tl-sm"
+                                )}
+                            >
+                                {msg.content}
+                            </motion.div>
+                        ))}
+                    </motion.div>
+                )}
+             </AnimatePresence>
           </div>
 
           {/* Controls */}
+          {mode === 'home' && <RightToolbar onAudioClick={() => setIsAudioOpen(true)} />}
           <KnotFAB isThinking={mode === 'analyst'} onClick={() => setIsDrawerOpen(!isDrawerOpen)} />
           
           {/* Input - Hackily mocking scenarios via click for prototype */}
-          <div className="absolute bottom-8 left-4 right-4 z-30" onClick={() => runScenario(mode === 'coach' ? 'plan' : 'schedule')}>
-             <InputBar /> 
-             {/* Instruction Overlay */}
-             <div className="absolute -top-12 left-0 right-0 text-center text-xs text-gray-400 font-mono pointer-events-none">
-                点击输入栏模拟: {mode === 'coach' ? '发起分析请求' : '打开日程安排'}
-             </div>
+          <div className="absolute bottom-8 left-4 right-4 z-30">
+               {/* Always show InputBar in Home mode for V2, or if Chatting */}
+               <div onClick={() => {
+                   if (mode === 'home') runScenario();
+               }}>
+                   <InputBar 
+                       topAccessory={mode === 'home' ? (
+                           <div onClick={(e) => e.stopPropagation()}>
+                               <ModeToggle 
+                                   mode={inputIntent}
+                                   onModeChange={setInputIntent}
+                               />
+                           </div>
+                       ) : null}
+                   /> 
+               </div>
+               
+               {/* Instruction Overlay */}
+               {mode === 'home' && (
+                   <div className="absolute -top-24 left-0 right-0 text-center text-xs text-white/50 font-mono pointer-events-none">
+                        [Prototype] Click Input to enter {inputIntent === 'coach' ? 'Coach' : 'Analyst'} Mode
+                   </div>
+               )}
           </div>
 
         </MobileFrame>

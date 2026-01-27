@@ -15,6 +15,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.smartsales.prism.domain.core.Mode
 import com.smartsales.prism.domain.core.UiState
+import com.smartsales.prism.ui.components.PlanCard
+import com.smartsales.prism.ui.components.ResponseBubble
+import com.smartsales.prism.ui.components.ThinkingBox
 
 /**
  * Prism Chat Screen
@@ -78,7 +81,24 @@ private fun PrismChatContent(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                ResponseBubble(uiState = uiState)
+                // 根据 UiState 渲染对应组件
+                when (uiState) {
+                    is UiState.PlanCard -> {
+                        PlanCard(
+                            plan = uiState.plan,
+                            completedSteps = uiState.completedSteps
+                        )
+                    }
+                    is UiState.Thinking -> {
+                        ThinkingBox(
+                            content = uiState.hint ?: "正在分析...",
+                            isComplete = false
+                        )
+                    }
+                    else -> {
+                        ResponseBubble(uiState = uiState)
+                    }
+                }
             }
         }
 
@@ -149,30 +169,7 @@ private fun ModeToggleBar(
     }
 }
 
-@Composable
-private fun ResponseBubble(uiState: UiState) {
-    val (message, color) = when (uiState) {
-        is UiState.Idle -> "等待输入..." to Color(0xFF666666)
-        is UiState.Loading -> "加载中..." to Color(0xFF4FC3F7)
-        is UiState.Thinking -> (uiState.hint ?: "思考中...") to Color(0xFF4FC3F7)
-        is UiState.Streaming -> uiState.partialContent to Color.White
-        is UiState.Response -> uiState.content to Color.White
-        is UiState.Error -> "❌ ${uiState.message}" to Color(0xFFFF6B6B)
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF1A1A2E), RoundedCornerShape(12.dp))
-            .padding(16.dp)
-    ) {
-        Text(
-            text = message,
-            color = color,
-            fontSize = 16.sp
-        )
-    }
-}
+// ResponseBubble 已移至 components/ResponseBubble.kt
 
 @Composable
 private fun InputBar(

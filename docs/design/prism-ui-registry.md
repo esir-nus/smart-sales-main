@@ -48,8 +48,13 @@ The official list of available Prism UI components.
 | `MOL-03` | **Conflict Card** | `ConflictResolver.kt` | `feature/chat/...` | ✅ **Verified** | `options: List`, `onConfirm: Fn` |
 | `MOL-04` | **Chat Bubble** | `ResponseBubble.kt` | `feature/chat/...` | ✅ **Verified** | `content: String`, `UiState` |
 | `MOL-05` | **Memory Toast** | `MemorySnackbar.kt` | `feature/chat/...` | ✅ **Verified** | `MemoryNotification` (Category, Message) |
-| `MOL-06` | **Input Bar** | `InputBar` (Inline) | `MinimalChatScreen.kt` | ✅ **Verified** | `text: String`, `onSend: Fn` |
-| `MOL-07` | **Mode Toggle** | `ModeToggleBar` (Inline) | `MinimalChatScreen.kt` | ✅ **Verified** | `currentMode: Mode`, `onSwitch: Fn` |
+| `MOL-06` | **Input Bar** | `InputBar` (Inline) | `MinimalChatScreen.kt` | ✅ **Verified** | `text: String`, `isSending: Bool`, `onInputChanged: Fn`, `onSend: Fn`, `onAudio: Fn` (Pending), `onImage: Fn` (Pending) |
+| `MOL-07` | **Mode Toggle** | `ModeToggleBar` (Inline) | `MinimalChatScreen.kt` | ✅ **Verified** | `currentMode: Mode`, `onModeSwitch: Fn` |
+| `MOL-08` | **Tingwu Recorder** | `TingwuRecorder.kt` | `feature/chat/...` | ✅ **Verified** | `isRecording: Bool`, `amplitude: Float`, `onStart: Fn`, `onStop: Fn` |
+| `MOL-09` | **Vision Picker** | `VisionPicker.kt` | `feature/chat/...` | ✅ **Verified** | `onImageSelected: Fn` |
+| `MOL-10` | **BLE Status** | `BleStatusIndicator.kt` | `feature/chat/...` | ✅ **Verified** | `isConnected: Bool`, `deviceName: String`, `onConnect: Fn` |
+| `MOL-11` | **URL Fetcher** | `UrlInputBox.kt` | `feature/chat/...` | ✅ **Verified** | `url: String`, `isFetching: Bool`, `onUrlChanged: Fn`, `onFetch: Fn` |
+
 
 **Status Legend**:
 *   ⚪ **To Implement**: Implementation pending.

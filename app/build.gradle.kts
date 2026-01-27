@@ -75,6 +75,10 @@ kapt {
     correctErrorTypes = true
 }
 
+configurations.all {
+    exclude(group = "com.google.guava", module = "listenablefuture")
+}
+
 dependencies {
     implementation(projects.data.aiCore)
     implementation(projects.domain.prismCore)

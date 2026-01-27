@@ -10,9 +10,12 @@ import javax.inject.Singleton
 
 /**
  * Prism Pipeline Hilt 模块 — 绑定核心管道接口
+ * 
+ * TODO(Phase 3): 取消注释 @InstallIn 以启用真实实现
+ * 当前被禁用以避免与 FakeCoreModule 冲突
  */
 @Module
-@InstallIn(SingletonComponent::class)
+// @InstallIn(SingletonComponent::class) // Disabled for Skeleton phase
 abstract class PrismPipelineModule {
 
     @Binds

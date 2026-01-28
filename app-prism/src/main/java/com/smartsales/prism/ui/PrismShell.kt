@@ -90,31 +90,33 @@ fun PrismShell(
 
         // 1. History Drawer (Left)
         if (activeDrawer == DrawerType.HISTORY) {
-            HistoryDrawer(
-                groupedSessions = groupedSessions,
-                onSessionClick = { sessionId ->
-                    activeDrawer = null
-                    // TODO: 切换会话
-                },
-                onDeviceClick = {
-                    activeDrawer = DrawerType.CONNECTIVITY
-                },
-                onSettingsClick = {
-                    activeDrawer = null
-                    showUserCenter = true
-                },
-                onPinSession = { sessionId ->
-                    historyRepository.togglePin(sessionId)
-                    sessionRefreshKey++
-                },
-                onRenameSession = { sessionId ->
-                    // TODO: 显示重命名对话框
-                },
-                onDeleteSession = { sessionId ->
-                    historyRepository.deleteSession(sessionId)
-                    sessionRefreshKey++
-                }
-            )
+            Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
+                HistoryDrawer(
+                    groupedSessions = groupedSessions,
+                    onSessionClick = { sessionId ->
+                        activeDrawer = null
+                        // TODO: 切换会话
+                    },
+                    onDeviceClick = {
+                        activeDrawer = DrawerType.CONNECTIVITY
+                    },
+                    onSettingsClick = {
+                        activeDrawer = null
+                        showUserCenter = true
+                    },
+                    onPinSession = { sessionId ->
+                        historyRepository.togglePin(sessionId)
+                        sessionRefreshKey++
+                    },
+                    onRenameSession = { sessionId ->
+                        // TODO: 显示重命名对话框
+                    },
+                    onDeleteSession = { sessionId ->
+                        historyRepository.deleteSession(sessionId)
+                        sessionRefreshKey++
+                    }
+                )
+            }
         }
 
         // 2. Scheduler Drawer (Top)
@@ -133,10 +135,12 @@ fun PrismShell(
 
         // 4. Connectivity Modal (Global Overlay)
         if (activeDrawer == DrawerType.CONNECTIVITY) {
-            com.smartsales.prism.ui.components.ConnectivityModal(
-                connectivityService = connectivityService,
-                onDismiss = { activeDrawer = null }
-            )
+            Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
+                com.smartsales.prism.ui.components.ConnectivityModal(
+                    connectivityService = connectivityService,
+                    onDismiss = { activeDrawer = null }
+                )
+            }
         }
 
         // 5. User Center (Full Screen Overlay)

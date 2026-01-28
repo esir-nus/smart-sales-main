@@ -1,40 +1,36 @@
 Type-safe project accessors is an incubating feature.
+> Task :core:util:preBuild UP-TO-DATE
+> Task :core:util:preDebugBuild UP-TO-DATE
 > Task :app-prism:preBuild UP-TO-DATE
 > Task :app-prism:preDebugBuild UP-TO-DATE
 > Task :app-prism:mergeDebugNativeDebugMetadata NO-SOURCE
-> Task :app-prism:checkKotlinGradlePluginConfigurationErrors
-> Task :app-prism:generateDebugBuildConfig UP-TO-DATE
-> Task :app-prism:generateDebugResValues UP-TO-DATE
-> Task :app-prism:generateDebugResources UP-TO-DATE
-> Task :app-prism:packageDebugResources UP-TO-DATE
 > Task :data:ai-core:preBuild UP-TO-DATE
-> Task :core:util:preBuild UP-TO-DATE
-> Task :core:util:preDebugBuild UP-TO-DATE
 > Task :data:ai-core:preDebugBuild UP-TO-DATE
 > Task :data:ai-core:writeDebugAarMetadata UP-TO-DATE
+> Task :app-prism:checkKotlinGradlePluginConfigurationErrors
 > Task :core:util:writeDebugAarMetadata UP-TO-DATE
+> Task :app-prism:generateDebugBuildConfig UP-TO-DATE
 > Task :data:ai-core:processDebugNavigationResources UP-TO-DATE
-> Task :data:ai-core:generateDebugResValues UP-TO-DATE
 > Task :core:util:processDebugNavigationResources UP-TO-DATE
-> Task :data:ai-core:generateDebugResources UP-TO-DATE
 > Task :core:util:generateDebugResValues UP-TO-DATE
+> Task :data:ai-core:generateDebugResValues UP-TO-DATE
+> Task :data:ai-core:generateDebugResources UP-TO-DATE
 > Task :core:util:generateDebugResources UP-TO-DATE
 > Task :data:ai-core:packageDebugResources UP-TO-DATE
-> Task :core:util:packageDebugResources UP-TO-DATE
-> Task :core:util:extractDeepLinksDebug UP-TO-DATE
 > Task :data:ai-core:extractDeepLinksDebug UP-TO-DATE
-> Task :app-prism:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :data:ai-core:processDebugManifest UP-TO-DATE
+> Task :core:util:packageDebugResources UP-TO-DATE
+> Task :data:ai-core:compileDebugLibraryResources UP-TO-DATE
+> Task :core:util:extractDeepLinksDebug UP-TO-DATE
 > Task :core:util:processDebugManifest UP-TO-DATE
 > Task :core:util:compileDebugLibraryResources UP-TO-DATE
-> Task :data:ai-core:processDebugManifest UP-TO-DATE
-> Task :data:ai-core:compileDebugLibraryResources UP-TO-DATE
 > Task :data:ai-core:parseDebugLocalResources UP-TO-DATE
-> Task :core:util:parseDebugLocalResources UP-TO-DATE
-> Task :core:util:generateDebugRFile UP-TO-DATE
-> Task :core:util:checkKotlinGradlePluginConfigurationErrors
 > Task :data:ai-core:generateDebugRFile UP-TO-DATE
 > Task :data:ai-core:checkKotlinGradlePluginConfigurationErrors
 > Task :data:ai-core:generateDebugBuildConfig UP-TO-DATE
+> Task :core:util:parseDebugLocalResources UP-TO-DATE
+> Task :core:util:generateDebugRFile UP-TO-DATE
+> Task :core:util:checkKotlinGradlePluginConfigurationErrors
 > Task :data:ai-core:javaPreCompileDebug UP-TO-DATE
 > Task :data:ai-core:mergeDebugShaders UP-TO-DATE
 > Task :data:ai-core:compileDebugShaders NO-SOURCE
@@ -44,25 +40,29 @@ Type-safe project accessors is an incubating feature.
 > Task :data:ai-core:mergeDebugNativeLibs NO-SOURCE
 > Task :data:ai-core:copyDebugJniLibsProjectOnly UP-TO-DATE
 > Task :core:util:compileDebugKotlin UP-TO-DATE
-> Task :app-prism:checkDebugAarMetadata UP-TO-DATE
 > Task :core:util:javaPreCompileDebug UP-TO-DATE
 > Task :core:util:compileDebugJavaWithJavac NO-SOURCE
 > Task :core:util:bundleLibCompileToJarDebug UP-TO-DATE
 > Task :core:util:bundleLibRuntimeToJarDebug UP-TO-DATE
-> Task :app-prism:processDebugNavigationResources UP-TO-DATE
-> Task :app-prism:compileDebugNavigationResources UP-TO-DATE
 > Task :core:util:mergeDebugShaders UP-TO-DATE
 > Task :core:util:compileDebugShaders NO-SOURCE
 > Task :core:util:generateDebugAssets UP-TO-DATE
 > Task :core:util:mergeDebugAssets UP-TO-DATE
-> Task :app-prism:mapDebugSourceSetPaths UP-TO-DATE
 > Task :core:util:processDebugJavaRes UP-TO-DATE
 > Task :core:util:bundleLibRuntimeToDirDebug UP-TO-DATE
 > Task :core:util:mergeDebugJniLibFolders UP-TO-DATE
-> Task :app-prism:mergeDebugResources UP-TO-DATE
 > Task :core:util:mergeDebugNativeLibs NO-SOURCE
 > Task :core:util:copyDebugJniLibsProjectOnly UP-TO-DATE
+> Task :app-prism:checkDebugAarMetadata UP-TO-DATE
+> Task :app-prism:processDebugNavigationResources UP-TO-DATE
+> Task :app-prism:compileDebugNavigationResources UP-TO-DATE
+> Task :app-prism:generateDebugResValues UP-TO-DATE
+> Task :app-prism:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app-prism:generateDebugResources UP-TO-DATE
+> Task :app-prism:mergeDebugResources UP-TO-DATE
+> Task :app-prism:packageDebugResources UP-TO-DATE
 > Task :app-prism:parseDebugLocalResources UP-TO-DATE
+> Task :app-prism:createDebugCompatibleScreenManifests UP-TO-DATE
 > Task :app-prism:extractDeepLinksDebug UP-TO-DATE
 > Task :app-prism:processDebugMainManifest UP-TO-DATE
 > Task :app-prism:processDebugManifest UP-TO-DATE
@@ -79,12 +79,12 @@ Type-safe project accessors is an incubating feature.
 > Task :app-prism:checkDebugDuplicateClasses UP-TO-DATE
 > Task :app-prism:mergeExtDexDebug UP-TO-DATE
 > Task :app-prism:mergeDebugJniLibFolders UP-TO-DATE
-> Task :data:ai-core:kaptDebugKotlin UP-TO-DATE
 > Task :app-prism:mergeDebugNativeLibs UP-TO-DATE
 > Task :app-prism:stripDebugDebugSymbols UP-TO-DATE
 > Task :app-prism:validateSigningDebug UP-TO-DATE
 > Task :app-prism:writeDebugAppMetadata UP-TO-DATE
 > Task :app-prism:writeDebugSigningConfigVersions UP-TO-DATE
+> Task :data:ai-core:kaptDebugKotlin UP-TO-DATE
 > Task :data:ai-core:compileDebugKotlin UP-TO-DATE
 > Task :data:ai-core:compileDebugJavaWithJavac UP-TO-DATE
 > Task :data:ai-core:transformDebugClassesWithAsm UP-TO-DATE
@@ -92,13 +92,19 @@ Type-safe project accessors is an incubating feature.
 > Task :data:ai-core:bundleLibRuntimeToJarDebug UP-TO-DATE
 > Task :data:ai-core:processDebugJavaRes UP-TO-DATE
 > Task :data:ai-core:bundleLibRuntimeToDirDebug UP-TO-DATE
-> Task :app-prism:kaptGenerateStubsDebugKotlin UP-TO-DATE
-> Task :app-prism:kaptDebugKotlin UP-TO-DATE
 > Task :app-prism:mergeLibDexDebug UP-TO-DATE
+> Task :app-prism:kaptGenerateStubsDebugKotlin
+
+> Task :app-prism:kaptDebugKotlin
+warning: The following options were not recognized by any processor: '[dagger.fastInit, dagger.hilt.android.internal.disableAndroidSuperclassValidation, dagger.hilt.android.internal.projectType, dagger.hilt.internal.useAggregatingRootProcessor, kapt.kotlin.generated]'
+
+> Task :app-prism:compileDebugKotlin
+e: file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/PrismChatScreen.kt:76:9 An argument is already passed for this parameter
+e: file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/PrismChatScreen.kt:81:9 No value passed for parameter 'onAudioBadgeClick'
+e: file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/PrismChatScreen.kt:100:5 Conflicting declarations: value-parameter onAudioBadgeClick: () -> Unit, value-parameter onAudioBadgeClick: () -> Unit
+e: file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/PrismChatScreen.kt:101:5 Conflicting declarations: value-parameter onAudioBadgeClick: () -> Unit, value-parameter onAudioBadgeClick: () -> Unit
 
 > Task :app-prism:compileDebugKotlin FAILED
-e: file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/PrismChatScreen.kt:76:25 Unresolved reference: onAvatarClick
-e: file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/PrismShell.kt:223:64 Unresolved reference: sp
 
 [Incubating] Problems report is available at: file:///home/cslh-frank/main_app/build/reports/problems/problems-report.html
 
@@ -121,5 +127,5 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/8.13/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 5s
-81 actionable tasks: 4 executed, 77 up-to-date
+BUILD FAILED in 8s
+81 actionable tasks: 6 executed, 75 up-to-date

@@ -103,7 +103,7 @@ fun AudioDrawer(
                     .fillMaxWidth()
                     .fillMaxHeight(0.95f) // 95% height
                     .background(
-                        Color(0xFFF7F8FA), // Light gray bg for drawer
+                        Color.White, // v2.6 Fix: Clean White (was F7F8FA)
                         RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
                     )
             ) {

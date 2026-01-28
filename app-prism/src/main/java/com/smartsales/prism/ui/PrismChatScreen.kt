@@ -47,7 +47,8 @@ fun PrismChatScreen(
     onMenuClick: () -> Unit = {},
     onNewSessionClick: () -> Unit = {},
     onAudioBadgeClick: () -> Unit = {},
-    onAvatarClick: () -> Unit = {}
+    onTingwuClick: () -> Unit = {}, // v2.6.5 Floating Action
+    onArtifactsClick: () -> Unit = {} // v2.6.5 Floating Action
 ) {
     val currentMode by viewModel.currentMode.collectAsState()
     val history by viewModel.history.collectAsState()
@@ -70,11 +71,12 @@ fun PrismChatScreen(
         onSend = viewModel::send,
         onClearError = viewModel::clearError,
         onMenuClick = onMenuClick,
-        onNewSessionClick = onNewSessionClick,
+        onNewSessionClick = viewModel::startNewSession, // Connect to VM
         onAudioBadgeClick = onAudioBadgeClick,
-        onAvatarClick = onAvatarClick,
         onDebugClick = viewModel::cycleDebugState,
-        onTitleChange = viewModel::updateSessionTitle // Wire update logic
+        onTitleChange = viewModel::updateSessionTitle,
+        onTingwuClick = onTingwuClick,
+        onArtifactsClick = onArtifactsClick
     )
 }
 
@@ -94,9 +96,10 @@ private fun PrismChatContent(
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
     onAudioBadgeClick: () -> Unit,
-    onAvatarClick: () -> Unit,
     onDebugClick: () -> Unit,
-    onTitleChange: (String) -> Unit // v2.6
+    onTitleChange: (String) -> Unit, // v2.6
+    onTingwuClick: () -> Unit,
+    onArtifactsClick: () -> Unit
 ) {
     val context = LocalContext.current
     
@@ -114,11 +117,11 @@ private fun PrismChatContent(
             onMenuClick = onMenuClick,
             onNewSessionClick = onNewSessionClick,
             onAudioBadgeClick = onAudioBadgeClick,
-            onAvatarClick = onAvatarClick,
-            onDebugClick = onDebugClick,
-            onTitleChange = onTitleChange,
-            onTingwuClick = { Toast.makeText(context, "Tingwu Feature Coming Soon", Toast.LENGTH_SHORT).show() },
-            onArtifactsClick = { Toast.makeText(context, "Artifacts Feature Coming Soon", Toast.LENGTH_SHORT).show() }
+            onDebugClick = { 
+                onDebugClick()
+                Toast.makeText(context, "Debug State Cycling...", Toast.LENGTH_SHORT).show()
+            },
+            onTitleChange = onTitleChange
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -147,43 +150,66 @@ private fun PrismChatContent(
             Spacer(modifier = Modifier.height(8.dp))
         }
 
-        // 对话区域
-        LazyColumn(
+        // --- MAIN CONTENT AREA (weighted) ---
+        // Single Box that contains:
+        // - LazyColumn (always, for chat history)
+        // - Floating Actions (overlaid when history is empty)
+        Box(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(bottom = 16.dp),
-            reverseLayout = true
+                .fillMaxWidth()
         ) {
-            // 1. 当前正在进行的响应 (Loading/Thinking/Streaming)
-            if (uiState !is UiState.Idle && uiState !is UiState.Error) {
-                item {
-                    when (uiState) {
-                        is UiState.Thinking -> {
-                            ThinkingBox(
-                                content = (uiState as UiState.Thinking).hint ?: "正在分析...",
-                                isComplete = false
-                            )
+            // 对话区域 (always present, may be empty)
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(bottom = 16.dp),
+                reverseLayout = true
+            ) {
+                // 1. 当前正在进行的响应 (Loading/Thinking/Streaming)
+                if (uiState !is UiState.Idle && uiState !is UiState.Error) {
+                    item {
+                        when (uiState) {
+                            is UiState.Thinking -> {
+                                ThinkingBox(
+                                    content = (uiState as UiState.Thinking).hint ?: "正在分析...",
+                                    isComplete = false
+                                )
+                            }
+                            is UiState.Response -> {
+                                 ResponseBubble(uiState = uiState as UiState.Response)
+                            }
+                            else -> {}
                         }
-                        is UiState.Response -> {
-                             ResponseBubble(uiState = uiState as UiState.Response)
+                    }
+                }
+
+                // 2. 历史消息
+                items(history.reversed()) { message ->
+                    when (message) {
+                        is ChatMessage.User -> UserBubble(text = message.content)
+                        is ChatMessage.Ai -> {
+                            when (val state = message.uiState) {
+                                is UiState.Response -> ResponseBubble(uiState = state)
+                                else -> Text("暂不支持的消息类型", color = Color.Gray)
+                            }
                         }
-                        else -> {}
                     }
                 }
             }
 
-            // 2. 历史消息
-            items(history.reversed()) { message ->
-                when (message) {
-                    is ChatMessage.User -> UserBubble(text = message.content)
-                    is ChatMessage.Ai -> {
-                        when (val state = message.uiState) {
-                            is UiState.Response -> ResponseBubble(uiState = state)
-                            else -> Text("暂不支持的消息类型", color = Color.Gray)
-                        }
-                    }
+            // Floating Actions (Clean Desk - overlaid on right side when no history)
+            if (history.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(end = 16.dp),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    HomeFloatingActions(
+                        onTingwuClick = onTingwuClick,
+                        onArtifactsClick = onArtifactsClick
+                    )
                 }
             }
         }
@@ -329,14 +355,10 @@ private fun ChatHeader(
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
     onAudioBadgeClick: () -> Unit,
-    onAvatarClick: () -> Unit,
     onDebugClick: () -> Unit,
-    onTitleChange: (String) -> Unit,
-    onTingwuClick: () -> Unit,
-    onArtifactsClick: () -> Unit
+    onTitleChange: (String) -> Unit
 ) {
-    var isEditing by remember { mutableStateOf(false) }
-    var tempTitle by remember { mutableStateOf(sessionTitle) }
+    // Removed: isEditing and tempTitle states - Title is auto-generated, not editable
 
     Row(
         modifier = Modifier
@@ -351,65 +373,72 @@ private fun ChatHeader(
             IconButton(onClick = onMenuClick) {
                 Icon(Icons.Filled.Menu, "History", tint = Color.White)
             }
+            // Device State: Wrapped in Box for easier clicking (Min 48dp target)
+            Box(
+                modifier = Modifier
+                    .padding(start = 8.dp)
+                    .size(48.dp)
+                    .clickable { onAudioBadgeClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "📶", fontSize = 16.sp)
+            }
+            // Text(
+            //    text = "📶", 
+            //    fontSize = 16.sp,
+            //    modifier = Modifier.padding(start = 8.dp).clickable { onAudioBadgeClick() }
+            // )
+        }
+        
+        // 中间: 会话标题 (v2.6 Auto-Generated Display ONLY)
+        Box(contentAlignment = Alignment.Center) {
             Text(
-                text = "📶", 
-                fontSize = 16.sp,
-                modifier = Modifier.padding(start = 8.dp).clickable { onAudioBadgeClick() }
+                text = "Session: $sessionTitle",
+                color = Color.White,
+                fontSize = 14.sp
+                // Removed: clickable { isEditing = true } - Title is auto-generated
             )
         }
         
-        // 中间: 会话标题 (v2.6 Editable)
-        Box(contentAlignment = Alignment.Center) {
-            if (isEditing) {
-                androidx.compose.foundation.text.BasicTextField(
-                    value = tempTitle,
-                    onValueChange = { tempTitle = it },
-                    textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
-                    singleLine = true,
-                    modifier = Modifier
-                        .width(150.dp)
-                        .background(Color.DarkGray, RoundedCornerShape(4.dp))
-                        .padding(4.dp),
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
-                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
-                        onDone = {
-                            if (tempTitle.isNotBlank()) onTitleChange(tempTitle)
-                            isEditing = false
-                        }
-                    )
-                )
-            } else {
-                Text(
-                    text = "Session: $sessionTitle",
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    modifier = Modifier.clickable { 
-                        tempTitle = sessionTitle
-                        isEditing = true 
-                    }
-                )
-            }
-        }
-        
-        // 右侧: [≣] [📦] | Avatar [🐞] [➕]
+        // 右侧: [🐞] [➕] (Clean Header - Removed Avatar/Floating Actions)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // v2.6 Placeholders
-            IconButton(onClick = onTingwuClick) {
-                Text("≣", color = Color.Gray, fontSize = 18.sp)
-            }
-            IconButton(onClick = onArtifactsClick) {
-                Text("📦", color = Color.Gray, fontSize = 16.sp)
-            }
-
-            IconButton(onClick = onAvatarClick) {
-                Icon(Icons.Filled.Person, "User Center", tint = Color.White)
-            }
             IconButton(onClick = onDebugClick) {
                 Icon(Icons.Filled.BugReport, "Debug", tint = Color(0xFF666666))
             }
             IconButton(onClick = onNewSessionClick) {
                 Icon(Icons.Filled.Add, "New Session", tint = Color.White)
             }
+        }
+    }
+}
+
+@Composable
+private fun HomeFloatingActions(
+    onTingwuClick: () -> Unit,
+    onArtifactsClick: () -> Unit
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Tingwu FAB [≣]
+        FloatingActionButton(
+            onClick = onTingwuClick,
+            containerColor = Color(0xFF1A1A2E),
+            contentColor = Color.White,
+            modifier = Modifier.size(56.dp)
+        ) {
+            Text("≣", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        }
+
+        // Artifacts FAB [📦]
+        FloatingActionButton(
+            onClick = onArtifactsClick,
+            containerColor = Color(0xFF1A1A2E),
+            contentColor = Color.White,
+            modifier = Modifier.size(56.dp)
+        ) {
+            Text("📦", fontSize = 20.sp)
         }
     }
 }

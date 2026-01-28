@@ -7,16 +7,17 @@ import javax.inject.Singleton
 
 /**
  * 假历史仓库 — 骨架开发阶段
- * 返回硬编码示例会话
+ * 返回硬编码示例会话，支持置顶/重命名/删除操作
  */
 @Singleton
 class FakeHistoryRepository @Inject constructor() : HistoryRepository {
-
-    override fun getSessions(): List<SessionPreview> {
+    
+    // 使用可变列表支持修改操作
+    private val sessions = mutableListOf<SessionPreview>().apply {
         val now = System.currentTimeMillis()
         val oneDay = 24 * 60 * 60 * 1000L
         
-        return listOf(
+        addAll(listOf(
             // 置顶
             SessionPreview(
                 id = "pinned-1",
@@ -33,7 +34,7 @@ class FakeHistoryRepository @Inject constructor() : HistoryRepository {
                 timestamp = now - 2 * 60 * 60 * 1000L,
                 isPinned = false
             ),
-            // Video/Audio review (Recent 30 Days)
+            // Recent 30 Days
             SessionPreview(
                 id = "recent-1",
                 clientName = "李财务",
@@ -41,7 +42,7 @@ class FakeHistoryRepository @Inject constructor() : HistoryRepository {
                 timestamp = now - 5 * oneDay,
                 isPinned = false
             ),
-             SessionPreview(
+            SessionPreview(
                 id = "recent-2",
                 clientName = "陈主任",
                 summary = "竞品价格分析",
@@ -53,29 +54,55 @@ class FakeHistoryRepository @Inject constructor() : HistoryRepository {
                 id = "archive-1",
                 clientName = "赵总",
                 summary = "合作意向确认",
-                timestamp = now - 45 * oneDay, // > 30 days
+                timestamp = now - 45 * oneDay,
                 isPinned = false
             ),
-             SessionPreview(
+            SessionPreview(
                 id = "archive-2",
                 clientName = "孙经理",
                 summary = "产品演示汇报",
                 timestamp = now - 46 * oneDay,
                 isPinned = false
             )
-        )
+        ))
+    }
+
+    override fun getSessions(): List<SessionPreview> = sessions.toList()
+    
+    override fun getSession(sessionId: String): SessionPreview? {
+        return sessions.find { it.id == sessionId }
+    }
+    
+    override fun togglePin(sessionId: String) {
+        val index = sessions.indexOfFirst { it.id == sessionId }
+        if (index >= 0) {
+            val session = sessions[index]
+            sessions[index] = session.copy(isPinned = !session.isPinned)
+        }
+    }
+    
+    override fun renameSession(sessionId: String, newClientName: String, newSummary: String) {
+        val index = sessions.indexOfFirst { it.id == sessionId }
+        if (index >= 0) {
+            val session = sessions[index]
+            sessions[index] = session.copy(clientName = newClientName, summary = newSummary)
+        }
+    }
+    
+    override fun deleteSession(sessionId: String) {
+        sessions.removeIf { it.id == sessionId }
     }
     
     /**
      * 按日期分组会话
      */
     override fun getGroupedSessions(): Map<String, List<SessionPreview>> {
-        val sessions = getSessions()
+        val currentSessions = getSessions()
         val now = System.currentTimeMillis()
         val oneDay = 24 * 60 * 60 * 1000L
         
-        val pinned = sessions.filter { it.isPinned }
-        val unpinned = sessions.filter { !it.isPinned }
+        val pinned = currentSessions.filter { it.isPinned }
+        val unpinned = currentSessions.filter { !it.isPinned }
         
         val today = unpinned.filter { now - it.timestamp < oneDay }
         val recent30Days = unpinned.filter { 
@@ -88,16 +115,7 @@ class FakeHistoryRepository @Inject constructor() : HistoryRepository {
             if (pinned.isNotEmpty()) put("📌 置顶", pinned)
             if (today.isNotEmpty()) put("📅 今天", today)
             if (recent30Days.isNotEmpty()) put("🗓️ 最近30天", recent30Days)
-            
-            // Group archived by YYYY-MM
-            if (archived.isNotEmpty()) {
-                // In a real app, use DateTimeFormatter. Here we simulate for skeleton.
-                // Assuming all test data is roughly consistent or we just dump them into a generic archive for now
-                // Or split them properly if we want to be fancy.
-                // For skeleton, let's just use one bucket or simple mock logic per item if needed.
-                // Spec says "🗂️ 2025-12". Let's just hardcode a group for the fake data.
-                put("🗂️ 2025-12", archived)
-            }
+            if (archived.isNotEmpty()) put("🗂️ 2025-12", archived)
         }
     }
 }

@@ -22,7 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
+import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
 
 // ==========================================
@@ -45,7 +45,8 @@ data class ChatMessage(
 @Composable
 fun ConflictCard(
     state: TimelineItem.Conflict,
-    onRemove: () -> Unit = {}
+    onRemove: () -> Unit = {},
+    viewModel: ConflictViewModel = hiltViewModel()
 ) {
     // Local state for the mock interaction
     var isExpanded by remember { mutableStateOf(state.isExpanded) }
@@ -185,16 +186,16 @@ fun ConflictCard(
                                         messages = messages + ChatMessage(userText, isSystem = false)
                                         isResolving = true
                                         
-                                        // 2. Mock System Reply & Resolution
+                                        // 2. Fake I/O: 延迟在FakeConflictResolutionService
                                         scope.launch {
-                                            delay(1000) // Simulate thinking
-                                            messages = messages + ChatMessage("好的，已更新。", isSystem = true)
+                                            val result = viewModel.resolveConflict(userText)
+                                            messages = messages + ChatMessage(result.reply, isSystem = true)
                                             isResolving = false
                                             
-                                            delay(1500) // Read time
-                                            // Collapse/Remove (In real app, this would delete the card)
-                                            isExpanded = false
-                                            onRemove()
+                                            if (result.resolved) {
+                                                isExpanded = false
+                                                onRemove()
+                                            }
                                         }
                                     }
                                 }

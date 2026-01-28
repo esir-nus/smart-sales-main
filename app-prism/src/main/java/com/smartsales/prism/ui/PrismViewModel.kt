@@ -54,6 +54,17 @@ class PrismViewModel @Inject constructor(
             _sessionTitle.value = newTitle.trim()
         }
     }
+
+    /**
+     * Start a new session (Clean Desk)
+     * Clears history, resets title, sets state to Idle.
+     */
+    fun startNewSession() {
+        _history.value = emptyList()
+        _sessionTitle.value = "新对话"
+        _inputText.value = ""
+        _uiState.value = UiState.Idle
+    }
     
     fun switchMode(mode: Mode) {
         viewModelScope.launch {

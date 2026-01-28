@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.delay
 
 /**
@@ -24,7 +25,8 @@ import kotlinx.coroutines.delay
  */
 @Composable
 fun OnboardingScreen(
-    onComplete: () -> Unit
+    onComplete: () -> Unit,
+    viewModel: OnboardingViewModel = hiltViewModel()
 ) {
     var currentStep by remember { mutableStateOf(OnboardingStep.WELCOME) }
 
@@ -64,6 +66,7 @@ fun OnboardingScreen(
                     onNext = { currentStep = OnboardingStep.SCAN }
                 )
                 OnboardingStep.SCAN -> ScanStep(
+                    viewModel = viewModel,
                     onCancel = { currentStep = OnboardingStep.HARDWARE_WAKE },
                     onFound = { currentStep = OnboardingStep.DEVICE_FOUND }
                 )
@@ -167,9 +170,13 @@ private fun HardwareWakeStep(onNext: () -> Unit) {
 }
 
 @Composable
-private fun ScanStep(onCancel: () -> Unit, onFound: () -> Unit) {
+private fun ScanStep(
+    viewModel: OnboardingViewModel,
+    onCancel: () -> Unit,
+    onFound: () -> Unit
+) {
     LaunchedEffect(Unit) {
-        delay(2000) // Mock Scan
+        viewModel.scanForDevices() // Fake I/O: 延迟在FakeOnboardingService
         onFound()
     }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {

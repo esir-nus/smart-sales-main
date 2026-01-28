@@ -1,6 +1,7 @@
 package com.smartsales.prism.ui.drawers
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,7 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -17,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smartsales.prism.domain.model.SessionPreview
+import com.smartsales.prism.ui.components.SessionContextMenu
 import com.smartsales.prism.ui.components.SessionItem
 
 /**
@@ -27,17 +29,24 @@ import com.smartsales.prism.ui.components.SessionItem
 fun HistoryDrawer(
     groupedSessions: Map<String, List<SessionPreview>>,
     onSessionClick: (String) -> Unit,
+    onDeviceClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    onPinSession: (String) -> Unit = {},
+    onRenameSession: (String) -> Unit = {},
+    onDeleteSession: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    // 上下文菜单状态
+    var contextMenuSession by remember { mutableStateOf<SessionPreview?>(null) }
+    
     Column(
         modifier = modifier
             .fillMaxHeight()
             .width(300.dp)
             .background(Color(0xFF0D0D1A))
     ) {
-        // 设备状态头部 (2-Row)
-        DeviceStateHeader()
+        // 设备状态头部 (2-Row) - 点击打开连接模态框
+        DeviceStateHeader(onClick = onDeviceClick)
         
         HorizontalDivider(color = Color(0xFF333333))
         
@@ -69,7 +78,8 @@ fun HistoryDrawer(
                     SessionItem(
                         clientName = session.clientName,
                         summary = session.summary,
-                        onClick = { onSessionClick(session.id) }
+                        onClick = { onSessionClick(session.id) },
+                        onLongPress = { contextMenuSession = session }
                     )
                 }
             }
@@ -80,6 +90,18 @@ fun HistoryDrawer(
         // 用户底栏
         UserFooter(onSettingsClick = onSettingsClick)
     }
+    
+    // 上下文菜单
+    contextMenuSession?.let { session ->
+        SessionContextMenu(
+            sessionId = session.id,
+            isPinned = session.isPinned,
+            onPin = { onPinSession(session.id) },
+            onRename = { onRenameSession(session.id) },
+            onDelete = { onDeleteSession(session.id) },
+            onDismiss = { contextMenuSession = null }
+        )
+    }
 }
 
 /**
@@ -88,10 +110,11 @@ fun HistoryDrawer(
  * Row 2: "已连接 • 正常" (centered, gray)
  */
 @Composable
-private fun DeviceStateHeader() {
+private fun DeviceStateHeader(onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onClick() }
             .padding(16.dp)
     ) {
         // Row 1: 设备信息

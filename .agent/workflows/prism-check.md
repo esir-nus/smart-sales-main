@@ -82,6 +82,14 @@ Verify the "Brain" (Separation of Concerns).
     -   Check: Does every Interface have a Module binding?
 3.  **Test Fakes**
     -   Check: Do Fakes exist for all new interfaces?
+4.  **Fake I/O Pattern** (NEW)
+    -   Check: Does async/external behavior go through **Interface → Fake Implementation**?
+    -   Anti-Pattern: `delay()`, mock data, or simulated logic **inside UI code** (Composables, Screens).
+    -   Command: `grep -rn "delay(" app-prism/src/main/java/**/ui/`
+    -   Result must be EMPTY. Delays belong in `platform/fake/` or `domain/fake/`.
+    -   **Rationale**: Fake I/O enables real code swapping with a single DI binding change.
+
+> 🔴 **STOP**: If Fake I/O pattern is violated, refactor to use an injected service interface.
 
 ---
 
@@ -110,3 +118,11 @@ If all 3 gates pass:
 **Q: "I hardcoded the Z-index because it was faster."**
 **A: REJECTED.**
 -   Refactor to use `PrismElevation` immediately.
+
+**Q: "I used `delay()` in the UI because Fake I/O is more work."**
+**A: REJECTED. This is a "Lazy Work".**
+1.  Create an interface (e.g., `ConnectivityService`).
+2.  Create a `FakeConnectivityService` with the `delay()` inside.
+3.  Inject via Hilt.
+4.  **Never embed simulation logic inside Composables.**
+-   Rationale: Real code swapping requires 1 binding change, not a UI rewrite.

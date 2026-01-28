@@ -27,33 +27,45 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.smartsales.prism.domain.connectivity.ConnectivityService
+import com.smartsales.prism.domain.connectivity.ReconnectResult
+import com.smartsales.prism.domain.connectivity.UpdateResult
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Connectivity Modal States
+ * Intermediate states (CHECKING_UPDATE, RECONNECTING) provide visual feedback
+ * during async service calls.
  */
 private enum class ConnectionState {
     CONNECTED,
     DISCONNECTED,
+    CHECKING_UPDATE,   // NEW: Spinner while checking firmware
     UPDATE_FOUND,
     UPDATING,
-    WIFI_MISMATCH // v2.5
+    RECONNECTING,      // NEW: Spinner while BLE reconnecting
+    WIFI_MISMATCH
 }
 
 /**
  * Connectivity Modal (Truncated Onboarding)
  * @see prism-ui-ux-contract.md §1.6.1
+ * 
+ * @param connectivityService Injected service for Fake I/O pattern (delays live in Fake, not here)
  */
 @Composable
 fun ConnectivityModal(
+    connectivityService: ConnectivityService,
     onDismiss: () -> Unit
 ) {
-    // Fake State Machine for Visual Verification
+    // Coroutine scope for service calls
+    val coroutineScope = rememberCoroutineScope()
+    
+    // State Machine
     var state by remember { mutableStateOf(ConnectionState.CONNECTED) }
     var batteryLevel by remember { mutableIntStateOf(85) }
-    
-    // Toggle for verification: Reconnect -> Mismatch -> Connected -> Mismatch...
-    var reconnectAttempts by remember { mutableIntStateOf(0) }
+    var pendingVersion by remember { mutableStateOf<String?>(null) }
 
     Box(
         modifier = Modifier
@@ -91,20 +103,40 @@ fun ConnectivityModal(
                         when (currentState) {
                             ConnectionState.CONNECTED -> ConnectedView(
                                 battery = batteryLevel,
-                                onUnbind = { state = ConnectionState.DISCONNECTED },
-                                onCheckUpdate = { state = ConnectionState.UPDATE_FOUND }
-                            )
-                            ConnectionState.DISCONNECTED -> DisconnectedView(
-                                onReconnect = {
-                                    reconnectAttempts++
-                                    // Debug Cycle: Even -> Connected, Odd -> Mismatch
-                                    if (reconnectAttempts % 2 != 0) {
-                                        state = ConnectionState.WIFI_MISMATCH
-                                    } else {
-                                        state = ConnectionState.CONNECTED
+                                onUnbind = {
+                                    coroutineScope.launch {
+                                        connectivityService.disconnect()
+                                        state = ConnectionState.DISCONNECTED
+                                    }
+                                },
+                                onCheckUpdate = {
+                                    coroutineScope.launch {
+                                        state = ConnectionState.CHECKING_UPDATE
+                                        val result = connectivityService.checkForUpdate()
+                                        state = when (result) {
+                                            is UpdateResult.Found -> {
+                                                pendingVersion = result.version
+                                                ConnectionState.UPDATE_FOUND
+                                            }
+                                            else -> ConnectionState.CONNECTED
+                                        }
                                     }
                                 }
                             )
+                            ConnectionState.DISCONNECTED -> DisconnectedView(
+                                onReconnect = {
+                                    coroutineScope.launch {
+                                        state = ConnectionState.RECONNECTING
+                                        val result = connectivityService.reconnect()
+                                        state = when (result) {
+                                            ReconnectResult.Connected -> ConnectionState.CONNECTED
+                                            ReconnectResult.WifiMismatch -> ConnectionState.WIFI_MISMATCH
+                                            else -> ConnectionState.DISCONNECTED
+                                        }
+                                    }
+                                }
+                            )
+                            ConnectionState.CHECKING_UPDATE -> CheckingUpdateView()
                             ConnectionState.UPDATE_FOUND -> UpdateFoundView(
                                 onSync = { state = ConnectionState.UPDATING },
                                 onLater = { state = ConnectionState.CONNECTED }
@@ -112,6 +144,7 @@ fun ConnectivityModal(
                             ConnectionState.UPDATING -> UpdatingView(
                                 onComplete = { state = ConnectionState.CONNECTED }
                             )
+                            ConnectionState.RECONNECTING -> ReconnectingView()
                             ConnectionState.WIFI_MISMATCH -> WifiMismatchView(
                                 onUpdate = { state = ConnectionState.CONNECTED },
                                 onIgnore = { state = ConnectionState.CONNECTED }
@@ -273,6 +306,32 @@ private fun UpdatingView(
 
     Text("正在安装... ${(progress * 100).toInt()}%", fontSize = 16.sp, color = Color.White)
     Text("请保持设备连接", fontSize = 12.sp, color = Color.Gray)
+}
+
+@Composable
+private fun CheckingUpdateView() {
+    CircularProgressIndicator(
+        modifier = Modifier.size(64.dp),
+        color = Color(0xFF2196F3),
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Text("正在检查更新...", fontSize = 16.sp, color = Color.White)
+    Text("连接服务器中", fontSize = 12.sp, color = Color.Gray)
+}
+
+@Composable
+private fun ReconnectingView() {
+    CircularProgressIndicator(
+        modifier = Modifier.size(64.dp),
+        color = Color(0xFF2196F3),
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Text("正在重新连接...", fontSize = 16.sp, color = Color.White)
+    Text("搜索附近设备", fontSize = 12.sp, color = Color.Gray)
 }
 
 @Composable

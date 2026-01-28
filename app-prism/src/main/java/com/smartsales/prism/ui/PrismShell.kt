@@ -3,129 +3,103 @@ package com.smartsales.prism.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.smartsales.prism.domain.core.HistoryRepository
+import com.smartsales.prism.domain.repository.HistoryRepository
+import com.smartsales.prism.ui.drawers.AudioDrawer
 import com.smartsales.prism.ui.drawers.HistoryDrawer
 import com.smartsales.prism.ui.drawers.SchedulerDrawer
 
 /**
+ * Drawer Types for Atomic Exclusion
+ */
+enum class DrawerType {
+    HISTORY,
+    SCHEDULER,
+    AUDIO,
+    CONNECTIVITY, // v2.5
+    TINGWU,    // Future
+    ARTIFACTS  // Future
+}
+
+/**
  * Prism 主界面壳 — 管理抽屉状态
- * 
- * 结构: SchedulerDrawer(顶部) + ChatScreen(主体) + HistoryDrawer(左侧)
+ *
+ * 结构: SchedulerDrawer(顶部) + ChatScreen(主体) + AudioDrawer(底部) + HistoryDrawer(左侧)
  * @see prism-ui-ux-contract.md §1.1
  */
 @Composable
 fun PrismShell(
     historyRepository: HistoryRepository
 ) {
-    var schedulerOpen by remember { mutableStateOf(true) } // 启动时自动下拉
-    var historyOpen by remember { mutableStateOf(false) }
-    
+    // Atomic Drawer State (Mutex)
+    // Start with SCHEDULER open (per brief/legacy behavior) or null
+    var activeDrawer by remember { mutableStateOf<DrawerType?>(DrawerType.SCHEDULER) }
+
     val groupedSessions = remember { historyRepository.getGroupedSessions() }
-    
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()  // 处理状态栏遮挡
+            .statusBarsPadding() // 只处理顶部状态栏
     ) {
         // 主内容层
         Column(modifier = Modifier.fillMaxSize()) {
-            // 头部
-            ChatHeader(
-                onMenuClick = { historyOpen = true },
-                onNewSessionClick = { /* TODO: 新建会话 */ }
+            // 聊天界面
+            PrismChatScreen(
+                onMenuClick = { activeDrawer = DrawerType.HISTORY },
+                onNewSessionClick = { /* TODO: 新建会话 */ },
+                onAudioBadgeClick = { activeDrawer = DrawerType.CONNECTIVITY }
             )
-            
-            // 聊天界面（已存在的 PrismChatScreen 内容）
-            Box(modifier = Modifier.weight(1f)) {
-                PrismChatScreen()
-            }
         }
-        
-        // 历史抽屉（左侧，条件渲染）
-        if (historyOpen) {
-            // 半透明遮罩
+
+        // --- SCRIM LAYER ---
+        // Atomic Scrim: Visible if ANY drawer is open (except maybe Scheduler acting as overlay?
+        // Spec says Scrim covers Home for History/Audio. Scheduler usually pushes or overlays.
+        // For simplicity, we strictly follow "Scrim covers Home" for side/bottom drawers.
+        if (activeDrawer == DrawerType.HISTORY || activeDrawer == DrawerType.AUDIO || activeDrawer == DrawerType.CONNECTIVITY) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f))
-                    .clickable { historyOpen = false }
+                    .background(Color.Black.copy(alpha = 0.4f)) // Spec: 0.4 Black
+                    .clickable { activeDrawer = null }
             )
-            
+        }
+
+        // --- DRAWERS ---
+
+        // 1. History Drawer (Left)
+        if (activeDrawer == DrawerType.HISTORY) {
             HistoryDrawer(
                 groupedSessions = groupedSessions,
                 onSessionClick = { sessionId ->
-                    historyOpen = false
+                    activeDrawer = null
                     // TODO: 切换会话
                 },
                 onSettingsClick = { /* TODO: 打开设置 */ }
             )
         }
-        
-        // 日程抽屉（顶部，覆盖层）
-        SchedulerDrawer(
-            isOpen = schedulerOpen,
-            onDismiss = { schedulerOpen = false }
-        )
-    }
-}
 
-/**
- * 聊天头部 — 匹配 spec §1.1
- */
-@Composable
-private fun ChatHeader(
-    onMenuClick: () -> Unit,
-    onNewSessionClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF0D0D1A))
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // 左侧: 菜单 + 设备状态
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onMenuClick) {
-                Icon(
-                    imageVector = Icons.Filled.Menu,
-                    contentDescription = "History",
-                    tint = Color.White
-                )
-            }
-            
-            Text(
-                text = "📶",
-                fontSize = 16.sp,
-                modifier = Modifier.padding(start = 8.dp)
-            )
-        }
-        
-        // 中间: 会话标题
-        Text(
-            text = "Session: 新对话",
-            color = Color.White,
-            fontSize = 14.sp
+        // 2. Scheduler Drawer (Top)
+        // Note: Scheduler usually persists until dismissed.
+        SchedulerDrawer(
+            isOpen = activeDrawer == DrawerType.SCHEDULER,
+            onDismiss = { activeDrawer = null }
         )
-        
-        // 右侧: 新建会话
-        IconButton(onClick = onNewSessionClick) {
-            Icon(
-                imageVector = Icons.Filled.Add,
-                contentDescription = "New Session",
-                tint = Color.White
+
+        // 3. Audio Drawer (Bottom)
+        // We use a gesture or specific trigger to open this usually.
+        // For now, ensuring it respects the mutex.
+        AudioDrawer(
+            isOpen = activeDrawer == DrawerType.AUDIO,
+            onDismiss = { activeDrawer = null }
+        )
+
+        // 4. Connectivity Modal (Global Overlay)
+        if (activeDrawer == DrawerType.CONNECTIVITY) {
+            com.smartsales.prism.ui.components.ConnectivityModal(
+                onDismiss = { activeDrawer = null }
             )
         }
     }

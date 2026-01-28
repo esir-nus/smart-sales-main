@@ -12,9 +12,9 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.smartsales.prism.domain.core.DeliverableType
-import com.smartsales.prism.domain.core.ExecutionPlan
-import com.smartsales.prism.domain.core.RetrievalScope
+import com.smartsales.prism.domain.pipeline.DeliverableType
+import com.smartsales.prism.domain.pipeline.ExecutionPlan
+import com.smartsales.prism.domain.pipeline.RetrievalScope
 
 /**
  * 计划卡片 — Analyst 模式下展示执行计划

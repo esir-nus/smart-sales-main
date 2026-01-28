@@ -104,4 +104,9 @@ dependencies {
     // Test
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
+    
+    // UI Tests (On-Device Logic Check)
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

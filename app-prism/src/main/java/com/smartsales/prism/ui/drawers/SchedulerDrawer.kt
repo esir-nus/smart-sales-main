@@ -12,17 +12,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import kotlin.math.roundToInt
+import com.smartsales.prism.ui.drawers.scheduler.SchedulerCalendar
+import com.smartsales.prism.ui.drawers.scheduler.SchedulerTimeline
+import com.smartsales.prism.ui.drawers.scheduler.TimelineItem
 
 /**
- * 日程抽屉骨架 — 从顶部下拉
+ * Scheduler Drawer — Top-Down Sheet
  * @see prism-ui-ux-contract.md §1.3
  * 
- * 此为骨架版本：月份轮播 + 日历占位 + 拖拽手柄
+ * Updated: Phase 2 Expansion & Visuals (Light Theme)
  */
 @Composable
 fun SchedulerDrawer(
@@ -30,9 +29,22 @@ fun SchedulerDrawer(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val drawerHeight = 320.dp
+    // Height: ~85% of screen
+    val drawerFraction = 0.85f 
     
-    // 使用 AnimatedVisibility 确保关闭后不阻挡点击
+    // State: Calendar Expansion
+    var isCalendarExpanded by remember { mutableStateOf(false) }
+    
+    // Mock Data
+    val timelineItems = remember {
+        listOf(
+            TimelineItem.Task("1", "08:00", "与张总会议 (A3项目)", hasAlarm = true),
+            TimelineItem.Inspiration("2", "10:30", "研究竞品报价策略", isSelected = false),
+            TimelineItem.Conflict("3", "12:00", "李总电话 vs 午餐会议", isExpanded = false),
+            TimelineItem.Task("4", "14:00", "提交季度报告 (已完成)", isDone = true)
+        )
+    }
+
     androidx.compose.animation.AnimatedVisibility(
         visible = isOpen,
         enter = androidx.compose.animation.slideInVertically(
@@ -50,122 +62,45 @@ fun SchedulerDrawer(
             )
         )
     ) {
-        // 全屏容器用于放置遮罩和抽屉
         Box(modifier = Modifier.fillMaxSize()) {
-            // 遮罩层 (Scrim) - 点击空白处关闭
-            // 只有当抽屉打开时，并且抽屉内容没有占据全屏时，遮罩层才有意义
-            // 但此处我们始终放置遮罩层，z-index 低于抽屉内容
+            // Scrim
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = if(isOpen) 0.3f else 0f))
-                    .clickable(
-                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                        indication = null
-                    ) { onDismiss() }
+                    .clickable { onDismiss() }
             )
 
-            // 抽屉内容
-            Box(
+            // Drawer Content (White Background - Light Theme)
+            Column(
                 modifier = modifier
                     .fillMaxWidth()
-                    .height(drawerHeight)
+                    .fillMaxHeight(drawerFraction)
                     .background(
-                        Color(0xFF1A1A2E),
-                        RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp)
+                        Color.White, // Light Theme per Spec
+                        RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
                     )
             ) {
-            Column(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                // 月份轮播占位
-                MonthCarouselPlaceholder()
-                
-                HorizontalDivider(color = Color(0xFF333333))
-                
-                // 日历网格占位
-                CalendarGridPlaceholder()
-                
-                Spacer(modifier = Modifier.weight(1f))
-                
-                // 拖拽手柄
-                DragHandle(onDismiss = onDismiss)
-            }
-        }
-    }
-    }
-}
-
-@Composable
-private fun MonthCarouselPlaceholder() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text("‹", color = Color(0xFF888888), fontSize = 20.sp)
-        Spacer(modifier = Modifier.width(16.dp))
-        
-        listOf("1月", "2月", "3月").forEach { month ->
-            val isSelected = month == "1月"
-            Text(
-                text = month,
-                color = if (isSelected) Color.White else Color(0xFF666666),
-                fontSize = 14.sp,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.padding(horizontal = 12.dp)
-            )
-        }
-        
-        Spacer(modifier = Modifier.width(16.dp))
-        Text("›", color = Color(0xFF888888), fontSize = 20.sp)
-    }
-}
-
-@Composable
-private fun CalendarGridPlaceholder() {
-    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-        // 星期头部
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            listOf("一", "二", "三", "四", "五", "六", "日").forEach { day ->
-                Text(
-                    text = day,
-                    color = Color(0xFF666666),
-                    fontSize = 12.sp,
-                    modifier = Modifier.width(36.dp)
+                // 1. Calendar Section (Expandable)
+                SchedulerCalendar(
+                    isExpanded = isCalendarExpanded,
+                    onExpandChange = { isCalendarExpanded = it }
                 )
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        // 单行日期（活动周）
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            listOf("27", "28", "29", "30", "31", "1", "2").forEachIndexed { index, day ->
-                val isToday = day == "27"
+                
+                // 2. Timeline Section
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
-                        .background(
-                            if (isToday) Color(0xFF4FC3F7) else Color.Transparent,
-                            RoundedCornerShape(8.dp)
-                        ),
-                    contentAlignment = Alignment.Center
+                        .weight(1f)
+                        .background(Color(0xFFFAFAFA)) // Very light gray for timeline area
                 ) {
-                    Text(
-                        text = day,
-                        color = if (isToday) Color.Black else Color.White,
-                        fontSize = 14.sp
+                    SchedulerTimeline(
+                        items = timelineItems,
+                        onInteraction = { /* Handle interactions */ }
                     )
                 }
+
+                // 3. Drag Handle (Bottom of sheet)
+                DragHandle(onDismiss = onDismiss)
             }
         }
     }
@@ -178,8 +113,9 @@ private fun DragHandle(onDismiss: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .background(Color.White)
             .padding(vertical = 12.dp)
-            .clickable { onDismiss() } // 点击也能关闭
+            .clickable { onDismiss() }
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
                     onDragEnd = { accumulatedDrag = 0f },
@@ -187,10 +123,10 @@ private fun DragHandle(onDismiss: () -> Unit) {
                 ) { change, dragAmount ->
                     change.consume()
                     accumulatedDrag += dragAmount
-                    // 累计拖动超过 50px 则关闭
+                    // Drag UP to close
                     if (accumulatedDrag < -50) {
                         onDismiss()
-                        accumulatedDrag = 0f // 重置防止多次触发
+                        accumulatedDrag = 0f
                     }
                 }
             },
@@ -200,7 +136,7 @@ private fun DragHandle(onDismiss: () -> Unit) {
             modifier = Modifier
                 .width(40.dp)
                 .height(4.dp)
-                .background(Color(0xFF666666), RoundedCornerShape(2.dp))
+                .background(Color(0xFFDDDDDD), RoundedCornerShape(2.dp))
         )
     }
 }

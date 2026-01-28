@@ -1,9 +1,8 @@
 package com.smartsales.aitest.di
 
-import com.smartsales.domain.prism.core.*
-import com.smartsales.domain.prism.core.fakes.*
-import com.smartsales.domain.prism.core.linters.*
-import com.smartsales.domain.prism.core.tools.*
+import com.smartsales.prism.domain.pipeline.*
+import com.smartsales.prism.domain.memory.*
+import com.smartsales.prism.data.fakes.*
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -32,56 +31,56 @@ object FakeCoreModule {
     @Singleton
     fun provideExecutor(): Executor = FakeExecutor()
     
-    @Provides
-    @Singleton
-    fun providePlanner(): Planner = FakePlanner()
+    // @Provides
+    // @Singleton
+    // fun providePlanner(): Planner = FakePlanner()
     
-    @Provides
-    @Singleton
-    fun provideModePublisher(): ModePublisher = FakeModePublisher()
+    // @Provides
+    // @Singleton
+    // fun provideModePublisher(): ModePublisher = FakeModePublisher()
     
     @Provides
     @Singleton
     fun provideMemoryWriter(): MemoryWriter = FakeMemoryWriter()
     
-    @Provides
-    @Singleton
-    fun provideSessionCache(): SessionCache = FakeSessionCache()
+    // @Provides
+    // @Singleton
+    // fun provideSessionCache(): SessionCache = FakeSessionCache()
     
-    @Provides
-    @Singleton
-    fun provideMemoryCenterNotifier(): MemoryCenterNotifier = FakeMemoryCenterNotifier()
+    // @Provides
+    // @Singleton
+    // fun provideMemoryCenterNotifier(): MemoryCenterNotifier = FakeMemoryCenterNotifier()
     
     // ============ Input Tools ============
     
-    @Provides
-    @Singleton
-    fun provideTingwuRunner(): TingwuRunner = FakeTingwuRunner()
+    // @Provides
+    // @Singleton
+    // fun provideTingwuRunner(): TingwuRunner = FakeTingwuRunner()
     
-    @Provides
-    @Singleton
-    fun provideVisionAnalyzer(): VisionAnalyzer = FakeVisionAnalyzer()
+    // @Provides
+    // @Singleton
+    // fun provideVisionAnalyzer(): VisionAnalyzer = FakeVisionAnalyzer()
     
-    @Provides
-    @Singleton
-    fun provideUrlFetcher(): UrlFetcher = FakeUrlFetcher()
+    // @Provides
+    // @Singleton
+    // fun provideUrlFetcher(): UrlFetcher = FakeUrlFetcher()
     
-    @Provides
-    @Singleton
-    fun provideBleConnector(): BleConnector = FakeBleConnector()
+    // @Provides
+    // @Singleton
+    // fun provideBleConnector(): BleConnector = FakeBleConnector()
     
     // ============ Linters ============
     
-    @Provides
-    fun provideEntityLinter(): EntityLinter = EntityLinter()
+    // @Provides
+    // fun provideEntityLinter(): EntityLinter = EntityLinter()
     
-    @Provides
-    fun providePlanLinter(): PlanLinter = PlanLinter()
+    // @Provides
+    // fun providePlanLinter(): PlanLinter = PlanLinter()
     
-    @Provides
-    fun provideSchedulerLinter(): SchedulerLinter = SchedulerLinter()
+    // @Provides
+    // fun provideSchedulerLinter(): SchedulerLinter = SchedulerLinter()
     
-    @Provides
-    fun provideRelevancyLinter(): RelevancyLinter = RelevancyLinter()
+    // @Provides
+    // fun provideRelevancyLinter(): RelevancyLinter = RelevancyLinter()
 }
 

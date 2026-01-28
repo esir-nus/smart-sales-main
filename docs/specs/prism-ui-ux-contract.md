@@ -91,16 +91,7 @@
 
 ### Component Registry (Home Screen)
 
-| Component | User Sees | States | Internal Logic |
-|-----------|-----------|--------|----------------|
-| **History Trigger [☰]** | Hamburger icon | `idle`, `open` | Opens Left Drawer (Sessions) |
-| **Device Status [📶]** | Signal icon | `on` (Green), `off` (Gray) | Opens **Connectivity Modal** (Truncated Onboarding) |
-| **Session Title** | Text "Session:..." | `read`, `edit` | Renames current session ID |
-| **Debug Toggle [🐞]** | Bug icon | `off`, `on` | Toggles overlay stats |
-| **New Session [➕]** | Plus icon | `idle`, `pressed` | 1. Clear Context 2. Gen new UUID |
-| **Tingwu Menu [≣]** | Text icon | `idle`, `pressed` | Opens Right Drawer (Transcript) |
-| **Artifacts [📦]** | Box icon | `idle`, `has-items` (Dot) | Opens Right Drawer (Files) |
-| **Mode Toggle** | Pill Switch | `coach` (Purple), `analyst` (Blue) | Sets `inputIntent` state. Navigation occurs on Input focus. |
+> 🧩 **Component Registry**: See [ui_element_registry.md](./ui_element_registry.md) for states and physics.
 
 ---
 
@@ -153,14 +144,7 @@
 
 ### Component Registry (Chat Interface)
 
-| Component | User Sees | States | Internal Logic |
-|-----------|-----------|--------|----------------|
-| **Mode Toggle** | Segmented control | `coach`, `analyst`, `switching` | Sets `currentMode` in Orchestrator |
-| **Thinking Box** | Foldable trace | `hidden`, `folded`, `unfolded`, `complete` | DashScope native streaming |
-| **Plan Card** | Persistent checklist | `visible`, `executing`, `complete` | Prism §4.6 Planner-Centric |
-| **Tool Button** | Clickable item | `idle`, `running`, `done` | Executes plan step |
-| **In-Chat Conflict**| Unified Card | `visible`, `resolved` | §1.3 Conflict Component |
-| **Resolution** | Chat Options | `listening`, `processed` | 4-Option Selection (§3.10) |
+> 🧩 **Component Registry**: See [ui_element_registry.md](./ui_element_registry.md) for states and physics.
 
 ---
 
@@ -186,11 +170,11 @@
 │  ══════════ TIMELINE (Adaptive Stack) ════════════════════ │
 │                                                            │
 │  08:00  ┌─────────────────────────────────────────────────┐│
-│         │ ☐ 与张总会议 (A3项目)               [⏰][⋮]    ││
+│         │ ☐ 与张总会议 (A3项目)               [⏰]       ││
 │         └─────────────────────────────────────────────────┘│
 │                          ↕ gap-4                           │
 │  10:30  ┌─────────────────────────────────────────────────┐│
-│         │ 💡 研究竞品报价策略                 [问AI][⋮]  ││
+│         │ 💡 研究竞品报价策略                 [问AI]     ││
 │         └─────────────────────────────────────────────────┘│
 │                          ↕ gap-4                           │
 │  12:00  ┌─────────────────── ⚠️ CONFLICT ─────────────────┐│
@@ -215,8 +199,8 @@
 
 | Type | Icon | Actions | Description |
 |------|------|---------|-------------|
-| **Task** | ☐ | `[⏰]` Alarm, `[⋮]` Menu | Scheduled item |
-| **Inspiration** | 💡 | `[问AI]` Ask AI, `[⋮]` Menu | Standalone note, not time-bound |
+| **Task** | ☐ | `[⏰]` Alarm | Scheduled item |
+| **Inspiration** | 💡 | `[问AI]` Ask AI | Standalone note, not time-bound |
 | **Conflict** | ⚠️ | `[展开]` Expand | Two overlapping items |
 | **Done** | ✓ | — | Completed task (dimmed) |
 
@@ -228,7 +212,7 @@
 ┌───────────────────────────────────────────────────────────┐
 │  COLLAPSED (Default)                                      │
 │  ───────────────────────────────────────────────────────  │
-│  ☐ 与张总会议 (A3项目)                           [⏰][⋮] │
+│  ☐ 与张总会议 (A3项目)                           [⏰]    │
 │  (Gestures: Swipe Left → Delete)                          │
 └───────────────────────────────────────────────────────────┘
         │
@@ -237,7 +221,7 @@
 ┌───────────────────────────────────────────────────────────┐
 │  EXPANDED (Chat & Context Mode)                           │
 │  ───────────────────────────────────────────────────────  │
-│  ☐ 与张总会议 (A3项目)                           [⏰][⋮] │
+│  ☐ 与张总会议 (A3项目)                           [⏰]    │
 │  ─────────────────────────────────────────────────────── │
 │  [AI - System]                                            │
 │  已为您安排 08:00。地点：北京办公室。发现3份相关历史文档。   │
@@ -293,17 +277,17 @@
 ```
 STEP 1: User taps [问AI] on Card A
 ┌─────────────────────────────────────────────────────────────┐
-│  💡 灵感：研究竞品报价策略                        [问AI][⋮] │ ← Tapped
+│  💡 灵感：研究竞品报价策略                        [问AI]    │ ← Tapped
 └─────────────────────────────────────────────────────────────┘
         │
         ▼
 STEP 2: Multi-select mode activates
 ┌─────────────────────────────────────────────────────────────┐
-│  ● 灵感：研究竞品报价策略                              [⋮] │ ← Auto-selected
+│  ● 灵感：研究竞品报价策略                              [✓] │ ← Auto-selected
 ├─────────────────────────────────────────────────────────────┤
-│  ○ 灵感：客户痛点整理                                  [⋮] │ ← Checkbox appears
+│  ○ 灵感：客户痛点整理                                  [ ] │ ← Checkbox appears
 ├─────────────────────────────────────────────────────────────┤
-│  ○ 灵感：Q2目标复盘                                    [⋮] │ ← Checkbox appears
+│  ○ 灵感：Q2目标复盘                                    [ ] │ ← Checkbox appears
 └─────────────────────────────────────────────────────────────┘
 ┌─────────────────────────────────────────────────────────────┐
 │              [ 问AI (1) ]                                   │ ← Bottom bar
@@ -311,11 +295,11 @@ STEP 2: Multi-select mode activates
 
 STEP 3: User selects more (optional)
 ┌─────────────────────────────────────────────────────────────┐
-│  ● 灵感：研究竞品报价策略                              [⋮] │
+│  ● 灵感：研究竞品报价策略                              [✓] │
 ├─────────────────────────────────────────────────────────────┤
-│  ● 灵感：客户痛点整理                                  [⋮] │ ← Now selected
+│  ● 灵感：客户痛点整理                                  [✓] │ ← Now selected
 ├─────────────────────────────────────────────────────────────┤
-│  ○ 灵感：Q2目标复盘                                    [⋮] │
+│  ○ 灵感：Q2目标复盘                                    [ ] │
 └─────────────────────────────────────────────────────────────┘
 ┌─────────────────────────────────────────────────────────────┐
 │              [ 问AI (2) ]                                   │ ← Count updates
@@ -333,18 +317,7 @@ STEP 4: Tap [问AI (N)] → Opens Coach with combined context
 
 ## Component Registry (Scheduler)
 
-| Component | User Sees | States | Internal Logic |
-|-----------|-----------|--------|----------------|
-| **Month Carousel** | Scrollable month pills | `idle`, `scrolling`, `selected` | Updates `selectedMonth` |
-| **Day Carousel** | Scrollable day pills | `idle`, `scrolling`, `selected` | Updates `selectedDay` |
-| **Grid Container** | 56px Row Grid | `folded` (H=56), `expanded` (H=300) | Animates Height/Y |
-| **Handle Bar** | Gray-200 Pill | `idle`, `dragging` (Pull >50px) | Triggers Expansion/Collapse |
-| **Task Dot** | Blue/White Dot | `idle` (Blue), `selected` (White) | Indicates task presence |
-| **Time Label** | Mono Font Text | `visible` (Adaptive), `hidden` | Shows only near existing items |
-| **Task Card** | Collapsible card | `collapsed`, `expanded`, `editing`, `done` | Links to `MemoryEntry` |
-| **Inspiration Card** | Selectable card | `collapsed`, `selected`, `multi-selected` | `isArchived=false`, no `scheduledAt` |
-| **Conflict Card** | Expandable resolver | `collapsed`, `expanded`, `resolving` | Triggers Prism §4.7 Rethink |
-| **Alarm Button** | Clock icon | `idle`, `set`, `ringing` | Triggers system notification |
+> 🧩 **Component Registry**: See [ui_element_registry.md](./ui_element_registry.md) for states and physics.
 
 **Gesture Notes:**
 - **Tap [问AI]** on Inspiration card → enters multi-select mode
@@ -438,79 +411,261 @@ STEP 4: Tap [问AI (N)] → Opens Coach with combined context
 
 ---
 
-### 1.6 Onboarding Flow (Mandatory Badge Pairing)
+### 1.6 Onboarding Flow (V15 Full Spectrum)
 
-> **Source of Truth:** Ported from V12 Legacy Designs.
+> **Context**: High-fidelity "unboxing" journey. Priorities: Hardware reliability, account binding, and confidence building.
 
-**Screen 1: Welcome**
-```
+**The Golden Thread (12 Steps):**
+1.  **Welcome**: Brand hero screen ("Your AI Sales Coach").
+2.  **Permissions**: Glass-card priming before triggering native Mic/BLE permission dialogs.
+3.  **Voice Handshake (Step 3)**: Establish relationship with "getting to know you" interaction via phone mic.
+4.  **Hardware Wake**: Manual instructions: "Turn on device, hold button 3s until blue light blinks."
+5.  **Scan (Radar)**: High-fidelity pulse animation. 
+6.  **Found (Manual Select)**: **NO Auto-Connect**. User MUST tap the discovered device card to confirm intent.
+7.  **FW Check & Update**: Automatic versioning integrity. Force-update triggered if FW < Min version.
+8.  **WiFi Setup**: Prompt for SSID and Password via BLE.
+9.  **Device Naming**: Personalized naming (e.g., "Frank's Badge").
+10. **Account Gate (Step 10)**: "Bind Device" gate to save setup context to the cloud.
+11. **Profile Collection**: Enhanced profile (Name, Role, Industry, Notes).
+12. **Complete**: Success checkmark and transition to Home.
+
+**Interactions:**
+*   **Manual Gate**: "Device Detected" state requires user tap to connect.
+*   **Persistence**: Badge-to-Account binding established upon successful handshake.
+*   **Dev-Doorway**: Persistent "Rocket" button in `PrototypeDashboard` resets `isOnboarding` and `pairedState`.
+
+#### 1.6.1 Welcome Screen (Step 1)
+```text
 ┌─────────────────────────────────────────────────┐
-│          ( Aurora Animation )                   │
+│          ( Aurora Animation: Slow Pulse )       │
 │                                                 │
-│       欢迎使用 SmartSales 助手                   │
-│       你的智能销售伙伴                           │
+│       [ LOGO ]                                  │
+│       SmartSales                                │
+│       您的 AI 销售教练                          │
 │                                                 │
-│       [ 开始设置 ]                               │
+│       [ 开启旅程 ] (Solid White Button)  │
+└─────────────────────────────────────────────────┘
+```
+> **Note**: No login/signup buttons. Clean entry.
+
+#### 1.6.2 Permissions (Step 2)
+```text
+┌─────────────────────────────────────────────────┐
+│  ┌───────────────────────────────────────────┐  │
+│  │ 🎙️ 麦克风权限                              │  │
+│  │ 为了分析您的销售对话...                    │  │
+│  │ [ 允许访问 ]                               │  │
+│  └───────────────────────────────────────────┘  │
+│  ┌───────────────────────────────────────────┐  │
+│  │ 📡 蓝牙权限                                │  │
+│  │ 为了连接 SmartBadge...                     │  │
+│  │ [ 允许访问 ]                               │  │
+│  └───────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────┘
 ```
 
-**Screen 2: Profile (Step 1/2)**
-```
+#### 1.6.3 Voice Handshake (Step 3)
+```text
 ┌─────────────────────────────────────────────────┐
-│  (•──○)  1/2                                    │
+│          ( Aurora: Expectant / Listening )      │
 │                                                 │
-│  告诉我们你是谁                                  │
+│       让我们先认识一下                           │
+│       试着说：“你好，帮我搞定这个客户”           │
 │                                                 │
-│  [ 姓名 ________________ ]                      │
-│  [ 职位 ________________ ]                      │
+│       ||||||||||||||||||||||||                  │
+│       ( Waveform reacts to PHONE mic )          │
 │                                                 │
-│                               [ 下一步 ]         │
+│       ( Upon Voice Detect ) -> AI Response      │
+│       "好的，先告诉我客户的情况..."             │
+│       [ 继续 ]                                   │
 └─────────────────────────────────────────────────┘
 ```
 
-**Screen 3: Profile (Step 2/2)**
-```
+#### 1.6.4 Hardware Wake Instruction (Step 4)
+```text
 ┌─────────────────────────────────────────────────┐
-│  (•──•)  2/2                                    │
+│        [ DEVICE ANIMATION: Finger Press ]       │
+│        ( 3... 2... 1... Blink! )                │
 │                                                 │
-│  你的工作风格                                    │
+│        启动您的 SmartBadge                       │
+│        长按中间按钮 3 秒，直到蓝灯闪烁           │
 │                                                 │
-│  [ 行业 ________________ ]                      │
-│  [ 经验 ▼ 0-1年 / 1-3年 / 3年以上 ]              │
-│  [ 备注 ________________ ]                      │
-│    Placeholder: "如：主要沟通渠道、工作习惯等"    │
-│                                                 │
-│                               [ 完成 ]           │
+│        [ 灯已经在闪了 ]                          │
 └─────────────────────────────────────────────────┘
 ```
 
-**Screen 4: Badge Pairing**
-```
+#### 1.6.5 Scan (Step 5)
+```text
 ┌─────────────────────────────────────────────────┐
-│        ( SmartBadge Illustration )              │
+│       ((      (      )      ))                  │
 │                                                 │
-│  连接你的 SmartBadge                             │
-│  实时录音 • 自动转写 • 智能总结                   │
+│          正在搜索设备...                         │
 │                                                 │
-│  [ 开始配对 ]                                    │
-│  [ 稍后再说 ]                                    │
+│       [ 取消 ]                                  │
 └─────────────────────────────────────────────────┘
 ```
 
-**Screen 5: Badge Gate (Unpaired Blocker)**
-> Shown if user skips pairing or enters Home without badge.
-
-```
+#### 1.6.6 Device Found (Manual Connect) (Step 6)
+```text
 ┌─────────────────────────────────────────────────┐
+│       ((      (      )      ))                  │
 │                                                 │
-│        ( Locked Icon + Badge Illustration )     │
-│                                                 │
-│  请先连接 SmartBadge                             │
-│  AI 功能需要配合徽章使用                          │
-│                                                 │
-│  [ 立即配对 ]                                    │
+│  ┌───────────────────────────────────────────┐  │
+│  │ 📱 SmartBadge (Frank's)           -42dBm  │  │
+│  │ ID: FF:23:44:A1                           │  │
+│  │                                           │  │
+│  │ [ 连接 ]                                  │  │
+│  └───────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────┘
 ```
+
+#### 1.6.7 WiFi Credentials (Step 7)
+```text
+┌─────────────────────────────────────────────────┐
+│       配置网络                                   │
+│       让徽章独立工作                             │
+│                                                 │
+│       [ WiFi 名称 (SSID)       ]                │
+│       [ 密码                   ]                │
+│                                                 │
+│       [ 连接网络 ]   [ 跳过 ]                    │
+│                                                 │
+│    ⚠️ 跳过后，徽章录音需通过蓝牙手动同步          │
+└─────────────────────────────────────────────────┘
+```
+
+#### 1.6.8 FW Check & Update (Step 8)
+```text
+┌─────────────────────────────────────────────────┐
+│          正在检查固件版本...                     │
+│          v1.0.2 -> v1.2.0 (必需)                │
+│                                                 │
+│          [=====================>    ] 75%       │
+│          请勿关闭设备                            │
+│          [ 下一步 ] (Available at 100%)          │
+└─────────────────────────────────────────────────┘
+```
+
+#### 1.6.9 Device Naming (Step 9)
+```text
+┌─────────────────────────────────────────────────┐
+│       给它起个名字                               │
+│                                                 │
+│       [ Frank's Badge          ]                │
+│                                                 │
+│       [ 确定 ]                                  │
+└─────────────────────────────────────────────────┘
+```
+
+#### 1.6.10 Account Gate (Login/Bind) (Step 10)
+```text
+┌─────────────────────────────────────────────────┐
+│  ┌───────────────────────────────────────────┐  │
+│  │ 保存您的设置                               │  │
+│  │ 登录以绑定 "Frank's Badge"                 │  │
+│  │                                           │  │
+│  │ [ 邮箱/手机号        ]                     │  │
+│  │ [ 密码               ]                     │  │
+│  │                                           │  │
+│  │ [     登录并绑定     ]                     │  │
+│  │                                           │  │
+│  │ 没有账号？ [ 立即注册 ]                    │  │
+│  └───────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────┘
+```
+
+#### 1.6.11 Profile Collection (Step 11)
+```text
+┌─────────────────────────────────────────────────┐
+│       让我更好地帮助你                           │
+│       (可跳过，后续可完善)                        │
+│                                                 │
+│  🎙️ [ 按住说话介绍自己 ]                         │
+│            或者                                 │
+│  ┌───────────────────────────────────────────┐  │
+│  │ 我是 [李明]，负责 [政企大客户销售]...        │  │
+│  └───────────────────────────────────────────┘  │
+│                                                 │
+│  [ 完成 ]       [ 稍后完善 ]                     │
+│                                                 │
+│  💡 完善资料可获得更精准的 AI 辅导               │
+│  📍 你可以在「用户中心」随时完善资料              │
+└─────────────────────────────────────────────────┘
+```
+
+#### 1.6.12 Complete (Step 12)
+```text
+┌─────────────────────────────────────────────────┐
+│                                                 │
+│          ( Success Checkmark Animation )        │
+│                                                 │
+│          一切就绪！                              │
+│                                                 │
+│          ( Auto-navigates to Home )             │
+└─────────────────────────────────────────────────┘
+```
+
+### 1.6.1 Connectivity Modal (Status & Pairing)
+> Triggered by tapping the **[📶] Device State** icon in the header.
+
+**Layout:**
+**Layout (State Machine):**
+
+**State A: Connected (Live Status)**
+```text
+┌─────────────────────────────────────────────────┐
+│              [ ✕ Close ]                        │
+│                                                 │
+│       [🟢 3D Badge Visual (Pulse) ]             │
+│            ( ID: 8842 • 🔋 85% )                │
+│                                                 │
+│         SmartBadge Pro                          │
+│         v1.2.0                                  │
+│                                                 │
+│  [ ⚡ 断开连接 ]    [ 🔄 检查更新 ]              │
+│  (Disconnect)       (Primary/Blue)              │
+└─────────────────────────────────────────────────┘
+```
+
+**State B: Disconnected (Offline)**
+```text
+┌─────────────────────────────────────────────────┐
+│              [ ✕ ]                              │
+│       [⚪ Badge Visual (Grayscale) ]            │
+│            🔴 离线 (Offline)                    │
+│                                                 │
+│       [ 连接设备 (Reconnect) ]                   │
+│       (Primary/Blue)                            │
+└─────────────────────────────────────────────────┘
+```
+
+**State C: Firmware Update**
+```text
+┌─────────────────────────────────────────────────┐
+│              [ ⬇️ Icon ]                        │
+│         发现新版本 v1.3                          │
+│         包含重要安全修复                         │
+│                                                 │
+│       [ 立即同步 (Sync Now) ]                    │
+│       (Triggers: 下载中... -> 安装中...)          │
+└─────────────────────────────────────────────────┘
+```
+
+**State D: WiFi Mismatch (Reconnect Edge Case)**
+> Triggered if Badge WiFi creds != Phone WiFi after BLE Reconnect.
+```text
+┌─────────────────────────────────────────────────┐
+│              [ ⚠️ WiFi Alert ]                  │
+│       网络环境已变更                             │
+│       检测到徽章 WiFi 与当前网络不匹配             │
+│                                                 │
+│       [ Input: WiFi Name (SSID) ]               │
+│       [ Input: Password         ]               │
+│                                                 │
+│       [ 更新配置 (Update) ]  [ 忽略 ]            │
+└─────────────────────────────────────────────────┘
+```
+**Logic**: A "truncated onboarding" view. It allows users to manage badge pairing without entering the full setup flow. Essential for hardware-first object permanence.
 
 ---
 
@@ -559,30 +714,25 @@ STEP 4: Tap [问AI (N)] → Opens Coach with combined context
 ├────────────────────────────────────────────────────────────┤
 │                                                            │
 │  ┌────────────────────────────────────────────────────────┐│
-│  │ ☆ Q4_年度预算会议_Final.wav               14:20       ││ ← Audio Card
-│  │ ──────────────────────────────────────────────────────  ││
-│  │ 财务部关于Q4预算的最终审核意见，重点讨论了...          ││ ← Transcript preview
+│  │ [★] Q4_年度预算会议_Final.wav                   14:20  ││ ← Row 1: Star + Name + Time
+│  │ [☁] 财务部关于Q4预算的最终审核意见...                  ││ ← Row 2: Source + Preview
 │  └────────────────────────────────────────────────────────┘│
 │                                                            │
 │  ┌────────────────────────────────────────────────────────┐│
-│  │ ○ 客户拜访_张总_20260124.wav              08:45       ││
-│  │ ──────────────────────────────────────────────────────  ││
-│  │ ░░░░░░░░░░ 右滑转写 >>> ░░░░░░░░░░                     ││ ← Shimmer placeholder
+│  │ [☆] 客户拜访_张总_20260124.wav                  2 days ││
+│  │ [📱] ░░░░░░░░░ 右滑转写 >>> ░░░░░░░░░                  ││ ← Local source (Phone)
 │  └────────────────────────────────────────────────────────┘│
 │                                                            │
 │  ┌────────────────────────────────────────────────────────┐│
-│  │ ○ meeting_notes.wav                        03:12       ││
-│  │ ──────────────────────────────────────────────────────  ││
-│  │ ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 转写中... 45%          ││ ← Transcribing
+│  │ [☆] meeting_notes.wav                            01-20 ││
+│  │ [📱] ░░░░░░░░░░░░░░░░░ 转写中... 45%                  ││
 │  └────────────────────────────────────────────────────────┘│
 │                                                            │
 │  ┌────────────────────────────────────────────────────────┐│
-│  │ [+] 上传本地音频                                       ││ ← Upload button
+│  │ [+] 上传本地音频                                       ││
 │  └────────────────────────────────────────────────────────┘│
 │                                                            │
 └────────────────────────────────────────────────────────────┘
-```
-
 ```
 
 **Interactions:**
@@ -599,8 +749,8 @@ STEP 4: Tap [问AI (N)] → Opens Coach with combined context
 ┌───────────────────────────────────────────────────────────┐
 │  COLLAPSED (Default)                                      │
 ├───────────────────────────────────────────────────────────┤
-│  ☆ Q4_年度预算会议.wav                    14:20          │
-│  财务部关于Q4预算的最终审核意见...                        │
+│  [★] Q4_年度预算会议.wav                           14:20  │
+│  [☁] 财务部关于Q4预算的最终审核意见...                    │
 └───────────────────────────────────────────────────────────┘
         │
         │ tap card body
@@ -608,16 +758,15 @@ STEP 4: Tap [问AI (N)] → Opens Coach with combined context
 ┌───────────────────────────────────────────────────────────┐
 │  EXPANDED                                                 │
 ├───────────────────────────────────────────────────────────┤
-│  ☆ Q4_年度预算会议.wav                    14:20          │
-│  ─────────────────────────────────────────────────────── │
-│  📅 2026-01-23 15:30                 ┌──────────────┐    │
-│  📁 来源：SmartBadge                 │    问AI      │    │
-│                                      └──────────────┘    │
-│  ─────────────────────────────────────────────────────── │
-│  ┌─────────────────────────────────────────────────────┐ │
-│  │ [转写内容 - 可折叠]                            [∧]  │ │
-│  │ ─────────────────────────────────────────────────── │ │
-│  │ 财务部关于Q4预算的最终审核意见，重点讨论了SaaS     │ │
+│  [★] Q4_年度预算会议.wav                           14:20  │
+│  [☁] ───────────────────────────────────────────────────  │
+│      📅 2026-01-23 15:30                 ┌──────────────┐ │
+│                                          │    问AI      │ │
+│      ─────────────────────────────────── └──────────────┘ │
+│  ┌─────────────────────────────────────────────────────┐  │
+│  │ [转写内容 - 可折叠]                            [∧]  │  │
+│  │ ─────────────────────────────────────────────────── │  │
+│  │ 财务部关于Q4预算的最终审核意见，重点讨论了SaaS     │  │
 │  │ 订阅模式的成本结构。李总提出需要在下周一之前...     │ │
 │  │                                            [查看全部]│ │
 │  └─────────────────────────────────────────────────────┘ │

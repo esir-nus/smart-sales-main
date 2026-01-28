@@ -11,7 +11,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star // v2.6 Home Hero Fallback
 import androidx.compose.material3.*
+import androidx.compose.animation.core.* // v2.6 Home Hero Animation
+import androidx.compose.ui.graphics.Brush // v2.6 Home Hero Gradient
+import androidx.compose.ui.graphics.graphicsLayer // v2.6 Home Hero Layer
+import android.view.HapticFeedbackConstants // v2.6 Haptic
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,7 +46,8 @@ fun PrismChatScreen(
     viewModel: PrismViewModel = hiltViewModel(),
     onMenuClick: () -> Unit = {},
     onNewSessionClick: () -> Unit = {},
-    onAudioBadgeClick: () -> Unit = {}
+    onAudioBadgeClick: () -> Unit = {},
+    onAvatarClick: () -> Unit = {}
 ) {
     val currentMode by viewModel.currentMode.collectAsState()
     val history by viewModel.history.collectAsState()
@@ -48,6 +55,7 @@ fun PrismChatScreen(
     val inputText by viewModel.inputText.collectAsState()
     val isSending by viewModel.isSending.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val sessionTitle by viewModel.sessionTitle.collectAsState() // Observe Title
 
     PrismChatContent(
         currentMode = currentMode,
@@ -56,13 +64,17 @@ fun PrismChatScreen(
         inputText = inputText,
         isSending = isSending,
         errorMessage = errorMessage,
+        sessionTitle = sessionTitle, // Pass Title
         onModeSwitch = viewModel::switchMode,
         onInputChanged = viewModel::updateInput,
         onSend = viewModel::send,
         onClearError = viewModel::clearError,
         onMenuClick = onMenuClick,
         onNewSessionClick = onNewSessionClick,
-        onAudioBadgeClick = onAudioBadgeClick
+        onAudioBadgeClick = onAudioBadgeClick,
+        onAvatarClick = onAvatarClick,
+        onDebugClick = viewModel::cycleDebugState,
+        onTitleChange = viewModel::updateSessionTitle // Wire update logic
     )
 }
 
@@ -74,13 +86,17 @@ private fun PrismChatContent(
     inputText: String,
     isSending: Boolean,
     errorMessage: String?,
+    sessionTitle: String, // v2.6
     onModeSwitch: (Mode) -> Unit,
     onInputChanged: (String) -> Unit,
     onSend: () -> Unit,
     onClearError: () -> Unit,
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
-    onAudioBadgeClick: () -> Unit
+    onAudioBadgeClick: () -> Unit,
+    onAvatarClick: () -> Unit,
+    onDebugClick: () -> Unit,
+    onTitleChange: (String) -> Unit // v2.6
 ) {
     val context = LocalContext.current
     
@@ -88,29 +104,48 @@ private fun PrismChatContent(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF0D0D1A))
-            .navigationBarsPadding() // 底部导航栏安全区
-            .imePadding()            // 键盘弹出时推动内容
+            .navigationBarsPadding()
+            .imePadding()
             .padding(16.dp)
     ) {
-        // 聊天头部 (v2.5 Aligned)
+        // 聊天头部 (v2.6 Updated: Editable Title + Placeholders)
         ChatHeader(
+            sessionTitle = sessionTitle,
             onMenuClick = onMenuClick,
             onNewSessionClick = onNewSessionClick,
             onAudioBadgeClick = onAudioBadgeClick,
-            onDebugClick = { 
-                Toast.makeText(context, "Debug Cmds: /plan, /think, /md, /error", Toast.LENGTH_LONG).show() 
-            }
+            onAvatarClick = onAvatarClick,
+            onDebugClick = onDebugClick,
+            onTitleChange = onTitleChange,
+            onTingwuClick = { Toast.makeText(context, "Tingwu Feature Coming Soon", Toast.LENGTH_SHORT).show() },
+            onArtifactsClick = { Toast.makeText(context, "Artifacts Feature Coming Soon", Toast.LENGTH_SHORT).show() }
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 模式切换栏 (v2.5 Aligned: Coach/Analyst ONLY)
+        // v2.6: Home Hero (Breathing Aura + Greeting)
+        // Only visible when history is empty (Clean Desk state)
+        if (history.isEmpty()) {
+            HomeHero(context = context)
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        // 模式切换栏 (v2.6 Aligned: Coach/Analyst ONLY + Haptics)
         ModeToggleBar(
             currentMode = currentMode,
             onModeSwitch = onModeSwitch
         )
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        // --- PINNED AREA (Plan Card) ---
+        if (uiState is UiState.PlanCard) {
+            PlanCard(
+                plan = (uiState as UiState.PlanCard).plan,
+                completedSteps = (uiState as UiState.PlanCard).completedSteps
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
 
         // 对话区域
         LazyColumn(
@@ -119,41 +154,33 @@ private fun PrismChatContent(
                 .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(bottom = 16.dp),
-            reverseLayout = true // 从底部开始渲染
+            reverseLayout = true
         ) {
             // 1. 当前正在进行的响应 (Loading/Thinking/Streaming)
             if (uiState !is UiState.Idle && uiState !is UiState.Error) {
                 item {
                     when (uiState) {
-                        is UiState.PlanCard -> {
-                            PlanCard(
-                                plan = (uiState as UiState.PlanCard).plan,
-                                completedSteps = (uiState as UiState.PlanCard).completedSteps
-                            )
-                        }
                         is UiState.Thinking -> {
                             ThinkingBox(
                                 content = (uiState as UiState.Thinking).hint ?: "正在分析...",
                                 isComplete = false
                             )
                         }
-                        else -> {
-                           // Loading 状态暂不显示 specialized UI，或显示 LoadingBubble
+                        is UiState.Response -> {
+                             ResponseBubble(uiState = uiState as UiState.Response)
                         }
+                        else -> {}
                     }
                 }
             }
 
-            // 2. 历史消息 (倒序显示，因为 reverseLayout = true)
+            // 2. 历史消息
             items(history.reversed()) { message ->
                 when (message) {
-                    is ChatMessage.User -> {
-                        UserBubble(text = message.content)
-                    }
+                    is ChatMessage.User -> UserBubble(text = message.content)
                     is ChatMessage.Ai -> {
                         when (val state = message.uiState) {
                             is UiState.Response -> ResponseBubble(uiState = state)
-                            is UiState.PlanCard -> PlanCard(plan = state.plan, completedSteps = state.completedSteps)
                             else -> Text("暂不支持的消息类型", color = Color.Gray)
                         }
                     }
@@ -165,31 +192,83 @@ private fun PrismChatContent(
         errorMessage?.let { error ->
             Snackbar(
                 modifier = Modifier.padding(vertical = 8.dp),
-                action = {
-                    TextButton(onClick = onClearError) {
-                        Text("关闭", color = Color.White)
-                    }
-                },
+                action = { TextButton(onClick = onClearError) { Text("关闭", color = Color.White) } },
                 containerColor = Color(0xFF3D2020)
-            ) {
-                Text(error, color = Color.White)
-            }
+            ) { Text(error, color = Color.White) }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 输入栏 (Unified Component)
+        // 输入栏
         InputBar(
             text = inputText,
             isSending = isSending,
             onTextChanged = onInputChanged,
             onSend = onSend,
-            onAttachClick = {
-                Toast.makeText(context, "Attachment Picker (Max 11)", Toast.LENGTH_SHORT).show()
-            },
-            onMicClick = {
-                Toast.makeText(context, "Voice Note (Phone Mic)", Toast.LENGTH_SHORT).show()
-            }
+            onAttachClick = { Toast.makeText(context, "Attachment Picker (Max 11)", Toast.LENGTH_SHORT).show() },
+            onMicClick = { Toast.makeText(context, "Voice Note (Phone Mic)", Toast.LENGTH_SHORT).show() }
+        )
+    }
+}
+
+// v2.6: Spec §1.1 Home Hero
+@Composable
+private fun HomeHero(context: android.content.Context) {
+    val infiniteTransition = rememberInfiniteTransition(label = "Aura")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue = 1.1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "AuraScale"
+    )
+
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Breathing Aura (Purple/Aurora)
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    alpha = 0.8f
+                }
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color(0xFF9C27B0).copy(alpha = 0.4f), Color.Transparent)
+                    ),
+                    shape = androidx.compose.foundation.shape.CircleShape
+                )
+        ) {
+            // Core Icon (Sparkle/Brain)
+            Icon(
+                imageVector = Icons.Default.Star, // Fallback to Star (Core) to avoid dependency issues
+                contentDescription = "AI Aura",
+                tint = Color(0xFFE1BEE7),
+                modifier = Modifier.size(48.dp).align(Alignment.Center)
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Greeting Text (Time Aware)
+        // Fallback logic for simplicity in this iteration, ideal involves Calendar
+        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        val greeting = when (hour) {
+            in 5..11 -> "上午好"
+            in 12..18 -> "下午好"
+            else -> "晚上好"
+        }
+        Text(
+            text = "$greeting, Frank",
+            color = Color.White.copy(alpha = 0.9f),
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Medium
         )
     }
 }
@@ -199,6 +278,8 @@ private fun ModeToggleBar(
     currentMode: Mode,
     onModeSwitch: (Mode) -> Unit
 ) {
+    val view = androidx.compose.ui.platform.LocalView.current // For Haptics
+    
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -206,19 +287,21 @@ private fun ModeToggleBar(
             .padding(4.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        // v2.5: Only Coach and Analyst are Modes. Scheduler is a Drawer.
         val validModes = listOf(Mode.COACH, Mode.ANALYST)
         
         validModes.forEach { mode ->
             val isSelected = mode == currentMode
             val (icon, label, color) = when (mode) {
-                Mode.COACH -> Triple("💬", "Coach", Color(0xFF9C27B0))   // Purple
-                Mode.ANALYST -> Triple("🔬", "Analyst", Color(0xFF2196F3)) // Blue
+                Mode.COACH -> Triple("💬", "Coach", Color(0xFF9C27B0))
+                Mode.ANALYST -> Triple("🔬", "Analyst", Color(0xFF2196F3))
                 else -> Triple("?", "Unknown", Color.Gray)
             }
 
             TextButton(
-                onClick = { onModeSwitch(mode) },
+                onClick = { 
+                    view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS) // v2.6 Haptic
+                    onModeSwitch(mode) 
+                },
                 modifier = Modifier
                     .weight(1f)
                     .background(
@@ -238,15 +321,23 @@ private fun ModeToggleBar(
 }
 
 /**
- * 聊天头部 — spec §1.1
+ * 聊天头部 — spec §1.1 (v2.6 Refined)
  */
 @Composable
 private fun ChatHeader(
+    sessionTitle: String,
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
     onAudioBadgeClick: () -> Unit,
-    onDebugClick: () -> Unit // New (v2.5)
+    onAvatarClick: () -> Unit,
+    onDebugClick: () -> Unit,
+    onTitleChange: (String) -> Unit,
+    onTingwuClick: () -> Unit,
+    onArtifactsClick: () -> Unit
 ) {
+    var isEditing by remember { mutableStateOf(false) }
+    var tempTitle by remember { mutableStateOf(sessionTitle) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -258,47 +349,66 @@ private fun ChatHeader(
         // 左侧: 菜单 + 设备状态
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onMenuClick) {
-                Icon(
-                    imageVector = Icons.Filled.Menu,
-                    contentDescription = "History",
-                    tint = Color.White
-                )
+                Icon(Icons.Filled.Menu, "History", tint = Color.White)
             }
-            
-            // Audio Badge Trigger -> Connectivity Modal (v2.5)
             Text(
-                text = "📶", // Device Status
+                text = "📶", 
                 fontSize = 16.sp,
-                modifier = Modifier
-                    .padding(start = 8.dp)
-                    .clickable { onAudioBadgeClick() }
+                modifier = Modifier.padding(start = 8.dp).clickable { onAudioBadgeClick() }
             )
         }
         
-        // 中间: 会话标题
-        Text(
-            text = "Session: 新对话",
-            color = Color.White,
-            fontSize = 14.sp
-        )
-        
-        // 右侧: Debug + 新建会话
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // Debug Toggle [🐞] (v2.5)
-            IconButton(onClick = onDebugClick) {
-                Icon(
-                    imageVector = Icons.Filled.BugReport,
-                    contentDescription = "Debug",
-                    tint = Color(0xFF666666) // Dimmed
+        // 中间: 会话标题 (v2.6 Editable)
+        Box(contentAlignment = Alignment.Center) {
+            if (isEditing) {
+                androidx.compose.foundation.text.BasicTextField(
+                    value = tempTitle,
+                    onValueChange = { tempTitle = it },
+                    textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
+                    singleLine = true,
+                    modifier = Modifier
+                        .width(150.dp)
+                        .background(Color.DarkGray, RoundedCornerShape(4.dp))
+                        .padding(4.dp),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                        onDone = {
+                            if (tempTitle.isNotBlank()) onTitleChange(tempTitle)
+                            isEditing = false
+                        }
+                    )
+                )
+            } else {
+                Text(
+                    text = "Session: $sessionTitle",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    modifier = Modifier.clickable { 
+                        tempTitle = sessionTitle
+                        isEditing = true 
+                    }
                 )
             }
-            
+        }
+        
+        // 右侧: [≣] [📦] | Avatar [🐞] [➕]
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // v2.6 Placeholders
+            IconButton(onClick = onTingwuClick) {
+                Text("≣", color = Color.Gray, fontSize = 18.sp)
+            }
+            IconButton(onClick = onArtifactsClick) {
+                Text("📦", color = Color.Gray, fontSize = 16.sp)
+            }
+
+            IconButton(onClick = onAvatarClick) {
+                Icon(Icons.Filled.Person, "User Center", tint = Color.White)
+            }
+            IconButton(onClick = onDebugClick) {
+                Icon(Icons.Filled.BugReport, "Debug", tint = Color(0xFF666666))
+            }
             IconButton(onClick = onNewSessionClick) {
-                Icon(
-                    imageVector = Icons.Filled.Add,
-                    contentDescription = "New Session",
-                    tint = Color.White
-                )
+                Icon(Icons.Filled.Add, "New Session", tint = Color.White)
             }
         }
     }

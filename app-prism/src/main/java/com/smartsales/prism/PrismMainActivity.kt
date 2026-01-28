@@ -9,7 +9,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.smartsales.prism.domain.repository.HistoryRepository
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.smartsales.prism.ui.PrismShell
+import com.smartsales.prism.ui.onboarding.OnboardingScreen
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -34,7 +37,13 @@ class PrismMainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    PrismShell(historyRepository = historyRepository)
+                    var isOnboarding by rememberSaveable { mutableStateOf(true) }
+
+                    if (isOnboarding) {
+                        OnboardingScreen(onComplete = { isOnboarding = false })
+                    } else {
+                        PrismShell(historyRepository = historyRepository)
+                    }
                 }
             }
         }

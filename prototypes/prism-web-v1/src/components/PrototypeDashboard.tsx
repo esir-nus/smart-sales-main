@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Home, Rocket, BarChart2, Calendar, FileAudio } from 'lucide-react';
+import { Settings, Home, Rocket, BarChart2, Calendar, FileAudio, User } from 'lucide-react';
 
 interface DashboardProps {
   onNavigate: (destination: string) => void;
@@ -46,6 +46,12 @@ export const PrototypeDashboard: React.FC<DashboardProps> = ({ onNavigate }) => 
           label="音频中心" 
           color="text-amber-400"
           onClick={() => onNavigate('Audio')} 
+        />
+        <MenuButton 
+          icon={<User size={18} />} 
+          label="用户中心" 
+          color="text-pink-400"
+          onClick={() => onNavigate('UserCenter')} 
         />
       </div>
 

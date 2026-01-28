@@ -11,6 +11,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.smartsales.prism.domain.model.ChatMessage
+import com.smartsales.prism.domain.pipeline.ExecutionPlan
+import com.smartsales.prism.domain.pipeline.RetrievalScope
+import com.smartsales.prism.domain.pipeline.DeliverableType
 import javax.inject.Inject
 
 /**
@@ -29,6 +32,7 @@ class PrismViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
     
+    // ... (rest of val props) ...
     private val _inputText = MutableStateFlow("")
     val inputText: StateFlow<String> = _inputText.asStateFlow()
     
@@ -40,6 +44,16 @@ class PrismViewModel @Inject constructor(
     
     private val _history = MutableStateFlow<List<ChatMessage>>(emptyList())
     val history: StateFlow<List<ChatMessage>> = _history.asStateFlow()
+
+    // v2.6 Spec: Editable Session Title ("Executive Desk")
+    private val _sessionTitle = MutableStateFlow("新对话") // Default: "New Session" (Localized)
+    val sessionTitle: StateFlow<String> = _sessionTitle.asStateFlow()
+
+    fun updateSessionTitle(newTitle: String) {
+        if (newTitle.isNotBlank()) {
+            _sessionTitle.value = newTitle.trim()
+        }
+    }
     
     fun switchMode(mode: Mode) {
         viewModelScope.launch {
@@ -92,5 +106,29 @@ class PrismViewModel @Inject constructor(
     
     fun clearError() {
         _errorMessage.value = null
+    }
+
+    /**
+     * Debug Tool: Cycle through UI States manually
+     * Sequence: Idle -> Thinking -> PlanCard -> Response -> Idle
+     */
+    fun cycleDebugState() {
+        val nextState = when (_uiState.value) {
+            is UiState.Idle -> UiState.Thinking("Analyzing Context...")
+            is UiState.Thinking -> UiState.PlanCard(
+                plan = ExecutionPlan(
+                    retrievalScope = RetrievalScope.HOT_ONLY,
+                    deliverables = listOf(
+                        DeliverableType.KEY_INSIGHT,
+                        DeliverableType.CHAT_RESPONSE
+                    )
+                ),
+                completedSteps = setOf(0)
+            )
+            is UiState.PlanCard -> UiState.Streaming("This is a simulated AI response stream... (Part 1)")
+            is UiState.Streaming -> UiState.Response("This is a simulated AI response stream... (Part 1) [Completed]")
+            else -> UiState.Idle
+        }
+        _uiState.value = nextState
     }
 }

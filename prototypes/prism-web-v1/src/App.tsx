@@ -7,7 +7,7 @@ import { InputBar } from './components/InputBar';
 import { SchedulerDrawer } from './components/SchedulerDrawer';
 import { PrototypeDashboard } from './components/PrototypeDashboard';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Circle, Rocket } from 'lucide-react';
+import { CheckCircle2, Circle } from 'lucide-react';
 import { clsx } from 'clsx';
 
 import { HomeScreen } from './components/HomeScreen';
@@ -15,6 +15,9 @@ import { HistoryDrawer } from './components/HistoryDrawer';
 import { AudioDrawer } from './components/AudioDrawer';
 import { RightToolbar } from './components/RightToolbar';
 import { ModeToggle } from './components/ModeToggle';
+import { OnboardingOverlay } from './components/OnboardingOverlay';
+import { ConnectivityModal } from './components/ConnectivityModal';
+import { UserCenter } from './components/UserCenter';
 
 // Types
 type Mode = 'coach' | 'analyst' | 'home';
@@ -63,24 +66,7 @@ const PlanCard = () => (
     </motion.div>
 );
 
-// Onboarding Component (Mock)
-const OnboardingScreen = () => (
-    <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="absolute inset-0 z-50 bg-white flex flex-col items-center justify-center p-8 text-center"
-    >
-        <div className="w-24 h-24 rounded-full bg-blue-50 mb-8 flex items-center justify-center animate-pulse">
-             <Rocket size={48} className="text-blue-500" />
-        </div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">欢迎使用 智能销售</h1>
-        <p className="text-gray-500 mb-8">正在初始化您的 AI 销售助手...</p>
-        <div className="w-full max-w-xs h-1 disabled bg-gray-100 rounded-full overflow-hidden">
-            <div className="h-full bg-blue-500 animate-[width_2s_ease-out_forwards] w-3/4" />
-        </div>
-    </motion.div>
-);
+
 
 function App() {
   const [mode, setMode] = useState<Mode>('home'); // View Mode
@@ -89,6 +75,8 @@ function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false); // History Drawer State
   const [isAudioOpen, setIsAudioOpen] = useState(false); // Audio Drawer State
+  const [isConnectivityOpen, setIsConnectivityOpen] = useState(false); // Connectivity Modal State
+  const [isUserCenterOpen, setIsUserCenterOpen] = useState(false); // User Center State
   
   // Auto-expand Scheduler on first launch (Clean Desk Paradigm)
   useEffect(() => {
@@ -140,6 +128,10 @@ function App() {
           setIsOnboarding(false);
           setIsAudioOpen(true);
       }
+      if (destination === 'UserCenter') {
+          setIsOnboarding(false);
+          setIsUserCenterOpen(true);
+      }
   };
 
   // Mock Scenario Trigger
@@ -166,7 +158,6 @@ function App() {
   return (
     <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center pl-64 transition-all duration-300">
         
-
         {/* Persistent Dashboard Sidebar */}
         <PrototypeDashboard onNavigate={handleDashboardNav} />
 
@@ -179,11 +170,24 @@ function App() {
             showHomeActions={mode === 'home'}
             onReset={() => setMessages([])}
             onMenuClick={() => setIsHistoryOpen(true)}
+            onSignalClick={() => setIsConnectivityOpen(true)}
+          />
+          
+          {/* Connectivity Modal */}
+          <ConnectivityModal 
+            isOpen={isConnectivityOpen} 
+            onClose={() => setIsConnectivityOpen(false)} 
+          />
+          
+          {/* User Center (Z-Index High) */}
+          <UserCenter 
+             isOpen={isUserCenterOpen} 
+             onClose={() => setIsUserCenterOpen(false)} 
           />
           
           {/* Onboarding Overlay */}
           <AnimatePresence>
-            {isOnboarding && <OnboardingScreen />}
+            {isOnboarding && <OnboardingOverlay onComplete={() => handleDashboardNav('Home')} />}
           </AnimatePresence>
 
           {/* History Drawer (Left) */}
@@ -195,6 +199,10 @@ function App() {
                     onSelectSession={(id) => {
                         console.log('Selected session:', id);
                         setIsHistoryOpen(false);
+                    }}
+                    onSettingsClick={() => {
+                        setIsHistoryOpen(false); // Close history
+                        setIsUserCenterOpen(true); // Open settings
                     }}
                 />
             )}

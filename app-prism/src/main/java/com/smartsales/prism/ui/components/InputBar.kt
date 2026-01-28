@@ -16,6 +16,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.getValue // v2.6 Shimmer
+import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.* // v2.6 Shimmer Animation
 
 /**
  * Prism Input Bar
@@ -57,7 +60,18 @@ fun InputBar(
             onValueChange = onTextChanged,
             modifier = Modifier.weight(1f),
             placeholder = {
-                Text("输入消息...", color = Color(0xFF666666))
+                // v2.6 Shimmering Placeholder
+                val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "Shimmer")
+                val alpha by infiniteTransition.animateFloat(
+                    initialValue = 0.3f,
+                    targetValue = 1.0f,
+                    animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                        animation = androidx.compose.animation.core.tween(1500, easing = androidx.compose.animation.core.LinearEasing),
+                        repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+                    ),
+                    label = "Alpha"
+                )
+                Text("输入消息...", color = Color(0xFF666666).copy(alpha = alpha))
             },
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,

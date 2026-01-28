@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, type PanInfo, AnimatePresence } from 'framer-motion';
-import { BellRing, Trash2, Sparkles, X } from 'lucide-react';
+import { Trash2, Sparkles, X, AlarmClock } from 'lucide-react';
 import { clsx } from 'clsx';
 import { InspirationCard } from './InspirationCard';
 import { ConflictCard } from './ConflictCard';
@@ -15,8 +15,8 @@ import { ChatExpandedView } from './ChatExpandedView';
 const ExpandedTaskCard = ({ item }: { item: any }) => {
     const [expanded, setExpanded] = React.useState(false);
     
-    // Mock Alarm Logic
-    const hasAlarm = React.useMemo(() => Math.random() > 0.5, []);
+    // Static Alarm/Menu as per spec
+    // In real app, 'hasAlarm' would come from 'item' prop
 
     return (
         <motion.div 
@@ -26,14 +26,8 @@ const ExpandedTaskCard = ({ item }: { item: any }) => {
         >
             <div className="flex justify-between items-center mb-2" onClick={() => expanded && setExpanded(false)}>
                 <h3 className="font-semibold text-gray-900">{item.title}</h3>
-                <div className="flex items-center gap-2">
-                    {/* Alarm State Visual */}
-                    {hasAlarm && (
-                        <div className="flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100/50">
-                             <BellRing size={10} className="animate-pulse" />
-                             <span>08:50</span>
-                        </div>
-                    )}
+                <div className="flex items-center gap-3 text-gray-400">
+                    <AlarmClock size={16} />
                 </div>
             </div>
             

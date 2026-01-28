@@ -8,6 +8,13 @@
 
 <!-- Add new candidates at the top -->
 
+### [CANDIDATE] "Screen Responsibility Locality"
+- **Date**: 2026-01-27
+- **Context**: Keyboard inset bug took 4 attempts to fix. ChatHeader was in PrismShell.kt, InputBar was in PrismChatScreen.kt. Scattered responsibilities.
+- **Evidence**: Conversation 8a468281. Had to read TWO files to debug ONE screen's layout.
+- **Frank's Insight**: All UI elements of a single screen belong in the same file (or extracted to components/). When fixing bugs, if you have to read N files to understand 1 screen, your architecture failed. Shell = drawer orchestration only, not screen elements.
+- **Observations**: 1
+
 ### [CANDIDATE] "Literal Spec Alignment Audit"
 - **Date**: 2026-01-27
 - **Context**: History Drawer audit falsely claimed "Match" on grouping buckets. Agent summarized spec instead of comparing verbatim.

@@ -32,9 +32,10 @@ interface HistoryDrawerProps {
     isOpen: boolean;
     onClose: () => void;
     onSelectSession: (id: string) => void;
+    onSettingsClick?: () => void;
 }
 
-export const HistoryDrawer = ({ isOpen, onClose, onSelectSession }: HistoryDrawerProps) => {
+export const HistoryDrawer = ({ isOpen, onClose, onSelectSession, onSettingsClick }: HistoryDrawerProps) => {
     return (
         <>
             {/* Scrim / Backdrop */}
@@ -119,7 +120,10 @@ export const HistoryDrawer = ({ isOpen, onClose, onSelectSession }: HistoryDrawe
                             </span>
                         </div>
                     </div>
-                    <button className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50">
+                    <button 
+                        onClick={onSettingsClick}
+                        className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50"
+                    >
                         <Settings size={20} />
                     </button>
                 </div>

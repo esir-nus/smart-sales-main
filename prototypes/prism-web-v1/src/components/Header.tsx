@@ -6,9 +6,10 @@ interface HeaderProps {
     showHomeActions?: boolean;
     onReset?: () => void;
     onMenuClick?: () => void;
+    onSignalClick?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ title = "智能销售", showHomeActions = false, onReset, onMenuClick }) => {
+export const Header: React.FC<HeaderProps> = ({ title = "智能销售", showHomeActions = false, onReset, onMenuClick, onSignalClick }) => {
   return (
     <header className="flex items-center justify-between h-auto min-h-[56px] px-4 pt-12 pb-2 z-20 relative">
         {/* Left: History & Device */}
@@ -17,7 +18,10 @@ export const Header: React.FC<HeaderProps> = ({ title = "智能销售", showHome
                 <Menu size={24} />
             </button>
             {showHomeActions && (
-                <button className="p-2 text-green-600 bg-green-50 rounded-full">
+                <button 
+                    onClick={onSignalClick}
+                    className="p-2 text-green-600 bg-green-50 rounded-full hover:bg-green-100 transition-colors"
+                >
                     <Signal size={18} />
                 </button>
             )}

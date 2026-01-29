@@ -1422,6 +1422,8 @@ When confidence is low or user taps `[更改]`:
 |-------------------|-------------------|----------------|
 | **Clarification Needed** | Ambiguous entity (low confidence score) | `⚠️ 需要澄清: [Entity Name] (歧义请求)` |
 | **Conflict Spotted** | Schedule overlap detected | `⚠️ 发现冲突: [Event A] vs [Event B]` |
+| **Visual Cue** | **Expanded State** | **Breathing Red Tint** (Animated Border/Shadow) |
+| **Gesture** | **Delete** | **Swipe Left-to-Right** (Cleaner Gesture, **Collapsed Only**) |
 | **Relevancy Found** | Background library match | `✨ 发现关联: [Entity Name] (置信度: [Score]%)` |
 | **Client Info Updated** | Profile enrichment via Relevancy Lib | `👤 客户信息更新: [Name] (新增偏好/职位...)` |
 | **Knowledge Added** | New fact learned from context | `📚 知识库扩充: [Topic] (来源: [Source])` |

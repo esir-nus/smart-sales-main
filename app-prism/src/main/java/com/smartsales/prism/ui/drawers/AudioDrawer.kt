@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons // ADDED IMPORT
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,6 +27,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.drawBehind
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.smartsales.prism.ui.drawers.audio.AudioViewModel
 
 /**
  * Audio Drawer — Bottom-Up Sheet
@@ -36,40 +38,11 @@ import androidx.compose.ui.draw.drawBehind
 fun AudioDrawer(
     isOpen: Boolean,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: AudioViewModel = hiltViewModel()
 ) {
-    // Height: Leave 5% gap at top (approx 95vh)
-    // For skeleton, we use a fixed high percentage or dp
-    
-    // Sample Data Mock (Matching Screenshot)
-    val sampleItems = remember {
-        listOf(
-            AudioItemState(
-                id = "1",
-                filename = "Q4_年度预算会议.wav",
-                timeDisplay = "1 day",
-                source = AudioSource.SMARTBADGE,
-                status = AudioStatus.TRANSCRIBED,
-                isStarred = true,
-                summary = "财务部关于Q4预算的最终审核意见，重点..."
-            ),
-            AudioItemState(
-                id = "2",
-                filename = "meeting_notes.wav",
-                timeDisplay = "10:15",
-                source = AudioSource.PHONE,
-                status = AudioStatus.TRANSCRIBING,
-                progress = 0.45f
-            ),
-            AudioItemState(
-                id = "3",
-                filename = "客户拜访_张总_20260124.wav",
-                timeDisplay = "14:30",
-                source = AudioSource.SMARTBADGE,
-                status = AudioStatus.PENDING
-            )
-        )
-    }
+    // 从 ViewModel 收集数据
+    val audioItems by viewModel.audioItems.collectAsState()
 
     AnimatedVisibility(
         visible = isOpen,
@@ -170,6 +143,9 @@ fun AudioDrawer(
                 }
 
                 // 3. List
+                // State Hoisting: Only one card expanded at a time
+                var expandedCardId by remember { mutableStateOf<String?>(null) }
+
                 LazyColumn(
                     modifier = Modifier
                         .weight(1f)
@@ -177,8 +153,23 @@ fun AudioDrawer(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(bottom = 20.dp)
                 ) {
-                    items(items = sampleItems, key = { it.id }) { item ->
-                        AudioCard(item = item, onClick = { /* TODO */ })
+                    items(items = audioItems, key = { it.id }) { item ->
+                        val isExpanded = expandedCardId == item.id
+                        
+                        AudioCard(
+                            item = item,
+                            isExpanded = isExpanded,
+                            onClick = { 
+                                // Toggle Logic: Click Open -> Expand; Click Open again -> Collapse
+                                expandedCardId = if (isExpanded) null else item.id 
+                            },
+                            onStarClick = { viewModel.toggleStar(item.id) },
+                            onAskAi = { id -> 
+                                // TODO: Navigation Callback
+                                // Logic: Expect a lambda from parent in production.
+                                // specific implementation pending navigation system.
+                            }
+                        )
                     }
                     
                     // 4. Footer Upload Button as last item

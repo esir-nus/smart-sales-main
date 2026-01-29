@@ -1,207 +1,324 @@
 package com.smartsales.prism.ui.drawers
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.VolumeUp // Added import
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Cloud
-import androidx.compose.material.icons.outlined.Headphones
 import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Single Audio Card Component
- * Handles 3 states: TRANSCRIBED, TRANSCRIBING, PENDING
+ * Audio Card Hub System
+ * Facade switching between Compact (List) and Expanded (Hub) views.
  */
 @Composable
 fun AudioCard(
     item: AudioItemState,
-    onClick: () -> Unit
+    isExpanded: Boolean,
+    onClick: () -> Unit,
+    onStarClick: (String) -> Unit,
+    onAskAi: (String) -> Unit
 ) {
+    // Shared Card Container
     Card(
-        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .shadow(
-                elevation = 2.dp,
+                elevation = if (isExpanded) 8.dp else 2.dp,
                 shape = RoundedCornerShape(12.dp),
                 spotColor = Color(0x1A000000)
+            )
+            .animateContentSize(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
             ),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        onClick = onClick // Toggles expansion via parent
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            // Row 1: Icon, Filename, Time
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Leading Icon
-                AudioIcon(item)
-                
-                Spacer(modifier = Modifier.width(12.dp))
-                
-                // Filename
-                Text(
-                    text = item.filename,
-                    color = Color(0xFF333333),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-                
-                Spacer(modifier = Modifier.width(8.dp))
-                
-                // Time
-                Text(
-                    text = item.timeDisplay,
-                    color = Color(0xFF888888),
-                    fontSize = 12.sp
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            // Row 2: Source Icon + Content Area
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top
-            ) {
-                // Source Icon (Cloud/Phone)
-                Icon(
-                    imageVector = if (item.source == AudioSource.SMARTBADGE) Icons.Outlined.Cloud else Icons.Outlined.Smartphone,
-                    contentDescription = null,
-                    tint = Color(0xFF888888), // Consistent gray tint for source
-                    modifier = Modifier
-                        .size(16.dp)
-                        .offset(y = 2.dp) // Optical alignment
-                )
-                
-                Spacer(modifier = Modifier.width(12.dp))
-                
-                // Content Area (Summary / Progress / Prompt)
-                Box(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    when (item.status) {
-                        AudioStatus.TRANSCRIBED -> TranscribedContent(item.summary)
-                        AudioStatus.TRANSCRIBING -> TranscribingContent(item.progress)
-                        AudioStatus.PENDING -> PendingContent()
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AudioIcon(item: AudioItemState) {
-    // Background color logic
-    val bgColor = when {
-        item.isStarred -> Color(0xFFE3F2FD) // Light Blue
-        item.status == AudioStatus.TRANSCRIBING -> Color(0xFFFFF3E0) // Light Orange
-        else -> Color(0xFFF5F5F5) // Light Gray
-    }
-    
-    // Icon tint logic
-    val iconTint = when {
-        item.isStarred -> Color(0xFF2196F3) // Blue
-        item.status == AudioStatus.TRANSCRIBING -> Color(0xFFFF9800) // Orange
-        else -> Color(0xFF9E9E9E) // Gray
-    }
-    
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .background(bgColor, CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        if (item.isStarred) {
-            Icon(Icons.Filled.Star, null, tint = iconTint, modifier = Modifier.size(24.dp))
+        if (isExpanded) {
+            ExpandedAudioHub(item, onAskAi, onClick)
         } else {
-            Icon(Icons.Outlined.Headphones, null, tint = iconTint, modifier = Modifier.size(24.dp))
+            CompactAudioCard(item, onStarClick)
         }
     }
 }
 
+/**
+ * Compact View (List Item)
+ * Minimalist: 2 Lines. Title + Truncated Summary.
+ */
 @Composable
-private fun TranscribedContent(summary: String?) {
-    Surface(
-        color = Color(0xFFF8F9FA), // Very light gray
-        shape = RoundedCornerShape(4.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Text(
-            text = summary ?: "无摘要",
-            color = Color(0xFF666666),
-            fontSize = 13.sp,
-            lineHeight = 18.sp,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
-        )
-    }
-}
-
-@Composable
-private fun TranscribingContent(progress: Float?) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        LinearProgressIndicator(
-            progress = progress ?: 0f,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(4.dp),
-            color = Color(0xFFFF9800),
-            trackColor = Color(0xFFEEEEEE)
-        )
-        Spacer(modifier = Modifier.height(6.dp))
+private fun CompactAudioCard(
+    item: AudioItemState,
+    onStarClick: (String) -> Unit
+) {
+    Column(modifier = Modifier.padding(16.dp)) {
+        // Row 1: Icon, Filename, Time
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            AudioIcon(item = item, onClick = { onStarClick(item.id) })
+            Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = "转写中...",
-                color = Color(0xFFFF9800),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
+                text = item.filename,
+                color = Color(0xFF333333),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "${((progress ?: 0f) * 100).toInt()}%",
+                text = item.timeDisplay,
                 color = Color(0xFF888888),
                 fontSize = 12.sp
             )
         }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // Row 2: Truncated Summary (Gray)
+        Text(
+            text = item.summary ?: "无摘要內容...",
+            color = Color(0xFF888888),
+            fontSize = 13.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 52.dp) // Align with text above (40dp icon + 12dp space)
+        )
+    }
+}
+
+/**
+ * Expanded View (The Hub)
+ * Consumption Focus: Player Top, Portal Button, Accordions.
+ */
+@Composable
+private fun ExpandedAudioHub(
+    item: AudioItemState,
+    onAskAi: (String) -> Unit,
+    onCollapse: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        
+        // 1. Collapse Handle (Visual Cue)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onCollapse() }
+                .padding(vertical = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+             Icon(
+                 imageVector = Icons.Default.ExpandLess,
+                 contentDescription = "Collapse",
+                 tint = Color(0xFFDDDDDD)
+             )
+        }
+
+        // 2. Player Header (Pinned Top)
+        // Mock Player Visual
+        Surface(
+            color = Color(0xFFF5F5F5),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(12.dp)
+            ) {
+                 Icon(
+                     imageVector = Icons.Default.PlayArrow,
+                     contentDescription = "Play",
+                     tint = Color(0xFF2196F3)
+                 )
+                 Spacer(modifier = Modifier.width(8.dp))
+                 Text(
+                     text = "00:12 / ${item.timeDisplay}",
+                     fontSize = 12.sp,
+                     color = Color(0xFF666666),
+                     modifier = Modifier.weight(1f)
+                 )
+                 // Fake Waveform
+                 Text(
+                     text = "|||||·|||||||·||||",
+                     fontSize = 10.sp,
+                     color = Color(0xFFBDBDBD),
+                     letterSpacing = 2.sp
+                 )
+                 Spacer(modifier = Modifier.width(8.dp))
+                 Icon(
+                     imageVector = Icons.Filled.VolumeUp, // Using VolumeUp as speaker substitute
+                     contentDescription = null,
+                     tint = Color(0xFF666666),
+                     modifier = Modifier.size(16.dp)
+                 )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 3. Portal Button (Ask AI)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+        ) {
+            Button(
+                onClick = { onAskAi(item.id) },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFE3F2FD), // Light Blue
+                    contentColor = Color(0xFF1976D2)
+                ),
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier.fillMaxWidth(),
+                elevation = ButtonDefaults.buttonElevation(0.dp, 0.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.AutoAwesome,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "问AI (Ask AI)",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 4. Accordions (Summary, Transcript, Chapters, Highlights)
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            AudioCardAccordion(
+                title = "摘要 (Summary)",
+                icon = "📝",
+                content = item.summary ?: "暂无摘要",
+                initiallyExpanded = true // Auto-expand summary
+            )
+            Divider(color = Color(0xFFEEEEEE))
+            AudioCardAccordion(
+                title = "转写 (Transcription)",
+                icon = "🗣️",
+                content = "这里是详细的转写内容占位符...\n(Lazy Loaded Content)",
+                initiallyExpanded = false
+            )
+            Divider(color = Color(0xFFEEEEEE))
+            AudioCardAccordion(
+                title = "章节 (Chapters)",
+                icon = "📑",
+                content = "1. 开场 (00:00)\n2. 讨论预算 (05:20)\n3. 总结 (12:00)",
+                initiallyExpanded = false
+            )
+            Divider(color = Color(0xFFEEEEEE))
+            AudioCardAccordion(
+                title = "重点 (Highlights)",
+                icon = "🖍️",
+                content = "• 确认Q4预算\n• 李总提到SaaS成本",
+                initiallyExpanded = false
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
 @Composable
-private fun PendingContent() {
-    Surface(
-        color = Color(0xFFF8F9FA),
-        shape = RoundedCornerShape(4.dp),
-        modifier = Modifier.fillMaxWidth()
+private fun AudioCardAccordion(
+    title: String,
+    icon: String,
+    content: String,
+    initiallyExpanded: Boolean = false
+) {
+    var expanded by remember { mutableStateOf(initiallyExpanded) }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded }
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = icon, fontSize = 14.sp)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = title,
+                fontSize = 14.sp,
+                color = Color(0xFF333333),
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.weight(1f)
+            )
+            Icon(
+                imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.KeyboardArrowRight,
+                contentDescription = null,
+                tint = Color(0xFFCCCCCC)
+            )
+        }
+        
+        AnimatedVisibility(visible = expanded) {
+            Text(
+                text = content,
+                fontSize = 14.sp,
+                color = Color(0xFF666666),
+                lineHeight = 22.sp,
+                modifier = Modifier.padding(bottom = 12.dp, start = 24.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun AudioIcon(item: AudioItemState, onClick: () -> Unit) {
+    val bgColor = if (item.isStarred) Color(0xFFE3F2FD) else Color(0xFFF5F5F5)
+    val iconTint = if (item.isStarred) Color(0xFF2196F3) else Color(0xFF9E9E9E)
+    
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .background(bgColor, CircleShape)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "右滑转写 >>>",
-            color = Color(0xFF888888),
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+        Icon(
+            imageVector = Icons.Filled.Star, 
+            contentDescription = if (item.isStarred) "Starred" else "Unstarred",
+            tint = iconTint,
+            modifier = Modifier.size(24.dp)
         )
     }
 }

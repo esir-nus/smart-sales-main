@@ -1,8 +1,7 @@
 package com.smartsales.prism.ui.drawers.scheduler
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,6 +12,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.ExpandLess // Added
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,13 +44,15 @@ data class ChatMessage(
  * @see prism-ui-ux-contract.md §1.3 "Conflict Card"
  */
 @Composable
+
 fun ConflictCard(
     state: TimelineItem.Conflict,
+    isExpanded: Boolean,
+    onExpandToggle: () -> Unit,
     onRemove: () -> Unit = {},
     viewModel: ConflictViewModel = hiltViewModel()
 ) {
     // Local state for the mock interaction
-    var isExpanded by remember { mutableStateOf(state.isExpanded) }
     var messages by remember { mutableStateOf(listOf<ChatMessage>()) }
     var inputText by remember { mutableStateOf("") }
     var isResolving by remember { mutableStateOf(false) }
@@ -69,6 +72,18 @@ fun ConflictCard(
         }
     }
 
+    // Breathing Animation for Expanded State
+    val infiniteTransition = rememberInfiniteTransition()
+    val breathingAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+    val glowColor = if (isExpanded) Color(0xFFD32F2F).copy(alpha = breathingAlpha) else Color.Transparent
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -79,8 +94,13 @@ fun ConflictCard(
                 )
             )
             .clickable { 
-                if (!isExpanded) isExpanded = true 
-            },
+                onExpandToggle() // Allow toggle (Expand/Collapse)
+            }
+            .border(
+                width = if (isExpanded) 2.dp else 0.dp,
+                color = glowColor,
+                shape = RoundedCornerShape(8.dp)
+            ),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)), // Light Red tint
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -110,13 +130,11 @@ fun ConflictCard(
                     modifier = Modifier.weight(1f)
                 )
                 
-                if (!isExpanded) {
-                    Icon(
-                        imageVector = Icons.Outlined.ExpandMore,
-                        contentDescription = "Expand",
-                        tint = Color(0xFFD32F2F)
-                    )
-                }
+                Icon(
+                    imageVector = if (isExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    tint = Color(0xFFD32F2F)
+                )
             }
             
             // Expanded Content: Mini Chat
@@ -193,7 +211,7 @@ fun ConflictCard(
                                             isResolving = false
                                             
                                             if (result.resolved) {
-                                                isExpanded = false
+                                                if (isExpanded) onExpandToggle()
                                                 onRemove()
                                             }
                                         }

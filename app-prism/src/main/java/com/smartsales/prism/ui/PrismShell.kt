@@ -132,7 +132,13 @@ fun PrismShell(
         Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
             AudioDrawer(
                 isOpen = activeDrawer == DrawerType.AUDIO,
-                onDismiss = { activeDrawer = null }
+                onDismiss = { activeDrawer = null },
+                onNavigateToChat = { sessionId ->
+                    // 关闭 Drawer 并导航到分析会话
+                    activeDrawer = null
+                    // TODO Phase 3: 实际导航 navController.navigate("chat/$sessionId?mode=analyst")
+                    println("PrismShell: Navigate to chat session: $sessionId")
+                }
             )
         }
 

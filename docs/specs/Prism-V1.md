@@ -485,6 +485,40 @@ The Analyst workflow uses a **visible planning pattern** to build user trust and
             ↑ Persists during Coach chat
 ```
 
+#### 4.6.1 AnalystFlowController (FSM)
+
+The Analyst mode is driven by a dedicated **Finite State Machine** to manage complex multi-step flows and provide a "Unified Output Center" for the UI.
+
+**Design Rationale**: Instead of "Boolean Soup" (`isThinking`, `isParsing`, `isRunning`) scattered across a ViewModel, we use a sealed hierarchy managed by a Controller. This improves:
+- **Debuggability**: Log every state change in one place.
+- **Testability**: Unit test the Controller without mounting UI.
+- **Reusability**: Decoupled from `ChatViewModel`.
+
+**State Hierarchy:**
+```kotlin
+sealed interface AnalystState {
+    data object Idle : AnalystState
+    data class Parsing(val currentTask: String, val progress: Float) : AnalystState
+    data class Planning(val trace: List<String>) : AnalystState
+    data class Proposal(val plan: AnalystPlan, val queue: List<String> = emptyList()) : AnalystState
+    data class Executing(val plan: AnalystPlan, val currentStepId: String) : AnalystState
+    data class Result(val artifact: PlanArtifact) : AnalystState
+}
+```
+
+**Controller Contract:**
+```kotlin
+class AnalystFlowController @Inject constructor() {
+    val state: StateFlow<AnalystState>
+    suspend fun startAnalysis(input: String)
+    suspend fun confirmPlan()
+    fun handleInterruption(msg: String)
+}
+```
+
+**Interruption Handling (Queueing):**
+If user sends input during `Planning` or `Parsing` state, the message is queued in the `Proposal.queue` and processed after the current flow settles. This avoids race conditions.
+
 ### 4.7 Conflict Resolution (Rethink Model)
 
 Conflicts are treated as **creative prompts**, not merge decisions.

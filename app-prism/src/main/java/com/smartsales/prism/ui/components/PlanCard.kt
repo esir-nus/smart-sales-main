@@ -12,6 +12,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import com.smartsales.prism.domain.pipeline.DeliverableType
 import com.smartsales.prism.domain.pipeline.ExecutionPlan
 import com.smartsales.prism.domain.pipeline.RetrievalScope
@@ -159,4 +160,72 @@ private fun PlanCardPreview() {
         ),
         completedSteps = setOf(0)
     )
+}
+
+/**
+ * Analyst Proposal Card (v2.7)
+ *
+ * Shows the Strategic Plan proposal.
+ * Unlike PlanCard, this is PASSIVE. User confirms via Chat Input.
+ */
+@Composable
+fun AnalystProposalCard(
+    plan: com.smartsales.prism.domain.pipeline.AnalystPlan,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E3A5F))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("📋", fontSize = 18.sp)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Strategic Analysis Plan",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = Color(0xFF3A5F8A), thickness = 1.dp)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Body
+            Text(
+                text = "Context: ${plan.context}",
+                color = Color(0xFFCCCCCC),
+                fontSize = 13.sp
+            )
+            Text(
+                text = "Goal: ${plan.goal}",
+                color = Color(0xFFCCCCCC),
+                fontSize = 13.sp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Deliverables
+            Text(
+                text = "Proposed Deliverables:",
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            plan.deliverables.forEach { item ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("•", color = Color(0xFF88CCFF))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = item.label,
+                        color = Color.White,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+        }
+    }
 }

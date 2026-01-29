@@ -150,6 +150,10 @@ Every element definition follows this strict logic:
 | **Waveform** | `Recording` | Audio In | Hertz | Visualizes **Phone Mic**. | Phone Source. | 🚧 In-Progress |
 | **Audio List** | `Syncing` | Event | Pulse | Mirror `storage`. | Badge + Local. | ❌ Pending |
 | **Audio Card** | `Idle` | Play | Toggle | Playback. | Stop others. | ❌ Pending |
+| **Audio Card** | `Non-Transcribed` | Tap | Shake | **Rejects Expansion**. | "Transcribe First". | ❌ Pending |
+| **Audio Card** | `Transcribed` | Tap | Expand | Opens Hub. | N/A | ❌ Pending |
+| **Audio Card** | `问AI` | Tap | Navigate | **Creates/Opens Analyst Session** | Session binding. | ✅ Verified |
+| **Source Badge** | `Static` | N/A | N/A | Local (Phone) vs Cloud (Badge). | **Below Star** (No Overlap). | ❌ Pending |
 
 ---
 
@@ -166,9 +170,27 @@ Every element definition follows this strict logic:
 | Element | Visual State | Trigger | Animation | Result | Invariant | Status |
 |---------|--------------|---------|-----------|--------|-----------|--------|
 | **Plan Card** | `Visible` | Analyst | Slide Down | Sticky Top Header. | Persistent. | ❌ Pending |
+| **Plan Card** | `Parsing` | System | Shimmer | Showing current parsing task (e.g., "Reading PDF..."). | Ticker updates. | ❌ Pending |
+| **Plan Card** | `Building` | System | Expand | Full plan revealed (Goals, Highlights, Deliverables). | User types to select. | ❌ Pending |
 | **Step Item** | `Pending` | Tool Start | Spinner | Active Execution. | N/A | ❌ Pending |
 | **Step Item** | `Prompting` | **Logic Wait** | Flash Yellow | **Prompt User** via Chat. | "Should I gen PDF?" | ❌ Pending |
 | **Step Item** | `Completed` | Tool Success | Checkmark | Step Done. | N/A | ❌ Pending |
+
+### 6.2 Thinking Box (Analyst Cognition)
+
+| Element | Visual State | Trigger | Animation | Result | Invariant | Status |
+|---------|--------------|---------|-----------|--------|-----------|--------|
+| **Thinking Box** | `Folded` | **Deep Think** | Accordion | Reveal Stream. | API Flag. | ❌ Pending |
+| **Thinking Ticker** | `Active` | Analyst Input | Typewriter | Streams perception (e.g., "Reading Page 3/12"). | Organic delays. | ❌ Pending |
+| **Thinking Trace** | `Streaming` | Token | Append | Qwen Max reasoning steps. | Scroll to bottom. | ❌ Pending |
+
+### 6.3 Artifact Card (Tool Output)
+| Element | Visual State | Trigger | Animation | Result | Invariant | Status |
+|---------|--------------|---------|-----------|--------|-----------|--------|
+| **Artifact Card** | `Preview` | Tool Done | Slide In | Shows thumbnail/summary of output. | N/A | ❌ Pending |
+| **Artifact Card** | `Preview` | Tap `Full View` | Nav | Opens full-screen viewer. | N/A | ❌ Pending |
+| **Action Buttons** | N/A | Tap `Download` | System | Invokes native download. | N/A | ❌ Pending |
+| **Action Buttons** | N/A | Tap `Share` | System | Invokes native share sheet. | N/A | ❌ Pending |
 
 ---
 
@@ -176,6 +198,7 @@ Every element definition follows this strict logic:
 
 | Version | Date | Status | Changes |
 |---------|------|--------|---------|
-| **v2.6** | 2026-01-28 | **Draft** | Added Z-Map (Lego Layers). |
-| **v2.5** | 2026-01-28 | **Locked** | Tracker Added. Plan Logic Fixed (Prompt vs Artifact). |
+| **v2.7** | 2026-01-29 | **Draft** | Added Analyst Flow States (Parsing, Building), Thinking Ticker, Artifact Card. |
+| **v2.6** | 2026-01-28 | **Locked** | Added Z-Map (Lego Layers). |
+| **v2.5** | 2026-01-28 | Archived | Tracker Added. Plan Logic Fixed (Prompt vs Artifact). |
 | **v2.4** | 2026-01-28 | Archived | Spec-Mirror Edition. |

@@ -31,6 +31,21 @@ interface AudioRepository {
      * 切换收藏状态
      */
     fun toggleStar(audioId: String)
+    
+    /**
+     * 获取音频文件
+     */
+    fun getAudio(audioId: String): AudioFile?
+    
+    /**
+     * 获取绑定的会话ID
+     */
+    fun getBoundSessionId(audioId: String): String?
+    
+    /**
+     * 绑定会话
+     */
+    fun bindSession(audioId: String, sessionId: String)
 }
 
 /**
@@ -44,7 +59,8 @@ data class AudioFile(
     val status: TranscriptionStatus,
     val isStarred: Boolean = false,
     val summary: String? = null,
-    val progress: Float = 0f
+    val progress: Float = 0f,
+    val boundSessionId: String? = null // Links to Analysis chat session
 )
 
 enum class AudioSource {

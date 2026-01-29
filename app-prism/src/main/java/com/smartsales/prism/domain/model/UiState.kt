@@ -14,5 +14,11 @@ sealed class UiState {
     data class Response(val content: String, val structuredJson: String? = null) : UiState()
     data class PlanCard(val plan: ExecutionPlan, val completedSteps: Set<Int> = emptySet()) : UiState()
     data class Error(val message: String, val retryable: Boolean = true) : UiState()
+
+    // Analyst Mode FSM Mapping (v2.7)
+    data class AnalystParsing(val ticker: String, val progress: Float) : UiState()
+    data class AnalystProposal(val plan: com.smartsales.prism.domain.pipeline.AnalystPlan) : UiState()
+    data class AnalystExecuting(val planTitle: String) : UiState()
+    data class AnalystResult(val artifact: com.smartsales.prism.domain.pipeline.PlanArtifact) : UiState()
 }
 

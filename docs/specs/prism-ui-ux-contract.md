@@ -853,6 +853,19 @@ Drawer Opens
 
 **Flow:** User Request → Thinking (Analyst) → Plan Card Created
 
+**State Machine Phases (Managed by `AnalystFlowController`):**
+| State | UI Manifestation | Notes |
+|-------|------------------|-------|
+| `Idle` | Normal Chat | Waiting for Analyst trigger. |
+| `Parsing` | **Thinking Ticker** (e.g., "Reading PDF pg 3/12...") | Visualizes *Perception*. Organic delays. |
+| `Planning` | **Thinking Trace** (Cognition Stream) | Visualizes *Cognition*. Qwen Max reasoning. |
+| `Proposal` | **Plan Card (Building)** + AI Prompt | Card expands to show Goals, Highlights, Deliverables. AI asks "Shall I proceed?". User types to confirm. |
+| `Executing` | **Plan Card (Running)** | Step spinner active. |
+| `Result` | **Artifact Card** | Preview with `[Full View]`, `[Download]`, `[Share]`. |
+
+**Interruption Handling (Queueing):**
+If user types during `Parsing` or `Planning`, the message is queued in `Proposal.queue`. After the plan is proposed, queued messages are processed, allowing for "Wait, also check Q2" scenarios.
+
 ```
 ┌────────────────────────────────────────────────────────────┐
 │  [☰]  [📱]   张总客户分析                          [+]    │
@@ -864,25 +877,38 @@ Drawer Opens
 │  │ [🖼️ img1] [🖼️ img2] ... [🎤 audio.wav]           │      │
 │  └────────────────────────────────────────────────────┘      │
 │                                                              │
-│  ┌────────────── THINKING BOX (Streaming) ─────────────┐     │
-│  │ 🧠 正在构建分析计划...                         [∧] │     │
-│  │ > 识别多模态输入 (5图, 1音频)...                    │     │
-│  │ > 提取关键信息...                                   │     │
+│  [ ⚙️ Ticker: "📄 Reading Q3_Report.pdf (Pg 5/12)..." ]      │ ← Perception (Parsing State)
+│                                                              │
+│  ┌────────── THINKING BOX (Cognition Stream) ───────────┐    │
+│  │ 🧠 正在构建分析计划...                         [∧] │    │ ← Cognition (Planning State)
+│  │ > 识别多模态输入 (5图, 1音频)...                    │    │
+│  │ > 提取关键信息...                                   │    │
 │  └─────────────────────────────────────────────────────┘     │
 │                                                              │
 │            (Thinking Complete ⬇️ Plan Appears)              │
 │                                                              │
-│  ┌──────────────── PLAN CARD (New) ─────────────────────┐    │
-│  │ 📋 分析计划                                          │    │
-│  │ ──────────────────────────────────────────────────── │    │
-│  │ ☐ 1. 音频关键点提取                           [运行] │    │
-│  │ ☐ 2. 图片OCR与语义分析                        [运行] │    │
-│  │ ☐ 3. 综合决策模型构建                         [运行] │    │
-│  └──────────────────────────────────────────────────────┘    │
+│  ┌─────────── PLAN CARD (Building State) ────────────────┐   │
+│  │ 📋 Strategic Analysis Plan                            │   │
+│  │ ────────────────────────────────────────────────────  │   │
+│  │ **Context**: Q3 Revenue missed by 5%.                 │   │
+│  │ **Goal**: Identify root cause in APAC region.         │   │
+│  │                                                       │   │
+│  │ **Highlights**:                                       │   │
+│  │ • Audio mentions "supply chain delay".                │   │
+│  │ • PDF shows breakdown in Logistics cost.              │   │
+│  │                                                       │   │
+│  │ **Proposed Deliverables**:                            │   │
+│  │ 1. 📄 Comprehensive PDF Report (Recommended)          │   │
+│  │ 2. 📧 Email Summary for Team                          │   │
+│  │ 3. 💾 Save raw insights to Memory                     │   │
+│  └───────────────────────────────────────────────────────┘   │
+│                                                              │
+│  [AI]: "I've analyzed the inputs. I recommend generating     │
+│        a Comprehensive PDF Report. Type 'Yes' to proceed."   │
 │                                                              │
 │          [  💬 Coach  |  🔬 Analyst▼ ]                       │
 │  ┌────────────────────────────────────────────────────────┐  │
-│  │ [+] │    继续追问...                            [➤]  │  │
+│  │ [+] │    Yes, generate the report.              [➤]  │  │ ← User confirms via Input Bar
 │  └────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────┘
 ```

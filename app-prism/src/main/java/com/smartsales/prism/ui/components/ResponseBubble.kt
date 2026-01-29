@@ -41,6 +41,18 @@ fun ResponseBubble(
         is UiState.PlanCard -> {
             // PlanCard 由专门的 PlanCard 组件处理
         }
+        is UiState.AnalystParsing -> {
+            // AnalystParsing 由 Pinned Area 处理
+        }
+        is UiState.AnalystProposal -> {
+            // AnalystProposal 由 Pinned Area 处理
+        }
+        is UiState.AnalystExecuting -> {
+            // AnalystExecuting 由 Pinned Area 处理
+        }
+        is UiState.AnalystResult -> {
+            // AnalystResult 由 Pinned Area 处理
+        }
         is UiState.Error -> {
             ErrorBubble(message = uiState.message, modifier = modifier)
         }

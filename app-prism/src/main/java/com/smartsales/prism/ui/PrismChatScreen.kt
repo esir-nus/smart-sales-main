@@ -141,13 +141,47 @@ private fun PrismChatContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- PINNED AREA (Plan Card) ---
-        if (uiState is UiState.PlanCard) {
-            PlanCard(
-                plan = (uiState as UiState.PlanCard).plan,
-                completedSteps = (uiState as UiState.PlanCard).completedSteps
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+        // --- PINNED AREA (Plan Cards) ---
+        // Enhanced for V2.7 Analyst Flow
+        when (uiState) {
+            is UiState.PlanCard -> {
+                PlanCard(
+                    plan = uiState.plan,
+                    completedSteps = uiState.completedSteps
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            is UiState.AnalystParsing -> {
+                com.smartsales.prism.ui.components.ThinkingTicker(
+                    text = uiState.ticker,
+                    progress = uiState.progress
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+            is UiState.AnalystProposal -> {
+                com.smartsales.prism.ui.components.AnalystProposalCard(
+                    plan = uiState.plan
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            is UiState.AnalystExecuting -> {
+                // Reuse Proposal logic or show active spinner?
+                // For simplicity, we can show a text or reuse the standard PlanCard in execution mode
+                // But V2 Design shows the Ticker again or the Card updating.
+                // Let's keep it simple for now:
+                Text("⚙️ ${uiState.planTitle}", color = Color.Cyan) 
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            is UiState.AnalystResult -> {
+                com.smartsales.prism.ui.components.ArtifactCard(
+                    artifact = uiState.artifact,
+                    onFullView = { Toast.makeText(context, "Opening Full View...", Toast.LENGTH_SHORT).show() },
+                    onDownload = { Toast.makeText(context, "Downloading PDF...", Toast.LENGTH_SHORT).show() },
+                    onShare = { Toast.makeText(context, "Sharing...", Toast.LENGTH_SHORT).show() }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            else -> {} // No pinned card
         }
 
         // --- MAIN CONTENT AREA (weighted) ---

@@ -9,7 +9,8 @@ data class SessionPreview(
     val clientName: String,
     val summary: String,
     val timestamp: Long,
-    val isPinned: Boolean = false
+    val isPinned: Boolean = false,
+    val linkedAudioId: String? = null  // 关联的音频文件ID（用于分析模式）
 ) {
     /** 显示标题 - 单行格式 */
     val displayTitle: String

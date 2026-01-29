@@ -38,6 +38,7 @@ import com.smartsales.prism.ui.drawers.audio.AudioViewModel
 fun AudioDrawer(
     isOpen: Boolean,
     onDismiss: () -> Unit,
+    onNavigateToChat: (sessionId: String) -> Unit,  // 导航到分析会话
     modifier: Modifier = Modifier,
     viewModel: AudioViewModel = hiltViewModel()
 ) {
@@ -168,8 +169,8 @@ fun AudioDrawer(
                             },
                             onStarClick = { viewModel.toggleStar(item.id) },
                             onAskAi = { id -> 
-                                // TODO: Navigation Callback
-                                println("Navigate to Analyst Mode with context: $id")
+                                val sessionId = viewModel.onAskAi(id)
+                                onNavigateToChat(sessionId)
                             },
                             onTranscribe = { id -> viewModel.startTranscription(id) },
                             onDelete = { id -> viewModel.deleteAudio(id) },

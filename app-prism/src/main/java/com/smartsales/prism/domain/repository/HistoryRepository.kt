@@ -36,5 +36,12 @@ interface HistoryRepository {
      * 获取会话详情
      */
     fun getSession(sessionId: String): SessionPreview?
+    
+    /**
+     * 创建新会话
+     * @param linkedAudioId 可选，关联的音频文件ID（用于分析模式）
+     * @return 新会话的ID
+     */
+    fun createSession(clientName: String, summary: String, linkedAudioId: String? = null): String
 }
 

@@ -24,7 +24,8 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class PrismViewModel @Inject constructor(
-    private val orchestrator: Orchestrator
+    private val orchestrator: Orchestrator,
+    private val analystController: com.smartsales.prism.domain.pipeline.AnalystFlowController
 ) : ViewModel() {
     
     val currentMode: StateFlow<Mode> = orchestrator.currentMode
@@ -52,6 +53,32 @@ class PrismViewModel @Inject constructor(
     fun updateSessionTitle(newTitle: String) {
         if (newTitle.isNotBlank()) {
             _sessionTitle.value = newTitle.trim()
+        }
+    }
+
+    init {
+        // Observe Analyst FSM and map to UiState
+        viewModelScope.launch {
+            analystController.state.collect { fsmState ->
+                when (fsmState) {
+                    is com.smartsales.prism.domain.pipeline.AnalystState.Parsing -> {
+                        _uiState.value = UiState.AnalystParsing(fsmState.currentTask, fsmState.progress)
+                    }
+                    is com.smartsales.prism.domain.pipeline.AnalystState.Planning -> {
+                        _uiState.value = UiState.Thinking("Brain: " + fsmState.trace.lastOrNull().orEmpty())
+                    }
+                    is com.smartsales.prism.domain.pipeline.AnalystState.Proposal -> {
+                        _uiState.value = UiState.AnalystProposal(fsmState.plan)
+                    }
+                    is com.smartsales.prism.domain.pipeline.AnalystState.Executing -> {
+                        _uiState.value = UiState.AnalystExecuting("Executing Plan...")
+                    }
+                    is com.smartsales.prism.domain.pipeline.AnalystState.Result -> {
+                        _uiState.value = UiState.AnalystResult(fsmState.artifact)
+                    }
+                    else -> {} // Idle handled by standard flow
+                }
+            }
         }
     }
 
@@ -88,15 +115,35 @@ class PrismViewModel @Inject constructor(
             content = input
         )
         _history.value += userMsg
+        _inputText.value = ""
+
+        // Check for Analyst Plan Confirmation
+        val currentState = uiState.value
+        if (currentState is UiState.AnalystProposal) {
+             // Mock Mode: Any input confirms the plan to keep the flow moving
+             viewModelScope.launch {
+                 analystController.confirmPlan()
+             }
+             return
+        }
+
+        // Analyst Mode Trigger
+        if (currentMode.value == Mode.ANALYST) {
+            _isSending.value = true // Show loading briefly
+            viewModelScope.launch {
+                analystController.startAnalysis(input)
+                _isSending.value = false
+            }
+            return
+        }
         
         _isSending.value = true
-        _inputText.value = ""
-        _uiState.value = UiState.Loading // 临时状态，不存入历史
+        _uiState.value = UiState.Loading 
         
         viewModelScope.launch {
             try {
                 val result = orchestrator.processInput(input)
-                _uiState.value = UiState.Idle // 处理完成，回到 Idle
+                _uiState.value = UiState.Idle 
                 
                 // 2. 添加 AI 响应到历史
                 val aiMsg = ChatMessage.Ai(
@@ -124,22 +171,6 @@ class PrismViewModel @Inject constructor(
      * Sequence: Idle -> Thinking -> PlanCard -> Response -> Idle
      */
     fun cycleDebugState() {
-        val nextState = when (_uiState.value) {
-            is UiState.Idle -> UiState.Thinking("Analyzing Context...")
-            is UiState.Thinking -> UiState.PlanCard(
-                plan = ExecutionPlan(
-                    retrievalScope = RetrievalScope.HOT_ONLY,
-                    deliverables = listOf(
-                        DeliverableType.KEY_INSIGHT,
-                        DeliverableType.CHAT_RESPONSE
-                    )
-                ),
-                completedSteps = setOf(0)
-            )
-            is UiState.PlanCard -> UiState.Streaming("This is a simulated AI response stream... (Part 1)")
-            is UiState.Streaming -> UiState.Response("This is a simulated AI response stream... (Part 1) [Completed]")
-            else -> UiState.Idle
-        }
-        _uiState.value = nextState
+         // Deprecated by FSM
     }
 }

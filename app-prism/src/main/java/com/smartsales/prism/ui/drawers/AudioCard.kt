@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 
 /**
  * Audio Card Hub System
@@ -61,7 +62,14 @@ fun AudioCard(
     onDelete: (String) -> Unit,
     onRename: (String) -> Unit
 ) {
-    // 1. Swipe Logic (Only active when NOT expanded)
+    // 1. Shake Animation State
+    val shakeAnim = remember { androidx.compose.animation.core.Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    
+    // 2. Expansion Logic: Only expand if Transcribed
+    val isExpandable = item.status == AudioStatus.TRANSCRIBED
+    
+    // 3. Swipe Logic (Only active when NOT expanded)
     val dismissState = rememberSwipeToDismissBoxState(
         positionalThreshold = { it * 0.25f },
         confirmValueChange = { value ->
@@ -130,6 +138,7 @@ fun AudioCard(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .offset(x = shakeAnim.value.dp) // Apply Shake
                     .shadow(
                         elevation = if (isExpanded) 8.dp else 2.dp,
                         shape = RoundedCornerShape(12.dp),
@@ -142,7 +151,28 @@ fun AudioCard(
                         )
                     )
                     .combinedClickable(
-                        onClick = onClick,
+                        onClick = {
+                            if (isExpandable) {
+                                onClick()
+                            } else {
+                                // Trigger Shake (Reject)
+                                scope.launch {
+                                    shakeAnim.snapTo(0f)
+                                    shakeAnim.animateTo(
+                                        targetValue = 0f,
+                                        animationSpec = androidx.compose.animation.core.keyframes {
+                                            durationMillis = 400
+                                            0f at 0
+                                            (-10f) at 50
+                                            10f at 100
+                                            (-10f) at 150
+                                            5f at 200
+                                            0f at 250
+                                        }
+                                    )
+                                }
+                            }
+                        },
                         onLongClick = { onRename(item.id) } // Long press -> Context Menu (Rename for now)
                     ),
                 shape = RoundedCornerShape(12.dp),
@@ -194,18 +224,20 @@ private fun CompactAudioCard(
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        // Row 2: Truncated Summary OR Shimmer Prompt
-        if (item.status == AudioStatus.PENDING) {
-            ShimmerSwipePrompt()
-        } else {
-            Text(
-                text = item.summary ?: "无摘要內容...",
-                color = Color(0xFF888888),
-                fontSize = 13.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 52.dp) // Align with text above
-            )
+        // Row 2: Status-Based Content
+        when (item.status) {
+            AudioStatus.PENDING -> ShimmerSwipePrompt()
+            AudioStatus.TRANSCRIBING -> TranscribingProgressBar(item.progress ?: 0f)
+            AudioStatus.TRANSCRIBED -> {
+                Text(
+                    text = item.summary ?: "无摘要內容...",
+                    color = Color(0xFF888888),
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 52.dp)
+                )
+            }
         }
     }
 }
@@ -231,6 +263,44 @@ private fun ShimmerSwipePrompt() {
             color = Color(0xFF2196F3).copy(alpha = alpha),
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+private fun TranscribingProgressBar(progress: Float) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 52.dp, end = 16.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "正在转写...",
+                color = Color(0xFF4CAF50),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            if (progress > 0f) {
+                Text(
+                    text = "${(progress * 100).toInt()}%",
+                    color = Color(0xFF888888),
+                    fontSize = 11.sp
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        LinearProgressIndicator(
+            progress = { if (progress > 0f) progress else 0f },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp)),
+            color = Color(0xFF4CAF50),
+            trackColor = Color(0xFFE8F5E9)
         )
     }
 }
@@ -423,18 +493,48 @@ private fun AudioIcon(item: AudioItemState, onClick: () -> Unit) {
     val bgColor = if (item.isStarred) Color(0xFFE3F2FD) else Color(0xFFF5F5F5)
     val iconTint = if (item.isStarred) Color(0xFF2196F3) else Color(0xFF9E9E9E)
     
+    // Container for Star + Source Icon
     Box(
-        modifier = Modifier
-            .size(40.dp)
-            .background(bgColor, CircleShape)
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
+        modifier = Modifier,
+        contentAlignment = Alignment.TopCenter
     ) {
+        // 1. Star Circle
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(bgColor, CircleShape)
+                .clickable { onClick() },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Star, 
+                contentDescription = if (item.isStarred) "Starred" else "Unstarred",
+                tint = iconTint,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        
+        // 2. Source Badge (Below Star, strictly separate)
+        val sourceIcon = when (item.source) {
+            AudioSource.PHONE -> Icons.Outlined.Smartphone
+            AudioSource.SMARTBADGE -> Icons.Outlined.Cloud
+        }
+        
         Icon(
-            imageVector = Icons.Filled.Star, 
-            contentDescription = if (item.isStarred) "Starred" else "Unstarred",
-            tint = iconTint,
-            modifier = Modifier.size(24.dp)
+            imageVector = sourceIcon,
+            contentDescription = null,
+            tint = Color(0xFF9E9E9E), // Muted Gray for source
+            modifier = Modifier
+                .size(14.dp)
+                .align(Alignment.BottomEnd) // Position relative to parent Box
+                .offset(x = (-4).dp, y = (4).dp) // Nudge inside or just below?
+                // User said "below the star icon", could mean below the CIRCLE or inside?
+                // "don'e overlap... below the star icon"
+                // Let's interpret as: Below the Main Star Icon, essentially Bottom Right of the CIRCLE.
+                // The previous impl was BottomEnd of Circle.
+                // Re-reading: "cloud/local icon with the start icon... below the star icon"
+                // Let's try to put it at BottomRight of the container (Circle).
+                // To avoid overlap with Star (Center), BottomRight (Corner) is safe.
         )
     }
 }

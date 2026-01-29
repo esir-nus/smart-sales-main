@@ -93,6 +93,19 @@ class FakeHistoryRepository @Inject constructor() : HistoryRepository {
         sessions.removeIf { it.id == sessionId }
     }
     
+    override fun createSession(clientName: String, summary: String, linkedAudioId: String?): String {
+        val id = java.util.UUID.randomUUID().toString()
+        sessions.add(0, SessionPreview(
+            id = id,
+            clientName = clientName,
+            summary = summary,
+            timestamp = System.currentTimeMillis(),
+            isPinned = false,
+            linkedAudioId = linkedAudioId
+        ))
+        return id
+    }
+    
     /**
      * 按日期分组会话
      */

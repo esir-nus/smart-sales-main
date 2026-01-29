@@ -81,6 +81,22 @@ class FakeAudioRepository @Inject constructor() : AudioRepository {
         }
     }
     
+    override fun getAudio(audioId: String): AudioFile? {
+        return _audioFiles.value.find { it.id == audioId }
+    }
+    
+    override fun bindSession(audioId: String, sessionId: String) {
+        _audioFiles.update { files ->
+            files.map { file ->
+                if (file.id == audioId) file.copy(boundSessionId = sessionId) else file
+            }
+        }
+    }
+    
+    override fun getBoundSessionId(audioId: String): String? {
+        return _audioFiles.value.find { it.id == audioId }?.boundSessionId
+    }
+    
     private fun generateSampleData(): List<AudioFile> = listOf(
         // Item 1: Transcribed & Starred
         AudioFile(

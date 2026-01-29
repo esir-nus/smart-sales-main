@@ -74,16 +74,18 @@ fun SchedulerDrawer(
     val coroutineScope = rememberCoroutineScope()
     
     // Transform timeline items based on selection mode
-    // FIX: Added timelineItems.size/lastOrNull to force refresh when list mutates
-    val displayItems = remember(timelineItems, timelineItems.size, timelineItems.lastOrNull(), isSelectionMode, selectedInspirationIds) {
-        timelineItems.map { item ->
-            if (item is TimelineItem.Inspiration) {
-                item.copy(
-                    isSelectionMode = isSelectionMode,
-                    isSelected = selectedInspirationIds.contains(item.id)
-                )
-            } else {
-                item
+    // FIX: Use derivedStateOf for proper reactivity to SnapshotStateList mutations
+    val displayItems by remember {
+        derivedStateOf {
+            timelineItems.map { item ->
+                if (item is TimelineItem.Inspiration) {
+                    item.copy(
+                        isSelectionMode = isSelectionMode,
+                        isSelected = selectedInspirationIds.contains(item.id)
+                    )
+                } else {
+                    item
+                }
             }
         }
     }

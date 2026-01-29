@@ -119,7 +119,7 @@ private fun PrismChatContent(
             onAudioBadgeClick = onAudioBadgeClick,
             onDebugClick = { 
                 onDebugClick()
-                Toast.makeText(context, "Debug State Cycling...", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "调试状态切换中...", Toast.LENGTH_SHORT).show()
             },
             onTitleChange = onTitleChange
         )
@@ -141,16 +141,9 @@ private fun PrismChatContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- PINNED AREA (Plan Cards) ---
-        // Enhanced for V2.7 Analyst Flow
+        // --- TRANSIENT ACTIVITY BANNER (Not persisted to history) ---
+        // Only shows Parsing/Executing states as temporary indicators
         when (uiState) {
-            is UiState.PlanCard -> {
-                PlanCard(
-                    plan = uiState.plan,
-                    completedSteps = uiState.completedSteps
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
             is UiState.AnalystParsing -> {
                 com.smartsales.prism.ui.components.ThinkingTicker(
                     text = uiState.ticker,
@@ -158,30 +151,18 @@ private fun PrismChatContent(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
             }
-            is UiState.AnalystProposal -> {
-                com.smartsales.prism.ui.components.AnalystProposalCard(
-                    plan = uiState.plan
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
             is UiState.AnalystExecuting -> {
-                // Reuse Proposal logic or show active spinner?
-                // For simplicity, we can show a text or reuse the standard PlanCard in execution mode
-                // But V2 Design shows the Ticker again or the Card updating.
-                // Let's keep it simple for now:
                 Text("⚙️ ${uiState.planTitle}", color = Color.Cyan) 
                 Spacer(modifier = Modifier.height(8.dp))
             }
-            is UiState.AnalystResult -> {
-                com.smartsales.prism.ui.components.ArtifactCard(
-                    artifact = uiState.artifact,
-                    onFullView = { Toast.makeText(context, "Opening Full View...", Toast.LENGTH_SHORT).show() },
-                    onDownload = { Toast.makeText(context, "Downloading PDF...", Toast.LENGTH_SHORT).show() },
-                    onShare = { Toast.makeText(context, "Sharing...", Toast.LENGTH_SHORT).show() }
+            is UiState.Thinking -> {
+                com.smartsales.prism.ui.components.ThinkingBox(
+                    content = uiState.hint ?: "思考中...",
+                    isComplete = false
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
             }
-            else -> {} // No pinned card
+            else -> {} // Cards are rendered in LazyColumn via history
         }
 
         // --- MAIN CONTENT AREA (weighted) ---
@@ -218,13 +199,32 @@ private fun PrismChatContent(
                     }
                 }
 
-                // 2. 历史消息
+                // 2. 历史消息 (包括 Plan Card 和 Artifact Card)
                 items(history.reversed()) { message ->
                     when (message) {
                         is ChatMessage.User -> UserBubble(text = message.content)
                         is ChatMessage.Ai -> {
                             when (val state = message.uiState) {
                                 is UiState.Response -> ResponseBubble(uiState = state)
+                                is UiState.AnalystProposal -> {
+                                    com.smartsales.prism.ui.components.AnalystProposalCard(
+                                        plan = state.plan
+                                    )
+                                }
+                                is UiState.AnalystResult -> {
+                                    com.smartsales.prism.ui.components.ArtifactCard(
+                                        artifact = state.artifact,
+                                        onFullView = { Toast.makeText(context, "正在打开全文...", Toast.LENGTH_SHORT).show() },
+                                        onDownload = { Toast.makeText(context, "正在下载 PDF...", Toast.LENGTH_SHORT).show() },
+                                        onShare = { Toast.makeText(context, "正在分享...", Toast.LENGTH_SHORT).show() }
+                                    )
+                                }
+                                is UiState.PlanCard -> {
+                                    PlanCard(
+                                        plan = state.plan,
+                                        completedSteps = state.completedSteps
+                                    )
+                                }
                                 else -> Text("暂不支持的消息类型", color = Color.Gray)
                             }
                         }
@@ -265,8 +265,8 @@ private fun PrismChatContent(
             isSending = isSending,
             onTextChanged = onInputChanged,
             onSend = onSend,
-            onAttachClick = { Toast.makeText(context, "Attachment Picker (Max 11)", Toast.LENGTH_SHORT).show() },
-            onMicClick = { Toast.makeText(context, "Voice Note (Phone Mic)", Toast.LENGTH_SHORT).show() }
+            onAttachClick = { Toast.makeText(context, "添加附件（最多11个）", Toast.LENGTH_SHORT).show() },
+            onMicClick = { Toast.makeText(context, "语音备注（手机麦克风）", Toast.LENGTH_SHORT).show() }
         )
     }
 }

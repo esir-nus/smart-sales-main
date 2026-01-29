@@ -169,20 +169,43 @@ Every element definition follows this strict logic:
 
 | Element | Visual State | Trigger | Animation | Result | Invariant | Status |
 |---------|--------------|---------|-----------|--------|-----------|--------|
-| **Plan Card** | `Visible` | Analyst | Slide Down | Sticky Top Header. | Persistent. | ❌ Pending |
+| **Plan Card** | `Visible` | Analyst | Slide Down | Rendered in chat. | **Part of Chat History** (not sticky). | ❌ Pending |
 | **Plan Card** | `Parsing` | System | Shimmer | Showing current parsing task (e.g., "Reading PDF..."). | Ticker updates. | ❌ Pending |
 | **Plan Card** | `Building` | System | Expand | Full plan revealed (Goals, Highlights, Deliverables). | User types to select. | ❌ Pending |
 | **Step Item** | `Pending` | Tool Start | Spinner | Active Execution. | N/A | ❌ Pending |
 | **Step Item** | `Prompting` | **Logic Wait** | Flash Yellow | **Prompt User** via Chat. | "Should I gen PDF?" | ❌ Pending |
 | **Step Item** | `Completed` | Tool Success | Checkmark | Step Done. | N/A | ❌ Pending |
 
-### 6.2 Thinking Box (Analyst Cognition)
+### 6.2 Agent Activity Banner (Unified Cognition/Perception)
 
-| Element | Visual State | Trigger | Animation | Result | Invariant | Status |
-|---------|--------------|---------|-----------|--------|-----------|--------|
-| **Thinking Box** | `Folded` | **Deep Think** | Accordion | Reveal Stream. | API Flag. | ❌ Pending |
-| **Thinking Ticker** | `Active` | Analyst Input | Typewriter | Streams perception (e.g., "Reading Page 3/12"). | Organic delays. | ❌ Pending |
-| **Thinking Trace** | `Streaming` | Token | Append | Qwen Max reasoning steps. | Scroll to bottom. | ❌ Pending |
+> **Design Principle**: All agent "thinking" indicators use one component. Title is required; trace is optional.
+
+| Element | Visual State | Trigger | Title (活动标题) | Trace (活动详情) | Invariant | Status |
+|---------|--------------|---------|-----------------|-----------------|-----------|--------|
+| **ActivityBanner** | `Active` | FSM State Change | Required (e.g., "🧠 思考中...") | **Optional**: If data exists, render it. If not, just show title. | First element of AI response. | ❌ Pending |
+| **ActivityBanner** | `Cognition` | `AnalystState.Planning` | "🧠 思考中..." | Dashscope CoT trace stream. | Scroll-to-bottom. | ❌ Pending |
+| **ActivityBanner** | `Perception` | `AnalystState.Parsing` | "⚙️ 解析中... (Q3_Report.pdf)" | Page numbers, extraction status lines. | Updates in place. | ❌ Pending |
+| **ActivityBanner** | `Memory` | Memory Retrieval | "📚 检索相关记忆..." | Retrieved snippets (e.g., "Jan 1st, CEO Jake visited"). | Optional detail. | ❌ Pending |
+| **ActivityBanner** | `Editing` | System Edit | "✏️ 编辑中..." | `null` (no trace). | Title only. | ❌ Pending |
+
+#### Component Signature
+
+```kotlin
+@Composable
+fun AgentActivityBanner(
+    title: String,           // Required: "🧠 思考中...", "⚙️ 解析中..."
+    trace: List<String>?,    // Optional: If null/empty, only title shown
+    modifier: Modifier = Modifier
+)
+```
+
+#### Rendering Rules
+
+| Scenario | Visual Output |
+|----------|---------------|
+| `trace = null` | Just title, no divider, no content block |
+| `trace = ["line1", "line2", ...]` | Title + divider + trace lines (scrollable) |
+| `trace = emptyList()` | Just title (same as null) |
 
 ### 6.3 Artifact Card (Tool Output)
 | Element | Visual State | Trigger | Animation | Result | Invariant | Status |
@@ -198,7 +221,8 @@ Every element definition follows this strict logic:
 
 | Version | Date | Status | Changes |
 |---------|------|--------|---------|
-| **v2.7** | 2026-01-29 | **Draft** | Added Analyst Flow States (Parsing, Building), Thinking Ticker, Artifact Card. |
+| **v2.8** | 2026-01-29 | **Draft** | Unified §6.2 Thinking Box/Ticker into `AgentActivityBanner` (title + optional trace). |
+| **v2.7** | 2026-01-29 | Locked | Added Analyst Flow States (Parsing, Building), Thinking Ticker, Artifact Card. |
 | **v2.6** | 2026-01-28 | **Locked** | Added Z-Map (Lego Layers). |
 | **v2.5** | 2026-01-28 | Archived | Tracker Added. Plan Logic Fixed (Prompt vs Artifact). |
 | **v2.4** | 2026-01-28 | Archived | Spec-Mirror Edition. |

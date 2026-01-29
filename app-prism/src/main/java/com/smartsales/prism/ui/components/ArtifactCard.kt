@@ -75,25 +75,9 @@ fun ArtifactCard(
                         text = artifact.previewText,
                         color = Color(0xFFAAAAAA),
                         fontSize = 13.sp,
-                        lineHeight = 18.sp
+                        lineHeight = 18.sp,
+                        maxLines = 4 // 截断预览最多4行
                     )
-                    
-                    // Future: Add Image Preview Here
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(100.dp)
-                            .background(Color(0xFF333344), RoundedCornerShape(4.dp))
-                            .border(1.dp, Color(0xFF444455), RoundedCornerShape(4.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "[ PDF COVER PREVIEW ]", // Placeholder for V2.8
-                            color = Color(0xFF666677),
-                            fontSize = 12.sp
-                        )
-                    }
                 }
             }
 
@@ -112,7 +96,7 @@ fun ArtifactCard(
                     shape = RoundedCornerShape(8.dp),
                     contentPadding = PaddingValues(0.dp)
                 ) {
-                    Text("👁️ Full View", fontSize = 13.sp)
+                    Text("👁️ 查看全文", fontSize = 13.sp)
                 }
                 
                 // Download
@@ -124,7 +108,7 @@ fun ArtifactCard(
                     shape = RoundedCornerShape(8.dp),
                     contentPadding = PaddingValues(0.dp)
                 ) {
-                    Text("📥 Download", fontSize = 13.sp)
+                    Text("📥 下载", fontSize = 13.sp)
                 }
                 
                 // Share
@@ -136,7 +120,7 @@ fun ArtifactCard(
                     shape = RoundedCornerShape(8.dp),
                     contentPadding = PaddingValues(0.dp)
                 ) {
-                    Text("📤 Share", fontSize = 13.sp)
+                    Text("📤 分享", fontSize = 13.sp)
                 }
             }
         }

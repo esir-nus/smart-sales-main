@@ -53,7 +53,7 @@ fun ThinkingBox(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = if (isComplete) "✨ Insight Generated" else "🧠 Deep Thinking...",
+                text = if (isComplete) "✨ 洞察已生成" else "🧠 深度思考中...",
                 color = Color.Cyan,
                 fontSize = 12.sp,
                 fontFamily = FontFamily.Monospace

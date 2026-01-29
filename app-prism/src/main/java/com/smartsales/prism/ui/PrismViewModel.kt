@@ -58,6 +58,7 @@ class PrismViewModel @Inject constructor(
 
     init {
         // Observe Analyst FSM and map to UiState
+        // ALSO persist AI responses to history so they don't vanish
         viewModelScope.launch {
             analystController.state.collect { fsmState ->
                 when (fsmState) {
@@ -68,13 +69,29 @@ class PrismViewModel @Inject constructor(
                         _uiState.value = UiState.Thinking("Brain: " + fsmState.trace.lastOrNull().orEmpty())
                     }
                     is com.smartsales.prism.domain.pipeline.AnalystState.Proposal -> {
-                        _uiState.value = UiState.AnalystProposal(fsmState.plan)
+                        val proposalState = UiState.AnalystProposal(fsmState.plan)
+                        _uiState.value = proposalState
+                        // 持久化 Plan Card 到历史
+                        val aiMsg = ChatMessage.Ai(
+                            id = java.util.UUID.randomUUID().toString(),
+                            timestamp = System.currentTimeMillis(),
+                            uiState = proposalState
+                        )
+                        _history.value += aiMsg
                     }
                     is com.smartsales.prism.domain.pipeline.AnalystState.Executing -> {
-                        _uiState.value = UiState.AnalystExecuting("Executing Plan...")
+                        _uiState.value = UiState.AnalystExecuting("执行计划中...")
                     }
                     is com.smartsales.prism.domain.pipeline.AnalystState.Result -> {
-                        _uiState.value = UiState.AnalystResult(fsmState.artifact)
+                        val resultState = UiState.AnalystResult(fsmState.artifact)
+                        _uiState.value = resultState
+                        // 持久化 Artifact Card 到历史
+                        val aiMsg = ChatMessage.Ai(
+                            id = java.util.UUID.randomUUID().toString(),
+                            timestamp = System.currentTimeMillis(),
+                            uiState = resultState
+                        )
+                        _history.value += aiMsg
                     }
                     else -> {} // Idle handled by standard flow
                 }

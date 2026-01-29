@@ -75,6 +75,29 @@ After designing:
 
 ---
 
+## 4.1 AgentActivityBanner Pattern
+
+> When designing FSM states that represent "agent thinking/processing", use the **AgentActivityBanner** unified component.
+
+```kotlin
+// Data class for Activity State (emitted by FSM)
+data class ActivityState(
+    val title: String,            // Required: "🧠 思考中...", "⚙️ 解析中..."
+    val trace: List<String>? = null // Optional: if present, render trace content
+)
+```
+
+| Activity Type | Title Example | Trace Source |
+|---------------|---------------|--------------|
+| **Cognition** | "🧠 思考中..." | Dashscope CoT stream |
+| **Perception** | "⚙️ 解析中... (file.pdf)" | Page extraction status |
+| **Memory** | "📚 检索相关记忆..." | Retrieved snippets |
+| **Editing** | "✏️ 编辑中..." | `null` (title only) |
+
+See `ui_element_registry.md` §6.2 for rendering rules.
+
+---
+
 ## 5. Implementation Handoff
 
 Run:

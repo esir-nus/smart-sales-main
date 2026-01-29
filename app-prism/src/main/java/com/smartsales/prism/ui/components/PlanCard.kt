@@ -184,7 +184,7 @@ fun AnalystProposalCard(
                 Text("📋", fontSize = 18.sp)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Strategic Analysis Plan",
+                    text = "战略分析计划",
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
@@ -196,12 +196,12 @@ fun AnalystProposalCard(
 
             // Body
             Text(
-                text = "Context: ${plan.context}",
+                text = "背景：${plan.context}",
                 color = Color(0xFFCCCCCC),
                 fontSize = 13.sp
             )
             Text(
-                text = "Goal: ${plan.goal}",
+                text = "目标：${plan.goal}",
                 color = Color(0xFFCCCCCC),
                 fontSize = 13.sp
             )
@@ -209,7 +209,7 @@ fun AnalystProposalCard(
 
             // Deliverables
             Text(
-                text = "Proposed Deliverables:",
+                text = "建议交付物：",
                 color = Color.White,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp

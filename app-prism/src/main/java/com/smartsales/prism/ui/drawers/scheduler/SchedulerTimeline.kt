@@ -17,6 +17,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
@@ -84,12 +85,20 @@ private fun TimelineRow(
         Column(modifier = Modifier.weight(1f)) {
             when (item) {
                 is TimelineItem.Task -> {
+                    // Determine slide direction based on exitDirection
+                    val slideOffset: (Int) -> Int = if (item.exitDirection == ExitDirection.LEFT) {
+                        { -it } // Slide LEFT (to past)
+                    } else {
+                        { it }  // Slide RIGHT (to future, default)
+                    }
+                    
                     AnimatedVisibility(
                         visible = !item.isExiting,
                         exit = slideOutHorizontally(
-                            targetOffsetX = { it }, // Slide to Right
-                            animationSpec = tween(300)
-                        ) + fadeOut(animationSpec = tween(300))
+                            targetOffsetX = slideOffset,
+                            // FastOutSlowInEasing: slow start → fast finish (momentum feel)
+                            animationSpec = tween(350, easing = FastOutSlowInEasing)
+                        ) + fadeOut(animationSpec = tween(350, easing = FastOutSlowInEasing))
                     ) {
                         SwipeableCardItem(
                             itemId = item.id,

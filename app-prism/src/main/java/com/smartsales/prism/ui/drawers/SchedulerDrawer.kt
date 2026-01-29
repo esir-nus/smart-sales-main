@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import com.smartsales.prism.ui.drawers.scheduler.SchedulerCalendar
 import com.smartsales.prism.ui.drawers.scheduler.SchedulerTimeline
 import com.smartsales.prism.ui.drawers.scheduler.TimelineItem
+import com.smartsales.prism.ui.drawers.scheduler.ExitDirection
 
 /**
  * Scheduler Drawer — Top-Down Sheet
@@ -67,6 +68,15 @@ fun SchedulerDrawer(
                 dateRange = "14:00 - 15:30",
                 location = "工位",
                 notes = "已通过邮件发送给运营总监。"
+            ),
+            // Demo: Task that exits LEFT (moving to past / older days)
+            TimelineItem.Task(
+                "5",
+                "16:00",
+                "跟进上周客户反馈",
+                dateRange = "16:00 - 17:00",
+                location = "远程",
+                notes = "将此任务改期至上周三。"
             )
         )
     }
@@ -180,6 +190,15 @@ fun SchedulerDrawer(
                                     val parts = interaction.split("_", limit = 3)
                                     if (parts.size == 3) {
                                         val id = parts[1]
+                                        val userText = parts[2]
+                                        
+                                        // Determine direction: past keywords = LEFT, otherwise RIGHT
+                                        val isPastReschedule = userText.contains("上周") || 
+                                                               userText.contains("昨天") || 
+                                                               userText.contains("之前") ||
+                                                               userText.contains("前天")
+                                        val direction = if (isPastReschedule) ExitDirection.LEFT else ExitDirection.RIGHT
+                                        
                                         // Fake I/O Flow
                                         coroutineScope.launch {
                                             // 1. Parsing
@@ -200,24 +219,30 @@ fun SchedulerDrawer(
 
                                             delay(1200) // Fake checking delay
 
-                                            // 3. Success (Move Card)
+                                            // 3. Success (Move Card with direction)
                                             val index3 = timelineItems.indexOfFirst { it.id == id }
                                             if (index3 != -1 && timelineItems[index3] is TimelineItem.Task) {
                                                 val task = timelineItems[index3] as TimelineItem.Task
-                                                // Trigger Animation: Slide Out
+                                                // Trigger Animation: Slide Out with direction
                                                 timelineItems[index3] = task.copy(
                                                     processingStatus = null, // Hide overlay during exit
-                                                    isExiting = true 
+                                                    isExiting = true,
+                                                    exitDirection = direction
                                                 )
                                             }
 
-                                            delay(300) // Wait for animation
+                                            delay(350) // Wait for animation (matches tween duration)
 
                                             val itemToRemove = timelineItems.find { it.id == id }
                                             if (itemToRemove != null) {
                                                 timelineItems.remove(itemToRemove)
-                                                // Fade + Toast Feedback
-                                                Toast.makeText(context, "Rescheduled to March 3rd, 08:00", Toast.LENGTH_LONG).show()
+                                                // Direction-aware Toast
+                                                val toastMsg = if (isPastReschedule) {
+                                                    "已改期至上周三，09:00"
+                                                } else {
+                                                    "已改期至3月3日，08:00"
+                                                }
+                                                Toast.makeText(context, toastMsg, Toast.LENGTH_LONG).show()
                                             }
                                         }
                                     }

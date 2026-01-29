@@ -5,6 +5,11 @@ package com.smartsales.prism.ui.drawers.scheduler
  * @see prism-ui-ux-contract.md §1.3
  */
 
+enum class ExitDirection {
+    RIGHT, // Moving to future (default)
+    LEFT   // Moving to past (older days)
+}
+
 sealed class TimelineItem {
     abstract val id: String
     abstract val timeDisplay: String
@@ -24,7 +29,8 @@ sealed class TimelineItem {
         val location: String? = null,
         val notes: String? = null,
         val processingStatus: String? = null, // For Fake I/O Overlay
-        val isExiting: Boolean = false // For Reschedule Animation
+        val isExiting: Boolean = false, // For Reschedule Animation
+        val exitDirection: ExitDirection = ExitDirection.RIGHT // Default: slide right (to future)
     ) : TimelineItem()
     
     /**

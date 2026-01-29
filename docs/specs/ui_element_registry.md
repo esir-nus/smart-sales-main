@@ -104,6 +104,9 @@ Every element definition follows this strict logic:
 | **Attachment [📎]** | `Idle` | Tap | Ripple | System Picker. | **Max 11**. | ✅ Verified |
 | **Audio Upload** | `Picked` | Confirm | Progress | Sync to **Audio Drawer**. | `storage` folder. | ❌ Pending |
 | **Mic FAB** | `Idle` | Tap | Morph | **Phone Mic** Capture. | Not Badge. | ✅ Verified |
+| **Audio Card** | `Star` | Tap | `spring` | **Star Toggle** | Heart/Star flip, color change. | ✅ Verified |
+| **Audio Card** | `PENDING` | Swipe L→R | `Shimmer` | **Transcribe** | "右滑开始转写 >>>" prompt. | ✅ Verified |
+| **Audio Card** | `TRANSCRIBING` | System | `LinearProgress` | **Processing** | "正在转写..." + progress bar. | ✅ Verified |
 
 ---
 
@@ -127,7 +130,7 @@ Every element definition follows this strict logic:
 | **Conflict Card** | `Expanded` | Chatting | **Breathing Red Tint** | Updates via NL. | Negotation. | ✅ Verified |
 | **Actions** | `Resolved` | System | Fade Out | Atomic API Calls. | DB Update. | ✅ Verified |
 | **All Cards** | `Swipe L->R` | Swipe | `spring` | **Delete/Dismiss** | "Cleaner" Gesture (**Collapsed Only**). | ✅ Verified |
-| **Task Card** | `Input` | Chat | `CircularProgress` | **Reschedule** | Card Fades Out -> Toast "Rescheduled". | ✅ Verified |
+| **Task Card** | `Input` | Chat | `CircularProgress` | **Reschedule** | Card **Slides Out** (LEFT=past, RIGHT=future, `FastOutSlowInEasing` 350ms) + Fade → Toast. | ✅ Verified |
 
 ### 4.2 Timeline & Calendar
 

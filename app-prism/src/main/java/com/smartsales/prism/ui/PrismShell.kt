@@ -108,8 +108,9 @@ fun PrismShell(
                         historyRepository.togglePin(sessionId)
                         sessionRefreshKey++
                     },
-                    onRenameSession = { sessionId ->
-                        // TODO: 显示重命名对话框
+                    onRenameSession = { sessionId, clientName, summary ->
+                        historyRepository.renameSession(sessionId, clientName, summary)
+                        sessionRefreshKey++
                     },
                     onDeleteSession = { sessionId ->
                         historyRepository.deleteSession(sessionId)
@@ -128,10 +129,12 @@ fun PrismShell(
 
         // 3. Audio Drawer (Bottom)
         // We use a gesture or specific trigger to open this usually.
-        AudioDrawer(
-            isOpen = activeDrawer == DrawerType.AUDIO,
-            onDismiss = { activeDrawer = null }
-        )
+        Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
+            AudioDrawer(
+                isOpen = activeDrawer == DrawerType.AUDIO,
+                onDismiss = { activeDrawer = null }
+            )
+        }
 
         // 4. Connectivity Modal (Global Overlay)
         if (activeDrawer == DrawerType.CONNECTIVITY) {

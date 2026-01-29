@@ -11,15 +11,22 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.QueryBuilder
+import androidx.compose.material.icons.filled.Mic // Added
+import androidx.compose.material.icons.filled.Send // Added
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue // Added
+import androidx.compose.runtime.mutableStateOf // Added
+import androidx.compose.runtime.remember // Added
+import androidx.compose.runtime.setValue // Added
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.Modifier // Added
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex // Added
 
 /**
  * Task Card Component
@@ -33,66 +40,200 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun TaskCard(
     state: TimelineItem.Task,
-    onClick: () -> Unit
+    isExpanded: Boolean = false,
+    onExpandToggle: () -> Unit,
+    onClick: () -> Unit,
+    onReschedule: (String) -> Unit = {}, // Added callback
+    onToggleDone: () -> Unit = {}
 ) {
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
+            .clickable { 
+                onExpandToggle()
+                onClick() 
+            },
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Checkbox (Visual only for now)
-            Box(
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Column {
+                // Header Row (Always Visible)
+                Row(
                 modifier = Modifier
-                    .size(20.dp)
-                    .background(
-                        if (state.isDone) Color(0xFFE0E0E0) else Color.Transparent, 
-                        RoundedCornerShape(4.dp)
-                    )
-                    .border(
-                        1.dp, 
-                        if (state.isDone) Color.Transparent else Color(0xFFBDBDBD), 
-                        RoundedCornerShape(4.dp)
-                    ),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (state.isDone) {
+                // Checkbox
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clickable { onToggleDone() }
+                        .background(
+                            if (state.isDone) Color(0xFFE0E0E0) else Color.Transparent, 
+                            RoundedCornerShape(4.dp)
+                        )
+                        .border(
+                            1.dp, 
+                            if (state.isDone) Color.Transparent else Color(0xFFBDBDBD), 
+                            RoundedCornerShape(4.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (state.isDone) {
+                        Icon(
+                            imageVector = Icons.Outlined.Check,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.width(12.dp))
+                
+                // Title
+                Text(
+                    text = state.title,
+                    fontSize = 14.sp,
+                    textDecoration = if (state.isDone) TextDecoration.LineThrough else null,
+                    color = if (state.isDone) Color(0xFF999999) else Color(0xFF333333),
+                    modifier = Modifier.weight(1f)
+                )
+                
+                // Alarm Icon or Chevron
+                if (state.hasAlarm) {
                     Icon(
-                        imageVector = Icons.Outlined.Check,
-                        contentDescription = null,
-                        tint = Color.White,
+                        imageVector = Icons.Outlined.QueryBuilder,
+                        contentDescription = "Alarm",
+                        tint = Color(0xFF888888),
                         modifier = Modifier.size(16.dp)
                     )
+                } else {
+                     // Show chevron if expandable and no alarm (or always show chevron if expanded?)
+                     // For now, keep alarm logic but maybe add rotation if needed. 
+                     // Let's just keep alarm if present.
                 }
             }
             
-            Spacer(modifier = Modifier.width(12.dp))
+            // Expanded Content
+            androidx.compose.animation.AnimatedVisibility(visible = isExpanded) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 44.dp, end = 12.dp, bottom = 12.dp) // Align with text start
+                ) {
+                    Divider(color = Color(0xFFEEEEEE), modifier = Modifier.padding(bottom = 8.dp))
+                    
+                    // Date
+                    Row(modifier = Modifier.padding(vertical = 4.dp)) {
+                        Text("📅 ", fontSize = 12.sp)
+                        Text(
+                            text = "日期: ${state.dateRange}", 
+                            fontSize = 13.sp, 
+                            color = Color(0xFF666666)
+                        )
+                    }
+                    
+                    // Location
+                    state.location?.let { loc ->
+                        Row(modifier = Modifier.padding(vertical = 4.dp)) {
+                            Text("📍 ", fontSize = 12.sp)
+                            Text(
+                                text = "地点: $loc", 
+                                fontSize = 13.sp, 
+                                color = Color(0xFF666666)
+                            )
+                        }
+                    }
+                    
+                    // Notes
+                    state.notes?.let { note ->
+                         Row(modifier = Modifier.padding(vertical = 4.dp)) {
+                            Text("📝 ", fontSize = 12.sp)
+                            Text(
+                                text = "备注: $note", 
+                                fontSize = 13.sp, 
+                                color = Color(0xFF666666)
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    // Chat Input Placeholder (Visual Mock for now, pending full Chat Interface)
+                    // Chat Input (Real UI) - Only show if pending
+                    if (!state.isDone) {
+                        var inputText by remember { mutableStateOf("") }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                                .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(20.dp))
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            androidx.compose.foundation.text.BasicTextField(
+                                value = inputText,
+                                onValueChange = { inputText = it },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                decorationBox = { innerTextField ->
+                                    if (inputText.isEmpty()) {
+                                        Text("Reply...", color = Color.Gray, fontSize = 14.sp)
+                                    }
+                                    innerTextField()
+                                }
+                            )
+                            
+                            Spacer(modifier = Modifier.width(8.dp))
+    
+                            Icon(
+                                imageVector = if (inputText.isEmpty()) Icons.Default.Mic else Icons.Default.Send,
+                                contentDescription = "Send",
+                                tint = Color(0xFF1976D2), // Publisher Blue
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clickable {
+                                        if (inputText.isNotEmpty()) {
+                                            onReschedule(inputText)
+                                            inputText = ""
+                                        }
+                                    }
+                            )
+                        }
+                    }
+                }
+            }
+        }
             
-            // Title
-            Text(
-                text = state.title,
-                fontSize = 14.sp,
-                textDecoration = if (state.isDone) TextDecoration.LineThrough else null,
-                color = if (state.isDone) Color(0xFF999999) else Color(0xFF333333),
-                modifier = Modifier.weight(1f)
-            )
-            
-            // Alarm Icon
-            if (state.hasAlarm) {
-                Icon(
-                    imageVector = Icons.Outlined.QueryBuilder,
-                    contentDescription = "Alarm",
-                    tint = Color(0xFF888888),
-                    modifier = Modifier.size(16.dp)
-                )
+            // Processing Overlay
+            if (state.processingStatus != null) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(Color.White.copy(alpha = 0.8f))
+                        .zIndex(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp,
+                            color = Color(0xFF1976D2)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = state.processingStatus ?: "",
+                            fontSize = 12.sp,
+                            color = Color(0xFF1976D2),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
         }
     }
@@ -111,10 +252,17 @@ fun TaskCard(
 @Composable
 fun InspirationCard(
     state: TimelineItem.Inspiration,
-    onAskAI: () -> Unit
+    onAskAI: () -> Unit,
+    onToggleSelection: () -> Unit = {} // New callback for selection toggle
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { 
+                if (state.isSelectionMode) {
+                    onToggleSelection()
+                }
+            },
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF3E5F5)), // Light Purple tint
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -169,7 +317,7 @@ fun InspirationCard(
                 modifier = Modifier.weight(1f)
             )
             
-            // Ask AI Button
+            // Ask AI Button (Only in normal mode)
             if (!state.isSelectionMode) {
                 Surface(
                     shape = RoundedCornerShape(4.dp),

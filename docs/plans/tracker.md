@@ -367,6 +367,22 @@
 - [ ] **Pipeline Integration**: Context → LLM → Publisher → Writer
 - [ ] **Verification**: Integration tests with Real implementations
 
+---
+
+### Tech Debt (Deferred for Beta)
+
+> **Logged**: 2026-01-29 — Does NOT block beta small circle test
+
+| Item | Location | Issue | Priority |
+|------|----------|-------|----------|
+| `delay()` in UI | `ConnectivityModal.kt:293` | Progress sim should use Fake | Low |
+| `delay()` in UI | `OnboardingScreen.kt:226,229` | Firmware progress sim should use Fake | Low |
+| Fake Tests | `FakeAudioRepository` etc. | No unit tests for Fakes | Low (not needed for beta) |
+
+**Resolution**: Refactor to `FakeProgressService` post-beta.
+
+---
+
 ### Phase 4: Ship
 - [ ] Beta APK Distribution
 - [ ] Bug Triage & Edge Case Handling

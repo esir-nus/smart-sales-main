@@ -32,12 +32,14 @@ fun HistoryDrawer(
     onDeviceClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onPinSession: (String) -> Unit = {},
-    onRenameSession: (String) -> Unit = {},
+    onRenameSession: (String, String, String) -> Unit = { _, _, _ -> },
     onDeleteSession: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // 上下文菜单状态
     var contextMenuSession by remember { mutableStateOf<SessionPreview?>(null) }
+    // 重命名对话框状态
+    var renameTarget by remember { mutableStateOf<SessionPreview?>(null) }
     
     Column(
         modifier = modifier
@@ -97,9 +99,25 @@ fun HistoryDrawer(
             sessionId = session.id,
             isPinned = session.isPinned,
             onPin = { onPinSession(session.id) },
-            onRename = { onRenameSession(session.id) },
+            onRename = { 
+                renameTarget = session
+                contextMenuSession = null
+            },
             onDelete = { onDeleteSession(session.id) },
             onDismiss = { contextMenuSession = null }
+        )
+    }
+    
+    // 重命名对话框
+    renameTarget?.let { session ->
+        RenameSessionDialog(
+            currentClientName = session.clientName,
+            currentSummary = session.summary,
+            onConfirm = { newClient, newSummary ->
+                onRenameSession(session.id, newClient, newSummary)
+                renameTarget = null
+            },
+            onDismiss = { renameTarget = null }
         )
     }
 }
@@ -154,13 +172,16 @@ private fun DeviceStateHeader(onClick: () -> Unit) {
  */
 @Composable
 private fun UserFooter(onSettingsClick: () -> Unit) {
+    // 整个底栏点击 → 用户中心
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onSettingsClick() }
             .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // 用户信息区域
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.Filled.Person,
@@ -193,12 +214,58 @@ private fun UserFooter(onSettingsClick: () -> Unit) {
             }
         }
         
-        IconButton(onClick = onSettingsClick) {
-            Icon(
-                imageVector = Icons.Filled.Settings,
-                contentDescription = "Settings",
-                tint = Color(0xFF888888)
-            )
-        }
+        // 设置图标（仅视觉指示，点击整行生效）
+        Icon(
+            imageVector = Icons.Filled.Settings,
+            contentDescription = "Settings",
+            tint = Color(0xFF888888)
+        )
     }
+}
+
+/**
+ * 重命名会话对话框
+ */
+@Composable
+private fun RenameSessionDialog(
+    currentClientName: String,
+    currentSummary: String,
+    onConfirm: (String, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var clientName by remember { mutableStateOf(currentClientName) }
+    var summary by remember { mutableStateOf(currentSummary) }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("重命名会话") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = clientName,
+                    onValueChange = { clientName = it },
+                    label = { Text("客户名称") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = summary,
+                    onValueChange = { summary = it.take(6) },
+                    label = { Text("摘要 (最多6字)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(clientName, summary) }) {
+                Text("确定")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
 }

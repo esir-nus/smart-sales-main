@@ -145,6 +145,9 @@ fun AudioDrawer(
                 // 3. List
                 // State Hoisting: Only one card expanded at a time
                 var expandedCardId by remember { mutableStateOf<String?>(null) }
+                
+                // Dialog States
+                var showRenameDialog by remember { mutableStateOf<Pair<String, String>?>(null) } // Pair(Id, CurrentName)
 
                 LazyColumn(
                     modifier = Modifier
@@ -166,9 +169,11 @@ fun AudioDrawer(
                             onStarClick = { viewModel.toggleStar(item.id) },
                             onAskAi = { id -> 
                                 // TODO: Navigation Callback
-                                // Logic: Expect a lambda from parent in production.
-                                // specific implementation pending navigation system.
-                            }
+                                println("Navigate to Analyst Mode with context: $id")
+                            },
+                            onTranscribe = { id -> viewModel.startTranscription(id) },
+                            onDelete = { id -> viewModel.deleteAudio(id) },
+                            onRename = { id -> showRenameDialog = id to item.filename }
                         )
                     }
                     
@@ -179,6 +184,37 @@ fun AudioDrawer(
                     
                     // Bottom Spacer
                     item { Spacer(modifier = Modifier.height(30.dp)) }
+                }
+                
+                // Wrapper for Dialog to be on top of LazyColumn but inside Drawer
+                if (showRenameDialog != null) {
+                    val (id, currentName) = showRenameDialog!!
+                    var newName by remember { mutableStateOf(currentName) }
+                    
+                    AlertDialog(
+                        onDismissRequest = { showRenameDialog = null },
+                        title = { Text("重命名录音") },
+                        text = {
+                            OutlinedTextField(
+                                value = newName,
+                                onValueChange = { newName = it },
+                                label = { Text("文件名") },
+                                singleLine = true
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = { 
+                                    // TODO: Implement rename in ViewModel
+                                    println("Rename $id to $newName") 
+                                    showRenameDialog = null 
+                                }
+                            ) { Text("确认") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showRenameDialog = null }) { Text("取消") }
+                        }
+                    )
                 }
             }
         }

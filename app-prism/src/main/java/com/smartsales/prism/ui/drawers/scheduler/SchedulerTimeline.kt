@@ -13,6 +13,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
@@ -77,20 +81,29 @@ private fun TimelineRow(
         )
         
         // Right: Card Content
-        Box(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.weight(1f)) {
             when (item) {
                 is TimelineItem.Task -> {
-                    SwipeableCardItem(
-                        itemId = item.id,
-                        onDelete = { onInteraction("delete_${item.id}") },
-                        enabled = !isExpanded // Disable swipe when expanded
+                    AnimatedVisibility(
+                        visible = !item.isExiting,
+                        exit = slideOutHorizontally(
+                            targetOffsetX = { it }, // Slide to Right
+                            animationSpec = tween(300)
+                        ) + fadeOut(animationSpec = tween(300))
                     ) {
-                        TaskCard(
-                            state = item,
-                            isExpanded = isExpanded,
-                            onExpandToggle = { isExpanded = !isExpanded },
-                            onClick = { onInteraction("task_${item.id}") }
-                        )
+                        SwipeableCardItem(
+                            itemId = item.id,
+                            onDelete = { onInteraction("delete_${item.id}") },
+                            enabled = !isExpanded // Disable swipe when expanded
+                        ) {
+                            TaskCard(
+                                state = item,
+                                isExpanded = isExpanded,
+                                onExpandToggle = { isExpanded = !isExpanded },
+                                onClick = { onInteraction("task_${item.id}") },
+                                onReschedule = { text -> onInteraction("reschedule_${item.id}_$text") }
+                            )
+                        }
                     }
                 }
                 is TimelineItem.Inspiration -> {

@@ -8,6 +8,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.interaction.MutableInteractionSource // Added import
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,14 +39,21 @@ fun SchedulerCalendar(
     isExpanded: Boolean,
     onExpandChange: (Boolean) -> Unit
 ) {
+    // State: Selected Month (1-12)
+    var selectedMonth by remember { mutableStateOf(1) } // Default to January
+    
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.White)
             .padding(bottom = 8.dp)
+            .padding(bottom = 8.dp)
     ) {
-        // 1. Header (Month Title + Pills)
-        CalendarHeader()
+        // 1. Header (Month Carousel)
+        CalendarHeader(
+            selectedMonth = selectedMonth,
+            onMonthSelected = { selectedMonth = it }
+        )
         
         Spacer(modifier = Modifier.height(16.dp))
         
@@ -59,9 +69,12 @@ fun SchedulerCalendar(
 }
 
 @Composable
-private fun CalendarHeader() {
+private fun CalendarHeader(
+    selectedMonth: Int,
+    onMonthSelected: (Int) -> Unit
+) {
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-        // Year + Month Text
+        // Year + Month Text (Dynamic based on selection)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = "2026年",
@@ -70,7 +83,7 @@ private fun CalendarHeader() {
                 modifier = Modifier.padding(end = 8.dp)
             )
             Text(
-                text = "1月",
+                text = "${selectedMonth}月",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF1A1A1A)
@@ -79,22 +92,28 @@ private fun CalendarHeader() {
         
         Spacer(modifier = Modifier.height(12.dp))
         
-        // Month Pills (Visual Mock)
-        Row(
+        // Month Carousel (Horizontal Scroll)
+        androidx.compose.foundation.lazy.LazyRow(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(end = 16.dp)
         ) {
-            val months = listOf("1月", "2月", "3月", "4月", "5月")
-            months.forEach { month ->
-                val isSelected = month == "1月"
+            items(12) { index ->
+                val monthNum = index + 1
+                val isSelected = monthNum == selectedMonth
+                val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(16.dp))
-                        .background(if (isSelected) Color.Black else Color.Transparent)
+                        .background(if (isSelected) Color.Black else Color(0xFFF5F5F5))
+                        .clickable { 
+                            onMonthSelected(monthNum)
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        }
                         .padding(horizontal = 16.dp, vertical = 6.dp)
                 ) {
                     Text(
-                        text = month,
+                        text = "${monthNum}月",
                         fontSize = 14.sp,
                         color = if (isSelected) Color.White else Color(0xFF666666)
                     )

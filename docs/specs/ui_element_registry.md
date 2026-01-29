@@ -124,8 +124,10 @@ Every element definition follows this strict logic:
 | Element | Visual State | Trigger | Animation | Result | Invariant | Status |
 |---------|--------------|---------|-----------|--------|-----------|--------|
 | **Conflict Card** | `Collapsed` | Tap Body | `spring(LowBouncy)` | `isExpanded=true`. Reveal Chat. | Red Tint. | ✅ Verified |
-| **Conflict Card** | `Expanded` | Chatting | **Breathing Red** | Updates via NL. | Negotation. | ✅ Verified |
+| **Conflict Card** | `Expanded` | Chatting | **Breathing Red Tint** | Updates via NL. | Negotation. | ✅ Verified |
 | **Actions** | `Resolved` | System | Fade Out | Atomic API Calls. | DB Update. | ✅ Verified |
+| **All Cards** | `Swipe L->R` | Swipe | `spring` | **Delete/Dismiss** | "Cleaner" Gesture (**Collapsed Only**). | ✅ Verified |
+| **Task Card** | `Input` | Chat | `CircularProgress` | **Reschedule** | Card Fades Out -> Toast "Rescheduled". | ✅ Verified |
 
 ### 4.2 Timeline & Calendar
 

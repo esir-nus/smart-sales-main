@@ -1,19 +1,29 @@
 package com.smartsales.prism.ui.drawers
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.VolumeUp // Added import
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.outlined.AutoAwesome
@@ -23,7 +33,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -36,39 +49,113 @@ import androidx.compose.ui.unit.sp
  * Audio Card Hub System
  * Facade switching between Compact (List) and Expanded (Hub) views.
  */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun AudioCard(
     item: AudioItemState,
     isExpanded: Boolean,
     onClick: () -> Unit,
     onStarClick: (String) -> Unit,
-    onAskAi: (String) -> Unit
+    onAskAi: (String) -> Unit,
+    onTranscribe: (String) -> Unit,
+    onDelete: (String) -> Unit,
+    onRename: (String) -> Unit
 ) {
-    // Shared Card Container
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = if (isExpanded) 8.dp else 2.dp,
-                shape = RoundedCornerShape(12.dp),
-                spotColor = Color(0x1A000000)
-            )
-            .animateContentSize(
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessLow
-                )
-            ),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        onClick = onClick // Toggles expansion via parent
-    ) {
-        if (isExpanded) {
-            ExpandedAudioHub(item, onAskAi, onClick)
-        } else {
-            CompactAudioCard(item, onStarClick)
+    // 1. Swipe Logic (Only active when NOT expanded)
+    val dismissState = rememberSwipeToDismissBoxState(
+        positionalThreshold = { it * 0.25f },
+        confirmValueChange = { value ->
+            when (value) {
+                SwipeToDismissBoxValue.StartToEnd -> { // L->R: Transcribe
+                    if (item.status == AudioStatus.PENDING) {
+                        onTranscribe(item.id)
+                        false // Snap back after triggering action
+                    } else {
+                        false
+                    }
+                }
+                SwipeToDismissBoxValue.EndToStart -> { // R->L: Delete
+                    onDelete(item.id)
+                    false // Let parent handle removal/confirmation dialog, don't dismiss visually instantly
+                }
+                else -> false
+            }
         }
-    }
+    )
+    
+    // Swipe Wrapper
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = !isExpanded && item.status == AudioStatus.PENDING, // Only allow transcribe swipe if pending
+        enableDismissFromEndToStart = !isExpanded, // Always allow delete swipe if collapsed
+        backgroundContent = {
+           val direction = dismissState.dismissDirection
+           val color = when (direction) {
+               SwipeToDismissBoxValue.StartToEnd -> Color(0xFFE8F5E9) // Green (Transcribe)
+               SwipeToDismissBoxValue.EndToStart -> Color(0xFFFFEBEE) // Red (Delete)
+               else -> Color.Transparent
+           }
+           val alignment = when (direction) {
+               SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+               SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+               else -> Alignment.Center
+           }
+           val icon = when (direction) {
+               SwipeToDismissBoxValue.StartToEnd -> Icons.Outlined.AutoAwesome // Magic/Transcribe
+               SwipeToDismissBoxValue.EndToStart -> Icons.Default.Delete
+               else -> Icons.Default.Delete
+           }
+           val tint = when (direction) {
+               SwipeToDismissBoxValue.StartToEnd -> Color(0xFF4CAF50)
+               SwipeToDismissBoxValue.EndToStart -> Color(0xFFD32F2F)
+               else -> Color.Transparent
+           }
+           
+           Box(
+               modifier = Modifier
+                   .fillMaxSize()
+                   .background(color, RoundedCornerShape(12.dp))
+                   .padding(horizontal = 20.dp),
+               contentAlignment = alignment
+           ) {
+               Icon(
+                   imageVector = icon,
+                   contentDescription = null,
+                   tint = tint
+               )
+           }
+        },
+        content = {
+            // Shared Card Container
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(
+                        elevation = if (isExpanded) 8.dp else 2.dp,
+                        shape = RoundedCornerShape(12.dp),
+                        spotColor = Color(0x1A000000)
+                    )
+                    .animateContentSize(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    )
+                    .combinedClickable(
+                        onClick = onClick,
+                        onLongClick = { onRename(item.id) } // Long press -> Context Menu (Rename for now)
+                    ),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                if (isExpanded) {
+                    ExpandedAudioHub(item, onAskAi, onClick)
+                } else {
+                    CompactAudioCard(item, onStarClick)
+                }
+            }
+        }
+    )
 }
 
 /**
@@ -107,14 +194,43 @@ private fun CompactAudioCard(
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        // Row 2: Truncated Summary (Gray)
+        // Row 2: Truncated Summary OR Shimmer Prompt
+        if (item.status == AudioStatus.PENDING) {
+            ShimmerSwipePrompt()
+        } else {
+            Text(
+                text = item.summary ?: "无摘要內容...",
+                color = Color(0xFF888888),
+                fontSize = 13.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 52.dp) // Align with text above
+            )
+        }
+    }
+}
+
+@Composable
+private fun ShimmerSwipePrompt() {
+    val infiniteTransition = rememberInfiniteTransition()
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+
+    Row(
+        modifier = Modifier.padding(start = 52.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(
-            text = item.summary ?: "无摘要內容...",
-            color = Color(0xFF888888),
+            text = "右滑开始转写 >>>",
+            color = Color(0xFF2196F3).copy(alpha = alpha),
             fontSize = 13.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(start = 52.dp) // Align with text above (40dp icon + 12dp space)
+            fontWeight = FontWeight.Medium
         )
     }
 }

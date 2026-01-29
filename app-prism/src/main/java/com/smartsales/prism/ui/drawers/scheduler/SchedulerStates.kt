@@ -18,7 +18,13 @@ sealed class TimelineItem {
         override val timeDisplay: String, // "08:00"
         val title: String,
         val isDone: Boolean = false,
-        val hasAlarm: Boolean = false
+        val hasAlarm: Boolean = false,
+        // Expanded Fields
+        val dateRange: String = "08:00 - 09:00",
+        val location: String? = null,
+        val notes: String? = null,
+        val processingStatus: String? = null, // For Fake I/O Overlay
+        val isExiting: Boolean = false // For Reschedule Animation
     ) : TimelineItem()
     
     /**

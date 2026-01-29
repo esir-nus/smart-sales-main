@@ -1,5 +1,6 @@
 package com.smartsales.prism.di
 
+import com.smartsales.prism.data.fakes.FakeAudioRepository
 import com.smartsales.prism.data.fakes.FakeConflictResolutionService
 import com.smartsales.prism.data.fakes.FakeConnectivityService
 import com.smartsales.prism.data.fakes.FakeContextBuilder
@@ -11,6 +12,7 @@ import com.smartsales.prism.data.fakes.FakeOnboardingService
 import com.smartsales.prism.data.fakes.FakeOrchestrator
 import com.smartsales.prism.data.fakes.FakePublisher
 import com.smartsales.prism.data.fakes.FakeRelevancyRepository
+import com.smartsales.prism.domain.audio.AudioRepository
 import com.smartsales.prism.domain.connectivity.ConnectivityService
 import com.smartsales.prism.domain.memory.MemoryRepository
 import com.smartsales.prism.domain.memory.MemoryWriter
@@ -82,4 +84,9 @@ abstract class PrismModule {
     
     @Binds @Singleton
     abstract fun bindConflictResolutionService(fake: FakeConflictResolutionService): ConflictResolutionService
+    
+    // === Audio ===
+    
+    @Binds @Singleton
+    abstract fun bindAudioRepository(fake: FakeAudioRepository): AudioRepository
 }

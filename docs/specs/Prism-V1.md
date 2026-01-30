@@ -11,7 +11,7 @@
 | Section | Description | Lines |
 |---------|-------------|-------|
 | [§1 Executive Summary](#1-executive-summary) | Core principles, unified pipeline overview | 9-22 |
-| [§2 Architecture Blueprint](#2-architecture-blueprint) | Pipeline diagram, Core Components (Context Builder, Executor, Publisher, Memory Writer, Schema Linter) | 23-303 |
+| [§2 Architecture Blueprint](#2-architecture-blueprint) | Pipeline diagram, Core Components, Model Router, Auto-Quote | 23-340 |
 | [§3 Data Flow & Consistency](#3-data-flow--consistency) | Buffered streaming, consistency model | 304-358 |
 | [§4 Mode Pipelines](#4-mode-pipelines-ascii-visualization) | Coach, Analyst, Scheduler mode flows | 359-487 |
 | [§5 Memory System](#5-memory-system--relevancy-library) | Hot/Cement Zones, RelevancyEntry schema, Entity Disambiguation, User Habits | 488-863 |
@@ -306,6 +306,32 @@ Step 3: Generate ExecutionPlan via Planner LLM (§4.5)
     ↓
 (Rest follows Plan-Once paradigm)
 ```
+
+### 2.3 Model Router
+
+Central routing for LLM model selection based on **task type**, not mode.
+
+> **Location**: `domain/config/ModelRouter.kt`
+
+#### Task-Based Routing (`forContext`)
+
+| Input Condition        | Model          | Context Window |
+|-----------------------|----------------|----------------|
+| Image/Video present    | `qwen-vl-plus` | Vision         |
+| Tool-calling required  | `qwen3-max`    | 32k tokens     |
+| Default (fast chat)    | `qwen-plus`    | 1M tokens      |
+
+#### Memory Layer Routing (`forMemoryLayer`)
+
+| Layer      | Model       | Rationale                                |
+|------------|-------------|------------------------------------------|
+| RELEVANCY  | `qwen3-max` | Tool-calling for entity search           |
+| HOT        | `qwen-plus` | Fast index navigation (14 days context)  |
+| CEMENT     | `qwen-long` | Deep history retrieval (10M tokens)      |
+
+> **Pattern**: Blackboxes call `ModelRouter` to get model string. Routing logic is centralized, not scattered across implementations.
+
+---
 
 ### 2.4 Auto-Quote Module
 

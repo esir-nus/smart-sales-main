@@ -85,6 +85,7 @@ dependencies {
     // Shared Infrastructure
     // =============================================
     implementation(projects.data.aiCore)  // DashScope, Tingwu, credentials
+    implementation(projects.core.util)     // Result type
     implementation(platform(libs.compose.bom))
     implementation(libs.bundles.compose.ui)
     implementation(libs.compose.material3)

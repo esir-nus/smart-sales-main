@@ -36,11 +36,33 @@ import com.smartsales.prism.domain.activity.AgentActivity
 @Composable
 fun AgentActivityBanner(
     activity: AgentActivity,
-    maxLines: Int = 20,
+    maxLines: Int = 20, // max visible lines when expanded
     modifier: Modifier = Modifier
 ) {
-    var isExpanded by remember { mutableStateOf(true) }
+    // Logic: 
+    // 1. Initially collapsed (header only)
+    // 2. Auto-expand when trace starts (trace.size > 0 && trace.size <= 3)
+    // 3. Auto-collapse when trace exceeds 3 lines
     
+    var isExpanded by remember { mutableStateOf(false) }
+    var hasAutoExpanded by remember { mutableStateOf(false) }
+    var hasAutoCollapsed by remember { mutableStateOf(false) }
+    
+    // Auto-behavior Logic
+    LaunchedEffect(activity.trace.size) {
+        if (activity.trace.isNotEmpty()) {
+            if (!hasAutoExpanded && activity.trace.size <= 3) {
+                isExpanded = true
+                hasAutoExpanded = true
+            } else if (isExpanded && !hasAutoCollapsed && activity.trace.size > 3) {
+                // Delay slightly to let user see "something is happening" before collapsing
+                kotlinx.coroutines.delay(500)
+                isExpanded = false
+                hasAutoCollapsed = true
+            }
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -55,65 +77,76 @@ fun AgentActivityBanner(
             .clickable { isExpanded = !isExpanded }
             .padding(12.dp)
     ) {
-        // 一级标题：Phase（阶段）
+        // Shimmer Animation for Header
+        val infiniteTransition = rememberInfiniteTransition(label = "ThinkingShimmer")
+        val alpha by infiniteTransition.animateFloat(
+            initialValue = 0.5f,
+            targetValue = 1.0f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1500, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "ThinkingAlpha"
+        )
+
+        // 一级标题：Header (Always Visible)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = activity.phase.toDisplayText(),
-                color = activity.phase.toColor(),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            
-            // 折叠指示器（仅在有 trace 时显示）
-            if (activity.trace.isNotEmpty()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // "思考中..." (Static if no action, or Action text)
                 Text(
-                    text = if (isExpanded) "▼" else "▶",
+                    text = activity.action?.toDisplayText() ?: "思考中...", 
+                    color = Color.LightGray.copy(alpha = alpha), // Shimmering Grey
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                // Phase Description
+                Text(
+                    text = activity.phase.toDisplayText(),
                     color = Color.Gray,
                     fontSize = 12.sp
                 )
             }
-        }
-        
-        // 二级标题：Action（动作）— 可选
-        activity.action?.let { action ->
-            Spacer(modifier = Modifier.height(4.dp))
+            
+            // Expand/Collapse Icon
             Text(
-                text = action.toDisplayText(),
-                color = Color.Cyan.copy(alpha = 0.8f),
+                text = if (isExpanded) "[∧]" else "[∨]",
+                color = Color.Gray,
                 fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace
+                 fontFamily = FontFamily.Monospace
             )
         }
         
-        // 三级内容：Trace（痕迹）— 可折叠
+        // 二级内容：Trace（痕迹）— 可折叠
+        // Unlike previous version, NO Action Text here (moved to header)
+        
         AnimatedVisibility(
             visible = isExpanded && activity.trace.isNotEmpty(),
             enter = expandVertically(),
             exit = shrinkVertically()
         ) {
             Column(modifier = Modifier.padding(top = 8.dp)) {
-                val displayLines = activity.trace.take(maxLines)
-                displayLines.forEach { line ->
+                // Divider
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(Color.White.copy(alpha = 0.1f))
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                val displayLines = activity.trace
+                displayLines.forEachIndexed { index, line ->
                     Text(
-                        text = "> $line",
-                        color = Color.White.copy(alpha = 0.7f),
+                        text = "┃ $line",
+                        color = Color.LightGray, // No shimmer for body
                         fontSize = 12.sp,
                         fontFamily = FontFamily.Monospace,
-                        lineHeight = 16.sp
-                    )
-                }
-                
-                // 截断提示
-                if (activity.trace.size > maxLines) {
-                    Text(
-                        text = "... (${activity.trace.size - maxLines} 行已隐藏)",
-                        color = Color.Gray,
-                        fontSize = 11.sp,
-                        fontFamily = FontFamily.Monospace
+                        lineHeight = 16.sp,
+                        maxLines = 10, // Safety cap
                     )
                 }
             }
@@ -125,21 +158,16 @@ fun AgentActivityBanner(
  * Phase 显示文案
  */
 private fun ActivityPhase.toDisplayText(): String = when (this) {
-    ActivityPhase.PLANNING -> "📝 规划分析步骤"
-    ActivityPhase.EXECUTING -> "⚙️ 执行工具"
-    ActivityPhase.RESPONDING -> "💬 生成回复"
-    ActivityPhase.ERROR -> "⚠️ 发生错误"
+    ActivityPhase.PLANNING -> "正在规划分析步骤"
+    ActivityPhase.EXECUTING -> "正在执行工具调用"
+    ActivityPhase.RESPONDING -> "正在生成回复内容"
+    ActivityPhase.ERROR -> "发生错误"
 }
 
 /**
- * Phase 颜色
+ * Phase 颜色 (Unused in DeepSeek style, kept for reference or removal)
  */
-private fun ActivityPhase.toColor(): Color = when (this) {
-    ActivityPhase.PLANNING -> Color(0xFF64B5F6)   // 蓝色
-    ActivityPhase.EXECUTING -> Color(0xFFFFB74D)  // 橙色
-    ActivityPhase.RESPONDING -> Color(0xFF81C784) // 绿色
-    ActivityPhase.ERROR -> Color(0xFFE57373)      // 红色
-}
+private fun ActivityPhase.toColor(): Color = Color.Gray // Normalized to Grey
 
 /**
  * Action 显示文案

@@ -1005,26 +1005,28 @@ The Thinking Box uses a **two-tier structure** to showcase agent activity compre
 #### Visual States
 
 ```
-UNFOLDED (With Action + Trace):
-┌──────────────────────────────────────────────────────────┐
-│ 📝 规划分析步骤                                      [∧] │ ← Phase
-│ 🧠 思考中...                                             │ ← Action
-│ ──────────────────────────────────────────────────────── │
-│ > 检索Relevancy Library...                              │ ← Trace
-│ > 找到3条相关记录                                        │
-│ > 分析客户偏好...                                        │
-└──────────────────────────────────────────────────────────┘
+HEADER (Grey, Shimmering — always visible):
+┌──────────────────────────────────────────────────────────────┐
+│ 思考中...  正在规划分析步骤                             [∨] │
+└──────────────────────────────────────────────────────────────┘
 
-FOLDED (Phase Only):
-┌──────────────────────────────────────────────────────────┐
-│ 📝 规划完成                                         [∨] │
-└──────────────────────────────────────────────────────────┘
+↓ Trace auto-unfolds when streaming starts
 
-ERROR (Phase Only, No Action):
-┌──────────────────────────────────────────────────────────┐
-│ ⚠️ 网络连接失败                                          │
-│    重试中...                                             │
-└──────────────────────────────────────────────────────────┘
+EXPANDED (≤3 lines, grey, no shimmer):
+┌──────────────────────────────────────────────────────────────┐
+│ 思考中...  正在规划分析步骤                             [∧] │
+│ ───────────────────────────────────────────────────────────── │
+│ ┃ 检索Relevancy Library...                                  │
+│ ┃ 找到3条相关记录                                            │
+│ ┃ 分析客户偏好...                                            │
+└──────────────────────────────────────────────────────────────┘
+
+↓ Auto-collapse when trace exceeds 3 lines
+
+COLLAPSED (Header ONLY — user taps [∨] to expand):
+┌──────────────────────────────────────────────────────────────┐
+│ 思考中...  正在规划分析步骤                             [∨] │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 #### API Binding
@@ -1042,10 +1044,11 @@ ERROR (Phase Only, No Action):
 **Fold/Unfold Behavior:**
 | Rule | Behavior |
 |------|----------|
-| Initial state | Unfolded (streaming content visible) |
-| Auto-fold | After 3 seconds of being unfolded |
-| User tap `[∨]` | Unfold again |
-| User tap `[∧]` | Fold immediately |
+| Initial state | Collapsed (Header only) |
+| Trace starts | Auto-Unfold (show trace) |
+| Trace > 3 lines | Auto-Collapse (Header only) |
+| User tap `[∨]` | Expand all |
+| User tap `[∧]` | Collapse (Header only) |
 
 > **Note:** The Thinking Box is bound to the presence of streaming activity, not to the mode. Coach mode naturally skips thinking (model doesn't use it), Analyst mode naturally shows thinking (model uses it).
 

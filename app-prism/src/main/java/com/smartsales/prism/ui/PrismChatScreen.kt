@@ -227,6 +227,23 @@ private fun PrismChatContent(
                                         completedSteps = state.completedSteps
                                     )
                                 }
+                                is UiState.Thinking -> {
+                                    // 历史化的 ThinkingBox (已完成的思考过程)
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("🧠 ", fontSize = 14.sp)
+                                        Text(
+                                            text = state.hint ?: "思考完成",
+                                            color = Color(0xFF88CCFF),
+                                            fontSize = 12.sp,
+                                            maxLines = 2
+                                        )
+                                    }
+                                }
                                 else -> Text("暂不支持的消息类型", color = Color.Gray)
                             }
                         }

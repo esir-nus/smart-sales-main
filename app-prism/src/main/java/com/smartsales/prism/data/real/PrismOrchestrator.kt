@@ -5,7 +5,7 @@ import com.smartsales.prism.domain.activity.ActivityPhase
 import com.smartsales.prism.domain.activity.AgentActivityController
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.model.UiState
-import com.smartsales.prism.domain.pipeline.AnalystFlowController
+import com.smartsales.prism.data.real.AnalystFlowController
 import com.smartsales.prism.domain.pipeline.AnalystState
 import com.smartsales.prism.domain.pipeline.ContextBuilder
 import com.smartsales.prism.domain.pipeline.Executor

@@ -25,7 +25,7 @@ import javax.inject.Inject
 @HiltViewModel
 class PrismViewModel @Inject constructor(
     private val orchestrator: Orchestrator,
-    private val analystController: com.smartsales.prism.domain.pipeline.AnalystFlowController,
+    private val analystController: com.smartsales.prism.data.real.AnalystFlowController,
     private val activityController: com.smartsales.prism.domain.activity.AgentActivityController
 ) : ViewModel() {
     
@@ -74,7 +74,15 @@ class PrismViewModel @Inject constructor(
                         _uiState.value = UiState.AnalystParsing(fsmState.currentTask, fsmState.progress)
                     }
                     is com.smartsales.prism.domain.pipeline.AnalystState.Planning -> {
-                        _uiState.value = UiState.Thinking("Brain: " + fsmState.trace.lastOrNull().orEmpty())
+                        val thinkingState = UiState.Thinking("Brain: " + fsmState.trace.lastOrNull().orEmpty())
+                        _uiState.value = thinkingState
+                        // 持久化 ThinkingBox 到历史 (保持可见，Response 会跟随在后)
+                        val aiMsg = ChatMessage.Ai(
+                            id = java.util.UUID.randomUUID().toString(),
+                            timestamp = System.currentTimeMillis(),
+                            uiState = thinkingState
+                        )
+                        _history.value += aiMsg
                     }
                     is com.smartsales.prism.domain.pipeline.AnalystState.Proposal -> {
                         val proposalState = UiState.AnalystProposal(fsmState.plan)

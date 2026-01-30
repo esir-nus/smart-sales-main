@@ -180,7 +180,7 @@ Every element definition follows this strict logic:
 
 > **Design Principle**: Agent activity uses a **two-tier hierarchy** for rich showcasing of agent thinking. This is a core differentiator.
 
-> **Position**: The AgentActivityBanner renders **inline in the chat history** as the first item in the LazyColumn (not sticky/pinned). It represents the START of an AI response turn. When the agent finishes, it transitions to the full response content.
+> **Position**: The AgentActivityBanner renders **inline in the chat history** and **persists** as a permanent record of agent cognition. When the agent finishes thinking, the response bubble appears as a **separate, following message** (not a replacement). This creates a visible trail: User → ThinkingBox → AI Response.
 
 #### Visual Structure
 

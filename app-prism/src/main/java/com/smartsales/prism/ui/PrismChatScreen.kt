@@ -150,36 +150,7 @@ private fun PrismChatContent(
         }
 
 
-
-        // --- TRANSIENT ACTIVITY BANNER (Not persisted to history) ---
-        // Agent Activity Banner (Two-tier: Phase + Action + Trace)
-        agentActivity?.let { activity ->
-            val maxLines = ThinkingPolicy.maxTraceLines(currentMode)
-            AgentActivityBanner(
-                activity = activity,
-                maxLines = maxLines
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-        
-        // Legacy transient states (Parsing/Executing) — fallback
-        if (agentActivity == null) {
-            when (uiState) {
-                is UiState.AnalystParsing -> {
-                    com.smartsales.prism.ui.components.ThinkingTicker(
-                        text = uiState.ticker,
-                        progress = uiState.progress
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                }
-                is UiState.AnalystExecuting -> {
-                    Text("⚙️ ${uiState.planTitle}", color = Color.Cyan) 
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-                // Note: UiState.Thinking now handled by AgentActivityBanner above
-                else -> {} // Cards are rendered in LazyColumn via history
-            }
-        }
+        // AgentActivityBanner now renders INSIDE LazyColumn as inline AI response start
 
         // --- MAIN CONTENT AREA (weighted) ---
         // Single Box that contains:
@@ -197,13 +168,33 @@ private fun PrismChatContent(
                 contentPadding = PaddingValues(bottom = 16.dp),
                 reverseLayout = true
             ) {
-                // 1. 当前正在进行的响应 (Loading/Thinking/Streaming)
-                if (uiState !is UiState.Idle && uiState !is UiState.Error) {
+                // 1. Agent Activity Banner (inline as first item - represents current AI turn)
+                // This includes AgentActivityBanner for new two-tier system + legacy fallbacks
+                agentActivity?.let { activity ->
+                    item {
+                        val maxLines = ThinkingPolicy.maxTraceLines(currentMode)
+                        AgentActivityBanner(
+                            activity = activity,
+                            maxLines = maxLines
+                        )
+                    }
+                }
+                
+                // Legacy transient states (fallback when agentActivity is null)
+                if (agentActivity == null && uiState !is UiState.Idle && uiState !is UiState.Error) {
                     item {
                         when (uiState) {
-                            // Note: UiState.Thinking now handled by AgentActivityBanner
+                            is UiState.AnalystParsing -> {
+                                com.smartsales.prism.ui.components.ThinkingTicker(
+                                    text = uiState.ticker,
+                                    progress = uiState.progress
+                                )
+                            }
+                            is UiState.AnalystExecuting -> {
+                                Text("⚙️ ${uiState.planTitle}", color = Color.Cyan) 
+                            }
                             is UiState.Response -> {
-                                 ResponseBubble(uiState = uiState as UiState.Response)
+                                ResponseBubble(uiState = uiState as UiState.Response)
                             }
                             else -> {}
                         }

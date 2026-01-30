@@ -9,9 +9,11 @@ import com.smartsales.prism.data.fakes.FakeHistoryRepository
 import com.smartsales.prism.data.fakes.FakeMemoryRepository
 import com.smartsales.prism.data.fakes.FakeMemoryWriter
 import com.smartsales.prism.data.fakes.FakeOnboardingService
-import com.smartsales.prism.data.fakes.FakeOrchestrator
 import com.smartsales.prism.data.fakes.FakePublisher
 import com.smartsales.prism.data.fakes.FakeRelevancyRepository
+import com.smartsales.prism.data.fakes.FakeUserProfileRepository 
+import com.smartsales.prism.data.real.DashscopeExecutor
+import com.smartsales.prism.data.real.PrismOrchestrator
 import com.smartsales.prism.domain.audio.AudioRepository
 import com.smartsales.prism.domain.connectivity.ConnectivityService
 import com.smartsales.prism.domain.memory.MemoryRepository
@@ -23,6 +25,7 @@ import com.smartsales.prism.domain.pipeline.Executor
 import com.smartsales.prism.domain.pipeline.Orchestrator
 import com.smartsales.prism.domain.pipeline.Publisher
 import com.smartsales.prism.domain.repository.HistoryRepository
+import com.smartsales.prism.domain.repository.UserProfileRepository
 import com.smartsales.prism.domain.scheduler.ConflictResolutionService
 import dagger.Binds
 import dagger.Module
@@ -43,13 +46,13 @@ abstract class PrismModule {
     // === Core Pipeline ===
     
     @Binds @Singleton
-    abstract fun bindOrchestrator(fake: FakeOrchestrator): Orchestrator
+    abstract fun bindOrchestrator(impl: PrismOrchestrator): Orchestrator
     
     @Binds @Singleton
     abstract fun bindContextBuilder(fake: FakeContextBuilder): ContextBuilder
     
     @Binds @Singleton
-    abstract fun bindExecutor(fake: FakeExecutor): Executor
+    abstract fun bindExecutor(impl: DashscopeExecutor): Executor
     
     @Binds @Singleton
     abstract fun bindPublisher(fake: FakePublisher): Publisher
@@ -89,4 +92,9 @@ abstract class PrismModule {
     
     @Binds @Singleton
     abstract fun bindAudioRepository(fake: FakeAudioRepository): AudioRepository
+
+    // === User Profile ===
+
+    @Binds @Singleton
+    abstract fun bindUserProfileRepository(fake: FakeUserProfileRepository): UserProfileRepository
 }

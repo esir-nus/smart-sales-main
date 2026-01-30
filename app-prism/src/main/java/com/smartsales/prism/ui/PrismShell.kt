@@ -11,7 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.smartsales.prism.domain.connectivity.ConnectivityService
+
 import com.smartsales.prism.domain.repository.HistoryRepository
 import com.smartsales.prism.ui.drawers.AudioDrawer
 import com.smartsales.prism.ui.drawers.HistoryDrawer
@@ -42,8 +42,7 @@ enum class DrawerType {
  */
 @Composable
 fun PrismShell(
-    historyRepository: HistoryRepository,
-    connectivityService: ConnectivityService
+    historyRepository: HistoryRepository
 ) {
     // Atomic Drawer State (Mutex)
     // Start with null (Idle) to ensure handles are visible
@@ -146,7 +145,6 @@ fun PrismShell(
         if (activeDrawer == DrawerType.CONNECTIVITY) {
             Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
                 com.smartsales.prism.ui.components.ConnectivityModal(
-                    connectivityService = connectivityService,
                     onDismiss = { activeDrawer = null }
                 )
             }
@@ -174,8 +172,8 @@ fun PrismShell(
         )
 
         // --- GHOST HANDLES (Clean Desk) ---
-        // Mutex: Only active when NO drawer is open (Safe Blockage)
-        if (activeDrawer == null) {
+        // Mutex: Only active when NO drawer is open AND UserCenter is closed (Safe Blockage)
+        if (activeDrawer == null && !showUserCenter) {
             
             // 1. Scheduler Ghost Handle (Top) - Pull Down
             GhostHandle(

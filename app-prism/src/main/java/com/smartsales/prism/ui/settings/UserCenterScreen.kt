@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.smartsales.prism.domain.memory.UserProfile
+import androidx.hilt.navigation.compose.hiltViewModel
 
 /**
  * User Center (Settings Blueprint)
@@ -27,98 +29,126 @@ import androidx.compose.ui.unit.sp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserCenterScreen(
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    viewModel: UserCenterViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("User Center", color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = onClose) {
-                        Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1E1E2C) // Prism Dark
+    val profile by viewModel.profile.collectAsState()
+    var isEditing by remember { mutableStateOf(false) }
+
+    // Handle system back gesture
+    androidx.activity.compose.BackHandler(onBack = {
+        if (isEditing) isEditing = false else onClose()
+    })
+
+    if (isEditing && profile != null) {
+        EditProfileScreen(
+            profile = profile!!,
+            onSave = { name, role, industry, exp, platform ->
+                viewModel.updateProfile(name, role, industry, exp, platform)
+                isEditing = false
+            },
+            onBack = { isEditing = false }
+        )
+    } else {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("User Center", color = Color.White) },
+                    navigationIcon = {
+                        IconButton(onClick = onClose) {
+                            Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color(0xFF1E1E2C) // Prism Dark
+                    )
                 )
-            )
-        },
-        containerColor = Color(0xFF1E1E2C)
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            // 1. Profile Card
-            item {
-                ProfileCard(onEdit = { /* Mock */ })
-            }
-
-            // 2. Preferences
-            item {
-                SettingsSection("Preferences") {
-                    SettingsRowSelect("Theme", "System") { /* Mock */ }
-                    SettingsRowToggle("AI Lab: Memory & Learning", true) { /* Mock */ }
-                    SettingsRowToggle("Notifications & Pop-ups", true) { /* Mock */ }
+            },
+            containerColor = Color(0xFF1E1E2C)
+        ) { padding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                // 1. Profile Card
+                item {
+                    profile?.let { userProfile ->
+                        ProfileCard(
+                            profile = userProfile,
+                            onEdit = { isEditing = true }
+                        )
+                    }
                 }
-            }
 
-            // 3. Storage
-            item {
-                SettingsSection("Storage") {
-                    SettingsRowAction("Used: 120MB", "Clear Cache") { /* Mock */ }
+                // 2. Preferences
+                item {
+                    SettingsSection("Preferences") {
+                        SettingsRowSelect("Theme", "System") { /* Mock */ }
+                        SettingsRowToggle("AI Lab: Memory & Learning", true) { /* Mock */ }
+                        SettingsRowToggle("Notifications & Pop-ups", true) { /* Mock */ }
+                    }
                 }
-            }
 
-            // 4. Security
-            item {
-                SettingsSection("Security") {
-                    SettingsRowNav("Change Password") { /* Mock */ }
-                    SettingsRowNav("Biometric") { /* Mock */ }
-                    SettingsRowButton("Logout All Devices") { /* Mock */ }
+                // 3. Storage
+                item {
+                    SettingsSection("Storage") {
+                        SettingsRowAction("Used: 120MB", "Clear Cache") { /* Mock */ }
+                    }
                 }
-            }
 
-            // 5. Support
-            item {
-                SettingsSection("Support") {
-                    SettingsRowNav("Help Center") { /* Mock */ }
-                    SettingsRowNav("Contact & Feedback") { /* Mock */ }
+                // 4. Security
+                item {
+                    SettingsSection("Security") {
+                        SettingsRowNav("Change Password") { /* Mock */ }
+                        SettingsRowNav("Biometric") { /* Mock */ }
+                        SettingsRowButton("Logout All Devices") { /* Mock */ }
+                    }
                 }
-            }
 
-            // 6. About
-            item {
-                SettingsSection("About SmartSales") {
-                    SettingsRowInfo("Version", "v1.0.0")
-                    SettingsRowNav("Updates") { /* Mock */ }
-                    SettingsRowNav("Privacy") { /* Mock */ }
-                    SettingsRowNav("Licenses") { /* Mock */ }
+                // 5. Support
+                item {
+                    SettingsSection("Support") {
+                        SettingsRowNav("Help Center") { /* Mock */ }
+                        SettingsRowNav("Contact & Feedback") { /* Mock */ }
+                    }
                 }
-            }
 
-            // 7. Footer
-            item {
-                Button(
-                    onClick = { /* Mock Logout */ onClose() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5252)),
-                    modifier = Modifier.fillMaxWidth().height(56.dp)
-                ) {
-                    Icon(Icons.Default.Logout, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Log Out")
+                // 6. About
+                item {
+                    SettingsSection("About SmartSales") {
+                        SettingsRowInfo("Version", "v1.0.0")
+                        SettingsRowNav("Updates") { /* Mock */ }
+                        SettingsRowNav("Privacy") { /* Mock */ }
+                        SettingsRowNav("Licenses") { /* Mock */ }
+                    }
                 }
-                Spacer(Modifier.height(32.dp))
+
+                // 7. Footer
+                item {
+                    Button(
+                        onClick = { /* Mock Logout */ onClose() },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5252)),
+                        modifier = Modifier.fillMaxWidth().height(56.dp)
+                    ) {
+                        Icon(Icons.Default.Logout, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Log Out")
+                    }
+                    Spacer(Modifier.height(32.dp))
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ProfileCard(onEdit: () -> Unit) {
+private fun ProfileCard(
+    profile: UserProfile,
+    onEdit: () -> Unit
+) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2B2B38)),
         modifier = Modifier.fillMaxWidth()
@@ -140,11 +170,11 @@ private fun ProfileCard(onEdit: () -> Unit) {
             Spacer(Modifier.width(16.dp))
             // Info
             Column(modifier = Modifier.weight(1f)) {
-                Text("Frank", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                Text("Sales Manager", color = Color.Gray, fontSize = 14.sp)
+                Text(profile.displayName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Text(profile.role, color = Color.Gray, fontSize = 14.sp)
                 Spacer(Modifier.height(4.dp))
                 Surface(color = Color(0xFF4CAF50).copy(alpha = 0.2f), shape = MaterialTheme.shapes.small) {
-                    Text("PRO Plan", color = Color(0xFF4CAF50), fontSize = 10.sp, modifier = Modifier.padding(horizontal = 4.dp))
+                    Text(profile.industry, color = Color(0xFF4CAF50), fontSize = 10.sp, modifier = Modifier.padding(horizontal = 4.dp))
                 }
             }
             // Edit

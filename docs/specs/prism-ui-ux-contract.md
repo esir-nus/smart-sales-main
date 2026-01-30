@@ -83,6 +83,8 @@
     *   **Input Interaction:** On Tap/Focus → Navigate to Chat Interface using the selected mode intent.
     *   **Upload `[📎]`**: Attach Images/Audio.
     *   **Shimmering Placeholder**: "输入消息..." (Localized).
+    *   **Keyboard Dismiss:** On Send `[➤]` tap, keyboard is dismissed automatically.
+    *   **Upload Menu `[📎]`**: Tap to reveal menu: 📄 文件 | 🖼️ 图片 | 🎙️ 音频.
 4.  **Auto-Drop Scheduler:**
     *   On App Launch: Scheduler Drawer drops *over* this interface.
     *   Dismissing Scheduler reveals this "Clean Desk".
@@ -986,33 +988,56 @@ After all steps executed, the Plan Card shows a **completion summary** with cros
 
 ---
 
-### Thinking Box (Dynamic, API-Bound)
+### Thinking Box (Two-Tier Agent Activity)
 
-The Thinking Box is **not mode-specific**. It appears whenever the Qwen3 API response contains a non-empty `thinking` field.
+The Thinking Box uses a **two-tier structure** to showcase agent activity comprehensively. This is a core product differentiator.
 
-| Trigger | Display |
-|---------|--------|
-| API response has `thinking` field | Show Thinking Box |
-| `thinking` field absent or empty | Skip directly to response |
+> **Reference**: See `ui_element_registry.md` §6.2 for full specification.
+
+#### Structure
+
+| Layer | Role | Example |
+|-------|------|---------|
+| **Phase** | High-level task (always visible) | "📝 规划分析步骤", "⚙️ 执行工具: PDF生成" |
+| **Action** | Specific operation (optional) | "🧠 思考中...", "📚 检索记忆..." |
+| **Trace** | Streaming content (optional) | Native CoT, transcript, memory hits |
+
+#### Visual States
 
 ```
-UNFOLDED (Auto, 3s):
+UNFOLDED (With Action + Trace):
 ┌──────────────────────────────────────────────────────────┐
-│ 🧠 思考中...                                        [∧] │
+│ 📝 规划分析步骤                                      [∧] │ ← Phase
+│ 🧠 思考中...                                             │ ← Action
 │ ──────────────────────────────────────────────────────── │
-│ > 检索Relevancy Library...                              │
+│ > 检索Relevancy Library...                              │ ← Trace
 │ > 找到3条相关记录                                        │
 │ > 分析客户偏好...                                        │
-│ > 生成回复...                                            │
 └──────────────────────────────────────────────────────────┘
 
-        ↓ (auto-fold after 3s)
-
-FOLDED (Collapsed):
+FOLDED (Phase Only):
 ┌──────────────────────────────────────────────────────────┐
-│ 🧠 思考完成                                         [∨] │
+│ 📝 规划完成                                         [∨] │
+└──────────────────────────────────────────────────────────┘
+
+ERROR (Phase Only, No Action):
+┌──────────────────────────────────────────────────────────┐
+│ ⚠️ 网络连接失败                                          │
+│    重试中...                                             │
 └──────────────────────────────────────────────────────────┘
 ```
+
+#### API Binding
+
+| Trigger | Phase | Action | Trace Source |
+|---------|-------|--------|--------------|
+| Analyst plan generation | `PLANNING` | `THINKING` | Qwen3-Max CoT |
+| Tool execution (chart/report) | `EXECUTING` | `THINKING` | Tool's CoT |
+| Image parsing | `EXECUTING` | `PARSING` | Qwen-VL output |
+| Audio transcription | `EXECUTING` | `TRANSCRIBING` | Tingwu stream |
+| Memory retrieval | `RESPONDING` | `RETRIEVING` | Entity matches |
+| Context assembly | `RESPONDING` | `ASSEMBLING` | Source list |
+| Error | `ERROR` | `null` | Error message |
 
 **Fold/Unfold Behavior:**
 | Rule | Behavior |
@@ -1022,7 +1047,7 @@ FOLDED (Collapsed):
 | User tap `[∨]` | Unfold again |
 | User tap `[∧]` | Fold immediately |
 
-> **Note:** The Thinking Box is bound to the presence of the `thinking` field in the API response, not to the mode. Coach mode naturally skips thinking (model doesn't use it), Analyst mode naturally shows thinking (model uses it).
+> **Note:** The Thinking Box is bound to the presence of streaming activity, not to the mode. Coach mode naturally skips thinking (model doesn't use it), Analyst mode naturally shows thinking (model uses it).
 
 ---
 

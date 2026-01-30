@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.smartsales.prism.domain.connectivity.ConnectivityService
+
 import com.smartsales.prism.domain.repository.HistoryRepository
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -29,8 +29,7 @@ class PrismMainActivity : ComponentActivity() {
     @Inject
     lateinit var historyRepository: HistoryRepository
     
-    @Inject
-    lateinit var connectivityService: ConnectivityService
+
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,8 +46,7 @@ class PrismMainActivity : ComponentActivity() {
                         OnboardingScreen(onComplete = { isOnboarding = false })
                     } else {
                         PrismShell(
-                            historyRepository = historyRepository,
-                            connectivityService = connectivityService
+                            historyRepository = historyRepository
                         )
                     }
                 }

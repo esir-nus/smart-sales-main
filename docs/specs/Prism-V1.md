@@ -545,6 +545,123 @@ class AnalystFlowController @Inject constructor() {
 **Interruption Handling (Queueing):**
 If user sends input during `Planning` or `Parsing` state, the message is queued in the `Proposal.queue` and processed after the current flow settles. This avoids race conditions.
 
+#### 4.6.2 AgentActivityController (FSM)
+
+The **AgentActivityController** manages all "thinking" visualization across the app. It uses a **two-tier structure** to showcase agent activity comprehensively—a core product differentiator.
+
+**Two-Tier Structure:**
+
+| Layer | Role | Example |
+|-------|------|---------|
+| **Phase** | High-level task (always visible) | "📝 规划分析步骤", "⚙️ 执行工具: PDF生成" |
+| **Action** | Specific operation (optional) | "🧠 思考中...", "📚 检索记忆..." |
+| **Trace** | Streaming content (optional) | Native CoT, transcript, memory hits |
+
+**State Hierarchy:**
+```kotlin
+enum class ActivityPhase {
+    PLANNING,      // 📝 规划...
+    EXECUTING,     // ⚙️ 执行工具...
+    RESPONDING,    // 💬 生成回复...
+    ERROR          // ⚠️ 发生错误
+}
+
+enum class ActivityAction {
+    THINKING,      // 🧠 思考中... (Qwen3-Max CoT)
+    PARSING,       // 📄 解析中... (Qwen-VL)
+    TRANSCRIBING,  // 🎙️ 转写中... (Tingwu)
+    RETRIEVING,    // 📚 检索记忆... (Relevancy)
+    ASSEMBLING,    // 📋 整理上下文...
+    STREAMING      // ✨ 生成中...
+}
+
+data class AgentActivity(
+    val phase: ActivityPhase,
+    val action: ActivityAction? = null,
+    val trace: String? = null
+)
+```
+
+**Trace Sources:**
+
+| Source | Type | Details |
+|--------|------|---------|
+| **Qwen3-Max CoT** | Native | `enable_thinking` returns real reasoning trace |
+| **Qwen-VL** | Native | Vision model streaming output |
+| **Tingwu** | Native | Real-time transcript (pseudo-thinking) |
+| **Relevancy Library** | Synthetic | Show matched entities/memories |
+| **Context Assembly** | Synthetic | Show assembled sources |
+
+**Controller Contract:**
+```kotlin
+class AgentActivityController @Inject constructor() {
+    val activity: StateFlow<AgentActivity?>
+    fun startPhase(phase: ActivityPhase, action: ActivityAction? = null)
+    fun updateTrace(line: String)
+    fun complete()
+}
+```
+
+> **UI Reference**: See `ui_element_registry.md` §6.2 for rendering rules.
+
+#### 4.6.3 ThinkingPolicy
+
+**All Qwen models use `enable_thinking=true`**. The policy controls UI display truncation based on mode:
+
+```kotlin
+object ThinkingPolicy {
+    fun maxTraceLines(mode: Mode): Int = when (mode) {
+        Mode.COACH -> 3       // Quick, truncated — "feels understood"
+        Mode.ANALYST -> 20    // Full trace — transparency matters
+        Mode.SCHEDULER -> 5   // Moderate
+    }
+}
+```
+
+**Model Thinking Behavior:**
+
+| Model | API Param | Trace Field | Use Case |
+|-------|-----------|-------------|----------|
+| Qwen3-Max | `enable_thinking=true` | `reasoning_content` | Analyst (full CoT) |
+| Qwen-Plus | `enable_thinking=true` | `reasoning_content` | Coach (truncated) |
+| Qwen-VL | `enable_thinking=true` | `reasoning_content` | Vision parsing |
+
+> **Note**: All models return thinking traces. UI truncates per `ThinkingPolicy`, not the API.
+
+#### 4.6.4 Simulated Streaming Architecture
+
+**Native Qwen streaming is NOT used.** The system uses a **linter-first** pattern:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ 1. LLM Call (non-streaming)                             │
+│    → Returns complete response + thinking trace         │
+└───────────────────────┬─────────────────────────────────┘
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│ 2. Linter validates response                            │
+│    → Structured output check, toxicity, etc.            │
+└───────────────────────┬─────────────────────────────────┘
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│ 3. AgentActivityController.complete()                   │
+│    → Thinking phase ends, banner collapses              │
+└───────────────────────┬─────────────────────────────────┘
+                        ▼
+┌─────────────────────────────────────────────────────────┐
+│ 4. SimulatedStreamer                                    │
+│    → Emit chars at 20ms/char for "typing" effect        │
+│    → UI shows progressive text rendering                │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Benefits:**
+- **Reliability**: Full response validated before display
+- **Consistency**: Same UX whether LLM streams or not
+- **Control**: Exact typing speed tuned for UX
+
+
+
 ### 4.7 Conflict Resolution (Rethink Model)
 
 Conflicts are treated as **creative prompts**, not merge decisions.

@@ -18,16 +18,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.getValue // v2.6 Shimmer
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.animation.core.* // v2.6 Shimmer Animation
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController // Keyboard Dismiss
+import androidx.compose.material.icons.filled.InsertDriveFile
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.AudioFile
 
 /**
  * Prism Input Bar
  * Aligned with Registry v2.5 (Input & Modes)
  *
  * Features:
- * - Attachment Button [📎]
+ * - Attachment Menu [📎] with 3 options: Files, Images, Audios
  * - Floating Capsule Integration
  * - Mic [Mic] / Send [➤] Transition
+ * - **Keyboard Dismiss on Send** (UX Polish)
  */
 @Composable
 fun InputBar(
@@ -35,9 +42,15 @@ fun InputBar(
     isSending: Boolean,
     onTextChanged: (String) -> Unit,
     onSend: () -> Unit,
-    onAttachClick: () -> Unit = {}, // New
-    onMicClick: () -> Unit = {}     // New
+    onAttachClick: () -> Unit = {}, // Legacy, now unused
+    onMicClick: () -> Unit = {},
+    onUploadFile: () -> Unit = {},   // 上传文件
+    onUploadImage: () -> Unit = {},  // 上传图片
+    onUploadAudio: () -> Unit = {}   // 上传音频
 ) {
+    val keyboardController = LocalSoftwareKeyboardController.current // 键盘控制器
+    var showAttachMenu by remember { mutableStateOf(false) } // 附件菜单状态
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -45,13 +58,54 @@ fun InputBar(
             .padding(horizontal = 8.dp, vertical = 6.dp), // Adjusted padding
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 1. Attachment Button [📎] (Reusing Add icon as placeholder for Attach)
-        IconButton(onClick = onAttachClick) {
-            Icon(
-                imageVector = Icons.Default.Add, // Placeholder for Clip/Attach
-                contentDescription = "Attach",
-                tint = Color(0xFF888888)
-            )
+        // 1. Attachment Menu [+] with Dropdown
+        Box {
+            IconButton(onClick = { showAttachMenu = true }) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Attach",
+                    tint = Color(0xFF888888)
+                )
+            }
+            DropdownMenu(
+                expanded = showAttachMenu,
+                onDismissRequest = { showAttachMenu = false },
+                modifier = Modifier.background(Color(0xFF2B2B38))
+            ) {
+                // 📄 文件
+                DropdownMenuItem(
+                    text = { Text("📄 文件", color = Color.White) },
+                    onClick = {
+                        showAttachMenu = false
+                        onUploadFile()
+                    },
+                    leadingIcon = {
+                        Icon(Icons.Default.InsertDriveFile, null, tint = Color(0xFF888888))
+                    }
+                )
+                // 🖼️ 图片
+                DropdownMenuItem(
+                    text = { Text("🖼️ 图片", color = Color.White) },
+                    onClick = {
+                        showAttachMenu = false
+                        onUploadImage()
+                    },
+                    leadingIcon = {
+                        Icon(Icons.Default.Image, null, tint = Color(0xFF888888))
+                    }
+                )
+                // 🎙️ 音频
+                DropdownMenuItem(
+                    text = { Text("🎙️ 音频", color = Color.White) },
+                    onClick = {
+                        showAttachMenu = false
+                        onUploadAudio()
+                    },
+                    leadingIcon = {
+                        Icon(Icons.Default.AudioFile, null, tint = Color(0xFF888888))
+                    }
+                )
+            }
         }
 
         // 2. Text Input
@@ -93,7 +147,10 @@ fun InputBar(
         // Show Send if typing, otherwise Mic
         if (hasText || isSending) {
             Button(
-                onClick = onSend,
+                onClick = {
+                    keyboardController?.hide() // 发送后关闭键盘
+                    onSend()
+                },
                 enabled = hasText && !isSending,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF4FC3F7),

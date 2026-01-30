@@ -371,15 +371,18 @@
 
 ### Tech Debt (Deferred for Beta)
 
-> **Logged**: 2026-01-29 — Does NOT block beta small circle test
+> **Logged**: 2026-01-30 — Does NOT block beta small circle test
 
 | Item | Location | Issue | Priority |
 |------|----------|-------|----------|
-| `delay()` in UI | `ConnectivityModal.kt:293` | Progress sim should use Fake | Low |
+| `delay()` in UI | `ResponseBubble.kt:129` | Simulated typing should use Fake | Low |
+| `delay()` in UI | `ConnectivityModal.kt:240` | Progress sim should use Fake | Low |
 | `delay()` in UI | `OnboardingScreen.kt:226,229` | Firmware progress sim should use Fake | Low |
+| `delay()` in UI | `SchedulerDrawer.kt:211,220,234` | Parsing/checking delays should use Fake | Low |
 | Fake Tests | `FakeAudioRepository` etc. | No unit tests for Fakes | Low (not needed for beta) |
+| Activity Trace Timing | `PrismOrchestrator.kt` | First trace may be missed due to phase transition race | Low |
 
-**Resolution**: Refactor to `FakeProgressService` post-beta.
+**Resolution**: Refactor to `FakeProgressService` / `FakeDelayService` post-beta.
 
 ---
 

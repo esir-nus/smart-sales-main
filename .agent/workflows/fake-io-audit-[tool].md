@@ -122,6 +122,60 @@ Run tests that exercise the Fakes:
 
 ---
 
+### Step 7: Blackbox Audit Check (Prism-Specific)
+
+Verify all Prism blackboxes follow the **Interface → Fake → Real** pattern per [Prism-V1.md §2.2](file:///home/cslh-frank/main_app/docs/specs/Prism-V1.md).
+
+**Canonical Blackbox List** (from spec):
+
+| Category | Blackboxes | Interface Location |
+|----------|-----------|-------------------|
+| **A: Core Pipeline** | ContextBuilder, SessionCache, Orchestrator, Executor, Publisher, MemoryWriter, SchemaLinter, MemoryCenterNotifier | `domain/pipeline/` |
+| **B: Input Tools** | TingwuRunner, VisionAnalyzer, UrlFetcher, BleConnector | `domain/inputs/` |
+| **C: Linters** | EntityLinter, PlanLinter, SchedulerLinter, RelevancyLinter | `domain/linters/` |
+| **D: Repositories** | RelevancyRepository, MemoryEntryRepository, UserProfileRepository, UserHabitRepository, ArtifactRepository, SessionsRepository, ScheduledTaskRepository, InspirationRepository | `domain/repositories/` |
+| **E: FSM Controllers** | AnalystFlowController, CoachFlowController, SchedulerFlowController, SystemNotificationController | `domain/pipeline/` |
+
+// turbo
+**Check Interface Existence**:
+```bash
+for iface in Executor ContextBuilder Publisher MemoryWriter Orchestrator; do
+  find app-prism/src/main/java -name "${iface}.kt" | head -1 || echo "❌ Missing: ${iface}"
+done
+```
+
+// turbo
+**Check Fake Existence**:
+```bash
+find app-prism/src/main/java -path "*/fakes/*" -name "*.kt" | wc -l
+```
+
+// turbo
+**Check Real Existence** (Phase 3):
+```bash
+find app-prism/src/main/java -path "*/real/*" -name "*.kt" 2>/dev/null | wc -l || echo "0 (Phase 2)"
+```
+
+**Blackbox Status Table**:
+
+Generate this table for each blackbox:
+
+| Blackbox | Interface | Fake | Real | DI Binding | Status |
+|----------|-----------|------|------|------------|--------|
+| `Executor` | ✅ | ✅ `FakeExecutor` | ❌ | ✅ `PrismModule:52` | Phase 2 |
+| `ContextBuilder` | ✅ | ✅ `FakeContextBuilder` | ❌ | ✅ | Phase 2 |
+| ... | ... | ... | ... | ... | ... |
+
+**Scoring:**
+| Result | Score |
+|--------|-------|
+| All interfaces exist | +10 |
+| All have Fakes | +10 |
+| Fakes bound via DI | +10 |
+| Missing any interface | **-30** (Hard Fail) |
+
+---
+
 ## Output: Audit Report
 
 Generate this report:
@@ -137,21 +191,22 @@ Generate this report:
 
 | Check | Status | Score |
 |-------|--------|-------|
-| Interfaces Defined | ✅/❌ | +X |
-| Fakes Implemented | ✅/❌ | +X |
-| UI Purity | ✅/❌ | +X |
-| DI Bindings | ✅/❌ | +X |
-| Tests Coupled | ✅/❌ | +X |
-| **Total** | | **/100** |
+| Interfaces Defined | ✅/❌ | +20 |
+| Fakes Implemented | ✅/❌ | +20 |
+| UI Purity | ✅/❌ | +30 |
+| DI Bindings | ✅/❌ | +15 |
+| Tests Coupled | ✅/❌ | +15 |
+| **Blackbox Audit** | ✅/❌ | +30 |
+| **Total** | | **/130** |
 
 ## Verdict
 
 | Score | Action |
 |-------|--------|
-| **90-100** | ✅ SHIP — Ready for real implementation swap |
-| **70-89** | ⚠️ PROCEED — Minor gaps, log as debt |
-| **50-69** | 🔧 FIX — Create missing Fakes/Bindings |
-| **<50** | 🔴 BLOCK — UI contaminated or no abstraction |
+| **115-130** | ✅ SHIP — Ready for real implementation swap |
+| **90-114** | ⚠️ PROCEED — Minor gaps, log as debt |
+| **65-89** | 🔧 FIX — Create missing Fakes/Bindings |
+| **<65** | 🔴 BLOCK — UI contaminated or no abstraction |
 
 ## Next Steps
 1. [Specific action based on gaps]

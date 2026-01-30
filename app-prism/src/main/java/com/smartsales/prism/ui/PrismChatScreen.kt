@@ -33,8 +33,10 @@ import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.ui.components.InputBar
 import com.smartsales.prism.ui.components.PlanCard
 import com.smartsales.prism.ui.components.ResponseBubble
-import com.smartsales.prism.ui.components.ThinkingBox
 import com.smartsales.prism.ui.components.UserBubble
+import com.smartsales.prism.ui.components.AgentActivityBanner
+import com.smartsales.prism.domain.activity.AgentActivity
+import com.smartsales.prism.domain.activity.ThinkingPolicy
 
 /**
  * Prism Chat Screen
@@ -57,6 +59,7 @@ fun PrismChatScreen(
     val isSending by viewModel.isSending.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val sessionTitle by viewModel.sessionTitle.collectAsState() // Observe Title
+    val agentActivity by viewModel.agentActivity.collectAsState() // Agent Activity (Thinking Trace)
 
     PrismChatContent(
         currentMode = currentMode,
@@ -76,7 +79,8 @@ fun PrismChatScreen(
         onDebugClick = viewModel::cycleDebugState,
         onTitleChange = viewModel::updateSessionTitle,
         onTingwuClick = onTingwuClick,
-        onArtifactsClick = onArtifactsClick
+        onArtifactsClick = onArtifactsClick,
+        agentActivity = agentActivity
     )
 }
 
@@ -99,7 +103,8 @@ private fun PrismChatContent(
     onDebugClick: () -> Unit,
     onTitleChange: (String) -> Unit, // v2.6
     onTingwuClick: () -> Unit,
-    onArtifactsClick: () -> Unit
+    onArtifactsClick: () -> Unit,
+    agentActivity: AgentActivity? = null
 ) {
     val context = LocalContext.current
     
@@ -133,36 +138,36 @@ private fun PrismChatContent(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // 模式切换栏 (v2.6 Aligned: Coach/Analyst ONLY + Haptics)
-        ModeToggleBar(
-            currentMode = currentMode,
-            onModeSwitch = onModeSwitch
-        )
 
-        Spacer(modifier = Modifier.height(16.dp))
 
         // --- TRANSIENT ACTIVITY BANNER (Not persisted to history) ---
-        // Only shows Parsing/Executing states as temporary indicators
-        when (uiState) {
-            is UiState.AnalystParsing -> {
-                com.smartsales.prism.ui.components.ThinkingTicker(
-                    text = uiState.ticker,
-                    progress = uiState.progress
-                )
-                Spacer(modifier = Modifier.height(4.dp))
+        // Agent Activity Banner (Two-tier: Phase + Action + Trace)
+        agentActivity?.let { activity ->
+            val maxLines = ThinkingPolicy.maxTraceLines(currentMode)
+            AgentActivityBanner(
+                activity = activity,
+                maxLines = maxLines
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+        
+        // Legacy transient states (Parsing/Executing) — fallback
+        if (agentActivity == null) {
+            when (uiState) {
+                is UiState.AnalystParsing -> {
+                    com.smartsales.prism.ui.components.ThinkingTicker(
+                        text = uiState.ticker,
+                        progress = uiState.progress
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+                is UiState.AnalystExecuting -> {
+                    Text("⚙️ ${uiState.planTitle}", color = Color.Cyan) 
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                // Note: UiState.Thinking now handled by AgentActivityBanner above
+                else -> {} // Cards are rendered in LazyColumn via history
             }
-            is UiState.AnalystExecuting -> {
-                Text("⚙️ ${uiState.planTitle}", color = Color.Cyan) 
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-            is UiState.Thinking -> {
-                com.smartsales.prism.ui.components.ThinkingBox(
-                    content = uiState.hint ?: "思考中...",
-                    isComplete = false
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-            else -> {} // Cards are rendered in LazyColumn via history
         }
 
         // --- MAIN CONTENT AREA (weighted) ---
@@ -185,12 +190,7 @@ private fun PrismChatContent(
                 if (uiState !is UiState.Idle && uiState !is UiState.Error) {
                     item {
                         when (uiState) {
-                            is UiState.Thinking -> {
-                                ThinkingBox(
-                                    content = (uiState as UiState.Thinking).hint ?: "正在分析...",
-                                    isComplete = false
-                                )
-                            }
+                            // Note: UiState.Thinking now handled by AgentActivityBanner
                             is UiState.Response -> {
                                  ResponseBubble(uiState = uiState as UiState.Response)
                             }
@@ -259,14 +259,25 @@ private fun PrismChatContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // 模式切换栏 (Moved to Bottom per Spec §1.2)
+        ModeToggleBar(
+            currentMode = currentMode,
+            onModeSwitch = onModeSwitch
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         // 输入栏
         InputBar(
             text = inputText,
             isSending = isSending,
             onTextChanged = onInputChanged,
             onSend = onSend,
-            onAttachClick = { Toast.makeText(context, "添加附件（最多11个）", Toast.LENGTH_SHORT).show() },
-            onMicClick = { Toast.makeText(context, "语音备注（手机麦克风）", Toast.LENGTH_SHORT).show() }
+            onAttachClick = { /* Legacy, now unused */ },
+            onMicClick = { Toast.makeText(context, "语音备注（手机麦克风）", Toast.LENGTH_SHORT).show() },
+            onUploadFile = { Toast.makeText(context, "上传文件...", Toast.LENGTH_SHORT).show() },
+            onUploadImage = { Toast.makeText(context, "上传图片...", Toast.LENGTH_SHORT).show() },
+            onUploadAudio = { Toast.makeText(context, "上传音频...", Toast.LENGTH_SHORT).show() }
         )
     }
 }

@@ -3,7 +3,6 @@ package com.smartsales.prism.ui.components
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -13,64 +12,39 @@ import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BluetoothDisabled
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Update
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.smartsales.prism.domain.connectivity.ConnectivityService
-import com.smartsales.prism.domain.connectivity.ReconnectResult
-import com.smartsales.prism.domain.connectivity.UpdateResult
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.smartsales.prism.ui.components.connectivity.ConnectionState
+import com.smartsales.prism.ui.components.connectivity.ConnectivityViewModel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-
-/**
- * Connectivity Modal States
- * Intermediate states (CHECKING_UPDATE, RECONNECTING) provide visual feedback
- * during async service calls.
- */
-private enum class ConnectionState {
-    CONNECTED,
-    DISCONNECTED,
-    CHECKING_UPDATE,   // NEW: Spinner while checking firmware
-    UPDATE_FOUND,
-    UPDATING,
-    RECONNECTING,      // NEW: Spinner while BLE reconnecting
-    WIFI_MISMATCH
-}
 
 /**
  * Connectivity Modal (Truncated Onboarding)
  * @see prism-ui-ux-contract.md §1.6.1
  * 
- * @param connectivityService Injected service for Fake I/O pattern (delays live in Fake, not here)
+ * 重构: 使用 ViewModel 管理状态，而非直接注入 Service。
  */
 @Composable
 fun ConnectivityModal(
-    connectivityService: ConnectivityService,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    viewModel: ConnectivityViewModel = hiltViewModel()
 ) {
-    // Coroutine scope for service calls
-    val coroutineScope = rememberCoroutineScope()
-    
-    // State Machine
-    var state by remember { mutableStateOf(ConnectionState.CONNECTED) }
-    var batteryLevel by remember { mutableIntStateOf(85) }
-    var pendingVersion by remember { mutableStateOf<String?>(null) }
+    // 从 ViewModel 收集状态
+    val state by viewModel.connectionState.collectAsState()
+    val batteryLevel by viewModel.batteryLevel.collectAsState()
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .clickable(enabled = false) {}, // Intercept clicks
+            .clickable(enabled = false) {}, // 拦截点击
         contentAlignment = Alignment.Center
     ) {
         Card(
@@ -85,7 +59,7 @@ fun ConnectivityModal(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Close Button
+                // 关闭按钮
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
@@ -97,57 +71,30 @@ fun ConnectivityModal(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Dynamic Content based on State
+                // 根据状态动态渲染内容
                 AnimatedContent(targetState = state, label = "StateTransition") { currentState ->
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         when (currentState) {
                             ConnectionState.CONNECTED -> ConnectedView(
                                 battery = batteryLevel,
-                                onUnbind = {
-                                    coroutineScope.launch {
-                                        connectivityService.disconnect()
-                                        state = ConnectionState.DISCONNECTED
-                                    }
-                                },
-                                onCheckUpdate = {
-                                    coroutineScope.launch {
-                                        state = ConnectionState.CHECKING_UPDATE
-                                        val result = connectivityService.checkForUpdate()
-                                        state = when (result) {
-                                            is UpdateResult.Found -> {
-                                                pendingVersion = result.version
-                                                ConnectionState.UPDATE_FOUND
-                                            }
-                                            else -> ConnectionState.CONNECTED
-                                        }
-                                    }
-                                }
+                                onUnbind = { viewModel.disconnect() },
+                                onCheckUpdate = { viewModel.checkForUpdate() }
                             )
                             ConnectionState.DISCONNECTED -> DisconnectedView(
-                                onReconnect = {
-                                    coroutineScope.launch {
-                                        state = ConnectionState.RECONNECTING
-                                        val result = connectivityService.reconnect()
-                                        state = when (result) {
-                                            ReconnectResult.Connected -> ConnectionState.CONNECTED
-                                            ReconnectResult.WifiMismatch -> ConnectionState.WIFI_MISMATCH
-                                            else -> ConnectionState.DISCONNECTED
-                                        }
-                                    }
-                                }
+                                onReconnect = { viewModel.reconnect() }
                             )
                             ConnectionState.CHECKING_UPDATE -> CheckingUpdateView()
                             ConnectionState.UPDATE_FOUND -> UpdateFoundView(
-                                onSync = { state = ConnectionState.UPDATING },
-                                onLater = { state = ConnectionState.CONNECTED }
+                                onSync = { viewModel.startUpdate() },
+                                onLater = { viewModel.cancel() }
                             )
                             ConnectionState.UPDATING -> UpdatingView(
-                                onComplete = { state = ConnectionState.CONNECTED }
+                                onComplete = { viewModel.completeUpdate() }
                             )
                             ConnectionState.RECONNECTING -> ReconnectingView()
                             ConnectionState.WIFI_MISMATCH -> WifiMismatchView(
-                                onUpdate = { state = ConnectionState.CONNECTED },
-                                onIgnore = { state = ConnectionState.CONNECTED }
+                                onUpdate = { ssid, password -> viewModel.updateWifiConfig(ssid, password) },
+                                onIgnore = { viewModel.cancel() }
                             )
                         }
                     }
@@ -167,7 +114,7 @@ private fun ConnectedView(
     onUnbind: () -> Unit,
     onCheckUpdate: () -> Unit
 ) {
-    // Pulse Animation
+    // 脉冲动画
     val infiniteTransition = rememberInfiniteTransition(label = "Pulse")
     val alpha by infiniteTransition.animateFloat(
         initialValue = 0.6f,
@@ -285,7 +232,7 @@ private fun UpdateFoundView(
 private fun UpdatingView(
     onComplete: () -> Unit
 ) {
-    // Mock Progress
+    // 模拟进度
     var progress by remember { mutableFloatStateOf(0f) }
     
     LaunchedEffect(Unit) {
@@ -336,7 +283,7 @@ private fun ReconnectingView() {
 
 @Composable
 private fun WifiMismatchView(
-    onUpdate: () -> Unit,
+    onUpdate: (String, String) -> Unit,
     onIgnore: () -> Unit
 ) {
     Icon(
@@ -356,11 +303,11 @@ private fun WifiMismatchView(
 
     Spacer(modifier = Modifier.height(24.dp))
 
-    // State for Inputs
+    // 输入状态
     var ssid by remember { mutableStateOf("Office_5G") }
     var password by remember { mutableStateOf("") }
 
-    // WiFi Inputs
+    // WiFi 输入框
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -368,7 +315,7 @@ private fun WifiMismatchView(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // SSID Input
+        // SSID 输入
         Column {
             Text("WiFi Name (SSID)", fontSize = 12.sp, color = Color.Gray)
             Spacer(Modifier.height(4.dp))
@@ -386,7 +333,7 @@ private fun WifiMismatchView(
             )
         }
         
-        // Password Input
+        // 密码输入
         Column {
             Text("Password", fontSize = 12.sp, color = Color.Gray)
             Spacer(Modifier.height(4.dp))
@@ -418,7 +365,7 @@ private fun WifiMismatchView(
         }
 
         Button(
-            onClick = onUpdate,
+            onClick = { onUpdate(ssid, password) },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
             modifier = Modifier.weight(1f)
         ) {

@@ -1,5 +1,8 @@
 package com.smartsales.prism.data.fakes
 
+import com.smartsales.prism.domain.activity.ActivityAction
+import com.smartsales.prism.domain.activity.ActivityPhase
+import com.smartsales.prism.domain.activity.AgentActivityController
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.pipeline.DeliverableType
@@ -18,17 +21,25 @@ import javax.inject.Singleton
  * 返回模拟数据，不会崩溃
  */
 @Singleton
-class FakeOrchestrator @Inject constructor() : Orchestrator {
+class FakeOrchestrator @Inject constructor(
+    private val activityController: AgentActivityController
+) : Orchestrator {
     
     private val _currentMode = MutableStateFlow(Mode.COACH)
     override val currentMode: StateFlow<Mode> = _currentMode.asStateFlow()
     
     override suspend fun processInput(input: String): UiState {
+        // 开始活动追踪
+        activityController.startPhase(ActivityPhase.PLANNING, ActivityAction.THINKING)
+        activityController.appendTrace("分析用户输入: \"$input\"")
+        
         // 模拟网络延迟
-        delay(800)
+        delay(400)
+        activityController.appendTrace("检索相关上下文...")
+        delay(400)
+        activityController.appendTrace("生成回复策略...")
 
-        // 🛡️ Fake I/O Scenarios (Debug Commands)
-        return when {
+        val result = when {
             input.startsWith("/plan") -> {
                 // Scenario: Analyst Plan Card
                 UiState.PlanCard(
@@ -64,6 +75,7 @@ class FakeOrchestrator @Inject constructor() : Orchestrator {
             }
             input.startsWith("/error") -> {
                 // Scenario: Error State
+                activityController.error("模拟的网络连接错误 (Error 500)")
                 throw RuntimeException("模拟的网络连接错误 (Error 500)")
             }
             else -> {
@@ -75,9 +87,14 @@ class FakeOrchestrator @Inject constructor() : Orchestrator {
                 }
             }
         }
+        
+        // 完成活动追踪
+        activityController.complete()
+        return result
     }
     
     override suspend fun switchMode(newMode: Mode) {
         _currentMode.value = newMode
     }
 }
+

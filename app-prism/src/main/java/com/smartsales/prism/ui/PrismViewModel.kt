@@ -25,10 +25,14 @@ import javax.inject.Inject
 @HiltViewModel
 class PrismViewModel @Inject constructor(
     private val orchestrator: Orchestrator,
-    private val analystController: com.smartsales.prism.domain.pipeline.AnalystFlowController
+    private val analystController: com.smartsales.prism.domain.pipeline.AnalystFlowController,
+    private val activityController: com.smartsales.prism.domain.activity.AgentActivityController
 ) : ViewModel() {
     
     val currentMode: StateFlow<Mode> = orchestrator.currentMode
+    
+    // 代理活动状态（思考痕迹）
+    val agentActivity: StateFlow<com.smartsales.prism.domain.activity.AgentActivity?> = activityController.activity
     
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()

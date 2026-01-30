@@ -176,25 +176,66 @@ Every element definition follows this strict logic:
 | **Step Item** | `Prompting` | **Logic Wait** | Flash Yellow | **Prompt User** via Chat. | "Should I gen PDF?" | ❌ Pending |
 | **Step Item** | `Completed` | Tool Success | Checkmark | Step Done. | N/A | ❌ Pending |
 
-### 6.2 Agent Activity Banner (Unified Cognition/Perception)
+### 6.2 Agent Activity Banner (Two-Tier Structure)
 
-> **Design Principle**: All agent "thinking" indicators use one component. Title is required; trace is optional.
+> **Design Principle**: Agent activity uses a **two-tier hierarchy** for rich showcasing of agent thinking. This is a core differentiator.
 
-| Element | Visual State | Trigger | Title (活动标题) | Trace (活动详情) | Invariant | Status |
-|---------|--------------|---------|-----------------|-----------------|-----------|--------|
-| **ActivityBanner** | `Active` | FSM State Change | Required (e.g., "🧠 思考中...") | **Optional**: If data exists, render it. If not, just show title. | First element of AI response. | ❌ Pending |
-| **ActivityBanner** | `Cognition` | `AnalystState.Planning` | "🧠 思考中..." | Dashscope CoT trace stream. | Scroll-to-bottom. | ❌ Pending |
-| **ActivityBanner** | `Perception` | `AnalystState.Parsing` | "⚙️ 解析中... (Q3_Report.pdf)" | Page numbers, extraction status lines. | Updates in place. | ❌ Pending |
-| **ActivityBanner** | `Memory` | Memory Retrieval | "📚 检索相关记忆..." | Retrieved snippets (e.g., "Jan 1st, CEO Jake visited"). | Optional detail. | ❌ Pending |
-| **ActivityBanner** | `Editing` | System Edit | "✏️ 编辑中..." | `null` (no trace). | Title only. | ❌ Pending |
+#### Visual Structure
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Phase: 📝 规划分析步骤                                  │  ← Primary (what high-level task)
+│  Action: 🧠 思考中...                                    │  ← Secondary (specific operation)
+├─────────────────────────────────────────────────────────┤
+│  [Thinking trace / transcript / memory hits...]         │  ← Body (streaming content)
+└─────────────────────────────────────────────────────────┘
+```
+
+#### Phase Types (ActivityPhase)
+
+| Phase | Icon | Microcopy | When |
+|-------|------|-----------|------|
+| `PLANNING` | 📝 | "规划分析步骤" / "生成执行计划" | Analyst mode plan generation |
+| `EXECUTING` | ⚙️ | "执行工具: {toolName}" | Running a tool (chart, report, etc.) |
+| `RESPONDING` | 💬 | "生成回复" | Standard response generation |
+| `ERROR` | ⚠️ | "发生错误" | Error state |
+
+#### Action Types (ActivityAction)
+
+| Action | Icon | Microcopy | Trace Source |
+|--------|------|-----------|--------------|
+| `THINKING` | 🧠 | "思考中..." | Qwen3-Max native CoT stream |
+| `PARSING` | 📄 | "解析中... ({filename})" | Qwen-VL vision output / OCR |
+| `TRANSCRIBING` | 🎙️ | "转写中... ({filename})" | Tingwu transcript stream |
+| `RETRIEVING` | 📚 | "检索记忆..." | Relevancy Library matches |
+| `ASSEMBLING` | 📋 | "整理上下文..." | Assembled context preview |
+| `STREAMING` | ✨ | "生成中..." | LLM response stream |
+
+#### Trace Sources (Native vs Synthetic)
+
+| Source | Type | Details |
+|--------|------|---------|
+| **Qwen3-Max CoT** | Native | `enable_thinking=true` → `reasoning_content` (Analyst: full) |
+| **Qwen-Plus CoT** | Native | `enable_thinking=true` → `reasoning_content` (Coach: truncated 3 lines) |
+| **Qwen-VL CoT** | Native | `enable_thinking=true` → `reasoning_content` (Vision: OCR trace) |
+| **Tingwu** | Native | Real-time transcript (pseudo-thinking) |
+| **Relevancy Library** | Synthetic | Show matched entities/memories |
+| **Context Assembly** | Synthetic | Show assembled sources |
 
 #### Component Signature
 
 ```kotlin
+data class AgentActivity(
+    val phase: ActivityPhase,        // Required: PLANNING, EXECUTING, etc.
+    val action: ActivityAction?,     // Optional: THINKING, PARSING, etc.
+    val trace: String? = null        // Optional: Streaming content
+)
+
 @Composable
 fun AgentActivityBanner(
-    title: String,           // Required: "🧠 思考中...", "⚙️ 解析中..."
-    trace: List<String>?,    // Optional: If null/empty, only title shown
+    phase: ActivityPhase,            // Required: always visible
+    action: ActivityAction?,         // Optional: visible if present
+    trace: List<String>?,            // Optional: body content
     modifier: Modifier = Modifier
 )
 ```
@@ -203,9 +244,21 @@ fun AgentActivityBanner(
 
 | Scenario | Visual Output |
 |----------|---------------|
-| `trace = null` | Just title, no divider, no content block |
-| `trace = ["line1", "line2", ...]` | Title + divider + trace lines (scrollable) |
-| `trace = emptyList()` | Just title (same as null) |
+| `action = null, trace = null` | Phase only (e.g., "⚠️ 网络连接失败") |
+| `action = THINKING, trace = null` | Phase + Action, no body |
+| `action = THINKING, trace = [...]` | Phase + Action + scrollable trace |
+
+#### State Matrix
+
+| Element | Phase | Action | Trace | Invariant | Status |
+|---------|-------|--------|-------|-----------|--------|
+| **Planning** | `PLANNING` | `THINKING` | CoT stream | Scroll-to-bottom | ❌ Pending |
+| **Tool (PDF)** | `EXECUTING` | `THINKING` | Tool's CoT | Updates in place | ❌ Pending |
+| **Vision** | `EXECUTING` | `PARSING` | OCR results | Per-file progress | ❌ Pending |
+| **Audio** | `EXECUTING` | `TRANSCRIBING` | Transcript | Per-file progress | ❌ Pending |
+| **Memory** | `RESPONDING` | `RETRIEVING` | Entity matches | Optional detail | ❌ Pending |
+| **Context** | `RESPONDING` | `ASSEMBLING` | Source list | Brief summary | ❌ Pending |
+| **Error** | `ERROR` | `null` | Error message | Title only | ❌ Pending |
 
 ### 6.3 Artifact Card (Tool Output)
 | Element | Visual State | Trigger | Animation | Result | Invariant | Status |
@@ -221,7 +274,8 @@ fun AgentActivityBanner(
 
 | Version | Date | Status | Changes |
 |---------|------|--------|---------|
-| **v2.8** | 2026-01-29 | **Draft** | Unified §6.2 Thinking Box/Ticker into `AgentActivityBanner` (title + optional trace). |
+| **v2.9** | 2026-01-30 | **Draft** | Refactored §6.2 to two-tier structure (Phase + Action + Trace) for rich agent activity showcase. |
+| **v2.8** | 2026-01-29 | Locked | Unified §6.2 Thinking Box/Ticker into `AgentActivityBanner` (title + optional trace). |
 | **v2.7** | 2026-01-29 | Locked | Added Analyst Flow States (Parsing, Building), Thinking Ticker, Artifact Card. |
 | **v2.6** | 2026-01-28 | **Locked** | Added Z-Map (Lego Layers). |
 | **v2.5** | 2026-01-28 | Archived | Tracker Added. Plan Logic Fixed (Prompt vs Artifact). |

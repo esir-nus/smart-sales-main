@@ -25,11 +25,13 @@ data class DashscopeRequest(
     val model: String,
     val messages: List<DashscopeMessage>,
     val temperature: Float = 0.3f,
-    val incrementalOutput: Boolean = true
+    val incrementalOutput: Boolean = true,
+    val enableThinking: Boolean = true  // 启用思考痕迹（所有模型默认开启）
 )
 
 data class DashscopeCompletion(
-    val displayText: String
+    val displayText: String,
+    val thinkingTrace: String? = null  // 思考痕迹（reasoning_content）
 )
 
 sealed class DashscopeStreamEvent {
@@ -48,7 +50,10 @@ class DefaultDashscopeClient @Inject constructor() : DashscopeClient {
     override fun generate(request: DashscopeRequest): DashscopeCompletion {
         val param = buildGenerationParam(request)
         val output = Generation().call(param)
-        return DashscopeCompletion(displayText = extractDisplayText(output))
+        return DashscopeCompletion(
+            displayText = extractDisplayText(output),
+            thinkingTrace = extractThinkingTrace(output)
+        )
     }
 
     override fun stream(request: DashscopeRequest): Flow<DashscopeStreamEvent> = callbackFlow {
@@ -95,6 +100,7 @@ class DefaultDashscopeClient @Inject constructor() : DashscopeClient {
             .temperature(request.temperature)
             .resultFormat(GenerationParam.ResultFormat.MESSAGE)
             .incrementalOutput(request.incrementalOutput)
+            .enableThinking(request.enableThinking)  // 启用思考痕迹
             .build()
     }
 
@@ -108,5 +114,20 @@ class DefaultDashscopeClient @Inject constructor() : DashscopeClient {
             ?.message
             ?.content
         return firstMessage?.trim().orEmpty()
+    }
+    
+    /**
+     * 提取思考痕迹（reasoning_content）
+     * 
+     * 当 enableThinking=true 时，模型返回的思考过程存储在 
+     * choices[0].message.reasoningContent 字段中。
+     */
+    private fun extractThinkingTrace(result: GenerationResult): String? {
+        return result.output?.choices
+            ?.firstOrNull()
+            ?.message
+            ?.reasoningContent
+            ?.takeIf { it.isNotBlank() }
+            ?.trim()
     }
 }

@@ -36,7 +36,8 @@ class FakeOrchestratorTest {
         val orchestrator = FakeOrchestrator()
         orchestrator.switchMode(Mode.ANALYST)
         
-        val result = orchestrator.processInput("analyze this")
+        // /plan command triggers PlanCard response
+        val result = orchestrator.processInput("/plan analyze this")
         
         assertTrue("Expected UiState.PlanCard", result is UiState.PlanCard)
     }

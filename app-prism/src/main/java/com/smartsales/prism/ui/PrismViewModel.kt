@@ -47,6 +47,10 @@ class PrismViewModel @Inject constructor(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
     
+    // Toast 消息（一次性事件）
+    private val _toastMessage = MutableStateFlow<String?>(null)
+    val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
+    
     private val _history = MutableStateFlow<List<ChatMessage>>(emptyList())
     val history: StateFlow<List<ChatMessage>> = _history.asStateFlow()
 
@@ -118,7 +122,18 @@ class PrismViewModel @Inject constructor(
         viewModelScope.launch {
             orchestrator.switchMode(mode)
             _uiState.value = UiState.Idle
+            // 显示模式切换提示
+            val modeName = when (mode) {
+                Mode.COACH -> "教练模式"
+                Mode.ANALYST -> "分析师模式"
+                Mode.SCHEDULER -> "日程模式"
+            }
+            _toastMessage.value = "已切换至$modeName"
         }
+    }
+    
+    fun clearToast() {
+        _toastMessage.value = null
     }
     
     fun updateInput(text: String) {

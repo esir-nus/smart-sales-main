@@ -60,6 +60,17 @@ fun PrismChatScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
     val sessionTitle by viewModel.sessionTitle.collectAsState() // Observe Title
     val agentActivity by viewModel.agentActivity.collectAsState() // Agent Activity (Thinking Trace)
+    val toastMessage by viewModel.toastMessage.collectAsState() // Toast Message
+
+    val context = LocalContext.current
+    
+    // 显示 Toast 消息
+    LaunchedEffect(toastMessage) {
+        toastMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearToast()
+        }
+    }
 
     PrismChatContent(
         currentMode = currentMode,

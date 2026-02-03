@@ -71,7 +71,8 @@ fun PrismChatScreen(
     onNewSessionClick: () -> Unit = {},
     onAudioBadgeClick: () -> Unit = {},
     onTingwuClick: () -> Unit = {},
-    onArtifactsClick: () -> Unit = {}
+    onArtifactsClick: () -> Unit = {},
+    onDebugClick: () -> Unit = {}
 ) {
     val currentMode by viewModel.currentMode.collectAsState()
     val history by viewModel.history.collectAsState()
@@ -208,7 +209,7 @@ fun PrismChatScreen(
                 sessionTitle = sessionTitle,
                 onMenuClick = onMenuClick,
                 onNewSessionClick = onNewSessionClick,
-                onDebugClick = viewModel::cycleDebugState,
+                onDebugClick = onDebugClick,
                 // Pass new analytics handler if needed, currently reusing logic inside header
             )
         }

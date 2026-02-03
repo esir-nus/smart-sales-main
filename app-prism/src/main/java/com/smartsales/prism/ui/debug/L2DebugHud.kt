@@ -3,6 +3,8 @@ package com.smartsales.prism.ui.debug
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,7 +12,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,12 +19,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smartsales.prism.BuildConfig
 import com.smartsales.prism.domain.scheduler.LintResult
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.delay
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface L2DebugHudEntryPoint {
+    fun schedulerLinter(): SchedulerLinter
+}
 
 /**
  * L2 Debug HUD — 独立于业务逻辑的 Pipeline 验证面板
@@ -31,16 +43,25 @@ import kotlinx.coroutines.delay
  * 直接调用 SchedulerLinter.lint() 并展示结果，不经过 ViewModel/UX 层
  * 避免 UX 层 bug 影响测试结果
  * 
+ * @param isVisible 由外部控制是否显示（header 的 bug 按钮切换）
+ * @param onDismiss 关闭回调
+ * 
  * @see .agent/rules/anti-drift-protocol.md §Three-Level Testing
  */
 @Composable
 fun L2DebugHud(
-    schedulerLinter: SchedulerLinter,
+    isVisible: Boolean,
+    onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (!BuildConfig.DEBUG) return
     
-    var isExpanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val entryPoint = remember {
+        EntryPointAccessors.fromApplication(context.applicationContext, L2DebugHudEntryPoint::class.java)
+    }
+    val schedulerLinter = remember { entryPoint.schedulerLinter() }
+    
     var lastResult by remember { mutableStateOf<String?>(null) }
     var showToast by remember { mutableStateOf(false) }
     
@@ -58,31 +79,18 @@ fun L2DebugHud(
         )
     }
     
-    Box(modifier = modifier) {
-        // 浮动按钮
+    Box(modifier = modifier.fillMaxSize()) {
+        // Debug 面板 (从右侧滑入)
         AnimatedVisibility(
-            visible = !isExpanded,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            FloatingActionButton(
-                onClick = { isExpanded = true },
-                containerColor = Color(0xFF6366F1),
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Icon(Icons.Default.BugReport, "L2 Debug", tint = Color.White)
-            }
-        }
-        
-        // 展开的 Debug 面板
-        AnimatedVisibility(
-            visible = isExpanded,
-            enter = fadeIn(),
-            exit = fadeOut()
+            visible = isVisible,
+            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+            modifier = Modifier.align(Alignment.TopEnd)
         ) {
             Column(
                 modifier = Modifier
-                    .width(320.dp)
+                    .padding(top = 100.dp, end = 16.dp)
+                    .width(300.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .background(Color(0xE6111827))
                     .padding(16.dp)
@@ -94,7 +102,7 @@ fun L2DebugHud(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("🧪 L2 Pipeline Tests", color = Color.White, fontSize = 16.sp)
-                    IconButton(onClick = { isExpanded = false }) {
+                    IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, "Close", tint = Color.White)
                     }
                 }
@@ -120,7 +128,7 @@ fun L2DebugHud(
             }
         }
         
-        // Debug Toast
+        // Debug Toast (顶部显示结果)
         AnimatedVisibility(
             visible = showToast && lastResult != null,
             enter = fadeIn(),

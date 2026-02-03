@@ -50,6 +50,7 @@ fun PrismShell(
     // Atomic Drawer State (Mutex)
     var activeDrawer by remember { mutableStateOf<DrawerType?>(null) }
     var showUserCenter by remember { mutableStateOf(false) }
+    var showDebugHud by remember { mutableStateOf(false) }
     
     // Refresh Trigger
     var sessionRefreshKey by remember { mutableIntStateOf(0) }
@@ -68,7 +69,8 @@ fun PrismShell(
                 onNewSessionClick = { /* TODO: New Session */ },
                 onAudioBadgeClick = { activeDrawer = DrawerType.CONNECTIVITY },
                 onTingwuClick = { activeDrawer = DrawerType.TINGWU },
-                onArtifactsClick = { activeDrawer = DrawerType.ARTIFACTS }
+                onArtifactsClick = { activeDrawer = DrawerType.ARTIFACTS },
+                onDebugClick = { showDebugHud = !showDebugHud }
             )
         }
 
@@ -200,6 +202,13 @@ fun PrismShell(
                 onTrigger = { activeDrawer = DrawerType.AUDIO }
             )
         }
+        
+        // --- L2 DEBUG HUD (DEBUG BUILDS ONLY) ---
+        com.smartsales.prism.ui.debug.L2DebugHud(
+            isVisible = showDebugHud,
+            onDismiss = { showDebugHud = false },
+            modifier = Modifier.zIndex(PrismElevation.Drawer + 10f)
+        )
     }
 }
 

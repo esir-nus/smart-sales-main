@@ -141,7 +141,38 @@ score = (confirmationCount × 0.4)
 | User picks from picker | `+1` count, update timestamp |
 | User overrides auto | `-1` wrong, `+1` correct |
 
----
+### NotFound Handling (Hybrid Approach)
+
+When `EntityResolver.resolve(alias)` returns `NotFound`:
+
+```
+Pipeline Level (NOT in EntityResolver):
+
+1. Clarification UI → "我还不认识「张总」，请问是哪位？"
+   └─ User provides: "张伟，华东区销售总监"
+
+2. Entity Onboarding → Create new RelevancyEntry
+   └─ displayName: "张伟"
+   └─ aliases: ["张总"]
+   └─ attributes: {"role": "销售总监", "region": "华东区"}
+
+3. Retry Resolution → EntityResolver.resolve("张总") = AutoResolved
+```
+
+**Design Principles**:
+- **EntityResolver stays pure** — No LLM dependency, just Kotlin lookup
+- **NotFound triggers clarification** — Pipeline asks user, not LLM guess
+- **New entities are onboarded** — Next time, Kotlin fast path works
+- **LLM is NOT used for disambiguation** — Too slow, too unpredictable
+
+**Pipeline State for NotFound**:
+```kotlin
+sealed class ResolutionResult {
+    data class AutoResolved(val entry: RelevancyEntry) : ResolutionResult()
+    data class AmbiguousMatches(val candidates: List<RelevancyEntry>) : ResolutionResult()
+    data object NotFound : ResolutionResult()  // Triggers onboarding flow
+}
+```
 
 ## Metrics History (Time-Series)
 

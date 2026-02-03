@@ -308,6 +308,8 @@ private fun formatResult(name: String, result: LintResult, expected: String): St
         is LintResult.Success -> "✅ duration=${result.task.durationMinutes}, cascade=${result.task.alarmCascade}"
         is LintResult.Incomplete -> "⚠️ ${result.missingField}: ${result.question}"
         is LintResult.Error -> "❌ ${result.message}"
+        is LintResult.NonIntent -> "🚫 non_intent: ${result.reason}"
+        is LintResult.Inspiration -> "💡 inspiration: ${result.content}"
     }
     return "[$name] $status (预期: $expected)"
 }

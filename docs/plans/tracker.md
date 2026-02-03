@@ -86,57 +86,54 @@
 
 ## Memory Center Waves
 
-> **Cerb Docs**: [`spec.md`](../cerb/memory-center/spec.md) · [`interface.md`](../cerb/memory-center/interface.md)  
+> **Cerb Docs**: 
+> - [`memory-center/spec.md`](../cerb/memory-center/spec.md) — Core storage, ScheduleBoard
+> - [`relevancy-library/spec.md`](../cerb/relevancy-library/spec.md) — Entity lookup, disambiguation
+> - [`user-habit/spec.md`](../cerb/user-habit/spec.md) — Behavioral learning
+>
 > **Strategy**: MVP-first, each wave ships independently
+
+---
+
+### Memory Center Core (spec: `memory-center/`)
 
 | Wave | Focus | Status |
 |------|-------|--------|
-| **1** | ScheduleBoard + Two-Phase Pipeline | ✅ Complete |
-| **2** | Entity Resolution ("张总" → picker) | ✅ SHIPPED |
-| **3** | Reinforcement Learning (picker improves) | 🔲 |
-| **4** | Hot/Cement Zones (30-day simulation) | 🔲 |
-| **5** | User Habit Learning (behavioral nudges) | 🔲 |
+| **1** | ScheduleBoard + Two-Phase Pipeline | ✅ SHIPPED |
+| **2** | Hot/Cement Zone Compaction | 🔲 (needs behavior spec) |
 
+**Wave 1 Shipped**: 2026-02-03
+- ScheduleBoard interface + RealScheduleBoard implementation
+- Conflict detection with `excludeId` self-exclusion
+- Duration inference from task types
 
-### Wave 1: ScheduleBoard ✅
+---
 
-**Shipped**: 2026-02-03
+### Relevancy Library (spec: `relevancy-library/`)
 
-| Deliverable | File | Status |
-|-------------|------|--------|
-| Interface | `domain/memory/ScheduleBoard.kt` | ✅ |
-| Model | `domain/memory/ScheduleItem.kt` | ✅ |
-| Implementation | `data/memory/RealScheduleBoard.kt` | ✅ |
-| Tests | `ScheduleBoardTest.kt` (6 tests) | ✅ |
-| Cerb Interface | `interface.md` updated | ✅ |
-| ViewModel Wiring | `SchedulerViewModel.kt` → conflict check | ✅ |
-| UI Feedback | `SchedulerDrawer.kt` → warning banner | ✅ |
+| Wave | Focus | Status |
+|------|-------|--------|
+| **1** | Core Model + Repository | ✅ (inherited from Memory Center) |
+| **2** | LLM Disambiguation Flow | ✅ SHIPPED |
+| **3** | Reinforcement Learning | 🔲 (needs behavior spec) |
 
-**Test Cases Covered**:
-- [x] No conflict: Empty schedule
-- [x] No conflict: Adjacent (2-3pm, 3-4pm)
-- [x] Conflict: Overlap (2-4pm vs 3-5pm)
-- [x] Conflict: Contained (2-5pm contains 3-4pm)
-- [x] COEXISTING tasks don't conflict
-- [x] Duration inferred from task type
-
-### Wave 2: Entity Resolution ✅ SHIPPED
-
-**Shipped**: 2026-02-03
-
-**Approach**: LLM-First Clue-Based Resolution
-- Phase 1: `SchedulerLinter` extracts frozen clues (`person`, `startTime`, `location`, `briefSummary`)
-- Phase 2: `RealContextBuilder` bridges clues + `RelevancyRepository` to LLM prompt
-- LLM synthesizes entity resolution using conversation context
-
-**Lesson Learned**: 
-- "Who is 张总?" requires LLM (context understanding)
-- Kotlin-only approach was YAGNI — LLM-First is correct
-
-**Deliverables**:
+**Wave 2 Shipped**: 2026-02-03
 - `ParsedClues` carrier in `LintResult.Success`
 - `RealContextBuilder.buildWithClues()` entity bridge
-- See [Memory Center spec](../cerb/memory-center/spec.md#entity-disambiguation)
+- LLM synthesizes entity resolution using conversation context
+
+---
+
+### User Habit (spec: `user-habit/`)
+
+| Wave | Focus | Status |
+|------|-------|--------|
+| **1** | Schema + Repository | 🔲 |
+| **2** | Observation Hook | 🔲 |
+| **3** | Nudge Integration | 🔲 |
+
+**Next Step**: Implement Wave 1 — basic UserHabit storage and retrieval.
+
 
 
 ---

@@ -12,6 +12,12 @@ Scheduler manages task creation, timeline display, alarm cascading, and LLM-powe
 - `ScheduleBoard` = Memory Center index (conflict check infrastructure)
 - `ScheduledTaskRepository` = Scheduler feature (task CRUD)
 
+**Inspiration** (defined in [Prism-V1.md §5.1](file:///home/cslh-frank/main_app/docs/specs/Prism-V1.md#L703) and [SchedulerDrawer.md](file:///home/cslh-frank/main_app/docs/specs/modules/SchedulerDrawer.md#L90)):
+- Standalone notes, **not time-bound**
+- Displayed with 💡 icon and `[问AI]` action
+- Excluded from Hot Zone (not scheduled items)
+- Stored via `InspirationRepository` (Wave 5)
+
 ---
 
 ## Wave Plan

@@ -194,10 +194,7 @@ class PrismOrchestrator @Inject constructor(
                         // Wave 4.0: Classification Results
                         is LintResult.NonIntent -> {
                             activityController.complete()
-                            UiState.AwaitingClarification(
-                                question = "你想安排什么任务？",
-                                clarificationType = ClarificationType.NON_SCHEDULING_INTENT
-                            )
+                            UiState.Idle  // Silently ignore non-scheduling input
                         }
                         
                         is LintResult.Inspiration -> {

@@ -120,24 +120,57 @@
 - [x] COEXISTING tasks don't conflict
 - [x] Duration inferred from task type
 
-### Wave 2: Entity Resolution ❌ REVERTED
+### Wave 2: Entity Resolution ✅ SHIPPED
 
-**Reverted**: 2026-02-03
+**Shipped**: 2026-02-03
 
-**Reason**: Premature abstraction. Entity resolution requires LLM context understanding, not Kotlin lookup.
+**Approach**: LLM-First Clue-Based Resolution
+- Phase 1: `SchedulerLinter` extracts frozen clues (`person`, `startTime`, `location`, `briefSummary`)
+- Phase 2: `RealContextBuilder` bridges clues + `RelevancyRepository` to LLM prompt
+- LLM synthesizes entity resolution using conversation context
 
 **Lesson Learned**: 
 - "Who is 张总?" requires LLM (context understanding)
-- Kotlin-only approach was YAGNI
+- Kotlin-only approach was YAGNI — LLM-First is correct
 
-**Real Approach** (TBD):
-- Entity resolution happens in LLM Linter phase
-- LLM outputs resolved entity ID using conversation context
-- See `.agent/rules/anti-drift-protocol.md` for new gates
+**Deliverables**:
+- `ParsedClues` carrier in `LintResult.Success`
+- `RealContextBuilder.buildWithClues()` entity bridge
+- See [Memory Center spec](../cerb/memory-center/spec.md#entity-disambiguation)
+
 
 ### Wave 3: Location Conflict 🔲
 
 **Next Step**: Extend overlap logic to shared resources (Meeting Rooms)
+
+---
+
+## Scheduler Waves
+
+> **Cerb Docs**: [`spec.md`](../cerb/scheduler/spec.md) · [`interface.md`](../cerb/scheduler/interface.md)  
+> **Strategy**: UX-first, each wave ships independently
+
+| Wave | Focus | Status |
+|------|-------|--------|
+| **1** | Repository + Linter (Core CRUD) | ✅ Complete |
+| **1.5** | ViewModel Wiring | ✅ Complete |
+| **2** | Alarm Cascade | ✅ SHIPPED |
+| **3** | Smart Reminder Inference | 🔲 |
+| **4** | Reschedule Flow | 🔲 |
+| **5** | Batch Operations | 🔲 |
+| **6** | Insights Integration | 🔲 |
+
+### Wave 1 & 1.5: Core + Wiring ✅
+
+**Shipped**: 2026-02-02
+
+**Deliverables**: `ScheduledTaskRepository`, `SchedulerLinter`, `SchedulerViewModel`, UI integration with conflict warning
+
+### Wave 2: Alarm Cascade ✅ SHIPPED
+
+**Shipped**: 2026-02-03
+
+**Deliverables**: `RealAlarmScheduler.kt` (rewritten), `TaskReminderReceiver.kt` (rewritten), `FakeAlarmScheduler.kt`, `AlarmSchedulerTest.kt`, notification channel + permission
 
 ---
 

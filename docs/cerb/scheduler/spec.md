@@ -20,7 +20,7 @@ Scheduler manages task creation, timeline display, alarm cascading, and LLM-powe
 |------|-------|--------|--------------|
 | **1** | Repository + Linter (Core) | 🚢 SHIPPED | `ScheduledTaskRepository`, `SchedulerLinter`, tests |
 | **1.5** | ViewModel Wiring | 🚢 SHIPPED | `SchedulerViewModel`, UI connection |
-| **2** | Alarm Cascade | 🔲 PLANNED | `RealAlarmScheduler`, notification triggers |
+| **2** | Alarm Cascade | 🚢 SHIPPED | `RealAlarmScheduler`, notification triggers |
 | **3** | Smart Reminder Inference | 🔲 PLANNED | LLM-based reminder timing suggestions |
 | **4** | Reschedule Flow | 🔲 PLANNED | Natural language reschedule parsing |
 | **5** | Batch Operations | 🔲 PLANNED | Multi-select delete, bulk reschedule |

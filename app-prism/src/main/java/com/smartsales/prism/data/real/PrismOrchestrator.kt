@@ -3,6 +3,8 @@ package com.smartsales.prism.data.real
 import com.smartsales.prism.domain.activity.ActivityAction
 import com.smartsales.prism.domain.activity.ActivityPhase
 import com.smartsales.prism.domain.activity.AgentActivityController
+import com.smartsales.prism.domain.model.CandidateOption
+import com.smartsales.prism.domain.model.ClarificationType
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.pipeline.AnalystState
@@ -106,6 +108,32 @@ class PrismOrchestrator @Inject constructor(
                     // 验证并解析 LLM 输出
                     when (val lintResult = schedulerLinter.lint(result.content)) {
                         is LintResult.Success -> {
+                            // === Phase 2: Entity Resolution ===
+                            // Query RelevancyLib with Phase 1 clues
+                            val phase2Context = (contextBuilder as? RealContextBuilder)
+                                ?.buildWithClues(input, Mode.SCHEDULER, lintResult.parsedClues)
+                            
+                            // Check for ambiguous person (multiple candidates)
+                            val personCandidates = phase2Context?.entityContext
+                                ?.filter { it.key.startsWith("person_candidate_") }
+                                ?.values?.toList() ?: emptyList()
+                            
+                            if (personCandidates.size > 1) {
+                                // Phase 2: Ask user to disambiguate
+                                activityController.complete()
+                                return UiState.AwaitingClarification(
+                                    question = "请问是哪位${lintResult.parsedClues.person}？",
+                                    clarificationType = ClarificationType.AMBIGUOUS_PERSON,
+                                    candidates = personCandidates.map { ref ->
+                                        CandidateOption(
+                                            entityId = ref.entityId,
+                                            displayName = ref.displayName,
+                                            description = ref.entityType
+                                        )
+                                    }
+                                )
+                            }
+                            
                             // 插入任务到日历
                             val taskId = scheduledTaskRepository.insertTask(lintResult.task)
                             
@@ -144,6 +172,20 @@ class PrismOrchestrator @Inject constructor(
                                 durationMinutes = lintResult.task.durationMinutes
                             )
                         }
+                        
+                        // Phase 1 Loop: Missing mandatory fields
+                        is LintResult.Incomplete -> {
+                            activityController.complete()
+                            UiState.AwaitingClarification(
+                                question = lintResult.question,
+                                clarificationType = when (lintResult.missingField) {
+                                    "startTime" -> ClarificationType.MISSING_TIME
+                                    "duration" -> ClarificationType.MISSING_DURATION
+                                    else -> ClarificationType.MISSING_TIME
+                                }
+                            )
+                        }
+                        
                         is LintResult.Error -> {
                             activityController.error(lintResult.message)
                             UiState.Error(lintResult.message, retryable = true)
@@ -203,6 +245,10 @@ class PrismOrchestrator @Inject constructor(
                         is LintResult.Error -> {
                             activityController.error(lintResult.message)
                             SchedulerActionResult.Failure(lintResult.message)
+                        }
+                        is LintResult.Incomplete -> {
+                            activityController.complete()
+                            SchedulerActionResult.Failure("请提供更具体的时间信息")
                         }
                     }
                 }

@@ -21,7 +21,39 @@ sealed class UiState {
     ) : UiState()
     data class PlanCard(val plan: ExecutionPlan, val completedSteps: Set<Int> = emptySet()) : UiState()
     data class Error(val message: String, val retryable: Boolean = true) : UiState()
+    
+    /**
+     * 等待用户澄清 — Phase 1 循环 / Phase 2 实体消歧
+     * @param question 向用户展示的问题
+     * @param clarificationType 澄清类型
+     * @param candidates 候选选项 (用于实体消歧)
+     */
+    data class AwaitingClarification(
+        val question: String,
+        val clarificationType: ClarificationType,
+        val candidates: List<CandidateOption> = emptyList()
+    ) : UiState()
 
     // Analyst Mode V2 State
     data class PlannerTableState(val table: com.smartsales.prism.domain.analyst.PlannerTable) : UiState()
 }
+
+/**
+ * 澄清类型
+ */
+enum class ClarificationType {
+    MISSING_TIME,       // Phase 1: 缺少时间
+    MISSING_DURATION,   // Phase 1: 缺少时长
+    AMBIGUOUS_PERSON,   // Phase 2: 多个人物候选
+    AMBIGUOUS_LOCATION  // Phase 2: 多个地点候选
+}
+
+/**
+ * 候选选项 (用于实体消歧 UI)
+ */
+data class CandidateOption(
+    val entityId: String,
+    val displayName: String,
+    val description: String? = null
+)
+

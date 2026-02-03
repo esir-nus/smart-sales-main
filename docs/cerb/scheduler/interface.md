@@ -29,11 +29,21 @@ sealed class LintResult {
     data class Success(
         val task: TimelineItemModel.Task,
         val reminderType: ReminderType?,
-        val taskTypeHint: TaskTypeHint
+        val taskTypeHint: TaskTypeHint,
+        val parsedClues: ParsedClues = ParsedClues()  // Phase 1 → Phase 2 bridge
     ) : LintResult()
     
     data class Error(val message: String) : LintResult()
 }
+
+/**
+ * Phase 1 frozen clues — passed to Phase 2 for LLM entity resolution
+ */
+data class ParsedClues(
+    val personAlias: String? = null,
+    val location: String? = null,
+    val briefSummary: String? = null
+)
 ```
 
 ### AlarmScheduler
@@ -129,7 +139,11 @@ Scheduler **consumes** Memory Center's `ScheduleBoard` for conflict detection.
 // From MemoryCenter interface:
 interface ScheduleBoard {
     val upcomingItems: StateFlow<List<ScheduleItem>>
-    suspend fun checkConflict(proposedStart: Long, durationMinutes: Int): ConflictResult
+    suspend fun checkConflict(
+        proposedStart: Long, 
+        durationMinutes: Int,
+        excludeId: String? = null  // Exclude self to avoid false positives
+    ): ConflictResult
     suspend fun refresh()
 }
 ```

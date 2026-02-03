@@ -54,6 +54,10 @@ fun ResponseBubble(
             CompleteBubble(content = "已创建任务: ${uiState.title}", modifier = modifier)
         }
         
+        is UiState.AwaitingClarification -> {
+            ClarifyingBubble(question = uiState.question, modifier = modifier)
+        }
+        
         is UiState.Error -> {
             ErrorBubble(message = uiState.message, modifier = modifier)
         }

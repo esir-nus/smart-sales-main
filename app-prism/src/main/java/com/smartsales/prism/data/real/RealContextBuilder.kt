@@ -1,6 +1,7 @@
 package com.smartsales.prism.data.real
 
 import com.smartsales.prism.domain.memory.EntityType
+import com.smartsales.prism.domain.memory.RelevancyEntry
 import com.smartsales.prism.domain.memory.RelevancyRepository
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.pipeline.ChatTurn
@@ -9,6 +10,7 @@ import com.smartsales.prism.domain.pipeline.EnhancedContext
 import com.smartsales.prism.domain.pipeline.EntityRef
 import com.smartsales.prism.domain.pipeline.ModeMetadata
 import com.smartsales.prism.domain.pipeline.ToolArtifact
+import com.smartsales.prism.domain.scheduler.ParsedClues
 import com.smartsales.prism.domain.time.TimeProvider
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,6 +19,7 @@ import javax.inject.Singleton
  * 真实上下文构建器 — 聚合会话历史和工具结果
  * 
  * Phase 4: 支持上下文感知的重规划
+ * Wave 2: 支持 RelevancyLib 实体查询注入
  * @see Prism-V1.md §2.2 #1
  */
 @Singleton
@@ -36,11 +39,58 @@ class RealContextBuilder @Inject constructor(
     override suspend fun build(userText: String, mode: Mode): EnhancedContext {
         _turnIndex++
         
-        // Wave 2: 为 SCHEDULER 模式加载客户实体上下文
-        val entityContext = if (mode == Mode.SCHEDULER) {
-            loadClientEntities()
-        } else {
-            emptyMap()
+        return EnhancedContext(
+            userText = userText,
+            modeMetadata = ModeMetadata(
+                currentMode = mode,
+                sessionId = _sessionId,
+                turnIndex = _turnIndex
+            ),
+            sessionHistory = _sessionHistory.toList(),
+            lastToolResult = _lastToolResult,
+            executedTools = _executedTools.toSet(),
+            // 使用 TimeProvider 获取格式化的日期时间（包含时间，支持 "今晚"、"3小时后"）
+            currentDate = timeProvider.formatForLlm()
+        )
+    }
+    
+    /**
+     * Phase 2 构建器 — 带 RelevancyLib 实体线索
+     * 
+     * @param userText 原始用户文本
+     * @param mode 当前模式
+     * @param clues Phase 1 解析的线索
+     * @return 增强上下文（含实体引用）
+     */
+    suspend fun buildWithClues(userText: String, mode: Mode, clues: ParsedClues): EnhancedContext {
+        _turnIndex++
+        
+        // 根据线索查询 RelevancyLib
+        val entityContext = mutableMapOf<String, EntityRef>()
+        
+        // 按人物线索查询候选
+        clues.person?.let { personClue ->
+            val candidates = relevancyRepository.findByAlias(personClue)
+            candidates.forEachIndexed { index, entry ->
+                entityContext["person_candidate_$index"] = EntityRef(
+                    entityId = entry.entityId,
+                    displayName = entry.displayName,
+                    entityType = entry.entityType.name
+                )
+            }
+        }
+        
+        // 按地点线索查询候选
+        clues.location?.let { locationClue ->
+            val locationCandidates = relevancyRepository.search(locationClue, limit = 3)
+                .filter { it.entityType == EntityType.LOCATION }
+            locationCandidates.forEachIndexed { index, entry ->
+                entityContext["location_candidate_$index"] = EntityRef(
+                    entityId = entry.entityId,
+                    displayName = entry.displayName,
+                    entityType = entry.entityType.name
+                )
+            }
         }
         
         return EnhancedContext(
@@ -53,39 +103,9 @@ class RealContextBuilder @Inject constructor(
             sessionHistory = _sessionHistory.toList(),
             lastToolResult = _lastToolResult,
             executedTools = _executedTools.toSet(),
-            entityContext = entityContext,
-            // 使用 TimeProvider 获取格式化的日期时间（包含时间，支持 "今晚"、"3小时后"）
-            currentDate = timeProvider.formatForLlm()
+            currentDate = timeProvider.formatForLlm(),
+            entityContext = entityContext  // Phase 2 实体线索
         )
-    }
-    
-    /**
-     * Wave 2: 加载客户/联系人实体用于 LLM 上下文
-     * 按 spec: 客户/人物名称优先（销售场景）
-     */
-    private suspend fun loadClientEntities(): Map<String, EntityRef> {
-        return try {
-            val persons = relevancyRepository.getByType(EntityType.PERSON)
-            persons.take(20).associate { entry ->
-                val aliases = try {
-                    org.json.JSONArray(entry.aliasesJson).let { arr ->
-                        (0 until arr.length()).map { arr.getString(it) }
-                    }
-                } catch (e: Exception) {
-                    emptyList()
-                }
-                val aliasDisplay = if (aliases.isNotEmpty()) "别名[${aliases.joinToString(", ")}]" else ""
-                
-                entry.displayName to EntityRef(
-                    entityId = entry.entityId,
-                    displayName = "${entry.displayName} $aliasDisplay".trim(),
-                    entityType = entry.entityType.name
-                )
-            }
-        } catch (e: Exception) {
-            android.util.Log.w("RealContextBuilder", "Failed to load client entities: ${e.message}")
-            emptyMap()
-        }
     }
     
     /**

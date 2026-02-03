@@ -32,9 +32,25 @@ class SchedulerLinter @Inject constructor(
             val startTimeStr = json.optString("startTime", "")
             val endTimeStr = if (json.isNull("endTime")) null else json.optString("endTime", null)
             
-            // 验证日期合理性
+            // Phase 1 Clues 先提取（用于 Incomplete 返回）
+            val location = if (json.isNull("location")) null else json.optString("location", null)
+            val notes = if (json.isNull("notes")) null else json.optString("notes", null)
+            val keyPerson = if (json.isNull("keyPerson")) null else json.optString("keyPerson", null)
+            val partialClues = ParsedClues(
+                person = keyPerson,
+                location = location,
+                briefSummary = if (notes.isNullOrBlank()) title else notes
+            )
+            
+            // 验证日期 — 如果缺失，返回 Incomplete 而不是 Error（Phase 1 循环）
             val startTime = parseDateTime(startTimeStr)
-                ?: return LintResult.Error("无法解析开始时间: $startTimeStr")
+            if (startTime == null) {
+                return LintResult.Incomplete(
+                    missingField = "startTime",
+                    question = "请问具体是什么时候？",
+                    partialClues = partialClues
+                )
+            }
             
             // endTime 可选，null 表示开放式任务
             val endTime: Instant? = endTimeStr?.let { parseDateTime(it) }
@@ -49,11 +65,8 @@ class SchedulerLinter @Inject constructor(
                 return LintResult.Error("不能创建过去的任务")
             }
 
-            val location = if (json.isNull("location")) null else json.getString("location")
-            val notes = if (json.isNull("notes")) null else json.getString("notes")
-            val keyPerson = if (json.isNull("keyPerson")) null else json.getString("keyPerson")
-            val highlights = if (json.isNull("highlights")) null else json.getString("highlights")
-            val reminder = if (json.isNull("reminder")) null else json.getString("reminder")
+            val highlights = if (json.isNull("highlights")) null else json.optString("highlights", null)
+            val reminder = if (json.isNull("reminder")) null else json.optString("reminder", null)
             
             // Infer alarm cascade from reminder type
             val alarmCascade: List<String>? = when (reminder) {
@@ -85,11 +98,8 @@ class SchedulerLinter @Inject constructor(
                     else -> ReminderType.SINGLE
                 },
                 taskTypeHint = inferTaskType(title),
-                parsedClues = ParsedClues(
-                    personAlias = keyPerson,           // 原始人物别名
-                    location = location,               // 地点
-                    briefSummary = title               // 摘要（使用标题）
-                )
+                // Phase 1 线索 → Phase 2 实体消歧
+                parsedClues = partialClues
             )
         } catch (e: Exception) {
             LintResult.Error("JSON 解析失败: ${e.message}")
@@ -158,38 +168,35 @@ class SchedulerLinter @Inject constructor(
 }
 
 /**
+ * Phase 1 解析线索 — 传递到 Phase 2 进行实体消歧
+ * 
+ * @see docs/cerb/memory-center/spec.md §Two-Phase Scheduler Pipeline
+ */
+data class ParsedClues(
+    val person: String? = null,        // 人物（原始提取，未解析）
+    val location: String? = null,      // 地点（原始提取，未解析）
+    val briefSummary: String? = null   // 简要摘要
+)
+
+/**
  * 校验结果
  */
 sealed class LintResult {
-    /**
-     * 成功解析的结果
-     * 
-     * @param task 解析后的任务模型
-     * @param reminderType 提醒类型
-     * @param taskTypeHint 任务类型提示
-     * @param parsedClues Phase 1 解析的线索（用于 Phase 2 实体解析）
-     */
     data class Success(
         val task: TimelineItemModel.Task,
         val reminderType: ReminderType?,
         val taskTypeHint: TaskTypeHint,
-        val parsedClues: ParsedClues = ParsedClues()
+        val parsedClues: ParsedClues = ParsedClues()  // Phase 1 → Phase 2 桥梁
+    ) : LintResult()
+    
+    /**
+     * 缺少必填字段 — 需要用户澄清（Phase 1 循环）
+     */
+    data class Incomplete(
+        val missingField: String,  // "startTime" | "duration"
+        val question: String,      // 向用户展示的问题
+        val partialClues: ParsedClues
     ) : LintResult()
 
     data class Error(val message: String) : LintResult()
 }
-
-/**
- * Phase 1 解析的线索 — 用于 Phase 2 LLM 实体解析
- * 
- * @property personAlias 人物别名（原始输入，未解析），如 "张总"
- * @property location 地点，如 "会议室"
- * @property briefSummary 摘要，如 "开会"
- * 
- * 注意：startTime 和 duration 已经在 task 中，不需要重复存储
- */
-data class ParsedClues(
-    val personAlias: String? = null,
-    val location: String? = null,
-    val briefSummary: String? = null
-)

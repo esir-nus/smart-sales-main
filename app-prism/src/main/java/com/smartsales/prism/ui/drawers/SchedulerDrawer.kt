@@ -292,7 +292,7 @@ fun SchedulerDrawer(
                                     )
                                 }
                                 
-                                // Scenario Buttons
+                                // Scenario Buttons Row 1: Basic
                                 Row(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
@@ -317,6 +317,26 @@ fun SchedulerDrawer(
                                         modifier = Modifier.weight(1f),
                                         contentPadding = PaddingValues(0.dp)
                                     ) { Text("测试 3-4点", fontSize = 11.sp, maxLines = 1) }
+                                }
+                                
+                                // Scenario Buttons Row 2: Wave 3 (Reminder Inference)
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                                ) {
+                                    Button(
+                                        onClick = { viewModel.debugRunScenario("MEETING_SMART") },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFAB47BC)),
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(0.dp)
+                                    ) { Text("🧪 会议→smart", fontSize = 10.sp, maxLines = 1) }
+                                    
+                                    Button(
+                                        onClick = { viewModel.debugRunScenario("CALL_SINGLE") },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF7043)),
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(0.dp)
+                                    ) { Text("🧪 电话→single", fontSize = 10.sp, maxLines = 1) }
                                 }
                             }
                         }

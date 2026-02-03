@@ -212,6 +212,12 @@ class SchedulerViewModel @Inject constructor(
 
     /**
      * 🧪 DEV ONLY: 快速运行测试场景
+     * 
+     * Available scenarios:
+     * - CLEAN: 清除明日任务
+     * - 1PM/3PM: 基础任务创建
+     * - MEETING_SMART: Wave 3 测试 — 会议应触发 smart (-1h, -15m, -5m)
+     * - CALL_SINGLE: Wave 3 测试 — 电话应触发 single (-15m)
      */
     fun debugRunScenario(scenario: String) {
         if (!com.smartsales.prism.BuildConfig.DEBUG) return
@@ -231,6 +237,18 @@ class SchedulerViewModel @Inject constructor(
                 }
                 "1PM" -> simulateTranscript("明天下午1点做实验A")
                 "3PM" -> simulateTranscript("明天下午3点做实验B")
+                
+                // Wave 3: Smart Reminder Inference L2 Tests
+                "MEETING_SMART" -> {
+                    // 「会议」应该触发 smart cascade (-1h, -15m, -5m)
+                    simulateTranscript("明天下午2点部门会议")
+                    android.util.Log.d("SchedulerVM", "🧪 L2: MEETING_SMART — 预期 reminder=smart, alarmCascade=[-1h,-15m,-5m]")
+                }
+                "CALL_SINGLE" -> {
+                    // 「电话」应该触发 single (-15m)
+                    simulateTranscript("明天下午4点给张总打电话")
+                    android.util.Log.d("SchedulerVM", "🧪 L2: CALL_SINGLE — 预期 reminder=single, alarmCascade=[-15m]")
+                }
             }
         }
     }

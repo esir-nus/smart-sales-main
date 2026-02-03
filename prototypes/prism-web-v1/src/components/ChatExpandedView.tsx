@@ -77,10 +77,10 @@ export const ChatExpandedView: React.FC<ChatExpandedViewProps> = ({ initialMessa
                         )}
                     >
                         <div className={clsx(
-                            "px-1 py-1 text-sm leading-relaxed text-gray-600 max-w-full",
+                            "px-1 py-1 text-sm leading-relaxed text-prism-primary max-w-full",
                             msg.role === 'ai' 
                                 ? "bg-transparent font-medium" 
-                                : "bg-blue-600 text-white px-3 py-2.5 rounded-2xl rounded-tr-none shadow-sm w-fit"
+                                : "bg-prism-accent text-white px-3 py-2.5 rounded-2xl rounded-tr-none shadow-sm w-fit"
                         )}>
                             {msg.text}
                         </div>
@@ -89,14 +89,14 @@ export const ChatExpandedView: React.FC<ChatExpandedViewProps> = ({ initialMessa
             </div>
 
             {/* Input Footer */}
-            <div className="p-3 bg-gray-50/50 border-t border-gray-100 mt-2">
-                <div className="flex items-center gap-2 bg-white p-1 rounded-full border border-gray-200 shadow-sm focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+            <div className="p-3 bg-black/5 border-t border-prism-border mt-2">
+                <div className="flex items-center gap-2 bg-prism-surface p-1 rounded-full border border-prism-border shadow-sm focus-within:border-prism-accent/50 focus-within:ring-2 focus-within:ring-prism-accent/20 transition-all">
                     <input 
                         type="text" 
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
                         placeholder="回复..." 
-                        className="flex-1 bg-transparent border-none outline-none text-sm px-3 text-gray-700 placeholder-gray-400 h-9"
+                        className="flex-1 bg-transparent border-none outline-none text-sm px-3 text-prism-primary placeholder-prism-secondary h-9"
                         onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                         onClick={(e) => e.stopPropagation()} // Prevent card collapse
                     />
@@ -104,13 +104,13 @@ export const ChatExpandedView: React.FC<ChatExpandedViewProps> = ({ initialMessa
                     {inputValue ? (
                         <button 
                             onClick={(e) => { e.stopPropagation(); handleSend(); }}
-                            className="w-9 h-9 bg-blue-600 rounded-full text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md"
+                            className="w-9 h-9 bg-prism-accent rounded-full text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md"
                         >
                             <Send size={16} />
                         </button>
                     ) : (
                         <button 
-                            className="w-9 h-9 bg-gray-50 rounded-full text-gray-400 flex items-center justify-center hover:bg-gray-100 transition-all"
+                            className="w-9 h-9 bg-black/5 rounded-full text-prism-secondary flex items-center justify-center hover:bg-black/10 transition-all"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <Mic size={18} />

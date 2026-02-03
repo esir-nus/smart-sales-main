@@ -18,7 +18,7 @@ graph LR
     B -- Fail --> F[Fix Aesthetics/Physics]
     B -- Pass --> C{Gate 2: Contract}
     C -- Fail --> G[Fix Logic/Flow]
-    C -- Pass --> D{Gate 3: Lattice}
+    C -- Pass --> D{Gate 3: Architecture}
     D -- Fail --> H[Fix Architecture]
     D -- Pass --> E[SHIP]
 ```
@@ -68,28 +68,63 @@ Verify the "User Journey" (Behavior, Logic, Intention).
 
 ---
 
-## Gate 3: The Lattice Check (Architecture)
+## Gate 3: Architecture Check (Prism Principles)
 
-**Source of Truth**: [`docs/specs/Prism-V1.md`](file:///home/cslh-frank/main_app/docs/specs/Prism-V1.md)
+**Source of Truth**: [`docs/specs/Prism-V1.md`](file:///home/cslh-frank/main_app/docs/specs/Prism-V1.md) §7 (Testability Contract)
 
-Verify the "Brain" (Separation of Concerns).
+> **Philosophy**: Alignment over arbitrary thresholds. Correct architecture — not cargo cult metrics.
+> **"Thin" = Logic-free delegation, NOT small LOC count.**
 
-### Verification Steps
-1.  **Domain Purity**
-    -   Command: `grep -r "import android" feature/**/domain/`
-    -   Result must be EMPTY.
-2.  **Hilt Binding**
-    -   Check: Does every Interface have a Module binding?
-3.  **Test Fakes**
-    -   Check: Do Fakes exist for all new interfaces?
-4.  **Fake I/O Pattern** (NEW)
-    -   Check: Does async/external behavior go through **Interface → Fake Implementation**?
-    -   Anti-Pattern: `delay()`, mock data, or simulated logic **inside UI code** (Composables, Screens).
-    -   Command: `grep -rn "delay(" app-prism/src/main/java/**/ui/`
-    -   Result must be EMPTY. Delays belong in `platform/fake/` or `domain/fake/`.
-    -   **Rationale**: Fake I/O enables real code swapping with a single DI binding change.
+### 3.1 Box Compliance (REQUIRED)
 
-> 🔴 **STOP**: If Fake I/O pattern is violated, refactor to use an injected service interface.
+Every service with I/O or state MUST have:
+
+| Check | Command | Pass | Fail |
+|-------|---------|------|------|
+| **Interface exists** | `grep "interface [Name]"` | ✅ | ❌ BLOCKER |
+| **Fake exists** | `grep "class Fake[Name]"` | ✅ | ❌ BLOCKER |
+| **Hilt binding** | `grep "@Binds.*[Name]"` | ✅ | ❌ BLOCKER |
+| **Has tests** | `find "*Test.kt"` | ✅ | ⚠️ Log debt |
+
+### 3.2 Domain Purity
+
+```bash
+# Zero Android imports in domain
+grep -r "import android" app-prism/src/main/java/**/domain/
+# Result MUST be EMPTY
+```
+
+### 3.3 Dependency Direction
+
+| Rule | Violation | Severity |
+|------|-----------|----------|
+| Box imports Box | ❌ | BLOCKER |
+| Android imports in domain | ❌ | BLOCKER |
+| Orchestrator imports Box | ✅ | Expected |
+| Business logic inline | ⚠️ | SMELL |
+
+### 3.4 Fake I/O Pattern
+
+- **Check**: Does async/external behavior go through **Interface → Fake Implementation**?
+- **Anti-Pattern**: `delay()`, mock data inside UI code (Composables, Screens)
+- **Command**: `grep -rn "delay(" app-prism/src/main/java/**/ui/`
+- **Result MUST be EMPTY** — Delays belong in `platform/fake/` or `domain/fake/`
+
+### 3.5 Naming Hygiene
+
+| Component | Pattern | Good | Bad |
+|-----------|---------|------|-----|
+| Interface | `[Concern]` | `ResultProcessor` | `IResultProcessor` |
+| Fake | `Fake[Concern]` | `FakeResultProcessor` | `MockResultProcessor` |
+| Real Impl | `Real[Concern]` | `RealResultProcessor` | `ResultProcessorImpl` |
+| Orchestrator | `[Domain]Runner` | `TingwuRunner` | `TingwuManager` |
+
+**Naming Blockers**:
+- No `*Manager` classes (use `*Coordinator` or `*Runner`)
+- No `*Helper` classes (use `*Service` or `*Processor`)
+- Fakes prefixed with `Fake`, not `Mock` or `Stub`
+
+> 🔴 **STOP**: If Box Compliance fails, refactor before shipping.
 
 ---
 

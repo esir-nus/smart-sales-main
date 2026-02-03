@@ -1,0 +1,25 @@
+{
+  "theme": {
+    "name": "Sleek Glass (Pro Max)",
+    "colors": {
+      "bg-app": "#F5F5F7",
+      "bg-surface": "rgba(255, 255, 255, 0.70)",
+      "color-accent": "#000000",
+      "color-text-primary": "#1D1D1F",
+      "color-text-secondary": "#86868B"
+    },
+    "borders": {
+      "base": "rgba(0, 0, 0, 0.04)",
+      "width": "0.5px"
+    },
+    "shadows": {
+      "glass": "0 20px 40px -10px rgba(0, 0, 0, 0.05)"
+    },
+    "radii": {
+      "card": "20px"
+    },
+    "typography": {
+      "font-spacing": "-0.02em"
+    }
+  }
+}

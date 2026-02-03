@@ -8,6 +8,14 @@
 
 <!-- Add new candidates at the top -->
 
+### [CANDIDATE] "LLM Context Propagation"
+- **Date**: 2026-01-30
+- **Context**: User typed "1" to select first deliverable. LLM asked for clarification instead of executing.
+- **Evidence**: Conversation e67fb9e3. ContextBuilder didn't include current deliverables, LLM had no list to reference.
+- **Frank's Insight**: If user can see a list, LLM must see that list too. Context != history. Context = visible state. Quick selection patterns ("1", "运行") only work if LLM knows what "1" maps to.
+- **Observations**: 1
+
+
 ### [CANDIDATE] "Screen Responsibility Locality"
 - **Date**: 2026-01-27
 - **Context**: Keyboard inset bug took 4 attempts to fix. ChatHeader was in PrismShell.kt, InputBar was in PrismChatScreen.kt. Scattered responsibilities.
@@ -136,4 +144,11 @@
 - **Context**: Scheduler Drawer interaction felt "poorly designed". Choice between implementing complex `AnchoredDraggable` physics (Foundation 1.6+) vs simple Scrim Dismiss.
 - **Evidence**: Senior review flagged `AnchoredDraggable` as overkill for skeleton. Implemented Scrim (10 lines) which solved the "reachability" friction immediately.
 - **Frank's Insight**: "You're tracking pixels when you should be tracking intent. Tapping outside is the ultimate intent signal. Ship the scrim, defer the physics."
+- **Observations**: 1
+
+### [CANDIDATE] "Granular Interaction Audit"
+- **Date**: 2026-02-02
+- **Context**: Scheduler Review missed dead date click.
+- **Evidence**: SchedulerCalendar.kt audit found missing clickable modifier.
+- **Frank's Insight**: E2E flows verify paths; Granular Audits verify physics. You need both.
 - **Observations**: 1

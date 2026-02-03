@@ -1,29 +1,46 @@
 package com.smartsales.prism.ui.drawers
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smartsales.prism.domain.model.SessionPreview
-import com.smartsales.prism.ui.components.SessionContextMenu
-import com.smartsales.prism.ui.components.SessionItem
+import com.smartsales.prism.ui.theme.*
 
 /**
- * 历史抽屉 — 左侧滑入
- * @see prism-ui-ux-contract.md §1.4
+ * History Drawer (Variant 4: Hybrid Collapsible)
+ * Source of Truth: docs/specs/modules/HistoryDrawer.md
+ * 
+ * Features:
+ * - Floating Capsule Header (Aurora Glass)
+ * - Collapsible Structured Cards
+ * - Floating Glass Dock Footer
  */
 @Composable
 fun HistoryDrawer(
@@ -36,236 +53,249 @@ fun HistoryDrawer(
     onDeleteSession: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    // 上下文菜单状态
-    var contextMenuSession by remember { mutableStateOf<SessionPreview?>(null) }
-    // 重命名对话框状态
-    var renameTarget by remember { mutableStateOf<SessionPreview?>(null) }
-    
-    Column(
+    // Main Container (Glass Sheet)
+    Box(
         modifier = modifier
             .fillMaxHeight()
-            .width(300.dp)
-            .background(Color(0xFF0D0D1A))
+            .width(320.dp)
+            .background(BackgroundApp.copy(alpha = 0.98f)) // High opacity for legibility
     ) {
-        // 设备状态头部 (2-Row) - 点击打开连接模态框
-        DeviceStateHeader(onClick = onDeviceClick)
-        
-        HorizontalDivider(color = Color(0xFF333333))
-        
-        // 会话列表
-        LazyColumn(
+        // 2. Content List (Collapsible Cards)
+        HistorySessionList(
+            groupedSessions = groupedSessions,
+            onSessionClick = onSessionClick,
+            contentPadding = PaddingValues(top = 100.dp, bottom = 120.dp) // Space for floating elements
+        )
+
+        // 1. Header (Floating Capsule)
+        FloatingCapsuleHeader(
+            onClick = onDeviceClick,
             modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            contentPadding = PaddingValues(vertical = 12.dp)
+                .align(Alignment.TopCenter)
+                .padding(top = 48.dp) // Status bar clearance
+        )
+
+        // 3. Footer (Floating Dock)
+        FloatingGlassDock(
+            onSettingsClick = onSettingsClick,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 32.dp, start = 16.dp, end = 16.dp)
+        )
+    }
+}
+
+@Composable
+private fun FloatingCapsuleHeader(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = BackgroundSurface.copy(alpha = 0.8f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.4f)),
+        shadowElevation = 4.dp, // Glass shadow
+        modifier = modifier.height(44.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(horizontal = 20.dp)
         ) {
-            groupedSessions.forEach { (groupName, sessions) ->
-                // 分组标题
-                item(key = "header-$groupName") {
-                    Text(
-                        text = groupName,
-                        color = Color(0xFF888888),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
-                    )
+            // Battery
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Icon(Icons.Filled.BatteryStd, contentDescription = null, tint = AccentGreen, modifier = Modifier.size(16.dp))
+                Text("85%", style = MaterialTheme.typography.labelMedium, color = AccentGreen, fontWeight = FontWeight.Bold)
+            }
+            
+            Divider(modifier = Modifier.height(12.dp).width(1.dp), color = Color.Black.copy(alpha = 0.1f))
+            
+            // Device
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Icon(Icons.Filled.Wifi, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(16.dp))
+                Text("SmartBadge", style = MaterialTheme.typography.labelMedium, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+            }
+            
+            Text("• 正常", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+        }
+    }
+}
+
+@Composable
+private fun FloatingGlassDock(
+    onSettingsClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = BackgroundSurface.copy(alpha = 0.85f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+        shadowElevation = 8.dp,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Avatar (Mock Gradient)
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(Brush.linearGradient(listOf(Color(0xFFE0E0E0), Color(0xFFF5F5F5)))),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Filled.Person, contentDescription = null, tint = TextSecondary)
                 }
                 
-                // 会话项 (单行格式)
-                items(
-                    items = sessions,
-                    key = { it.id }
-                ) { session ->
-                    SessionItem(
-                        clientName = session.clientName,
-                        summary = session.summary,
-                        onClick = { onSessionClick(session.id) },
-                        onLongPress = { contextMenuSession = session }
+                Column {
+                    Text("Frank Chen", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("Premium Plan", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                }
+            }
+            
+            IconButton(onClick = onSettingsClick) {
+                Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = TextSecondary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistorySessionList(
+    groupedSessions: Map<String, List<SessionPreview>>,
+    onSessionClick: (String) -> Unit,
+    contentPadding: PaddingValues
+) {
+    LazyColumn(
+        contentPadding = contentPadding,
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        groupedSessions.forEach { (group, sessions) ->
+            item(key = group) {
+                CollapsibleGroupCard(
+                    title = group,
+                    sessions = sessions,
+                    onSessionClick = onSessionClick,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CollapsibleGroupCard(
+    title: String,
+    sessions: List<SessionPreview>,
+    onSessionClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(true) }
+    val rotateAngle by animateFloatAsState(targetValue = if (expanded) 0f else -90f)
+    
+    // Icon Mapping (Mock logic based on title strings)
+    val (icon, color) = when {
+        title.contains("置顶") -> Icons.Filled.PushPin to Color(0xFFF59E0B) // Amber
+        title.contains("今天") -> Icons.Filled.Today to Color(0xFF3B82F6) // Blue
+        title.contains("30天") -> Icons.Filled.DateRange to Color(0xFF6366F1) // Indigo
+        else -> Icons.Filled.Folder to TextSecondary // Gray (FolderLike placeholder or common icon)
+    }
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = Color.White,
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+        shadowElevation = 1.dp,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column {
+            // Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded }
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .background(Color(0xFFFAFAFA)), // Subtle header bg
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
+                    Text(
+                        text = title.replace(Regex("[\\uD83C-\\uDBFF\\uDC00-\\uDFFF]+"), "").trim().uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        letterSpacing = 1.sp
                     )
+                }
+                Icon(
+                    Icons.Filled.ExpandMore,
+                    contentDescription = null,
+                    tint = TextSecondary.copy(alpha = 0.5f),
+                    modifier = Modifier.size(16.dp).rotate(rotateAngle)
+                )
+            }
+
+            // Divider
+            Divider(color = BorderSubtle)
+
+            // Content
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column {
+                    sessions.forEachIndexed { index, session ->
+                        HistoryCardItem(session, onSessionClick)
+                        if (index < sessions.lastIndex) {
+                            Divider(color = BorderSubtle, modifier = Modifier.padding(start = 16.dp))
+                        }
+                    }
                 }
             }
         }
-        
-        HorizontalDivider(color = Color(0xFF333333))
-        
-        // 用户底栏
-        UserFooter(onSettingsClick = onSettingsClick)
-    }
-    
-    // 上下文菜单
-    contextMenuSession?.let { session ->
-        SessionContextMenu(
-            sessionId = session.id,
-            isPinned = session.isPinned,
-            onPin = { onPinSession(session.id) },
-            onRename = { 
-                renameTarget = session
-                contextMenuSession = null
-            },
-            onDelete = { onDeleteSession(session.id) },
-            onDismiss = { contextMenuSession = null }
-        )
-    }
-    
-    // 重命名对话框
-    renameTarget?.let { session ->
-        RenameSessionDialog(
-            currentClientName = session.clientName,
-            currentSummary = session.summary,
-            onConfirm = { newClient, newSummary ->
-                onRenameSession(session.id, newClient, newSummary)
-                renameTarget = null
-            },
-            onDismiss = { renameTarget = null }
-        )
     }
 }
 
-/**
- * 设备状态头部 — 2行布局
- * Row 1: Battery (left), SmartBadge (right)
- * Row 2: "已连接 • 正常" (centered, gray)
- */
 @Composable
-private fun DeviceStateHeader(onClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(16.dp)
-    ) {
-        // Row 1: 设备信息
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "🔋 85%",
-                color = Color(0xFF4CAF50),
-                fontSize = 14.sp
-            )
-            Text(
-                text = "📶 SmartBadge",
-                color = Color.White,
-                fontSize = 14.sp
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(4.dp))
-        
-        // Row 2: 连接状态
-        Text(
-            text = "已连接 • 正常",
-            color = Color(0xFF888888),
-            fontSize = 12.sp
-        )
-    }
-}
-
-/**
- * 用户底栏
- * Left: Avatar (40dp)
- * Middle: Stacked Name + PRO Badge (Teal)
- * Right: Settings
- */
-@Composable
-private fun UserFooter(onSettingsClick: () -> Unit) {
-    // 整个底栏点击 → 用户中心
+private fun HistoryCardItem(
+    session: SessionPreview,
+    onClick: (String) -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onSettingsClick() }
-            .padding(16.dp),
+            .clickable { onClick(session.id) }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 用户信息区域
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Filled.Person,
-                contentDescription = "User",
-                tint = Color.White,
-                modifier = Modifier.size(40.dp)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Hover indicator placeholder (invisible unless active)
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(32.dp)
+                    .clip(CircleShape)
+                    .background(Brush.verticalGradient(listOf(KnotPrimary.copy(alpha=0.1f), Color.Transparent)))
+                    .alpha(0f) // Only visible on hover in desktop, mobile logic separate
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            
             Column {
-                Text(
-                    text = "Frank Chen",
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                // PRO Badge - Teal rounded rect
-                Surface(
-                    shape = RoundedCornerShape(4.dp),
-                    color = Color(0xFF00BFA5)
-                ) {
-                    Text(
-                        text = "PRO",
-                        color = Color.White,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
+                Text(session.clientName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                Text(session.summary, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
             }
         }
-        
-        // 设置图标（仅视觉指示，点击整行生效）
-        Icon(
-            imageVector = Icons.Filled.Settings,
-            contentDescription = "Settings",
-            tint = Color(0xFF888888)
-        )
     }
 }
 
-/**
- * 重命名会话对话框
- */
-@Composable
-private fun RenameSessionDialog(
-    currentClientName: String,
-    currentSummary: String,
-    onConfirm: (String, String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var clientName by remember { mutableStateOf(currentClientName) }
-    var summary by remember { mutableStateOf(currentSummary) }
-    
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("重命名会话") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = clientName,
-                    onValueChange = { clientName = it },
-                    label = { Text("客户名称") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = summary,
-                    onValueChange = { summary = it.take(6) },
-                    label = { Text("摘要 (最多6字)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(clientName, summary) }) {
-                Text("确定")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        }
-    )
-}

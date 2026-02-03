@@ -21,6 +21,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.smartsales.prism.ui.theme.BackgroundApp
 
 /**
  * Drawer Types for Atomic Exclusion
@@ -35,9 +36,11 @@ enum class DrawerType {
 }
 
 /**
- * Prism 主界面壳 — 管理抽屉状态
+ * Prism Shell — The Core Container (Sleek Glass Version)
  *
- * 结构: SchedulerDrawer(顶部) + ChatScreen(主体) + AudioDrawer(底部) + HistoryDrawer(左侧)
+ * Updates:
+ * - Uses `BackgroundApp` (Light/Aurora) as the root canvas.
+ * - Manages atomic drawers and glass interop.
  * @see prism-ui-ux-contract.md §1.1
  */
 @Composable
@@ -45,27 +48,25 @@ fun PrismShell(
     historyRepository: HistoryRepository
 ) {
     // Atomic Drawer State (Mutex)
-    // Start with null (Idle) to ensure handles are visible
     var activeDrawer by remember { mutableStateOf<DrawerType?>(null) }
     var showUserCenter by remember { mutableStateOf(false) }
     
-    // 会话列表刷新触发器
+    // Refresh Trigger
     var sessionRefreshKey by remember { mutableIntStateOf(0) }
     val groupedSessions = remember(sessionRefreshKey) { historyRepository.getGroupedSessions() }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(BackgroundApp) // Global Aurora/Light Background
             .statusBarsPadding()
     ) {
-        // 主内容层
+        // Main Content Layer
         Column(modifier = Modifier.fillMaxSize()) {
-            // 聊天界面
             PrismChatScreen(
                 onMenuClick = { activeDrawer = DrawerType.HISTORY },
-                onNewSessionClick = { /* TODO: 新建会话 */ },
+                onNewSessionClick = { /* TODO: New Session */ },
                 onAudioBadgeClick = { activeDrawer = DrawerType.CONNECTIVITY },
-                // onAvatarClick removed (Profile in History)
                 onTingwuClick = { activeDrawer = DrawerType.TINGWU },
                 onArtifactsClick = { activeDrawer = DrawerType.ARTIFACTS }
             )
@@ -73,14 +74,12 @@ fun PrismShell(
 
         // --- SCRIM LAYER ---
         // Atomic Scrim: Visible if ANY drawer is open
-        // Atomic Scrim: Visible if ANY drawer is open (History, Audio, Connectivity, Tingwu, Artifacts)
-        if (activeDrawer == DrawerType.HISTORY || activeDrawer == DrawerType.AUDIO || activeDrawer == DrawerType.CONNECTIVITY ||
-            activeDrawer == DrawerType.TINGWU || activeDrawer == DrawerType.ARTIFACTS) {
+        if (activeDrawer != null) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .zIndex(PrismElevation.Scrim)
-                    .background(Color.Black.copy(alpha = 0.4f)) // Spec: 0.4 Black
+                    .background(Color.Black.copy(alpha = 0.4f)) // Spec: 0.4 Black Dim
                     .clickable { activeDrawer = null }
             )
         }
@@ -94,7 +93,7 @@ fun PrismShell(
                     groupedSessions = groupedSessions,
                     onSessionClick = { sessionId ->
                         activeDrawer = null
-                        // TODO: 切换会话
+                        // TODO: Switch Session
                     },
                     onDeviceClick = {
                         activeDrawer = DrawerType.CONNECTIVITY
@@ -120,22 +119,20 @@ fun PrismShell(
         }
 
         // 2. Scheduler Drawer (Top)
-        // Note: Scheduler usually persists until dismissed.
-        SchedulerDrawer(
-            isOpen = activeDrawer == DrawerType.SCHEDULER,
-            onDismiss = { activeDrawer = null }
-        )
+        Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
+            SchedulerDrawer(
+                isOpen = activeDrawer == DrawerType.SCHEDULER,
+                onDismiss = { activeDrawer = null }
+            )
+        }
 
         // 3. Audio Drawer (Bottom)
-        // We use a gesture or specific trigger to open this usually.
         Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
             AudioDrawer(
                 isOpen = activeDrawer == DrawerType.AUDIO,
                 onDismiss = { activeDrawer = null },
                 onNavigateToChat = { sessionId ->
-                    // 关闭 Drawer 并导航到分析会话
                     activeDrawer = null
-                    // TODO Phase 3: 实际导航 navController.navigate("chat/$sessionId?mode=analyst")
                     println("PrismShell: Navigate to chat session: $sessionId")
                 }
             )
@@ -150,56 +147,62 @@ fun PrismShell(
             }
         }
 
-        // 5. User Center (Full Screen Overlay)
-        if (showUserCenter) {
+        // 5. User Center (Glass Sheet Overlay)
+        // 5. User Center (Glass Sheet Overlay)
+        androidx.compose.animation.AnimatedVisibility(
+            visible = showUserCenter,
+            enter = androidx.compose.animation.slideInHorizontally(
+                initialOffsetX = { it },
+                animationSpec = androidx.compose.animation.core.tween(300)
+            ) + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.slideOutHorizontally(
+                targetOffsetX = { it },
+                animationSpec = androidx.compose.animation.core.tween(300)
+            ) + androidx.compose.animation.fadeOut(),
+            modifier = Modifier.zIndex(PrismElevation.Drawer + 1f)
+        ) {
             UserCenterScreen(
                 onClose = { showUserCenter = false }
             )
         }
 
-        // 6. Tingwu Drawer (Right Stub)
+        // 6. Right Stubs
         RightDrawerStub(
             isOpen = activeDrawer == DrawerType.TINGWU,
             title = "Tingwu Assistant",
             onDismiss = { activeDrawer = null }
         )
 
-        // 7. Artifacts Drawer (Right Stub)
         RightDrawerStub(
             isOpen = activeDrawer == DrawerType.ARTIFACTS,
             title = "Artifacts Box",
             onDismiss = { activeDrawer = null }
         )
 
-        // --- GHOST HANDLES (Clean Desk) ---
-        // Mutex: Only active when NO drawer is open AND UserCenter is closed (Safe Blockage)
+        // --- GHOST HANDLES ---
         if (activeDrawer == null && !showUserCenter) {
-            
-            // 1. Scheduler Ghost Handle (Top) - Pull Down
+            // Scheduler (Top Pull) - 更大触摸区域
             GhostHandle(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .height(48.dp), // Reduced from 120dp to avoid blocking Header
-                threshold = 150f, // Positive = Down drag
+                    .padding(top = 60.dp) // Clear the header zone
+                    .height(120.dp), // 更大的触摸区域
+                threshold = 100f, // 降低阈值，更容易触发
                 onTrigger = { activeDrawer = DrawerType.SCHEDULER }
             )
 
-            // 2. Audio Ghost Handle (Bottom) - Pull Up
+            // Audio (Bottom Pull)
             GhostHandle(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .height(48.dp), // Reduced from 120dp (and removed padding) to avoid blocking Input Bar
-                threshold = -150f, // Negative = Up drag
+                    .height(48.dp),
+                threshold = -150f,
                 onTrigger = { activeDrawer = DrawerType.AUDIO }
             )
         }
     }
 }
 
-/**
- * Invisible Gesture Trigger for "Clean Desk" UI.
- * @param threshold Drag distance threshold (Positive = Down/Right, Negative = Up/Left)
- */
 @Composable
 private fun GhostHandle(
     modifier: Modifier = Modifier,
@@ -217,21 +220,16 @@ private fun GhostHandle(
                     onDragEnd = { totalDrag = 0f }
                 ) { _, dragAmount ->
                     totalDrag += dragAmount
-                    // Check threshold direction
                     if ((threshold > 0 && totalDrag > threshold) || 
                         (threshold < 0 && totalDrag < threshold)) {
                         onTrigger()
-                        totalDrag = 0f // Reset to prevent multi-trigger
+                        totalDrag = 0f
                     }
                 }
             }
-        // No Content: Invisible (Ghost)
     )
 }
 
-/**
- * Stub Drawer for Right Side (Tingwu / Artifacts)
- */
 @Composable
 private fun RightDrawerStub(
     isOpen: Boolean,
@@ -243,22 +241,21 @@ private fun RightDrawerStub(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.CenterEnd
         ) {
-            // Scrim handled by parent
-
-            // Drawer Content
-            Column(
+            com.smartsales.prism.ui.components.PrismSurface(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .width(300.dp)
-                    .background(Color(0xFF1A1A2E))
-                    .padding(16.dp)
+                    .width(300.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp),
+                backgroundColor = com.smartsales.prism.ui.theme.BackgroundSurface.copy(alpha=0.95f)
             ) {
-                Text(title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(20.dp))
-                Text("🚧 Feature In Progress", color = Color.Gray)
-                Spacer(modifier = Modifier.weight(1f))
-                Button(onClick = onDismiss) {
-                    Text("Close")
+                Column(Modifier.padding(16.dp)) {
+                    Text(title, color = com.smartsales.prism.ui.theme.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Text("🚧 Feature In Progress", color = com.smartsales.prism.ui.theme.TextSecondary)
+                    Spacer(modifier = Modifier.weight(1f))
+                    Button(onClick = onDismiss) {
+                        Text("Close")
+                    }
                 }
             }
         }

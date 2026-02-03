@@ -1,11 +1,18 @@
 package com.smartsales.prism.data.fakes
 
+import com.smartsales.prism.domain.activity.AgentActivityController
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.model.UiState
+import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
+import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
+import java.time.LocalDate
 
 /**
  * FakeOrchestrator 单元测试
@@ -13,10 +20,27 @@ import org.junit.Test
  */
 class FakeOrchestratorTest {
 
+    private lateinit var controller: AgentActivityController
+    private lateinit var timeProvider: FakeTimeProvider
+    private lateinit var taskRepository: ScheduledTaskRepository
+    private lateinit var orchestrator: FakeOrchestrator
+    
+    @Before
+    fun setup() {
+        controller = AgentActivityController()
+        timeProvider = FakeTimeProvider()
+        taskRepository = object : ScheduledTaskRepository {
+            override fun getTimelineItems(dayOffset: Int): Flow<List<TimelineItemModel>> = flowOf(emptyList())
+            override fun queryByDateRange(start: LocalDate, end: LocalDate): Flow<List<TimelineItemModel>> = flowOf(emptyList())
+            override suspend fun insertTask(task: TimelineItemModel.Task): String = "test-id"
+            override suspend fun updateTask(task: TimelineItemModel.Task) {}
+            override suspend fun deleteItem(id: String) {}
+        }
+        orchestrator = FakeOrchestrator(controller, taskRepository, timeProvider)
+    }
+
     @Test
     fun `processInput returns Response for Coach mode`() = runTest {
-        val orchestrator = FakeOrchestrator()
-        
         val result = orchestrator.processInput("test input")
         
         assertTrue("Expected UiState.Response", result is UiState.Response)
@@ -24,8 +48,6 @@ class FakeOrchestratorTest {
 
     @Test
     fun `switchMode updates currentMode`() = runTest {
-        val orchestrator = FakeOrchestrator()
-        
         orchestrator.switchMode(Mode.ANALYST)
         
         assertEquals(Mode.ANALYST, orchestrator.currentMode.value)
@@ -33,12 +55,20 @@ class FakeOrchestratorTest {
 
     @Test
     fun `processInput returns PlanCard for Analyst mode`() = runTest {
-        val orchestrator = FakeOrchestrator()
         orchestrator.switchMode(Mode.ANALYST)
         
         // /plan command triggers PlanCard response
         val result = orchestrator.processInput("/plan analyze this")
         
         assertTrue("Expected UiState.PlanCard", result is UiState.PlanCard)
+    }
+    
+    @Test
+    fun `createScheduledTask returns Response with task confirmation`() = runTest {
+        val result = orchestrator.createScheduledTask("明天凌晨3点赶飞机")
+        
+        assertTrue("Expected UiState.Response", result is UiState.Response)
+        val response = result as UiState.Response
+        assertTrue("Response should contain 已创建任务", response.content.contains("已创建任务"))
     }
 }

@@ -53,6 +53,19 @@ export const PrototypeDashboard: React.FC<DashboardProps> = ({ onNavigate }) => 
           color="text-pink-400"
           onClick={() => onNavigate('UserCenter')} 
         />
+        <MenuButton 
+          icon={<React.Fragment>📜</React.Fragment>}
+          label="历史会话" 
+          color="text-cyan-400"
+          onClick={() => onNavigate('History')} 
+        />
+        <div className="h-px bg-white/10 my-2" />
+        <MenuButton
+           icon={<React.Fragment>🎨</React.Fragment>} // Using emoji as Palette icon wasn't imported in original file, or I can just use text.
+           label="Theme Studio"
+           color="text-white"
+           onClick={() => onNavigate('Gallery')}
+        />
       </div>
 
       <div className="pt-6 border-t border-white/10 text-xs text-gray-600 font-mono">
@@ -72,7 +85,7 @@ const MenuButton: React.FC<{
     onClick={onClick}
     className="w-full flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-transparent hover:border-white/10 hover:bg-white/10 transition-all text-left group"
   >
-    <div className={`${color} group-hover:scale-110 transition-transform`}>{icon}</div>
-    <span className="text-sm font-medium text-gray-300 group-hover:text-white">{label}</span>
+    <div className={`${color} group-hover:scale-110 transition-transform opacity-80 group-hover:opacity-100`}>{icon}</div>
+    <span className="text-sm font-medium text-gray-400 group-hover:text-white">{label}</span>
   </button>
 );

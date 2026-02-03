@@ -13,11 +13,11 @@ object ModelRegistry {
     /** Coach 模式 — 快速对话，1M tokens */
     const val COACH = "qwen-plus"
     
-    /** Analyst 模式 — 推理、工具调用，32k tokens */
-    const val ANALYST = "qwen3-max"
+    /** Analyst 模式 — 推理、工具调用，32k tokens (混合思考模型) */
+    const val ANALYST = "qwen3-max-2026-01-23"
     
     /** Scheduler 模式 — 结构化输出 (使用与 Analyst 相同的模型) */
-    const val SCHEDULER = "qwen3-max"
+    const val SCHEDULER = "qwen3-max-2026-01-23"
     
     /** Vision 模式 — 图像 OCR/描述 */
     const val VISION = "qwen3-vl-plus"
@@ -25,7 +25,7 @@ object ModelRegistry {
     // === Memory Layer Models ===
     
     /** Relevancy Library — 工具调用查询结构化实体，32k tokens */
-    const val RELEVANCY = "qwen3-max"
+    const val RELEVANCY = "qwen3-max-2026-01-23"
     
     /** Hot Zone — 快速读取近期上下文，1M tokens */
     const val HOT_ZONE = "qwen-plus"

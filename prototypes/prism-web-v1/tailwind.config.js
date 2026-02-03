@@ -7,19 +7,27 @@ export default {
   theme: {
     extend: {
       colors: {
-        'prism-bg': '#F7F7F7', // V12 --gray-50
-        'prism-accent': '#007AFF', // V12 --blue-500
-        'prism-knot': '#34C759',   // V12 --green-500
-        'prism-danger': '#FF3B30', // V12 --red-500
-        'prism-surface': '#FFFFFF',
-        'prism-surface-muted': '#F2F2F7', // V12 --gray-100
+        'prism-bg': 'var(--bg-app)', 
+        'prism-accent': 'var(--color-accent)', 
+        'prism-knot': '#34C759',   // Keep static for now or map?
+        'prism-danger': '#FF3B30', 
+        'prism-surface': 'var(--bg-surface)',
+        'prism-surface-muted': 'var(--bg-surface-muted)',
+        'prism-primary': 'var(--color-text-primary)',
+        'prism-secondary': 'var(--color-text-secondary)',
       },
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
+      borderColor: {
+        'prism-border': 'var(--border-base)',
+      },
+      borderWidth: {
+        'retina': 'var(--border-width)',
+      },
       boxShadow: {
-        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.08)', // V12 --glass-shadow
-        'floating': '0 8px 32px 0 rgba(0, 122, 255, 0.15)', // V12 Input Capsule shadow
+        'glass': 'var(--shadow-glass)', 
+        'floating': '0 8px 32px 0 rgba(0, 122, 255, 0.15)', // Keep for active inputs
       },
       animation: {
         'breathing': 'breathing 4s ease-in-out infinite',

@@ -81,6 +81,7 @@ configurations.all {
 
 dependencies {
     implementation(projects.data.aiCore)
+    // REMOVED: projects.appPrism (is application module, not library)
     // REMOVED: projects.domain.prismCore (archived - see archived/ folder)
     implementation(projects.tingwuTestApp)
     implementation(projects.feature.chat)

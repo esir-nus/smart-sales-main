@@ -25,9 +25,9 @@ All color, spacing, typography, and component values are defined in:
 | File | Purpose |
 |------|---------|
 | [`design-tokens.json`](file:///home/cslh-frank/main_app/docs/design/design-tokens.json) | **Master token file** — primitives, semantics, scales |
-| [`AppColors.kt`](file:///home/cslh-frank/main_app/feature/chat/src/main/java/com/smartsales/feature/chat/home/theme/AppColors.kt) | Compose color consumers |
-| [`AppTypography.kt`](file:///home/cslh-frank/main_app/feature/chat/src/main/java/com/smartsales/feature/chat/home/theme/AppTypography.kt) | Compose typography consumers |
-| [`AppSpacing.kt`](file:///home/cslh-frank/main_app/feature/chat/src/main/java/com/smartsales/feature/chat/home/theme/AppSpacing.kt) | Compose spacing/radius/elevation consumers |
+| [`Color.kt`](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/theme/Color.kt) | Compose color definitions |
+| [`Type.kt`](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/theme/Type.kt) | Compose typography definitions |
+| [`Theme.kt`](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/theme/Theme.kt) | Compose theme root |
 
 > [!IMPORTANT]
 > When updating design values, edit `design-tokens.json` first, then update the Kotlin consumers to match.
@@ -57,7 +57,8 @@ All color, spacing, typography, and component values are defined in:
 
 4. **Few, meaningful colors**
 
-   - Primary blue for actions.
+   - Primary black (`AccentPrimary`) for keys/actions.
+   - `AccentBlue` for functional links only.
    - Neutral surfaces for content.
    - **Chroma Wave** gradients for AI presence (not UI chrome).
 
@@ -73,6 +74,12 @@ All color, spacing, typography, and component values are defined in:
    - **Zero-Chrome**: ABSOLUTELY NO browser artifacts. No scrollbars, no focus rings, no selection highlights. The web prototype is an *emulator* of a native app.
    - **Glass Slabs**: Light mode UI must use "Frosted Ice" (High blur + White Border) to separate layers. Never use flat gray.
 
+8. **MANDATE: Zero-Spec-Contamination**
+   - Spec ASCII diagrams (e.g., `HistoryDrawer.md`) define **STRUCTURE** only, not styling.
+   - **Emojis in specs** (📌, 📅, 🗓️) are for documentation readability — **NOT** for visual implementation.
+   - Real UI uses **design system icons** (Material Icons, custom SVGs). Never render emoji Unicode as UI.
+   - **Never copy spec formatting** literally. Example: Spec "📌 置顶" → Code: `Icon(PushPin) + Text("置顶")`
+
 ---
 
 ## 2. Color System
@@ -86,37 +93,18 @@ The palette uses clean, neutral surfaces to let the **AI Intelligence** (Chroma 
 
 | Token / Role        | Light Mode | Dark Mode | Usage |
 | ------------------- | ---------- | --------- | ----- |
-| **AppBackground**   | `Aurora`   | `#0D0D12` | **Target UI**: Soft Blue/Cyan Mesh Gradient (Dark Default). |
+| **AppBackground**   | `#F5F5F7`  | `#0D0D12` | **Target UI**: "Sleek Glass" Pro Max Gray. |
 | **SurfaceCard**     | `FrostedIce` | `#1C1C1E` | Light Mode = High Saturation Blur + White Border. |
 | **FloatingCapsule** | `#FFFFFF`  | `#2C2C2E` | **Target UI**: High-elevation Input Bar. |
 | **BorderDefault**   | `#E5E5EA`  | `#38383A` | Subtle dividers. |
-| **AccentPrimary**   | `#007AFF`  | `#0A84FF` | Primary actions. |
+| **AccentPrimary**   | `#000000`  | `#FFFFFF` | **Sleek Glass**: Stark Black keys. |
+| **AccentBlue**      | `#007AFF`  | `#0A84FF` | Functional links / Analyst Mode. |
 
-...
 
-### 2.4 Android Mapping (Aurora Update)
 
-```kotlin
-object AppColors {
-    // Backgrounds
-    val AuroraBrush = Brush.verticalGradient(
-        colors = listOf(
-            Color(0xFFE0F7FA), // Top (Cyan tint)
-            Color(0xFFF7F7F7), // Middle
-            Color(0xFFFFFFFF)  // Bottom
-        )
-    )
-    // Frosted Ice (Light Mode Slab)
-    val FrostedIceBorder = Color(0xFFFFFFFF).copy(alpha = 0.65f)
-    val FrostedIceShadow = Color(0x14000000) // 8% opacity black
-    )
-    // ...
-}
-```
+## 3. Component Patterns
 
-...
-
-### 6.2 Home Hero (`ChatWelcome`) (V12 Blueprint)
+### 3.1 Home Hero (`ChatWelcome`) (V12 Blueprint)
 
 **A. Top Bar Layout (Target UI):**
 *   **Left**: `[≡]` Hamburger (Open History Drawer) + `[⚡]` Device Icon (Device Status/Manager).
@@ -130,7 +118,7 @@ object AppColors {
 *   **Subtitle**: "我是您的销售助手" (Body, Secondary).
 *   **Hero Actions**: Row of 3 Large Translucent Pills (`Smart Analysis`, `PDF`, `CSV`).
 
-### 6.3 Chat Input (Floating Capsule)
+### 3.2 Chat Input (Floating Capsule)
 
 **Target UI Pattern**:
 
@@ -145,7 +133,7 @@ object AppColors {
     *   **Scan Shine**: Subtle sheen traversing the placeholder text "输入消息..." in idle state.
 
 
-### 6.4 Chat Messages (User & Assistant)
+### 3.3 Chat Messages (User & Assistant)
 
 Visual only; conversational behavior in `ux-contract.md`.
 
@@ -170,7 +158,7 @@ Visual only; conversational behavior in `ux-contract.md`.
   * Between different speakers: 8–12 dp.
   * Timestamp / metadata: `Caption` + `TextMuted` under or between clusters.
 
-### 6.5 Cards (Device Manager, Audio Library, Settings)
+### 3.4 Cards (Device Manager, Audio Library, Settings)
 
 * Background: `SurfaceCard`.
 * Radius: 12–16 dp.
@@ -185,7 +173,7 @@ Visual only; conversational behavior in `ux-contract.md`.
 
 The Home screenshot pattern (two stacked cards) is the baseline card style.
 
-### 6.6 History Drawer ("Memory Stream")
+### 3.5 History Drawer ("Memory Stream")
 
 **Concept**: A deep glass overlay that feels like peering into the system's memory. It features organic "Aurora" light bleeding in from the edge.
 
@@ -210,7 +198,7 @@ The Home screenshot pattern (two stacked cards) is the baseline card style.
   *   Scrim tap closes drawer.
   *   Aurora bleed overlay (`mix-blend-mode: screen`) adds depth.
 
-### 6.7 Lists & Rows
+### 3.6 Lists & Rows
 
 Used in history, audio library, device files, etc.
 
@@ -220,7 +208,7 @@ Used in history, audio library, device files, etc.
 * Subtitle: `Caption` + `TextMuted`.
 * Bottom divider: 1 dp `BorderDefault` spanning full width or with inset.
 
-### 6.8 Empty States
+### 3.7 Empty States
 
 * Use **SurfaceMuted** or naked `AppBackground` plus an icon or illustration.
 * Include:
@@ -229,7 +217,7 @@ Used in history, audio library, device files, etc.
   * Optional short tip in `Caption` + `TextMuted`.
 * No heavy colors; keep it soft and informative.
 
-### 6.9 Smart Badge (Header Status)
+### 3.8 Smart Badge (Header Status)
 
 **Concept**: Replaces the generic "Device Status" text with a specialized, localized badge that pulses to indicate life.
 
@@ -243,7 +231,7 @@ Used in history, audio library, device files, etc.
   * **Pulse Indicator**: A 6dp Green Circle (`#4CD964`).
     * Animation: `alpha` oscillates 0.4 -> 1.0 (authentic pulse).
 
-### 6.10 Aurora Background (V16)
+### 3.9 Aurora Background (V16)
 
 **Concept**: The Aurora consists of three distinct, animated radial gradient blobs that create a subtle, living atmosphere. NOT a mesh gradient—each blob is a separate light source.
 
@@ -263,7 +251,7 @@ Used in history, audio library, device files, etc.
 
 * **Design Principle**: "Distinct Blobs"—intentionally reduce radius and spread positions to prevent muddy overlap. Each blob should be recognizable as a separate light source.
 
-### 6.11 Knot FAB & Tip Bubble (V18) — "Living Intelligence Avatar"
+### 3.10 Knot FAB & Tip Bubble (V18) — "Living Intelligence Avatar"
 
 **Concept**: The Knot is the UI's "soul"—an always-visible, breathing infinity symbol that represents the AI assistant. Tapping it reveals a contextual tip.
 
@@ -283,7 +271,7 @@ Used in history, audio library, device files, etc.
   * **Content**: Rotates through localized tips on open (e.g., "试试 '帮我分析财报'").
   * **Animation**: `fadeIn + scaleIn` from bottom-right origin.
 
-### 6.12 Input Placeholder Shimmer (V17)
+### 3.11 Input Placeholder Shimmer (V17)
 
 **Concept**: A subtle "text scan" effect on the placeholder text ("输入消息...") that suggests the input is ready and attentive.
 
@@ -297,11 +285,11 @@ Used in history, audio library, device files, etc.
 
 ---
 
-## 7. Motion & Interaction
+## 4. Motion & Interaction
 
 Visual guidance only; gesture behavior is in `ux-contract.md`.
 
-### 7.1 Animation
+### 4.1 Animation
 
 * Use **subtle** animations:
 
@@ -315,7 +303,7 @@ Visual guidance only; gesture behavior is in `ux-contract.md`.
 
   * Standard Material 3 curves (`FastOutSlowIn`, etc.).
 
-### 7.2 Touch Targets
+### 4.2 Touch Targets
 
 * Minimum target size: **48 × 48 dp**.
 * Padding around icons: at least 8 dp.
@@ -323,7 +311,7 @@ Visual guidance only; gesture behavior is in `ux-contract.md`.
 
 ---
 
-## 8. Accessibility & Contrast
+## 5. Accessibility & Contrast
 
 * Make sure text on `SurfaceCard`/`SurfaceMuted` has enough contrast:
 
@@ -334,7 +322,7 @@ Visual guidance only; gesture behavior is in `ux-contract.md`.
 
 ---
 
-## 9. Usage Checklist
+## 6. Usage Checklist
 
 Before shipping a screen, verify:
 

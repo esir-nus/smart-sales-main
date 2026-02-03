@@ -1,7 +1,7 @@
 # Smart Sales Prism Tracker
 
-> **SOT**: [`Prism-V1.md`](../specs/Prism-V1.md) · [`prism-ui-ux-contract.md`](../specs/prism-ui-ux-contract.md)  
-> **Last Updated**: 2026-01-26
+> **SOT**: [`Prism-V1.md`](../specs/Prism-V1.md) · [`prism-ui-ux-contract.md`](../specs/prism-ui-ux-contract.md) (INDEX) · [`GLOSSARY.md`](../specs/GLOSSARY.md)  
+> **Last Updated**: 2026-02-01
 
 ---
 
@@ -80,6 +80,24 @@
 
 ---
 
+## Federated Spec System ✅
+
+> **Status**: Production Ready (90%) — Shipped 2026-02-01
+
+| Category | Files | Status |
+|----------|-------|--------|
+| **INDEX** | `prism-ui-ux-contract.md` | ✅ |
+| **Terminology** | `GLOSSARY.md` | ✅ |
+| **Modules** | `HomeScreen.md`, `SchedulerDrawer.md`, `AudioDrawer.md`, `ConnectivityModal.md`, `AnalystMode.md` | ✅ |
+| **Components** | `ThinkingBox.md` | ✅ |
+| **Flows** | `OnboardingFlow.md` | ✅ |
+
+**Tech Debt (Logged)**:
+- [ ] Add JSON contracts to AudioDrawer, SchedulerDrawer, HomeScreen, ConnectivityModal
+- [ ] Monitor OnboardingFlow.md (232 lines) — split if >300
+
+---
+
 ## Prism Clean Room Roadmap (5-Phase Model)
 
 > **Strategy**: Contract-First Architecture Reset  
@@ -129,7 +147,7 @@
 | Home Screen (Session List, Knot FAB) | 🔲 |
 | Chat Interface (Coach/Analyst mode toggle) | 🔲 |
 | Audio Drawer (bottom gesture, card states) | 🔲 |
-| Scheduler Drawer (top gesture, carousels) | 🔲 |
+| Scheduler Drawer (top gesture, carousels) | 🚧 Logic wired |
 | All 3 modes navigable with fake responses | 🔲 |
 | UI matches prism-ui-ux-contract.md | 🔲 |
 
@@ -378,7 +396,7 @@
 | `delay()` in UI | `ResponseBubble.kt:129` | Simulated typing should use Fake | Low |
 | `delay()` in UI | `ConnectivityModal.kt:240` | Progress sim should use Fake | Low |
 | `delay()` in UI | `OnboardingScreen.kt:226,229` | Firmware progress sim should use Fake | Low |
-| `delay()` in UI | `SchedulerDrawer.kt:211,220,234` | Parsing/checking delays should use Fake | Low |
+| `delay()` in UI | `SchedulerDrawer.kt` | ✅ Resolved (Moved to Fake) | Low |
 | Fake Tests | `FakeAudioRepository` etc. | No unit tests for Fakes | Low (not needed for beta) |
 | Activity Trace Timing | `PrismOrchestrator.kt` | First trace may be missed due to phase transition race | Low |
 

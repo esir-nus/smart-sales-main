@@ -5,27 +5,30 @@ import com.smartsales.prism.domain.activity.ActivityPhase
 import com.smartsales.prism.domain.activity.AgentActivityController
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.model.UiState
-import com.smartsales.prism.data.real.AnalystFlowController
 import com.smartsales.prism.domain.pipeline.AnalystState
 import com.smartsales.prism.domain.pipeline.ContextBuilder
 import com.smartsales.prism.domain.pipeline.Executor
 import com.smartsales.prism.domain.pipeline.ExecutorResult
 import com.smartsales.prism.domain.pipeline.Orchestrator
+import com.smartsales.prism.domain.pipeline.SchedulerActionResult
+import com.smartsales.prism.domain.scheduler.AlarmScheduler
+import com.smartsales.prism.domain.scheduler.LintResult
+import com.smartsales.prism.domain.scheduler.ReminderType
+import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
+import com.smartsales.prism.domain.scheduler.SchedulerLinter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * 生产环境 Orchestrator — 真实 LLM 调用
- * 
- * 组装 Pipeline 核心组件：
- * - ContextBuilder: 构建增强上下文（当前使用 FakeContextBuilder）
- * - Executor: 真实 LLM 执行器（DashscopeExecutor）
- * - AgentActivityController: 活动追踪与可视化
- * - AnalystFlowController: Analyst 模式 FSM
  * 
  * @see Prism-V1.md §2.2 Core Components
  */
@@ -34,14 +37,17 @@ class PrismOrchestrator @Inject constructor(
     private val contextBuilder: ContextBuilder,
     private val executor: Executor,
     private val activityController: AgentActivityController,
-    private val analystFlowController: AnalystFlowController
+    private val analystController: AnalystFlowControllerV2,
+    private val scheduledTaskRepository: ScheduledTaskRepository,
+    private val alarmScheduler: AlarmScheduler,
+    private val schedulerLinter: SchedulerLinter
 ) : Orchestrator {
     
     private val _currentMode = MutableStateFlow(Mode.COACH)
     override val currentMode: StateFlow<Mode> = _currentMode.asStateFlow()
     
     /** Analyst 状态流 — UI 可观察 */
-    val analystState: StateFlow<AnalystState> = analystFlowController.state
+    val analystState: StateFlow<AnalystState> = analystController.state
     
     override suspend fun processInput(input: String): UiState {
         return when (_currentMode.value) {
@@ -51,20 +57,13 @@ class PrismOrchestrator @Inject constructor(
         }
     }
     
-    /**
-     * Coach 模式 — 快速对话，直接调用 LLM
-     */
     private suspend fun processCoachInput(input: String): UiState {
         activityController.startPhase(ActivityPhase.PLANNING, ActivityAction.THINKING)
-        activityController.appendTrace("分析用户输入...")
         
         return try {
             activityController.updateAction(ActivityAction.ASSEMBLING)
-            activityController.appendTrace("构建上下文...")
             val context = contextBuilder.build(input, Mode.COACH)
-            
             activityController.startPhase(ActivityPhase.EXECUTING, ActivityAction.THINKING)
-            activityController.appendTrace("调用 LLM...")
             
             when (val result = executor.execute(context)) {
                 is ExecutorResult.Success -> {
@@ -83,56 +82,157 @@ class PrismOrchestrator @Inject constructor(
         }
     }
     
-    /**
-     * Analyst 模式 — 委托给 AnalystFlowController
-     * 
-     * 流程: Parsing → Planning → Proposal (等待用户确认)
-     * UI 通过 analystState 观察状态变化
-     */
     private suspend fun processAnalystInput(input: String): UiState {
-        activityController.startPhase(ActivityPhase.PLANNING, ActivityAction.THINKING)
-        activityController.appendTrace("启动分析流程...")
-        
-        // 启动 Analyst FSM — 状态变化通过 analystState 流暴露
-        analystFlowController.startAnalysis(input)
-        
-        // 等待进入 Proposal 状态
-        val proposalState = analystFlowController.state.first { it is AnalystState.Proposal }
-        activityController.complete()
-        
-        // 返回 AnalystProposal 状态 — UI 显示 AnalystProposalCard
-        return UiState.AnalystProposal((proposalState as AnalystState.Proposal).plan)
+        analystController.handleInput(input)
+        val structuredState = analystController.state.first { it is AnalystState.Structured }
+        return UiState.PlannerTableState((structuredState as AnalystState.Structured).table)
     }
     
-    /**
-     * Scheduler 模式 — TODO: 实现
-     */
+    override suspend fun createScheduledTask(input: String): UiState {
+        return processSchedulerInput(input)
+    }
+    
     private suspend fun processSchedulerInput(input: String): UiState {
-        return UiState.Response("Scheduler 模式尚未实现")
-    }
-    
-    /**
-     * 确认执行 Analyst 计划
-     */
-    suspend fun confirmAnalystPlan(deliverableId: String = "1"): UiState {
-        activityController.startPhase(ActivityPhase.EXECUTING, ActivityAction.THINKING)
-        activityController.appendTrace("执行分析计划...")
+        activityController.startPhase(ActivityPhase.PLANNING, ActivityAction.THINKING)
         
-        analystFlowController.confirmPlan(deliverableId)
-        
-        // 等待进入 Result 状态
-        val resultState = analystFlowController.state.first { it is AnalystState.Result }
-        activityController.complete()
-        
-        val artifact = (resultState as AnalystState.Result).artifact
-        return UiState.Response("✅ ${artifact.title}\n\n${artifact.previewText}")
+        return try {
+            // 构建 Scheduler 上下文
+            val context = contextBuilder.build(input, Mode.SCHEDULER)
+            activityController.startPhase(ActivityPhase.EXECUTING, ActivityAction.THINKING)
+            
+            // 调用 LLM 解析
+            when (val result = executor.execute(context)) {
+                is ExecutorResult.Success -> {
+                    // 验证并解析 LLM 输出
+                    when (val lintResult = schedulerLinter.lint(result.content)) {
+                        is LintResult.Success -> {
+                            // 插入任务到日历
+                            val taskId = scheduledTaskRepository.insertTask(lintResult.task)
+                            
+                            // 设置提醒
+                            lintResult.reminderType?.let { reminderType ->
+                                val startTime = parseStartTime(lintResult.task.dateRange)
+                                if (startTime != null) {
+                                    when (reminderType) {
+                                        ReminderType.SMART_CASCADE -> {
+                                            alarmScheduler.scheduleSmartCascade(
+                                                taskId, startTime, lintResult.taskTypeHint
+                                            )
+                                        }
+                                        ReminderType.SINGLE -> {
+                                            alarmScheduler.scheduleReminder(
+                                                taskId, startTime, reminderType
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            activityController.complete()
+                            
+                            // 计算实际的日期偏移量
+                            val zone = ZoneId.systemDefault()
+                            val today = LocalDate.now(zone)
+                            val taskDate = lintResult.task.startTime.atZone(zone).toLocalDate()
+                            val dayOffset = ChronoUnit.DAYS.between(today, taskDate).toInt()
+                            
+                            UiState.SchedulerTaskCreated(
+                                title = lintResult.task.title,
+                                dayOffset = dayOffset
+                            )
+                        }
+                        is LintResult.Error -> {
+                            activityController.error(lintResult.message)
+                            UiState.Error(lintResult.message, retryable = true)
+                        }
+                    }
+                }
+                is ExecutorResult.Failure -> {
+                    activityController.error(result.error)
+                    UiState.Error(result.error, result.retryable)
+                }
+            }
+        } catch (e: Exception) {
+            val errorMessage = e.message ?: "未知错误"
+            activityController.error(errorMessage)
+            UiState.Error(errorMessage, retryable = true)
+        }
     }
     
     override suspend fun switchMode(newMode: Mode) {
         _currentMode.value = newMode
-        // 切换模式时重置 Analyst 状态
         if (newMode != Mode.ANALYST) {
-            analystFlowController.reset()
+            analystController.reset()
+        }
+    }
+    
+    /**
+     * 处理日程操作（改期、取消等）
+     */
+    override suspend fun processSchedulerAction(itemId: String, userText: String): SchedulerActionResult {
+        activityController.startPhase(ActivityPhase.EXECUTING, ActivityAction.THINKING)
+        
+        return try {
+            // 构建改期上下文
+            val prompt = buildReschedulePrompt(userText)
+            val context = contextBuilder.build(prompt, Mode.SCHEDULER)
+            
+            when (val result = executor.execute(context)) {
+                is ExecutorResult.Success -> {
+                    when (val lintResult = schedulerLinter.lint(result.content)) {
+                        is LintResult.Success -> {
+                            // 更新已有任务
+                            val updatedTask = lintResult.task.copy(id = itemId)
+                            scheduledTaskRepository.updateTask(updatedTask)
+                            
+                            // 更新提醒
+                            alarmScheduler.cancelReminder(itemId)
+                            lintResult.reminderType?.let { reminderType ->
+                                val startTime = parseStartTime(lintResult.task.dateRange)
+                                if (startTime != null) {
+                                    alarmScheduler.scheduleReminder(itemId, startTime, reminderType)
+                                }
+                            }
+                            
+                            activityController.complete()
+                            SchedulerActionResult.Success("已更新任务时间")
+                        }
+                        is LintResult.Error -> {
+                            activityController.error(lintResult.message)
+                            SchedulerActionResult.Failure(lintResult.message)
+                        }
+                    }
+                }
+                is ExecutorResult.Failure -> {
+                    activityController.error(result.error)
+                    SchedulerActionResult.Failure(result.error)
+                }
+            }
+        } catch (e: Exception) {
+            val errorMessage = e.message ?: "未知错误"
+            activityController.error(errorMessage)
+            SchedulerActionResult.Failure(errorMessage)
+        }
+    }
+    
+    private fun buildReschedulePrompt(userText: String): String {
+        return """
+            用户想要改期任务: $userText
+            请解析用户意图并输出 JSON 格式的新时间安排。
+        """.trimIndent()
+    }
+    
+    private fun parseStartTime(dateRange: String): Instant? {
+        return try {
+            val parts = dateRange.split("~").map { it.trim() }
+            if (parts.isEmpty()) return null
+            
+            val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+            java.time.LocalDateTime.parse(parts[0], formatter)
+                .atZone(ZoneId.systemDefault())
+                .toInstant()
+        } catch (e: Exception) {
+            null
         }
     }
 }

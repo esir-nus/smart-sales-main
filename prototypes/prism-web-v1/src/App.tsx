@@ -12,6 +12,7 @@ import { clsx } from 'clsx';
 
 import { HomeScreen } from './components/HomeScreen';
 import { HistoryDrawer } from './components/HistoryDrawer';
+import { HistoryPage } from './components/HistoryPage';
 import { AudioDrawer } from './components/AudioDrawer';
 import { RightToolbar } from './components/RightToolbar';
 import { ModeToggle } from './components/ModeToggle';
@@ -19,8 +20,10 @@ import { OnboardingOverlay } from './components/OnboardingOverlay';
 import { ConnectivityModal } from './components/ConnectivityModal';
 import { UserCenter } from './components/UserCenter';
 
+import { VIGuidebook } from './components/VIGuidebook';
+
 // Types
-type Mode = 'coach' | 'analyst' | 'home';
+type Mode = 'coach' | 'analyst' | 'home' | 'gallery' | 'history';
 type Message = {
     id: string;
     role: 'user' | 'assistant';
@@ -36,10 +39,10 @@ const PlanCard = () => (
         className="w-full glass-card p-4 mb-4 border-l-4 border-l-prism-accent overflow-hidden"
     >
         <div className="flex justify-between items-center mb-3">
-             <h3 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
+             <h3 className="font-semibold text-sm text-prism-primary flex items-center gap-2">
                 <span className="text-xl">📋</span> 分析计划
              </h3>
-             <span className="text-xs font-mono text-gray-500">运行中</span>
+             <span className="text-xs font-mono text-prism-secondary">运行中</span>
         </div>
         <div className="space-y-2">
             {[
@@ -49,16 +52,16 @@ const PlanCard = () => (
             ].map((step, i) => (
                 <div key={i} className="flex items-center gap-3 text-sm">
                     {step.status === 'done' ? (
-                        <CheckCircle2 size={16} className="text-green-500" />
+                        <CheckCircle2 size={16} className="text-prism-knot" />
                     ) : step.status === 'running' ? (
                          <div className="w-4 h-4 border-2 border-prism-accent border-t-transparent rounded-full animate-spin" />
                     ) : (
-                        <Circle size={16} className="text-gray-300" />
+                        <Circle size={16} className="text-prism-secondary/30" />
                     )}
                     <span className={clsx(
-                        step.status === 'done' && "text-gray-400 line-through",
-                        step.status === 'running' && "text-gray-900 font-medium",
-                        step.status === 'pending' && "text-gray-500"
+                        step.status === 'done' && "text-prism-secondary line-through",
+                        step.status === 'running' && "text-prism-primary font-medium",
+                        step.status === 'pending' && "text-prism-secondary"
                     )}>{step.label}</span>
                 </div>
             ))}
@@ -70,6 +73,7 @@ const PlanCard = () => (
 
 function App() {
   const [mode, setMode] = useState<Mode>('home'); // View Mode
+  const [theme, setTheme] = useState('theme-glass-sleek'); // Current Theme Class
   const [inputIntent, setInputIntent] = useState<'coach' | 'analyst'>('coach'); // Toggle State
   const [isOnboarding, setIsOnboarding] = useState(false); // New State
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -132,6 +136,16 @@ function App() {
           setIsOnboarding(false);
           setIsUserCenterOpen(true);
       }
+      if (destination === 'Gallery') {
+          setIsOnboarding(false);
+          setMode('gallery');
+          setIsDrawerOpen(false);
+      }
+      if (destination === 'History') {
+          setIsOnboarding(false);
+          setMode('history');
+          setIsDrawerOpen(false);
+      }
   };
 
   // Mock Scenario Trigger
@@ -163,7 +177,7 @@ function App() {
 
         {/* Mobile Frame (Centered in remaining space) */}
 
-        <MobileFrame>
+        <MobileFrame theme={theme}>
           <AuroraBackground />
           <Header 
             title={mode === 'home' ? "Session: CEO Wang..." : "智能销售"} 
@@ -253,12 +267,39 @@ function App() {
                                     "max-w-[85%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed shadow-sm",
                                     msg.role === 'user' 
                                         ? "bg-prism-accent text-white self-end ml-auto rounded-tr-sm" 
-                                        : "glass-card text-gray-800 self-start mr-auto rounded-tl-sm"
+                                        : "glass-card text-prism-primary self-start mr-auto rounded-tl-sm"
                                 )}
                             >
                                 {msg.content}
                             </motion.div>
                         ))}
+                    </motion.div>
+                )}
+                
+                {mode === 'gallery' && (
+                    <motion.div
+                       key="gallery"
+                       initial={{ opacity: 0, x: 20 }}
+                       animate={{ opacity: 1, x: 0 }}
+                       exit={{ opacity: 0, x: -20 }}
+                       className="absolute inset-0 z-50 bg-prism-bg"
+                    >
+                        <VIGuidebook 
+                           onThemeChange={setTheme} 
+                           onNavigate={handleDashboardNav}
+                        />
+                    </motion.div>
+                )}
+                
+                {mode === 'history' && (
+                    <motion.div
+                       key="history"
+                       initial={{ opacity: 0, x: 20 }}
+                       animate={{ opacity: 1, x: 0 }}
+                       exit={{ opacity: 0, x: -20 }}
+                       className="absolute inset-0 z-50 bg-prism-surface"
+                    >
+                        <HistoryPage />
                     </motion.div>
                 )}
              </AnimatePresence>
@@ -269,6 +310,7 @@ function App() {
           <KnotFAB isThinking={mode === 'analyst'} onClick={() => setIsDrawerOpen(!isDrawerOpen)} />
           
           {/* Input - Hackily mocking scenarios via click for prototype */}
+          {mode !== 'gallery' && (
           <div className="absolute bottom-8 left-4 right-4 z-30">
                {/* Always show InputBar in Home mode for V2, or if Chatting */}
                <div onClick={() => {
@@ -293,6 +335,7 @@ function App() {
                    </div>
                )}
           </div>
+          )}
 
         </MobileFrame>
     </div>

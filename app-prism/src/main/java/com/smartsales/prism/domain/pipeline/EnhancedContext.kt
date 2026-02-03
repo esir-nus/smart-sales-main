@@ -12,7 +12,30 @@ data class EnhancedContext(
     val imageAnalysis: List<VisionResult> = emptyList(),
     val memoryHits: List<MemoryHit> = emptyList(),
     val entityContext: Map<String, EntityRef> = emptyMap(),
-    val modeMetadata: ModeMetadata = ModeMetadata()
+    val modeMetadata: ModeMetadata = ModeMetadata(),
+    // Phase 4: Session history for context-aware refinement
+    val sessionHistory: List<ChatTurn> = emptyList(),
+    val lastToolResult: ToolArtifact? = null,
+    val executedTools: Set<String> = emptySet(),
+    // 日期上下文 — LLM 需要知道今天才能正确解析 "明天"、"下周" 等
+    val currentDate: String? = null
+)
+
+/**
+ * 会话轮次（用于历史上下文）
+ */
+data class ChatTurn(
+    val role: String,  // "user" | "assistant"
+    val content: String
+)
+
+/**
+ * 工具执行结果（用于上下文传递）
+ */
+data class ToolArtifact(
+    val toolId: String,
+    val title: String,
+    val preview: String
 )
 
 /**

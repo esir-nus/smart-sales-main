@@ -37,3 +37,15 @@
 ---
 
 <!-- Append new entries below -->
+## 2026-02-02
+
+### Observed Thinking
+- **Cross-Domain Connection**: Checking "Calendar App" fidelity (UX lens) revealed a critical architecture gap (static UI vs functional engine). The "First 5 Seconds" test isn't just for usability—it validates the underlying state model.
+- **Evidence-Based Pivot**: Shifted from "Ship It" to "Fix Click" based on granular audit finding that days were static. Proves that high-level reviews miss low-level interaction failures.
+
+### Communication Style
+- **Direct & Corrective**: "Review should be really comprehensive" -> triggered detailed component breakdown.
+- **Pragmatic**: Accepted hardcoded logic ("fake dots") as long as interaction (click) works.
+
+### Session Flow
+- **High-Level Review** -> **Granular Audit** -> **Refinement Plan**. This "Zoom In" pattern is effective for preventing "Hollow Shell" features.

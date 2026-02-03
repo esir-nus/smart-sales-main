@@ -138,7 +138,7 @@ export const AudioDrawer = ({ isOpen, onClose }: AudioDrawerProps) => {
                         onDragEnd={(_, info) => {
                             if (info.offset.y > 100) onClose();
                         }}
-                        className="absolute top-[5%] left-0 right-0 bottom-0 bg-white rounded-t-3xl z-50 shadow-2xl flex flex-col"
+                        className="absolute top-[5%] left-0 right-0 bottom-0 bg-prism-surface backdrop-blur-3xl rounded-t-[32px] z-50 shadow-glass flex flex-col border-t border-prism-border"
                     >
                         {/* 1. Drag Handle */}
                         <div className="w-full flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing" onClick={onClose}>

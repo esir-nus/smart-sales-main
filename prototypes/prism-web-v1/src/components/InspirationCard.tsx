@@ -1,4 +1,4 @@
-import React from 'react';
+// import React from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Check } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -19,8 +19,8 @@ export const InspirationCard = ({
 
     return (
         <div className={clsx(
-            "p-4 rounded-2xl border shadow-sm relative overflow-hidden transition-all duration-300",
-            selectionMode && isSelected ? "bg-purple-100 border-purple-200" : "bg-purple-50 border-purple-100",
+            "p-4 rounded-2xl border shadow-glass relative overflow-hidden transition-all duration-300",
+            selectionMode && isSelected ? "bg-prism-surface border-prism-accent" : "bg-prism-surface border-prism-border",
             selectionMode && !isSelected && "opacity-60 grayscale-[0.5]" // Dim unselected
         )}>
             <div className="flex items-start gap-3 relative z-10">

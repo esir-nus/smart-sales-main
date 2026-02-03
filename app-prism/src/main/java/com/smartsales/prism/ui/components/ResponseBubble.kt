@@ -41,18 +41,19 @@ fun ResponseBubble(
         is UiState.PlanCard -> {
             // PlanCard 由专门的 PlanCard 组件处理
         }
-        is UiState.AnalystParsing -> {
-            // AnalystParsing 由 Pinned Area 处理
+        
+        // V2: Planner Table 展示
+        is UiState.PlannerTableState -> {
+            com.smartsales.prism.ui.analyst.PlannerTableBubble(
+                table = uiState.table,
+                modifier = modifier
+            )
         }
-        is UiState.AnalystProposal -> {
-            // AnalystProposal 由 Pinned Area 处理
+        
+        is UiState.SchedulerTaskCreated -> {
+            CompleteBubble(content = "已创建任务: ${uiState.title}", modifier = modifier)
         }
-        is UiState.AnalystExecuting -> {
-            // AnalystExecuting 由 Pinned Area 处理
-        }
-        is UiState.AnalystResult -> {
-            // AnalystResult 由 Pinned Area 处理
-        }
+        
         is UiState.Error -> {
             ErrorBubble(message = uiState.message, modifier = modifier)
         }
@@ -175,6 +176,34 @@ private fun ErrorBubble(message: String, modifier: Modifier = Modifier) {
                 text = message,
                 color = Color(0xFFFF6B6B),
                 fontSize = 14.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun ClarifyingBubble(question: String, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E3A5F))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(text = "❓", fontSize = 16.sp)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "需要更多信息",
+                    color = Color(0xFF88CCFF),
+                    fontSize = 14.sp
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = question,
+                color = Color.White,
+                fontSize = 14.sp,
+                lineHeight = 20.sp
             )
         }
     }

@@ -3,7 +3,7 @@ package com.smartsales.prism.di
 import com.smartsales.prism.data.fakes.FakeAudioRepository
 import com.smartsales.prism.data.fakes.FakeConflictResolutionService
 import com.smartsales.prism.data.fakes.FakeConnectivityService
-import com.smartsales.prism.data.fakes.FakeContextBuilder
+import com.smartsales.prism.data.real.RealContextBuilder
 import com.smartsales.prism.data.fakes.FakeExecutor
 import com.smartsales.prism.data.fakes.FakeHistoryRepository
 import com.smartsales.prism.data.fakes.FakeMemoryRepository
@@ -49,7 +49,7 @@ abstract class PrismModule {
     abstract fun bindOrchestrator(impl: PrismOrchestrator): Orchestrator
     
     @Binds @Singleton
-    abstract fun bindContextBuilder(fake: FakeContextBuilder): ContextBuilder
+    abstract fun bindContextBuilder(impl: RealContextBuilder): ContextBuilder
     
     @Binds @Singleton
     abstract fun bindExecutor(impl: DashscopeExecutor): Executor
@@ -97,4 +97,14 @@ abstract class PrismModule {
 
     @Binds @Singleton
     abstract fun bindUserProfileRepository(fake: FakeUserProfileRepository): UserProfileRepository
+
+    // === Analyst Tools ===
+
+    @Binds @Singleton
+    abstract fun bindToolRegistry(fake: com.smartsales.prism.data.fakes.FakeToolRegistry): com.smartsales.prism.domain.analyst.ToolRegistry
+
+    // === Time ===
+
+    @Binds @Singleton
+    abstract fun bindTimeProvider(impl: com.smartsales.prism.data.time.SystemTimeProvider): com.smartsales.prism.domain.time.TimeProvider
 }

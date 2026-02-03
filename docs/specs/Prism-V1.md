@@ -427,7 +427,7 @@ User Input
 ```
 
 ### 4.2 Analyze Mode (The Analyst)
-Heavy reasoning path with Planner-centric execution. See **§2.3 Analyst Mode** and **§4.5-4.6** for planning details.
+Heavy reasoning path with Thinking Trace and Planner Table. See **§2.3 Analyst Mode** and **§4.5-4.6** for planning details.
 
 ```
 User Input
@@ -436,13 +436,13 @@ User Input
 [Context Builder: Relevancy Library + Hot Zone]
     │
     ▼
-[Planner LLM] ──▶ ExecutionPlan (visible Plan Card)
+[Qwen Max (Thinking)] ──stream──▶ [Thinking Trace UI]
     │
     ▼
-[Qwen Max] ──stream──▶ [AnalystPublisher] ──▶ UI
-    │                         │
-    │                   [Chart Tool]
-    │
+[Qwen Max (Structured)] ──stream──▶ [Planner Table (Chat Bubble)]
+    │                                  │
+    │                            [Tool Execution]
+    │                                  │
     └─async─▶ [Memory Writer] ──▶ Hot Zone
 ```
 
@@ -488,34 +488,41 @@ data class ExecutionPlan(
 enum class RetrievalScope { NONE, HOT_ONLY, HOT_AND_CEMENT, DEEP }
 ```
 
-### 4.6 Analyst Planner-Centric Paradigm
+### 4.6 Agent Visibility System
 
-The Analyst workflow uses a **visible planning pattern** to build user trust and handle heavy operations:
+> **Philosophy**: The user should *feel* the agent is smart. This section defines how intelligence is made visible.
+>
+> For detailed audit protocols, see `/agent-visibility` workflow.
 
-| Feature | Behavior |
-|---------|----------|
-| **Plan Card** | Persistent UI card listing deliverables (chapters, insights) |
-| **Task Persistence** | Task buttons stay visible even if user switches to Coach chat |
-| **Fresh Reads** | Each task execution reads **fresh Hot Zone** (eventual consistency) |
-| **Read-Repair** | High-frequency reads opportunistically refresh Relevancy Library |
+The Analyst workflow uses a **three-layer visibility architecture** to showcase agent cognition:
+
+| Layer | Component | Purpose |
+|-------|-----------|---------|
+| **1. Cognition** | **Thinking Trace** | Inline raw reasoning streamed before response. |
+| **2. Structure** | **Planner Table** | Self-updating markdown table within a chat bubble. |
+| **3. Access** | **Task Board** | Sticky top row of shortcut buttons. |
 
 ```
 ┌─────────────────────────────────────────┐
-│  ANALYST PLAN CARD (stays visible)      │
+│  📊 Sales   📈 Competitor   [+] Custom  │ ← Task Board (Sticky)
 ├─────────────────────────────────────────┤
-│  ☑ Chapter 1: Meeting Summary           │
-│  ☐ Chapter 2: Action Items              │
-│  ☐ Chapter 3: Key Insights              │
-│  ☐ Generate Charts                      │
+│  [AI]                                   │
+│  ┌── Thinking ───────────────────────┐  │ ← Thinking Trace
+│  │ Checking Q4 data...               │  │
+│  └───────────────────────────────────┘  │
+│                                         │
+│  | Step | Task | Status |               │ ← Planner Table (Bubble)
+│  |------|------|--------|               │
+│  | 1    | Data | ✅     |               │
+│  | 2    | Viz  | ⏳     |               │
 └─────────────────────────────────────────┘
-            ↑ Persists during Coach chat
 ```
 
-#### 4.6.1 AnalystFlowController (FSM)
+#### 4.6.1 Analyst Pipeline Orchestration
 
-The Analyst mode is driven by a dedicated **Finite State Machine** to manage complex multi-step flows and provide a "Unified Output Center" for the UI.
+The Analyst mode uses a **stateful controller** to orchestrate multi-step analysis flows. This is a **pipeline mechanism**, not a visibility concern — the visibility is handled by `AgentActivityController` (§4.6.2).
 
-**Design Rationale**: Instead of "Boolean Soup" (`isThinking`, `isParsing`, `isRunning`) scattered across a ViewModel, we use a sealed hierarchy managed by a Controller. This improves:
+**Design Rationale**: Instead of "Boolean Soup" (`isThinking`, `isParsing`, `isRunning`) scattered across a ViewModel, we use a sealed hierarchy managed by a Controller.
 - **Debuggability**: Log every state change in one place.
 - **Testability**: Unit test the Controller without mounting UI.
 - **Reusability**: Decoupled from `ChatViewModel`.
@@ -545,9 +552,11 @@ class AnalystFlowController @Inject constructor() {
 **Interruption Handling (Queueing):**
 If user sends input during `Planning` or `Parsing` state, the message is queued in the `Proposal.queue` and processed after the current flow settles. This avoids race conditions.
 
-#### 4.6.2 AgentActivityController (FSM)
+#### 4.6.2 Visibility Mechanism: AgentActivityController
 
-The **AgentActivityController** manages all "thinking" visualization across the app. It uses a **two-tier structure** to showcase agent activity comprehensively—a core product differentiator.
+The **AgentActivityController** is the PRIMARY visibility mechanism — it makes agent cognition visible to users via the **AgentActivityBanner**.
+
+> **Hierarchy**: Visibility channels are the **first debugging entry point**. If the app "feels dumb", audit visibility first, then pipeline logic.
 
 **Two-Tier Structure:**
 
@@ -563,6 +572,7 @@ enum class ActivityPhase {
     PLANNING,      // 📝 规划...
     EXECUTING,     // ⚙️ 执行工具...
     RESPONDING,    // 💬 生成回复...
+    COMPLETED,     // ✅ 思考完成（持久化展示）
     ERROR          // ⚠️ 发生错误
 }
 
@@ -602,7 +612,7 @@ class AgentActivityController @Inject constructor() {
 }
 ```
 
-> **UI Reference**: See `ui_element_registry.md` §6.2 for rendering rules.
+> **UI Reference**: See [AgentActivityBanner.md](./components/AgentActivityBanner.md) for rendering rules.
 
 #### 4.6.3 ThinkingPolicy
 

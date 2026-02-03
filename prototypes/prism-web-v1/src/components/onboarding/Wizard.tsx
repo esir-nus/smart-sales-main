@@ -33,14 +33,14 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
     };
 
     return (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 bg-slate-900 text-white overflow-hidden font-sans">
+        <div className="theme-onboarding absolute inset-0 z-50 flex flex-col items-center justify-center p-6 bg-prism-bg text-prism-primary overflow-hidden font-sans">
             {/* Ambient Background */}
-            <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-gradient-to-br from-blue-900/40 via-purple-900/30 to-slate-900 blur-3xl -z-10 animate-pulse" />
+            <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-gradient-to-br from-prism-accent/20 via-purple-900/30 to-prism-bg blur-3xl -z-10 animate-pulse" />
             
             {/* Progress Indicator (Skip on Welcome & Complete) */}
             {step > 1 && step < 12 && (
-                <div className="absolute top-8 w-64 h-1 bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 transition-all duration-500 ease-out" style={{ width: `${((step - 1) / 11) * 100}%` }} />
+                <div className="absolute top-8 w-64 h-1 bg-prism-surface-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-prism-accent transition-all duration-500 ease-out" style={{ width: `${((step - 1) / 11) * 100}%` }} />
                 </div>
             )}
 
@@ -49,7 +49,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete }
             </AnimatePresence>
             
             {/* Version Watermark */}
-            <div className="absolute bottom-6 text-[10px] text-white/20 font-mono tracking-widest">
+            <div className="absolute bottom-6 text-[10px] text-prism-secondary/50 font-mono tracking-widest">
                 PRISM V15 FULL SPECTRUM • STEP {step}/12
             </div>
         </div>

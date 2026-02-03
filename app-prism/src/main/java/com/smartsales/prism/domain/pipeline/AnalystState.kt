@@ -1,63 +1,52 @@
 package com.smartsales.prism.domain.pipeline
 
+import com.smartsales.prism.domain.analyst.PlannerTable
+
 /**
- * Analyst 模式状态层级
+ * Analyst 模式状态层级 (V2: Three-Layer Intelligence)
  * 
- * 用于 FSM 状态管理，纯数据类保留在 domain 层。
+ * 三阶段：对话 → 结构化 → 执行
  * 
- * @see Prism-V1.md §4.6.1
+ * @see prism-ui-ux-contract.md "Analyst Mode (V2: Three-Layer Intelligence)"
  */
 sealed interface AnalystState : FlowState {
     /** 空闲 - 等待用户输入 */
     data object Idle : AnalystState
 
-    /** 解析中 - 感知阶段 (Ticker) */
-    data class Parsing(
-        val currentTask: String,
-        val progress: Float
+    /** 
+     * Phase 1: 对话阶段 (Conversational Planner)
+     * 
+     * 用户与 AI 对话，AI 使用 Thinking Trace 展示推理过程。
+     */
+    data class Conversing(
+        val trace: List<String> = emptyList()
     ) : AnalystState
 
-    /** 规划中 - 认知阶段 (Thinking Trace) */
-    data class Planning(
-        val trace: List<String>
+    /**
+     * Phase 1 完成: 对话响应 (Plain Text Response)
+     * 
+     * LLM 返回纯文本（非结构化），需要渲染到聊天历史。
+     */
+    data class Responded(
+        val text: String
     ) : AnalystState
 
-    /** 提议 - 等待用户确认 (Plan Card) */
-    data class Proposal(
-        val plan: AnalystPlan,
-        val queue: List<String> = emptyList()
+    /** 
+     * Phase 2: 结构化阶段 (Plan Formalization)
+     * 
+     * AI 生成 Planner Table，展示分析计划。
+     */
+    data class Structured(
+        val table: PlannerTable
     ) : AnalystState
 
-    /** 执行中 - 工具调用 */
+    /** 
+     * Phase 3: 执行阶段 (Execution)
+     * 
+     * 用户从 Task Board 选择工作流，AI 执行并更新状态。
+     */
     data class Executing(
-        val plan: AnalystPlan,
-        val currentStepId: String
-    ) : AnalystState
-
-    /** 完成 - 展示结果 (Artifact Card) */
-    data class Result(
-        val artifact: PlanArtifact
+        val table: PlannerTable,
+        val currentStepIndex: Int
     ) : AnalystState
 }
-
-// ============================================================================
-// 数据类
-// ============================================================================
-
-data class AnalystPlan(
-    val context: String,
-    val goal: String,
-    val highlights: List<String>,
-    val deliverables: List<PlanDeliverable>
-)
-
-data class PlanDeliverable(
-    val id: String,
-    val label: String
-)
-
-data class PlanArtifact(
-    val title: String,
-    val type: String,
-    val previewText: String
-)

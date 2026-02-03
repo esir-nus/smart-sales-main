@@ -9,7 +9,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,31 +24,37 @@ import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Icon
-import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.ExperimentalMaterial3Api
+import com.smartsales.prism.ui.theme.*
 
 /**
- * Scheduler Timeline Layout
- * @see prism-ui-ux-contract.md §1.3 "Timeline (Adaptive Stack)"
- * 
- * Adaptive stack: time labels on left, cards on right.
- * No fixed height per hour - cards stack naturally with 16dp spacing.
+ * Scheduler Timeline Layout (Sleek Glass Version)
+ * @see prism-ui-ux-contract.md §1.3
  */
 @Composable
 fun SchedulerTimeline(
     items: List<TimelineItem>,
-    onInteraction: (String) -> Unit // Generic callback for skeleton clicks
+    onItemClick: (String) -> Unit,
+    onDelete: (String) -> Unit,
+    onReschedule: (String, String) -> Unit, // id, userText
+    onMultiSelectToggle: (String) -> Unit,
+    onEnterMultiSelect: () -> Unit
 ) {
-
-
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        items(items) { item ->
-            TimelineRow(item = item, onInteraction = onInteraction)
+        items(items, key = { it.id }) { item ->
+            TimelineRow(
+                item = item, 
+                onItemClick = onItemClick,
+                onDelete = onDelete,
+                onReschedule = onReschedule,
+                onMultiSelectToggle = onMultiSelectToggle,
+                onEnterMultiSelect = onEnterMultiSelect
+            )
         }
         
         // Bottom spacer for overscroll
@@ -60,7 +65,11 @@ fun SchedulerTimeline(
 @Composable
 private fun TimelineRow(
     item: TimelineItem,
-    onInteraction: (String) -> Unit
+    onItemClick: (String) -> Unit,
+    onDelete: (String) -> Unit,
+    onReschedule: (String, String) -> Unit,
+    onMultiSelectToggle: (String) -> Unit,
+    onEnterMultiSelect: () -> Unit
 ) {
     // Local expansion state for this row item
     var isExpanded by remember { mutableStateOf(false) }
@@ -74,43 +83,41 @@ private fun TimelineRow(
         Text(
             text = item.timeDisplay,
             fontSize = 12.sp,
-            color = Color(0xFF999999),
+            color = TextMuted,
             fontFamily = FontFamily.Monospace,
             modifier = Modifier
                 .width(48.dp)
-                .padding(top = 4.dp) // Align with card text top
+                .padding(top = 4.dp)
         )
         
         // Right: Card Content
         Column(modifier = Modifier.weight(1f)) {
             when (item) {
                 is TimelineItem.Task -> {
-                    // Determine slide direction based on exitDirection
                     val slideOffset: (Int) -> Int = if (item.exitDirection == ExitDirection.LEFT) {
-                        { -it } // Slide LEFT (to past)
+                        { -it }
                     } else {
-                        { it }  // Slide RIGHT (to future, default)
+                        { it }
                     }
                     
                     AnimatedVisibility(
                         visible = !item.isExiting,
                         exit = slideOutHorizontally(
                             targetOffsetX = slideOffset,
-                            // FastOutSlowInEasing: slow start → fast finish (momentum feel)
                             animationSpec = tween(350, easing = FastOutSlowInEasing)
                         ) + fadeOut(animationSpec = tween(350, easing = FastOutSlowInEasing))
                     ) {
                         SwipeableCardItem(
                             itemId = item.id,
-                            onDelete = { onInteraction("delete_${item.id}") },
-                            enabled = !isExpanded // Disable swipe when expanded
+                            onDelete = { onDelete(item.id) },
+                            enabled = !isExpanded
                         ) {
                             TaskCard(
                                 state = item,
                                 isExpanded = isExpanded,
                                 onExpandToggle = { isExpanded = !isExpanded },
-                                onClick = { onInteraction("task_${item.id}") },
-                                onReschedule = { text -> onInteraction("reschedule_${item.id}_$text") }
+                                onClick = { onItemClick(item.id) },
+                                onReschedule = { text -> onReschedule(item.id, text) }
                             )
                         }
                     }
@@ -118,26 +125,29 @@ private fun TimelineRow(
                 is TimelineItem.Inspiration -> {
                     SwipeableCardItem(
                         itemId = item.id,
-                        onDelete = { onInteraction("delete_${item.id}") }
+                        onDelete = { onDelete(item.id) }
                     ) {
                         InspirationCard(
                             state = item,
-                            onAskAI = { onInteraction("ask_ai_${item.id}") },
-                            onToggleSelection = { onInteraction("select_${item.id}") }
+                            onAskAI = { 
+                                onEnterMultiSelect()
+                                onMultiSelectToggle(item.id) // Select this one
+                            },
+                            onToggleSelection = { onMultiSelectToggle(item.id) }
                         )
                     }
                 }
                 is TimelineItem.Conflict -> {
                     SwipeableCardItem(
                         itemId = item.id,
-                        onDelete = { onInteraction("delete_${item.id}") },
-                        enabled = !isExpanded // Disable swipe when expanded
+                        onDelete = { onDelete(item.id) },
+                        enabled = !isExpanded
                     ) {
                         ConflictCard(
                             state = item,
                             isExpanded = isExpanded,
                             onExpandToggle = { isExpanded = !isExpanded },
-                            onRemove = { onInteraction("conflict_resolve_${item.id}") }
+                            onRemove = { onDelete(item.id) } // Treat resolve as delete for now
                         )
                     }
                 }
@@ -151,39 +161,56 @@ private fun TimelineRow(
 private fun SwipeableCardItem(
     itemId: String,
     onDelete: () -> Unit,
-    enabled: Boolean = true, // Added enabled param
+    enabled: Boolean = true,
     content: @Composable () -> Unit
 ) {
+    val currentOnDelete by rememberUpdatedState(onDelete)
+    
     val dismissState = rememberSwipeToDismissBoxState(
-        positionalThreshold = { totalDistance -> totalDistance * 0.25f }, // 25% Threshold
+        positionalThreshold = { totalDistance -> totalDistance * 0.25f },
         confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.StartToEnd) { // Left-to-Right delete
-                onDelete()
+            if (value == SwipeToDismissBoxValue.StartToEnd) {
+                currentOnDelete()
                 true
             } else {
                 false
             }
         }
     )
+    
+    // Reset dismiss state when item changes
+    LaunchedEffect(itemId) {
+        dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+    }
 
     SwipeToDismissBox(
         state = dismissState,
-        enableDismissFromStartToEnd = enabled, // Respect enabled flag (L->R)
-        enableDismissFromEndToStart = false, // Disable R->L
+        enableDismissFromStartToEnd = enabled,
+        enableDismissFromEndToStart = false,
         backgroundContent = {
-            val color = Color(0xFFFFCDD2) // Light red
+            // Only show background when actively swiping (not settled)
+            val isSwiping = dismissState.targetValue != SwipeToDismissBoxValue.Settled
+            
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(color, androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                    .then(
+                        if (isSwiping) {
+                            Modifier.background(AccentDanger.copy(alpha = 0.1f), GlassCardShape)
+                        } else {
+                            Modifier
+                        }
+                    )
                     .padding(horizontal = 20.dp),
-                contentAlignment = Alignment.CenterStart // Icon on Left
+                contentAlignment = Alignment.CenterStart
             ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = Color.Red
-                )
+                if (isSwiping) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = AccentDanger
+                    )
+                }
             }
         },
         content = { content() }

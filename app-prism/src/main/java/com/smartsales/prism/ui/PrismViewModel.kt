@@ -20,12 +20,12 @@ import javax.inject.Inject
  * Prism ViewModel
  * 
  * Manages UI state for the Prism chat interface.
- * Uses Orchestrator (currently FakeOrchestrator) for processing.
+ * Uses V2 Analyst Controller for Analyst mode.
  */
 @HiltViewModel
 class PrismViewModel @Inject constructor(
     private val orchestrator: Orchestrator,
-    private val analystController: com.smartsales.prism.data.real.AnalystFlowController,
+    private val analystController: com.smartsales.prism.data.real.AnalystFlowControllerV2,
     private val activityController: com.smartsales.prism.domain.activity.AgentActivityController
 ) : ViewModel() {
     
@@ -54,6 +54,9 @@ class PrismViewModel @Inject constructor(
     private val _history = MutableStateFlow<List<ChatMessage>>(emptyList())
     val history: StateFlow<List<ChatMessage>> = _history.asStateFlow()
 
+    // V2: Task Board items
+    val taskBoardItems: StateFlow<List<com.smartsales.prism.domain.analyst.TaskBoardItem>> = analystController.taskBoardItems
+
     // v2.6 Spec: Editable Session Title ("Executive Desk")
     private val _sessionTitle = MutableStateFlow("新对话") // Default: "New Session" (Localized)
     val sessionTitle: StateFlow<String> = _sessionTitle.asStateFlow()
@@ -65,47 +68,36 @@ class PrismViewModel @Inject constructor(
     }
 
     init {
-        // Observe Analyst FSM and map to UiState
-        // ALSO persist AI responses to history so they don't vanish
+        // V2: Observe Analyst FSM and map to UiState
         viewModelScope.launch {
             analystController.state.collect { fsmState ->
                 when (fsmState) {
-                    is com.smartsales.prism.domain.pipeline.AnalystState.Parsing -> {
-                        _uiState.value = UiState.AnalystParsing(fsmState.currentTask, fsmState.progress)
+                    is com.smartsales.prism.domain.pipeline.AnalystState.Conversing -> {
+                        // Thinking trace shown via Activity Banner
+                        _uiState.value = UiState.Thinking(fsmState.trace.lastOrNull() ?: "分析中...")
                     }
-                    is com.smartsales.prism.domain.pipeline.AnalystState.Planning -> {
-                        val thinkingState = UiState.Thinking("Brain: " + fsmState.trace.lastOrNull().orEmpty())
-                        _uiState.value = thinkingState
-                        // 持久化 ThinkingBox 到历史 (保持可见，Response 会跟随在后)
+                    is com.smartsales.prism.domain.pipeline.AnalystState.Structured -> {
+                        val tableState = UiState.PlannerTableState(fsmState.table)
+                        _uiState.value = tableState
+                        // Add to history
                         val aiMsg = ChatMessage.Ai(
                             id = java.util.UUID.randomUUID().toString(),
                             timestamp = System.currentTimeMillis(),
-                            uiState = thinkingState
-                        )
-                        _history.value += aiMsg
-                    }
-                    is com.smartsales.prism.domain.pipeline.AnalystState.Proposal -> {
-                        val proposalState = UiState.AnalystProposal(fsmState.plan)
-                        _uiState.value = proposalState
-                        // 持久化 Plan Card 到历史
-                        val aiMsg = ChatMessage.Ai(
-                            id = java.util.UUID.randomUUID().toString(),
-                            timestamp = System.currentTimeMillis(),
-                            uiState = proposalState
+                            uiState = tableState
                         )
                         _history.value += aiMsg
                     }
                     is com.smartsales.prism.domain.pipeline.AnalystState.Executing -> {
-                        _uiState.value = UiState.AnalystExecuting("执行计划中...")
+                        _uiState.value = UiState.Thinking("执行计划中...")
                     }
-                    is com.smartsales.prism.domain.pipeline.AnalystState.Result -> {
-                        val resultState = UiState.AnalystResult(fsmState.artifact)
-                        _uiState.value = resultState
-                        // 持久化 Artifact Card 到历史
+                    is com.smartsales.prism.domain.pipeline.AnalystState.Responded -> {
+                        // Phase 1 完成: 纯文本响应 → 渲染到聊天历史
+                        val responseState = UiState.Response(fsmState.text)
+                        _uiState.value = responseState
                         val aiMsg = ChatMessage.Ai(
                             id = java.util.UUID.randomUUID().toString(),
                             timestamp = System.currentTimeMillis(),
-                            uiState = resultState
+                            uiState = responseState
                         )
                         _history.value += aiMsg
                     }
@@ -124,6 +116,7 @@ class PrismViewModel @Inject constructor(
         _sessionTitle.value = "新对话"
         _inputText.value = ""
         _uiState.value = UiState.Idle
+        activityController.reset() // 清除持久化的 ThinkingBox
     }
     
     fun switchMode(mode: Mode) {
@@ -161,21 +154,11 @@ class PrismViewModel @Inject constructor(
         _history.value += userMsg
         _inputText.value = ""
 
-        // Check for Analyst Plan Confirmation
-        val currentState = uiState.value
-        if (currentState is UiState.AnalystProposal) {
-             // Mock Mode: Any input confirms the plan to keep the flow moving
-             viewModelScope.launch {
-                 analystController.confirmPlan()
-             }
-             return
-        }
-
-        // Analyst Mode Trigger
+        // V2: Analyst Mode uses V2 Controller
         if (currentMode.value == Mode.ANALYST) {
-            _isSending.value = true // Show loading briefly
+            _isSending.value = true
             viewModelScope.launch {
-                analystController.startAnalysis(input)
+                analystController.handleInput(input)
                 _isSending.value = false
             }
             return
@@ -216,5 +199,18 @@ class PrismViewModel @Inject constructor(
      */
     fun cycleDebugState() {
          // Deprecated by FSM
+    }
+
+    // ========================================================================
+    // V2: Task Board Interaction
+    // ========================================================================
+    
+    /**
+     * Handle Task Board item selection
+     */
+    fun selectTaskBoardItem(itemId: String) {
+        viewModelScope.launch {
+            analystController.selectTaskBoardItem(itemId)
+        }
     }
 }

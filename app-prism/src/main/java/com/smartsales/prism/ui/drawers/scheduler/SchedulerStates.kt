@@ -24,10 +24,14 @@ sealed class TimelineItem {
         val title: String,
         val isDone: Boolean = false,
         val hasAlarm: Boolean = false,
+        val isSmartAlarm: Boolean = false, // "智能提醒" badge
         // Expanded Fields
         val dateRange: String = "08:00 - 09:00",
         val location: String? = null,
         val notes: String? = null,
+        val keyPerson: String? = null,
+        val highlights: String? = null,
+        val alarmCascade: List<String>? = null, // e.g. ["-1h", "-15m", "-5m"]
         val processingStatus: String? = null, // For Fake I/O Overlay
         val isExiting: Boolean = false, // For Reschedule Animation
         val exitDirection: ExitDirection = ExitDirection.RIGHT // Default: slide right (to future)

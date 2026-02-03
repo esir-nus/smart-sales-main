@@ -6,7 +6,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
@@ -28,30 +27,31 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.drawBehind
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.smartsales.prism.ui.components.PrismSurface
 import com.smartsales.prism.ui.drawers.audio.AudioViewModel
+import com.smartsales.prism.ui.theme.*
 
 /**
- * Audio Drawer — Bottom-Up Sheet
+ * Audio Drawer — Bottom-Up Sheet (Sleek Glass Version)
  * @see prism-ui-ux-contract.md §1.8
  */
 @Composable
 fun AudioDrawer(
     isOpen: Boolean,
     onDismiss: () -> Unit,
-    onNavigateToChat: (sessionId: String) -> Unit,  // 导航到分析会话
+    onNavigateToChat: (sessionId: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AudioViewModel = hiltViewModel()
 ) {
-    // 从 ViewModel 收集数据
     val audioItems by viewModel.audioItems.collectAsState()
 
     AnimatedVisibility(
         visible = isOpen,
         enter = slideInVertically(
-            initialOffsetY = { it }, // Slide up from bottom
+            initialOffsetY = { it },
             animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy, // 0.65-0.75 range
-                stiffness = Spring.StiffnessMedium // Approx 200 stiffness
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMedium
             )
         ),
         exit = slideOutVertically(
@@ -67,155 +67,145 @@ fun AudioDrawer(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.3f))
+                    .background(BackdropScrim)
                     .clickable { onDismiss() }
             )
 
-            // Drawer Content
-            Column(
+            // Drawer Content (Glass Sheet)
+            PrismSurface(
                 modifier = modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.95f) // 95% height
-                    .background(
-                        Color.White, // v2.6 Fix: Clean White (was F7F8FA)
-                        RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
-                    )
+                    .fillMaxHeight(0.95f), // 95% height
+                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                backgroundColor = BackgroundSurface.copy(alpha = 0.95f), // Slightly more opaque for sheet
+                elevation = 16.dp
             ) {
-                // 1. Drag Handle Pill
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp, bottom = 8.dp)
-                        .pointerInput(Unit) {
-                            detectVerticalDragGestures { change, dragAmount ->
-                                change.consume()
-                                if (dragAmount > 20) onDismiss() // Simple drag down logic
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // 1. Drag Handle Pill
                     Box(
                         modifier = Modifier
-                            .width(40.dp)
-                            .height(4.dp)
-                            .background(Color(0xFFDDDDDD), RoundedCornerShape(2.dp))
-                    )
-                }
-
-                // 2. Header
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "录音文件",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF333333)
-                    )
-                    
-                    // Sync Status Pill (Green)
-                    Surface(
-                        color = Color(0xFFE8F5E9), // Light Green
-                        shape = RoundedCornerShape(16.dp)
+                            .fillMaxWidth()
+                            .padding(top = 12.dp, bottom = 8.dp)
+                            .pointerInput(Unit) {
+                                detectVerticalDragGestures { change, dragAmount ->
+                                    change.consume()
+                                    if (dragAmount > 20) onDismiss()
+                                }
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Smartphone, // Placeholder for badge icon
-                                contentDescription = null,
-                                tint = Color(0xFF4CAF50),
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "SmartBadge 已同步",
-                                color = Color(0xFF4CAF50),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-
-                // 3. List
-                // State Hoisting: Only one card expanded at a time
-                var expandedCardId by remember { mutableStateOf<String?>(null) }
-                
-                // Dialog States
-                var showRenameDialog by remember { mutableStateOf<Pair<String, String>?>(null) } // Pair(Id, CurrentName)
-
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 20.dp)
-                ) {
-                    items(items = audioItems, key = { it.id }) { item ->
-                        val isExpanded = expandedCardId == item.id
-                        
-                        AudioCard(
-                            item = item,
-                            isExpanded = isExpanded,
-                            onClick = { 
-                                // Toggle Logic: Click Open -> Expand; Click Open again -> Collapse
-                                expandedCardId = if (isExpanded) null else item.id 
-                            },
-                            onStarClick = { viewModel.toggleStar(item.id) },
-                            onAskAi = { id -> 
-                                val sessionId = viewModel.onAskAi(id)
-                                onNavigateToChat(sessionId)
-                            },
-                            onTranscribe = { id -> viewModel.startTranscription(id) },
-                            onDelete = { id -> viewModel.deleteAudio(id) },
-                            onRename = { id -> showRenameDialog = id to item.filename }
+                        Box(
+                            modifier = Modifier
+                                .width(40.dp)
+                                .height(4.dp)
+                                .background(Color.Gray.copy(alpha = 0.3f), RoundedCornerShape(2.dp))
                         )
                     }
-                    
-                    // 4. Footer Upload Button as last item
-                    item {
-                        UploadButton()
+
+                    // 2. Header
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "录音文件",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 20.sp
+                            ),
+                            color = TextPrimary
+                        )
+                        
+                        // Sync Status Pill (Glass Green)
+                        Surface(
+                            color = AccentSecondary.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(16.dp),
+                            border = androidx.compose.foundation.BorderStroke(0.5.dp, AccentSecondary.copy(alpha = 0.2f))
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Smartphone,
+                                    contentDescription = null,
+                                    tint = AccentSecondary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "SmartBadge 已同步",
+                                    color = AccentSecondary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+
+                    // 3. List
+                    var expandedCardId by remember { mutableStateOf<String?>(null) }
+                    var showRenameDialog by remember { mutableStateOf<Pair<String, String>?>(null) }
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(bottom = 20.dp)
+                    ) {
+                        items(items = audioItems, key = { it.id }) { item ->
+                            val isExpanded = expandedCardId == item.id
+                            
+                            AudioCard(
+                                item = item,
+                                isExpanded = isExpanded,
+                                onClick = { expandedCardId = if (isExpanded) null else item.id },
+                                onStarClick = { viewModel.toggleStar(item.id) },
+                                onAskAi = { id -> 
+                                    val sessionId = viewModel.onAskAi(id)
+                                    onNavigateToChat(sessionId)
+                                },
+                                onTranscribe = { id -> viewModel.startTranscription(id) },
+                                onDelete = { id -> viewModel.deleteAudio(id) },
+                                onRename = { id -> showRenameDialog = id to item.filename }
+                            )
+                        }
+                        
+                        item { UploadButton() }
+                        item { Spacer(modifier = Modifier.height(30.dp)) }
                     }
                     
-                    // Bottom Spacer
-                    item { Spacer(modifier = Modifier.height(30.dp)) }
-                }
-                
-                // Wrapper for Dialog to be on top of LazyColumn but inside Drawer
-                if (showRenameDialog != null) {
-                    val (id, currentName) = showRenameDialog!!
-                    var newName by remember { mutableStateOf(currentName) }
-                    
-                    AlertDialog(
-                        onDismissRequest = { showRenameDialog = null },
-                        title = { Text("重命名录音") },
-                        text = {
-                            OutlinedTextField(
-                                value = newName,
-                                onValueChange = { newName = it },
-                                label = { Text("文件名") },
-                                singleLine = true
-                            )
-                        },
-                        confirmButton = {
-                            TextButton(
-                                onClick = { 
-                                    // TODO: Implement rename in ViewModel
-                                    println("Rename $id to $newName") 
-                                    showRenameDialog = null 
-                                }
-                            ) { Text("确认") }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { showRenameDialog = null }) { Text("取消") }
-                        }
-                    )
+                    // Dialog
+                    if (showRenameDialog != null) {
+                        val (id, currentName) = showRenameDialog!!
+                        var newName by remember { mutableStateOf(currentName) }
+                        
+                        AlertDialog(
+                            onDismissRequest = { showRenameDialog = null },
+                            title = { Text("重命名录音") },
+                            text = {
+                                OutlinedTextField(
+                                    value = newName,
+                                    onValueChange = { newName = it },
+                                    label = { Text("文件名") },
+                                    singleLine = true
+                                )
+                            },
+                            confirmButton = {
+                                TextButton(onClick = { showRenameDialog = null }) { Text("确认") }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showRenameDialog = null }) { Text("取消") }
+                            },
+                            containerColor = BackgroundSurface,
+                            titleContentColor = TextPrimary,
+                            textContentColor = TextSecondary
+                        )
+                    }
                 }
             }
         }
@@ -235,7 +225,7 @@ private fun UploadButton() {
             .height(56.dp)
             .drawBehind {
                 drawRoundRect(
-                    color = Color(0xFFDDDDDD),
+                    color = Color.LightGray,
                     style = stroke,
                     cornerRadius = androidx.compose.ui.geometry.CornerRadius(12.dp.toPx())
                 )
@@ -248,14 +238,14 @@ private fun UploadButton() {
             Text(
                 text = "+",
                 fontSize = 18.sp,
-                color = Color(0xFF888888),
+                color = TextMuted,
                 modifier = Modifier.padding(bottom = 2.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "上传本地音频",
                 fontSize = 14.sp,
-                color = Color(0xFF888888),
+                color = TextMuted,
                 fontWeight = FontWeight.Medium
             )
         }

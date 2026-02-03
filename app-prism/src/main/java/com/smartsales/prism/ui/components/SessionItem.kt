@@ -11,15 +11,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
+import com.smartsales.prism.ui.theme.*
 
 /**
- * 会话项 — 最小化单行格式
- * 格式: [ClientName]_[Summary (6 chars)]
- * 双色: 粗体白色标题 + 灰色摘要
- * 
- * 交互:
- * - 点击: 加载会话
- * - 长按: 上下文菜单 (置顶/重命名/删除)
+ * Session Item (Sleek Glass Version)
+ * Clean, light-theme compatible row.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -37,25 +34,26 @@ fun SessionItem(
                 onClick = onClick,
                 onLongClick = onLongPress
             )
-            .padding(vertical = 10.dp)
+            .padding(vertical = 12.dp, horizontal = 4.dp)
     ) {
-        // 客户名/标题 - 粗体白色
+        // Client Name - Primary Text
         Text(
             text = clientName,
-            fontWeight = FontWeight.Bold,
-            color = Color.White,
+            fontWeight = FontWeight.SemiBold,
+            color = TextPrimary,
+            style = MaterialTheme.typography.bodyMedium,
             fontSize = 14.sp
         )
-        // 分隔符
+        // Separator
         Text(
-            text = "_",
-            color = Color(0xFF888888),
+            text = " · ",
+            color = TextTertiary,
             fontSize = 14.sp
         )
-        // 摘要 - 灰色 (最多6字符)
+        // Summary - Muted Text
         Text(
-            text = summary.take(6),
-            color = Color(0xFF888888),
+            text = summary.take(10),
+            color = TextSecondary,
             fontSize = 14.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis

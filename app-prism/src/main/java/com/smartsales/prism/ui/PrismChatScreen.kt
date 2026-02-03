@@ -6,23 +6,40 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Star // v2.6 Home Hero Fallback
+
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.TextSnippet
+import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.TextSnippet
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.outlined.ChatBubble
+import androidx.compose.material.icons.outlined.CenterFocusStrong
+import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material3.*
-import androidx.compose.animation.core.* // v2.6 Home Hero Animation
-import androidx.compose.ui.graphics.Brush // v2.6 Home Hero Gradient
-import androidx.compose.ui.graphics.graphicsLayer // v2.6 Home Hero Layer
-import android.view.HapticFeedbackConstants // v2.6 Haptic
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.animation.core.*
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import android.view.HapticFeedbackConstants
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,18 +47,22 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.smartsales.prism.domain.model.ChatMessage
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.model.UiState
-import com.smartsales.prism.ui.components.InputBar
-import com.smartsales.prism.ui.components.PlanCard
-import com.smartsales.prism.ui.components.ResponseBubble
-import com.smartsales.prism.ui.components.UserBubble
-import com.smartsales.prism.ui.components.AgentActivityBanner
+import com.smartsales.prism.ui.components.*
 import com.smartsales.prism.domain.activity.AgentActivity
 import com.smartsales.prism.domain.activity.ThinkingPolicy
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.SolidColor
+import com.smartsales.prism.ui.theme.*
 
 /**
- * Prism Chat Screen
+ * Prism Chat Screen (Sleek Glass Version)
  * 
- * Main chat interface for the Prism monolith.
+ * - Removes opaque background (relies on Shell)
+ * - Glass Chat Header
+ * - Glass Mode Toggle
+ * - Aurora Home Hero
  */
 @Composable
 fun PrismChatScreen(
@@ -49,8 +70,8 @@ fun PrismChatScreen(
     onMenuClick: () -> Unit = {},
     onNewSessionClick: () -> Unit = {},
     onAudioBadgeClick: () -> Unit = {},
-    onTingwuClick: () -> Unit = {}, // v2.6.5 Floating Action
-    onArtifactsClick: () -> Unit = {} // v2.6.5 Floating Action
+    onTingwuClick: () -> Unit = {},
+    onArtifactsClick: () -> Unit = {}
 ) {
     val currentMode by viewModel.currentMode.collectAsState()
     val history by viewModel.history.collectAsState()
@@ -58,13 +79,13 @@ fun PrismChatScreen(
     val inputText by viewModel.inputText.collectAsState()
     val isSending by viewModel.isSending.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
-    val sessionTitle by viewModel.sessionTitle.collectAsState() // Observe Title
-    val agentActivity by viewModel.agentActivity.collectAsState() // Agent Activity (Thinking Trace)
-    val toastMessage by viewModel.toastMessage.collectAsState() // Toast Message
+    val sessionTitle by viewModel.sessionTitle.collectAsState()
+    val agentActivity by viewModel.agentActivity.collectAsState()
+    val toastMessage by viewModel.toastMessage.collectAsState()
+    val taskBoardItems by viewModel.taskBoardItems.collectAsState()
 
     val context = LocalContext.current
     
-    // 显示 Toast 消息
     LaunchedEffect(toastMessage) {
         toastMessage?.let {
             Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
@@ -72,437 +93,393 @@ fun PrismChatScreen(
         }
     }
 
-    PrismChatContent(
-        currentMode = currentMode,
-        history = history,
-        uiState = uiState,
-        inputText = inputText,
-        isSending = isSending,
-        errorMessage = errorMessage,
-        sessionTitle = sessionTitle, // Pass Title
-        onModeSwitch = viewModel::switchMode,
-        onInputChanged = viewModel::updateInput,
-        onSend = viewModel::send,
-        onClearError = viewModel::clearError,
-        onMenuClick = onMenuClick,
-        onNewSessionClick = viewModel::startNewSession, // Connect to VM
-        onAudioBadgeClick = onAudioBadgeClick,
-        onDebugClick = viewModel::cycleDebugState,
-        onTitleChange = viewModel::updateSessionTitle,
-        onTingwuClick = onTingwuClick,
-        onArtifactsClick = onArtifactsClick,
-        agentActivity = agentActivity
-    )
-}
-
-@Composable
-private fun PrismChatContent(
-    currentMode: Mode,
-    history: List<ChatMessage>,
-    uiState: UiState,
-    inputText: String,
-    isSending: Boolean,
-    errorMessage: String?,
-    sessionTitle: String, // v2.6
-    onModeSwitch: (Mode) -> Unit,
-    onInputChanged: (String) -> Unit,
-    onSend: () -> Unit,
-    onClearError: () -> Unit,
-    onMenuClick: () -> Unit,
-    onNewSessionClick: () -> Unit,
-    onAudioBadgeClick: () -> Unit,
-    onDebugClick: () -> Unit,
-    onTitleChange: (String) -> Unit, // v2.6
-    onTingwuClick: () -> Unit,
-    onArtifactsClick: () -> Unit,
-    agentActivity: AgentActivity? = null
-) {
-    val context = LocalContext.current
-    
-    Column(
+    /* 
+     * Pro Max Layout Strategy:
+     * - Everything floats in a Box (The "Void")
+     * - Header: Absolute Top
+     * - Content: Padding for Header/Dock
+     * - Dock: Absolute Bottom
+     * - FABs: Absolute Right center
+     */
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0D0D1A))
-            .navigationBarsPadding()
-            .imePadding()
-            .padding(16.dp)
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFFAFAFC), // Top: Very light gray
+                        Color(0xFFF5F0F8), // Middle: Soft lavender hint
+                        Color(0xFFEDE5F2)  // Bottom: Subtle purple aurora
+                    )
+                )
+            )
     ) {
-        // 聊天头部 (v2.6 Updated: Editable Title + Placeholders)
-        ChatHeader(
-            sessionTitle = sessionTitle,
-            onMenuClick = onMenuClick,
-            onNewSessionClick = onNewSessionClick,
-            onAudioBadgeClick = onAudioBadgeClick,
-            onDebugClick = { 
-                onDebugClick()
-                Toast.makeText(context, "调试状态切换中...", Toast.LENGTH_SHORT).show()
-            },
-            onTitleChange = onTitleChange
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // v2.6: Home Hero (Breathing Aura + Greeting)
-        // Only visible when history is empty (Clean Desk state)
-        if (history.isEmpty()) {
-            HomeHero(context = context)
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-
-        // AgentActivityBanner now renders INSIDE LazyColumn as inline AI response start
-
-        // --- MAIN CONTENT AREA (weighted) ---
-        // Single Box that contains:
-        // - LazyColumn (always, for chat history)
-        // - Floating Actions (overlaid when history is empty)
-        Box(
+        // --- Layer 1: Main Scrollable Content ---
+        Column(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
+                .fillMaxSize()
+                .statusBarsPadding()
+                .padding(top = 80.dp) // Space for Floating Header
+                .navigationBarsPadding()
+                .padding(bottom = 140.dp) // Space for Dock
         ) {
-            // 对话区域 (always present, may be empty)
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 16.dp),
-                reverseLayout = true
-            ) {
-                // 1. Agent Activity Banner (inline as first item - represents current AI turn)
-                // This includes AgentActivityBanner for new two-tier system + legacy fallbacks
-                agentActivity?.let { activity ->
-                    item {
-                        val maxLines = ThinkingPolicy.maxTraceLines(currentMode)
-                        AgentActivityBanner(
-                            activity = activity,
-                            maxLines = maxLines
-                        )
-                    }
-                }
-                
-                // Legacy transient states (fallback when agentActivity is null)
-                if (agentActivity == null && uiState !is UiState.Idle && uiState !is UiState.Error) {
-                    item {
-                        when (uiState) {
-                            is UiState.AnalystParsing -> {
-                                com.smartsales.prism.ui.components.ThinkingTicker(
-                                    text = uiState.ticker,
-                                    progress = uiState.progress
-                                )
-                            }
-                            is UiState.AnalystExecuting -> {
-                                Text("⚙️ ${uiState.planTitle}", color = Color.Cyan) 
-                            }
-                            is UiState.Response -> {
-                                ResponseBubble(uiState = uiState as UiState.Response)
-                            }
-                            else -> {}
-                        }
-                    }
-                }
-
-                // 2. 历史消息 (包括 Plan Card 和 Artifact Card)
-                items(history.reversed()) { message ->
-                    when (message) {
-                        is ChatMessage.User -> UserBubble(text = message.content)
-                        is ChatMessage.Ai -> {
-                            when (val state = message.uiState) {
-                                is UiState.Response -> ResponseBubble(uiState = state)
-                                is UiState.AnalystProposal -> {
-                                    com.smartsales.prism.ui.components.AnalystProposalCard(
-                                        plan = state.plan
-                                    )
-                                }
-                                is UiState.AnalystResult -> {
-                                    com.smartsales.prism.ui.components.ArtifactCard(
-                                        artifact = state.artifact,
-                                        onFullView = { Toast.makeText(context, "正在打开全文...", Toast.LENGTH_SHORT).show() },
-                                        onDownload = { Toast.makeText(context, "正在下载 PDF...", Toast.LENGTH_SHORT).show() },
-                                        onShare = { Toast.makeText(context, "正在分享...", Toast.LENGTH_SHORT).show() }
-                                    )
-                                }
-                                is UiState.PlanCard -> {
-                                    PlanCard(
-                                        plan = state.plan,
-                                        completedSteps = state.completedSteps
-                                    )
-                                }
-                                is UiState.Thinking -> {
-                                    // 历史化的 ThinkingBox (已完成的思考过程)
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text("🧠 ", fontSize = 14.sp)
-                                        Text(
-                                            text = state.hint ?: "思考完成",
-                                            color = Color(0xFF88CCFF),
-                                            fontSize = 12.sp,
-                                            maxLines = 2
-                                        )
-                                    }
-                                }
-                                else -> Text("暂不支持的消息类型", color = Color.Gray)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Floating Actions (Clean Desk - overlaid on right side when no history)
+            // Hero (Only if empty history)
             if (history.isEmpty()) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(end = 16.dp),
-                    contentAlignment = Alignment.CenterEnd
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.TopCenter // Fixed: Top alignment
                 ) {
-                    HomeFloatingActions(
-                        onTingwuClick = onTingwuClick,
-                        onArtifactsClick = onArtifactsClick
+                    HomeHero()
+                }
+            } else {
+                // V2: Task Board for Analyst Mode — STICKY
+                if (currentMode == Mode.ANALYST && taskBoardItems.isNotEmpty()) {
+                    com.smartsales.prism.ui.analyst.TaskBoard(
+                        items = taskBoardItems,
+                        onItemClick = viewModel::selectTaskBoardItem
                     )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // Chat List
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    reverseLayout = true
+                ) {
+                    // (Chat Content Logic - Same as before)
+                    // 1. Agent Activity
+                    agentActivity?.let { activity ->
+                        item {
+                            val maxLines = ThinkingPolicy.maxTraceLines(currentMode)
+                            val autoCollapse = ThinkingPolicy.shouldAutoCollapse(currentMode)
+                            AgentActivityBanner(activity, maxLines, autoCollapse)
+                        }
+                    }
+                    
+                    // Legacy Fallback
+                    val currentUiState = uiState
+                    if (agentActivity == null && currentUiState !is UiState.Idle && currentUiState !is UiState.Error) {
+                        item {
+                            when (currentUiState) {
+                                is UiState.Response -> ResponseBubble(uiState = currentUiState)
+                                is UiState.PlannerTableState -> com.smartsales.prism.ui.analyst.PlannerTableBubble(table = currentUiState.table)
+                                else -> {}
+                            }
+                        }
+                    }
+
+                    // 2. Message History
+                    items(history.reversed()) { message ->
+                        when (message) {
+                            is ChatMessage.User -> UserBubble(text = message.content)
+                            is ChatMessage.Ai -> {
+                                when (val state = message.uiState) {
+                                    is UiState.Response -> ResponseBubble(uiState = state)
+                                    is UiState.PlannerTableState -> com.smartsales.prism.ui.analyst.PlannerTableBubble(table = state.table)
+                                    is UiState.Thinking -> {
+                                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(8.dp)) {
+                                            Text("🧠", fontSize = 12.sp) 
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(state.hint ?: "Thinking...", color = TextMuted, fontSize = 12.sp)
+                                        }
+                                    }
+                                    else -> {}
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
-
-        // 错误提示
-        errorMessage?.let { error ->
-            Snackbar(
-                modifier = Modifier.padding(vertical = 8.dp),
-                action = { TextButton(onClick = onClearError) { Text("关闭", color = Color.White) } },
-                containerColor = Color(0xFF3D2020)
-            ) { Text(error, color = Color.White) }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // 模式切换栏 (Moved to Bottom per Spec §1.2)
-        ModeToggleBar(
-            currentMode = currentMode,
-            onModeSwitch = onModeSwitch
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // 输入栏
-        InputBar(
-            text = inputText,
-            isSending = isSending,
-            onTextChanged = onInputChanged,
-            onSend = onSend,
-            onAttachClick = { /* Legacy, now unused */ },
-            onMicClick = { Toast.makeText(context, "语音备注（手机麦克风）", Toast.LENGTH_SHORT).show() },
-            onUploadFile = { Toast.makeText(context, "上传文件...", Toast.LENGTH_SHORT).show() },
-            onUploadImage = { Toast.makeText(context, "上传图片...", Toast.LENGTH_SHORT).show() },
-            onUploadAudio = { Toast.makeText(context, "上传音频...", Toast.LENGTH_SHORT).show() }
-        )
-    }
-}
-
-// v2.6: Spec §1.1 Home Hero
-@Composable
-private fun HomeHero(context: android.content.Context) {
-    val infiniteTransition = rememberInfiniteTransition(label = "Aura")
-    val scale by infiniteTransition.animateFloat(
-        initialValue = 1.0f,
-        targetValue = 1.1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "AuraScale"
-    )
-
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Breathing Aura (Purple/Aurora)
+        
+        // --- Layer 2: Floating Header (5-Button Layout) ---
         Box(
             modifier = Modifier
-                .size(120.dp)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    alpha = 0.8f
-                }
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(Color(0xFF9C27B0).copy(alpha = 0.4f), Color.Transparent)
-                    ),
-                    shape = androidx.compose.foundation.shape.CircleShape
-                )
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(top = 16.dp, start = 16.dp, end = 16.dp)
+                .fillMaxWidth()
         ) {
-            // Core Icon (Sparkle/Brain)
-            Icon(
-                imageVector = Icons.Default.Star, // Fallback to Star (Core) to avoid dependency issues
-                contentDescription = "AI Aura",
-                tint = Color(0xFFE1BEE7),
-                modifier = Modifier.size(48.dp).align(Alignment.Center)
+            ProMaxHeader(
+                sessionTitle = sessionTitle,
+                onMenuClick = onMenuClick,
+                onNewSessionClick = onNewSessionClick,
+                onDebugClick = viewModel::cycleDebugState,
+                // Pass new analytics handler if needed, currently reusing logic inside header
             )
         }
-        
-        Spacer(modifier = Modifier.height(16.dp))
 
-        // Greeting Text (Time Aware)
-        // Fallback logic for simplicity in this iteration, ideal involves Calendar
-        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-        val greeting = when (hour) {
-            in 5..11 -> "上午好"
-            in 12..18 -> "下午好"
-            else -> "晚上好"
-        }
-        Text(
-            text = "$greeting, Frank",
-            color = Color.White.copy(alpha = 0.9f),
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-@Composable
-private fun ModeToggleBar(
-    currentMode: Mode,
-    onModeSwitch: (Mode) -> Unit
-) {
-    val view = androidx.compose.ui.platform.LocalView.current // For Haptics
-    
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF1A1A2E), RoundedCornerShape(8.dp))
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        val validModes = listOf(Mode.COACH, Mode.ANALYST)
-        
-        validModes.forEach { mode ->
-            val isSelected = mode == currentMode
-            val (icon, label, color) = when (mode) {
-                Mode.COACH -> Triple("💬", "Coach", Color(0xFF9C27B0))
-                Mode.ANALYST -> Triple("🔬", "Analyst", Color(0xFF2196F3))
-                else -> Triple("?", "Unknown", Color.Gray)
-            }
-
-            TextButton(
-                onClick = { 
-                    view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS) // v2.6 Haptic
-                    onModeSwitch(mode) 
-                },
+        // --- Layer 3: Floating Right Toolbar (FABs) ---
+        // Hidden when keyboard is open or if preferred, kept strict.
+        // For now, assume always visible but pushed up by IME if needed.
+        if (history.isEmpty()) {
+             Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .background(
-                        if (isSelected) color.copy(alpha = 0.2f) else Color.Transparent,
-                        RoundedCornerShape(6.dp)
-                    )
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = "$icon $label",
-                    color = if (isSelected) color else Color(0xFF888888),
-                    fontSize = 14.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                // Documents (List -> Description/File)
+                GlassFab(icon = Icons.AutoMirrored.Filled.TextSnippet, onClick = { /* Specs */ }) 
+                // Cube (Inventory -> Science/ViewInAr)
+                GlassFab(icon = Icons.Outlined.Science, onClick = onArtifactsClick) // Using Science as Cube proxy
+            }
+        }
+
+        // --- Layer 4: Floating Dock (Switcher + Input) ---
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .imePadding() // Float above keyboard
+                .padding(horizontal = 16.dp, vertical = 16.dp)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Mode Switcher (Floating above Input)
+                GlassModeSwitcher(
+                    currentMode = currentMode,
+                    onModeSwitch = viewModel::switchMode
+                )
+                
+                // Input Bar (Glass Capsule)
+                GlassInputCapsule(
+                    text = inputText,
+                    onTextChanged = viewModel::updateInput,
+                    onSend = viewModel::send
                 )
             }
         }
+        
+        // Error Toast
+         errorMessage?.let { error ->
+            Snackbar(
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 80.dp),
+                containerColor = AccentDanger
+            ) { Text(error, color = Color.White) }
+        }
     }
 }
 
-/**
- * 聊天头部 — spec §1.1 (v2.6 Refined)
- */
+// ===================================================================
+// Pro Max Components (Local Implementation to match Prototype specs)
+// ===================================================================
+
 @Composable
-private fun ChatHeader(
+private fun ProMaxHeader(
     sessionTitle: String,
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
-    onAudioBadgeClick: () -> Unit,
-    onDebugClick: () -> Unit,
-    onTitleChange: (String) -> Unit
+    onDebugClick: () -> Unit
 ) {
-    // Removed: isEditing and tempTitle states - Title is auto-generated, not editable
-
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF0D0D1A))
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 左侧: 菜单 + 设备状态
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onMenuClick) {
-                Icon(Icons.Filled.Menu, "History", tint = Color.White)
-            }
-            // Device State: Wrapped in Box for easier clicking (Min 48dp target)
-            Box(
-                modifier = Modifier
-                    .padding(start = 8.dp)
-                    .size(48.dp)
-                    .clickable { onAudioBadgeClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "📶", fontSize = 16.sp)
-            }
-            // Text(
-            //    text = "📶", 
-            //    fontSize = 16.sp,
-            //    modifier = Modifier.padding(start = 8.dp).clickable { onAudioBadgeClick() }
-            // )
+        // Left Group
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            GlassCircleButton(icon = Icons.Filled.Menu, onClick = onMenuClick)
+            // Analytics/Chart - Yellow Tint
+             GlassCircleButton(
+                 icon = Icons.AutoMirrored.Filled.ShowChart, 
+                 onClick = { /* TODO */ },
+                 tint = AccentYellow 
+             )
         }
-        
-        // 中间: 会话标题 (v2.6 Auto-Generated Display ONLY)
-        Box(contentAlignment = Alignment.Center) {
+
+        // Center Title (Floating Badge)
+        // Center Title (Floating Text - Assumption Removed)
+        Box(
+            modifier = Modifier.height(40.dp),
+            contentAlignment = Alignment.Center
+        ) {
             Text(
-                text = "Session: $sessionTitle",
-                color = Color.White,
-                fontSize = 14.sp
-                // Removed: clickable { isEditing = true } - Title is auto-generated
+                text = sessionTitle.ifEmpty { "New Session" },
+                style = MaterialTheme.typography.labelLarge,
+                color = TextPrimary
             )
         }
+
+        // Right Group
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            GlassCircleButton(icon = Icons.Filled.BugReport, onClick = onDebugClick, tint = TextMuted)
+            GlassCircleButton(icon = Icons.Filled.Add, onClick = onNewSessionClick)
+        }
+    }
+}
+
+@Composable
+private fun HomeHero() {
+    // Target Design: Just greeting text near TOP, NO center icon box
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 24.dp) // Near top
+    ) {
+        // Greeting only - no icon box
+        Text(
+            text = "✨ 上午好, Frank",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary
+        )
+    }
+}
+
+@Composable
+private fun GlassModeSwitcher(currentMode: Mode, onModeSwitch: (Mode) -> Unit) {
+    PrismSurface(
+        shape = CircleShape,
+        backgroundColor = BackgroundSurface.copy(alpha = 0.9f),
+        modifier = Modifier.height(36.dp) // Reduced from 44.dp to match target
+    ) {
+        val modes = listOf(Mode.COACH, Mode.ANALYST)
         
-        // 右侧: [🐞] [➕] (Clean Header - Removed Avatar/Floating Actions)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onDebugClick) {
-                Icon(Icons.Filled.BugReport, "Debug", tint = Color(0xFF666666))
-            }
-            IconButton(onClick = onNewSessionClick) {
-                Icon(Icons.Filled.Add, "New Session", tint = Color.White)
+        BoxWithConstraints(modifier = Modifier.padding(4.dp)) {
+            val width = maxWidth
+            val segmentWidth = width / modes.size
+            
+            // Animated Indicator (White Pill)
+            val indicatorOffset by animateDpAsState(
+                targetValue = if (currentMode == Mode.COACH) 0.dp else segmentWidth,
+                animationSpec = spring(stiffness = Spring.StiffnessLow),
+                label = "indicator"
+            )
+
+            Box(
+                modifier = Modifier
+                    .offset(x = indicatorOffset)
+                    .width(segmentWidth)
+                    .fillMaxHeight()
+                    .padding(vertical = 2.dp) // Slight inset
+                    .shadow(2.dp, CircleShape)
+                    .background(Color.White, CircleShape)
+            )
+
+            // Text/Icon Layer
+            Row(modifier = Modifier.fillMaxSize()) {
+                modes.forEach { mode ->
+                    val isSelected = mode == currentMode
+                    // Web Spec: Coach=Purple, Analyst=Blue
+                    val color = if (isSelected) {
+                        if (mode == Mode.COACH) AccentTertiary else AccentBlue
+                    } else TextSecondary
+                    
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clip(CircleShape)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null // Disable ripple as pill is the feedback
+                            ) { onModeSwitch(mode) },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = if (mode == Mode.COACH) Icons.Outlined.ChatBubble else Icons.Outlined.Science, // Or Icons.Outlined.CenterFocusStrong for Analyst
+                            contentDescription = null,
+                            tint = color,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (mode == Mode.COACH) "Coach" else "Analyst",
+                            color = color,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun HomeFloatingActions(
-    onTingwuClick: () -> Unit,
-    onArtifactsClick: () -> Unit
-) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+private fun GlassInputCapsule(text: String, onTextChanged: (String) -> Unit, onSend: () -> Unit) {
+    PrismSurface(
+        shape = CircleShape, // Fully rounded capsule
+        modifier = Modifier.fillMaxWidth().height(56.dp)
     ) {
-        // Tingwu FAB [≣]
-        FloatingActionButton(
-            onClick = onTingwuClick,
-            containerColor = Color(0xFF1A1A2E),
-            contentColor = Color.White,
-            modifier = Modifier.size(56.dp)
+        Row(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("≣", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            // Plus Button
+            IconButton(onClick = { /* Check specs */ }) {
+                Icon(Icons.Filled.AttachFile, "Attach", tint = TextPrimary) // Web: Paperclip
+            }
+            
+            // Input Field
+            Box(
+                modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                if (text.isEmpty()) {
+                     Text("输入消息...", color = TextMuted)
+                }
+                androidx.compose.foundation.text.BasicTextField(
+                    value = text,
+                    onValueChange = onTextChanged,
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        color = TextPrimary,
+                        fontSize = 16.sp
+                    ),
+                    cursorBrush = SolidColor(AccentBlue)
+                )
+            }
+            
+            // Mic/Send Button
+             Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color.Black, CircleShape) // Web: Black Button
+                    .clickable { onSend() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (text.isEmpty()) Icons.Filled.Mic else Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Send",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
+    }
+}
 
-        // Artifacts FAB [📦]
-        FloatingActionButton(
-            onClick = onArtifactsClick,
-            containerColor = Color(0xFF1A1A2E),
-            contentColor = Color.White,
-            modifier = Modifier.size(56.dp)
-        ) {
-            Text("📦", fontSize = 20.sp)
-        }
+@Composable
+private fun GlassCircleButton(
+    icon: ImageVector, 
+    onClick: () -> Unit, 
+    tint: Color = TextPrimary
+) {
+    PrismSurface(
+        shape = CircleShape,
+        modifier = Modifier.size(44.dp).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = null, tint = tint)
+    }
+}
+
+@Composable
+private fun GlassFab(icon: ImageVector, onClick: () -> Unit) {
+     PrismSurface(
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.size(48.dp).clickable(onClick = onClick),
+         contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(24.dp))
     }
 }

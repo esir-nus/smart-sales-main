@@ -294,7 +294,7 @@ private fun AiFeatureTestApp(
                 Log.w("AiFeatureTestActivity", "忽略 snackbar：Activity 已销毁 - $message")
             }
         }
-        if (!onboardingCompleted) {
+        if (false && !onboardingCompleted) {
             currentPage = TestHomePage.Home
             overlayState = HomeOverlay.Home
             OnboardingHost(
@@ -313,7 +313,7 @@ private fun AiFeatureTestApp(
             )
         } else {
             Scaffold(
-                containerColor = designTokens.appBackground,
+                containerColor = MaterialTheme.colorScheme.background,
                 snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
                 topBar = {
                     if (currentPage != TestHomePage.Home) {
@@ -354,7 +354,12 @@ private fun AiFeatureTestApp(
                             .padding(horizontal = 8.dp, vertical = 10.dp)
                     ) {
                         when (currentPage) {
-                            TestHomePage.Home -> OverlayScaffold(
+                            TestHomePage.Home -> {
+                                // NEW: Sleek Glass Home Layout
+                                com.smartsales.aitest.ui.home.HomeLayout()
+                                
+                                /* LEGACY: OverlayScaffold
+                                OverlayScaffold(
                                 currentOverlay = overlayState,
                                 onOverlayChange = { overlayState = it },
                                 mediaServerClient = mediaServerClient,
@@ -367,7 +372,8 @@ private fun AiFeatureTestApp(
                                 latestDeviceSnapshot = latestDeviceSnapshot,
                                 onDeviceSnapshotChanged = { latestDeviceSnapshot = it },
                                 showSnackbar = showSnackbar
-                            )
+                            ) */
+                            }
 
                             TestHomePage.WifiBleTester -> WifiBleTesterRoute(
                                 modifier = Modifier

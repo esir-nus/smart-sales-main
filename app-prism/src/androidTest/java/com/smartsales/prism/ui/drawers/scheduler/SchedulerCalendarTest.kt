@@ -19,9 +19,12 @@ class SchedulerCalendarTest {
         // 1. Setup
         composeTestRule.setContent {
             var isExpanded by remember { mutableStateOf(false) }
+            var activeDay by remember { mutableStateOf(28) }
             SchedulerCalendar(
                 isExpanded = isExpanded,
-                onExpandChange = { isExpanded = it }
+                onExpandChange = { isExpanded = it },
+                activeDay = activeDay,
+                onDateSelected = { activeDay = it }
             )
         }
 
@@ -43,7 +46,9 @@ class SchedulerCalendarTest {
             // Force Expanded
             SchedulerCalendar(
                 isExpanded = true,
-                onExpandChange = {}
+                onExpandChange = {},
+                activeDay = 28,
+                onDateSelected = {}
             )
         }
         

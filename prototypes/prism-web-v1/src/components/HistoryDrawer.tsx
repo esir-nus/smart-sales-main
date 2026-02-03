@@ -1,7 +1,6 @@
-import React from 'react';
+// React unused
 import { motion } from 'framer-motion';
-import { Battery, Wifi, Pin, Trash2, Edit2, Settings, User } from 'lucide-react';
-import { clsx } from 'clsx';
+import { Battery, Wifi, Pin, Settings, User, Plus, Calendar, CalendarDays, Archive } from 'lucide-react';
 
 type Session = {
     id: string;
@@ -33,9 +32,10 @@ interface HistoryDrawerProps {
     onClose: () => void;
     onSelectSession: (id: string) => void;
     onSettingsClick?: () => void;
+    onNewSession?: () => void;
 }
 
-export const HistoryDrawer = ({ isOpen, onClose, onSelectSession, onSettingsClick }: HistoryDrawerProps) => {
+export const HistoryDrawer = ({ isOpen, onClose, onSelectSession, onSettingsClick, onNewSession }: HistoryDrawerProps) => {
     return (
         <>
             {/* Scrim / Backdrop */}
@@ -54,20 +54,33 @@ export const HistoryDrawer = ({ isOpen, onClose, onSelectSession, onSettingsClic
                 initial={{ x: '-100%' }}
                 animate={{ x: isOpen ? 0 : '-100%' }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="absolute top-0 bottom-0 left-0 w-[85%] max-w-[320px] bg-white z-50 shadow-2xl flex flex-col"
+                className="absolute top-0 bottom-0 left-0 w-[85%] max-w-[320px] bg-prism-surface backdrop-blur-3xl z-50 shadow-2xl flex flex-col border-r border-prism-border"
             >
                 {/* 1. Device Header */}
-                <div className="p-6 bg-slate-50 border-b border-slate-100 dark:bg-slate-900/50">
-                    <div className="flex items-center justify-between text-xs font-mono text-slate-500 mb-2">
-                        <span className="flex items-center gap-1 text-green-600">
-                            <Battery size={14} /> 85%
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <Wifi size={14} /> SmartBadge
-                        </span>
-                    </div>
-                    <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                        已连接 • 正常
+                <div className="p-6 border-b border-prism-border">
+                    <div className="flex items-center justify-between mb-4">
+                        {/* Device State */}
+                        <div>
+                            <div className="flex items-center gap-3 text-sm font-medium text-prism-secondary mb-1">
+                                <span className="flex items-center gap-1.5 text-green-600">
+                                    <Battery size={16} /> 85%
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                    <Wifi size={16} /> SmartBadge
+                                </span>
+                            </div>
+                            <div className="text-xs font-semibold text-prism-secondary uppercase tracking-wider opacity-70">
+                                已连接 • 正常
+                            </div>
+                        </div>
+
+                        {/* Plus Action */}
+                        <button 
+                            onClick={onNewSession}
+                            className="p-2 -mr-2 text-prism-primary hover:bg-black/5 rounded-full transition-colors"
+                        >
+                            <Plus size={24} />
+                        </button>
                     </div>
                 </div>
 
@@ -76,29 +89,26 @@ export const HistoryDrawer = ({ isOpen, onClose, onSelectSession, onSettingsClic
                     {/* Helper to render Session Groups */}
                     {(Object.entries(SESSIONS) as [string, Session[]][]).map(([key, group]) => (
                         <div key={key} className="mb-6">
-                            <div className="px-6 mb-3 text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <div className="px-6 mb-3 text-[10px] font-bold text-prism-secondary uppercase tracking-widest flex items-center gap-2 opacity-60">
                                 {key === 'pinned' && <Pin size={12} />}
+                                {key === 'today' && <Calendar size={12} />}
+                                {key === 'recent' && <CalendarDays size={12} />}
+                                {key === 'archive' && <Archive size={12} />}
+                                
                                 {key === 'pinned' ? '置顶' : 
                                  key === 'today' ? '今天' : 
                                  key === 'recent' ? '最近30天' : '2025-12'}
                             </div>
-                            <div className="space-y-1">
+                            <div className="space-y-0.5">
                                 {group.map(session => (
                                     <div 
                                         key={session.id}
                                         onClick={() => onSelectSession(session.id)}
-                                        className="px-6 py-3 hover:bg-slate-50 active:bg-slate-100 cursor-pointer group relative"
+                                        className="px-6 py-3 cursor-pointer group hover:bg-black/5 transition-colors"
                                     >
-                                        <div className="text-sm truncate pr-4 text-slate-800">
-                                            <span className="font-medium">{session.title}</span>
-                                            <span className="text-slate-400">_{session.summary}</span>
-                                        </div>
-                                        
-                                        {/* Hover Actions (Desktop Prototype only) */}
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 hidden group-hover:flex gap-2 text-slate-400">
-                                            <button className="hover:text-amber-500"><Pin size={14} /></button>
-                                            <button className="hover:text-blue-500"><Edit2 size={14} /></button>
-                                            <button className="hover:text-red-500"><Trash2 size={14} /></button>
+                                        <div className="flex items-baseline gap-2 mb-0.5">
+                                            <span className="text-sm font-bold text-prism-primary">{session.title}</span>
+                                            <span className="text-xs text-prism-secondary font-medium">_{session.summary}</span>
                                         </div>
                                     </div>
                                 ))}
@@ -108,21 +118,21 @@ export const HistoryDrawer = ({ isOpen, onClose, onSelectSession, onSettingsClic
                 </div>
 
                 {/* 3. User Footer */}
-                <div className="p-4 border-t border-slate-100 bg-white flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                <div className="p-4 border-t border-prism-border flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-black/5 flex items-center justify-center text-prism-secondary">
                         <User size={20} />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <div className="font-medium text-slate-900 truncate">Frank Chen</div>
+                        <div className="font-bold text-prism-primary truncate">Frank Chen</div>
                         <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gradient-to-r from-purple-500 to-blue-500 text-white font-bold tracking-wide">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-black text-white font-bold tracking-wide">
                                 PRO
                             </span>
                         </div>
                     </div>
                     <button 
                         onClick={onSettingsClick}
-                        className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50"
+                        className="p-2 text-prism-secondary hover:text-prism-primary rounded-full hover:bg-black/5 transition-colors"
                     >
                         <Settings size={20} />
                     </button>

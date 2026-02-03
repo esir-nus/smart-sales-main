@@ -443,6 +443,62 @@ When auditing, produce:
 
 ---
 
+## Fidelity Alignment Check (Quad-Factor Audit)
+
+When alignment issues persist or "vibe" feels off, invoke this specific audit to bridge the gap between **Web Code** (Source of Truth) and **Android Code**.
+
+### The Quad-Factor Audit
+
+Compare these four inputs to find the *exact* failure point:
+
+1.  **Visual Target (Prototype)**: What it *should* look like (Screenshot of Web/Figma).
+2.  **Device Reality (Android)**: What it *does* look like (Screenshot of Device).
+3.  **Code A (Web Source)**: The `.tsx` definition (Spacing, Colors, Shadows).
+4.  **Code B (Android Impl)**: The `.kt` definition.
+
+### Comparison Strategy
+Don't guess. Read the code.
+
+1.  **Identify the Visual Gap**: "Padding looks wrong."
+2.  **Read Web Code**: Open `.tsx`. Find `p-6` (24px).
+3.  **Read Android Code**: Open `.kt`. Find `padding(16.dp)`.
+4.  **Verdict**: "Android is using 16dp, must be 24dp to match Web."
+
+### Output Template: Fidelity Report
+
+When performing this check, produce a report using this structure:
+
+```markdown
+## 🔍 Fidelity Alignment Report: [Feature Name]
+
+### 1. Visual Delta
+| Element | Web Target (Source) | Android Reality | Verdict | Action |
+|---------|---------------------|-----------------|---------|--------|
+| Header Padding | `p-6` (24px) | `padding(16.dp)` | 🔴 Mismatch | Increase to `24.dp` |
+| Blur Strength | `backdrop-blur-xl` | `elevation` | 🟡 Different model | Use `Box` scrim for blur |
+
+### 2. Code vs. Code Analysis
+- **Web Source**: `[Filename.tsx]`
+  ```typescript
+  className="bg-white/70 backdrop-blur-xl border-white/20"
+  ```
+- **Android Current**: `[Filename.kt]`
+  ```kotlin
+  backgroundColor = Color.White.copy(alpha = 0.5f)
+  ```
+- **Correction**: Change Android alpha to `0.7f` to strictly match Web `70%`.
+
+### 3. Spec Check
+- **Contract**: Does `prism-ui-ux-contract.md` specify this value?
+- **Result**: [Aligned / Ambiguous / Conflict]
+
+### 🏁 Alignment Plan
+- [ ] [Specific Code Change 1]
+- [ ] [Specific Code Change 2]
+```
+
+---
+
 You are the **Guardian of the Design Tokens**.
 
 - **Token File**: `docs/design/design-tokens.json`

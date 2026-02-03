@@ -12,8 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.outlined.ExpandLess // Added
+import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,6 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
+import com.smartsales.prism.ui.components.PrismCard
+import com.smartsales.prism.ui.components.PrismSurface
+import com.smartsales.prism.ui.theme.*
 
 // ==========================================
 // State Models
@@ -40,11 +42,10 @@ data class ChatMessage(
 // ==========================================
 
 /**
- * Conflict Card Component (Natural Language Resolution)
+ * Conflict Card Component (Sleek Glass Version)
  * @see prism-ui-ux-contract.md §1.3 "Conflict Card"
  */
 @Composable
-
 fun ConflictCard(
     state: TimelineItem.Conflict,
     isExpanded: Boolean,
@@ -52,17 +53,16 @@ fun ConflictCard(
     onRemove: () -> Unit = {},
     viewModel: ConflictViewModel = hiltViewModel()
 ) {
-    // Local state for the mock interaction
+    // Local state needed for interaction
     var messages by remember { mutableStateOf(listOf<ChatMessage>()) }
     var inputText by remember { mutableStateOf("") }
     var isResolving by remember { mutableStateOf(false) }
     
     val scope = rememberCoroutineScope()
 
-    // Mock Logic: Initialize chat on expand
+    // Initialize chat on expand
     LaunchedEffect(isExpanded) {
         if (isExpanded && messages.isEmpty()) {
-            // Initial AI Message
             messages = listOf(
                 ChatMessage(
                     text = "发现日程冲突。'团队午餐' (12:00) 优先级较低。建议保留 '审查预算' (12:00)。是否自动调整午餐时间？",
@@ -75,36 +75,34 @@ fun ConflictCard(
     // Breathing Animation for Expanded State
     val infiniteTransition = rememberInfiniteTransition()
     val breathingAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 0.8f,
+        initialValue = 0.5f,
+        targetValue = 1.0f,
         animationSpec = infiniteRepeatable(
             animation = tween(1500, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         )
     )
-    val glowColor = if (isExpanded) Color(0xFFD32F2F).copy(alpha = breathingAlpha) else Color.Transparent
+    val borderColor = if (isExpanded) AccentDanger.copy(alpha = breathingAlpha) else AccentDanger
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessLow
-                )
-            )
-            .clickable { 
-                onExpandToggle() // Allow toggle (Expand/Collapse)
-            }
-            .border(
-                width = if (isExpanded) 2.dp else 0.dp,
-                color = glowColor,
-                shape = RoundedCornerShape(8.dp)
-            ),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)), // Light Red tint
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    PrismCard(
+        onClick = onExpandToggle,
+        modifier = Modifier.fillMaxWidth(),
+        shape = GlassCardShape // 20.dp
     ) {
+        // Red/Orange Tint Background
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(AccentDanger.copy(alpha = 0.08f)) // Subtle tint
+        )
+
+        // Red Border Overlay
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .border(1.dp, borderColor, GlassCardShape)
+        )
+
         Column {
             // Header Row (Always Visible)
             Row(
@@ -116,7 +114,7 @@ fun ConflictCard(
                 Icon(
                     imageVector = Icons.Filled.Warning,
                     contentDescription = null,
-                    tint = Color(0xFFD32F2F), // Red
+                    tint = AccentDanger,
                     modifier = Modifier.size(20.dp)
                 )
                 
@@ -125,7 +123,7 @@ fun ConflictCard(
                 Text(
                     text = state.conflictText,
                     fontSize = 14.sp,
-                    color = Color(0xFFD32F2F),
+                    color = AccentDanger,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.weight(1f)
                 )
@@ -133,21 +131,19 @@ fun ConflictCard(
                 Icon(
                     imageVector = if (isExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
                     contentDescription = if (isExpanded) "Collapse" else "Expand",
-                    tint = Color(0xFFD32F2F)
+                    tint = AccentDanger
                 )
             }
             
             // Expanded Content: Mini Chat
             if (isExpanded) {
-                Divider(color = Color(0xFFFFCDD2).copy(alpha = 0.5f))
+                 HorizontalDivider(color = AccentDanger.copy(alpha = 0.2f))
                 
-                // Chat Area (Column, NOT LazyColumn to avoid nested scroll)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp)
                 ) {
-                    // Messages
                     messages.forEach { msg ->
                         ChatBubble(message = msg)
                         Spacer(modifier = Modifier.height(8.dp))
@@ -157,7 +153,7 @@ fun ConflictCard(
                          Text(
                             text = "Processing...",
                             fontSize = 12.sp,
-                            color = Color(0xFFD32F2F).copy(alpha = 0.6f),
+                            color = AccentDanger.copy(alpha = 0.6f),
                             modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
                         )
                     }
@@ -168,8 +164,8 @@ fun ConflictCard(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color.White, RoundedCornerShape(20.dp))
-                            .border(1.dp, Color(0xFFFFCDD2), RoundedCornerShape(20.dp))
+                            .background(Color.White.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                            .border(1.dp, AccentDanger.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
                             .padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -178,9 +174,10 @@ fun ConflictCard(
                             onValueChange = { inputText = it },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
+                            textStyle = LocalTextStyle.current.copy(color = TextPrimary),
                             decorationBox = { innerTextField ->
                                 if (inputText.isEmpty()) {
-                                    Text("Reply...", color = Color.Gray, fontSize = 14.sp)
+                                    Text("Reply...", color = TextMuted, fontSize = 14.sp)
                                 }
                                 innerTextField()
                             }
@@ -188,11 +185,10 @@ fun ConflictCard(
                         
                         Spacer(modifier = Modifier.width(8.dp))
 
-                        // Send / Mic Button
                         Icon(
                             imageVector = if (inputText.isEmpty()) Icons.Default.Mic else Icons.Default.Send,
                             contentDescription = "Send",
-                            tint = Color(0xFFD32F2F),
+                            tint = AccentDanger,
                             modifier = Modifier
                                 .size(20.dp)
                                 .clickable {
@@ -200,11 +196,9 @@ fun ConflictCard(
                                         val userText = inputText
                                         inputText = ""
                                         
-                                        // 1. Add User Message
                                         messages = messages + ChatMessage(userText, isSystem = false)
                                         isResolving = true
                                         
-                                        // 2. Fake I/O: 延迟在FakeConflictResolutionService
                                         scope.launch {
                                             val result = viewModel.resolveConflict(userText)
                                             messages = messages + ChatMessage(result.reply, isSystem = true)
@@ -238,7 +232,7 @@ fun ChatBubble(message: ChatMessage) {
                 bottomStart = if (message.isSystem) 2.dp else 12.dp,
                 bottomEnd = if (message.isSystem) 12.dp else 2.dp
             ),
-            color = if (message.isSystem) Color.White else Color(0xFFD32F2F), // White for AI, Red for User (on Pink bg)
+            color = if (message.isSystem) BackgroundSurface else AccentDanger, 
             shadowElevation = 1.dp,
             modifier = Modifier.widthIn(max = 280.dp)
         ) {
@@ -246,7 +240,7 @@ fun ChatBubble(message: ChatMessage) {
                 text = message.text,
                 modifier = Modifier.padding(10.dp),
                 fontSize = 13.sp,
-                color = if (message.isSystem) Color.Black else Color.White
+                color = if (message.isSystem) TextPrimary else Color.White
             )
         }
     }

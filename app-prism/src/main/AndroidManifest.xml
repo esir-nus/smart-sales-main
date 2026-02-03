@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- 网络权限：LLM API 调用需要 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- 日历权限：Scheduler 任务同步需要 -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+
+    <!-- 闹钟权限：任务提醒需要 -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+
     <application
         android:name=".PrismApplication"
         android:allowBackup="true"
@@ -21,6 +32,16 @@
             </intent-filter>
         </activity>
 
+        <!-- 任务提醒广播接收器 -->
+        <receiver
+            android:name=".data.scheduler.TaskReminderReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.smartsales.prism.TASK_REMINDER" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>
+

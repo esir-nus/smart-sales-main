@@ -29,13 +29,9 @@ const groupSessions = (sessions: Session[]) => {
 
 // --- Components ---
 
-const SessionCard = ({ session, onClick }: { session: Session; onClick: () => void }) => (
+const SessionCard = ({ session }: { session: Session; onClick?: () => void }) => (
   <motion.div
-    whileHover={{ scale: 1.02, backgroundColor: 'rgba(255,255,255,0.8)' }}
-    whileTap={{ scale: 0.98 }}
-    transition={{ type: "spring", stiffness: 400, damping: 17 }}
-    onClick={onClick}
-    className="bg-white/60 backdrop-blur-md rounded-2xl p-4 border border-white/40 shadow-sm hover:shadow-md transition-all cursor-pointer relative group overflow-hidden"
+    className="glass-card p-4 hover:shadow-md transition-all cursor-pointer relative group overflow-hidden"
   >
     {/* Floating Gradient Accent */}
     <div className={clsx(
@@ -44,24 +40,24 @@ const SessionCard = ({ session, onClick }: { session: Session; onClick: () => vo
     )} />
 
     <div className="flex justify-between items-start mb-2">
-       <div className="flex items-center gap-2 text-xs font-medium text-gray-400 uppercase tracking-wider">
-          {session.type === 'analyst' ? <LayoutGrid size={12} className="text-blue-500" /> : <Zap size={12} className="text-purple-500" />}
+       <div className="flex items-center gap-2 text-xs font-medium text-prism-secondary uppercase tracking-wider">
+          {session.type === 'analyst' ? <LayoutGrid size={12} className="text-prism-accent" /> : <Zap size={12} className="text-prism-knot" />}
           <span>{session.type === 'analyst' ? '深度分析' : '日常会话'}</span>
-          {session.time && <span className="text-gray-300">• {session.time}</span>}
+          {session.time && <span className="text-prism-secondary/60">• {session.time}</span>}
        </div>
-       {session.isPinned && <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />}
+       {session.isPinned && <div className="w-1.5 h-1.5 rounded-full bg-prism-danger" />}
     </div>
     
-    <h3 className="text-gray-900 font-semibold mb-1 leading-tight group-hover:text-blue-700 transition-colors">
+    <h3 className="text-prism-primary font-semibold mb-1 leading-tight group-hover:text-prism-accent transition-colors">
         {session.title}
     </h3>
-    <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">
+    <p className="text-sm text-prism-secondary line-clamp-2 leading-relaxed">
         {session.summary}
     </p>
 
     {/* Hover Arrow */}
     <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
-        <ArrowRight size={16} className="text-gray-400" />
+        <ArrowRight size={16} className="text-prism-secondary" />
     </div>
   </motion.div>
 );
@@ -69,8 +65,8 @@ const SessionCard = ({ session, onClick }: { session: Session; onClick: () => vo
 const SectionHeader = ({ title, icon }: { title: string, icon?: React.ReactNode }) => (
   <div className="flex items-center gap-2 px-2 pb-2 mt-6 mb-1 opacity-60">
       {icon}
-      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">{title}</h4>
-      <div className="h-px bg-gray-200 flex-1 ml-2" />
+      <h4 className="text-xs font-bold text-prism-secondary uppercase tracking-widest">{title}</h4>
+      <div className="h-px bg-prism-border flex-1 ml-2" />
   </div>
 );
 
@@ -87,24 +83,24 @@ const HomeHero = () => (
             <motion.div 
                 animate={{ scale: [1, 1.1, 1], opacity: [0.1, 0.3, 0.1] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute inset-0 bg-blue-400 rounded-full blur-3xl"
+                className="absolute inset-0 bg-prism-accent/30 rounded-full blur-3xl"
             />
             
             {/* Center Icon */}
             <div className="absolute inset-0 flex items-center justify-center">
-                 <div className="w-20 h-20 bg-white/10 backdrop-blur-md rounded-2xl shadow-glass border border-white/20 flex items-center justify-center">
-                    <Sparkles size={32} className="text-white/80" />
+                 <div className="w-20 h-20 bg-prism-surface backdrop-blur-md rounded-2xl shadow-glass border border-prism-border flex items-center justify-center">
+                    <Sparkles size={32} className="text-prism-primary/80" />
                  </div>
             </div>
         </div>
 
         {/* Localized Greeting V2 */}
         <h2 className="text-3xl font-bold mb-2">
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-prism-primary to-prism-secondary bg-clip-text text-transparent">
                 下午好, Frank
             </span>
         </h2>
-        <p className="text-gray-500 mb-10 font-medium tracking-wide">
+        <p className="text-prism-secondary mb-10 font-medium tracking-wide">
             我是您的销售助手
         </p>
 

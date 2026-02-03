@@ -13,7 +13,7 @@ export const ConflictCard = ({ item }: { item: any }) => {
             onClick={() => !expanded && setExpanded(true)}
             animate={{ height: expanded ? 'auto' : 56 }}
             className={clsx(
-                "bg-orange-50 rounded-xl overflow-hidden shadow-sm border border-orange-100/50 transition-all relative",
+                "bg-prism-surface backdrop-blur-xl rounded-[20px] overflow-hidden shadow-sm border-retina border-orange-200/50 transition-all relative",
                 expanded ? "z-50" : "z-10"
             )}
         >

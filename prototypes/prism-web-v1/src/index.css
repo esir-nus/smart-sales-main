@@ -11,6 +11,241 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Default Theme (Executive Platinum) */
+  --bg-app: #F2F2F7;
+  --bg-surface: #FFFFFF;
+  --bg-surface-muted: #F2F2F7;
+  --color-accent: #007AFF;
+  --color-text-primary: #1F2937; /* Gray-900 */
+  --color-text-secondary: #6B7280; /* Gray-500 */
+  --border-base: rgba(0, 0, 0, 0.1);
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.08); 
+  --radius-card: 16px;
+  --font-spacing: -0.01em; 
+  --font-family-base: "Inter", system-ui, sans-serif;
+  --line-height-base: 1.5;
+  --border-width: 1px;
+}
+
+/* Theme: Obsidian (Dark / Technical) */
+.theme-obsidian {
+  --bg-app: #000000;
+  --bg-surface: #1C1C1E;
+  --bg-surface-muted: #2C2C2E;
+  --color-accent: #0A84FF;
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #8E8E93;
+  --border-base: rgba(255, 255, 255, 0.15);
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  --radius-card: 18px;
+  --font-spacing: 0em;
+  --font-family-base: "JetBrains Mono", "SF Mono", monospace; /* Technical Feel */
+  --line-height-base: 1.6;
+}
+
+/* Theme: Paper White (E-Ink / Reading) */
+.theme-paper {
+  --bg-app: #FFFFFF;
+  --bg-surface: #F7F7F5;
+  --bg-surface-muted: #EEEEEC;
+  --color-accent: #333333;
+  --color-text-primary: #111111;
+  --color-text-secondary: #555555;
+  --border-base: #E5E5E5;
+  --shadow-glass: none; /* Flat */
+  --radius-card: 0px; /* Sharp corners */
+  --font-spacing: 0.02em;
+  --font-family-base: "Georgia", "Songti SC", serif; /* Reading Feel */
+  --line-height-base: 1.8; /* Relaxed reading */
+  --border-width: 1px;
+}
+
+/* Theme: Forest Focus (Natural / Soft) */
+.theme-forest {
+  --bg-app: #F0FDF4; /* Mint Cream */
+  --bg-surface: #FFFFFF;
+  --bg-surface-muted: #D1FAE5;
+  --color-accent: #059669; /* Emerald 600 */
+  --color-text-primary: #064E3B;
+  --color-text-secondary: #34D399;
+  --border-base: rgba(6, 78, 59, 0.1);
+  --shadow-glass: 0 4px 12px 0 rgba(6, 78, 59, 0.05);
+  --radius-card: 24px; /* Organic roundness */
+  --font-spacing: -0.01em;
+  --font-family-base: "Rounded Mplus 1c", system-ui, sans-serif;
+  --line-height-base: 1.5;
+}
+
+/* Theme: Sleek Glass (Pro Max) — Minimalist, Elegant, Airy */
+.theme-glass-sleek {
+  --bg-app: #F5F5F7; /* Pro Max Gray */
+  --bg-surface: rgba(255, 255, 255, 0.70); /* High Translucency 70% */
+  --bg-surface-muted: rgba(0, 0, 0, 0.02);
+  --color-accent: #000000; /* Stark Black */
+  --color-text-primary: #1D1D1F; /* SF Black */
+  --color-text-secondary: #86868B; /* SF Gray */
+  --border-base: rgba(0, 0, 0, 0.04); /* Ultra-fine */
+  --shadow-glass: 0 20px 40px -10px rgba(0, 0, 0, 0.05); /* Pro Max Deep Shadow */
+  --radius-card: 20px; /* Modern continuous curve */
+  --font-family-base: "SF Pro Text", "Inter", system-ui, sans-serif;
+  --font-spacing: -0.02em; /* Tight Pro tracking */
+  --border-width: 0.5px; /* Retina hairline border */
+}
+
+/* Theme: Sunset Gold — Warm, Luxurious, Premium */
+.theme-sunset {
+  --bg-app: #FFFBEB; /* Amber 50 */
+  --bg-surface: #FFFFFF;
+  --bg-surface-muted: #FEF3C7; /* Amber 100 */
+  --color-accent: #D97706; /* Amber 600 */
+  --color-text-primary: #78350F; /* Amber 900 */
+  --color-text-secondary: #B45309;
+  --border-base: rgba(217, 119, 6, 0.15);
+  --shadow-glass: 0 4px 16px 0 rgba(217, 119, 6, 0.08);
+  --radius-card: 8px; /* Classic Premium */
+  --font-family-base: "Times New Roman", "Songti SC", serif; /* Traditional Luxury */
+  --font-spacing: 0em;
+}
+
+/* Theme: Ocean Deep — Calm, Professional, Trust */
+.theme-ocean {
+  --bg-app: #0C4A6E; /* Sky 900 */
+  --bg-surface: rgba(14, 116, 144, 0.6); /* Cyan 700 */
+  --bg-surface-muted: rgba(8, 145, 178, 0.4);
+  --color-accent: #22D3EE; /* Cyan 400 */
+  --color-text-primary: #ECFEFF; /* Cyan 50 */
+  --color-text-secondary: #67E8F9;
+  --border-base: rgba(34, 211, 238, 0.25);
+  --shadow-glass: 0 8px 32px 0 rgba(6, 182, 212, 0.2);
+  --radius-card: 16px;
+  --font-family-base: "Inter", system-ui, sans-serif;
+  --font-spacing: 0.01em;
+}
+
+/* Theme: Charcoal Board — Serious, Executive, Boardroom */
+.theme-charcoal {
+  --bg-app: #1F2937; /* Gray 800 */
+  --bg-surface: #374151; /* Gray 700 */
+  --bg-surface-muted: #4B5563; /* Gray 600 */
+  --color-accent: #E5E7EB; /* Gray 200 (Monochrome accent) */
+  --color-text-primary: #F9FAFB;
+  --color-text-secondary: #9CA3AF;
+  --border-base: rgba(229, 231, 235, 0.1);
+  --shadow-glass: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+  --radius-card: 4px; /* Minimal rounding */
+  --font-family-base: "Inter", sans-serif;
+  --font-spacing: 0.02em; /* Wide executive stance */
+  --border-width: 1px;
+}
+
+/* Theme: Ivory Tower — Minimalist, Elite, Clean */
+.theme-ivory {
+  --bg-app: #FFFFF0; /* Ivory */
+  --bg-surface: #FFFFFF;
+  --bg-surface-muted: #F8F8F8;
+  --color-accent: #C0C0C0; /* Silver */
+  --color-text-primary: #2C2C2C; /* Near Black */
+  --color-text-secondary: #888888;
+  --border-base: rgba(0, 0, 0, 0.05);
+  --shadow-glass: 0 10px 30px rgba(0, 0, 0, 0.04); /* Soft luxury shadow */
+  --radius-card: 2px; /* Very sharp */
+  --font-family-base: "Didot", serif; /* High fashion/finance */
+  --font-spacing: 0.04em;
+}
+
+/* Theme: Obsidian (Sleek Dark Pro Max) */
+.theme-glass-obsidian {
+  --bg-app: #000000; /* Pure Black Base */
+  --bg-surface: rgba(28, 28, 30, 0.6); /* Dark Glass */
+  --bg-surface-muted: rgba(44, 44, 46, 0.5); /* Apple Dark Gray */
+  --color-accent: #FFFFFF; /* Stark White Accent */
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: rgba(255, 255, 255, 0.6); /* Lighter gray for dark mode visibility */
+  --border-base: rgba(255, 255, 255, 0.15); /* Slightly stronger border */
+  --shadow-glass: 0 10px 40px -10px rgba(0,0,0,0.8); /* Deeper shadow */
+  --radius-card: 20px;
+  --font-family-base: "SF Pro Text", "Inter", system-ui, sans-serif;
+  --font-spacing: -0.02em;
+  --border-width: 0.5px;
+}
+
+/* Theme: Navy Admiral — Trust, Authority, Banking */
+.theme-navy {
+  --bg-app: #0A192F; /* Deep Navy */
+  --bg-surface: #112240;
+  --bg-surface-muted: #233554;
+  --color-accent: #64FFDA; /* Teal accent (common in fintech/terminals) */
+  --color-text-primary: #E6F1FF;
+  --color-text-secondary: #8892B0;
+  --border-base: rgba(100, 255, 218, 0.1);
+  --shadow-glass: 0 10px 30px -10px rgba(2, 12, 27, 0.7);
+  --radius-card: 6px;
+  --font-family-base: "Roboto Mono", monospace; /* Data-first vibe */
+  --font-spacing: 0em;
+}
+
+/* Theme: Gray Flannel — Traditional, Conservative, Tailored */
+.theme-flannel {
+  --bg-app: #E5E5E5; /* Light wool gray */
+  --bg-surface: #F5F5F5;
+  --bg-surface-muted: #D4D4D4;
+  --color-accent: #4B5563; /* Dark Gray */
+  --color-text-primary: #171717; /* Neutral Black */
+  --color-text-secondary: #525252;
+  --border-base: rgba(0, 0, 0, 0.05);
+  --shadow-glass: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --radius-card: 12px;
+  --font-family-base: "Helvetica Neue", "Arial", sans-serif;
+  --font-spacing: 0em;
+}
+/* Theme: Glassmorphism (Frost) — Modern, Airy, Translucent */
+.theme-glass {
+  --bg-app: #E0E7FF; /* Soft Indigo Mist */
+  --bg-surface: rgba(255, 255, 255, 0.4); /* High transparency */
+  --bg-surface-muted: rgba(255, 255, 255, 0.2);
+  --color-accent: #6366F1; /* Indigo 500 */
+  --color-text-primary: #1E1B4B; /* Indigo 950 */
+  --color-text-secondary: #4338CA; /* Indigo 700 */
+  --border-base: rgba(255, 255, 255, 0.4);
+  --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.15); /* Classic Glass Shadow */
+  --radius-card: 24px;
+  --font-family-base: "Inter", system-ui, sans-serif;
+  --font-spacing: 0em;
+  --border-width: 1.5px; /* Thicker light borders for glass edge */
+}
+
+/* Theme: Business Glassmorphism — Executive, Neutral, Conservative */
+.theme-glass-biz {
+  --bg-app: #F1F5F9; /* Slate 100 - Cool gray mist */
+  --bg-surface: rgba(255, 255, 255, 0.65); /* Higher opacity - more corporate */
+  --bg-surface-muted: rgba(241, 245, 249, 0.5);
+  --color-accent: #334155; /* Slate 700 - Charcoal accent */
+  --color-text-primary: #0F172A; /* Slate 900 */
+  --color-text-secondary: #64748B; /* Slate 500 */
+  --border-base: rgba(0, 0, 0, 0.08); /* Subtle dark border */
+  --shadow-glass: 0 4px 16px 0 rgba(0, 0, 0, 0.08); /* Subtle corporate shadow */
+  --radius-card: 16px; /* More conservative radius */
+  --font-family-base: "SF Pro Display", "Inter", system-ui, sans-serif;
+  --font-spacing: -0.01em; /* Slightly tight for executive feel */
+  --border-width: 1px;
+}
+
+/* Theme: Onboarding (Dark Mode) — Slate-based */
+.theme-onboarding {
+  --bg-app: #0F172A; /* Slate 900 */
+  --bg-surface: rgba(30, 41, 59, 0.8); /* Slate 800 */
+  --bg-surface-muted: rgba(51, 65, 85, 0.5); /* Slate 700 */
+  --color-accent: #2563EB; /* Blue 600 */
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #94A3B8; /* Slate 400 */
+  --border-base: rgba(255, 255, 255, 0.1);
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  --radius-card: 24px;
+  --font-spacing: 0em;
+  --font-family-base: "Inter", system-ui, sans-serif;
+  --line-height-base: 1.5;
+  --border-width: 1px;
 }
 
 html, body {
@@ -19,7 +254,7 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden; /* Prevent scrolling on body */
-  background-color: #000; /* Outer void color */
+  background-color: #111; /* Outer void color stays dark */
   touch-action: none; /* Prevent browser gestures */
   overscroll-behavior: none;
 }
@@ -38,21 +273,66 @@ html, body {
     display: none;
 }
 
-/* Utilities */
+/* Utilities using Vars */
 .glass-panel {
-    @apply bg-white/65 backdrop-blur-xl border border-white/50 shadow-glass;
+    background-color: var(--bg-surface);
+    backdrop-filter: blur(24px);
+    border: var(--border-width, 1px) solid var(--border-base);
+    box-shadow: var(--shadow-glass);
 }
 
 .glass-card {
-    @apply bg-white/80 backdrop-blur-md border border-white/40 shadow-sm rounded-2xl;
+    background-color: var(--bg-surface);
+    backdrop-filter: blur(16px);
+    border: var(--border-width, 1px) solid var(--border-base);
+    border-radius: var(--radius-card);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+}
+
+.t-hero { 
+    @apply text-2xl font-bold; 
+    letter-spacing: var(--font-spacing, -0.01em);
+    font-family: var(--font-family-base);
+    line-height: var(--line-height-base, 1.2);
+    color: var(--color-text-primary); 
+}
+.t-title { 
+    @apply text-lg font-semibold; 
+    font-family: var(--font-family-base);
+    color: var(--color-text-primary); 
+}
+.t-body { 
+    @apply text-[15px]; 
+    line-height: var(--line-height-base, 1.5);
+    font-family: var(--font-family-base);
+    color: var(--color-text-primary); 
+}
+.t-caption { 
+    @apply text-xs; 
+    font-family: var(--font-family-base);
+    color: var(--color-text-secondary); 
 }
 
 .aurora-blob {
     @apply absolute rounded-full mix-blend-multiply filter blur-[80px] opacity-70 animate-breathing;
 }
 
-/* Typography map */
-.t-hero { @apply text-2xl font-bold tracking-tight text-gray-900; }
-.t-title { @apply text-lg font-semibold text-gray-900; }
-.t-body { @apply text-[15px] leading-relaxed text-gray-800; }
-.t-caption { @apply text-xs text-gray-500; }
+/* Visible Scrollbar for Theme Selector */
+.theme-scrollbar::-webkit-scrollbar {
+    display: block !important;
+    height: 6px;
+}
+
+.theme-scrollbar::-webkit-scrollbar-track {
+    background: var(--bg-surface-muted);
+    border-radius: 3px;
+}
+
+.theme-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--color-accent);
+    border-radius: 3px;
+}
+
+.theme-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-secondary);
+}

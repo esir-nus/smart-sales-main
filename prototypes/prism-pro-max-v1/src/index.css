@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Chapter 5: Sleek Glass (Pro Max) Tokens */
+    --bg-app: #F5F5F7; /* Pro Max Gray */
+    --bg-surface: rgba(255, 255, 255, 0.70); /* High-Translucency Glass */
+    --bg-surface-muted: rgba(0, 0, 0, 0.02);
+    
+    --color-text-primary: #1D1D1F; /* SF Black */
+    --color-text-secondary: #86868B; /* SF Gray */
+    --color-accent: #000000; /* Stark Black */
+    
+    --border-base: rgba(0, 0, 0, 0.04); /* Hairline 4% */
+    --shadow-glass: 0 20px 40px -10px rgba(0, 0, 0, 0.05); /* Pro Max Depth */
+  }
+
+  body {
+    @apply bg-prism-bg text-prism-primary font-sans antialiased selection:bg-black/10;
+    /* Contamination Prevention */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    user-select: none; /* App-like feel */
+    -webkit-tap-highlight-color: transparent;
+    letter-spacing: -0.02em; /* Global Tight Tracking */
+  }
+
+  /* Hide Scrollbar Global */
+  ::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
+  }
+}
+
+@layer utilities {
+  .border-retina {
+    border-width: 0.5px;
+  }
+  
+  .glass-panel {
+    @apply bg-prism-surface backdrop-blur-xl border border-prism-border shadow-glass;
+  }
+}

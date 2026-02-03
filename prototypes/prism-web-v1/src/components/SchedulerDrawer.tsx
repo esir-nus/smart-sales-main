@@ -197,14 +197,14 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
       drag="y"
       dragConstraints={{ top: -800, bottom: 0 }}
       dragElastic={0.1}
-      className="absolute top-0 left-0 right-0 h-[95%] bg-white/95 backdrop-blur-2xl rounded-b-[40px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] z-40 border-b border-white/20 flex flex-col pt-8 text-gray-900 overflow-hidden pb-8"
+      className="absolute top-0 left-0 right-0 h-[95%] bg-prism-surface backdrop-blur-2xl rounded-b-[32px] shadow-glass z-40 border-b border-prism-border flex flex-col pt-8 text-prism-primary overflow-hidden pb-8"
     >
         {/* Month Header & Carousel */}
         <div className="px-6 py-2 flex flex-col gap-4">
             <div className="flex justify-between items-center mb-2">
                  <h2 className="text-xl font-bold flex items-center gap-2 tracking-tight">
-                    <span className="text-gray-400 font-medium tracking-normal text-sm">{currentWeekStart.getFullYear()}年</span>
-                    <span className="text-gray-900 text-2xl">{currentWeekStart.getMonth() + 1}月</span>
+                    <span className="text-prism-secondary font-medium tracking-normal text-sm">{currentWeekStart.getFullYear()}年</span>
+                    <span className="text-prism-primary text-2xl">{currentWeekStart.getMonth() + 1}月</span>
                 </h2>
             </div>
             
@@ -222,8 +222,8 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
                             className={clsx(
                             "font-medium text-[13px] px-5 py-2.5 rounded-full whitespace-nowrap transition-all duration-300 snap-center border",
                             isActive 
-                                ? "bg-black text-white border-black shadow-md scale-105" 
-                                : "bg-white text-gray-500 border-gray-100 hover:bg-gray-50"
+                                ? "bg-prism-accent text-white border-prism-accent shadow-md scale-105" 
+                                : "bg-prism-surface text-prism-secondary border-prism-border hover:bg-black/5"
                         )}>{m}月</button>
                     )
                 })}
@@ -289,8 +289,8 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
                                     >
                                         <div className={clsx(
                                             "w-9 h-9 flex items-center justify-center rounded-full transition-all duration-300 relative z-10 font-mono",
-                                            isSelectedDay ? "bg-blue-600 text-white shadow-lg scale-110" : "text-gray-700", // blue-600 token
-                                            !isCurrentMonth && !isSelectedDay && "text-gray-300"
+                                            isSelectedDay ? "bg-prism-accent text-white shadow-lg scale-110" : "text-prism-primary", 
+                                            !isCurrentMonth && !isSelectedDay && "text-prism-secondary/50"
                                         )}>
                                             <span className={clsx("text-sm", isSelectedDay ? "font-bold" : "font-medium")}>
                                                 {d.getDate()}
@@ -301,7 +301,7 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
                                         {hasTask && (
                                             <div className={clsx(
                                                 "absolute bottom-1 w-1 h-1 rounded-full transition-all left-1/2 -translate-x-1/2", 
-                                                isSelectedDay ? "bg-white/80" : "bg-blue-400 group-hover:scale-125"
+                                                isSelectedDay ? "bg-white/80" : "bg-prism-accent group-hover:scale-125"
                                             )} />
                                         )}
                                     </motion.div>
@@ -320,11 +320,10 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
                     setIsExpanded(!isExpanded);
                 }}
              >
-                 <div className="w-8 h-1 bg-gray-300 rounded-full" />
+                 <div className="w-8 h-1 bg-prism-secondary/20 rounded-full" />
              </div>
         </motion.div>
 
-        {/* Content Area */}
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-24 no-scrollbar">
             <AnimatePresence initial={false} mode='popLayout'>
@@ -339,12 +338,12 @@ export const SchedulerDrawer: React.FC<SchedulerDrawerProps> = ({ isOpen, onClos
                     className="flex gap-4 relative group items-start"
                 >
                      {/* Time Label - Refined Typography */}
-                     <span className="text-xs text-gray-400 font-mono pt-3 w-10 text-right shrink-0 tracking-wide">{item.time}</span>
+                     <span className="text-xs text-prism-secondary font-mono pt-3 w-10 text-right shrink-0 tracking-wide">{item.time}</span>
                      
                      {/* Swipe Container */}
                      <div className="flex-1 relative">
                         {/* Timeline Connector */}
-                        <div className="absolute left-0 top-3 bottom-0 w-0.5 bg-gray-100 rounded-full" /> 
+                        <div className="absolute left-0 top-3 bottom-0 w-px bg-prism-border rounded-full" /> 
                         
                         {/* Swipe Wrapper (Delete Background) */}
                         <div className="relative ml-3 bg-red-500 rounded-[20px] overflow-hidden">

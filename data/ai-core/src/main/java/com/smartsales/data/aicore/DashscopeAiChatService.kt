@@ -49,6 +49,8 @@ class DashscopeAiChatService @Inject constructor(
                     references = emptyList(),
                     // 重要：用于验证“真实使用的模型名”，必须是 resolvedModel（override 或 credentials 默认值）。
                     modelUsed = dashscopeRequest.model,
+                    // 思考痕迹：从 DashscopeCompletion 直接传递
+                    thinkingTrace = completion.thinkingTrace,
                 )
             }
         }
@@ -68,6 +70,11 @@ class DashscopeAiChatService @Inject constructor(
             return flowOf(AiChatStreamEvent.Error(noNetworkError()))
         }
         val dashscopeRequest = buildDashscopeRequest(request, credentials)
+        // DEBUG: 验证请求参数
+        android.util.Log.d(
+            "DashscopeAiChat",
+            "streamMessage: model=${dashscopeRequest.model}, enableThinking=${dashscopeRequest.enableThinking}"
+        )
         val accumulator = StringBuilder()
         
         // Wrap SDK stream call to catch network failures and prevent SDK NPE crash
@@ -77,7 +84,13 @@ class DashscopeAiChatService @Inject constructor(
                 when (event) {
                     is DashscopeStreamEvent.Chunk -> {
                         accumulator.append(event.content)
-                        emit(AiChatStreamEvent.Chunk(event.content))
+                        // DEBUG: 追踪 reasoningContent 是否从 DashscopeClient 到达
+                        android.util.Log.d(
+                            "DashscopeAiChat",
+                            "transform: content=${event.content.take(50)}, " +
+                            "reasoning=${event.reasoningContent?.take(50)}"
+                        )
+                        emit(AiChatStreamEvent.Chunk(event.content, event.reasoningContent))
                     }
                     DashscopeStreamEvent.Completed -> {
                         val display = accumulator.toString()
@@ -141,12 +154,19 @@ class DashscopeAiChatService @Inject constructor(
     ): DashscopeRequest {
         val dashScopeSettings = aiParaSettingsProvider.snapshot().dashScope
         val modelOverride = request.model?.trim()?.takeIf { it.isNotBlank() }
+        
+        // Thinking: 仅对需要推理的任务启用（Analyst），结构化输出任务（Scheduler）禁用以降低延迟
+        // reasoning = Analyst需要COT，structured_output = Scheduler只需JSON
+        val shouldEnableThinking = request.skillTags.contains("reasoning") 
+            && !request.skillTags.contains("structured_output")
+        
         return DashscopeRequest(
             apiKey = credentials.apiKey,
             model = modelOverride ?: credentials.model,
             messages = buildMessages(request),
             temperature = dashScopeSettings.temperature.toFloat(),
-            incrementalOutput = dashScopeSettings.incrementalOutput
+            incrementalOutput = dashScopeSettings.incrementalOutput,
+            enableThinking = shouldEnableThinking
         )
     }
 

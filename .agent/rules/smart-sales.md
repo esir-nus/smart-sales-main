@@ -12,6 +12,8 @@ trigger: always_on
 
 | Document | Purpose |
 |----------|---------|
+| [docs/specs/README.md](file:///home/cslh-frank/main_app/docs/specs/README.md) | **Spec Navigation SOP** — Reading order, feature→file routing |
+| [docs/sops/feature-development.md](file:///home/cslh-frank/main_app/docs/sops/feature-development.md) | **Feature Dev SOP** — 5-phase process, Trinity checkpoints |
 | [docs/specs/Prism-V1.md](file:///home/cslh-frank/main_app/docs/specs/Prism-V1.md) | **Architecture SOT** — Unified Pipeline, Memory, Schemas |
 | [docs/specs/prism-ui-ux-contract.md](file:///home/cslh-frank/main_app/docs/specs/prism-ui-ux-contract.md) | **UX SOT** — Layouts, Gestures, Component Registry |
 | [docs/plans/tracker.md](file:///home/cslh-frank/main_app/docs/plans/tracker.md) | **Living tracker** — architecture status, milestones |

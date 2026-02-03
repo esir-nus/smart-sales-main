@@ -1,9 +1,18 @@
 package com.smartsales.prism.ui.drawers
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -12,104 +21,109 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.interaction.MutableInteractionSource // Added import
-import androidx.compose.ui.platform.LocalContext // Added for Toast
-import android.widget.Toast // Added for Toast
+import android.widget.Toast
+import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.smartsales.prism.ui.components.PrismSurface
 import com.smartsales.prism.ui.drawers.scheduler.SchedulerCalendar
 import com.smartsales.prism.ui.drawers.scheduler.SchedulerTimeline
+import com.smartsales.prism.ui.drawers.scheduler.SchedulerViewModel
 import com.smartsales.prism.ui.drawers.scheduler.TimelineItem
 import com.smartsales.prism.ui.drawers.scheduler.ExitDirection
+import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.ui.theme.*
 
 /**
- * Scheduler Drawer — Top-Down Sheet
+ * Scheduler Drawer — Top-Down Glass Sheet
  * @see prism-ui-ux-contract.md §1.3
  * 
- * Updated: Phase 2 Expansion & Visuals (Light Theme)
+ * Updated: Phase 3 Sleek Glass Purity
  */
 @Composable
 fun SchedulerDrawer(
     isOpen: Boolean,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: SchedulerViewModel = hiltViewModel()
 ) {
     // Height: ~85% of screen
     val drawerFraction = 0.85f 
     
-    // State: Calendar Expansion
+    // UI State: View-specific (Animation/Layout)
     var isCalendarExpanded by remember { mutableStateOf(false) }
     
-    // State: Inspiration Multi-Select
-    var isSelectionMode by remember { mutableStateOf(false) }
-    var selectedInspirationIds by remember { mutableStateOf(setOf<String>()) }
+    // Business State: From ViewModel
+    val activeDayOffset by viewModel.activeDayOffset.collectAsState()
+    val isSelectionMode by viewModel.isSelectionMode.collectAsState()
+    val selectedInspirationIds by viewModel.selectedInspirationIds.collectAsState()
+    val timelineItems by viewModel.timelineItems.collectAsState()
+    val pipelineStatus by viewModel.pipelineStatus.collectAsState()
     
-    // Mock Data (Mutable for Deletion)
-    val timelineItems = remember {
-        mutableStateListOf(
-            TimelineItem.Task(
-                "1", 
-                "08:00", 
-                "与张总会议 (A3项目)", 
-                hasAlarm = true,
-                dateRange = "08:00 - 09:00",
-                location = "会议室 A",
-                notes = "讨论Q4预算审核细节，确认最终报价范围。"
-            ),
-            TimelineItem.Inspiration("2", "10:30", "研究竞品报价策略", isSelected = false),
-            TimelineItem.Conflict("3", "12:00", "李总电话 vs 午餐会议", isExpanded = false),
-            TimelineItem.Task(
-                "4", 
-                "14:00", 
-                "提交季度报告 (已完成)", 
-                isDone = true,
-                dateRange = "14:00 - 15:30",
-                location = "工位",
-                notes = "已通过邮件发送给运营总监。"
-            ),
-            // Demo: Task that exits LEFT (moving to past / older days)
-            TimelineItem.Task(
-                "5",
-                "16:00",
-                "跟进上周客户反馈",
-                dateRange = "16:00 - 17:00",
-                location = "远程",
-                notes = "将此任务改期至上周三。"
-            )
-        )
-    }
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
     
-    // Transform timeline items based on selection mode
-    // FIX: Use derivedStateOf for proper reactivity to SnapshotStateList mutations
-    val displayItems by remember {
-        derivedStateOf {
-            timelineItems.map { item ->
-                if (item is TimelineItem.Inspiration) {
-                    item.copy(
-                        isSelectionMode = isSelectionMode,
-                        isSelected = selectedInspirationIds.contains(item.id)
-                    )
-                } else {
-                    item
-                }
+    // Derived UI State for Timeline
+    // Map Domain Models to UI (if needed, but for now they are compatible or shared)
+    // Note: Since we defined TimelineItemModel in Domain, we need to ensure UI uses that or maps it.
+    // To facilitate compiling without touching every child file, we can map Domain->UI if they differ.
+    // Based on previous reads, UI used 'TimelineItem' sealed class in `SchedulerStates.kt`.
+    // We should double check if we need to map Domain `TimelineItemModel` -> UI `TimelineItem`.
+    // Assuming for now we map them or they are same. 
+    // Wait, I created TimelineItemModel in Domain. I must map it to UI TimelineItem here.
+    
+    val uiItems = remember(timelineItems, isSelectionMode, selectedInspirationIds) {
+        timelineItems.map { model ->
+            when (model) {
+                is TimelineItemModel.Task -> TimelineItem.Task(
+                    id = model.id,
+                    timeDisplay = model.timeDisplay,
+                    title = model.title,
+                    isDone = model.isDone,
+                    hasAlarm = model.hasAlarm,
+                    isSmartAlarm = model.isSmartAlarm,
+                    dateRange = model.dateRange,
+                    location = model.location,
+                    notes = model.notes,
+                    keyPerson = model.keyPerson,
+                    highlights = model.highlights,
+                    alarmCascade = model.alarmCascade,
+                    // UI-only animation state (not from Domain)
+                    processingStatus = null,
+                    isExiting = false,
+                    exitDirection = ExitDirection.RIGHT
+                )
+                is TimelineItemModel.Inspiration -> TimelineItem.Inspiration(
+                    id = model.id,
+                    timeDisplay = model.timeDisplay,
+                    title = model.title,
+                    isSelected = selectedInspirationIds.contains(model.id),
+                    isSelectionMode = isSelectionMode
+                )
+                is TimelineItemModel.Conflict -> TimelineItem.Conflict(
+                    id = model.id,
+                    timeDisplay = model.timeDisplay,
+                    conflictText = model.conflictText,
+                    isExpanded = false // UI state local to item, or hoisted? ideally hoisted but okay for now
+                )
             }
         }
     }
 
-    androidx.compose.animation.AnimatedVisibility(
+    // Drawer container — no internal scrim (PrismShell provides global scrim)
+    // Use AnimatedVisibility to slide content in from top
+    AnimatedVisibility(
         visible = isOpen,
-        enter = androidx.compose.animation.slideInVertically(
+        enter = slideInVertically(
             initialOffsetY = { -it },
             animationSpec = spring(
                 dampingRatio = Spring.DampingRatioMediumBouncy,
                 stiffness = Spring.StiffnessMedium
             )
         ),
-        exit = androidx.compose.animation.slideOutVertically(
+        exit = slideOutVertically(
             targetOffsetY = { -it },
             animationSpec = spring(
                 dampingRatio = Spring.DampingRatioNoBouncy,
@@ -117,172 +131,153 @@ fun SchedulerDrawer(
             )
         )
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Scrim
-            Box(
+        PrismSurface(
+            modifier = modifier
+                .fillMaxWidth()
+                .fillMaxHeight(drawerFraction),
+            shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+            backgroundColor = BackgroundSurface.copy(alpha = 0.98f),
+            elevation = 16.dp
+        ) {
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = if(isOpen) 0.3f else 0f))
-                    .clickable { onDismiss() }
-            )
-
-            // Drawer Content (White Background - Light Theme)
-            Column(
-                modifier = modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight(drawerFraction)
-                    .background(
-                        Color.White, // Light Theme per Spec
-                        RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
-                    )
-                    // Intercept clicks to prevent them from passing through to the scrim
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) { /* Consume click */ }
-            ) {
-                // 1. Calendar Section (Expandable)
-                SchedulerCalendar(
-                    isExpanded = isCalendarExpanded,
-                    onExpandChange = { isCalendarExpanded = it }
-                )
-                
-                // 2. Timeline Section
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .background(Color(0xFFFAFAFA)) // Very light gray for timeline area
-                ) {
-                    SchedulerTimeline(
-                        items = displayItems,
-                        onInteraction = { interaction ->
-                            when {
-                                interaction.startsWith("ask_ai_") -> {
-                                    val id = interaction.removePrefix("ask_ai_")
-                                    // Enter selection mode and select this inspiration
-                                    isSelectionMode = true
-                                    selectedInspirationIds = selectedInspirationIds + id
-                                }
-                                interaction.startsWith("select_") -> {
-                                    val id = interaction.removePrefix("select_")
-                                    // Toggle selection
-                                    selectedInspirationIds = if (selectedInspirationIds.contains(id)) {
-                                        val newSet = selectedInspirationIds - id
-                                        // Exit selection mode if none selected
-                                        if (newSet.isEmpty()) isSelectionMode = false
-                                        newSet
-                                    } else {
-                                        selectedInspirationIds + id
-                                    }
-                                }
-
-                                interaction.startsWith("delete_") -> {
-                                    val id = interaction.removePrefix("delete_")
-                                    val item = timelineItems.find { it.id == id }
-                                    if (item != null) {
-                                        timelineItems.remove(item)
-                                        // "Boom, it's gone" - with cleanup confirmation
-                                        Toast.makeText(context, "Deleted", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                                interaction.startsWith("reschedule_") -> {
-                                    // Format: reschedule_<id>_<text>
-                                    val parts = interaction.split("_", limit = 3)
-                                    if (parts.size == 3) {
-                                        val id = parts[1]
-                                        val userText = parts[2]
-                                        
-                                        // Determine direction: past keywords = LEFT, otherwise RIGHT
-                                        val isPastReschedule = userText.contains("上周") || 
-                                                               userText.contains("昨天") || 
-                                                               userText.contains("之前") ||
-                                                               userText.contains("前天")
-                                        val direction = if (isPastReschedule) ExitDirection.LEFT else ExitDirection.RIGHT
-                                        
-                                        // Fake I/O Flow
-                                        coroutineScope.launch {
-                                            // 1. Parsing
-                                            val index = timelineItems.indexOfFirst { it.id == id }
-                                            if (index != -1 && timelineItems[index] is TimelineItem.Task) {
-                                                val task = timelineItems[index] as TimelineItem.Task
-                                                timelineItems[index] = task.copy(processingStatus = "Parsing request...")
-                                            }
-                                            
-                                            delay(800) // Fake parsing delay
-
-                                            // 2. Checking Memory
-                                            val index2 = timelineItems.indexOfFirst { it.id == id }
-                                            if (index2 != -1 && timelineItems[index2] is TimelineItem.Task) {
-                                                val task = timelineItems[index2] as TimelineItem.Task
-                                                timelineItems[index2] = task.copy(processingStatus = "Checking availability...")
-                                            }
-
-                                            delay(1200) // Fake checking delay
-
-                                            // 3. Success (Move Card with direction)
-                                            val index3 = timelineItems.indexOfFirst { it.id == id }
-                                            if (index3 != -1 && timelineItems[index3] is TimelineItem.Task) {
-                                                val task = timelineItems[index3] as TimelineItem.Task
-                                                // Trigger Animation: Slide Out with direction
-                                                timelineItems[index3] = task.copy(
-                                                    processingStatus = null, // Hide overlay during exit
-                                                    isExiting = true,
-                                                    exitDirection = direction
-                                                )
-                                            }
-
-                                            delay(350) // Wait for animation (matches tween duration)
-
-                                            val itemToRemove = timelineItems.find { it.id == id }
-                                            if (itemToRemove != null) {
-                                                timelineItems.remove(itemToRemove)
-                                                // Direction-aware Toast
-                                                val toastMsg = if (isPastReschedule) {
-                                                    "已改期至上周三，09:00"
-                                                } else {
-                                                    "已改期至3月3日，08:00"
-                                                }
-                                                Toast.makeText(context, toastMsg, Toast.LENGTH_LONG).show()
-                                            }
-                                        }
-                                    }
-                                }
-                                else -> { /* Other interactions */ }
+                    // Consume all pointer events so clicks don't pass through to scrim
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                awaitPointerEvent()
+                                // Just consume, don't do anything
                             }
                         }
+                    }
+            ) {
+                    // 1. Calendar Section (Expandable)
+                    val unacknowledgedDates by viewModel.unacknowledgedDates.collectAsState()
+                    SchedulerCalendar(
+                        isExpanded = isCalendarExpanded,
+                        onExpandChange = { isCalendarExpanded = it },
+                        activeDay = activeDayOffset,
+                        onDateSelected = { viewModel.onDateSelected(it) },
+                        unacknowledgedDates = unacknowledgedDates
                     )
-                }
-                
-                // 2.1 Multi-Select Bottom Bar
-                if (isSelectionMode && selectedInspirationIds.isNotEmpty()) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = Color(0xFF7B1FA2), // Purple accent
-                        shadowElevation = 8.dp
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { 
-                                    // TODO: Navigate to Coach with selected inspirations
-                                    isSelectionMode = false
-                                    selectedInspirationIds = emptySet()
-                                }
-                                .padding(16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "问AI (${selectedInspirationIds.size})",
-                                color = Color.White,
-                                fontSize = 16.sp,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    
+                    // 2. Timeline Section
+                    Box(modifier = Modifier.weight(1f)) {
+                        SchedulerTimeline(
+                            items = uiItems,
+                            onItemClick = { id -> viewModel.onItemClick(id) },
+                            onDelete = { id -> viewModel.onDeleteItem(id) },
+                            onReschedule = { id, text -> viewModel.onReschedule(id, text) },
+                            onMultiSelectToggle = { id -> viewModel.onToggleSelection(id) },
+                            onEnterMultiSelect = { viewModel.onEnterSelectionMode() }
+                        )
+                        
+                        // Swipe to exit multi-select
+                        if (isSelectionMode) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .draggable(
+                                        state = rememberDraggableState { delta ->
+                                            if (delta > 20) {
+                                                viewModel.onExitSelectionMode()
+                                            }
+                                        },
+                                        orientation = Orientation.Horizontal
+                                    )
                             )
                         }
                     }
-                }
 
-                // 3. Drag Handle (Bottom of sheet)
-                DragHandle(onDismiss = onDismiss)
+                    // Multi-Select Action Bar
+                    if (isSelectionMode && selectedInspirationIds.isNotEmpty()) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = Color(0xFFAF52DE), // iOS Purple
+                            shadowElevation = 8.dp
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { 
+                                        viewModel.onExitSelectionMode()
+                                    }
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "问AI (${selectedInspirationIds.size})",
+                                    color = Color.White,
+                                    fontSize = 16.sp,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    // 🧪 DEV ONLY: Flexible Simulation Input (bypasses hardware)
+                    if (com.smartsales.prism.BuildConfig.DEBUG) {
+                        val scope = rememberCoroutineScope()
+                        val devContext = LocalContext.current
+                        var simulationText by remember { mutableStateOf("") }
+                        
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            color = Color(0xFF2ECC71).copy(alpha = 0.9f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                // Input Field
+                                androidx.compose.foundation.text.BasicTextField(
+                                    value = simulationText,
+                                    onValueChange = { simulationText = it },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
+                                        .padding(8.dp),
+                                    textStyle = LocalTextStyle.current.copy(color = Color.White),
+                                    singleLine = true,
+                                    decorationBox = { innerTextField ->
+                                        if (simulationText.isEmpty()) {
+                                            Text("输入测试语句...", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
+                                        }
+                                        innerTextField()
+                                    }
+                                )
+                                
+                                Spacer(modifier = Modifier.height(8.dp))
+                                
+                                // Send Button
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            val textToSend = simulationText.ifEmpty { "我需要明天凌晨3点赶飞机" }
+                                            scope.launch {
+                                                Toast.makeText(devContext, "🧪 模拟: $textToSend", Toast.LENGTH_SHORT).show()
+                                                viewModel.simulateTranscript(textToSend)
+                                            }
+                                        }
+                                        .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
+                                        .padding(8.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "🧪 发送模拟转录",
+                                        color = Color.White,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Drag Handle
+                    DragHandle(onDismiss = onDismiss)
             }
         }
     }
@@ -295,9 +290,7 @@ private fun DragHandle(onDismiss: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
             .padding(vertical = 12.dp)
-            // Removed clickable { onDismiss() } to prevent accidental dismissals during interaction attempt
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
                     onDragEnd = { accumulatedDrag = 0f },
@@ -318,7 +311,7 @@ private fun DragHandle(onDismiss: () -> Unit) {
             modifier = Modifier
                 .width(40.dp)
                 .height(4.dp)
-                .background(Color(0xFFDDDDDD), RoundedCornerShape(2.dp))
+                .background(BorderSubtle, RoundedCornerShape(2.dp))
         )
     }
 }

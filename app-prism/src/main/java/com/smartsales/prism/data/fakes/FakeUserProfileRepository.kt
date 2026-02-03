@@ -15,7 +15,7 @@ class FakeUserProfileRepository @Inject constructor() : UserProfileRepository {
         UserProfile(
             id = 0,
             displayName = "Frank",
-            role = "Sales Manager",
+            role = "manager",
             industry = "Technology",
             experienceLevel = "Expert",
             preferredLanguage = "zh-CN",

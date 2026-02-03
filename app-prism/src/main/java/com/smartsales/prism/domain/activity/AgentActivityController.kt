@@ -62,9 +62,18 @@ class AgentActivityController @Inject constructor() {
     }
     
     /**
-     * 完成当前活动，清空状态
+     * 完成当前活动，保留思考痕迹（持久化显示）
      */
     fun complete() {
+        _activity.value?.let { current ->
+            _activity.value = current.copy(phase = ActivityPhase.COMPLETED)
+        }
+    }
+    
+    /**
+     * 重置活动状态（开始新对话时调用）
+     */
+    fun reset() {
         _activity.value = null
     }
     

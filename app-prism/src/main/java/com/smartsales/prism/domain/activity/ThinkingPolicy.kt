@@ -21,6 +21,17 @@ object ThinkingPolicy {
     }
     
     /**
+     * 是否自动折叠思考痕迹
+     * 
+     * Analyst 模式保持展开直到完成，让用户看到完整的思考过程。
+     */
+    fun shouldAutoCollapse(mode: Mode): Boolean = when (mode) {
+        Mode.COACH -> true       // 快速折叠 — 不打扰用户
+        Mode.ANALYST -> false    // 保持展开 — 透明度优先
+        Mode.SCHEDULER -> true   // 适度折叠
+    }
+    
+    /**
      * 截断思考痕迹
      */
     fun truncate(trace: List<String>, mode: Mode): List<String> {

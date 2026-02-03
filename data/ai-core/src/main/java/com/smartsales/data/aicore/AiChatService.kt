@@ -35,10 +35,13 @@ data class AiChatResponse(
     val references: List<String> = emptyList(),
     // 说明：调试用“实际使用的模型名”（由实现方填充）；为空表示未知或未提供。
     val modelUsed: String? = null,
+    // 说明：Qwen3 CoT 思考痕迹（reasoning_content）；为空表示模型不支持或未启用。
+    val thinkingTrace: String? = null,
 )
 
 sealed class AiChatStreamEvent {
-    data class Chunk(val content: String) : AiChatStreamEvent()
+    // reasoningContent: 思考痕迹增量（每个 chunk 可能包含 reasoning 或 content 或两者）
+    data class Chunk(val content: String, val reasoningContent: String? = null) : AiChatStreamEvent()
     data class Completed(val response: AiChatResponse) : AiChatStreamEvent()
     data class Error(val throwable: Throwable) : AiChatStreamEvent()
 }

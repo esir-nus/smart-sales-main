@@ -9,6 +9,7 @@ enum class ActivityPhase {
     PLANNING,      // 📝 规划分析步骤
     EXECUTING,     // ⚙️ 执行工具
     RESPONDING,    // 💬 生成回复
+    COMPLETED,     // ✅ 思考完成（持久化展示）
     ERROR          // ⚠️ 发生错误
 }
 

@@ -4,6 +4,7 @@ import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.AiChatRequest
 import com.smartsales.data.aicore.AiChatResponse
 import com.smartsales.data.aicore.AiChatService
+import com.smartsales.data.aicore.AiChatStreamEvent
 import com.smartsales.prism.domain.config.ModelRegistry
 import com.smartsales.prism.domain.config.ModelRouter
 import com.smartsales.prism.domain.model.Mode
@@ -24,18 +25,53 @@ import javax.inject.Singleton
  */
 @Singleton
 class DashscopeExecutor @Inject constructor(
-    private val aiChatService: AiChatService
+    private val aiChatService: AiChatService,
+    private val activityController: com.smartsales.prism.domain.activity.AgentActivityController
 ) : Executor {
     
     override suspend fun execute(context: EnhancedContext): ExecutorResult {
         // 构建 AiChatRequest
         val request = buildRequest(context)
         
-        // 调用 ai-core 服务
-        return when (val result = aiChatService.sendMessage(request)) {
-            is Result.Success -> mapSuccess(result.data)
-            is Result.Error -> mapError(result.throwable)
+        // 记录 API 请求
+        activityController.appendTrace("🔌 API: ${request.model}")
+        
+        // 使用流式调用（官方推荐用于 enable_thinking）
+        val contentBuilder = StringBuilder()
+        var lastResponse: AiChatResponse? = null
+        var errorResult: ExecutorResult.Failure? = null
+        
+        aiChatService.streamMessage(request).collect { event ->
+            when (event) {
+                is AiChatStreamEvent.Chunk -> {
+                    // DEBUG: 验证 reasoningContent 是否到达 Executor
+                    android.util.Log.d(
+                        "DashscopeExecutor",
+                        "Chunk: reasoning=${event.reasoningContent}, content=${event.content.take(30)}"
+                    )
+                    // 实时显示思考痕迹
+                    event.reasoningContent?.let { reasoning ->
+                        if (reasoning.isNotBlank()) {
+                            activityController.appendTrace(reasoning)
+                        }
+                    }
+                    // 累积内容
+                    contentBuilder.append(event.content)
+                }
+                is AiChatStreamEvent.Completed -> {
+                    lastResponse = event.response
+                    activityController.appendTrace("✅ 分析完成")
+                }
+                is AiChatStreamEvent.Error -> {
+                    activityController.appendTrace("❌ API Error: ${event.throwable.message}")
+                    errorResult = mapError(event.throwable)
+                }
+            }
         }
+        
+        // 返回结果
+        return errorResult ?: lastResponse?.let { mapSuccess(it) } 
+            ?: ExecutorResult.Failure("流式调用未返回结果", retryable = true)
     }
     
     /**
@@ -71,7 +107,62 @@ class DashscopeExecutor @Inject constructor(
      * 包含用户输入 + 上下文信息
      */
     private fun buildPrompt(context: EnhancedContext): String = buildString {
+        val mode = context.modeMetadata.currentMode
+        
+        // Phase 4: Analyst / Scheduler 模式使用结构化 JSON 输出
+        when (mode) {
+            Mode.ANALYST -> {
+                appendLine(buildAnalystSystemPrompt())
+                appendLine()
+                appendLine("---")
+                appendLine()
+            }
+            Mode.SCHEDULER -> {
+                appendLine(buildSchedulerSystemPrompt())
+                appendLine()
+                appendLine("---")
+                appendLine()
+            }
+            else -> { /* Coach 模式不需要特殊 system prompt */ }
+        }
+        
+        // 添加会话历史（如果有）
+        if (context.sessionHistory.isNotEmpty()) {
+            appendLine("## 对话历史")
+            context.sessionHistory.takeLast(6).forEach { turn ->
+                val roleLabel = if (turn.role == "user") "用户" else "助手"
+                appendLine("[$roleLabel]: ${turn.content.take(200)}")
+            }
+            appendLine()
+        }
+        
+        // 添加上一次工具结果（如果有）
+        if (context.lastToolResult != null) {
+            appendLine("## 上次工具执行结果")
+            appendLine("- 工具: ${context.lastToolResult.toolId}")
+            appendLine("- 标题: ${context.lastToolResult.title}")
+            appendLine("- 预览: ${context.lastToolResult.preview.take(100)}")
+            appendLine()
+        }
+        
+        // 添加已执行工具（如果有）
+        if (context.executedTools.isNotEmpty()) {
+            appendLine("## 已执行工具")
+            context.executedTools.forEach { toolId ->
+                appendLine("- ✓ $toolId")
+            }
+            appendLine()
+        }
+        
+        // 📅 添加日期上下文（关键：LLM 需要知道 "今天" 才能解析 "明天"、"下周"）
+        context.currentDate?.let { date ->
+            appendLine("## 当前日期")
+            appendLine("今天是: $date")
+            appendLine()
+        }
+        
         // 基础用户输入
+        appendLine("## 当前用户输入")
         appendLine(context.userText)
         
         // 添加实体上下文（如果有）
@@ -92,6 +183,91 @@ class DashscopeExecutor @Inject constructor(
             }
         }
     }
+    
+    /**
+     * Analyst 模式系统提示词
+     * Phase 4.5: 结构化分析 + 澄清优先
+     */
+    private fun buildAnalystSystemPrompt(): String = """
+你是一位资深销售教练。分析用户场景后，提供专业建议。
+
+## 响应策略
+
+1. 先判断信息是否充足：
+   - 如果用户场景模糊或缺少关键细节 → info_sufficient = false
+   - 如果场景清晰 → info_sufficient = true
+
+2. 场景类型：
+   - price_objection: 价格异议
+   - value_gap: 价值感知差距
+   - comparison: 产品对比
+   - closing: 成交促成
+   - discovery: 需求挖掘
+   - unclear: 信息不足
+
+## 响应格式（必须是严格的 JSON）
+
+{
+  "analysis": {
+    "scenario_type": "price_objection",
+    "info_sufficient": true,
+    "objection_root": "perceived_value_gap",
+    "customer_state": "ready_to_buy_but_price_sensitive",
+    "recommended_tactics": ["value_stack", "tco_comparison", "urgency"]
+  },
+  "thought": "你的分析思路（中文）",
+  "response": "给用户的专业建议（中文，2-3段）"
+}
+
+注意：如果 info_sufficient 为 true，系统将自动触发后续的详细规划流程。你不需要在此处生成具体的交付物列表。
+""".trimIndent()
+    
+    /**
+     * Scheduler 模式系统提示词
+     * 解析用户日程意图，输出结构化 JSON
+     */
+    private fun buildSchedulerSystemPrompt(): String = """
+你是一个日程解析助手。解析用户的日程描述，输出结构化 JSON。
+
+## 响应格式（必须是严格的 JSON，不允许 markdown）
+
+{
+  "title": "任务标题（简洁明了）",
+  "startTime": "YYYY-MM-DD HH:mm",
+  "endTime": "YYYY-MM-DD HH:mm (可选，若用户未指定则为 null)",
+  "location": "地点（可选，没有则省略此字段）",
+  "notes": "备注（可选，没有则省略此字段）",
+  "keyPerson": "关键人物（可选，提取主要联系人或干系人）",
+  "highlights": "高亮信息（可选，提取必须注意的细节，如带身份证、正装等）",
+  "reminder": "smart"
+}
+
+## 规则
+
+1. 时间格式必须是 YYYY-MM-DD HH:mm（如 2026-02-03 03:00）
+2. 根据"当前日期"推算相对时间（"明天"、"下周一"等）
+3. 如果用户没指定结束时间，endTime 设为 null（表示开放式任务）
+4. title 应简洁概括任务本质（如 "赶飞机"、"客户会议"）
+5. 默认 reminder 为 "smart"（智能级联提醒：-1h, -15m, -5m），除非用户明确指定
+
+## 示例
+
+用户：我明天凌晨3点要在T2航站楼赶飞机，必须带好护照
+当前日期：2026-02-02
+
+输出：
+{
+  "title": "赶飞机",
+  "startTime": "2026-02-03 03:00",
+  "endTime": null,
+  "location": "T2航站楼",
+  "keyPerson": null,
+  "highlights": "必须带好护照",
+  "reminder": "smart"
+}
+
+只输出 JSON，不要有任何其他文字。
+""".trimIndent()
     
     /**
      * 成功结果映射

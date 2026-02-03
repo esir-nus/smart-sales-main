@@ -22,7 +22,7 @@ data class AiCoreConfig(
     val enableV1TingwuMacroWindowFilter: Boolean = true, // V1 spec §B.1: Range filtering for overlap de-dup
     val dashscopeMaxRetries: Int = 1,
     val dashscopeRequestTimeoutMillis: Long = 15_000,
-    val dashscopeEnableStreaming: Boolean = false,
+    val dashscopeEnableStreaming: Boolean = true, // 官方推荐使用流式输出 enable_thinking
     val preferFakeTingwu: Boolean = false,
     val preferFakeExport: Boolean = false,
     val tingwuPollIntervalMillis: Long = 5_000,

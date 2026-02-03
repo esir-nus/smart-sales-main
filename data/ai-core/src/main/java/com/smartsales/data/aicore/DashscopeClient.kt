@@ -35,7 +35,7 @@ data class DashscopeCompletion(
 )
 
 sealed class DashscopeStreamEvent {
-    data class Chunk(val content: String) : DashscopeStreamEvent()
+    data class Chunk(val content: String, val reasoningContent: String? = null) : DashscopeStreamEvent()
     data object Completed : DashscopeStreamEvent()
     data class Failed(val reason: String, val throwable: Throwable?) : DashscopeStreamEvent()
 }
@@ -65,7 +65,15 @@ class DefaultDashscopeClient @Inject constructor() : DashscopeClient {
             }
 
             override fun onEvent(data: GenerationResult) {
-                trySend(DashscopeStreamEvent.Chunk(extractDisplayText(data)))
+                val content = extractDisplayText(data)
+                val reasoning = extractThinkingTrace(data)
+                // DEBUG: 验证 SDK 流式块是否包含 reasoningContent
+                android.util.Log.d(
+                    "DashscopeClient",
+                    "chunk: content=$content, reasoning=$reasoning, " +
+                    "raw=${data.output?.choices?.firstOrNull()?.message}"
+                )
+                trySend(DashscopeStreamEvent.Chunk(content, reasoning))
             }
 
             override fun onComplete() {

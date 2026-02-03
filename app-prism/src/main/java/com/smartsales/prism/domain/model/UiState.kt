@@ -12,13 +12,10 @@ sealed class UiState {
     data class Thinking(val hint: String? = null) : UiState()
     data class Streaming(val partialContent: String) : UiState()
     data class Response(val content: String, val structuredJson: String? = null) : UiState()
+    data class SchedulerTaskCreated(val title: String, val dayOffset: Int) : UiState()
     data class PlanCard(val plan: ExecutionPlan, val completedSteps: Set<Int> = emptySet()) : UiState()
     data class Error(val message: String, val retryable: Boolean = true) : UiState()
 
-    // Analyst Mode FSM Mapping (v2.7)
-    data class AnalystParsing(val ticker: String, val progress: Float) : UiState()
-    data class AnalystProposal(val plan: com.smartsales.prism.domain.pipeline.AnalystPlan) : UiState()
-    data class AnalystExecuting(val planTitle: String) : UiState()
-    data class AnalystResult(val artifact: com.smartsales.prism.domain.pipeline.PlanArtifact) : UiState()
+    // Analyst Mode V2 State
+    data class PlannerTableState(val table: com.smartsales.prism.domain.analyst.PlannerTable) : UiState()
 }
-

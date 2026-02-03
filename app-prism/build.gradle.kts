@@ -61,6 +61,12 @@ android {
             )
         }
     }
+    
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 kotlin {
@@ -71,8 +77,10 @@ kapt {
     correctErrorTypes = true
 }
 
-configurations.all {
-    exclude(group = "com.google.guava", module = "listenablefuture")
+// Guava for ListenableFuture (required by AndroidX concurrent-futures / ProfileInstaller)
+// Using guava-android to avoid JRE-only classes
+dependencies {
+    implementation("com.google.guava:guava:32.1.3-android")
 }
 
 dependencies {
@@ -105,6 +113,7 @@ dependencies {
     // Test
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
+    testImplementation("org.json:json:20231013")  // Real JSON lib for unit tests
     
     // UI Tests (On-Device Logic Check)
     androidTestImplementation(platform(libs.compose.bom))

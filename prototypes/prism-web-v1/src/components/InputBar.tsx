@@ -10,9 +10,9 @@ export const InputBar: React.FC<InputBarProps> = ({ topAccessory }) => {
     <div className="absolute bottom-8 left-4 right-4 z-30 flex flex-col items-center gap-4">
         {topAccessory}
         
-        <div className="w-full h-16 bg-white/85 backdrop-blur-xl rounded-full shadow-floating border border-white/50 flex items-center px-2">
+        <div className="w-full h-16 bg-prism-surface backdrop-blur-xl rounded-[24px] shadow-glass border-retina border-prism-border flex items-center px-2">
             {/* Upload Button (Left) */}
-            <button className="w-12 h-12 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors">
+            <button className="w-12 h-12 rounded-full flex items-center justify-center text-prism-secondary hover:bg-black/5 transition-colors">
                 <Paperclip size={22} className="rotate-45" />
             </button>
             
@@ -21,10 +21,10 @@ export const InputBar: React.FC<InputBarProps> = ({ topAccessory }) => {
                  <input 
                     type="text" 
                     placeholder="输入消息..." // Localized
-                    className="w-full h-full bg-transparent border-none outline-none text-gray-900 placeholder-gray-400 font-medium z-10"
+                    className="w-full h-full bg-transparent border-none outline-none text-prism-primary placeholder-prism-secondary font-medium z-10"
                  />
                  
-                 {/* Scan Shine Overlay */}
+                 {/* Scan Shine Overlay (Optional, keep for now or remove if strictly minimal) */}
                  <div className="absolute inset-0 flex items-center pointer-events-none opacity-50">
                     <span className="bg-gradient-to-r from-gray-400 via-gray-900 to-gray-400 bg-[length:200%_auto] text-transparent bg-clip-text animate-scan-shine text-sm font-medium ml-2">
                         {/* Shimmer effect target */}

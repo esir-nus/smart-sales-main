@@ -84,7 +84,12 @@ class SchedulerLinter @Inject constructor(
                     null -> null
                     else -> ReminderType.SINGLE
                 },
-                taskTypeHint = inferTaskType(title)
+                taskTypeHint = inferTaskType(title),
+                parsedClues = ParsedClues(
+                    personAlias = keyPerson,           // 原始人物别名
+                    location = location,               // 地点
+                    briefSummary = title               // 摘要（使用标题）
+                )
             )
         } catch (e: Exception) {
             LintResult.Error("JSON 解析失败: ${e.message}")
@@ -156,11 +161,35 @@ class SchedulerLinter @Inject constructor(
  * 校验结果
  */
 sealed class LintResult {
+    /**
+     * 成功解析的结果
+     * 
+     * @param task 解析后的任务模型
+     * @param reminderType 提醒类型
+     * @param taskTypeHint 任务类型提示
+     * @param parsedClues Phase 1 解析的线索（用于 Phase 2 实体解析）
+     */
     data class Success(
         val task: TimelineItemModel.Task,
         val reminderType: ReminderType?,
-        val taskTypeHint: TaskTypeHint
+        val taskTypeHint: TaskTypeHint,
+        val parsedClues: ParsedClues = ParsedClues()
     ) : LintResult()
 
     data class Error(val message: String) : LintResult()
 }
+
+/**
+ * Phase 1 解析的线索 — 用于 Phase 2 LLM 实体解析
+ * 
+ * @property personAlias 人物别名（原始输入，未解析），如 "张总"
+ * @property location 地点，如 "会议室"
+ * @property briefSummary 摘要，如 "开会"
+ * 
+ * 注意：startTime 和 duration 已经在 task 中，不需要重复存储
+ */
+data class ParsedClues(
+    val personAlias: String? = null,
+    val location: String? = null,
+    val briefSummary: String? = null
+)

@@ -1,9 +1,12 @@
 package com.smartsales.prism.data.real
 
+import com.smartsales.prism.domain.memory.EntityType
+import com.smartsales.prism.domain.memory.RelevancyRepository
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.pipeline.ChatTurn
 import com.smartsales.prism.domain.pipeline.ContextBuilder
 import com.smartsales.prism.domain.pipeline.EnhancedContext
+import com.smartsales.prism.domain.pipeline.EntityRef
 import com.smartsales.prism.domain.pipeline.ModeMetadata
 import com.smartsales.prism.domain.pipeline.ToolArtifact
 import com.smartsales.prism.domain.time.TimeProvider
@@ -18,7 +21,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class RealContextBuilder @Inject constructor(
-    private val timeProvider: TimeProvider
+    private val timeProvider: TimeProvider,
+    private val relevancyRepository: RelevancyRepository
 ) : ContextBuilder {
     
     // 会话历史（最多保留10轮，避免上下文膨胀）
@@ -32,6 +36,13 @@ class RealContextBuilder @Inject constructor(
     override suspend fun build(userText: String, mode: Mode): EnhancedContext {
         _turnIndex++
         
+        // Wave 2: 为 SCHEDULER 模式加载客户实体上下文
+        val entityContext = if (mode == Mode.SCHEDULER) {
+            loadClientEntities()
+        } else {
+            emptyMap()
+        }
+        
         return EnhancedContext(
             userText = userText,
             modeMetadata = ModeMetadata(
@@ -42,9 +53,39 @@ class RealContextBuilder @Inject constructor(
             sessionHistory = _sessionHistory.toList(),
             lastToolResult = _lastToolResult,
             executedTools = _executedTools.toSet(),
+            entityContext = entityContext,
             // 使用 TimeProvider 获取格式化的日期时间（包含时间，支持 "今晚"、"3小时后"）
             currentDate = timeProvider.formatForLlm()
         )
+    }
+    
+    /**
+     * Wave 2: 加载客户/联系人实体用于 LLM 上下文
+     * 按 spec: 客户/人物名称优先（销售场景）
+     */
+    private suspend fun loadClientEntities(): Map<String, EntityRef> {
+        return try {
+            val persons = relevancyRepository.getByType(EntityType.PERSON)
+            persons.take(20).associate { entry ->
+                val aliases = try {
+                    org.json.JSONArray(entry.aliasesJson).let { arr ->
+                        (0 until arr.length()).map { arr.getString(it) }
+                    }
+                } catch (e: Exception) {
+                    emptyList()
+                }
+                val aliasDisplay = if (aliases.isNotEmpty()) "别名[${aliases.joinToString(", ")}]" else ""
+                
+                entry.displayName to EntityRef(
+                    entityId = entry.entityId,
+                    displayName = "${entry.displayName} $aliasDisplay".trim(),
+                    entityType = entry.entityType.name
+                )
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("RealContextBuilder", "Failed to load client entities: ${e.message}")
+            emptyMap()
+        }
     }
     
     /**

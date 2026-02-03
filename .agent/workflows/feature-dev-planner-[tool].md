@@ -113,26 +113,61 @@ Only after Phases 0-2 pass:
 
 ## Phase 4: Three-Level Testing
 
-| Level | What | When |
-|-------|------|------|
-| **L1** | `./gradlew testDebugUnitTest` | Every change |
-| **L2** | Debug buttons in UI (isolated scenarios) | Before integration |
-| **L3** | Full on-device with real UX | After L2 pass |
+### L2 Applicability Matrix
 
-### L2 Scenario Runner Pattern
+| Feature Type | Example | L1 (Unit) | L2 (Debug HUD) | L3 (On-Device) |
+|--------------|---------|-----------|----------------|----------------|
+| **UI Surface** | Scheduler, Analyst Mode | ✅ | ✅ Required | ✅ |
+| **Invisible Infra** | Memory Center, ScheduleBoard | ✅ | ❌ Skip | ❌ Skip |
+
+**Rule**: L2 tests are ONLY for features with user-visible UI that receives input.
+
+### When to Use L2
+
+| ✅ Use L2 | ❌ Skip L2 |
+|----------|-----------|
+| Feature has a Drawer/Screen | Feature is pure backend index |
+| User can trigger via input bar | Feature is consumed by other features |
+| Pipeline goes: Input → LLM → UI | Pipeline is index/cache/query |
+
+### L2 Debug HUD Pattern (UI Features)
+
+For features with UI surface, use the centralized Debug HUD (🐛 icon):
+
+1. **Input bar** for natural language simulation (bypasses hardware)
+2. **Full pipeline** via Orchestrator (not just domain layer)
+3. **Logcat output** for verification
+
+```bash
+# L2 verification command
+adb logcat -s L2DebugHud:D
+```
+
+**Location**: `ui/debug/L2DebugHud.kt`
+
+### L1-Only Pattern (Invisible Infra)
+
+For invisible infrastructure:
 
 ```kotlin
-// In ViewModel (DEBUG only)
-fun debugRunScenario(scenario: String) {
-    when (scenario) {
-        "CLEAN" -> clearAllTestData()
-        "SCENARIO_A" -> simulateWithPreset(PRESET_A)
-        "SCENARIO_B" -> simulateWithPreset(PRESET_B)
-    }
+// Just unit tests in src/test/
+class ScheduleBoardTest {
+    @Test fun `overlap detection works`() { ... }
+    @Test fun `index updates correctly`() { ... }
 }
 ```
 
-**L2 MUST pass before L3.** L3 can have false positives.
+**No Debug HUD needed.** Unit tests are sufficient.
+
+### Testing Gate
+
+| Level | What | UI Features | Infra Features |
+|-------|------|-------------|----------------|
+| **L1** | `./gradlew testDebugUnitTest` | ✅ Required | ✅ Required |
+| **L2** | Debug HUD simulation | ✅ Required | ❌ Skip |
+| **L3** | Full on-device with real UX | ✅ Required | ❌ Skip |
+
+**L2 MUST pass before L3** (for UI features only).
 
 ---
 

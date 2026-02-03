@@ -138,7 +138,9 @@ class PrismOrchestrator @Inject constructor(
                             
                             UiState.SchedulerTaskCreated(
                                 title = lintResult.task.title,
-                                dayOffset = dayOffset
+                                dayOffset = dayOffset,
+                                scheduledAtMillis = lintResult.task.startTime.toEpochMilli(),
+                                durationMinutes = lintResult.task.durationMinutes
                             )
                         }
                         is LintResult.Error -> {

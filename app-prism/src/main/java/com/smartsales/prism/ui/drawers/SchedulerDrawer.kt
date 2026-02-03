@@ -162,7 +162,26 @@ fun SchedulerDrawer(
                         unacknowledgedDates = unacknowledgedDates
                     )
                     
-                    // 2. Timeline Section
+                    // 2. Conflict Warning (if any)
+                    val conflictWarning by viewModel.conflictWarning.collectAsState()
+                    AnimatedVisibility(visible = conflictWarning != null) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFFFF9800).copy(alpha = 0.15f))
+                                .clickable { viewModel.clearConflictWarning() }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = conflictWarning ?: "",
+                                color = Color(0xFFFFB74D),
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                    
+                    // 3. Timeline Section
                     Box(modifier = Modifier.weight(1f)) {
                         SchedulerTimeline(
                             items = uiItems,

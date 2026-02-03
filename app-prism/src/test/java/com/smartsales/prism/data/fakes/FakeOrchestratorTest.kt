@@ -64,11 +64,14 @@ class FakeOrchestratorTest {
     }
     
     @Test
-    fun `createScheduledTask returns Response with task confirmation`() = runTest {
+    fun `createScheduledTask returns SchedulerTaskCreated`() = runTest {
         val result = orchestrator.createScheduledTask("明天凌晨3点赶飞机")
         
-        assertTrue("Expected UiState.Response", result is UiState.Response)
-        val response = result as UiState.Response
-        assertTrue("Response should contain 已创建任务", response.content.contains("已创建任务"))
+        assertTrue("Expected UiState.SchedulerTaskCreated", result is UiState.SchedulerTaskCreated)
+        val created = result as UiState.SchedulerTaskCreated
+        assertEquals("赶飞机", created.title)
+        assertEquals(1, created.dayOffset)
+        assertTrue("durationMinutes should be positive", created.durationMinutes > 0)
+        assertTrue("scheduledAtMillis should be positive", created.scheduledAtMillis > 0)
     }
 }

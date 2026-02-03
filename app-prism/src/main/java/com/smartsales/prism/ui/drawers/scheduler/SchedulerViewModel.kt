@@ -2,6 +2,8 @@ package com.smartsales.prism.ui.drawers.scheduler
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.smartsales.prism.domain.memory.ConflictResult
+import com.smartsales.prism.domain.memory.ScheduleBoard
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.pipeline.Orchestrator
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
@@ -21,7 +23,8 @@ import javax.inject.Inject
 @HiltViewModel
 class SchedulerViewModel @Inject constructor(
     private val taskRepository: ScheduledTaskRepository,
-    private val orchestrator: Orchestrator
+    private val orchestrator: Orchestrator,
+    private val scheduleBoard: ScheduleBoard
 ) : ViewModel() {
 
     // --- State ---
@@ -48,6 +51,10 @@ class SchedulerViewModel @Inject constructor(
     // 未确认的日期 (显示呼吸发光效果的日期)
     private val _unacknowledgedDates = MutableStateFlow<Set<Int>>(emptySet())
     val unacknowledgedDates: StateFlow<Set<Int>> = _unacknowledgedDates.asStateFlow()
+
+    // 冲突警告
+    private val _conflictWarning = MutableStateFlow<String?>(null)
+    val conflictWarning: StateFlow<String?> = _conflictWarning.asStateFlow()
 
     // Timeline Items — 响应 dayOffset 和刷新触发器变化
     val timelineItems: StateFlow<List<TimelineItemModel>> = _activeDayOffset
@@ -147,6 +154,20 @@ class SchedulerViewModel @Inject constructor(
                     _pipelineStatus.value = "✅ 已创建: ${result.title}"
                     addUnacknowledgedDate(result.dayOffset)
                     _activeDayOffset.value = result.dayOffset
+                    
+                    // 冲突检测 (创建后，信息性提示)
+                    scheduleBoard.refresh()
+                    when (val conflict = scheduleBoard.checkConflict(
+                        result.scheduledAtMillis,
+                        result.durationMinutes
+                    )) {
+                        is ConflictResult.Conflict -> {
+                            _conflictWarning.value = "⚠️ 与「${conflict.overlaps.first().title}」时间冲突"
+                        }
+                        is ConflictResult.Clear -> {
+                            _conflictWarning.value = null
+                        }
+                    }
                 }
                 is UiState.Response -> {
                     _pipelineStatus.value = "✅ ${result.content}"
@@ -178,5 +199,12 @@ class SchedulerViewModel @Inject constructor(
      */
     fun clearPipelineStatus() {
         _pipelineStatus.value = null
+    }
+
+    /**
+     * 清除冲突警告
+     */
+    fun clearConflictWarning() {
+        _conflictWarning.value = null
     }
 }

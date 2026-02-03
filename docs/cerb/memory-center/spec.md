@@ -283,7 +283,20 @@ PHASE 2: CONTEXT ENRICHMENT (LLM)
 ├─ 2.2 RelevancyLib Query — entity history, relationship context
 ├─ 2.3 UserHabit Nudge — behavioral patterns, warnings
 └─ 2.4 Final Synthesis — combine all context into response
+
+    ↓
+
+PERSIST: ScheduleBoard.upsert(task with final duration)
 ```
+
+### ScheduleBoard as Living Board
+
+| When | ScheduleBoard State |
+|------|---------------------|
+| Phase 1 conflict check | Uses **estimated** duration (default by task type) |
+| After Phase 2 complete | Updates with **real** duration from user clarification |
+
+> **The Kanban updates AFTER Phase 2** — not before. Phase 1 conflict check is preliminary; final write has the confirmed duration.
 
 ### Pipeline States
 

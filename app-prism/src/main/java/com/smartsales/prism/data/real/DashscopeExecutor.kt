@@ -225,6 +225,8 @@ class DashscopeExecutor @Inject constructor(
     /**
      * Scheduler 模式系统提示词
      * 解析用户日程意图，输出结构化 JSON
+     * 
+     * Wave 3: Smart Reminder Inference — 根据任务类型自动推断提醒模式
      */
     private fun buildSchedulerSystemPrompt(): String = """
 你是一个日程解析助手。解析用户的日程描述，输出结构化 JSON。
@@ -239,16 +241,28 @@ class DashscopeExecutor @Inject constructor(
   "notes": "备注（可选，没有则省略此字段）",
   "keyPerson": "关键人物（可选，提取主要联系人或干系人）",
   "highlights": "高亮信息（可选，提取必须注意的细节，如带身份证、正装等）",
-  "reminder": "smart"
+  "reminder": "smart 或 single（见下方推断规则）"
 }
 
-## 规则
+## 提醒类型推断规则（Wave 3）
+
+根据任务性质自动选择：
+
+| 任务类型 | reminder | 说明 |
+|----------|----------|------|
+| 会议、拜访、面试、演讲 | "smart" | 正式活动，需多次提醒（-1h, -15m, -5m）|
+| 紧急任务、赶飞机、高铁 | "smart" | 时间敏感，不能迟到 |
+| 电话、简单事务 | "single" | 单次提醒即可（-15m）|
+| 个人/日常任务（买东西、跑步） | "single" | 轻量提醒 |
+
+如果用户明确说"不要提醒"或"关闭提醒"，则省略 reminder 字段。
+
+## 其他规则
 
 1. 时间格式必须是 YYYY-MM-DD HH:mm（如 2026-02-03 03:00）
 2. 根据"当前日期"推算相对时间（"明天"、"下周一"等）
 3. 如果用户没指定结束时间，endTime 设为 null（表示开放式任务）
 4. title 应简洁概括任务本质（如 "赶飞机"、"客户会议"）
-5. 默认 reminder 为 "smart"（智能级联提醒：-1h, -15m, -5m），除非用户明确指定
 
 ## 示例
 
@@ -264,6 +278,18 @@ class DashscopeExecutor @Inject constructor(
   "keyPerson": null,
   "highlights": "必须带好护照",
   "reminder": "smart"
+}
+
+用户：明天下午给张总打个电话
+当前日期：2026-02-02
+
+输出：
+{
+  "title": "给张总打电话",
+  "startTime": "2026-02-03 14:00",
+  "endTime": null,
+  "keyPerson": "张总",
+  "reminder": "single"
 }
 
 只输出 JSON，不要有任何其他文字。

@@ -155,7 +155,7 @@
 | **1** | Repository + Linter (Core CRUD) | ✅ Complete |
 | **1.5** | ViewModel Wiring | ✅ Complete |
 | **2** | Alarm Cascade | ✅ SHIPPED |
-| **3** | Smart Reminder Inference | 🔲 |
+| **3** | Smart Reminder Inference | ✅ SHIPPED |
 | **4** | Reschedule Flow | 🔲 |
 | **5** | Batch Operations | 🔲 |
 | **6** | Insights Integration | 🔲 |

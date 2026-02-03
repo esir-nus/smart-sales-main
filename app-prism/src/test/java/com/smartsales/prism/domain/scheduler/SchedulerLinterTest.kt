@@ -121,4 +121,125 @@ class SchedulerLinterTest {
         assertTrue("Expected LintResult.Error, got: $result", result is LintResult.Error)
         assertTrue((result as LintResult.Error).message.contains("JSON"))
     }
+
+    @Test
+    fun `unknown task type defaults to 60min (PERSONAL)`() {
+        val unknownTaskJson = """
+            {
+                "title": "其他事情",
+                "startTime": "2026-02-03 14:00"
+            }
+        """.trimIndent()
+
+        val result = linter.lint(unknownTaskJson)
+
+        // Unknown type defaults to PERSONAL -> 60min
+        assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
+        val success = result as LintResult.Success
+        assertEquals(60, success.task.durationMinutes)
+    }
+
+    @Test
+    fun `meeting title infers 60min duration`() {
+        val meetingJson = """
+            {
+                "title": "开会",
+                "startTime": "2026-02-03 14:00"
+            }
+        """.trimIndent()
+
+        val result = linter.lint(meetingJson)
+
+        assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
+        val success = result as LintResult.Success
+        assertEquals(60, success.task.durationMinutes)
+    }
+
+    @Test
+    fun `call title infers 15min duration`() {
+        val callJson = """
+            {
+                "title": "电话",
+                "startTime": "2026-02-03 14:00"
+            }
+        """.trimIndent()
+
+        val result = linter.lint(callJson)
+
+        assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
+        val success = result as LintResult.Success
+        assertEquals(15, success.task.durationMinutes)
+    }
+
+    @Test
+    fun `explicit duration string is parsed`() {
+        val durationJson = """
+            {
+                "title": "测试",
+                "startTime": "2026-02-03 14:00",
+                "duration": "45m"
+            }
+        """.trimIndent()
+
+        val result = linter.lint(durationJson)
+
+        assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
+        val success = result as LintResult.Success
+        assertEquals(45, success.task.durationMinutes)
+    }
+    
+    @Test
+    fun `endTime calculates duration correctly`() {
+        val endTimeJson = """
+            {
+                "title": "测试",
+                "startTime": "2026-02-03 14:00",
+                "endTime": "2026-02-03 15:30"
+            }
+        """.trimIndent()
+        
+        val result = linter.lint(endTimeJson)
+        
+        assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
+        val success = result as LintResult.Success
+        assertEquals(90, success.task.durationMinutes)
+    }
+    
+    // Wave 3: Smart Reminder Inference tests
+    
+    @Test
+    fun `single reminder sets ReminderType SINGLE`() {
+        val singleReminderJson = """
+            {
+                "title": "给张总打电话",
+                "startTime": "2026-02-03 14:00",
+                "reminder": "single"
+            }
+        """.trimIndent()
+        
+        val result = linter.lint(singleReminderJson)
+        
+        assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
+        val success = result as LintResult.Success
+        assertEquals(ReminderType.SINGLE, success.reminderType)
+        assertEquals(TaskTypeHint.CALL, success.taskTypeHint)
+        assertEquals(listOf("-15m"), success.task.alarmCascade)
+    }
+    
+    @Test
+    fun `no reminder field sets no alarm`() {
+        val noReminderJson = """
+            {
+                "title": "买牛奶",
+                "startTime": "2026-02-03 14:00"
+            }
+        """.trimIndent()
+        
+        val result = linter.lint(noReminderJson)
+        
+        assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
+        val success = result as LintResult.Success
+        assertEquals(null, success.reminderType)
+        assertEquals(false, success.task.hasAlarm)
+    }
 }

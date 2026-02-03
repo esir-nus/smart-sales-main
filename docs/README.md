@@ -13,6 +13,8 @@ docs/
 ├── AGENTS.md        # 🤖 AI collaboration rules (generic behavior)
 ├── specs/           # 🔒 Locked contracts (WHAT to build)
 │   └── README.md    # 📍 Spec navigation SOP
+├── cerb/            # 🔲 Cerb-compliant modules (self-contained specs)
+│   └── memory-center/  # Memory Center spec + interface
 ├── sops/            # 📋 Standard Operating Procedures
 ├── plans/           # 🔄 Living trackers (WHERE we are)
 ├── dev-notes/       # 📝 Human handovers (agent ignores)
@@ -30,8 +32,19 @@ docs/
 | Layer | Purpose | Mutation |
 |-------|---------|----------|
 | **specs/** | Defines behavior, contracts, interfaces | Rarely changed, versioned |
+| **cerb/** | Self-contained module specs (Cerb-compliant) | Per-feature, blackbox contract |
 | **plans/** | Tracks implementation status, deviation log | Updated every session |
 | **sops/** | Standard procedures for common tasks | Evolves with process |
+
+---
+
+## cerb/ (🔲 Self-Contained Modules)
+
+> **Cerb = Context Boundary** — Each module is blackbox. Read interface, ignore implementation.
+
+| Module | Spec | Interface | Status |
+|--------|------|-----------|--------|
+| **Memory Center** | [spec.md](./cerb/memory-center/spec.md) | [interface.md](./cerb/memory-center/interface.md) | Wave 1 ✅ |
 
 ---
 

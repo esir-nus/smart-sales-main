@@ -40,12 +40,15 @@
 
 ## Memory System (§5)
 
+> **Cerb Docs**: [`docs/cerb/memory-center/`](../cerb/memory-center/) — Self-contained spec + interface
+
 | Layer | Status | Schema Reference |
 |-------|--------|------------------|
 | **Hot Zone** | 🔲 | `MemoryEntryEntity` (§5.7) |
 | **Cement Zone** | 🔲 | Archived entries (§5.1) |
 | **Relevancy Library** | 🔲 | `RelevancyEntry` (§5.2) |
 | **Session Cache** | 🔲 | In-task fast access (§2.2 #1b) |
+| **ScheduleBoard** | ✅ | Conflict index ([spec](../cerb/memory-center/spec.md#scheduleboard-conflict-index)) |
 
 ---
 
@@ -75,8 +78,60 @@
 
 - [Prism-V1.md](../specs/Prism-V1.md) — Architecture SOT
 - [prism-ui-ux-contract.md](../specs/prism-ui-ux-contract.md) — UX SOT
+- [Memory Center Cerb](../cerb/memory-center/) — Spec + Interface (self-contained)
 - [legacy-to-prism-dictionary.md](../reference/legacy-to-prism-dictionary.md) — Legacy mapping
 - [tracker-lattice-era.md](../archived/tracker-lattice-era.md) — Archived Lattice tracker
+
+---
+
+## Memory Center Waves
+
+> **Cerb Docs**: [`spec.md`](../cerb/memory-center/spec.md) · [`interface.md`](../cerb/memory-center/interface.md)  
+> **Strategy**: MVP-first, each wave ships independently
+
+| Wave | Focus | Status |
+|------|-------|--------|
+| **1** | ScheduleBoard + Two-Phase Pipeline | ✅ Complete |
+| **2** | Entity Resolution ("张总" → picker) | 🔲 |
+| **3** | Location Conflict (room double-booking) | 🔲 |
+| **4** | Reinforcement Learning (picker improves) | 🔲 |
+| **5** | Hot/Cement Zones (30-day simulation) | 🔲 |
+| **6** | User Habit Learning (behavioral nudges) | 🔲 |
+
+### Wave 1: ScheduleBoard ✅
+
+**Shipped**: 2026-02-03
+
+| Deliverable | File | Status |
+|-------------|------|--------|
+| Interface | `domain/memory/ScheduleBoard.kt` | ✅ |
+| Model | `domain/memory/ScheduleItem.kt` | ✅ |
+| Implementation | `data/memory/RealScheduleBoard.kt` | ✅ |
+| Tests | `ScheduleBoardTest.kt` (6 tests) | ✅ |
+| Cerb Interface | `interface.md` updated | ✅ |
+
+**Test Cases Covered**:
+- [x] No conflict: Empty schedule
+- [x] No conflict: Adjacent (2-3pm, 3-4pm)
+- [x] Conflict: Overlap (2-4pm vs 3-5pm)
+- [x] Conflict: Contained (2-5pm contains 3-4pm)
+- [x] COEXISTING tasks don't conflict
+- [x] Duration inferred from task type
+
+### Wave 2: Entity Resolution 🔲
+
+**Next Step**: Wire ScheduleBoard → SchedulerViewModel OR start EntityResolver
+
+| Deliverable | File | Status |
+|-------------|------|--------|
+| Interface | `EntityResolver.kt` | 🔲 |
+| Implementation | `RealEntityResolver.kt` | 🔲 |
+| Tests | `EntityResolverTest.kt` | 🔲 |
+
+**Test Cases**:
+- [ ] One match → Auto-resolve
+- [ ] Multiple → Picker
+- [ ] Zero → NotFound
 
 ---
 

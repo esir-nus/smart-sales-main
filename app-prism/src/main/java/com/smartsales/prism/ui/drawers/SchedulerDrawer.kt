@@ -291,6 +291,33 @@ fun SchedulerDrawer(
                                         fontSize = 14.sp
                                     )
                                 }
+                                
+                                // Scenario Buttons
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                                ) {
+                                    Button(
+                                        onClick = { viewModel.debugRunScenario("CLEAN") },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350)),
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(0.dp)
+                                    ) { Text("🧹 清除", fontSize = 11.sp, maxLines = 1) }
+                                    
+                                    Button(
+                                        onClick = { viewModel.debugRunScenario("1PM") },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF42A5F5)),
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(0.dp)
+                                    ) { Text("测试 1-2点", fontSize = 11.sp, maxLines = 1) }
+                                    
+                                    Button(
+                                        onClick = { viewModel.debugRunScenario("3PM") },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF42A5F5)),
+                                        modifier = Modifier.weight(1f),
+                                        contentPadding = PaddingValues(0.dp)
+                                    ) { Text("测试 3-4点", fontSize = 11.sp, maxLines = 1) }
+                                }
                             }
                         }
                     }

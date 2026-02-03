@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -206,5 +207,30 @@ class SchedulerViewModel @Inject constructor(
      */
     fun clearConflictWarning() {
         _conflictWarning.value = null
+    }
+
+    /**
+     * 🧪 DEV ONLY: 快速运行测试场景
+     */
+    fun debugRunScenario(scenario: String) {
+        if (!com.smartsales.prism.BuildConfig.DEBUG) return
+        viewModelScope.launch {
+            when (scenario) {
+                "CLEAN" -> {
+                    // 删除所有明天的任务 (activeDayOffset = 1)
+                    val items = taskRepository.getTimelineItems(1).first()
+                    items.filterIsInstance<TimelineItemModel.Task>().forEach { 
+                        taskRepository.deleteItem(it.id) 
+                    }
+                    triggerRefresh()
+                    clearConflictWarning()
+                    _pipelineStatus.value = "🧹 已清除明日任务"
+                    // 确保切换到明天，这样用户能看到清空效果
+                    onDateSelected(1)
+                }
+                "1PM" -> simulateTranscript("明天下午1点做实验A")
+                "3PM" -> simulateTranscript("明天下午3点做实验B")
+            }
+        }
     }
 }

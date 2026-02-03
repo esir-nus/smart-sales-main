@@ -10,9 +10,22 @@ Verify that a Cerb doc follows context boundary principles.
 
 ## When to Use
 
-- Before shipping a new `docs/cerb/` shard
-- When updating existing Cerb docs
-- Auditing legacy docs for Cerb migration
+- **Mandatory**: After completing Wave 1 of `/feature-cerb-pattern`
+- **Optional**: When updating existing Cerb docs (run on modified files only)
+- **Migration**: Auditing legacy docs for Cerb compliance
+
+---
+
+## Prerequisites
+
+This workflow validates docs created via `/feature-cerb-pattern`.
+
+Expected structure:
+```
+docs/cerb/[feature]/
+├── interface.md  → Consumer contract
+└── spec.md       → Internal implementation
+```
 
 ---
 
@@ -26,7 +39,7 @@ Verify that a Cerb doc follows context boundary principles.
 | **Spec → Glossary** | ✅ Quick lookup | — |
 | **Spec → Code file** | ✅ Implementation ref | — |
 | **Spec → Another Spec** | ⚠️ Avoid | ❌ Chain risk |
-| **"See X for details" (200+ lines)** | — | ❌ Rabbit hole |
+| **"See X for details" → external doc** | — | ❌ Context break |
 
 **Run:** `grep -n "See\|see\|参见" [doc.md]` to find cross-references.
 
@@ -38,6 +51,7 @@ Verify that a Cerb doc follows context boundary principles.
 | Does doc require reading another spec to understand? | ❌ No |
 | Are all domain models defined inline? | ✅ Yes |
 | Are edge cases inline, not linked? | ✅ Yes |
+| Does `spec.md` contain a Wave Plan table? | ✅ Yes |
 
 ### 3. Interface Clarity
 

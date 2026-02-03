@@ -73,6 +73,9 @@ abstract class PrismModule {
     @Binds @Singleton
     abstract fun bindMemoryWriter(fake: FakeMemoryWriter): MemoryWriter
     
+    @Binds @Singleton
+    abstract fun bindEntityResolver(impl: com.smartsales.prism.data.memory.RealEntityResolver): com.smartsales.prism.domain.memory.EntityResolver
+    
     // === Connectivity ===
     
     @Binds @Singleton

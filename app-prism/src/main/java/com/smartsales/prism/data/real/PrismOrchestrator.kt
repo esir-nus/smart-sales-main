@@ -190,6 +190,20 @@ class PrismOrchestrator @Inject constructor(
                             activityController.error(lintResult.message)
                             UiState.Error(lintResult.message, retryable = true)
                         }
+                        
+                        // Wave 4.0: Classification Results
+                        is LintResult.NonIntent -> {
+                            activityController.complete()
+                            UiState.AwaitingClarification(
+                                question = "你想安排什么任务？",
+                                clarificationType = ClarificationType.NON_SCHEDULING_INTENT
+                            )
+                        }
+                        
+                        is LintResult.Inspiration -> {
+                            activityController.complete()
+                            UiState.Response("已记录灵感: ${lintResult.content}\n（将在 Wave 5 存储到 Inspiration 仓库）")
+                        }
                     }
                 }
                 is ExecutorResult.Failure -> {
@@ -249,6 +263,14 @@ class PrismOrchestrator @Inject constructor(
                         is LintResult.Incomplete -> {
                             activityController.complete()
                             SchedulerActionResult.Failure("请提供更具体的时间信息")
+                        }
+                        is LintResult.NonIntent -> {
+                            activityController.complete()
+                            SchedulerActionResult.Failure("未识别到有效的改期请求")
+                        }
+                        is LintResult.Inspiration -> {
+                            activityController.complete()
+                            SchedulerActionResult.Failure("这看起来不是改期请求")
                         }
                     }
                 }

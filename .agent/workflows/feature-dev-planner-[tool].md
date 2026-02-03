@@ -43,6 +43,28 @@ Before ANY planning, read the relevant spec:
 
 **If mismatch → STOP. Do not proceed.**
 
+### ⚠️ Anti-Invention Gate
+
+| Quote Type | Example | Valid Spec? |
+|------------|---------|-------------|
+| **Wave title** | "Wave 3: Location Conflict" | ❌ NO — summary, not behavior |
+| **Behavior spec** | Sequence diagram, I/O examples, data flow | ✅ YES |
+| **Tracker milestone** | "Extend overlap logic to shared resources" | ❌ NO — roadmap, not spec |
+
+**If you can only quote a title/summary → spec doesn't exist for this behavior.**
+
+**Rule**: You may only implement behavior that is **explicitly specified**:
+- Sequence diagram
+- Example I/O
+- Data flow description
+- Validation rules
+
+**If behavior is not specified**:
+1. Ask USER for spec clarification
+2. OR request spec update before implementation
+
+**Never invent behavior to fill gaps in spec.**
+
 ---
 
 ## Phase 1: Contamination Cleanup

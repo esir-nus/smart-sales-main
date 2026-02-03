@@ -25,6 +25,22 @@ class SchedulerLinter @Inject constructor(
         return try {
             val json = JSONObject(llmOutput)
             
+            // Wave 4.0: Check classification first
+            val classification = json.optString("classification", "schedulable")
+            
+            when (classification) {
+                "non_intent" -> {
+                    return LintResult.NonIntent(
+                        reason = json.optString("reason", "未检测到日程安排意图")
+                    )
+                }
+                "inspiration" -> {
+                    val content = json.optString("title", json.optString("content", ""))
+                    return LintResult.Inspiration(content = content)
+                }
+                // "schedulable" → continue to full parsing below
+            }
+            
             val title = json.optString("title", "")
             if (title.isBlank()) {
                 return LintResult.Error("任务标题不能为空")
@@ -249,4 +265,8 @@ sealed class LintResult {
     ) : LintResult()
 
     data class Error(val message: String) : LintResult()
+    
+    // Wave 4.0: Input Classification Results
+    data class NonIntent(val reason: String) : LintResult()
+    data class Inspiration(val content: String) : LintResult()
 }

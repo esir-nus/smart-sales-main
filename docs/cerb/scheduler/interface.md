@@ -33,16 +33,27 @@ sealed class LintResult {
         val parsedClues: ParsedClues = ParsedClues()  // Phase 1 → Phase 2 bridge
     ) : LintResult()
     
+    data class Incomplete(
+        val missingField: String,  // "startTime" | "duration"
+        val question: String,      // User-facing question
+        val partialClues: ParsedClues
+    ) : LintResult()
+    
     data class Error(val message: String) : LintResult()
+    
+    // Wave 4.0: Input Classification
+    data class NonIntent(val reason: String) : LintResult()
+    data class Inspiration(val content: String) : LintResult()
 }
 
 /**
  * Phase 1 frozen clues — passed to Phase 2 for LLM entity resolution
  */
 data class ParsedClues(
-    val personAlias: String? = null,
+    val person: String? = null,
     val location: String? = null,
-    val briefSummary: String? = null
+    val briefSummary: String? = null,
+    val durationMinutes: Int? = null
 )
 ```
 

@@ -92,11 +92,11 @@
 | Wave | Focus | Status |
 |------|-------|--------|
 | **1** | ScheduleBoard + Two-Phase Pipeline | ✅ Complete |
-| **2** | Entity Resolution ("张总" → picker) | 🔲 |
-| **3** | Location Conflict (room double-booking) | 🔲 |
-| **4** | Reinforcement Learning (picker improves) | 🔲 |
-| **5** | Hot/Cement Zones (30-day simulation) | 🔲 |
-| **6** | User Habit Learning (behavioral nudges) | 🔲 |
+| **2** | Entity Resolution ("张总" → picker) | ✅ SHIPPED |
+| **3** | Reinforcement Learning (picker improves) | 🔲 |
+| **4** | Hot/Cement Zones (30-day simulation) | 🔲 |
+| **5** | User Habit Learning (behavioral nudges) | 🔲 |
+
 
 ### Wave 1: ScheduleBoard ✅
 
@@ -138,10 +138,6 @@
 - `RealContextBuilder.buildWithClues()` entity bridge
 - See [Memory Center spec](../cerb/memory-center/spec.md#entity-disambiguation)
 
-
-### Wave 3: Location Conflict 🔲
-
-**Next Step**: Extend overlap logic to shared resources (Meeting Rooms)
 
 ---
 

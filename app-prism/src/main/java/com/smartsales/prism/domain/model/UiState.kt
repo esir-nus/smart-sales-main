@@ -45,7 +45,8 @@ enum class ClarificationType {
     MISSING_TIME,       // Phase 1: 缺少时间
     MISSING_DURATION,   // Phase 1: 缺少时长
     AMBIGUOUS_PERSON,   // Phase 2: 多个人物候选
-    AMBIGUOUS_LOCATION  // Phase 2: 多个地点候选
+    AMBIGUOUS_LOCATION, // Phase 2: 多个地点候选
+    NON_SCHEDULING_INTENT  // Wave 4.0: 非日程意图
 }
 
 /**

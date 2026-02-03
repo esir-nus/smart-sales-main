@@ -107,6 +107,28 @@ When adding a new lesson (after USER confirms "problem fixed"):
 
 ---
 
+### Spec Invention from Wave Titles — 2026-02-03
+
+**Symptom**: Wave 3 implementation plan prescribed Kotlin location conflict logic that user rejected  
+**Root Cause**: **Quoted wave TITLE as if it were behavior SPEC**  
+- Tracker said "Extend overlap logic to shared resources (Meeting Rooms)"
+- I invented string equality matching conflict detection
+- I assumed "location conflict" meant blocking like time conflicts  
+**Wrong Approach**: 
+- Treating roadmap milestones as implementation specs
+- Prescribing business logic when spec was silent
+- Assuming semantic matching could be done in Kotlin  
+**Correct Fix**:
+1. Wave titles/milestones are NOT behavior specs
+2. If only a title exists → spec doesn't exist for this behavior
+3. Ask USER before implementing unspecified behavior
+4. Let RelevancyLib/LLM decide semantic questions, don't prescribe in Kotlin  
+**File(s)**: `.agent/workflows/feature-dev-planner-[tool].md` (added Anti-Invention Gate)  
+**Pattern**: **Faithfully pull relevant info. Don't prescribe, don't assume.**  
+**Status**: ✅ CONFIRMED 2026-02-03
+
+---
+
 <!-- Add new lessons above this line -->
 
 ### SwipeToDismiss Background Visibility — 2026-02-02

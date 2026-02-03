@@ -298,6 +298,28 @@ PERSIST: ScheduleBoard.upsert(task with final duration)
 
 > **The Kanban updates AFTER Phase 2** — not before. Phase 1 conflict check is preliminary; final write has the confirmed duration.
 
+### Multi-Round Conversation
+
+The scheduler supports multi-round clarification:
+
+```
+User: "下周开会"
+       │
+       ▼
+Phase 1: startTime = null (ambiguous)
+         → No conflict check possible
+         → LLM asks: "请问具体是哪天？"
+       │
+User: "周三下午3点"
+       │
+       ▼
+Phase 1 RE-RUNS: startTime = 2026-02-05 15:00
+         → Kanban conflict check executes
+         → Continue pipeline...
+```
+
+> **Kanban checking stays ON throughout all follow-up rounds.** Each clarification re-triggers Phase 1 parsing.
+
 ### Pipeline States
 
 ```kotlin

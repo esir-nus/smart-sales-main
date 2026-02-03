@@ -1,5 +1,6 @@
 package com.smartsales.prism.ui.debug
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -11,8 +12,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,9 +23,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smartsales.prism.BuildConfig
+import com.smartsales.prism.domain.pipeline.Orchestrator
+import com.smartsales.prism.domain.model.Mode
+import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.scheduler.LintResult
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
 import dagger.hilt.EntryPoint
@@ -30,21 +37,27 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+private const val TAG = "L2DebugHud"
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)
 interface L2DebugHudEntryPoint {
     fun schedulerLinter(): SchedulerLinter
+    fun orchestrator(): Orchestrator
 }
 
 /**
- * L2 Debug HUD — 独立于业务逻辑的 Pipeline 验证面板
+ * L2 Debug HUD — Pipeline 验证面板
  * 
- * 直接调用 SchedulerLinter.lint() 并展示结果，不经过 ViewModel/UX 层
- * 避免 UX 层 bug 影响测试结果
+ * 两种测试模式:
+ * 1. 直接 Linter 测试 — 输入 JSON，验证 Linter 解析
+ * 2. 全 Pipeline 测试 — 输入自然语言，走完整 Orchestrator 流程，结果输出到 logcat
  * 
- * @param isVisible 由外部控制是否显示（header 的 bug 按钮切换）
- * @param onDismiss 关闭回调
+ * 使用方式:
+ * - 打开 Debug HUD → 输入自然语言 → 点发送
+ * - 查看 logcat: `adb logcat -s L2DebugHud:D`
  * 
  * @see .agent/rules/anti-drift-protocol.md §Three-Level Testing
  */
@@ -61,26 +74,25 @@ fun L2DebugHud(
         EntryPointAccessors.fromApplication(context.applicationContext, L2DebugHudEntryPoint::class.java)
     }
     val schedulerLinter = remember { entryPoint.schedulerLinter() }
+    val orchestrator = remember { entryPoint.orchestrator() }
+    val scope = rememberCoroutineScope()
     
     var lastResult by remember { mutableStateOf<String?>(null) }
     var showToast by remember { mutableStateOf(false) }
+    var inputText by remember { mutableStateOf("") }
+    var isProcessing by remember { mutableStateOf(false) }
     
-    // L2 测试场景
-    val scenarios = remember {
+    // Linter-only 测试场景 (直接 JSON 输入)
+    val linterScenarios = remember {
         listOf(
-            L2Scenario("Duration: EndTime Diff", """{"title":"测试","startTime":"2026-02-03 14:00","endTime":"2026-02-03 15:30"}""", "预期: Success, duration=90"),
-            L2Scenario("Duration: Meeting Infer", """{"title":"开会","startTime":"2026-02-03 14:00"}""", "预期: Success, duration=60"),
-            L2Scenario("Duration: Call Infer", """{"title":"电话","startTime":"2026-02-03 14:00"}""", "预期: Success, duration=15"),
-            L2Scenario("Duration: Explicit", """{"title":"测试","startTime":"2026-02-03 14:00","duration":"45m"}""", "预期: Success, duration=45"),
-            L2Scenario("Duration: Personal Default", """{"title":"其他事情","startTime":"2026-02-03 14:00"}""", "预期: Success, duration=60 (PERSONAL)"),
-            L2Scenario("StartTime: Missing", """{"title":"开会"}""", "预期: Incomplete, question包含'什么时候'"),
-            L2Scenario("Reminder: Smart", """{"title":"开会","startTime":"2026-02-03 14:00","reminder":"smart"}""", "预期: SMART_CASCADE, cascade=[-1h,-15m,-5m]"),
-            L2Scenario("Reminder: Single", """{"title":"电话","startTime":"2026-02-03 14:00","reminder":"single"}""", "预期: SINGLE, cascade=[-15m]"),
+            L2Scenario("Duration: Meeting", """{"title":"开会","startTime":"2026-02-03 14:00"}""", "duration=60"),
+            L2Scenario("Reminder: Smart", """{"title":"开会","startTime":"2026-02-03 14:00","reminder":"smart"}""", "cascade=[-1h,-15m,-5m]"),
+            L2Scenario("Reminder: Single", """{"title":"电话","startTime":"2026-02-03 14:00","reminder":"single"}""", "cascade=[-15m]"),
         )
     }
     
     Box(modifier = modifier.fillMaxSize()) {
-        // Debug 面板 (从右侧滑入)
+        // Debug 面板
         AnimatedVisibility(
             visible = isVisible,
             enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
@@ -90,7 +102,7 @@ fun L2DebugHud(
             Column(
                 modifier = Modifier
                     .padding(top = 100.dp, end = 16.dp)
-                    .width(300.dp)
+                    .width(320.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .background(Color(0xE6111827))
                     .padding(16.dp)
@@ -107,19 +119,132 @@ fun L2DebugHud(
                     }
                 }
                 
-                Spacer(modifier = Modifier.height(8.dp))
+                // ═══════════════════════════════════════════════════
+                // Section 1: Full Pipeline Simulation (Natural Language Input)
+                // ═══════════════════════════════════════════════════
+                Text(
+                    "📥 Full Pipeline (simulate hardware input)",
+                    color = Color(0xFF9CA3AF),
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                )
                 
-                // Scenarios
-                LazyColumn(
-                    modifier = Modifier.heightIn(max = 400.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF1F2937), RoundedCornerShape(8.dp))
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    items(scenarios) { scenario ->
+                    BasicTextField(
+                        value = inputText,
+                        onValueChange = { inputText = it },
+                        textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        decorationBox = { innerTextField ->
+                            if (inputText.isEmpty()) {
+                                Text("明天下午2点部门会议", color = Color.Gray, fontSize = 14.sp)
+                            }
+                            innerTextField()
+                        }
+                    )
+                    
+                    IconButton(
+                        onClick = {
+                            val text = inputText.ifEmpty { "明天下午2点部门会议" }
+                            Log.d(TAG, "════════════════════════════════════════")
+                            Log.d(TAG, "🧪 L2 TEST: Full Pipeline Simulation")
+                            Log.d(TAG, "📥 Input: $text")
+                            Log.d(TAG, "════════════════════════════════════════")
+                            
+                            scope.launch {
+                                isProcessing = true
+                                try {
+                                    val uiState = orchestrator.createScheduledTask(text)
+                                    when (uiState) {
+                                        is UiState.SchedulerTaskCreated -> {
+                                            Log.d(TAG, "✅ Task Created!")
+                                            Log.d(TAG, "   title: ${uiState.title}")
+                                            Log.d(TAG, "   dayOffset: ${uiState.dayOffset}")
+                                            Log.d(TAG, "   taskId: ${uiState.taskId}")
+                                            lastResult = "✅ Task: ${uiState.title}"
+                                            showToast = true
+                                        }
+                                        is UiState.AwaitingClarification -> {
+                                            Log.d(TAG, "⚠️ Clarification needed: ${uiState.question}")
+                                            lastResult = "⚠️ ${uiState.question}"
+                                            showToast = true
+                                        }
+                                        is UiState.Error -> {
+                                            Log.e(TAG, "❌ Error: ${uiState.message}")
+                                            lastResult = "❌ ${uiState.message}"
+                                            showToast = true
+                                        }
+                                        else -> {
+                                            Log.d(TAG, "📦 State: $uiState")
+                                            lastResult = "📦 $uiState"
+                                            showToast = true
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "❌ Exception: ${e.message}", e)
+                                    lastResult = "❌ ${e.message}"
+                                    showToast = true
+                                } finally {
+                                    isProcessing = false
+                                    Log.d(TAG, "════════════════════════════════════════")
+                                }
+                            }
+                        },
+                        enabled = !isProcessing
+                    ) {
+                        if (isProcessing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(Icons.Default.Send, "Send", tint = Color(0xFF6366F1))
+                        }
+                    }
+                }
+                
+                Text(
+                    "💡 logcat: adb logcat -s L2DebugHud:D",
+                    color = Color(0xFF4B5563),
+                    fontSize = 10.sp,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                
+                Divider(
+                    color = Color(0xFF374151),
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
+                
+                // ═══════════════════════════════════════════════════
+                // Section 2: Direct Linter Tests (JSON Input)
+                // ═══════════════════════════════════════════════════
+                Text(
+                    "🔬 Direct Linter (JSON bypass)",
+                    color = Color(0xFF9CA3AF),
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 200.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(linterScenarios) { scenario ->
                         L2ScenarioButton(
                             scenario = scenario,
                             onClick = {
                                 val result = schedulerLinter.lint(scenario.json)
-                                lastResult = formatResult(scenario.name, result, scenario.expected)
+                                val formatted = formatResult(scenario.name, result, scenario.expected)
+                                Log.d(TAG, "🔬 Linter Test: ${scenario.name}\n$formatted")
+                                lastResult = formatted
                                 showToast = true
                             }
                         )
@@ -128,7 +253,7 @@ fun L2DebugHud(
             }
         }
         
-        // Debug Toast (顶部显示结果)
+        // Toast 显示结果
         AnimatedVisibility(
             visible = showToast && lastResult != null,
             enter = fadeIn(),
@@ -171,20 +296,20 @@ private fun L2ScenarioButton(
         color = Color(0xFF1F2937),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(scenario.name, color = Color.White, fontSize = 13.sp)
-            Text(scenario.expected, color = Color(0xFF9CA3AF), fontSize = 11.sp)
+        Column(modifier = Modifier.padding(10.dp)) {
+            Text(scenario.name, color = Color.White, fontSize = 12.sp)
+            Text(scenario.expected, color = Color(0xFF9CA3AF), fontSize = 10.sp)
         }
     }
 }
 
 private fun formatResult(name: String, result: LintResult, expected: String): String {
     val status = when (result) {
-        is LintResult.Success -> "✅ Success\nduration=${result.task.durationMinutes}\nreminder=${result.reminderType}\ncascade=${result.task.alarmCascade}"
-        is LintResult.Incomplete -> "⚠️ Incomplete\nfield=${result.missingField}\nquestion=${result.question}"
-        is LintResult.Error -> "❌ Error\nmessage=${result.message}"
+        is LintResult.Success -> "✅ duration=${result.task.durationMinutes}, cascade=${result.task.alarmCascade}"
+        is LintResult.Incomplete -> "⚠️ ${result.missingField}: ${result.question}"
+        is LintResult.Error -> "❌ ${result.message}"
     }
-    return "【$name】\n$status\n\n预期: $expected"
+    return "[$name] $status (预期: $expected)"
 }
 
 private data class L2Scenario(

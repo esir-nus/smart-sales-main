@@ -110,36 +110,47 @@ data class AliasMapping(
 
 ---
 
-## Entity Disambiguation
+## Entity Disambiguation (LLM-First)
 
 When voice input contains ambiguous references (e.g., "张总" matches multiple people):
 
-### Scoring Algorithm
+### Resolution Flow
 
 ```
-score = (confirmationCount × 0.4)
-      + (recencyDecay(lastConfirmedAt) × 0.3)
-      + (contextMatch(currentSession) × 0.3)
+Phase 1 Parse → person: "张总" (raw clue, unresolved)
+       │
+       ▼
+Phase 2: LLM synthesizes with context
+├─ Conversation history (recent mentions)
+├─ RelevancyLib query (known entities with this alias)
+├─ Session context (current topic)
+       │
+       ▼
+LLM Decision:
+├─ HIGH confidence → Use resolved entity
+├─ MEDIUM confidence → Disclose + [更改] button
+└─ LOW/UNKNOWN → Ask user: "请问是哪位张总？"
 ```
 
-| Component | Weight | Notes |
-|-----------|--------|-------|
-| `confirmationCount` | 40% | Bounded at 20 |
-| `recencyDecay` | 30% | `1.0 - min(days/90, 1.0)` |
-| `contextMatch` | 30% | Jaccard similarity |
+### Design Principles
 
-### Resolution Rules
+| Principle | Rationale |
+|-----------|-----------|
+| **LLM is source of truth** | Has conversation context, can reason |
+| **DB is for learning** | Stores user confirmations for future hints |
+| **No Kotlin scoring** | LLM handles disambiguation naturally |
+| **Cold start = ask user** | Don't guess when uncertain |
 
-- **1 candidate** → Auto-resolve
-- **Multiple, top > 0.85 AND second < 0.3** → Auto-resolve with disclosure + [更改] button
-- **Otherwise** → Show picker ordered by score
+### Reinforcement (Future)
 
-### Reinforcement
+After user confirms entity, write to `AliasMapping` for future LLM hints:
 
 | Event | Action |
 |-------|--------|
-| User picks from picker | `+1` count, update timestamp |
-| User overrides auto | `-1` wrong, `+1` correct |
+| User confirms | Store alias → entityId mapping |
+| User corrects | Update mapping |
+
+> **Note**: Confidence levels and finetuned prompts for disambiguation are deferred. Ship basic flow first.
 
 ---
 
@@ -241,21 +252,37 @@ fun checkConflict(start: Long, durationMin: Int): ConflictResult {
 
 Scheduling tasks follows a **gated pipeline** — Phase 2 only executes after Phase 1 is fully resolved.
 
+### Phase 1 Output (Frozen 4 Fields)
+
+LLM Linter extracts exactly 4 fields from user input:
+
+| Field | Example | Notes |
+|-------|---------|-------|
+| `person` | "张总" | Raw alias, unresolved |
+| `startTime` | 2026-02-05 09:00 | Parsed datetime |
+| `location` | "会议室" or null | Optional |
+| `briefSummary` | "开会" | Action/purpose |
+
+> **Duration is NOT parsed in Phase 1.** It requires follow-up clarification or inference from task type.
+
+### Pipeline Flow
+
 ```
-PHASE 1: CONFLICT CHECK (Gate)
-├─ 1.1 Basic Parse (LLM) — time, entity alias, action
-├─ 1.2 ScheduleBoard Check (Kotlin) — hardcoded overlap detection
-├─ 1.3 Conflict Resolution (if conflict) — LLM proposes options
-│      Options: [调整时间] [保持共存] [取消原任务]
-├─ 1.4 User Confirmation — wait for user choice
-└─ 1.5 Entity Resolution (if ambiguous) — picker if multiple matches
+PHASE 1: PARSE & CLUES
+├─ 1.1 LLM Parse → 4 frozen fields (person, startTime, location, briefSummary)
+├─ 1.2 Duration Acquisition:
+│      ├─ Infer from task type (e.g., "开会" = 1h default)
+│      └─ OR follow-up: "这个会议大概多长时间？"
+├─ 1.3 ScheduleBoard Check (Kotlin) — startTime + duration → conflict?
+└─ 1.4 If conflict → User choice: [调整时间] [保持共存] [取消原任务]
 
     ↓ (Only proceed if clean time arrangement)
 
-PHASE 2: COMPREHENSIVE OUTPUT
-├─ 2.1 RelevancyLib Query — entity context, relationship history
-├─ 2.2 UserHabit Nudge — behavioral patterns, warnings
-└─ 2.3 Final Synthesis (LLM) — combine all context into response
+PHASE 2: CONTEXT ENRICHMENT (LLM)
+├─ 2.1 Entity Resolution — LLM uses clues + context to resolve "张总"
+├─ 2.2 RelevancyLib Query — entity history, relationship context
+├─ 2.3 UserHabit Nudge — behavioral patterns, warnings
+└─ 2.4 Final Synthesis — combine all context into response
 ```
 
 ### Pipeline States

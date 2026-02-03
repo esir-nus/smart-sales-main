@@ -21,11 +21,13 @@ interface ScheduleBoard {
      * 
      * @param proposedStart 提议的开始时间 (epoch millis)
      * @param durationMinutes 持续时间 (分钟)
+     * @param excludeId 排除的任务ID (用于避免新创建的任务与自己冲突)
      * @return 冲突检测结果
      */
     suspend fun checkConflict(
         proposedStart: Long,
-        durationMinutes: Int
+        durationMinutes: Int,
+        excludeId: String? = null
     ): ConflictResult
     
     /**

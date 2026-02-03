@@ -159,11 +159,13 @@ class FakeScheduleBoard : ScheduleBoard {
     
     override suspend fun checkConflict(
         proposedStart: Long,
-        durationMinutes: Int
+        durationMinutes: Int,
+        excludeId: String?
     ): ConflictResult {
         val proposedEnd = proposedStart + (durationMinutes * 60_000L)
         
         val overlaps = _items.value.filter { slot ->
+            slot.entryId != excludeId &&
             slot.conflictPolicy == ConflictPolicy.EXCLUSIVE &&
             slot.scheduledAt < proposedEnd && proposedStart < slot.endAt
         }

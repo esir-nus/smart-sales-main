@@ -137,6 +137,7 @@ class PrismOrchestrator @Inject constructor(
                             val dayOffset = ChronoUnit.DAYS.between(today, taskDate).toInt()
                             
                             UiState.SchedulerTaskCreated(
+                                taskId = taskId,
                                 title = lintResult.task.title,
                                 dayOffset = dayOffset,
                                 scheduledAtMillis = lintResult.task.startTime.toEpochMilli(),

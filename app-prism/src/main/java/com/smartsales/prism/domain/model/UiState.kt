@@ -13,6 +13,7 @@ sealed class UiState {
     data class Streaming(val partialContent: String) : UiState()
     data class Response(val content: String, val structuredJson: String? = null) : UiState()
     data class SchedulerTaskCreated(
+        val taskId: String,           // 用于冲突检测排除自身
         val title: String,
         val dayOffset: Int,
         val scheduledAtMillis: Long,  // 用于冲突检测

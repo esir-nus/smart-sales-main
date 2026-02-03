@@ -52,11 +52,14 @@ class RealScheduleBoard @Inject constructor(
      */
     override suspend fun checkConflict(
         proposedStart: Long,
-        durationMinutes: Int
+        durationMinutes: Int,
+        excludeId: String?
     ): ConflictResult {
         val proposedEnd = proposedStart + (durationMinutes * 60_000L)
         
         val overlaps = _upcomingItems.value.filter { slot ->
+            // 排除指定ID (避免新任务与自己冲突)
+            slot.entryId != excludeId &&
             // 只检查 EXCLUSIVE 策略的项目
             slot.conflictPolicy == ConflictPolicy.EXCLUSIVE &&
             // 时间重叠判断

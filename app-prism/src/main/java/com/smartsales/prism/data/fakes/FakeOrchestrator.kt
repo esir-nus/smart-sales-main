@@ -139,6 +139,7 @@ class FakeOrchestrator @Inject constructor(
         delay(300)
         activityController.complete()
         return UiState.SchedulerTaskCreated(
+            taskId = taskId,
             title = "赶飞机",
             dayOffset = 1,
             scheduledAtMillis = startTime.atZone(timeProvider.zoneId).toInstant().toEpochMilli(),

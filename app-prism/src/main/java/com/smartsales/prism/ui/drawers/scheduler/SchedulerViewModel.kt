@@ -160,7 +160,8 @@ class SchedulerViewModel @Inject constructor(
                     scheduleBoard.refresh()
                     when (val conflict = scheduleBoard.checkConflict(
                         result.scheduledAtMillis,
-                        result.durationMinutes
+                        result.durationMinutes,
+                        excludeId = result.taskId  // 排除刚创建的任务，避免自冲突
                     )) {
                         is ConflictResult.Conflict -> {
                             _conflictWarning.value = "⚠️ 与「${conflict.overlaps.first().title}」时间冲突"

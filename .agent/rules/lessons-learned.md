@@ -74,6 +74,25 @@ When adding a new lesson (after USER confirms "problem fixed"):
 
 ---
 
+### Post-Insert Self-Conflict — 2026-02-03
+
+**Symptom**: Every new task triggers conflict warning, even with empty schedule  
+**Root Cause**: **refresh() → new item in index → checkConflict() finds itself**  
+- After `insertTask()`, we call `refresh()` which adds the new task to `ScheduleBoard`
+- `checkConflict(startTime, duration)` then finds the task we just inserted → false positive  
+**Wrong Approach**: Checking conflict AFTER insert without exclusion  
+**Correct Fix**:  
+1. Add `excludeId: String?` parameter to `checkConflict()`
+2. Add `taskId: String` field to `UiState.SchedulerTaskCreated`
+3. Pass `excludeId = result.taskId` in conflict check  
+**File(s)**:  
+- [ScheduleBoard.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/domain/memory/ScheduleBoard.kt)
+- [RealScheduleBoard.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/memory/RealScheduleBoard.kt)
+- [UiState.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/domain/model/UiState.kt)
+- [SchedulerViewModel.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModel.kt)  
+**Pattern**: Any "check for duplicates/conflicts after insert" needs **exclusion logic** for the just-inserted entity  
+**Status**: ✅ CONFIRMED 2026-02-03
+
 <!-- Add new lessons above this line -->
 
 ### SwipeToDismiss Background Visibility — 2026-02-02

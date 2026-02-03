@@ -22,9 +22,10 @@ Scheduler manages task creation, timeline display, alarm cascading, and LLM-powe
 | **1.5** | ViewModel Wiring | 🚢 SHIPPED | `SchedulerViewModel`, UI connection |
 | **2** | Alarm Cascade | 🚢 SHIPPED | `RealAlarmScheduler`, notification triggers |
 | **3** | Smart Reminder Inference | 🚢 SHIPPED | LLM-based reminder timing suggestions |
-| **4** | Reschedule Flow | 🔲 PLANNED | Natural language reschedule parsing |
-| **5** | Batch Operations | 🔲 PLANNED | Multi-select delete, bulk reschedule |
-| **6** | Insights Integration | 🔲 PLANNED | Connect to Analyst for task analytics |
+| **4** | Input Classification + Multi-Task + Reschedule | 🔲 PLANNED | Input gate, batch create, reschedule parsing |
+| **5** | Inspiration Storage | 🔲 PLANNED | InspirationRepository, save non-schedulable input |
+| **6** | Batch Operations | 🔲 PLANNED | Multi-select delete, bulk reschedule |
+| **7** | Insights Integration | 🔲 PLANNED | Connect to Analyst for task analytics |
 
 ---
 
@@ -247,7 +248,39 @@ LLM suggests optimal reminder timing based on task type.
     - [ ] User override respected
 - **Deliverables**: Prompt engineering in `DashscopeExecutor`
 
-### 🔬 Wave 4: Reschedule Flow
+### 🔬 Wave 4: Input Classification + Multi-Task + Reschedule
+
+Expanded Wave 4 covers the full input processing pipeline.
+
+#### 4.0: Input Classification
+
+First gate: classify user input before parsing.
+
+| Classification | Route |
+|----------------|-------|
+| `schedulable` | Continue to task parsing |
+| `inspiration` | Return for future Wave 5 storage |
+| `non_intent` | Return `AwaitingClarification` |
+
+- **Ship Criteria**: Non-scheduling input (e.g., "你好") does NOT create bogus task
+- **Test Cases**:
+    - [ ] "你好" → AwaitingClarification
+    - [ ] "以后想学吉他" → classification=inspiration
+    - [ ] "明天开会" → classification=schedulable
+- **Deliverables**: Prompt update in `DashscopeExecutor`, classification handling in `PrismOrchestrator`
+
+#### 4.1: Multi-Task Splitting
+
+Handle input with multiple tasks.
+
+- **Ship Criteria**: "8点吃面 9点开会" creates 2 tasks after user confirmation
+- **Test Cases**:
+    - [ ] Multi-task detected → confirmation dialog
+    - [ ] User confirms → batch create
+    - [ ] Each task gets conflict check
+- **Deliverables**: `UiState.MultiTaskConfirmation`, batch insert in ViewModel
+
+#### 4.2: Reschedule Flow
 
 Natural language rescheduling (e.g., "把明天的会改到后天").
 
@@ -256,9 +289,19 @@ Natural language rescheduling (e.g., "把明天的会改到后天").
     - [ ] Reference existing task → correct match
     - [ ] Ambiguous reference → picker shown
     - [ ] Conflict on new time → resolution flow
-- **Deliverables**: `onReschedule()` in ViewModel, LLM reschedule prompt
+- **Deliverables**: `buildReschedulePrompt()` rewrite, `onReschedule()` in ViewModel
 
-### 🔬 Wave 5: Batch Operations
+### 🔬 Wave 5: Inspiration Storage
+
+Store non-schedulable input for future reference.
+
+- **Ship Criteria**: Inspiration saved and retrievable
+- **Test Cases**:
+    - [ ] "以后想学吉他" → saved to InspirationRepository
+    - [ ] Inspirations visible in dedicated UI
+- **Deliverables**: `InspirationRepository`, inspiration UI component
+
+### 🔬 Wave 6: Batch Operations
 
 Multi-select delete and bulk reschedule.
 
@@ -268,7 +311,7 @@ Multi-select delete and bulk reschedule.
     - [ ] Batch reschedule → all items shifted
 - **Deliverables**: `toggleSelectionMode()`, batch UI
 
-### 🔬 Wave 6: Insights Integration
+### 🔬 Wave 7: Insights Integration
 
 Connect to Analyst for task completion analytics.
 

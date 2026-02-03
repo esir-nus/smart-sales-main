@@ -49,10 +49,12 @@ interface ScheduleBoard {
     
     /**
      * Hardcoded conflict check — no LLM, instant.
+     * @param excludeId Skip this task ID (prevents self-conflict after insert)
      */
     suspend fun checkConflict(
         proposedStart: Long,
-        durationMinutes: Int
+        durationMinutes: Int,
+        excludeId: String? = null
     ): ConflictResult
     
     /**

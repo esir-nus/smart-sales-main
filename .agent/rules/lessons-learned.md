@@ -93,6 +93,20 @@ When adding a new lesson (after USER confirms "problem fixed"):
 **Pattern**: Any "check for duplicates/conflicts after insert" needs **exclusion logic** for the just-inserted entity  
 **Status**: ✅ CONFIRMED 2026-02-03
 
+### Spec Drift: Inventing UI Features — 2026-02-03
+
+**Symptom**: Implementation plan included "Swipe Right to Reschedule" gesture  
+**Root Cause**: Agent saw a gap (how to trigger reschedule?) and **invented** a UI pattern without spec backing  
+**Wrong Approach**: Making up features to fill perceived gaps  
+**Correct Fix**:  
+1. Check if spec covers the interaction
+2. If not covered, **flag as spec gap** — don't invent
+3. Ask user: "Spec doesn't define how to trigger reschedule. Should I propose a spec update?"  
+**Pattern**: **Docs > Code > Guessing** — Never invent features, always verify against spec  
+**Status**: ✅ CONFIRMED 2026-02-03
+
+---
+
 <!-- Add new lessons above this line -->
 
 ### SwipeToDismiss Background Visibility — 2026-02-02

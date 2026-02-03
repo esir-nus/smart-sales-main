@@ -120,20 +120,26 @@
 - [x] COEXISTING tasks don't conflict
 - [x] Duration inferred from task type
 
-### Wave 2: Entity Resolution 🔲
+### Wave 2: Entity Resolution ✅
 
-**Next Step**: Implement EntityResolver interface for "张总" → contact picker
+**Shipped**: 2026-02-03
 
 | Deliverable | File | Status |
 |-------------|------|--------|
-| Interface | `EntityResolver.kt` | 🔲 |
-| Implementation | `RealEntityResolver.kt` | 🔲 |
-| Tests | `EntityResolverTest.kt` | 🔲 |
+| Interface | `domain/memory/EntityResolver.kt` | ✅ |
+| Implementation | `data/memory/RealEntityResolver.kt` | ✅ |
+| Tests | `EntityResolverTest.kt` (3 tests) | ✅ |
+| DI Binding | `PrismModule.kt` | ✅ |
+| Test Data | `FakeRelevancyRepository.kt` | ✅ |
 
-**Test Cases**:
-- [ ] One match → Auto-resolve
-- [ ] Multiple → Picker
-- [ ] Zero → NotFound
+**Test Cases Covered**:
+- [x] One match → Auto-resolve (张总 → 张伟)
+- [x] Multiple → AmbiguousMatches (王总 → 3 candidates)
+- [x] Zero → NotFound (李总)
+
+### Wave 3: Location Conflict 🔲
+
+**Next Step**: Extend overlap logic to shared resources (Meeting Rooms)
 
 ---
 

@@ -109,6 +109,8 @@
 | Implementation | `data/memory/RealScheduleBoard.kt` | ✅ |
 | Tests | `ScheduleBoardTest.kt` (6 tests) | ✅ |
 | Cerb Interface | `interface.md` updated | ✅ |
+| ViewModel Wiring | `SchedulerViewModel.kt` → conflict check | ✅ |
+| UI Feedback | `SchedulerDrawer.kt` → warning banner | ✅ |
 
 **Test Cases Covered**:
 - [x] No conflict: Empty schedule
@@ -120,7 +122,7 @@
 
 ### Wave 2: Entity Resolution 🔲
 
-**Next Step**: Wire ScheduleBoard → SchedulerViewModel OR start EntityResolver
+**Next Step**: Implement EntityResolver interface for "张总" → contact picker
 
 | Deliverable | File | Status |
 |-------------|------|--------|

@@ -120,22 +120,20 @@
 - [x] COEXISTING tasks don't conflict
 - [x] Duration inferred from task type
 
-### Wave 2: Entity Resolution ✅
+### Wave 2: Entity Resolution ❌ REVERTED
 
-**Shipped**: 2026-02-03
+**Reverted**: 2026-02-03
 
-| Deliverable | File | Status |
-|-------------|------|--------|
-| Interface | `domain/memory/EntityResolver.kt` | ✅ |
-| Implementation | `data/memory/RealEntityResolver.kt` | ✅ |
-| Tests | `EntityResolverTest.kt` (3 tests) | ✅ |
-| DI Binding | `PrismModule.kt` | ✅ |
-| Test Data | `FakeRelevancyRepository.kt` | ✅ |
+**Reason**: Premature abstraction. Entity resolution requires LLM context understanding, not Kotlin lookup.
 
-**Test Cases Covered**:
-- [x] One match → Auto-resolve (张总 → 张伟)
-- [x] Multiple → AmbiguousMatches (王总 → 3 candidates)
-- [x] Zero → NotFound (李总)
+**Lesson Learned**: 
+- "Who is 张总?" requires LLM (context understanding)
+- Kotlin-only approach was YAGNI
+
+**Real Approach** (TBD):
+- Entity resolution happens in LLM Linter phase
+- LLM outputs resolved entity ID using conversation context
+- See `.agent/rules/anti-drift-protocol.md` for new gates
 
 ### Wave 3: Location Conflict 🔲
 

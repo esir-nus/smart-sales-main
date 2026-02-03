@@ -140,6 +140,7 @@ fun debugRunScenario(scenario: String) {
 
 **Do NOT proceed to implementation if:**
 
+- [ ] ❌ Lessons-learned.md NOT read
 - [ ] Spec not read completely
 - [ ] Fakes contain hardcoded test data
 - [ ] LLM vs Kotlin decision not justified
@@ -147,19 +148,65 @@ fun debugRunScenario(scenario: String) {
 
 ---
 
+## Phase -1: READ LESSONS LEARNED (FIRST!)
+
+**BEFORE touching any code, read the lessons file:**
+
+```bash
+# MANDATORY — do this FIRST
+cat .agent/rules/lessons-learned.md
+```
+
+| Check | What to Look For |
+|-------|------------------|
+| **Similar symptom** | Has this bug pattern been seen before? |
+| **Same file/component** | Is there a known gotcha for this area? |
+| **UI issue** | Check Compose patterns (scrim, swipe, click) |
+| **Data flow issue** | Check sealed class, parser, pipeline lessons |
+
+**If a lesson matches → apply the documented fix IMMEDIATELY. Do NOT reinvent.**
+
+---
+
+## Phase 5: LOG FIX (After User Confirms)
+
+**After USER says "problem fixed" (not just BUILD SUCCESSFUL):**
+
+1. Open `.agent/rules/lessons-learned.md`
+2. Add entry using the template:
+
+```markdown
+### [SHORT TITLE] — [DATE]
+
+**Symptom**: What the user reported  
+**Root Cause**: The actual problem  
+**Wrong Approach**: What didn't work  
+**Correct Fix**: What worked  
+**File(s)**: Where the fix was applied  
+**Status**: ✅ CONFIRMED [DATE]
+```
+
+3. Add ABOVE the `<!-- Add new lessons above this line -->` marker
+
+**⚠️ Do NOT log until user confirms. BUILD SUCCESS ≠ FIXED.**
+
+---
+
 ## Quick Reference
 
 | Phase | Gate |
 |-------|------|
+| **-1** | ✅ Lessons read |
 | 0 | Spec quoted |
 | 1 | Fakes clean |
 | 2 | First principles checked |
 | 3 | Plan approved |
 | 4 | L1 → L2 → L3 pass |
+| **5** | ✅ Lesson logged (if bug fix) |
 
 ---
 
 ## Related Rules
 
 - `.agent/rules/anti-drift-protocol.md` — Full anti-drift rules
-- `.agent/rules/lessons-learned.md` — Past mistakes to avoid
+- `.agent/rules/lessons-learned.md` — **READ FIRST, UPDATE AFTER FIX**

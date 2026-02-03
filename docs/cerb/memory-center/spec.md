@@ -256,14 +256,19 @@ Scheduling tasks follows a **gated pipeline** — Phase 2 only executes after Ph
 
 LLM Linter extracts exactly 4 fields from user input:
 
-| Field | Example | Notes |
-|-------|---------|-------|
-| `person` | "张总" | Raw alias, unresolved |
-| `startTime` | 2026-02-05 09:00 | Parsed datetime |
-| `location` | "会议室" or null | Optional |
-| `briefSummary` | "开会" | Action/purpose |
+| Field | Example | Required |
+|-------|---------|----------|
+| `startTime` | 2026-02-05 09:00 | **MANDATORY** |
+| `duration` | 1h (or endTime) | **MANDATORY** |
+| `person` | "张总" | Encouraged |
+| `location` | "会议室" | Encouraged |
+| `briefSummary` | "开会" | Encouraged |
 
-> **Duration is NOT parsed in Phase 1.** It requires follow-up clarification or inference from task type.
+### Phase 1 Exit Condition
+
+> **Phase 1 loops until LLM has enough info to schedule:**
+> - ✅ Have startTime + duration (or endTime) → Exit loop, proceed to Kanban check
+> - ❌ Missing either → Ask user for clarification, loop continues
 
 ### Pipeline Flow
 

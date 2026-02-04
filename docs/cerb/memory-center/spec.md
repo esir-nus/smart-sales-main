@@ -166,4 +166,69 @@ data class DecisionRecord(
 | Wave | Focus | Status |
 |------|-------|--------|
 | **1** | ScheduleBoard + Two-Phase Pipeline | ✅ SHIPPED |
-| **2** | Hot/Cement Zone Compaction | 🔲 (needs behavior spec) |
+| **2** | Hot/Cement Lazy Compaction + Subscription Config | 🔲 Planned |
+
+---
+
+## Wave 2: Lazy Compaction Behavior
+
+### Philosophy
+
+**No background jobs.** Hot/Cement zones are defined by **query-time filters**, not physical data movement.
+
+### Hot Zone Query (Default)
+
+```kotlin
+SELECT * FROM entries
+WHERE isArchived = false
+   OR scheduledAt > (NOW() - INTERVAL [subscriptionWindowDays] DAY)
+```
+
+### Cement Zone Query (History Browsing)
+
+```kotlin
+SELECT * FROM entries
+WHERE isArchived = true
+  AND scheduledAt <= (NOW() - INTERVAL [subscriptionWindowDays] DAY)
+```
+
+### Subscription Tier Configuration
+
+| Tier | Hot Window | Cement Access |
+|------|-----------|---------------|
+| **Free** | 7 days | Read-only |
+| **Pro** | 14 days | Full access |
+| **Enterprise** | 30 days | Full access |
+
+**Implementation**:
+```kotlin
+object SubscriptionConfig {
+    fun getHotWindowDays(tier: SubscriptionTier): Int = when (tier) {
+        SubscriptionTier.FREE -> 7
+        SubscriptionTier.PRO -> 14
+        SubscriptionTier.ENTERPRISE -> 30
+    }
+}
+```
+
+### Archive Trigger
+
+Archiving happens **only when user completes a task**:
+
+```kotlin
+suspend fun completeTask(taskId: String) {
+    repository.update(taskId, isArchived = true)
+}
+```
+
+**No automatic archiving.** The `isArchived` flag is user-driven.
+
+### Retrieval Strategy
+
+| Scenario | Query Target | Model | Cost |
+|----------|-------------|-------|------|
+| Default (recent context) | Hot Zone only | qwen-plus | Low |
+| Entity last seen >14 days | Cement Zone (targeted) | qwen-long | High (justified) |
+| Explicit history request | Cement Zone (filtered) | qwen-long | High (user-initiated) |
+
+**Cost guardrail**: Max 50 Cement entries per LLM request.

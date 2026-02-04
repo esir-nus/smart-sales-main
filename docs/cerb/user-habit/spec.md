@@ -72,9 +72,10 @@ Re-calculate confidence: obs / (obs + rej)
 
 | Wave | Focus | Status |
 |------|-------|--------|
-| **1** | Schema + Repository | 🔲 |
+| **1** | Schema + Repository | ✅ SHIPPED |
 | **2** | Observation Hook | 🔲 |
 | **3** | Nudge Integration | 🔲 |
+| **4** | Time Decay (Fading) | 🔲 |
 
 ---
 

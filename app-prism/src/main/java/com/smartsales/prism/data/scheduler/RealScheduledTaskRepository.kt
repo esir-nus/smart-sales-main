@@ -38,6 +38,10 @@ class RealScheduledTaskRepository @Inject constructor(
         return calendarRepository.insertEvent(event)
     }
 
+    override suspend fun getTask(id: String): TimelineItemModel.Task? {
+        return calendarRepository.getEvent(id)?.toTimelineItem()
+    }
+
     override suspend fun updateTask(task: TimelineItemModel.Task) {
         val event = task.toCalendarEvent()
         calendarRepository.updateEvent(event)

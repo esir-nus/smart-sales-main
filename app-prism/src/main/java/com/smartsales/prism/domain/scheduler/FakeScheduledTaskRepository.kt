@@ -60,6 +60,10 @@ class FakeScheduledTaskRepository @Inject constructor() : ScheduledTaskRepositor
         return newId
     }
 
+    override suspend fun getTask(id: String): TimelineItemModel.Task? {
+        return _items.value.filterIsInstance<TimelineItemModel.Task>().find { it.id == id }
+    }
+
     override suspend fun updateTask(task: TimelineItemModel.Task) {
         delay(200) // Fake write
         val current = _items.value.toMutableList()

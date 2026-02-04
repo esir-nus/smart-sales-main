@@ -1,5 +1,7 @@
 package com.smartsales.prism.data.fakes
 
+import com.smartsales.prism.domain.config.SubscriptionConfig
+import com.smartsales.prism.domain.config.SubscriptionTier
 import com.smartsales.prism.domain.memory.MemoryEntry
 import com.smartsales.prism.domain.memory.MemoryRepository
 import kotlinx.coroutines.flow.Flow
@@ -10,16 +12,50 @@ import javax.inject.Singleton
 
 /**
  * Fake MemoryRepository — 内存中存储
- * Phase 2 占位实现
+ * 支持 Lazy Compaction: 热区/水泥区通过查询时过滤实现
  */
 @Singleton
 class FakeMemoryRepository @Inject constructor() : MemoryRepository {
     
     private val entries = MutableStateFlow<List<MemoryEntry>>(emptyList())
     
+    // 用于测试注入当前时间
+    var currentTimeProvider: () -> Long = { System.currentTimeMillis() }
+    
     override suspend fun getHotEntries(sessionId: String): List<MemoryEntry> {
         return entries.value.filter { 
             !it.isArchived && it.sessionId == sessionId 
+        }
+    }
+    
+    /**
+     * 获取热区条目（分层读取）
+     * 逻辑: !isArchived OR scheduledAt > (now - windowDays)
+     */
+    override suspend fun getHotEntries(sessionId: String, userTier: SubscriptionTier): List<MemoryEntry> {
+        val windowDays = SubscriptionConfig.getHotWindowDays(userTier)
+        val cutoff = currentTimeProvider() - (windowDays * 24 * 60 * 60 * 1000L)
+        
+        return entries.value.filter { entry ->
+            entry.sessionId == sessionId && (
+                !entry.isArchived || 
+                (entry.scheduledAt != null && entry.scheduledAt > cutoff)
+            )
+        }
+    }
+    
+    /**
+     * 获取水泥区条目（已归档且超出热区窗口）
+     * 逻辑: isArchived AND scheduledAt <= (now - windowDays)
+     */
+    override suspend fun getCementEntries(sessionId: String, userTier: SubscriptionTier): List<MemoryEntry> {
+        val windowDays = SubscriptionConfig.getHotWindowDays(userTier)
+        val cutoff = currentTimeProvider() - (windowDays * 24 * 60 * 60 * 1000L)
+        
+        return entries.value.filter { entry ->
+            entry.sessionId == sessionId &&
+            entry.isArchived && 
+            (entry.scheduledAt == null || entry.scheduledAt <= cutoff)
         }
     }
     
@@ -48,5 +84,10 @@ class FakeMemoryRepository @Inject constructor() : MemoryRepository {
             else entry
         }
         entries.value = current
+    }
+    
+    // Test helper: clear all entries
+    fun clear() {
+        entries.value = emptyList()
     }
 }

@@ -105,6 +105,39 @@ class CalendarRepository @Inject constructor(
     }
 
     /**
+     * 获取单个事件
+     */
+    suspend fun getEvent(eventId: String): CalendarEvent? = withContext(Dispatchers.IO) {
+        val projection = arrayOf(
+            CalendarContract.Events._ID,
+            CalendarContract.Events.TITLE,
+            CalendarContract.Events.DTSTART,
+            CalendarContract.Events.DTEND,
+            CalendarContract.Events.EVENT_LOCATION,
+            CalendarContract.Events.DESCRIPTION
+        )
+
+        val eventUri = ContentUris.withAppendedId(
+            CalendarContract.Events.CONTENT_URI,
+            eventId.toLong()
+        )
+
+        contentResolver.query(eventUri, projection, null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                return@withContext CalendarEvent(
+                    id = cursor.getLong(0).toString(),
+                    title = cursor.getString(1) ?: "",
+                    startTime = Instant.ofEpochMilli(cursor.getLong(2)),
+                    endTime = Instant.ofEpochMilli(cursor.getLong(3)),
+                    location = cursor.getString(4),
+                    notes = cursor.getString(5)
+                )
+            }
+        }
+        null
+    }
+
+    /**
      * 更新事件
      */
     suspend fun updateEvent(event: CalendarEvent) = withContext(Dispatchers.IO) {

@@ -41,106 +41,140 @@ class SchedulerLinter @Inject constructor(
                 // "schedulable" → continue to full parsing below
             }
             
-            val title = json.optString("title", "")
-            if (title.isBlank()) {
-                return LintResult.Error("任务标题不能为空")
-            }
-
-            val startTimeStr = json.optString("startTime", "")
-            val endTimeStr = if (json.isNull("endTime")) null else json.optString("endTime", null)
+            // Wave 4.1: Parse tasks array
+            val tasksArray = json.optJSONArray("tasks")
             
-            // Phase 1 Clues 先提取（用于 Incomplete 返回）
-            val location = if (json.isNull("location")) null else json.optString("location", null)
-            val notes = if (json.isNull("notes")) null else json.optString("notes", null)
-            val keyPerson = if (json.isNull("keyPerson")) null else json.optString("keyPerson", null)
-            val partialClues = ParsedClues(
-                person = keyPerson,
-                location = location,
-                briefSummary = if (notes.isNullOrBlank()) title else notes
-            )
-            
-            // 验证日期 — 如果缺失，返回 Incomplete 而不是 Error（Phase 1 循环）
-            val startTime = parseDateTime(startTimeStr)
-            if (startTime == null) {
-                return LintResult.Incomplete(
-                    missingField = "startTime",
-                    question = "请问具体是什么时候？",
-                    partialClues = partialClues
-                )
+            if (tasksArray == null || tasksArray.length() == 0) {
+                // Backward compat: try parsing as single object
+                return parseSingleTask(json)
             }
             
-            // endTime 可选，null 表示开放式任务
-            val endTime: Instant? = endTimeStr?.let { parseDateTime(it) }
-
-            if (endTime != null && endTime.isBefore(startTime)) {
-                return LintResult.Error("结束时间不能早于开始时间")
-            }
-
-            // 检查是否是过去的时间 (允许今天的任务)
-            val todayStart = timeProvider.today.atStartOfDay(timeProvider.zoneId).toInstant()
-            if (startTime.isBefore(todayStart)) {
-                return LintResult.Error("不能创建过去的任务")
-            }
-
-            // Duration check: Mandatory Loop Phase 1
-            // Priority: Explicit JSON > EndTime Diff > TaskType Inference > Ask User
-            val explicitDuration = json.optString("duration", null)
-            val taskTypeHint = inferTaskType(title)
-            
-            val durationMinutes: Int? = when {
-                !explicitDuration.isNullOrBlank() -> parseDuration(explicitDuration)
-                endTime != null -> ChronoUnit.MINUTES.between(startTime, endTime).toInt()
-                else -> taskTypeHint.defaultDuration()
+            if (tasksArray.length() == 1) {
+                // Single task → return Success
+                return parseSingleTask(tasksArray.getJSONObject(0))
             }
             
-            if (durationMinutes == null || durationMinutes <= 0) {
-                return LintResult.Incomplete(
-                    missingField = "duration",
-                    question = "这个${title}大概多长时间？",
-                    partialClues = partialClues.copy(durationMinutes = null)
-                )
+            // Multi-task → parse all and return MultiTask
+            val tasks = (0 until tasksArray.length()).mapNotNull { i ->
+                val result = parseSingleTask(tasksArray.getJSONObject(i))
+                when (result) {
+                    is LintResult.Success -> result.task
+                    else -> null // 跳过解析失败的任务
+                }
             }
-
-            val highlights = if (json.isNull("highlights")) null else json.optString("highlights", null)
-            val reminder = if (json.isNull("reminder")) null else json.optString("reminder", null)
             
-            // Infer alarm cascade from reminder type
-            val alarmCascade: List<String>? = when (reminder) {
-                "smart" -> listOf("-1h", "-15m", "-5m")
-                null -> null
-                else -> listOf("-15m") // Simple single reminder
+            return if (tasks.isNotEmpty()) {
+                LintResult.MultiTask(tasks)
+            } else {
+                LintResult.Error("无法解析任务列表")
             }
-
-            LintResult.Success(
-                task = TimelineItemModel.Task(
-                    id = "", // 新任务，ID 由 Repository 生成
-                    timeDisplay = formatTimeDisplay(startTime, endTime),
-                    title = title,
-                    isDone = false,
-                    hasAlarm = reminder != null,
-                    isSmartAlarm = reminder == "smart",
-                    startTime = startTime,
-                    endTime = endTime,
-                    durationMinutes = durationMinutes,
-                    dateRange = formatDateRange(startTime, endTime),
-                    location = location,
-                    notes = notes,
-                    keyPerson = keyPerson,
-                    highlights = highlights,
-                    alarmCascade = alarmCascade
-                ),
-                reminderType = when (reminder) {
-                    "smart" -> ReminderType.SMART_CASCADE
-                    null -> null
-                    else -> ReminderType.SINGLE
-                },
-                taskTypeHint = taskTypeHint,
-                // Phase 1 线索 → Phase 2 实体消歧
-                parsedClues = partialClues.copy(durationMinutes = durationMinutes)
-            )
         } catch (e: Exception) {
             LintResult.Error("JSON 解析失败: ${e.message}")
         }
+    }
+    
+    /**
+     * 解析单个任务对象
+     * Wave 4.1: 提取为独立方法，供 tasks 数组解析复用
+     */
+    private fun parseSingleTask(json: JSONObject): LintResult {
+        val title = json.optString("title", "")
+        if (title.isBlank()) {
+            return LintResult.Error("任务标题不能为空")
+        }
+
+        val startTimeStr = json.optString("startTime", "")
+        val endTimeStr = if (json.isNull("endTime")) null else json.optString("endTime", null)
+        
+        // Phase 1 Clues 先提取（用于 Incomplete 返回）
+        val location = if (json.isNull("location")) null else json.optString("location", null)
+        val notes = if (json.isNull("notes")) null else json.optString("notes", null)
+        val keyPerson = if (json.isNull("keyPerson")) null else json.optString("keyPerson", null)
+        val partialClues = ParsedClues(
+            person = keyPerson,
+            location = location,
+            briefSummary = if (notes.isNullOrBlank()) title else notes
+        )
+        
+        // 验证日期 — 如果缺失，返回 Incomplete 而不是 Error（Phase 1 循环）
+        val startTime = parseDateTime(startTimeStr)
+        if (startTime == null) {
+            return LintResult.Incomplete(
+                missingField = "startTime",
+                question = "请问具体是什么时候？",
+                partialClues = partialClues
+            )
+        }
+        
+        // endTime 可选，null 表示开放式任务
+        val endTime: Instant? = endTimeStr?.let { parseDateTime(it) }
+
+        if (endTime != null && endTime.isBefore(startTime)) {
+            return LintResult.Error("结束时间不能早于开始时间")
+        }
+
+        // 检查是否是过去的时间 (允许今天的任务)
+        val todayStart = timeProvider.today.atStartOfDay(timeProvider.zoneId).toInstant()
+        if (startTime.isBefore(todayStart)) {
+            return LintResult.Error("不能创建过去的任务")
+        }
+
+        // Duration check: Mandatory Loop Phase 1
+        // Priority: Explicit JSON > EndTime Diff > TaskType Inference > Ask User
+        val explicitDuration = json.optString("duration", null)
+        val taskTypeHint = inferTaskType(title)
+        
+        val durationMinutes: Int? = when {
+            !explicitDuration.isNullOrBlank() -> parseDuration(explicitDuration)
+            endTime != null -> ChronoUnit.MINUTES.between(startTime, endTime).toInt()
+            else -> taskTypeHint.defaultDuration()
+        }
+        
+        if (durationMinutes == null || durationMinutes <= 0) {
+            return LintResult.Incomplete(
+                missingField = "duration",
+                question = "这个${title}大概多长时间？",
+                partialClues = partialClues.copy(durationMinutes = null)
+            )
+        }
+
+        val highlights = if (json.isNull("highlights")) null else json.optString("highlights", null)
+        val reminder = if (json.isNull("reminder")) null else json.optString("reminder", null)
+        
+        // Infer alarm cascade from reminder type
+        val alarmCascade: List<String>? = when (reminder) {
+            "smart" -> listOf("-1h", "-15m", "-5m")
+            null -> null
+            else -> listOf("-15m") // Simple single reminder
+        }
+
+        return LintResult.Success(
+            task = TimelineItemModel.Task(
+                id = "", // 新任务，ID 由 Repository 生成
+                timeDisplay = formatTimeDisplay(startTime, endTime),
+                title = title,
+                isDone = false,
+                hasAlarm = reminder != null,
+                isSmartAlarm = reminder == "smart",
+                startTime = startTime,
+                endTime = endTime,
+                durationMinutes = durationMinutes,
+                dateRange = formatDateRange(startTime, endTime),
+                location = location,
+                notes = notes,
+                keyPerson = keyPerson,
+                highlights = highlights,
+                alarmCascade = alarmCascade
+            ),
+            reminderType = when (reminder) {
+                "smart" -> ReminderType.SMART_CASCADE
+                null -> null
+                else -> ReminderType.SINGLE
+            },
+            taskTypeHint = taskTypeHint,
+            // Phase 1 线索 → Phase 2 实体消歧
+            parsedClues = partialClues.copy(durationMinutes = durationMinutes)
+        )
     }
 
     private fun parseDateTime(dateTimeStr: String): Instant? {
@@ -253,6 +287,14 @@ sealed class LintResult {
         val reminderType: ReminderType?,
         val taskTypeHint: TaskTypeHint,
         val parsedClues: ParsedClues = ParsedClues()  // Phase 1 → Phase 2 桥梁
+    ) : LintResult()
+    
+    /**
+     * Wave 4.1: Multi-Task Detected
+     * LLM 返回多个任务时使用此结果
+     */
+    data class MultiTask(
+        val tasks: List<TimelineItemModel.Task>
     ) : LintResult()
     
     /**

@@ -103,6 +103,11 @@ abstract class PrismModule {
     @Binds @Singleton
     abstract fun bindToolRegistry(fake: com.smartsales.prism.data.fakes.FakeToolRegistry): com.smartsales.prism.domain.analyst.ToolRegistry
 
+    // === User Habit ===
+
+    @Binds @Singleton
+    abstract fun bindUserHabitRepository(fake: com.smartsales.prism.data.fakes.FakeUserHabitRepository): com.smartsales.prism.domain.habit.UserHabitRepository
+
     // === Time ===
 
     @Binds @Singleton

@@ -20,15 +20,7 @@ interface MemoryRepository {
 
 ### RelevancyRepository
 
-```kotlin
-interface RelevancyRepository {
-    suspend fun getById(entityId: String): RelevancyEntry?
-    suspend fun findByAlias(alias: String): List<RelevancyEntry>
-    suspend fun getByType(entityType: EntityType): List<RelevancyEntry>
-    suspend fun save(entry: RelevancyEntry)
-    suspend fun search(query: String, limit: Int = 10): List<RelevancyEntry>
-}
-```
+See [Relevancy Library Interface](../relevancy-library/interface.md) for full contract.
 
 ### MemoryWriter
 

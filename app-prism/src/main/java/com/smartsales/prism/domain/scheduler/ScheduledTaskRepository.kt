@@ -27,6 +27,11 @@ interface ScheduledTaskRepository {
     suspend fun insertTask(task: TimelineItemModel.Task): String
 
     /**
+     * 获取单个任务
+     */
+    suspend fun getTask(id: String): TimelineItemModel.Task?
+
+    /**
      * 更新任务
      */
     suspend fun updateTask(task: TimelineItemModel.Task)

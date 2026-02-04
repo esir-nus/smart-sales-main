@@ -306,10 +306,12 @@ private fun L2ScenarioButton(
 private fun formatResult(name: String, result: LintResult, expected: String): String {
     val status = when (result) {
         is LintResult.Success -> "✅ duration=${result.task.durationMinutes}, cascade=${result.task.alarmCascade}"
+        is LintResult.MultiTask -> "🔢 ${result.tasks.size} tasks: ${result.tasks.map { it.title }}"
         is LintResult.Incomplete -> "⚠️ ${result.missingField}: ${result.question}"
         is LintResult.Error -> "❌ ${result.message}"
         is LintResult.NonIntent -> "🚫 non_intent: ${result.reason}"
         is LintResult.Inspiration -> "💡 inspiration: ${result.content}"
+
     }
     return "[$name] $status (预期: $expected)"
 }

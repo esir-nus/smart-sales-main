@@ -15,10 +15,10 @@ Entity lookup and disambiguation for B2B sales context. Provides O(1) access to 
 ```kotlin
 interface RelevancyRepository {
     /**
-     * Find entity by alias match (e.g., "张总" → RelevancyEntry?).
-     * Returns null if no match found.
+     * Find entities by alias match (e.g., "张总" → List<RelevancyEntry>).
+     * Returns empty list if no match found.
      */
-    suspend fun findByAlias(alias: String): RelevancyEntry?
+    suspend fun findByAlias(alias: String): List<RelevancyEntry>
     
     /**
      * Find entity by exact ID.
@@ -48,7 +48,7 @@ interface RelevancyRepository {
 
 | Method | Input | Output |
 |--------|-------|--------|
-| `findByAlias` | `alias: String` | `RelevancyEntry?` |
+| `findByAlias` | `alias: String` | `List<RelevancyEntry>` |
 | `findById` | `entityId: String` | `RelevancyEntry?` |
 | `search` | `query: String` | `List<RelevancyEntry>` |
 | `getByType` | `EntityType` | `List<RelevancyEntry>` |

@@ -1,5 +1,6 @@
 package com.smartsales.prism.domain.memory
 
+import com.smartsales.prism.domain.config.SubscriptionTier
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -11,6 +12,18 @@ interface MemoryRepository {
      * 获取热区条目（活跃条目 + 14天内日程）
      */
     suspend fun getHotEntries(sessionId: String): List<MemoryEntry>
+    
+    /**
+     * 获取热区条目（分层读取）
+     * @param userTier 用户订阅层级，决定热区窗口大小
+     */
+    suspend fun getHotEntries(sessionId: String, userTier: SubscriptionTier): List<MemoryEntry>
+    
+    /**
+     * 获取水泥区条目（已归档且超出热区窗口）
+     * @param userTier 用户订阅层级，决定热区窗口边界
+     */
+    suspend fun getCementEntries(sessionId: String, userTier: SubscriptionTier): List<MemoryEntry>
     
     /**
      * 搜索记忆

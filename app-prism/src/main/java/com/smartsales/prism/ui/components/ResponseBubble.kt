@@ -61,6 +61,8 @@ fun ResponseBubble(
         is UiState.Error -> {
             ErrorBubble(message = uiState.message, modifier = modifier)
         }
+        
+
     }
 }
 

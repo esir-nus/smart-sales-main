@@ -1,5 +1,7 @@
 package com.smartsales.prism.domain.memory
 
+import com.smartsales.prism.domain.config.SubscriptionTier
+
 /**
  * User Profile Configuration
  * @see Prism-V1.md §5.8
@@ -12,6 +14,9 @@ data class UserProfile(
     val experienceLevel: String,          // "beginner", "intermediate", "expert"
     val preferredLanguage: String = "zh-CN",
     val updatedAt: Long,
+
+    // [EXTENSION] Subscription tier for tiered read
+    val subscriptionTier: SubscriptionTier = SubscriptionTier.FREE,
 
     // [EXTENSION] For manual entry & contact suggestions
     val communicationPlatform: String = "", // e.g., "WeChat", "DingTalk"

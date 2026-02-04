@@ -235,14 +235,18 @@ class DashscopeExecutor @Inject constructor(
 
 {
   "classification": "schedulable|inspiration|non_intent",
-  "title": "任务标题（简洁明了）",
-  "startTime": "YYYY-MM-DD HH:mm",
-  "endTime": "YYYY-MM-DD HH:mm (可选，若用户未指定则为 null)",
-  "location": "地点（可选，没有则省略此字段）",
-  "notes": "备注（可选，没有则省略此字段）",
-  "keyPerson": "关键人物（可选，提取主要联系人或干系人）",
-  "highlights": "高亮信息（可选，提取必须注意的细节，如带身份证、正装等）",
-  "reminder": "smart 或 single（见下方推断规则）"
+  "tasks": [
+    {
+      "title": "任务标题（简洁明了）",
+      "startTime": "YYYY-MM-DD HH:mm",
+      "endTime": "YYYY-MM-DD HH:mm (可选，若用户未指定则为 null)",
+      "location": "地点（可选，没有则省略此字段）",
+      "notes": "备注（可选，没有则省略此字段）",
+      "keyPerson": "关键人物（可选，提取主要联系人或干系人）",
+      "highlights": "高亮信息（可选，提取必须注意的细节，如带身份证、正装等）",
+      "reminder": "smart 或 single（见下方推断规则）"
+    }
+  ]
 }
 
 ## 输入分类规则（Wave 4.0）
@@ -256,8 +260,9 @@ class DashscopeExecutor @Inject constructor(
 | "non_intent" | 普通对话，无日程或想法意图 | "你好"、"今天天气怎么样" |
 
 **规则**：
-- 如果是 "inspiration" 或 "non_intent"，只需返回 classification 字段，其他字段可省略
-- 如果是 "schedulable"，继续解析任务详情
+- 如果是 "inspiration" 或 "non_intent"，只需返回 classification 字段，tasks 可省略
+- 如果是 "schedulable"，tasks 数组必须包含至少 1 个任务对象
+- **Wave 4.1**: 如果用户描述包含多个任务（如 "8点吃面 9点开会"），将所有任务都放入 tasks 数组
 
 ## 提醒类型推断规则（Wave 3）
 

@@ -6,6 +6,7 @@ import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.memory.ScheduleBoard
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.pipeline.Orchestrator
+import com.smartsales.prism.domain.pipeline.SchedulerActionResult
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.TimelineItemModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -52,6 +53,10 @@ class SchedulerViewModel @Inject constructor(
     // 未确认的日期 (显示呼吸发光效果的日期)
     private val _unacknowledgedDates = MutableStateFlow<Set<Int>>(emptySet())
     val unacknowledgedDates: StateFlow<Set<Int>> = _unacknowledgedDates.asStateFlow()
+    
+    // 改期目标日期 (显示琥珀色发光效果)
+    private val _rescheduledDates = MutableStateFlow<Set<Int>>(emptySet())
+    val rescheduledDates: StateFlow<Set<Int>> = _rescheduledDates.asStateFlow()
 
     // 冲突警告
     private val _conflictWarning = MutableStateFlow<String?>(null)
@@ -81,7 +86,11 @@ class SchedulerViewModel @Inject constructor(
     fun onReschedule(id: String, text: String) {
         android.util.Log.d("SchedulerVM", "🔄 Reschedule: id=$id, input='$text'")
         viewModelScope.launch {
-            orchestrator.processSchedulerAction(id, text)
+            val result = orchestrator.processSchedulerAction(id, text)
+            if (result is SchedulerActionResult.Success && result.newDayOffset != null) {
+                _rescheduledDates.value += result.newDayOffset
+                android.util.Log.d("SchedulerVM", "Rescheduled to day offset: ${result.newDayOffset}")
+            }
             triggerRefresh()
         }
     }

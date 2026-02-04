@@ -41,7 +41,10 @@ interface Orchestrator {
  * Scheduler 操作结果
  */
 sealed class SchedulerActionResult {
-    data class Success(val reply: String) : SchedulerActionResult()
+    data class Success(
+        val reply: String,
+        val newDayOffset: Int? = null  // 改期目标日期偏移量 (null = 未改日期)
+    ) : SchedulerActionResult()
     data class Failure(val error: String) : SchedulerActionResult()
 }
 

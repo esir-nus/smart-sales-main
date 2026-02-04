@@ -300,10 +300,15 @@ Natural language rescheduling (e.g., "把明天的会改到后天").
     - **Date Anchors**:
         - "Next Friday" → Anchored to TODAY (absolute).
         - "Defer 2 days" → Anchored to TASK DATE (relative).
+    - **Visual Feedback**: When reschedule changes task date, highlight target date with breathing animation:
+        - New task: Blue glow (`AccentBlue`)
+        - Rescheduled task: Amber glow (`#FFA726`) 
+        - Animation: Same breathing pattern (0.3-0.8 alpha, 1000ms cycle)
 - **Test Cases**:
     - [ ] Reference existing task → correct match
     - [ ] Ambiguous reference → picker shown
     - [ ] Conflict on new time → resolution flow
+    - [ ] Reschedule to different date → amber glow on target date
 - **Deliverables**: `buildReschedulePrompt()` rewrite, `onReschedule()` in ViewModel
 
 ### 🔬 Wave 5: Inspiration Storage

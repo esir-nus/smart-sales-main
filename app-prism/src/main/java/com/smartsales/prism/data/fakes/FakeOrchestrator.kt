@@ -176,6 +176,9 @@ class FakeOrchestrator @Inject constructor(
             scheduledTaskRepository.updateTask(item.copy(dateRange = dateRangeStr))
         }
         
-        return SchedulerActionResult.Success("好的，已将任务改期到${parsedDate.format(formatter)}。")
+        // 计算日期偏移量
+        val newDayOffset = java.time.temporal.ChronoUnit.DAYS.between(today, parsedDate).toInt()
+        
+        return SchedulerActionResult.Success("好的，已将任务改期到${parsedDate.format(formatter)}。", newDayOffset = newDayOffset)
     }
 }

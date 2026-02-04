@@ -68,6 +68,9 @@ val AccentYellow = Color(0xFFFFCC00)
 /** 默认蓝色 (用于链接、按钮等 - iOS Blue) */
 val AccentBlue = Color(0xFF007AFF)
 
+/** 琥珀色 (用于改期高亮) */
+val AccentAmber = Color(0xFFFFA726)
+
 /** 危险/警告色 */
 val AccentDanger = Color(0xFFEF4444)
 val AccentRed = AccentDanger // Alias

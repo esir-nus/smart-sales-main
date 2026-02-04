@@ -129,6 +129,45 @@ When adding a new lesson (after USER confirms "problem fixed"):
 
 ---
 
+### Dead Flow Reference in flatMapLatest — 2026-02-04
+
+**Symptom**: UI requires manual refresh (navigate away/back) to see changes after insert/update  
+**Root Cause**: **SharedFlow referenced but not combined** — line exists but has no effect  
+```kotlin
+// BROKEN: This line does nothing
+flatMapLatest { offset ->
+    _refreshTrigger.asSharedFlow()  // ← DEAD CODE
+    taskRepository.getTimelineItems(offset)
+}
+```
+**Why It's Subtle**: Code compiles, builds pass, no runtime errors. Only visible in L2 testing.  
+**Correct Fix**: Use `combine()` to actually merge the flows:  
+```kotlin
+combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset }
+    .flatMapLatest { offset -> taskRepository.getTimelineItems(offset) }
+```
+**File(s)**: [SchedulerViewModel.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModel.kt)  
+**Pattern**: In reactive chains, a Flow reference on its own line **does nothing**. Must be combined/collected.  
+**Heuristic**: If you see a Flow/SharedFlow reference that isn't assigned, collected, or combined → **DEAD CODE**.  
+**Status**: ⏳ AWAITING L2 CONFIRMATION
+
+---
+
+### Ghost UI After Update ≠ Persistence Bug — 2026-02-04
+
+**Symptom**: Old card persists after reschedule; looks like persistence is broken  
+**Initial Hypothesis**: `updateEvent()` not working, CalendarProvider issue  
+**Actual Root Cause**: **UI stale, not data stale** — persistence was fine, UI just didn't refresh  
+**Diagnostic Pattern**: Don't assume persistence bug first. Always verify:  
+1. Check logs: Did update actually go through?  
+2. Query DB directly: Is old data still there?  
+3. Force refresh: Does UI update after?  
+**Correlation**: Ghost card symptom **disappeared after fixing refresh trigger** (see above)  
+**Pattern**: When UI shows stale data, check refresh flow BEFORE debugging persistence layer  
+**Status**: ⏳ AWAITING L2 CONFIRMATION
+
+---
+
 <!-- Add new lessons above this line -->
 
 ### SwipeToDismiss Background Visibility — 2026-02-02

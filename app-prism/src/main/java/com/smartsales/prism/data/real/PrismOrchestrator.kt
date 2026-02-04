@@ -299,6 +299,12 @@ class PrismOrchestrator @Inject constructor(
                             
                             scheduledTaskRepository.updateTask(updatedTask)
                             
+                            // 计算新日期偏移量 (用于 UI 高亮)
+                            val zone = ZoneId.systemDefault()
+                            val today = LocalDate.now(zone)
+                            val newDate = updatedTask.startTime.atZone(zone).toLocalDate()
+                            val newDayOffset = ChronoUnit.DAYS.between(today, newDate).toInt()
+                            
                             // 更新提醒
                             alarmScheduler.cancelReminder(itemId)
                             lintResult.reminderType?.let { reminderType ->
@@ -309,7 +315,7 @@ class PrismOrchestrator @Inject constructor(
                             }
                             
                             activityController.complete()
-                            SchedulerActionResult.Success("已更新任务时间${warning}")
+                            SchedulerActionResult.Success("已更新任务时间${warning}", newDayOffset = newDayOffset)
                         }
                         is LintResult.Error -> {
                             activityController.error(lintResult.message)

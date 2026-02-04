@@ -45,7 +45,8 @@ fun SchedulerCalendar(
     onExpandChange: (Boolean) -> Unit,
     activeDay: Int,
     onDateSelected: (Int) -> Unit,
-    unacknowledgedDates: Set<Int> = emptySet()
+    unacknowledgedDates: Set<Int> = emptySet(),
+    rescheduledDates: Set<Int> = emptySet()  // 改期目标日期
 ) {
     // 获取今天日期
     val today = remember { LocalDate.now() }
@@ -91,7 +92,8 @@ fun SchedulerCalendar(
                 onDateSelected(offset)
             },
             eventDots = eventDots,
-            unacknowledgedDates = unacknowledgedDates
+            unacknowledgedDates = unacknowledgedDates,
+            rescheduledDates = rescheduledDates
         )
         
         // 3. Expansion Handle
@@ -168,7 +170,8 @@ private fun ExpandableCalendarGrid(
     selectedMonth: Int,
     onDateSelected: (Int) -> Unit,
     eventDots: Map<Int, Boolean>,
-    unacknowledgedDates: Set<Int> = emptySet()
+    unacknowledgedDates: Set<Int> = emptySet(),
+    rescheduledDates: Set<Int> = emptySet()
 ) {
     val days = (1..35).toList()
     
@@ -209,7 +212,8 @@ private fun ExpandableCalendarGrid(
                         selectedDayOfMonth = selectedDayOfMonth,
                         onDateSelected = onDateSelected,
                         eventDots = eventDots,
-                        unacknowledgedDates = unacknowledgedDates
+                        unacknowledgedDates = unacknowledgedDates,
+                        rescheduledDates = rescheduledDates
                     )
                 }
             } else {
@@ -227,7 +231,8 @@ private fun ExpandableCalendarGrid(
                     selectedDayOfMonth = selectedDayOfMonth,
                     onDateSelected = onDateSelected,
                     eventDots = eventDots,
-                    unacknowledgedDates = unacknowledgedDates
+                    unacknowledgedDates = unacknowledgedDates,
+                    rescheduledDates = rescheduledDates
                 )
             }
         }
@@ -241,7 +246,8 @@ private fun CalendarRow(
     selectedDayOfMonth: Int,
     onDateSelected: (Int) -> Unit,
     eventDots: Map<Int, Boolean>,
-    unacknowledgedDates: Set<Int> = emptySet()
+    unacknowledgedDates: Set<Int> = emptySet(),
+    rescheduledDates: Set<Int> = emptySet()
 ) {
     // 呼吸发光动画 (用于未确认日期)
     val infiniteTransition = rememberInfiniteTransition(label = "dateGlow")
@@ -269,7 +275,10 @@ private fun CalendarRow(
             val hasEvent = eventDots[dayNum] == true
             // 计算 dayOffset 从 todayDayOfMonth
             val dayOffset = dayNum - todayDayOfMonth
-            val hasGlow = dayOffset in unacknowledgedDates
+            val isRescheduleGlow = dayOffset in rescheduledDates
+            val isNewTaskGlow = dayOffset in unacknowledgedDates && !isRescheduleGlow
+            val hasGlow = isRescheduleGlow || isNewTaskGlow
+            val glowColor = if (isRescheduleGlow) AccentAmber else AccentBlue
             
             Box(
                 modifier = Modifier
@@ -279,7 +288,7 @@ private fun CalendarRow(
                         if (hasGlow) {
                             Modifier.drawBehind {
                                 drawCircle(
-                                    color = AccentBlue.copy(alpha = glowAlpha),
+                                    color = glowColor.copy(alpha = glowAlpha),
                                     radius = size.minDimension / 2 + 4.dp.toPx()
                                 )
                             }

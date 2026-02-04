@@ -165,8 +165,8 @@ data class DecisionRecord(
 
 | Wave | Focus | Status |
 |------|-------|--------|
-| **1** | ScheduleBoard + Two-Phase Pipeline | ✅ SHIPPED |
-| **2** | Hot/Cement Lazy Compaction + Subscription Config | 🔲 Planned |
+| **1** | ScheduleBoard + Two-Phase Pipeline | ✅ SHIPPED |\
+| **2** | Hot/Cement Lazy Compaction + Subscription Config | ✅ SHIPPED |
 
 ---
 

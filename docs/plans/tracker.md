@@ -100,12 +100,18 @@
 | Wave | Focus | Status |
 |------|-------|--------|
 | **1** | ScheduleBoard + Two-Phase Pipeline | ✅ SHIPPED |
-| **2** | Hot/Cement Zone Compaction | 🔲 (needs behavior spec) |
+| **2** | Hot/Cement Lazy Compaction + Subscription Config | ✅ SHIPPED |
 
 **Wave 1 Shipped**: 2026-02-03
 - ScheduleBoard interface + RealScheduleBoard implementation
 - Conflict detection with `excludeId` self-exclusion
 - Duration inference from task types
+
+**Wave 2 Shipped**: 2026-02-04
+- SubscriptionConfig with FREE/PRO/ENTERPRISE tiers (7/14/30 day windows)
+- Tier-aware `getHotEntries()` and `getCementEntries()` methods
+- Lazy compaction via query-time filtering (no background jobs)
+- 7/7 unit tests passed in `FakeMemoryRepositoryTest`
 
 ---
 

@@ -154,12 +154,14 @@ fun SchedulerDrawer(
             ) {
                     // 1. Calendar Section (Expandable)
                     val unacknowledgedDates by viewModel.unacknowledgedDates.collectAsState()
+                    val rescheduledDates by viewModel.rescheduledDates.collectAsState()
                     SchedulerCalendar(
                         isExpanded = isCalendarExpanded,
                         onExpandChange = { isCalendarExpanded = it },
                         activeDay = activeDayOffset,
                         onDateSelected = { viewModel.onDateSelected(it) },
-                        unacknowledgedDates = unacknowledgedDates
+                        unacknowledgedDates = unacknowledgedDates,
+                        rescheduledDates = rescheduledDates
                     )
                     
                     // 2. Conflict Warning (if any)

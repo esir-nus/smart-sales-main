@@ -7,6 +7,7 @@ import com.smartsales.prism.domain.memory.ScheduleBoard
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.pipeline.Orchestrator
 import com.smartsales.prism.domain.pipeline.SchedulerActionResult
+import com.smartsales.prism.domain.scheduler.InspirationRepository
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.TimelineItemModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -26,7 +28,8 @@ import javax.inject.Inject
 class SchedulerViewModel @Inject constructor(
     private val taskRepository: ScheduledTaskRepository,
     private val orchestrator: Orchestrator,
-    private val scheduleBoard: ScheduleBoard
+    private val scheduleBoard: ScheduleBoard,
+    private val inspirationRepository: InspirationRepository
 ) : ViewModel() {
 
     // --- State ---
@@ -62,16 +65,20 @@ class SchedulerViewModel @Inject constructor(
     private val _conflictWarning = MutableStateFlow<String?>(null)
     val conflictWarning: StateFlow<String?> = _conflictWarning.asStateFlow()
 
+    // 灵感箱展开状态
+    private val _isInspirationsExpanded = MutableStateFlow(false)
+    val isInspirationsExpanded: StateFlow<Boolean> = _isInspirationsExpanded.asStateFlow()
+
     // Timeline Items — 响应 dayOffset 和刷新触发器变化
-    // Timeline Items — 响应 dayOffset 和刷新触发器变化
-    val timelineItems: StateFlow<List<TimelineItemModel>> = kotlinx.coroutines.flow.combine(
-        _activeDayOffset,
-        _refreshTrigger.asSharedFlow()
-    ) { offset, _ -> offset }
-        .flatMapLatest { offset ->
-            taskRepository.getTimelineItems(offset)
-        }
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    // 合并：日期特定任务 + 全局灵感
+    val timelineItems: StateFlow<List<TimelineItemModel>> = combine(
+        combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset }
+            .flatMapLatest { offset -> taskRepository.getTimelineItems(offset) },
+        inspirationRepository.getAll()
+    ) { tasks, inspirations ->
+        // 灵感在前，任务在后
+        inspirations + tasks
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     // --- Aliased Actions ---
     fun onItemClick(id: String) {
@@ -146,6 +153,18 @@ class SchedulerViewModel @Inject constructor(
         viewModelScope.launch {
             taskRepository.deleteItem(id)
             triggerRefresh()
+        }
+    }
+
+    // --- Inspiration Actions ---
+    
+    fun toggleInspirations() {
+        _isInspirationsExpanded.value = !_isInspirationsExpanded.value
+    }
+    
+    fun deleteInspiration(id: String) {
+        viewModelScope.launch {
+            inspirationRepository.delete(id)
         }
     }
 

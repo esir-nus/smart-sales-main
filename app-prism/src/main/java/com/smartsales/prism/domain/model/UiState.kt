@@ -22,6 +22,12 @@ sealed class UiState {
  : UiState()
     
     data class PlanCard(val plan: ExecutionPlan, val completedSteps: Set<Int> = emptySet()) : UiState()
+    
+    /**
+     * 轻量级反馈 — Toast 消息，不进入聊天历史
+     */
+    data class Toast(val message: String) : UiState()
+    
     data class Error(val message: String, val retryable: Boolean = true) : UiState()
     
     /**

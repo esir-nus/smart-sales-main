@@ -1,0 +1,76 @@
+# Client Profile Hub — Interface
+
+> **Consumer contract** for CRM hierarchy and context queries.
+
+---
+
+## Methods
+
+### getQuickContext
+
+```kotlin
+suspend fun getQuickContext(entityIds: List<String>): QuickContext
+```
+
+Returns a "6-second glance" context for the given entities.
+
+| Input | Type | Description |
+|-------|------|-------------|
+| `entityIds` | `List<String>` | Entity IDs to query |
+
+| Output | Type |
+|--------|------|
+| `QuickContext` | Snapshot + recent activities + suggestions |
+
+---
+
+### getFocusedContext
+
+```kotlin
+suspend fun getFocusedContext(entityId: String): FocusedContext
+```
+
+Returns deep dive context for a single entity (Account/Contact/Deal).
+
+---
+
+### getUnifiedTimeline
+
+```kotlin
+suspend fun getUnifiedTimeline(entityId: String): List<UnifiedActivity>
+```
+
+Aggregates timeline activities for an entity (includes all related contacts for Accounts).
+
+---
+
+## Output Types
+
+```kotlin
+data class QuickContext(
+    val entitySnapshots: Map<String, EntitySnapshot>,
+    val recentActivities: List<UnifiedActivity>,
+    val suggestedNextSteps: List<String>
+)
+
+data class UnifiedActivity(
+    val id: String,
+    val type: ActivityType,
+    val timestamp: Long,
+    val summary: String,
+    val location: String?,
+    val assetId: String?,
+    val relatedEntityIds: List<String>
+)
+```
+
+---
+
+## You Should NOT
+
+| ❌ Don't | ✅ Do Instead |
+|----------|--------------|
+| Access `RelevancyEntry` directly | Use `ClientProfileHub` methods |
+| Parse `MemoryEntry.entitiesJson` manually | Use `getUnifiedTimeline()` |
+| Query habit data here | Use `ReinforcementLearner.getHabitContext()` |
+| Assume entity exists | Check for null/empty returns |

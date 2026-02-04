@@ -168,6 +168,28 @@ combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset 
 
 ---
 
+### LLM Prompt-Linter Data Gap — 2026-02-04
+
+**Symptom**: Inspiration cards show only 💡 emoji, no title text visible  
+**Root Cause**: **Prompt told LLM to omit content for inspiration classification**  
+- DashscopeExecutor L263: `如果是 "inspiration"，只需返回 classification 字段，tasks 可省略`
+- LLM returns `{"classification": "inspiration"}` with NO title/content field
+- SchedulerLinter extracts `json.optString("title", "")` → empty string
+- InspirationRepository stores empty string → UI renders empty text  
+**Wrong Approach**: Assuming LLM would include the inspiration text automatically  
+**Correct Fix**:  
+1. Update prompt to **require** `inspirationText` field for inspiration classification
+2. Add example: `{"classification": "inspiration", "inspirationText": "以后想学吉他"}`
+3. Update Linter to read `inspirationText` with fallback chain  
+**File(s)**:  
+- [DashscopeExecutor.kt L262-274](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/real/DashscopeExecutor.kt#L262-L274)
+- [SchedulerLinter.kt L37-40](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerLinter.kt#L37-L40)  
+**Pattern**: **When LLM classifies + extracts data, ensure prompt REQUIRES all fields that downstream code expects.** Don't rely on optional fields.  
+**Heuristic**: If Linter extracts field X from LLM JSON, grep prompt for requirement of field X.  
+**Status**: ⏳ AWAITING L2 CONFIRMATION
+
+---
+
 <!-- Add new lessons above this line -->
 
 ### SwipeToDismiss Background Visibility — 2026-02-02

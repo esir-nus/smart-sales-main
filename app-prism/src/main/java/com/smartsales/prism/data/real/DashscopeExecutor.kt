@@ -260,9 +260,19 @@ class DashscopeExecutor @Inject constructor(
 | "non_intent" | 普通对话，无日程或想法意图 | "你好"、"今天天气怎么样" |
 
 **规则**：
-- 如果是 "inspiration" 或 "non_intent"，只需返回 classification 字段，tasks 可省略
+- 如果是 "inspiration"，必须返回 classification 和 inspirationText 字段（包含用户的灵感内容）
+- 如果是 "non_intent"，只需返回 classification 字段
 - 如果是 "schedulable"，tasks 数组必须包含至少 1 个任务对象
 - **Wave 4.1**: 如果用户描述包含多个任务（如 "8点吃面 9点开会"），将所有任务都放入 tasks 数组
+
+## Inspiration 示例
+
+用户：以后想学吉他
+输出：
+{
+  "classification": "inspiration",
+  "inspirationText": "以后想学吉他"
+}
 
 ## 提醒类型推断规则（Wave 3）
 

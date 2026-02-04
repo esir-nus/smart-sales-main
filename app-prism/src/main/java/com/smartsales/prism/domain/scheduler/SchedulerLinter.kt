@@ -35,7 +35,9 @@ class SchedulerLinter @Inject constructor(
                     )
                 }
                 "inspiration" -> {
-                    val content = json.optString("title", json.optString("content", ""))
+                    // Wave 5: 读取 inspirationText 字段（prompt 已要求必填）
+                    val content = json.optString("inspirationText", 
+                        json.optString("title", json.optString("content", "")))
                     return LintResult.Inspiration(content = content)
                 }
                 // "schedulable" → continue to full parsing below

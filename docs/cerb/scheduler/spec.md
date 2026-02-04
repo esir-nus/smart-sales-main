@@ -12,11 +12,11 @@ Scheduler manages task creation, timeline display, alarm cascading, and LLM-powe
 - `ScheduleBoard` = Memory Center index (conflict check infrastructure)
 - `ScheduledTaskRepository` = Scheduler feature (task CRUD)
 
-**Inspiration** (defined in [Prism-V1.md §5.1](file:///home/cslh-frank/main_app/docs/specs/Prism-V1.md#L703) and [SchedulerDrawer.md](file:///home/cslh-frank/main_app/docs/specs/modules/SchedulerDrawer.md#L90)):
+**Inspiration**:
 - Standalone notes, **not time-bound**
-- Displayed with 💡 icon and `[问AI]` action
+- Displayed with 💡 icon in collapsible shelf
 - Excluded from Hot Zone (not scheduled items)
-- Stored via `InspirationRepository` (Wave 5)
+- Stored via `InspirationRepository`
 
 ---
 
@@ -29,7 +29,7 @@ Scheduler manages task creation, timeline display, alarm cascading, and LLM-powe
 | **2** | Alarm Cascade | 🚢 SHIPPED | `RealAlarmScheduler`, notification triggers |
 | **3** | Smart Reminder Inference | 🚢 SHIPPED | LLM-based reminder timing suggestions |
 | **4** | Input Classification + Multi-Task + Reschedule | 🔲 PLANNED | Input gate, batch create, reschedule parsing |
-| **5** | Inspiration Storage | 🔲 PLANNED | InspirationRepository, save non-schedulable input |
+| **5** | Inspiration Storage | 🚢 SHIPPED | `InspirationRepository`, `CollapsibleInspirationShelf` |
 | **6** | Batch Operations | 🔲 PLANNED | Multi-select delete, bulk reschedule |
 | **7** | Insights Integration | 🔲 PLANNED | Connect to Analyst for task analytics |
 
@@ -311,15 +311,16 @@ Natural language rescheduling (e.g., "把明天的会改到后天").
     - [ ] Reschedule to different date → amber glow on target date
 - **Deliverables**: `buildReschedulePrompt()` rewrite, `onReschedule()` in ViewModel
 
-### 🔬 Wave 5: Inspiration Storage
+### � Wave 5: Inspiration Storage (SHIPPED)
 
 Store non-schedulable input for future reference.
 
 - **Ship Criteria**: Inspiration saved and retrievable
 - **Test Cases**:
-    - [ ] "以后想学吉他" → saved to InspirationRepository
-    - [ ] Inspirations visible in dedicated UI
-- **Deliverables**: `InspirationRepository`, inspiration UI component
+    - [x] "以后想学吉他" → saved to InspirationRepository
+    - [x] Inspirations visible in `CollapsibleInspirationShelf`
+    - [x] Swipe to delete inspiration
+- **Deliverables**: `InspirationRepository.kt`, `RealInspirationRepository.kt`, `CollapsibleInspirationShelf.kt`
 
 ### 🔬 Wave 6: Batch Operations
 
@@ -347,10 +348,10 @@ Connect to Analyst for task completion analytics.
 
 | Layer | Files |
 |-------|-------|
-| **Domain** | `ScheduledTaskRepository.kt`, `SchedulerLinter.kt`, `AlarmScheduler.kt`, `FakeScheduledTaskRepository.kt` |
-| **Data** | `RealScheduledTaskRepository.kt`, `RealAlarmScheduler.kt` |
+| **Domain** | `ScheduledTaskRepository.kt`, `SchedulerLinter.kt`, `AlarmScheduler.kt`, `InspirationRepository.kt`, `FakeScheduledTaskRepository.kt` |
+| **Data** | `RealScheduledTaskRepository.kt`, `RealAlarmScheduler.kt`, `RealInspirationRepository.kt`, `FakeInspirationRepository.kt` |
 | **DI** | `SchedulerModule.kt` |
-| **UI** | `SchedulerDrawer.kt`, `SchedulerViewModel.kt`, `SchedulerTimeline.kt`, `SchedulerCalendar.kt`, `SchedulerCards.kt` |
+| **UI** | `SchedulerDrawer.kt`, `SchedulerViewModel.kt`, `SchedulerTimeline.kt`, `SchedulerCalendar.kt`, `SchedulerCards.kt`, `CollapsibleInspirationShelf.kt` |
 | **Test** | `SchedulerLinterTest.kt` |
 
 ---

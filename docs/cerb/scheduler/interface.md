@@ -67,6 +67,16 @@ interface AlarmScheduler {
 }
 ```
 
+### InspirationRepository
+
+```kotlin
+interface InspirationRepository {
+    suspend fun insert(content: String): String
+    fun getAll(): Flow<List<TimelineItemModel.Inspiration>>
+    suspend fun delete(id: String)
+}
+```
+
 ---
 
 ## Input/Output Types

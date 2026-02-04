@@ -34,6 +34,7 @@ import com.smartsales.prism.ui.drawers.scheduler.SchedulerTimeline
 import com.smartsales.prism.ui.drawers.scheduler.SchedulerViewModel
 import com.smartsales.prism.ui.drawers.scheduler.TimelineItem
 import com.smartsales.prism.ui.drawers.scheduler.ExitDirection
+import com.smartsales.prism.ui.drawers.scheduler.CollapsibleInspirationShelf
 import com.smartsales.prism.domain.scheduler.TimelineItemModel
 import com.smartsales.prism.ui.theme.*
 
@@ -62,6 +63,7 @@ fun SchedulerDrawer(
     val selectedInspirationIds by viewModel.selectedInspirationIds.collectAsState()
     val timelineItems by viewModel.timelineItems.collectAsState()
     val pipelineStatus by viewModel.pipelineStatus.collectAsState()
+    val isInspirationsExpanded by viewModel.isInspirationsExpanded.collectAsState()
     
     val context = LocalContext.current
     
@@ -110,6 +112,14 @@ fun SchedulerDrawer(
                 )
             }
         }
+    }
+    
+    // 分离灵感和任务用于可折叠灵感架
+    val inspirationItems = remember(uiItems) {
+        uiItems.filterIsInstance<TimelineItem.Inspiration>()
+    }
+    val taskItems = remember(uiItems) {
+        uiItems.filter { it !is TimelineItem.Inspiration }
     }
 
     // Drawer container — no internal scrim (PrismShell provides global scrim)
@@ -183,10 +193,20 @@ fun SchedulerDrawer(
                         }
                     }
                     
-                    // 3. Timeline Section
+                    // 3. 灵感箱可折叠面板 (Wave 5)
+                    CollapsibleInspirationShelf(
+                        items = inspirationItems,
+                        isExpanded = isInspirationsExpanded,
+                        onToggle = { viewModel.toggleInspirations() },
+                        onDelete = { id -> viewModel.deleteInspiration(id) },
+                        onAskAI = { id -> /* 等待 Coach Mode */ },
+                        modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                    )
+                    
+                    // 4. Timeline Section (只显示任务，不显示灵感)
                     Box(modifier = Modifier.weight(1f)) {
                         SchedulerTimeline(
-                            items = uiItems,
+                            items = taskItems,
                             onItemClick = { id -> viewModel.onItemClick(id) },
                             onDelete = { id -> viewModel.onDeleteItem(id) },
                             onReschedule = { id, text -> viewModel.onReschedule(id, text) },

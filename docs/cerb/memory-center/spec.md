@@ -19,19 +19,18 @@ Memory Center manages persistent storage and retrieval of user interactions, ent
 
 ---
 
-## Two-Zone Model
+## Two-Zone Model (DEPRECATED)
+
+> [!WARNING]
+> **Hot/Cement terminology is deprecated.** Use query-time filtering only.
+> See [Client Profile Hub](../client-profile-hub/spec.md) for the new relevance-first approach.
 
 | Zone | Criteria | Contents |
 |------|----------|----------|
-| **Hot** | `isArchived = false` OR `scheduledAt` within 14 days | Active entries, upcoming/recent tasks |
-| **Cement** | `isArchived = true` AND `scheduledAt` > 14 days ago | Completed entries, old schedules |
+| **Active** | `isArchived = false` | Active entries |
+| **Archived** | `isArchived = true` | Completed entries |
 
-**Same schema, different flag.** Entries age from Hot → Cement via background compaction.
-
-**Hot Zone includes:**
-- All active entries (`isArchived = false`)
-- All scheduled items within 14 days (past or future)
-- **Excludes:** Inspirations (standalone notes)
+**No physical data movement.** Zone is determined by query-time filter only.
 
 ---
 
@@ -165,8 +164,9 @@ data class DecisionRecord(
 
 | Wave | Focus | Status |
 |------|-------|--------|
-| **1** | ScheduleBoard + Two-Phase Pipeline | ✅ SHIPPED |\
-| **2** | Hot/Cement Lazy Compaction + Subscription Config | ✅ SHIPPED |
+| **1** | ScheduleBoard + Two-Phase Pipeline | ✅ SHIPPED |
+| **2** | Query-Time Filtering (Lazy Compaction) | ✅ SHIPPED |
+| **3** | [Client Profile Hub](../client-profile-hub/spec.md) | 🔲 PLANNING |
 
 ---
 

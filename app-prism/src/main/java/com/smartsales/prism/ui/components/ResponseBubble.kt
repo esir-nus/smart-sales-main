@@ -62,6 +62,10 @@ fun ResponseBubble(
             ErrorBubble(message = uiState.message, modifier = modifier)
         }
         
+        is UiState.Toast -> {
+            // Toast 通过 Toast 机制显示，不进入聊天气泡
+        }
+        
 
     }
 }

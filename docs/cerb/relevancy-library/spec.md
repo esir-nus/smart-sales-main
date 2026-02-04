@@ -121,6 +121,7 @@ Stores in `metricsHistoryJson` for visualization:
 
 | Wave | Focus | Status |
 |------|-------|--------|
-| **1** | Core Model + Repository | ✅ Complete (in Memory Center) |
+| **1** | Core Model + Repository | ✅ Complete |
 | **2** | LLM Disambiguation Flow | ✅ SHIPPED |
-| **3** | Reinforcement Learning | 🔲 Future |
+| **3** | CRM Hierarchy → [Client Profile Hub](../client-profile-hub/spec.md) | 🔲 |
+

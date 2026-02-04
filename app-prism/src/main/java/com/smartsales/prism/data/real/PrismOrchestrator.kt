@@ -19,6 +19,7 @@ import com.smartsales.prism.domain.pipeline.SchedulerActionResult
 import com.smartsales.prism.domain.scheduler.AlarmScheduler
 import com.smartsales.prism.domain.scheduler.LintResult
 import com.smartsales.prism.domain.scheduler.ReminderType
+import com.smartsales.prism.domain.scheduler.InspirationRepository
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
 import com.smartsales.prism.domain.scheduler.TimelineItemModel
@@ -47,7 +48,8 @@ class PrismOrchestrator @Inject constructor(
     private val scheduledTaskRepository: ScheduledTaskRepository,
     private val alarmScheduler: AlarmScheduler,
     private val schedulerLinter: SchedulerLinter,
-    private val scheduleBoard: com.smartsales.prism.domain.memory.ScheduleBoard
+    private val scheduleBoard: com.smartsales.prism.domain.memory.ScheduleBoard,
+    private val inspirationRepository: InspirationRepository
 ) : Orchestrator {
     
     private val _currentMode = MutableStateFlow(Mode.COACH)
@@ -203,8 +205,10 @@ class PrismOrchestrator @Inject constructor(
                         }
                         
                         is LintResult.Inspiration -> {
+                            // Wave 5: 存储到灵感仓库
+                            inspirationRepository.insert(lintResult.content)
                             activityController.complete()
-                            UiState.Response("已记录灵感: ${lintResult.content}\n（将在 Wave 5 存储到 Inspiration 仓库）")
+                            UiState.Toast("💡 已存入灵感箱")
                         }
                         
                         // Wave 4.1: Multi-Task Direct Insert

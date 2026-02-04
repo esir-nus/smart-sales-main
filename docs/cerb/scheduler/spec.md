@@ -279,18 +279,27 @@ First gate: classify user input before parsing.
 
 Handle input with multiple tasks.
 
-- **Ship Criteria**: "8点吃面 9点开会" creates 2 tasks after user confirmation
+> **Design Note**: Split tasks are independent creates, not concurrent operations. Direct insertion allows faster UX (user can delete if LLM misunderstood). Earlier versions included confirmation, but this was removed as it added friction without benefit.
+
+- **Ship Criteria**: "8点吃面 9点开会" creates 2 tasks immediately
 - **Test Cases**:
-    - [ ] Multi-task detected → confirmation dialog
-    - [ ] User confirms → batch create
-    - [ ] Each task gets conflict check
-- **Deliverables**: `UiState.MultiTaskConfirmation`, batch insert in ViewModel
+    - [ ] Multi-task detected → batch create directly
+    - [ ] Toast shows: "✅ 已创建 N 个任务"
+    - [ ] Each task gets conflict check (warning appended if any conflict)
+    - [ ] All tasks get alarms if reminder type specified
+- **Deliverables**: Direct batch insert in `PrismOrchestrator`, conflict warning in toast
 
 #### 4.2: Reschedule Flow
 
 Natural language rescheduling (e.g., "把明天的会改到后天").
 
 - **Ship Criteria**: Existing task updated with new time
+- **Edge Cases**:
+    - **Auto-Refresh**: UI must reflect changes immediately without user interaction (e.g. pull-to-refresh).
+    - **Ghost Cards**: Updates must atomically replace the old item. No duplicates allowed.
+    - **Date Anchors**:
+        - "Next Friday" → Anchored to TODAY (absolute).
+        - "Defer 2 days" → Anchored to TASK DATE (relative).
 - **Test Cases**:
     - [ ] Reference existing task → correct match
     - [ ] Ambiguous reference → picker shown

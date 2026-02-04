@@ -58,9 +58,12 @@ class SchedulerViewModel @Inject constructor(
     val conflictWarning: StateFlow<String?> = _conflictWarning.asStateFlow()
 
     // Timeline Items — 响应 dayOffset 和刷新触发器变化
-    val timelineItems: StateFlow<List<TimelineItemModel>> = _activeDayOffset
+    // Timeline Items — 响应 dayOffset 和刷新触发器变化
+    val timelineItems: StateFlow<List<TimelineItemModel>> = kotlinx.coroutines.flow.combine(
+        _activeDayOffset,
+        _refreshTrigger.asSharedFlow()
+    ) { offset, _ -> offset }
         .flatMapLatest { offset ->
-            _refreshTrigger.asSharedFlow()
             taskRepository.getTimelineItems(offset)
         }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
@@ -76,6 +79,7 @@ class SchedulerViewModel @Inject constructor(
      * 改期操作 — 调用 Orchestrator 处理 (LLM 解析在那里发生)
      */
     fun onReschedule(id: String, text: String) {
+        android.util.Log.d("SchedulerVM", "🔄 Reschedule: id=$id, input='$text'")
         viewModelScope.launch {
             orchestrator.processSchedulerAction(id, text)
             triggerRefresh()

@@ -5,8 +5,11 @@ import com.smartsales.prism.domain.activity.ActivityPhase
 import com.smartsales.prism.domain.activity.AgentActivityController
 import com.smartsales.prism.domain.model.CandidateOption
 import com.smartsales.prism.domain.model.ClarificationType
+import android.util.Log
 import com.smartsales.prism.domain.model.Mode
+
 import com.smartsales.prism.domain.model.UiState
+import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.pipeline.AnalystState
 import com.smartsales.prism.domain.pipeline.ContextBuilder
 import com.smartsales.prism.domain.pipeline.Executor
@@ -18,6 +21,7 @@ import com.smartsales.prism.domain.scheduler.LintResult
 import com.smartsales.prism.domain.scheduler.ReminderType
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
+import com.smartsales.prism.domain.scheduler.TimelineItemModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -42,7 +46,8 @@ class PrismOrchestrator @Inject constructor(
     private val analystController: AnalystFlowControllerV2,
     private val scheduledTaskRepository: ScheduledTaskRepository,
     private val alarmScheduler: AlarmScheduler,
-    private val schedulerLinter: SchedulerLinter
+    private val schedulerLinter: SchedulerLinter,
+    private val scheduleBoard: com.smartsales.prism.domain.memory.ScheduleBoard
 ) : Orchestrator {
     
     private val _currentMode = MutableStateFlow(Mode.COACH)
@@ -201,6 +206,32 @@ class PrismOrchestrator @Inject constructor(
                             activityController.complete()
                             UiState.Response("已记录灵感: ${lintResult.content}\n（将在 Wave 5 存储到 Inspiration 仓库）")
                         }
+                        
+                        // Wave 4.1: Multi-Task Direct Insert
+                        is LintResult.MultiTask -> {
+                            // Insert all tasks directly (no confirmation)
+                            var anyConflict = false
+                            
+                            lintResult.tasks.forEach { task ->
+                                // Check conflict first (informational)
+                                val conflictResult = scheduleBoard.checkConflict(
+                                    task.startTime.toEpochMilli(),
+                                    task.durationMinutes
+                                )
+                                if (conflictResult is ConflictResult.Conflict) {
+                                    anyConflict = true
+                                }
+                                
+                                // Insert task
+                                scheduledTaskRepository.insertTask(task)
+                            }
+                            
+                            scheduleBoard.refresh()
+                            activityController.complete()
+                            
+                            val warning = if (anyConflict) " (部分任务有冲突)" else ""
+                            UiState.Response("✅ 已创建 ${lintResult.tasks.size} 个任务${warning}")
+                        }
                     }
                 }
                 is ExecutorResult.Failure -> {
@@ -230,7 +261,7 @@ class PrismOrchestrator @Inject constructor(
         
         return try {
             // 构建改期上下文
-            val prompt = buildReschedulePrompt(userText)
+            val prompt = buildReschedulePrompt(itemId, userText)
             val context = contextBuilder.build(prompt, Mode.SCHEDULER)
             
             when (val result = executor.execute(context)) {
@@ -238,7 +269,34 @@ class PrismOrchestrator @Inject constructor(
                     when (val lintResult = schedulerLinter.lint(result.content)) {
                         is LintResult.Success -> {
                             // 更新已有任务
-                            val updatedTask = lintResult.task.copy(id = itemId)
+                            var updatedTask = lintResult.task.copy(id = itemId)
+                            
+                            // 防御性检查: 保护日期不被意外修改
+                            val originalTask = scheduledTaskRepository.getTask(itemId)
+                            if (originalTask != null) {
+                                val originalDate = originalTask.startTime.atZone(ZoneId.systemDefault()).toLocalDate()
+                                val newDate = updatedTask.startTime.atZone(ZoneId.systemDefault()).toLocalDate()
+                                
+                                // 检测日期变化
+                                val hasDateKeyword = userText.contains(Regex("明天|后天|今天|周|星期|号|日"))
+                                if (originalDate != newDate && !hasDateKeyword) {
+                                    Log.w("PrismOrch", "⚠️ Date changed without date keyword: $originalDate → $newDate, input='$userText', preserving original date")
+                                    // 保留原日期,只改时间
+                                    val newTime = updatedTask.startTime.atZone(ZoneId.systemDefault()).toLocalTime()
+                                    updatedTask = updatedTask.copy(
+                                        startTime = originalDate.atTime(newTime).atZone(ZoneId.systemDefault()).toInstant()
+                                    )
+                                }
+                            }
+                            
+                            // 检查冲突 BEFORE 更新
+                            val conflictResult = scheduleBoard.checkConflict(
+                                updatedTask.startTime.toEpochMilli(),
+                                updatedTask.durationMinutes,
+                                excludeId = itemId
+                            )
+                            val warning = if (conflictResult is ConflictResult.Conflict) " (与其他任务冲突)" else ""
+                            
                             scheduledTaskRepository.updateTask(updatedTask)
                             
                             // 更新提醒
@@ -251,7 +309,7 @@ class PrismOrchestrator @Inject constructor(
                             }
                             
                             activityController.complete()
-                            SchedulerActionResult.Success("已更新任务时间")
+                            SchedulerActionResult.Success("已更新任务时间${warning}")
                         }
                         is LintResult.Error -> {
                             activityController.error(lintResult.message)
@@ -269,6 +327,12 @@ class PrismOrchestrator @Inject constructor(
                             activityController.complete()
                             SchedulerActionResult.Failure("这看起来不是改期请求")
                         }
+                        
+                        // Wave 4.1: MultiTask not supported in reschedule action
+                        is LintResult.MultiTask -> {
+                            activityController.complete()
+                            SchedulerActionResult.Failure("改期操作不支持多任务")
+                        }
                     }
                 }
                 is ExecutorResult.Failure -> {
@@ -283,10 +347,25 @@ class PrismOrchestrator @Inject constructor(
         }
     }
     
-    private fun buildReschedulePrompt(userText: String): String {
+    private suspend fun buildReschedulePrompt(itemId: String, userText: String): String {
+        val task = scheduledTaskRepository.getTask(itemId)
+        val context = if (task != null) {
+            "当前任务: ${task.title} 在 ${task.dateRange}"
+        } else {
+            Log.w("PrismOrch", "Reschedule: task $itemId not found, using generic prompt")
+            "改期任务"
+        }
         return """
-            用户想要改期任务: $userText
-            请解析用户意图并输出 JSON 格式的新时间安排。
+            $context
+            用户请求: $userText
+            
+            解析规则:
+            1. 日期基准(Anchor)判断:
+               - 绝对日期词(如"下周五"、"明天"、"2月10号"): 以【今天】为基准计算新日期
+               - 相对延后词(如"推迟2天"、"延后1周"): 以【原任务日期】为基准计算
+            2. 仅时间调整:
+               - 如"提前1小时"、"改到下午3点", 且未提及日期: 保持【原任务日期】不变
+            3. 输出 JSON 格式的新时间安排
         """.trimIndent()
     }
     

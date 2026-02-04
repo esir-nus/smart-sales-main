@@ -112,9 +112,8 @@ class SchedulerViewModel @Inject constructor(
      * 确认日期 — 从未确认集合中移除 (停止发光)
      */
     fun acknowledgeDate(dayOffset: Int) {
-        val current = _unacknowledgedDates.value.toMutableSet()
-        current.remove(dayOffset)
-        _unacknowledgedDates.value = current
+        _unacknowledgedDates.value -= dayOffset
+        _rescheduledDates.value -= dayOffset  // 同时清除改期高亮
     }
 
     /**

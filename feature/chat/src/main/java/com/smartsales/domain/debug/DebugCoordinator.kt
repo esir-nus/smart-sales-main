@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
  * - Manage debug panel visibility
  * - Get session debug metadata
  * - Get HUD debug snapshots
- * - Refresh Xfyun/Tingwu trace data
+ * - Refresh Tingwu trace data
  *
  * Design:
  * - Stateful coordinator for debug information
@@ -59,7 +59,7 @@ interface DebugCoordinator {
     )
 
     /**
-     * Refresh trace snapshots (Xfyun + Tingwu).
+     * Refresh trace snapshots (Tingwu).
      */
     fun refreshTraces()
 

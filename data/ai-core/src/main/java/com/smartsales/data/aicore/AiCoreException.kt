@@ -9,7 +9,6 @@ enum class AiCoreErrorSource {
     TINGWU,
     EXPORT,
     OSS,
-    XFYUN,
 }
 
 enum class AiCoreErrorReason {

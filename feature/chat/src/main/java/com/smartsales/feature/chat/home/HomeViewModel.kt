@@ -799,7 +799,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun refreshXfyunTrace() {
+    fun refreshTraces() {
         if (!CHAT_DEBUG_HUD_ENABLED) return
         debugCoordinator.refreshTraces()
         // Wire traces from DebugUiState to HomeUiState for HUD display

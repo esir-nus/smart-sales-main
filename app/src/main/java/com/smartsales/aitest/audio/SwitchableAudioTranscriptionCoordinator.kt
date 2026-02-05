@@ -1,6 +1,6 @@
 // 文件：app/src/main/java/com/smartsales/aitest/audio/SwitchableAudioTranscriptionCoordinator.kt
 // 模块：:app
-// 说明：统一 AudioTranscriptionCoordinator 实现（XFyun 已弃用，仅使用 Tingwu）
+// 说明：统一 AudioTranscriptionCoordinator 实现（仅使用 Tingwu）
 // 作者：创建于 2025-12-15，简化于 2026-01-11
 package com.smartsales.aitest.audio
 
@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * Unified AudioTranscriptionCoordinator that delegates to Tingwu.
- * XFyun support was deprecated and removed.
  */
 @Singleton
 class SwitchableAudioTranscriptionCoordinator @Inject constructor(

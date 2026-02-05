@@ -19,7 +19,6 @@ data class AiParaSettingsSnapshot(
 
 /**
  * 说明：转写相关运行时开关（MVP：内存态，可被测试壳实时修改）。
- * 重要：V7+ 仅支持 Tingwu，XFyun 已移除。
  */
 data class TranscriptionSettings(
     val provider: String = TRANSCRIPTION_PROVIDER_TINGWU,
@@ -125,5 +124,4 @@ data class DashScopeSettings(
     val incrementalOutput: Boolean = true
 )
 
-// 重要：V7+ 仅支持 Tingwu，XFyun 已移除
 const val TRANSCRIPTION_PROVIDER_TINGWU: String = "TINGWU"

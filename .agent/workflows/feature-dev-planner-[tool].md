@@ -67,6 +67,80 @@ Before ANY planning, read the relevant spec:
 
 ---
 
+## Phase 0.5: UI Discovery (Check for Existing UI)
+
+**BEFORE planning to build UI, check if it already exists.**
+
+### UI Audit Checklist
+
+```bash
+# Search for UI components by feature name
+find app-prism/src/main/java -name "*[FeatureName]*" -type f | grep -i "ui/"
+
+# Search for ViewModels
+find app-prism/src/main/java -name "*ViewModel.kt" | xargs grep -l "[FeatureName]"
+
+# Search for Composables
+grep -rn "@Composable" app-prism/src/main/java --include="*[FeatureName]*.kt"
+```
+
+### Decision Matrix
+
+| UI Status | Action | Plan Type |
+|-----------|--------|-----------|
+| **UI exists, fully wired** | Skip UI work | Backend/Logic only |
+| **UI exists, NOT wired** | Wire existing UI | **UI Wiring** plan |
+| **UI partially exists** | Complete + wire | Hybrid plan |
+| **UI does not exist** | Build from scratch | Full UI implementation |
+
+### Screenshot Verification (When Provided)
+
+If USER supplies screenshot of existing UI:
+
+1. **Verify file match**: Screenshot → UI file correspondence
+2. **Document in plan**: Embed screenshot with caption
+3. **Update spec**: If UI undocumented, add to spec's "UI Components" section
+
+**Template for UI Wiring Plan**:
+
+```markdown
+## Existing UI Components
+
+| Component | File | Status |
+|-----------|------|--------|
+| [ComponentName] | `ui/path/File.kt` | ✅ Exists |
+| [ViewModel] | `ui/path/ViewModel.kt` | ✅ Exists |
+| [Service Interface] | `domain/Service.kt` | ✅ Exists |
+
+**Screenshot Verification**: 
+![UI Screenshot](path/to/screenshot.png)
+*Caption: Existing [FeatureName] modal showing [X, Y, Z]*
+
+### Missing Layer: Glue Implementation
+
+**Need to build**: `Real[Service]` to wire UI → Backend
+
+**Data Flow**:
+```
+Existing UI → Existing ViewModel → Missing Service Impl → Existing Backend
+                                        ↑ BUILD THIS
+```
+```
+
+### Anti-Pattern: Building UI That Exists
+
+**❌ DON'T**:
+- Assume UI doesn't exist without searching
+- Build new UI when existing UI is 90% done
+- Ignore existing UI because "it's not wired yet"
+
+**✅ DO**:
+- Search for UI components FIRST
+- Wire existing UI if it's close enough
+- Propose spec update if UI exists but undocumented
+
+---
+
 ## Phase 1: Contamination Cleanup
 
 Before implementing ANYTHING:
@@ -276,11 +350,12 @@ cat .agent/rules/lessons-learned.md
 |-------|------|
 | **-2** | ✅ Tracker read, feature exists |
 | **-1** | ✅ Lessons read |
-| 0 | Spec quoted |
-| 1 | Fakes clean |
-| 2 | First principles checked |
-| 3 | Plan approved |
-| 4 | L1 → L2 → L3 pass |
+| **0** | Spec quoted |
+| **0.5** | ✅ UI Discovery — existing UI found or confirmed absent |
+| **1** | Fakes clean |
+| **2** | First principles checked |
+| **3** | Plan approved |
+| **4** | L1 → L2 → L3 pass |
 | **5** | ✅ Lesson logged (if bug fix) |
 
 ---

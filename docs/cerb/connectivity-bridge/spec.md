@@ -152,9 +152,9 @@ sealed class WavDownloadResult {
 **Goal**: Real connectivity via legacy wrapper.
 
 - **Exit Criteria**:
-  - [ ] `RealConnectivityBridge` delegates to `DeviceConnectionManager`
-  - [ ] Rate limiting enforced at bridge level
-  - [ ] WAV download works end-to-end
+  - [x] `RealConnectivityBridge` delegates to `DeviceConnectionManager`
+  - [x] Rate limiting enforced at bridge level (via legacy `RateLimitedBleGateway`)
+  - [ ] WAV download works end-to-end (L2 test pending)
 
 - **Test Cases**:
   - [ ] L2: Connect to real badge, query status

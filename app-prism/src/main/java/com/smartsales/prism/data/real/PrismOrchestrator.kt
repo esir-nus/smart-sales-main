@@ -23,10 +23,12 @@ import com.smartsales.prism.domain.scheduler.InspirationRepository
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
 import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -49,8 +51,14 @@ class PrismOrchestrator @Inject constructor(
     private val alarmScheduler: AlarmScheduler,
     private val schedulerLinter: SchedulerLinter,
     private val scheduleBoard: com.smartsales.prism.domain.memory.ScheduleBoard,
-    private val inspirationRepository: InspirationRepository
+    private val inspirationRepository: InspirationRepository,
+    private val reinforcementLearner: com.smartsales.prism.domain.rl.ReinforcementLearner
 ) : Orchestrator {
+    
+    // Fire-and-forget scope for RL learning
+    private val rlScope = kotlinx.coroutines.CoroutineScope(
+        kotlinx.coroutines.SupervisorJob() + Dispatchers.IO
+    )
     
     private val _currentMode = MutableStateFlow(Mode.COACH)
     override val currentMode: StateFlow<Mode> = _currentMode.asStateFlow()
@@ -112,6 +120,14 @@ class PrismOrchestrator @Inject constructor(
             // 调用 LLM 解析
             when (val result = executor.execute(context)) {
                 is ExecutorResult.Success -> {
+                    // === Wave 2: Fire-and-forget RL learning ===
+                    val observations = parseRlObservations(result.content)
+                    if (observations.isNotEmpty()) {
+                        rlScope.launch {
+                            reinforcementLearner.processObservations(observations)
+                        }
+                    }
+                    
                     // 验证并解析 LLM 输出
                     when (val lintResult = schedulerLinter.lint(result.content)) {
                         is LintResult.Success -> {
@@ -390,6 +406,41 @@ class PrismOrchestrator @Inject constructor(
                 .toInstant()
         } catch (e: Exception) {
             null
+        }
+    }
+    
+    /**
+     * Parse rl_observations from LLM JSON
+     * 
+     * Wave 2: Extracts learning signals for preference tracking
+     */
+    private fun parseRlObservations(llmOutput: String): List<com.smartsales.prism.domain.rl.RlObservation> {
+        return try {
+            val json = org.json.JSONObject(llmOutput)
+            val observations = json.optJSONArray("rl_observations") ?: return emptyList()
+            
+            (0 until observations.length()).mapNotNull { i ->
+                try {
+                    val obs = observations.getJSONObject(i)
+                    com.smartsales.prism.domain.rl.RlObservation(
+                        entityId = obs.optString("entityId").takeIf { it.isNotBlank() },
+                        key = obs.getString("key"),
+                        value = obs.getString("value"),
+                        source = when (obs.optString("source", "INFERRED")) {
+                            "USER_POSITIVE" -> com.smartsales.prism.domain.rl.ObservationSource.USER_POSITIVE
+                            "USER_NEGATIVE" -> com.smartsales.prism.domain.rl.ObservationSource.USER_NEGATIVE
+                            else -> com.smartsales.prism.domain.rl.ObservationSource.INFERRED
+                        },
+                        evidence = obs.optString("evidence").takeIf { it.isNotBlank() }
+                    )
+                } catch (e: Exception) {
+                    Log.w("PrismOrchestrator", "Skipping malformed observation: ${e.message}")
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("PrismOrchestrator", "Failed to parse rl_observations: ${e.message}")
+            emptyList()
         }
     }
 }

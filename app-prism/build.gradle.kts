@@ -94,6 +94,7 @@ dependencies {
     // =============================================
     implementation(projects.data.aiCore)  // DashScope, Tingwu, credentials
     implementation(projects.core.util)     // Result type
+    implementation(projects.feature.connectivity)  // Legacy BLE/HTTP for RealConnectivityBridge
     implementation(platform(libs.compose.bom))
     implementation(libs.bundles.compose.ui)
     implementation(libs.compose.material3)

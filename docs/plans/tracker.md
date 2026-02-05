@@ -188,7 +188,7 @@
 
 | Wave | Focus | Status |
 |------|-------|--------|
-| **1** | Interface + Fake | 🔲 (Planning) |
+| **1** | Interface + Fake | ✅ SHIPPED |
 | **2** | Real Implementation (Legacy Wrapper) | 🔲 |
 | **3** | record#end Handler | 🔲 |
 

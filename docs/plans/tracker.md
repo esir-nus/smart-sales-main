@@ -157,7 +157,7 @@
 | **1** | Interface + Observation Schema | ✅ SHIPPED |
 | **1.5** | Schema Migration (4-rule model) | ✅ SHIPPED |
 | **2** | Orchestrator Integration (Parser) | ✅ SHIPPED |
-| **3** | Context Builder Integration | 🔲 |
+| **3** | Context Builder Integration | ✅ SHIPPED |
 
 **Wave 1 Shipped**: 2026-02-04
 - `RlModels` (Observation, Source)
@@ -175,6 +175,13 @@
 - `PrismOrchestrator.parseRlObservations()`: JSON parser for rl_observations
 - Fire-and-forget wiring in `processSchedulerInput()`
 - Source string → enum mapping
+
+**Wave 3 Shipped**: 2026-02-05
+- Added `habitContext` field to `EnhancedContext`
+- Injected `ReinforcementLearner` into `RealContextBuilder`
+- Wired `getHabitContext()` in both `build()` and `buildWithClues()`
+- Created `RealContextBuilderTest` (4/4 tests passing)
+- Learning feedback loop now complete: observations → storage → LLM prompts
 
 ---
 
@@ -205,6 +212,22 @@
 
 ---
 
+### Device Pairing (spec: `device-pairing/`)
+
+| Wave | Focus | Status |
+|------|-------|--------|
+| **1** | Core Service (Wrap Legacy) | 🔧 IN PROGRESS |
+| **1.5** | Wiring (Onboarding UI) | 🔲 PLANNED |
+| **2** | Robustness & Error Handling | 🔲 PLANNED |
+| **3** | Polish (UX Refinement) | 🔲 PLANNED |
+
+**Key Deliverables**:
+- `PairingService` interface (Cerb compliant)
+- `RealPairingService` wrapping `DeviceConnectionManager` + `BleScanner`
+- Simplified 6-state model (vs legacy 9-state)
+
+---
+
 ### ASR Service (spec: `asr-service/`)
 
 | Wave | Focus | Status |
@@ -224,7 +247,7 @@
 
 | Wave | Focus | Status |
 |------|-------|--------|
-| **1** | Interface + State Machine | 🔲 (Planning) |
+| **1** | Interface + State Machine | ✅ SHIPPED (2026-02-05) |
 | **2** | Fake Pipeline | 🔲 |
 | **3** | Real Implementation | 🔲 |
 | **4** | Error Recovery | 🔲 |

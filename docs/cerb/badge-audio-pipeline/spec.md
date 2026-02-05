@@ -249,22 +249,25 @@ class RealBadgeAudioPipeline @Inject constructor(
         
         // Step 2: Transcribe
         val transcription = asr.transcribe(file)
-        if (transcription is TranscriptionResult.Error) {
+        if (transcription is AsrResult.Error) {
             _events.emit(PipelineEvent.Error(Stage.TRANSCRIBE, transcription.message, filename))
             return
         }
         
-        val transcript = (transcription as TranscriptionResult.Success).text
+        val transcript = (transcription as AsrResult.Success).text
         _events.emit(PipelineEvent.Processing(transcript))
         
         // Step 3: Schedule (reuse existing pipeline)
-        val result = schedulerOrchestrator.processSchedulerAction(transcript)
+        // Note: Using createScheduledTask for new tasks vs processSchedulerAction for updates
+        val uiState = schedulerOrchestrator.createScheduledTask(transcript)
         
         // Step 4: Cleanup
         connectivity.deleteRecording(filename)
         file.delete()
         
-        _events.emit(PipelineEvent.Complete(result.toSchedulerResult(), filename))
+        // Map UiState to domain-agnostic SchedulerResult
+        val schedulerResult = uiState.toSchedulerResult()
+        _events.emit(PipelineEvent.Complete(schedulerResult, filename))
     }
 }
 ```

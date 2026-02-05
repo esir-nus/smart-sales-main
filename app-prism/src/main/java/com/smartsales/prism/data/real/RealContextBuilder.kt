@@ -11,6 +11,7 @@ import com.smartsales.prism.domain.pipeline.EntityRef
 import com.smartsales.prism.domain.pipeline.ModeMetadata
 import com.smartsales.prism.domain.pipeline.ToolArtifact
 import com.smartsales.prism.domain.scheduler.ParsedClues
+import com.smartsales.prism.domain.rl.ReinforcementLearner
 import com.smartsales.prism.domain.time.TimeProvider
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -25,7 +26,8 @@ import javax.inject.Singleton
 @Singleton
 class RealContextBuilder @Inject constructor(
     private val timeProvider: TimeProvider,
-    private val entityRepository: EntityRepository
+    private val entityRepository: EntityRepository,
+    private val reinforcementLearner: ReinforcementLearner
 ) : ContextBuilder {
     
     // 会话历史（最多保留10轮，避免上下文膨胀）
@@ -39,6 +41,9 @@ class RealContextBuilder @Inject constructor(
     override suspend fun build(userText: String, mode: Mode): EnhancedContext {
         _turnIndex++
         
+        // Wave 3: 获取全局习惯（无实体上下文）
+        val habitContext = reinforcementLearner.getHabitContext(entityIds = null)
+        
         return EnhancedContext(
             userText = userText,
             modeMetadata = ModeMetadata(
@@ -50,7 +55,8 @@ class RealContextBuilder @Inject constructor(
             lastToolResult = _lastToolResult,
             executedTools = _executedTools.toSet(),
             // 使用 TimeProvider 获取格式化的日期时间（包含时间，支持 "今晚"、"3小时后"）
-            currentDate = timeProvider.formatForLlm()
+            currentDate = timeProvider.formatForLlm(),
+            habitContext = habitContext
         )
     }
     
@@ -93,6 +99,10 @@ class RealContextBuilder @Inject constructor(
             }
         }
         
+        // Wave 3: 从实体上下文提取 ID，获取习惯
+        val entityIds = entityContext.values.map { it.entityId }.takeIf { it.isNotEmpty() }
+        val habitContext = reinforcementLearner.getHabitContext(entityIds)
+        
         return EnhancedContext(
             userText = userText,
             modeMetadata = ModeMetadata(
@@ -104,7 +114,8 @@ class RealContextBuilder @Inject constructor(
             lastToolResult = _lastToolResult,
             executedTools = _executedTools.toSet(),
             currentDate = timeProvider.formatForLlm(),
-            entityContext = entityContext  // Phase 2 实体线索
+            entityContext = entityContext,  // Phase 2 实体线索
+            habitContext = habitContext      // Wave 3 习惯上下文
         )
     }
     

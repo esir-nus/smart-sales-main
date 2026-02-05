@@ -4,6 +4,7 @@ import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.pipeline.ContextBuilder
 import com.smartsales.prism.domain.pipeline.EnhancedContext
 import com.smartsales.prism.domain.pipeline.ModeMetadata
+import com.smartsales.prism.domain.rl.HabitContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,6 +22,11 @@ class FakeContextBuilder @Inject constructor() : ContextBuilder {
                 currentMode = mode,
                 sessionId = "fake-session-001",
                 turnIndex = 1
+            ),
+            habitContext = HabitContext(
+                userHabits = emptyList(),
+                clientHabits = emptyList(),
+                suggestedDefaults = emptyMap()
             )
         )
     }

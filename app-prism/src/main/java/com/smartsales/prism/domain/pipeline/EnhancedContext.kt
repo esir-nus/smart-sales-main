@@ -1,6 +1,7 @@
 package com.smartsales.prism.domain.pipeline
 
 import com.smartsales.prism.domain.model.Mode
+import com.smartsales.prism.domain.rl.HabitContext
 
 /**
  * 增强上下文 — 统一输入载体
@@ -18,7 +19,9 @@ data class EnhancedContext(
     val lastToolResult: ToolArtifact? = null,
     val executedTools: Set<String> = emptySet(),
     // 日期上下文 — LLM 需要知道今天才能正确解析 "明天"、"下周" 等
-    val currentDate: String? = null
+    val currentDate: String? = null,
+    // Wave 3: 习惯上下文 — 用户和客户偏好（RL Module）
+    val habitContext: HabitContext? = null
 )
 
 /**

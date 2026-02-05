@@ -149,7 +149,7 @@ combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset 
 **File(s)**: [SchedulerViewModel.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModel.kt)  
 **Pattern**: In reactive chains, a Flow reference on its own line **does nothing**. Must be combined/collected.  
 **Heuristic**: If you see a Flow/SharedFlow reference that isn't assigned, collected, or combined → **DEAD CODE**.  
-**Status**: ⏳ AWAITING L2 CONFIRMATION
+**Status**: ✅ CONFIRMED 2026-02-05
 
 ---
 
@@ -164,7 +164,7 @@ combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset 
 3. Force refresh: Does UI update after?  
 **Correlation**: Ghost card symptom **disappeared after fixing refresh trigger** (see above)  
 **Pattern**: When UI shows stale data, check refresh flow BEFORE debugging persistence layer  
-**Status**: ⏳ AWAITING L2 CONFIRMATION
+**Status**: ✅ CONFIRMED 2026-02-05
 
 ---
 
@@ -186,7 +186,7 @@ combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset 
 - [SchedulerLinter.kt L37-40](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerLinter.kt#L37-L40)  
 **Pattern**: **When LLM classifies + extracts data, ensure prompt REQUIRES all fields that downstream code expects.** Don't rely on optional fields.  
 **Heuristic**: If Linter extracts field X from LLM JSON, grep prompt for requirement of field X.  
-**Status**: ⏳ AWAITING L2 CONFIRMATION
+**Status**: ✅ CONFIRMED 2026-02-05
 
 ---
 

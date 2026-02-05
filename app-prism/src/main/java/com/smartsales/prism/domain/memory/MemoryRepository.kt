@@ -4,26 +4,26 @@ import com.smartsales.prism.domain.config.SubscriptionTier
 import kotlinx.coroutines.flow.Flow
 
 /**
- * 记忆仓库 — Hot/Cement Zone 访问接口
- * @see Prism-V1.md §5.1
+ * 记忆仓库 — Active/Archived Zone 访问接口
+ * @see Memory Center interface
  */
 interface MemoryRepository {
     /**
-     * 获取热区条目（活跃条目 + 14天内日程）
+     * 获取活跃区条目（活跃条目 + 14天内日程）
      */
-    suspend fun getHotEntries(sessionId: String): List<MemoryEntry>
+    suspend fun getActiveEntries(sessionId: String): List<MemoryEntry>
     
     /**
-     * 获取热区条目（分层读取）
-     * @param userTier 用户订阅层级，决定热区窗口大小
+     * 获取活跃区条目（分层读取）
+     * @param userTier 用户订阅层级，决定活跃区窗口大小
      */
-    suspend fun getHotEntries(sessionId: String, userTier: SubscriptionTier): List<MemoryEntry>
+    suspend fun getActiveEntries(sessionId: String, userTier: SubscriptionTier): List<MemoryEntry>
     
     /**
-     * 获取水泥区条目（已归档且超出热区窗口）
-     * @param userTier 用户订阅层级，决定热区窗口边界
+     * 获取归档区条目（已归档且超出活跃区窗口）
+     * @param userTier 用户订阅层级，决定活跃区窗口边界
      */
-    suspend fun getCementEntries(sessionId: String, userTier: SubscriptionTier): List<MemoryEntry>
+    suspend fun getArchivedEntries(sessionId: String, userTier: SubscriptionTier): List<MemoryEntry>
     
     /**
      * 搜索记忆
@@ -33,9 +33,9 @@ interface MemoryRepository {
     suspend fun search(query: String, limit: Int = 10): List<MemoryEntry>
     
     /**
-     * 观察热区变化
+     * 观察活跃区变化
      */
-    fun observeHotEntries(sessionId: String): Flow<List<MemoryEntry>>
+    fun observeActiveEntries(sessionId: String): Flow<List<MemoryEntry>>
     
     /**
      * 保存条目
@@ -43,7 +43,23 @@ interface MemoryRepository {
     suspend fun save(entry: MemoryEntry)
     
     /**
-     * 归档条目（Hot → Cement）
+     * 标记为已归档
      */
-    suspend fun archive(entryId: String)
+    suspend fun markAsArchived(entryId: String)
 }
+
+// Backwards compatibility aliases (deprecated, will be removed)
+@Deprecated("Use getActiveEntries instead")
+suspend fun MemoryRepository.getHotEntries(sessionId: String) = getActiveEntries(sessionId)
+
+@Deprecated("Use getActiveEntries instead")
+suspend fun MemoryRepository.getHotEntries(sessionId: String, userTier: SubscriptionTier) = getActiveEntries(sessionId, userTier)
+
+@Deprecated("Use getArchivedEntries instead")
+suspend fun MemoryRepository.getCementEntries(sessionId: String, userTier: SubscriptionTier) = getArchivedEntries(sessionId, userTier)
+
+@Deprecated("Use observeActiveEntries instead")
+fun MemoryRepository.observeHotEntries(sessionId: String) = observeActiveEntries(sessionId)
+
+@Deprecated("Use markAsArchived instead")
+suspend fun MemoryRepository.archive(entryId: String) = markAsArchived(entryId)

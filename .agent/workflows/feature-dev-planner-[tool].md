@@ -205,12 +205,33 @@ class ScheduleBoardTest {
 
 ---
 
-## Phase -1: READ LESSONS LEARNED (FIRST!)
+## Phase -2: READ TRACKER (FIRST!)
+
+**MANDATORY**: Before ANY feature work, read `docs/plans/tracker.md`:
+
+```bash
+# MANDATORY — verify feature is tracked
+cat docs/plans/tracker.md
+```
+
+### Tracker Gate Checklist
+
+| Check | Action if FAIL |
+|-------|----------------|
+| Feature exists in tracker? | STOP. Propose tracker update first. |
+| Wave is 🔲 (not already shipped)? | STOP. Pick next wave. |
+| Dependencies satisfied? | STOP. Build dependencies first. |
+
+**If feature NOT in tracker → Do NOT build. Propose tracker update first.**
+
+---
+
+## Phase -1: READ LESSONS LEARNED
 
 **BEFORE touching any code, read the lessons file:**
 
 ```bash
-# MANDATORY — do this FIRST
+# MANDATORY — do this SECOND
 cat .agent/rules/lessons-learned.md
 ```
 
@@ -253,6 +274,7 @@ cat .agent/rules/lessons-learned.md
 
 | Phase | Gate |
 |-------|------|
+| **-2** | ✅ Tracker read, feature exists |
 | **-1** | ✅ Lessons read |
 | 0 | Spec quoted |
 | 1 | Fakes clean |

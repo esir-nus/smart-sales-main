@@ -25,8 +25,13 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
 import com.smartsales.prism.ui.components.PrismCard
-import com.smartsales.prism.ui.components.PrismSurface
 import com.smartsales.prism.ui.theme.*
+import com.smartsales.prism.domain.memory.ScheduleItem
+import com.smartsales.prism.domain.scheduler.ConflictAction
+import com.smartsales.prism.data.scheduler.RealConflictResolver
+import androidx.compose.ui.platform.LocalContext
+import dagger.hilt.android.EntryPointAccessors
+import com.smartsales.prism.di.HiltComponentProvider
 
 // ==========================================
 // State Models
@@ -42,17 +47,26 @@ data class ChatMessage(
 // ==========================================
 
 /**
- * Conflict Card Component (Sleek Glass Version)
- * @see prism-ui-ux-contract.md §1.3 "Conflict Card"
+ * Conflict Card Component (Rewrite with Real Context)
+ * @see prism-ui-ux-contract.md §1.3 \"Conflict Card\"
  */
 @Composable
 fun ConflictCard(
-    state: TimelineItem.Conflict,
+    taskA: ScheduleItem,
+    taskB: ScheduleItem,
     isExpanded: Boolean,
     onExpandToggle: () -> Unit,
-    onRemove: () -> Unit = {},
-    viewModel: ConflictViewModel = hiltViewModel()
+    onResolve: (ConflictAction) -> Unit
 ) {
+    // Access RealConflictResolver via Hilt
+    val context = LocalContext.current
+    val resolver = remember {
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            HiltComponentProvider::class.java
+        ).conflictResolver()
+    }
+    
     // Local state needed for interaction
     var messages by remember { mutableStateOf(listOf<ChatMessage>()) }
     var inputText by remember { mutableStateOf("") }
@@ -65,7 +79,7 @@ fun ConflictCard(
         if (isExpanded && messages.isEmpty()) {
             messages = listOf(
                 ChatMessage(
-                    text = "发现日程冲突。'团队午餐' (12:00) 优先级较低。建议保留 '审查预算' (12:00)。是否自动调整午餐时间？",
+                    text = "发现日程冲突。'${taskA.title}' (${formatTime(taskA.scheduledAt)}) 和 '${taskB.title}' (${formatTime(taskB.scheduledAt)}) 时间重叠。请告诉我要保留哪个？",
                     isSystem = true
                 )
             )
@@ -121,7 +135,7 @@ fun ConflictCard(
                 Spacer(modifier = Modifier.width(12.dp))
                 
                 Text(
-                    text = state.conflictText,
+                    text = "${taskA.title} vs ${taskB.title}",
                     fontSize = 14.sp,
                     color = AccentDanger,
                     fontWeight = FontWeight.Medium,
@@ -200,14 +214,12 @@ fun ConflictCard(
                                         isResolving = true
                                         
                                         scope.launch {
-                                            val result = viewModel.resolveConflict(userText)
-                                            messages = messages + ChatMessage(result.reply, isSystem = true)
+                                            val action = resolver.resolve(userText, taskA, taskB)
+                                            messages = messages + ChatMessage(action.reply, isSystem = true)
                                             isResolving = false
                                             
-                                            if (result.resolved) {
-                                                if (isExpanded) onExpandToggle()
-                                                onRemove()
-                                            }
+                                            // Execute action via callback
+                                            onResolve(action)
                                         }
                                     }
                                 }
@@ -244,4 +256,14 @@ fun ChatBubble(message: ChatMessage) {
             )
         }
     }
+}
+
+/**
+ * 格式化时间戳为可读格式
+ */
+private fun formatTime(epochMillis: Long): String {
+    val instant = java.time.Instant.ofEpochMilli(epochMillis)
+    val formatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
+        .withZone(java.time.ZoneId.systemDefault())
+    return formatter.format(instant)
 }

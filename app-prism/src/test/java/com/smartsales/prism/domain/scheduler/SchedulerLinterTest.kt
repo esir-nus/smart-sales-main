@@ -242,4 +242,85 @@ class SchedulerLinterTest {
         assertEquals(null, success.reminderType)
         assertEquals(false, success.task.hasAlarm)
     }
+    
+    // Wave 4.0: Input Classification tests
+    
+    @Test
+    fun `classification non_intent returns NonIntent`() {
+        val nonIntentJson = """
+            {
+                "classification": "non_intent"
+            }
+        """.trimIndent()
+        
+        val result = linter.lint(nonIntentJson)
+        
+        assertTrue("Expected LintResult.NonIntent, got: $result", result is LintResult.NonIntent)
+    }
+    
+    @Test
+    fun `classification inspiration returns Inspiration with content`() {
+        val inspirationJson = """
+            {
+                "classification": "inspiration",
+                "inspirationText": "以后想学吉他"
+            }
+        """.trimIndent()
+        
+        val result = linter.lint(inspirationJson)
+        
+        assertTrue("Expected LintResult.Inspiration, got: $result", result is LintResult.Inspiration)
+        val inspiration = result as LintResult.Inspiration
+        assertEquals("以后想学吉他", inspiration.content)
+    }
+    
+    // Wave 4.1: Multi-Task Splitting tests
+    
+    @Test
+    fun `tasks array with single item returns Success`() {
+        val singleTaskArrayJson = """
+            {
+                "classification": "schedulable",
+                "tasks": [
+                    {
+                        "title": "开会",
+                        "startTime": "2026-02-03 14:00"
+                    }
+                ]
+            }
+        """.trimIndent()
+        
+        val result = linter.lint(singleTaskArrayJson)
+        
+        assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
+        val success = result as LintResult.Success
+        assertEquals("开会", success.task.title)
+    }
+    
+    @Test
+    fun `tasks array with multiple items returns MultiTask`() {
+        val multiTaskJson = """
+            {
+                "classification": "schedulable",
+                "tasks": [
+                    {
+                        "title": "吃面",
+                        "startTime": "2026-02-03 08:00"
+                    },
+                    {
+                        "title": "开会",
+                        "startTime": "2026-02-03 09:00"
+                    }
+                ]
+            }
+        """.trimIndent()
+        
+        val result = linter.lint(multiTaskJson)
+        
+        assertTrue("Expected LintResult.MultiTask, got: $result", result is LintResult.MultiTask)
+        val multi = result as LintResult.MultiTask
+        assertEquals(2, multi.tasks.size)
+        assertEquals("吃面", multi.tasks[0].title)
+        assertEquals("开会", multi.tasks[1].title)
+    }
 }

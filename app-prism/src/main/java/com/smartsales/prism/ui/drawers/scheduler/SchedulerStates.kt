@@ -57,6 +57,8 @@ sealed class TimelineItem {
         override val id: String,
         override val timeDisplay: String, // "12:00"
         val conflictText: String, // "Event A vs Event B"
+        val taskA: com.smartsales.prism.domain.memory.ScheduleItem,
+        val taskB: com.smartsales.prism.domain.memory.ScheduleItem,
         val isExpanded: Boolean = false
     ) : TimelineItem()
 }

@@ -23,7 +23,25 @@ class FakeScheduledTaskRepository @Inject constructor() : ScheduledTaskRepositor
                 endTime = java.time.Instant.now().plusSeconds(3600)
             ),
             TimelineItemModel.Inspiration("2", "10:30", "研究竞品报价策略"),
-            TimelineItemModel.Conflict("3", "12:00", "李总电话 vs 午餐会议"),
+            TimelineItemModel.Conflict(
+                "3", "12:00", "李总电话 vs 午餐会议",
+                taskA = com.smartsales.prism.domain.memory.ScheduleItem(
+                    entryId = "conflict_a",
+                    title = "李总电话",
+                    scheduledAt = java.time.Instant.now().plusSeconds(14400).toEpochMilli(),
+                    durationMinutes = 30,
+                    durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                    conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+                ),
+                taskB = com.smartsales.prism.domain.memory.ScheduleItem(
+                    entryId = "conflict_b",
+                    title = "午餐会议",
+                    scheduledAt = java.time.Instant.now().plusSeconds(14400).toEpochMilli(),
+                    durationMinutes = 60,
+                    durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                    conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+                )
+            ),
             TimelineItemModel.Task(
                 "4", "14:00", "提交季度报告 (已完成)",
                 isDone = true, dateRange = "14:00 - 15:30", location = "工位",

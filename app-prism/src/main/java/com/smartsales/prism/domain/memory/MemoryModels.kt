@@ -1,8 +1,8 @@
 package com.smartsales.prism.domain.memory
 
 /**
- * 记忆条目实体 — Hot/Cement Zone 存储单元
- * @see Prism-V1.md §5.1 Two-Zone Model
+ * 记忆条目实体 — Active/Archived Zone 存储单元
+ * @see Memory Center spec §Two-Zone Model
  */
 data class MemoryEntry(
     val entryId: String,
@@ -28,11 +28,11 @@ enum class MemoryEntryType {
 }
 
 /**
- * 关联性条目 — Relevancy Library 索引单元
- * @see Prism-V1.md §5.2 Relevancy Library Schema
+ * 实体条目 — Entity Registry 索引单元
+ * @see Entity Registry spec §Domain Models
  */
-data class RelevancyEntry(
-    val entityId: String,          // e.g., "z-001" (Person), "p-042" (Product)
+data class EntityEntry(
+    val entityId: String,          // e.g., "z-001" (Person), "a-001" (Account)
     val entityType: EntityType,
     val displayName: String,       // 规范名称
     val aliasesJson: String = "[]",
@@ -42,17 +42,34 @@ data class RelevancyEntry(
     val relatedEntitiesJson: String = "[]",
     val decisionLogJson: String = "[]",
     val lastUpdatedAt: Long,
-    val createdAt: Long
+    val createdAt: Long,
+    
+    // CRM Extension Fields (nullable for non-CRM types)
+    val accountId: String? = null,           // FK to Account (for CONTACT/DEAL)
+    val primaryContactId: String? = null,    // FK to Contact (for DEAL)
+    val jobTitle: String? = null,            // Contact job title
+    val buyingRole: String? = null,          // economic_buyer, champion, etc.
+    val dealStage: String? = null,           // Pipeline stage
+    val dealValue: Long? = null,             // Amount (minor units)
+    val closeDate: String? = null            // ISO 8601
 )
 
 /**
  * 实体类型
  */
 enum class EntityType {
-    PERSON,
-    COMPANY,
+    // Core Types
+    PERSON,       // Individual (non-CRM)
     PRODUCT,
     LOCATION,
     EVENT,
-    CUSTOM
+    
+    // CRM Types
+    ACCOUNT,      // Company (CRM entity)
+    CONTACT,      // Business contact (linked to Account)
+    DEAL          // Sales opportunity
 }
+
+// Backwards compatibility alias (deprecated, will be removed)
+@Deprecated("Use EntityEntry instead", ReplaceWith("EntityEntry"))
+typealias RelevancyEntry = EntityEntry

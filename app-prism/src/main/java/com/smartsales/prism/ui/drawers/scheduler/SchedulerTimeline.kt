@@ -39,7 +39,9 @@ fun SchedulerTimeline(
     onDelete: (String) -> Unit,
     onReschedule: (String, String) -> Unit, // id, userText
     onMultiSelectToggle: (String) -> Unit,
-    onEnterMultiSelect: () -> Unit
+    onEnterMultiSelect: () -> Unit,
+    onConflictResolve: (com.smartsales.prism.domain.scheduler.ConflictAction) -> Unit,
+    onConflictToggle: (String) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
@@ -53,7 +55,9 @@ fun SchedulerTimeline(
                 onDelete = onDelete,
                 onReschedule = onReschedule,
                 onMultiSelectToggle = onMultiSelectToggle,
-                onEnterMultiSelect = onEnterMultiSelect
+                onEnterMultiSelect = onEnterMultiSelect,
+                onConflictResolve = onConflictResolve,
+                onConflictToggle = onConflictToggle
             )
         }
         
@@ -69,7 +73,9 @@ private fun TimelineRow(
     onDelete: (String) -> Unit,
     onReschedule: (String, String) -> Unit,
     onMultiSelectToggle: (String) -> Unit,
-    onEnterMultiSelect: () -> Unit
+    onEnterMultiSelect: () -> Unit,
+    onConflictResolve: (com.smartsales.prism.domain.scheduler.ConflictAction) -> Unit,
+    onConflictToggle: (String) -> Unit
 ) {
     // Local expansion state for this row item
     var isExpanded by remember { mutableStateOf(false) }
@@ -129,7 +135,7 @@ private fun TimelineRow(
                     ) {
                         InspirationCard(
                             state = item,
-                            onAskAI = { 
+                            onAskAI = {
                                 onEnterMultiSelect()
                                 onMultiSelectToggle(item.id) // Select this one
                             },
@@ -138,23 +144,23 @@ private fun TimelineRow(
                     }
                 }
                 is TimelineItem.Conflict -> {
-                    SwipeableCardItem(
-                        itemId = item.id,
-                        onDelete = { onDelete(item.id) },
-                        enabled = !isExpanded
-                    ) {
-                        ConflictCard(
-                            state = item,
-                            isExpanded = isExpanded,
-                            onExpandToggle = { isExpanded = !isExpanded },
-                            onRemove = { onDelete(item.id) } // Treat resolve as delete for now
-                        )
-                    }
+                    com.smartsales.prism.ui.drawers.scheduler.ConflictCard(
+                        taskA = item.taskA,
+                        taskB = item.taskB,
+                        isExpanded = item.isExpanded,
+                        onExpandToggle = { onConflictToggle(item.id) },
+                        onResolve = onConflictResolve
+                    )
                 }
             }
         }
     }
 }
+
+
+// Keeping SwipeableCardItem and TaskCard as they were in the original document,
+// assuming SchedulerTaskCard is a new composable that replaces their combined functionality for tasks.
+// The InspirationCard still uses SwipeableCardItem.
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -1,4 +1,4 @@
-# Relevancy Library
+# Entity Registry
 
 > **Cerb-compliant spec** — Entity lookup and disambiguation.
 
@@ -6,18 +6,18 @@
 
 ## Overview
 
-Manages B2B sales entity tracking (People, Products, Locations, Events) with O(1) lookup and LLM-first disambiguation.
+Manages B2B sales entity tracking (People, Products, Locations, Events, and CRM entities) with O(1) lookup and LLM-first disambiguation.
 
 ---
 
 ## Domain Models
 
-### RelevancyEntry
+### EntityEntry
 
 ```kotlin
-data class RelevancyEntry(
+data class EntityEntry(
     val entityId: String,        // "z-001" (Person), "p-042" (Product)
-    val entityType: EntityType,  // PERSON, PRODUCT, LOCATION, EVENT
+    val entityType: EntityType,  // PERSON, PRODUCT, ACCOUNT, CONTACT, DEAL
     val displayName: String,     // Canonical name ("张伟")
     val aliasesJson: String,     // ["张总", "张董事长"]
     val demeanorJson: String,    // {"communication_style": "formal"}
@@ -26,10 +26,30 @@ data class RelevancyEntry(
     val relatedEntitiesJson: String,
     val decisionLogJson: String,
     val lastUpdatedAt: Long,
-    val createdAt: Long
+    val createdAt: Long,
+    
+    // CRM Extension Fields (nullable for non-CRM types)
+    val accountId: String? = null,           // FK to Account (for CONTACT/DEAL)
+    val primaryContactId: String? = null,    // FK to Contact (for DEAL)
+    val jobTitle: String? = null,            // Contact job title
+    val buyingRole: String? = null,          // economic_buyer, champion, etc.
+    val dealStage: String? = null,           // Pipeline stage
+    val dealValue: Long? = null,             // Amount (minor units)
+    val closeDate: String? = null            // ISO 8601
 )
 
-enum class EntityType { PERSON, PRODUCT, LOCATION, EVENT }
+enum class EntityType {
+    // Core Types
+    PERSON,       // Individual (non-CRM)
+    PRODUCT,
+    LOCATION,
+    EVENT,
+    
+    // CRM Types
+    ACCOUNT,      // Company (CRM entity)
+    CONTACT,      // Business contact (linked to Account)
+    DEAL          // Sales opportunity
+}
 ```
 
 ### AliasMapping (for disambiguation)
@@ -71,7 +91,7 @@ Phase 1 Parse → person: "张总" (raw clue, unresolved)
        ▼
 Phase 2: LLM synthesizes with context
 ├─ Conversation history (recent mentions)
-├─ RelevancyLib query (known entities with this alias)
+├─ EntityRegistry query (known entities with this alias)
 ├─ Session context (current topic)
        │
        ▼
@@ -123,5 +143,5 @@ Stores in `metricsHistoryJson` for visualization:
 |------|-------|--------|
 | **1** | Core Model + Repository | ✅ Complete |
 | **2** | LLM Disambiguation Flow | ✅ SHIPPED |
+| **2.5** | CRM Schema Extension + Rename | ✅ SHIPPED |
 | **3** | CRM Hierarchy → [Client Profile Hub](../client-profile-hub/spec.md) | 🔲 |
-

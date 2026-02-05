@@ -12,8 +12,8 @@ interface MemoryWriter {
     fun write(entry: MemoryEntry)
     
     /**
-     * 异步更新关联性条目
-     * @param entry 待更新的关联性条目
+     * 异步更新实体条目
+     * @param entry 待更新的实体条目
      */
-    fun updateRelevancy(entry: RelevancyEntry)
+    fun updateRelevancy(entry: EntityEntry)
 }

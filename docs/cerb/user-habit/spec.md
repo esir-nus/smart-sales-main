@@ -1,12 +1,12 @@
 # User Habit
 
-> **Cerb-compliant spec** — Behavioral pattern learning.
+> **Cerb-compliant spec** — Behavioral pattern storage.
 
 ---
 
 ## Overview
 
-Tracks and learns user behavioral patterns for personalization. Used by Context Builder to provide nudges and defaults.
+Stores learned user behavioral patterns for personalization. Learning logic is in [RL Module](../rl-module/spec.md); this spec covers storage only.
 
 ---
 
@@ -14,15 +14,18 @@ Tracks and learns user behavioral patterns for personalization. Used by Context 
 
 ```kotlin
 data class UserHabit(
-    val habitKey: String,          // e.g., "preferred_meeting_time"
-    val habitValue: String,        // e.g., "morning"
-    val entityId: String?,         // For per-client habits (null = global)
-    val isExplicit: Boolean,       // true = user-set, false = inferred
-    val confidence: Float,         // 0.0-1.0
-    val observationCount: Int,
-    val rejectionCount: Int,
-    val lastObservedAt: Long,
-    val createdAt: Long
+    val habitKey: String,           // e.g., "preferred_meeting_time"
+    val habitValue: String,         // e.g., "morning"
+    val entityId: String?,          // For per-client habits (null = global)
+    
+    // 4-Rule Weighting Signals
+    val inferredCount: Int = 0,     // Rule 1: Frequency (LLM inferred)
+    val explicitPositive: Int = 0,  // Rule 2: User confirmed
+    val explicitNegative: Int = 0,  // Rule 3: User rejected
+    
+    // Rule 4: Recency
+    val lastObservedAt: Long,       // Epoch millis
+    val createdAt: Long             // Epoch millis
 )
 ```
 
@@ -34,9 +37,35 @@ data class UserHabit(
 |-------|---------|
 | `habitKey` | Behavior category (meeting_time, duration, location) |
 | `habitValue` | The preference value |
-| `confidence` | Strength: obs / (obs + rej) |
-| `isExplicit` | User explicitly set vs system inferred |
+| `inferredCount` | LLM observed this pattern N times |
+| `explicitPositive` | User explicitly confirmed N times (3x weight) |
+| `explicitNegative` | User explicitly rejected N times (-2x weight) |
+| `lastObservedAt` | For time decay calculation |
 | `entityId` | Habit specific to one client vs global (null) |
+
+---
+
+## Confidence Calculation
+
+Confidence is calculated at **query time** by RL Module (not stored):
+
+```kotlin
+fun calculateConfidence(habit: UserHabit, now: Instant): Float {
+    val daysSince = ChronoUnit.DAYS.between(
+        Instant.ofEpochMilli(habit.lastObservedAt), now
+    )
+    val decayFactor = 1.0f / (1 + daysSince / 30f)  // Half-life ~30 days
+    
+    val rawScore = (habit.inferredCount * 1.0f) +
+                   (habit.explicitPositive * 3.0f) +
+                   (habit.explicitNegative * -2.0f)
+    
+    val maxPossible = (habit.inferredCount + habit.explicitPositive) * 3.0f
+    val normalized = if (maxPossible > 0) rawScore / maxPossible else 0.5f
+    
+    return (normalized * decayFactor).coerceIn(0f, 1f)
+}
+```
 
 ---
 
@@ -51,19 +80,16 @@ data class UserHabit(
 
 ---
 
-## Learning Flow (Future)
+## Repository Interface
 
-```
-User Action → Observe Pattern
-       │
-       ▼
-Update Habit:
-├─ Matches existing → observationCount++
-├─ Conflicts with existing → rejectionCount++
-└─ New pattern → Create habit (confidence = 0.5)
-       │
-       ▼
-Re-calculate confidence: obs / (obs + rej)
+```kotlin
+interface UserHabitRepository {
+    suspend fun getGlobalHabits(): List<UserHabit>
+    suspend fun getByEntity(entityId: String): List<UserHabit>
+    
+    // Called by RL Module
+    suspend fun observe(key: String, value: String, entityId: String?, source: ObservationSource)
+}
 ```
 
 ---
@@ -73,16 +99,5 @@ Re-calculate confidence: obs / (obs + rej)
 | Wave | Focus | Status |
 |------|-------|--------|
 | **1** | Schema + Repository | ✅ SHIPPED |
-| **2-4** | Moved to [RL Module](../rl-module/spec.md) | — |
-
----
-
-## Usage (Future)
-
-Context Builder queries habits before LLM call:
-
-```kotlin
-val habits = habitRepository.getGlobalHabits()
-val clientHabits = habitRepository.getByEntity(clientId)
-// Inject into LLM prompt for personalization
-```
+| **1.5** | Update schema for 4-rule model | 🔲 |
+| **2+** | Moved to [RL Module](../rl-module/spec.md) | — |

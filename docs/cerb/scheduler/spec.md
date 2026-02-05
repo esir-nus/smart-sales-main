@@ -28,10 +28,8 @@ Scheduler manages task creation, timeline display, alarm cascading, and LLM-powe
 | **1.5** | ViewModel Wiring | 🚢 SHIPPED | `SchedulerViewModel`, UI connection |
 | **2** | Alarm Cascade | 🚢 SHIPPED | `RealAlarmScheduler`, notification triggers |
 | **3** | Smart Reminder Inference | 🚢 SHIPPED | LLM-based reminder timing suggestions |
-| **4** | Input Classification + Multi-Task + Reschedule | 🔲 PLANNED | Input gate, batch create, reschedule parsing |
+| **4** | Input Classification + Multi-Task + Reschedule | 🚢 SHIPPED | Input gate, batch create, reschedule parsing |
 | **5** | Inspiration Storage | 🚢 SHIPPED | `InspirationRepository`, `CollapsibleInspirationShelf` |
-| **6** | Batch Operations | 🔲 PLANNED | Multi-select delete, bulk reschedule |
-| **7** | Insights Integration | 🔲 PLANNED | Connect to Analyst for task analytics |
 
 ---
 
@@ -309,6 +307,10 @@ Natural language rescheduling (e.g., "把明天的会改到后天").
     - [ ] Ambiguous reference → picker shown
     - [ ] Conflict on new time → resolution flow
     - [ ] Reschedule to different date → amber glow on target date
+
+> [!NOTE]
+> **Deferred to Wave 6+**: Ambiguous reference picker (needs UX design), Full conflict resolution picker (warning-only acceptable for MVP).
+
 - **Deliverables**: `buildReschedulePrompt()` rewrite, `onReschedule()` in ViewModel
 
 ### � Wave 5: Inspiration Storage (SHIPPED)
@@ -322,26 +324,6 @@ Store non-schedulable input for future reference.
     - [x] Swipe to delete inspiration
 - **Deliverables**: `InspirationRepository.kt`, `RealInspirationRepository.kt`, `CollapsibleInspirationShelf.kt`
 
-### 🔬 Wave 6: Batch Operations
-
-Multi-select delete and bulk reschedule.
-
-- **Ship Criteria**: Select N items, delete all in one action
-- **Test Cases**:
-    - [ ] Multi-select → delete count toast
-    - [ ] Batch reschedule → all items shifted
-- **Deliverables**: `toggleSelectionMode()`, batch UI
-
-### 🔬 Wave 7: Insights Integration
-
-Connect to Analyst for task completion analytics.
-
-- **Ship Criteria**: "过去30天任务完成率" visible in Analyst
-- **Test Cases**:
-    - [ ] Completion rate calculated correctly
-    - [ ] Trend visualization works
-- **Deliverables**: Analyst data hook
-
 ---
 
 ## File Map
@@ -349,10 +331,10 @@ Connect to Analyst for task completion analytics.
 | Layer | Files |
 |-------|-------|
 | **Domain** | `ScheduledTaskRepository.kt`, `SchedulerLinter.kt`, `AlarmScheduler.kt`, `InspirationRepository.kt`, `FakeScheduledTaskRepository.kt` |
-| **Data** | `RealScheduledTaskRepository.kt`, `RealAlarmScheduler.kt`, `RealInspirationRepository.kt`, `FakeInspirationRepository.kt` |
+| **Data** | `RealScheduledTaskRepository.kt`, `RealAlarmScheduler.kt`, `RealInspirationRepository.kt`, `FakeInspirationRepository.kt`, `FakeAlarmScheduler.kt` |
 | **DI** | `SchedulerModule.kt` |
-| **UI** | `SchedulerDrawer.kt`, `SchedulerViewModel.kt`, `SchedulerTimeline.kt`, `SchedulerCalendar.kt`, `SchedulerCards.kt`, `CollapsibleInspirationShelf.kt` |
-| **Test** | `SchedulerLinterTest.kt` |
+| **UI** | `SchedulerDrawer.kt`, `SchedulerViewModel.kt`, `SchedulerTimeline.kt`, `SchedulerCalendar.kt`, `SchedulerCards.kt`, `SchedulerConflict.kt`, `SchedulerStates.kt`, `CollapsibleInspirationShelf.kt` |
+| **Test** | `SchedulerLinterTest.kt`, `AlarmSchedulerTest.kt` |
 
 ---
 

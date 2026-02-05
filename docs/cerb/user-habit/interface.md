@@ -69,4 +69,4 @@ interface UserHabitRepository {
 ## Related Specs
 
 - [Memory Center](../memory-center/spec.md) — Storage layer
-- [Relevancy Library](../relevancy-library/spec.md) — Entity lookup
+- [Entity Registry](../entity-registry/spec.md) — Entity lookup

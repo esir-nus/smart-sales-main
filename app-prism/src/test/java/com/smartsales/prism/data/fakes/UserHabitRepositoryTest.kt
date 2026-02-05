@@ -1,6 +1,7 @@
 package com.smartsales.prism.data.fakes
 
 import com.smartsales.prism.domain.habit.UserHabitRepository
+import com.smartsales.prism.domain.rl.ObservationSource
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -8,19 +9,19 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * # UserHabitRepository 单元测试
+ * # UserHabitRepository 单元测试 — Wave 1.5
  *
- * 验证习惯仓库的核心契约,包括置信度计算和除零边界情况。
+ * 验证习惯仓库的核心契约,包括新的 4-rule weighting model。
  *
  * ## 测试用例
  * 1. Empty returns empty
  * 2. Global habits only (entityId = null)
  * 3. Entity-specific habits
- * 4. Observe creates new (confidence = 0.5)
- * 5. Observe increments existing
- * 6. Reject increments
- * 7. Confidence calc: obs / (obs + rej)
- * 8. Division-by-zero edge case (0 obs, 0 rej → confidence = 0.5)
+ * 4. Observe INFERRED increments inferredCount
+ * 5. Observe USER_POSITIVE increments explicitPositive
+ * 6. Observe USER_NEGATIVE increments explicitNegative
+ * 7. Create new habit with correct source routing
+ * 8. Delete removes habit
  */
 class UserHabitRepositoryTest {
 
@@ -41,8 +42,8 @@ class UserHabitRepositoryTest {
     @Test
     fun `getGlobalHabits returns only global habits`() = runTest {
         // Seed: 1 global + 1 entity-specific
-        repository.observe("preferred_meeting_time", "morning", entityId = null)
-        repository.observe("default_duration", "60", entityId = "client-123")
+        repository.observe("preferred_meeting_time", "morning", entityId = null, ObservationSource.INFERRED)
+        repository.observe("default_duration", "60", entityId = "client-123", ObservationSource.INFERRED)
         
         val result = repository.getGlobalHabits()
         
@@ -54,10 +55,10 @@ class UserHabitRepositoryTest {
     @Test
     fun `getByEntity returns only matching entityId`() = runTest {
         // Seed: 2 for client-123, 1 for client-456, 1 global
-        repository.observe("preferred_meeting_time", "morning", entityId = "client-123")
-        repository.observe("default_duration", "60", entityId = "client-123")
-        repository.observe("preferred_location", "office", entityId = "client-456")
-        repository.observe("follow_up_interval", "7", entityId = null)
+        repository.observe("preferred_meeting_time", "morning", entityId = "client-123", ObservationSource.INFERRED)
+        repository.observe("default_duration", "60", entityId = "client-123", ObservationSource.USER_POSITIVE)
+        repository.observe("preferred_location", "office", entityId = "client-456", ObservationSource.INFERRED)
+        repository.observe("follow_up_interval", "7", entityId = null, ObservationSource.INFERRED)
         
         val result = repository.getByEntity("client-123")
         
@@ -67,81 +68,72 @@ class UserHabitRepositoryTest {
     }
 
     @Test
-    fun `observe creates new habit with confidence 0_5`() = runTest {
-        repository.observe("preferred_meeting_time", "morning", entityId = null)
+    fun `observe INFERRED increments inferredCount`() = runTest {
+        repository.observe("preferred_meeting_time", "morning", entityId = null, ObservationSource.INFERRED)
+        repository.observe("preferred_meeting_time", "morning", entityId = null, ObservationSource.INFERRED)
+        repository.observe("preferred_meeting_time", "morning", entityId = null, ObservationSource.INFERRED)
         
         val habit = repository.getHabit("preferred_meeting_time", entityId = null)
         
         assertEquals("morning", habit?.habitValue)
-        assertEquals(0.5f, habit?.confidence)
-        assertEquals(1, habit?.observationCount)
-        assertEquals(0, habit?.rejectionCount)
+        assertEquals(3, habit?.inferredCount)
+        assertEquals(0, habit?.explicitPositive)
+        assertEquals(0, habit?.explicitNegative)
     }
 
     @Test
-    fun `observe increments observationCount on existing habit`() = runTest {
-        repository.observe("preferred_meeting_time", "morning", entityId = null)
-        repository.observe("preferred_meeting_time", "morning", entityId = null)
-        repository.observe("preferred_meeting_time", "morning", entityId = null)
+    fun `observe USER_POSITIVE increments explicitPositive`() = runTest {
+        repository.observe("preferred_meeting_time", "morning", entityId = null, ObservationSource.USER_POSITIVE)
+        repository.observe("preferred_meeting_time", "morning", entityId = null, ObservationSource.USER_POSITIVE)
         
         val habit = repository.getHabit("preferred_meeting_time", entityId = null)
         
-        assertEquals(3, habit?.observationCount)
-        assertEquals(0, habit?.rejectionCount)
-        // 3 obs, 0 rej → 3/3 = 1.0
-        assertEquals(1.0f, habit?.confidence)
+        assertEquals("morning", habit?.habitValue)
+        assertEquals(0, habit?.inferredCount)
+        assertEquals(2, habit?.explicitPositive)
+        assertEquals(0, habit?.explicitNegative)
     }
 
     @Test
-    fun `reject increments rejectionCount`() = runTest {
-        // Create habit first
-        repository.observe("preferred_meeting_time", "morning", entityId = null)
+    fun `observe USER_NEGATIVE increments explicitNegative`() = runTest {
+        // Create with INFERRED first
+        repository.observe("preferred_meeting_time", "morning", entityId = null, ObservationSource.INFERRED)
         // Then reject it
-        repository.reject("preferred_meeting_time", entityId = null)
+        repository.observe("preferred_meeting_time", "evening", entityId = null, ObservationSource.USER_NEGATIVE)
         
         val habit = repository.getHabit("preferred_meeting_time", entityId = null)
         
-        assertEquals(1, habit?.observationCount)
-        assertEquals(1, habit?.rejectionCount)
-        // 1 obs, 1 rej → 1/2 = 0.5
-        assertEquals(0.5f, habit?.confidence)
+        assertEquals("evening", habit?.habitValue)  // Updated to newest value
+        assertEquals(1, habit?.inferredCount)
+        assertEquals(0, habit?.explicitPositive)
+        assertEquals(1, habit?.explicitNegative)
     }
 
     @Test
-    fun `confidence calculates as obs divided by total`() = runTest {
-        repository.observe("preferred_meeting_time", "morning", entityId = null)
-        repository.observe("preferred_meeting_time", "morning", entityId = null)
-        repository.observe("preferred_meeting_time", "morning", entityId = null)
-        repository.reject("preferred_meeting_time", entityId = null)
+    fun `new habit routes source correctly on creation`() = runTest {
+        repository.observe("preferred_meeting_time", "morning", entityId = null, ObservationSource.USER_POSITIVE)
         
         val habit = repository.getHabit("preferred_meeting_time", entityId = null)
         
-        assertEquals(3, habit?.observationCount)
-        assertEquals(1, habit?.rejectionCount)
-        // 3 obs, 1 rej → 3/4 = 0.75
-        assertEquals(0.75f, habit?.confidence)
+        // New habit created with USER_POSITIVE should have explicitPositive = 1
+        assertEquals(0, habit?.inferredCount)
+        assertEquals(1, habit?.explicitPositive)
+        assertEquals(0, habit?.explicitNegative)
     }
 
     @Test
-    fun `divisionByZero edge case returns 0_5 for new habit`() = runTest {
-        // This tests the internal edge case: when a habit is created with 0 obs and 0 rej
-        // In practice, observe() always sets observationCount = 1, but this tests the calc logic
+    fun `delete removes habit`() = runTest {
+        repository.observe("preferred_meeting_time", "morning", entityId = null, ObservationSource.INFERRED)
         
-        // Create a habit
-        repository.observe("preferred_meeting_time", "morning", entityId = null)
+        // Verify exists
+        var habit = repository.getHabit("preferred_meeting_time", entityId = null)
+        assertEquals("morning", habit?.habitValue)
         
-        val habit = repository.getHabit("preferred_meeting_time", entityId = null)
+        // Delete
+        repository.delete("preferred_meeting_time", entityId = null)
         
-        // New habit should have confidence = 0.5 (1 obs, 0 rej → but initial creation uses 0.5)
-        // Actually, after 1 observe, it's 1 obs, 0 rej → we need to test the edge case differently
-        
-        // The edge case is tested implicitly: when total = 0 in recalculateConfidence,
-        // but observe() always creates with observationCount = 1.
-        // So the division-by-zero safety is in the recalculateConfidence function itself.
-        
-        // Let's verify the initial creation:
-        assertEquals(1, habit?.observationCount)
-        assertEquals(0, habit?.rejectionCount)
-        assertEquals(0.5f, habit?.confidence) // Initial confidence for new habit
+        // Verify removed
+        habit = repository.getHabit("preferred_meeting_time", entityId = null)
+        assertNull(habit)
     }
 }

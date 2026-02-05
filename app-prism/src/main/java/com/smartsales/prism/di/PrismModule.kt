@@ -1,7 +1,7 @@
 package com.smartsales.prism.di
 
 import com.smartsales.prism.data.fakes.FakeAudioRepository
-import com.smartsales.prism.data.fakes.FakeConflictResolutionService
+
 import com.smartsales.prism.data.fakes.FakeConnectivityService
 import com.smartsales.prism.data.real.RealContextBuilder
 import com.smartsales.prism.data.fakes.FakeExecutor
@@ -10,7 +10,7 @@ import com.smartsales.prism.data.fakes.FakeMemoryRepository
 import com.smartsales.prism.data.fakes.FakeMemoryWriter
 import com.smartsales.prism.data.fakes.FakeOnboardingService
 import com.smartsales.prism.data.fakes.FakePublisher
-import com.smartsales.prism.data.fakes.FakeRelevancyRepository
+import com.smartsales.prism.data.fakes.FakeEntityRepository
 import com.smartsales.prism.data.fakes.FakeUserProfileRepository 
 import com.smartsales.prism.data.real.DashscopeExecutor
 import com.smartsales.prism.data.real.PrismOrchestrator
@@ -18,7 +18,7 @@ import com.smartsales.prism.domain.audio.AudioRepository
 import com.smartsales.prism.domain.connectivity.ConnectivityService
 import com.smartsales.prism.domain.memory.MemoryRepository
 import com.smartsales.prism.domain.memory.MemoryWriter
-import com.smartsales.prism.domain.memory.RelevancyRepository
+import com.smartsales.prism.domain.memory.EntityRepository
 import com.smartsales.prism.domain.onboarding.OnboardingService
 import com.smartsales.prism.domain.pipeline.ContextBuilder
 import com.smartsales.prism.domain.pipeline.Executor
@@ -26,7 +26,7 @@ import com.smartsales.prism.domain.pipeline.Orchestrator
 import com.smartsales.prism.domain.pipeline.Publisher
 import com.smartsales.prism.domain.repository.HistoryRepository
 import com.smartsales.prism.domain.repository.UserProfileRepository
-import com.smartsales.prism.domain.scheduler.ConflictResolutionService
+
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -66,7 +66,7 @@ abstract class PrismModule {
     abstract fun bindMemoryRepository(fake: FakeMemoryRepository): MemoryRepository
     
     @Binds @Singleton
-    abstract fun bindRelevancyRepository(fake: FakeRelevancyRepository): RelevancyRepository
+    abstract fun bindEntityRepository(fake: FakeEntityRepository): EntityRepository
     
     // === Memory System ===
     
@@ -82,11 +82,6 @@ abstract class PrismModule {
     
     @Binds @Singleton
     abstract fun bindOnboardingService(fake: FakeOnboardingService): OnboardingService
-    
-    // === Scheduler ===
-    
-    @Binds @Singleton
-    abstract fun bindConflictResolutionService(fake: FakeConflictResolutionService): ConflictResolutionService
     
     // === Audio ===
     
@@ -107,6 +102,11 @@ abstract class PrismModule {
 
     @Binds @Singleton
     abstract fun bindUserHabitRepository(fake: com.smartsales.prism.data.fakes.FakeUserHabitRepository): com.smartsales.prism.domain.habit.UserHabitRepository
+
+    // === RL Module ===
+
+    @Binds @Singleton
+    abstract fun bindReinforcementLearner(fake: com.smartsales.prism.data.fakes.FakeReinforcementLearner): com.smartsales.prism.domain.rl.ReinforcementLearner
 
     // === Time ===
 

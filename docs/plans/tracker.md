@@ -1,7 +1,7 @@
 # Smart Sales Prism Tracker
 
 > **SOT**: [`Prism-V1.md`](../specs/Prism-V1.md) · [`prism-ui-ux-contract.md`](../specs/prism-ui-ux-contract.md) (INDEX) · [`GLOSSARY.md`](../specs/GLOSSARY.md)  
-> **Last Updated**: 2026-02-01
+> **Last Updated**: 2026-02-05
 
 ---
 
@@ -44,9 +44,9 @@
 
 | Layer | Status | Schema Reference |
 |-------|--------|------------------|
-| **Hot Zone** | 🔲 | `MemoryEntryEntity` (§5.7) |
-| **Cement Zone** | 🔲 | Archived entries (§5.1) |
-| **Relevancy Library** | 🔲 | `RelevancyEntry` (§5.2) |
+| **Active Zone** | 🔲 | `MemoryEntry` (isArchived=false) (§5.7) |
+| **Archived Zone** | 🔲 | `MemoryEntry` (isArchived=true) (§5.1) |
+| **Entity Registry** | 🔲 | `EntityEntry` (§5.2) |
 | **Session Cache** | 🔲 | In-task fast access (§2.2 #1b) |
 | **ScheduleBoard** | ✅ | Conflict index ([spec](../cerb/memory-center/spec.md#scheduleboard-conflict-index)) |
 
@@ -100,7 +100,7 @@
 | Wave | Focus | Status |
 |------|-------|--------|
 | **1** | ScheduleBoard + Two-Phase Pipeline | ✅ SHIPPED |
-| **2** | Hot/Cement Lazy Compaction + Subscription Config | ✅ SHIPPED |
+| **2** | Active/Archived Lazy Compaction + Subscription Config | ✅ SHIPPED |
 
 **Wave 1 Shipped**: 2026-02-03
 - ScheduleBoard interface + RealScheduleBoard implementation
@@ -109,24 +109,30 @@
 
 **Wave 2 Shipped**: 2026-02-04
 - SubscriptionConfig with FREE/PRO/ENTERPRISE tiers (7/14/30 day windows)
-- Tier-aware `getHotEntries()` and `getCementEntries()` methods
+- Tier-aware `getActiveEntries()` and `getArchivedEntries()` methods
 - Lazy compaction via query-time filtering (no background jobs)
 - 7/7 unit tests passed in `FakeMemoryRepositoryTest`
 
 ---
 
-### Relevancy Library (spec: `relevancy-library/`)
+### Entity Registry (spec: `entity-registry/`)
 
 | Wave | Focus | Status |
 |------|-------|--------|
-| **1** | Core Model + Repository | ✅ (inherited from Memory Center) |
+| **1** | Core Model + Repository | ✅ (inherited) |
 | **2** | LLM Disambiguation Flow | ✅ SHIPPED |
-| **3** | Reinforcement Learning | 🔲 (needs behavior spec) |
+| **2.5** | CRM Schema + Rename (Relevancy → Entity) | ✅ SHIPPED |
+| **3** | CRM Hierarchy → [Client Profile Hub](../client-profile-hub/spec.md) | 🔲 (Planning) |
 
 **Wave 2 Shipped**: 2026-02-03
 - `ParsedClues` carrier in `LintResult.Success`
 - `RealContextBuilder.buildWithClues()` entity bridge
 - LLM synthesizes entity resolution using conversation context
+
+**Wave 2.5 Shipped**: 2026-02-04
+- Renamed `RelevancyEntry` → `EntityEntry`
+- Added CRM fields (accountId, contactId, dealStage)
+- Added CRM types (ACCOUNT, CONTACT, DEAL)
 
 ---
 
@@ -134,13 +140,85 @@
 
 | Wave | Focus | Status |
 |------|-------|--------|
-| **1** | Schema + Repository | 🔲 |
-| **2** | Observation Hook | 🔲 |
-| **3** | Nudge Integration | 🔲 |
+| **1** | Schema + Repository (Storage) | ✅ SHIPPED |
+| **2-4** | Moved to RL Module | — |
 
-**Next Step**: Implement Wave 1 — basic UserHabit storage and retrieval.
+**Wave 1 Shipped**: 2026-02-04
+- `UserHabit` model + `UserHabitRepository` interface
+- Fake implementation passing logic tests
+- Confidence score calculation (obs/total)
 
+---
 
+### RL Module (spec: `rl-module/`)
+
+| Wave | Focus | Status |
+|------|-------|--------|
+| **1** | Interface + Observation Schema | ✅ SHIPPED |
+| **2** | Orchestrator Integration (Parser) | 🔲 (Planning) |
+| **3** | Context Builder Integration | 🔲 |
+
+**Wave 1 Shipped**: 2026-02-04
+- `RlModels` (Observation, Source)
+- `ReinforcementLearner` interface + Fake facade
+- `HabitContext` aggregation logic
+
+---
+
+## Badge Audio Integration
+
+> **Cerb Docs**:
+> - [`connectivity-bridge/`](../cerb/connectivity-bridge/) — Prism wrapper for legacy BLE/HTTP
+> - [`asr-service/`](../cerb/asr-service/) — FunASR cloud transcription
+> - [`badge-audio-pipeline/`](../cerb/badge-audio-pipeline/) — End-to-end orchestration
+>
+> **Strategy**: Replace simulated transcription with real hardware audio
+
+---
+
+### Connectivity Bridge (spec: `connectivity-bridge/`)
+
+| Wave | Focus | Status |
+|------|-------|--------|
+| **1** | Interface + Fake | 🔲 (Planning) |
+| **2** | Real Implementation (Legacy Wrapper) | 🔲 |
+| **3** | record#end Handler | 🔲 |
+
+**Key Deliverables**:
+- `ConnectivityBridge` interface (Prism domain)
+- `RealConnectivityBridge` wrapping `DeviceConnectionManager`
+- Preserved ESP32 rate limiting (2s query TTL, 300ms inter-command gap)
+
+---
+
+### ASR Service (spec: `asr-service/`)
+
+| Wave | Focus | Status |
+|------|-------|--------|
+| **1** | Interface + Fake | ✅ SHIPPED |
+| **2** | FunASR Implementation | 🔲 |
+| **3** | Error Handling + Retry | 🔲 |
+
+**Key Deliverables**:
+- `AsrService` interface
+- `FunAsrService` using DashScope SDK (`fun-asr-realtime` model)
+- 16kHz WAV support, Chinese/English language hints
+
+---
+
+### Badge Audio Pipeline (spec: `badge-audio-pipeline/`)
+
+| Wave | Focus | Status |
+|------|-------|--------|
+| **1** | Interface + State Machine | 🔲 (Planning) |
+| **2** | Fake Pipeline | 🔲 |
+| **3** | Real Implementation | 🔲 |
+| **4** | Error Recovery | 🔲 |
+
+**Key Deliverables**:
+- `BadgeAudioPipeline` orchestrator
+- `record#end` → Download → Transcribe → Schedule flow
+- Integration with existing `PrismOrchestrator.processSchedulerAction()`
 
 ---
 
@@ -155,9 +233,9 @@
 | **1.5** | ViewModel Wiring | ✅ Complete |
 | **2** | Alarm Cascade | ✅ SHIPPED |
 | **3** | Smart Reminder Inference | ✅ SHIPPED |
-| **4** | Reschedule Flow | 🔲 |
-| **5** | Batch Operations | 🔲 |
-| **6** | Insights Integration | 🔲 |
+| **4** | Input Classification + Multi-Task + Reschedule | ✅ SHIPPED |
+| **5** | Inspiration Storage | ✅ SHIPPED |
+| **6** | Conflict Resolution | ✅ SHIPPED |
 
 ### Wave 1 & 1.5: Core + Wiring ✅
 
@@ -170,6 +248,14 @@
 **Shipped**: 2026-02-03
 
 **Deliverables**: `RealAlarmScheduler.kt` (rewritten), `TaskReminderReceiver.kt` (rewritten), `FakeAlarmScheduler.kt`, `AlarmSchedulerTest.kt`, notification channel + permission
+
+### Wave 6: Conflict Resolution ✅ SHIPPED
+
+**Shipped**: 2026-02-05
+
+**Deliverables**: `ConflictAction.kt`, `RealConflictResolver.kt`, `ConflictCard.kt`, ViewModel wiring (`handleConflictResolution`, `toggleConflictExpansion`)
+
+**Cerb Docs**: [`conflict-resolver/spec.md`](../cerb/conflict-resolver/spec.md) · [`conflict-resolver/interface.md`](../cerb/conflict-resolver/interface.md)
 
 ---
 

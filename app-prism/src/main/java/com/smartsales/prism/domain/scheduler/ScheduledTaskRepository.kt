@@ -87,6 +87,9 @@ sealed class TimelineItemModel {
     data class Conflict(
         override val id: String,
         override val timeDisplay: String,
-        val conflictText: String
+        val conflictText: String,
+        val taskA: com.smartsales.prism.domain.memory.ScheduleItem,
+        val taskB: com.smartsales.prism.domain.memory.ScheduleItem
     ) : TimelineItemModel()
 }
+

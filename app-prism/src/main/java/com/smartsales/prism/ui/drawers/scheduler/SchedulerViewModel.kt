@@ -68,6 +68,19 @@ class SchedulerViewModel @Inject constructor(
     // 灵感箱展开状态
     private val _isInspirationsExpanded = MutableStateFlow(false)
     val isInspirationsExpanded: StateFlow<Boolean> = _isInspirationsExpanded.asStateFlow()
+    
+    // 冲突卡片展开状态
+    private val _expandedConflictIds = MutableStateFlow<Set<String>>(emptySet())
+    val expandedConflictIds: StateFlow<Set<String>> = _expandedConflictIds.asStateFlow()
+
+    fun toggleConflictExpansion(id: String) {
+        val current = _expandedConflictIds.value
+        if (current.contains(id)) {
+            _expandedConflictIds.value = current - id
+        } else {
+            _expandedConflictIds.value = current + id
+        }
+    }
 
     // Timeline Items — 响应 dayOffset 和刷新触发器变化
     // 合并：日期特定任务 + 全局灵感
@@ -239,6 +252,37 @@ class SchedulerViewModel @Inject constructor(
      */
     fun clearConflictWarning() {
         _conflictWarning.value = null
+    }
+
+    /**
+     * 处理冲突解决 — 执行用户选择的动作
+     */
+    fun handleConflictResolution(action: com.smartsales.prism.domain.scheduler.ConflictAction) {
+        viewModelScope.launch {
+            when (action.action) {
+                com.smartsales.prism.domain.scheduler.ActionType.KEEP_A -> {
+                    taskRepository.deleteItem(action.taskToRemove!!)
+                    android.util.Log.d("SchedulerVM", "Conflict resolved: KEEP_A, deleted ${action.taskToRemove}")
+                }
+                com.smartsales.prism.domain.scheduler.ActionType.KEEP_B -> {
+                    taskRepository.deleteItem(action.taskToRemove!!)
+                    android.util.Log.d("SchedulerVM", "Conflict resolved: KEEP_B, deleted ${action.taskToRemove}")
+                }
+                com.smartsales.prism.domain.scheduler.ActionType.RESCHEDULE -> {
+                    if (action.taskToReschedule != null && action.rescheduleText != null) {
+                        onReschedule(action.taskToReschedule!!, action.rescheduleText!!)
+                    } else {
+                        _conflictWarning.value = "无法识别改期指令"
+                    }
+                }
+                com.smartsales.prism.domain.scheduler.ActionType.NONE -> {
+                    // Do nothing
+                }
+            }
+            scheduleBoard.refresh()
+            _conflictWarning.value = action.reply
+            triggerRefresh()
+        }
     }
 
     /**

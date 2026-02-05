@@ -14,16 +14,16 @@ Memory Center manages persistent storage and retrieval of user interactions, ent
 
 | Spec | Responsibility |
 |------|----------------|
-| [Relevancy Library](../relevancy-library/spec.md) | Entity lookup, disambiguation |
+| [Entity Registry](../entity-registry/spec.md) | Entity lookup, disambiguation |
 | [User Habit](../user-habit/spec.md) | Behavioral patterns, learning |
 
 ---
 
-## Two-Zone Model (DEPRECATED)
+## Two-Zone Model
 
-> [!WARNING]
-> **Hot/Cement terminology is deprecated.** Use query-time filtering only.
-> See [Client Profile Hub](../client-profile-hub/spec.md) for the new relevance-first approach.
+> [!NOTE]
+> **Renamed from Hot/Cement.** Now uses **Active/Archived** terminology.
+> Zone is determined by `isArchived` flag at query-time, no physical data movement.
 
 | Zone | Criteria | Contents |
 |------|----------|----------|
@@ -176,7 +176,7 @@ data class DecisionRecord(
 
 **No background jobs.** Hot/Cement zones are defined by **query-time filters**, not physical data movement.
 
-### Hot Zone Query (Default)
+### Active Zone Query (Default)
 
 ```kotlin
 SELECT * FROM entries
@@ -184,7 +184,7 @@ WHERE isArchived = false
    OR scheduledAt > (NOW() - INTERVAL [subscriptionWindowDays] DAY)
 ```
 
-### Cement Zone Query (History Browsing)
+### Archived Zone Query (History Browsing)
 
 ```kotlin
 SELECT * FROM entries
@@ -227,8 +227,8 @@ suspend fun completeTask(taskId: String) {
 
 | Scenario | Query Target | Model | Cost |
 |----------|-------------|-------|------|
-| Default (recent context) | Hot Zone only | qwen-plus | Low |
-| Entity last seen >14 days | Cement Zone (targeted) | qwen-long | High (justified) |
-| Explicit history request | Cement Zone (filtered) | qwen-long | High (user-initiated) |
+| Default (recent context) | Active Zone only | qwen-plus | Low |
+| Entity last seen >14 days | Archived Zone (targeted) | qwen-long | High (justified) |
+| Explicit history request | Archived Zone (filtered) | qwen-long | High (user-initiated) |
 
-**Cost guardrail**: Max 50 Cement entries per LLM request.
+**Cost guardrail**: Max 50 Archived entries per LLM request.

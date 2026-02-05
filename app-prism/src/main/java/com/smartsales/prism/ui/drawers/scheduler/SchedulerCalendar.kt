@@ -271,6 +271,7 @@ private fun CalendarRow(
         days.forEach { dayVal ->
             val dayNum = if (dayVal > 31) dayVal - 31 else dayVal
             val isToday = dayNum == todayDayOfMonth
+            val isTodaySelected = isToday && dayNum == selectedDayOfMonth
             val isSelected = dayNum == selectedDayOfMonth && !isToday // Don't double highlight today if selected
             val hasEvent = eventDots[dayNum] == true
             // 计算 dayOffset 从 todayDayOfMonth
@@ -296,7 +297,8 @@ private fun CalendarRow(
                     )
                     .then(
                         when {
-                            isToday -> Modifier.background(TextPrimary, CircleShape)
+                            isTodaySelected -> Modifier.background(TextPrimary, CircleShape)
+                            isToday -> Modifier.background(TextMuted, CircleShape) // Grey when not selected
                             isSelected -> Modifier.border(2.dp, TextPrimary, CircleShape)
                             else -> Modifier
                         }
@@ -310,7 +312,7 @@ private fun CalendarRow(
                         text = dayNum.toString(),
                         color = if (isToday) Color.White else TextPrimary,
                         fontSize = 14.sp,
-                        fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
+                        fontWeight = if (isTodaySelected) FontWeight.Bold else FontWeight.Normal
                     )
                     if (!isToday && hasEvent) { 
                         Spacer(modifier = Modifier.height(2.dp))

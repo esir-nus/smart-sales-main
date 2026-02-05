@@ -12,7 +12,7 @@ import javax.inject.Singleton
 
 /**
  * Fake MemoryRepository — 内存中存储
- * 支持 Lazy Compaction: 热区/水泥区通过查询时过滤实现
+ * 支持 Lazy Compaction: 活跃区/归档区通过查询时过滤实现
  */
 @Singleton
 class FakeMemoryRepository @Inject constructor() : MemoryRepository {
@@ -22,17 +22,17 @@ class FakeMemoryRepository @Inject constructor() : MemoryRepository {
     // 用于测试注入当前时间
     var currentTimeProvider: () -> Long = { System.currentTimeMillis() }
     
-    override suspend fun getHotEntries(sessionId: String): List<MemoryEntry> {
+    override suspend fun getActiveEntries(sessionId: String): List<MemoryEntry> {
         return entries.value.filter { 
             !it.isArchived && it.sessionId == sessionId 
         }
     }
     
     /**
-     * 获取热区条目（分层读取）
+     * 获取活跃区条目（分层读取）
      * 逻辑: !isArchived OR scheduledAt > (now - windowDays)
      */
-    override suspend fun getHotEntries(sessionId: String, userTier: SubscriptionTier): List<MemoryEntry> {
+    override suspend fun getActiveEntries(sessionId: String, userTier: SubscriptionTier): List<MemoryEntry> {
         val windowDays = SubscriptionConfig.getHotWindowDays(userTier)
         val cutoff = currentTimeProvider() - (windowDays * 24 * 60 * 60 * 1000L)
         
@@ -45,10 +45,10 @@ class FakeMemoryRepository @Inject constructor() : MemoryRepository {
     }
     
     /**
-     * 获取水泥区条目（已归档且超出热区窗口）
+     * 获取归档区条目（已归档且超出活跃区窗口）
      * 逻辑: isArchived AND scheduledAt <= (now - windowDays)
      */
-    override suspend fun getCementEntries(sessionId: String, userTier: SubscriptionTier): List<MemoryEntry> {
+    override suspend fun getArchivedEntries(sessionId: String, userTier: SubscriptionTier): List<MemoryEntry> {
         val windowDays = SubscriptionConfig.getHotWindowDays(userTier)
         val cutoff = currentTimeProvider() - (windowDays * 24 * 60 * 60 * 1000L)
         
@@ -65,7 +65,7 @@ class FakeMemoryRepository @Inject constructor() : MemoryRepository {
             .take(limit)
     }
     
-    override fun observeHotEntries(sessionId: String): Flow<List<MemoryEntry>> {
+    override fun observeActiveEntries(sessionId: String): Flow<List<MemoryEntry>> {
         return entries.map { list ->
             list.filter { !it.isArchived && it.sessionId == sessionId }
         }
@@ -78,7 +78,7 @@ class FakeMemoryRepository @Inject constructor() : MemoryRepository {
         entries.value = current
     }
     
-    override suspend fun archive(entryId: String) {
+    override suspend fun markAsArchived(entryId: String) {
         val current = entries.value.map { entry ->
             if (entry.entryId == entryId) entry.copy(isArchived = true)
             else entry

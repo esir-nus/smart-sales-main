@@ -24,6 +24,7 @@ Communication happens via:
 | 4 | WAV Download | ✅ Implemented | `WavDownloadCoordinator` + `BadgeHttpClient.downloadWav()` |
 | 5 | WAV Delete | ✅ Implemented | `BadgeHttpClient.deleteWav()` |
 | 6 | Time Sync | ✅ Implemented | `GattBleGateway.listenForTimeSync()` |
+| 7 | Recording End | 🔲 Planned | `ConnectivityBridge.recordingNotifications()` (Prism) |
 
 ---
 
@@ -106,6 +107,25 @@ App: PD#Cai123456
 Badge sends:  time#get
 App returns:  time#20260112175600   (YYYYMMDDHHMMSS)
 ```
+
+### 6. Recording End Notification
+
+> **Added**: 2026-02-05 (firmware update from hardware team)
+
+When user finishes recording on badge, ESP32 notifies app that audio is ready for download.
+
+```
+Badge sends:  record#end
+App:          (initiates WAV download flow)
+```
+
+**Workflow**:
+1. User presses record button on badge
+2. Badge sends `time#get` → App responds with timestamp (used for filename)
+3. User records audio → saved as `YYYYMMDDHHMMSS.wav`
+4. User stops recording
+5. Badge sends `record#end` 
+6. App downloads WAV via HTTP `/download?file=<timestamp>.wav`
 
 ---
 

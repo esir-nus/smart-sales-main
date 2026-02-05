@@ -1,8 +1,8 @@
 package com.smartsales.prism.data.real
 
 import com.smartsales.prism.domain.memory.EntityType
-import com.smartsales.prism.domain.memory.RelevancyEntry
-import com.smartsales.prism.domain.memory.RelevancyRepository
+import com.smartsales.prism.domain.memory.EntityEntry
+import com.smartsales.prism.domain.memory.EntityRepository
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.pipeline.ChatTurn
 import com.smartsales.prism.domain.pipeline.ContextBuilder
@@ -25,7 +25,7 @@ import javax.inject.Singleton
 @Singleton
 class RealContextBuilder @Inject constructor(
     private val timeProvider: TimeProvider,
-    private val relevancyRepository: RelevancyRepository
+    private val entityRepository: EntityRepository
 ) : ContextBuilder {
     
     // 会话历史（最多保留10轮，避免上下文膨胀）
@@ -70,7 +70,7 @@ class RealContextBuilder @Inject constructor(
         
         // 按人物线索查询候选
         clues.person?.let { personClue ->
-            val candidates = relevancyRepository.findByAlias(personClue)
+            val candidates = entityRepository.findByAlias(personClue)
             candidates.forEachIndexed { index, entry ->
                 entityContext["person_candidate_$index"] = EntityRef(
                     entityId = entry.entityId,
@@ -82,7 +82,7 @@ class RealContextBuilder @Inject constructor(
         
         // 按地点线索查询候选
         clues.location?.let { locationClue ->
-            val locationCandidates = relevancyRepository.search(locationClue, limit = 3)
+            val locationCandidates = entityRepository.search(locationClue, limit = 3)
                 .filter { it.entityType == EntityType.LOCATION }
             locationCandidates.forEachIndexed { index, entry ->
                 entityContext["location_candidate_$index"] = EntityRef(

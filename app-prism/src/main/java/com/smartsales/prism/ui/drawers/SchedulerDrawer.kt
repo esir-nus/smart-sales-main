@@ -76,7 +76,9 @@ fun SchedulerDrawer(
     // Assuming for now we map them or they are same. 
     // Wait, I created TimelineItemModel in Domain. I must map it to UI TimelineItem here.
     
-    val uiItems = remember(timelineItems, isSelectionMode, selectedInspirationIds) {
+    val expandedConflictIds by viewModel.expandedConflictIds.collectAsState()
+    
+    val uiItems = remember(timelineItems, isSelectionMode, selectedInspirationIds, expandedConflictIds) {
         timelineItems.map { model ->
             when (model) {
                 is TimelineItemModel.Task -> TimelineItem.Task(
@@ -108,7 +110,9 @@ fun SchedulerDrawer(
                     id = model.id,
                     timeDisplay = model.timeDisplay,
                     conflictText = model.conflictText,
-                    isExpanded = false // UI state local to item, or hoisted? ideally hoisted but okay for now
+                    taskA = model.taskA,
+                    taskB = model.taskB,
+                    isExpanded = expandedConflictIds.contains(model.id)
                 )
             }
         }
@@ -211,7 +215,9 @@ fun SchedulerDrawer(
                             onDelete = { id -> viewModel.onDeleteItem(id) },
                             onReschedule = { id, text -> viewModel.onReschedule(id, text) },
                             onMultiSelectToggle = { id -> viewModel.onToggleSelection(id) },
-                            onEnterMultiSelect = { viewModel.onEnterSelectionMode() }
+                            onEnterMultiSelect = { viewModel.onEnterSelectionMode() },
+                            onConflictResolve = { action -> viewModel.handleConflictResolution(action) },
+                            onConflictToggle = { id -> viewModel.toggleConflictExpansion(id) }
                         )
                         
                         // Swipe to exit multi-select

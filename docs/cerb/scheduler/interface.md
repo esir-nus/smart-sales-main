@@ -44,6 +44,9 @@ sealed class LintResult {
     // Wave 4.0: Input Classification
     data class NonIntent(val reason: String) : LintResult()
     data class Inspiration(val content: String) : LintResult()
+    
+    // Wave 4.1: Multi-Task Splitting
+    data class MultiTask(val tasks: List<TimelineItemModel.Task>) : LintResult()
 }
 
 /**

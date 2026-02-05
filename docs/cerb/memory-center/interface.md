@@ -10,17 +10,17 @@
 
 ```kotlin
 interface MemoryRepository {
-    suspend fun getHotEntries(sessionId: String): List<MemoryEntry>
+    suspend fun getActiveEntries(sessionId: String): List<MemoryEntry>
     suspend fun search(query: String, limit: Int = 10): List<MemoryEntry>
-    fun observeHotEntries(sessionId: String): Flow<List<MemoryEntry>>
+    fun observeActiveEntries(sessionId: String): Flow<List<MemoryEntry>>
     suspend fun save(entry: MemoryEntry)
-    suspend fun archive(entryId: String)
+    suspend fun markAsArchived(entryId: String)
 }
 ```
 
-### RelevancyRepository
+### EntityRepository
 
-See [Relevancy Library Interface](../relevancy-library/interface.md) for full contract.
+See [Entity Registry Interface](../entity-registry/interface.md) for full contract.
 
 ### MemoryWriter
 
@@ -115,10 +115,10 @@ enum class ConflictPolicy { EXCLUSIVE, COEXISTING, BACKGROUND }
 
 | Operation | Guarantee |
 |-----------|-----------|
-| `getHotEntries` | Returns active + 14-day scheduled items |
+| `getActiveEntries` | Returns active + 14-day scheduled items |
 | `findByAlias` | Returns all entities matching alias (for disambiguation) |
 | `save` | Persists immediately, triggers observers |
-| `archive` | Moves from Hot → Cement zone |
+| `markAsArchived` | Sets `isArchived = true` |
 
 ---
 
@@ -127,7 +127,7 @@ enum class ConflictPolicy { EXCLUSIVE, COEXISTING, BACKGROUND }
 - ❌ Read `RealMemoryRepository.kt` implementation
 - ❌ Read `MemoryDAO.kt` (Room layer)
 - ❌ Access database directly
-- ❌ Implement your own Hot/Cement zone logic
+- ❌ Implement your own Active/Archived zone logic
 - ❌ Parse `metricsHistoryJson` manually (use provided helpers)
 
 ---

@@ -16,7 +16,7 @@ Client Profile Hub provides HubSpot-style CRM data hierarchy (Account → Contac
 |------|----------------|
 | [RL Module](../rl-module/spec.md) | Habit learning from structured output |
 | [User Habit](../user-habit/spec.md) | Habit storage (entityId, key, confidence) |
-| [Relevancy Library](../relevancy-library/spec.md) | Entity disambiguation, alias mapping |
+| [Entity Registry](../entity-registry/spec.md) | Entity disambiguation, alias mapping |
 
 ---
 
@@ -49,7 +49,7 @@ enum class EntityType {
 }
 ```
 
-### RelevancyEntry (CRM Fields)
+### EntityEntry (CRM Fields)
 
 ```kotlin
 // New nullable fields for CRM types

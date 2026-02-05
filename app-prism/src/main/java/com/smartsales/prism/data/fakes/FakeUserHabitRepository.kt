@@ -2,6 +2,7 @@ package com.smartsales.prism.data.fakes
 
 import com.smartsales.prism.domain.habit.UserHabit
 import com.smartsales.prism.domain.habit.UserHabitRepository
+import com.smartsales.prism.domain.rl.ObservationSource
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -10,10 +11,10 @@ import javax.inject.Singleton
  *
  * 用于单元测试的 Fake 实现。
  *
- * ## 置信度计算
- * - 新习惯: confidence = 0.5 (中性)
- * - 已有习惯: confidence = observationCount / (observationCount + rejectionCount)
- * - 除零边界: 当 total = 0 时,返回 0.5
+ * ## Wave 1.5 更新
+ * - `observe()` 根据 source 路由到不同计数器
+ * - 移除置信度计算 (在查询时计算)
+ * - 新增 `delete()` 方法
  *
  * NOTE: No hardcoded test data. Tests should seed their own data.
  */
@@ -34,60 +35,45 @@ class FakeUserHabitRepository @Inject constructor() : UserHabitRepository {
         return habits[makeKey(key, entityId)]
     }
 
-    override suspend fun observe(key: String, value: String, entityId: String?) {
+    override suspend fun observe(
+        key: String,
+        value: String,
+        entityId: String?,
+        source: ObservationSource
+    ) {
         val habitKey = makeKey(key, entityId)
         val existing = habits[habitKey]
         val now = System.currentTimeMillis()
 
         if (existing == null) {
-            // 创建新习惯 (confidence = 0.5)
+            // 创建新习惯,根据 source 初始化对应计数器
             habits[habitKey] = UserHabit(
                 habitKey = key,
                 habitValue = value,
                 entityId = entityId,
-                isExplicit = false,
-                confidence = 0.5f,
-                observationCount = 1,
-                rejectionCount = 0,
+                inferredCount = if (source == ObservationSource.INFERRED) 1 else 0,
+                explicitPositive = if (source == ObservationSource.USER_POSITIVE) 1 else 0,
+                explicitNegative = if (source == ObservationSource.USER_NEGATIVE) 1 else 0,
                 lastObservedAt = now,
                 createdAt = now
             )
         } else {
-            // 增加观察计数并重新计算置信度
-            val newObsCount = existing.observationCount + 1
+            // 增加对应计数器
             habits[habitKey] = existing.copy(
                 habitValue = value,
-                observationCount = newObsCount,
-                confidence = recalculateConfidence(newObsCount, existing.rejectionCount),
+                inferredCount = existing.inferredCount + 
+                    if (source == ObservationSource.INFERRED) 1 else 0,
+                explicitPositive = existing.explicitPositive + 
+                    if (source == ObservationSource.USER_POSITIVE) 1 else 0,
+                explicitNegative = existing.explicitNegative + 
+                    if (source == ObservationSource.USER_NEGATIVE) 1 else 0,
                 lastObservedAt = now
             )
         }
     }
 
-    override suspend fun reject(key: String, entityId: String?) {
-        val habitKey = makeKey(key, entityId)
-        val existing = habits[habitKey] ?: return
-
-        // 增加拒绝计数并重新计算置信度
-        val newRejCount = existing.rejectionCount + 1
-        habits[habitKey] = existing.copy(
-            rejectionCount = newRejCount,
-            confidence = recalculateConfidence(existing.observationCount, newRejCount),
-            lastObservedAt = System.currentTimeMillis()
-        )
-    }
-
-    /**
-     * 计算置信度
-     * - total = 0 → 0.5 (除零边界,新习惯中性置信度)
-     * - total > 0 → obs / (obs + rej)
-     */
-    private fun recalculateConfidence(observationCount: Int, rejectionCount: Int): Float {
-        val total = observationCount + rejectionCount
-        return when {
-            total == 0 -> 0.5f  // 除零边界:新习惯,中性置信度
-            else -> observationCount.toFloat() / total
-        }
+    override suspend fun delete(key: String, entityId: String?) {
+        habits.remove(makeKey(key, entityId))
     }
 
     /**

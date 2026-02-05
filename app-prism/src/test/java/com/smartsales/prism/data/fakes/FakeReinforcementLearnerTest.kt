@@ -50,7 +50,7 @@ class FakeReinforcementLearnerTest {
             entityId = null,
             key = "preferred_meeting_time",
             value = "morning",
-            source = ObservationSource.USER_INPUT,
+            source = ObservationSource.USER_POSITIVE,
             evidence = "用户说我喜欢早上开会"
         )
         
@@ -58,7 +58,8 @@ class FakeReinforcementLearnerTest {
         
         val habit = habitRepository.getHabit("preferred_meeting_time", entityId = null)
         assertEquals("morning", habit?.habitValue)
-        assertEquals(1, habit?.observationCount)
+        assertEquals(1, habit?.explicitPositive)
+        assertEquals(0, habit?.inferredCount)
     }
 
     @Test
@@ -68,7 +69,7 @@ class FakeReinforcementLearnerTest {
                 entityId = null,
                 key = "preferred_meeting_time",
                 value = "morning",
-                source = ObservationSource.USER_INPUT,
+                source = ObservationSource.USER_POSITIVE,
                 evidence = null
             ),
             RlObservation(
@@ -92,8 +93,8 @@ class FakeReinforcementLearnerTest {
     @Test
     fun `getHabitContext with null entityIds returns global habits only`() = runTest {
         // Seed: 1 global + 1 entity-specific
-        habitRepository.observe("preferred_meeting_time", "morning", entityId = null)
-        habitRepository.observe("default_duration", "60", entityId = "client-123")
+        habitRepository.observe("preferred_meeting_time", "morning", entityId = null, ObservationSource.INFERRED)
+        habitRepository.observe("default_duration", "60", entityId = "client-123", ObservationSource.INFERRED)
         
         val context = reinforcementLearner.getHabitContext(entityIds = null)
         
@@ -104,8 +105,8 @@ class FakeReinforcementLearnerTest {
 
     @Test
     fun `getHabitContext with empty list returns global habits only`() = runTest {
-        habitRepository.observe("preferred_meeting_time", "morning", entityId = null)
-        habitRepository.observe("default_duration", "60", entityId = "client-123")
+        habitRepository.observe("preferred_meeting_time", "morning", entityId = null, ObservationSource.INFERRED)
+        habitRepository.observe("default_duration", "60", entityId = "client-123", ObservationSource.INFERRED)
         
         val context = reinforcementLearner.getHabitContext(entityIds = emptyList())
         
@@ -116,10 +117,10 @@ class FakeReinforcementLearnerTest {
     @Test
     fun `getHabitContext aggregates global and entity habits`() = runTest {
         // Seed: 1 global, 2 for client-123, 1 for client-456
-        habitRepository.observe("preferred_meeting_time", "morning", entityId = null)
-        habitRepository.observe("default_duration", "60", entityId = "client-123")
-        habitRepository.observe("preferred_location", "office", entityId = "client-123")
-        habitRepository.observe("follow_up_interval", "7", entityId = "client-456")
+        habitRepository.observe("preferred_meeting_time", "morning", entityId = null, ObservationSource.INFERRED)
+        habitRepository.observe("default_duration", "60", entityId = "client-123", ObservationSource.INFERRED)
+        habitRepository.observe("preferred_location", "office", entityId = "client-123", ObservationSource.INFERRED)
+        habitRepository.observe("follow_up_interval", "7", entityId = "client-456", ObservationSource.INFERRED)
         
         val context = reinforcementLearner.getHabitContext(entityIds = listOf("client-123"))
         
@@ -130,9 +131,9 @@ class FakeReinforcementLearnerTest {
 
     @Test
     fun `getHabitContext with multiple entityIds aggregates all`() = runTest {
-        habitRepository.observe("default_duration", "60", entityId = "client-123")
-        habitRepository.observe("preferred_location", "office", entityId = "client-123")
-        habitRepository.observe("follow_up_interval", "7", entityId = "client-456")
+        habitRepository.observe("default_duration", "60", entityId = "client-123", ObservationSource.INFERRED)
+        habitRepository.observe("preferred_location", "office", entityId = "client-123", ObservationSource.INFERRED)
+        habitRepository.observe("follow_up_interval", "7", entityId = "client-456", ObservationSource.INFERRED)
         
         val context = reinforcementLearner.getHabitContext(
             entityIds = listOf("client-123", "client-456")
@@ -144,7 +145,7 @@ class FakeReinforcementLearnerTest {
 
     @Test
     fun `getHabitContext suggestedDefaults is empty in Wave 1`() = runTest {
-        habitRepository.observe("preferred_meeting_time", "morning", entityId = null)
+        habitRepository.observe("preferred_meeting_time", "morning", entityId = null, ObservationSource.INFERRED)
         
         val context = reinforcementLearner.getHabitContext(entityIds = null)
         

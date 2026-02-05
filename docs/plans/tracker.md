@@ -155,6 +155,7 @@
 | Wave | Focus | Status |
 |------|-------|--------|
 | **1** | Interface + Observation Schema | ✅ SHIPPED |
+| **1.5** | Schema Migration (4-rule model) | ✅ SHIPPED |
 | **2** | Orchestrator Integration (Parser) | 🔲 (Planning) |
 | **3** | Context Builder Integration | 🔲 |
 
@@ -162,6 +163,13 @@
 - `RlModels` (Observation, Source)
 - `ReinforcementLearner` interface + Fake facade
 - `HabitContext` aggregation logic
+
+**Wave 1.5 Shipped**: 2026-02-05
+- `ObservationSource`: 3 values (INFERRED, USER_POSITIVE, USER_NEGATIVE)
+- `UserHabit`: New 4-rule schema (inferredCount, explicitPositive, explicitNegative)
+- `UserHabitRepository.observe(source)` + `delete()`
+- `FakeUserHabitRepository`: Source-based routing
+- Tests updated for new schema
 
 ---
 

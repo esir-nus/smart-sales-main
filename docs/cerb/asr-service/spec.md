@@ -111,9 +111,9 @@ sealed class AsrResult {
 **Goal**: Real transcription via FunASR.
 
 - **Exit Criteria**:
-  - [ ] `FunAsrService` in `data/asr/`
-  - [ ] DashScope SDK integrated (build.gradle)
-  - [ ] API key from secure storage
+  - [ ] `FunAsrService` in `app-prism/data/asr/`
+  - [ ] Uses DashScope SDK (transitive from `data:ai-core`)
+  - [ ] API key from `BuildConfig.DASHSCOPE_API_KEY`
   - [ ] Transcription works end-to-end
 
 - **Test Cases**:
@@ -167,11 +167,14 @@ val apiKey = BuildConfig.DASHSCOPE_API_KEY
 
 ## File Map
 
-| Layer | Files |
-|-------|-------|
-| **Domain** | `AsrService.kt`, `TranscriptionResult.kt`, `TranscriptionConfig.kt` |
-| **Data** | `FunAsrService.kt`, `FakeAsrService.kt` |
-| **DI** | `AsrModule.kt` |
+| Layer | Path | Files |
+|-------|------|-------|
+| **Domain** | `app-prism/domain/asr/` | `AsrService.kt`, `AsrResult.kt` |
+| **Data** | `app-prism/data/asr/` | `FunAsrService.kt` |
+| **Fakes** | `app-prism/data/fakes/` | `FakeAsrService.kt` |
+| **DI** | `app-prism/di/` | `AsrModule.kt` |
+
+**Note**: SDK comes from `data:ai-core` via transitive dependency. No direct SDK import in `app-prism`.
 
 ---
 

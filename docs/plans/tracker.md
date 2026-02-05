@@ -204,7 +204,7 @@
 | Wave | Focus | Status |
 |------|-------|--------|
 | **1** | Interface + Fake | ✅ SHIPPED |
-| **2** | FunASR Implementation | 🔲 |
+| **2** | FunASR Implementation | ✅ SHIPPED |
 | **3** | Error Handling + Retry | 🔲 |
 
 **Key Deliverables**:

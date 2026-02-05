@@ -134,7 +134,7 @@ dependencies {
     implementation(projects.core.util)
     implementation(libs.coroutines.core)
     implementation(libs.hilt.android)
-    implementation(libs.dashscope.sdk)
+    api(libs.dashscope.sdk)  // api() to expose to consumers (app-prism uses Recognition)
     implementation(libs.retrofit.core)
     implementation(libs.retrofit.converter.gson)
     implementation(libs.okhttp)

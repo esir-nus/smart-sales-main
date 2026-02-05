@@ -195,7 +195,7 @@
 |------|-------|--------|
 | **1** | Interface + Fake | ✅ SHIPPED |
 | **2** | Real Implementation (Backend) | ✅ SHIPPED |
-| **2.5** | UI Wiring | 🔲 |
+| **2.5** | UI Wiring | 🏗️ Implemented (Verify) |
 | **3** | record#end Handler | 🔲 |
 
 **Key Deliverables**:

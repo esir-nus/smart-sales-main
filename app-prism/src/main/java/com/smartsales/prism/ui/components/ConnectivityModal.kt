@@ -37,8 +37,8 @@ fun ConnectivityModal(
     onDismiss: () -> Unit,
     viewModel: ConnectivityViewModel = hiltViewModel()
 ) {
-    // 从 ViewModel 收集状态
-    val state by viewModel.connectionState.collectAsState()
+    // 从 ViewModel 收集状态 — 使用 effectiveState（真实状态 + UI 覆盖）
+    val state by viewModel.effectiveState.collectAsState()
     val batteryLevel by viewModel.batteryLevel.collectAsState()
 
     Box(

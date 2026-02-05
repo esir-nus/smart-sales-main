@@ -209,8 +209,8 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
 **Goal**: Wire existing UI to RealConnectivityBridge.
 
 - **Exit Criteria**:
-  - [ ] `RealConnectivityService` implemented
-  - [ ] DI binding: `ConnectivityService` → `RealConnectivityService`
+  - [x] `RealConnectivityService` implemented
+  - [x] DI binding: `ConnectivityService` → `RealConnectivityService`
   - [ ] `ConnectivityModal` displays correct badge info
   - [ ] Disconnect/Reconnect buttons work
 
@@ -218,6 +218,7 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
   - [ ] L2: Tap 🔗 icon → modal shows real badge data
   - [ ] L2: Disconnect → toast + modal shows "离线"
   - [ ] L2: Reconnect → badge reconnects successfully
+
 
 ---
 
@@ -241,9 +242,10 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
 
 | Layer | Files |
 |-------|-------|
-| **Domain** | `ConnectivityBridge.kt`, `BadgeConnectionState.kt`, `RecordingNotification.kt`, `WavDownloadResult.kt` |
-| **Data** | `RealConnectivityBridge.kt`, `FakeConnectivityBridge.kt` |
+| **Domain** | `ConnectivityBridge.kt`, `ConnectivityService.kt`, `BadgeConnectionState.kt`, `RecordingNotification.kt`, `WavDownloadResult.kt` |
+| **Data** | `RealConnectivityBridge.kt`, `RealConnectivityService.kt`, `FakeConnectivityBridge.kt` |
 | **DI** | `ConnectivityBridgeModule.kt` |
+
 
 ---
 

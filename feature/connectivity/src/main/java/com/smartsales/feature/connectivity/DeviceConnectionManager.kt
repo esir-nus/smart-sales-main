@@ -42,11 +42,10 @@ class DefaultDeviceConnectionManager @Inject constructor(
     private val provisioner: WifiProvisioner,
     private val dispatchers: DispatcherProvider,
     private val httpChecker: HttpEndpointChecker,
-    private val badgeStateMonitor: BadgeStateMonitor,
-    private val externalScope: CoroutineScope = CoroutineScope(SupervisorJob() + dispatchers.default)
+    private val badgeStateMonitor: BadgeStateMonitor
 ) : DeviceConnectionManager {
 
-    private val scope = externalScope
+    private val scope = CoroutineScope(SupervisorJob() + dispatchers.default)
     private val lock = Mutex()
     private val _state = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
 

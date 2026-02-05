@@ -224,8 +224,8 @@ fun getHabitsWithCleanup(entityId: String?, now: Instant): List<UserHabit> {
 | Wave | Focus | Status |
 |------|-------|--------|
 | **1** | Interface + RlObservation Schema | ✅ SHIPPED (2026-02-04) |
-| **1.5** | Schema Migration (3-value enum, new fields) | 🔲 (Required) |
-| **2** | Orchestrator Integration (Parser) | 🔲 (Planning) |
+| **1.5** | Schema Migration (3-value enum, new fields) | ✅ SHIPPED (2026-02-05) |
+| **2** | Orchestrator Integration (Parser) | ✅ SHIPPED (2026-02-05) |
 | **3** | Context Builder Integration | 🔲 |
 | **4** | Time Decay + Deletion Cleanup | 🔲 |
 

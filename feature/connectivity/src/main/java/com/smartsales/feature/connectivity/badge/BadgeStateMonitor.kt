@@ -61,10 +61,9 @@ interface BadgeStateMonitor {
 @Singleton
 class RealBadgeStateMonitor @Inject constructor(
     private val provisioner: WifiProvisioner,
-    private val dispatchers: DispatcherProvider,
-    externalScope: CoroutineScope? = null
+    private val dispatchers: DispatcherProvider
 ) : BadgeStateMonitor {
-    private val scope = externalScope ?: CoroutineScope(SupervisorJob() + dispatchers.default)
+    private val scope = CoroutineScope(SupervisorJob() + dispatchers.default)
 
     private val _status = MutableStateFlow(BadgeStatus.UNKNOWN)
     override val status: StateFlow<BadgeStatus> = _status.asStateFlow()

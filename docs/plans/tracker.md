@@ -156,7 +156,7 @@
 |------|-------|--------|
 | **1** | Interface + Observation Schema | ✅ SHIPPED |
 | **1.5** | Schema Migration (4-rule model) | ✅ SHIPPED |
-| **2** | Orchestrator Integration (Parser) | 🔲 (Planning) |
+| **2** | Orchestrator Integration (Parser) | ✅ SHIPPED |
 | **3** | Context Builder Integration | 🔲 |
 
 **Wave 1 Shipped**: 2026-02-04
@@ -170,6 +170,11 @@
 - `UserHabitRepository.observe(source)` + `delete()`
 - `FakeUserHabitRepository`: Source-based routing
 - Tests updated for new schema
+
+**Wave 2 Shipped**: 2026-02-05
+- `PrismOrchestrator.parseRlObservations()`: JSON parser for rl_observations
+- Fire-and-forget wiring in `processSchedulerInput()`
+- Source string → enum mapping
 
 ---
 

@@ -314,8 +314,7 @@ class DefaultDeviceConnectionManagerTest {
             provisioner = provisioner,
             dispatchers = dispatcherProvider,
             httpChecker = httpChecker,
-            badgeStateMonitor = fakeBadgeMonitor,
-            externalScope = backgroundScope
+            badgeStateMonitor = fakeBadgeMonitor
         )
     }
 

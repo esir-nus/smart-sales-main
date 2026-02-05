@@ -114,8 +114,7 @@ class BadgeStateMonitorTest {
         val dispatchers = FakeDispatcherProvider(dispatcher)
         return RealBadgeStateMonitor(
             provisioner = provisioner,
-            dispatchers = dispatchers,
-            externalScope = backgroundScope
+            dispatchers = dispatchers
         )
     }
 }

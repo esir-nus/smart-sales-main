@@ -2,7 +2,7 @@ package com.smartsales.prism.di
 
 import com.smartsales.prism.data.fakes.FakeAudioRepository
 
-import com.smartsales.prism.data.fakes.FakeConnectivityService
+
 import com.smartsales.prism.data.real.RealContextBuilder
 import com.smartsales.prism.data.fakes.FakeExecutor
 import com.smartsales.prism.data.fakes.FakeHistoryRepository
@@ -15,7 +15,7 @@ import com.smartsales.prism.data.fakes.FakeUserProfileRepository
 import com.smartsales.prism.data.real.DashscopeExecutor
 import com.smartsales.prism.data.real.PrismOrchestrator
 import com.smartsales.prism.domain.audio.AudioRepository
-import com.smartsales.prism.domain.connectivity.ConnectivityService
+
 import com.smartsales.prism.domain.memory.MemoryRepository
 import com.smartsales.prism.domain.memory.MemoryWriter
 import com.smartsales.prism.domain.memory.EntityRepository
@@ -73,10 +73,7 @@ abstract class PrismModule {
     @Binds @Singleton
     abstract fun bindMemoryWriter(fake: FakeMemoryWriter): MemoryWriter
     
-    // === Connectivity ===
-    
-    @Binds @Singleton
-    abstract fun bindConnectivityService(fake: FakeConnectivityService): ConnectivityService
+
     
     // === Onboarding ===
     
@@ -112,4 +109,14 @@ abstract class PrismModule {
 
     @Binds @Singleton
     abstract fun bindTimeProvider(impl: com.smartsales.prism.data.time.SystemTimeProvider): com.smartsales.prism.domain.time.TimeProvider
+
+    // === Pairing ===
+
+    @Binds @Singleton
+    abstract fun bindPairingService(impl: com.smartsales.prism.data.pairing.RealPairingService): com.smartsales.prism.domain.pairing.PairingService
+
+    // === Badge Audio Pipeline ===
+
+    @Binds @Singleton
+    abstract fun bindBadgeAudioPipeline(fake: com.smartsales.prism.data.fakes.FakeBadgeAudioPipeline): com.smartsales.prism.domain.audio.BadgeAudioPipeline
 }

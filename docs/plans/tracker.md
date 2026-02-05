@@ -248,7 +248,7 @@
 | Wave | Focus | Status |
 |------|-------|--------|
 | **1** | Interface + State Machine | ✅ SHIPPED (2026-02-05) |
-| **2** | Fake Pipeline | 🔲 |
+| **2** | Fake Pipeline | ✅ SHIPPED (2026-02-05) |
 | **3** | Real Implementation | 🔲 |
 | **4** | Error Recovery | 🔲 |
 

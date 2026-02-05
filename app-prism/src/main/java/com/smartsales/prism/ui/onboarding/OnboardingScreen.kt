@@ -38,6 +38,7 @@ fun OnboardingScreen(
     viewModel: OnboardingViewModel = hiltViewModel()
 ) {
     var currentStep by remember { mutableStateOf(OnboardingStep.WELCOME) }
+    var discoveredBadge by remember { mutableStateOf<com.smartsales.prism.domain.pairing.DiscoveredBadge?>(null) }
 
     // Aurora Background (Shared) - Consistent with App
     Box(
@@ -75,16 +76,26 @@ fun OnboardingScreen(
                     )
                     OnboardingStep.SCAN -> ScanStep(
                         viewModel = viewModel,
-                        onCancel = { currentStep = OnboardingStep.HARDWARE_WAKE },
-                        onFound = { currentStep = OnboardingStep.DEVICE_FOUND }
+                        onCancel = { 
+                            viewModel.cancelPairing()
+                            currentStep = OnboardingStep.HARDWARE_WAKE 
+                        },
+                        onFound = { badge -> 
+                            discoveredBadge = badge
+                            currentStep = OnboardingStep.DEVICE_FOUND 
+                        }
                     )
                     OnboardingStep.DEVICE_FOUND -> DeviceFoundStep(
+                        badge = discoveredBadge!!,
                         onConnect = { currentStep = OnboardingStep.WIFI_CREDS }
                     )
                     OnboardingStep.WIFI_CREDS -> WifiCredsStep(
+                        viewModel = viewModel,
+                        badge = discoveredBadge!!,
                         onConnect = { currentStep = OnboardingStep.FIRMWARE_CHECK }
                     )
-                    OnboardingStep.FIRMWARE_CHECK -> FirmwareCheckStep(
+                    OnboardingStep.FIRMWARE_CHECK -> PairingProgressStep(
+                        viewModel = viewModel,
                         onComplete = { currentStep = OnboardingStep.DEVICE_NAMING }
                     )
                     OnboardingStep.DEVICE_NAMING -> DeviceNamingStep(
@@ -191,7 +202,7 @@ private fun ScanStep(
     onFound: () -> Unit
 ) {
     LaunchedEffect(Unit) {
-        viewModel.scanForDevices()
+        viewModel.startScan()
         onFound()
     }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {

@@ -120,12 +120,53 @@ sealed class WavDownloadResult {
 
 ---
 
+## UI Components
+
+> **Note**: UI components exist and are ready for wiring. Wave 2 shipped backend, Wave 2.5 will wire UI.
+
+### ConnectivityModal
+
+**File**: [`ui/components/ConnectivityModal.kt`](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/components/ConnectivityModal.kt)
+
+**Trigger**: User taps 🔗 Bluetooth icon in top bar.
+
+#### States
+
+| State | Visual | Actions |
+|-------|--------|---------|
+| `CONNECTED` | ✅ Green pulsing BT icon<br>Badge name + ID + battery | **⚡ 断开连接**<br>**🔄 检查更新** |
+| `DISCONNECTED` | ⚫ Gray BT icon<br>"🔴 离线" | **连接设备** |
+| `RECONNECTING` | Spinner | (Auto) |
+| `CHECKING_UPDATE` | Spinner |  (Auto) |
+| `UPDATE_FOUND` | 📥 Amber icon<br>"发现新版本" | **立即同步**<br>**稍后** |
+| `UPDATING` | Progress bar | (Auto) |
+| `WIFI_MISMATCH` | ⚠️ Warning<br>WiFi form | **忽略**<br>**更新配置** |
+
+#### Data Flow
+
+```
+User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBridge → Legacy
+```
+
+#### Implementation Status
+
+| Component | Status | Wave |
+|-----------|--------|------|
+| `ConnectivityModal.kt` | ✅ Exists | Pre-existing |
+| `ConnectivityViewModel.kt` | ✅ Exists | Pre-existing |
+| `ConnectivityService` (interface) | ✅ Exists | Pre-existing |
+| `RealConnectivityService` | 🔲 **Need** | Wave 2.5 |
+| `ConnectivityBridge` | ✅ Exists | Wave 2 |
+
+---
+
 ## Wave Plan
 
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
-| **1** | Interface + Fake | 🔲 | `ConnectivityBridge` interface, `FakeConnectivityBridge` |
-| **2** | Real Implementation | 🔲 | `RealConnectivityBridge` wrapping legacy |
+| **1** | Interface + Fake | ✅ SHIPPED | `ConnectivityBridge` interface, `FakeConnectivityBridge` |
+| **2** | Real Implementation (Backend) | ✅ SHIPPED | `RealConnectivityBridge` wrapping legacy |
+| **2.5** | UI Wiring | 🔲 | `RealConnectivityService`, DI binding, modal integration |
 | **3** | Record End Handler | 🔲 | `record#end` BLE listener, notification flow |
 
 ---
@@ -160,6 +201,23 @@ sealed class WavDownloadResult {
   - [ ] L2: Connect to real badge, query status
   - [ ] L2: Download WAV file, verify contents
   - [ ] Rate limit: Rapid queries throttled correctly
+
+---
+
+## Wave 2.5 Ship Criteria
+
+**Goal**: Wire existing UI to RealConnectivityBridge.
+
+- **Exit Criteria**:
+  - [ ] `RealConnectivityService` implemented
+  - [ ] DI binding: `ConnectivityService` → `RealConnectivityService`
+  - [ ] `ConnectivityModal` displays correct badge info
+  - [ ] Disconnect/Reconnect buttons work
+
+- **Test Cases**:
+  - [ ] L2: Tap 🔗 icon → modal shows real badge data
+  - [ ] L2: Disconnect → toast + modal shows "离线"
+  - [ ] L2: Reconnect → badge reconnects successfully
 
 ---
 

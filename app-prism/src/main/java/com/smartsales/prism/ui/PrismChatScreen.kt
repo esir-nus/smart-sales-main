@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
@@ -210,7 +211,7 @@ fun PrismChatScreen(
                 onMenuClick = onMenuClick,
                 onNewSessionClick = onNewSessionClick,
                 onDebugClick = onDebugClick,
-                // Pass new analytics handler if needed, currently reusing logic inside header
+                onDeviceClick = onAudioBadgeClick
             )
         }
 
@@ -277,7 +278,8 @@ private fun ProMaxHeader(
     sessionTitle: String,
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
-    onDebugClick: () -> Unit
+    onDebugClick: () -> Unit,
+    onDeviceClick: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -287,10 +289,10 @@ private fun ProMaxHeader(
         // Left Group
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             GlassCircleButton(icon = Icons.Filled.Menu, onClick = onMenuClick)
-            // Analytics/Chart - Yellow Tint
+            // Device Connectivity - Yellow Tint
              GlassCircleButton(
-                 icon = Icons.AutoMirrored.Filled.ShowChart, 
-                 onClick = { /* TODO */ },
+                 icon = Icons.Filled.Bluetooth, 
+                 onClick = onDeviceClick,
                  tint = AccentYellow 
              )
         }

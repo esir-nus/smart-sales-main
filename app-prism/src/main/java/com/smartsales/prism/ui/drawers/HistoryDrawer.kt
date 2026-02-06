@@ -32,6 +32,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smartsales.prism.domain.model.SessionPreview
 import com.smartsales.prism.ui.theme.*
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.smartsales.prism.ui.components.connectivity.ConnectivityViewModel
+import com.smartsales.prism.ui.components.connectivity.ConnectionState
 
 /**
  * History Drawer (Variant 4: Hybrid Collapsible)
@@ -44,6 +49,7 @@ import com.smartsales.prism.ui.theme.*
  */
 @Composable
 fun HistoryDrawer(
+    connectivityViewModel: ConnectivityViewModel = hiltViewModel(),
     groupedSessions: Map<String, List<SessionPreview>>,
     onSessionClick: (String) -> Unit,
     onDeviceClick: () -> Unit,
@@ -53,6 +59,9 @@ fun HistoryDrawer(
     onDeleteSession: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    // Observe connectivity state
+    val batteryLevel by connectivityViewModel.batteryLevel.collectAsState()
+    val connectionState by connectivityViewModel.effectiveState.collectAsState()
     // Main Container (Glass Sheet)
     Box(
         modifier = modifier
@@ -69,6 +78,8 @@ fun HistoryDrawer(
 
         // 1. Header (Floating Capsule)
         FloatingCapsuleHeader(
+            batteryLevel = batteryLevel,
+            connectionState = connectionState,
             onClick = onDeviceClick,
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -87,6 +98,8 @@ fun HistoryDrawer(
 
 @Composable
 private fun FloatingCapsuleHeader(
+    batteryLevel: Int,
+    connectionState: ConnectionState,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -106,7 +119,7 @@ private fun FloatingCapsuleHeader(
             // Battery
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Icon(Icons.Filled.BatteryStd, contentDescription = null, tint = AccentGreen, modifier = Modifier.size(16.dp))
-                Text("85%", style = MaterialTheme.typography.labelMedium, color = AccentGreen, fontWeight = FontWeight.Bold)
+                Text("$batteryLevel%", style = MaterialTheme.typography.labelMedium, color = AccentGreen, fontWeight = FontWeight.Bold)
             }
             
             Divider(modifier = Modifier.height(12.dp).width(1.dp), color = Color.Black.copy(alpha = 0.1f))
@@ -114,10 +127,24 @@ private fun FloatingCapsuleHeader(
             // Device
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Icon(Icons.Filled.Wifi, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(16.dp))
-                Text("SmartBadge", style = MaterialTheme.typography.labelMedium, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                val deviceName = when (connectionState) {
+                    ConnectionState.CONNECTED -> "SmartBadge"
+                    ConnectionState.DISCONNECTED -> "未连接"
+                    ConnectionState.RECONNECTING -> "连接中..."
+                    else -> "SmartBadge"
+                }
+                Text(deviceName, style = MaterialTheme.typography.labelMedium, color = TextPrimary, fontWeight = FontWeight.SemiBold)
             }
             
-            Text("• 正常", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+            val statusText = when (connectionState) {
+                ConnectionState.CONNECTED -> "• 正常"
+                ConnectionState.DISCONNECTED -> "• 离线"
+                ConnectionState.RECONNECTING -> "• 重连中"
+                else -> ""
+            }
+            if (statusText.isNotEmpty()) {
+                Text(statusText, style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+            }
         }
     }
 }

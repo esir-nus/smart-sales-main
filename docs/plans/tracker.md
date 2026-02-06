@@ -202,13 +202,19 @@
 |------|-------|--------|
 | **1** | Interface + Fake | ✅ SHIPPED |
 | **2** | Real Implementation (Backend) | ✅ SHIPPED |
-| **2.5** | UI Wiring | 🏗️ Implemented (Verify) |
+| **2.5** | UI Wiring | ✅ SHIPPED |
 | **3** | record#end Handler | 🔲 |
+| **4** | Battery Level Reporting | 🔲 (Pending hardware) |
 
 **Key Deliverables**:
 - `ConnectivityBridge` interface (Prism domain)
 - `RealConnectivityBridge` wrapping `DeviceConnectionManager`
 - Preserved ESP32 rate limiting (2s query TTL, 300ms inter-command gap)
+
+**Tech Debt**: 
+- Battery level currently hardcoded placeholder (85%) in `ConnectivityViewModel`
+- Real BLE battery characteristic not yet implemented by hardware team
+- UI wired to observe placeholder, ready for real data when available
 
 ---
 
@@ -216,8 +222,7 @@
 
 | Wave | Focus | Status |
 |------|-------|--------|
-| **1** | Core Service (Wrap Legacy) | 🔧 IN PROGRESS |
-| **1.5** | Wiring (Onboarding UI) | 🔲 PLANNED |
+| **1** | Core Service (Wrap Legacy) | ✅ SHIPPED |\n| **1.5** | Wiring (Onboarding UI) | 🔧 IN PROGRESS (L2 pending) |
 | **2** | Robustness & Error Handling | 🔲 PLANNED |
 | **3** | Polish (UX Refinement) | 🔲 PLANNED |
 

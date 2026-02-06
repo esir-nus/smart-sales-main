@@ -101,16 +101,17 @@ class ConnectivityViewModel @Inject constructor(
     }
 
     /**
-     * 重新连接
-     * 
-     * ConnectivityService 内部已处理 RECONNECTING 状态，
-     * 这里不需要手动设置 UI 状态
+     * 重新连接 — 显示 RECONNECTING 状态并处理结果
      */
     fun reconnect() {
         viewModelScope.launch {
-            _uiOverride.value = null  // 清除覆盖
-            connectivityService.reconnect()
-            // 真实状态会通过 ConnectivityBridge 自动更新
+            _uiOverride.value = ConnectionState.RECONNECTING
+            when (val result = connectivityService.reconnect()) {
+                ReconnectResult.Connected -> _uiOverride.value = null
+                ReconnectResult.DeviceNotFound -> _uiOverride.value = null
+                ReconnectResult.WifiMismatch -> _uiOverride.value = ConnectionState.WIFI_MISMATCH
+                is ReconnectResult.Error -> _uiOverride.value = null
+            }
         }
     }
 

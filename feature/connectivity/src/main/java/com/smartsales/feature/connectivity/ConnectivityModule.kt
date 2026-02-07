@@ -26,14 +26,14 @@ import org.json.JSONArray
 // 最近修改: 2025-11-14
 @Module
 @InstallIn(SingletonComponent::class)
-interface ConnectivityModule {
+abstract class ConnectivityModule {
     @Binds
     @Singleton
-    fun bindDeviceConnectionManager(impl: DefaultDeviceConnectionManager): DeviceConnectionManager
+    abstract fun bindDeviceConnectionManager(impl: DefaultDeviceConnectionManager): DeviceConnectionManager
 
     @Binds
     @Singleton
-    fun bindBadgeStateMonitor(impl: RealBadgeStateMonitor): BadgeStateMonitor
+    abstract fun bindBadgeStateMonitor(impl: RealBadgeStateMonitor): BadgeStateMonitor
 }
 
 @Module
@@ -72,6 +72,12 @@ object ConnectivityProvidesModule {
     fun provideBadgeHttpClient(
         dispatchers: DispatcherProvider
     ): BadgeHttpClient = DefaultBadgeHttpClient(dispatchers)
+    
+    @Provides
+    @Singleton
+    fun provideSessionStore(
+        @ApplicationContext context: Context
+    ): SessionStore = SharedPrefsSessionStore(context)
 
     @Provides
     @Singleton

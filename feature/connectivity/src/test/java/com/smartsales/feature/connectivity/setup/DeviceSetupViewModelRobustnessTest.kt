@@ -217,6 +217,8 @@ class DeviceSetupViewModelRobustnessTest {
             pairResult
 
         override suspend fun retry(): Result<Unit> = Result.Success(Unit)
+        
+        override fun disconnectBle() = Unit
 
         override fun forgetDevice() = Unit
 

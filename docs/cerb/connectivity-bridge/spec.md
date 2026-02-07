@@ -70,6 +70,7 @@ Connectivity Bridge provides a **thin, Prism-compatible interface** to legacy `f
 ```kotlin
 sealed class BadgeConnectionState {
     object Disconnected : BadgeConnectionState()
+    object NeedsSetup : BadgeConnectionState()   // 无 session，需要初始配网
     object Connecting : BadgeConnectionState()
     data class Connected(
         val badgeIp: String,
@@ -122,7 +123,7 @@ sealed class WavDownloadResult {
 
 ## UI Components
 
-> **Note**: UI components exist and are ready for wiring. Wave 2 shipped backend, Wave 2.5 will wire UI.
+> **Note**: UI components wired in Wave 2.5. See Implementation Status below.
 
 ### ConnectivityModal
 
@@ -136,11 +137,18 @@ sealed class WavDownloadResult {
 |-------|--------|---------|
 | `CONNECTED` | ✅ Green pulsing BT icon<br>Badge name + ID + battery | **⚡ 断开连接**<br>**🔄 检查更新** |
 | `DISCONNECTED` | ⚫ Gray BT icon<br>"🔴 离线" | **连接设备** |
+| `NEEDS_SETUP` | ⚠️ Amber Warning icon<br>"⚙️ 设备未配网" | **📱 开始配网** → Onboarding |
 | `RECONNECTING` | Spinner | (Auto) |
 | `CHECKING_UPDATE` | Spinner |  (Auto) |
 | `UPDATE_FOUND` | 📥 Amber icon<br>"发现新版本" | **立即同步**<br>**稍后** |
 | `UPDATING` | Progress bar | (Auto) |
 | `WIFI_MISMATCH` | ⚠️ Warning<br>WiFi form | **忽略**<br>**更新配置** |
+
+> [!NOTE]
+> After user taps "断开连接", soft disconnect preserves session.
+> State naturally becomes `DISCONNECTED` (no UI override needed).
+> `NEEDS_SETUP` only shows on cold boot (no session ever existed).
+> Tapping "连接设备" from `DISCONNECTED` triggers auto-reconnect using persisted session.
 
 #### Data Flow
 
@@ -152,11 +160,11 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
 
 | Component | Status | Wave |
 |-----------|--------|------|
-| `ConnectivityModal.kt` | ✅ Exists | Pre-existing |
-| `ConnectivityViewModel.kt` | ✅ Exists | Pre-existing |
-| `ConnectivityService` (interface) | ✅ Exists | Pre-existing |
-| `RealConnectivityService` | 🔲 **Need** | Wave 2.5 |
-| `ConnectivityBridge` | ✅ Exists | Wave 2 |
+| `ConnectivityModal.kt` | ✅ Shipped | Pre-existing + Wave 2.5 |
+| `ConnectivityViewModel.kt` | ✅ Shipped | Pre-existing + Wave 2.5 |
+| `ConnectivityService` (interface) | ✅ Shipped | Pre-existing |
+| `RealConnectivityService` | ✅ Shipped | Wave 2.5 |
+| `ConnectivityBridge` | ✅ Shipped | Wave 2 |
 
 ---
 
@@ -166,8 +174,10 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
 |------|-------|--------|--------------|
 | **1** | Interface + Fake | ✅ SHIPPED | `ConnectivityBridge` interface, `FakeConnectivityBridge` |
 | **2** | Real Implementation (Backend) | ✅ SHIPPED | `RealConnectivityBridge` wrapping legacy |
-| **2.5** | UI Wiring | 🔲 | `RealConnectivityService`, DI binding, modal integration |
+| **2.5** | UI Wiring | ✅ SHIPPED | `RealConnectivityService`, DI binding, modal integration, `NeedsSetup` routing |
+| **2.7** | Session Persistence + Soft Disconnect | ✅ SHIPPED | `OnboardingGate`, `SessionStore`, `disconnectBle()`, `unpair()` |
 | **3** | Record End Handler | 🔲 | `record#end` BLE listener, notification flow |
+| **4** | Battery Level Reporting | 🔲 | Real BLE battery characteristic (pending hardware) |
 
 ---
 
@@ -176,15 +186,15 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
 **Goal**: Prism-safe interface that compiles without legacy imports in domain layer.
 
 - **Exit Criteria**:
-  - [ ] `ConnectivityBridge` interface in `domain/connectivity/`
-  - [ ] `FakeConnectivityBridge` returns mock data
-  - [ ] Zero imports from `feature:connectivity` in Prism domain
-  - [ ] Build passes: `./gradlew :app-prism:compileDebugKotlin`
+  - [x] `ConnectivityBridge` interface in `domain/connectivity/`
+  - [x] `FakeConnectivityBridge` returns mock data
+  - [x] Zero imports from `feature:connectivity` in Prism domain
+  - [x] Build passes: `./gradlew :app-prism:compileDebugKotlin`
 
 - **Test Cases**:
-  - [ ] Fake returns Connected state
-  - [ ] Fake simulates download with 500ms delay
-  - [ ] Fake emits RecordingReady notification
+  - [x] Fake returns Connected state
+  - [x] Fake simulates download with 500ms delay
+  - [x] Fake emits RecordingReady notification
 
 ---
 
@@ -211,13 +221,94 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
 - **Exit Criteria**:
   - [x] `RealConnectivityService` implemented
   - [x] DI binding: `ConnectivityService` → `RealConnectivityService`
-  - [ ] `ConnectivityModal` displays correct badge info
-  - [ ] Disconnect/Reconnect buttons work
+  - [x] `ConnectivityModal` displays correct badge info
+  - [x] Disconnect/Reconnect buttons work
+  - [x] `NeedsSetup` state routes to onboarding
+  - [x] Disconnect pins UI to `DISCONNECTED` (prevents NeedsSetup flash)
 
 - **Test Cases**:
   - [ ] L2: Tap 🔗 icon → modal shows real badge data
-  - [ ] L2: Disconnect → toast + modal shows "离线"
-  - [ ] L2: Reconnect → badge reconnects successfully
+  - [ ] L2: Disconnect → modal shows "离线" (not "设备未配网")
+  - [ ] L2: Reconnect → badge reconnects or routes to setup
+  - [ ] L2: Cold boot → modal shows "设备未配网" → "开始配网" → onboarding
+
+
+---
+
+## Wave 2.7 Ship Criteria
+
+**Goal**: Session persistence + soft disconnect — reconnection without re-onboarding.
+
+### Problem Summary
+
+1. **Onboarding reset on app restart**: `PrismMainActivity` used `rememberSaveable` → not persisted across process death → always showed onboarding
+2. **Session lost on disconnect**: `DeviceConnectionManager` stored BLE session in-memory only → lost after app restart → reconnection impossible
+3. **Disconnect nuked session**: `disconnect()` called `forgetDevice()` → cleared session → forced full re-onboarding
+
+### Solution
+
+| Fix | Component | Implementation |
+|-----|-----------|----------------|
+| **1. Onboarding Gate** | `OnboardingGate` (Prism-native) | SharedPreferences-backed `StateFlow<Boolean>`, survives process death |
+| **2. Session Store** | `SessionStore` interface + impls | Persists `BleSession` + `WifiCredentials` to SharedPrefs (production) or memory (tests) |
+| **3. Soft Disconnect** | `disconnectBle()` vs `forgetDevice()` | `disconnectBle()` keeps session (reconnect possible), `forgetDevice()` clears (requires onboarding) |
+
+### Semantics
+
+#### DeviceConnectionManager (Connectivity Module)
+
+| Method | Heartbeat | Session | Credentials | Next Reconnect |
+|--------|-----------|---------|-------------|----------------|
+| `disconnectBle()` | ❌ Cancel | ✅ Keep | ✅ Keep | Auto-reconnect possible |
+| `forgetDevice()` | ❌ Cancel | ❌ Clear | ❌ Clear | Requires full onboarding |
+
+#### ConnectivityService (Prism Layer)
+
+| Method | Calls | Use Case |
+|--------|-------|----------|
+| `disconnect()` | `deviceManager.disconnectBle()` | User taps "断开连接" |
+| `unpair()` | `deviceManager.forgetDevice()` | User explicitly unpairs device (future) |
+
+### Exit Criteria
+
+- **Exit Criteria**:
+  - [x] `OnboardingGate` with SharedPreferences persistence
+  - [x] `SessionStore` interface + `SharedPrefsSessionStore` + `InMemorySessionStore`
+  - [x] `DefaultDeviceConnectionManager` loads session on init, saves on provisioning success, clears on unpair
+  - [x] `disconnectBle()` added to `DeviceConnectionManager` interface
+  - [x] 5 fake implementations updated (canonical + 4 inline test fakes)
+  - [x] `ConnectivityService.unpair()` added for hard disconnect
+  - [x] `RealConnectivityService.disconnect()` calls `disconnectBle()`
+  - [x] UI override workaround removed from `ConnectivityViewModel`
+  - [x] Build passes: `:feature:connectivity:testDebugUnitTest` (23/23) + `:app-prism:compileDebugKotlin`
+
+- **Test Cases**:
+  - [x] Unit: `DefaultDeviceConnectionManagerTest` with `InMemorySessionStore`
+  - [ ] L2: Fresh install → onboarding shown
+  - [ ] L2: Complete onboarding → force-close app → relaunch → **PrismShell shown (not onboarding)**
+  - [ ] L2: Disconnect → reconnect → **reconnects without onboarding**
+
+### Files Changed
+
+**New** (3):
+- `app-prism/src/main/java/com/smartsales/prism/data/onboarding/OnboardingGate.kt`
+- `feature/connectivity/src/main/java/com/smartsales/feature/connectivity/SessionStore.kt`
+- `feature/connectivity/src/main/java/com/smartsales/feature/connectivity/SessionStoreImpl.kt`
+
+**Modified** (11):
+- `app-prism/src/main/java/com/smartsales/prism/PrismMainActivity.kt`
+- `feature/connectivity/src/main/java/com/smartsales/feature/connectivity/DeviceConnectionManager.kt`
+- `feature/connectivity/src/main/java/com/smartsales/feature/connectivity/ConnectivityModule.kt`
+- `feature/connectivity/src/test/java/com/smartsales/feature/connectivity/DefaultDeviceConnectionManagerTest.kt`
+- `feature/connectivity/src/main/java/com/smartsales/feature/connectivity/FakeDeviceConnectionManager.kt`
+- `feature/media/src/test/java/com/smartsales/feature/media/devicemanager/DeviceManagerViewModelTest.kt`
+- `app/src/test/java/com/smartsales/aitest/audio/DeviceHttpEndpointProviderImplTest.kt`
+- `feature/connectivity/src/test/java/com/smartsales/feature/connectivity/setup/DeviceSetupViewModelTest.kt`
+- `feature/connectivity/src/test/java/com/smartsales/feature/connectivity/setup/DeviceSetupViewModelRobustnessTest.kt`
+- `app-prism/src/main/java/com/smartsales/prism/domain/connectivity/ConnectivityService.kt`
+- `app-prism/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityService.kt`
+- `app-prism/src/main/java/com/smartsales/prism/data/fakes/FakeConnectivityService.kt`
+- `app-prism/src/main/java/com/smartsales/prism/ui/components/connectivity/ConnectivityViewModel.kt`
 
 
 ---

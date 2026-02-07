@@ -46,6 +46,11 @@ class FakeConnectivityService @Inject constructor() : ConnectivityService {
         // Fake: 什么都不做，只是延迟
     }
     
+    override suspend fun unpair() {
+        delay(500) // 模拟取消配对延迟
+        // Fake: 什么都不做，只是延迟
+    }
+    
     override suspend fun updateWifiConfig(ssid: String, password: String): WifiConfigResult {
         delay(1500) // 模拟配置传输延迟
         // 总是成功 (Fake 不验证密码)

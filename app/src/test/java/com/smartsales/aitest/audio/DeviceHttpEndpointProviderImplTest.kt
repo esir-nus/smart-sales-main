@@ -201,6 +201,8 @@ class DeviceHttpEndpointProviderImplTest {
 
         override suspend fun retry(): Result<Unit> =
             Result.Error(UnsupportedOperationException("not used"))
+        
+        override fun disconnectBle() = Unit
 
         override fun forgetDevice() = Unit
 

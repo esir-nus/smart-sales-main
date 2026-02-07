@@ -1,5 +1,6 @@
 package com.smartsales.prism.data.connectivity
 
+import android.util.Log
 import com.smartsales.core.util.Result
 import com.smartsales.feature.connectivity.DeviceConnectionManager
 import com.smartsales.feature.connectivity.WifiCredentials
@@ -10,6 +11,8 @@ import com.smartsales.prism.domain.connectivity.UpdateResult
 import com.smartsales.prism.domain.connectivity.WifiConfigResult
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private const val TAG = "ConnectivityService"
 
 /**
  * Real ConnectivityService — 将 ConnectivityViewModel → ConnectivityBridge 桥接
@@ -35,18 +38,22 @@ class RealConnectivityService @Inject constructor(
     }
     
     override suspend fun reconnect(): ReconnectResult {
-        // 使用 DeviceConnectionManager 的强制重连（跳过退避）
-        deviceManager.forceReconnectNow()
+        Log.d(TAG, "reconnect() called, initial state: ${deviceManager.state.value}")
         
-        // 给予时间让状态转换完成
+        // Early return if no session exists — device needs initial pairing
+        if (deviceManager.state.value is com.smartsales.feature.connectivity.ConnectionState.NeedsSetup) {
+            Log.d(TAG, "NeedsSetup detected — routing to onboarding")
+            return ReconnectResult.DeviceNotFound  // UI will show NeedsSetup view
+        }
+        
+        deviceManager.forceReconnectNow()
         kotlinx.coroutines.delay(1500)
         
-        return when (val state = deviceManager.state.value) {
+        val result = when (val state = deviceManager.state.value) {
             is com.smartsales.feature.connectivity.ConnectionState.Connected,
             is com.smartsales.feature.connectivity.ConnectionState.WifiProvisioned,
             is com.smartsales.feature.connectivity.ConnectionState.Syncing -> 
                 ReconnectResult.Connected
-            
             is com.smartsales.feature.connectivity.ConnectionState.Error -> {
                 val error = state.error
                 if (error is com.smartsales.feature.connectivity.ConnectivityError.DeviceNotFound) {
@@ -55,13 +62,23 @@ class RealConnectivityService @Inject constructor(
                     ReconnectResult.Error(error.toString())
                 }
             }
-            
             else -> ReconnectResult.DeviceNotFound
         }
+        
+        Log.d(TAG, "reconnect() result: $result, current state: ${deviceManager.state.value}")
+        return result
     }
     
     override suspend fun disconnect() {
+        Log.d(TAG, "disconnect() called (soft disconnect - session preserved)")
+        deviceManager.disconnectBle()
+        Log.d(TAG, "disconnect() completed")
+    }
+    
+    override suspend fun unpair() {
+        Log.d(TAG, "unpair() called (hard disconnect - session cleared)")
         deviceManager.forgetDevice()
+        Log.d(TAG, "unpair() completed")
     }
     
     override suspend fun updateWifiConfig(ssid: String, password: String): WifiConfigResult {

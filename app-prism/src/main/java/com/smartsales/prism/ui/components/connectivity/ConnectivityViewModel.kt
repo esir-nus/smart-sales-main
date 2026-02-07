@@ -1,5 +1,6 @@
 package com.smartsales.prism.ui.components.connectivity
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.prism.domain.connectivity.BadgeConnectionState
@@ -64,6 +65,7 @@ class ConnectivityViewModel @Inject constructor(
     private fun mapToUiState(badgeState: BadgeConnectionState): ConnectionState {
         return when (badgeState) {
             is BadgeConnectionState.Disconnected -> ConnectionState.DISCONNECTED
+            is BadgeConnectionState.NeedsSetup -> ConnectionState.NEEDS_SETUP
             is BadgeConnectionState.Connecting -> ConnectionState.RECONNECTING
             is BadgeConnectionState.Connected -> ConnectionState.CONNECTED
             is BadgeConnectionState.Error -> ConnectionState.DISCONNECTED
@@ -89,14 +91,14 @@ class ConnectivityViewModel @Inject constructor(
     }
 
     /**
-     * 断开连接
+     * 断开连接 — 调用软断开（保留 session，可重连）
      * 
      * 调用真实服务，ConnectivityBridge 状态会自动更新为 Disconnected
      */
     fun disconnect() {
         viewModelScope.launch {
             connectivityService.disconnect()
-            _uiOverride.value = null  // 清除覆盖，显示真实状态
+            // disconnectBle() keeps session → state naturally becomes Disconnected
         }
     }
 
@@ -104,14 +106,19 @@ class ConnectivityViewModel @Inject constructor(
      * 重新连接 — 显示 RECONNECTING 状态并处理结果
      */
     fun reconnect() {
+        Log.d("ConnectivityVM", "reconnect() called, current effectiveState=${effectiveState.value}")
         viewModelScope.launch {
             _uiOverride.value = ConnectionState.RECONNECTING
-            when (val result = connectivityService.reconnect()) {
+            Log.d("ConnectivityVM", "Set override=RECONNECTING, calling service.reconnect()")
+            val result = connectivityService.reconnect()
+            Log.d("ConnectivityVM", "service.reconnect() returned: $result")
+            when (result) {
                 ReconnectResult.Connected -> _uiOverride.value = null
                 ReconnectResult.DeviceNotFound -> _uiOverride.value = null
                 ReconnectResult.WifiMismatch -> _uiOverride.value = ConnectionState.WIFI_MISMATCH
                 is ReconnectResult.Error -> _uiOverride.value = null
             }
+            Log.d("ConnectivityVM", "After reconnect: override=${_uiOverride.value}, effective=${effectiveState.value}")
         }
     }
 
@@ -157,6 +164,7 @@ class ConnectivityViewModel @Inject constructor(
 enum class ConnectionState {
     CONNECTED,
     DISCONNECTED,
+    NEEDS_SETUP,     // 需要初始化配网
     CHECKING_UPDATE,
     UPDATE_FOUND,
     UPDATING,

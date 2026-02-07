@@ -17,9 +17,14 @@ interface ConnectivityService {
     suspend fun reconnect(): ReconnectResult
     
     /**
-     * 断开设备连接
+     * 断开设备连接（软断开 - 保留 session，可重连）
      */
     suspend fun disconnect()
+    
+    /**
+     * 取消配对（硬断开 - 清除 session，需要重新配网）
+     */
+    suspend fun unpair()
     
     /**
      * 更新 WiFi 配置

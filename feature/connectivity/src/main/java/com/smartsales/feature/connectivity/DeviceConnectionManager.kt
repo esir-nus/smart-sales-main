@@ -26,7 +26,13 @@ interface DeviceConnectionManager {
     fun selectPeripheral(peripheral: BlePeripheral)
     suspend fun startPairing(peripheral: BlePeripheral, credentials: WifiCredentials): Result<Unit>
     suspend fun retry(): Result<Unit>
+    
+    /** 软断开：停止心跳，保留 session — 可重连 */
+    fun disconnectBle()
+    
+    /** 硬断开：清空 session + 凭据 — 需要重新配网 */
     fun forgetDevice()
+    
     suspend fun requestHotspotCredentials(): Result<WifiCredentials>
     suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus>
 
@@ -42,7 +48,8 @@ class DefaultDeviceConnectionManager @Inject constructor(
     private val provisioner: WifiProvisioner,
     private val dispatchers: DispatcherProvider,
     private val httpChecker: HttpEndpointChecker,
-    private val badgeStateMonitor: BadgeStateMonitor
+    private val badgeStateMonitor: BadgeStateMonitor,
+    private val sessionStore: SessionStore
 ) : DeviceConnectionManager {
 
     private val scope = CoroutineScope(SupervisorJob() + dispatchers.default)
@@ -57,6 +64,15 @@ class DefaultDeviceConnectionManager @Inject constructor(
     private var autoRetryJob: Job? = null
     private var autoRetryAttempts = 0
     private var reconnectMeta = AutoReconnectMeta()
+    
+    init {
+        // Restore session from persistence
+        sessionStore.load()?.let { (session, credentials) ->
+            currentSession = session
+            lastCredentials = credentials
+            ConnectivityLogger.d("Restored session: ${session.peripheralId}")
+        }
+    }
 
 
     override fun selectPeripheral(peripheral: BlePeripheral) {
@@ -109,16 +125,28 @@ class DefaultDeviceConnectionManager @Inject constructor(
         launchProvisioning()
         Result.Success(Unit)
     }
+    
+    override fun disconnectBle() {
+        heartbeatJob?.cancel()
+        heartbeatJob = null
+        cancelAutoRetry()
+        badgeStateMonitor.onBleDisconnected()
+        // currentSession + lastCredentials KEPT — reconnection possible
+        _state.value = ConnectionState.Disconnected
+        ConnectivityLogger.d("Soft disconnect (session preserved)")
+    }
 
     override fun forgetDevice() {
         heartbeatJob?.cancel()
         heartbeatJob = null
         cancelAutoRetry()
         badgeStateMonitor.onBleDisconnected()
+        sessionStore.clear()
         currentSession = null
         lastCredentials = null
         reconnectMeta = AutoReconnectMeta()
         _state.value = ConnectionState.Disconnected
+        ConnectivityLogger.d("Hard disconnect (session cleared)")
     }
 
     override fun scheduleAutoReconnectIfNeeded() {
@@ -229,6 +257,13 @@ class DefaultDeviceConnectionManager @Inject constructor(
         ConnectivityLogger.i(
             "Provision success device=${session.peripheralName} profile=${session.profileId ?: "dynamic"}"
         )
+        
+        // Persist session and credentials for reconnection
+        lastCredentials?.let { credentials ->
+            sessionStore.save(session, credentials)
+            ConnectivityLogger.d("Session persisted: ${session.peripheralId}")
+        }
+        
         _state.value = ConnectionState.WifiProvisioned(session, status)
         startHeartbeat(session, status)
     }

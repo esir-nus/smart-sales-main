@@ -16,7 +16,7 @@ import androidx.core.content.ContextCompat
 
 import com.smartsales.prism.domain.repository.HistoryRepository
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
+import com.smartsales.prism.data.onboarding.OnboardingGate
 import com.smartsales.prism.ui.PrismShell
 import com.smartsales.prism.ui.onboarding.OnboardingScreen
 import dagger.hilt.android.AndroidEntryPoint
@@ -33,6 +33,9 @@ class PrismMainActivity : ComponentActivity() {
     
     @Inject
     lateinit var historyRepository: HistoryRepository
+    
+    @Inject
+    lateinit var onboardingGate: OnboardingGate
 
     // 日历权限请求
     private val calendarPermissionLauncher = registerForActivityResult(
@@ -57,13 +60,16 @@ class PrismMainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    var isOnboarding by rememberSaveable { mutableStateOf(true) }
+                    val onboardingCompleted by onboardingGate.completedFlow.collectAsState()
 
-                    if (isOnboarding) {
-                        OnboardingScreen(onComplete = { isOnboarding = false })
+                    if (!onboardingCompleted) {
+                        OnboardingScreen(onComplete = { 
+                            onboardingGate.markCompleted()
+                        })
                     } else {
                         PrismShell(
-                            historyRepository = historyRepository
+                            historyRepository = historyRepository,
+                            onNavigateToSetup = { onboardingGate.reset() }
                         )
                     }
                 }

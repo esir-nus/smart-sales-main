@@ -507,6 +507,7 @@ class DeviceManagerViewModelTest {
         ): Result<Unit> = Result.Success(Unit)
 
         override suspend fun retry(): Result<Unit> = Result.Success(Unit)
+        override fun disconnectBle() = Unit
         override fun forgetDevice() = Unit
         override suspend fun requestHotspotCredentials(): Result<WifiCredentials> =
             Result.Error(IllegalStateException())

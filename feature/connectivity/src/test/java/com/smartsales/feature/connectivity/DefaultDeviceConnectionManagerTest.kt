@@ -314,7 +314,8 @@ class DefaultDeviceConnectionManagerTest {
             provisioner = provisioner,
             dispatchers = dispatcherProvider,
             httpChecker = httpChecker,
-            badgeStateMonitor = fakeBadgeMonitor
+            badgeStateMonitor = fakeBadgeMonitor,
+            sessionStore = InMemorySessionStore()
         )
     }
 

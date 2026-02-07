@@ -19,6 +19,7 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
     val selectCalls = mutableListOf<BlePeripheral>()
     val pairingCalls = mutableListOf<Pair<BlePeripheral, WifiCredentials>>()
     var retryCalls = 0
+    var disconnectCalls = 0
     var forgetCalls = 0
     var autoReconnectCalls = 0
     var forceReconnectCalls = 0
@@ -36,6 +37,11 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
     override suspend fun retry(): Result<Unit> {
         retryCalls++
         return stubRetryResult
+    }
+    
+    override fun disconnectBle() {
+        disconnectCalls++
+        _state.value = ConnectionState.Disconnected
     }
     
     override fun forgetDevice() {
@@ -64,6 +70,7 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
         selectCalls.clear()
         pairingCalls.clear()
         retryCalls = 0
+        disconnectCalls = 0
         forgetCalls = 0
         autoReconnectCalls = 0
         forceReconnectCalls = 0

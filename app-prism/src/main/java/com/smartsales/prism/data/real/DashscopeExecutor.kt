@@ -109,8 +109,14 @@ class DashscopeExecutor @Inject constructor(
     private fun buildPrompt(context: EnhancedContext): String = buildString {
         val mode = context.modeMetadata.currentMode
         
-        // Phase 4: Analyst / Scheduler 模式使用结构化 JSON 输出
+        // Wave 2: 各模式使用专用系统提示词
         when (mode) {
+            Mode.COACH -> {
+                appendLine(buildCoachSystemPrompt())
+                appendLine()
+                appendLine("---")
+                appendLine()
+            }
             Mode.ANALYST -> {
                 appendLine(buildAnalystSystemPrompt())
                 appendLine()
@@ -123,7 +129,6 @@ class DashscopeExecutor @Inject constructor(
                 appendLine("---")
                 appendLine()
             }
-            else -> { /* Coach 模式不需要特殊 system prompt */ }
         }
         
         // 添加会话历史（如果有）
@@ -176,13 +181,55 @@ class DashscopeExecutor @Inject constructor(
         
         // 添加记忆命中（如果有）
         if (context.memoryHits.isNotEmpty()) {
+            android.util.Log.d("CoachMemory", "📝 Executor: injecting ${context.memoryHits.size} memory hits into prompt")
             appendLine()
             appendLine("## 历史记忆")
             context.memoryHits.take(3).forEach { entry ->
                 appendLine("- ${entry.content}")
+                android.util.Log.d("CoachMemory", "📝 Executor: → '${entry.content.take(50)}...'")
             }
+        } else {
+            android.util.Log.d("CoachMemory", "📝 Executor: no memory hits in context")
         }
     }
+    
+    /**
+     * Coach 模式系统提示词
+     * Wave 2: 销售教练人格
+     */
+    private fun buildCoachSystemPrompt(): String = """
+你是一位资深销售教练，拥有10年以上B2B销售经验。你的风格是实战导向、简洁高效。
+
+## 你的角色
+
+- 专注于 **可执行的销售建议**，而非理论知识
+- 用对话式语气回应，像一个经验丰富的同事在给建议
+- 保持简洁，2-3段话即可，避免长篇大论
+- 中文回复，偶尔穿插销售术语（如成交信号、价值主张、异议处理）
+
+## 回复原则
+
+1. **快速切入重点** — 不要客套，直接给出建议
+2. **举例说明** — 提供具体话术示例（用引号标注）
+3. **预期反馈** — 提醒用户客户可能的反应
+4. **可选下一步** — 简单提示后续动作（如有必要）
+
+## 示例风格
+
+用户："客户说太贵了，怎么办？"
+
+你的回复示例：
+
+价格异议背后通常是价值感知不足。先别急着降价，问一句："跟谁比贵了？" 或者 "您觉得哪部分功能不值这个价？"
+
+这招能揭示真实顾虑。如果是跟竞品比，就拆解差异点；如果是预算问题，就谈分期或者缩小范围先做MVP。
+
+记住：客户说贵，不一定是真贵，可能只是在试探你的底线。
+
+---
+
+现在，用户有个销售问题需要你的建议。请直接给出建议，不要使用markdown代码块格式。
+    """.trimIndent()
     
     /**
      * Analyst 模式系统提示词

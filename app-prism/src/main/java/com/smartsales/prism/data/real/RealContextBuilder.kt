@@ -1,13 +1,16 @@
 package com.smartsales.prism.data.real
 
+import android.util.Log
 import com.smartsales.prism.domain.memory.EntityType
 import com.smartsales.prism.domain.memory.EntityEntry
 import com.smartsales.prism.domain.memory.EntityRepository
+import com.smartsales.prism.domain.memory.MemoryRepository
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.pipeline.ChatTurn
 import com.smartsales.prism.domain.pipeline.ContextBuilder
 import com.smartsales.prism.domain.pipeline.EnhancedContext
 import com.smartsales.prism.domain.pipeline.EntityRef
+import com.smartsales.prism.domain.pipeline.MemoryHit
 import com.smartsales.prism.domain.pipeline.ModeMetadata
 import com.smartsales.prism.domain.pipeline.ToolArtifact
 import com.smartsales.prism.domain.scheduler.ParsedClues
@@ -27,7 +30,8 @@ import javax.inject.Singleton
 class RealContextBuilder @Inject constructor(
     private val timeProvider: TimeProvider,
     private val entityRepository: EntityRepository,
-    private val reinforcementLearner: ReinforcementLearner
+    private val reinforcementLearner: ReinforcementLearner,
+    private val memoryRepository: MemoryRepository
 ) : ContextBuilder {
     
     // 会话历史（最多保留10轮，避免上下文膨胀）
@@ -41,11 +45,25 @@ class RealContextBuilder @Inject constructor(
     override suspend fun build(userText: String, mode: Mode): EnhancedContext {
         _turnIndex++
         
+        // Wave 3: Memory search (session-history-aware)
+        val memoryHits = if (shouldSearchMemory(userText, _sessionHistory)) {
+            memoryRepository.search(userText, limit = 5).map { entry ->
+                MemoryHit(
+                    entryId = entry.entryId,
+                    content = entry.content,
+                    relevanceScore = 1.0f
+                )
+            }
+        } else {
+            emptyList()
+        }
+        
         // Wave 3: 获取全局习惯（无实体上下文）
         val habitContext = reinforcementLearner.getHabitContext(entityIds = null)
         
         return EnhancedContext(
             userText = userText,
+            memoryHits = memoryHits,
             modeMetadata = ModeMetadata(
                 currentMode = mode,
                 sessionId = _sessionId,
@@ -120,9 +138,14 @@ class RealContextBuilder @Inject constructor(
     }
     
     /**
+     * 获取当前会话历史
+     */
+    override fun getSessionHistory(): List<ChatTurn> = _sessionHistory.toList()
+    
+    /**
      * 记录用户输入到历史
      */
-    fun recordUserTurn(content: String) {
+    override fun recordUserMessage(content: String) {
         _sessionHistory.add(ChatTurn(role = "user", content = content))
         pruneHistory()
     }
@@ -130,7 +153,7 @@ class RealContextBuilder @Inject constructor(
     /**
      * 记录助手响应到历史
      */
-    fun recordAssistantTurn(content: String) {
+    override fun recordAssistantMessage(content: String) {
         _sessionHistory.add(ChatTurn(role = "assistant", content = content))
         pruneHistory()
     }
@@ -165,5 +188,25 @@ class RealContextBuilder @Inject constructor(
         while (_sessionHistory.size > 20) { // 10轮 = 20条消息（user + assistant）
             _sessionHistory.removeAt(0)
         }
+    }
+    
+    /**
+     * Wave 3: Session-aware memory search heuristic
+     * 
+     * 只在新会话中对模糊引用进行记忆搜索。
+     * 如果会话历史存在，LLM 已有足够上下文，无需搜索。
+     */
+    private fun shouldSearchMemory(input: String, sessionHistory: List<ChatTurn>): Boolean {
+        // 如果会话有历史，跳过搜索（会话上下文足够）
+        if (sessionHistory.isNotEmpty()) {
+            Log.d("CoachMemory", "shouldSearchMemory=false (session active), historySize=${sessionHistory.size}, input='$input'")
+            return false
+        }
+        
+        // 只对新会话中的模糊引用进行搜索
+        val vagueKeywords = listOf("那个", "上次", "之前", "刚才")
+        val result = vagueKeywords.any { input.contains(it) } && input.length > 3
+        Log.d("CoachMemory", "shouldSearchMemory=$result (new session), historySize=0, input='$input'")
+        return result
     }
 }

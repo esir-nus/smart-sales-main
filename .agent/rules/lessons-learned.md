@@ -190,6 +190,36 @@ combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset 
 
 ---
 
+### Reconnect Race Condition: Fire-and-Poll — 2026-02-07
+
+**Symptom**: `reconnect()` returns `DeviceNotFound` despite badge being powered on and nearby  
+**Root Cause**: **Fire-and-poll pattern with insufficient delay** — `forceReconnectNow()` + `delay(1500ms)` + poll `state.value`. BLE GATT timeout is ~10s, so 1.5s was always too early → state was still `AutoReconnecting` → mapped to `DeviceNotFound`.  
+**Wrong Approach**: Increasing the delay (fragile), polling in a loop (wasteful)  
+**Correct Fix**: Replace fire-and-poll with `suspend fun reconnectAndWait()` that directly calls `connectUsingSession()` and returns the actual outcome. No delay, no polling.  
+**File(s)**:  
+- [DeviceConnectionManager.kt](file:///home/cslh-frank/main_app/feature/connectivity/src/main/java/com/smartsales/feature/connectivity/DeviceConnectionManager.kt) — new `reconnectAndWait()` 
+- [RealConnectivityService.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityService.kt) — calls `reconnectAndWait()`  
+**Pattern**: **Never fire-and-poll async operations with fixed delays.** Use suspend functions that return actual results. If you see `fire() → delay(N) → poll`, it's a race condition waiting to happen.  
+**Status**: ✅ CONFIRMED 2026-02-07
+
+---
+
+### HTTP Gate Conflating Connection Concerns — 2026-02-07
+
+**Symptom**: Reconnect returns `EndpointUnreachable("设备服务不可达")` even though BLE connects and badge reports valid IP  
+**Root Cause**: **`connectUsingSession()` gates on HTTP reachability** — it does BLE GATT → query WiFi → get IP → HTTP HEAD to `:8088`. If HTTP server isn't running (firmware state), reconnect fails. But HTTP is only needed for WAV file operations, not for BLE connectivity.  
+**Wrong Approach**: Treating HTTP unreachable as "badge not connected"  
+**Correct Fix**: Remove HTTP gate from `connectUsingSession()` — check only for valid IP (not `0.0.0.0`). HTTP check stays in `ConnectivityBridge.isReady()` which is the spec-defined pre-flight for media operations.  
+**Key Insight**: **The spec already had the right separation** — `isReady()` was designed for BLE+HTTP pre-flight. The HTTP check was in the wrong layer.  
+**Diagnostic**: `adb logcat | grep "RX \[NetworkResponse\]"` → `IP#192.168.0.106` proved BLE worked, HTTP was the sole blocker.  
+**File(s)**:  
+- [DeviceConnectionManager.kt L366-384](file:///home/cslh-frank/main_app/feature/connectivity/src/main/java/com/smartsales/feature/connectivity/DeviceConnectionManager.kt#L366-L384)  
+**Pattern**: **Don't gate connection state on downstream service availability.** BLE connected ≠ HTTP server running. Separate "can I talk to the device?" from "can I download files?"  
+**Heuristic**: If a function gates on multiple protocols (BLE + HTTP), ask: *"Do ALL callers need ALL these checks?"* If not, the function is conflating concerns.  
+**Status**: ✅ CONFIRMED 2026-02-07
+
+---
+
 <!-- Add new lessons above this line -->
 
 ### SwipeToDismiss Background Visibility — 2026-02-02

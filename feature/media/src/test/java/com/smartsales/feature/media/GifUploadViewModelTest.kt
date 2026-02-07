@@ -129,5 +129,6 @@ class GifUploadViewModelTest {
         override suspend fun queryNetworkStatus() = CoreResult.Error(IllegalStateException())
         override fun scheduleAutoReconnectIfNeeded() {}
         override fun forceReconnectNow() {}
+        override suspend fun reconnectAndWait(): ConnectionState = _state.value
     }
 }

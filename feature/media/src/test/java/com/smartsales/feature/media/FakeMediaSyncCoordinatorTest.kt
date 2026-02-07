@@ -119,5 +119,7 @@ class FakeMediaSyncCoordinatorTest {
 
         override fun scheduleAutoReconnectIfNeeded() = Unit
         override fun forceReconnectNow() = Unit
+        override suspend fun reconnectAndWait(): ConnectionState = state.value
+        override fun disconnectBle() = Unit
     }
 }

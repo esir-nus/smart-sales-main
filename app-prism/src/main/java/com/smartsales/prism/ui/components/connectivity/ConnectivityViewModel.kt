@@ -105,9 +105,17 @@ class ConnectivityViewModel @Inject constructor(
     /**
      * 重新连接 — 显示 RECONNECTING 状态并处理结果
      */
+    // 重连任务引用 — 防止重复发起
+    private var reconnectJob: kotlinx.coroutines.Job? = null
+
     fun reconnect() {
         Log.d("ConnectivityVM", "reconnect() called, current effectiveState=${effectiveState.value}")
-        viewModelScope.launch {
+        // 已有重连任务在执行中 — 忽略重复点击
+        if (reconnectJob?.isActive == true) {
+            Log.d("ConnectivityVM", "reconnect() skipped — already in progress")
+            return
+        }
+        reconnectJob = viewModelScope.launch {
             _uiOverride.value = ConnectionState.RECONNECTING
             Log.d("ConnectivityVM", "Set override=RECONNECTING, calling service.reconnect()")
             val result = connectivityService.reconnect()

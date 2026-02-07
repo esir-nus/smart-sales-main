@@ -40,22 +40,17 @@ class RealConnectivityService @Inject constructor(
     override suspend fun reconnect(): ReconnectResult {
         Log.d(TAG, "reconnect() called, initial state: ${deviceManager.state.value}")
         
-        // Early return if no session exists — device needs initial pairing
-        if (deviceManager.state.value is com.smartsales.feature.connectivity.ConnectionState.NeedsSetup) {
-            Log.d(TAG, "NeedsSetup detected — routing to onboarding")
-            return ReconnectResult.DeviceNotFound  // UI will show NeedsSetup view
-        }
+        val outcome = deviceManager.reconnectAndWait()
         
-        deviceManager.forceReconnectNow()
-        kotlinx.coroutines.delay(1500)
-        
-        val result = when (val state = deviceManager.state.value) {
+        val result = when (outcome) {
             is com.smartsales.feature.connectivity.ConnectionState.Connected,
             is com.smartsales.feature.connectivity.ConnectionState.WifiProvisioned,
             is com.smartsales.feature.connectivity.ConnectionState.Syncing -> 
                 ReconnectResult.Connected
+            is com.smartsales.feature.connectivity.ConnectionState.NeedsSetup ->
+                ReconnectResult.DeviceNotFound
             is com.smartsales.feature.connectivity.ConnectionState.Error -> {
-                val error = state.error
+                val error = outcome.error
                 if (error is com.smartsales.feature.connectivity.ConnectivityError.DeviceNotFound) {
                     ReconnectResult.DeviceNotFound
                 } else {

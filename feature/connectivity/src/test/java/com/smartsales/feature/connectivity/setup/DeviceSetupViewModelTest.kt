@@ -225,6 +225,7 @@ class DeviceSetupViewModelTest {
 
         override fun scheduleAutoReconnectIfNeeded() {}
         override fun forceReconnectNow() {}
+        override suspend fun reconnectAndWait(): ConnectionState = state.value
     }
 
     private class FakeBleScanner : BleScanner {

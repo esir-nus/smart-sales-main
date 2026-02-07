@@ -41,6 +41,9 @@ interface DeviceConnectionManager {
 
     /** 立即重连，跳过退避（需已有凭据）。 */
     fun forceReconnectNow()
+
+    /** 挂起式重连：等待 BLE GATT + 网络查询完成后返回实际结果。 */
+    suspend fun reconnectAndWait(): ConnectionState
 }
 
 @Singleton
@@ -176,6 +179,26 @@ class DefaultDeviceConnectionManager @Inject constructor(
             return
         }
         launchReconnect(ignoreBackoff = true)
+    }
+
+    override suspend fun reconnectAndWait(): ConnectionState = withContext(dispatchers.io) {
+        val sessionSnapshot = currentSession
+        if (sessionSnapshot == null) {
+            _state.value = ConnectionState.NeedsSetup
+            return@withContext ConnectionState.NeedsSetup
+        }
+        _state.value = ConnectionState.AutoReconnecting(1)
+        val outcome = connectUsingSession(sessionSnapshot)
+        when (outcome) {
+            is ConnectionState.Connected -> {
+                _state.value = outcome
+                reconnectMeta = AutoReconnectMeta()
+            }
+            else -> {
+                _state.value = ConnectionState.Disconnected
+            }
+        }
+        outcome
     }
 
     private fun launchReconnect(ignoreBackoff: Boolean = false) {
@@ -344,11 +367,12 @@ class DefaultDeviceConnectionManager @Inject constructor(
         val networkStatus = provisioner.queryNetworkStatus(session)
         return when (networkStatus) {
             is Result.Success -> {
-                val baseUrl = buildBaseUrl(networkStatus.data.ipAddress)
-                    ?: return ConnectionState.Error(ConnectivityError.EndpointUnreachable("无效的设备地址"))
-                if (!httpChecker.isReachable(baseUrl)) {
-                    ConnectionState.Error(ConnectivityError.EndpointUnreachable("设备服务不可达"))
+                val ip = networkStatus.data.ipAddress
+                if (ip.isNullOrBlank() || ip == "0.0.0.0" || ip.startsWith("0.")) {
+                    ConnectivityLogger.d("connectUsingSession: badge offline, ip=$ip")
+                    ConnectionState.Error(ConnectivityError.EndpointUnreachable("设备未连接WiFi"))
                 } else {
+                    ConnectivityLogger.d("connectUsingSession: connected, ip=$ip")
                     ConnectionState.Connected(session)
                 }
             }

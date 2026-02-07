@@ -208,6 +208,8 @@ class DeviceHttpEndpointProviderImplTest {
 
         override fun forceReconnectNow() = Unit
 
+        override suspend fun reconnectAndWait(): ConnectionState = stateFlow.value
+
         override suspend fun requestHotspotCredentials(): Result<WifiCredentials> =
             Result.Error(UnsupportedOperationException("not used"))
 

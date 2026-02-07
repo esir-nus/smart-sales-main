@@ -60,6 +60,16 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
     override fun forceReconnectNow() {
         forceReconnectCalls++
     }
+
+    var stubReconnectAndWaitResult: ConnectionState = ConnectionState.Connected(
+        BleSession.fromPeripheral(BlePeripheral("fake-id", "FakeDevice", -50))
+    )
+    var reconnectAndWaitCalls = 0
+
+    override suspend fun reconnectAndWait(): ConnectionState {
+        reconnectAndWaitCalls++
+        return stubReconnectAndWaitResult
+    }
     
     fun setState(newState: ConnectionState) {
         _state.value = newState

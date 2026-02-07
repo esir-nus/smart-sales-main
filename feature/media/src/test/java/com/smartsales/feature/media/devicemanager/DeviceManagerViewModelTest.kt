@@ -515,6 +515,7 @@ class DeviceManagerViewModelTest {
         override suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus> = networkStatusResult
         override fun scheduleAutoReconnectIfNeeded() {}
         override fun forceReconnectNow() {}
+        override suspend fun reconnectAndWait(): ConnectionState = state.value
     }
     private class FakeGifTransferCoordinator : GifTransferCoordinator {
         override fun transfer(session: BleSession, gifUri: android.net.Uri) = flowOf<GifTransferState>()

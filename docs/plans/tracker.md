@@ -295,6 +295,14 @@
 - `FakeCoachPipeline` for testing
 - Wired into `PrismOrchestrator` as default mode
 
+**L2 Testing** (2026-02-08):
+- ✅ 12/20 tests passed, all critical path verified
+- Memory search: 3 seed entries hit on first turn
+- Multi-turn context: 10+ turn conversation coherence validated
+- Analyst suggestion: keyword heuristic + UI block + mode switch working
+- Session isolation + history windowing (caps at 20) confirmed
+- Memory persistence: append-only storage working correctly
+
 ---
 
 ## Scheduler Waves

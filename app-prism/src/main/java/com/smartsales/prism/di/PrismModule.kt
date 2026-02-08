@@ -66,6 +66,9 @@ abstract class PrismModule {
     @Binds @Singleton
     abstract fun bindEntityRepository(fake: FakeEntityRepository): EntityRepository
     
+    @Binds @Singleton
+    abstract fun bindClientProfileHub(fake: com.smartsales.prism.data.fakes.FakeClientProfileHub): com.smartsales.prism.domain.crm.ClientProfileHub
+    
     // === Memory System ===
     
     @Binds @Singleton

@@ -62,6 +62,29 @@ val dealValue: Long? = null,             // Amount (minor units)
 val closeDate: String? = null            // ISO 8601
 ```
 
+### EntitySnapshot (Lightweight Summary)
+
+```kotlin
+data class EntitySnapshot(
+    val entityId: String,
+    val displayName: String,
+    val entityType: EntityType,
+    val lastActivity: UnifiedActivity?
+)
+```
+
+### FocusedContext (Deep Dive)
+
+```kotlin
+data class FocusedContext(
+    val entity: EntityEntry,
+    val relatedContacts: List<EntityEntry>,
+    val relatedDeals: List<EntityEntry>,
+    val timeline: List<UnifiedActivity>,
+    val habitContext: HabitContext  // from RL module
+)
+```
+
 ### UnifiedActivity (Timeline View)
 
 ```kotlin
@@ -131,7 +154,12 @@ data class QuickContext(
 
 | Wave | Focus | Status |
 |------|-------|--------|
-| **1** | CRM Schema (ACCOUNT, CONTACT, DEAL) | 🔲 |
-| **2** | ClientProfileHub Interface | 🔲 |
-| **3** | Timeline Aggregation | 🔲 |
-| **4** | CRM Export Integration | 🔲 |
+| **1** | Interface + Domain Models + Fake | ✅ SHIPPED |
+| **2** | Timeline Aggregation | ✅ SHIPPED |
+| **3** | CRM Export Integration | 🔲 |
+
+> **Note**: CRM schema (ACCOUNT, CONTACT, DEAL types + EntityEntry CRM fields) already shipped in Entity Registry Wave 2.5.
+
+> **Shipped 2026-02-08 (Wave 1)**: ClientProfileHub interface, FocusedContext, QuickContext, EntitySnapshot, UnifiedActivity, FakeClientProfileHub
+
+> **Shipped 2026-02-08 (Wave 2)**: Entity-tagged MemoryEntry via `structuredJson`, `MemoryRepository.getByEntityId()`, `getUnifiedTimeline()` with MemoryEntry→UnifiedActivity mapping, `ContextBuilder.record*()` now suspend + persists to MemoryRepository

@@ -53,6 +53,21 @@ data class QuickContext(
     val suggestedNextSteps: List<String>
 )
 
+data class EntitySnapshot(
+    val entityId: String,
+    val displayName: String,
+    val entityType: EntityType,
+    val lastActivity: UnifiedActivity?
+)
+
+data class FocusedContext(
+    val entity: EntityEntry,
+    val relatedContacts: List<EntityEntry>,
+    val relatedDeals: List<EntityEntry>,
+    val timeline: List<UnifiedActivity>,
+    val habitContext: HabitContext
+)
+
 data class UnifiedActivity(
     val id: String,
     val type: ActivityType,

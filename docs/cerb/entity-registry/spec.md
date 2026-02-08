@@ -144,4 +144,6 @@ Stores in `metricsHistoryJson` for visualization:
 | **1** | Core Model + Repository | ✅ Complete |
 | **2** | LLM Disambiguation Flow | ✅ SHIPPED |
 | **2.5** | CRM Schema Extension + Rename | ✅ SHIPPED |
-| **3** | CRM Hierarchy → [Client Profile Hub](../client-profile-hub/spec.md) | 🔲 |
+| **3** | CRM Hierarchy → [Client Profile Hub](../client-profile-hub/spec.md) | ✅ SHIPPED |
+
+> **Shipped 2026-02-08**: Client Profile Hub Wave 1 (Interface + Domain Models + Fake)

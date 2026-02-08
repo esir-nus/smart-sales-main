@@ -37,11 +37,11 @@ class FakeContextBuilder @Inject constructor() : ContextBuilder {
     
     override fun getSessionHistory(): List<ChatTurn> = _sessionHistory.toList()
     
-    override fun recordUserMessage(content: String) {
+    override suspend fun recordUserMessage(content: String) {
         _sessionHistory.add(ChatTurn(role = "user", content = content))
     }
     
-    override fun recordAssistantMessage(content: String) {
+    override suspend fun recordAssistantMessage(content: String) {
         _sessionHistory.add(ChatTurn(role = "assistant", content = content))
     }
 }

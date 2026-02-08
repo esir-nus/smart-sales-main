@@ -46,7 +46,7 @@
 |-------|--------|------------------|
 | **Active Zone** | 🔲 | `MemoryEntry` (isArchived=false) (§5.7) |
 | **Archived Zone** | 🔲 | `MemoryEntry` (isArchived=true) (§5.1) |
-| **Entity Registry** | 🔲 | `EntityEntry` (§5.2) |
+| **Entity Registry** | ✅ | `EntityEntry` (§5.2) |
 | **Session Cache** | ✅ | Path indexing + entity state tracking (§2.2 #1b) |
 | **ScheduleBoard** | ✅ | Conflict index ([spec](../cerb/memory-center/spec.md#scheduleboard-conflict-index)) |
 
@@ -122,7 +122,7 @@
 | **1** | Core Model + Repository | ✅ (inherited) |
 | **2** | LLM Disambiguation Flow | ✅ SHIPPED |
 | **2.5** | CRM Schema + Rename (Relevancy → Entity) | ✅ SHIPPED |
-| **3** | CRM Hierarchy → [Client Profile Hub](../client-profile-hub/spec.md) | 🔲 (Planning) |
+| **3** | CRM Hierarchy → Client Profile Hub | ✅ SHIPPED |
 
 **Wave 2 Shipped**: 2026-02-03
 - `ParsedClues` carrier in `LintResult.Success`
@@ -133,6 +133,19 @@
 - Renamed `RelevancyEntry` → `EntityEntry`
 - Added CRM fields (accountId, contactId, dealStage)
 - Added CRM types (ACCOUNT, CONTACT, DEAL)
+
+**Wave 3 Shipped**: 2026-02-08 (→ Client Profile Hub Wave 1)
+- `ClientProfileHub` interface (`getQuickContext`, `getFocusedContext`, `getUnifiedTimeline`)
+- Domain models: `EntitySnapshot`, `FocusedContext`, `QuickContext`, `UnifiedActivity`
+- `getByAccountId()` hierarchy query in `EntityRepository`
+- `FakeClientProfileHub` + 4 passing tests
+
+**Client Profile Hub Wave 2 Shipped**: 2026-02-08 (Timeline Aggregation)
+- Entity-tagged `MemoryEntry.structuredJson` via `RealContextBuilder.saveToMemory()`
+- `MemoryRepository.getByEntityId()` with quoted JSON matching
+- `FakeClientProfileHub.getUnifiedTimeline()` with `MemoryEntry→UnifiedActivity` mapping
+- `ContextBuilder.record*()` now suspend + persists to MemoryRepository
+- 4 new tests (8 total for Client Profile Hub)
 
 ---
 

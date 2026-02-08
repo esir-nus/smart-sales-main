@@ -43,6 +43,10 @@ class FakeEntityRepository @Inject constructor() : EntityRepository {
             }
             .take(limit)
     }
+    
+    override suspend fun getByAccountId(accountId: String): List<EntityEntry> {
+        return entries.values.filter { it.accountId == accountId }
+    }
 }
 
 // Backwards compatibility alias (deprecated, will be removed)

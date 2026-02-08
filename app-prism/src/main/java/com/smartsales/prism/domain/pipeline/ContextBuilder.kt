@@ -23,10 +23,10 @@ interface ContextBuilder {
     /**
      * 记录用户消息到历史
      */
-    fun recordUserMessage(content: String)
+    suspend fun recordUserMessage(content: String)
     
     /**
      * 记录助手消息到历史
      */
-    fun recordAssistantMessage(content: String)
+    suspend fun recordAssistantMessage(content: String)
 }

@@ -4,7 +4,10 @@ import android.util.Log
 import com.smartsales.prism.domain.memory.EntityType
 import com.smartsales.prism.domain.memory.EntityEntry
 import com.smartsales.prism.domain.memory.EntityRepository
+import com.smartsales.prism.domain.memory.MemoryEntry
+import com.smartsales.prism.domain.memory.MemoryEntryType
 import com.smartsales.prism.domain.memory.MemoryRepository
+import com.smartsales.prism.domain.session.EntityState
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.pipeline.ChatTurn
 import com.smartsales.prism.domain.pipeline.ContextBuilder
@@ -194,17 +197,43 @@ class RealContextBuilder @Inject constructor(
     /**
      * 记录用户输入到历史
      */
-    override fun recordUserMessage(content: String) {
+    override suspend fun recordUserMessage(content: String) {
         _sessionHistory.add(ChatTurn(role = "user", content = content))
         pruneHistory()
+        saveToMemory(content, MemoryEntryType.USER_MESSAGE)
     }
     
     /**
      * 记录助手响应到历史
      */
-    override fun recordAssistantMessage(content: String) {
+    override suspend fun recordAssistantMessage(content: String) {
         _sessionHistory.add(ChatTurn(role = "assistant", content = content))
         pruneHistory()
+        saveToMemory(content, MemoryEntryType.ASSISTANT_RESPONSE)
+    }
+    
+    /**
+     * 持久化记忆条目（含实体标记）
+     * Wave 2: 填充 structuredJson 以支持实体时间线
+     */
+    private suspend fun saveToMemory(content: String, type: MemoryEntryType) {
+        val activeEntityIds = _sessionContext.entityStates
+            .filter { it.value.state == EntityState.ACTIVE }
+            .keys.toList()
+
+        val structuredJson = if (activeEntityIds.isNotEmpty()) {
+            """{"relatedEntityIds":[${activeEntityIds.joinToString(",") { "\"$it\"" }}]}"""
+        } else null
+
+        memoryRepository.save(MemoryEntry(
+            entryId = java.util.UUID.randomUUID().toString(),
+            sessionId = _sessionId,
+            content = content,
+            entryType = type,
+            createdAt = timeProvider.now.toEpochMilli(),
+            updatedAt = timeProvider.now.toEpochMilli(),
+            structuredJson = structuredJson
+        ))
     }
     
     /**

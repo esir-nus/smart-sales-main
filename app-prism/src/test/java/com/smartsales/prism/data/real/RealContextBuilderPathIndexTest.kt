@@ -182,5 +182,8 @@ class RealContextBuilderPathIndexTest {
             searchCallCount++
             return delegate.search(query, limit)
         }
+        
+        override suspend fun getByAccountId(accountId: String): List<EntityEntry> =
+            delegate.getByAccountId(accountId)
     }
 }

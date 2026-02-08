@@ -29,6 +29,11 @@ interface EntityRepository {
      * 搜索实体
      */
     suspend fun search(query: String, limit: Int = 10): List<EntityEntry>
+    
+    /**
+     * 按账户ID获取关联实体（联系人和交易）
+     */
+    suspend fun getByAccountId(accountId: String): List<EntityEntry>
 }
 
 // Backwards compatibility alias (deprecated, will be removed)

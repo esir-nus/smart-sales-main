@@ -1,5 +1,6 @@
 package com.smartsales.prism.data.audio
 
+import android.util.Log
 import com.smartsales.prism.domain.asr.AsrResult
 import com.smartsales.prism.domain.asr.AsrService
 import com.smartsales.prism.domain.audio.BadgeAudioPipeline
@@ -58,7 +59,7 @@ class RealBadgeAudioPipeline @Inject constructor(
             connectivityBridge.recordingNotifications().collect { notification ->
                 when (notification) {
                     is RecordingNotification.RecordingReady -> {
-                        android.util.Log.d(TAG, "New recording detected: ${notification.filename}")
+                        Log.d(TAG, "New recording detected: ${notification.filename}")
                         processFile(notification.filename)
                     }
                 }
@@ -67,13 +68,13 @@ class RealBadgeAudioPipeline @Inject constructor(
     }
     
     override suspend fun processFile(filename: String) {
-        var currentStage = PipelineEvent.Stage.DOWNLOAD // Track stage for catch-all
+        var currentStage = PipelineEvent.Stage.DOWNLOAD
         try {
-            // 1. Download
+            // 1. 下载录音
             currentStage = PipelineEvent.Stage.DOWNLOAD
             _currentState.value = PipelineState.DOWNLOADING
             _events.emit(PipelineEvent.Downloading(filename))
-            android.util.Log.d(TAG, "Downloading: $filename")
+            Log.d(TAG, "Downloading: $filename")
             
             val downloadResult = connectivityBridge.downloadRecording(filename)
             if (downloadResult is WavDownloadResult.Error) {
@@ -83,18 +84,18 @@ class RealBadgeAudioPipeline @Inject constructor(
                     message = downloadResult.message,
                     filename = filename
                 ))
-                android.util.Log.w(TAG, "Download failed: ${downloadResult.message}")
+                Log.w(TAG, "Download failed: ${downloadResult.message}")
                 return
             }
             
             val localFile = (downloadResult as WavDownloadResult.Success).localFile
-            android.util.Log.d(TAG, "Downloaded ${downloadResult.sizeBytes} bytes")
+            Log.d(TAG, "Downloaded ${downloadResult.sizeBytes} bytes")
             
-            // 2. Transcribe
+            // 2. 转写
             currentStage = PipelineEvent.Stage.TRANSCRIBE
             _currentState.value = PipelineState.TRANSCRIBING
             _events.emit(PipelineEvent.Transcribing(filename, downloadResult.sizeBytes))
-            android.util.Log.d(TAG, "Transcribing...")
+            Log.d(TAG, "Transcribing...")
             
             val asrResult = asrService.transcribe(localFile)
             if (asrResult is AsrResult.Error) {
@@ -104,68 +105,82 @@ class RealBadgeAudioPipeline @Inject constructor(
                     message = "转写失败: ${asrResult.message}",
                     filename = filename
                 ))
-                android.util.Log.w(TAG, "Transcription failed: ${asrResult.message}")
+                Log.w(TAG, "Transcription failed: ${asrResult.message}")
                 localFile.delete()
                 return
             }
             
             val transcript = (asrResult as AsrResult.Success).text
-            android.util.Log.d(TAG, "Transcribed: $transcript")
+            Log.d(TAG, "Transcribed: $transcript")
             
-            // 3. Schedule
+            // 3. 调度
             currentStage = PipelineEvent.Stage.SCHEDULE
             _currentState.value = PipelineState.PROCESSING
             _events.emit(PipelineEvent.Processing(transcript))
-            android.util.Log.d(TAG, "Scheduling task...")
+            Log.d(TAG, "Scheduling task...")
             
             val uiState = orchestrator.createScheduledTask(transcript)
-            val schedulerResult = try {
-                mapToSchedulerResult(uiState)
-            } catch (e: IllegalStateException) {
+            val schedulerResult = mapToSchedulerResult(uiState)
+            
+            if (schedulerResult == null) {
+                // 非日程意图（聊天、无效输入等），静默完成
                 _currentState.value = PipelineState.IDLE
-                _events.emit(PipelineEvent.Error(
-                    stage = PipelineEvent.Stage.SCHEDULE,
-                    message = e.message ?: "调度失败",
-                    filename = filename
-                ))
-                android.util.Log.w(TAG, "Scheduling failed: ${e.message}")
+                Log.d(TAG, "Non-scheduling intent, skipping: $uiState")
                 localFile.delete()
                 return
             }
             
-            android.util.Log.d(TAG, "Scheduled: $schedulerResult")
+            Log.d(TAG, "Scheduled: $schedulerResult")
             
-            // 4. Cleanup
+            // 4. 清理
             currentStage = PipelineEvent.Stage.CLEANUP
             _currentState.value = PipelineState.IDLE
             _events.emit(PipelineEvent.Complete(schedulerResult, filename, transcript))
             
             val deleted = connectivityBridge.deleteRecording(filename)
             localFile.delete()
-            android.util.Log.d(TAG, "Cleanup: badge=${if (deleted) "✓" else "✗"}, local=✓")
+            Log.d(TAG, "Cleanup: badge=${if (deleted) "✓" else "✗"}, local=✓")
             
         } catch (e: Exception) {
             _currentState.value = PipelineState.IDLE
             _events.emit(PipelineEvent.Error(
-                stage = currentStage, // Use tracked stage, not hardcoded CLEANUP
+                stage = currentStage,
                 message = e.message ?: "未知错误",
                 filename = filename
             ))
-            android.util.Log.e(TAG, "Pipeline error at stage $currentStage", e)
+            Log.e(TAG, "Pipeline error at stage $currentStage", e)
         }
     }
     
     override fun isIdle(): Boolean = currentState.value == PipelineState.IDLE
     
     /**
-     * Map UiState from Orchestrator to SchedulerResult for pipeline events.
-     * Handles: SchedulerTaskCreated, AwaitingClarification, Toast (inspiration).
-     * Throws for unexpected states.
+     * 将 Orchestrator 返回的 UiState 映射为 Pipeline 领域的 SchedulerResult。
+     * 
+     * 可能的 UiState:
+     *   SchedulerTaskCreated → 单任务创建
+     *   AwaitingClarification → 需要用户澄清
+     *   Toast → 灵感保存
+     *   Response → 多任务创建（Wave 4.1）
+     *   Error → 调度失败
+     *   Idle → 非日程意图（静默忽略）
+     * 
+     * @return null 表示非日程意图，Pipeline 应静默跳过
      */
-    private fun mapToSchedulerResult(uiState: UiState): SchedulerResult = when (uiState) {
+    private fun mapToSchedulerResult(uiState: UiState): SchedulerResult? = when (uiState) {
         is UiState.SchedulerTaskCreated -> SchedulerResult.TaskCreated(uiState.taskId, uiState.title)
         is UiState.AwaitingClarification -> SchedulerResult.AwaitingClarification(uiState.question)
-        is UiState.Toast -> SchedulerResult.InspirationSaved("") // Toast = inspiration saved
-        else -> throw IllegalStateException("Unexpected UiState from scheduler: $uiState")
+        is UiState.Toast -> SchedulerResult.InspirationSaved(uiState.message)
+        // 多任务：Orchestrator 返回 Response("✅ 已创建 N 个任务")，当前无 taskIds
+        is UiState.Response -> SchedulerResult.TaskCreated("multi", uiState.content)
+        // 非日程意图：Orchestrator 返回 Idle，Pipeline 静默跳过
+        is UiState.Idle -> null
+        // 调度错误：透传为 null，由上层 catch 处理
+        is UiState.Error -> throw IllegalStateException(uiState.message)
+        // 其他状态不应出现在调度流程中
+        else -> {
+            Log.w(TAG, "Unexpected UiState from scheduler: $uiState")
+            null
+        }
     }
 }

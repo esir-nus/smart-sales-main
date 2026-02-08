@@ -46,6 +46,13 @@ interface MemoryRepository {
      * 标记为已归档
      */
     suspend fun markAsArchived(entryId: String)
+    
+    /**
+     * 按实体 ID 查询关联记忆（通过 structuredJson 中的 relatedEntityIds）
+     * @param entityId 实体 ID
+     * @param limit 返回数量上限
+     */
+    suspend fun getByEntityId(entityId: String, limit: Int = 50): List<MemoryEntry>
 }
 
 // Backwards compatibility aliases (deprecated, will be removed)

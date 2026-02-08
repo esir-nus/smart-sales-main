@@ -75,7 +75,7 @@ class FakeConnectivityBridge @Inject constructor() : ConnectivityBridge {
     // ========================================
     
     /**
-     * 模拟 Badge 发送 log#YYYYMMDDHHMMSS 事件
+     * 模拟 Badge 发送 log#YYYYMMDD_HHMMSS 事件
      */
     fun simulateRecordingReady(filename: String) {
         _recordingNotifications.tryEmit(

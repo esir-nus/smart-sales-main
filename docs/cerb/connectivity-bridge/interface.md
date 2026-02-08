@@ -29,7 +29,7 @@ interface ConnectivityBridge {
      * Stream of recording notifications from badge.
      * 
      * **Current**: HTTP polling on `/list` detects new WAV files.  
-     * **Future**: BLE `log#YYYYMMDDHHMMSS` command triggers immediate notification.
+     * **Future**: BLE `log#YYYYMMDD_HHMMSS` command triggers immediate notification.
      * 
      * @return Flow (hot, starts polling on collection)
      * @see esp32-protocol.md §6

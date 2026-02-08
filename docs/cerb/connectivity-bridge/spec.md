@@ -32,7 +32,7 @@ Connectivity Bridge provides a **thin, Prism-compatible interface** to legacy `f
 | **WAV Get** | `wav#get` | `wav#send` | Initiates download |
 | **WAV End** | `wav#end` | `wav#ok` | Completes download |
 | **Time Sync** | Badge: `tim#get` | App: `time#YYYYMMDDHHMMSS` | ESP32 clock calibration |
-| **Recording Log** | Badge: `log#YYYYMMDDHHMMSS` | (none) | Recording ready + filename |
+| **Recording Log** | Badge: `log#YYYYMMDD_HHMMSS` | (none) | Recording ready + filename |
 
 ### HTTP Endpoints (Port 8088)
 
@@ -84,10 +84,10 @@ sealed class BadgeConnectionState {
 sealed class RecordingNotification {
     /**
      * Badge finished recording, file is ready for download.
-     * Triggered by `log#YYYYMMDDHHMMSS` BLE command from firmware.
+     * Triggered by `log#YYYYMMDD_HHMMSS` BLE command from firmware.
      */
     data class RecordingReady(
-        val filename: String  // YYYYMMDDHHMMSS.wav
+        val filename: String  // YYYYMMDD_HHMMSS.wav
     ) : RecordingNotification()
 }
 ```
@@ -174,7 +174,7 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
 | **2** | Real Implementation (Backend) | ✅ SHIPPED | `RealConnectivityBridge` wrapping legacy |
 | **2.5** | UI Wiring | ✅ SHIPPED | `RealConnectivityService`, DI binding, modal integration, `NeedsSetup` routing |
 | **2.7** | Session Persistence + Soft Disconnect | ✅ SHIPPED | `OnboardingGate`, `SessionStore`, `disconnectBle()`, `unpair()` |
-| **3** | Recording Log Handler | 🔲 | `log#YYYYMMDDHHMMSS` BLE listener, notification flow |
+| **3** | Recording Log Handler | 🔲 | `log#YYYYMMDD_HHMMSS` BLE listener, notification flow |
 | **4** | Battery Level Reporting | 🔲 | Real BLE battery characteristic (pending hardware) |
 
 ---
@@ -330,7 +330,7 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
   - [ ] Disconnected state → polling stops
 
 **Future Path** (wire BLE `log#` notification):
-- Replace 15s timer with BLE `log#YYYYMMDDHHMMSS` notification trigger
+- Replace 15s timer with BLE `log#YYYYMMDD_HHMMSS` notification trigger
 - Badge provides filename directly in `log#` command, no prediction needed
 - Interface stays unchanged
 
@@ -370,7 +370,7 @@ class RealConnectivityBridge @Inject constructor(
     }
     
     override fun recordingNotifications(): Flow<RecordingNotification> {
-        // Listen for "log#YYYYMMDDHHMMSS" BLE command (or HTTP polling fallback)
+        // Listen for "log#YYYYMMDD_HHMMSS" BLE command (or HTTP polling fallback)
         // Map to RecordingNotification.RecordingReady
     }
 }

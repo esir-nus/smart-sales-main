@@ -15,7 +15,7 @@ ESP32 tim#get → App returns timestamp
        ↓
 User speaks → ESP32 records WAV
        ↓
-ESP32 log#YYYYMMDDHHMMSS → App notified
+ESP32 log#YYYYMMDD_HHMMSS → App notified
        ↓
 Download WAV from badge (HTTP)
        ↓

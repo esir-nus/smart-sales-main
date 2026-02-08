@@ -276,7 +276,7 @@
 
 **Key Deliverables**:
 - `BadgeAudioPipeline` orchestrator
-- `log#YYYYMMDDHHMMSS` → Download → Transcribe → Schedule flow
+- `log#YYYYMMDD_HHMMSS` → Download → Transcribe → Schedule flow
 - Integration with existing `PrismOrchestrator.processSchedulerAction()`
 
 ---

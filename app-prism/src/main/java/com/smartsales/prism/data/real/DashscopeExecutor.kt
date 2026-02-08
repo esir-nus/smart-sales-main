@@ -196,13 +196,17 @@ class DashscopeExecutor @Inject constructor(
         context.habitContext?.let { habits ->
             val allHabits = habits.userHabits + habits.clientHabits
             if (allHabits.isNotEmpty()) {
+                android.util.Log.d("CoachMemory", "📝 Executor: injecting ${allHabits.size} habit(s) into prompt")
                 appendLine()
                 appendLine("## 用户偏好")
                 allHabits.take(5).forEach { habit ->
                     appendLine("- ${habit.habitKey}: ${habit.habitValue}")
+                    android.util.Log.d("CoachMemory", "📝 Executor: → '${habit.habitKey}: ${habit.habitValue.take(30)}...'")
                 }
+            } else {
+                android.util.Log.d("CoachMemory", "📝 Executor: no habit context")
             }
-        }
+        } ?: android.util.Log.d("CoachMemory", "📝 Executor: habitContext is null")
     }
     
     /**

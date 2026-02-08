@@ -30,6 +30,8 @@ class UserHabitRepositoryTest {
     @Before
     fun setup() {
         repository = FakeUserHabitRepository()
+        // Clear seeded habits to ensure tests start with empty state
+        (repository as FakeUserHabitRepository).clear()
     }
 
     @Test

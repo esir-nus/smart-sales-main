@@ -48,8 +48,17 @@ class RealConnectivityBridge @Inject constructor(
     
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     
+    // URL cache to avoid repeated BLE queries in polling loop
+    private var cachedBaseUrl: String? = null
+    
     override val connectionState: StateFlow<BadgeConnectionState> = deviceManager.state
-        .map { legacyState -> mapToPrismState(legacyState) }
+        .map { legacyState ->
+            // Clear cache on disconnect
+            if (legacyState is ConnectionState.Disconnected) {
+                cachedBaseUrl = null
+            }
+            mapToPrismState(legacyState)
+        }
         .stateIn(
             scope = scope,
             started = SharingStarted.Eagerly,
@@ -77,10 +86,16 @@ class RealConnectivityBridge @Inject constructor(
         val processed = mutableSetOf<String>()
         while (currentCoroutineContext().isActive) {
             if (connectionState.value is BadgeConnectionState.Connected) {
-                val baseUrl = resolveBaseUrl()
+                // Use cached URL or resolve + cache
+                val baseUrl = cachedBaseUrl ?: resolveBaseUrl()?.also { cachedBaseUrl = it }
                 if (baseUrl != null) {
-                    val files = httpClient.listWavFiles(baseUrl)
-                        .let { (it as? Result.Success)?.data } ?: emptyList()
+                    val files = when (val result = httpClient.listWavFiles(baseUrl)) {
+                        is Result.Success -> result.data
+                        is Result.Error -> {
+                            android.util.Log.w(TAG_RECORDING_POLL, "Poll failed: ${result.throwable.message}")
+                            emptyList()
+                        }
+                    }
                     for (file in files) {
                         if (file !in processed) {
                             processed.add(file)

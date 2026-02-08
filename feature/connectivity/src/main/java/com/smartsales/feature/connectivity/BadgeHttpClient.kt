@@ -68,7 +68,7 @@ interface BadgeHttpClient {
     /**
      * Check if badge HTTP server is reachable.
      * @param baseUrl Base URL with port
-     * @return true if reachable (HEAD /list returns 2xx)
+     * @return true if reachable (GET / health check returns 2xx)
      */
     suspend fun isReachable(baseUrl: String): Boolean
 }
@@ -105,6 +105,9 @@ class DefaultBadgeHttpClient @Inject constructor(
         .build()
 
     override suspend fun uploadJpg(baseUrl: String, file: File): Result<Unit> =
+        retryOnServerError { uploadJpgOnce(baseUrl, file) }
+    
+    private suspend fun uploadJpgOnce(baseUrl: String, file: File): Result<Unit> =
         withContext(dispatchers.io) {
             // Validate file extension
             if (!file.name.lowercase().endsWith(".jpg")) {
@@ -219,6 +222,12 @@ class DefaultBadgeHttpClient @Inject constructor(
         baseUrl: String,
         filename: String,
         dest: File
+    ): Result<Unit> = retryOnServerError { downloadWavOnce(baseUrl, filename, dest) }
+    
+    private suspend fun downloadWavOnce(
+        baseUrl: String,
+        filename: String,
+        dest: File
     ): Result<Unit> = withContext(dispatchers.io) {
         // Validate filename
         if (!filename.lowercase().endsWith(".wav")) {
@@ -266,6 +275,9 @@ class DefaultBadgeHttpClient @Inject constructor(
     }
 
     override suspend fun deleteWav(baseUrl: String, filename: String): Result<Unit> =
+        retryOnServerError { deleteWavOnce(baseUrl, filename) }
+    
+    private suspend fun deleteWavOnce(baseUrl: String, filename: String): Result<Unit> =
         withContext(dispatchers.io) {
             // Validate filename
             if (!filename.lowercase().endsWith(".wav")) {
@@ -336,5 +348,43 @@ class DefaultBadgeHttpClient @Inject constructor(
         private const val WRITE_TIMEOUT_SECONDS = 30L // For JPG uploads
         private const val REACHABLE_TIMEOUT_SECONDS = 3L
         private const val MAX_FILE_SIZE_BYTES = 10L * 1024 * 1024 // 10MB per spec
+    }
+    
+    /**
+     * Retry helper for HTTP operations per spec:
+     * - 5xx errors: retry 3x with exponential backoff (1s, 2s, 4s)
+     * - Network errors: retry 3x with exponential backoff
+     * - 4xx errors: no retry (client error)
+     */
+    private suspend fun <T> retryOnServerError(
+        maxAttempts: Int = 3,
+        initialDelayMs: Long = 1000,
+        block: suspend () -> Result<T>
+    ): Result<T> {
+        var attempt = 0
+        var lastError: Result<T>? = null
+        
+        while (attempt < maxAttempts) {
+            when (val result = block()) {
+                is Result.Success -> return result
+                is Result.Error -> {
+                    val throwable = result.throwable
+                    // Only retry on 5xx or network errors
+                    when (throwable) {
+                        is BadgeHttpException.ServerException,
+                        is BadgeHttpException.NetworkException -> {
+                            lastError = result
+                            if (attempt < maxAttempts - 1) {
+                                val delayMs = initialDelayMs * (1 shl attempt) // 1s, 2s, 4s
+                                kotlinx.coroutines.delay(delayMs)
+                            }
+                            attempt++
+                        }
+                        else -> return result // 4xx = don't retry
+                    }
+                }
+            }
+        }
+        return lastError!!
     }
 }

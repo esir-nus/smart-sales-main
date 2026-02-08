@@ -67,8 +67,10 @@ class RealBadgeAudioPipeline @Inject constructor(
     }
     
     override suspend fun processFile(filename: String) {
+        var currentStage = PipelineEvent.Stage.DOWNLOAD // Track stage for catch-all
         try {
             // 1. Download
+            currentStage = PipelineEvent.Stage.DOWNLOAD
             _currentState.value = PipelineState.DOWNLOADING
             _events.emit(PipelineEvent.Downloading(filename))
             android.util.Log.d(TAG, "Downloading: $filename")
@@ -89,6 +91,7 @@ class RealBadgeAudioPipeline @Inject constructor(
             android.util.Log.d(TAG, "Downloaded ${downloadResult.sizeBytes} bytes")
             
             // 2. Transcribe
+            currentStage = PipelineEvent.Stage.TRANSCRIBE
             _currentState.value = PipelineState.TRANSCRIBING
             _events.emit(PipelineEvent.Transcribing(filename, downloadResult.sizeBytes))
             android.util.Log.d(TAG, "Transcribing...")
@@ -110,6 +113,7 @@ class RealBadgeAudioPipeline @Inject constructor(
             android.util.Log.d(TAG, "Transcribed: $transcript")
             
             // 3. Schedule
+            currentStage = PipelineEvent.Stage.SCHEDULE
             _currentState.value = PipelineState.PROCESSING
             _events.emit(PipelineEvent.Processing(transcript))
             android.util.Log.d(TAG, "Scheduling task...")
@@ -132,6 +136,7 @@ class RealBadgeAudioPipeline @Inject constructor(
             android.util.Log.d(TAG, "Scheduled: $schedulerResult")
             
             // 4. Cleanup
+            currentStage = PipelineEvent.Stage.CLEANUP
             _currentState.value = PipelineState.IDLE
             _events.emit(PipelineEvent.Complete(schedulerResult, filename, transcript))
             
@@ -142,11 +147,11 @@ class RealBadgeAudioPipeline @Inject constructor(
         } catch (e: Exception) {
             _currentState.value = PipelineState.IDLE
             _events.emit(PipelineEvent.Error(
-                stage = PipelineEvent.Stage.CLEANUP,
+                stage = currentStage, // Use tracked stage, not hardcoded CLEANUP
                 message = e.message ?: "未知错误",
                 filename = filename
             ))
-            android.util.Log.e(TAG, "Pipeline error", e)
+            android.util.Log.e(TAG, "Pipeline error at stage $currentStage", e)
         }
     }
     

@@ -22,13 +22,6 @@ interface MemoryRepository {
 
 See [Entity Registry Interface](../entity-registry/interface.md) for full contract.
 
-### MemoryWriter
-
-```kotlin
-interface MemoryWriter {
-    suspend fun write(entry: MemoryEntry)
-}
-```
 
 ### ScheduleBoard (Conflict Check)
 
@@ -80,9 +73,9 @@ data class MemoryEntry(
 )
 ```
 
-### RelevancyEntry
+### EntityEntry (formerly RelevancyEntry)
 ```kotlin
-data class RelevancyEntry(
+data class EntityEntry(
     val entityId: String,
     val entityType: EntityType,
     val displayName: String,

@@ -38,6 +38,12 @@ Memory Center manages persistent storage and retrieval of user interactions, ent
 
 ### MemoryEntry
 
+> [!NOTE]
+> **Current Implementation (Wave 2)**: Code uses simplified 8-field schema: `entryId`, `sessionId`, `content`, `entryType`, `createdAt`, `updatedAt`, `isArchived`, `scheduledAt`, `structuredJson`. See [`MemoryModels.kt`](../../app-prism/src/main/java/com/smartsales/prism/domain/memory/MemoryModels.kt).
+> 
+> **Design Target (Wave 4)**: Rich metadata schema below for future Analyst/Coach enhancements.
+
+
 ```kotlin
 data class MemoryEntry(
     val id: String,
@@ -186,8 +192,8 @@ data class DecisionRecord(
 
 | Layer | Files |
 |-------|-------|
-| **Domain** | `MemoryRepository.kt`, `MemoryWriter.kt`, `MemoryModels.kt`, `ScheduleBoard.kt`, `ScheduleItem.kt` |
-| **Data** | `RealScheduleBoard.kt`, `FakeMemoryRepository.kt`, `FakeMemoryWriter.kt` |
+| **Domain** | `MemoryRepository.kt`, `MemoryModels.kt`, `ScheduleBoard.kt`, `ScheduleItem.kt` |
+| **Data** | `RealScheduleBoard.kt`, `FakeMemoryRepository.kt` |
 | **DI** | `SchedulerModule.kt` (provides ScheduleBoard binding) |
 
 ---

@@ -11,7 +11,7 @@ sealed class UiState {
     object Loading : UiState()
     data class Thinking(val hint: String? = null) : UiState()
     data class Streaming(val partialContent: String) : UiState()
-    data class Response(val content: String, val structuredJson: String? = null) : UiState()
+    data class Response(val content: String, val structuredJson: String? = null, val suggestAnalyst: Boolean = false) : UiState()
     data class SchedulerTaskCreated(
         val taskId: String,           // 用于冲突检测排除自身
         val title: String,

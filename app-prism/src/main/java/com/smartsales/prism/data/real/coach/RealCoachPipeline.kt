@@ -35,11 +35,17 @@ class RealCoachPipeline @Inject constructor(
         // 调用 LLM
         return when (val result = executor.execute(context)) {
             is ExecutorResult.Success -> {
+                // Wave 4: 检测是否建议切换到 Analyst 模式
+                val suggestAnalyst = input.contains("分析") ||
+                                     input.contains("数据") ||
+                                     input.contains("报表") ||
+                                     input.contains("对比")
+                
                 // Wave 3: 传递记忆命中项（由 ContextBuilder 搜索并注入）
                 Log.d("CoachMemory", "✅ CoachPipeline: LLM success, propagating ${context.memoryHits.size} memoryHits to response")
                 CoachResponse.Chat(
                     content = result.content,
-                    suggestAnalyst = false,
+                    suggestAnalyst = suggestAnalyst,
                     memoryHits = context.memoryHits
                 )
             }

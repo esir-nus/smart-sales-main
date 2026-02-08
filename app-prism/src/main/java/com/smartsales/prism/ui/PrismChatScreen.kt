@@ -180,7 +180,12 @@ fun PrismChatScreen(
                             is ChatMessage.User -> UserBubble(text = message.content)
                             is ChatMessage.Ai -> {
                                 when (val state = message.uiState) {
-                                    is UiState.Response -> ResponseBubble(uiState = state)
+                                    is UiState.Response -> {
+                                        ResponseBubble(uiState = state)
+                                        if (state.suggestAnalyst) {
+                                            AnalystSuggestionBlock(onSwitch = { viewModel.switchMode(Mode.ANALYST) })
+                                        }
+                                    }
                                     is UiState.PlannerTableState -> com.smartsales.prism.ui.analyst.PlannerTableBubble(table = state.table)
                                     is UiState.Thinking -> {
                                          Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(8.dp)) {
@@ -484,5 +489,38 @@ private fun GlassFab(icon: ImageVector, onClick: () -> Unit) {
          contentAlignment = Alignment.Center
     ) {
         Icon(icon, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(24.dp))
+    }
+}
+
+/**
+ * Wave 4: Analyst Suggestion Block
+ * Shown when Coach detects a question better suited for Analyst mode
+ */
+@Composable
+private fun AnalystSuggestionBlock(onSwitch: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E3A5F))
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "这看起来需要深度分析，建议切换到分析师模式",
+                color = Color(0xFF88CCFF),
+                fontSize = 13.sp,
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = onSwitch) {
+                Text("切换到分析师", color = Color(0xFF4FC3F7), fontSize = 13.sp)
+            }
+        }
     }
 }

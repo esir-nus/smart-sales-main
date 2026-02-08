@@ -94,7 +94,7 @@ class PrismOrchestrator @Inject constructor(
                     // 记录会话历史
                     contextBuilder.recordUserMessage(input)
                     contextBuilder.recordAssistantMessage(response.content)
-                    UiState.Response(response.content)
+                    UiState.Response(response.content, suggestAnalyst = response.suggestAnalyst)
                 }
             }
         } catch (e: Exception) {

@@ -1,7 +1,7 @@
 # Smart Sales Prism Tracker
 
 > **SOT**: [`Prism-V1.md`](../specs/Prism-V1.md) · [`prism-ui-ux-contract.md`](../specs/prism-ui-ux-contract.md) (INDEX) · [`GLOSSARY.md`](../specs/GLOSSARY.md)  
-> **Last Updated**: 2026-02-05
+> **Last Updated**: 2026-02-08
 
 ---
 
@@ -20,10 +20,10 @@
 | Component | Status | Notes |
 |-----------|--------|-------|
 | **Context Builder** | ✅ | Session Context complete (Waves 1-3 shipped) |
-| **Executor** | 🔲 | Strategy-based LLM selection per mode |
-| **Publisher** | 🔲 | Chat/Analyst/Schedule publishers |
-| **Memory Writer** | 🔲 | Fire-and-forget with retry |
-| **Schema Linter** | 🔲 | Entity/Plan/Scheduler/Relevancy linters |
+| **Executor** | ✅ | `DashscopeExecutor` — Qwen LLM calls |
+| **Publisher** | 🔲 | Chat/Analyst/Schedule publishers (inline in Orchestrator) |
+| **Memory Writer** | ✅ | Delivered via `ContextBuilder.saveToMemory()` (retry deferred to Wave 4) |
+| **Schema Linter** | ✅ | `SchedulerLinter` — structured JSON validation |
 | **Memory Center Notifier** | 🔲 | Snackbar updates for memory changes |
 
 ---
@@ -32,9 +32,9 @@
 
 | Mode | Status | Key Features |
 |------|--------|--------------|
-| **Coach** | 🔲 | Lightweight chat, optional memory search |
-| **Analyst** | 🔲 | Planner LLM, visible Plan Card, Chart tools |
-| **Scheduler** | 🔲 | Global Top Drawer, structured JSON output |
+| **Coach** | 🚧 | Wave 1-2 shipped (`RealCoachPipeline`), Wave 3-4 pending |
+| **Analyst** | 🚧 | `AnalystFlowControllerV2` wired, structured table output |
+| **Scheduler** | ✅ | 6 waves shipped, full CRUD + conflict resolution |
 
 ---
 
@@ -44,8 +44,8 @@
 
 | Layer | Status | Schema Reference |
 |-------|--------|------------------|
-| **Active Zone** | 🔲 | `MemoryEntry` (isArchived=false) (§5.7) |
-| **Archived Zone** | 🔲 | `MemoryEntry` (isArchived=true) (§5.1) |
+| **Active Zone** | ✅ | `MemoryEntry` (isArchived=false) — `getActiveEntries()` shipped |
+| **Archived Zone** | ✅ | `MemoryEntry` (isArchived=true) — `getArchivedEntries()` shipped |
 | **Entity Registry** | ✅ | `EntityEntry` (§5.2) |
 | **Session Cache** | ✅ | Path indexing + entity state tracking (§2.2 #1b) |
 | **ScheduleBoard** | ✅ | Conflict index ([spec](../cerb/memory-center/spec.md#scheduleboard-conflict-index)) |
@@ -216,7 +216,7 @@
 | **1** | Interface + Fake | ✅ SHIPPED |
 | **2** | Real Implementation (Backend) | ✅ SHIPPED |
 | **2.5** | UI Wiring | ✅ SHIPPED |
-| **3** | record#end Handler | 🔲 |
+| **3** | record#end Handler (HTTP Polling) | ✅ SHIPPED (2026-02-08) |
 | **4** | Battery Level Reporting | 🔲 (Pending hardware) |
 
 **Key Deliverables**:
@@ -238,7 +238,8 @@
 
 | Wave | Focus | Status |
 |------|-------|--------|
-| **1** | Core Service (Wrap Legacy) | ✅ SHIPPED |\n| **1.5** | Wiring (Onboarding UI) | 🔧 IN PROGRESS (L2 pending) |
+| **1** | Core Service (Wrap Legacy) | ✅ SHIPPED |
+| **1.5** | Wiring (Onboarding UI) | ✅ SHIPPED |
 | **2** | Robustness & Error Handling | 🔲 PLANNED |
 | **3** | Polish (UX Refinement) | 🔲 PLANNED |
 
@@ -270,13 +271,29 @@
 |------|-------|--------|
 | **1** | Interface + State Machine | ✅ SHIPPED (2026-02-05) |
 | **2** | Fake Pipeline | ✅ SHIPPED (2026-02-05) |
-| **3** | Real Implementation | 🔲 |
+| **3** | Real Implementation | ✅ SHIPPED (2026-02-08) |
 | **4** | Error Recovery | 🔲 |
 
 **Key Deliverables**:
 - `BadgeAudioPipeline` orchestrator
 - `record#end` → Download → Transcribe → Schedule flow
 - Integration with existing `PrismOrchestrator.processSchedulerAction()`
+
+---
+
+### Coach Mode (spec: `coach/`)
+
+| Wave | Focus | Status |
+|------|-------|--------|
+| **1** | Interface + Fake | ✅ SHIPPED |
+| **2** | Real LLM + Context | ✅ SHIPPED |
+| **3** | Memory + Habit | ✅ SHIPPED (2026-02-08) |
+| **4** | Analyst Suggestion | ✅ SHIPPED (2026-02-08) |
+
+**Key Deliverables**:
+- `CoachPipeline` interface + `RealCoachPipeline` (LLM via Executor)
+- `FakeCoachPipeline` for testing
+- Wired into `PrismOrchestrator` as default mode
 
 ---
 
@@ -339,7 +356,7 @@
 
 > **Strategy**: Contract-First Architecture Reset  
 > **Mandate**: NO old code extraction — fresh rewrite only (learn WHAT from legacy, write HOW fresh)  
-> **Current**: Phase 1 ✅ → Phase 2 🔲
+> **Current**: Phase 1 ✅ → Phase 2 🚧 → Phase 3 🚧
 
 ---
 
@@ -396,10 +413,10 @@
 
 | Exit Criterion | Status |
 |----------------|--------|
-| DashScope API (Coach mode working) | ⚡ Prototype exists |
+| DashScope API (Coach mode working) | ✅ `DashscopeExecutor` + `RealCoachPipeline` |
 | Room persistence (RelevancyEntry, MemoryEntry) | 🔲 |
-| Tingwu integration (audio transcription) | 🔲 |
-| ESP32 BLE (badge communication) | 🔲 |
+| Tingwu integration (audio transcription) | ✅ `FunAsrService` shipped |
+| ESP32 BLE (badge communication) | ✅ `RealConnectivityBridge` shipped |
 | Memory Writer (fire-and-forget persistence) | 🔲 |
 | All integration tests pass | 🔲 |
 
@@ -416,37 +433,6 @@
 | Cold start < 3s | 🔲 |
 | All critical user journeys tested | 🔲 |
 | Beta distribution via internal channel | 🔲 |
-
----
-
-### Phase 1: Skeleton (Interfaces + Fakes) ✅
-
-> **Archived Granular Progress**: See [`tracker-phase-1-granular.md`](../archived/tracker-phase-1-granular.md) for detailed interface/fake tracking.
-
-**Goal**: Production-ready interfaces that evolve with implementation. Fakes prove wiring.
-
-> **Mapping Table**: [`prism-interface-mapping.md`](../reference/prism-interface-mapping.md) — Bidirectional sync with spec
-
-### Phase 2: UX Layer (Page-by-Page + Fake Chaining) 🏗️
-
-**Goal**: Visual & interaction completeness. No real backend.
-
-| Area | Status |
-|------|--------|
-| **Home Screen** | 🔲 |
-| **Audio Drawer** | 🔲 |
-| **Chat Interface** | 🔲 |
-| **Scheduler Drawer** | 🚧 Logic wired |
-
-> **Archived Detail**: See `tracker-phase-1-granular.md` since Phase 2 granularity is tracked in `docs/CN_Dev/UX合约/` files.
-
-### Phase 3: Core Layer (Real Implementation)
-**Goal**: Swap Fakes for Real logic. Data flows to DB/API.
-
-- [ ] **Data Layer**: Room Databases (Sessions, Relevancy, Memory)
-- [ ] **External Services**: Tingwu (Aliyun), DashScope (Qwen), ESP32 (BLE)
-- [ ] **Pipeline Integration**: Context → LLM → Publisher → Writer
-- [ ] **Verification**: Integration tests with Real implementations
 
 ---
 
@@ -467,7 +453,4 @@
 
 ---
 
-### Phase 4: Ship
-- [ ] Beta APK Distribution
-- [ ] Bug Triage & Edge Case Handling
-- [ ] Store Submission
+> **Archived**: Phase 1/2 granular tracking moved to [`tracker-phase-1-granular.md`](../archived/tracker-phase-1-granular.md).

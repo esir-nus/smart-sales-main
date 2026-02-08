@@ -134,10 +134,13 @@ Coach detects schedule conflict during conversation.
 
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
-| **1** | Interface + Fake | 🔲 | `CoachPipeline` interface, `FakeCoachPipeline` |
-| **2** | Real LLM + Context | 🔲 | `RealCoachPipeline`, system prompt, session history |
-| **3** | Memory + Habit | 🔲 | `MemoryRepository.search()`, `getHabitContext()` integration |
-| **4** | Analyst Suggestion | 🔲 | `suggestAnalyst` flag parsing, UI block |
+| **1** | Interface + Fake | ✅ SHIPPED | `CoachPipeline` interface, `FakeCoachPipeline` |
+| **2** | Real LLM + Context | ✅ SHIPPED | `RealCoachPipeline`, system prompt, session history |
+| **3** | Memory + Habit | ✅ SHIPPED | `MemoryRepository.search()`, `getHabitContext()` integration |
+| **4** | Analyst Suggestion | ✅ SHIPPED | `suggestAnalyst` flag parsing, UI block |
+
+> [!NOTE]
+> Wave 4 MVP uses keyword heuristic (`分析`, `数据`). LLM-based detection planned for Wave 4.5.
 
 ---
 

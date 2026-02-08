@@ -191,6 +191,18 @@ class DashscopeExecutor @Inject constructor(
         } else {
             android.util.Log.d("CoachMemory", "📝 Executor: no memory hits in context")
         }
+        
+        // Wave 3: 习惯上下文注入（用户和客户偏好）
+        context.habitContext?.let { habits ->
+            val allHabits = habits.userHabits + habits.clientHabits
+            if (allHabits.isNotEmpty()) {
+                appendLine()
+                appendLine("## 用户偏好")
+                allHabits.take(5).forEach { habit ->
+                    appendLine("- ${habit.habitKey}: ${habit.habitValue}")
+                }
+            }
+        }
     }
     
     /**

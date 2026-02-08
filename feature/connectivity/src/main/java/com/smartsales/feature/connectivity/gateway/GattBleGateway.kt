@@ -81,6 +81,23 @@ class GattBleGateway @Inject constructor(
             // Wait for badge to connect and respond
             val ackBytes = gattContext.awaitNotificationOrRead(config.provisioningStatusCharacteristicUuid)
             ConnectivityLogger.rx("ProvisionAck", ackBytes)
+            
+            // 如果 Badge 在配网期间请求时间同步，尽力响应（不阻塞配网流程）
+            val ackValue = ackBytes.decodeToString().trim()
+            if (ackValue.startsWith("tim#", ignoreCase = true)) {
+                try {
+                    val timestamp = formatCurrentTime()
+                    val response = "time#$timestamp"
+                    gattContext.writeCharacteristic(
+                        config.credentialCharacteristicUuid,
+                        response.toByteArray(Charsets.UTF_8)
+                    )
+                    ConnectivityLogger.i("Responded to time sync during provisioning: $response")
+                } catch (e: Exception) {
+                    ConnectivityLogger.w("Time sync response failed during provisioning (non-fatal): ${e.message}")
+                }
+            }
+            
             parseProvisioningAck(credentials, ackBytes)
             // NOTE: pollForConnection workaround removed — it bypassed rate limiter and caused ESP32 freezes.
             // If firmware returns "failed", the user can retry provisioning.
@@ -180,9 +197,8 @@ class GattBleGateway @Inject constructor(
                         val notification = gattContext.awaitNotificationOrRead(config.provisioningStatusCharacteristicUuid)
                         val value = notification.decodeToString().trim()
                         
-                        // Handle both "time#get" and "tim#get" (firmware variant)
-                        if (value.startsWith("time#get", ignoreCase = true) || 
-                            value.startsWith("tim#get", ignoreCase = true)) {
+                        // Badge sends "tim#get" to request current time
+                        if (value.startsWith("tim#get", ignoreCase = true)) {
                             val timestamp = formatCurrentTime()
                             val response = "time#$timestamp"
                             gattContext.writeCharacteristic(
@@ -412,11 +428,10 @@ class GattBleGateway @Inject constructor(
     ): BleGatewayResult {
         val parts = raw.split("#")
         
-        // Handle time sync request variants (badge asking for current time)
-        // Badge may send "time#get" or truncated "tim#get" depending on firmware
-        // This indicates badge is alive and provisioning is proceeding
+        // Badge sends "tim#get" to request time sync
+        // During provisioning, this indicates badge is alive and proceeding
         val command = parts.getOrNull(0)?.lowercase() ?: ""
-        if (command == "time" || command == "tim") {
+        if (command == "tim") {
             ConnectivityLogger.i("Badge requested time sync during provisioning ($raw), treating as success")
             return BleGatewayResult.Success(
                 handshakeId = UUID.randomUUID().toString(),
@@ -794,6 +809,7 @@ private class GatewayGattCallback : BluetoothGattCallback() {
         characteristic: BluetoothGattCharacteristic
     ) {
         val value = characteristic.legacyValue() ?: byteArrayOf()
+        ConnectivityLogger.rx("Notification", value)
         notificationChannel.trySend(characteristic.uuid to value)
     }
 

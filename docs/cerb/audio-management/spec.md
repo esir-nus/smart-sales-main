@@ -51,7 +51,7 @@ graph TB
 
 **Two Layers**:
 - **AudioRepository** — UI-driven (user taps "Sync", "Transcribe", "Delete")
-- **BadgeAudioPipeline** — Event-driven (badge sends `record#end` → auto-process)
+- **BadgeAudioPipeline** — Event-driven (badge sends `log#YYYYMMDDHHMMSS` → auto-process)
 
 **Future Integration** (Wave 3): Pipeline emits `PipelineEvent.Completed` → Repository auto-ingests the file.
 

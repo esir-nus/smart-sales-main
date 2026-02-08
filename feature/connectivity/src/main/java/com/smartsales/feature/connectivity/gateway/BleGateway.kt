@@ -70,7 +70,7 @@ interface BleGateway {
     
     /**
      * Listen for and respond to time sync requests from badge.
-     * Badge sends "time#get", app responds with "time#YYYYMMDDHHMMSS".
+     * Badge sends "tim#get", app responds with "time#YYYYMMDDHHMMSS".
      */
     fun listenForTimeSync(session: BleSession): Flow<TimeSyncEvent>
     

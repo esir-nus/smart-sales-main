@@ -11,11 +11,11 @@ Badge Audio Pipeline orchestrates the complete flow when user records audio on t
 ```
 Badge Record Button
        ↓
-ESP32 time#get → App returns timestamp
+ESP32 tim#get → App returns timestamp
        ↓
 User speaks → ESP32 records WAV
        ↓
-ESP32 record#end → App notified
+ESP32 log#YYYYMMDDHHMMSS → App notified
        ↓
 Download WAV from badge (HTTP)
        ↓
@@ -61,7 +61,8 @@ sealed class PipelineEvent {
     /** Pipeline complete, task created */
     data class Complete(
         val result: SchedulerResult,
-        val filename: String
+        val filename: String,
+        val transcript: String
     ) : PipelineEvent()
     
     /** Pipeline failed at some stage */
@@ -81,6 +82,7 @@ sealed class SchedulerResult {
     data class MultiTaskCreated(val taskIds: List<String>) : SchedulerResult()
     data class InspirationSaved(val id: String) : SchedulerResult()
     data class AwaitingClarification(val question: String) : SchedulerResult()
+    data object Ignored : SchedulerResult()  // 非调度意图（聊天、无效输入）
 }
 ```
 
@@ -93,7 +95,7 @@ sealed class SchedulerResult {
 |------|-------|--------|--------------|
 | **1** | Interface + State Machine | ✅ SHIPPED | `BadgeAudioPipeline` interface, state model |
 | **2** | Fake Pipeline | ✅ SHIPPED | `FakeBadgeAudioPipeline` for UI testing |
-| **3** | Real Implementation | 🔲 BLOCKED | Requires connectivity-bridge Wave 3 (`recordingNotifications`) |
+| **3** | Real Implementation | ✅ SHIPPED | `RealBadgeAudioPipeline`, handles all UiState variants |
 | **4** | Error Recovery | 🔲 | Retry logic, partial failure handling |
 
 ---
@@ -171,7 +173,7 @@ sealed class SchedulerResult {
                     ┌─────────────┐
                     │    Idle     │
                     └──────┬──────┘
-                           │ record#end received
+                           │ log# received
                     ┌──────▼──────┐
                     │ Downloading │
                     └──────┬──────┘

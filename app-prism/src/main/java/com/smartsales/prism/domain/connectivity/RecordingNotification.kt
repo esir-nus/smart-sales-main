@@ -9,7 +9,7 @@ sealed class RecordingNotification {
     /**
      * Badge 完成录音，文件可下载
      * 
-     * 触发条件：Badge 通过 BLE 发送 `record#end` 命令
+     * 触发条件：Badge 通过 BLE 发送 `log#YYYYMMDDHHMMSS` 命令
      */
     data class RecordingReady(
         /** 文件名格式: YYYYMMDDHHMMSS.wav */

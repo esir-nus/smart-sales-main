@@ -216,7 +216,7 @@
 | **1** | Interface + Fake | ✅ SHIPPED |
 | **2** | Real Implementation (Backend) | ✅ SHIPPED |
 | **2.5** | UI Wiring | ✅ SHIPPED |
-| **3** | record#end Handler (HTTP Polling) | ✅ SHIPPED (2026-02-08) |
+| **3** | log# Recording Handler (HTTP Polling) | ✅ SHIPPED (2026-02-08) |
 | **4** | Battery Level Reporting | 🔲 (Pending hardware) |
 
 **Key Deliverables**:
@@ -276,7 +276,7 @@
 
 **Key Deliverables**:
 - `BadgeAudioPipeline` orchestrator
-- `record#end` → Download → Transcribe → Schedule flow
+- `log#YYYYMMDDHHMMSS` → Download → Transcribe → Schedule flow
 - Integration with existing `PrismOrchestrator.processSchedulerAction()`
 
 ---

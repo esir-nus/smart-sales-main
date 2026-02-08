@@ -32,7 +32,7 @@ interface ConnectivityBridge {
     /**
      * 录音通知流
      * 
-     * Badge 通过 BLE 发送 `record#end` 时触发
+     * Badge 通过 BLE 发送 `log#YYYYMMDDHHMMSS` 时触发
      * 
      * Hot flow, buffered(1), 无历史回放
      */

@@ -45,7 +45,8 @@ enum class DrawerType {
  */
 @Composable
 fun PrismShell(
-    historyRepository: HistoryRepository
+    historyRepository: HistoryRepository,
+    onNavigateToSetup: () -> Unit = {}
 ) {
     // Atomic Drawer State (Mutex)
     var activeDrawer by remember { mutableStateOf<DrawerType?>(null) }
@@ -144,7 +145,11 @@ fun PrismShell(
         if (activeDrawer == DrawerType.CONNECTIVITY) {
             Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
                 com.smartsales.prism.ui.components.ConnectivityModal(
-                    onDismiss = { activeDrawer = null }
+                    onDismiss = { activeDrawer = null },
+                    onNavigateToSetup = {
+                        activeDrawer = null
+                        onNavigateToSetup()
+                    }
                 )
             }
         }

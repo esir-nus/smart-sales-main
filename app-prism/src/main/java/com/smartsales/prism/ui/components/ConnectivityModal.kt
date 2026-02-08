@@ -35,6 +35,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun ConnectivityModal(
     onDismiss: () -> Unit,
+    onNavigateToSetup: () -> Unit = {},
     viewModel: ConnectivityViewModel = hiltViewModel()
 ) {
     // 从 ViewModel 收集状态 — 使用 effectiveState（真实状态 + UI 覆盖）
@@ -82,6 +83,12 @@ fun ConnectivityModal(
                             )
                             ConnectionState.DISCONNECTED -> DisconnectedView(
                                 onReconnect = { viewModel.reconnect() }
+                            )
+                            ConnectionState.NEEDS_SETUP -> NeedsSetupView(
+                                onStartSetup = {
+                                    onDismiss()
+                                    onNavigateToSetup()
+                                }
                             )
                             ConnectionState.CHECKING_UPDATE -> CheckingUpdateView()
                             ConnectionState.UPDATE_FOUND -> UpdateFoundView(
@@ -188,6 +195,36 @@ private fun DisconnectedView(
         modifier = Modifier.fillMaxWidth(0.8f)
     ) {
         Text("连接设备 (Reconnect)")
+    }
+}
+
+@Composable
+private fun NeedsSetupView(
+    onStartSetup: () -> Unit
+) {
+    Icon(
+        imageVector = Icons.Default.Warning,
+        contentDescription = "Needs Setup",
+        tint = Color(0xFFFFC107),
+        modifier = Modifier
+            .size(64.dp)
+            .background(Color(0xFFFFC107).copy(alpha = 0.1f), CircleShape)
+            .padding(12.dp)
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Text("⚙️ 设备未配网", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+    Text("需要完成初始化设置才能连接", fontSize = 14.sp, color = Color(0xFFAAAAAA))
+
+    Spacer(modifier = Modifier.height(32.dp))
+
+    Button(
+        onClick = onStartSetup,
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+        modifier = Modifier.fillMaxWidth(0.8f)
+    ) {
+        Text("📱 开始配网")
     }
 }
 

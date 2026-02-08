@@ -19,7 +19,7 @@
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| **Context Builder** | 🔲 | Multimodal normalization (Tingwu, Qwen-VL) |
+| **Context Builder** | ✅ | Session Context complete (Waves 1-3 shipped) |
 | **Executor** | 🔲 | Strategy-based LLM selection per mode |
 | **Publisher** | 🔲 | Chat/Analyst/Schedule publishers |
 | **Memory Writer** | 🔲 | Fire-and-forget with retry |
@@ -47,7 +47,7 @@
 | **Active Zone** | 🔲 | `MemoryEntry` (isArchived=false) (§5.7) |
 | **Archived Zone** | 🔲 | `MemoryEntry` (isArchived=true) (§5.1) |
 | **Entity Registry** | 🔲 | `EntityEntry` (§5.2) |
-| **Session Cache** | 🔲 | In-task fast access (§2.2 #1b) |
+| **Session Cache** | ✅ | Path indexing + entity state tracking (§2.2 #1b) |
 | **ScheduleBoard** | ✅ | Conflict index ([spec](../cerb/memory-center/spec.md#scheduleboard-conflict-index)) |
 
 ---
@@ -215,6 +215,9 @@
 - Battery level currently hardcoded placeholder (85%) in `ConnectivityViewModel`
 - Real BLE battery characteristic not yet implemented by hardware team
 - UI wired to observe placeholder, ready for real data when available
+- `disconnect()` calls `forgetDevice()` (nuclear unpair) — no soft disconnect API in `DeviceConnectionManager`
+- Modal stays open after disconnect — consider auto-dismiss with toast "已断开连接"
+- Error states show generic "离线" — should show contextual hints ("检查蓝牙" vs "检查WiFi")
 
 ---
 

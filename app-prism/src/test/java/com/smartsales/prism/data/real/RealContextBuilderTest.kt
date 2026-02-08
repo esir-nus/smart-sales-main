@@ -6,6 +6,7 @@ import com.smartsales.prism.data.fakes.FakeTimeProvider
 import com.smartsales.prism.data.fakes.FakeUserHabitRepository
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.rl.ObservationSource
+import com.smartsales.prism.data.fakes.FakeMemoryRepository
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -26,6 +27,7 @@ class RealContextBuilderTest {
     private lateinit var entityRepository: FakeEntityRepository
     private lateinit var habitRepository: FakeUserHabitRepository
     private lateinit var reinforcementLearner: FakeReinforcementLearner
+    private lateinit var memoryRepository: FakeMemoryRepository
     
     @Before
     fun setup() {
@@ -33,11 +35,13 @@ class RealContextBuilderTest {
         entityRepository = FakeEntityRepository()
         habitRepository = FakeUserHabitRepository()
         reinforcementLearner = FakeReinforcementLearner(habitRepository)
+        memoryRepository = FakeMemoryRepository()
         
         contextBuilder = RealContextBuilder(
             timeProvider = timeProvider,
             entityRepository = entityRepository,
-            reinforcementLearner = reinforcementLearner
+            reinforcementLearner = reinforcementLearner,
+            memoryRepository = memoryRepository
         )
     }
     

@@ -12,9 +12,13 @@ import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.io.File
@@ -37,6 +41,11 @@ class RealConnectivityBridge @Inject constructor(
     private val httpClient: BadgeHttpClient
 ) : ConnectivityBridge {
     
+    companion object {
+        private const val POLL_INTERVAL_MS = 15_000L
+        private const val TAG_RECORDING_POLL = "RecordingPoll"
+    }
+    
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     
     override val connectionState: StateFlow<BadgeConnectionState> = deviceManager.state
@@ -48,16 +57,10 @@ class RealConnectivityBridge @Inject constructor(
         )
     
     override suspend fun downloadRecording(filename: String): WavDownloadResult {
-        // Query network status to get IP (ConnectionState doesn't contain it)
-        val networkStatus = when (val result = deviceManager.queryNetworkStatus()) {
-            is Result.Success -> result.data
-            is Result.Error -> return WavDownloadResult.Error(
-                code = WavDownloadResult.ErrorCode.NOT_CONNECTED,
-                message = "无法获取设备IP: ${result.throwable.message}"
-            )
-        }
-        
-        val baseUrl = "http://${networkStatus.ipAddress}:8088"
+        val baseUrl = resolveBaseUrl() ?: return WavDownloadResult.Error(
+            code = WavDownloadResult.ErrorCode.NOT_CONNECTED,
+            message = "无法获取设备IP"
+        )
         val tempFile = File.createTempFile("badge_recording_", ".wav")
         
         return when (val result = httpClient.downloadWav(baseUrl, filename, tempFile)) {
@@ -70,28 +73,34 @@ class RealConnectivityBridge @Inject constructor(
         }
     }
     
-    override fun recordingNotifications(): Flow<RecordingNotification> {
-        // Wave 3: BLE listener for record#end
-        return kotlinx.coroutines.flow.emptyFlow()
+    override fun recordingNotifications(): Flow<RecordingNotification> = flow {
+        val processed = mutableSetOf<String>()
+        while (currentCoroutineContext().isActive) {
+            if (connectionState.value is BadgeConnectionState.Connected) {
+                val baseUrl = resolveBaseUrl()
+                if (baseUrl != null) {
+                    val files = httpClient.listWavFiles(baseUrl)
+                        .let { (it as? Result.Success)?.data } ?: emptyList()
+                    for (file in files) {
+                        if (file !in processed) {
+                            processed.add(file)
+                            android.util.Log.d(TAG_RECORDING_POLL, "New recording detected: $file")
+                            emit(RecordingNotification.RecordingReady(file))
+                        }
+                    }
+                }
+            }
+            delay(POLL_INTERVAL_MS)
+        }
     }
     
     override suspend fun isReady(): Boolean {
-        val networkStatus = when (val result = deviceManager.queryNetworkStatus()) {
-            is Result.Success -> result.data
-            is Result.Error -> return false
-        }
-        
-        val baseUrl = "http://${networkStatus.ipAddress}:8088"
+        val baseUrl = resolveBaseUrl() ?: return false
         return httpClient.isReachable(baseUrl)
     }
     
     override suspend fun deleteRecording(filename: String): Boolean {
-        val networkStatus = when (val result = deviceManager.queryNetworkStatus()) {
-            is Result.Success -> result.data
-            is Result.Error -> return false
-        }
-        
-        val baseUrl = "http://${networkStatus.ipAddress}:8088"
+        val baseUrl = resolveBaseUrl() ?: return false
         return when (httpClient.deleteWav(baseUrl, filename)) {
             is Result.Success -> true
             is Result.Error -> false
@@ -100,8 +109,8 @@ class RealConnectivityBridge @Inject constructor(
     
     private fun mapToPrismState(legacy: ConnectionState): BadgeConnectionState {
         return when (legacy) {
-            is ConnectionState.Disconnected, 
-            is ConnectionState.NeedsSetup -> BadgeConnectionState.Disconnected
+            is ConnectionState.Disconnected -> BadgeConnectionState.Disconnected
+            is ConnectionState.NeedsSetup -> BadgeConnectionState.NeedsSetup
             
             is ConnectionState.Pairing,
             is ConnectionState.AutoReconnecting -> BadgeConnectionState.Connecting
@@ -146,5 +155,17 @@ class RealConnectivityBridge @Inject constructor(
                 message = throwable.message ?: "下载失败"
             )
         }
+    }
+    
+    /**
+     * Extract duplicated pattern: query network status → build base URL.
+     * Eliminates 3× copy-paste in downloadRecording/isReady/deleteRecording.
+     */
+    private suspend fun resolveBaseUrl(): String? {
+        val networkStatus = when (val result = deviceManager.queryNetworkStatus()) {
+            is Result.Success -> result.data
+            is Result.Error -> return null
+        }
+        return "http://${networkStatus.ipAddress}:8088"
     }
 }

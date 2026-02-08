@@ -60,7 +60,8 @@ class FakeBadgeAudioPipeline @Inject constructor() : BadgeAudioPipeline {
         _currentState.value = PipelineState.IDLE
         _events.emit(PipelineEvent.Complete(
             SchedulerResult.TaskCreated("fake-task-1", "明天开会"),
-            filename
+            filename,
+            "明天开会"
         ))
     }
     
@@ -119,7 +120,8 @@ class FakeBadgeAudioPipeline @Inject constructor() : BadgeAudioPipeline {
         _currentState.value = PipelineState.IDLE
         _events.emit(PipelineEvent.Complete(
             SchedulerResult.InspirationSaved("inspiration-1"),
-            filename
+            filename,
+            "以后想学吉他"
         ))
     }
 }

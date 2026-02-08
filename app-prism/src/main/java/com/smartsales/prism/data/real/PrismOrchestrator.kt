@@ -52,7 +52,8 @@ class PrismOrchestrator @Inject constructor(
     private val schedulerLinter: SchedulerLinter,
     private val scheduleBoard: com.smartsales.prism.domain.memory.ScheduleBoard,
     private val inspirationRepository: InspirationRepository,
-    private val reinforcementLearner: com.smartsales.prism.domain.rl.ReinforcementLearner
+    private val reinforcementLearner: com.smartsales.prism.domain.rl.ReinforcementLearner,
+    private val coachPipeline: com.smartsales.prism.domain.coach.CoachPipeline
 ) : Orchestrator {
     
     // Fire-and-forget scope for RL learning
@@ -78,18 +79,22 @@ class PrismOrchestrator @Inject constructor(
         activityController.startPhase(ActivityPhase.PLANNING, ActivityAction.THINKING)
         
         return try {
-            activityController.updateAction(ActivityAction.ASSEMBLING)
-            val context = contextBuilder.build(input, Mode.COACH)
-            activityController.startPhase(ActivityPhase.EXECUTING, ActivityAction.THINKING)
+            // 获取会话历史
+            val sessionHistory = contextBuilder.getSessionHistory()
             
-            when (val result = executor.execute(context)) {
-                is ExecutorResult.Success -> {
+            activityController.updateAction(ActivityAction.ASSEMBLING)
+            activityController.startPhase(ActivityPhase.EXECUTING, ActivityAction.STREAMING)
+            
+            // 委托给 CoachPipeline 处理
+            val response = coachPipeline.process(input, sessionHistory)
+            
+            when (response) {
+                is com.smartsales.prism.domain.coach.CoachResponse.Chat -> {
                     activityController.complete()
-                    UiState.Response(result.content)
-                }
-                is ExecutorResult.Failure -> {
-                    activityController.error(result.error)
-                    UiState.Error(result.error, result.retryable)
+                    // 记录会话历史
+                    contextBuilder.recordUserMessage(input)
+                    contextBuilder.recordAssistantMessage(response.content)
+                    UiState.Response(response.content)
                 }
             }
         } catch (e: Exception) {

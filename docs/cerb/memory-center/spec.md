@@ -14,8 +14,8 @@ Memory Center manages persistent storage and retrieval of user interactions, ent
 
 | Spec | Responsibility |
 |------|----------------|
-| [Entity Registry](../entity-registry/spec.md) | Entity lookup, disambiguation |
-| [User Habit](../user-habit/spec.md) | Behavioral patterns, learning |
+| [Entity Registry](../entity-registry/interface.md) | Entity lookup, disambiguation |
+| [User Habit](../user-habit/interface.md) | Behavioral patterns, learning |
 
 ---
 
@@ -166,7 +166,42 @@ data class DecisionRecord(
 |------|-------|--------|
 | **1** | ScheduleBoard + Two-Phase Pipeline | ✅ SHIPPED |
 | **2** | Query-Time Filtering (Lazy Compaction) | ✅ SHIPPED |
-| **3** | [Client Profile Hub](../client-profile-hub/spec.md) | 🔲 PLANNING |
+| **3** | [Client Profile Hub](../client-profile-hub/interface.md) integration | 🔲 PLANNING |
+
+### Wave 1 Ship Criteria (✅ SHIPPED)
+
+- **Goal**: Conflict detection via hardcoded Kotlin
+- **Exit Criteria**: `checkConflict()` returns correct overlap results
+- **Test Cases**: ✅ Time overlap detection, ✅ `excludeId` self-exclusion, ✅ `ConflictPolicy.COEXISTING` passthrough
+
+### Wave 2 Ship Criteria (✅ SHIPPED)
+
+- **Goal**: Active/Archived zones via query-time filtering
+- **Exit Criteria**: `getActiveEntries()` filters by `isArchived` + subscription window
+- **Test Cases**: ✅ Tier-based window logic, ✅ Archive query excludes active entries
+
+---
+
+## File Map
+
+| Layer | Files |
+|-------|-------|
+| **Domain** | `MemoryRepository.kt`, `MemoryWriter.kt`, `MemoryModels.kt`, `ScheduleBoard.kt`, `ScheduleItem.kt` |
+| **Data** | `RealScheduleBoard.kt`, `FakeMemoryRepository.kt`, `FakeMemoryWriter.kt` |
+| **DI** | `SchedulerModule.kt` (provides ScheduleBoard binding) |
+
+---
+
+## Verification Commands
+
+```bash
+# Build check
+./gradlew :app-prism:compileDebugKotlin
+
+# Run memory-related tests
+./gradlew :app-prism:testDebugUnitTest --tests "*Memory*"
+./gradlew :app-prism:testDebugUnitTest --tests "*ScheduleBoard*"
+```
 
 ---
 

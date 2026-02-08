@@ -43,6 +43,11 @@ Before ANY planning, read the relevant spec:
 
 **If mismatch → STOP. Do not proceed.**
 
+> [!IMPORTANT]
+> **Docs-First Protocol** (`.agent/rules/docs-first-protocol.md`):
+> If spec doesn't exist → CREATE via `/feature-cerb-pattern` before any code.
+> If spec doesn't cover this change → UPDATE spec first, then implement.
+
 ### ⚠️ Anti-Invention Gate
 
 | Quote Type | Example | Valid Spec? |
@@ -267,6 +272,36 @@ class ScheduleBoardTest {
 
 ---
 
+## Phase 4.5: Doc Sync (Mandatory After Code)
+
+> **Rule**: `.agent/rules/docs-first-protocol.md` — Gate 3 (Post-Flight)
+
+After implementation AND after tests pass:
+
+```markdown
+### Doc Sync Checklist
+- [ ] Domain models in spec match code
+- [ ] UI states in spec match code (state tables)
+- [ ] Wave status updated (🔲 → ✅ SHIPPED)
+- [ ] Ship criteria boxes checked
+- [ ] Implementation status table updated
+- [ ] Tracker.md tech debt updated (if applicable)
+```
+
+**Run `/cerb-check` on updated docs to verify compliance.**
+
+| If You Changed... | Update This |
+|-------------------|-------------|
+| Sealed class variants | Spec → Domain Models section |
+| UI enum values | Spec → States table |
+| Interface signatures | `interface.md` |
+| Any ship criteria met | Spec → Ship Criteria checkboxes |
+| New tech debt found | `tracker.md` → Tech Debt section |
+
+**❌ Do NOT mark a wave as shipped without updating docs.**
+
+---
+
 ## Enforcement
 
 **Do NOT proceed to implementation if:**
@@ -356,6 +391,7 @@ cat .agent/rules/lessons-learned.md
 | **2** | First principles checked |
 | **3** | Plan approved |
 | **4** | L1 → L2 → L3 pass |
+| **4.5** | ✅ Docs synced (spec + tracker) |
 | **5** | ✅ Lesson logged (if bug fix) |
 
 ---
@@ -363,4 +399,5 @@ cat .agent/rules/lessons-learned.md
 ## Related Rules
 
 - `.agent/rules/anti-drift-protocol.md` — Full anti-drift rules
+- `.agent/rules/docs-first-protocol.md` — **Docs-first enforcement (3 gates)**
 - `.agent/rules/lessons-learned.md` — **READ FIRST, UPDATE AFTER FIX**

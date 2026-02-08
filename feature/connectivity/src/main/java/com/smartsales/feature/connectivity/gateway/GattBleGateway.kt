@@ -180,7 +180,9 @@ class GattBleGateway @Inject constructor(
                         val notification = gattContext.awaitNotificationOrRead(config.provisioningStatusCharacteristicUuid)
                         val value = notification.decodeToString().trim()
                         
-                        if (value.startsWith("time#get", ignoreCase = true)) {
+                        // Handle both "time#get" and "tim#get" (firmware variant)
+                        if (value.startsWith("time#get", ignoreCase = true) || 
+                            value.startsWith("tim#get", ignoreCase = true)) {
                             val timestamp = formatCurrentTime()
                             val response = "time#$timestamp"
                             gattContext.writeCharacteristic(
@@ -409,10 +411,22 @@ class GattBleGateway @Inject constructor(
         raw: String
     ): BleGatewayResult {
         val parts = raw.split("#")
+        
+        // Handle time sync request variants (badge asking for current time)
+        // Badge may send "time#get" or truncated "tim#get" depending on firmware
+        // This indicates badge is alive and provisioning is proceeding
+        val command = parts.getOrNull(0)?.lowercase() ?: ""
+        if (command == "time" || command == "tim") {
+            ConnectivityLogger.i("Badge requested time sync during provisioning ($raw), treating as success")
+            return BleGatewayResult.Success(
+                handshakeId = UUID.randomUUID().toString(),
+                credentialsHash = sha256("${credentials.ssid}${credentials.password}")
+            )
+        }
+        
         if (parts.size < 3) {
             return BleGatewayResult.TransportError("BLE 响应格式不正确：$raw")
         }
-        val command = parts[0].lowercase()
         val action = parts[1].lowercase()
         if (command != "wifi" || action != "connect") {
             return BleGatewayResult.TransportError("收到未知确认指令：$raw")

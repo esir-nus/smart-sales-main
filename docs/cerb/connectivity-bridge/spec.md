@@ -16,14 +16,12 @@ Connectivity Bridge provides a **thin, Prism-compatible interface** to legacy `f
 
 | Spec | Responsibility |
 |------|----------------|
-| [Badge Audio Pipeline](../badge-audio-pipeline/spec.md) | Orchestrates recording → transcription → scheduler |
-| [ASR Service](../asr-service/spec.md) | Audio transcription via FunASR |
+| [Badge Audio Pipeline](../badge-audio-pipeline/interface.md) | Orchestrates recording → transcription → scheduler |
+| [ASR Service](../asr-service/interface.md) | Audio transcription via FunASR |
 
 ---
 
 ## ESP32 Protocol Reference
-
-> **SOT**: [`esp32-protocol.md`](../../specs/esp32-protocol.md)
 
 ### BLE Commands (Preserved)
 
@@ -315,17 +313,30 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
 
 ## Wave 3 Ship Criteria
 
-**Goal**: `record#end` triggers automatic download.
+**Goal**: Automatic recording detection triggers download.
+
+**Current Implementation**: HTTP `/list` polling (firmware `record#end` not ready).
 
 - **Exit Criteria**:
-  - [ ] BLE listener for `record#end` command
-  - [ ] Filename extracted from time sync
-  - [ ] `RecordingNotification.RecordingReady` emitted
+  - [ ] HTTP polling on `/list` endpoint every 15s
+  - [ ] New file detection via diff (delete-as-dedup)
+  - [ ] `RecordingNotification.RecordingReady` emitted for new files
+  - [ ] Only polls when badge is connected
 
 - **Test Cases**:
-  - [ ] Badge sends `record#end` → notification received
-  - [ ] Time sync provides correct filename format
-  - [ ] Multiple recordings handled sequentially
+  - [ ] New WAV appears on badge → detected within 15s
+  - [ ] Processed file deleted → not re-detected on next poll
+  - [ ] Process restart → undeleted files re-detected correctly
+  - [ ] Disconnected state → polling stops
+
+**Future Path** (when firmware ships `record#end` BLE command):
+- Replace 15s timer with BLE notification trigger
+- Use cached `time#get` timestamp for direct filename prediction
+- Interface stays unchanged
+
+> [!NOTE]
+> Protocol SOT: [esp32-protocol.md §6](file:///home/cslh-frank/main_app/docs/specs/esp32-protocol.md#L111-L129)
+
 
 ---
 

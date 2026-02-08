@@ -277,22 +277,21 @@ User Input
     ↓
 Step 1: In-session chat history (primary context)
     ↓
-Step 2: LLM-scored prompt checks:
-    ├─ Check A: Suggest Analyst mode? (if yes → prompt user to switch)
-    └─ Check B: Memory search threshold (0-1 score)
-           ├─ Score > threshold → Auto-search Relevancy Library
-           │                      (emit: "Searching memory...")
-           └─ Score ≤ threshold → Stay with session context only
+Step 2: Context enrichment (deterministic):
+    ├─ First turn of session → MemoryRepository.search() for relevant context
+    ├─ Entity mentions detected → EntityRepository.findByAlias() for known entities
+    └─ Subsequent turns → session context is sufficient (no re-search)
     ↓
-Step 3: If memory search triggered → follow Relevancy Library pointers to Hot/Cement
+Step 3: Analyst suggestion is an output flag from the main LLM call
+        (not a pre-execution LLM check)
 ```
 
 **Coach Prompt Checks:**
 
 | Check | Purpose | User Control |
 |-------|---------|--------------|
-| **Analyst Suggestion** | Detects analysis-heavy requests | User must confirm switch |
-| **Memory Threshold** | Detects need for historical context | Auto-search if passed, visible to user |
+| **Analyst Suggestion** | Detects analysis-heavy requests | Output flag from response (User confirms) |
+| **Memory Search** | Provides historical context | Triggered on first turn or entity state change |
 
 #### Analyst Mode
 ```

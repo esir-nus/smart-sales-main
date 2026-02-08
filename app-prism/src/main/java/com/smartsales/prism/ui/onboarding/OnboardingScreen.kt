@@ -63,10 +63,7 @@ fun OnboardingScreen(
             ) {
                 when (step) {
                     OnboardingStep.WELCOME -> WelcomeStep(
-                        onStart = { currentStep = OnboardingStep.PERMISSIONS }
-                    )
-                    OnboardingStep.PERMISSIONS -> PermissionsStep(
-                        onAllow = { currentStep = OnboardingStep.VOICE_HANDSHAKE }
+                        onStart = { currentStep = OnboardingStep.VOICE_HANDSHAKE }
                     )
                     OnboardingStep.VOICE_HANDSHAKE -> VoiceHandshakeStep(
                         onContinue = { currentStep = OnboardingStep.HARDWARE_WAKE }
@@ -144,30 +141,6 @@ private fun WelcomeStep(onStart: () -> Unit) {
 }
 
 @Composable
-private fun PermissionsStep(onAllow: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("需要一些权限", fontSize = 24.sp, color = TextPrimary, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(32.dp))
-        
-        PrismCard(onClick = {}, modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp)) {
-                Text("🎙️ 麦克风权限", color = TextPrimary, fontWeight = FontWeight.Bold)
-                Text("为了分析您的销售对话...", color = TextSecondary, fontSize = 12.sp)
-            }
-        }
-        Spacer(Modifier.height(16.dp))
-        PrismCard(onClick = {}, modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(16.dp)) {
-                Text("📡 蓝牙权限", color = TextPrimary, fontWeight = FontWeight.Bold)
-                Text("为了连接 SmartBadge...", color = TextSecondary, fontSize = 12.sp)
-            }
-        }
-        Spacer(Modifier.height(48.dp))
-        PrismButton(text = "允许访问", onClick = onAllow, modifier = Modifier.fillMaxWidth())
-    }
-}
-
-@Composable
 private fun VoiceHandshakeStep(onContinue: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text("让我们先认识一下", fontSize = 24.sp, color = TextPrimary)
@@ -199,12 +172,53 @@ private fun HardwareWakeStep(onNext: () -> Unit) {
 private fun ScanStep(
     viewModel: OnboardingViewModel,
     onCancel: () -> Unit,
-    onFound: () -> Unit
+    onFound: (com.smartsales.prism.domain.pairing.DiscoveredBadge) -> Unit
 ) {
-    LaunchedEffect(Unit) {
-        viewModel.startScan()
-        onFound()
+    val pairingState by viewModel.pairingState.collectAsState()
+    
+    // 权限请求 (Android 12+)
+    val permissions = remember {
+        buildList {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                add(android.Manifest.permission.BLUETOOTH_SCAN)
+                add(android.Manifest.permission.BLUETOOTH_CONNECT)
+            }
+        }
     }
+    
+    var permissionsGranted by remember { mutableStateOf(permissions.isEmpty()) }
+    
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        permissionsGranted = results.values.all { it }
+        if (permissionsGranted) {
+            viewModel.startScan()
+        }
+    }
+    
+    // 启动扫描或请求权限
+    LaunchedEffect(Unit) {
+        if (permissions.isEmpty() || permissionsGranted) {
+            viewModel.startScan()
+        } else {
+            launcher.launch(permissions.toTypedArray())
+        }
+    }
+    
+    // 处理状态转换
+    when (val state = pairingState) {
+        is com.smartsales.prism.domain.pairing.PairingState.DeviceFound -> {
+            LaunchedEffect(state.badge) {
+                onFound(state.badge)
+            }
+        }
+        is com.smartsales.prism.domain.pairing.PairingState.Error -> {
+            // 显示错误（TODO: 添加 toast）
+        }
+        else -> {} // Scanning or Idle
+    }
+    
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text("正在搜索设备...", fontSize = 20.sp, color = TextPrimary)
         Spacer(Modifier.height(32.dp))
@@ -215,12 +229,15 @@ private fun ScanStep(
 }
 
 @Composable
-private fun DeviceFoundStep(onConnect: () -> Unit) {
+private fun DeviceFoundStep(
+    badge: com.smartsales.prism.domain.pairing.DiscoveredBadge,
+    onConnect: () -> Unit
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         PrismCard(onClick = {}, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
-                Text("📱 SmartBadge (Frank's)", color = TextPrimary, fontWeight = FontWeight.Bold)
-                Text("ID: FF:23:44:A1 • -42dBm", color = AccentSecondary, fontSize = 12.sp)
+                Text("📱 ${badge.name}", color = TextPrimary, fontWeight = FontWeight.Bold)
+                Text("ID: ${badge.id} • ${badge.signalStrengthDbm}dBm", color = AccentSecondary, fontSize = 12.sp)
                 Spacer(Modifier.height(16.dp))
                 PrismButton(text = "连接", onClick = onConnect, modifier = Modifier.fillMaxWidth())
             }
@@ -229,33 +246,63 @@ private fun DeviceFoundStep(onConnect: () -> Unit) {
 }
 
 @Composable
-private fun WifiCredsStep(onConnect: () -> Unit) {
+private fun WifiCredsStep(
+    viewModel: OnboardingViewModel,
+    badge: com.smartsales.prism.domain.pairing.DiscoveredBadge,
+    onConnect: () -> Unit
+) {
+    var ssid by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text("配置网络", fontSize = 24.sp, color = TextPrimary)
         Text("让徽章独立工作", color = TextSecondary)
         Spacer(Modifier.height(32.dp))
-        GlassTextField(value = "", onValueChange = {}, label = "WiFi SSID")
+        GlassTextField(value = ssid, onValueChange = { ssid = it }, label = "WiFi SSID")
         Spacer(Modifier.height(16.dp))
-        GlassTextField(value = "", onValueChange = {}, label = "密码", isPassword = true)
+        GlassTextField(value = password, onValueChange = { password = it }, label = "密码", isPassword = true)
         Spacer(Modifier.height(32.dp))
-        PrismButton(text = "连接网络", onClick = onConnect, modifier = Modifier.fillMaxWidth())
+        PrismButton(
+            text = "连接网络", 
+            onClick = {
+                viewModel.pairBadge(
+                    badge = badge,
+                    wifiCreds = com.smartsales.prism.domain.pairing.WifiCredentials(ssid, password)
+                )
+                onConnect()
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
 @Composable
-private fun FirmwareCheckStep(onComplete: () -> Unit) {
-    var progress by remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(Unit) {
-        while (progress < 1f) {
-            delay(50)
-            progress += 0.02f
+private fun PairingProgressStep(
+    viewModel: OnboardingViewModel,
+    onComplete: () -> Unit
+) {
+    val pairingState by viewModel.pairingState.collectAsState()
+    
+    // 监听配对完成
+    when (val state = pairingState) {
+        is com.smartsales.prism.domain.pairing.PairingState.Success -> {
+            LaunchedEffect(Unit) {
+                delay(500)
+                onComplete()
+            }
         }
-        delay(500)
-        onComplete()
+        else -> {}
     }
+    
+    val progress = when (val state = pairingState) {
+        is com.smartsales.prism.domain.pairing.PairingState.Pairing -> state.progress / 100f
+        is com.smartsales.prism.domain.pairing.PairingState.Success -> 1f
+        else -> 0f
+    }
+    
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("正在检查固件版本...", fontSize = 20.sp, color = TextPrimary)
-        Text("v1.0.2 -> v1.2.0 (必需)", color = TextSecondary)
+        Text("正在配对设备...", fontSize = 20.sp, color = TextPrimary)
+        Text("WiFi 配网 + 网络检查", color = TextSecondary)
         Spacer(Modifier.height(32.dp))
         LinearProgressIndicator(
             progress = { progress },

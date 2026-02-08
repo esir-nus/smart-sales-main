@@ -8,7 +8,6 @@ import com.smartsales.prism.data.fakes.FakeExecutor
 import com.smartsales.prism.data.fakes.FakeHistoryRepository
 import com.smartsales.prism.data.fakes.FakeMemoryRepository
 import com.smartsales.prism.data.fakes.FakeMemoryWriter
-import com.smartsales.prism.data.fakes.FakeOnboardingService
 import com.smartsales.prism.data.fakes.FakePublisher
 import com.smartsales.prism.data.fakes.FakeEntityRepository
 import com.smartsales.prism.data.fakes.FakeUserProfileRepository 
@@ -19,7 +18,6 @@ import com.smartsales.prism.domain.audio.AudioRepository
 import com.smartsales.prism.domain.memory.MemoryRepository
 import com.smartsales.prism.domain.memory.MemoryWriter
 import com.smartsales.prism.domain.memory.EntityRepository
-import com.smartsales.prism.domain.onboarding.OnboardingService
 import com.smartsales.prism.domain.pipeline.ContextBuilder
 import com.smartsales.prism.domain.pipeline.Executor
 import com.smartsales.prism.domain.pipeline.Orchestrator
@@ -72,14 +70,7 @@ abstract class PrismModule {
     
     @Binds @Singleton
     abstract fun bindMemoryWriter(fake: FakeMemoryWriter): MemoryWriter
-    
 
-    
-    // === Onboarding ===
-    
-    @Binds @Singleton
-    abstract fun bindOnboardingService(fake: FakeOnboardingService): OnboardingService
-    
     // === Audio ===
     
     @Binds @Singleton
@@ -118,5 +109,10 @@ abstract class PrismModule {
     // === Badge Audio Pipeline ===
 
     @Binds @Singleton
-    abstract fun bindBadgeAudioPipeline(fake: com.smartsales.prism.data.fakes.FakeBadgeAudioPipeline): com.smartsales.prism.domain.audio.BadgeAudioPipeline
+    abstract fun bindBadgeAudioPipeline(impl: com.smartsales.prism.data.audio.RealBadgeAudioPipeline): com.smartsales.prism.domain.audio.BadgeAudioPipeline
+
+    // === Coach Pipeline ===
+
+    @Binds @Singleton
+    abstract fun bindCoachPipeline(impl: com.smartsales.prism.data.real.coach.RealCoachPipeline): com.smartsales.prism.domain.coach.CoachPipeline
 }

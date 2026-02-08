@@ -27,7 +27,12 @@ interface ConnectivityBridge {
     
     /**
      * Stream of recording notifications from badge.
-     * Emits when badge sends `record#end` via BLE.
+     * 
+     * **Current**: HTTP polling on `/list` detects new WAV files.  
+     * **Future**: BLE `record#end` command triggers immediate notification.
+     * 
+     * @return Flow (hot, starts polling on collection)
+     * @see esp32-protocol.md §6
      */
     fun recordingNotifications(): Flow<RecordingNotification>
     
@@ -54,6 +59,7 @@ interface ConnectivityBridge {
 ```kotlin
 sealed class BadgeConnectionState {
     object Disconnected : BadgeConnectionState()
+    object NeedsSetup : BadgeConnectionState()
     object Connecting : BadgeConnectionState()
     data class Connected(val badgeIp: String, val ssid: String) : BadgeConnectionState()
     data class Error(val message: String) : BadgeConnectionState()
@@ -81,7 +87,35 @@ sealed class WavDownloadResult {
 }
 ```
 
+### ConnectivityService
+
+```kotlin
+interface ConnectivityService {
+    suspend fun checkForUpdate(): UpdateResult
+    suspend fun reconnect(): ReconnectResult
+    suspend fun disconnect()
+    suspend fun unpair()
+    suspend fun updateWifiConfig(ssid: String, password: String): WifiConfigResult
+}
+
+sealed class UpdateResult {
+    object None : UpdateResult()
+    data class Available(val version: String) : UpdateResult()
+}
+
+sealed class ReconnectResult {
+    object Success : ReconnectResult()
+    data class Failed(val reason: String) : ReconnectResult()
+}
+
+sealed class WifiConfigResult {
+    object Success : WifiConfigResult()
+    data class Failed(val reason: String) : WifiConfigResult()
+}
+```
+
 ---
+
 
 ## Guarantees
 

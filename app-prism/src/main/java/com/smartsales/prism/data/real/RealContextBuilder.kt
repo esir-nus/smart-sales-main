@@ -15,6 +15,7 @@ import com.smartsales.prism.domain.pipeline.ModeMetadata
 import com.smartsales.prism.domain.pipeline.ToolArtifact
 import com.smartsales.prism.domain.scheduler.ParsedClues
 import com.smartsales.prism.domain.rl.ReinforcementLearner
+import com.smartsales.prism.domain.session.SessionContext
 import com.smartsales.prism.domain.time.TimeProvider
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,11 +40,14 @@ class RealContextBuilder @Inject constructor(
     private var _lastToolResult: ToolArtifact? = null
     private val _executedTools = mutableSetOf<String>()
     
-    private var _turnIndex = 0
     private var _sessionId = "session-${System.currentTimeMillis()}"
+    private var _sessionContext = SessionContext(
+        sessionId = _sessionId,
+        createdAt = timeProvider.now.toEpochMilli()
+    )
     
     override suspend fun build(userText: String, mode: Mode): EnhancedContext {
-        _turnIndex++
+        _sessionContext.incrementTurn()
         
         // Wave 3: Memory search (session-history-aware)
         val memoryHits = if (shouldSearchMemory(userText, _sessionHistory)) {
@@ -67,7 +71,7 @@ class RealContextBuilder @Inject constructor(
             modeMetadata = ModeMetadata(
                 currentMode = mode,
                 sessionId = _sessionId,
-                turnIndex = _turnIndex
+                turnIndex = _sessionContext.turnCount
             ),
             sessionHistory = _sessionHistory.toList(),
             lastToolResult = _lastToolResult,
@@ -87,13 +91,33 @@ class RealContextBuilder @Inject constructor(
      * @return 增强上下文（含实体引用）
      */
     suspend fun buildWithClues(userText: String, mode: Mode, clues: ParsedClues): EnhancedContext {
-        _turnIndex++
+        _sessionContext.incrementTurn()
         
         // 根据线索查询 RelevancyLib
         val entityContext = mutableMapOf<String, EntityRef>()
         
-        // 按人物线索查询候选
+        // 按人物线索查询候选（Wave 2: 路径索引缓存）
         clues.person?.let { personClue ->
+            // 先检查会话缓存（O(1)）
+            val cachedId = _sessionContext.resolveAlias(personClue)
+            if (cachedId != null) {
+                Log.d("PathIndex", "HIT alias=$personClue → $cachedId")
+                val entry = entityRepository.getById(cachedId)
+                if (entry != null) {
+                    entityContext["person_candidate_0"] = EntityRef(
+                        entityId = entry.entityId,
+                        displayName = entry.displayName,
+                        entityType = entry.entityType.name
+                    )
+                    _sessionContext.markActive(cachedId)  // Wave 3: 标记为 ACTIVE（幂等）
+                    return@let  // 缓存命中，跳过 DB 搜索
+                }
+                // 缓存的 ID 对应的实体已被删除，走 fallback
+                Log.d("PathIndex", "STALE alias=$personClue, cachedId=$cachedId not found in DB")
+            }
+
+            // 缓存未命中：DB 查询，然后缓存第一个结果
+            Log.d("PathIndex", "MISS alias=$personClue")
             val candidates = entityRepository.findByAlias(personClue)
             candidates.forEachIndexed { index, entry ->
                 entityContext["person_candidate_$index"] = EntityRef(
@@ -101,11 +125,32 @@ class RealContextBuilder @Inject constructor(
                     displayName = entry.displayName,
                     entityType = entry.entityType.name
                 )
+                // 缓存第一个候选（Scheduler 管线只使用 candidate_0）
+                if (index == 0) {
+                    _sessionContext.cacheAlias(personClue, entry.entityId)
+                    _sessionContext.markActive(entry.entityId)  // Wave 3: 标记为已加载
+                }
             }
         }
         
-        // 按地点线索查询候选
+        // 按地点线索查询候选（Wave 2: 路径索引缓存）
         clues.location?.let { locationClue ->
+            val cachedId = _sessionContext.resolveAlias(locationClue)
+            if (cachedId != null) {
+                Log.d("PathIndex", "HIT alias=$locationClue → $cachedId")
+                val entry = entityRepository.getById(cachedId)
+                if (entry != null && entry.entityType == EntityType.LOCATION) {
+                    entityContext["location_candidate_0"] = EntityRef(
+                        entityId = entry.entityId,
+                        displayName = entry.displayName,
+                        entityType = entry.entityType.name
+                    )
+                    _sessionContext.markActive(cachedId)  // Wave 3: 标记为 ACTIVE（幂等）
+                    return@let
+                }
+            }
+
+            Log.d("PathIndex", "MISS alias=$locationClue")
             val locationCandidates = entityRepository.search(locationClue, limit = 3)
                 .filter { it.entityType == EntityType.LOCATION }
             locationCandidates.forEachIndexed { index, entry ->
@@ -114,6 +159,10 @@ class RealContextBuilder @Inject constructor(
                     displayName = entry.displayName,
                     entityType = entry.entityType.name
                 )
+                if (index == 0) {
+                    _sessionContext.cacheAlias(locationClue, entry.entityId)
+                    _sessionContext.markActive(entry.entityId)  // Wave 3: 标记为已加载
+                }
             }
         }
         
@@ -126,7 +175,7 @@ class RealContextBuilder @Inject constructor(
             modeMetadata = ModeMetadata(
                 currentMode = mode,
                 sessionId = _sessionId,
-                turnIndex = _turnIndex
+                turnIndex = _sessionContext.turnCount
             ),
             sessionHistory = _sessionHistory.toList(),
             lastToolResult = _lastToolResult,
@@ -177,8 +226,11 @@ class RealContextBuilder @Inject constructor(
         _sessionHistory.clear()
         _lastToolResult = null
         _executedTools.clear()
-        _turnIndex = 0
         _sessionId = "session-${System.currentTimeMillis()}"
+        _sessionContext = SessionContext(
+            sessionId = _sessionId,
+            createdAt = timeProvider.now.toEpochMilli()
+        )
     }
     
     /**
@@ -191,22 +243,20 @@ class RealContextBuilder @Inject constructor(
     }
     
     /**
-     * Wave 3: Session-aware memory search heuristic
+     * Context Strategy: First Turn Search
      * 
-     * 只在新会话中对模糊引用进行记忆搜索。
-     * 如果会话历史存在，LLM 已有足够上下文，无需搜索。
+     * Rely on Session Context pattern:
+     * 1. First turn: Search MemoryRepository to seed session context
+     * 2. Subsequent turns: Trust in-memory session history (no re-search)
+     * 
+     * Future (Phase 3): Add Entity State Machine triggers here.
      */
     private fun shouldSearchMemory(input: String, sessionHistory: List<ChatTurn>): Boolean {
-        // 如果会话有历史，跳过搜索（会话上下文足够）
-        if (sessionHistory.isNotEmpty()) {
-            Log.d("CoachMemory", "shouldSearchMemory=false (session active), historySize=${sessionHistory.size}, input='$input'")
-            return false
-        }
+        // Simple, robust heuristic: If allow-list is empty (new session), search memory.
+        // Once session is established, we rely on the conversation context.
+        val shouldSearch = sessionHistory.size < 2
         
-        // 只对新会话中的模糊引用进行搜索
-        val vagueKeywords = listOf("那个", "上次", "之前", "刚才")
-        val result = vagueKeywords.any { input.contains(it) } && input.length > 3
-        Log.d("CoachMemory", "shouldSearchMemory=$result (new session), historySize=0, input='$input'")
-        return result
+        Log.d("CoachMemory", "shouldSearchMemory=$shouldSearch (historySize=${sessionHistory.size})")
+        return shouldSearch
     }
 }

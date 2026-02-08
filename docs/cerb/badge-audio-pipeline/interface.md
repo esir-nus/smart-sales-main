@@ -52,7 +52,7 @@ sealed class PipelineEvent {
     data class Downloading(val filename: String) : PipelineEvent()
     data class Transcribing(val filename: String, val sizeBytes: Long) : PipelineEvent()
     data class Processing(val transcript: String) : PipelineEvent()
-    data class Complete(val result: SchedulerResult, val filename: String) : PipelineEvent()
+    data class Complete(val result: SchedulerResult, val filename: String, val transcript: String) : PipelineEvent()
     data class Error(val stage: Stage, val message: String, val filename: String?) : PipelineEvent()
     
     enum class Stage { DOWNLOAD, TRANSCRIBE, SCHEDULE, CLEANUP }

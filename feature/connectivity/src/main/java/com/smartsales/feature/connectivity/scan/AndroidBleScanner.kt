@@ -65,8 +65,13 @@ class AndroidBleScanner @Inject constructor(
 
     @SuppressLint("MissingPermission")
     override fun start() {
-        if (_isScanning.value) return
+        Log.d("BT311Scan", "start() called, isScanning=${_isScanning.value}")
+        if (_isScanning.value) {
+            Log.d("BT311Scan", "Already scanning, returning early")
+            return
+        }
         if (adapter == null || !adapter.isEnabled) {
+            Log.w("BT311Scan", "Bluetooth adapter null or disabled, adapter=$adapter, isEnabled=${adapter?.isEnabled}")
             _devices.value = emptyList()
             _isScanning.value = false
             return
@@ -74,10 +79,14 @@ class AndroidBleScanner @Inject constructor(
         _devices.value = emptyList()
         _isScanning.value = true
         debugLoggedCount = 0
+        Log.d("BT311Scan", "Calling startScan on scanner=$scanner")
         runCatching { scanner?.startScan(null, scanSettings, callback) }
-            .onFailure {
+            .onSuccess { Log.d("BT311Scan", "startScan() success") }
+            .onFailure { e ->
+                Log.e("BT311Scan", "startScan() FAILED: ${e.message}", e)
                 _isScanning.value = false
             }
+        Log.d("BT311Scan", "start() completed, isScanning=${_isScanning.value}")
     }
 
     @SuppressLint("MissingPermission")

@@ -19,8 +19,8 @@ ASR Service provides audio-to-text transcription using Aliyun FunASR cloud servi
 
 | Spec | Responsibility |
 |------|----------------|
-| [Badge Audio Pipeline](../badge-audio-pipeline/spec.md) | Orchestrates recording → transcription → scheduler |
-| [Connectivity Bridge](../connectivity-bridge/spec.md) | Downloads WAV from badge |
+| [Badge Audio Pipeline](../badge-audio-pipeline/interface.md) | Orchestrates recording → transcription → scheduler |
+| [Connectivity Bridge](../connectivity-bridge/interface.md) | Downloads WAV from badge |
 
 ---
 
@@ -83,8 +83,8 @@ sealed class AsrResult {
 
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
-| **1** | Interface + Fake | 🔲 | `AsrService` interface, `FakeAsrService` |
-| **2** | Real Implementation | 🔲 | `FunAsrService` with DashScope SDK |
+| **1** | Interface + Fake | ✅ SHIPPED | `AsrService` interface, `FakeAsrService` |
+| **2** | Real Implementation | ✅ SHIPPED | `FunAsrService` with DashScope SDK |
 | **3** | Error Handling | 🔲 | Retry policy, fallback, metrics |
 
 ---

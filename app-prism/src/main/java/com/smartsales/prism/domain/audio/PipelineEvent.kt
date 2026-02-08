@@ -20,7 +20,7 @@ sealed class PipelineEvent {
     data class Processing(val transcript: String) : PipelineEvent()
     
     /** 完成 */
-    data class Complete(val result: SchedulerResult, val filename: String) : PipelineEvent()
+    data class Complete(val result: SchedulerResult, val filename: String, val transcript: String) : PipelineEvent()
     
     /** 错误 */
     data class Error(val stage: Stage, val message: String, val filename: String?) : PipelineEvent()

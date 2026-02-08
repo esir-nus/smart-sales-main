@@ -34,9 +34,9 @@ Delete WAV from badge (cleanup)
 
 | Spec | Responsibility |
 |------|----------------|
-| [Connectivity Bridge](../connectivity-bridge/spec.md) | Badge BLE + HTTP access |
-| [ASR Service](../asr-service/spec.md) | Audio transcription |
-| [Scheduler](../scheduler/spec.md) | Task creation from transcript |
+| [Connectivity Bridge](../connectivity-bridge/interface.md) | Badge BLE + HTTP access |
+| [ASR Service](../asr-service/interface.md) | Audio transcription |
+| [Scheduler](../scheduler/interface.md) | Task creation from transcript |
 
 ---
 
@@ -84,15 +84,6 @@ sealed class SchedulerResult {
 }
 ```
 
-### PipelineConfig
-
-```kotlin
-data class PipelineConfig(
-    val deleteAfterSuccess: Boolean = true,   // Delete WAV from badge after success
-    val deleteAfterError: Boolean = false,    // Keep WAV for debugging on error
-    val transcriptionConfig: TranscriptionConfig = TranscriptionConfig()
-)
-```
 
 ---
 
@@ -100,9 +91,9 @@ data class PipelineConfig(
 
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
-| **1** | Interface + State Machine | 🔲 | `BadgeAudioPipeline` interface, state model |
-| **2** | Fake Pipeline | 🔲 | `FakeBadgeAudioPipeline` for UI testing |
-| **3** | Real Implementation | 🔲 | `RealBadgeAudioPipeline` with full orchestration |
+| **1** | Interface + State Machine | ✅ SHIPPED | `BadgeAudioPipeline` interface, state model |
+| **2** | Fake Pipeline | ✅ SHIPPED | `FakeBadgeAudioPipeline` for UI testing |
+| **3** | Real Implementation | 🔲 BLOCKED | Requires connectivity-bridge Wave 3 (`recordingNotifications`) |
 | **4** | Error Recovery | 🔲 | Retry logic, partial failure handling |
 
 ---

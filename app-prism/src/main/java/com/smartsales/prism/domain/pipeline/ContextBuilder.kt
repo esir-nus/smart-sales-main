@@ -14,4 +14,19 @@ interface ContextBuilder {
      * @return 归一化的 EnhancedContext
      */
     suspend fun build(userText: String, mode: Mode): EnhancedContext
+    
+    /**
+     * 获取当前会话历史
+     */
+    fun getSessionHistory(): List<ChatTurn>
+    
+    /**
+     * 记录用户消息到历史
+     */
+    fun recordUserMessage(content: String)
+    
+    /**
+     * 记录助手消息到历史
+     */
+    fun recordAssistantMessage(content: String)
 }

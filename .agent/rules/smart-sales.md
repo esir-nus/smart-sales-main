@@ -14,16 +14,17 @@ trigger: always_on
 |----------|---------|
 | [docs/specs/README.md](file:///home/cslh-frank/main_app/docs/specs/README.md) | **Spec Navigation SOP** — Reading order, feature→file routing |
 | [docs/sops/feature-development.md](file:///home/cslh-frank/main_app/docs/sops/feature-development.md) | **Feature Dev SOP** — 5-phase process, Trinity checkpoints |
-| [docs/specs/Prism-V1.md](file:///home/cslh-frank/main_app/docs/specs/Prism-V1.md) | **Architecture SOT** — Unified Pipeline, Memory, Schemas |
+| [docs/specs/Prism-V1.md](file:///home/cslh-frank/main_app/docs/specs/Prism-V1.md) | **Architecture Reference** ⚠️ READ ONLY WITH FRANK'S EXPLICIT APPROVAL |
 | [docs/specs/prism-ui-ux-contract.md](file:///home/cslh-frank/main_app/docs/specs/prism-ui-ux-contract.md) | **UX SOT** — Layouts, Gestures, Component Registry |
 | [docs/plans/tracker.md](file:///home/cslh-frank/main_app/docs/plans/tracker.md) | **Living tracker** — architecture status, milestones |
 | [docs/README.md](file:///home/cslh-frank/main_app/docs/README.md) | **Navigation hub** — folder structure, doc index |
 | [docs/reference/legacy-to-prism-dictionary.md](file:///home/cslh-frank/main_app/docs/reference/legacy-to-prism-dictionary.md) | **Reference dictionary** — legacy→Prism mapping, working code refs |
 
-**Hierarchy**: Prism-V1.md > prism-ui-ux-contract.md > code
+**Hierarchy**: Cerb docs (`docs/cerb/*/spec.md`) > prism-ui-ux-contract.md > code
+**Prism-V1.md Policy**: Do NOT auto-read. Only consult when Frank explicitly asks.
 **Legacy Lookup**: When encountering M1/M2/M3, MetaHub, or Lattice terms → consult dictionary
-**⚠️ Dictionary is micro-functional reference only** — NOT architecture guidance. Rewrite from Prism spec, don't copy legacy.
-**Alignment Audit**: `/prism-check` workflow
+**⚠️ Dictionary is micro-functional reference only** — NOT architecture guidance. Rewrite from Cerb spec, don't copy legacy.
+**Alignment Audit**: `/prism-check` workflow, `/cerb-check` workflow
 
 ---
 

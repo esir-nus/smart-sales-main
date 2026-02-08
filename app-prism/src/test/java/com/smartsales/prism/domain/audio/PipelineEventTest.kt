@@ -20,7 +20,8 @@ class PipelineEventTest {
             PipelineEvent.Processing("hello"),
             PipelineEvent.Complete(
                 SchedulerResult.TaskCreated("1", "Test Task"),
-                "test.wav"
+                "test.wav",
+                "hello"
             ),
             PipelineEvent.Error(PipelineEvent.Stage.DOWNLOAD, "err", null)
         )

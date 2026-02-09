@@ -108,17 +108,87 @@ class SchedulerViewModel @Inject constructor(
     fun onDeleteItem(id: String) = deleteItem(id)
     
     /**
-     * 改期操作 — 调用 Orchestrator 处理 (LLM 解析在那里发生)
+     * 改期操作 — 检测冲突组，走对应管线
+     * 
+     * 如果任务在冲突组中: 删除所有冲突任务 → 用 LLM 重建用户想要的任务
+     * 否则: 常规单任务改期（Wave 8 管线）
      */
     fun onReschedule(id: String, text: String) {
-        android.util.Log.d("SchedulerVM", "🔄 Reschedule: id=$id, input='$text'")
+        val conflictGroup = _conflictedTaskIds.value
+        if (id in conflictGroup && conflictGroup.size > 1) {
+            android.util.Log.d("SchedulerVM", "🔀 Conflict group reschedule: ${conflictGroup.size} tasks, input='$text'")
+            resolveConflictGroup(conflictGroup, text)
+        } else {
+            android.util.Log.d("SchedulerVM", "🔄 Reschedule: id=$id, input='$text'")
+            viewModelScope.launch {
+                // Wave 8: Unified Pipeline — create new, delete old
+                val result = orchestrator.createScheduledTask(text, replaceItemId = id)
+                if (result is UiState.SchedulerTaskCreated) {
+                    _rescheduledDates.value += result.dayOffset
+                    android.util.Log.d("SchedulerVM", "Rescheduled to day offset: ${result.dayOffset}")
+                }
+                triggerRefresh()
+            }
+        }
+    }
+    
+    /**
+     * 冲突组解决 — 删除全部旧任务，用 LLM 重建
+     * 
+     * 不区分 keep/reschedule/coexist/cancel — 统一走 delete-and-recreate:
+     * 1. 收集所有冲突任务的上下文
+     * 2. 删除所有旧任务
+     * 3. LLM 根据用户指令创建需要保留的任务（可能 0/1/N 个）
+     */
+    private fun resolveConflictGroup(conflictedIds: Set<String>, userText: String) {
         viewModelScope.launch {
-            // Wave 8: Unified Pipeline — create new, delete old
-            val result = orchestrator.createScheduledTask(text, replaceItemId = id)
+            // 1. 收集冲突任务上下文
+            val allItems = scheduleBoard.upcomingItems.value
+            val conflictedTasks = conflictedIds.mapNotNull { id ->
+                allItems.find { it.entryId == id }
+            }
+            
+            val taskContext = conflictedTasks.joinToString("\n") { task ->
+                val time = java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm")
+                    .withZone(java.time.ZoneId.systemDefault())
+                    .format(java.time.Instant.ofEpochMilli(task.scheduledAt))
+                "- ${task.title} @ $time (${task.durationMinutes}分钟)"
+            }
+            
+            val enrichedInput = """
+当前有以下冲突的任务:
+$taskContext
+
+用户指令: $userText
+
+请根据用户指令，返回用户希望保留的任务（可能修改时间）。
+如果用户要取消某个任务，就不要返回那个任务。
+如果用户要改期某个任务，返回修改后的新任务。
+如果用户要保留所有任务，返回所有任务。
+            """.trimIndent()
+            
+            android.util.Log.d("SchedulerVM", "Conflict group context:\n$taskContext")
+            
+            // 2. 删除所有旧的冲突任务
+            conflictedIds.forEach { id ->
+                taskRepository.deleteItem(id)
+                android.util.Log.d("SchedulerVM", "🗑️ Deleted conflicted task: $id")
+            }
+            
+            // 3. 清除冲突状态
+            _conflictWarning.value = null
+            _conflictedTaskIds.value = emptySet()
+            _causingTaskId.value = null
+            
+            // 4. 调用现有管线重建任务（MultiTask 或 SingleTask）
+            val result = orchestrator.createScheduledTask(enrichedInput, replaceItemId = null)
+            android.util.Log.d("SchedulerVM", "Conflict resolution result: $result")
+            
             if (result is UiState.SchedulerTaskCreated) {
                 _rescheduledDates.value += result.dayOffset
-                android.util.Log.d("SchedulerVM", "Rescheduled to day offset: ${result.dayOffset}")
             }
+            
+            scheduleBoard.refresh()
             triggerRefresh()
         }
     }

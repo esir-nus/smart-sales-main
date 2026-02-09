@@ -27,13 +27,18 @@ Conflict Resolver handles user-driven resolution of schedule conflicts detected 
 
 ## Domain Models
 
-### ConflictAction
+### ConflictResolution & ConflictAction
 
 ```kotlin
+// 冲突解决结果 — 支持复合指令（如"取消A，改期B"）
+data class ConflictResolution(
+    val actions: List<ConflictAction>,
+    val reply: String
+)
+
 data class ConflictAction(
     val action: ActionType,
     val taskToRemove: String?,
-    val reply: String,
     val taskToReschedule: String?,
     val rescheduleText: String?
 )
@@ -137,17 +142,25 @@ When a conflict is detected, visual indicators appear on task cards to guide use
 
 | Card Type | Visual Treatment |
 |-----------|-----------------|
-| **Causing card** (newest) | Amber border (琥珀色) + breathing glow animation |
-| **Conflicted cards** (existing overlap) | Amber border (琥珀色) static, alpha 0.6 |
+| **Causing card** (newest) | Amber border (3dp) + Amber background pulse |
+| **Conflicted cards** (existing overlap) | Amber border (2dp) static, alpha 0.6 |
 | **Normal cards** | No border |
+
+> **UX Note**: Animation stops when card is expanded to prevent distraction during resolution.
 
 ### Animation Spec
 
-**Breathing glow** (causing card only):
-- Color: `#FF9800` (Amber)
-- Alpha: Animates `0.6 → 1.0 → 0.6` (infinite loop)
+**Breathing glow** (causing card only, when collapsed):
+- **Background**: Amber tint pulse (alpha `0.0 → 0.12 → 0.0`)
+- **Border**: Amber stroke (alpha `0.6 → 1.0 → 0.6`)
 - Duration: `1.5s` per cycle
 - Easing: `FastOutSlowInEasing`
+
+**Collapsed Header Layout**:
+1. Warning icon + "时间重叠" label
+2. Task A details (Title + Time + Duration)
+3. Task B details (Title + Time + Duration)
+4. Overlap duration (e.g., "重叠 30 分钟")
 
 ### State Model
 

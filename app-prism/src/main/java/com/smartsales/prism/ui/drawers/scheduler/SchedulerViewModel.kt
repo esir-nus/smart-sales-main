@@ -271,45 +271,43 @@ class SchedulerViewModel @Inject constructor(
     }
 
     /**
-     * 处理冲突解决 — 执行用户选择的动作
+     * 处理冲突解决 — 顺序执行多个动作（支持复合指令如"取消A，改期B"）
      */
-    fun handleConflictResolution(action: com.smartsales.prism.domain.scheduler.ConflictAction) {
+    fun handleConflictResolution(resolution: com.smartsales.prism.domain.scheduler.ConflictResolution) {
         viewModelScope.launch {
-            when (action.action) {
-                com.smartsales.prism.domain.scheduler.ActionType.KEEP_A -> {
-                    taskRepository.deleteItem(action.taskToRemove!!)
-                    _conflictWarning.value = null
-                    _conflictedTaskIds.value = emptySet()
-                    _causingTaskId.value = null
-                    android.util.Log.d("SchedulerVM", "Resolved: KEEP_A, deleted ${action.taskToRemove}")
-                }
-                com.smartsales.prism.domain.scheduler.ActionType.KEEP_B -> {
-                    taskRepository.deleteItem(action.taskToRemove!!)
-                    _conflictWarning.value = null
-                    _conflictedTaskIds.value = emptySet()
-                    _causingTaskId.value = null
-                    android.util.Log.d("SchedulerVM", "Resolved: KEEP_B, deleted ${action.taskToRemove}")
-                }
-                com.smartsales.prism.domain.scheduler.ActionType.RESCHEDULE -> {
-                    if (action.taskToReschedule != null && action.rescheduleText != null) {
-                        onReschedule(action.taskToReschedule, action.rescheduleText)
-                        _conflictWarning.value = null
-                        _conflictedTaskIds.value = emptySet()
-                        _causingTaskId.value = null
-                    } else {
-                        _conflictWarning.value = "无法识别改期指令"
+            android.util.Log.d("SchedulerVM", "Conflict resolution: ${resolution.actions.size} actions")
+            
+            for (action in resolution.actions) {
+                when (action.action) {
+                    com.smartsales.prism.domain.scheduler.ActionType.KEEP_A -> {
+                        taskRepository.deleteItem(action.taskToRemove!!)
+                        android.util.Log.d("SchedulerVM", "Resolved: KEEP_A, deleted ${action.taskToRemove}")
+                    }
+                    com.smartsales.prism.domain.scheduler.ActionType.KEEP_B -> {
+                        taskRepository.deleteItem(action.taskToRemove!!)
+                        android.util.Log.d("SchedulerVM", "Resolved: KEEP_B, deleted ${action.taskToRemove}")
+                    }
+                    com.smartsales.prism.domain.scheduler.ActionType.RESCHEDULE -> {
+                        if (action.taskToReschedule != null && action.rescheduleText != null) {
+                            onReschedule(action.taskToReschedule, action.rescheduleText)
+                            android.util.Log.d("SchedulerVM", "Resolved: RESCHEDULE ${action.taskToReschedule}")
+                        } else {
+                            android.util.Log.w("SchedulerVM", "RESCHEDULE missing fields, skipping")
+                        }
+                    }
+                    com.smartsales.prism.domain.scheduler.ActionType.COEXIST -> {
+                        android.util.Log.d("SchedulerVM", "Resolved: COEXIST — keeping both")
+                    }
+                    com.smartsales.prism.domain.scheduler.ActionType.NONE -> {
+                        android.util.Log.w("SchedulerVM", "Resolved: NONE — skipping")
                     }
                 }
-                com.smartsales.prism.domain.scheduler.ActionType.COEXIST -> {
-                    _conflictWarning.value = null
-                    _conflictedTaskIds.value = emptySet()
-                    _causingTaskId.value = null
-                    android.util.Log.d("SchedulerVM", "Resolved: COEXIST — keeping both")
-                }
-                com.smartsales.prism.domain.scheduler.ActionType.NONE -> {
-                    // 解析失败 — 保留现有警告，不覆盖
-                }
             }
+            
+            // 所有动作执行完毕后，统一清除冲突状态
+            _conflictWarning.value = null
+            _conflictedTaskIds.value = emptySet()
+            _causingTaskId.value = null
             scheduleBoard.refresh()
             triggerRefresh()
         }

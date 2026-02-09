@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
 import com.smartsales.prism.ui.components.PrismCard
 import com.smartsales.prism.ui.theme.*
 import com.smartsales.prism.domain.memory.ScheduleItem
-import com.smartsales.prism.domain.scheduler.ConflictAction
+import com.smartsales.prism.domain.scheduler.ConflictResolution
 import com.smartsales.prism.data.scheduler.RealConflictResolver
 import androidx.compose.ui.platform.LocalContext
 import dagger.hilt.android.EntryPointAccessors
@@ -56,7 +56,7 @@ fun ConflictCard(
     taskB: ScheduleItem,
     isExpanded: Boolean,
     onExpandToggle: () -> Unit,
-    onResolve: (ConflictAction) -> Unit
+    onResolve: (ConflictResolution) -> Unit
 ) {
     // Access RealConflictResolver via Hilt
     val context = LocalContext.current
@@ -119,34 +119,96 @@ fun ConflictCard(
 
         Column {
             // Header Row (Always Visible)
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(12.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Warning,
-                    contentDescription = null,
-                    tint = AccentDanger,
-                    modifier = Modifier.size(20.dp)
-                )
+                // Row 1: Warning Icon + Label + Expand Icon
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = null,
+                        tint = AccentDanger,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    Text(
+                        text = "时间重叠",
+                        fontSize = 12.sp,
+                        color = AccentDanger,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Spacer(modifier = Modifier.weight(1f))
+                    
+                    Icon(
+                        imageVector = if (isExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                        contentDescription = if (isExpanded) "Collapse" else "Expand",
+                        tint = AccentDanger.copy(alpha = 0.8f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
                 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 
-                Text(
-                    text = "${taskA.title} vs ${taskB.title}",
-                    fontSize = 14.sp,
-                    color = AccentDanger,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.weight(1f)
-                )
+                // Row 2: Task A Details
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = taskA.title,
+                        fontSize = 15.sp, // Slightly larger
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "${formatTime(taskA.scheduledAt)} (${taskA.durationMinutes}m)",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
                 
-                Icon(
-                    imageVector = if (isExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
-                    contentDescription = if (isExpanded) "Collapse" else "Expand",
-                    tint = AccentDanger
-                )
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                // Row 3: Task B Details
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = taskB.title,
+                        fontSize = 15.sp, // Slightly larger
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "${formatTime(taskB.scheduledAt)} (${taskB.durationMinutes}m)",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+                
+                // Row 4: Overlap Duration (Calculated)
+                val startA = taskA.scheduledAt
+                val endA = startA + taskA.durationMinutes * 60_000L
+                val startB = taskB.scheduledAt
+                val endB = startB + taskB.durationMinutes * 60_000L
+                val overlapStart = maxOf(startA, startB)
+                val overlapEnd = minOf(endA, endB)
+                val overlapMillis = maxOf(0L, overlapEnd - overlapStart)
+                val overlapMinutes = overlapMillis / 60_000L
+                
+                if (overlapMinutes > 0) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "重叠 $overlapMinutes 分钟",
+                        fontSize = 12.sp,
+                        color = AccentDanger,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
             
             // Expanded Content: Mini Chat
@@ -214,12 +276,12 @@ fun ConflictCard(
                                         isResolving = true
                                         
                                         scope.launch {
-                                            val action = resolver.resolve(userText, taskA, taskB)
-                                            messages = messages + ChatMessage(action.reply, isSystem = true)
+                                            val resolution = resolver.resolve(userText, taskA, taskB)
+                                            messages = messages + ChatMessage(resolution.reply, isSystem = true)
                                             isResolving = false
                                             
-                                            // Execute action via callback
-                                            onResolve(action)
+                                            // Execute all actions via callback
+                                            onResolve(resolution)
                                         }
                                     }
                                 }

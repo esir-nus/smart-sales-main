@@ -43,7 +43,7 @@ fun SchedulerTimeline(
     onReschedule: (String, String) -> Unit, // id, userText
     onMultiSelectToggle: (String) -> Unit,
     onEnterMultiSelect: () -> Unit,
-    onConflictResolve: (com.smartsales.prism.domain.scheduler.ConflictAction) -> Unit,
+    onConflictResolve: (com.smartsales.prism.domain.scheduler.ConflictResolution) -> Unit,
     onConflictToggle: (String) -> Unit
 ) {
     LazyColumn(
@@ -81,7 +81,7 @@ private fun TimelineRow(
     onReschedule: (String, String) -> Unit,
     onMultiSelectToggle: (String) -> Unit,
     onEnterMultiSelect: () -> Unit,
-    onConflictResolve: (com.smartsales.prism.domain.scheduler.ConflictAction) -> Unit,
+    onConflictResolve: (com.smartsales.prism.domain.scheduler.ConflictResolution) -> Unit,
     onConflictToggle: (String) -> Unit
 ) {
     // Local expansion state for this row item

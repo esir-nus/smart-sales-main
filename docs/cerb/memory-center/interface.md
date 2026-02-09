@@ -74,16 +74,8 @@ data class MemoryEntry(
 ```
 
 ### EntityEntry (formerly RelevancyEntry)
-```kotlin
-data class EntityEntry(
-    val entityId: String,
-    val entityType: EntityType,
-    val displayName: String,
-    val aliasesJson: String,
-    val attributesJson: String,
-    val lastUpdatedAt: Long
-)
-```
+
+See [Entity Registry Interface](../entity-registry/interface.md) for full `EntityEntry` definition (includes CRM extension fields).
 
 ### ScheduleItem
 ```kotlin

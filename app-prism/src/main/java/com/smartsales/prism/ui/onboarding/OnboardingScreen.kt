@@ -84,7 +84,10 @@ fun OnboardingScreen(
                     )
                     OnboardingStep.DEVICE_FOUND -> DeviceFoundStep(
                         badge = discoveredBadge!!,
-                        onConnect = { currentStep = OnboardingStep.WIFI_CREDS }
+                        onConnect = { currentStep = OnboardingStep.BLE_CONNECTING }
+                    )
+                    OnboardingStep.BLE_CONNECTING -> BleConnectingStep(
+                        onReady = { currentStep = OnboardingStep.WIFI_CREDS }
                     )
                     OnboardingStep.WIFI_CREDS -> WifiCredsStep(
                         viewModel = viewModel,
@@ -245,6 +248,50 @@ private fun DeviceFoundStep(
     }
 }
 
+/**
+ * BLE 配对冷却步骤 — 5秒动画缓冲
+ * 
+ * Makeshift: 给 BLE GATT 配对完成留出时间
+ * 真正的修复应该是监听 PairingState 到达 BLE ready 状态
+ */
+@Composable
+private fun BleConnectingStep(onReady: () -> Unit) {
+    // 5秒后自动前进
+    LaunchedEffect(Unit) {
+        delay(5000)
+        onReady()
+    }
+    
+    // 进度动画
+    var progress by remember { mutableStateOf(0f) }
+    LaunchedEffect(Unit) {
+        val startTime = System.currentTimeMillis()
+        while (progress < 1f) {
+            val elapsed = System.currentTimeMillis() - startTime
+            progress = (elapsed / 5000f).coerceAtMost(1f)
+            delay(50)
+        }
+    }
+    
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("📡", fontSize = 64.sp)
+        Spacer(Modifier.height(24.dp))
+        Text("正在连接设备...", fontSize = 22.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
+        Spacer(Modifier.height(8.dp))
+        Text("建立蓝牙连接中，请稍候", color = TextSecondary, fontSize = 14.sp)
+        Spacer(Modifier.height(32.dp))
+        LinearProgressIndicator(
+            progress = { progress },
+            modifier = Modifier.fillMaxWidth(0.6f),
+            color = AccentBlue,
+            trackColor = BackgroundSurfaceActive
+        )
+    }
+}
+
 @Composable
 private fun WifiCredsStep(
     viewModel: OnboardingViewModel,
@@ -294,7 +341,7 @@ private fun PairingProgressStep(
         else -> {}
     }
     
-    val progress = when (val state = pairingState) {
+    val currentProgress = when (val state = pairingState) {
         is com.smartsales.prism.domain.pairing.PairingState.Pairing -> state.progress / 100f
         is com.smartsales.prism.domain.pairing.PairingState.Success -> 1f
         else -> 0f
@@ -303,15 +350,15 @@ private fun PairingProgressStep(
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text("正在配对设备...", fontSize = 20.sp, color = TextPrimary)
         Text("WiFi 配网 + 网络检查", color = TextSecondary)
-        Spacer(Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(32.dp))
         LinearProgressIndicator(
-            progress = { progress },
+            progress = { currentProgress },
             modifier = Modifier.fillMaxWidth(0.7f),
             color = AccentBlue,
             trackColor = BackgroundSurfaceActive
         )
-        Spacer(Modifier.height(16.dp))
-        Text("${(progress * 100).toInt()}%", color = TextPrimary)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("${(currentProgress * 100).toInt()}%", color = TextPrimary)
     }
 }
 

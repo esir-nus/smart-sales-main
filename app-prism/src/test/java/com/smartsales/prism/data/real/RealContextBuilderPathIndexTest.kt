@@ -185,5 +185,9 @@ class RealContextBuilderPathIndexTest {
         
         override suspend fun getByAccountId(accountId: String): List<EntityEntry> =
             delegate.getByAccountId(accountId)
+
+        override suspend fun delete(entityId: String) {
+            delegate.delete(entityId)
+        }
     }
 }

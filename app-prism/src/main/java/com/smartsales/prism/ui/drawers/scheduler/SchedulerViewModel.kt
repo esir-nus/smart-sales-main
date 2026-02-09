@@ -1,5 +1,9 @@
 package com.smartsales.prism.ui.drawers.scheduler
 
+import com.smartsales.prism.domain.audio.BadgeAudioPipeline
+import com.smartsales.prism.domain.audio.PipelineEvent
+import com.smartsales.prism.domain.audio.SchedulerResult
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.prism.domain.memory.ConflictResult
@@ -9,6 +13,11 @@ import com.smartsales.prism.domain.pipeline.Orchestrator
 import com.smartsales.prism.domain.scheduler.InspirationRepository
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.domain.memory.MemoryEntry
+import com.smartsales.prism.domain.memory.MemoryEntryType
+import com.smartsales.prism.domain.memory.MemoryRepository
+import com.smartsales.prism.domain.memory.EntityWriter
+import com.smartsales.prism.domain.memory.EntityType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +30,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -28,8 +38,20 @@ class SchedulerViewModel @Inject constructor(
     private val taskRepository: ScheduledTaskRepository,
     private val orchestrator: Orchestrator,
     private val scheduleBoard: ScheduleBoard,
-    private val inspirationRepository: InspirationRepository
+    private val inspirationRepository: InspirationRepository,
+    private val memoryRepository: MemoryRepository,
+    private val entityWriter: EntityWriter,
+    private val badgeAudioPipeline: BadgeAudioPipeline
 ) : ViewModel() {
+
+    init {
+        // 监听 Badge Audio Pipeline 事件，合并到 SchedulerViewModel 后处理
+        viewModelScope.launch {
+            badgeAudioPipeline.events.collect { event ->
+                handlePipelineEvent(event)
+            }
+        }
+    }
 
     // --- State ---
     
@@ -268,40 +290,18 @@ $taskContext
             android.util.Log.d("SchedulerVM", "🧪 Simulating transcript: $fakeMessage")
             _pipelineStatus.value = "处理中..."
             
-            // 使用 createScheduledTask 直接路由到 Scheduler Pipeline
             val result = orchestrator.createScheduledTask(fakeMessage)
-            
             android.util.Log.d("SchedulerVM", "🧪 Pipeline result: $result")
             
             when (result) {
                 is UiState.SchedulerTaskCreated -> {
-                    _pipelineStatus.value = "✅ 已创建: ${result.title}"
-                    addUnacknowledgedDate(result.dayOffset)
-                    _activeDayOffset.value = result.dayOffset
-                    
-                    // 冲突检测 (创建后，信息性提示)
-                    scheduleBoard.refresh()
-                    when (val conflict = scheduleBoard.checkConflict(
-                        result.scheduledAtMillis,
-                        result.durationMinutes,
-                        excludeId = result.taskId  // 排除刚创建的任务，避免自冲突
-                    )) {
-                        is ConflictResult.Conflict -> {
-                            _conflictWarning.value = "⚠️ 与「${conflict.overlaps.first().title}」时间重叠"
-                            // 视觉指示器: 标记所有冲突卡片 (已有 + 新创建)
-                            _conflictedTaskIds.value = conflict.overlaps.map { it.entryId }.toSet() + result.taskId
-                            _causingTaskId.value = result.taskId
-                        }
-                        is ConflictResult.Clear -> {
-                            _conflictWarning.value = null
-                            _conflictedTaskIds.value = emptySet()
-                            _causingTaskId.value = null
-                        }
-                    }
+                    onTaskCreated(
+                        result.taskId, result.title, result.dayOffset,
+                        result.scheduledAtMillis, result.durationMinutes
+                    )
                 }
                 is UiState.Response -> {
                     _pipelineStatus.value = "✅ ${result.content}"
-                    // Fallback: 无法确定日期时默认明天
                     addUnacknowledgedDate(1)
                     _activeDayOffset.value = 1
                 }
@@ -314,6 +314,79 @@ $taskContext
             }
             
             triggerRefresh()
+        }
+    }
+
+    // =====================
+    // 共享后处理 — simulate 和 badge pipeline 共用
+    // =====================
+
+    /**
+     * 任务创建后处理 — 日期高亮 + 冲突检测 + 刷新
+     * 由 simulateTranscript() 和 handlePipelineEvent() 共用
+     */
+    private suspend fun onTaskCreated(
+        taskId: String, title: String, dayOffset: Int,
+        scheduledAtMillis: Long, durationMinutes: Int
+    ) {
+        _pipelineStatus.value = "✅ 已创建: $title"
+        addUnacknowledgedDate(dayOffset)
+        _activeDayOffset.value = dayOffset
+        
+        // 冲突检测
+        scheduleBoard.refresh()
+        when (val conflict = scheduleBoard.checkConflict(
+            scheduledAtMillis, durationMinutes,
+            excludeId = taskId
+        )) {
+            is ConflictResult.Conflict -> {
+                _conflictWarning.value = "⚠️ 与「${conflict.overlaps.first().title}」时间重叠"
+                _conflictedTaskIds.value = conflict.overlaps.map { it.entryId }.toSet() + taskId
+                _causingTaskId.value = taskId
+            }
+            is ConflictResult.Clear -> {
+                _conflictWarning.value = null
+                _conflictedTaskIds.value = emptySet()
+                _causingTaskId.value = null
+            }
+        }
+    }
+
+    /**
+     * Badge Audio Pipeline 事件处理 — 进度 + 完成后处理
+     */
+    private suspend fun handlePipelineEvent(event: PipelineEvent) {
+        when (event) {
+            is PipelineEvent.Downloading -> _pipelineStatus.value = "📥 下载中..."
+            is PipelineEvent.Transcribing -> _pipelineStatus.value = "🎙️ 转写中..."
+            is PipelineEvent.Processing -> _pipelineStatus.value = "⚙️ 处理中..."
+            is PipelineEvent.Complete -> {
+                when (val result = event.result) {
+                    is SchedulerResult.TaskCreated -> {
+                        onTaskCreated(
+                            result.taskId, result.title, result.dayOffset,
+                            result.scheduledAtMillis, result.durationMinutes
+                        )
+                    }
+                    is SchedulerResult.InspirationSaved -> {
+                        _pipelineStatus.value = "💡 灵感已保存"
+                    }
+                    is SchedulerResult.MultiTaskCreated -> {
+                        _pipelineStatus.value = "✅ 已创建 ${result.taskIds.size} 个任务"
+                    }
+                    is SchedulerResult.AwaitingClarification -> {
+                        _pipelineStatus.value = "❓ ${result.question}"
+                    }
+                    is SchedulerResult.Ignored -> {
+                        // 非调度意图，不更新状态
+                    }
+                }
+                triggerRefresh()
+            }
+            is PipelineEvent.Error -> {
+                _pipelineStatus.value = "❌ ${event.message}"
+            }
+            else -> { /* RecordingStarted 等 — 不需要处理 */ }
         }
     }
     
@@ -421,7 +494,62 @@ $taskContext
                     simulateTranscript("明天下午4点给张总打电话")
                     android.util.Log.d("SchedulerVM", "🧪 L2: CALL_SINGLE — 预期 reminder=single, alarmCascade=[-15m]")
                 }
+                "SEED_MEMORY" -> {
+                    debugSeedMemories()
+                    _pipelineStatus.value = "💾 已注入记忆 seed data"
+                }
             }
         }
+    }
+
+    private suspend fun debugSeedMemories() {
+        val now = System.currentTimeMillis()
+        
+        // 1. Taizhou U / Ameer / Sun (Feb 8 debugging)
+        val m1Content = "台州大学的ameer教授和他弟弟2月8日来摩升泰公司调试最新的桌面机械臂代码，蔡瑞江，孙扬浩对接，协助相关调试工作。 有以下主要以下待办事项：1. yolo模型需要优化训练，将书籍封面剔除在外，只识别打开的书籍。  2. 新的音响麦克风套件表现稳定。3.阿里多模态目前迭代迅速，不太稳定，会时常出现网络问题导致任务失败。 4.阿里作业模式的相关服务不够完善，例如模型单次调用智能识别文字，或者图形。有图形就会优先识别图形而忽略文字。蔡瑞江提议先将作业用户群体限制在小学4年级或以下，加强亲子互动，家庭关系构建可能更加实用。 5.阿里的多模态调试页面还不够完善，等待更新。"
+        val e1a = entityWriter.upsertFromClue("Ameer教授", null, EntityType.PERSON, "debug_seed")
+        val e1b = entityWriter.upsertFromClue("孙扬浩", null, EntityType.PERSON, "debug_seed")
+        val e1c = entityWriter.upsertFromClue("蔡瑞江", null, EntityType.PERSON, "debug_seed")
+        
+        memoryRepository.save(MemoryEntry(
+            entryId = "mem-seed-1",
+            sessionId = "debug-session",
+            content = m1Content,
+            entryType = MemoryEntryType.USER_MESSAGE,
+            createdAt = now,
+            updatedAt = now,
+            structuredJson = """{"relatedEntityIds": ["${e1a.entityId}", "${e1b.entityId}", "${e1c.entityId}"]}"""
+        ))
+
+        // 2. Smart Assistant / Sun (Product Pitch)
+        val m2Content = "承时利和公司孙扬浩孙工当前销售智能助理产品已处于打磨阶段，功能主要定位是全方位智能助手，亮点包涵：1.长期记忆系统，能智能调用记忆库，知识库，文件库；2.成长型智能体，会随着使用加深对于用户和客户的理解；3智能行程管理，只能安排用户行程，智能提醒，解决事件冲突；4.智能专家，随着和用户的沟通，不断推荐最有用的业务工具，例如年报，日报，pdf报告，思维导图，数据分析等"
+        val e2a = entityWriter.upsertFromClue("智能助理", null, EntityType.PRODUCT, "debug_seed")
+        // Reuse Sun Yanghao (e1b)
+        
+        memoryRepository.save(MemoryEntry(
+            entryId = "mem-seed-2",
+            sessionId = "debug-session",
+            content = m2Content,
+            entryType = MemoryEntryType.USER_MESSAGE,
+            createdAt = now,
+            updatedAt = now,
+            structuredJson = """{"relatedEntityIds": ["${e1b.entityId}", "${e2a.entityId}"]}"""
+        ))
+
+        // 3. Jiangxi U / Ata (Model photos)
+        val m3Content = "江西大学Ata教授上周4再次询问模型训练用照片，等待安排；一月28号30号也曾反复询问"
+        val e3a = entityWriter.upsertFromClue("Ata教授", null, EntityType.PERSON, "debug_seed")
+        
+        memoryRepository.save(MemoryEntry(
+            entryId = "mem-seed-3",
+            sessionId = "debug-session",
+            content = m3Content,
+            entryType = MemoryEntryType.USER_MESSAGE,
+            createdAt = now,
+            updatedAt = now,
+            structuredJson = """{"relatedEntityIds": ["${e3a.entityId}"]}"""
+        ))
+        
+        android.util.Log.d("SchedulerVM", "✅ Seeded 3 memories and associated entities")
     }
 }

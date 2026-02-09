@@ -32,7 +32,7 @@ import com.smartsales.feature.chat.home.HomeViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.smartsales.feature.media.devicemanager.DeviceManagerViewModel
 import com.smartsales.feature.media.WavDownloadScreen
-import com.smartsales.feature.media.GifUploadScreen
+// GIF pipeline removed — GifUploadScreen no longer exists
 
 @Composable
 fun MainScreen() {
@@ -134,7 +134,7 @@ fun MainScreen() {
                 WavDownloadScreen()
             }
             composable(Screen.GifUpload.route) {
-                GifUploadScreen()
+                // GIF pipeline removed
             }
         }
     }

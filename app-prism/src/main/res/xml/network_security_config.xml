@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 允许明文 HTTP 通信（徽章 ESP32 HTTP 服务器使用 HTTP 提供 WAV 下载） -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

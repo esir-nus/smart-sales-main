@@ -112,6 +112,18 @@ class DefaultDeviceConnectionManager @Inject constructor(
         currentSession = session
         _state.value = ConnectionState.Connected(session)
         badgeStateMonitor.onBleConnected(session)
+        
+        // 建立持久 GATT 会话并启动通知监听
+        scope.launch(dispatchers.io) {
+            val result = bleGateway.connect(peripheral.id)
+            if (result is com.smartsales.core.util.Result.Success) {
+                startNotificationListener(session)
+                ConnectivityLogger.i("📡 Persistent session + listener active for ${peripheral.name}")
+            } else {
+                ConnectivityLogger.w("⚠️ Failed to establish persistent GATT for ${peripheral.name}: $result")
+            }
+        }
+        
         ConnectivityLogger.d(
             "🔌 Select peripheral id=${peripheral.id} name=${peripheral.name} profile=${peripheral.profileId ?: "dynamic"}"
         )

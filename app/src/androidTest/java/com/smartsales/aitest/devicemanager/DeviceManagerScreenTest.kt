@@ -132,7 +132,7 @@ class DeviceManagerScreenTest {
     fun listState_rendersFilesAndTriggersActions() {
         val files = listOf(
             fileUi(id = "promo.mp4", displayName = "promo.mp4", mimeType = "video/mp4"),
-            fileUi(id = "loop.gif", displayName = "loop.gif", mimeType = "image/gif", mediaType = DeviceMediaTab.Gifs)
+            fileUi(id = "cover.png", displayName = "cover.png", mimeType = "image/png", mediaType = DeviceMediaTab.Images)
         )
         var refreshClicks = 0
         var uploadClicks = 0
@@ -157,7 +157,7 @@ class DeviceManagerScreenTest {
     @Test
     fun mediaBadges_showTypeAndDuration() {
         val files = listOf(
-            fileUi(id = "loop.gif", displayName = "loop.gif", mimeType = "image/gif", mediaType = DeviceMediaTab.Gifs, durationText = null),
+            fileUi(id = "cover.png", displayName = "cover.png", mimeType = "image/png", mediaType = DeviceMediaTab.Images, durationText = null),
             fileUi(id = "promo.mp4", displayName = "promo.mp4", mimeType = "video/mp4", durationText = "00:30")
         )
         renderDeviceManager(
@@ -172,7 +172,7 @@ class DeviceManagerScreenTest {
             .performScrollToIndex(2)
 
         composeRule.onNodeWithText("00:30", useUnmergedTree = true).assertExists()
-        composeRule.onNodeWithText("GIF", useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithText("图片", useUnmergedTree = true).assertExists()
     }
 
     @Test
@@ -318,9 +318,8 @@ class DeviceManagerScreenTest {
         durationText: String? = "00:45",
         mediaLabel: String = when (mediaType) {
             DeviceMediaTab.Videos -> "视频"
-            DeviceMediaTab.Gifs -> "GIF"
             DeviceMediaTab.Images -> "图片"
-            else -> "音频" // Handle Audio or other new types
+            DeviceMediaTab.Audio -> "音频"
         }
     ): DeviceFileUi {
         return DeviceFileUi(

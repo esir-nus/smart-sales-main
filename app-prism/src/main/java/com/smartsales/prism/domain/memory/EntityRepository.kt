@@ -34,6 +34,11 @@ interface EntityRepository {
      * 按账户ID获取关联实体（联系人和交易）
      */
     suspend fun getByAccountId(accountId: String): List<EntityEntry>
+    
+    /**
+     * 删除实体
+     */
+    suspend fun delete(entityId: String)
 }
 
 // Backwards compatibility alias (deprecated, will be removed)

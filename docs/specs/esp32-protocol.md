@@ -47,17 +47,24 @@ Communication happens via:
 ### 1. WiFi Status Query
 
 ```
-App sends:    wifi#address#ip#name     (literal fixed string)
-Badge returns: wifi#address#<IP>#<SSID>  (single response)
+App sends:    wifi#address#ip#name         (literal fixed string)
+Badge sends:  IP#<IP_ADDRESS>              (BLE notification 1)
+Badge sends:  SD#<SSID>                    (BLE notification 2)
 ```
+
+**Notes**:
+- Badge sends TWO separate BLE notifications (fragmented response)
+- Order may vary; app must collect both fragments
+- App implementation collects up to 3 fragments with 2s timeout per fragment
 
 **Example:**
 ```
 App:   wifi#address#ip#name
-Badge: wifi#address#192.168.0.101#MstRobot
+Badge: IP#192.168.0.101      (arrives first or second)
+Badge: SD#MstRobot           (arrives first or second)
 ```
 
-> **SOT**: `bluetooch.py` lines 320-324
+> **SOT**: `bluetooch.py` lines 320-324 (spec said single response, but actual firmware sends fragmented)
 
 ### 2. WiFi Connect (Two-Step Protocol)
 
@@ -110,7 +117,7 @@ When user finishes recording on badge, ESP32 notifies app with the filename.
 
 ```
 Badge sends:  log#20260208_201345    (YYYYMMDD_HHMMSS, ESP32 local time)
-App:          (downloads /download?file=20260208_201345.wav)
+App:          (downloads /download?file=log_20260208_201345.wav)
 ```
 
 **Workflow**:
@@ -119,7 +126,7 @@ App:          (downloads /download?file=20260208_201345.wav)
 3. User records audio on the badge → saved as `YYYYMMDD_HHMMSS.wav` (ESP32 local time; the timestamp sent by app is for clock calibration only, not prescriptive of the filename)
 4. User stops recording
 5. Badge sends `log#YYYYMMDD_HHMMSS` (ESP32 local time)
-6. App downloads WAV via HTTP `/download?file=YYYYMMDD_HHMMSS.wav` (app learns filename from `log#` command)
+6. App downloads WAV via HTTP `/download?file=log_YYYYMMDD_HHMMSS.wav` (app learns filename from `log#` command)
 
 ---
 

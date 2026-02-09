@@ -67,6 +67,7 @@ class GattBleGateway @Inject constructor(
     // 持久化会话状态
     private var persistentSession: GattContext? = null
     private val sessionLock = Mutex()
+
     private val _badgeNotifications = MutableSharedFlow<BadgeNotification>(
         extraBufferCapacity = 16,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
@@ -104,6 +105,10 @@ class GattBleGateway @Inject constructor(
                         }
                     }
                 }
+            }, onTimeSync = {
+                scope.launch(dispatchers.io) {
+                    respondToTimeSync()
+                }
             })
             val gatt = connect(device, callback)
                 ?: return@withContext com.smartsales.core.util.Result.Error(
@@ -113,6 +118,31 @@ class GattBleGateway @Inject constructor(
             val gattContext = GattContext(context, gatt, callback)
             try {
                 gattContext.awaitServices()
+                
+                // 诊断：转储所有 BLE 服务/特征/描述符，验证 CCCD 支持
+                gatt.services.forEach { service ->
+                    ConnectivityLogger.d("📋 Service: ${service.uuid}")
+                    service.characteristics.forEach { char ->
+                        val props = char.properties
+                        val propStr = buildString {
+                            if (props and 0x02 != 0) append("READ ")
+                            if (props and 0x08 != 0) append("WRITE ")
+                            if (props and 0x04 != 0) append("WRITE_NR ")
+                            if (props and 0x10 != 0) append("NOTIFY ")
+                            if (props and 0x20 != 0) append("INDICATE ")
+                        }
+                        ConnectivityLogger.d("  📋 Char: ${char.uuid} [$propStr]")
+                        if (char.descriptors.isEmpty()) {
+                            ConnectivityLogger.d("    📋 (no descriptors)")
+                        } else {
+                            char.descriptors.forEach { desc ->
+                                val isCccd = desc.uuid.toString().startsWith("00002902")
+                                ConnectivityLogger.d("    📋 Descriptor: ${desc.uuid}${if (isCccd) " ← CCCD ✅" else ""}")
+                            }
+                        }
+                    }
+                }
+                
                 val config = configCache[peripheralId] ?: discoverConfig(gatt).also {
                     configCache[peripheralId] = it
                 }
@@ -174,21 +204,8 @@ class GattBleGateway @Inject constructor(
             val ackBytes = gattContext.awaitNotificationOrRead(config.provisioningStatusCharacteristicUuid)
             ConnectivityLogger.rx("ProvisionAck", ackBytes)
             
-            // 如果 Badge 在配网期间请求时间同步，尽力响应（不阻塞配网流程）
-            val ackValue = ackBytes.decodeToString().trim()
-            if (ackValue.startsWith("tim#", ignoreCase = true)) {
-                try {
-                    val timestamp = formatCurrentTime()
-                    val response = "tim#$timestamp"
-                    gattContext.writeCharacteristic(
-                        config.credentialCharacteristicUuid,
-                        response.toByteArray(Charsets.UTF_8)
-                    )
-                    ConnectivityLogger.i("Responded to time sync during provisioning: $response")
-                } catch (e: Exception) {
-                    ConnectivityLogger.w("Time sync response failed during provisioning (non-fatal): ${e.message}")
-                }
-            }
+            // tim#get 作为 ProvisionAck 时由 parseProvisioningAckDelimited 处理（L615）
+            // 时间同步写回由 onCharacteristicChanged → respondToTimeSync 自动处理
             
             parseProvisioningAck(credentials, ackBytes)
             // NOTE: pollForConnection workaround removed — it bypassed rate limiter and caused ESP32 freezes.
@@ -224,9 +241,35 @@ class GattBleGateway @Inject constructor(
             val command = buildNetworkQueryPayload()
             ConnectivityLogger.tx("NetworkQuery", command)
             gattContext.writeCharacteristic(config.credentialCharacteristicUuid, command)
-            val response = gattContext.awaitNotificationOrRead(config.provisioningStatusCharacteristicUuid)
-            ConnectivityLogger.rx("NetworkResponse", response)
-            parseNetworkResponse(response)
+            
+            // Badge 回复 wifi 查询时分多个 BLE 通知发送（IP#, SD# 等）
+            // 需要收集所有片段后合并解析
+            val rawResponses = mutableListOf<String>()
+            val maxFragments = 3
+            val fragmentTimeout = 2000L
+            
+            repeat(maxFragments) {
+                val response = try {
+                    kotlinx.coroutines.withTimeout(fragmentTimeout) {
+                        gattContext.awaitNotification(config.provisioningStatusCharacteristicUuid)
+                    }
+                } catch (_: kotlinx.coroutines.TimeoutCancellationException) {
+                    null
+                } catch (ex: IllegalStateException) {
+                    // 非目标特征的通知或 CCCD 不支持等异常
+                    ConnectivityLogger.d("⏭️ Fragment skipped: ${ex.message}")
+                    null
+                }
+                if (response == null) return@repeat
+                
+                val raw = response.decodeToString().trim()
+                ConnectivityLogger.rx("NetworkResponse", response)
+                rawResponses.add(raw)
+                // 拿到 IP 就可以停了（SD 等为补充信息）
+                if (raw.startsWith("IP#", ignoreCase = true)) return@repeat
+            }
+            
+            mergeNetworkFragments(rawResponses)
         }) {
             is GatewayOutcome.Success -> NetworkQueryResult.Success(outcome.value)
             is GatewayOutcome.Failure -> when (val error = outcome.error) {
@@ -266,6 +309,20 @@ class GattBleGateway @Inject constructor(
     private fun formatCurrentTime(): String {
         val sdf = java.text.SimpleDateFormat("yyyyMMddHHmmss", java.util.Locale.US)
         return sdf.format(java.util.Date())
+    }
+
+    // 持久会话空闲时响应 Badge 的时间同步请求（tim#get → tim#YYYYMMDDHHMMSS）
+    // tim#get 响应：独立处理，不与配网耦合。BLE 写串行化由 GattContext.writeLock 保证
+    private suspend fun respondToTimeSync() {
+        try {
+            val session = persistentSession ?: return
+            val config = configCache.values.firstOrNull() ?: return
+            val response = "tim#${formatCurrentTime()}"
+            session.writeCharacteristic(config.credentialCharacteristicUuid, response.toByteArray(Charsets.UTF_8))
+            ConnectivityLogger.i("⏰ Time sync responded: $response")
+        } catch (e: Exception) {
+            ConnectivityLogger.w("⏰ Time sync response failed (non-fatal): ${e.message}")
+        }
     }
 
     override fun forget(peripheral: BlePeripheral) {
@@ -552,68 +609,6 @@ class GattBleGateway @Inject constructor(
         }
     }
 
-    private fun parseNetworkResponse(payload: ByteArray): DeviceNetworkStatus {
-        val raw = payload.decodeToString().trim()
-        if (raw.isBlank()) throw IllegalStateException("网络响应为空")
-        return if (raw.startsWith("{")) {
-            parseNetworkJson(raw)
-        } else {
-            parseDelimitedNetworkResponse(raw)
-        }
-    }
-
-    private fun parseNetworkJson(raw: String): DeviceNetworkStatus {
-        return try {
-            val json = JSONObject(raw)
-            val ip = json.optString("ip", json.optString("ipAddress"))
-            val deviceWifi = json.optString("device_wifi", json.optString("deviceName"))
-            val phoneWifi = json.optString("phone_wifi", json.optString("phoneName", deviceWifi))
-            if (ip.isBlank()) throw IllegalStateException("网络响应缺少 IP")
-            val deviceName = deviceWifi.ifBlank { "未知Wi-Fi" }
-            val phoneName = phoneWifi.ifBlank { deviceName }
-            DeviceNetworkStatus(
-                ipAddress = ip,
-                deviceWifiName = deviceName,
-                phoneWifiName = phoneName,
-                rawResponse = raw
-            )
-        } catch (ex: Exception) {
-            throw IllegalStateException("网络响应解析失败：${ex.message}")
-        }
-    }
-
-    private fun parseDelimitedNetworkResponse(raw: String): DeviceNetworkStatus {
-        val parts = raw.split("#")
-        
-        // Handle simple "IP#<address>" format (what badge actually returns)
-        if (parts.size == 2 && parts[0].equals("IP", true)) {
-            val ip = parts[1].takeIf { it.isNotBlank() && it != "0.0.0.0" }
-                ?: throw IllegalStateException("设备未连接WiFi：$raw")
-            return DeviceNetworkStatus(
-                ipAddress = ip,
-                deviceWifiName = "未知Wi-Fi",
-                phoneWifiName = "未知Wi-Fi",
-                rawResponse = raw
-            )
-        }
-        
-        // Handle full "wifi#address#ip#name" format
-        if (parts.size < 4) throw IllegalStateException("网络响应格式错误：$raw")
-        if (!parts[0].equals("wifi", true) || !parts[1].equals("address", true)) {
-            throw IllegalStateException("网络响应类型不符：$raw")
-        }
-        val ip = parts.getOrNull(2)?.takeIf { it.isNotBlank() }
-            ?: throw IllegalStateException("网络响应缺少 IP：$raw")
-        val deviceWifi = parts.getOrNull(3)?.ifBlank { "BT311" } ?: "BT311"
-        val phoneWifi = parts.getOrNull(4)?.ifBlank { deviceWifi } ?: deviceWifi
-        return DeviceNetworkStatus(
-            ipAddress = ip,
-            deviceWifiName = deviceWifi,
-            phoneWifiName = phoneWifi,
-            rawResponse = raw
-        )
-    }
-
 
     private fun parseWavResponse(command: WavCommand, payload: ByteArray): WavCommandResult {
         val raw = payload.decodeToString().trim()
@@ -710,15 +705,20 @@ private class GattContext(
         notificationEnabled.add(uuid)
     }
 
+    // 所有 BLE 写操作通过 writeLock 串行化，防止并发写入导致 GATT 操作失败
+    private val writeLock = kotlinx.coroutines.sync.Mutex()
+
     suspend fun writeCharacteristic(uuid: UUID, payload: ByteArray) {
-        ensureConnectPermission()
-        val characteristic = findCharacteristic(uuid)
-        callback.prepareWrite(uuid)
-        if (!gatt.writeCharacteristicCompat(appContext, characteristic, payload)) {
-            throw IllegalStateException("写入特征失败：$uuid")
-        }
-        withTimeout(operationTimeoutMillis) {
-            callback.awaitWriteResult(uuid)
+        writeLock.withLock {
+            ensureConnectPermission()
+            val characteristic = findCharacteristic(uuid)
+            callback.prepareWrite(uuid)
+            if (!gatt.writeCharacteristicCompat(appContext, characteristic, payload)) {
+                throw IllegalStateException("写入特征失败：$uuid")
+            }
+            withTimeout(operationTimeoutMillis) {
+                callback.awaitWriteResult(uuid)
+            }
         }
     }
 
@@ -757,7 +757,8 @@ private class GattContext(
 
 private class GatewayGattCallback(
     private val badgeNotifications: MutableSharedFlow<BadgeNotification>? = null,
-    private val onDisconnect: (GatewayGattCallback) -> Unit = {}
+    private val onDisconnect: (GatewayGattCallback) -> Unit = {},
+    private val onTimeSync: () -> Unit = {}
 ) : BluetoothGattCallback() {
 
     private val connectionReady = CompletableDeferred<Boolean>()
@@ -809,9 +810,13 @@ private class GatewayGattCallback(
     }
 
     suspend fun awaitNotification(uuid: UUID): ByteArray {
-        val (characteristicUuid, payload) = notificationChannel.receive()
-        if (characteristicUuid != uuid) throw IllegalStateException("通知来源不匹配 $uuid")
-        return payload
+        // 跳过非目标 UUID 的通知（它们已通过 SharedFlow 广播，不会丢失）
+        // 外层总有 withTimeout 保证不会无限循环
+        while (true) {
+            val (characteristicUuid, payload) = notificationChannel.receive()
+            if (characteristicUuid == uuid) return payload
+            ConnectivityLogger.d("⏭️ Skipped notification from $characteristicUuid (waiting for $uuid)")
+        }
     }
 
     override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
@@ -882,6 +887,7 @@ private class GatewayGattCallback(
             when {
                 raw.startsWith("tim#get", ignoreCase = true) -> {
                     flow.tryEmit(BadgeNotification.TimeSyncRequested)
+                    onTimeSync()
                 }
                 raw.startsWith("log#", ignoreCase = true) -> {
                     val filename = raw.removePrefix("log#").trim()
@@ -898,6 +904,36 @@ private class GatewayGattCallback(
     private companion object {
         const val TAG = "GattBleGateway"
     }
+}
+
+/**
+ * 将多个 BLE 通知片段（如 "IP#192.168.0.1", "SD#MstRobot"）合并为 DeviceNetworkStatus。
+ * 
+ * 纯函数，方便单元测试。Badge 回复 WiFi 查询时分多条 BLE 通知发送。
+ */
+internal fun mergeNetworkFragments(rawResponses: List<String>): DeviceNetworkStatus {
+    val fragments = mutableMapOf<String, String>()
+    for (raw in rawResponses) {
+        val parts = raw.split("#", limit = 2)
+        if (parts.size == 2) {
+            fragments[parts[0].uppercase()] = parts[1]
+        }
+    }
+    
+    val ip = fragments["IP"]
+        ?: throw IllegalStateException("网络响应缺少 IP（收到: ${fragments.keys}）")
+    val ssid = fragments["SD"] ?: "未知Wi-Fi"
+    
+    if (ip == "0.0.0.0" || ip.isBlank()) {
+        throw IllegalStateException("设备未连接WiFi：IP=$ip")
+    }
+    
+    return DeviceNetworkStatus(
+        ipAddress = ip,
+        deviceWifiName = ssid,
+        phoneWifiName = ssid,
+        rawResponse = fragments.entries.joinToString(", ") { "${it.key}#${it.value}" }
+    )
 }
 
 private class CredentialRejectedException(message: String) : RuntimeException(message)

@@ -47,6 +47,9 @@ sealed class LintResult {
     
     // Wave 4.1: Multi-Task Splitting
     data class MultiTask(val tasks: List<TimelineItemModel.Task>) : LintResult()
+    
+    // Wave 7: NL Deletion
+    data class Deletion(val targetTitle: String) : LintResult()
 }
 
 /**

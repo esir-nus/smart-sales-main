@@ -51,17 +51,40 @@ fun TaskCard(
     // 冲突视觉效果 — 琥珀色边框 + 呼吸发光
     val conflictBorderModifier = when (state.conflictVisual) {
         ConflictVisual.CAUSING -> {
+            // Aggressive glow: Background pulse + thicker border
             val infiniteTransition = rememberInfiniteTransition(label = "conflict_glow")
-            val glowAlpha by infiniteTransition.animateFloat(
+            
+            // Background tint pulse (0.0 -> 0.12) - Unmistakable attention grab
+            val bgAlpha by infiniteTransition.animateFloat(
+                initialValue = 0.0f,
+                targetValue = 0.12f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1500, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "bg_alpha"
+            )
+            
+            // Border alpha (0.6 -> 1.0)
+            val borderAlpha by infiniteTransition.animateFloat(
                 initialValue = 0.6f,
                 targetValue = 1.0f,
                 animationSpec = infiniteRepeatable(
                     animation = tween(1500, easing = FastOutSlowInEasing),
                     repeatMode = RepeatMode.Reverse
                 ),
-                label = "glow_alpha"
+                label = "border_alpha"
             )
-            Modifier.border(2.dp, Color(0xFFFF9800).copy(alpha = glowAlpha), RoundedCornerShape(12.dp))
+            
+            if (!isExpanded) {
+                // Pulsing state (when collapsed)
+                Modifier
+                    .background(Color(0xFFFF9800).copy(alpha = bgAlpha), RoundedCornerShape(12.dp))
+                    .border(3.dp, Color(0xFFFF9800).copy(alpha = borderAlpha), RoundedCornerShape(12.dp))
+            } else {
+                // Static state (when expanded) - stop distraction
+                Modifier.border(2.dp, Color(0xFFFF9800), RoundedCornerShape(12.dp))
+            }
         }
         ConflictVisual.IN_GROUP -> {
             Modifier.border(2.dp, Color(0xFFFF9800).copy(alpha = 0.6f), RoundedCornerShape(12.dp))

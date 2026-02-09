@@ -19,7 +19,7 @@ class PipelineEventTest {
             PipelineEvent.Transcribing("test.wav", 1024L),
             PipelineEvent.Processing("hello"),
             PipelineEvent.Complete(
-                SchedulerResult.TaskCreated("1", "Test Task"),
+                SchedulerResult.TaskCreated("1", "Test Task", dayOffset = 1, scheduledAtMillis = System.currentTimeMillis(), durationMinutes = 30),
                 "test.wav",
                 "hello"
             ),
@@ -33,7 +33,7 @@ class PipelineEventTest {
     @Test
     fun `all SchedulerResult variants compile`() {
         val results = listOf(
-            SchedulerResult.TaskCreated("1", "Meeting"),
+            SchedulerResult.TaskCreated("1", "Meeting", dayOffset = 0, scheduledAtMillis = System.currentTimeMillis(), durationMinutes = 60),
             SchedulerResult.MultiTaskCreated(listOf("1", "2")),
             SchedulerResult.InspirationSaved("inspiration-1"),
             SchedulerResult.AwaitingClarification("请问时间？")

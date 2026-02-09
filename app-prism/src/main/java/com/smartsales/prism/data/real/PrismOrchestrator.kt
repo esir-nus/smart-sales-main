@@ -7,7 +7,8 @@ import com.smartsales.prism.domain.model.CandidateOption
 import com.smartsales.prism.domain.model.ClarificationType
 import android.util.Log
 import com.smartsales.prism.domain.model.Mode
-
+import com.smartsales.prism.domain.memory.EntityType
+import com.smartsales.prism.domain.memory.EntityWriter
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.pipeline.AnalystState
@@ -52,7 +53,8 @@ class PrismOrchestrator @Inject constructor(
     private val scheduleBoard: com.smartsales.prism.domain.memory.ScheduleBoard,
     private val inspirationRepository: InspirationRepository,
     private val reinforcementLearner: com.smartsales.prism.domain.rl.ReinforcementLearner,
-    private val coachPipeline: com.smartsales.prism.domain.coach.CoachPipeline
+    private val coachPipeline: com.smartsales.prism.domain.coach.CoachPipeline,
+    private val entityWriter: EntityWriter
 ) : Orchestrator {
     
     // Fire-and-forget scope for RL learning
@@ -168,8 +170,20 @@ class PrismOrchestrator @Inject constructor(
                                 )
                             }
                             
+                            // === Entity Write-Back ===
+                            val resolvedId = personCandidates.firstOrNull()?.entityId
+                            val enrichedTask = lintResult.parsedClues.person?.let { clue ->
+                                val result = entityWriter.upsertFromClue(
+                                    clue = clue,
+                                    resolvedId = resolvedId,
+                                    type = EntityType.PERSON,
+                                    source = "scheduler"
+                                )
+                                lintResult.task.copy(keyPerson = result.displayName)
+                            } ?: lintResult.task
+                            
                             // 插入任务到日历
-                            val taskId = scheduledTaskRepository.insertTask(lintResult.task)
+                            val taskId = scheduledTaskRepository.insertTask(enrichedTask)
                             
                             // 设置提醒
                             lintResult.reminderType?.let { reminderType ->
@@ -248,14 +262,25 @@ class PrismOrchestrator @Inject constructor(
                         is LintResult.MultiTask -> {
                             var anyConflict = false
                             lintResult.tasks.forEach { task ->
+                                // Entity write-back per task
+                                val enrichedTask = task.keyPerson?.let { clue ->
+                                    val result = entityWriter.upsertFromClue(
+                                        clue = clue,
+                                        resolvedId = null,
+                                        type = EntityType.PERSON,
+                                        source = "scheduler"
+                                    )
+                                    task.copy(keyPerson = result.displayName)
+                                } ?: task
+                                
                                 val conflictResult = scheduleBoard.checkConflict(
-                                    task.startTime.toEpochMilli(),
-                                    task.durationMinutes
+                                    enrichedTask.startTime.toEpochMilli(),
+                                    enrichedTask.durationMinutes
                                 )
                                 if (conflictResult is ConflictResult.Conflict) {
                                     anyConflict = true
                                 }
-                                scheduledTaskRepository.insertTask(task)
+                                scheduledTaskRepository.insertTask(enrichedTask)
                             }
                             
                             scheduleBoard.refresh()

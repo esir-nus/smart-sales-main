@@ -311,7 +311,7 @@ private fun formatResult(name: String, result: LintResult, expected: String): St
         is LintResult.Error -> "❌ ${result.message}"
         is LintResult.NonIntent -> "🚫 non_intent: ${result.reason}"
         is LintResult.Inspiration -> "💡 inspiration: ${result.content}"
-
+        is LintResult.Deletion -> "🗑️ deletion: ${result.targetTitle}"
     }
     return "[$name] $status (预期: $expected)"
 }

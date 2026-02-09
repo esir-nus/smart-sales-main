@@ -27,7 +27,7 @@ Connectivity Bridge provides a **thin, Prism-compatible interface** to legacy `f
 
 | Command | Request | Response | Notes |
 |---------|---------|----------|-------|
-| **WiFi Query** | `wifi#address#ip#name` | `wifi#address#<IP>#<SSID>` | Network status |
+| **WiFi Query** | `wifi#address#ip#name` | `IP#<IP>` + `SD#<SSID>` (2 fragments) | Network status (fragmented) |
 | **WiFi Connect** | `SD#<ssid>` → `PD#<password>` | (connects) | Two-step protocol |
 | **WAV Get** | `wav#get` | `wav#send` | Initiates download |
 | **WAV End** | `wav#end` | `wav#ok` | Completes download |
@@ -313,26 +313,20 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
 
 ## Wave 3 Ship Criteria
 
-**Goal**: Automatic recording detection triggers download.
+**Goal**: Automatic recording detection via BLE `log#` notification.
 
-**Current Implementation**: BLE `log#` notification from `DeviceConnectionManager.recordingReadyEvents` (HTTP polling removed).
+**Implementation**: BLE notification listener from `DeviceConnectionManager.recordingReadyEvents` → `ConnectivityBridge.recordingNotifications()` → `BadgeAudioPipeline`.
 
 - **Exit Criteria**:
-  - [ ] HTTP polling on `/list` endpoint every 15s
-  - [ ] New file detection via diff (delete-as-dedup)
-  - [ ] `RecordingNotification.RecordingReady` emitted for new files
-  - [ ] Only polls when badge is connected
+  - [x] BLE `log#YYYYMMDD_HHMMSS` notification listener on persistent GATT session
+  - [ ] `RecordingNotification.RecordingReady` emitted with correct filename
+  - [ ] Only fires when badge is connected
+  - [x] HTTP polling removed (obsolete)
 
 - **Test Cases**:
-  - [ ] New WAV appears on badge → detected within 15s
-  - [ ] Processed file deleted → not re-detected on next poll
-  - [ ] Process restart → undeleted files re-detected correctly
-  - [ ] Disconnected state → polling stops
-
-**Future Path** (wire BLE `log#` notification):
-- Replace 15s timer with BLE `log#YYYYMMDD_HHMMSS` notification trigger
-- Badge provides filename directly in `log#` command, no prediction needed
-- Interface stays unchanged
+  - [ ] L2: Record on badge → BLE notification arrives within 1s
+  - [ ] L2: Notification triggers full pipeline (download → ASR → schedule)
+  - [ ] L2: Disconnected state → recording notifications stop
 
 > [!NOTE]
 > Protocol SOT: [esp32-protocol.md §6](file:///home/cslh-frank/main_app/docs/specs/esp32-protocol.md#L111-L129)

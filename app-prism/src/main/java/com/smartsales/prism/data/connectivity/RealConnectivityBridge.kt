@@ -37,6 +37,10 @@ class RealConnectivityBridge @Inject constructor(
     private val httpClient: BadgeHttpClient
 ) : ConnectivityBridge {
     
+    companion object {
+        private const val TAG = "AudioPipeline"
+    }
+    
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     
     
@@ -51,8 +55,9 @@ class RealConnectivityBridge @Inject constructor(
     override suspend fun downloadRecording(filename: String): WavDownloadResult {
         val baseUrl = resolveBaseUrl() ?: return WavDownloadResult.Error(
             code = WavDownloadResult.ErrorCode.NOT_CONNECTED,
-            message = "无法获取设备IP"
+            message = "无法获取设备IP — 请确认 Badge 已连接 WiFi"
         )
+        android.util.Log.d(TAG, "⬇️ Downloading: $baseUrl/download?file=$filename")
         val tempFile = File.createTempFile("badge_recording_", ".wav")
         
         return when (val result = httpClient.downloadWav(baseUrl, filename, tempFile)) {
@@ -61,16 +66,19 @@ class RealConnectivityBridge @Inject constructor(
                 originalFilename = filename,
                 sizeBytes = tempFile.length()
             )
-            is Result.Error -> mapHttpError(result.throwable)
+            is Result.Error -> {
+                android.util.Log.w(TAG, "❌ Download failed from $baseUrl: ${result.throwable.message}")
+                mapHttpError(result.throwable)
+            }
         }
     }
     
     
     override fun recordingNotifications(): Flow<RecordingNotification> =
         deviceManager.recordingReadyEvents.map { filename ->
-            // BLE sends "20260209_142605" (no extension)
-            // HTTP download expects "20260209_142605.wav"
-            RecordingNotification.RecordingReady("$filename.wav")
+            // BLE sends "log#20260209_142605" → GattBleGateway strips to "20260209_142605"
+            // ESP32 stores as "log_20260209_142605.wav"
+            RecordingNotification.RecordingReady("log_$filename.wav")
         }
     
     
@@ -144,7 +152,14 @@ class RealConnectivityBridge @Inject constructor(
     private suspend fun resolveBaseUrl(): String? {
         val networkStatus = when (val result = deviceManager.queryNetworkStatus()) {
             is Result.Success -> result.data
-            is Result.Error -> return null
+            is Result.Error -> {
+                android.util.Log.w(TAG, "❌ resolveBaseUrl: 无法查询设备网络状态 — ${result.throwable.message}")
+                return null
+            }
+        }
+        if (networkStatus.ipAddress == "0.0.0.0" || networkStatus.ipAddress.isBlank()) {
+            android.util.Log.w(TAG, "❌ resolveBaseUrl: Badge IP 无效 (${networkStatus.ipAddress}) — Badge 未连 WiFi 或不在同一网络")
+            return null
         }
         return "http://${networkStatus.ipAddress}:8088"
     }

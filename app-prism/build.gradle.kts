@@ -93,6 +93,7 @@ dependencies {
     // Shared Infrastructure
     // =============================================
     implementation(projects.data.aiCore)  // DashScope, Tingwu, credentials
+    implementation(projects.data.oss)      // OSS file upload for ASR
     implementation(projects.core.util)     // Result type
     implementation(projects.feature.connectivity)  // Legacy BLE/HTTP for RealConnectivityBridge
     implementation(platform(libs.compose.bom))

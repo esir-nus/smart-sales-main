@@ -325,14 +325,32 @@ class DashscopeExecutor @Inject constructor(
 | classification | 条件 | 示例 |
 |----------------|------|------|
 | "schedulable" | 包含时间和任务的日程安排 | "明天开会"、"后天下午2点会议" |
+| "deletion" | 明确要取消/删除某个已有任务 | "取消会议"、"把会议删了"、"不去开会了" |
 | "inspiration" | 想法、计划，但没有具体时间 | "以后想学吉他"、"有空研究一下竞品" |
 | "non_intent" | 普通对话，无日程或想法意图 | "你好"、"今天天气怎么样" |
 
 **规则**：
 - 如果是 "inspiration"，必须返回 classification 和 inspirationText 字段（包含用户的灵感内容）
 - 如果是 "non_intent"，只需返回 classification 字段
+- 如果是 "deletion"，必须返回 classification 和 targetTitle 字段（用户想删除的任务关键词）
 - 如果是 "schedulable"，tasks 数组必须包含至少 1 个任务对象
 - **Wave 4.1**: 如果用户描述包含多个任务（如 "8点吃面 9点开会"），将所有任务都放入 tasks 数组
+
+## Deletion 示例
+
+用户：取消明天的会议
+输出：
+{
+  "classification": "deletion",
+  "targetTitle": "会议"
+}
+
+用户：把打电话删了
+输出：
+{
+  "classification": "deletion",
+  "targetTitle": "打电话"
+}
 
 ## Inspiration 示例
 

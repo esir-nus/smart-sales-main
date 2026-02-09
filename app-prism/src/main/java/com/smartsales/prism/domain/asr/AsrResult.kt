@@ -28,6 +28,8 @@ sealed class AsrResult {
         /** 网络错误 */
         NETWORK_ERROR,
         /** 认证失败 */
-        AUTH_FAILED
+        AUTH_FAILED,
+        /** OSS 文件上传失败 */
+        OSS_UPLOAD_FAILED
     }
 }

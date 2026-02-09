@@ -1,17 +1,30 @@
 # ASR Service
 
-> **Cerb-compliant spec** — Audio transcription via Aliyun FunASR.
+> **Cerb-compliant spec** — Audio transcription via Aliyun FunASR (Batch API).
 
 ---
 
 ## Overview
 
-ASR Service provides audio-to-text transcription using Aliyun FunASR cloud service (part of DashScope/百炼). Supports WAV file transcription with Chinese/English language detection.
+ASR Service provides audio-to-text transcription using Aliyun FunASR cloud service (part of DashScope/百炼). 
 
-**Key Decision**: Using FunASR instead of Tingwu because:
-- Simpler API (direct file transcription, no job polling)
-- Lower latency (synchronous call returns result)
-- Same DashScope billing infrastructure
+**Key Decision**: Switch to **File Recognition (Batch API)** to access higher accuracy models (`fun-asr`, `paraformer`, `sensevoice`) which are not available in Realtime API.
+- **Old approach**: Realtime API (Stream) -> Empty results on local files.
+- **New approach**: Batch API (Async) -> Requires OSS Upload -> High accuracy.
+
+---
+
+## Architecture
+
+```mermaid
+graph LR
+    A[Badge WAV] --> B[App Local File]
+    B --> C[OssUploader]
+    C -->|Upload| D[Aliyun OSS]
+    D -->|URL| E[DashScope Transcription]
+    E -->|Polling| F[ASR Service]
+    F -->|Text| G[App Domain]
+```
 
 ---
 
@@ -21,28 +34,41 @@ ASR Service provides audio-to-text transcription using Aliyun FunASR cloud servi
 |------|----------------|
 | [Badge Audio Pipeline](../badge-audio-pipeline/interface.md) | Orchestrates recording → transcription → scheduler |
 | [Connectivity Bridge](../connectivity-bridge/interface.md) | Downloads WAV from badge |
+| [OSS Service](../oss-service/interface.md) | Handles file uploads to Aliyun OSS |
 
 ---
 
-## FunASR API Reference
+## FunASR API Reference (Batch)
 
-> **SOT**: [Aliyun FunASR Java SDK](https://help.aliyun.com/zh/model-studio/fun-asr-realtime-java-sdk)
+> **SOT**: [Aliyun Recording File Recognition](https://help.aliyun.com/zh/model-studio/recording-file-recognition)
 
-### Non-Streaming Call (Local File)
+### Async Call Flow
 
 ```kotlin
-// DashScope SDK usage
-val recognizer = Recognition()
-val param = RecognitionParam.builder()
-    .model("fun-asr-realtime")
+// 1. Upload to OSS (via data:oss)
+val objectKey = "smartsales/audio/${LocalDate.now()}/${file.name}"
+val uploadResult = ossUploader.upload(file, objectKey)
+val fileUrl = when (uploadResult) {
+    is OssUploadResult.Success -> uploadResult.publicUrl
+    is OssUploadResult.Error -> return AsrResult.Error(ErrorCode.OSS_UPLOAD_FAILED, uploadResult.message)
+}
+
+// 2. Submit Task
+val param = TranscriptionParam.builder()
+    .model("fun-asr") // Batch model
     .apiKey(apiKey)
-    .format("wav")
-    .sampleRate(16000)
-    .parameter("language_hints", arrayOf("zh", "en"))
+    .fileUrls(listOf(fileUrl))
     .build()
 
-val result: String = recognizer.call(param, File("recording.wav"))
-recognizer.duplexApi.close(1000, "bye")
+val transcription = Transcription()
+val result = transcription.asyncCall(param)
+val taskId = result.getTaskId()
+
+// 3. Poll for Results
+val taskResult = transcription.wait(TranscriptionQueryParam.FromTranscriptionParam(param, taskId))
+
+// 4. Parse transcription result JSON
+val text = parseTranscriptionResult(taskResult)
 ```
 
 ### Audio Requirements
@@ -52,7 +78,7 @@ recognizer.duplexApi.close(1000, "bye")
 | **Format** | WAV | PCM encoded required |
 | **Sample Rate** | 16000 Hz | ESP32 records at 16kHz |
 | **Channels** | Mono | Single channel |
-| **Max Duration** | ~10 min | Based on max file size |
+| **Storage** | OSS URL | **Required for Batch API** |
 
 ---
 
@@ -70,12 +96,11 @@ sealed class AsrResult {
         FILE_TOO_LARGE,
         API_ERROR,
         NETWORK_ERROR,
-        AUTH_FAILED
+        AUTH_FAILED,
+        OSS_UPLOAD_FAILED // New
     }
 }
 ```
-
-**Design Decision**: Plain text only. No sentence timestamps (FunASR non-streaming returns text only). Add timestamps in future wave if needed.
 
 ---
 
@@ -83,148 +108,39 @@ sealed class AsrResult {
 
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
-| **1** | Interface + Fake | ✅ SHIPPED | `AsrService` interface, `FakeAsrService` |
-| **2** | Real Implementation | ✅ SHIPPED | `FunAsrService` with DashScope SDK |
-| **3** | Error Handling | 🔲 | Retry policy, fallback, metrics |
+| **1** | Implementation | 🔲 | `data:oss` module, `FunAsrService` refactor to Batch API |
+| **2** | Optimization | 🔲 | Resumeable uploads, result caching |
 
 ---
 
 ## Wave 1 Ship Criteria
 
-**Goal**: Interface that compiles without SDK dependency in domain layer.
+**Goal**: Reliable transcription via OSS + Batch API.
 
 - **Exit Criteria**:
-  - [ ] `AsrService` interface in `domain/asr/`
-  - [ ] `FakeAsrService` returns mock transcript with 1s delay
-  - [ ] Zero SDK imports in domain layer
-  - [ ] Build passes
+  - [ ] `data:oss` module created and receiving credentials
+  - [ ] `OssUploader` implementing `upload(File, objectKey)`
+  - [ ] `FunAsrService` switches to `Transcription` API
+  - [ ] End-to-end flow: Local WAV -> OSS -> Text
 
 - **Test Cases**:
-  - [ ] Fake returns Success with predefined text
-  - [ ] Fake simulates processing delay
-  - [ ] Fake can return Error for testing
-
----
-
-## Wave 2 Ship Criteria
-
-**Goal**: Real transcription via FunASR.
-
-- **Exit Criteria**:
-  - [ ] `FunAsrService` in `app-prism/data/asr/`
-  - [ ] Uses DashScope SDK (transitive from `data:ai-core`)
-  - [ ] API key from `BuildConfig.DASHSCOPE_API_KEY`
-  - [ ] Transcription works end-to-end
-
-- **Test Cases**:
-  - [ ] L2: Transcribe sample WAV → Chinese text returned
-  - [ ] L2: Language detection works (zh/en mixed)
-  - [ ] Error: Invalid file format → appropriate error code
-
----
-
-## Wave 3 Ship Criteria
-
-**Goal**: Production-ready error handling.
-
-- **Exit Criteria**:
-  - [ ] Retry policy: 2 retries with exponential backoff
-  - [ ] Timeout: 60s per transcription
-  - [ ] Metrics: requestId, latency logged
-  - [ ] Circuit breaker for repeated failures
-
-- **Test Cases**:
-  - [ ] Network error → retry succeeds
-  - [ ] API error → no retry, error returned
-  - [ ] Timeout → error with appropriate message
+  - [ ] L2: Real WAV file uploaded to OSS (check console)
+  - [ ] L2: Transcription returns valid text (not empty)
+  - [ ] Error: Invalid OSS auth -> OSS_UPLOAD_FAILED
 
 ---
 
 ## SDK Integration
 
-### Gradle Dependency
+### Dependencies
+- `com.aliyun.dpa:oss-android-sdk` (for Upload)
+- `com.alibaba:dashscope-sdk-java` (for Transcription)
 
-```kotlin
-// data/ai-core/build.gradle.kts
-implementation("com.alibaba:dashscope-sdk-java:2.16.0")
-```
+### Credentials
+Requires both DashScope (for ASR) and Aliyun RAM (for OSS):
+- `DASHSCOPE_API_KEY`
+- `OSS_ACCESS_KEY_ID`
+- `OSS_ACCESS_KEY_SECRET`
+- `OSS_BUCKET_NAME`
+- `OSS_ENDPOINT`
 
-### WebSocket URL
-
-```kotlin
-// Beijing region
-Constants.baseWebsocketApiUrl = "wss://dashscope.aliyuncs.com/api-ws/v1/inference"
-```
-
-### API Key Management
-
-```kotlin
-// Use existing DashScope key from BuildConfig or secure storage
-val apiKey = BuildConfig.DASHSCOPE_API_KEY
-```
-
----
-
-## File Map
-
-| Layer | Path | Files |
-|-------|------|-------|
-| **Domain** | `app-prism/domain/asr/` | `AsrService.kt`, `AsrResult.kt` |
-| **Data** | `app-prism/data/asr/` | `FunAsrService.kt` |
-| **Fakes** | `app-prism/data/fakes/` | `FakeAsrService.kt` |
-| **DI** | `app-prism/di/` | `AsrModule.kt` |
-
-**Note**: SDK comes from `data:ai-core` via transitive dependency. No direct SDK import in `app-prism`.
-
----
-
-## Implementation Notes
-
-### Thread Safety
-
-FunASR uses WebSocket internally. Each transcription should:
-1. Create new `Recognition` instance
-2. Call synchronously on background thread
-3. Close WebSocket after completion
-
-```kotlin
-suspend fun transcribe(file: File): TranscriptionResult = withContext(Dispatchers.IO) {
-    val recognizer = Recognition()
-    try {
-        val result = recognizer.call(param, file)
-        // Parse result string to TranscriptionResult
-    } finally {
-        recognizer.duplexApi.close(1000, "complete")
-    }
-}
-```
-
-### Result Parsing
-
-FunASR returns plain text for non-streaming calls. For sentence timestamps, use streaming callback mode:
-
-```kotlin
-callback = object : ResultCallback<RecognitionResult> {
-    override fun onEvent(result: RecognitionResult) {
-        if (result.isSentenceEnd) {
-            sentences.add(Sentence(
-                text = result.sentence.text,
-                beginTimeMs = result.sentence.beginTime,
-                endTimeMs = result.sentence.endTime
-            ))
-        }
-    }
-}
-```
-
----
-
-## Verification Commands
-
-```bash
-# Check SDK added
-grep -n "dashscope-sdk-java" data/ai-core/build.gradle.kts
-
-# Build check
-./gradlew :data:ai-core:compileDebugKotlin
-```

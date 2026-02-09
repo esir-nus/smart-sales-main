@@ -175,7 +175,10 @@ class RealBadgeAudioPipeline @Inject constructor(
      * - Error → throw (触发 pipeline error)
      */
     private fun mapToSchedulerResult(uiState: UiState): SchedulerResult = when (uiState) {
-        is UiState.SchedulerTaskCreated -> SchedulerResult.TaskCreated(uiState.taskId, uiState.title)
+        is UiState.SchedulerTaskCreated -> SchedulerResult.TaskCreated(
+            uiState.taskId, uiState.title,
+            uiState.dayOffset, uiState.scheduledAtMillis, uiState.durationMinutes
+        )
         is UiState.AwaitingClarification -> SchedulerResult.AwaitingClarification(uiState.question)
         is UiState.Toast -> SchedulerResult.InspirationSaved("")  // ID 未从 Orchestrator 传回
         is UiState.Response -> SchedulerResult.MultiTaskCreated(emptyList())  // MultiTask 成功，但 ID 列表未传播

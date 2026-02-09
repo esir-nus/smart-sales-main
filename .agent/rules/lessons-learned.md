@@ -268,6 +268,30 @@ combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset 
 **Pattern**: When a specific field is missing in UI but present in data model, **check the Mapper** (`toDomain`/`toUiState`) first.
 **Status**: ✅ CONFIRMED 2026-02-09
 
+### Application-Level Coupling vs Transport-Level Serialization — 2026-02-09
+
+**Symptom**: `tim#get` auto-response interfered with WiFi provisioning writes → `写入特征失败`  
+**Root Cause**: Two coroutines calling `GattContext.writeCharacteristic()` concurrently on the same BLE characteristic. Android BLE rejects concurrent GATT writes.  
+**Wrong Approach (3 iterations)**:
+1. `sessionLock.tryLock()` in `respondToTimeSync()` — failed (timing gaps between coroutine dispatches)
+2. `AtomicBoolean` flag `isExecutingOperation` — worked but over-coupled (application logic gating a transport concern)
+3. `AtomicBoolean` + deferred `pendingTimeSync` flush — worked but even MORE over-coupled (added a second flag)
+
+**Why All 3 Were Wrong**: They solved a **transport problem** (concurrent BLE writes) with **application logic** (provisioning-aware flags in `respondToTimeSync`). This created false coupling between two independent protocol flows:
+- Time sync: `Badge → tim#get → Phone → tim#YYYYMMDDHHMMSS`  
+- Provisioning: `Phone → SD#ssid → Phone → PD#password`  
+
+These flows are **logically independent**. The only shared resource is the BLE write pipe.  
+**Correct Fix**: Add `writeLock = Mutex()` inside `GattContext.writeCharacteristic()` — serialize ALL BLE writes at the transport layer. Then `respondToTimeSync()` becomes a simple, standalone handler with zero awareness of provisioning.  
+**Result**: Removed ~40 lines of flag/defer complexity. Net simpler, net more correct.  
+**File(s)**: [GattBleGateway.kt](file:///home/cslh-frank/main_app/feature/connectivity/src/main/java/com/smartsales/feature/connectivity/gateway/GattBleGateway.kt) — `GattContext.writeLock`  
+**Pattern**: **When two independent flows share a resource, serialize at the resource level, not the flow level.** If you're adding flags like `isDoingX` to block `Y`, ask: "Is the real problem that X and Y share a pipe?" If yes, lock the pipe, not the logic.  
+**Heuristic**: If your fix requires one feature to "know about" another feature → you're coupling at the wrong layer. Push the lock DOWN to the shared resource.  
+**Corollary (from Frank)**: "Why should we respond tim# when badge sends SD#?" — if your mental model requires explaining why Feature A cares about Feature B's state, you've coupled them wrong.  
+**Status**: ✅ CONFIRMED 2026-02-09
+
+---
+
 <!-- Add new lessons above this line -->
 
 ### SwipeToDismiss Background Visibility — 2026-02-02

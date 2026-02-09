@@ -113,4 +113,9 @@ abstract class PrismModule {
 
     @Binds @Singleton
     abstract fun bindCoachPipeline(impl: com.smartsales.prism.data.real.coach.RealCoachPipeline): com.smartsales.prism.domain.coach.CoachPipeline
+
+    // === Entity Writer ===
+
+    @Binds @Singleton
+    abstract fun bindEntityWriter(impl: com.smartsales.prism.data.real.RealEntityWriter): com.smartsales.prism.domain.memory.EntityWriter
 }

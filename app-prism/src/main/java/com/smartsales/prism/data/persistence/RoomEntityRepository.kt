@@ -41,4 +41,9 @@ class RoomEntityRepository @Inject constructor(
     override suspend fun getByAccountId(accountId: String): List<EntityEntry> {
         return dao.getByAccountId(accountId).map { it.toDomain() }
     }
+    
+    override suspend fun delete(entityId: String) {
+        dao.delete(entityId)
+        Log.d("RoomEntity", "🗑️ 删除: id=$entityId")
+    }
 }

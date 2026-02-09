@@ -53,6 +53,12 @@ interface EntityDao {
     suspend fun getByAccountId(accountId: String): List<EntityEntryEntity>
     
     /**
+     * 按 ID 删除实体
+     */
+    @Query("DELETE FROM entity_entries WHERE entityId = :entityId")
+    suspend fun delete(entityId: String)
+    
+    /**
      * Test helper: 清空所有数据
      */
     @Query("DELETE FROM entity_entries")

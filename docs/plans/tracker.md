@@ -67,9 +67,9 @@
 | Milestone | Status | Description |
 |-----------|--------|-------------|
 | **M0: Prism Spec** | ✅ | Architecture documented |
-| **M1: Core Pipeline** | 🔲 | Context → Execute → Publish working |
-| **M2: Memory Integration** | 🔲 | Hot/Cement + Relevancy Library |
-| **M3: All Modes** | 🔲 | Coach, Analyst, Scheduler functional |
+| **M1: Core Pipeline** | ✅ | Context → Execute → Publish working |
+| **M2: Memory Integration** | ✅ | Room persistence, Entity Registry, RL Module |
+| **M3: All Modes** | 🚧 | Coach ✅, Scheduler ✅, Analyst 🚧 |
 | **M4: Polish** | 🔲 | UX, performance, edge cases |
 
 ---
@@ -146,6 +146,39 @@
 - `FakeClientProfileHub.getUnifiedTimeline()` with `MemoryEntry→UnifiedActivity` mapping
 - `ContextBuilder.record*()` now suspend + persists to MemoryRepository
 - 4 new tests (8 total for Client Profile Hub)
+
+---
+
+### Session Context (spec: `session-context/`)
+
+| Wave | Focus | Status |
+|------|-------|--------|
+| **1** | Skeleton (Data classes + wiring) | ✅ SHIPPED |
+| **2** | Path Indexing (Cache hit logic) | ✅ SHIPPED |
+| **3** | Smart Triggers (State-driven loading) | ✅ SHIPPED |
+
+**All Waves Shipped**: 2026-02-07
+- `SessionContext`, `EntityTrace`, `EntityState` domain models
+- O(1) alias resolution via path index cache (50-entry LRU)
+- Session-scoped caching — no expiry timer, valid for entire session
+
+---
+
+### Client Profile Hub (spec: `client-profile-hub/`)
+
+| Wave | Focus | Status |
+|------|-------|--------|
+| **1** | Interface + Domain Models + Fake | ✅ SHIPPED |
+| **2** | Timeline Aggregation | ✅ SHIPPED |
+| **3** | CRM Export Integration | 🔲 |
+
+**Wave 1 Shipped**: 2026-02-08
+- `ClientProfileHub` interface, `EntitySnapshot`, `FocusedContext`, `QuickContext`, `UnifiedActivity`
+- `getByAccountId()` hierarchy query, `FakeClientProfileHub` + 4 tests
+
+**Wave 2 Shipped**: 2026-02-08
+- Entity-tagged `MemoryEntry.structuredJson`, `MemoryRepository.getByEntityId()`
+- `ContextBuilder.record*()` now suspend + persists to MemoryRepository
 
 ---
 
@@ -255,13 +288,42 @@
 | Wave | Focus | Status |
 |------|-------|--------|
 | **1** | Interface + Fake | ✅ SHIPPED |
-| **2** | FunASR Implementation | ✅ SHIPPED |
+| **2** | FunASR Batch Implementation (OSS + Transcription API) | 🔧 IN PROGRESS |
 | **3** | Error Handling + Retry | 🔲 |
 
 **Key Deliverables**:
 - `AsrService` interface
-- `FunAsrService` using DashScope SDK (`fun-asr-realtime` model)
-- 16kHz WAV support, Chinese/English language hints
+- `FunAsrService` refactoring to Batch API (`fun-asr` model via `Transcription.asyncCall`)
+- Requires OSS upload (see OSS Service below)
+
+**Wave 2 Note**: Original implementation used `fun-asr-realtime` (streaming) which returned empty results on local files. Switching to Batch API for file-based recognition.
+
+---
+
+### OSS Service (spec: `oss-service/`)
+
+| Wave | Focus | Status |
+|------|-------|--------|
+| **1** | Core Upload (`OssUploader`) | 🔲 |
+| **2** | Resilience (retry, multipart) | 🔲 |
+
+**Key Deliverables**:
+- `OssUploader` interface + `RealOssUploader` (Aliyun OSS SDK)
+- Standalone `data:oss` module
+- Public-read bucket URL generation
+
+---
+
+### Audio Management (spec: `audio-management/`)
+
+| Wave | Focus | Status |
+|------|-------|--------|
+| **1** | Interface + Fake | ✅ SHIPPED |
+| **2** | Room Persistence | 🔲 |
+| **3** | Pipeline Integration | 🔲 |
+| **4** | UI (Audio Drawer) | 🔲 |
+
+**Wave 1 Shipped**: `AudioRepository` interface, `FakeAudioRepository`, domain models (`AudioFile`, `AudioSource`, `TranscriptionStatus`)
 
 ---
 
@@ -364,7 +426,7 @@
 
 > **Strategy**: Contract-First Architecture Reset  
 > **Mandate**: NO old code extraction — fresh rewrite only (learn WHAT from legacy, write HOW fresh)  
-> **Current**: Phase 1 ✅ → Phase 2 🚧 → Phase 3 🚧
+> **Current**: Phase 1 ✅ → Phase 2 🚧 → Phase 3 🚧 (Real implementations shipping ahead of UI)
 
 ---
 
@@ -409,7 +471,7 @@
 | Home Screen (Session List, Knot FAB) | 🔲 |
 | Chat Interface (Coach/Analyst mode toggle) | 🔲 |
 | Audio Drawer (bottom gesture, card states) | 🔲 |
-| Scheduler Drawer (top gesture, carousels) | 🚧 Logic wired |
+| Scheduler Drawer (top gesture, carousels) | ✅ Logic + UI shipped (6 waves) |
 | All 3 modes navigable with fake responses | 🔲 |
 | UI matches prism-ui-ux-contract.md | 🔲 |
 
@@ -425,7 +487,7 @@
 | Room persistence (Memory, Entity, UserHabit) | ✅ `RoomMemoryRepository`, `RoomEntityRepository`, `RoomUserHabitRepository` shipped |
 | Tingwu integration (audio transcription) | ✅ `FunAsrService` shipped |
 | ESP32 BLE (badge communication) | ✅ `RealConnectivityBridge` shipped |
-| Memory Writer (fire-and-forget persistence) | 🔲 |
+| Memory Writer (fire-and-forget persistence) | ✅ `EntityWriter` shipped |
 | All integration tests pass | 🔲 |
 
 ---
@@ -460,7 +522,7 @@
 | Remaining Fakes | `FakeHistoryRepository`, `FakeAudioRepository` | Not yet backed by Room | Low (deferred) |
 | TOCTOU in observe() | `RoomUserHabitRepository.kt` | Concurrent first-observation of same key may lose 1 count; add `@Transaction` if batching | Low |
 | Room error handling | `RoomMemoryRepository`, `RoomEntityRepository`, `RoomUserHabitRepository` | No try-catch on write ops; uncaught SQLite exceptions possible | Low |
-| GIF Hardware Pipeline | `feature/media/Gif*.kt`, `BleGateway.sendGifCommand` | Hardware no longer sends GIF/image — only long audio + short audio. 6 dead files + interface method. Spec cleanup first (`esp32-protocol.md`, `connectivity-bridge/spec.md`) | Medium |
+| ~~GIF Hardware Pipeline~~ | ~~`feature/media/Gif*.kt`~~ | ✅ Resolved (2026-02-08) — GIF files deleted, `sendGifCommand` removed from BleGateway, specs cleaned | ~~Medium~~ |
 | Dead `httpChecker` field | `DefaultDeviceConnectionManager.kt` | Constructor param never used after HTTP gate removal. Remove field + DI provider | Low |
 
 **Resolution**: Refactor to `FakeProgressService` / `FakeDelayService` post-beta.

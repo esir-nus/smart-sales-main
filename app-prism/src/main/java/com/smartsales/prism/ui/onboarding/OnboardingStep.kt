@@ -11,6 +11,7 @@ enum class OnboardingStep {
     HARDWARE_WAKE,    // Step 3: Manual Instructions
     SCAN,             // Step 4: Radar Pulse (requests BLE permissions here)
     DEVICE_FOUND,     // Step 5: Manual Connect
+    BLE_CONNECTING,   // Step 5.5: 5s cooldown — BLE pairing buffer (makeshift)
     WIFI_CREDS,       // Step 6: SSID/Pwd
     FIRMWARE_CHECK,   // Step 7: Integrity Check
     DEVICE_NAMING,    // Step 8: Personalization

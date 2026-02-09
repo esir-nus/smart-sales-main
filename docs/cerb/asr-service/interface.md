@@ -43,7 +43,8 @@ sealed class AsrResult {
         FILE_TOO_LARGE,
         API_ERROR,
         NETWORK_ERROR,
-        AUTH_FAILED
+        AUTH_FAILED,
+        OSS_UPLOAD_FAILED
     }
 }
 ```
@@ -54,7 +55,7 @@ sealed class AsrResult {
 
 | Operation | Guarantee |
 |-----------|-----------|
-| `transcribe` | Timeout at 60s, returns Error on timeout |
+| `transcribe` | Timeout at 180s (upload + transcription polling), returns Error on timeout |
 | `transcribe` | Thread-safe, can run concurrent calls |
 | `isAvailable` | Fast check (<3s), no file upload |
 

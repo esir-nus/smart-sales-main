@@ -80,5 +80,6 @@ interface EntityRepository {
 
 ## Related Specs
 
-- [Memory Center](../memory-center/spec.md) — Storage layer
-- [User Habit](../user-habit/spec.md) — Learning patterns
+- [Memory Center](../memory-center/interface.md) — Storage layer
+- [User Habit](../user-habit/interface.md) — Learning patterns
+- [Entity Writer](../entity-writer/interface.md) — Write side (mutations)

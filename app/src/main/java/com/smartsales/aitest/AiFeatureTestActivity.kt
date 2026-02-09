@@ -443,9 +443,7 @@ private fun AiFeatureTestApp(
                                 onOpenPrivacy = { goHome() }
                             )
 
-                            TestHomePage.GifUpload -> com.smartsales.feature.media.GifUploadScreen(
-                                modifier = Modifier.fillMaxSize()
-                            )
+                            TestHomePage.GifUpload -> { /* GIF pipeline removed */ }
 
                             TestHomePage.WavDownload -> com.smartsales.feature.media.WavDownloadScreen(
                                 modifier = Modifier.fillMaxSize()

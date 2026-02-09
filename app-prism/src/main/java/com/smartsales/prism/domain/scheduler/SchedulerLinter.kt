@@ -40,6 +40,14 @@ class SchedulerLinter @Inject constructor(
                         json.optString("title", json.optString("content", "")))
                     return LintResult.Inspiration(content = content)
                 }
+                // Wave 7: NL Deletion
+                "deletion" -> {
+                    val targetTitle = json.optString("targetTitle", "")
+                    if (targetTitle.isBlank()) {
+                        return LintResult.Error("未指定要删除的任务")
+                    }
+                    return LintResult.Deletion(targetTitle = targetTitle)
+                }
                 // "schedulable" → continue to full parsing below
             }
             
@@ -313,4 +321,7 @@ sealed class LintResult {
     // Wave 4.0: Input Classification Results
     data class NonIntent(val reason: String) : LintResult()
     data class Inspiration(val content: String) : LintResult()
+    
+    // Wave 7: NL Deletion
+    data class Deletion(val targetTitle: String) : LintResult()
 }

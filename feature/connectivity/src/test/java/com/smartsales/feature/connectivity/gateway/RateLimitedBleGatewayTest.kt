@@ -16,6 +16,8 @@ class RateLimitedBleGatewayTest {
 
     private lateinit var fakeGateway: RecordingBleGateway
     private lateinit var rateLimitedGateway: RateLimitedBleGateway
+    private var fakeTimeMs = 0L
+    private val fakeTime: () -> Long = { fakeTimeMs }
     private val testSession = BleSession(
         peripheralId = "test-device",
         peripheralName = "TestBadge",
@@ -28,9 +30,11 @@ class RateLimitedBleGatewayTest {
     @Before
     fun setup() {
         fakeGateway = RecordingBleGateway()
+        fakeTimeMs = 10_000L
         rateLimitedGateway = RateLimitedBleGateway(
             delegate = fakeGateway,
-            config = RateLimitedBleGateway.RateLimitConfig(networkQueryTtlMs = 100)
+            config = RateLimitedBleGateway.RateLimitConfig(networkQueryTtlMs = 100),
+            timeSource = fakeTime
         )
     }
 
@@ -73,11 +77,6 @@ class RateLimitedBleGatewayTest {
 
     @Test
     fun `query after TTL expiry calls delegate again`() = runTest {
-        // Use real time for this test since RateLimitedBleGateway uses System.currentTimeMillis()
-        val realTimeGateway = RateLimitedBleGateway(
-            delegate = fakeGateway,
-            config = RateLimitedBleGateway.RateLimitConfig(networkQueryTtlMs = 50)
-        )
         fakeGateway.networkResult = NetworkQueryResult.Success(
             DeviceNetworkStatus(
                 ipAddress = "192.168.1.100",
@@ -87,12 +86,12 @@ class RateLimitedBleGatewayTest {
             )
         )
 
-        realTimeGateway.queryNetwork(testSession)
-        
-        // Wait for TTL to expire using real time
-        Thread.sleep(60)
-        
-        realTimeGateway.queryNetwork(testSession)
+        rateLimitedGateway.queryNetwork(testSession)
+
+        // Advance past both TTL (100ms) and MIN_QUERY_INTERVAL (2000ms)
+        fakeTimeMs += 3000
+
+        rateLimitedGateway.queryNetwork(testSession)
 
         // 2 calls to delegate after TTL expired
         assertEquals(2, fakeGateway.queryNetworkCallCount)
@@ -103,7 +102,10 @@ class RateLimitedBleGatewayTest {
         fakeGateway.networkResult = NetworkQueryResult.Timeout(5000)
 
         rateLimitedGateway.queryNetwork(testSession)
-        
+
+        // Advance past MIN_QUERY_INTERVAL so second call isn't throttled
+        fakeTimeMs += 3000
+
         // Second query should still hit delegate (error not cached)
         fakeGateway.networkResult = NetworkQueryResult.Success(
             DeviceNetworkStatus(
@@ -162,7 +164,10 @@ class RateLimitedBleGatewayTest {
         )
 
         rateLimitedGateway.queryNetwork(testSession)
-        
+
+        // Advance past MIN_QUERY_INTERVAL so second call isn't throttled
+        fakeTimeMs += 3000
+
         // Second query should still hit delegate (0.0.0.0 not cached)
         fakeGateway.networkResult = NetworkQueryResult.Success(
             DeviceNetworkStatus(
@@ -226,13 +231,9 @@ class RateLimitedBleGatewayTest {
             return networkResult
         }
 
-        override suspend fun sendGifCommand(session: BleSession, command: GifCommand): GifCommandResult =
-            GifCommandResult.Timeout(5000)
-
         override suspend fun sendWavCommand(session: BleSession, command: WavCommand): WavCommandResult =
             WavCommandResult.Timeout(5000)
 
-        override fun listenForTimeSync(session: BleSession): Flow<TimeSyncEvent> = emptyFlow()
 
         override fun forget(peripheral: BlePeripheral) {}
     }

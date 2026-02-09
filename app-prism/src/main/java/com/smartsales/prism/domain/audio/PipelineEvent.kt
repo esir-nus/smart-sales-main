@@ -38,6 +38,7 @@ sealed class SchedulerResult {
     data class MultiTaskCreated(val taskIds: List<String>) : SchedulerResult()
     data class InspirationSaved(val id: String) : SchedulerResult()
     data class AwaitingClarification(val question: String) : SchedulerResult()
+    data object Ignored : SchedulerResult()  // 非调度意图（聊天、无效输入）
 }
 
 /**

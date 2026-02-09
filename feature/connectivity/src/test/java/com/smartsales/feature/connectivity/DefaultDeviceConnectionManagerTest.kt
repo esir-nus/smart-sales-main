@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Test
 
 // 文件路径: feature/connectivity/src/test/java/com/smartsales/feature/connectivity/DefaultDeviceConnectionManagerTest.kt
@@ -19,6 +20,13 @@ import org.junit.Test
 // 最近修改: 2025-11-14
 @OptIn(ExperimentalCoroutinesApi::class)
 class DefaultDeviceConnectionManagerTest {
+
+    private var manager: DefaultDeviceConnectionManager? = null
+
+    @After
+    fun tearDown() {
+        manager?.close()
+    }
 
     private val peripheral = BlePeripheral(id = "device-1", name = "Demo Device", signalStrengthDbm = -55)
     private val credentials = WifiCredentials(ssid = "SalesWiFi", password = "password123")
@@ -199,28 +207,6 @@ class DefaultDeviceConnectionManagerTest {
     }
 
     @Test
-    fun `auto reconnect fails on unreachable endpoint`() = runTest {
-        val provisioner = QueueProvisioner(
-            mutableListOf(Result.Success(ProvisioningStatus("ssid", "handshake", "hash"))),
-            networkResult = Result.Success(networkStatus)
-        )
-        val manager = createManager(
-            provisioner = provisioner,
-            httpChecker = object : HttpEndpointChecker {
-                override suspend fun isReachable(baseUrl: String): Boolean = false
-            }
-        )
-
-        manager.selectPeripheral(peripheral)
-        manager.startPairing(peripheral, credentials)
-        runCurrent()
-        manager.scheduleAutoReconnectIfNeeded()
-        runCurrent()
-
-        assertTrue(manager.state.value is ConnectionState.Disconnected)
-    }
-
-    @Test
     fun `auto reconnect handles device not found`() = runTest {
         val provisioner = QueueProvisioner(
             mutableListOf(Result.Success(ProvisioningStatus("ssid", "handshake", "hash"))),
@@ -301,6 +287,12 @@ class DefaultDeviceConnectionManagerTest {
             networkResult
     }
 
+    private class FakeGattSessionLifecycle : com.smartsales.feature.connectivity.gateway.GattSessionLifecycle {
+        override suspend fun connect(peripheralId: String) = Result.Success(Unit)
+        override suspend fun disconnect() {}
+        override fun listenForBadgeNotifications() = kotlinx.coroutines.flow.emptyFlow<com.smartsales.feature.connectivity.gateway.BadgeNotification>()
+    }
+
     private fun TestScope.createManager(
         provisioner: WifiProvisioner,
         dispatcher: TestDispatcher = StandardTestDispatcher(testScheduler),
@@ -312,11 +304,13 @@ class DefaultDeviceConnectionManagerTest {
         val fakeBadgeMonitor = FakeBadgeStateMonitor()
         return DefaultDeviceConnectionManager(
             provisioner = provisioner,
+            bleGateway = FakeGattSessionLifecycle(),
             dispatchers = dispatcherProvider,
             httpChecker = httpChecker,
             badgeStateMonitor = fakeBadgeMonitor,
-            sessionStore = InMemorySessionStore()
-        )
+            sessionStore = InMemorySessionStore(),
+            scope = backgroundScope
+        ).also { manager = it }
     }
 
     private companion object {

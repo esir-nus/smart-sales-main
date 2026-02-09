@@ -8,14 +8,10 @@ import com.smartsales.feature.connectivity.WifiCredentials
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import javax.inject.Qualifier
 
-/**
- * Qualifier for the real (undecorated) BLE gateway implementation.
- */
-@Qualifier
-@Retention(AnnotationRetention.BINARY)
-annotation class RealGateway
+
+
+
 
 /**
  * Rate-limited decorator for [BleGateway].
@@ -32,7 +28,8 @@ annotation class RealGateway
  */
 class RateLimitedBleGateway(
     private val delegate: BleGateway,
-    private val config: RateLimitConfig = RateLimitConfig()
+    private val config: RateLimitConfig = RateLimitConfig(),
+    private val timeSource: () -> Long = { System.currentTimeMillis() }
 ) : BleGateway {
 
     private val networkQueryMutex = Mutex()
@@ -53,18 +50,12 @@ class RateLimitedBleGateway(
     override suspend fun requestHotspot(session: BleSession): HotspotResult =
         delegate.requestHotspot(session)
 
-    override suspend fun sendGifCommand(
-        session: BleSession,
-        command: GifCommand
-    ): GifCommandResult = delegate.sendGifCommand(session, command)
-
     override suspend fun sendWavCommand(
         session: BleSession,
         command: WavCommand
     ): WavCommandResult = delegate.sendWavCommand(session, command)
 
-    override fun listenForTimeSync(session: BleSession): Flow<TimeSyncEvent> =
-        delegate.listenForTimeSync(session)
+
 
     override fun forget(peripheral: BlePeripheral) = delegate.forget(peripheral)
 
@@ -72,15 +63,15 @@ class RateLimitedBleGateway(
 
     override suspend fun queryNetwork(session: BleSession): NetworkQueryResult {
         return networkQueryMutex.withLock {
-            ConnectivityLogger.i(">>> RateLimitedBleGateway.queryNetwork ENTRY (in mutex)")
-            val now = System.currentTimeMillis()
+            ConnectivityLogger.i("📡 queryNetwork ENTRY (in mutex)")
+            val now = timeSource()
             val timeSinceLastQuery = now - lastQueryMs
             
             // Rate limiting: return cached result if within TTL
             val cached = cachedResult
             if (cached != null && timeSinceLastQuery < config.networkQueryTtlMs) {
                 ConnectivityLogger.d(
-                    "RateLimitedBleGateway: CACHED (${timeSinceLastQuery}ms old)"
+                    "📡 CACHED (${timeSinceLastQuery}ms old)"
                 )
                 return@withLock NetworkQueryResult.Success(cached)
             }
@@ -88,7 +79,7 @@ class RateLimitedBleGateway(
             // Enforce minimum interval even for 0.0.0.0 to protect ESP32
             if (timeSinceLastQuery < MIN_QUERY_INTERVAL_MS) {
                 ConnectivityLogger.d(
-                    "RateLimitedBleGateway: THROTTLED (${timeSinceLastQuery}ms < ${MIN_QUERY_INTERVAL_MS}ms floor)"
+                    "📡 THROTTLED (${timeSinceLastQuery}ms < ${MIN_QUERY_INTERVAL_MS}ms floor)"
                 )
                 // Return last result or timeout if none
                 val lastResult = cachedResult
@@ -109,11 +100,11 @@ class RateLimitedBleGateway(
                     if (!ip.isNullOrBlank() && ip != "0.0.0.0") {
                         cachedResult = result.status
                         ConnectivityLogger.d(
-                            "RateLimitedBleGateway: fresh query, caching IP=$ip"
+                            "📡 fresh query, caching IP=$ip"
                         )
                     } else {
                         ConnectivityLogger.d(
-                            "RateLimitedBleGateway: got $ip, NOT caching (retry after ${MIN_QUERY_INTERVAL_MS}ms)"
+                            "📡 got $ip, NOT caching (retry after ${MIN_QUERY_INTERVAL_MS}ms)"
                         )
                     }
                     result

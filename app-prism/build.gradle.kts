@@ -111,10 +111,16 @@ dependencies {
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
 
+    // Room Persistence
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    kapt(libs.room.compiler)
+
     // Test
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
     testImplementation("org.json:json:20231013")  // Real JSON lib for unit tests
+    testImplementation("androidx.room:room-testing:2.6.1")  // Room DAO tests
     
     // UI Tests (On-Device Logic Check)
     androidTestImplementation(platform(libs.compose.bom))

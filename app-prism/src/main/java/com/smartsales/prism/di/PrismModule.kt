@@ -6,17 +6,16 @@ import com.smartsales.prism.data.fakes.FakeAudioRepository
 import com.smartsales.prism.data.real.RealContextBuilder
 import com.smartsales.prism.data.fakes.FakeExecutor
 import com.smartsales.prism.data.fakes.FakeHistoryRepository
-import com.smartsales.prism.data.fakes.FakeMemoryRepository
-import com.smartsales.prism.data.fakes.FakeMemoryWriter
 import com.smartsales.prism.data.fakes.FakePublisher
-import com.smartsales.prism.data.fakes.FakeEntityRepository
+import com.smartsales.prism.data.persistence.RoomMemoryRepository
+import com.smartsales.prism.data.persistence.RoomEntityRepository
+import com.smartsales.prism.data.persistence.RoomUserHabitRepository
 import com.smartsales.prism.data.fakes.FakeUserProfileRepository 
 import com.smartsales.prism.data.real.DashscopeExecutor
 import com.smartsales.prism.data.real.PrismOrchestrator
 import com.smartsales.prism.domain.audio.AudioRepository
 
 import com.smartsales.prism.domain.memory.MemoryRepository
-import com.smartsales.prism.domain.memory.MemoryWriter
 import com.smartsales.prism.domain.memory.EntityRepository
 import com.smartsales.prism.domain.pipeline.ContextBuilder
 import com.smartsales.prism.domain.pipeline.Executor
@@ -61,18 +60,14 @@ abstract class PrismModule {
     abstract fun bindHistoryRepository(fake: FakeHistoryRepository): HistoryRepository
     
     @Binds @Singleton
-    abstract fun bindMemoryRepository(fake: FakeMemoryRepository): MemoryRepository
+    abstract fun bindMemoryRepository(impl: RoomMemoryRepository): MemoryRepository
     
     @Binds @Singleton
-    abstract fun bindEntityRepository(fake: FakeEntityRepository): EntityRepository
+    abstract fun bindEntityRepository(impl: RoomEntityRepository): EntityRepository
     
     @Binds @Singleton
     abstract fun bindClientProfileHub(fake: com.smartsales.prism.data.fakes.FakeClientProfileHub): com.smartsales.prism.domain.crm.ClientProfileHub
     
-    // === Memory System ===
-    
-    @Binds @Singleton
-    abstract fun bindMemoryWriter(fake: FakeMemoryWriter): MemoryWriter
 
     // === Audio ===
     
@@ -92,7 +87,7 @@ abstract class PrismModule {
     // === User Habit ===
 
     @Binds @Singleton
-    abstract fun bindUserHabitRepository(fake: com.smartsales.prism.data.fakes.FakeUserHabitRepository): com.smartsales.prism.domain.habit.UserHabitRepository
+    abstract fun bindUserHabitRepository(impl: RoomUserHabitRepository): com.smartsales.prism.domain.habit.UserHabitRepository
 
     // === RL Module ===
 

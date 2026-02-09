@@ -6,7 +6,6 @@ package com.smartsales.feature.media.devicemanager
 // 作者：提取于 2026-01-06
 
 import android.net.Uri
-import com.smartsales.feature.media.GifTransferState
 import com.smartsales.feature.media.WavListState
 import com.smartsales.feature.media.WavDownloadState
 
@@ -39,7 +38,6 @@ data class DeviceManagerUiState(
     val loadErrorMessage: String? = null,
     
     // New coordinator states
-    val gifTransferState: GifTransferState? = null,
     val wavListState: WavListState? = null,
     val wavDownloadState: WavDownloadState? = null
 )
@@ -67,7 +65,6 @@ data class DeviceFileUi(
  */
 enum class DeviceMediaTab {
     Videos,
-    Gifs,
     Images,
     Audio;
 }

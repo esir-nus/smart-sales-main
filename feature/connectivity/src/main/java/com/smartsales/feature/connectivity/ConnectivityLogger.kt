@@ -33,7 +33,7 @@ internal object ConnectivityLogger {
             timestampMs = System.currentTimeMillis()
         )
         _bleTrafficEvents.tryEmit(event)
-        d("TX [$label]: $text ($hex)")
+        d("📤 TX [$label]: $text ($hex)")
     }
 
     /** Log RX (device → app) with raw bytes */
@@ -48,7 +48,7 @@ internal object ConnectivityLogger {
             timestampMs = System.currentTimeMillis()
         )
         _bleTrafficEvents.tryEmit(event)
-        d("RX [$label]: $text ($hex)")
+        d("📥 RX [$label]: $text ($hex)")
     }
 
     private fun log(priority: Int, message: String, throwable: Throwable?) {

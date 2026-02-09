@@ -3,11 +3,11 @@ package com.smartsales.feature.connectivity
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
 import com.smartsales.feature.connectivity.badge.BadgeStateMonitor
+import java.io.Closeable
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,13 +49,13 @@ interface DeviceConnectionManager {
 @Singleton
 class DefaultDeviceConnectionManager @Inject constructor(
     private val provisioner: WifiProvisioner,
+    private val bleGateway: com.smartsales.feature.connectivity.gateway.GattSessionLifecycle,
     private val dispatchers: DispatcherProvider,
     private val httpChecker: HttpEndpointChecker,
     private val badgeStateMonitor: BadgeStateMonitor,
-    private val sessionStore: SessionStore
-) : DeviceConnectionManager {
-
-    private val scope = CoroutineScope(SupervisorJob() + dispatchers.default)
+    private val sessionStore: SessionStore,
+    @ConnectivityScope private val scope: CoroutineScope
+) : DeviceConnectionManager, Closeable {
     private val lock = Mutex()
     private val _state = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
 
@@ -64,6 +64,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
     private var currentSession: BleSession? = null
     private var lastCredentials: WifiCredentials? = null
     private var heartbeatJob: Job? = null
+    private var notificationListenerJob: Job? = null
     private var autoRetryJob: Job? = null
     private var autoRetryAttempts = 0
     private var reconnectMeta = AutoReconnectMeta()
@@ -73,9 +74,18 @@ class DefaultDeviceConnectionManager @Inject constructor(
         sessionStore.load()?.let { (session, credentials) ->
             currentSession = session
             lastCredentials = credentials
-            ConnectivityLogger.d("Restored session: ${session.peripheralId}")
+            ConnectivityLogger.d("🔌 Restored session: ${session.peripheralId}")
         }
     }
+
+    /** 取消所有后台协程：心跳、通知监听、自动重连 */
+    private fun cancelAllJobs() {
+        heartbeatJob?.cancel(); heartbeatJob = null
+        notificationListenerJob?.cancel(); notificationListenerJob = null
+        cancelAutoRetry()
+    }
+
+    override fun close() = cancelAllJobs()
 
 
     override fun selectPeripheral(peripheral: BlePeripheral) {
@@ -84,7 +94,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
         _state.value = ConnectionState.Connected(session)
         badgeStateMonitor.onBleConnected(session)
         ConnectivityLogger.d(
-            "Select peripheral id=${peripheral.id} name=${peripheral.name} profile=${peripheral.profileId ?: "dynamic"}"
+            "🔌 Select peripheral id=${peripheral.id} name=${peripheral.name} profile=${peripheral.profileId ?: "dynamic"}"
         )
     }
 
@@ -130,26 +140,24 @@ class DefaultDeviceConnectionManager @Inject constructor(
     }
     
     override fun disconnectBle() {
-        heartbeatJob?.cancel()
-        heartbeatJob = null
-        cancelAutoRetry()
+        cancelAllJobs()
         badgeStateMonitor.onBleDisconnected()
+        scope.launch(dispatchers.io) { bleGateway.disconnect() }
         // currentSession + lastCredentials KEPT — reconnection possible
         _state.value = ConnectionState.Disconnected
-        ConnectivityLogger.d("Soft disconnect (session preserved)")
+        ConnectivityLogger.d("🔌 Soft disconnect (session preserved)")
     }
 
     override fun forgetDevice() {
-        heartbeatJob?.cancel()
-        heartbeatJob = null
-        cancelAutoRetry()
+        cancelAllJobs()
         badgeStateMonitor.onBleDisconnected()
+        scope.launch(dispatchers.io) { bleGateway.disconnect() }
         sessionStore.clear()
         currentSession = null
         lastCredentials = null
         reconnectMeta = AutoReconnectMeta()
         _state.value = ConnectionState.Disconnected
-        ConnectivityLogger.d("Hard disconnect (session cleared)")
+        ConnectivityLogger.d("🔌 Hard disconnect (session cleared)")
     }
 
     override fun scheduleAutoReconnectIfNeeded() {
@@ -167,7 +175,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
         val requiredInterval = requiredIntervalFor(reconnectMeta.failureCount)
         val elapsed = now - reconnectMeta.lastAttemptMillis
         if (elapsed < requiredInterval) {
-            ConnectivityLogger.d("跳过自动重连：退避中 ${elapsed}ms < ${requiredInterval}ms")
+            ConnectivityLogger.d("🔄 Backoff: ${elapsed}ms < ${requiredInterval}ms")
             return
         }
         launchReconnect()
@@ -278,23 +286,24 @@ class DefaultDeviceConnectionManager @Inject constructor(
         autoRetryAttempts = 0
         cancelAutoRetry()
         ConnectivityLogger.i(
-            "Provision success device=${session.peripheralName} profile=${session.profileId ?: "dynamic"}"
+            "✅ Provision success device=${session.peripheralName} profile=${session.profileId ?: "dynamic"}"
         )
         
         // Persist session and credentials for reconnection
         lastCredentials?.let { credentials ->
             sessionStore.save(session, credentials)
-            ConnectivityLogger.d("Session persisted: ${session.peripheralId}")
+            ConnectivityLogger.d("🔌 Session persisted: ${session.peripheralId}")
         }
         
         _state.value = ConnectionState.WifiProvisioned(session, status)
         startHeartbeat(session, status)
+        startNotificationListener(session)
     }
 
     private fun handleProvisioningFailure(session: BleSession, throwable: Throwable) {
         val error = throwable.toConnectivityError()
         ConnectivityLogger.w(
-            "Provision failure device=${session.peripheralName} profile=${session.profileId ?: "dynamic"} error=$error",
+            "❌ Provision failure device=${session.peripheralName} profile=${session.profileId ?: "dynamic"} error=$error",
             throwable
         )
         _state.value = ConnectionState.Error(error)
@@ -318,7 +327,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
                 if (_state.value !is ConnectionState.Error) return@withLock
                 autoRetryAttempts += 1
                 ConnectivityLogger.i(
-                    "Auto retry #$autoRetryAttempts for ${session.peripheralName}"
+                    "🔄 Auto retry #$autoRetryAttempts for ${session.peripheralName}"
                 )
                 _state.value = ConnectionState.Pairing(
                     deviceName = session.peripheralName,
@@ -357,22 +366,31 @@ class DefaultDeviceConnectionManager @Inject constructor(
             credentialsHash = "${wifiName}-${status.ipAddress}".hashCode().toString()
         )
         ConnectivityLogger.d(
-            "Network status ok device=${session.peripheralName} ip=${status.ipAddress}"
+            "🌐 Network status ok device=${session.peripheralName} ip=${status.ipAddress}"
         )
         _state.value = ConnectionState.WifiProvisioned(session, syntheticStatus)
         startHeartbeat(session, syntheticStatus)
     }
 
     private suspend fun connectUsingSession(session: BleSession): ConnectionState {
+        // 建立持久 GATT 会话
+        bleGateway.connect(session.peripheralId).let { result ->
+            if (result is com.smartsales.core.util.Result.Error) {
+                ConnectivityLogger.w("🔌 Persistent GATT connect failed: ${result.throwable.message}")
+                // 不阻塞 — 仍尝试通过 provisioner 查询
+            }
+        }
+        
         val networkStatus = provisioner.queryNetworkStatus(session)
         return when (networkStatus) {
             is Result.Success -> {
                 val ip = networkStatus.data.ipAddress
                 if (ip.isNullOrBlank() || ip == "0.0.0.0" || ip.startsWith("0.")) {
-                    ConnectivityLogger.d("connectUsingSession: badge offline, ip=$ip")
+                    ConnectivityLogger.d("🔌 connectUsingSession: badge offline, ip=$ip")
                     ConnectionState.Error(ConnectivityError.EndpointUnreachable("设备未连接WiFi"))
                 } else {
-                    ConnectivityLogger.d("connectUsingSession: connected, ip=$ip")
+                    ConnectivityLogger.d("🔌 connectUsingSession: connected, ip=$ip")
+                    startNotificationListener(session)
                     ConnectionState.Connected(session)
                 }
             }
@@ -380,6 +398,29 @@ class DefaultDeviceConnectionManager @Inject constructor(
             is Result.Error -> {
                 val error = mapProvisioningError(networkStatus.throwable)
                 ConnectionState.Error(error)
+            }
+        }
+    }
+    
+    /**
+     * 启动持久通知监听器，接收 log# 和 tim# 等消息。
+     */
+    private fun startNotificationListener(session: BleSession) {
+        notificationListenerJob?.cancel()
+        notificationListenerJob = scope.launch(dispatchers.io) {
+            ConnectivityLogger.d("📡 Starting persistent notification listener for ${session.peripheralId}")
+            bleGateway.listenForBadgeNotifications().collect { event ->
+                when (event) {
+                    is com.smartsales.feature.connectivity.gateway.BadgeNotification.RecordingReady -> {
+                        ConnectivityLogger.i("📥 Badge recording ready: ${event.filename}")
+                    }
+                    is com.smartsales.feature.connectivity.gateway.BadgeNotification.TimeSyncRequested -> {
+                        ConnectivityLogger.d("⏰ Badge time sync requested")
+                    }
+                    is com.smartsales.feature.connectivity.gateway.BadgeNotification.Unknown -> {
+                        ConnectivityLogger.d("❓ Badge unknown notification: ${event.raw}")
+                    }
+                }
             }
         }
     }

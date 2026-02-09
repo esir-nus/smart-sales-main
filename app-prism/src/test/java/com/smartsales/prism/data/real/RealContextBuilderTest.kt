@@ -34,6 +34,7 @@ class RealContextBuilderTest {
         timeProvider = FakeTimeProvider()
         entityRepository = FakeEntityRepository()
         habitRepository = FakeUserHabitRepository()
+        habitRepository.clear()  // Reset seed data for test isolation
         reinforcementLearner = FakeReinforcementLearner(habitRepository)
         memoryRepository = FakeMemoryRepository()
         

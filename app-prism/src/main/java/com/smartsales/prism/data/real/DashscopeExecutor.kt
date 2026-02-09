@@ -190,6 +190,9 @@ class DashscopeExecutor @Inject constructor(
             }
         } else {
             android.util.Log.d("CoachMemory", "📝 Executor: no memory hits in context")
+            appendLine()
+            appendLine("## 历史记忆")
+            appendLine("注意: 当前没有任何历史对话记录。你不知道用户之前说过什么。不要编造、引用或暗示任何以前的对话内容或案例。如果用户问起之前的对话，请明确告知你没有相关记录。")
         }
         
         // Wave 3: 习惯上下文注入（用户和客户偏好）
@@ -229,6 +232,7 @@ class DashscopeExecutor @Inject constructor(
 2. **举例说明** — 提供具体话术示例（用引号标注）
 3. **预期反馈** — 提醒用户客户可能的反应
 4. **可选下一步** — 简单提示后续动作（如有必要）
+5. **绝不编造历史** — 不要引用或捏造任何以前的对话内容、日期或案例。如果没有历史记忆提供给你，就说"我没有之前的对话记录"
 
 ## 示例风格
 
@@ -253,6 +257,8 @@ class DashscopeExecutor @Inject constructor(
      */
     private fun buildAnalystSystemPrompt(): String = """
 你是一位资深销售教练。分析用户场景后，提供专业建议。
+
+重要规则：绝不编造历史。不要引用或捏造任何以前的对话内容。如果没有历史记忆提供给你，就说"我没有相关记录"。
 
 ## 响应策略
 

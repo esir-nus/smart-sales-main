@@ -27,12 +27,13 @@ import org.junit.Test
  */
 class FakeReinforcementLearnerTest {
 
-    private lateinit var habitRepository: UserHabitRepository
+    private lateinit var habitRepository: FakeUserHabitRepository
     private lateinit var reinforcementLearner: ReinforcementLearner
 
     @Before
     fun setup() {
         habitRepository = FakeUserHabitRepository()
+        habitRepository.clear()  // Reset seed data for test isolation
         reinforcementLearner = FakeReinforcementLearner(habitRepository)
     }
 

@@ -54,13 +54,15 @@ class RealContextBuilder @Inject constructor(
         
         // Wave 3: Memory search (session-history-aware)
         val memoryHits = if (shouldSearchMemory(userText, _sessionHistory)) {
-            memoryRepository.search(userText, limit = 5).map { entry ->
+            val hits = memoryRepository.search(userText, limit = 5).map { entry ->
                 MemoryHit(
                     entryId = entry.entryId,
                     content = entry.content,
                     relevanceScore = 1.0f
                 )
             }
+            Log.d("CoachMemory", "🔍 build: memorySearch('${userText.take(30)}') → ${hits.size} hits")
+            hits
         } else {
             emptyList()
         }
@@ -225,8 +227,11 @@ class RealContextBuilder @Inject constructor(
             """{"relatedEntityIds":[${activeEntityIds.joinToString(",") { "\"$it\"" }}]}"""
         } else null
 
+        val entryId = java.util.UUID.randomUUID().toString()
+        Log.d("CoachMemory", "✏️ saveToMemory: type=$type, entities=${activeEntityIds.size}, content='${content.take(40)}...'")
+
         memoryRepository.save(MemoryEntry(
-            entryId = java.util.UUID.randomUUID().toString(),
+            entryId = entryId,
             sessionId = _sessionId,
             content = content,
             entryType = type,

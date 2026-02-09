@@ -27,7 +27,7 @@ class AndroidBleWifiProvisioner @Inject constructor(
         credentials: WifiCredentials
     ): Result<ProvisioningStatus> = withContext(dispatchers.io) {
         ConnectivityLogger.i(
-            "provision start device=${session.peripheralName} ssid=${credentials.ssid}"
+            "🔗 provision start device=${session.peripheralName} ssid=${credentials.ssid}"
         )
         when (val result = gateway.provision(session, credentials)) {
             is BleGatewayResult.Success -> Result.Success(
@@ -59,7 +59,7 @@ class AndroidBleWifiProvisioner @Inject constructor(
         }.also { outcome ->
             val status = if (outcome is Result.Success) "success" else "failure"
             ConnectivityLogger.i(
-                "provision finished status=$status device=${session.peripheralName}"
+                "🔗 provision finished status=$status device=${session.peripheralName}"
             )
         }
     }
@@ -67,7 +67,7 @@ class AndroidBleWifiProvisioner @Inject constructor(
     override suspend fun requestHotspotCredentials(session: BleSession): Result<WifiCredentials> =
         withContext(dispatchers.io) {
             ConnectivityLogger.i(
-                "hotspot request device=${session.peripheralName}"
+                "📡 hotspot request device=${session.peripheralName}"
             )
             when (val result = gateway.requestHotspot(session)) {
                 is HotspotResult.Success -> Result.Success(result.credentials)
@@ -88,13 +88,13 @@ class AndroidBleWifiProvisioner @Inject constructor(
                 )
             }.also { outcome ->
                 ConnectivityLogger.d(
-                    "hotspot completed status=${outcome is Result.Success}"
+                    "📡 hotspot completed status=${outcome is Result.Success}"
                 )
             }
         }
     override suspend fun queryNetworkStatus(session: BleSession): Result<DeviceNetworkStatus> =
         withContext(dispatchers.io) {
-            ConnectivityLogger.d("network query device=${session.peripheralName}")
+            ConnectivityLogger.d("🌐 network query device=${session.peripheralName}")
             when (val result = gateway.queryNetwork(session)) {
                 is NetworkQueryResult.Success -> Result.Success(result.status)
                 is NetworkQueryResult.PermissionDenied -> Result.Error(

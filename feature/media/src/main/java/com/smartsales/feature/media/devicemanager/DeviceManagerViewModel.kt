@@ -14,9 +14,7 @@ import com.smartsales.feature.connectivity.ConnectivityError
 import com.smartsales.feature.connectivity.ConnectionState
 import com.smartsales.feature.connectivity.DeviceConnectionManager
 import com.smartsales.feature.media.audiofiles.DeviceHttpEndpointProvider
-import com.smartsales.feature.media.GifTransferCoordinator
 import com.smartsales.feature.media.WavDownloadCoordinator
-import com.smartsales.feature.media.GifTransferState
 import com.smartsales.feature.media.WavListState
 import com.smartsales.feature.media.WavDownloadState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -42,7 +40,6 @@ class DeviceManagerViewModel @Inject constructor(
     private val connectionManager: DeviceConnectionManager,
     private val dispatcherProvider: DispatcherProvider,
     private val endpointProvider: DeviceHttpEndpointProvider,
-    private val gifTransferCoordinator: GifTransferCoordinator,
     private val wavDownloadCoordinator: WavDownloadCoordinator
 ) : ViewModel() {
 
@@ -198,29 +195,6 @@ class DeviceManagerViewModel @Inject constructor(
         _uiState.update { it.copy(errorMessage = null, loadErrorMessage = null) }
     }
 
-    // === GIF Transfer ===
-
-    fun uploadGif(uri: Uri) {
-        val session = (connectionManager.state.value as? ConnectionState.Connected)?.session
-            ?: (connectionManager.state.value as? ConnectionState.WifiProvisioned)?.session
-            ?: (connectionManager.state.value as? ConnectionState.Syncing)?.session
-        
-        if (session == null) {
-            _uiState.update { it.copy(errorMessage = "设备未连接，无法上传") }
-            return
-        }
-
-        viewModelScope.launch(dispatcherProvider.io) {
-            gifTransferCoordinator.transfer(session, uri)
-                .collect { state ->
-                    _uiState.update { it.copy(gifTransferState = state) }
-                }
-        }
-    }
-
-    fun clearGifState() {
-        _uiState.update { it.copy(gifTransferState = null) }
-    }
 
     // === WAV Operations ===
 

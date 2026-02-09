@@ -31,7 +31,7 @@ Connectivity Bridge provides a **thin, Prism-compatible interface** to legacy `f
 | **WiFi Connect** | `SD#<ssid>` → `PD#<password>` | (connects) | Two-step protocol |
 | **WAV Get** | `wav#get` | `wav#send` | Initiates download |
 | **WAV End** | `wav#end` | `wav#ok` | Completes download |
-| **Time Sync** | Badge: `tim#get` | App: `time#YYYYMMDDHHMMSS` | ESP32 clock calibration |
+| **Time Sync** | Badge: `tim#get` | App: `tim#YYYYMMDDHHMMSS` | ESP32 clock calibration |
 | **Recording Log** | Badge: `log#YYYYMMDD_HHMMSS` | (none) | Recording ready + filename |
 
 ### HTTP Endpoints (Port 8088)

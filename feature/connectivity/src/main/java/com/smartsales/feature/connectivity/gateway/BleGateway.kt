@@ -45,14 +45,7 @@ sealed interface NetworkQueryResult {
     data class DeviceMissing(val peripheralId: String) : NetworkQueryResult
 }
 
-sealed interface GifCommandResult {
-    data object Ready : GifCommandResult           // jpg#receive
-    data object DisplayOk : GifCommandResult       // jpg#display
-    data class PermissionDenied(val permissions: Set<String>) : GifCommandResult
-    data class Timeout(val timeoutMillis: Long) : GifCommandResult
-    data class TransportError(val reason: String) : GifCommandResult
-    data class DeviceMissing(val peripheralId: String) : GifCommandResult
-}
+
 
 interface BleGateway {
     suspend fun provision(
@@ -64,23 +57,14 @@ interface BleGateway {
 
     suspend fun queryNetwork(session: BleSession): NetworkQueryResult
     
-    suspend fun sendGifCommand(session: BleSession, command: GifCommand): GifCommandResult
-    
     suspend fun sendWavCommand(session: BleSession, command: WavCommand): WavCommandResult
     
-    /**
-     * Listen for and respond to time sync requests from badge.
-     * Badge sends "tim#get", app responds with "time#YYYYMMDDHHMMSS".
-     */
-    fun listenForTimeSync(session: BleSession): Flow<TimeSyncEvent>
+
     
     fun forget(peripheral: BlePeripheral)
 }
 
-enum class GifCommand(val blePayload: String) {
-    START("jpg#send"),
-    END("jpg#end")
-}
+
 
 enum class WavCommand(val blePayload: String) {
     GET("wav#get"),
@@ -96,7 +80,18 @@ sealed interface WavCommandResult {
     data class DeviceMissing(val peripheralId: String) : WavCommandResult
 }
 
-sealed class TimeSyncEvent {
-    data class Responded(val timestamp: String) : TimeSyncEvent()
-    data class Error(val message: String) : TimeSyncEvent()
+/**
+ * 徽章通过 BLE 发送的通知事件
+ */
+sealed class BadgeNotification {
+    /** 徽章请求时间同步 (tim#get) */
+    data object TimeSyncRequested : BadgeNotification()
+    
+    /** 徽章报告录音就绪 (log#YYYYMMDD_HHMMSS) */
+    data class RecordingReady(val filename: String) : BadgeNotification()
+    
+    /** 未识别的命令 */
+    data class Unknown(val raw: String) : BadgeNotification()
 }
+
+

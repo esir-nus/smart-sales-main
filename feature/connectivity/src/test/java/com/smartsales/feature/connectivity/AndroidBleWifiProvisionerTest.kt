@@ -4,11 +4,9 @@ import com.smartsales.core.test.FakeDispatcherProvider
 import com.smartsales.core.util.Result
 import com.smartsales.feature.connectivity.gateway.BleGateway
 import com.smartsales.feature.connectivity.gateway.BleGatewayResult
-import com.smartsales.feature.connectivity.gateway.GifCommand
-import com.smartsales.feature.connectivity.gateway.GifCommandResult
 import com.smartsales.feature.connectivity.gateway.HotspotResult
 import com.smartsales.feature.connectivity.gateway.NetworkQueryResult
-import com.smartsales.feature.connectivity.gateway.TimeSyncEvent
+
 import com.smartsales.feature.connectivity.gateway.WavCommand
 import com.smartsales.feature.connectivity.gateway.WavCommandResult
 import kotlinx.coroutines.flow.Flow
@@ -145,13 +143,9 @@ class AndroidBleWifiProvisionerTest {
 
         override suspend fun queryNetwork(session: BleSession): NetworkQueryResult = networkResult
 
-        override suspend fun sendGifCommand(session: BleSession, command: GifCommand): GifCommandResult =
-            GifCommandResult.TransportError("not configured")
-
         override suspend fun sendWavCommand(session: BleSession, command: WavCommand): WavCommandResult =
             WavCommandResult.TransportError("not configured")
 
-        override fun listenForTimeSync(session: BleSession): Flow<TimeSyncEvent> = emptyFlow()
 
         override fun forget(peripheral: BlePeripheral) = Unit
     }

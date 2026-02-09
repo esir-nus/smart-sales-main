@@ -5,8 +5,6 @@ import android.content.Context
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.feature.media.audio.FlaggedRecordingsStore
 import com.smartsales.feature.media.audio.SharedPrefsFlaggedRecordingsStore
-import com.smartsales.feature.media.processing.DefaultGifFrameExtractor
-import com.smartsales.feature.media.processing.GifFrameExtractor
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -28,10 +26,6 @@ interface MediaModule {
 
     @Binds
     @Singleton
-    fun bindGifTransferCoordinator(impl: DefaultGifTransferCoordinator): GifTransferCoordinator
-
-    @Binds
-    @Singleton
     fun bindWavDownloadCoordinator(impl: DefaultWavDownloadCoordinator): WavDownloadCoordinator
 
     @Binds
@@ -39,13 +33,4 @@ interface MediaModule {
     fun bindFlaggedRecordingsStore(impl: SharedPrefsFlaggedRecordingsStore): FlaggedRecordingsStore
 }
 
-@Module
-@InstallIn(SingletonComponent::class)
-object MediaProvidesModule {
-    @Provides
-    @Singleton
-    fun provideGifFrameExtractor(
-        @ApplicationContext context: Context,
-        dispatchers: DispatcherProvider
-    ): GifFrameExtractor = DefaultGifFrameExtractor(context.contentResolver, dispatchers)
-}
+

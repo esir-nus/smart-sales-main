@@ -2,6 +2,7 @@ package com.smartsales.prism.data.memory
 
 import com.smartsales.prism.domain.memory.*
 import com.smartsales.prism.domain.scheduler.*
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -67,22 +68,18 @@ class RealScheduleBoard @Inject constructor(
         }
         
         return if (overlaps.isEmpty()) {
+            Log.d("ScheduleBoard", "✅ checkConflict: CLEAR (proposed=${proposedStart}, dur=${durationMinutes}min)")
             ConflictResult.Clear
         } else {
+            Log.d("ScheduleBoard", "⚠️ checkConflict: ${overlaps.size} conflicts (${overlaps.map { it.title }})")
             ConflictResult.Conflict(overlaps)
         }
     }
     
     override suspend fun refresh() {
-        // 触发重新收集
-        val today = LocalDate.now()
-        val endDate = today.plusDays(7)
-        
-        taskRepository.queryByDateRange(today, endDate).collect { items ->
-            _upcomingItems.value = items
-                .filterIsInstance<TimelineItemModel.Task>()
-                .map { it.toScheduleItem() }
-        }
+        Log.d("ScheduleBoard", "🔄 refresh: triggered (no-op with Room persistence)")
+        // Room sends updates automatically via the Flow collected in init {}
+        // No need to manually re-query or block execution
     }
     
     /**

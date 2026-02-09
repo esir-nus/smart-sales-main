@@ -13,13 +13,11 @@ class FakeBleGateway : BleGateway {
     var stubProvisionResult: BleGatewayResult = BleGatewayResult.Success("fake-handshake", "fake-hash")
     var stubHotspotResult: HotspotResult = HotspotResult.TransportError("Not stubbed")
     var stubNetworkResult: NetworkQueryResult = NetworkQueryResult.TransportError("Not stubbed")
-    var stubGifResult: GifCommandResult = GifCommandResult.Ready
     var stubWavResult: WavCommandResult = WavCommandResult.Ready
     
     val provisionCalls = mutableListOf<Pair<BleSession, WifiCredentials>>()
     val hotspotCalls = mutableListOf<BleSession>()
     val networkCalls = mutableListOf<BleSession>()
-    val gifCalls = mutableListOf<Pair<BleSession, GifCommand>>()
     val wavCalls = mutableListOf<Pair<BleSession, WavCommand>>()
     val forgetCalls = mutableListOf<BlePeripheral>()
     
@@ -38,17 +36,11 @@ class FakeBleGateway : BleGateway {
         return stubNetworkResult
     }
     
-    override suspend fun sendGifCommand(session: BleSession, command: GifCommand): GifCommandResult {
-        gifCalls.add(session to command)
-        return stubGifResult
-    }
-    
     override suspend fun sendWavCommand(session: BleSession, command: WavCommand): WavCommandResult {
         wavCalls.add(session to command)
         return stubWavResult
     }
     
-    override fun listenForTimeSync(session: BleSession): Flow<TimeSyncEvent> = emptyFlow()
     
     override fun forget(peripheral: BlePeripheral) {
         forgetCalls.add(peripheral)
@@ -58,7 +50,6 @@ class FakeBleGateway : BleGateway {
         provisionCalls.clear()
         hotspotCalls.clear()
         networkCalls.clear()
-        gifCalls.clear()
         wavCalls.clear()
         forgetCalls.clear()
     }

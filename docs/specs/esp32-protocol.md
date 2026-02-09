@@ -20,7 +20,7 @@ Communication happens via:
 |---|----------|--------|----------------|
 | 1 | WiFi Status Query | ✅ Implemented | `GattBleGateway.queryNetwork()` |
 | 2 | WiFi Connect | ✅ Implemented | `wifi#connect#ssid#password` format |
-| 3 | GIF/JPG Upload | ✅ Implemented | `GifTransferCoordinator` + `BadgeHttpClient.uploadJpg()` |
+| 3 | GIF/JPG Upload | ⚠️ DEPRECATED | Hardware no longer supports image transfer (audio only) |
 | 4 | WAV Download | ✅ Implemented | `WavDownloadCoordinator` + `BadgeHttpClient.downloadWav()` |
 | 5 | WAV Delete | ✅ Implemented | `BadgeHttpClient.deleteWav()` |
 | 6 | Time Sync | ✅ Implemented | `GattBleGateway.listenForTimeSync()` |
@@ -75,21 +75,14 @@ App: PD#Cai123456
 
 > **Note**: `bluetooch.py` is legacy. Two-step protocol confirmed by hardware team.
 
-### 3. GIF Transfer Flow
+### 3. ~~GIF Transfer Flow~~ (DEPRECATED)
 
-```
-1. App sends:     jpg#send
-2. Badge returns: jpg#receive
-3. App uploads:   POST /upload (for each frame: 1.jpg, 2.jpg, ...)
-4. App sends:     jpg#end
-5. Badge returns: jpg#display
-```
-
-**Frame requirements**:
-- Resolution: 240×280
-- Format: JPEG
-- Naming: `1.jpg`, `2.jpg`, `3.jpg`...
-- Location: Saved to `/sdcard/`
+> [!WARNING]
+> **Hardware no longer supports GIF/JPG transfer.** Badge now only supports:
+> - Long audio recording (badge → app)
+> - Short audio commands (app → badge)
+>
+> Image upload from gallery/camera goes through a different app pipeline (not hardware).
 
 ### 4. WAV Download Flow
 
@@ -105,7 +98,7 @@ App: PD#Cai123456
 
 ```
 Badge sends:  tim#get
-App returns:  time#20260112175600   (YYYYMMDDHHMMSS)
+App returns:  tim#20260112175600   (YYYYMMDDHHMMSS)
 ```
 
 ### 6. Recording End Notification
@@ -122,7 +115,7 @@ App:          (downloads /download?file=20260208_201345.wav)
 
 **Workflow**:
 1. User presses record button on badge
-2. Badge sends `tim#get` → App responds with timestamp following format `log#YYYYMMDDHHMMSS` (used for calibrating the ESP32 local time)
+2. Badge sends `tim#get` → App responds with timestamp following pattern `log#YYYYMMDDHHMMSS` (used for calibrating the ESP32 local time)
 3. User records audio on the badge → saved as `YYYYMMDD_HHMMSS.wav` (ESP32 local time; the timestamp sent by app is for clock calibration only, not prescriptive of the filename)
 4. User stops recording
 5. Badge sends `log#YYYYMMDD_HHMMSS` (ESP32 local time)
@@ -143,23 +136,21 @@ App:          (downloads /download?file=20260208_201345.wav)
 {"status":"ok","version":"1.1.0"}
 ```
 
-### POST `/upload` — Upload JPG Frame
+### ~~POST `/upload`~~ — Upload JPG Frame (DEPRECATED)
+
+> [!WARNING]
+> **DEPRECATED**: Hardware no longer supports image transfer. This endpoint remains documented for historical reference only.
 
 ```
+POST /upload
 Content-Type: multipart/form-data
-Body: file=<binary> (field name must be "file")
+Field: file (JPG binary)
 ```
-
-**Constraints** (from `webserver-test.c`):
-- ✅ Extension: `.jpg` ONLY (line 179)
-- ✅ Max size: 10MB (line 145)
-- ✅ Filename: alphanumeric, `_`, `-`, `.`, `~` only (line 40)
-- ✅ Max filename: 128 chars (line 24)
-- ✅ Saves to: `/sdcard/<filename>` (line 197)
 
 **Response**:
-- Success: `200 OK` with HTML body "文件上传成功！"
-- Error: `400 Bad Request` with error message
+- 200: HTML page "文件上传成功！"
+- 400: Invalid request
+- 403: File type not allowed
 
 ### GET `/list` — List WAV Files
 
@@ -209,11 +200,9 @@ Body: filename=recording1.wav
 
 ```
 /sdcard/
-├── 1.jpg              # GIF frame 1
-├── 2.jpg              # GIF frame 2
-├── ...
 ├── recording1.wav     # Audio recording
-└── rec_20260109.wav   # Audio recording
+├── rec_20260109.wav   # Audio recording
+└── YYYYMMDD_HHMMSS.wav  # Timestamped recording
 ```
 
 ---
@@ -225,18 +214,14 @@ Body: filename=recording1.wav
 | Operation | Timeout | Notes |
 |-----------|---------|-------|
 | BLE command send | 5s | Wait for ACK |
-| BLE response wait | 10s | Wait for `jpg#receive`, `wav#send`, etc. |
-| HTTP upload per frame | 30s | Single JPG upload |
+| BLE response wait | 10s | Wait for `wav#send`, etc. |
 | HTTP download per file | 60s | Large WAV files |
-| Total GIF transfer | 5min | All frames combined |
 
 ### Retry Policy
 
 | Failure | Retries | Backoff |
 |---------|---------|---------|
 | BLE command timeout | 2 | 1s, 2s |
-| HTTP upload fail (5xx) | 3 | 1s, 2s, 4s |
-| HTTP upload fail (4xx) | 0 | No retry (client error) |
 | HTTP download fail | 3 | 1s, 2s, 4s |
 
 ### Pre-flight Checks

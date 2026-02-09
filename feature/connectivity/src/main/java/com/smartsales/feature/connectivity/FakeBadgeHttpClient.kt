@@ -20,21 +20,18 @@ import javax.inject.Singleton
 class FakeBadgeHttpClient @Inject constructor() : BadgeHttpClient {
 
     // Configurable responses
-    private var uploadResult: Result<Unit> = Result.Success(Unit)
     private var listResult: Result<List<String>> = Result.Success(emptyList())
     private var downloadResult: Result<Unit> = Result.Success(Unit)
     private var deleteResult: Result<Unit> = Result.Success(Unit)
     private var isReachableResult: Boolean = true
 
     // Call tracking for verification
-    private val uploadCalls = mutableListOf<UploadCall>()
     private val listCalls = mutableListOf<String>()
     private val downloadCalls = mutableListOf<DownloadCall>()
     private val deleteCalls = mutableListOf<DeleteCall>()
     private val reachableCalls = mutableListOf<String>()
 
     // Configuration methods
-    fun setUploadResult(result: Result<Unit>) { uploadResult = result }
     fun setListResult(result: Result<List<String>>) { listResult = result }
     fun setDownloadResult(result: Result<Unit>) { downloadResult = result }
     fun setDeleteResult(result: Result<Unit>) { deleteResult = result }
@@ -42,12 +39,10 @@ class FakeBadgeHttpClient @Inject constructor() : BadgeHttpClient {
 
     // Reset all state
     fun reset() {
-        uploadResult = Result.Success(Unit)
         listResult = Result.Success(emptyList())
         downloadResult = Result.Success(Unit)
         deleteResult = Result.Success(Unit)
         isReachableResult = true
-        uploadCalls.clear()
         listCalls.clear()
         downloadCalls.clear()
         deleteCalls.clear()
@@ -55,16 +50,11 @@ class FakeBadgeHttpClient @Inject constructor() : BadgeHttpClient {
     }
 
     // Verification helpers
-    fun getUploadCalls(): List<UploadCall> = uploadCalls.toList()
     fun getListCalls(): List<String> = listCalls.toList()
     fun getDownloadCalls(): List<DownloadCall> = downloadCalls.toList()
     fun getDeleteCalls(): List<DeleteCall> = deleteCalls.toList()
     fun getReachableCalls(): List<String> = reachableCalls.toList()
 
-    override suspend fun uploadJpg(baseUrl: String, file: File): Result<Unit> {
-        uploadCalls.add(UploadCall(baseUrl, file.name))
-        return uploadResult
-    }
 
     override suspend fun listWavFiles(baseUrl: String): Result<List<String>> {
         listCalls.add(baseUrl)
@@ -87,7 +77,6 @@ class FakeBadgeHttpClient @Inject constructor() : BadgeHttpClient {
     }
 
     // Data classes for call tracking
-    data class UploadCall(val baseUrl: String, val filename: String)
     data class DownloadCall(val baseUrl: String, val filename: String, val destPath: String)
     data class DeleteCall(val baseUrl: String, val filename: String)
 }

@@ -2,7 +2,7 @@ package com.smartsales.feature.connectivity
 
 // 文件：feature/connectivity/src/main/java/com/smartsales/feature/connectivity/BadgeHttpClient.kt
 // 模块：:feature:connectivity
-// 说明：ESP32徽章HTTP通信客户端，支持JPG上传和WAV下载
+// 说明：ESP32徽章HTTP通信客户端，支持WAV下载
 // 规范：docs/specs/esp32-protocol.md
 // 作者：创建于 2026-01-09
 
@@ -25,7 +25,6 @@ import javax.inject.Singleton
  * HTTP client for ESP32 badge file operations.
  * 
  * Endpoints (port 8088):
- * - POST /upload: Upload JPG frame (multipart/form-data)
  * - GET /list: List WAV files (returns JSON array)
  * - GET /download?file=: Download WAV file
  * - POST /delete: Delete WAV file (body: filename=...)
@@ -33,14 +32,6 @@ import javax.inject.Singleton
  * @see docs/specs/esp32-protocol.md for full protocol specification
  */
 interface BadgeHttpClient {
-    /**
-     * Upload a JPG file to badge.
-     * @param baseUrl Base URL with port, e.g., "http://192.168.1.100:8088"
-     * @param file JPG file to upload (must have .jpg extension)
-     * @return Success if HTTP 200, Error otherwise
-     */
-    suspend fun uploadJpg(baseUrl: String, file: File): Result<Unit>
-
     /**
      * List WAV files on badge.
      * @param baseUrl Base URL with port
@@ -104,71 +95,6 @@ class DefaultBadgeHttpClient @Inject constructor(
         .writeTimeout(WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .build()
 
-    override suspend fun uploadJpg(baseUrl: String, file: File): Result<Unit> =
-        retryOnServerError { uploadJpgOnce(baseUrl, file) }
-    
-    private suspend fun uploadJpgOnce(baseUrl: String, file: File): Result<Unit> =
-        withContext(dispatchers.io) {
-            // Validate file extension
-            if (!file.name.lowercase().endsWith(".jpg")) {
-                return@withContext Result.Error(
-                    BadgeHttpException.InvalidFormatException("Only .jpg files allowed, got: ${file.name}")
-                )
-            }
-            
-            // Validate file exists
-            if (!file.exists()) {
-                return@withContext Result.Error(
-                    BadgeHttpException.NotFoundException("File not found: ${file.absolutePath}")
-                )
-            }
-            
-            // Validate file size (max 10MB per spec)
-            if (file.length() > MAX_FILE_SIZE_BYTES) {
-                return@withContext Result.Error(
-                    BadgeHttpException.InvalidFormatException("File too large: ${file.length()} bytes (max: $MAX_FILE_SIZE_BYTES)")
-                )
-            }
-
-            runCatching {
-                val requestBody = MultipartBody.Builder()
-                    .setType(MultipartBody.FORM)
-                    .addFormDataPart(
-                        "file",
-                        file.name,
-                        file.asRequestBody("image/jpeg".toMediaType())
-                    )
-                    .build()
-
-                val request = Request.Builder()
-                    .url("$baseUrl/upload")
-                    .post(requestBody)
-                    .build()
-
-                client.newCall(request).execute().use { response ->
-                    when {
-                        response.isSuccessful -> Result.Success(Unit)
-                        response.code == 400 -> Result.Error(
-                            BadgeHttpException.ClientException(400, response.body?.string() ?: "Bad request")
-                        )
-                        response.code == 403 -> Result.Error(
-                            BadgeHttpException.InvalidFormatException("File type not allowed")
-                        )
-                        response.code in 400..499 -> Result.Error(
-                            BadgeHttpException.ClientException(response.code, "Client error")
-                        )
-                        response.code in 500..599 -> Result.Error(
-                            BadgeHttpException.ServerException(response.code, "Server error")
-                        )
-                        else -> Result.Error(
-                            Exception("Unexpected response: ${response.code}")
-                        )
-                    }
-                }
-            }.getOrElse { e ->
-                Result.Error(BadgeHttpException.NetworkException(e.message ?: "Network error"))
-            }
-        }
 
     override suspend fun listWavFiles(baseUrl: String): Result<List<String>> =
         withContext(dispatchers.io) {
@@ -345,7 +271,7 @@ class DefaultBadgeHttpClient @Inject constructor(
     companion object {
         private const val CONNECT_TIMEOUT_SECONDS = 10L
         private const val READ_TIMEOUT_SECONDS = 60L  // For large WAV downloads
-        private const val WRITE_TIMEOUT_SECONDS = 30L // For JPG uploads
+        private const val WRITE_TIMEOUT_SECONDS = 30L // For WAV delete operations
         private const val REACHABLE_TIMEOUT_SECONDS = 3L
         private const val MAX_FILE_SIZE_BYTES = 10L * 1024 * 1024 // 10MB per spec
     }

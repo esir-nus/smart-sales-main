@@ -34,6 +34,10 @@ abstract class ConnectivityModule {
     @Binds
     @Singleton
     abstract fun bindBadgeStateMonitor(impl: RealBadgeStateMonitor): BadgeStateMonitor
+
+    @Binds
+    @Singleton
+    abstract fun bindGattSessionLifecycle(impl: com.smartsales.feature.connectivity.gateway.GattBleGateway): com.smartsales.feature.connectivity.gateway.GattSessionLifecycle
 }
 
 @Module
@@ -50,17 +54,8 @@ object ConnectivityProvidesModule {
 
     @Provides
     @Singleton
-    @com.smartsales.feature.connectivity.gateway.RealGateway
-    fun provideRealBleGateway(
-        @ApplicationContext context: Context,
-        bluetoothManager: BluetoothManager,
-        dispatchers: DispatcherProvider
-    ): BleGateway = GattBleGateway(context, bluetoothManager, dispatchers)
-
-    @Provides
-    @Singleton
     fun provideBleGateway(
-        @com.smartsales.feature.connectivity.gateway.RealGateway realGateway: BleGateway
+        realGateway: GattBleGateway
     ): BleGateway = com.smartsales.feature.connectivity.gateway.RateLimitedBleGateway(realGateway)
 
     @Provides
@@ -78,6 +73,13 @@ object ConnectivityProvidesModule {
     fun provideSessionStore(
         @ApplicationContext context: Context
     ): SessionStore = SharedPrefsSessionStore(context)
+
+    @Provides
+    @Singleton
+    @ConnectivityScope
+    fun provideConnectivityScope(): kotlinx.coroutines.CoroutineScope =
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob())
+
 
     @Provides
     @Singleton

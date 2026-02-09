@@ -3,7 +3,7 @@ package com.smartsales.prism.di
 import com.smartsales.prism.data.memory.RealScheduleBoard
 import com.smartsales.prism.data.scheduler.RealAlarmScheduler
 import com.smartsales.prism.data.scheduler.RealInspirationRepository
-import com.smartsales.prism.data.scheduler.RealScheduledTaskRepository
+import com.smartsales.prism.data.scheduler.RoomScheduledTaskRepository
 import com.smartsales.prism.domain.memory.ScheduleBoard
 import com.smartsales.prism.domain.scheduler.AlarmScheduler
 import com.smartsales.prism.domain.scheduler.InspirationRepository
@@ -26,7 +26,7 @@ abstract class SchedulerModule {
     @Binds
     @Singleton
     abstract fun bindScheduledTaskRepository(
-        impl: RealScheduledTaskRepository
+        impl: RoomScheduledTaskRepository
     ): ScheduledTaskRepository
 
     @Binds

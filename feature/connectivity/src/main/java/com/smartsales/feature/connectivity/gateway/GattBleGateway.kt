@@ -18,6 +18,7 @@ import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.feature.connectivity.BlePeripheral
 import com.smartsales.feature.connectivity.BleSession
 import com.smartsales.feature.connectivity.ConnectivityLogger
+import com.smartsales.feature.connectivity.ConnectivityScope
 import com.smartsales.feature.connectivity.DeviceNetworkStatus
 import com.smartsales.feature.connectivity.WifiCredentials
 import java.io.Closeable
@@ -26,8 +27,14 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -49,11 +56,96 @@ private const val DEFAULT_OPERATION_TIMEOUT_MS = 5_000L
 class GattBleGateway @Inject constructor(
     @ApplicationContext private val context: Context,
     private val bluetoothManager: BluetoothManager,
-    private val dispatchers: DispatcherProvider
-) : BleGateway {
-
+    private val dispatchers: DispatcherProvider,
+    @ConnectivityScope private val scope: CoroutineScope
+) : BleGateway, GattSessionLifecycle {
+    
+    // 原有的事务锁（用于短期操作）
     private val lock = Mutex()
     private val configCache = mutableMapOf<String, BleGatewayConfig>()
+    
+    // 持久化会话状态
+    private var persistentSession: GattContext? = null
+    private val sessionLock = Mutex()
+    private val _badgeNotifications = MutableSharedFlow<BadgeNotification>(
+        extraBufferCapacity = 16,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+    
+   /**
+     * 建立持久 GATT 连接。
+     * 如果已连接，则返回成功。
+     */
+    override suspend fun connect(peripheralId: String): com.smartsales.core.util.Result<Unit> = withContext(dispatchers.io) {
+        sessionLock.withLock {
+            if (persistentSession != null) {
+                return@withContext com.smartsales.core.util.Result.Success(Unit)
+            }
+            
+            val adapter = bluetoothManager.adapter
+                ?: return@withContext com.smartsales.core.util.Result.Error(
+                    IllegalStateException("蓝牙不可用")
+                )
+            
+            val device = try {
+                adapter.getRemoteDevice(peripheralId)
+            } catch (ex: IllegalArgumentException) {
+                return@withContext com.smartsales.core.util.Result.Error(
+                    IllegalStateException("无效的设备ID: $peripheralId")
+                )
+            }
+            
+            val callback = GatewayGattCallback(_badgeNotifications, onDisconnect = { cb ->
+                scope.launch(dispatchers.io) {
+                    sessionLock.withLock {
+                        if (persistentSession?.callback === cb) {
+                            persistentSession = null
+                            ConnectivityLogger.w("⚠️ Unexpected GATT disconnect -> Zombie session cleared")
+                        }
+                    }
+                }
+            })
+            val gatt = connect(device, callback)
+                ?: return@withContext com.smartsales.core.util.Result.Error(
+                    IllegalStateException("BLE 连接失败")
+                )
+            
+            val gattContext = GattContext(context, gatt, callback)
+            try {
+                gattContext.awaitServices()
+                val config = configCache[peripheralId] ?: discoverConfig(gatt).also {
+                    configCache[peripheralId] = it
+                }
+                gattContext.attachConfig(config)
+                gattContext.ensureNotifications(config.provisioningStatusCharacteristicUuid)
+                if (config.hotspotCharacteristicUuid != config.provisioningStatusCharacteristicUuid) {
+                    gattContext.ensureNotifications(config.hotspotCharacteristicUuid)
+                }
+                
+                persistentSession = gattContext
+                ConnectivityLogger.i("🔌 Persistent GATT session established: $peripheralId")
+                com.smartsales.core.util.Result.Success(Unit)
+            } catch (ex: Exception) {
+                gattContext.close()
+                com.smartsales.core.util.Result.Error(ex)
+            }
+        }
+    }
+    
+    /**
+     * 断开持久 GATT 连接。
+     */
+    override suspend fun disconnect() = sessionLock.withLock {
+        persistentSession?.close()
+        persistentSession = null
+        ConnectivityLogger.d("🔌 Persistent GATT session closed")
+    }
+    
+    /**
+     * 监听来自徽章的所有通知（tim#, log# 等）。
+     * 此流在整个连接生命周期内持续发送事件。
+     */
+    override fun listenForBadgeNotifications(): Flow<BadgeNotification> = _badgeNotifications.asSharedFlow()
 
     override suspend fun provision(
         session: BleSession,
@@ -87,7 +179,7 @@ class GattBleGateway @Inject constructor(
             if (ackValue.startsWith("tim#", ignoreCase = true)) {
                 try {
                     val timestamp = formatCurrentTime()
-                    val response = "time#$timestamp"
+                    val response = "tim#$timestamp"
                     gattContext.writeCharacteristic(
                         config.credentialCharacteristicUuid,
                         response.toByteArray(Charsets.UTF_8)
@@ -147,26 +239,6 @@ class GattBleGateway @Inject constructor(
             }
         }
 
-    override suspend fun sendGifCommand(
-        session: BleSession,
-        command: GifCommand
-    ): GifCommandResult =
-        when (val outcome = execute(session.peripheralId) { gattContext, config ->
-            val payload = command.blePayload.toByteArray(Charsets.UTF_8)
-            gattContext.writeCharacteristic(config.credentialCharacteristicUuid, payload)
-            val response = gattContext.awaitNotificationOrRead(config.provisioningStatusCharacteristicUuid)
-            parseGifResponse(command, response)
-        }) {
-            is GatewayOutcome.Success -> outcome.value
-            is GatewayOutcome.Failure -> when (val error = outcome.error) {
-                is BleGatewayResult.PermissionDenied -> GifCommandResult.PermissionDenied(error.permissions)
-                BleGatewayResult.Timeout -> GifCommandResult.Timeout(DEFAULT_OPERATION_TIMEOUT_MS)
-                is BleGatewayResult.TransportError -> GifCommandResult.TransportError(error.reason)
-                is BleGatewayResult.CredentialRejected -> GifCommandResult.TransportError(error.reason)
-                is BleGatewayResult.DeviceMissing -> GifCommandResult.DeviceMissing(error.peripheralId)
-                is BleGatewayResult.Success -> GifCommandResult.TransportError("无效错误类型")
-            }
-        }
 
     override suspend fun sendWavCommand(
         session: BleSession,
@@ -189,33 +261,7 @@ class GattBleGateway @Inject constructor(
             }
         }
 
-    override fun listenForTimeSync(session: BleSession): kotlinx.coroutines.flow.Flow<TimeSyncEvent> =
-        kotlinx.coroutines.flow.flow {
-            try {
-                val outcome = execute(session.peripheralId) { gattContext, config ->
-                    while (kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]?.isActive != false) {
-                        val notification = gattContext.awaitNotificationOrRead(config.provisioningStatusCharacteristicUuid)
-                        val value = notification.decodeToString().trim()
-                        
-                        // Badge sends "tim#get" to request current time
-                        if (value.startsWith("tim#get", ignoreCase = true)) {
-                            val timestamp = formatCurrentTime()
-                            val response = "time#$timestamp"
-                            gattContext.writeCharacteristic(
-                                config.credentialCharacteristicUuid,
-                                response.toByteArray(Charsets.UTF_8)
-                            )
-                            emit(TimeSyncEvent.Responded(timestamp))
-                        }
-                    }
-                }
-                if (outcome is GatewayOutcome.Failure) {
-                    emit(TimeSyncEvent.Error(outcome.error.toString()))
-                }
-            } catch (e: Exception) {
-                emit(TimeSyncEvent.Error(e.message ?: "Unknown error"))
-            }
-        }
+
 
     private fun formatCurrentTime(): String {
         val sdf = java.text.SimpleDateFormat("yyyyMMddHHmmss", java.util.Locale.US)
@@ -230,6 +276,40 @@ class GattBleGateway @Inject constructor(
         peripheralId: String,
         block: suspend (GattContext, BleGatewayConfig) -> T
     ): GatewayOutcome<T> = withContext(dispatchers.io) {
+        // 优先使用持久化会话
+        sessionLock.withLock {
+            val session = persistentSession
+            if (session != null && session.gatt.device.address == peripheralId) {
+                return@withContext try {
+                    val config = session.config
+                        ?: return@withContext GatewayOutcome.Failure(
+                            BleGatewayResult.TransportError("会话配置未加载")
+                        )
+                    GatewayOutcome.Success(block(session, config))
+                } catch (ex: TimeoutCancellationException) {
+                    GatewayOutcome.Failure(BleGatewayResult.Timeout)
+                } catch (ex: SecurityException) {
+                    GatewayOutcome.Failure(
+                        BleGatewayResult.PermissionDenied(
+                            setOf(
+                                Manifest.permission.BLUETOOTH_CONNECT,
+                                Manifest.permission.BLUETOOTH_SCAN
+                            )
+                        )
+                    )
+                } catch (ex: CredentialRejectedException) {
+                    GatewayOutcome.Failure(
+                        BleGatewayResult.CredentialRejected(ex.message ?: "凭据被设备拒绝")
+                    )
+                } catch (ex: Exception) {
+                    GatewayOutcome.Failure(
+                        BleGatewayResult.TransportError(ex.message ?: "BLE 传输失败")
+                    )
+                }
+            }
+        }
+        
+        // 降级模式：一次性连接（用于首次配网或无持久会话时）
         lock.withLock {
             val adapter = bluetoothManager.adapter ?: return@withContext GatewayOutcome.Failure(
                 BleGatewayResult.TransportError("蓝牙不可用")
@@ -249,7 +329,7 @@ class GattBleGateway @Inject constructor(
                 )
             }
 
-            val callback = GatewayGattCallback()
+            val callback = GatewayGattCallback()  // 临时连接不广播通知
             val gatt = connect(device, callback)
                 ?: return@withContext GatewayOutcome.Failure(BleGatewayResult.TransportError("连接失败"))
             val gattContext = GattContext(context, gatt, callback)
@@ -534,24 +614,6 @@ class GattBleGateway @Inject constructor(
         )
     }
 
-    private fun parseGifResponse(command: GifCommand, payload: ByteArray): GifCommandResult {
-        val raw = payload.decodeToString().trim()
-        if (raw.isBlank()) throw IllegalStateException("GIF响应为空")
-        
-        val parts = raw.split("#")
-        if (parts.size < 2) throw IllegalStateException("GIF响应格式错误：$raw")
-        
-        // Expected responses: "jpg#receive" or "jpg#display"
-        if (!parts[0].equals("jpg", true)) {
-            throw IllegalStateException("GIF响应类型不符：$raw")
-        }
-        
-        return when (parts[1].lowercase()) {
-            "receive" -> GifCommandResult.Ready
-            "display" -> GifCommandResult.DisplayOk
-            else -> throw IllegalStateException("未知GIF响应：$raw")
-        }
-    }
 
     private fun parseWavResponse(command: WavCommand, payload: ByteArray): WavCommandResult {
         val raw = payload.decodeToString().trim()
@@ -591,14 +653,14 @@ private fun BluetoothGattCharacteristic.supportsRead(): Boolean =
 @SuppressLint("MissingPermission")
 private class GattContext(
     private val appContext: Context,
-    private val gatt: BluetoothGatt,
-    private val callback: GatewayGattCallback,
+    internal val gatt: BluetoothGatt,  // internal for persistent session checks
+    internal val callback: GatewayGattCallback, // internal for zombie session check
     private var operationTimeoutMillis: Long = DEFAULT_OPERATION_TIMEOUT_MS
 ) : Closeable {
 
-    private val closed = Mutex(locked = false)
+    private val closed = java.util.concurrent.atomic.AtomicBoolean(false)
     private val notificationEnabled = mutableSetOf<UUID>()
-    private var config: BleGatewayConfig? = null
+    internal var config: BleGatewayConfig? = null  // internal for persistent session access
 
     fun attachConfig(value: BleGatewayConfig) {
         config = value
@@ -686,18 +748,17 @@ private class GattContext(
     }
 
     override fun close() {
-        if (closed.tryLock()) {
-            try {
-                gatt.disconnect()
-                gatt.close()
-            } finally {
-                closed.unlock()
-            }
+        if (closed.compareAndSet(false, true)) {
+            gatt.disconnect()
+            gatt.close()
         }
     }
 }
 
-private class GatewayGattCallback : BluetoothGattCallback() {
+private class GatewayGattCallback(
+    private val badgeNotifications: MutableSharedFlow<BadgeNotification>? = null,
+    private val onDisconnect: (GatewayGattCallback) -> Unit = {}
+) : BluetoothGattCallback() {
 
     private val connectionReady = CompletableDeferred<Boolean>()
     private val servicesReady = CompletableDeferred<Boolean>()
@@ -756,8 +817,9 @@ private class GatewayGattCallback : BluetoothGattCallback() {
     override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
         if (status == BluetoothGatt.GATT_SUCCESS && newState == BluetoothProfile.STATE_CONNECTED) {
             connectionReady.complete(true)
-        } else if (status != BluetoothGatt.GATT_SUCCESS) {
+        } else if (status != BluetoothGatt.GATT_SUCCESS || newState == BluetoothProfile.STATE_DISCONNECTED) {
             connectionReady.complete(false)
+            onDisconnect(this)
         }
     }
 
@@ -810,7 +872,27 @@ private class GatewayGattCallback : BluetoothGattCallback() {
     ) {
         val value = characteristic.legacyValue() ?: byteArrayOf()
         ConnectivityLogger.rx("Notification", value)
+        
+        // 保留原有的 Channel 发送（向后兼容）
         notificationChannel.trySend(characteristic.uuid to value)
+        
+        // 解析并广播到 SharedFlow（如果已注入）
+        badgeNotifications?.let { flow ->
+            val raw = value.decodeToString().trim()
+            when {
+                raw.startsWith("tim#get", ignoreCase = true) -> {
+                    flow.tryEmit(BadgeNotification.TimeSyncRequested)
+                }
+                raw.startsWith("log#", ignoreCase = true) -> {
+                    val filename = raw.removePrefix("log#").trim()
+                    flow.tryEmit(BadgeNotification.RecordingReady(filename))
+                }
+                raw.isNotBlank() -> {
+                    flow.tryEmit(BadgeNotification.Unknown(raw))
+                }
+                else -> { /* ignore empty notifications */ }
+            }
+        }
     }
 
     private companion object {

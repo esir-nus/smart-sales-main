@@ -47,68 +47,6 @@ class BadgeHttpClientTest {
 
     private fun baseUrl(): String = mockServer.url("/").toString().trimEnd('/')
 
-    // === Upload Tests ===
-
-    @Test
-    fun `uploadJpg returns success on 200`() = runBlocking {
-        // Given: Server returns success (HTML response per spec)
-        mockServer.enqueue(MockResponse().setBody("文件上传成功！").setResponseCode(200))
-        val file = File(tempDir, "1.jpg").apply { writeBytes(ByteArray(100)) }
-
-        // When
-        val result = client.uploadJpg(baseUrl(), file)
-
-        // Then
-        assertTrue("Expected Success but got $result", result is Result.Success)
-        assertEquals("/upload", mockServer.takeRequest().path)
-    }
-
-    @Test
-    fun `uploadJpg returns error for non-jpg file`() = runBlocking {
-        // Given: A PNG file (wrong extension)
-        val file = File(tempDir, "test.png").apply { writeBytes(ByteArray(100)) }
-
-        // When
-        val result = client.uploadJpg(baseUrl(), file)
-
-        // Then
-        assertTrue(result is Result.Error)
-        val error = (result as Result.Error).throwable
-        assertTrue(error is BadgeHttpException.InvalidFormatException)
-    }
-
-    @Test
-    fun `uploadJpg returns error for file too large`() = runBlocking {
-        // Given: File larger than 10MB
-        val file = File(tempDir, "large.jpg").apply { 
-            writeBytes(ByteArray(11 * 1024 * 1024)) // 11MB
-        }
-
-        // When
-        val result = client.uploadJpg(baseUrl(), file)
-
-        // Then
-        assertTrue(result is Result.Error)
-        val error = (result as Result.Error).throwable
-        assertTrue(error is BadgeHttpException.InvalidFormatException)
-        assertTrue(error.message!!.contains("too large"))
-    }
-
-    @Test
-    fun `uploadJpg returns error on 400`() = runBlocking {
-        // Given: Server returns bad request
-        mockServer.enqueue(MockResponse().setResponseCode(400).setBody("Unsafe characters"))
-        val file = File(tempDir, "test.jpg").apply { writeBytes(ByteArray(100)) }
-
-        // When
-        val result = client.uploadJpg(baseUrl(), file)
-
-        // Then
-        assertTrue(result is Result.Error)
-        val error = (result as Result.Error).throwable
-        assertTrue(error is BadgeHttpException.ClientException)
-    }
-
     // === List Tests ===
 
     @Test

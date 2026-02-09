@@ -422,7 +422,7 @@
 | Exit Criterion | Status |
 |----------------|--------|
 | DashScope API (Coach mode working) | ✅ `DashscopeExecutor` + `RealCoachPipeline` |
-| Room persistence (RelevancyEntry, MemoryEntry) | 🔲 |
+| Room persistence (Memory, Entity, UserHabit) | ✅ `RoomMemoryRepository`, `RoomEntityRepository`, `RoomUserHabitRepository` shipped |
 | Tingwu integration (audio transcription) | ✅ `FunAsrService` shipped |
 | ESP32 BLE (badge communication) | ✅ `RealConnectivityBridge` shipped |
 | Memory Writer (fire-and-forget persistence) | 🔲 |
@@ -456,6 +456,12 @@
 | `delay()` in UI | `SchedulerDrawer.kt` | ✅ Resolved (Moved to Fake) | Low |
 | Fake Tests | `FakeAudioRepository` etc. | No unit tests for Fakes | Low (not needed for beta) |
 | Activity Trace Timing | `PrismOrchestrator.kt` | First trace may be missed due to phase transition race | Low |
+| FTS4 Search | `MemoryDao.kt` | LIKE search for Chinese text; FTS4 needed for accuracy | Medium |
+| Remaining Fakes | `FakeHistoryRepository`, `FakeAudioRepository` | Not yet backed by Room | Low (deferred) |
+| TOCTOU in observe() | `RoomUserHabitRepository.kt` | Concurrent first-observation of same key may lose 1 count; add `@Transaction` if batching | Low |
+| Room error handling | `RoomMemoryRepository`, `RoomEntityRepository`, `RoomUserHabitRepository` | No try-catch on write ops; uncaught SQLite exceptions possible | Low |
+| GIF Hardware Pipeline | `feature/media/Gif*.kt`, `BleGateway.sendGifCommand` | Hardware no longer sends GIF/image — only long audio + short audio. 6 dead files + interface method. Spec cleanup first (`esp32-protocol.md`, `connectivity-bridge/spec.md`) | Medium |
+| Dead `httpChecker` field | `DefaultDeviceConnectionManager.kt` | Constructor param never used after HTTP gate removal. Remove field + DI provider | Low |
 
 **Resolution**: Refactor to `FakeProgressService` / `FakeDelayService` post-beta.
 

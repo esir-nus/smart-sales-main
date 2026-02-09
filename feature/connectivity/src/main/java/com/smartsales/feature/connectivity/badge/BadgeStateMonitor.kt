@@ -4,13 +4,13 @@ import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
 import com.smartsales.feature.connectivity.BleSession
 import com.smartsales.feature.connectivity.ConnectivityLogger
+import com.smartsales.feature.connectivity.ConnectivityScope
 import com.smartsales.feature.connectivity.DeviceNetworkStatus
 import com.smartsales.feature.connectivity.WifiProvisioner
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -61,9 +61,9 @@ interface BadgeStateMonitor {
 @Singleton
 class RealBadgeStateMonitor @Inject constructor(
     private val provisioner: WifiProvisioner,
-    private val dispatchers: DispatcherProvider
+    private val dispatchers: DispatcherProvider,
+    @ConnectivityScope private val scope: CoroutineScope
 ) : BadgeStateMonitor {
-    private val scope = CoroutineScope(SupervisorJob() + dispatchers.default)
 
     private val _status = MutableStateFlow(BadgeStatus.UNKNOWN)
     override val status: StateFlow<BadgeStatus> = _status.asStateFlow()
@@ -79,7 +79,7 @@ class RealBadgeStateMonitor @Inject constructor(
             bleConnected = true,
             lastCheckMs = System.currentTimeMillis()
         )
-        ConnectivityLogger.i("BadgeStateMonitor: BLE connected, starting poll")
+        ConnectivityLogger.i("📶 BLE connected, starting poll")
         startPolling()
     }
 
@@ -87,7 +87,7 @@ class RealBadgeStateMonitor @Inject constructor(
         currentSession = null
         stopPolling()
         _status.value = BadgeStatus.UNKNOWN
-        ConnectivityLogger.i("BadgeStateMonitor: BLE disconnected")
+        ConnectivityLogger.i("📶 BLE disconnected")
     }
 
     override fun startPolling() {
@@ -104,7 +104,7 @@ class RealBadgeStateMonitor @Inject constructor(
 
                 val session = currentSession
                 if (session == null) {
-                    ConnectivityLogger.d("BadgeStateMonitor: No session, stopping poll")
+                    ConnectivityLogger.d("📶 No session, stopping poll")
                     break
                 }
 
@@ -113,7 +113,7 @@ class RealBadgeStateMonitor @Inject constructor(
 
                 // Stop polling after too many consecutive failures
                 if (_status.value.consecutiveFailures >= BadgeStateMonitor.MAX_CONSECUTIVE_FAILURES) {
-                    ConnectivityLogger.w("BadgeStateMonitor: Max failures reached, stopping poll")
+                    ConnectivityLogger.w("⚠️ Max failures reached, stopping poll")
                     break
                 }
 
@@ -149,7 +149,7 @@ class RealBadgeStateMonitor @Inject constructor(
             consecutiveFailures = 0
         )
 
-        ConnectivityLogger.d("BadgeStateMonitor: state=$newState ip=$ip")
+        ConnectivityLogger.d("📶 state=$newState ip=$ip")
     }
 
     private fun handleError() {
@@ -158,6 +158,6 @@ class RealBadgeStateMonitor @Inject constructor(
             consecutiveFailures = current.consecutiveFailures + 1,
             lastCheckMs = System.currentTimeMillis()
         )
-        ConnectivityLogger.w("BadgeStateMonitor: poll failed, count=${_status.value.consecutiveFailures}")
+        ConnectivityLogger.w("⚠️ poll failed, count=${_status.value.consecutiveFailures}")
     }
 }

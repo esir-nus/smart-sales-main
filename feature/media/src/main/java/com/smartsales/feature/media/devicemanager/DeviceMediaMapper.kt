@@ -17,7 +17,6 @@ fun DeviceMediaFile.toUiOrNull(): DeviceFileUi? {
     val tab = when {
         isAudio() -> DeviceMediaTab.Audio
         isVideo() -> DeviceMediaTab.Videos
-        isGif() -> DeviceMediaTab.Gifs
         isImage() -> DeviceMediaTab.Images
         else -> DeviceMediaTab.Audio // 未知类型默认归为音频
     }
@@ -29,7 +28,6 @@ fun DeviceMediaFile.toUiOrNull(): DeviceFileUi? {
         mediaType = tab,
         mediaLabel = when (tab) {
             DeviceMediaTab.Videos -> "视频"
-            DeviceMediaTab.Gifs -> "GIF"
             DeviceMediaTab.Images -> "图片"
             DeviceMediaTab.Audio -> "音频"
         },
@@ -51,21 +49,15 @@ fun DeviceMediaFile.isVideo(): Boolean {
     return lowerName.endsWith(".mp4") || lowerName.endsWith(".mov") || lowerName.endsWith(".mkv")
 }
 
-/**
- * 判断是否为 GIF 文件
- */
-fun DeviceMediaFile.isGif(): Boolean =
-    mimeType.equals("image/gif", ignoreCase = true) || name.lowercase(Locale.ROOT).endsWith(".gif")
 
 /**
  * 判断是否为图片文件
  */
 fun DeviceMediaFile.isImage(): Boolean {
     val lowerMime = mimeType.lowercase(Locale.ROOT)
-    if (isGif()) return false
     if (lowerMime.startsWith("image")) return true
     val lowerName = name.lowercase(Locale.ROOT)
-    return lowerName.endsWith(".png") || lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || lowerName.endsWith(".webp")
+    return lowerName.endsWith(".png") || lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || lowerName.endsWith(".webp") || lowerName.endsWith(".gif")
 }
 
 /**

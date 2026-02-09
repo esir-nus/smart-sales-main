@@ -25,32 +25,58 @@ class FakeMemoryRepository @Inject constructor() : MemoryRepository {
     var currentTimeProvider: () -> Long = { System.currentTimeMillis() }
     
     init {
-        // 预填充种子数据，供 Coach Wave 3 记忆搜索 L2 测试使用
+        // 预填充种子数据 — 模拟真实用户历史记忆，供 L3 测试使用
+        // 场景1: 2月4日拜访华为见CTO
+        // 场景2: 2月9日与 Professor Ameer 年度会议
+        // 场景3: 1月28日王总生日送茶壶
         val now = System.currentTimeMillis()
+        val dayMs = 86400000L
+        
+        // 基于当前日期(2026-02-08)计算相对时间
+        val feb4 = now - (4 * dayMs)   // 约4天前
+        val feb9 = now + (1 * dayMs)   // 约1天后
+        val jan28 = now - (11 * dayMs) // 约11天前
+        
         val seedEntries = listOf(
+            // 场景1: 拜访华为 — 包含会面细节、跟进计划
             MemoryEntry(
-                entryId = "seed-price-1",
-                sessionId = "old-session-1",
-                content = "价格异议处理：先别急着降价，问一句'跟谁比贵了？'揭示真实顾虑。如果是预算问题，谈分期或缩小范围做MVP。",
-                entryType = MemoryEntryType.ASSISTANT_RESPONSE,
-                createdAt = now - 86400000,
-                updatedAt = now - 86400000
+                entryId = "seed-huawei-visit",
+                sessionId = "session-feb04",
+                content = "今天去华为坂田基地拜访，见了IT部门CTO李总。他们目前用的是竞品的CRM系统，合同明年3月到期。" +
+                        "李总对我们的AI辅助功能很感兴趣，特别是智能会议摘要和客户画像分析。" +
+                        "他提了两个顾虑：1) 数据安全合规（华为对数据主权要求很高），2) 和现有ERP系统的集成。" +
+                        "约了下周三再做一次技术方案演示，需要带上解决方案架构师老陈。",
+                entryType = MemoryEntryType.TASK_RECORD,
+                createdAt = feb4,
+                updatedAt = feb4,
+                structuredJson = """{"relatedEntityIds":["huawei-001","li-cto-001"]}"""
             ),
+            // 场景2: 与 Professor Ameer 年度会议（未来事件）
             MemoryEntry(
-                entryId = "seed-negotiation-1",
-                sessionId = "old-session-2",
-                content = "谈判技巧：用'假设成交法'推进——'如果价格合适，您希望什么时候开始？'让客户进入决策框架。",
-                entryType = MemoryEntryType.ASSISTANT_RESPONSE,
-                createdAt = now - 172800000,
-                updatedAt = now - 172800000
+                entryId = "seed-ameer-meeting",
+                sessionId = "session-feb08",
+                content = "2月9日下午2点，和 Professor Ameer 的年度回顾会议。" +
+                        "需要准备：1) 过去一年的合作成果总结（3个联合项目），2) 下一年的合作提案，3) NUS实验室参观安排。" +
+                        "Ameer 教授比较关注AI在东南亚市场的应用场景，准备几个本地化案例。" +
+                        "地点：NUS Computing 学院会议室 COM2-02-12。",
+                entryType = MemoryEntryType.SCHEDULE_ITEM,
+                createdAt = now,
+                updatedAt = now,
+                scheduledAt = feb9,
+                structuredJson = """{"relatedEntityIds":["ameer-prof-001"]}"""
             ),
+            // 场景3: 王总生日送茶壶 — 客户关系维护
             MemoryEntry(
-                entryId = "seed-followup-1",
-                sessionId = "old-session-3",
-                content = "跟进时间：首次会面后24小时内发感谢邮件，48小时内发方案，1周后电话跟进。超过2周未回复，降低优先级。",
-                entryType = MemoryEntryType.ASSISTANT_RESPONSE,
-                createdAt = now - 259200000,
-                updatedAt = now - 259200000
+                entryId = "seed-boss-wang-birthday",
+                sessionId = "session-jan28",
+                content = "今天是王总生日，送了一套景德镇手工青花瓷茶壶给他。王总很开心，" +
+                        "聊到他最近在收藏紫砂壶，下次可以找个宜兴的壶送。" +
+                        "他顺便提了一下Q2的预算申请已经批了，让我下周把正式报价单发过去。" +
+                        "王总的助理小张说老板下个月要去日本出差两周（3月10-24日），报价要赶在那之前定下来。",
+                entryType = MemoryEntryType.TASK_RECORD,
+                createdAt = jan28,
+                updatedAt = jan28,
+                structuredJson = """{"relatedEntityIds":["wang-boss-001"]}"""
             )
         )
         entries.value = seedEntries
@@ -129,6 +155,7 @@ class FakeMemoryRepository @Inject constructor() : MemoryRepository {
     }
     
     override suspend fun markAsArchived(entryId: String) {
+        Log.d("CoachMemory", "📦 markAsArchived(id=$entryId)")
         val current = entries.value.map { entry ->
             if (entry.entryId == entryId) entry.copy(isArchived = true)
             else entry
@@ -147,10 +174,12 @@ class FakeMemoryRepository @Inject constructor() : MemoryRepository {
      */
     override suspend fun getByEntityId(entityId: String, limit: Int): List<MemoryEntry> {
         val quoted = "\"$entityId\""
-        return entries.value
+        val results = entries.value
             .filter { it.structuredJson?.contains(quoted) == true }
             .sortedByDescending { it.createdAt }
             .take(limit)
+        Log.d("CoachMemory", "🔗 getByEntityId('$entityId') → ${results.size} hits")
+        return results
     }
 }
 

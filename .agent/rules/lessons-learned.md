@@ -220,6 +220,54 @@ combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset 
 
 ---
 
+### LLM Fabricates History When Memory Is Empty — 2026-02-08
+
+**Symptom**: Coach mode invents specific dates, quotes, and past conversations that never happened. When challenged ("你确定?"), doubles down with more fabricated details.  
+**Root Cause**: **System prompt had no anti-hallucination instruction + empty memory context provided no grounding.** LLM fills the vacuum with plausible fiction.  
+- `buildCoachSystemPrompt()` said "you're a sales coach" but never said "don't make up history"
+- `buildPrompt()` logged `no memory hits` but didn't inject that fact into the LLM prompt
+- With zero `memoryHits`, the LLM had no guardrails against fabrication  
+**Wrong Approach**: Assuming the LLM would naturally say "I don't have records" when context is empty  
+**Correct Fix**: Two-layer defense:
+1. System prompt: Add explicit rule `绝不编造历史 — 不要引用或捏造任何以前的对话内容`
+2. Runtime: When `memoryHits.isEmpty()`, inject `注意: 当前没有任何历史对话记录` into the prompt body  
+**File(s)**: [DashscopeExecutor.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/real/DashscopeExecutor.kt) — L193 (runtime), L232 (Coach), L255 (Analyst)  
+**Pattern**: **Every LLM system prompt must include anti-hallucination rules for empty context.** Don't assume the model will be honest about what it doesn't know.  
+**Heuristic**: When adding a new LLM mode/pipeline, ask: "What happens when context is empty?" If the answer is "LLM freestyles" → add guardrail.  
+**Status**: ⏳ PENDING L3 — 2026-02-08
+
+---
+
+### Fake→Real Swap Removes Implicit Behavior — 2026-02-08
+
+**Symptom**: Same as above — Coach worked fine with Fakes but hallucinated after Room swap  
+**Root Cause**: **FakeMemoryRepository had seed data. RoomMemoryRepository starts empty.** The Fake's seed data was an implicit guardrail — the LLM always had *some* context to reference, so it never needed to fabricate. When swapped to Real (empty DB), the LLM had zero grounding data.  
+**Deeper Insight**: Fakes don't just provide test data — they implicitly define behavior boundaries. When you remove a Fake, you're also removing whatever implicit behavior its data provided.  
+**Correct Fix**: When swapping Fake→Real, audit:
+1. What seed data did the Fake provide?
+2. Does any downstream consumer assume data is always present?
+3. What happens when the Real implementation returns empty?  
+**Pattern**: **Fake→Real swap checklist:**
+- [ ] What does the consumer do with empty results?
+- [ ] Does the LLM behave differently with empty vs populated context?
+- [ ] Are there UI states for "no data"?  
+**File(s)**: Applies broadly — any `Fake*Repository` → `Room*Repository` swap  
+**Status**: ⏳ PENDING L3 — 2026-02-08
+
+---
+
+### Entity-Domain Mapping Gap (Computed Fields) — 2026-02-09
+
+**Symptom**: Scheduler card expanded view showed blank date range, despite UI code and data model supporting it.
+**Root Cause**: **Computed field `dateRange` was hardcoded to `""` in `ScheduledTaskEntity.toDomain()`**. 
+- Entity doesn't store computed fields (good), but Mapper failed to reconstruct them (bad).
+- Pipeline layers (LLM, Linter, UI) were correct; only the persistence mapper dropped the data.
+**Wrong Approach**: Assuming UI bug or LLM extraction failure without checking the mapper.
+**Correct Fix**: Reconstruct `dateRange` in `toDomain()` using stored timestamps, duplicating the formatting logic from `SchedulerLinter`.
+**File(s)**: [ScheduledTaskEntity.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/persistence/ScheduledTaskEntity.kt)
+**Pattern**: When a specific field is missing in UI but present in data model, **check the Mapper** (`toDomain`/`toUiState`) first.
+**Status**: ✅ CONFIRMED 2026-02-09
+
 <!-- Add new lessons above this line -->
 
 ### SwipeToDismiss Background Visibility — 2026-02-02

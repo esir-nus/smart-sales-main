@@ -67,6 +67,18 @@ fun SchedulerDrawer(
     
     val context = LocalContext.current
     
+    // Show Toast when pipeline status changes
+    LaunchedEffect(pipelineStatus) {
+        if (!pipelineStatus.isNullOrEmpty()) {
+            Toast.makeText(context, pipelineStatus, Toast.LENGTH_SHORT).show()
+            // Optional: Clear status after showing to require fresh update for next toast?
+            // ViewModel doesn't clear it automatically unless we added a clearPipelineStatus() call.
+            // But for simple feedback, this is enough. 
+            // Better pattern: ViewModel clears it after delay, or we just observe edges.
+            // Here we just toast whatever comes in.
+        }
+    }
+    
     // Derived UI State for Timeline
     // Map Domain Models to UI (if needed, but for now they are compatible or shared)
     // Note: Since we defined TimelineItemModel in Domain, we need to ensure UI uses that or maps it.
@@ -320,40 +332,7 @@ fun SchedulerDrawer(
                                     )
                                 }
                                 
-                                // Scenario Buttons Row 1: Basic
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                                ) {
-                                    Button(
-                                        onClick = { viewModel.debugRunScenario("CLEAN") },
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350)),
-                                        modifier = Modifier.weight(1f),
-                                        contentPadding = PaddingValues(0.dp)
-                                    ) { Text("🧹 清除", fontSize = 11.sp, maxLines = 1) }
-                                    
-                                    Button(
-                                        onClick = { viewModel.debugRunScenario("1PM") },
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF42A5F5)),
-                                        modifier = Modifier.weight(1f),
-                                        contentPadding = PaddingValues(0.dp)
-                                    ) { Text("测试 1-2点", fontSize = 11.sp, maxLines = 1) }
-                                    
-                                    Button(
-                                        onClick = { viewModel.debugRunScenario("3PM") },
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF42A5F5)),
-                                        modifier = Modifier.weight(1f),
-                                        contentPadding = PaddingValues(0.dp)
-                                    ) { Text("测试 3-4点", fontSize = 11.sp, maxLines = 1) }
-                                }
-                                
-                                // Wave 3+ tests → use L2 Debug HUD (bug icon at top-right)
-                                Text(
-                                    "Wave 3+ 测试 → 点击右上角 🐛",
-                                    color = Color.White.copy(alpha = 0.7f),
-                                    fontSize = 10.sp,
-                                    modifier = Modifier.padding(top = 4.dp)
-                                )
+
                             }
                         }
                     }

@@ -72,7 +72,7 @@ class RealConflictResolver @Inject constructor(
         taskA: ScheduleItem,
         taskB: ScheduleItem
     ): String = """
-你是日程冲突解决助手。用户有以下冲突：
+你是日程助手。用户有两个时间重叠的任务（重叠是可以接受的，未必一定要删除一个）：
 
 - 任务A: ${taskA.title} @ ${formatTime(taskA.scheduledAt)}
 - 任务B: ${taskB.title} @ ${formatTime(taskB.scheduledAt)}
@@ -81,7 +81,7 @@ class RealConflictResolver @Inject constructor(
 
 返回 JSON:
 {
-  "action": "keep_a" | "keep_b" | "reschedule" | "none", 
+  "action": "keep_a" | "keep_b" | "reschedule" | "coexist" | "none", 
   "target": "a" | "b" (仅当 action="reschedule"),
   "time": "明天下午3点" (仅当 action="reschedule", 提取用户说的时间),
   "reply": "回复用户"
@@ -91,7 +91,8 @@ action 规则:
 - keep_a: 保留任务A，删除任务B
 - keep_b: 保留任务B，删除任务A  
 - reschedule: 用户明确说要改某一个任务的时间
-- none: 不确定用户意图
+- coexist: 两个都保留 (用户表示都没问题/都要做)
+- none: 无法理解用户意图
 
 只输出 JSON，不要有任何其他文字。
     """.trimIndent()
@@ -110,6 +111,7 @@ action 规则:
                 "keep_a" -> ActionType.KEEP_A
                 "keep_b" -> ActionType.KEEP_B
                 "reschedule" -> ActionType.RESCHEDULE
+                "coexist" -> ActionType.COEXIST
                 else -> ActionType.NONE
             }
             val reply = json.optString("reply", "已处理")

@@ -15,5 +15,6 @@ enum class ActionType {
     KEEP_A,      // 保留任务A，删除任务B
     KEEP_B,      // 保留任务B，删除任务A
     RESCHEDULE,  // 改期 (Wave 6+ deferred)
+    COEXIST,     // 两个都保留，清除重叠提示
     NONE         // 不做任何操作
 }

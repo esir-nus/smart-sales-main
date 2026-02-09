@@ -79,7 +79,7 @@ fun ConflictCard(
         if (isExpanded && messages.isEmpty()) {
             messages = listOf(
                 ChatMessage(
-                    text = "发现日程冲突。'${taskA.title}' (${formatTime(taskA.scheduledAt)}) 和 '${taskB.title}' (${formatTime(taskB.scheduledAt)}) 时间重叠。请告诉我要保留哪个？",
+                    text = "发现日程重叠：'${taskA.title}' (${formatTime(taskA.scheduledAt)}) 和 '${taskB.title}' (${formatTime(taskB.scheduledAt)})。如果两个都要保留也没问题，或者你想调整哪一个？",
                     isSystem = true
                 )
             )

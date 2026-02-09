@@ -39,6 +39,7 @@ enum class ActionType {
     KEEP_A,      // Keep first task, remove second
     KEEP_B,      // Keep second task, remove first  
     RESCHEDULE,  // Reschedule one of the tasks
+    COEXIST,     // Keep both tasks, clear warning
     NONE         // No action / parsing failed
 }
 ```
@@ -62,6 +63,7 @@ data class ScheduleItem(
 | Operation | Guarantee |
 |-----------|-----------|
 | `resolve()` | Returns valid ConflictAction (never throws) |
+| `ActionType.COEXIST` | Clears conflict state, preserves both tasks |
 | `ActionType.NONE` | Returned on LLM failure with fallback reply |
 | Reply text | Always non-empty (Chinese user-facing message) |
 
@@ -87,6 +89,7 @@ fun handleConflictResolution(action: ConflictAction) {
             KEEP_A -> taskRepository.deleteItem(action.taskToRemove!!)
             KEEP_B -> taskRepository.deleteItem(action.taskToRemove!!)
             RESCHEDULE -> onReschedule(action.taskToReschedule!!, action.rescheduleText!!)
+            COEXIST -> clearConflictWarning()
             NONE -> { /* Show error toast */ }
         }
         scheduleBoard.refresh()

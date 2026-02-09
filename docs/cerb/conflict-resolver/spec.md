@@ -42,6 +42,7 @@ enum class ActionType {
     KEEP_A,      // Remove taskB, keep taskA
     KEEP_B,      // Remove taskA, keep taskB
     RESCHEDULE,  // Reschedule one task to new time
+    COEXIST,     // Keep both tasks, clear overlap warning
     NONE         // Parsing failed / unclear intent
 }
 ```
@@ -61,8 +62,9 @@ parseConflictAction() → ConflictAction
     ↓
 SchedulerViewModel.handleConflictResolution()
     ↓
-[KEEP] → taskRepository.deleteItem()
-[RESCHEDULE] → onReschedule(id, text)
+[KEEP] → taskRepository.deleteItem() + clearWarning()
+[RESCHEDULE] → onReschedule(id, text) + clearWarning()
+[COEXIST] → clearWarning()
     ↓
 ScheduleBoard.refresh()
 ```
@@ -72,7 +74,7 @@ ScheduleBoard.refresh()
 ## LLM Prompt Structure
 
 ```
-你是日程助手。用户有两个冲突的任务：
+你是日程助手。用户有两个时间重叠的任务（重叠是可以接受的，未必一定要删除一个）：
 任务A: "${taskA.title}" (${formatTime(taskA.scheduledAt)})
 任务B: "${taskB.title}" (${formatTime(taskB.scheduledAt)})
 
@@ -80,12 +82,19 @@ ScheduleBoard.refresh()
 
 返回JSON:
 {
-  "action": "KEEP_A" | "KEEP_B" | "RESCHEDULE" | "NONE",
+  "action": "keep_a" | "keep_b" | "reschedule" | "coexist" | "none",
   "taskId": "要删除或改期的任务ID",
   "reply": "友好的回复文本",
   "target": "要改期的任务ID (仅RESCHEDULE)",
   "time": "改期时间 (仅RESCHEDULE)"
 }
+
+action 解释:
+- keep_a: 保留A，删除B
+- keep_b: 保留B，删除A
+- reschedule: 改期其中一个
+- coexist: 两个都保留 (用户表示都没问题/都要做)
+- none: 无法理解
 ```
 
 ---

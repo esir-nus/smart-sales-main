@@ -165,6 +165,7 @@ class SchedulerViewModel @Inject constructor(
     fun deleteItem(id: String) {
         viewModelScope.launch {
             taskRepository.deleteItem(id)
+            _pipelineStatus.value = "🗑️ 已删除"
             triggerRefresh()
         }
     }
@@ -208,7 +209,7 @@ class SchedulerViewModel @Inject constructor(
                         excludeId = result.taskId  // 排除刚创建的任务，避免自冲突
                     )) {
                         is ConflictResult.Conflict -> {
-                            _conflictWarning.value = "⚠️ 与「${conflict.overlaps.first().title}」时间冲突"
+                            _conflictWarning.value = "⚠️ 与「${conflict.overlaps.first().title}」时间重叠"
                         }
                         is ConflictResult.Clear -> {
                             _conflictWarning.value = null
@@ -262,25 +263,31 @@ class SchedulerViewModel @Inject constructor(
             when (action.action) {
                 com.smartsales.prism.domain.scheduler.ActionType.KEEP_A -> {
                     taskRepository.deleteItem(action.taskToRemove!!)
-                    android.util.Log.d("SchedulerVM", "Conflict resolved: KEEP_A, deleted ${action.taskToRemove}")
+                    _conflictWarning.value = null
+                    android.util.Log.d("SchedulerVM", "Resolved: KEEP_A, deleted ${action.taskToRemove}")
                 }
                 com.smartsales.prism.domain.scheduler.ActionType.KEEP_B -> {
                     taskRepository.deleteItem(action.taskToRemove!!)
-                    android.util.Log.d("SchedulerVM", "Conflict resolved: KEEP_B, deleted ${action.taskToRemove}")
+                    _conflictWarning.value = null
+                    android.util.Log.d("SchedulerVM", "Resolved: KEEP_B, deleted ${action.taskToRemove}")
                 }
                 com.smartsales.prism.domain.scheduler.ActionType.RESCHEDULE -> {
                     if (action.taskToReschedule != null && action.rescheduleText != null) {
-                        onReschedule(action.taskToReschedule!!, action.rescheduleText!!)
+                        onReschedule(action.taskToReschedule, action.rescheduleText)
+                        _conflictWarning.value = null
                     } else {
                         _conflictWarning.value = "无法识别改期指令"
                     }
                 }
+                com.smartsales.prism.domain.scheduler.ActionType.COEXIST -> {
+                    _conflictWarning.value = null
+                    android.util.Log.d("SchedulerVM", "Resolved: COEXIST — keeping both")
+                }
                 com.smartsales.prism.domain.scheduler.ActionType.NONE -> {
-                    // Do nothing
+                    // 解析失败 — 保留现有警告，不覆盖
                 }
             }
             scheduleBoard.refresh()
-            _conflictWarning.value = action.reply
             triggerRefresh()
         }
     }
@@ -304,7 +311,6 @@ class SchedulerViewModel @Inject constructor(
                     items.filterIsInstance<TimelineItemModel.Task>().forEach { 
                         taskRepository.deleteItem(it.id) 
                     }
-                    triggerRefresh()
                     clearConflictWarning()
                     _pipelineStatus.value = "🧹 已清除明日任务"
                     // 确保切换到明天，这样用户能看到清空效果

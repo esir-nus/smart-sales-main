@@ -12,13 +12,9 @@ import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.io.File
@@ -41,24 +37,11 @@ class RealConnectivityBridge @Inject constructor(
     private val httpClient: BadgeHttpClient
 ) : ConnectivityBridge {
     
-    companion object {
-        private const val POLL_INTERVAL_MS = 15_000L
-        private const val TAG_RECORDING_POLL = "RecordingPoll"
-    }
-    
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     
-    // URL cache to avoid repeated BLE queries in polling loop
-    private var cachedBaseUrl: String? = null
     
     override val connectionState: StateFlow<BadgeConnectionState> = deviceManager.state
-        .map { legacyState ->
-            // Clear cache on disconnect
-            if (legacyState is ConnectionState.Disconnected) {
-                cachedBaseUrl = null
-            }
-            mapToPrismState(legacyState)
-        }
+        .map { legacyState -> mapToPrismState(legacyState) }
         .stateIn(
             scope = scope,
             started = SharingStarted.Eagerly,
@@ -82,32 +65,14 @@ class RealConnectivityBridge @Inject constructor(
         }
     }
     
-    override fun recordingNotifications(): Flow<RecordingNotification> = flow {
-        val processed = mutableSetOf<String>()
-        while (currentCoroutineContext().isActive) {
-            if (connectionState.value is BadgeConnectionState.Connected) {
-                // Use cached URL or resolve + cache
-                val baseUrl = cachedBaseUrl ?: resolveBaseUrl()?.also { cachedBaseUrl = it }
-                if (baseUrl != null) {
-                    val files = when (val result = httpClient.listWavFiles(baseUrl)) {
-                        is Result.Success -> result.data
-                        is Result.Error -> {
-                            android.util.Log.w(TAG_RECORDING_POLL, "Poll failed: ${result.throwable.message}")
-                            emptyList()
-                        }
-                    }
-                    for (file in files) {
-                        if (file !in processed) {
-                            processed.add(file)
-                            android.util.Log.d(TAG_RECORDING_POLL, "New recording detected: $file")
-                            emit(RecordingNotification.RecordingReady(file))
-                        }
-                    }
-                }
-            }
-            delay(POLL_INTERVAL_MS)
+    
+    override fun recordingNotifications(): Flow<RecordingNotification> =
+        deviceManager.recordingReadyEvents.map { filename ->
+            // BLE sends "20260209_142605" (no extension)
+            // HTTP download expects "20260209_142605.wav"
+            RecordingNotification.RecordingReady("$filename.wav")
         }
-    }
+    
     
     override suspend fun isReady(): Boolean {
         val baseUrl = resolveBaseUrl() ?: return false

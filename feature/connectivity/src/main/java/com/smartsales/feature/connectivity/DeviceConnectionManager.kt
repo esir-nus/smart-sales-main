@@ -9,8 +9,11 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -23,6 +26,15 @@ import kotlinx.coroutines.withContext
 // 最近修改: 2025-11-14
 interface DeviceConnectionManager {
     val state: StateFlow<ConnectionState>
+    
+    /**
+     * Badge 录音就绪通知流 — Badge 发送 log#YYYYMMDD_HHMMSS 时触发
+     * 
+     * Emits filename WITHOUT .wav extension (e.g., "20260209_142605")
+     * Downstream consumers append ".wav" when downloading via HTTP
+     */
+    val recordingReadyEvents: SharedFlow<String>
+    
     fun selectPeripheral(peripheral: BlePeripheral)
     suspend fun startPairing(peripheral: BlePeripheral, credentials: WifiCredentials): Result<Unit>
     suspend fun retry(): Result<Unit>
@@ -60,6 +72,13 @@ class DefaultDeviceConnectionManager @Inject constructor(
     private val _state = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
 
     override val state: StateFlow<ConnectionState> = _state.asStateFlow()
+    
+    private val _recordingReadyEvents = MutableSharedFlow<String>(
+        replay = 0,
+        extraBufferCapacity = 3
+    )
+    override val recordingReadyEvents: SharedFlow<String> = 
+        _recordingReadyEvents.asSharedFlow()
 
     private var currentSession: BleSession? = null
     private var lastCredentials: WifiCredentials? = null
@@ -413,6 +432,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
                 when (event) {
                     is com.smartsales.feature.connectivity.gateway.BadgeNotification.RecordingReady -> {
                         ConnectivityLogger.i("📥 Badge recording ready: ${event.filename}")
+                        _recordingReadyEvents.tryEmit(event.filename)
                     }
                     is com.smartsales.feature.connectivity.gateway.BadgeNotification.TimeSyncRequested -> {
                         ConnectivityLogger.d("⏰ Badge time sync requested")

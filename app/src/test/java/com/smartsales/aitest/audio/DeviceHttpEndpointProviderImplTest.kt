@@ -183,6 +183,10 @@ class DeviceHttpEndpointProviderImplTest {
             private set
 
         override val state: StateFlow<ConnectionState> = stateFlow
+        
+        private val _recordingReadyEvents = kotlinx.coroutines.flow.MutableSharedFlow<String>()
+        override val recordingReadyEvents: kotlinx.coroutines.flow.SharedFlow<String> = 
+            _recordingReadyEvents.asSharedFlow()
 
         fun enqueueResult(result: Result<DeviceNetworkStatus>) {
             responses.add(result)

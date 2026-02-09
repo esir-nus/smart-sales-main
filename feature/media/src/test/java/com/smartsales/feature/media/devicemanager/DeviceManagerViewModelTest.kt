@@ -460,6 +460,11 @@ class DeviceManagerViewModelTest {
     private class FakeDeviceConnectionManager : DeviceConnectionManager {
         private val _state = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
         override val state: StateFlow<ConnectionState> = _state
+        
+        private val _recordingReadyEvents = kotlinx.coroutines.flow.MutableSharedFlow<String>()
+        override val recordingReadyEvents: kotlinx.coroutines.flow.SharedFlow<String> = 
+            _recordingReadyEvents.asSharedFlow()
+        
         var networkStatusResult: Result<DeviceNetworkStatus> = Result.Error(IllegalStateException("未配置网络"))
 
         fun emitReady() {

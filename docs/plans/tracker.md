@@ -216,7 +216,7 @@
 | **1** | Interface + Fake | ✅ SHIPPED |
 | **2** | Real Implementation (Backend) | ✅ SHIPPED |
 | **2.5** | UI Wiring | ✅ SHIPPED |
-| **3** | log# Recording Handler (HTTP Polling) | ✅ SHIPPED (2026-02-08) |
+| **3** | log# Recording Handler (BLE notification) | ✅ SHIPPED (2026-02-09) |
 | **4** | Battery Level Reporting | 🔲 (Pending hardware) |
 
 **Key Deliverables**:

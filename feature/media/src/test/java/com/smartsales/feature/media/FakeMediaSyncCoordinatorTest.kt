@@ -95,6 +95,10 @@ class FakeMediaSyncCoordinatorTest {
     private class StubConnectionManager(initial: ConnectionState) : DeviceConnectionManager {
         private val _state = MutableStateFlow(initial)
         override val state: StateFlow<ConnectionState> = _state.asStateFlow()
+        
+        private val _recordingReadyEvents = kotlinx.coroutines.flow.MutableSharedFlow<String>()
+        override val recordingReadyEvents: kotlinx.coroutines.flow.SharedFlow<String> = 
+            _recordingReadyEvents.asSharedFlow()
 
         fun emit(state: ConnectionState) {
             _state.value = state

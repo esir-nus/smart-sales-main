@@ -18,6 +18,7 @@ import com.smartsales.feature.connectivity.WifiCredentials
 import com.smartsales.feature.connectivity.scan.BleScanner
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -207,6 +208,11 @@ class DeviceSetupViewModelRobustnessTest {
 
     private class FakeConnectionManager : DeviceConnectionManager {
         override val state: MutableStateFlow<ConnectionState> = MutableStateFlow(ConnectionState.Disconnected)
+        
+        private val _recordingReadyEvents = kotlinx.coroutines.flow.MutableSharedFlow<String>()
+        override val recordingReadyEvents: kotlinx.coroutines.flow.SharedFlow<String> = 
+            _recordingReadyEvents.asSharedFlow()
+        
         var pairResult: Result<Unit> = Result.Success(Unit)
         var queryResult: Result<DeviceNetworkStatus> = Result.Error(IllegalStateException("offline"))
         var throwOnQuery: Boolean = false

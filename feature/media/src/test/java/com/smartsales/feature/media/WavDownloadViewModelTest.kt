@@ -112,6 +112,10 @@ class WavDownloadViewModelTest {
             }
         )
         override val state: StateFlow<ConnectionState> = _state
+        
+        private val _recordingReadyEvents = kotlinx.coroutines.flow.MutableSharedFlow<String>()
+        override val recordingReadyEvents: kotlinx.coroutines.flow.SharedFlow<String> = 
+            _recordingReadyEvents.asSharedFlow()
 
         override fun selectPeripheral(peripheral: BlePeripheral) {}
         override suspend fun startPairing(peripheral: BlePeripheral, credentials: com.smartsales.feature.connectivity.WifiCredentials) = CoreResult.Success(Unit)

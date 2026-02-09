@@ -174,7 +174,7 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
 | **2** | Real Implementation (Backend) | ✅ SHIPPED | `RealConnectivityBridge` wrapping legacy |
 | **2.5** | UI Wiring | ✅ SHIPPED | `RealConnectivityService`, DI binding, modal integration, `NeedsSetup` routing |
 | **2.7** | Session Persistence + Soft Disconnect | ✅ SHIPPED | `OnboardingGate`, `SessionStore`, `disconnectBle()`, `unpair()` |
-| **3** | Recording Log Handler | 🔲 | `log#YYYYMMDD_HHMMSS` BLE listener, notification flow |
+| **3** | Recording Log Handler | ✅ SHIPPED | `log#YYYYMMDD_HHMMSS` BLE listener, notification flow |
 | **4** | Battery Level Reporting | 🔲 | Real BLE battery characteristic (pending hardware) |
 
 ---
@@ -315,7 +315,7 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
 
 **Goal**: Automatic recording detection triggers download.
 
-**Current Implementation**: HTTP `/list` polling (firmware `log#` BLE handler not wired yet).
+**Current Implementation**: BLE `log#` notification from `DeviceConnectionManager.recordingReadyEvents` (HTTP polling removed).
 
 - **Exit Criteria**:
   - [ ] HTTP polling on `/list` endpoint every 15s

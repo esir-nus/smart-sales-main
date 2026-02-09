@@ -3,6 +3,7 @@ package com.smartsales.feature.connectivity
 import com.smartsales.core.util.Result
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 /**
  * Fake implementation for testing. Supports stubbing and call tracking.
@@ -10,6 +11,10 @@ import kotlinx.coroutines.flow.StateFlow
 class FakeDeviceConnectionManager : DeviceConnectionManager {
     private val _state = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     override val state: StateFlow<ConnectionState> = _state
+    
+    private val _recordingReadyEvents = kotlinx.coroutines.flow.MutableSharedFlow<String>()
+    override val recordingReadyEvents: kotlinx.coroutines.flow.SharedFlow<String> = 
+        _recordingReadyEvents.asSharedFlow()
     
     var stubPairingResult: Result<Unit> = Result.Success(Unit)
     var stubRetryResult: Result<Unit> = Result.Success(Unit)

@@ -16,6 +16,7 @@ import com.smartsales.feature.connectivity.WifiCredentials
 import com.smartsales.feature.connectivity.scan.BleScanner
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -178,6 +179,11 @@ class DeviceSetupViewModelTest {
         val provisioning = com.smartsales.feature.connectivity.ProvisioningStatus("ssid", "handshake", "hash")
         val networkStatus = DeviceNetworkStatus("192.168.0.2", "ssid", "phone", "raw")
         override val state: MutableStateFlow<ConnectionState> = MutableStateFlow(ConnectionState.Disconnected)
+        
+        private val _recordingReadyEvents = kotlinx.coroutines.flow.MutableSharedFlow<String>()
+        override val recordingReadyEvents: kotlinx.coroutines.flow.SharedFlow<String> = 
+            _recordingReadyEvents.asSharedFlow()
+        
         private var lastNetworkResult: Result<DeviceNetworkStatus> = Result.Error(IllegalStateException("no status"))
         var queryCount = 0
 

@@ -9,7 +9,6 @@ import com.smartsales.prism.domain.pipeline.DeliverableType
 import com.smartsales.prism.domain.pipeline.ExecutionPlan
 import com.smartsales.prism.domain.pipeline.Orchestrator
 import com.smartsales.prism.domain.pipeline.RetrievalScope
-import com.smartsales.prism.domain.pipeline.SchedulerActionResult
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.TimelineItemModel
 import com.smartsales.prism.domain.time.TimeProvider
@@ -105,12 +104,23 @@ class FakeOrchestrator @Inject constructor(
         _currentMode.value = newMode
     }
     
-    override suspend fun createScheduledTask(input: String): UiState {
+    override suspend fun createScheduledTask(input: String, replaceItemId: String?): UiState {
         // Fake: 模拟任务创建
         delay(500)
         activityController.startPhase(ActivityPhase.EXECUTING, ActivityAction.THINKING)
         activityController.appendTrace("解析输入: \"$input\"")
         delay(300)
+        
+        // Wave 8: Atomicity simulation
+        if (replaceItemId != null) {
+            activityController.appendTrace("替换旧任务: $replaceItemId")
+             val items = scheduledTaskRepository.getTimelineItems(0).first()
+             val item = items.find { it.id == replaceItemId }
+             if (item is TimelineItemModel.Task) {
+                 activityController.appendTrace("上下文: ${item.title}")
+             }
+        }
+        
         activityController.appendTrace("创建日历事件...")
         
         // 实际插入任务到 Repository
@@ -136,6 +146,11 @@ class FakeOrchestrator @Inject constructor(
         )
         val taskId = scheduledTaskRepository.insertTask(newTask)
         
+        // Wave 8: Delete old if replacing
+        if (replaceItemId != null) {
+            scheduledTaskRepository.deleteItem(replaceItemId)
+        }
+        
         delay(300)
         activityController.complete()
         return UiState.SchedulerTaskCreated(
@@ -146,39 +161,8 @@ class FakeOrchestrator @Inject constructor(
             durationMinutes = 60
         )
     }
-    
-    /**
-     * 处理日程操作 — Fake LLM 解析
-     * 真实实现会调用 LLM 解析用户输入，这里用简单关键词匹配模拟
-     */
-    override suspend fun processSchedulerAction(itemId: String, userText: String): SchedulerActionResult {
-        // 模拟 LLM 思考
-        delay(500)
-        
-        // Fake NLP: 简单关键词匹配
-        val today = timeProvider.today
-        val parsedDate = when {
-            userText.contains("明天") -> today.plusDays(1)
-            userText.contains("后天") -> today.plusDays(2)
-            userText.contains("下周") -> today.plusWeeks(1)
-            userText.contains("下个月") -> today.plusMonths(1)
-            else -> today.plusDays(1) // 默认明天
-        }
-        
-        // 格式化为中文日期
-        val formatter = DateTimeFormatter.ofPattern("M月d日")
-        val dateRangeStr = "已改期至 ${parsedDate.format(formatter)}"
-        
-        // 获取原任务并更新
-        val items = scheduledTaskRepository.getTimelineItems(0).first()
-        val item = items.find { it.id == itemId }
-        if (item is TimelineItemModel.Task) {
-            scheduledTaskRepository.updateTask(item.copy(dateRange = dateRangeStr))
-        }
-        
-        // 计算日期偏移量
-        val newDayOffset = java.time.temporal.ChronoUnit.DAYS.between(today, parsedDate).toInt()
-        
-        return SchedulerActionResult.Success("好的，已将任务改期到${parsedDate.format(formatter)}。", newDayOffset = newDayOffset)
-    }
+
+    // Wave 8: Deleted processSchedulerAction fake
+
+
 }

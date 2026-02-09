@@ -28,23 +28,12 @@ interface Orchestrator {
      * 创建日程任务 — 直接路由到 Scheduler Pipeline
      * 用于 Scheduler Drawer 内的操作，无需切换全局 Mode
      */
-    suspend fun createScheduledTask(input: String): UiState
-    
     /**
-     * 处理日程操作 (改期、解决冲突等)
-     * LLM 解析在这里发生，然后调用 Repo 更新数据
+     * 创建日程任务 — 统一入口
+     * @param input 用户自然语言输入
+     * @param replaceItemId (可选) 指定要替换/改期的旧任务 ID。成功创建新任务后，旧任务将被删除。
      */
-    suspend fun processSchedulerAction(itemId: String, userText: String): SchedulerActionResult
+    suspend fun createScheduledTask(input: String, replaceItemId: String? = null): UiState
 }
 
-/**
- * Scheduler 操作结果
- */
-sealed class SchedulerActionResult {
-    data class Success(
-        val reply: String,
-        val newDayOffset: Int? = null  // 改期目标日期偏移量 (null = 未改日期)
-    ) : SchedulerActionResult()
-    data class Failure(val error: String) : SchedulerActionResult()
-}
 

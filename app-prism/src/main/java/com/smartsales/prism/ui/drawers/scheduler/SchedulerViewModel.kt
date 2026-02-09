@@ -6,7 +6,6 @@ import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.memory.ScheduleBoard
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.pipeline.Orchestrator
-import com.smartsales.prism.domain.pipeline.SchedulerActionResult
 import com.smartsales.prism.domain.scheduler.InspirationRepository
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.TimelineItemModel
@@ -114,10 +113,11 @@ class SchedulerViewModel @Inject constructor(
     fun onReschedule(id: String, text: String) {
         android.util.Log.d("SchedulerVM", "🔄 Reschedule: id=$id, input='$text'")
         viewModelScope.launch {
-            val result = orchestrator.processSchedulerAction(id, text)
-            if (result is SchedulerActionResult.Success && result.newDayOffset != null) {
-                _rescheduledDates.value += result.newDayOffset
-                android.util.Log.d("SchedulerVM", "Rescheduled to day offset: ${result.newDayOffset}")
+            // Wave 8: Unified Pipeline — create new, delete old
+            val result = orchestrator.createScheduledTask(text, replaceItemId = id)
+            if (result is UiState.SchedulerTaskCreated) {
+                _rescheduledDates.value += result.dayOffset
+                android.util.Log.d("SchedulerVM", "Rescheduled to day offset: ${result.dayOffset}")
             }
             triggerRefresh()
         }

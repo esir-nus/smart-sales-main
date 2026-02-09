@@ -263,6 +263,7 @@ First gate: classify user input before parsing.
 | Classification | Route |
 |----------------|-------|
 | `schedulable` | Continue to task parsing |
+| `deletion` | Match against ScheduleBoard, delete if 1 match |
 | `inspiration` | Return for future Wave 5 storage |
 | `non_intent` | Return `AwaitingClarification` |
 
@@ -335,6 +336,43 @@ Store non-schedulable input for future reference.
 | **DI** | `SchedulerModule.kt` |
 | **UI** | `SchedulerDrawer.kt`, `SchedulerViewModel.kt`, `SchedulerTimeline.kt`, `SchedulerCalendar.kt`, `SchedulerCards.kt`, `SchedulerConflict.kt`, `SchedulerStates.kt`, `CollapsibleInspirationShelf.kt` |
 | **Test** | `SchedulerLinterTest.kt`, `AlarmSchedulerTest.kt` |
+
+---
+
+### Wave 7: NL Deletion ✅ SHIPPED
+
+Natural language task deletion via creation pipeline (`processSchedulerInput`).
+
+- **Classification**: `deletion` → LLM returns `targetTitle`
+- **Matching**: `contains`-based fuzzy match against `ScheduleBoard.upcomingItems`
+- **Results**: 0 matches → error, 1 match → delete + toast, 2+ matches → ask for specificity
+- **Ship Criteria**: "取消会议" deletes the matching task
+- **Test Cases**:
+    - [x] "取消会议" → matching task deleted, toast "🗑️ 已删除'部门会议'"
+    - [x] "取消xxx" (no match) → toast "未找到匹配..."
+    - [x] "取消xxx" (2+ matches) → toast "找到多个匹配..."
+    - [x] "你好" → non_intent (no regression)
+- **Deliverables**: `LintResult.Deletion`, prompt update, orchestrator handler
+
+### Wave 8: Pipeline Unification 🔧 IN PROGRESS
+
+Eliminate `processSchedulerAction` and unify all scheduler operations into `createScheduledTask(input, replaceItemId?)`.
+
+**Motivation**: `processSchedulerAction` is a 100-line second pipeline where 6 of 7 `LintResult` branches just return "不支持". The date protection regex hack (L325-340) is a symptom of wrong abstraction.
+
+**Design**: 
+- `createScheduledTask(input, replaceItemId?)` — optional replace semantics
+- When `replaceItemId` set: inject old task context into prompt, create new, delete old
+- Atomicity: create first, delete after success
+
+**Ship Criteria**: Reschedule from card produces same behavior via create+delete
+- **Test Cases**:
+    - [ ] "推迟两个小时" from card → new task at +2h, old deleted
+    - [ ] "取消吃饭" from card → task deleted (Wave 7 preserved)
+    - [ ] Conflict RESCHEDULE → task replaced correctly
+    - [ ] "明天开会" → no regression
+- **Deliverables**: Updated `Orchestrator` interface, rewritten `PrismOrchestrator`, cleaned `SchedulerViewModel`
+- **Code Removed**: `processSchedulerAction`, `buildReschedulePrompt`, `SchedulerActionResult`, date regex hack (~173 lines)
 
 ---
 

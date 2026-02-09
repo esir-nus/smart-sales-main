@@ -125,6 +125,55 @@ action 解释:
     - [x] Task deleted or rescheduled correctly
 - **Deliverables**: `ConflictCard.kt`, `SchedulerTimeline.kt` wiring, `SchedulerViewModel.handleConflictResolution()`
 
+---
+
+## Visual Conflict Indicators (Wave 2.5)
+
+**Shipped**: 2026-02-09
+
+When a conflict is detected, visual indicators appear on task cards to guide users toward resolution:
+
+### Visual Behavior
+
+| Card Type | Visual Treatment |
+|-----------|-----------------|
+| **Causing card** (newest) | Amber border (琥珀色) + breathing glow animation |
+| **Conflicted cards** (existing overlap) | Amber border (琥珀色) static, alpha 0.6 |
+| **Normal cards** | No border |
+
+### Animation Spec
+
+**Breathing glow** (causing card only):
+- Color: `#FF9800` (Amber)
+- Alpha: Animates `0.6 → 1.0 → 0.6` (infinite loop)
+- Duration: `1.5s` per cycle
+- Easing: `FastOutSlowInEasing`
+
+### State Model
+
+```kotlin
+// UI State
+enum class ConflictVisual {
+    NONE,       // 正常状态，无冲突
+    IN_GROUP,   // 琥珀色边框 (冲突组内的已有卡片)
+    CAUSING     // 琥珀色边框 + 呼吸发光 (引发冲突的新卡片)
+}
+
+// ViewModel Tracking
+conflictedTaskIds: Set<String>  // 所有冲突任务 ID
+causingTaskId: String?          // 引发冲突的任务 ID
+```
+
+### Resolution Behavior
+
+All resolution actions (`KEEP_A`, `KEEP_B`, `RESCHEDULE`, `COEXIST`) clear both visual indicators and the text warning banner immediately.
+
+### Accessibility
+
+**Text warning banner** (`conflictWarning: String?`) is retained alongside visual indicators to ensure accessibility compliance.
+
+---
+
 ### 🔬 Wave 3: Cross-Mode Conflict Reminder (⏸️ BLOCKED)
 
 > **Goal**: Coach and Analyst modes naturally remind users about unresolved conflicts by reading ScheduleBoard state.

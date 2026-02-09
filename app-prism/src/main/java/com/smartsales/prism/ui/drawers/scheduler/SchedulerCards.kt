@@ -1,6 +1,7 @@
 package com.smartsales.prism.ui.drawers.scheduler
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -47,12 +48,35 @@ fun TaskCard(
     onReschedule: (String) -> Unit = {},
     onToggleDone: () -> Unit = {}
 ) {
+    // 冲突视觉效果 — 琥珀色边框 + 呼吸发光
+    val conflictBorderModifier = when (state.conflictVisual) {
+        ConflictVisual.CAUSING -> {
+            val infiniteTransition = rememberInfiniteTransition(label = "conflict_glow")
+            val glowAlpha by infiniteTransition.animateFloat(
+                initialValue = 0.6f,
+                targetValue = 1.0f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1500, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "glow_alpha"
+            )
+            Modifier.border(2.dp, Color(0xFFFF9800).copy(alpha = glowAlpha), RoundedCornerShape(12.dp))
+        }
+        ConflictVisual.IN_GROUP -> {
+            Modifier.border(2.dp, Color(0xFFFF9800).copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+        }
+        ConflictVisual.NONE -> Modifier
+    }
+    
     PrismCard(
         onClick = {
             onExpandToggle()
             onClick()
         },
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(conflictBorderModifier),  // 应用冲突边框
         shape = GlassCardShape,
         elevation = if (isExpanded) 8.dp else 2.dp
     ) {

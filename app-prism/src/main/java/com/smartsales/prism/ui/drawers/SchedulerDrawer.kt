@@ -221,8 +221,13 @@ fun SchedulerDrawer(
                     
                     // 4. Timeline Section (只显示任务，不显示灵感)
                     Box(modifier = Modifier.weight(1f)) {
+                        val conflictedIds by viewModel.conflictedTaskIds.collectAsState()
+                        val causingId by viewModel.causingTaskId.collectAsState()
+                        
                         SchedulerTimeline(
                             items = taskItems,
+                            conflictedTaskIds = conflictedIds,
+                            causingTaskId = causingId,
                             onItemClick = { id -> viewModel.onItemClick(id) },
                             onDelete = { id -> viewModel.onDeleteItem(id) },
                             onReschedule = { id, text -> viewModel.onReschedule(id, text) },

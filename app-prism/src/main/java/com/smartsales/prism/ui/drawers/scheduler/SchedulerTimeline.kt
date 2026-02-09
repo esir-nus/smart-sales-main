@@ -27,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.ui.Alignment
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.smartsales.prism.ui.theme.*
+import com.smartsales.prism.ui.drawers.scheduler.ConflictVisual
 
 /**
  * Scheduler Timeline Layout (Sleek Glass Version)
@@ -35,6 +36,8 @@ import com.smartsales.prism.ui.theme.*
 @Composable
 fun SchedulerTimeline(
     items: List<TimelineItem>,
+    conflictedTaskIds: Set<String> = emptySet(),
+    causingTaskId: String? = null,
     onItemClick: (String) -> Unit,
     onDelete: (String) -> Unit,
     onReschedule: (String, String) -> Unit, // id, userText
@@ -50,7 +53,9 @@ fun SchedulerTimeline(
     ) {
         items(items, key = { it.id }) { item ->
             TimelineRow(
-                item = item, 
+                item = item,
+                conflictedTaskIds = conflictedTaskIds,
+                causingTaskId = causingTaskId,
                 onItemClick = onItemClick,
                 onDelete = onDelete,
                 onReschedule = onReschedule,
@@ -69,6 +74,8 @@ fun SchedulerTimeline(
 @Composable
 private fun TimelineRow(
     item: TimelineItem,
+    conflictedTaskIds: Set<String>,
+    causingTaskId: String?,
     onItemClick: (String) -> Unit,
     onDelete: (String) -> Unit,
     onReschedule: (String, String) -> Unit,
@@ -100,6 +107,14 @@ private fun TimelineRow(
         Column(modifier = Modifier.weight(1f)) {
             when (item) {
                 is TimelineItem.Task -> {
+                    // 映射冲突视觉状态
+                    val conflictVisual = when {
+                        item.id == causingTaskId -> ConflictVisual.CAUSING
+                        item.id in conflictedTaskIds -> ConflictVisual.IN_GROUP
+                        else -> ConflictVisual.NONE
+                    }
+                    val taskWithVisual = item.copy(conflictVisual = conflictVisual)
+                    
                     val slideOffset: (Int) -> Int = if (item.exitDirection == ExitDirection.LEFT) {
                         { -it }
                     } else {
@@ -119,7 +134,7 @@ private fun TimelineRow(
                             enabled = !isExpanded
                         ) {
                             TaskCard(
-                                state = item,
+                                state = taskWithVisual,  // 传递带视觉状态的任务
                                 isExpanded = isExpanded,
                                 onExpandToggle = { isExpanded = !isExpanded },
                                 onClick = { onItemClick(item.id) },

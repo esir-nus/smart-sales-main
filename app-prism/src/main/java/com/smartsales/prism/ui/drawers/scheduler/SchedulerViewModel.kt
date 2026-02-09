@@ -65,6 +65,14 @@ class SchedulerViewModel @Inject constructor(
     private val _conflictWarning = MutableStateFlow<String?>(null)
     val conflictWarning: StateFlow<String?> = _conflictWarning.asStateFlow()
 
+    // 冲突视觉指示器 — 标记所有冲突卡片的 ID
+    private val _conflictedTaskIds = MutableStateFlow<Set<String>>(emptySet())
+    val conflictedTaskIds: StateFlow<Set<String>> = _conflictedTaskIds.asStateFlow()
+
+    // 引发冲突的卡片 ID (呼吸发光)
+    private val _causingTaskId = MutableStateFlow<String?>(null)
+    val causingTaskId: StateFlow<String?> = _causingTaskId.asStateFlow()
+
     // 灵感箱展开状态
     private val _isInspirationsExpanded = MutableStateFlow(false)
     val isInspirationsExpanded: StateFlow<Boolean> = _isInspirationsExpanded.asStateFlow()
@@ -210,9 +218,14 @@ class SchedulerViewModel @Inject constructor(
                     )) {
                         is ConflictResult.Conflict -> {
                             _conflictWarning.value = "⚠️ 与「${conflict.overlaps.first().title}」时间重叠"
+                            // 视觉指示器: 标记所有冲突卡片 (已有 + 新创建)
+                            _conflictedTaskIds.value = conflict.overlaps.map { it.entryId }.toSet() + result.taskId
+                            _causingTaskId.value = result.taskId
                         }
                         is ConflictResult.Clear -> {
                             _conflictWarning.value = null
+                            _conflictedTaskIds.value = emptySet()
+                            _causingTaskId.value = null
                         }
                     }
                 }
@@ -253,6 +266,8 @@ class SchedulerViewModel @Inject constructor(
      */
     fun clearConflictWarning() {
         _conflictWarning.value = null
+        _conflictedTaskIds.value = emptySet()
+        _causingTaskId.value = null
     }
 
     /**
@@ -264,23 +279,31 @@ class SchedulerViewModel @Inject constructor(
                 com.smartsales.prism.domain.scheduler.ActionType.KEEP_A -> {
                     taskRepository.deleteItem(action.taskToRemove!!)
                     _conflictWarning.value = null
+                    _conflictedTaskIds.value = emptySet()
+                    _causingTaskId.value = null
                     android.util.Log.d("SchedulerVM", "Resolved: KEEP_A, deleted ${action.taskToRemove}")
                 }
                 com.smartsales.prism.domain.scheduler.ActionType.KEEP_B -> {
                     taskRepository.deleteItem(action.taskToRemove!!)
                     _conflictWarning.value = null
+                    _conflictedTaskIds.value = emptySet()
+                    _causingTaskId.value = null
                     android.util.Log.d("SchedulerVM", "Resolved: KEEP_B, deleted ${action.taskToRemove}")
                 }
                 com.smartsales.prism.domain.scheduler.ActionType.RESCHEDULE -> {
                     if (action.taskToReschedule != null && action.rescheduleText != null) {
                         onReschedule(action.taskToReschedule, action.rescheduleText)
                         _conflictWarning.value = null
+                        _conflictedTaskIds.value = emptySet()
+                        _causingTaskId.value = null
                     } else {
                         _conflictWarning.value = "无法识别改期指令"
                     }
                 }
                 com.smartsales.prism.domain.scheduler.ActionType.COEXIST -> {
                     _conflictWarning.value = null
+                    _conflictedTaskIds.value = emptySet()
+                    _causingTaskId.value = null
                     android.util.Log.d("SchedulerVM", "Resolved: COEXIST — keeping both")
                 }
                 com.smartsales.prism.domain.scheduler.ActionType.NONE -> {

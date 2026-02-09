@@ -34,7 +34,8 @@ sealed class TimelineItem {
         val alarmCascade: List<String>? = null, // e.g. ["-1h", "-15m", "-5m"]
         val processingStatus: String? = null, // For Fake I/O Overlay
         val isExiting: Boolean = false, // For Reschedule Animation
-        val exitDirection: ExitDirection = ExitDirection.RIGHT // Default: slide right (to future)
+        val exitDirection: ExitDirection = ExitDirection.RIGHT, // Default: slide right (to future)
+        val conflictVisual: ConflictVisual = ConflictVisual.NONE // 冲突视觉指示器
     ) : TimelineItem()
     
     /**
@@ -62,3 +63,13 @@ sealed class TimelineItem {
         val isExpanded: Boolean = false
     ) : TimelineItem()
 }
+
+/**
+ * 冲突视觉状态 — 用于在卡片上显示冲突指示器
+ */
+enum class ConflictVisual {
+    NONE,       // 正常状态，无冲突
+    IN_GROUP,   // 琥珀色边框 (冲突组内的已有卡片)
+    CAUSING     // 琥珀色边框 + 呼吸发光 (引发冲突的新卡片)
+}
+

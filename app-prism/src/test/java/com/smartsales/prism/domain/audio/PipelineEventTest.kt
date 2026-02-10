@@ -34,7 +34,10 @@ class PipelineEventTest {
     fun `all SchedulerResult variants compile`() {
         val results = listOf(
             SchedulerResult.TaskCreated("1", "Meeting", dayOffset = 0, scheduledAtMillis = System.currentTimeMillis(), durationMinutes = 60),
-            SchedulerResult.MultiTaskCreated(listOf("1", "2")),
+            SchedulerResult.MultiTaskCreated(listOf(
+                SchedulerResult.TaskCreated("1", "Task A", dayOffset = 0, scheduledAtMillis = System.currentTimeMillis(), durationMinutes = 30),
+                SchedulerResult.TaskCreated("2", "Task B", dayOffset = 1, scheduledAtMillis = System.currentTimeMillis() + 86_400_000, durationMinutes = 60)
+            )),
             SchedulerResult.InspirationSaved("inspiration-1"),
             SchedulerResult.AwaitingClarification("请问时间？")
         )

@@ -18,8 +18,15 @@ sealed class UiState {
         val dayOffset: Int,
         val scheduledAtMillis: Long,  // 用于冲突检测
         val durationMinutes: Int      // 用于冲突检测
-    )
- : UiState()
+    ) : UiState()
+
+    /**
+     * 多任务创建结果 — 传递完整的任务列表，解决 Head-Body 数据丢失
+     */
+    data class SchedulerMultiTaskCreated(
+        val tasks: List<SchedulerTaskCreated>,
+        val hasConflict: Boolean = false
+    ) : UiState()
     
     data class PlanCard(val plan: ExecutionPlan, val completedSteps: Set<Int> = emptySet()) : UiState()
     

@@ -34,7 +34,7 @@
 |------|--------|--------------|
 | **Coach** | 🚧 | Wave 1-2 shipped (`RealCoachPipeline`), Wave 3-4 pending |
 | **Analyst** | 🚧 | `AnalystFlowControllerV2` wired, structured table output |
-| **Scheduler** | ✅ | 6 waves shipped, full CRUD + conflict resolution |
+| **Scheduler** | ✅ | 8 waves (6 shipped, W8 in progress, W9 planned) |
 
 ---
 
@@ -381,6 +381,9 @@
 | **4** | Input Classification + Multi-Task + Reschedule | ✅ SHIPPED |
 | **5** | Inspiration Storage | ✅ SHIPPED |
 | **6** | Conflict Resolution | ✅ SHIPPED |
+| **7** | NL Deletion | ✅ SHIPPED |
+| **8** | Pipeline Unification | 🔧 IN PROGRESS |
+| **9** | Smart Tips (Memory → Card) | 🔲 PLANNED |
 
 ### Wave 1 & 1.5: Core + Wiring ✅
 

@@ -54,6 +54,13 @@ fun ResponseBubble(
             CompleteBubble(content = "已创建任务: ${uiState.title}", modifier = modifier)
         }
         
+        is UiState.SchedulerMultiTaskCreated -> {
+            CompleteBubble(
+                content = "✅ 已创建 ${uiState.tasks.size} 个任务",
+                modifier = modifier
+            )
+        }
+        
         is UiState.AwaitingClarification -> {
             ClarifyingBubble(question = uiState.question, modifier = modifier)
         }

@@ -145,10 +145,7 @@ class SchedulerViewModel @Inject constructor(
             viewModelScope.launch {
                 // Wave 8: Unified Pipeline — create new, delete old
                 val result = orchestrator.createScheduledTask(text, replaceItemId = id)
-                if (result is UiState.SchedulerTaskCreated) {
-                    _rescheduledDates.value += result.dayOffset
-                    android.util.Log.d("SchedulerVM", "Rescheduled to day offset: ${result.dayOffset}")
-                }
+                handleCreateResult(result, isReschedule = true)
                 triggerRefresh()
             }
         }
@@ -205,12 +202,7 @@ $taskContext
             // 4. 调用现有管线重建任务（MultiTask 或 SingleTask）
             val result = orchestrator.createScheduledTask(enrichedInput, replaceItemId = null)
             android.util.Log.d("SchedulerVM", "Conflict resolution result: $result")
-            
-            if (result is UiState.SchedulerTaskCreated) {
-                _rescheduledDates.value += result.dayOffset
-            }
-            
-            scheduleBoard.refresh()
+            handleCreateResult(result, isReschedule = true)
             triggerRefresh()
         }
     }
@@ -293,25 +285,7 @@ $taskContext
             val result = orchestrator.createScheduledTask(fakeMessage)
             android.util.Log.d("SchedulerVM", "🧪 Pipeline result: $result")
             
-            when (result) {
-                is UiState.SchedulerTaskCreated -> {
-                    onTaskCreated(
-                        result.taskId, result.title, result.dayOffset,
-                        result.scheduledAtMillis, result.durationMinutes
-                    )
-                }
-                is UiState.Response -> {
-                    _pipelineStatus.value = "✅ ${result.content}"
-                    addUnacknowledgedDate(1)
-                    _activeDayOffset.value = 1
-                }
-                is UiState.Error -> {
-                    _pipelineStatus.value = "❌ ${result.message}"
-                }
-                else -> {
-                    _pipelineStatus.value = "⚠️ 未知响应类型"
-                }
-            }
+            handleCreateResult(result)
             
             triggerRefresh()
         }
@@ -353,6 +327,78 @@ $taskContext
     }
 
     /**
+     * 多任务创建后处理 — 聚合所有冲突结果
+     * 修复 Last Writer Wins bug: 不再逐个覆盖，而是收集所有冲突后统一更新
+     */
+    private suspend fun onMultiTaskCreated(tasks: List<UiState.SchedulerTaskCreated>) {
+        if (tasks.isEmpty()) return
+        
+        // 高亮所有任务的日期
+        tasks.forEach { task -> addUnacknowledgedDate(task.dayOffset) }
+        // 切换到最后一个任务的日期
+        _activeDayOffset.value = tasks.last().dayOffset
+        
+        // 聚合冲突检测
+        scheduleBoard.refresh()
+        val allConflictedIds = mutableSetOf<String>()
+        var causingTask: UiState.SchedulerTaskCreated? = null
+        
+        tasks.forEach { task ->
+            when (val conflict = scheduleBoard.checkConflict(
+                task.scheduledAtMillis, task.durationMinutes,
+                excludeId = task.taskId
+            )) {
+                is ConflictResult.Conflict -> {
+                    allConflictedIds.addAll(conflict.overlaps.map { it.entryId })
+                    allConflictedIds.add(task.taskId)
+                    if (causingTask == null) causingTask = task  // 第一个冲突任务
+                }
+                is ConflictResult.Clear -> { /* 无冲突 */ }
+            }
+        }
+        
+        // 统一更新冲突状态 (不会覆盖)
+        if (allConflictedIds.isNotEmpty()) {
+            _conflictWarning.value = "⚠️ ${tasks.size} 个任务中发现时间冲突"
+            _conflictedTaskIds.value = allConflictedIds
+            _causingTaskId.value = causingTask?.taskId
+        } else {
+            _conflictWarning.value = null
+            _conflictedTaskIds.value = emptySet()
+            _causingTaskId.value = null
+        }
+    }
+
+    /**
+     * 统一结果分发 — 所有 createScheduledTask 调用点共用
+     * 确保 single/multi task 都正确走 conflict detection + date highlight
+     */
+    private suspend fun handleCreateResult(result: UiState, isReschedule: Boolean = false) {
+        when (result) {
+            is UiState.SchedulerTaskCreated -> {
+                onTaskCreated(
+                    result.taskId, result.title, result.dayOffset,
+                    result.scheduledAtMillis, result.durationMinutes
+                )
+                if (isReschedule) _rescheduledDates.value += result.dayOffset
+            }
+            is UiState.SchedulerMultiTaskCreated -> {
+                onMultiTaskCreated(result.tasks)
+                _pipelineStatus.value = "✅ 已创建 ${result.tasks.size} 个任务"
+                if (isReschedule) {
+                    result.tasks.forEach { _rescheduledDates.value += it.dayOffset }
+                }
+            }
+            is UiState.Error -> {
+                _pipelineStatus.value = "❌ ${result.message}"
+            }
+            else -> {
+                _pipelineStatus.value = "⚠️ 未知响应类型"
+            }
+        }
+    }
+
+    /**
      * Badge Audio Pipeline 事件处理 — 进度 + 完成后处理
      */
     private suspend fun handlePipelineEvent(event: PipelineEvent) {
@@ -372,7 +418,17 @@ $taskContext
                         _pipelineStatus.value = "💡 灵感已保存"
                     }
                     is SchedulerResult.MultiTaskCreated -> {
-                        _pipelineStatus.value = "✅ 已创建 ${result.taskIds.size} 个任务"
+                        if (result.tasks.isEmpty()) {
+                            _pipelineStatus.value = "✅ 多任务已创建"
+                        } else {
+                            onMultiTaskCreated(result.tasks.map { task ->
+                                UiState.SchedulerTaskCreated(
+                                    task.taskId, task.title, task.dayOffset,
+                                    task.scheduledAtMillis, task.durationMinutes
+                                )
+                            })
+                            _pipelineStatus.value = "✅ 已创建 ${result.tasks.size} 个任务"
+                        }
                     }
                     is SchedulerResult.AwaitingClarification -> {
                         _pipelineStatus.value = "❓ ${result.question}"

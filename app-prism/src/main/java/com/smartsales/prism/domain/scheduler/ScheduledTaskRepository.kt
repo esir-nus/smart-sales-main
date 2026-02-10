@@ -74,6 +74,7 @@ sealed class TimelineItemModel {
         val location: String? = null,
         val notes: String? = null,
         val keyPerson: String? = null,
+        val keyPersonEntityId: String? = null,  // Wave 9: Entity ID for tip generation
         val highlights: String? = null,
         val alarmCascade: List<String>? = null // e.g. ["-1h", "-15m", "-5m"]
     ) : TimelineItemModel()

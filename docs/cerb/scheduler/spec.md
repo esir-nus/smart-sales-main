@@ -58,7 +58,10 @@ sealed class TimelineItemModel {
         val location: String? = null,
         val notes: String? = null,
         val keyPerson: String? = null,
+        val keyPersonEntityId: String? = null,  // Wave 9: Entity ID for tip generation
         val highlights: String? = null,
+        val tips: List<String> = emptyList(),  // Wave 9: LLM-generated context tips
+        val tipsLoading: Boolean = false,       // Wave 9: Generation animation state
         val alarmCascade: List<String>? = null // e.g. ["-1h", "-15m", "-5m"]
     ) : TimelineItemModel()
     
@@ -373,6 +376,77 @@ Eliminate `processSchedulerAction` and unify all scheduler operations into `crea
     - [ ] "明天开会" → no regression
 - **Deliverables**: Updated `Orchestrator` interface, rewritten `PrismOrchestrator`, cleaned `SchedulerViewModel`
 - **Code Removed**: `processSchedulerAction`, `buildReschedulePrompt`, `SchedulerActionResult`, date regex hack (~173 lines)
+
+### Wave 9: Smart Tips 🔲 PLANNED
+
+LLM-generated contextual tips (2-5) per task card, sourced from memory layer.
+
+**Distinction**: `highlights` = scheduler-relevant reminders (from linter). `tips` = actionable intel from EntityLib, UserHabit, ClientProfileHub.
+
+**Data Sources**:
+- `EntityEntry.demeanorJson` — communication style, preferences
+- `EntityEntry.attributesJson` — budget, deal stage, close date
+- `UserHabit` — per-entity behavioral patterns ("Bob prefers mornings")
+- `ClientProfileHub.getFocusedContext()` — related contacts, deals, timeline
+- `MemoryRepository` — recent conversation history with entity
+
+**Architecture**:
+```
+Card Expand (first time)
+    ↓
+1. tipsLoading = true → Card shows shimmer animation
+    ↓
+2. Resolve keyPerson → entityId via EntityRegistry
+    ↓
+3. ClientProfileHub.getFocusedContext(entityId)
+    ↓
+4. LLM Prompt: context → 2-5 tips as JSON array
+    ↓
+5. tips = result, tipsLoading = false → Card renders tips
+    ↓
+6. Cache tips on task (persist via updateTask)
+```
+
+**Lazy-Load UX**:
+- Card created with essential schedule info immediately (title, time, location, highlights)
+- Tips generated on first card expand only
+- Shimmer/pulse animation during generation (2-4s)
+- Tips cached after first generation (no re-generation on subsequent expands)
+- If `keyPerson` is null (no entity context), skip tip generation entirely
+
+**LLM Tip Prompt**:
+```
+你是销售助手。用户即将参加以下日程：
+任务: "${task.title}" (${formatTime(task.startTime)})
+关键人物: ${keyPerson}
+
+以下是关于该关键人物的上下文信息：
+${focusedContext.toPromptString()}
+
+请生成 2-5 条简短、有用的提示，帮助用户更好地准备此次会面。
+每条提示一行，JSON 数组格式：["提示1", "提示2", ...]
+
+规则：
+- 只返回有实际价值的信息，不要说废话
+- 基于已知数据，绝不编造
+- 如果没有足够上下文，返回空数组 []
+```
+
+**Domain Model Change**:
+```kotlin
+// TimelineItemModel.Task 新增字段
+val tips: List<String> = emptyList()  // LLM 生成的上下文提示
+val tipsLoading: Boolean = false      // 生成动画状态
+```
+
+**Ship Criteria**: Expanding a task card with `keyPerson` set triggers tip generation and displays 2-5 context-aware tips
+- **Test Cases**:
+    - [ ] Card with keyPerson → expand → shimmer → tips appear
+    - [ ] Card without keyPerson → expand → no shimmer, no tips
+    - [ ] Second expand → cached tips shown instantly (no LLM call)
+    - [ ] Empty EntityLib → tips = [] (graceful degradation)
+    - [ ] LLM timeout → tipsLoading = false, tips = [] (no error shown)
+- **Deliverables**: `TipGenerator.kt`, prompt in `DashscopeExecutor`, ViewModel lazy-load wiring, UI shimmer + tip list
 
 ---
 

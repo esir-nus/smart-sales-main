@@ -168,7 +168,7 @@ class RealBadgeAudioPipeline @Inject constructor(
      * 
      * Wave 3: 处理所有 UiState 变体
      * - SchedulerTaskCreated → TaskCreated
-     * - Response (multi-task) → MultiTaskCreated(emptyList) // ID 未传播
+     * - SchedulerMultiTaskCreated → MultiTaskCreated (完整任务数据)
      * - AwaitingClarification → AwaitingClarification
      * - Toast (inspiration) → InspirationSaved("") // ID 未传播
      * - Idle (non-intent) → Ignored
@@ -179,9 +179,17 @@ class RealBadgeAudioPipeline @Inject constructor(
             uiState.taskId, uiState.title,
             uiState.dayOffset, uiState.scheduledAtMillis, uiState.durationMinutes
         )
+        is UiState.SchedulerMultiTaskCreated -> SchedulerResult.MultiTaskCreated(
+            tasks = uiState.tasks.map { task ->
+                SchedulerResult.TaskCreated(
+                    task.taskId, task.title,
+                    task.dayOffset, task.scheduledAtMillis, task.durationMinutes
+                )
+            }
+        )
         is UiState.AwaitingClarification -> SchedulerResult.AwaitingClarification(uiState.question)
         is UiState.Toast -> SchedulerResult.InspirationSaved("")  // ID 未从 Orchestrator 传回
-        is UiState.Response -> SchedulerResult.MultiTaskCreated(emptyList())  // MultiTask 成功，但 ID 列表未传播
+        is UiState.Response -> SchedulerResult.MultiTaskCreated(emptyList())  // 兜底：不应走到此分支
         is UiState.Idle -> SchedulerResult.Ignored  // 非调度意图
         is UiState.Error -> throw IllegalStateException("Scheduler error: ${uiState.message}")
         else -> throw IllegalStateException("Unexpected UiState from scheduler: $uiState")

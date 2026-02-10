@@ -33,6 +33,7 @@ data class ScheduledTaskEntity(
     val location: String?,
     val notes: String?,
     val keyPerson: String?,
+    val keyPersonEntityId: String?,  // Wave 9: Entity ID
     val highlights: String?,
     val isDone: Boolean,
     val hasAlarm: Boolean,
@@ -54,6 +55,7 @@ fun TimelineItemModel.Task.toEntity(): ScheduledTaskEntity = ScheduledTaskEntity
     location = location,
     notes = notes,
     keyPerson = keyPerson,
+    keyPersonEntityId = keyPersonEntityId,
     highlights = highlights,
     isDone = isDone,
     hasAlarm = hasAlarm,
@@ -102,6 +104,7 @@ fun ScheduledTaskEntity.toDomain(): TimelineItemModel.Task {
         location = location,
         notes = notes,
         keyPerson = keyPerson,
+        keyPersonEntityId = keyPersonEntityId,
         highlights = highlights,
         isDone = isDone,
         hasAlarm = hasAlarm,

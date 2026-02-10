@@ -179,7 +179,10 @@ class PrismOrchestrator @Inject constructor(
                                     type = EntityType.PERSON,
                                     source = "scheduler"
                                 )
-                                lintResult.task.copy(keyPerson = result.displayName)
+                                lintResult.task.copy(
+                                    keyPerson = result.displayName,
+                                    keyPersonEntityId = result.entityId
+                                )
                             } ?: lintResult.task
                             
                             // 插入任务到日历
@@ -261,6 +264,10 @@ class PrismOrchestrator @Inject constructor(
                         // Wave 4.1: Multi-Task Direct Insert
                         is LintResult.MultiTask -> {
                             var anyConflict = false
+                            val zone = ZoneId.systemDefault()
+                            val today = LocalDate.now(zone)
+                            val createdTasks = mutableListOf<UiState.SchedulerTaskCreated>()
+                            
                             lintResult.tasks.forEach { task ->
                                 // Entity write-back per task
                                 val enrichedTask = task.keyPerson?.let { clue ->
@@ -270,7 +277,10 @@ class PrismOrchestrator @Inject constructor(
                                         type = EntityType.PERSON,
                                         source = "scheduler"
                                     )
-                                    task.copy(keyPerson = result.displayName)
+                                    task.copy(
+                                        keyPerson = result.displayName,
+                                        keyPersonEntityId = result.entityId
+                                    )
                                 } ?: task
                                 
                                 val conflictResult = scheduleBoard.checkConflict(
@@ -280,15 +290,28 @@ class PrismOrchestrator @Inject constructor(
                                 if (conflictResult is ConflictResult.Conflict) {
                                     anyConflict = true
                                 }
-                                scheduledTaskRepository.insertTask(enrichedTask)
+                                val taskId = scheduledTaskRepository.insertTask(enrichedTask)
+                                
+                                // 计算日期偏移量
+                                val taskDate = enrichedTask.startTime.atZone(zone).toLocalDate()
+                                val dayOffset = ChronoUnit.DAYS.between(today, taskDate).toInt()
+                                
+                                createdTasks.add(UiState.SchedulerTaskCreated(
+                                    taskId = taskId,
+                                    title = enrichedTask.title,
+                                    dayOffset = dayOffset,
+                                    scheduledAtMillis = enrichedTask.startTime.toEpochMilli(),
+                                    durationMinutes = enrichedTask.durationMinutes
+                                ))
                             }
                             
                             scheduleBoard.refresh()
                             activityController.complete()
                             
-                            
-                            val warning = if (anyConflict) " (部分任务有冲突)" else ""
-                            UiState.Response("✅ 已创建 ${lintResult.tasks.size} 个任务${warning}")
+                            UiState.SchedulerMultiTaskCreated(
+                                tasks = createdTasks,
+                                hasConflict = anyConflict
+                            )
                         }
                         
                         // Wave 7: NL Deletion

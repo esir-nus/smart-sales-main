@@ -33,6 +33,20 @@ description: Verify that interface.md files across features are compatible befor
 
 ---
 
+## Step 0: Read Interface Map
+
+Read `docs/cerb/interface-map.md` FIRST.
+
+Check:
+1. What does the map say Feature A **owns** (writes)?
+2. What does the map say Feature A **reads from**?
+3. Does the integration point match the declared flow?
+4. Does the map's ownership rule cover this case?
+
+> If the map doesn't mention this cross-module edge, flag it as a **new edge** to add in Step 5.
+
+---
+
 ## Step 1: Read Both Interfaces
 
 Read `docs/cerb/[feature]/interface.md` for both features.
@@ -109,6 +123,35 @@ Check if A violates any of B's anti-patterns:
 | Both import shared domain | ⚠️ Extract to core |
 
 ---
+
+## Step 5: Map vs Reality Diff
+
+Verify the interface-map.md matches what code actually does:
+
+```bash
+# Check what Feature A actually imports from Feature B's domain
+grep -rn "import com.smartsales.*[featureB]" [featureA source path] | head -20
+```
+
+### Diff Table
+
+| Aspect | Map Says | Code Shows | Aligned? |
+|--------|----------|------------|----------|
+| A reads B | ✅ Declared | `import B.Repository` found | ✅/❌ |
+| A writes B | ❌ Not declared | `import B.Writer` found | ❌ DRIFT |
+| B reads A | ❌ Not declared | No imports found | ✅ |
+
+### If Drift Found
+
+1. **Map is wrong** (code is correct) → Update `interface-map.md` ownership table
+2. **Code is wrong** (map is correct) → Flag as architecture violation, recommend fix
+3. **New edge** (neither declares it) → Add to map AND verify with interface compatibility
+
+### Update Map (if new edge discovered)
+
+Append the new cross-module dependency to `docs/cerb/interface-map.md` ownership table.
+
+> ⚠️ NEVER silently add a new cross-module dependency without updating the map.
 
 ## Output Format
 

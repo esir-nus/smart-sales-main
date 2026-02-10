@@ -1,17 +1,76 @@
 # Entity Writer Spec
 
-> **Cerb-compliant spec** — Internal implementation of centralized entity writes.
+> **Cerb-compliant spec** — Internal implementation of centralized entity writes.  
+> **OS Layer**: RAM Application
 
 ---
 
 ## Overview
 
-Centralized write component (`EntityWriter`) for mutating `EntityRepository`.
+EntityWriter is an **Application** that runs on the SessionWorkingSet (RAM). It is the centralized write path for entity mutations.
+
+**OS Model Role**:
+- **Searcher**: Queries full SSD catalog for dedup/resolution (allowed per OS Model boundary rules).
+- **Writer**: Mutations write-through — update RAM Section 1 AND persist to SSD.
+- **Kernel Invoker**: `updateProfile()` calls `ContextBuilder.recordActivity()` (App → Kernel) to emit history events.
+- **Constraint**: Callers must NOT call `EntityRepository.save()` directly. All mutations go through EntityWriter.
+
 Ensures consistent:
 1. Alias registration (dedup)
 2. Field update policies (append vs replace)
 3. Source tracking (provenance)
 4. **Change tracking** — profile changes (name, title, company) trigger history events
+
+---
+
+## Related Cerb Specs
+
+| Spec | Responsibility |
+|------|----------------|
+| [Entity Registry](../entity-registry/spec.md) | **SSD Storage** — The full entity catalog |
+| [Session Context](../session-context/spec.md) | **RAM** — Section 1 holds active entity context |
+| [Client Profile Hub](../client-profile-hub/spec.md) | **File Explorer** — Reads entity data for dashboards |
+
+---
+
+## OS Layer & Data Flow
+
+### The Transformation
+
+| Old Model (Silo) | New OS Model (RAM Application) |
+|------------------|--------------------------------|
+| EntityWriter calls `EntityRepository.save()` directly | Mutations write-through: RAM Section 1 + SSD |
+| Callers don't know if entity is session-active | Mutations update the active session context |
+| `updateProfile()` only persists to SSD | `updateProfile()` updates RAM + SSD + emits Kernel history event |
+| New entities invisible until next session | New entities immediately available in current session RAM |
+
+### 1. Search & Dedup (SSD Allowed)
+
+**Why SSD?** Entity dedup requires the **full catalog** — not just session-active entities. The OS Model explicitly allows this (see `os-model-architecture.md` L103: "Full entity search hits SSD").
+
+- `findByAlias()` → SSD (EntityRepository)
+- `getById()` for read-modify-write → SSD (EntityRepository)
+
+### 2. Mutations (Write-Through)
+
+**Trigger**: Any `save()` or `delete()` call.
+**Action**: Write-Through (Atomic).
+
+1. **Persist to SSD**: Write to `EntityRepository` (Room).
+2. **Update RAM**: If entity is in Session Section 1, update the in-memory reference.
+
+```mermaid
+graph TD
+    Caller[Scheduler / Coach] -->|clue, resolvedId| EW[EntityWriter Application]
+    EW -->|findByAlias| SSD[EntityRepository SSD]
+    EW -->|1. Persist| SSD
+    EW -->|2. Update RAM| RAM[SessionWorkingSet Section 1]
+    EW -->|3. recordActivity| Kernel[ContextBuilder Kernel]
+```
+
+### 3. App → Kernel Callback
+
+`updateProfile()` detects field changes and calls `ContextBuilder.recordActivity()` — this is an **Application invoking a Kernel service** to emit `UnifiedActivity` history events. The Kernel persists these to Memory Center (SSD).
 
 ---
 
@@ -178,6 +237,12 @@ Convention: Keys prefixed with `_` are metadata, not business attributes.
 | **1.5** | Wiring | ✅ SHIPPED | Wire into `PrismOrchestrator` Scheduler path |
 | **2** | Change-Aware Profile Management | 🔲 PLANNED | `updateProfile()`, change tracking, history emission |
 | **3** | Conflict Merge | 🔲 PLANNED | UI flow for merging duplicates |
+| **4** | **OS Model Upgrade** (RAM Application) | 🔲 PLANNED | Wire write-through to SessionWorkingSet Section 1 |
+
+### Wave 4 Scope (OS Model)
+- Wire `upsertFromClue` / `registerAlias` / `updateAttribute` / `delete` to update RAM Section 1 after SSD write
+- Wire `updateProfile()` to use `ContextBuilder.recordActivity()` (App → Kernel)
+- Remove any direct SSD reads that could use RAM instead (where entity is known-active)
 
 ---
 

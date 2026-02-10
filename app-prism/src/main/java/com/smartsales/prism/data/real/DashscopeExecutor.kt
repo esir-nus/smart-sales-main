@@ -309,6 +309,7 @@ class DashscopeExecutor @Inject constructor(
       "title": "任务标题（简洁明了）",
       "startTime": "YYYY-MM-DD HH:mm",
       "endTime": "YYYY-MM-DD HH:mm (可选，若用户未指定则为 null)",
+      "duration": "预估时长（如 30m、1h、15m）— 见下方推断规则",
       "location": "地点（可选，没有则省略此字段）",
       "notes": "备注（可选，没有则省略此字段）",
       "keyPerson": "关键人物（可选，提取主要联系人或干系人）",
@@ -374,6 +375,22 @@ class DashscopeExecutor @Inject constructor(
 
 如果用户明确说"不要提醒"或"关闭提醒"，则省略 reminder 字段。
 
+## 时长推断规则
+
+根据任务性质推断合理时长（用户明确说了时长或结束时间则以用户为准）：
+
+| 任务类型 | duration | 说明 |
+|----------|----------|------|
+| 打电话、回消息 | "15m" | 简短沟通 |
+| 看手机、喝水、休息 | "5m" | 极短任务 |
+| 会议、面试 | "1h" | 正式会议 |
+| 吃饭、午餐 | "30m" | 用餐 |
+| 运动、跑步 | "30m" | 运动 |
+| 赶飞机、高铁 | "2h" | 交通出行 |
+| 其他未知 | "30m" | 默认中等时长 |
+
+**重要**: 如果用户给了 endTime，则不需要 duration 字段（系统自动计算）。如果两者都没给，你必须根据任务类型推断 duration。
+
 ## 其他规则
 
 1. 时间格式必须是 YYYY-MM-DD HH:mm（如 2026-02-03 03:00）
@@ -391,6 +408,7 @@ class DashscopeExecutor @Inject constructor(
   "title": "赶飞机",
   "startTime": "2026-02-03 03:00",
   "endTime": null,
+  "duration": "2h",
   "location": "T2航站楼",
   "keyPerson": null,
   "highlights": "必须带好护照",
@@ -405,7 +423,20 @@ class DashscopeExecutor @Inject constructor(
   "title": "给张总打电话",
   "startTime": "2026-02-03 14:00",
   "endTime": null,
+  "duration": "15m",
   "keyPerson": "张总",
+  "reminder": "single"
+}
+
+用户：2分钟以后提醒我看手机
+当前日期：2026-02-10
+
+输出：
+{
+  "title": "看手机",
+  "startTime": "2026-02-10 17:42",
+  "endTime": null,
+  "duration": "5m",
   "reminder": "single"
 }
 

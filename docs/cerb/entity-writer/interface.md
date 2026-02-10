@@ -1,6 +1,7 @@
 # Entity Writer Interface
 
-> **Blackbox contract** — For consumers (Scheduler, Coach, Audio Pipeline). Don't read implementation.
+> **Blackbox contract** — For consumers (Scheduler, Coach, Audio Pipeline). Don't read implementation.  
+> **OS Layer**: RAM Application
 
 ---
 
@@ -8,7 +9,13 @@
 
 Centralized write path for `EntityRepository`. Handles dedup, alias registration, and field update policies so callers don't have to.
 
-**Read side**: Use [EntityRepository](../entity-registry/interface.md) directly for queries.
+**OS Model Note**: EntityWriter implements **Write-Through** for all mutations:
+1. Persists to SSD (`EntityRepository`) for durability.
+2. Updates RAM (SessionWorkingSet Section 1) for session visibility.
+
+Search/dedup operations (`findByAlias`) hit SSD directly — the full entity catalog exceeds what's in session RAM.
+
+**Read side**: Use [EntityRepository](../entity-registry/interface.md) directly for queries.  
 **Write side**: Use EntityWriter (this interface) for all mutations.
 
 ### Shared Types
@@ -151,11 +158,12 @@ data class ProfileChange(
 
 | ❌ Don't | ✅ Do Instead |
 |----------|--------------|
-| Call `EntityRepository.save()` directly | Use `EntityWriter.upsertFromClue()` |
+| Call `EntityRepository.save()` directly | Use `EntityWriter.upsertFromClue()` — it handles write-through (RAM + SSD) |
 | Implement dedup logic in your feature | EntityWriter handles alias-based dedup |
 | Build your own field merge logic | EntityWriter enforces update policies |
 | Read EntityWriter internals | Trust this interface |
 | Use `_` prefixed attribute keys | Reserved for internal metadata |
+| Assume new entities are in session RAM | EntityWriter handles RAM Section 1 update on mutation |
 
 ---
 

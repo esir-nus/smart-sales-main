@@ -265,11 +265,12 @@ class SchedulerLinter @Inject constructor(
         }
     }
     
+    // 安全网默认值 — LLM prompt 已要求推断 duration，这里仅作兜底
     private fun TaskTypeHint.defaultDuration(): Int? = when (this) {
         TaskTypeHint.MEETING -> 60
         TaskTypeHint.CALL -> 15
         TaskTypeHint.URGENT -> 30
-        TaskTypeHint.PERSONAL -> 60
+        TaskTypeHint.PERSONAL -> 30  // 中等时长兜底，不再是 60
         else -> null
     }
 }

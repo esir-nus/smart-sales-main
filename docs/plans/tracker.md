@@ -540,7 +540,7 @@
 | Step | Focus | Files | Status |
 |------|-------|-------|--------|
 | **1** | SessionWorkingSet (3 sections + Kernel wiring) | `SessionContext.kt`, `RealContextBuilder.kt` | ✅ |
-| **2** | RL Module → read from RAM S2/S3 | `ReinforcementLearner.kt`, callers | 🔲 |
+| **2** | RL Module → read from RAM S2/S3 | `ReinforcementLearner.kt`, callers | ✅ |
 | **3** | EntityWriter → write-through to RAM S1 | `RealEntityWriter.kt` | 🔲 |
 | **4** | Coach: delete entityIds wiring | `RealCoachPipeline.kt` | 🔲 |
 | **5** | Scheduler: delete buildWithClues entity extraction | `PrismOrchestrator.kt` | 🔲 |

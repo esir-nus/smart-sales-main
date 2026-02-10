@@ -8,17 +8,15 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Fake 增强学习器 — Wave 1 骨架实现
+ * Fake 增强学习器 — OS Model: RAM Application
  * 
  * ## 实现策略
- * `FakeReinforcementLearner` 是 `UserHabitRepository` 的外观 (Facade):
- * - 不重复存储逻辑
- * - 委托给已有的 UserHabitRepository
- * - Wave 2+ 会添加 LLM 集成逻辑
+ * 委托给 UserHabitRepository (SSD)，由 Kernel 调用填充 SessionWorkingSet (RAM)
  * 
- * ## Wave 1 职责
- * - processObservations: 委托给 habitRepository.observe()
- * - getHabitContext: 聚合全局 + 实体习惯
+ * ## 职责
+ * - processObservations: 委托给 habitRepository.observe() (SSD 写入)
+ * - loadUserHabits: 加载全局用户习惯 → Section 2
+ * - loadClientHabits: 加载实体客户习惯 → Section 3
  */
 @Singleton
 class FakeReinforcementLearner @Inject constructor(
@@ -37,17 +35,23 @@ class FakeReinforcementLearner @Inject constructor(
         }
     }
     
-    override suspend fun getHabitContext(entityIds: List<String>?): HabitContext {
-        // 聚合全局习惯 + 特定实体习惯
-        val globalHabits = habitRepository.getGlobalHabits()
-        val clientHabits = entityIds?.flatMap { 
-            habitRepository.getByEntity(it) 
-        } ?: emptyList()
-        
+    override suspend fun loadUserHabits(): HabitContext {
+        // 全局用户习惯 → RAM Section 2
         return HabitContext(
-            userHabits = globalHabits,
+            userHabits = habitRepository.getGlobalHabits(),
+            clientHabits = emptyList(),
+            suggestedDefaults = emptyMap()
+        )
+    }
+    
+    override suspend fun loadClientHabits(entityIds: List<String>): HabitContext {
+        // 指定实体的客户习惯 → RAM Section 3
+        // 空列表 → 空习惯（不 fallback 到全局）
+        val clientHabits = entityIds.flatMap { habitRepository.getByEntity(it) }
+        return HabitContext(
+            userHabits = emptyList(),
             clientHabits = clientHabits,
-            suggestedDefaults = emptyMap()  // Wave 3: 智能默认值生成
+            suggestedDefaults = emptyMap()
         )
     }
 }

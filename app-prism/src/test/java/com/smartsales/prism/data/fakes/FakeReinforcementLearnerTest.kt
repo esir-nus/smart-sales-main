@@ -12,18 +12,21 @@ import org.junit.Test
 /**
  * # FakeReinforcementLearner 单元测试
  * 
- * 验证 RL Module Wave 1 的核心契约:
+ * 验证 RL Module OS Model 升级后的契约:
  * - processObservations() 委托给 UserHabitRepository
- * - getHabitContext() 正确聚合全局 + 实体习惯
+ * - loadUserHabits() 仅返回全局习惯 (Section 2)
+ * - loadClientHabits() 仅返回实体习惯 (Section 3)
  * 
  * ## 测试用例
  * 1. processObservations with empty list (no-op)
  * 2. processObservations with single observation
  * 3. processObservations with multiple observations
- * 4. getHabitContext with null entityIds (global only)
- * 5. getHabitContext with empty entityIds list
- * 6. getHabitContext with single entityId
- * 7. getHabitContext with multiple entityIds
+ * 4. loadUserHabits returns global habits only
+ * 5. loadUserHabits excludes entity-specific habits
+ * 6. loadClientHabits with single entityId
+ * 7. loadClientHabits with multiple entityIds
+ * 8. loadClientHabits with empty list returns empty
+ * 9. suggestedDefaults is empty
  */
 class FakeReinforcementLearnerTest {
 
@@ -91,13 +94,15 @@ class FakeReinforcementLearnerTest {
         assertEquals("60", entityHabit?.habitValue)
     }
 
+    // === loadUserHabits (Section 2) ===
+
     @Test
-    fun `getHabitContext with null entityIds returns global habits only`() = runTest {
+    fun `loadUserHabits returns global habits only`() = runTest {
         // Seed: 1 global + 1 entity-specific
         habitRepository.observe("preferred_meeting_time", "morning", entityId = null, ObservationSource.INFERRED)
         habitRepository.observe("default_duration", "60", entityId = "client-123", ObservationSource.INFERRED)
         
-        val context = reinforcementLearner.getHabitContext(entityIds = null)
+        val context = reinforcementLearner.loadUserHabits()
         
         assertEquals(1, context.userHabits.size)
         assertEquals(0, context.clientHabits.size)
@@ -105,39 +110,38 @@ class FakeReinforcementLearnerTest {
     }
 
     @Test
-    fun `getHabitContext with empty list returns global habits only`() = runTest {
-        habitRepository.observe("preferred_meeting_time", "morning", entityId = null, ObservationSource.INFERRED)
-        habitRepository.observe("default_duration", "60", entityId = "client-123", ObservationSource.INFERRED)
+    fun `loadUserHabits with no data returns empty`() = runTest {
+        val context = reinforcementLearner.loadUserHabits()
         
-        val context = reinforcementLearner.getHabitContext(entityIds = emptyList())
-        
-        assertEquals(1, context.userHabits.size)
+        assertEquals(0, context.userHabits.size)
         assertEquals(0, context.clientHabits.size)
     }
 
+    // === loadClientHabits (Section 3) ===
+
     @Test
-    fun `getHabitContext aggregates global and entity habits`() = runTest {
+    fun `loadClientHabits returns only entity habits`() = runTest {
         // Seed: 1 global, 2 for client-123, 1 for client-456
         habitRepository.observe("preferred_meeting_time", "morning", entityId = null, ObservationSource.INFERRED)
         habitRepository.observe("default_duration", "60", entityId = "client-123", ObservationSource.INFERRED)
         habitRepository.observe("preferred_location", "office", entityId = "client-123", ObservationSource.INFERRED)
         habitRepository.observe("follow_up_interval", "7", entityId = "client-456", ObservationSource.INFERRED)
         
-        val context = reinforcementLearner.getHabitContext(entityIds = listOf("client-123"))
+        val context = reinforcementLearner.loadClientHabits(listOf("client-123"))
         
-        assertEquals(1, context.userHabits.size)
+        // 只返回 client-123 的习惯，不包含全局习惯
+        assertEquals(0, context.userHabits.size)
         assertEquals(2, context.clientHabits.size)
-        assertEquals("preferred_meeting_time", context.userHabits[0].habitKey)
     }
 
     @Test
-    fun `getHabitContext with multiple entityIds aggregates all`() = runTest {
+    fun `loadClientHabits with multiple entityIds aggregates all`() = runTest {
         habitRepository.observe("default_duration", "60", entityId = "client-123", ObservationSource.INFERRED)
         habitRepository.observe("preferred_location", "office", entityId = "client-123", ObservationSource.INFERRED)
         habitRepository.observe("follow_up_interval", "7", entityId = "client-456", ObservationSource.INFERRED)
         
-        val context = reinforcementLearner.getHabitContext(
-            entityIds = listOf("client-123", "client-456")
+        val context = reinforcementLearner.loadClientHabits(
+            listOf("client-123", "client-456")
         )
         
         assertEquals(0, context.userHabits.size)
@@ -145,11 +149,26 @@ class FakeReinforcementLearnerTest {
     }
 
     @Test
-    fun `getHabitContext suggestedDefaults is empty in Wave 1`() = runTest {
+    fun `loadClientHabits with empty list returns empty habits`() = runTest {
+        habitRepository.observe("preferred_meeting_time", "morning", entityId = null, ObservationSource.INFERRED)
+        habitRepository.observe("default_duration", "60", entityId = "client-123", ObservationSource.INFERRED)
+        
+        // 空列表 → 空习惯（不 fallback 到全局）
+        val context = reinforcementLearner.loadClientHabits(emptyList())
+        
+        assertEquals(0, context.userHabits.size)
+        assertEquals(0, context.clientHabits.size)
+    }
+
+    @Test
+    fun `suggestedDefaults is empty`() = runTest {
         habitRepository.observe("preferred_meeting_time", "morning", entityId = null, ObservationSource.INFERRED)
         
-        val context = reinforcementLearner.getHabitContext(entityIds = null)
+        val userContext = reinforcementLearner.loadUserHabits()
+        val clientContext = reinforcementLearner.loadClientHabits(emptyList())
         
-        assertEquals(0, context.suggestedDefaults.size)
+        assertEquals(0, userContext.suggestedDefaults.size)
+        assertEquals(0, clientContext.suggestedDefaults.size)
     }
 }
+

@@ -17,8 +17,8 @@ import org.junit.Test
  * RealContextBuilder 测试 — Wave 3 习惯注入验证
  * 
  * 测试目标:
- * 1. build() 调用 getHabitContext(null) — 全局习惯
- * 2. buildWithClues() 提取实体 ID 并调用 getHabitContext(entityIds)
+ * 1. build() 调用 loadUserHabits() — 全局习惯
+ * 2. buildWithClues() 提取实体 ID 并调用 loadClientHabits(entityIds)
  */
 class RealContextBuilderTest {
     

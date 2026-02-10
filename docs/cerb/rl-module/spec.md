@@ -176,9 +176,11 @@ interface ReinforcementLearner {
     // Called by Orchestrator after LLM response
     suspend fun processObservations(observations: List<RlObservation>)
     
-    // Called by Context Builder (every LLM call)
-    // OS Model Update: No entityIds param. Reads from RAM.
-    suspend fun getHabitContext(): HabitContext
+    // Called by Kernel to populate RAM Section 2
+    suspend fun loadUserHabits(): HabitContext
+    
+    // Called by Kernel to populate RAM Section 3
+    suspend fun loadClientHabits(entityIds: List<String>): HabitContext
 }
 ```
 
@@ -260,7 +262,7 @@ Habits with confidence < 0.1 are **deleted** on next query (garbage collection).
 | **2** | Orchestrator Integration (Parser) | ✅ SHIPPED (2026-02-05) |
 | **3** | Context Builder Integration | ✅ SHIPPED (2026-02-05) |
 | **4** | Time Decay + Deletion Cleanup | 🔲 PLANNED |
-| **5** | **OS Model Upgrade** (RAM Application) | 🔲 PLANNED |
+| **5** | **OS Model Upgrade** (RAM Application) | ✅ SHIPPED (2026-02-10) |
 
 ### Wave 5 Scope (OS Model)
 - Remove `entityIds` param from `getHabitContext()`

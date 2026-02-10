@@ -88,16 +88,32 @@ sealed class TimelineItemModel {
 sealed class LintResult {
     data class Success(
         val task: TimelineItemModel.Task,
-        val reminderType: ReminderType?,
-        val taskTypeHint: TaskTypeHint
+        val urgencyLevel: UrgencyLevel
     ) : LintResult()
     
     data class Error(val message: String) : LintResult()
 }
-
-enum class TaskTypeHint { MEETING, CALL, URGENT, PERSONAL }
-enum class ReminderType { SINGLE, SMART_CASCADE }
 ```
+
+### UrgencyLevel
+
+LLM-classified urgency determines alarm cascade, conflict policy, and duration defaults.
+
+```kotlin
+enum class UrgencyLevel {
+    L1_CRITICAL,   // 赶飞机、签约、面试 — 错过=不可逆损失
+    L2_IMPORTANT,  // 会议、电话、汇报 — 错过=影响他人
+    L3_NORMAL,     // 回邮件、买东西、日常 — 错过=无大碍
+    FIRE_OFF       // 喝水、站起来走走 — 即时提醒，无闹钟
+}
+```
+
+| Level | Cascade | Conflict Policy | Duration Default |
+|-------|---------|-----------------|------------------|
+| `L1_CRITICAL` | `-2h, -1h, -30m, -15m, -5m, -1m` | EXCLUSIVE | LLM-decided |
+| `L2_IMPORTANT` | `-1h, -15m, -5m, -1m` | EXCLUSIVE | LLM-decided |
+| `L3_NORMAL` | `-15m, -1m` | EXCLUSIVE | LLM-decided |
+| `FIRE_OFF` | _(none)_ | COEXISTING | 0 |
 
 ---
 
@@ -164,41 +180,63 @@ val normalized = dateTimeStr
 
 ---
 
-## Task Type Inference
+## Alarm Cascade (Urgency-Driven)
+
+**Architecture**: LLM classifies urgency → Kotlin builds deterministic cascade.
+
+```
+User: "6点赶飞机"
+    ↓
+LLM: { "urgency": "L1" }     ← LLM classifies
+    ↓
+Linter: validates urgency ∈ {L1, L2, L3, FIRE_OFF}
+    ↓
+buildCascade(L1_CRITICAL)      ← Kotlin determines offsets
+    → [-2h, -1h, -30m, -15m, -5m, -1m]
+    ↓
+AlarmScheduler.scheduleAll()
+```
+
+### buildCascade
 
 ```kotlin
-fun inferTaskType(title: String): TaskTypeHint {
-    val lower = title.lowercase()
-    return when {
-        "会议" in lower || "meeting" in lower -> TaskTypeHint.MEETING
-        "电话" in lower || "call" in lower -> TaskTypeHint.CALL
-        "紧急" in lower || "urgent" in lower -> TaskTypeHint.URGENT
-        else -> TaskTypeHint.PERSONAL
-    }
+fun buildCascade(level: UrgencyLevel): List<String> = when (level) {
+    L1_CRITICAL  -> listOf("-2h", "-1h", "-30m", "-15m", "-5m", "-1m")
+    L2_IMPORTANT -> listOf("-1h", "-15m", "-5m", "-1m")
+    L3_NORMAL    -> listOf("-15m", "-1m")
+    FIRE_OFF     -> emptyList()
 }
 ```
 
----
+### LLM Prompt for Urgency
 
-## Alarm Cascade
-
-Smart reminders fire multiple times before the event:
-
-| Reminder Type | Cascade Pattern |
-|---------------|-----------------|
-| **Single** | `-15m` only |
-| **Smart** | `-1h`, `-15m`, `-5m` |
-
-Stored in `alarmCascade: List<String>?`:
-```kotlin
-listOf("-1h", "-15m", "-5m")
+```
+紧急程度分类 (urgency):
+- L1: 赶飞机、签约、面试（错过=不可逆损失）
+- L2: 会议、电话、汇报（错过=影响他人）
+- L3: 回邮件、买东西、日常任务（错过=无大碍）
+- FIRE_OFF: 喝水、站起来走走、看新闻（即时提醒，无闹钟）
 ```
 
-### Cascade Parsing
+### Linter Validation
 
 ```kotlin
-// "-1h" → 60 minutes before
-// "-15m" → 15 minutes before
+val urgency = json.optString("urgency", "L3")  // 默认 L3
+val urgencyLevel = when (urgency.uppercase()) {
+    "L1" -> UrgencyLevel.L1_CRITICAL
+    "L2" -> UrgencyLevel.L2_IMPORTANT
+    "L3" -> UrgencyLevel.L3_NORMAL
+    "FIRE_OFF" -> UrgencyLevel.FIRE_OFF
+    else -> UrgencyLevel.L3_NORMAL  // 无法识别 → 安全默认
+}
+val alarmCascade = buildCascade(urgencyLevel)
+val policy = if (urgencyLevel == UrgencyLevel.FIRE_OFF) 
+    ConflictPolicy.COEXISTING else ConflictPolicy.EXCLUSIVE
+```
+
+### Cascade Offset Parsing
+
+```kotlin
 fun parseCascadeOffset(offset: String): Long {
     val regex = Regex("-(\\d+)([hm])")
     val match = regex.matchEntire(offset) ?: return 0
@@ -211,6 +249,15 @@ fun parseCascadeOffset(offset: String): Long {
     }
 }
 ```
+
+### What Gets Removed
+
+| Removed | Replaced By |
+|---------|-------------|
+| `TaskTypeHint` enum | `UrgencyLevel` enum |
+| `ReminderType` enum | `buildCascade(UrgencyLevel)` |
+| `inferTaskType()` Kotlin keyword matching | LLM `urgency` field |
+| Hardcoded `when(reminder)` cascade | `buildCascade()` lookup |
 
 ---
 

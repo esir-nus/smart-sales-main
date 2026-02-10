@@ -3,12 +3,11 @@ package com.smartsales.prism.domain.rl
 /**
  * 增强学习器 — 从 LLM 结构化输出中学习用户和客户偏好
  * 
- * ## 职责
- * - Wave 1: 接收观察 → 委托给 UserHabitRepository 存储
- * - Wave 2: Orchestrator 集成 (处理 rl_observations)
- * - Wave 3: Context Builder 集成 (提供习惯上下文)
+ * ## OS Model: RAM Application
+ * - Kernel 调用 loadUserHabits/loadClientHabits 填充 SessionWorkingSet
+ * - processObservations 写入 SSD（未来: 同时更新 RAM，write-through）
  * 
- * 来源: docs/cerb/rl-module/spec.md L88-94
+ * 来源: docs/cerb/rl-module/spec.md L172-182
  */
 interface ReinforcementLearner {
     /**
@@ -19,10 +18,19 @@ interface ReinforcementLearner {
     suspend fun processObservations(observations: List<RlObservation>)
     
     /**
-     * 获取习惯上下文 (由 Context Builder 调用)
+     * 加载全局用户习惯 → Kernel 填充 RAM Section 2
      * 
-     * @param entityIds 相关实体 ID 列表 (null = 仅全局习惯)
-     * @return 习惯上下文 (用于 LLM 提示注入)
+     * @return 仅包含 userHabits 的 HabitContext（clientHabits 为空）
      */
-    suspend fun getHabitContext(entityIds: List<String>?): HabitContext
+    suspend fun loadUserHabits(): HabitContext
+    
+    /**
+     * 加载指定实体的客户习惯 → Kernel 填充 RAM Section 3
+     * 
+     * 空列表返回空习惯（不会 fallback 到全局习惯）
+     * 
+     * @param entityIds 活跃实体 ID 列表（非空）
+     * @return 仅包含 clientHabits 的 HabitContext（userHabits 为空）
+     */
+    suspend fun loadClientHabits(entityIds: List<String>): HabitContext
 }

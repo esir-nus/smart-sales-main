@@ -54,7 +54,7 @@ class RealContextBuilder @Inject constructor(
         
         // Section 2: 会话首次加载用户习惯（一次性）
         if (_sessionContext.userHabitContext == null) {
-            _sessionContext.userHabitContext = reinforcementLearner.getHabitContext(entityIds = null)
+            _sessionContext.userHabitContext = reinforcementLearner.loadUserHabits()
             Log.d("WorkingSet", "📦 Section 2 loaded: userHabits")
         }
         
@@ -177,7 +177,7 @@ class RealContextBuilder @Inject constructor(
         // Section 3: 活跃实体 → 自动填充客户习惯
         val activeEntityIds = entityContext.values.map { it.entityId }.takeIf { it.isNotEmpty() }
         if (activeEntityIds != null) {
-            _sessionContext.clientHabitContext = reinforcementLearner.getHabitContext(activeEntityIds)
+            _sessionContext.clientHabitContext = reinforcementLearner.loadClientHabits(activeEntityIds)
             Log.d("WorkingSet", "📦 Section 3 auto-populated: ${activeEntityIds.size} entities")
         }
         

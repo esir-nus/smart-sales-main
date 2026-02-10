@@ -509,6 +509,32 @@
 
 ---
 
+## OS Model Upgrade
+
+> **North Star**: [`os-model-architecture.md`](../specs/os-model-architecture.md) — RAM/SSD mental model  
+> **Strategy**: Spec-first, one wave per session, backward compatible  
+> **Date**: 2026-02-10
+
+| Wave | Focus | Spec | OS Layer | Status |
+|------|-------|------|----------|--------|
+| **0** | Create the RAM (SessionWorkingSet) | `session-context/spec.md` | Kernel | 🔲 |
+| **1** | Connect RL Module | `rl-module/spec.md` | RAM Application | 🔲 |
+| **2** | Connect EntityWriter | `entity-writer/spec.md` | RAM Application | 🔲 |
+| **3** | Simplify Coach + Scheduler | `coach/spec.md` + `scheduler/spec.md` | — | 🔲 |
+| **4** | CRM Hub → File Explorer | `client-profile-hub/spec.md` | File Explorer | 🔲 |
+
+**Critical path**: W0 → W1 → W3 (fixes Coach Mode missing client habits bug)
+
+**Supporting tasks** (do alongside Wave 0):
+- [ ] GLOSSARY.md: Add RAM, SSD, Kernel, Application, File Explorer, SessionWorkingSet
+- [ ] `memory-center/spec.md`: Add `> **OS Layer**: SSD Storage` header
+- [ ] `entity-registry/spec.md`: Add `> **OS Layer**: SSD Storage` header
+- [ ] `user-habit/spec.md`: Add `> **OS Layer**: SSD Storage` header
+
+**Per-wave protocol**: Spec upgrade → `/cerb-check` → Review → Code (separate session) → `/acceptance-team`
+
+---
+
 ### Tech Debt (Deferred for Beta)
 
 > **Logged**: 2026-01-30 — Does NOT block beta small circle test

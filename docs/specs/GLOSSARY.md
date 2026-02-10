@@ -58,6 +58,23 @@ App
 
 ---
 
+## OS Model Terms
+
+> **Reference**: [`os-model-architecture.md`](./os-model-architecture.md)
+
+| Term | Definition | OS Analogy |
+|------|------------|------------|
+| **RAM** | Session Working Set — per-session workspace with 3 sections. All modules operate here during a chat session. | Computer RAM |
+| **SSD** | Room DB (all repositories) — permanent storage, source of truth. | Hard drive |
+| **Kernel** | ContextBuilder — loads data from SSD into RAM, manages what's active. Only component that owns the RAM lifecycle. | OS Kernel |
+| **Application** | A module that reads/writes through RAM, never accesses SSD directly. Uses write-through persistence. | User-space app |
+| **File Explorer** | CRM Hub — reads SSD directly for dashboard/history views. Not session-scoped. | File manager |
+| **SessionWorkingSet** | The RAM data structure with 3 sections: Distilled Memory, User Habits, Client Habits. Replaces `SessionContext`. | — |
+| **Write-Through** | Every RAM write simultaneously persists to SSD. No flush, no sync, no crash risk. | Cache write-through |
+| **Distilled Memory** | RAM Section 1 — resolved entity pointers + active memory references. Drives auto-population of Section 3. | — |
+
+---
+
 ## UI Terms
 
 | Term | Definition | Example |
@@ -118,3 +135,4 @@ App
 | Date | Change |
 |------|--------|
 | 2026-02-01 | Initial creation. Established core terminology. |
+| 2026-02-10 | Added OS Model Terms (RAM, SSD, Kernel, Application, File Explorer, SessionWorkingSet, Write-Through, Distilled Memory). |

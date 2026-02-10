@@ -324,10 +324,12 @@ First gate: classify user input before parsing.
 | `non_intent` | Return `AwaitingClarification` |
 
 - **Ship Criteria**: Non-scheduling input (e.g., "你好") does NOT create bogus task
+- **Ship Criteria (Wave 4.3)**: Input without explicit clock time routes to inspiration, not schedulable
 - **Test Cases**:
     - [ ] "你好" → AwaitingClarification
     - [ ] "以后想学吉他" → classification=inspiration
-    - [ ] "明天开会" → classification=schedulable
+    - [ ] "明天找Jake" → classification=inspiration (有日期无时间点)
+    - [ ] "明天下午2点开会" → classification=schedulable (有具体时间点)
 - **Deliverables**: Prompt update in `DashscopeExecutor`, classification handling in `PrismOrchestrator`
 
 #### 4.1: Multi-Task Splitting

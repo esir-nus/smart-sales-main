@@ -25,7 +25,8 @@ class TaskReminderReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "TaskReminderReceiver"
-        const val CHANNEL_ID = "prism_task_reminders"
+        // v2: 强制重建渠道，确保振动设置生效（Android 缓存旧渠道设置）
+        const val CHANNEL_ID = "prism_task_reminders_v2"
         const val CHANNEL_NAME = "任务提醒"
     }
 
@@ -50,6 +51,11 @@ class TaskReminderReceiver : BroadcastReceiver() {
      */
     private fun ensureNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            
+            // 清理旧渠道（旧渠道缓存了无振动设置）
+            manager.deleteNotificationChannel("prism_task_reminders")
+            
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 CHANNEL_NAME,
@@ -57,10 +63,11 @@ class TaskReminderReceiver : BroadcastReceiver() {
             ).apply {
                 description = "智能任务提醒 — 在任务开始前多次提醒"
                 enableVibration(true)
-                vibrationPattern = longArrayOf(0, 250, 250, 250)
+                vibrationPattern = longArrayOf(0, 300, 200, 300)
+                setBypassDnd(false)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
             }
             
-            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
         }
     }

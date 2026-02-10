@@ -151,11 +151,10 @@ class SchedulerLinter @Inject constructor(
         val highlights = if (json.isNull("highlights")) null else json.optString("highlights", null)
         val reminder = if (json.isNull("reminder")) null else json.optString("reminder", null)
         
-        // Infer alarm cascade from reminder type
-        val alarmCascade: List<String>? = when (reminder) {
-            "smart" -> listOf("-1h", "-15m", "-5m")
-            null -> null
-            else -> listOf("-15m") // Simple single reminder
+        // 推断闹钟级联 — 每个任务至少有 -1m 最终提醒
+        val alarmCascade: List<String> = when (reminder) {
+            "smart" -> listOf("-1h", "-15m", "-5m", "-1m")
+            else -> listOf("-15m", "-1m") // 包括 null: 默认 SINGLE + 最终提醒
         }
 
         return LintResult.Success(
@@ -164,7 +163,7 @@ class SchedulerLinter @Inject constructor(
                 timeDisplay = formatTimeDisplay(startTime, endTime),
                 title = title,
                 isDone = false,
-                hasAlarm = reminder != null,
+                hasAlarm = true, // 所有任务都有闹钟（至少 SINGLE）
                 isSmartAlarm = reminder == "smart",
                 startTime = startTime,
                 endTime = endTime,
@@ -178,8 +177,7 @@ class SchedulerLinter @Inject constructor(
             ),
             reminderType = when (reminder) {
                 "smart" -> ReminderType.SMART_CASCADE
-                null -> null
-                else -> ReminderType.SINGLE
+                else -> ReminderType.SINGLE // 包括 null: 默认 SINGLE
             },
             taskTypeHint = taskTypeHint,
             // Phase 1 线索 → Phase 2 实体消歧

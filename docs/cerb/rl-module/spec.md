@@ -1,12 +1,18 @@
 # RL Module
 
-> **Cerb-compliant spec** — Reinforcement learning from structured LLM output.
+> **Cerb-compliant spec** — Reinforcement learning from structured LLM output.  
+> **OS Layer**: RAM Application
 
 ---
 
 ## Overview
 
-RL Module learns user and client preferences from structured output in LLM responses. Only activates when `rl_observations` section exists (no wasted parsing).
+RL Module is an **Application** that runs on the SessionWorkingSet (RAM). It learns user and client preferences from structured output in LLM responses.
+
+**OS Model Role**:
+- **Reader**: Reads active habits from RAM Sections 2 (User) & 3 (Client).
+- **Writer**: Writes new observations to RAM *and* persists them to SSD (write-through).
+- **Constraint**: Never reads/writes `UserHabitRepository` directly. Always operates through the Kernel or RAM.
 
 ---
 
@@ -14,8 +20,47 @@ RL Module learns user and client preferences from structured output in LLM respo
 
 | Spec | Responsibility |
 |------|----------------|
-| [User Habit](../user-habit/spec.md) | Storage (entityId, key, confidence) |
-| [Client Profile Hub](../client-profile-hub/spec.md) | Profile data (on-demand) |
+| [User Habit](../user-habit/spec.md) | **SSD Storage** — The permanent record |
+| [Session Context](../session-context/spec.md) | **RAM** — The workspace where habits are loaded |
+
+---
+
+## OS Layer & Data Flow
+
+### The Transformation
+
+| Old Model (Silo) | New OS Model (RAM Application) |
+|------------------|--------------------------------|
+| RL Module asks: "Who is the client?" | RL Module asks: "What's on the RAM?" |
+| Caller must pass `entityIds` list | Caller passes nothing; RAM has the context |
+| Reads `UserHabitRepo` on every turn | Reads RAM (in-memory, pre-loaded by Kernel) |
+| Writes to Repo, maybe updates cache | Writes to RAM & SSD simultaneously (write-through) |
+| **Buggy**: Context often missing | **Robust**: If entity is active, habits are there |
+
+### 1. Reading Habits (The "Get" Path)
+
+**Source**: `SessionWorkingSet` (RAM).
+- **Section 2 (User Habits)**: Loaded by Kernel at session start.
+- **Section 3 (Client Habits)**: Auto-populated by Kernel when entities become ACTIVE.
+
+> **Input**: None. The RAM *is* the input.  
+> **Output**: `HabitContext` (merged User + Client habits).
+
+### 2. Writing Observations (The "Learn" Path)
+
+**Trigger**: LLM response contains `rl_observations`.  
+**Action**: Write-Through (Atomic).
+
+1. **Update RAM**: Immediately update the in-memory `HabitContext` in `SessionWorkingSet`.
+2. **Persist to SSD**: Async write to `UserHabitRepository` (Room).
+
+```mermaid
+graph TD
+    LLM[LLM Response] -->|rl_observations| RL[RL Module Application]
+    RL -->|1. Update RAM| RAM[SessionWorkingSet]
+    RL -->|2. Persist SSD| SSD[UserHabitRepository]
+    RAM -->|Next Turn| Prompt[LLM Prompt]
+```
 
 ---
 
@@ -132,7 +177,8 @@ interface ReinforcementLearner {
     suspend fun processObservations(observations: List<RlObservation>)
     
     // Called by Context Builder (every LLM call)
-    suspend fun getHabitContext(entityIds: List<String>?): HabitContext
+    // OS Model Update: No entityIds param. Reads from RAM.
+    suspend fun getHabitContext(): HabitContext
 }
 ```
 
@@ -154,10 +200,8 @@ For each observation:
     └── source = USER_NEGATIVE → explicitNegative++
     │
     ▼
-Update lastObservedAt = now()
-    │
-    ▼
-Recalculate confidence with decay
+1. Update RAM (SessionWorkingSet)
+2. Persist to SSD (UserHabitRepository)
 ```
 
 ---
@@ -203,19 +247,7 @@ fun calculateConfidence(habit: UserHabit, now: Instant): Float {
 
 ### Deletion Threshold
 
-Habits with confidence < 0.1 are **deleted** on next query (garbage collection):
-
-```kotlin
-fun getHabitsWithCleanup(entityId: String?, now: Instant): List<UserHabit> {
-    val habits = repository.getByEntity(entityId)
-    val (valid, stale) = habits.partition { calculateConfidence(it, now) >= 0.1f }
-    
-    // Fire-and-forget cleanup
-    stale.forEach { repository.delete(it.habitKey, it.entityId) }
-    
-    return valid
-}
-```
+Habits with confidence < 0.1 are **deleted** on next query (garbage collection).
 
 ---
 
@@ -226,21 +258,12 @@ fun getHabitsWithCleanup(entityId: String?, now: Instant): List<UserHabit> {
 | **1** | Interface + RlObservation Schema | ✅ SHIPPED (2026-02-04) |
 | **1.5** | Schema Migration (3-value enum, new fields) | ✅ SHIPPED (2026-02-05) |
 | **2** | Orchestrator Integration (Parser) | ✅ SHIPPED (2026-02-05) |
-| **3** | Context Builder Integration | 🔲 |
-| **4** | Time Decay + Deletion Cleanup | 🔲 |
+| **3** | Context Builder Integration | ✅ SHIPPED (2026-02-05) |
+| **4** | Time Decay + Deletion Cleanup | 🔲 PLANNED |
+| **5** | **OS Model Upgrade** (RAM Application) | 🔲 PLANNED |
 
-### Wave 1.5 Scope (NEW)
-- Update `ObservationSource` enum: `INFERRED`, `USER_POSITIVE`, `USER_NEGATIVE`
-- Update `UserHabit` schema: `inferredCount`, `explicitPositive`, `explicitNegative`
-- Update `UserHabitRepository.observe()` signature
-- Update `interface.md` to match
-
-### Wave 2 Scope
-- Parse `rl_observations` from LLM JSON
-- Map `source` string → `ObservationSource` enum
-- Call `ReinforcementLearner.processObservations()`
-- Update `lastObservedAt` on each observation
-
-### Wave 4 Scope
-- Query-time decay calculation (no background jobs)
-- Delete habits below 0.1 confidence threshold
+### Wave 5 Scope (OS Model)
+- Remove `entityIds` param from `getHabitContext()`
+- Wire `FakeReinforcementLearner` to read SessionWorkingSet
+- Implement write-through in `processObservations`
+- Remove direct SSD access from Learner (except via Kernel/Repository)

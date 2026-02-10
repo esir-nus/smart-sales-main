@@ -204,6 +204,8 @@
 | **1.5** | Schema Migration (4-rule model) | ✅ SHIPPED |
 | **2** | Orchestrator Integration (Parser) | ✅ SHIPPED |
 | **3** | Context Builder Integration | ✅ SHIPPED |
+| **4** | Time Decay + Deletion Cleanup | 🔲 |
+| **5** | **OS Model Upgrade** (RAM Application) | 🔲 |
 
 **Wave 1 Shipped**: 2026-02-04
 - `RlModels` (Observation, Source)
@@ -518,7 +520,7 @@
 | Wave | Focus | Spec | OS Layer | Status |
 |------|-------|------|----------|--------|
 | **0** | Create the RAM (SessionWorkingSet) | `session-context/spec.md` | Kernel | ✅ |
-| **1** | Connect RL Module | `rl-module/spec.md` | RAM Application | 🔲 |
+| **1** | Connect RL Module | `rl-module/spec.md` | RAM Application | ✅ |
 | **2** | Connect EntityWriter | `entity-writer/spec.md` | RAM Application | 🔲 |
 | **3** | Simplify Coach + Scheduler | `coach/spec.md` + `scheduler/spec.md` | — | 🔲 |
 | **4** | CRM Hub → File Explorer | `client-profile-hub/spec.md` | File Explorer | 🔲 |

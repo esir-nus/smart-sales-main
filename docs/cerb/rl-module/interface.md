@@ -1,6 +1,7 @@
 # RL Module — Interface
 
-> **Consumer contract** for habit context and observation processing.
+> **Consumer contract** for habit context and observation processing.  
+> **OS Layer**: RAM Application
 
 ---
 
@@ -9,18 +10,16 @@
 ### getHabitContext
 
 ```kotlin
-suspend fun getHabitContext(entityIds: List<String>?): HabitContext
+suspend fun getHabitContext(): HabitContext
 ```
 
 Returns habit context for LLM prompt enrichment. Called by Context Builder on every LLM call.
 
-| Input | Type | Description |
-|-------|------|-------------|
-| `entityIds` | `List<String>?` | Optional entity IDs for client-specific habits |
+**OS Model Note**: Reads directly from `SessionWorkingSet` (RAM Sections 2 & 3). No `entityIds` parameter needed because the RAM is already populated with the active entity context.
 
-| Output | Type |
-|--------|------|
-| `HabitContext` | User + client habits + suggested defaults |
+| Output | Type | Description |
+|--------|------|-------------|
+| `HabitContext` | `UserHabit` list | Merged User (global) + Client (contextual) habits |
 
 ---
 
@@ -31,6 +30,10 @@ suspend fun processObservations(observations: List<RlObservation>)
 ```
 
 Processes RL observations from structured LLM output. Called by Orchestrator when `rl_observations` section exists.
+
+**OS Model Note**: Implements **Write-Through**:
+1. Updates `SessionWorkingSet` (RAM) immediately.
+2. Persists to `UserHabitRepository` (SSD) asynchronously.
 
 | Input | Type | Description |
 |-------|------|-------------|
@@ -83,8 +86,8 @@ Confidence is calculated at **query time** using 4 rules:
 
 | ❌ Don't | ✅ Do Instead |
 |----------|--------------|
-| Access `UserHabit` table directly | Use `ReinforcementLearner` methods |
+| Access `UserHabit` table directly | READ the RAM (Section 2/3) or WRITE via `processObservations` |
+| Pass `entityIds` to `getHabitContext` | RAM already has the active entities loaded |
 | Parse `rl_observations` JSON manually | Orchestrator provides parsed list |
 | Call `processObservations` when section is empty | Check for null/empty first |
 | Modify habit confidence manually | Let RL Module manage via observations |
-| Calculate confidence yourself | RL Module calculates with decay at query time |

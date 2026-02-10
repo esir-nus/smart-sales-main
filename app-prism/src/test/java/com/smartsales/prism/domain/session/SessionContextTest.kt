@@ -1,6 +1,11 @@
 package com.smartsales.prism.domain.session
 
+import com.smartsales.prism.domain.habit.UserHabit
+import com.smartsales.prism.domain.pipeline.EntityRef
+import com.smartsales.prism.domain.pipeline.MemoryHit
+import com.smartsales.prism.domain.rl.HabitContext
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -180,5 +185,133 @@ class SessionContextTest {
         assertEquals(EntityState.ACTIVE, trace?.state)
         assertEquals("e-004", trace?.entityId)
         assertEquals(0.95f, trace?.confidence)
+    }
+
+    // ===== Wave 4: SessionWorkingSet (3-Section) Tests =====
+
+    @Test
+    fun `initializes with null habit sections`() {
+        assertNull("Section 2 (userHabitContext) should start null", sessionContext.userHabitContext)
+        assertNull("Section 3 (clientHabitContext) should start null", sessionContext.clientHabitContext)
+        assertTrue("Section 1 (memoryHits) should start empty", sessionContext.memoryHits.isEmpty())
+        assertTrue("Section 1 (entityContext) should start empty", sessionContext.entityContext.isEmpty())
+    }
+
+    @Test
+    fun `getCombinedHabitContext returns null when both sections null`() {
+        assertNull(sessionContext.getCombinedHabitContext())
+    }
+
+    @Test
+    fun `getCombinedHabitContext returns user-only when no client habits`() {
+        sessionContext.userHabitContext = HabitContext(
+            userHabits = listOf(UserHabit(habitKey = "meeting_time", habitValue = "morning", entityId = null, lastObservedAt = 1000L, createdAt = 1000L)),
+            clientHabits = emptyList(),
+            suggestedDefaults = mapOf("time" to "09:00")
+        )
+
+        val combined = sessionContext.getCombinedHabitContext()
+        assertNotNull(combined)
+        assertEquals(1, combined!!.userHabits.size)
+        assertEquals("meeting_time", combined.userHabits[0].habitKey)
+        assertTrue("clientHabits should be empty", combined.clientHabits.isEmpty())
+        assertEquals("09:00", combined.suggestedDefaults["time"])
+    }
+
+    @Test
+    fun `getCombinedHabitContext returns client-only when no user habits`() {
+        sessionContext.clientHabitContext = HabitContext(
+            userHabits = emptyList(),
+            clientHabits = listOf(UserHabit(habitKey = "preferred_channel", habitValue = "wechat", entityId = "c-001", lastObservedAt = 1000L, createdAt = 1000L)),
+            suggestedDefaults = emptyMap()
+        )
+
+        val combined = sessionContext.getCombinedHabitContext()
+        assertNotNull(combined)
+        assertTrue("userHabits should be empty", combined!!.userHabits.isEmpty())
+        assertEquals(1, combined.clientHabits.size)
+        assertEquals("preferred_channel", combined.clientHabits[0].habitKey)
+    }
+
+    @Test
+    fun `getCombinedHabitContext merges user and client habits`() {
+        sessionContext.userHabitContext = HabitContext(
+            userHabits = listOf(UserHabit(habitKey = "meeting_time", habitValue = "morning", entityId = null, lastObservedAt = 1000L, createdAt = 1000L)),
+            clientHabits = emptyList(),
+            suggestedDefaults = mapOf("time" to "09:00")
+        )
+        sessionContext.clientHabitContext = HabitContext(
+            userHabits = emptyList(),
+            clientHabits = listOf(UserHabit(habitKey = "preferred_channel", habitValue = "wechat", entityId = "c-001", lastObservedAt = 1000L, createdAt = 1000L)),
+            suggestedDefaults = mapOf("channel" to "wechat")
+        )
+
+        val combined = sessionContext.getCombinedHabitContext()
+        assertNotNull(combined)
+        assertEquals("userHabits from Section 2", 1, combined!!.userHabits.size)
+        assertEquals("clientHabits from Section 3", 1, combined.clientHabits.size)
+        assertEquals("suggestedDefaults merged", 2, combined.suggestedDefaults.size)
+        assertEquals("09:00", combined.suggestedDefaults["time"])
+        assertEquals("wechat", combined.suggestedDefaults["channel"])
+    }
+
+    @Test
+    fun `memoryHits stored on working set`() {
+        val hits = listOf(
+            MemoryHit(entryId = "m-001", content = "test memory", relevanceScore = 0.9f)
+        )
+        sessionContext.memoryHits = hits
+
+        assertEquals(1, sessionContext.memoryHits.size)
+        assertEquals("m-001", sessionContext.memoryHits[0].entryId)
+    }
+
+    @Test
+    fun `entityContext stored on working set`() {
+        sessionContext.entityContext["person_0"] = EntityRef(
+            entityId = "p-001",
+            displayName = "张总",
+            entityType = "PERSON"
+        )
+
+        assertEquals(1, sessionContext.entityContext.size)
+        assertEquals("p-001", sessionContext.entityContext["person_0"]?.entityId)
+    }
+
+    @Test
+    fun `reset clears all sections`() {
+        // Populate all sections
+        sessionContext.userHabitContext = HabitContext(
+            userHabits = listOf(UserHabit(habitKey = "k", habitValue = "v", entityId = null, lastObservedAt = 1000L, createdAt = 1000L)),
+            clientHabits = emptyList(),
+            suggestedDefaults = emptyMap()
+        )
+        sessionContext.clientHabitContext = HabitContext(
+            userHabits = emptyList(),
+            clientHabits = listOf(UserHabit(habitKey = "k2", habitValue = "v2", entityId = "c-001", lastObservedAt = 1000L, createdAt = 1000L)),
+            suggestedDefaults = emptyMap()
+        )
+        sessionContext.memoryHits = listOf(
+            MemoryHit(entryId = "m-001", content = "test", relevanceScore = 1.0f)
+        )
+        sessionContext.entityContext["p_0"] = EntityRef("p-001", "Test", "PERSON")
+
+        // Reset
+        val fresh = sessionContext.reset("new-session", 9999L)
+
+        // All sections should be clean
+        assertNull(fresh.userHabitContext)
+        assertNull(fresh.clientHabitContext)
+        assertTrue(fresh.memoryHits.isEmpty())
+        assertTrue(fresh.entityContext.isEmpty())
+        assertTrue(fresh.entityStates.isEmpty())
+        assertTrue(fresh.pathIndex.isEmpty())
+    }
+
+    @Test
+    fun `typealias SessionWorkingSet equals SessionContext`() {
+        // 验证 typealias 可以正常使用
+        val ws: SessionWorkingSet = SessionContext(sessionId = "alias-test", createdAt = 0L)
+        assertEquals("alias-test", ws.sessionId)
     }
 }

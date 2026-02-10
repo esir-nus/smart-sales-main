@@ -307,7 +307,10 @@ $taskContext
         addUnacknowledgedDate(dayOffset)
         _activeDayOffset.value = dayOffset
         
-        // 冲突检测
+        // 0 时长 = fire-off 提醒，跳过冲突检测
+        if (durationMinutes <= 0) return
+        
+        // 冲突检测 (仅对有时长的任务)
         scheduleBoard.refresh()
         when (val conflict = scheduleBoard.checkConflict(
             scheduledAtMillis, durationMinutes,
@@ -343,7 +346,8 @@ $taskContext
         val allConflictedIds = mutableSetOf<String>()
         var causingTask: UiState.SchedulerTaskCreated? = null
         
-        tasks.forEach { task ->
+        // 只对有时长的任务做冲突检测 (0 时长 = fire-off, 跳过)
+        tasks.filter { it.durationMinutes > 0 }.forEach { task ->
             when (val conflict = scheduleBoard.checkConflict(
                 task.scheduledAtMillis, task.durationMinutes,
                 excludeId = task.taskId

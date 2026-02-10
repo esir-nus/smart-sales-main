@@ -160,7 +160,7 @@ markActive(entityId)
 | **1** | **Skeleton** (Data classes + wiring) | ✅ SHIPPED | `SessionContext.kt`, `EntityTrace.kt`, `EntityState.kt` |
 | **2** | **Path Indexing** (Cache hit logic) | ✅ SHIPPED | `resolveAlias()`, `cacheAlias()` in `SessionContext.kt` |
 | **3** | **Smart Triggers** (State-driven loading) | ✅ SHIPPED | `shouldLoadData()`, `markActive()` in `SessionContext.kt` |
-| **4** | **SessionWorkingSet** (OS Model upgrade) | 🔲 PLANNED | 3-section workspace, auto-population, write-through |
+| **4** | **SessionWorkingSet** (OS Model upgrade) | ✅ SHIPPED | 3-section workspace, `getCombinedHabitContext()`, `typealias SessionWorkingSet` |
 
 ### 🔬 Wave 1: Skeleton
 

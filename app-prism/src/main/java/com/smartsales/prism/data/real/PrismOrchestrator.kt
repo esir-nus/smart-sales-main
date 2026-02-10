@@ -281,12 +281,15 @@ class PrismOrchestrator @Inject constructor(
                                     )
                                 } ?: task
                                 
-                                val conflictResult = scheduleBoard.checkConflict(
-                                    enrichedTask.startTime.toEpochMilli(),
-                                    enrichedTask.durationMinutes
-                                )
-                                if (conflictResult is ConflictResult.Conflict) {
-                                    anyConflict = true
+                                // 冲突检测 — 仅对有时长的任务
+                                if (enrichedTask.durationMinutes > 0) {
+                                    val conflictResult = scheduleBoard.checkConflict(
+                                        enrichedTask.startTime.toEpochMilli(),
+                                        enrichedTask.durationMinutes
+                                    )
+                                    if (conflictResult is ConflictResult.Conflict) {
+                                        anyConflict = true
+                                    }
                                 }
                                 val taskId = scheduledTaskRepository.insertTask(enrichedTask)
                                 

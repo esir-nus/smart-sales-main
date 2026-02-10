@@ -1,5 +1,7 @@
 package com.smartsales.prism.ui.drawers.scheduler
 
+import com.smartsales.prism.domain.asr.AsrResult
+import com.smartsales.prism.domain.asr.AsrService
 import com.smartsales.prism.domain.audio.BadgeAudioPipeline
 import com.smartsales.prism.domain.audio.PipelineEvent
 import com.smartsales.prism.domain.audio.SchedulerResult
@@ -41,7 +43,8 @@ class SchedulerViewModel @Inject constructor(
     private val inspirationRepository: InspirationRepository,
     private val memoryRepository: MemoryRepository,
     private val entityWriter: EntityWriter,
-    private val badgeAudioPipeline: BadgeAudioPipeline
+    private val badgeAudioPipeline: BadgeAudioPipeline,
+    private val asrService: AsrService
 ) : ViewModel() {
 
     init {
@@ -288,6 +291,36 @@ $taskContext
             handleCreateResult(result)
             
             triggerRefresh()
+        }
+    }
+
+    /**
+     * 🎙️ DEV ONLY: 手机端录音 → ASR 转写 → 调度管线
+     * 
+     * 与硬件 badge 完全相同的管线，跳过 BLE 下载步骤:
+     * WAV 文件 → AsrService.transcribe() → Orchestrator.createScheduledTask()
+     */
+    fun simulateFromMic(wavFile: java.io.File) {
+        viewModelScope.launch {
+            android.util.Log.d("SchedulerVM", "🎙️ Mic recording → ASR: ${wavFile.name} (${wavFile.length()} bytes)")
+            _pipelineStatus.value = "🎙️ 转写中..."
+
+            when (val asrResult = asrService.transcribe(wavFile)) {
+                is AsrResult.Success -> {
+                    android.util.Log.d("SchedulerVM", "🎙️ Transcribed: ${asrResult.text}")
+                    _pipelineStatus.value = "处理中..."
+                    val result = orchestrator.createScheduledTask(asrResult.text)
+                    handleCreateResult(result)
+                    triggerRefresh()
+                }
+                is AsrResult.Error -> {
+                    android.util.Log.w("SchedulerVM", "🎙️ ASR failed: ${asrResult.message}")
+                    _pipelineStatus.value = "❌ 转写失败: ${asrResult.message}"
+                }
+            }
+
+            // 清理临时文件
+            wavFile.delete()
         }
     }
 

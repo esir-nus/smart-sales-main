@@ -2,6 +2,7 @@ package com.smartsales.prism.domain.scheduler
 
 import com.smartsales.prism.domain.memory.ConflictPolicy
 import com.smartsales.prism.domain.memory.DurationSource
+import com.smartsales.prism.domain.scheduler.UrgencyLevel
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import java.time.LocalDate
@@ -62,6 +63,7 @@ sealed class TimelineItemModel {
         override val id: String,
         override val timeDisplay: String,
         val title: String,
+        val urgencyLevel: UrgencyLevel = UrgencyLevel.L3_NORMAL, // Wave 4.2: LLM Urgency
         val isDone: Boolean = false,
         val hasAlarm: Boolean = false,
         val isSmartAlarm: Boolean = false, // "智能提醒"
@@ -76,7 +78,7 @@ sealed class TimelineItemModel {
         val keyPerson: String? = null,
         val keyPersonEntityId: String? = null,  // Wave 9: Entity ID for tip generation
         val highlights: String? = null,
-        val alarmCascade: List<String>? = null // e.g. ["-1h", "-15m", "-5m"]
+        val alarmCascade: List<String> = emptyList() // e.g. ["-1h", "-15m", "-5m"]
     ) : TimelineItemModel()
 
     data class Inspiration(

@@ -1,6 +1,5 @@
 package com.smartsales.prism.data.real
 
-import com.smartsales.prism.data.fakes.FakeEntityRepository
 import com.smartsales.prism.data.fakes.FakeReinforcementLearner
 import com.smartsales.prism.data.fakes.FakeTimeProvider
 import com.smartsales.prism.data.fakes.FakeUserHabitRepository
@@ -18,13 +17,12 @@ import org.junit.Test
  * 
  * 测试目标:
  * 1. build() 调用 loadUserHabits() — 全局习惯
- * 2. buildWithClues() 提取实体 ID 并调用 loadClientHabits(entityIds)
+ * 2. EntityWriter write-through 更新 RAM Section 1
  */
 class RealContextBuilderTest {
     
     private lateinit var contextBuilder: RealContextBuilder
     private lateinit var timeProvider: FakeTimeProvider
-    private lateinit var entityRepository: FakeEntityRepository
     private lateinit var habitRepository: FakeUserHabitRepository
     private lateinit var reinforcementLearner: FakeReinforcementLearner
     private lateinit var memoryRepository: FakeMemoryRepository
@@ -32,7 +30,6 @@ class RealContextBuilderTest {
     @Before
     fun setup() {
         timeProvider = FakeTimeProvider()
-        entityRepository = FakeEntityRepository()
         habitRepository = FakeUserHabitRepository()
         habitRepository.clear()  // Reset seed data for test isolation
         reinforcementLearner = FakeReinforcementLearner(habitRepository)
@@ -40,7 +37,6 @@ class RealContextBuilderTest {
         
         contextBuilder = RealContextBuilder(
             timeProvider = timeProvider,
-            entityRepository = entityRepository,
             reinforcementLearner = reinforcementLearner,
             memoryRepository = memoryRepository
         )

@@ -1,9 +1,6 @@
 package com.smartsales.prism.data.real
 
 import android.util.Log
-import com.smartsales.prism.domain.memory.EntityType
-import com.smartsales.prism.domain.memory.EntityEntry
-import com.smartsales.prism.domain.memory.EntityRepository
 import com.smartsales.prism.domain.memory.MemoryEntry
 import com.smartsales.prism.domain.memory.MemoryEntryType
 import com.smartsales.prism.domain.memory.MemoryRepository
@@ -16,7 +13,6 @@ import com.smartsales.prism.domain.pipeline.EntityRef
 import com.smartsales.prism.domain.pipeline.MemoryHit
 import com.smartsales.prism.domain.pipeline.ModeMetadata
 import com.smartsales.prism.domain.pipeline.ToolArtifact
-import com.smartsales.prism.domain.scheduler.ParsedClues
 import com.smartsales.prism.domain.rl.ReinforcementLearner
 import com.smartsales.prism.domain.session.SessionContext
 import com.smartsales.prism.domain.time.TimeProvider
@@ -33,7 +29,6 @@ import javax.inject.Singleton
 @Singleton
 class RealContextBuilder @Inject constructor(
     private val timeProvider: TimeProvider,
-    private val entityRepository: EntityRepository,
     private val reinforcementLearner: ReinforcementLearner,
     private val memoryRepository: MemoryRepository
 ) : ContextBuilder {
@@ -84,116 +79,6 @@ class RealContextBuilder @Inject constructor(
             executedTools = _executedTools.toSet(),
             currentDate = timeProvider.formatForLlm(),
             habitContext = _sessionContext.getCombinedHabitContext()  // 从 RAM 读取
-        )
-    }
-    
-    /**
-     * Phase 2 构建器 — 带 RelevancyLib 实体线索
-     * 
-     * @param userText 原始用户文本
-     * @param mode 当前模式
-     * @param clues Phase 1 解析的线索
-     * @return 增强上下文（含实体引用）
-     */
-    suspend fun buildWithClues(userText: String, mode: Mode, clues: ParsedClues): EnhancedContext {
-        _sessionContext.incrementTurn()
-        
-        // 根据线索查询 RelevancyLib
-        val entityContext = mutableMapOf<String, EntityRef>()
-        
-        // 按人物线索查询候选（Wave 2: 路径索引缓存）
-        clues.person?.let { personClue ->
-            // 先检查会话缓存（O(1)）
-            val cachedId = _sessionContext.resolveAlias(personClue)
-            if (cachedId != null) {
-                Log.d("PathIndex", "HIT alias=$personClue → $cachedId")
-                val entry = entityRepository.getById(cachedId)
-                if (entry != null) {
-                    entityContext["person_candidate_0"] = EntityRef(
-                        entityId = entry.entityId,
-                        displayName = entry.displayName,
-                        entityType = entry.entityType.name
-                    )
-                    _sessionContext.markActive(cachedId)  // Wave 3: 标记为 ACTIVE（幂等）
-                    return@let  // 缓存命中，跳过 DB 搜索
-                }
-                // 缓存的 ID 对应的实体已被删除，走 fallback
-                Log.d("PathIndex", "STALE alias=$personClue, cachedId=$cachedId not found in DB")
-            }
-
-            // 缓存未命中：DB 查询，然后缓存第一个结果
-            Log.d("PathIndex", "MISS alias=$personClue")
-            val candidates = entityRepository.findByAlias(personClue)
-            candidates.forEachIndexed { index, entry ->
-                entityContext["person_candidate_$index"] = EntityRef(
-                    entityId = entry.entityId,
-                    displayName = entry.displayName,
-                    entityType = entry.entityType.name
-                )
-                // 缓存第一个候选（Scheduler 管线只使用 candidate_0）
-                if (index == 0) {
-                    _sessionContext.cacheAlias(personClue, entry.entityId)
-                    _sessionContext.markActive(entry.entityId)  // Wave 3: 标记为已加载
-                }
-            }
-        }
-        
-        // 按地点线索查询候选（Wave 2: 路径索引缓存）
-        clues.location?.let { locationClue ->
-            val cachedId = _sessionContext.resolveAlias(locationClue)
-            if (cachedId != null) {
-                Log.d("PathIndex", "HIT alias=$locationClue → $cachedId")
-                val entry = entityRepository.getById(cachedId)
-                if (entry != null && entry.entityType == EntityType.LOCATION) {
-                    entityContext["location_candidate_0"] = EntityRef(
-                        entityId = entry.entityId,
-                        displayName = entry.displayName,
-                        entityType = entry.entityType.name
-                    )
-                    _sessionContext.markActive(cachedId)  // Wave 3: 标记为 ACTIVE（幂等）
-                    return@let
-                }
-            }
-
-            Log.d("PathIndex", "MISS alias=$locationClue")
-            val locationCandidates = entityRepository.search(locationClue, limit = 3)
-                .filter { it.entityType == EntityType.LOCATION }
-            locationCandidates.forEachIndexed { index, entry ->
-                entityContext["location_candidate_$index"] = EntityRef(
-                    entityId = entry.entityId,
-                    displayName = entry.displayName,
-                    entityType = entry.entityType.name
-                )
-                if (index == 0) {
-                    _sessionContext.cacheAlias(locationClue, entry.entityId)
-                    _sessionContext.markActive(entry.entityId)  // Wave 3: 标记为已加载
-                }
-            }
-        }
-        
-        // Section 1: 实体上下文写入 RAM
-        _sessionContext.entityContext.putAll(entityContext)
-        
-        // Section 3: 活跃实体 → 自动填充客户习惯
-        val activeEntityIds = entityContext.values.map { it.entityId }.takeIf { it.isNotEmpty() }
-        if (activeEntityIds != null) {
-            _sessionContext.clientHabitContext = reinforcementLearner.loadClientHabits(activeEntityIds)
-            Log.d("WorkingSet", "📦 Section 3 auto-populated: ${activeEntityIds.size} entities")
-        }
-        
-        return EnhancedContext(
-            userText = userText,
-            modeMetadata = ModeMetadata(
-                currentMode = mode,
-                sessionId = _sessionId,
-                turnIndex = _sessionContext.turnCount
-            ),
-            sessionHistory = _sessionHistory.toList(),
-            lastToolResult = _lastToolResult,
-            executedTools = _executedTools.toSet(),
-            currentDate = timeProvider.formatForLlm(),
-            entityContext = _sessionContext.entityContext.toMap(),  // 从 RAM Section 1 读取
-            habitContext = _sessionContext.getCombinedHabitContext()  // 从 RAM S2+S3 读取
         )
     }
     
@@ -259,6 +144,49 @@ class RealContextBuilder @Inject constructor(
         _executedTools.add(toolId)
     }
     
+    // ========================================
+    // Internal Kernel methods — called by EntityWriter (App → Kernel)
+    // NOT on ContextBuilder interface
+    // ========================================
+
+    /**
+     * 写入实体到 RAM Section 1（Write-Through 的 RAM 半段）
+     *
+     * EntityWriter 在 SSD 写入后调用此方法，确保当前会话能立即看到变更。
+     * 同时自动填充 Section 3（客户习惯）。
+     *
+     * @param entityId 实体 ID
+     * @param ref 实体引用
+     */
+    @Synchronized
+    fun updateEntityInSession(entityId: String, ref: EntityRef) {
+        // Section 1: 更新实体引用
+        _sessionContext.entityContext["entity_$entityId"] = ref
+        _sessionContext.markActive(entityId)
+        Log.d("WorkingSet", "📝 Write-through S1: $entityId → ${ref.displayName}")
+
+        // Section 3: 自动填充客户习惯
+        val activeEntityIds = _sessionContext.entityContext.values.map { it.entityId }
+        if (activeEntityIds.isNotEmpty()) {
+            kotlinx.coroutines.runBlocking {
+                _sessionContext.clientHabitContext = reinforcementLearner.loadClientHabits(activeEntityIds)
+            }
+            Log.d("WorkingSet", "📦 Section 3 auto-refreshed: ${activeEntityIds.size} entities")
+        }
+    }
+
+    /**
+     * 从 RAM Section 1 移除实体（删除时的 Write-Through）
+     *
+     * @param entityId 被删除的实体 ID
+     */
+    @Synchronized
+    fun removeEntityFromSession(entityId: String) {
+        _sessionContext.entityContext.entries.removeAll { it.value.entityId == entityId }
+        _sessionContext.entityStates.remove(entityId)
+        Log.d("WorkingSet", "🗑️ Write-through S1 removed: $entityId")
+    }
+
     /**
      * 重置会话（模式切换或新会话时调用）
      */

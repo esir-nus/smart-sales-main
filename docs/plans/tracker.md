@@ -1,7 +1,7 @@
 # Smart Sales Prism Tracker
 
 > **SOT**: [`Prism-V1.md`](../specs/Prism-V1.md) · [`prism-ui-ux-contract.md`](../specs/prism-ui-ux-contract.md) (INDEX) · [`GLOSSARY.md`](../specs/GLOSSARY.md)  
-> **Last Updated**: 2026-02-08
+> **Last Updated**: 2026-02-10
 
 ---
 
@@ -126,7 +126,7 @@
 
 **Wave 2 Shipped**: 2026-02-03
 - `ParsedClues` carrier in `LintResult.Success`
-- `RealContextBuilder.buildWithClues()` entity bridge
+- ~~`RealContextBuilder.buildWithClues()` entity bridge~~ (deleted in OS Model Upgrade — entity resolution moved to Orchestrator)
 - LLM synthesizes entity resolution using conversation context
 
 **Wave 2.5 Shipped**: 2026-02-04
@@ -541,9 +541,9 @@
 |------|-------|-------|--------|
 | **1** | SessionWorkingSet (3 sections + Kernel wiring) | `SessionContext.kt`, `RealContextBuilder.kt` | ✅ |
 | **2** | RL Module → read from RAM S2/S3 | `ReinforcementLearner.kt`, callers | ✅ |
-| **3** | EntityWriter → write-through to RAM S1 | `RealEntityWriter.kt` | 🔲 |
-| **4** | Coach: delete entityIds wiring | `RealCoachPipeline.kt` | 🔲 |
-| **5** | Scheduler: delete buildWithClues entity extraction | `PrismOrchestrator.kt` | 🔲 |
+| **3** | EntityWriter → write-through to RAM S1 | `RealEntityWriter.kt`, `RealContextBuilder.kt` | ✅ (2026-02-10, L2 confirmed) |
+| **4** | Coach: delete entityIds wiring | `RealCoachPipeline.kt` | ✅ (already clean — no entityIds refs) |
+| **5** | Scheduler: delete buildWithClues entity extraction | `PrismOrchestrator.kt`, `RealContextBuilder.kt` | ✅ (2026-02-10, L2 confirmed) |
 
 ---
 

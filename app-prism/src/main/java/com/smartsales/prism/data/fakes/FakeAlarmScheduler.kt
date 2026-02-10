@@ -1,16 +1,16 @@
 package com.smartsales.prism.data.fakes
 
 import com.smartsales.prism.domain.scheduler.AlarmScheduler
-import com.smartsales.prism.domain.scheduler.ReminderType
-import com.smartsales.prism.domain.scheduler.TaskTypeHint
+import com.smartsales.prism.domain.scheduler.UrgencyLevel
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * FakeAlarmScheduler — 用于测试的闹钟调度器
- * 
- * 记录所有调度操作，不实际设置系统闹钟
+ * 测试用闹钟调度器
+ *
+ * 记录所有调度操作，不实际设置系统闹钟。
+ * 支持级联偏移量调度方式。
  */
 @Singleton
 class FakeAlarmScheduler @Inject constructor() : AlarmScheduler {
@@ -18,8 +18,7 @@ class FakeAlarmScheduler @Inject constructor() : AlarmScheduler {
     data class ScheduledAlarm(
         val taskId: String,
         val triggerAt: Instant,
-        val type: ReminderType,
-        val offsetMinutes: Int? = null
+        val offsetMinutes: Int
     )
     
     private val _scheduledAlarms = mutableListOf<ScheduledAlarm>()
@@ -28,23 +27,20 @@ class FakeAlarmScheduler @Inject constructor() : AlarmScheduler {
     private val _cancelledTaskIds = mutableListOf<String>()
     val cancelledTaskIds: List<String> get() = _cancelledTaskIds.toList()
     
-    /** 用于测试的级联偏移量 */
-    private val cascadeOffsets = listOf(60, 15, 5, 1)
-    private val singleOffset = listOf(15, 1)
-    
-    override suspend fun scheduleReminder(taskId: String, taskTitle: String, triggerAt: Instant, type: ReminderType) {
-        val offsets = when (type) {
-            ReminderType.SMART_CASCADE -> cascadeOffsets
-            ReminderType.SINGLE -> singleOffset
-        }
-        
-        offsets.forEach { offset ->
+    override suspend fun scheduleCascade(
+        taskId: String,
+        taskTitle: String,
+        eventTime: Instant,
+        cascade: List<String>
+    ) {
+        cascade.forEach { offset ->
+            val offsetMs = UrgencyLevel.parseCascadeOffset(offset)
+            val offsetMinutes = (offsetMs / 60_000).toInt()
             _scheduledAlarms.add(
                 ScheduledAlarm(
                     taskId = taskId,
-                    triggerAt = triggerAt.minusSeconds(offset * 60L),
-                    type = type,
-                    offsetMinutes = offset
+                    triggerAt = eventTime.minusMillis(offsetMs),
+                    offsetMinutes = offsetMinutes
                 )
             )
         }
@@ -53,16 +49,6 @@ class FakeAlarmScheduler @Inject constructor() : AlarmScheduler {
     override suspend fun cancelReminder(taskId: String) {
         _cancelledTaskIds.add(taskId)
         _scheduledAlarms.removeAll { it.taskId == taskId }
-    }
-
-    override suspend fun scheduleSmartCascade(taskId: String, taskTitle: String, eventTime: Instant, taskType: TaskTypeHint) {
-        val reminderType = when (taskType) {
-            TaskTypeHint.MEETING -> ReminderType.SMART_CASCADE
-            TaskTypeHint.CALL -> ReminderType.SINGLE
-            TaskTypeHint.PERSONAL -> ReminderType.SINGLE
-            TaskTypeHint.URGENT -> ReminderType.SMART_CASCADE
-        }
-        scheduleReminder(taskId, taskTitle, eventTime, reminderType)
     }
     
     /** 清空测试状态 */

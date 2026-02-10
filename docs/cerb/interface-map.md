@@ -4,7 +4,7 @@
 >
 > **Purpose**: Module ownership + data flow. Read this BEFORE any cross-module change.
 > **Rule**: If data belongs to Module B, query B's interface at runtime. Don't store B's data on A's model.
-> **Last Updated**: 2026-02-10
+> **Last Updated**: 2026-02-10 (OS Model Upgrade sync)
 
 ---
 
@@ -15,6 +15,7 @@ Leaf services with no upstream dependencies. They don't call other modules.
 | Module | Owns (Writes) | Reads From | Key Interface | OS Layer |
 |--------|--------------|------------|---------------|----------|
 | **ConnectivityBridge** | BLE + HTTP device state | — | `ConnectivityService` | — |
+| **NotificationService** | System notification display | — | `NotificationService.show()` | — |
 | **OSS** | File upload/download | — | `OssUploader.upload()` | — |
 | **ASR** | Transcription results | OSS (downloads audio files to transcribe) | `TingwuRunner.transcribe()` | — |
 
@@ -26,13 +27,15 @@ Store and query domain data. Other modules use their interfaces but never each o
 
 | Module | Owns (Writes) | Reads From | Key Interface | OS Layer |
 |--------|--------------|------------|---------------|----------|
-| **EntityWriter** | Entity mutations (create/update/merge aliases) | — | `EntityWriter.upsertFromClue()` | RAM Application |
+| **EntityWriter** | Entity mutations (create/update/merge aliases) | SessionContext (write-through to RAM S1) | `EntityWriter.upsertFromClue()` | RAM Application |
 | **EntityRegistry** | Entity queries (read-only view of entities) | — | `EntityRepository.findByAlias()` | SSD |
 | **MemoryCenter** | Conversation memory entries | — | `MemoryRepository.search()` | SSD |
 | **UserHabit** | Behavioral pattern observations | — | `UserHabitRepository.observe()` | SSD |
-| **SessionContext** | Per-session entity cache (ephemeral) | EntityRegistry (populates cache) | `SessionContext.getCachedEntities()` | Kernel (RAM) |
+| **SessionContext** | Per-session workspace (3 sections) | EntityWriter (S1 via write-through), RLModule (S2/S3) | `SessionContext.entityContext` | Kernel (RAM) |
 
-> **EntityWriter vs EntityRegistry**: Writer handles mutations (dedup, merge, alias registration). Registry handles queries. Callers MUST use Writer for writes, Registry for reads. Never call `EntityRepository.save()` directly.
+> **EntityWriter vs EntityRegistry**: Writer handles mutations (dedup, merge, alias registration) AND write-through to RAM S1. Registry handles queries. Callers MUST use Writer for writes, Registry for reads. Never call `EntityRepository.save()` directly.
+>
+> **EntityWriter → SessionContext (write-through)**: After persisting to SSD, EntityWriter calls `RealContextBuilder.updateEntityInSession()` to keep RAM Section 1 in sync. This is an App→Kernel internal edge (concrete injection, not on ContextBuilder interface).
 
 ---
 
@@ -42,11 +45,13 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 
 | Module | Owns (Writes) | Reads From | Key Interface | OS Layer |
 |--------|--------------|------------|---------------|----------|
-| **ContextBuilder** | `EnhancedContext` (assembled prompt context) | EntityRegistry, MemoryCenter, SessionContext | `ContextBuilder.build()` | Kernel |
+| **ContextBuilder** | `EnhancedContext` (assembled prompt context) | MemoryCenter, SessionContext | `ContextBuilder.build()` | Kernel |
 | **Executor** | Raw LLM output (stateless — no storage) | — | `Executor.execute()` | — |
-| **Orchestrator** | Mode routing + pipeline coordination | ContextBuilder, Executor, all Linters, EntityWriter | `Orchestrator.process()` | — |
+| **Orchestrator** | Mode routing + pipeline coordination | ContextBuilder, Executor, all Linters, EntityWriter, EntityRegistry | `Orchestrator.process()` | — |
 
-> **Orchestrator is the only module that calls EntityWriter during task creation.** Feature modules (Scheduler, Coach) receive results from Orchestrator; they don't call EntityWriter themselves.
+> **Orchestrator is the only module that calls EntityWriter during task creation.** Feature modules (Scheduler, Coach) receive results from Orchestrator; they don't call EntityWriter themselves. (Exception: debug seed code in SchedulerViewModel, guarded by `DEBUG` build type.)
+>
+> **ContextBuilder no longer reads EntityRegistry.** Entity resolution moved from `buildWithClues()` (deleted) to Orchestrator calling `EntityRepository.findByAlias()` directly.
 
 ---
 
@@ -73,7 +78,7 @@ Cross-cutting services that aggregate data from multiple Layer 2 sources.
 | Module | Owns (Writes) | Reads From | Key Interface | OS Layer |
 |--------|--------------|------------|---------------|----------|
 | **ClientProfileHub** | Aggregated client context for tips | EntityRegistry, MemoryCenter, UserHabit | `ClientProfileHub.getFocusedContext()` | File Explorer |
-| **RLModule** | Prompt tuning parameters | UserHabit | `ReinforcementLearner.adjustPrompt()` | RAM Application |
+| **RLModule** | Habit context for prompts (S2/S3 population) | UserHabit | `ReinforcementLearner.loadUserHabits()`, `loadClientHabits()` | RAM Application |
 
 ---
 
@@ -87,8 +92,10 @@ graph TD
     D --> E["Orchestrator"]
     E --> F["Executor (LLM)"]
     F --> G["SchedulerLinter"]
-    G --> H["Orchestrator calls EntityWriter.upsertFromClue()"]
-    H --> I["ScheduledTaskRepository.insert()"]
+    G --> H1["Orchestrator calls EntityRepository.findByAlias()"]
+    H1 --> H2["Orchestrator calls EntityWriter.upsertFromClue()"]
+    H2 --> H3["EntityWriter write-through → RAM S1"]
+    H2 --> I["ScheduledTaskRepository.insert()"]
     I --> J["ScheduleBoard.refresh()"]
     J --> K["SchedulerViewModel (UI)"]
 ```
@@ -115,4 +122,5 @@ graph TD
 | Call `EntityRepository.save()` | Call `EntityWriter.upsertFromClue()` | EntityWriter owns dedup/merge/alias logic |
 | Import ASR types in Scheduler | Go through Orchestrator | Layer 1 → Layer 4 skip violates dependency direction |
 | Cache MemoryEntry on ViewModel | Query MemoryRepository per request | Memory entries are mutable hot storage |
-| Feature module calls EntityWriter | Orchestrator calls EntityWriter | Only Layer 3 writes entities; Layer 4 receives results |
+| Feature module calls EntityWriter (production) | Orchestrator calls EntityWriter | Only Layer 3 writes entities; Layer 4 receives results |
+| Bypass ContextBuilder for RAM writes | EntityWriter calls `RealContextBuilder.updateEntityInSession()` | Write-through keeps SSD and RAM in sync automatically |

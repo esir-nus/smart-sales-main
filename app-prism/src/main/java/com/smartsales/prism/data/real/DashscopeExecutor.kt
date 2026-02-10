@@ -314,7 +314,7 @@ class DashscopeExecutor @Inject constructor(
       "notes": "备注（可选，没有则省略此字段）",
       "keyPerson": "关键人物（可选，提取主要联系人或干系人）",
       "highlights": "高亮信息（可选，提取必须注意的细节，如带身份证、正装等）",
-      "reminder": "smart 或 single（见下方推断规则）"
+      "urgency": "L1|L2|L3|FIRE_OFF（见下方推断规则）"
     }
   ]
 }
@@ -325,9 +325,9 @@ class DashscopeExecutor @Inject constructor(
 
 | classification | 条件 | 示例 |
 |----------------|------|------|
-| "schedulable" | 包含时间和任务的日程安排 | "明天开会"、"后天下午2点会议" |
+| "schedulable" | 包含**具体时间点**（几点几分）的日程安排 | "明天下午2点开会"、"后天3点会议"、"8点吃面" |
 | "deletion" | 明确要取消/删除某个已有任务 | "取消会议"、"把会议删了"、"不去开会了" |
-| "inspiration" | 想法、计划，但没有具体时间 | "以后想学吉他"、"有空研究一下竞品" |
+| "inspiration" | 想法、计划，或有日期但**无具体时间点** | "以后想学吉他"、"明天找Jake"、"有空研究一下竞品"、"提醒我明天去银行" |
 | "non_intent" | 普通对话，无日程或想法意图 | "你好"、"今天天气怎么样" |
 
 **规则**：
@@ -362,18 +362,18 @@ class DashscopeExecutor @Inject constructor(
   "inspirationText": "以后想学吉他"
 }
 
-## 提醒类型推断规则（Wave 3）
+## 紧急程度推断规则（Wave 4.2）
 
-根据任务性质自动选择：
+根据任务性质自动选择（默认 L3）：
 
-| 任务类型 | reminder | 说明 |
-|----------|----------|------|
-| 会议、拜访、面试、演讲 | "smart" | 正式活动，需多次提醒（-1h, -15m, -5m）|
-| 紧急任务、赶飞机、高铁 | "smart" | 时间敏感，不能迟到 |
-| 电话、简单事务 | "single" | 单次提醒即可（-15m）|
-| 个人/日常任务（买东西、跑步） | "single" | 轻量提醒 |
+| 任务类型 | urgency | 说明 |
+|----------|---------|------|
+| 赶飞机、签约、面试 | "L1" | 错过=不可逆重大损失（-2h, -1h, -30m...）|
+| 会议、电话、汇报 | "L2" | 错过=影响他人/工作（-1h, -15m...）|
+| 回邮件、买东西、日常任务 | "L3" | 错过=无大碍（-15m）|
+| 喝水、站起来走走、看新闻 | "FIRE_OFF" | 即时提醒，**不设闹钟**（仅由应用内逻辑处理）|
 
-如果用户明确说"不要提醒"或"关闭提醒"，则省略 reminder 字段。
+如果用户明确说"不要提醒"或"关闭提醒"，请使用 "FIRE_OFF"。
 
 ## 时长推断规则
 
@@ -412,7 +412,7 @@ class DashscopeExecutor @Inject constructor(
   "location": "T2航站楼",
   "keyPerson": null,
   "highlights": "必须带好护照",
-  "reminder": "smart"
+  "urgency": "L1"
 }
 
 用户：明天下午给张总打个电话
@@ -425,7 +425,7 @@ class DashscopeExecutor @Inject constructor(
   "endTime": null,
   "duration": "15m",
   "keyPerson": "张总",
-  "reminder": "single"
+  "urgency": "L2"
 }
 
 用户：2分钟以后提醒我看手机

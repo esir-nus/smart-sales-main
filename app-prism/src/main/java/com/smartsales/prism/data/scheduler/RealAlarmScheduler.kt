@@ -8,18 +8,17 @@ import android.os.Build
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.smartsales.prism.domain.scheduler.AlarmScheduler
-import com.smartsales.prism.domain.scheduler.ReminderType
-import com.smartsales.prism.domain.scheduler.TaskTypeHint
+import com.smartsales.prism.domain.scheduler.UrgencyLevel
 import com.smartsales.prism.domain.time.TimeProvider
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * 真实闹钟调度器 — 使用 AlarmManager 实现级联提醒
- * 
- * 级联模式: 在事件前 -60min, -15min, -5min 触发三次提醒
- * 单次模式: 在事件前 -15min 触发一次提醒
+ * 真实闹钟调度器 — 根据级联偏移量设置系统闹钟
+ *
+ * 接收 UrgencyLevel.buildCascade() 生成的偏移量列表，
+ * 为每个偏移量设置一个精确闹钟。空列表 = 不设闹钟。
  */
 @Singleton
 class RealAlarmScheduler @Inject constructor(
@@ -37,46 +36,41 @@ class RealAlarmScheduler @Inject constructor(
         const val EXTRA_TASK_TITLE = "task_title"
         const val EXTRA_OFFSET_MINUTES = "offset_minutes"
         
-        // 级联提醒偏移量 (分钟) — 1min 是每个任务的最终提醒
-        private val CASCADE_OFFSETS = listOf(60, 15, 5, 1)  // 1h, 15m, 5m, 1m before
-        private val SINGLE_OFFSET = listOf(15, 1)            // 15m + 1m before
+        // 用于取消时枚举所有可能的偏移量（分钟）
+        private val ALL_POSSIBLE_OFFSETS = listOf(120, 60, 30, 15, 5, 1)
     }
 
-    override suspend fun scheduleReminder(taskId: String, taskTitle: String, triggerAt: Instant, type: ReminderType) {
-        val offsets = when (type) {
-            ReminderType.SMART_CASCADE -> CASCADE_OFFSETS
-            ReminderType.SINGLE -> SINGLE_OFFSET
+    override suspend fun scheduleCascade(
+        taskId: String,
+        taskTitle: String,
+        eventTime: Instant,
+        cascade: List<String>
+    ) {
+        if (cascade.isEmpty()) {
+            Log.d(TAG, "无级联提醒 (FIRE_OFF): taskId=$taskId")
+            return
         }
-        
-        offsets.forEach { offsetMinutes ->
-            val alarmTime = triggerAt.minusSeconds(offsetMinutes * 60L)
+
+        cascade.forEach { offset ->
+            val offsetMs = UrgencyLevel.parseCascadeOffset(offset)
+            val offsetMinutes = (offsetMs / 60_000).toInt()
+            val alarmTime = eventTime.minusMillis(offsetMs)
+            
             if (alarmTime.isAfter(timeProvider.now)) {
                 scheduleExactAlarm(taskId, taskTitle, offsetMinutes, alarmTime)
-                Log.d(TAG, "已设置提醒: taskId=$taskId, title=$taskTitle, offset=-${offsetMinutes}min, at=$alarmTime")
+                Log.d(TAG, "已设置提醒: taskId=$taskId, title=$taskTitle, offset=$offset, at=$alarmTime")
             } else {
-                Log.d(TAG, "跳过过期提醒: taskId=$taskId, offset=-${offsetMinutes}min")
+                Log.d(TAG, "跳过过期提醒: taskId=$taskId, offset=$offset")
             }
         }
     }
 
     override suspend fun cancelReminder(taskId: String) {
-        // 取消所有可能的级联提醒
-        (CASCADE_OFFSETS + SINGLE_OFFSET).distinct().forEach { offsetMinutes ->
-            // title 对取消无影响，PendingIntent 匹配基于 requestCode
+        ALL_POSSIBLE_OFFSETS.forEach { offsetMinutes ->
             val intent = createCascadePendingIntent(taskId, "", offsetMinutes)
             alarmManager.cancel(intent)
         }
         Log.d(TAG, "已取消提醒: taskId=$taskId")
-    }
-
-    override suspend fun scheduleSmartCascade(taskId: String, taskTitle: String, eventTime: Instant, taskType: TaskTypeHint) {
-        val reminderType = when (taskType) {
-            TaskTypeHint.MEETING -> ReminderType.SMART_CASCADE  // 会议用级联
-            TaskTypeHint.CALL -> ReminderType.SINGLE            // 电话用单次
-            TaskTypeHint.PERSONAL -> ReminderType.SINGLE        // 个人用单次
-            TaskTypeHint.URGENT -> ReminderType.SMART_CASCADE   // 紧急用级联
-        }
-        scheduleReminder(taskId, taskTitle, eventTime, reminderType)
     }
 
     /**
@@ -94,7 +88,6 @@ class RealAlarmScheduler @Inject constructor(
                     pendingIntent
                 )
             } else {
-                // 回退到非精确闹钟
                 alarmManager.setAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
                     triggerMillis,
@@ -113,8 +106,7 @@ class RealAlarmScheduler @Inject constructor(
 
     /**
      * 创建级联提醒的 PendingIntent
-     * 
-     * 关键: 每个偏移量使用不同的 requestCode，确保多个提醒不会互相覆盖
+     * 每个偏移量使用不同的 requestCode，确保多个提醒不会互相覆盖
      */
     private fun createCascadePendingIntent(taskId: String, taskTitle: String, offsetMinutes: Int): PendingIntent {
         val intent = Intent(context, TaskReminderReceiver::class.java).apply {
@@ -124,7 +116,6 @@ class RealAlarmScheduler @Inject constructor(
             putExtra(EXTRA_OFFSET_MINUTES, offsetMinutes)
         }
         
-        // 关键: 使用 taskId + offset 组合生成唯一 requestCode
         val requestCode = "$taskId-$offsetMinutes".hashCode()
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         

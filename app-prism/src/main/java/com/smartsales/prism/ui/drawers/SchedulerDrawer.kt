@@ -12,6 +12,7 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -280,11 +282,27 @@ fun SchedulerDrawer(
                         }
                     }
 
-                    // 🧪 DEV ONLY: Flexible Simulation Input (bypasses hardware)
+                    // 🧪 DEV ONLY: 录音 + 文本模拟 (bypasses hardware)
                     if (com.smartsales.prism.BuildConfig.DEBUG) {
                         val scope = rememberCoroutineScope()
                         val devContext = LocalContext.current
-                        var simulationText by remember { mutableStateOf("") }
+                        
+                        // 录音状态
+                        var isRecordingMic by remember { mutableStateOf(false) }
+                        val recorder = remember { com.smartsales.prism.data.audio.PhoneAudioRecorder(devContext) }
+                        
+                        // 权限请求
+                        val permissionLauncher = rememberLauncherForActivityResult(
+                            androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+                        ) { granted ->
+                            if (granted) {
+                                // 权限获得后立即开始录音
+                                recorder.startRecording()
+                                isRecordingMic = true
+                            } else {
+                                Toast.makeText(devContext, "❌ 需要录音权限", Toast.LENGTH_SHORT).show()
+                            }
+                        }
                         
                         Surface(
                             modifier = Modifier
@@ -294,50 +312,61 @@ fun SchedulerDrawer(
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
-                                // Input Field
-                                androidx.compose.foundation.text.BasicTextField(
-                                    value = simulationText,
-                                    onValueChange = { simulationText = it },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
-                                        .padding(8.dp),
-                                    textStyle = LocalTextStyle.current.copy(color = Color.White),
-                                    singleLine = true,
-                                    decorationBox = { innerTextField ->
-                                        if (simulationText.isEmpty()) {
-                                            Text("输入测试语句...", color = Color.White.copy(alpha = 0.6f), fontSize = 14.sp)
-                                        }
-                                        innerTextField()
-                                    }
-                                )
-                                
-                                Spacer(modifier = Modifier.height(8.dp))
-                                
-                                // Send Button
+                                // 🎙️ Mic Record Button (hold-to-record)
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable {
-                                            val textToSend = simulationText.ifEmpty { "我需要明天凌晨3点赶飞机" }
-                                            scope.launch {
-                                                Toast.makeText(devContext, "🧪 模拟: $textToSend", Toast.LENGTH_SHORT).show()
-                                                viewModel.simulateTranscript(textToSend)
-                                            }
+                                        .background(
+                                            if (isRecordingMic) Color(0xFFE74C3C).copy(alpha = 0.8f)
+                                            else Color.White.copy(alpha = 0.2f),
+                                            RoundedCornerShape(4.dp)
+                                        )
+                                        .pointerInput(Unit) {
+                                            detectTapGestures(
+                                                onPress = {
+                                                    // 检查权限
+                                                    val hasPermission = androidx.core.content.ContextCompat
+                                                        .checkSelfPermission(
+                                                            devContext,
+                                                            android.Manifest.permission.RECORD_AUDIO
+                                                        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                                    
+                                                    if (!hasPermission) {
+                                                        permissionLauncher.launch(
+                                                            android.Manifest.permission.RECORD_AUDIO
+                                                        )
+                                                        return@detectTapGestures
+                                                    }
+                                                    
+                                                    // 开始录音
+                                                    recorder.startRecording()
+                                                    isRecordingMic = true
+                                                    
+                                                    // 等松手或取消
+                                                    val released = tryAwaitRelease()
+                                                    
+                                                    // 停止录音 → 提交
+                                                    isRecordingMic = false
+                                                    if (released) {
+                                                        val wavFile = recorder.stopRecording()
+                                                        viewModel.simulateFromMic(wavFile)
+                                                    } else {
+                                                        recorder.cancel()
+                                                    }
+                                                }
+                                            )
                                         }
-                                        .background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
-                                        .padding(8.dp),
+                                        .padding(12.dp),
                                     horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "🧪 发送模拟转录",
+                                        text = if (isRecordingMic) "🔴 松开结束录音..." else "🎙️ 按住录音",
                                         color = Color.White,
-                                        fontSize = 14.sp
+                                        fontSize = 14.sp,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                                     )
                                 }
-                                
-
                             }
                         }
                     }

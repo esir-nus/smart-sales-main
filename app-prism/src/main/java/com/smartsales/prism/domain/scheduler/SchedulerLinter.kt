@@ -131,9 +131,7 @@ class SchedulerLinter @Inject constructor(
         }
 
         // Duration: LLM 推断为主，无需确认
-        // 优先级: 显式 JSON duration > endTime 差值 > 5 分钟 (fire-off 提醒)
         val explicitDuration = json.optString("duration", null)
-        val taskTypeHint = inferTaskType(title)
         
         val durationMinutes: Int = when {
             !explicitDuration.isNullOrBlank() -> parseDuration(explicitDuration) ?: 0
@@ -141,18 +139,27 @@ class SchedulerLinter @Inject constructor(
             else -> 0  // fire-off 提醒没有时长
         }
         
-        // 冲突策略: 有明确时长/结束时间 → EXCLUSIVE, 否则 fire-off → COEXISTING
-        val isFireOff = explicitDuration.isNullOrBlank() && endTime == null
-        val policy = if (isFireOff) ConflictPolicy.COEXISTING else ConflictPolicy.EXCLUSIVE
+        // UrgencyLevel 解析 (Wave 4.2)
+        val urgencyStr = json.optString("urgency", "L3") // 默认 L3
+        val urgencyLevel = try {
+            UrgencyLevel.valueOf(urgencyStr.uppercase())
+        } catch (e: IllegalArgumentException) {
+            when {
+                urgencyStr.uppercase().startsWith("L1") -> UrgencyLevel.L1_CRITICAL
+                urgencyStr.uppercase().startsWith("L2") -> UrgencyLevel.L2_IMPORTANT
+                urgencyStr.uppercase() == "FIRE_OFF" -> UrgencyLevel.FIRE_OFF
+                else -> UrgencyLevel.L3_NORMAL // 安全默认
+            }
+        }
+        
+        // 冲突策略: 根据紧急程度决定 (FIRE_OFF -> COEXISTING)
+        val policy = if (urgencyLevel == UrgencyLevel.FIRE_OFF) 
+            ConflictPolicy.COEXISTING else ConflictPolicy.EXCLUSIVE
 
         val highlights = if (json.isNull("highlights")) null else json.optString("highlights", null)
-        val reminder = if (json.isNull("reminder")) null else json.optString("reminder", null)
         
-        // 推断闹钟级联 — 每个任务至少有 -1m 最终提醒
-        val alarmCascade: List<String> = when (reminder) {
-            "smart" -> listOf("-1h", "-15m", "-5m", "-1m")
-            else -> listOf("-15m", "-1m") // 包括 null: 默认 SINGLE + 最终提醒
-        }
+        // 级联提醒: 由 UrgencyLevel 决定
+        val alarmCascade = UrgencyLevel.buildCascade(urgencyLevel)
 
         return LintResult.Success(
             task = TimelineItemModel.Task(
@@ -160,8 +167,8 @@ class SchedulerLinter @Inject constructor(
                 timeDisplay = formatTimeDisplay(startTime, endTime),
                 title = title,
                 isDone = false,
-                hasAlarm = true, // 所有任务都有闹钟（至少 SINGLE）
-                isSmartAlarm = reminder == "smart",
+                hasAlarm = alarmCascade.isNotEmpty(), // 有级联就有提醒
+                isSmartAlarm = urgencyLevel == UrgencyLevel.L1_CRITICAL || urgencyLevel == UrgencyLevel.L2_IMPORTANT,
                 startTime = startTime,
                 endTime = endTime,
                 durationMinutes = durationMinutes,
@@ -173,11 +180,7 @@ class SchedulerLinter @Inject constructor(
                 highlights = highlights,
                 alarmCascade = alarmCascade
             ),
-            reminderType = when (reminder) {
-                "smart" -> ReminderType.SMART_CASCADE
-                else -> ReminderType.SINGLE // 包括 null: 默认 SINGLE
-            },
-            taskTypeHint = taskTypeHint,
+            urgencyLevel = urgencyLevel,
             // Phase 1 线索 → Phase 2 实体消歧
             parsedClues = partialClues.copy(durationMinutes = durationMinutes)
         )
@@ -252,19 +255,6 @@ class SchedulerLinter @Inject constructor(
             "${startZone.format(fullFormatter)} ~ ${endZone.format(fullFormatter)}"
         }
     }
-
-    private fun inferTaskType(title: String): TaskTypeHint {
-        val lower = title.lowercase()
-        return when {
-            "会议" in lower || "meeting" in lower -> TaskTypeHint.MEETING
-            "电话" in lower || "call" in lower -> TaskTypeHint.CALL
-            "紧急" in lower || "urgent" in lower -> TaskTypeHint.URGENT
-            else -> TaskTypeHint.PERSONAL
-        }
-    }
-    
-    // LLM prompt 负责推断 duration — Kotlin 不兜底，缺失时询问用户
-    private fun TaskTypeHint.defaultDuration(): Int? = null
 }
 
 /**
@@ -285,8 +275,7 @@ data class ParsedClues(
 sealed class LintResult {
     data class Success(
         val task: TimelineItemModel.Task,
-        val reminderType: ReminderType?,
-        val taskTypeHint: TaskTypeHint,
+        val urgencyLevel: UrgencyLevel,
         val parsedClues: ParsedClues = ParsedClues()  // Phase 1 → Phase 2 桥梁
     ) : LintResult()
     

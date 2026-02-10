@@ -1,6 +1,5 @@
 package com.smartsales.prism.data.real
 
-import com.smartsales.prism.data.fakes.FakeEntityRepository
 import com.smartsales.prism.data.fakes.FakeMemoryRepository
 import com.smartsales.prism.data.fakes.FakeReinforcementLearner
 import com.smartsales.prism.data.fakes.FakeTimeProvider
@@ -23,21 +22,18 @@ class RealContextBuilderMemoryTest {
     private lateinit var contextBuilder: RealContextBuilder
     private lateinit var memoryRepository: FakeMemoryRepository
     private lateinit var timeProvider: FakeTimeProvider
-    private lateinit var entityRepository: FakeEntityRepository
     private lateinit var habitRepository: FakeUserHabitRepository
     private lateinit var reinforcementLearner: FakeReinforcementLearner
 
     @Before
     fun setup() {
         timeProvider = FakeTimeProvider()
-        entityRepository = FakeEntityRepository()
         habitRepository = FakeUserHabitRepository()
         reinforcementLearner = FakeReinforcementLearner(habitRepository)
         memoryRepository = FakeMemoryRepository() // Initialized with seed data including "价格"
 
         contextBuilder = RealContextBuilder(
             timeProvider = timeProvider,
-            entityRepository = entityRepository,
             reinforcementLearner = reinforcementLearner,
             memoryRepository = memoryRepository
         )

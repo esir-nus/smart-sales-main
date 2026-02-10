@@ -6,6 +6,7 @@ import androidx.room.PrimaryKey
 import com.smartsales.prism.domain.memory.ConflictPolicy
 import com.smartsales.prism.domain.memory.DurationSource
 import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.domain.scheduler.UrgencyLevel
 import org.json.JSONArray
 import java.time.Instant
 
@@ -60,7 +61,7 @@ fun TimelineItemModel.Task.toEntity(): ScheduledTaskEntity = ScheduledTaskEntity
     isDone = isDone,
     hasAlarm = hasAlarm,
     isSmartAlarm = isSmartAlarm,
-    alarmCascadeJson = alarmCascade?.let { JSONArray(it).toString() }
+    alarmCascadeJson = if (alarmCascade.isEmpty()) null else JSONArray(alarmCascade).toString()
 )
 
 fun ScheduledTaskEntity.toDomain(): TimelineItemModel.Task {
@@ -90,7 +91,7 @@ fun ScheduledTaskEntity.toDomain(): TimelineItemModel.Task {
     val cascade = alarmCascadeJson?.let { json ->
         val array = JSONArray(json)
         List(array.length()) { i -> array.getString(i) }
-    }
+    } ?: emptyList()
     
     return TimelineItemModel.Task(
         id = taskId,
@@ -110,6 +111,7 @@ fun ScheduledTaskEntity.toDomain(): TimelineItemModel.Task {
         hasAlarm = hasAlarm,
         isSmartAlarm = isSmartAlarm,
         alarmCascade = cascade,
+        urgencyLevel = UrgencyLevel.L3_NORMAL, // Not persisted yet, default to L3 (Safe as cascade/conflict are persisted separately)
         dateRange = dateRange
     )
 }

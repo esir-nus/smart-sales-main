@@ -47,7 +47,7 @@ class SessionContext(
     /** 记忆搜索结果（首轮由 Kernel 填充） */
     var memoryHits: List<MemoryHit> = emptyList()
 
-    /** 实体引用（由 buildWithClues 填充） */
+    /** 实体引用（由 EntityWriter write-through 填充） */
     val entityContext: MutableMap<String, EntityRef> = mutableMapOf()
 
     // ========================================

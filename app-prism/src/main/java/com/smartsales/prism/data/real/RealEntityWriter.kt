@@ -6,6 +6,7 @@ import com.smartsales.prism.domain.memory.EntityRepository
 import com.smartsales.prism.domain.memory.EntityType
 import com.smartsales.prism.domain.memory.EntityWriter
 import com.smartsales.prism.domain.memory.UpsertResult
+import com.smartsales.prism.domain.pipeline.EntityRef
 import com.smartsales.prism.domain.time.TimeProvider
 import org.json.JSONArray
 import org.json.JSONObject
@@ -24,7 +25,8 @@ import javax.inject.Singleton
 @Singleton
 class RealEntityWriter @Inject constructor(
     private val entityRepository: EntityRepository,
-    private val timeProvider: TimeProvider
+    private val timeProvider: TimeProvider,
+    private val contextBuilder: RealContextBuilder
 ) : EntityWriter {
 
     companion object {
@@ -51,6 +53,12 @@ class RealEntityWriter @Inject constructor(
             entityRepository.save(merged)
             Log.d(TAG, "📝 更新实体: id=${merged.entityId} name=${merged.displayName} source=$source")
             
+            // Write-through → RAM Section 1
+            contextBuilder.updateEntityInSession(
+                merged.entityId,
+                EntityRef(merged.entityId, merged.displayName, merged.entityType.name)
+            )
+            
             UpsertResult(
                 entityId = merged.entityId,
                 isNew = false,
@@ -73,6 +81,12 @@ class RealEntityWriter @Inject constructor(
             )
             entityRepository.save(newEntry)
             Log.d(TAG, "✨ 创建实体: id=$entityId name=$clue type=$type source=$source")
+            
+            // Write-through → RAM Section 1
+            contextBuilder.updateEntityInSession(
+                entityId,
+                EntityRef(entityId, clue, type.name)
+            )
             
             UpsertResult(
                 entityId = entityId,
@@ -130,6 +144,8 @@ class RealEntityWriter @Inject constructor(
 
     override suspend fun delete(entityId: String) {
         entityRepository.delete(entityId)
+        // Write-through → 从 RAM Section 1 移除
+        contextBuilder.removeEntityFromSession(entityId)
         Log.d(TAG, "🗑️ 删除实体: id=$entityId")
     }
 

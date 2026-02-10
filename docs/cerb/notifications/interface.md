@@ -1,18 +1,20 @@
-# Notification Service — Interface
+# Notification Service Interface
 
-> **Consumers**: Scheduler, Coach, Badge Pipeline, Memory Center
+> **Blackbox contract** — For consumers (Scheduler, Coach, Badge Pipeline, Memory Center). Don't read implementation.
 > **OS Layer**: Infrastructure (Layer 1)
 > **Rule**: All Android `NotificationManager` access goes through this interface. Never build notifications directly.
 
 ---
 
-## Interface
+## You Can Call
+
+### NotificationService
 
 ```kotlin
 interface NotificationService {
     /**
-     * 显示任务提醒通知
-     * @param taskId 用于去重和取消
+     * 显示通知
+     * @param id 通知唯一标识 (用于去重和取消)
      * @param title 通知标题
      * @param body 通知正文
      * @param channel 通知渠道
@@ -38,7 +40,11 @@ interface NotificationService {
 }
 ```
 
-### Channels
+---
+
+## Output Types
+
+### NotificationChannel
 
 ```kotlin
 enum class NotificationChannel(val id: String, val displayName: String) {
@@ -49,7 +55,7 @@ enum class NotificationChannel(val id: String, val displayName: String) {
 }
 ```
 
-### Priority
+### NotificationPriority
 
 ```kotlin
 enum class NotificationPriority {
@@ -61,23 +67,32 @@ enum class NotificationPriority {
 
 ---
 
-## You Should NOT
+## Guarantees
 
-| ❌ Don't | ✅ Do Instead |
-|----------|--------------|
-| Call `NotificationManagerCompat` directly | Use `NotificationService.show()` |
-| Create `NotificationChannel` in feature code | Declare in `NotificationChannel` enum |
-| Check permission in feature code | Call `NotificationService.hasPermission()` |
-| Build `NotificationCompat.Builder` in features | Let `RealNotificationService` handle construction |
+| Operation | Guarantee |
+|-----------|-----------|
+| `show` | Thread-safe — concurrent calls OK |
+| `show` | No-op if `POST_NOTIFICATIONS` permission denied (logs warning silently) |
+| `show` | Channels created lazily on first use |
+| `cancel` | Idempotent — safe to call with non-existent id |
+| `hasPermission` | Always returns `true` on API < 33 |
 
 ---
 
-## Data Flow
+## You Should NOT
 
-```
-Feature (Scheduler/Coach/Badge)
-    → NotificationService.show(id, title, body, channel)
-    → RealNotificationService
-    → Android NotificationManager
-    → System notification tray
-```
+- ❌ Call `NotificationManagerCompat` directly — use `NotificationService.show()`
+- ❌ Create `NotificationChannel` in feature code — declare in `NotificationChannel` enum
+- ❌ Check permission in feature code — call `NotificationService.hasPermission()`
+- ❌ Build `NotificationCompat.Builder` in features — let `RealNotificationService` handle construction
+
+---
+
+## When to Read Full Spec
+
+Read `spec.md` only if:
+- You are implementing `RealNotificationService`
+- You need to understand channel importance levels or vibration patterns
+- You are adding a new notification channel
+
+Otherwise, **trust this interface**.

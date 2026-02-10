@@ -8,6 +8,7 @@ import com.smartsales.prism.domain.model.ClarificationType
 import android.util.Log
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.memory.EntityType
+import com.smartsales.prism.domain.memory.EntityRepository
 import com.smartsales.prism.domain.memory.EntityWriter
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.memory.ConflictResult
@@ -18,7 +19,7 @@ import com.smartsales.prism.domain.pipeline.ExecutorResult
 import com.smartsales.prism.domain.pipeline.Orchestrator
 import com.smartsales.prism.domain.scheduler.AlarmScheduler
 import com.smartsales.prism.domain.scheduler.LintResult
-import com.smartsales.prism.domain.scheduler.ReminderType
+import com.smartsales.prism.domain.scheduler.UrgencyLevel
 import com.smartsales.prism.domain.scheduler.InspirationRepository
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
@@ -54,7 +55,8 @@ class PrismOrchestrator @Inject constructor(
     private val inspirationRepository: InspirationRepository,
     private val reinforcementLearner: com.smartsales.prism.domain.rl.ReinforcementLearner,
     private val coachPipeline: com.smartsales.prism.domain.coach.CoachPipeline,
-    private val entityWriter: EntityWriter
+    private val entityWriter: EntityWriter,
+    private val entityRepository: EntityRepository
 ) : Orchestrator {
     
     // Fire-and-forget scope for RL learning
@@ -147,30 +149,27 @@ class PrismOrchestrator @Inject constructor(
                     // 验证并解析 LLM 输出
                     when (val lintResult = schedulerLinter.lint(result.content)) {
                         is LintResult.Success -> {
-                            // === Phase 2: Entity Resolution ===
-                            val phase2Context = (contextBuilder as? RealContextBuilder)
-                                ?.buildWithClues(input, Mode.SCHEDULER, lintResult.parsedClues)
-                            
-                            val personCandidates = phase2Context?.entityContext
-                                ?.filter { it.key.startsWith("person_candidate_") }
-                                ?.values?.toList() ?: emptyList()
+                            // === Entity Resolution (直接查 SSD，不再依赖 buildWithClues) ===
+                            val personCandidates = lintResult.parsedClues.person?.let { clue ->
+                                entityRepository.findByAlias(clue).map { entry ->
+                                    CandidateOption(
+                                        entityId = entry.entityId,
+                                        displayName = entry.displayName,
+                                        description = entry.entityType.name
+                                    )
+                                }
+                            } ?: emptyList()
                             
                             if (personCandidates.size > 1) {
                                 activityController.complete()
                                 return UiState.AwaitingClarification(
                                     question = "请问是哪位${lintResult.parsedClues.person}？",
                                     clarificationType = ClarificationType.AMBIGUOUS_PERSON,
-                                    candidates = personCandidates.map { ref ->
-                                        CandidateOption(
-                                            entityId = ref.entityId,
-                                            displayName = ref.displayName,
-                                            description = ref.entityType
-                                        )
-                                    }
+                                    candidates = personCandidates
                                 )
                             }
                             
-                            // === Entity Write-Back ===
+                            // === Entity Write-Back (EntityWriter 自动 write-through 到 RAM) ===
                             val resolvedId = personCandidates.firstOrNull()?.entityId
                             val enrichedTask = lintResult.parsedClues.person?.let { clue ->
                                 val result = entityWriter.upsertFromClue(
@@ -188,22 +187,10 @@ class PrismOrchestrator @Inject constructor(
                             // 插入任务到日历
                             val taskId = scheduledTaskRepository.insertTask(enrichedTask)
                             
-                            // 设置提醒 — 使用已解析的 startTime，默认 SINGLE
-                            val effectiveReminderType = lintResult.reminderType
-                                ?: ReminderType.SINGLE
-                            val eventTime = enrichedTask.startTime
-                            when (effectiveReminderType) {
-                                ReminderType.SMART_CASCADE -> {
-                                    alarmScheduler.scheduleSmartCascade(
-                                        taskId, enrichedTask.title, eventTime, lintResult.taskTypeHint
-                                    )
-                                }
-                                ReminderType.SINGLE -> {
-                                    alarmScheduler.scheduleReminder(
-                                        taskId, enrichedTask.title, eventTime, effectiveReminderType
-                                    )
-                                }
-                            }
+                            // 设置提醒 — 使用 UrgencyLevel 决定的级联
+                            alarmScheduler.scheduleCascade(
+                                taskId, enrichedTask.title, enrichedTask.startTime, enrichedTask.alarmCascade
+                            )
                             
                             activityController.complete()
                             
@@ -293,9 +280,9 @@ class PrismOrchestrator @Inject constructor(
                                 }
                                 val taskId = scheduledTaskRepository.insertTask(enrichedTask)
                                 
-                                // 设置提醒 — 批量任务也需要闹钟
-                                alarmScheduler.scheduleReminder(
-                                    taskId, enrichedTask.title, enrichedTask.startTime, ReminderType.SINGLE
+                                // 设置提醒 — 批量任务也使用自身的 alarmCascade (-15m, -1m default)
+                                alarmScheduler.scheduleCascade(
+                                    taskId, enrichedTask.title, enrichedTask.startTime, enrichedTask.alarmCascade
                                 )
                                 
                                 // 计算日期偏移量

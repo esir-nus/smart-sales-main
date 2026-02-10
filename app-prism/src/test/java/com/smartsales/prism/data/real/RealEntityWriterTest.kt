@@ -1,7 +1,10 @@
 package com.smartsales.prism.data.real
 
 import com.smartsales.prism.data.fakes.FakeEntityRepository
+import com.smartsales.prism.data.fakes.FakeMemoryRepository
+import com.smartsales.prism.data.fakes.FakeReinforcementLearner
 import com.smartsales.prism.data.fakes.FakeTimeProvider
+import com.smartsales.prism.data.fakes.FakeUserHabitRepository
 import com.smartsales.prism.domain.memory.EntityType
 import kotlinx.coroutines.test.runTest
 import org.json.JSONArray
@@ -17,11 +20,19 @@ class RealEntityWriterTest {
 
     private lateinit var repo: FakeEntityRepository
     private lateinit var writer: RealEntityWriter
+    private lateinit var contextBuilder: RealContextBuilder
 
     @Before
     fun setup() {
         repo = FakeEntityRepository()
-        writer = RealEntityWriter(repo, FakeTimeProvider())
+        val timeProvider = FakeTimeProvider()
+        val habitRepository = FakeUserHabitRepository()
+        contextBuilder = RealContextBuilder(
+            timeProvider = timeProvider,
+            reinforcementLearner = FakeReinforcementLearner(habitRepository),
+            memoryRepository = FakeMemoryRepository()
+        )
+        writer = RealEntityWriter(repo, timeProvider, contextBuilder)
     }
 
     @Test

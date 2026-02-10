@@ -1,33 +1,35 @@
 package com.smartsales.prism.data.scheduler
 
-import android.Manifest
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
 import android.util.Log
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.ContextCompat
 import com.smartsales.prism.PrismMainActivity
-import com.smartsales.prism.R
+import com.smartsales.prism.domain.notification.NotificationService
+import com.smartsales.prism.domain.notification.PrismNotificationChannel
+import com.smartsales.prism.domain.notification.NotificationPriority
+import dagger.hilt.android.EntryPointAccessors
 
 /**
  * 任务提醒广播接收器
  * 
- * 接收 AlarmManager 发送的提醒广播，显示通知
+ * 接收 AlarmManager 发送的提醒广播，通过 NotificationService 显示通知。
+ * 使用 Hilt EntryPointAccessors 获取依赖（BroadcastReceiver 不支持构造器注入）。
  */
 class TaskReminderReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "TaskReminderReceiver"
-        // v2: 强制重建渠道，确保振动设置生效（Android 缓存旧渠道设置）
-        const val CHANNEL_ID = "prism_task_reminders_v2"
-        const val CHANNEL_NAME = "任务提醒"
+    }
+
+    /**
+     * Hilt EntryPoint — 从 Application 组件获取 NotificationService
+     */
+    @dagger.hilt.EntryPoint
+    @dagger.hilt.InstallIn(dagger.hilt.components.SingletonComponent::class)
+    interface NotificationServiceEntryPoint {
+        fun notificationService(): NotificationService
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -38,57 +40,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
         val offsetMinutes = intent.getIntExtra(RealAlarmScheduler.EXTRA_OFFSET_MINUTES, 15)
         
         Log.d(TAG, "收到任务提醒: taskId=$taskId, title=$taskTitle, offset=-${offsetMinutes}min")
-        
-        // 确保通知渠道已创建
-        ensureNotificationChannel(context)
-        
-        // 显示通知
-        showNotification(context, taskId, taskTitle, offsetMinutes)
-    }
 
-    /**
-     * 确保通知渠道已创建 (Android 8.0+)
-     */
-    private fun ensureNotificationChannel(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            
-            // 清理旧渠道（旧渠道缓存了无振动设置）
-            manager.deleteNotificationChannel("prism_task_reminders")
-            
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "智能任务提醒 — 在任务开始前多次提醒"
-                enableVibration(true)
-                vibrationPattern = longArrayOf(0, 300, 200, 300)
-                setBypassDnd(false)
-                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
-            }
-            
-            manager.createNotificationChannel(channel)
-        }
-    }
-
-    /**
-     * 显示任务提醒通知
-     */
-    private fun showNotification(context: Context, taskId: String, taskTitle: String, offsetMinutes: Int) {
-        // 检查通知权限 (Android 13+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val hasPermission = ContextCompat.checkSelfPermission(
-                context, 
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-            
-            if (!hasPermission) {
-                Log.w(TAG, "缺少通知权限，无法显示提醒")
-                return
-            }
-        }
-        
         // 构建通知内容
         val timeText = when (offsetMinutes) {
             60 -> "1小时后"
@@ -98,7 +50,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
             else -> "${offsetMinutes}分钟后"
         }
         
-        // 点击通知打开应用
+        // 点击通知打开应用并导航到 Scheduler
         val contentIntent = Intent(context, PrismMainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             putExtra("navigate_to", "scheduler")
@@ -110,30 +62,24 @@ class TaskReminderReceiver : BroadcastReceiver() {
             contentIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle("⏰ $taskTitle")
-            .setContentText("将在${timeText}开始")
-            .setStyle(NotificationCompat.BigTextStyle()
-                .bigText("将在${timeText}开始")
-                .setSummaryText("任务提醒")
-            )
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_REMINDER)
-            .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
-            .setVibrate(longArrayOf(0, 250, 250, 250))
-            .build()
-        
-        // 每个 offset 使用不同的 notificationId
-        val notificationId = "$taskId-$offsetMinutes".hashCode()
-        
-        try {
-            NotificationManagerCompat.from(context).notify(notificationId, notification)
-            Log.d(TAG, "通知已显示: id=$notificationId")
-        } catch (e: SecurityException) {
-            Log.e(TAG, "显示通知失败: ${e.message}")
-        }
+
+        // 通过 Hilt EntryPoint 获取 NotificationService
+        val entryPoint = EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            NotificationServiceEntryPoint::class.java
+        )
+        val notificationService = entryPoint.notificationService()
+
+        // 每个 offset 使用不同的 id，避免级联提醒互相覆盖
+        val notificationId = "$taskId-$offsetMinutes"
+
+        notificationService.show(
+            id = notificationId,
+            title = "⏰ $taskTitle",
+            body = "将在${timeText}开始",
+            channel = PrismNotificationChannel.TASK_REMINDER,
+            priority = NotificationPriority.HIGH,
+            contentIntent = pendingIntent
+        )
     }
 }

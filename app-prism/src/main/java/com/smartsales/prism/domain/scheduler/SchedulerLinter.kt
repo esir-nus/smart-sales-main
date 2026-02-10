@@ -136,9 +136,9 @@ class SchedulerLinter @Inject constructor(
         val taskTypeHint = inferTaskType(title)
         
         val durationMinutes: Int = when {
-            !explicitDuration.isNullOrBlank() -> parseDuration(explicitDuration) ?: 5
+            !explicitDuration.isNullOrBlank() -> parseDuration(explicitDuration) ?: 0
             endTime != null -> ChronoUnit.MINUTES.between(startTime, endTime).toInt().coerceAtLeast(1)
-            else -> 5  // fire-off 提醒默认 5 分钟
+            else -> 0  // fire-off 提醒没有时长
         }
         
         // 冲突策略: 有明确时长/结束时间 → EXCLUSIVE, 否则 fire-off → COEXISTING

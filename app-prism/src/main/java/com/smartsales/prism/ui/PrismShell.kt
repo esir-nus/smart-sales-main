@@ -49,9 +49,23 @@ fun PrismShell(
     onNavigateToSetup: () -> Unit = {}
 ) {
     // Atomic Drawer State (Mutex)
-    var activeDrawer by remember { mutableStateOf<DrawerType?>(null) }
+    // 初始状态: SCHEDULER — 每次进入app自动展示日程抽屉
+    var activeDrawer by remember { mutableStateOf<DrawerType?>(DrawerType.SCHEDULER) }
     var showUserCenter by remember { mutableStateOf(false) }
     var showDebugHud by remember { mutableStateOf(false) }
+    
+    // 每次app回到前台时自动展示日程抽屉
+    // drop-down动画暗示用户可以 dismiss 查看更多
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_START) {
+                activeDrawer = DrawerType.SCHEDULER
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     
     // Refresh Trigger
     var sessionRefreshKey by remember { mutableIntStateOf(0) }

@@ -67,7 +67,7 @@ sealed class TimelineItemModel {
         val isSmartAlarm: Boolean = false, // "智能提醒"
         val startTime: Instant, // Raw data for persistence
         val endTime: Instant? = null, // Raw data for persistence
-        val durationMinutes: Int = 5, // 持续时间 (默认5分钟 fire-off)
+        val durationMinutes: Int = 0, // 持续时间 (fire-off 无时长)
         val durationSource: DurationSource = DurationSource.DEFAULT, // 持续时间来源
         val conflictPolicy: ConflictPolicy = ConflictPolicy.EXCLUSIVE, // 冲突策略
         val dateRange: String = "",

@@ -45,15 +45,15 @@ class RealContextBuilderMemoryTest {
 
     @Test
     fun `first turn triggers memory search`() = runTest {
-        // Act: First message (no history) with query that matches seed data "价格"
-        val context = contextBuilder.build("关于价格的问题", Mode.COACH)
+        // Act: First message — query matches seed data about 华为拜访
+        val context = contextBuilder.build("华为拜访", Mode.COACH)
 
         // Assert: Should have hits because it's first turn
         assertTrue("Should have memory hits on first turn", context.memoryHits.isNotEmpty())
         
-        // Match content from FakeMemoryRepository seed
-        val hasPriceHit = context.memoryHits.any { it.content.contains("价格") }
-        assertTrue("Should contain '价格' related memory", hasPriceHit)
+        // Match content from FakeMemoryRepository seed (seed-huawei-visit)
+        val hasHuaweiHit = context.memoryHits.any { it.content.contains("华为") }
+        assertTrue("Should contain '华为' related memory", hasHuaweiHit)
     }
 
     @Test
@@ -63,7 +63,7 @@ class RealContextBuilderMemoryTest {
         contextBuilder.recordAssistantMessage("Hello")
         
         // Act: Second turn with same query
-        val context = contextBuilder.build("关于价格的问题", Mode.COACH)
+        val context = contextBuilder.build("华为拜访", Mode.COACH)
 
         // Assert: Should NOT search (relying on session context)
         assertEquals("Should skip memory search on subsequent turns", 0, context.memoryHits.size)
@@ -79,7 +79,7 @@ class RealContextBuilderMemoryTest {
         contextBuilder.resetSession()
         
         // Act: New session, same query
-        val context = contextBuilder.build("关于价格的问题", Mode.COACH)
+        val context = contextBuilder.build("华为拜访", Mode.COACH)
         
         // Assert: Should search again
         assertTrue("Should search memory after session reset", context.memoryHits.isNotEmpty())

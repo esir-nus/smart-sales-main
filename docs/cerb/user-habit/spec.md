@@ -1,6 +1,7 @@
 # User Habit
 
 > **Cerb-compliant spec** — Behavioral pattern storage.
+> **OS Layer**: SSD Storage
 
 ---
 

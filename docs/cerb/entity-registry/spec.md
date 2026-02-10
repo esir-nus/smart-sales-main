@@ -1,6 +1,7 @@
 # Entity Registry
 
-> **Cerb-compliant spec** — Entity lookup and disambiguation.
+> **Cerb-compliant spec** — Entity lookup and disambiguation.  
+> **OS Layer**: SSD Storage
 
 ---
 

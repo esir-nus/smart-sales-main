@@ -1,6 +1,7 @@
 # Memory Center
 
-> **Cerb-compliant spec** — Core storage layer for Prism.
+> **Cerb-compliant spec** — Core storage layer for Prism.  
+> **OS Layer**: SSD Storage
 
 ---
 

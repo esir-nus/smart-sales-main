@@ -1,12 +1,15 @@
-# Session Context — Interface
+# Session Working Set — Interface
 
-> **Consumer contract** — How other pipelines interact with the session cache.
+> **Consumer contract** — How other pipelines interact with the session workspace.  
+> **OS Layer**: Kernel
 
 ---
 
 ## Contract
 
-Session Context is an **internal optimization** of `ContextBuilder`. It is NOT directly accessed by consumers.
+The Session Working Set is the **per-session RAM** managed by `ContextBuilder` (the Kernel). Applications do NOT access it directly — they consume it through `ContextBuilder.build()`, which populates `EnhancedContext` from the Working Set.
+
+> **OS Model**: Applications work on RAM. The Kernel owns the lifecycle.
 
 ### Exposed via `ContextBuilder` (existing interface)
 
@@ -27,13 +30,16 @@ interface ContextBuilder {
 ### Output Types
 
 ```kotlin
-// Already defined in EnhancedContext — no new types exposed
+// EnhancedContext is built FROM the SessionWorkingSet (RAM)
 data class EnhancedContext(
-    val memoryHits: List<MemoryHit>,     // Populated by session context logic
-    val entityContext: Map<String, EntityRef>, // Populated by path index
+    val memoryHits: List<MemoryHit>,          // From RAM Section 1 (Distilled Memory)
+    val entityContext: Map<String, EntityRef>, // From RAM Section 1 (Distilled Memory)
+    val habitContext: HabitContext? = null,     // From RAM Sections 2 + 3 (auto-populated)
     // ... other fields unchanged
 )
 ```
+
+> **Note**: `habitContext` is auto-populated from the Working Set. Applications should NOT pass `entityIds` explicitly — the Kernel handles entity-to-habit resolution automatically.
 
 ---
 
@@ -41,10 +47,12 @@ data class EnhancedContext(
 
 | ❌ Don't | ✅ Do Instead |
 |----------|--------------|
-| Access `SessionContext` directly | Use `ContextBuilder.build()` — it handles caching internally |
-| Manage entity state from ViewModel | Let `ContextBuilder` manage entity lifecycle |
-| Call `MemoryRepository.search()` yourself for Coach mode | Trust `ContextBuilder` to search on first turn |
+| Access `SessionContext` / Working Set directly | Use `ContextBuilder.build()` — it reads from RAM internally |
+| Manage entity state from ViewModel | Let `ContextBuilder` (Kernel) manage entity lifecycle |
+| Call `MemoryRepository.search()` yourself | Trust `ContextBuilder` to search on first turn |
 | Reset session context manually | Call `RealContextBuilder.resetSession()` on mode switch |
+| Pass `entityIds` to `getHabitContext()` | Habits are auto-populated in RAM Section 3 |
+| Read repos directly from Application code | Route through the Working Set (RAM) |
 
 ---
 

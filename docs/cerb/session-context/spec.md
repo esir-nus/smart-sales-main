@@ -1,14 +1,18 @@
-# Session Context System
+# Session Working Set System
 
-> **Cerb-compliant spec** — In-memory caching and entity state management for `ContextBuilder`.
+> **Cerb-compliant spec** — In-memory workspace and caching for `ContextBuilder`.  
+> **OS Layer**: Kernel
 
 ---
 
 ## Overview
 
-The Session Context System is an **intelligent caching layer** that optimizes entity retrieval within a conversation session. It replaces "search every turn" with "resolve once, cache forever (in session)."
+The Session Working Set System is the **per-session workspace** (the "RAM") that all pipeline modules operate through. It evolved from the original Session Context (alias cache) into a unified workspace with three sections.
 
-**Lifecycle**: Created when a session starts, destroyed when session ends or chat is deleted. No expiry timer — cache is valid for the entire session.
+**Lifecycle**: Created when a session starts, destroyed when session ends or chat is deleted. No expiry timer — valid for the entire session.
+
+> **OS Model Reference**: [`os-model-architecture.md`](../../specs/os-model-architecture.md)  
+> **Note**: `SessionContextMenu.kt` in the UI layer is an unrelated component (session management menu), not part of this system.
 
 ---
 
@@ -24,7 +28,9 @@ The Session Context System is an **intelligent caching layer** that optimizes en
 
 ## Domain Models
 
-### SessionContext
+### SessionContext (evolves into SessionWorkingSet)
+
+The current `SessionContext` data class evolves into the `SessionWorkingSet` — the RAM that all Applications read/write through.
 
 ```kotlin
 data class SessionContext(
@@ -89,6 +95,64 @@ enum class EntityState {
 
 ---
 
+## SessionWorkingSet Structure (The RAM)
+
+> `SessionContext` evolves into `SessionWorkingSet` — the per-session workspace.
+> All RAM Applications read/write through this structure. Only the Kernel (ContextBuilder) manages its lifecycle.
+
+### Section 1: Distilled Memory
+
+Resolved entity pointers + active memory references. Built by ContextBuilder during `build()`.
+Drives auto-population of Section 3.
+
+| Field | Type | Source | Existing? |
+|-------|------|--------|-----------|
+| `entityStates` | `Map<String, EntityTrace>` | Entity resolution | ✅ Wave 3 |
+| `pathIndex` | `Map<String, String>` | Alias caching | ✅ Wave 2 |
+| `memoryHits` | `List<MemoryHit>` | `MemoryRepository.search()` | ✅ In `build()` |
+| `entityContext` | `Map<String, EntityRef>` | `buildWithClues()` | ✅ In `buildWithClues()` |
+
+### Section 2: User Habits (Global)
+
+User-level preferences. Loaded **once at session start** by the Kernel.
+
+| Field | Type | Source |
+|-------|------|--------|
+| `userHabits` | `HabitContext` | `ReinforcementLearner.getHabitContext(entityIds = null)` |
+
+### Section 3: Client Habits (Contextual)
+
+Per-entity habits. **Auto-populated** when entities appear in Section 1.
+
+| Field | Type | Source |
+|-------|------|--------|
+| `clientHabits` | `HabitContext` | `ReinforcementLearner.getHabitContext(entityIds = activeEntityIds)` |
+
+### Auto-Population Rule
+
+**Trigger**: When `markActive(entityId)` transitions an entity to ACTIVE state, the Kernel immediately queries the RL Module for that entity's habits and populates Section 3.
+
+```
+markActive(entityId) 
+  → entityStates[entityId] = ACTIVE        (Section 1 update)
+  → RL.getHabitContext(activeEntityIds)     (Section 3 auto-populate)
+```
+
+**This eliminates the Coach Mode bug**: Coach previously passed `entityIds = null` because it had no entity context. With auto-population, Section 3 is always current — any Application reading habits gets the right data without knowing about entity resolution.
+
+---
+
+## Interaction Rules
+
+| Rule | Description |
+|------|-------------|
+| **Write-Through** | Every mutation to Sections 2/3 persists to SSD (Room) immediately. No deferred flush. |
+| **Kernel Owns Lifecycle** | Only `ContextBuilder` creates, destroys, and populates the Working Set. Applications don't load data directly from repos. |
+| **Concurrent Reads** | Multiple Applications can read from the Working Set concurrently. Thread-safety required. |
+| **SSD = Source of Truth** | Working Set is rebuilt from SSD on session start. If process dies, no data loss. |
+
+---
+
 ## Wave Plan
 
 | Wave | Focus | Status | Deliverables |
@@ -96,6 +160,7 @@ enum class EntityState {
 | **1** | **Skeleton** (Data classes + wiring) | ✅ SHIPPED | `SessionContext.kt`, `EntityTrace.kt`, `EntityState.kt` |
 | **2** | **Path Indexing** (Cache hit logic) | ✅ SHIPPED | `resolveAlias()`, `cacheAlias()` in `SessionContext.kt` |
 | **3** | **Smart Triggers** (State-driven loading) | ✅ SHIPPED | `shouldLoadData()`, `markActive()` in `SessionContext.kt` |
+| **4** | **SessionWorkingSet** (OS Model upgrade) | 🔲 PLANNED | 3-section workspace, auto-population, write-through |
 
 ### 🔬 Wave 1: Skeleton
 

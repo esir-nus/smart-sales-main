@@ -52,8 +52,14 @@ class RealContextBuilder @Inject constructor(
     override suspend fun build(userText: String, mode: Mode): EnhancedContext {
         _sessionContext.incrementTurn()
         
-        // Wave 3: Memory search (session-history-aware)
-        val memoryHits = if (shouldSearchMemory(userText, _sessionHistory)) {
+        // Section 2: 会话首次加载用户习惯（一次性）
+        if (_sessionContext.userHabitContext == null) {
+            _sessionContext.userHabitContext = reinforcementLearner.getHabitContext(entityIds = null)
+            Log.d("WorkingSet", "📦 Section 2 loaded: userHabits")
+        }
+        
+        // Section 1: 记忆搜索（首轮触发）
+        if (shouldSearchMemory(userText, _sessionHistory)) {
             val hits = memoryRepository.search(userText, limit = 5).map { entry ->
                 MemoryHit(
                     entryId = entry.entryId,
@@ -61,18 +67,13 @@ class RealContextBuilder @Inject constructor(
                     relevanceScore = 1.0f
                 )
             }
-            Log.d("CoachMemory", "🔍 build: memorySearch('${userText.take(30)}') → ${hits.size} hits")
-            hits
-        } else {
-            emptyList()
+            _sessionContext.memoryHits = hits  // 写入 RAM Section 1
+            Log.d("WorkingSet", "🔍 Section 1: memorySearch('${userText.take(30)}') → ${hits.size} hits")
         }
-        
-        // Wave 3: 获取全局习惯（无实体上下文）
-        val habitContext = reinforcementLearner.getHabitContext(entityIds = null)
         
         return EnhancedContext(
             userText = userText,
-            memoryHits = memoryHits,
+            memoryHits = _sessionContext.memoryHits,  // 从 RAM 读取
             modeMetadata = ModeMetadata(
                 currentMode = mode,
                 sessionId = _sessionId,
@@ -81,9 +82,8 @@ class RealContextBuilder @Inject constructor(
             sessionHistory = _sessionHistory.toList(),
             lastToolResult = _lastToolResult,
             executedTools = _executedTools.toSet(),
-            // 使用 TimeProvider 获取格式化的日期时间（包含时间，支持 "今晚"、"3小时后"）
             currentDate = timeProvider.formatForLlm(),
-            habitContext = habitContext
+            habitContext = _sessionContext.getCombinedHabitContext()  // 从 RAM 读取
         )
     }
     
@@ -171,9 +171,15 @@ class RealContextBuilder @Inject constructor(
             }
         }
         
-        // Wave 3: 从实体上下文提取 ID，获取习惯
-        val entityIds = entityContext.values.map { it.entityId }.takeIf { it.isNotEmpty() }
-        val habitContext = reinforcementLearner.getHabitContext(entityIds)
+        // Section 1: 实体上下文写入 RAM
+        _sessionContext.entityContext.putAll(entityContext)
+        
+        // Section 3: 活跃实体 → 自动填充客户习惯
+        val activeEntityIds = entityContext.values.map { it.entityId }.takeIf { it.isNotEmpty() }
+        if (activeEntityIds != null) {
+            _sessionContext.clientHabitContext = reinforcementLearner.getHabitContext(activeEntityIds)
+            Log.d("WorkingSet", "📦 Section 3 auto-populated: ${activeEntityIds.size} entities")
+        }
         
         return EnhancedContext(
             userText = userText,
@@ -186,8 +192,8 @@ class RealContextBuilder @Inject constructor(
             lastToolResult = _lastToolResult,
             executedTools = _executedTools.toSet(),
             currentDate = timeProvider.formatForLlm(),
-            entityContext = entityContext,  // Phase 2 实体线索
-            habitContext = habitContext      // Wave 3 习惯上下文
+            entityContext = _sessionContext.entityContext.toMap(),  // 从 RAM Section 1 读取
+            habitContext = _sessionContext.getCombinedHabitContext()  // 从 RAM S2+S3 读取
         )
     }
     

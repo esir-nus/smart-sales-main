@@ -1,5 +1,6 @@
 package com.smartsales.prism.domain.scheduler
 
+import com.smartsales.prism.domain.memory.ConflictPolicy
 import com.smartsales.prism.domain.time.TimeProvider
 import org.json.JSONObject
 import java.time.Instant
@@ -139,6 +140,10 @@ class SchedulerLinter @Inject constructor(
             endTime != null -> ChronoUnit.MINUTES.between(startTime, endTime).toInt().coerceAtLeast(1)
             else -> 5  // fire-off 提醒默认 5 分钟
         }
+        
+        // 冲突策略: 有明确时长/结束时间 → EXCLUSIVE, 否则 fire-off → COEXISTING
+        val isFireOff = explicitDuration.isNullOrBlank() && endTime == null
+        val policy = if (isFireOff) ConflictPolicy.COEXISTING else ConflictPolicy.EXCLUSIVE
 
         val highlights = if (json.isNull("highlights")) null else json.optString("highlights", null)
         val reminder = if (json.isNull("reminder")) null else json.optString("reminder", null)
@@ -160,6 +165,7 @@ class SchedulerLinter @Inject constructor(
                 startTime = startTime,
                 endTime = endTime,
                 durationMinutes = durationMinutes,
+                conflictPolicy = policy,
                 dateRange = formatDateRange(startTime, endTime),
                 location = location,
                 notes = notes,

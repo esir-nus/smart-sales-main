@@ -1,15 +1,25 @@
 package com.smartsales.prism.domain.session
 
+import com.smartsales.prism.domain.pipeline.EntityRef
+import com.smartsales.prism.domain.pipeline.MemoryHit
+import com.smartsales.prism.domain.rl.HabitContext
+
 /**
- * 会话上下文 — ContextBuilder 的智能缓存层
+ * 会话工作集 — 每个会话的 "RAM"
+ *
+ * OS Model 角色：Kernel 管理的工作区。所有 Application 通过此结构读写。
+ * 三个 Section：
+ *   Section 1: 蒸馏记忆（实体状态、路径索引、记忆命中、实体上下文）
+ *   Section 2: 用户习惯（全局，会话开始时加载一次）
+ *   Section 3: 客户习惯（上下文相关，实体变为 ACTIVE 时自动填充）
  *
  * 生命周期：会话开始时创建，会话结束或进程死亡时销毁。
- * 不是持久化存储，而是会话内的 O(1) 实体解析缓存。
  *
- * @param sessionId 当前会话 ID
- * @param createdAt 会话创建时间戳（由 TimeProvider 提供，便于测试）
+ * // TODO: 线程安全 — 当 EntityWriter 写入 Section 1 时需要同步 (Code Wave 3)
+ *
+ * @see docs/cerb/session-context/spec.md L98-153
  */
-data class SessionContext(
+class SessionContext(
     val sessionId: String,
     val createdAt: Long
 ) {
@@ -17,6 +27,10 @@ data class SessionContext(
         /** 路径索引最大容量（超过时淘汰最早插入的条目） */
         const val MAX_PATH_INDEX_SIZE = 50
     }
+
+    // ========================================
+    // Section 1: 蒸馏记忆 (Distilled Memory)
+    // ========================================
 
     /** 实体状态跟踪 — entityId → EntityTrace */
     val entityStates: MutableMap<String, EntityTrace> = mutableMapOf()
@@ -30,6 +44,30 @@ data class SessionContext(
      */
     val pathIndex: MutableMap<String, String> = mutableMapOf()
 
+    /** 记忆搜索结果（首轮由 Kernel 填充） */
+    var memoryHits: List<MemoryHit> = emptyList()
+
+    /** 实体引用（由 buildWithClues 填充） */
+    val entityContext: MutableMap<String, EntityRef> = mutableMapOf()
+
+    // ========================================
+    // Section 2: 用户习惯 (User Habits — Global)
+    // ========================================
+
+    /** 全局用户偏好（会话开始时加载一次，不随实体变化） */
+    var userHabitContext: HabitContext? = null
+
+    // ========================================
+    // Section 3: 客户习惯 (Client Habits — Contextual)
+    // ========================================
+
+    /** 实体相关偏好（markActive 时自动填充） */
+    var clientHabitContext: HabitContext? = null
+
+    // ========================================
+    // 会话元数据
+    // ========================================
+
     /** 当前会话轮次计数 */
     var turnCount: Int = 0
         private set
@@ -40,6 +78,10 @@ data class SessionContext(
     fun incrementTurn() {
         turnCount++
     }
+
+    // ========================================
+    // Section 1 操作：路径索引 + 实体状态
+    // ========================================
 
     /**
      * 从缓存解析别名 → entityId（O(1) 查找）
@@ -98,6 +140,31 @@ data class SessionContext(
         )
     }
 
+    // ========================================
+    // Section 2 + 3 操作：习惯上下文
+    // ========================================
+
+    /**
+     * 合并 Section 2 (用户习惯) + Section 3 (客户习惯) 为统一 HabitContext
+     *
+     * 向后兼容 — EnhancedContext.habitContext 消费方无需感知分区
+     */
+    fun getCombinedHabitContext(): HabitContext? {
+        val user = userHabitContext
+        val client = clientHabitContext
+        if (user == null && client == null) return null
+        return HabitContext(
+            userHabits = user?.userHabits ?: emptyList(),
+            clientHabits = client?.clientHabits ?: emptyList(),
+            suggestedDefaults = (user?.suggestedDefaults ?: emptyMap()) +
+                (client?.suggestedDefaults ?: emptyMap())
+        )
+    }
+
+    // ========================================
+    // 生命周期
+    // ========================================
+
     /**
      * 重置会话上下文（模式切换或新会话时调用）
      *
@@ -111,4 +178,7 @@ data class SessionContext(
         )
     }
 }
+
+/** OS Model 别名 — 新代码应使用此名称 */
+typealias SessionWorkingSet = SessionContext
 

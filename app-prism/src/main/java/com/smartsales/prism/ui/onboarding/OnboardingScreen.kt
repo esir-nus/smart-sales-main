@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -47,6 +48,17 @@ fun OnboardingScreen(
             .background(BackgroundApp), // Global Aurora
         contentAlignment = Alignment.Center
     ) {
+        // 跳过按钮 — 固定在右上角，所有步骤通用
+        TextButton(
+            onClick = onComplete,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 48.dp, end = 16.dp)
+                .statusBarsPadding()
+        ) {
+            Text("跳过", color = TextMuted, fontSize = 14.sp)
+        }
+
         // Step Content with Animation
         AnimatedContent(
             targetState = currentStep,

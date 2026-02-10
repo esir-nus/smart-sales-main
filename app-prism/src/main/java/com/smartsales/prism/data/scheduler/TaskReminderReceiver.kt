@@ -33,15 +33,16 @@ class TaskReminderReceiver : BroadcastReceiver() {
         if (intent.action != RealAlarmScheduler.ACTION_TASK_REMINDER) return
         
         val taskId = intent.getStringExtra(RealAlarmScheduler.EXTRA_TASK_ID) ?: return
+        val taskTitle = intent.getStringExtra(RealAlarmScheduler.EXTRA_TASK_TITLE) ?: "任务提醒"
         val offsetMinutes = intent.getIntExtra(RealAlarmScheduler.EXTRA_OFFSET_MINUTES, 15)
         
-        Log.d(TAG, "收到任务提醒: taskId=$taskId, offset=-${offsetMinutes}min")
+        Log.d(TAG, "收到任务提醒: taskId=$taskId, title=$taskTitle, offset=-${offsetMinutes}min")
         
         // 确保通知渠道已创建
         ensureNotificationChannel(context)
         
         // 显示通知
-        showNotification(context, taskId, offsetMinutes)
+        showNotification(context, taskId, taskTitle, offsetMinutes)
     }
 
     /**
@@ -67,7 +68,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
     /**
      * 显示任务提醒通知
      */
-    private fun showNotification(context: Context, taskId: String, offsetMinutes: Int) {
+    private fun showNotification(context: Context, taskId: String, taskTitle: String, offsetMinutes: Int) {
         // 检查通知权限 (Android 13+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val hasPermission = ContextCompat.checkSelfPermission(
@@ -86,6 +87,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
             60 -> "1小时后"
             15 -> "15分钟后"
             5 -> "5分钟后"
+            1 -> "1分钟后"
             else -> "${offsetMinutes}分钟后"
         }
         
@@ -103,9 +105,13 @@ class TaskReminderReceiver : BroadcastReceiver() {
         )
         
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)  // 需要确保此资源存在
-            .setContentTitle("⏰ 任务提醒")
-            .setContentText("您有任务将在${timeText}开始")
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("⏰ $taskTitle")
+            .setContentText("将在${timeText}开始")
+            .setStyle(NotificationCompat.BigTextStyle()
+                .bigText("将在${timeText}开始")
+                .setSummaryText("任务提醒")
+            )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)

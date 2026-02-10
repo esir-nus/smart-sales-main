@@ -37,12 +37,12 @@ class RealAlarmScheduler @Inject constructor(
         const val EXTRA_TASK_TITLE = "task_title"
         const val EXTRA_OFFSET_MINUTES = "offset_minutes"
         
-        // 级联提醒偏移量 (分钟)
-        private val CASCADE_OFFSETS = listOf(60, 15, 5)  // 1h, 15m, 5m before
-        private val SINGLE_OFFSET = listOf(15)           // 15m before only
+        // 级联提醒偏移量 (分钟) — 1min 是每个任务的最终提醒
+        private val CASCADE_OFFSETS = listOf(60, 15, 5, 1)  // 1h, 15m, 5m, 1m before
+        private val SINGLE_OFFSET = listOf(15, 1)            // 15m + 1m before
     }
 
-    override suspend fun scheduleReminder(taskId: String, triggerAt: Instant, type: ReminderType) {
+    override suspend fun scheduleReminder(taskId: String, taskTitle: String, triggerAt: Instant, type: ReminderType) {
         val offsets = when (type) {
             ReminderType.SMART_CASCADE -> CASCADE_OFFSETS
             ReminderType.SINGLE -> SINGLE_OFFSET
@@ -51,8 +51,8 @@ class RealAlarmScheduler @Inject constructor(
         offsets.forEach { offsetMinutes ->
             val alarmTime = triggerAt.minusSeconds(offsetMinutes * 60L)
             if (alarmTime.isAfter(timeProvider.now)) {
-                scheduleExactAlarm(taskId, offsetMinutes, alarmTime)
-                Log.d(TAG, "已设置提醒: taskId=$taskId, offset=-${offsetMinutes}min, at=$alarmTime")
+                scheduleExactAlarm(taskId, taskTitle, offsetMinutes, alarmTime)
+                Log.d(TAG, "已设置提醒: taskId=$taskId, title=$taskTitle, offset=-${offsetMinutes}min, at=$alarmTime")
             } else {
                 Log.d(TAG, "跳过过期提醒: taskId=$taskId, offset=-${offsetMinutes}min")
             }
@@ -62,27 +62,28 @@ class RealAlarmScheduler @Inject constructor(
     override suspend fun cancelReminder(taskId: String) {
         // 取消所有可能的级联提醒
         (CASCADE_OFFSETS + SINGLE_OFFSET).distinct().forEach { offsetMinutes ->
-            val intent = createCascadePendingIntent(taskId, offsetMinutes)
+            // title 对取消无影响，PendingIntent 匹配基于 requestCode
+            val intent = createCascadePendingIntent(taskId, "", offsetMinutes)
             alarmManager.cancel(intent)
         }
         Log.d(TAG, "已取消提醒: taskId=$taskId")
     }
 
-    override suspend fun scheduleSmartCascade(taskId: String, eventTime: Instant, taskType: TaskTypeHint) {
+    override suspend fun scheduleSmartCascade(taskId: String, taskTitle: String, eventTime: Instant, taskType: TaskTypeHint) {
         val reminderType = when (taskType) {
             TaskTypeHint.MEETING -> ReminderType.SMART_CASCADE  // 会议用级联
             TaskTypeHint.CALL -> ReminderType.SINGLE            // 电话用单次
             TaskTypeHint.PERSONAL -> ReminderType.SINGLE        // 个人用单次
             TaskTypeHint.URGENT -> ReminderType.SMART_CASCADE   // 紧急用级联
         }
-        scheduleReminder(taskId, eventTime, reminderType)
+        scheduleReminder(taskId, taskTitle, eventTime, reminderType)
     }
 
     /**
      * 设置精确闹钟
      */
-    private fun scheduleExactAlarm(taskId: String, offsetMinutes: Int, triggerAt: Instant) {
-        val pendingIntent = createCascadePendingIntent(taskId, offsetMinutes)
+    private fun scheduleExactAlarm(taskId: String, taskTitle: String, offsetMinutes: Int, triggerAt: Instant) {
+        val pendingIntent = createCascadePendingIntent(taskId, taskTitle, offsetMinutes)
         val triggerMillis = triggerAt.toEpochMilli()
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -115,10 +116,11 @@ class RealAlarmScheduler @Inject constructor(
      * 
      * 关键: 每个偏移量使用不同的 requestCode，确保多个提醒不会互相覆盖
      */
-    private fun createCascadePendingIntent(taskId: String, offsetMinutes: Int): PendingIntent {
+    private fun createCascadePendingIntent(taskId: String, taskTitle: String, offsetMinutes: Int): PendingIntent {
         val intent = Intent(context, TaskReminderReceiver::class.java).apply {
             action = ACTION_TASK_REMINDER
             putExtra(EXTRA_TASK_ID, taskId)
+            putExtra(EXTRA_TASK_TITLE, taskTitle)
             putExtra(EXTRA_OFFSET_MINUTES, offsetMinutes)
         }
         

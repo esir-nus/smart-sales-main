@@ -29,10 +29,10 @@ class FakeAlarmScheduler @Inject constructor() : AlarmScheduler {
     val cancelledTaskIds: List<String> get() = _cancelledTaskIds.toList()
     
     /** 用于测试的级联偏移量 */
-    private val cascadeOffsets = listOf(60, 15, 5)
-    private val singleOffset = listOf(15)
+    private val cascadeOffsets = listOf(60, 15, 5, 1)
+    private val singleOffset = listOf(15, 1)
     
-    override suspend fun scheduleReminder(taskId: String, triggerAt: Instant, type: ReminderType) {
+    override suspend fun scheduleReminder(taskId: String, taskTitle: String, triggerAt: Instant, type: ReminderType) {
         val offsets = when (type) {
             ReminderType.SMART_CASCADE -> cascadeOffsets
             ReminderType.SINGLE -> singleOffset
@@ -55,14 +55,14 @@ class FakeAlarmScheduler @Inject constructor() : AlarmScheduler {
         _scheduledAlarms.removeAll { it.taskId == taskId }
     }
 
-    override suspend fun scheduleSmartCascade(taskId: String, eventTime: Instant, taskType: TaskTypeHint) {
+    override suspend fun scheduleSmartCascade(taskId: String, taskTitle: String, eventTime: Instant, taskType: TaskTypeHint) {
         val reminderType = when (taskType) {
             TaskTypeHint.MEETING -> ReminderType.SMART_CASCADE
             TaskTypeHint.CALL -> ReminderType.SINGLE
             TaskTypeHint.PERSONAL -> ReminderType.SINGLE
             TaskTypeHint.URGENT -> ReminderType.SMART_CASCADE
         }
-        scheduleReminder(taskId, eventTime, reminderType)
+        scheduleReminder(taskId, taskTitle, eventTime, reminderType)
     }
     
     /** 清空测试状态 */

@@ -28,15 +28,15 @@ class AlarmSchedulerTest {
         val eventTime = Instant.parse("2026-02-03T15:00:00Z")
         
         // When
-        alarmScheduler.scheduleReminder(taskId, eventTime, ReminderType.SMART_CASCADE)
+        alarmScheduler.scheduleReminder(taskId, "Team Meeting", eventTime, ReminderType.SMART_CASCADE)
         
         // Then
         val alarms = alarmScheduler.getAlarmsForTask(taskId)
-        assertEquals(3, alarms.size)
+        assertEquals(4, alarms.size)
         
-        // 验证偏移量: -60m, -15m, -5m
+        // 验证偏移量: -60m, -15m, -5m, -1m
         val offsets = alarms.mapNotNull { it.offsetMinutes }.sortedDescending()
-        assertEquals(listOf(60, 15, 5), offsets)
+        assertEquals(listOf(60, 15, 5, 1), offsets)
     }
     
     @Test
@@ -46,11 +46,11 @@ class AlarmSchedulerTest {
         val eventTime = Instant.parse("2026-02-03T15:00:00Z")
         
         // When
-        alarmScheduler.scheduleReminder(taskId, eventTime, ReminderType.SINGLE)
+        alarmScheduler.scheduleReminder(taskId, "Quick Call", eventTime, ReminderType.SINGLE)
         
         // Then
         val alarms = alarmScheduler.getAlarmsForTask(taskId)
-        assertEquals(1, alarms.size)
+        assertEquals(2, alarms.size)
         assertEquals(15, alarms.first().offsetMinutes)
     }
     
@@ -61,11 +61,11 @@ class AlarmSchedulerTest {
         val eventTime = Instant.parse("2026-02-03T15:00:00Z")
         
         // When
-        alarmScheduler.scheduleSmartCascade(taskId, eventTime, TaskTypeHint.MEETING)
+        alarmScheduler.scheduleSmartCascade(taskId, "Board Meeting", eventTime, TaskTypeHint.MEETING)
         
         // Then
         val alarms = alarmScheduler.getAlarmsForTask(taskId)
-        assertEquals(3, alarms.size) // Cascade = 3 alarms
+        assertEquals(4, alarms.size) // Cascade = 4 alarms
     }
     
     @Test
@@ -75,11 +75,11 @@ class AlarmSchedulerTest {
         val eventTime = Instant.parse("2026-02-03T15:00:00Z")
         
         // When
-        alarmScheduler.scheduleSmartCascade(taskId, eventTime, TaskTypeHint.CALL)
+        alarmScheduler.scheduleSmartCascade(taskId, "Client Call", eventTime, TaskTypeHint.CALL)
         
         // Then
         val alarms = alarmScheduler.getAlarmsForTask(taskId)
-        assertEquals(1, alarms.size) // Single = 1 alarm
+        assertEquals(2, alarms.size) // Single = 2 alarms (15m + 1m)
     }
     
     @Test
@@ -87,8 +87,8 @@ class AlarmSchedulerTest {
         // Given
         val taskId = "task-cancel"
         val eventTime = Instant.parse("2026-02-03T15:00:00Z")
-        alarmScheduler.scheduleReminder(taskId, eventTime, ReminderType.SMART_CASCADE)
-        assertEquals(3, alarmScheduler.getAlarmsForTask(taskId).size)
+        alarmScheduler.scheduleReminder(taskId, "Sprint Review", eventTime, ReminderType.SMART_CASCADE)
+        assertEquals(4, alarmScheduler.getAlarmsForTask(taskId).size)
         
         // When
         alarmScheduler.cancelReminder(taskId)
@@ -105,7 +105,7 @@ class AlarmSchedulerTest {
         val eventTime = Instant.parse("2026-02-03T15:00:00Z")
         
         // When
-        alarmScheduler.scheduleReminder(taskId, eventTime, ReminderType.SMART_CASCADE)
+        alarmScheduler.scheduleReminder(taskId, "Performance Review", eventTime, ReminderType.SMART_CASCADE)
         
         // Then
         val alarms = alarmScheduler.scheduledAlarms

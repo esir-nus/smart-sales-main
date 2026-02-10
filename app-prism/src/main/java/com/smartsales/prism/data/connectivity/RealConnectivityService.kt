@@ -3,6 +3,7 @@ package com.smartsales.prism.data.connectivity
 import android.util.Log
 import com.smartsales.core.util.Result
 import com.smartsales.feature.connectivity.DeviceConnectionManager
+import com.smartsales.feature.connectivity.SessionStore
 import com.smartsales.feature.connectivity.WifiCredentials
 import com.smartsales.feature.connectivity.WifiProvisioner
 import com.smartsales.prism.domain.connectivity.ConnectivityService
@@ -28,7 +29,8 @@ private const val TAG = "ConnectivityService"
 @Singleton
 class RealConnectivityService @Inject constructor(
     private val deviceManager: DeviceConnectionManager,
-    private val wifiProvisioner: WifiProvisioner
+    private val wifiProvisioner: WifiProvisioner,
+    private val sessionStore: SessionStore
 ) : ConnectivityService {
     
     override suspend fun checkForUpdate(): UpdateResult {
@@ -45,8 +47,11 @@ class RealConnectivityService @Inject constructor(
         val result = when (outcome) {
             is com.smartsales.feature.connectivity.ConnectionState.Connected,
             is com.smartsales.feature.connectivity.ConnectionState.WifiProvisioned,
-            is com.smartsales.feature.connectivity.ConnectionState.Syncing -> 
-                ReconnectResult.Connected
+            is com.smartsales.feature.connectivity.ConnectionState.Syncing -> {
+                // BLE 已连接 — 检查 WiFi 是否与配网时一致
+                if (isWifiMismatch()) ReconnectResult.WifiMismatch
+                else ReconnectResult.Connected
+            }
             is com.smartsales.feature.connectivity.ConnectionState.NeedsSetup ->
                 ReconnectResult.DeviceNotFound
             is com.smartsales.feature.connectivity.ConnectionState.Error -> {
@@ -90,5 +95,20 @@ class RealConnectivityService @Inject constructor(
             is Result.Success -> WifiConfigResult.Success
             is Result.Error -> WifiConfigResult.Error(result.throwable.message ?: "WiFi 配置失败")
         }
+    }
+    
+    /**
+     * 比较 Badge 当前 WiFi SSID 与配网时存储的 SSID。
+     * 不同则说明 Badge 连了别的网络，需要重新配网。
+     */
+    private suspend fun isWifiMismatch(): Boolean {
+        val storedSsid = sessionStore.load()?.second?.ssid ?: return false
+        val networkResult = deviceManager.queryNetworkStatus()
+        val badgeSsid = (networkResult as? Result.Success)?.data?.deviceWifiName ?: return false
+        val mismatch = badgeSsid.isNotBlank() && !badgeSsid.equals(storedSsid, ignoreCase = true)
+        if (mismatch) {
+            Log.d(TAG, "⚠️ WiFi mismatch: badge=$badgeSsid, stored=$storedSsid")
+        }
+        return mismatch
     }
 }

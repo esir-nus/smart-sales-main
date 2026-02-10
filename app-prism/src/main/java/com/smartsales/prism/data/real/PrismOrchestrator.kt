@@ -188,22 +188,20 @@ class PrismOrchestrator @Inject constructor(
                             // 插入任务到日历
                             val taskId = scheduledTaskRepository.insertTask(enrichedTask)
                             
-                            // 设置提醒
-                            lintResult.reminderType?.let { reminderType ->
-                                val startTime = parseStartTime(lintResult.task.dateRange)
-                                if (startTime != null) {
-                                    when (reminderType) {
-                                        ReminderType.SMART_CASCADE -> {
-                                            alarmScheduler.scheduleSmartCascade(
-                                                taskId, startTime, lintResult.taskTypeHint
-                                            )
-                                        }
-                                        ReminderType.SINGLE -> {
-                                            alarmScheduler.scheduleReminder(
-                                                taskId, startTime, reminderType
-                                            )
-                                        }
-                                    }
+                            // 设置提醒 — 使用已解析的 startTime，默认 SINGLE
+                            val effectiveReminderType = lintResult.reminderType
+                                ?: ReminderType.SINGLE
+                            val eventTime = enrichedTask.startTime
+                            when (effectiveReminderType) {
+                                ReminderType.SMART_CASCADE -> {
+                                    alarmScheduler.scheduleSmartCascade(
+                                        taskId, enrichedTask.title, eventTime, lintResult.taskTypeHint
+                                    )
+                                }
+                                ReminderType.SINGLE -> {
+                                    alarmScheduler.scheduleReminder(
+                                        taskId, enrichedTask.title, eventTime, effectiveReminderType
+                                    )
                                 }
                             }
                             
@@ -292,6 +290,11 @@ class PrismOrchestrator @Inject constructor(
                                 }
                                 val taskId = scheduledTaskRepository.insertTask(enrichedTask)
                                 
+                                // 设置提醒 — 批量任务也需要闹钟
+                                alarmScheduler.scheduleReminder(
+                                    taskId, enrichedTask.title, enrichedTask.startTime, ReminderType.SINGLE
+                                )
+                                
                                 // 计算日期偏移量
                                 val taskDate = enrichedTask.startTime.atZone(zone).toLocalDate()
                                 val dayOffset = ChronoUnit.DAYS.between(today, taskDate).toInt()
@@ -371,20 +374,7 @@ class PrismOrchestrator @Inject constructor(
     }
     
 
-    
-    private fun parseStartTime(dateRange: String): Instant? {
-        return try {
-            val parts = dateRange.split("~").map { it.trim() }
-            if (parts.isEmpty()) return null
-            
-            val formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-            java.time.LocalDateTime.parse(parts[0], formatter)
-                .atZone(ZoneId.systemDefault())
-                .toInstant()
-        } catch (e: Exception) {
-            null
-        }
-    }
+
     
     /**
      * Parse rl_observations from LLM JSON

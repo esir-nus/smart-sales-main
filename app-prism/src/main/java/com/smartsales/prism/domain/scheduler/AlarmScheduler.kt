@@ -10,10 +10,11 @@ interface AlarmScheduler {
     /**
      * 设置任务提醒
      * @param taskId 任务ID
+     * @param taskTitle 任务标题 (用于通知显示)
      * @param triggerAt 触发时间
      * @param type 提醒类型
      */
-    suspend fun scheduleReminder(taskId: String, triggerAt: Instant, type: ReminderType)
+    suspend fun scheduleReminder(taskId: String, taskTitle: String, triggerAt: Instant, type: ReminderType)
 
     /**
      * 取消任务提醒
@@ -23,7 +24,7 @@ interface AlarmScheduler {
     /**
      * 使用智能级联设置提醒 (根据任务类型自动决定提前时间)
      */
-    suspend fun scheduleSmartCascade(taskId: String, eventTime: Instant, taskType: TaskTypeHint)
+    suspend fun scheduleSmartCascade(taskId: String, taskTitle: String, eventTime: Instant, taskType: TaskTypeHint)
 }
 
 /**

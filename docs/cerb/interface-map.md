@@ -12,11 +12,11 @@
 
 Leaf services with no upstream dependencies. They don't call other modules.
 
-| Module | Owns (Writes) | Reads From | Key Interface |
-|--------|--------------|------------|---------------|
-| **ConnectivityBridge** | BLE + HTTP device state | — | `ConnectivityService` |
-| **OSS** | File upload/download | — | `OssUploader.upload()` |
-| **ASR** | Transcription results | OSS (downloads audio files to transcribe) | `TingwuRunner.transcribe()` |
+| Module | Owns (Writes) | Reads From | Key Interface | OS Layer |
+|--------|--------------|------------|---------------|----------|
+| **ConnectivityBridge** | BLE + HTTP device state | — | `ConnectivityService` | — |
+| **OSS** | File upload/download | — | `OssUploader.upload()` | — |
+| **ASR** | Transcription results | OSS (downloads audio files to transcribe) | `TingwuRunner.transcribe()` | — |
 
 ---
 
@@ -24,13 +24,13 @@ Leaf services with no upstream dependencies. They don't call other modules.
 
 Store and query domain data. Other modules use their interfaces but never each other's storage.
 
-| Module | Owns (Writes) | Reads From | Key Interface |
-|--------|--------------|------------|---------------|
-| **EntityWriter** | Entity mutations (create/update/merge aliases) | — | `EntityWriter.upsertFromClue()` |
-| **EntityRegistry** | Entity queries (read-only view of entities) | — | `EntityRepository.findByAlias()` |
-| **MemoryCenter** | Conversation memory entries | — | `MemoryRepository.search()` |
-| **UserHabit** | Behavioral pattern observations | — | `UserHabitRepository.observe()` |
-| **SessionContext** | Per-session entity cache (ephemeral) | EntityRegistry (populates cache) | `SessionContext.getCachedEntities()` |
+| Module | Owns (Writes) | Reads From | Key Interface | OS Layer |
+|--------|--------------|------------|---------------|----------|
+| **EntityWriter** | Entity mutations (create/update/merge aliases) | — | `EntityWriter.upsertFromClue()` | RAM Application |
+| **EntityRegistry** | Entity queries (read-only view of entities) | — | `EntityRepository.findByAlias()` | SSD |
+| **MemoryCenter** | Conversation memory entries | — | `MemoryRepository.search()` | SSD |
+| **UserHabit** | Behavioral pattern observations | — | `UserHabitRepository.observe()` | SSD |
+| **SessionContext** | Per-session entity cache (ephemeral) | EntityRegistry (populates cache) | `SessionContext.getCachedEntities()` | Kernel (RAM) |
 
 > **EntityWriter vs EntityRegistry**: Writer handles mutations (dedup, merge, alias registration). Registry handles queries. Callers MUST use Writer for writes, Registry for reads. Never call `EntityRepository.save()` directly.
 
@@ -40,11 +40,11 @@ Store and query domain data. Other modules use their interfaces but never each o
 
 Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 
-| Module | Owns (Writes) | Reads From | Key Interface |
-|--------|--------------|------------|---------------|
-| **ContextBuilder** | `EnhancedContext` (assembled prompt context) | EntityRegistry, MemoryCenter, SessionContext | `ContextBuilder.build()` |
-| **Executor** | Raw LLM output (stateless — no storage) | — | `Executor.execute()` |
-| **Orchestrator** | Mode routing + pipeline coordination | ContextBuilder, Executor, all Linters, EntityWriter | `Orchestrator.process()` |
+| Module | Owns (Writes) | Reads From | Key Interface | OS Layer |
+|--------|--------------|------------|---------------|----------|
+| **ContextBuilder** | `EnhancedContext` (assembled prompt context) | EntityRegistry, MemoryCenter, SessionContext | `ContextBuilder.build()` | Kernel |
+| **Executor** | Raw LLM output (stateless — no storage) | — | `Executor.execute()` | — |
+| **Orchestrator** | Mode routing + pipeline coordination | ContextBuilder, Executor, all Linters, EntityWriter | `Orchestrator.process()` | — |
 
 > **Orchestrator is the only module that calls EntityWriter during task creation.** Feature modules (Scheduler, Coach) receive results from Orchestrator; they don't call EntityWriter themselves.
 
@@ -54,13 +54,13 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 
 User-facing features. Each receives processed results from Orchestrator (Layer 3) and reads from Data Services (Layer 2).
 
-| Module | Owns (Writes) | Reads From (directly) | Receives From (via Orchestrator) |
-|--------|--------------|----------------------|----------------------------------|
-| **Scheduler** | ScheduledTask, InspirationEntry | EntityRegistry (alias lookup), ScheduleBoard (conflicts) | `UiState.SchedulerTaskCreated` |
-| **ScheduleBoard** | Conflict index (in-memory cache) | ScheduledTaskRepository (populates index) | — |
-| **Coach** | Chat message responses | MemoryCenter, UserHabit, EntityRegistry | `UiState.Response` |
-| **Analyst** | Analysis reports | MemoryCenter, EntityRegistry | `UiState.Response` |
-| **BadgeAudioPipeline** | Audio recording lifecycle | ASR, OSS, ConnectivityBridge | Triggers Orchestrator on transcription complete |
+| Module | Owns (Writes) | Reads From (directly) | Receives From (via Orchestrator) | OS Layer |
+|--------|--------------|----------------------|----------------------------------|----------|
+| **Scheduler** | ScheduledTask, InspirationEntry | EntityRegistry (alias lookup), ScheduleBoard (conflicts) | `UiState.SchedulerTaskCreated` | Consumer of RAM |
+| **ScheduleBoard** | Conflict index (in-memory cache) | ScheduledTaskRepository (populates index) | — | SSD |
+| **Coach** | Chat message responses | MemoryCenter, UserHabit, EntityRegistry | `UiState.Response` | Consumer of RAM |
+| **Analyst** | Analysis reports | MemoryCenter, EntityRegistry | `UiState.Response` | Consumer of RAM |
+| **BadgeAudioPipeline** | Audio recording lifecycle | ASR, OSS, ConnectivityBridge | Triggers Orchestrator on transcription complete | — |
 
 > **"Reads From" vs "Receives From"**: "Reads From" = the feature calls the interface directly. "Receives From" = Orchestrator pushes results into the feature's ViewModel. This distinction prevents confusion about who initiates the call.
 
@@ -70,10 +70,10 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 
 Cross-cutting services that aggregate data from multiple Layer 2 sources.
 
-| Module | Owns (Writes) | Reads From | Key Interface |
-|--------|--------------|------------|---------------|
-| **ClientProfileHub** | Aggregated client context for tips | EntityRegistry, MemoryCenter, UserHabit | `ClientProfileHub.getFocusedContext()` |
-| **RLModule** | Prompt tuning parameters | UserHabit | `ReinforcementLearner.adjustPrompt()` |
+| Module | Owns (Writes) | Reads From | Key Interface | OS Layer |
+|--------|--------------|------------|---------------|----------|
+| **ClientProfileHub** | Aggregated client context for tips | EntityRegistry, MemoryCenter, UserHabit | `ClientProfileHub.getFocusedContext()` | File Explorer |
+| **RLModule** | Prompt tuning parameters | UserHabit | `ReinforcementLearner.adjustPrompt()` | RAM Application |
 
 ---
 

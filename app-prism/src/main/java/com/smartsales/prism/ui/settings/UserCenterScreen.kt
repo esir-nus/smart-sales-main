@@ -15,6 +15,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -195,11 +198,22 @@ fun UserCenterScreen(
                             SettingsRowToggle("AI Laboratory", true) {}
                             // 通知开关 — 读取真实系统状态，点击打开系统通知设置
                             val context = androidx.compose.ui.platform.LocalContext.current
-                            val notificationsEnabled = remember {
-                                val manager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE)
-                                    as android.app.NotificationManager
-                                manager.areNotificationsEnabled()
+                            val lifecycleOwner = LocalLifecycleOwner.current
+                            var notificationsEnabled by remember { mutableStateOf(false) }
+                            
+                            // 监听生命周期 ON_RESUME，从系统设置返回时刷新状态
+                            DisposableEffect(lifecycleOwner) {
+                                val observer = LifecycleEventObserver { _, event ->
+                                    if (event == Lifecycle.Event.ON_RESUME) {
+                                        val manager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE)
+                                            as android.app.NotificationManager
+                                        notificationsEnabled = manager.areNotificationsEnabled()
+                                    }
+                                }
+                                lifecycleOwner.lifecycle.addObserver(observer)
+                                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                             }
+                            
                             SettingsRowToggle("Notifications", notificationsEnabled) {
                                 // 打开系统通知设置页
                                 val intent = android.content.Intent().apply {

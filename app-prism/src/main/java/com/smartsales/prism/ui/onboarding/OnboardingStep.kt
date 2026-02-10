@@ -17,5 +17,6 @@ enum class OnboardingStep {
     DEVICE_NAMING,    // Step 8: Personalization
     ACCOUNT_GATE,     // Step 9: Bind Context
     PROFILE,          // Step 10: Role/Industry
+    NOTIFICATION_PERMISSION, // Step 10.5: Request POST_NOTIFICATIONS (Android 13+)
     COMPLETE          // Step 11: Success
 }

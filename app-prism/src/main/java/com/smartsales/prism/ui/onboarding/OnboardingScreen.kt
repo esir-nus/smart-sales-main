@@ -4,6 +4,7 @@ import androidx.compose.animation.*
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -117,7 +118,10 @@ fun OnboardingScreen(
                         onLogin = { currentStep = OnboardingStep.PROFILE }
                     )
                     OnboardingStep.PROFILE -> ProfileStep(
-                        onFinish = { currentStep = OnboardingStep.COMPLETE }
+                        onFinish = { currentStep = OnboardingStep.NOTIFICATION_PERMISSION }
+                    )
+                    OnboardingStep.NOTIFICATION_PERMISSION -> NotificationPermissionStep(
+                        onNext = { currentStep = OnboardingStep.COMPLETE }
                     )
                     OnboardingStep.COMPLETE -> CompleteStep(
                         onGoHome = onComplete
@@ -446,4 +450,61 @@ private fun GlassTextField(
         modifier = Modifier.fillMaxWidth(),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
     )
+}
+
+@Composable
+private fun NotificationPermissionStep(onNext: () -> Unit) {
+    // Android 13+ (Tiramisu) 需要运行时权限
+    val needsPermission = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
+    
+    if (!needsPermission) {
+        // 旧版本不需要请求，直接跳过
+        LaunchedEffect(Unit) { onNext() }
+        return
+    }
+
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        // 无论同意还是拒绝，都进入下一步
+        // Future: 如果拒绝，可以显示 Banner 提示 "未开启通知可能错过重要任务"
+        onNext()
+    }
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(
+            imageVector = Icons.Default.NotificationsActive,
+            contentDescription = null,
+            tint = AccentBlue,
+            modifier = Modifier.size(80.dp)
+        )
+        Spacer(Modifier.height(32.dp))
+        Text("开启通知提醒", fontSize = 24.sp, color = TextPrimary, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(16.dp))
+        Text(
+            "在任务开始前收到精准提醒\n不错过任何重要安排", 
+            fontSize = 16.sp, 
+            color = TextSecondary,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+        Spacer(Modifier.height(48.dp))
+        
+        PrismButton(
+            text = "开启通知", 
+            onClick = { 
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    launcher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    onNext()
+                }
+            }, 
+            modifier = Modifier.fillMaxWidth()
+        )
+        
+        Spacer(Modifier.height(16.dp))
+        
+        TextButton(onClick = onNext) {
+            Text("稍后再说", color = TextMuted)
+        }
+    }
 }

@@ -193,7 +193,21 @@ fun UserCenterScreen(
                         SettingsSection("PREFERENCES") {
                             SettingsRowSelect("Theme", "System") {}
                             SettingsRowToggle("AI Laboratory", true) {}
-                            SettingsRowToggle("Notifications", false) {}
+                            // 通知开关 — 读取真实系统状态，点击打开系统通知设置
+                            val context = androidx.compose.ui.platform.LocalContext.current
+                            val notificationsEnabled = remember {
+                                val manager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE)
+                                    as android.app.NotificationManager
+                                manager.areNotificationsEnabled()
+                            }
+                            SettingsRowToggle("Notifications", notificationsEnabled) {
+                                // 打开系统通知设置页
+                                val intent = android.content.Intent().apply {
+                                    action = android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS
+                                    putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                }
+                                context.startActivity(intent)
+                            }
                         }
                     }
 

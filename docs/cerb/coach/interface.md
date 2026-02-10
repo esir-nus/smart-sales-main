@@ -1,6 +1,7 @@
 # Coach Interface (Blackbox Contract)
 
-> **Consumer Contract** — Minimal API for features that need Coach responses.
+> **Consumer Contract** — Minimal API for features that need Coach responses.  
+> **OS Model**: Consumer of RAM (reads habits + entity context from SessionWorkingSet)
 
 ---
 
@@ -80,7 +81,8 @@ when (response) {
 |----------|--------------|
 | Call for Analyst-mode queries | Use `AnalystPipeline` instead |
 | Access `MemoryRepository` directly | Let pipeline handle memory search |
-| Access `ReinforcementLearner` directly | Let pipeline handle habit context |
+| Access `ReinforcementLearner` directly | Pipeline reads habits from RAM (Sections 2 & 3) |
+| Manually wire `entityIds` for habit context | Kernel auto-populates RAM; pipeline just reads |
 | Block on response | This is a `suspend` function |
 | Parse structured output manually | Pipeline returns typed response |
 
@@ -90,13 +92,13 @@ when (response) {
 
 These are consumed **by the implementation**, not by you:
 
-| Interface | Cerb Shard | Purpose |
-|-----------|------------|---------|
-| `ContextBuilder` | — | Build enhanced context |
-| `Executor` | — | Execute LLM calls |
-| `MemoryRepository` | memory-center | Memory search |
-| `ReinforcementLearner` | rl-module | Habit context |
-| `AgentActivityController` | — | Visibility trace |
+| Interface | Cerb Shard | Purpose | OS Model Note |
+|-----------|------------|---------|---------------|
+| `ContextBuilder` | — | Build enhanced context | **Kernel** — loads RAM |
+| `Executor` | — | Execute LLM calls | Direct call |
+| `MemoryRepository` | memory-center | Memory search | SSD query (search, not session data) |
+| `ReinforcementLearner` | rl-module | Habit context | **Reads from RAM** Sections 2 & 3 |
+| `AgentActivityController` | — | Visibility trace | Direct call |
 
 ---
 

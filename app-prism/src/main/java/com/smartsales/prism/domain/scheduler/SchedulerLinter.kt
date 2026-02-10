@@ -129,23 +129,15 @@ class SchedulerLinter @Inject constructor(
             return LintResult.Error("不能创建过去的任务")
         }
 
-        // Duration check: Mandatory Loop Phase 1
-        // Priority: Explicit JSON > EndTime Diff > TaskType Inference > Ask User
+        // Duration: LLM 推断为主，无需确认
+        // 优先级: 显式 JSON duration > endTime 差值 > 5 分钟 (fire-off 提醒)
         val explicitDuration = json.optString("duration", null)
         val taskTypeHint = inferTaskType(title)
         
-        val durationMinutes: Int? = when {
-            !explicitDuration.isNullOrBlank() -> parseDuration(explicitDuration)
-            endTime != null -> ChronoUnit.MINUTES.between(startTime, endTime).toInt()
-            else -> taskTypeHint.defaultDuration()
-        }
-        
-        if (durationMinutes == null || durationMinutes <= 0) {
-            return LintResult.Incomplete(
-                missingField = "duration",
-                question = "这个${title}大概多长时间？",
-                partialClues = partialClues.copy(durationMinutes = null)
-            )
+        val durationMinutes: Int = when {
+            !explicitDuration.isNullOrBlank() -> parseDuration(explicitDuration) ?: 5
+            endTime != null -> ChronoUnit.MINUTES.between(startTime, endTime).toInt().coerceAtLeast(1)
+            else -> 5  // fire-off 提醒默认 5 分钟
         }
 
         val highlights = if (json.isNull("highlights")) null else json.optString("highlights", null)

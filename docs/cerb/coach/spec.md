@@ -1,6 +1,7 @@
 # Coach Mode
 
-> **Cerb-compliant spec** — Lightweight conversational AI for sales coaching.
+> **Cerb-compliant spec** — Lightweight conversational AI for sales coaching.  
+> **OS Model**: Consumer of RAM (reads habits + entity context from SessionWorkingSet)
 
 ---
 
@@ -30,10 +31,10 @@ Coach Mode is the **default conversational mode** in Prism. It provides fast, li
 User Input
     │
     ▼
-[Context Builder]
-    ├─▶ Session Context (Primary: In-Chat History)
-    ├─▶ ReinforcementLearner.getHabitContext() ─▶ User/client habits
-    ├─▶ ClientProfileHub.getQuickContext() ─▶ Entity snapshots (optional)
+[Context Builder (Kernel)]
+    ├─▶ RAM Section 1 ─▶ Entity context (who is being discussed)
+    ├─▶ RAM Section 2 ─▶ User habits (global preferences)
+    ├─▶ RAM Section 3 ─▶ Client habits (auto-populated by Kernel)
     └─▶ MemoryRepository.search() ─▶ Relevant memory (First turn / High ambiguity)
     │
     ▼
@@ -42,6 +43,10 @@ User Input
     └─ Response flags ─────▶  ├─▶ suggestAnalyst? → Suggestion block
                               └─▶ async → Memory Writer → Hot Zone
 ```
+
+> [!IMPORTANT]
+> **OS Model Simplification**: Coach does NOT manually wire `entityIds` or call `getHabitContext(entityIds)`. The Kernel loads habit context into RAM Sections 2 & 3 automatically. Coach just reads what's on the RAM.
+> This eliminates the Coach Mode missing-client-habits bug.
 
 ---
 
@@ -138,6 +143,12 @@ Coach detects schedule conflict during conversation.
 | **2** | Real LLM + Context | ✅ SHIPPED | `RealCoachPipeline`, system prompt, session history |
 | **3** | Memory + Habit | ✅ SHIPPED | `MemoryRepository.search()`, `getHabitContext()` integration |
 | **4** | Analyst Suggestion | ✅ SHIPPED | `suggestAnalyst` flag parsing, UI block |
+| **5** | **OS Model Upgrade** | 🔲 PLANNED | Delete `entityIds` wiring, read habits from RAM |
+
+### Wave 5 Scope (OS Model)
+- Remove `entityIds` parameter passing in `RealContextBuilder.build()` and `buildWithClues()`
+- Read `HabitContext` from `SessionWorkingSet` Sections 2 & 3 instead of calling `getHabitContext(entityIds)`
+- Verify client habits auto-populate when entities become ACTIVE in Section 1
 
 > [!NOTE]
 > Wave 4 MVP uses keyword heuristic (`分析`, `数据`). LLM-based detection planned for Wave 4.5.

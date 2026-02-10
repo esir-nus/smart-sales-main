@@ -1,6 +1,7 @@
 # Scheduler
 
-> **Cerb-compliant spec** — Self-contained, all content inline.
+> **Cerb-compliant spec** — Self-contained, all content inline.  
+> **OS Model**: Consumer of RAM (reads entity context from SessionWorkingSet Section 1)
 
 ---
 
@@ -8,9 +9,11 @@
 
 Scheduler manages task creation, timeline display, alarm cascading, and LLM-powered parsing. Uses **Memory Center's ScheduleBoard** for conflict detection.
 
+**OS Model Note**: Scheduler reads entity context (key persons, locations) from RAM Section 1 instead of doing its own entity extraction via `buildWithClues`. The Kernel populates entity context; Scheduler just consumes what's on the RAM.
+
 **Key Distinction:**
 - `ScheduleBoard` = Memory Center index (conflict check infrastructure)
-- `ScheduledTaskRepository` = Scheduler feature (task CRUD)
+- `ScheduledTaskRepository` = Scheduler feature (task CRUD, **SSD Storage**)
 
 **Inspiration**:
 - Standalone notes, **not time-bound**
@@ -110,6 +113,9 @@ Orchestrator (MODE_SCHEDULER)
 LLM Parse → JSON { title, startTime, endTime?, location?, ... }
     ↓
 SchedulerLinter.lint() → LintResult.Success | Error
+    ↓
+    ├─▶ RAM Section 1 → Entity context (keyPerson, location candidates)
+    │   (Kernel auto-populated — no buildWithClues needed)
     ↓
 ScheduleBoard.checkConflict() → Clear | Conflict
     ↓
@@ -447,6 +453,20 @@ val tipsLoading: Boolean = false      // 生成动画状态
     - [ ] Empty EntityLib → tips = [] (graceful degradation)
     - [ ] LLM timeout → tipsLoading = false, tips = [] (no error shown)
 - **Deliverables**: `TipGenerator.kt`, prompt in `DashscopeExecutor`, ViewModel lazy-load wiring, UI shimmer + tip list
+
+### Wave 10: OS Model Upgrade 🔲 PLANNED
+
+Simplify entity context access by reading from RAM instead of `buildWithClues`.
+
+- **Scope**:
+  - Remove `buildWithClues()` entity extraction from Scheduler pipeline
+  - Read entity context (keyPerson, location) from SessionWorkingSet Section 1
+  - Wave 9 tip generation reads `entityId` from RAM instead of EntityRegistry lookup
+- **Ship Criteria**: Entity context available in pipeline without explicit extraction
+- **Test Cases**:
+    - [ ] Task with keyPerson → entity context auto-available from RAM
+    - [ ] No entity mentioned → graceful fallback (no crash)
+    - [ ] Wave 7 deletion → no regression
 
 ---
 

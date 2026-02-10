@@ -1,6 +1,7 @@
 # Scheduler Interface
 
-> **Blackbox contract** — For consumers (Chat, PrismShell). Don't read implementation.
+> **Blackbox contract** — For consumers (Chat, PrismShell). Don't read implementation.  
+> **OS Model**: Consumer of RAM (reads entity context from SessionWorkingSet Section 1)
 
 ---
 
@@ -158,6 +159,7 @@ enum class ReminderType { SINGLE, SMART_CASCADE }
 - ❌ Access database directly
 - ❌ Parse LLM JSON manually — use `SchedulerLinter`
 - ❌ Implement your own conflict logic — use `ScheduleBoard` from Memory Center
+- ❌ Manually do entity resolution (e.g. `buildWithClues`) — Kernel populates RAM; pipeline reads it
 
 ---
 

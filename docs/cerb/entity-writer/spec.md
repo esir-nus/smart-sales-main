@@ -11,7 +11,7 @@ Ensures consistent:
 1. Alias registration (dedup)
 2. Field update policies (append vs replace)
 3. Source tracking (provenance)
-4. Event emission (future)
+4. **Change tracking** — profile changes (name, title, company) trigger history events
 
 ---
 
@@ -30,7 +30,7 @@ Caller (Scheduler/Coach)
        │   └─ getById() → merge fields → save()
        │
        ├─ 3. Apply Field Policies
-       │   ├─ displayName: Keep existing
+       │   ├─ displayName: Latest-write-wins (old → aliases)
        │   ├─ aliasesJson: Append unique
        │   ├─ attributesJson: Upsert key
        │   └─ _sourceJson: Track provenance
@@ -91,7 +91,7 @@ suspend fun upsertFromClue(...): UpsertResult {
         val merged = existing.copy(
             aliasesJson = mergeAliases(existing.aliasesJson, clue),
             lastUpdatedAt = now()
-            // displayName: KEEP existing (first-write-wins)
+            // displayName: Latest-write-wins (old name → aliasesJson)
             // demeanorJson: KEEP existing (not touched by upsert)
             // metricsHistoryJson: KEEP existing (not touched by upsert)
         )
@@ -108,13 +108,48 @@ suspend fun upsertFromClue(...): UpsertResult {
 
 | Field | Policy | Implementation | Via |
 |-------|--------|----------------|-----|
-| `displayName` | First-write-wins | `existing.displayName` (ignore input) | `upsertFromClue` |
+| `displayName` | **Latest-write-wins** | Old name → `aliasesJson`, new name replaces | `updateProfile` |
 | `aliasesJson` | Append (Cap 8) | `(old + new).distinct().takeLast(8)` — FIFO tail, oldest dropped | `upsertFromClue`, `registerAlias` |
 | `demeanorJson` | Upsert per key | `oldMap + newMap` | `updateAttribute` |
 | `attributesJson` | Upsert per key | `oldMap + newMap` | `updateAttribute` |
 | `metricsHistoryJson` | Append per key | `oldTimeSeries + newEntry` | `updateAttribute` |
 | `relatedEntitiesJson` | Append (dedupe) | `(oldList + newId).distinct()` | Future wave |
-| `decisionLogJson` | Append-only | `oldList + newEntry` | Future wave |
+| `decisionLogJson` | ~~Append-only~~ **Deprecated** | Superseded by `UnifiedActivity` timeline | — |
+
+#### Tracked Profile Fields (Change-Aware)
+
+These fields trigger a `UnifiedActivity` history event when changed:
+
+| Field | ActivityType | Example |
+|-------|-------------|----------|
+| `displayName` | `NAME_CHANGE` | 索尼娱乐集团 → SONY |
+| `jobTitle` | `TITLE_CHANGE` | 销售经理 → 销售VP |
+| `accountId` | `COMPANY_CHANGE` | 承时利和 → 华为 |
+| `buyingRole` | `ROLE_CHANGE` | champion → economic_buyer |
+| `dealStage` | `DEAL_STAGE_CHANGE` | proposal → negotiation |
+
+**Change-Tracking Pattern:**
+
+```kotlin
+// Inside EntityWriter.updateProfile()
+if (newJobTitle != null && newJobTitle != existing.jobTitle) {
+    // 1. Record history BEFORE overwrite
+    contextBuilder.recordActivity(
+        entityId = entityId,
+        type = ActivityType.TITLE_CHANGE,
+        summary = "${existing.jobTitle} → $newJobTitle"
+    )
+    // 2. Update the field
+    merged = merged.copy(jobTitle = newJobTitle)
+}
+```
+
+**Display Format (UI):**
+```
+SONY (Former 索尼娱乐集团)
+孙扬浩 at 华为 (Former 承时利和)
+```
+Former names are always in `aliasesJson`. UI reads aliases to show history context.
 
 ### 4. Source Tracking
 
@@ -141,7 +176,7 @@ Convention: Keys prefixed with `_` are metadata, not business attributes.
 | **0** | Prerequisites (delete infra) | ✅ SHIPPED | `EntityRepository.delete()` + DAO + impls |
 | **1** | Core Writer | ✅ SHIPPED | `EntityWriter` interface + `RealEntityWriter` + tests |
 | **1.5** | Wiring | ✅ SHIPPED | Wire into `PrismOrchestrator` Scheduler path |
-| **2** | Event Emission | 🔲 PLANNED | `EntityEvent` bus (for UI updates) |
+| **2** | Change-Aware Profile Management | 🔲 PLANNED | `updateProfile()`, change tracking, history emission |
 | **3** | Conflict Merge | 🔲 PLANNED | UI flow for merging duplicates |
 
 ---

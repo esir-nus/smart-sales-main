@@ -77,6 +77,19 @@ data class UnifiedActivity(
     val assetId: String?,
     val relatedEntityIds: List<String>
 )
+
+enum class ActivityType {
+    MEETING, CALL, NOTE, ARTIFACT_GENERATED, DEAL_STAGE_CHANGE, TASK_COMPLETED,
+
+    // Change-Aware Profile Tracking
+    NAME_CHANGE,       // Account/Contact renamed
+    TITLE_CHANGE,      // Contact promoted/changed role
+    COMPANY_CHANGE,    // Contact moved companies
+    ROLE_CHANGE,       // Buying role changed
+
+    // RL Module Insights
+    INSIGHT_LEARNED    // RL discovered high-confidence habit
+}
 ```
 
 ---

@@ -62,6 +62,22 @@ interface EntityWriter {
     suspend fun registerAlias(entityId: String, alias: String)
 
     /**
+     * Update tracked profile fields on an existing entity.
+     * If a tracked field changes, EntityWriter emits a UnifiedActivity
+     * history event BEFORE overwriting the field.
+     *
+     * Tracked fields: displayName, jobTitle, accountId, buyingRole, dealStage
+     *
+     * @param entityId Must exist
+     * @param updates Map of field name → new value (only non-null fields updated)
+     * @return ProfileUpdateResult with list of changes detected
+     */
+    suspend fun updateProfile(
+        entityId: String,
+        updates: Map<String, String?>
+    ): ProfileUpdateResult
+
+    /**
      * Delete an entity by ID. No-op if entity doesn't exist.
      */
     suspend fun delete(entityId: String)
@@ -75,6 +91,20 @@ data class UpsertResult(
     val isNew: Boolean,
     val displayName: String  // Canonical name (for write-back to caller)
 )
+
+/**
+ * Result of a profile update. Lists which fields actually changed.
+ */
+data class ProfileUpdateResult(
+    val entityId: String,
+    val changes: List<ProfileChange>
+)
+
+data class ProfileChange(
+    val field: String,       // e.g., "jobTitle"
+    val oldValue: String?,
+    val newValue: String?
+)
 ```
 
 ---
@@ -85,6 +115,7 @@ data class UpsertResult(
 |--------|-------|--------|
 | `upsertFromClue` | clue, resolvedId?, type, source | `UpsertResult` |
 | `updateAttribute` | entityId, key, value | Unit |
+| `updateProfile` | entityId, updates (Map) | `ProfileUpdateResult` |
 | `registerAlias` | entityId, alias | Unit |
 | `delete` | entityId | Unit |
 
@@ -96,6 +127,7 @@ data class UpsertResult(
 |--------|--------------|
 | `upsertFromClue` | `clue` must be non-blank. Throws `IllegalArgumentException` otherwise. |
 | `updateAttribute` | `entityId` must exist. No-op if not found. `key` must not start with `_`. |
+| `updateProfile` | `entityId` must exist. Throws `IllegalArgumentException` if not found. Only tracked fields accepted. |
 | `registerAlias` | `entityId` must exist. No-op if not found. |
 
 ---
@@ -106,7 +138,9 @@ data class UpsertResult(
 |-----------|-----------|
 | `upsertFromClue` | Idempotent — same clue+resolvedId returns same entityId |
 | `upsertFromClue` | Preserves all existing fields (read-modify-write internally) |
-| `upsertFromClue` | `displayName` uses first-write-wins policy |
+| `upsertFromClue` | `displayName` uses **latest-write-wins** policy (old name → aliases) |
+| `updateProfile` | Emits `UnifiedActivity` for each tracked field that changed |
+| `updateProfile` | Old `displayName` auto-appended to `aliasesJson` before overwrite |
 | `registerAlias` | Bounded to 8 aliases max, deduplicates |
 | `updateAttribute` | Upsert-per-key on `attributesJson` |
 | `delete` | No-op if entity doesn't exist |

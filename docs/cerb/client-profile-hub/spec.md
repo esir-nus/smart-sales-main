@@ -99,7 +99,16 @@ data class UnifiedActivity(
 )
 
 enum class ActivityType {
-    MEETING, CALL, NOTE, ARTIFACT_GENERATED, DEAL_STAGE_CHANGE, TASK_COMPLETED
+    MEETING, CALL, NOTE, ARTIFACT_GENERATED, DEAL_STAGE_CHANGE, TASK_COMPLETED,
+    
+    // Change-Aware Profile Tracking (EntityWriter Wave 2)
+    NAME_CHANGE,       // Account/Contact renamed (e.g., 索尼娱乐集团 → SONY)
+    TITLE_CHANGE,      // Contact promoted/changed role
+    COMPANY_CHANGE,    // Contact moved companies
+    ROLE_CHANGE,       // Buying role changed (champion → economic_buyer)
+    
+    // RL Module Insights
+    INSIGHT_LEARNED    // RL discovered high-confidence habit
 }
 ```
 

@@ -70,12 +70,12 @@ data class AliasMapping(
 
 | Field | Policy | Rationale |
 |-------|--------|-----------|
-| `displayName` | First-write-wins | Canonical name shouldn't change |
+| `displayName` | **Latest-write-wins** | Old name → `aliasesJson` before update |
 | `aliasesJson` | Append (dedupe) | Growing list, bounded 3-8 items |
 | `demeanorJson` | Upsert per key | Latest observation wins |
 | `attributesJson` | Upsert per key | Current state snapshot |
 | `metricsHistoryJson` | Append per key | Time-series, never overwrite |
-| `decisionLogJson` | Append-only | History for Rethink learning |
+| `decisionLogJson` | ~~Append-only~~ **Deprecated** | Superseded by `UnifiedActivity` timeline |
 
 ---
 

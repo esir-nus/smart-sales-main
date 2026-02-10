@@ -1,5 +1,5 @@
 ---
-description: Feature development with Cerb pattern (wave plans, interface/spec split)
+description: Feature development with Cerb pattern (wave plans, interface/spec split, OS Model alignment)
 ---
 
 # Feature Development (Cerb Pattern)
@@ -15,6 +15,23 @@ Create two documents:
 2. `docs/cerb/[feature-name]/spec.md` — **Internal implementation** (algorithms, logic, hidden from consumers)
 
 **Rule**: Feature Agents interact via Interface only. No reading Internal Spec.
+
+### OS Layer Declaration (Mandatory)
+
+> **Reference**: `docs/specs/os-model-architecture.md`
+
+Every spec MUST declare its OS layer at the top:
+
+```markdown
+> **OS Layer**: [RAM Application | SSD Storage | Kernel | File Explorer]
+```
+
+| Layer | Meaning | Data Flow |
+|-------|---------|----------|
+| **RAM Application** | Operates through SessionWorkingSet | Read/write RAM → write-through to SSD |
+| **SSD Storage** | Permanent store (Room DB) | Receives writes from RAM, serves reads |
+| **Kernel** | ContextBuilder — manages RAM lifecycle | Loads from SSD → populates RAM |
+| **File Explorer** | CRM Hub — dashboard reads | Reads SSD directly, not session-scoped |
 
 ---
 
@@ -87,6 +104,9 @@ User Input → Phase 1 (Gate) → [CLEAR] → Phase 2 → Response
 | **Feature Branch** | Work on `cerb-[feature]` branch |
 | **No Legacy Imports** | Rewrite from spec, don't copy legacy |
 | **Test-Driven** | Each wave ships with tests |
+| **OS Layer Declared** | Spec declares RAM App / SSD / Kernel / File Explorer |
+| **RAM-First** | RAM Applications read/write through SessionWorkingSet, not direct repos |
+| **Write-Through** | Every RAM write simultaneously persists to SSD |
 
 ---
 
@@ -137,3 +157,6 @@ For each Wave:
 | Ship without tests | Each wave has explicit test cases |
 | Read blackbox internals | Trust the interface contract |
 | Copy legacy code | Rewrite from spec |
+| Access repos directly from RAM Apps | Route through SessionWorkingSet |
+| Skip OS Layer declaration | Declare layer role in spec header |
+| Put business logic in the RAM | RAM is data container; logic stays in Apps |

@@ -1,5 +1,5 @@
 ---
-description: Gateway workflow for feature development - enforces anti-drift protocol and 3-level testing
+description: Gateway workflow for feature development - enforces anti-drift protocol, OS Model alignment, and 3-level testing
 ---
 
 # Feature Dev Planner
@@ -69,6 +69,42 @@ Before ANY planning, read the relevant spec:
 2. OR request spec update before implementation
 
 **Never invent behavior to fill gaps in spec.**
+
+---
+
+## Phase 0.1: OS Model Alignment (Mandatory Gate)
+
+> **Reference**: `docs/specs/os-model-architecture.md`
+
+Before planning, classify the feature's OS layer:
+
+```markdown
+### OS Layer Classification
+- **Feature**: [Name]
+- **Layer**: [RAM Application | SSD Storage | Kernel | File Explorer]
+- **Justification**: [Why this layer?]
+```
+
+### Layer-Specific Rules
+
+| If Layer = | Then |
+|------------|------|
+| **RAM Application** | Feature reads/writes through SessionWorkingSet. No direct repo access. |
+| **SSD Storage** | Feature is a passive store. No session awareness. |
+| **Kernel** | Feature manages RAM lifecycle. Only ContextBuilder qualifies. |
+| **File Explorer** | Feature reads SSD directly for dashboards. No session dependency. |
+
+### OS Alignment Checklist
+
+```markdown
+- [ ] OS Layer declared in spec header
+- [ ] Data flow matches layer rules
+- [ ] No RAM Application accesses repos directly
+- [ ] Write-through pattern used (if RAM Application)
+- [ ] SessionWorkingSet interaction documented
+```
+
+**If OS Layer not declared in spec → STOP. Update spec first.**
 
 ---
 
@@ -208,6 +244,8 @@ Only after Phases 0-2 pass:
 - [ ] No skeleton data in Fakes
 - [ ] LLM vs Kotlin justified
 - [ ] L2 scenario planned
+- [ ] OS Layer classified and documented
+- [ ] RAM interaction rules verified (if Application layer)
 ```
 
 ---
@@ -308,6 +346,7 @@ After implementation AND after tests pass:
 
 - [ ] ❌ Lessons-learned.md NOT read
 - [ ] Spec not read completely
+- [ ] OS Layer not classified
 - [ ] Fakes contain hardcoded test data
 - [ ] LLM vs Kotlin decision not justified
 - [ ] No L2 scenario planned
@@ -386,6 +425,7 @@ cat .agent/rules/lessons-learned.md
 | **-2** | ✅ Tracker read, feature exists |
 | **-1** | ✅ Lessons read |
 | **0** | Spec quoted |
+| **0.1** | ✅ OS Layer classified, alignment verified |
 | **0.5** | ✅ UI Discovery — existing UI found or confirmed absent |
 | **1** | Fakes clean |
 | **2** | First principles checked |

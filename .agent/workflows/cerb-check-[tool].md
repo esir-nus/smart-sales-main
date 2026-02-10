@@ -1,10 +1,10 @@
 ---
-description: Audit a doc for Cerb (context boundary) compliance
+description: Audit a doc for Cerb (context boundary) + OS Model compliance
 ---
 
 # Cerb Doc Check
 
-Verify that a Cerb doc follows context boundary principles.
+Verify that a Cerb doc follows context boundary principles and OS Model architecture.
 
 ---
 
@@ -62,6 +62,32 @@ docs/cerb/[feature]/
 | "You Should NOT" section present? | ✅ Required |
 | Links to implementation internals? | ❌ Forbidden |
 
+### 4. OS Model Compliance
+
+> **Reference**: `docs/specs/os-model-architecture.md`
+
+#### Layer Declaration
+
+Every spec MUST declare its OS layer role:
+
+| Layer | Role | Expected in Spec |
+|-------|------|-------------------|
+| **RAM (Application)** | Reads/writes through SessionWorkingSet | `interface.md` methods accept/return WorkingSet data |
+| **SSD (Storage)** | Permanent storage, source of truth | No session dependency, no RAM references |
+| **Kernel** | Manages RAM lifecycle | Owns SessionWorkingSet, loads from SSD |
+| **File Explorer** | Reads SSD directly (dashboards) | No session dependency, reads repos directly |
+
+**Check**: `grep -n "OS Layer\|RAM\|SSD\|Kernel\|Working Set" docs/cerb/[feature]/spec.md`
+
+#### Interaction Rules Audit
+
+| Rule | Check | Fail Signal |
+|------|-------|---------|
+| Apps work on RAM | Does spec reference direct repo access? | `import.*Repository` in domain code |
+| Write-Through | Does spec mention flush/sync/batch? | Any deferred persistence |
+| Kernel owns lifecycle | Does spec load its own data from SSD? | `getById()` calls outside ContextBuilder |
+| SSD = Source of Truth | Does spec claim RAM is authoritative? | RAM treated as permanent |
+
 ---
 
 ## Output Format
@@ -84,12 +110,18 @@ docs/cerb/[feature]/
 - [x] I/O types
 - [ ] Missing: "You Should NOT" section
 
+### OS Model Compliance: [PASS/FAIL]
+- [ ] OS Layer declared (RAM App / SSD / Kernel / File Explorer)
+- [x] Interaction rules respected
+- [ ] Missing: No direct repo access pattern documented
+
 ### Verdict
 **[PASS / NEEDS WORK / FAIL]**
 
 ### Fixes Required
 1. Inline content from Prism-V1.md §5.2 (lines 42-60)
 2. Add "You Should NOT" section to interface.md
+3. Declare OS Layer role in spec header
 ```
 
 ---

@@ -1,14 +1,20 @@
 # Client Profile Hub
 
-> **Cerb-compliant spec** — CRM hierarchy + client intelligence.
+> **Cerb-compliant spec** — CRM hierarchy + client intelligence.  
+> **OS Layer**: File Explorer
 
 ---
 
 ## Overview
 
-Client Profile Hub provides HubSpot-style CRM data hierarchy (Account → Contact → Deal) and unified timeline aggregation. Separates **on-demand profile data** from **always-loaded RL context**.
+Client Profile Hub is the **File Explorer** in the OS Model. It reads SSD directly for dashboard and history views — NOT session-scoped.
 
----
+Provides HubSpot-style CRM data hierarchy (Account → Contact → Deal) and unified timeline aggregation. Separates **on-demand profile data** from **always-loaded RL context**.
+
+**OS Model Role**:
+- **Reads SSD directly** — no RAM/session dependency
+- **Not session-scoped** — shows historical data across all sessions
+- **Cross-layer read** — `FocusedContext.habitContext` pulls from RL Module (RAM Application) via `getHabitContext()`. Acceptable because this is on-demand enrichment, not session state.
 
 ## Related Cerb Specs
 
@@ -116,11 +122,11 @@ enum class ActivityType {
 
 ## Context Layers
 
-| Layer | Access Pattern | Used By |
-|-------|---------------|---------|
-| **Quick Context** | Always-loaded | Context Builder (every LLM call) |
-| **Focused Context** | On-demand | Agent (when entity detected) |
-| **Full Context** | Rare | Deep research, export |
+| Layer | Access Pattern | Used By | OS Model Note |
+|-------|---------------|---------|---------------|
+| **Quick Context** | Always-loaded | Context Builder (every LLM call) | Kernel populates RAM with this |
+| **Focused Context** | On-demand | Agent (when entity detected) | File Explorer reads SSD + cross-layer habit read |
+| **Full Context** | Rare | Deep research, export | File Explorer reads SSD directly |
 
 ---
 
@@ -166,6 +172,7 @@ data class QuickContext(
 | **1** | Interface + Domain Models + Fake | ✅ SHIPPED |
 | **2** | Timeline Aggregation | ✅ SHIPPED |
 | **3** | CRM Export Integration | 🔲 |
+| **4** | **OS Model Labeling** (File Explorer) | ✅ SHIPPED |
 
 > **Note**: CRM schema (ACCOUNT, CONTACT, DEAL types + EntityEntry CRM fields) already shipped in Entity Registry Wave 2.5.
 

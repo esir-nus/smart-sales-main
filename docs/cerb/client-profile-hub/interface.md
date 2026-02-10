@@ -1,6 +1,7 @@
 # Client Profile Hub — Interface
 
-> **Consumer contract** for CRM hierarchy and context queries.
+> **Consumer contract** for CRM hierarchy and context queries.  
+> **OS Layer**: File Explorer (reads SSD directly, NOT session-scoped)
 
 ---
 
@@ -102,3 +103,4 @@ enum class ActivityType {
 | Parse `MemoryEntry.entitiesJson` manually | Use `getUnifiedTimeline()` |
 | Query habit data here | Use `ReinforcementLearner.getHabitContext()` |
 | Assume entity exists | Check for null/empty returns |
+| Depend on session state (SessionWorkingSet) | CRM Hub reads SSD directly — no session dependency |

@@ -523,7 +523,7 @@
 | **1** | Connect RL Module | `rl-module/spec.md` | RAM Application | ✅ |
 | **2** | Connect EntityWriter | `entity-writer/spec.md` | RAM Application | ✅ |
 | **3** | Simplify Coach + Scheduler | `coach/spec.md` + `scheduler/spec.md` | — | ✅ |
-| **4** | CRM Hub → File Explorer | `client-profile-hub/spec.md` | File Explorer | 🔲 |
+| **4** | CRM Hub → File Explorer | `client-profile-hub/spec.md` | File Explorer | ✅ |
 
 **Critical path**: W0 → W1 → W3 (fixes Coach Mode missing client habits bug)
 

@@ -22,7 +22,7 @@
 
 | Cerb Shard | State | Next Wave |
 |------------|-------|-----------|
-| [session-context](../cerb/session-context/spec.md) | PARTIAL | W3: Entity Knowledge (pointer cache) |
+| [session-context](../cerb/session-context/spec.md) | SHIPPED | W5: Context Compression |
 | [memory-center](../cerb/memory-center/spec.md) | SHIPPED | — |
 | [entity-registry](../cerb/entity-registry/spec.md) | SHIPPED | — |
 | [entity-writer](../cerb/entity-writer/spec.md) | SHIPPED | — |
@@ -48,6 +48,8 @@
 
 ### 2026-02-11
 
+- **session-context**: W4 SHIPPED — Clean rewrite (SessionWorkingSet, KernelWriteBack, 3-Section RAM)
+- **real-context-builder**: Tech Debt fixed — `runBlocking` removed, `kernelWriteBack` implemented
 - **session-context**: Spec updated — EntityKnowledge section added (pointer cache, pathIndex, EntityState machine)
 - **memory-center**: Spec updated — W3 Entity Knowledge Context, `getAll(limit)` read path
 - **entity-registry**: Spec updated — added `getAll(limit)` to interface, CRM Snapshot responsibilities
@@ -136,8 +138,9 @@
 | TOCTOU in observe() | `RoomUserHabitRepository.kt` | Low |
 | Room error handling | `Room*Repository` — no try-catch on writes | Low |
 | Dead `httpChecker` | `DefaultDeviceConnectionManager.kt` | Low |
-| `runBlocking` in Kernel | `RealContextBuilder.kt:171` | Medium |
+
 | `structuredJson` schema inconsistency | `RealContextBuilder.recordActivity()` — uses `{"entityId":"..."}` instead of `{"relatedEntityIds":["..."]}` convention. Works today (LIKE query catches both), but any code parsing `relatedEntityIds` from activity records gets `emptyList()`. One-line fix: add `relatedEntityIds` field to `recordActivity()` output. | Low |
+
 
 ---
 

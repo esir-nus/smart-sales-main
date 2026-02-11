@@ -532,13 +532,19 @@ private fun NotificationPermissionStep(onNext: () -> Unit) {
                 )
                 Spacer(Modifier.height(48.dp))
                 PrismButton(
-                    text = "打开通知设置",
+                    text = if (com.smartsales.prism.data.notification.OemCompat.isHuawei) "打开启动管理" else "打开通知设置",
                     onClick = {
-                        val intent = Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                            putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        if (com.smartsales.prism.data.notification.OemCompat.isHuawei) {
+                            // 华为: 打开【应用启动管理】设置页
+                            com.smartsales.prism.data.notification.OemCompat.openAutoStartSettings(context)
+                        } else {
+                            // 小米/其他: 打开通知设置页
+                            val intent = Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
                         }
-                        context.startActivity(intent)
                     },
                     modifier = Modifier.fillMaxWidth()
                 )

@@ -47,6 +47,9 @@ abstract class PrismModule {
     
     @Binds @Singleton
     abstract fun bindContextBuilder(impl: RealContextBuilder): ContextBuilder
+
+    @Binds @Singleton
+    abstract fun bindKernelWriteBack(impl: RealContextBuilder): com.smartsales.prism.domain.pipeline.KernelWriteBack
     
     @Binds @Singleton
     abstract fun bindExecutor(impl: DashscopeExecutor): Executor

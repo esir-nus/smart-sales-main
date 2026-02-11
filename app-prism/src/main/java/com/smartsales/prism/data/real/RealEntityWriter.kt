@@ -14,17 +14,12 @@ import com.smartsales.prism.domain.time.TimeProvider
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
+import com.smartsales.prism.domain.pipeline.KernelWriteBack
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * 实体写入器实现 — read-modify-write 模式（重写自 spec）
- *
- * 核心职责:
- * 1. 去重 + 别名管理
- * 2. 字段策略: displayName=latest-write-wins, aliases=append-unique, attrs=upsert-per-key
- * 3. Write-Through: 所有变更同时写 SSD + RAM Section 1
- * 4. 变更感知 Profile: 检测字段变更 → 记录历史
+ * 实体写入器实现 — read-modify-write 模式
  *
  * @see docs/cerb/entity-writer/spec.md
  */
@@ -32,7 +27,7 @@ import javax.inject.Singleton
 class RealEntityWriter @Inject constructor(
     private val entityRepository: EntityRepository,
     private val timeProvider: TimeProvider,
-    private val contextBuilder: RealContextBuilder
+    private val kernelWriteBack: KernelWriteBack // Breaks concrete coupling to RealContextBuilder
 ) : EntityWriter {
 
     companion object {
@@ -227,7 +222,7 @@ class RealEntityWriter @Inject constructor(
             // Kernel 回调: 记录历史事件
             for (change in changes) {
                 val activityType = TRACKED_FIELDS[change.field] ?: continue
-                contextBuilder.recordActivity(
+                kernelWriteBack.recordActivity(
                     entityId = entityId,
                     type = activityType,
                     summary = "${change.oldValue ?: "（空）"} → ${change.newValue}"
@@ -243,7 +238,7 @@ class RealEntityWriter @Inject constructor(
     override suspend fun delete(entityId: String) {
         entityRepository.delete(entityId)
         // Write-through → 从 RAM Section 1 移除
-        contextBuilder.removeEntityFromSession(entityId)
+        kernelWriteBack.removeEntityFromSession(entityId)
         Log.d(TAG, "🗑️ 删除实体: id=$entityId")
     }
 
@@ -252,8 +247,8 @@ class RealEntityWriter @Inject constructor(
     /**
      * Write-through: SSD 写入后同步 RAM Section 1
      */
-    private fun writeThrough(entry: EntityEntry) {
-        contextBuilder.updateEntityInSession(
+    private suspend fun writeThrough(entry: EntityEntry) {
+        kernelWriteBack.updateEntityInSession(
             entry.entityId,
             EntityRef(entry.entityId, entry.displayName, entry.entityType.name)
         )

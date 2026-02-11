@@ -1,5 +1,7 @@
 package com.smartsales.prism.ui.onboarding
 
+import android.content.Intent
+
 import androidx.compose.animation.*
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
@@ -454,21 +456,26 @@ private fun GlassTextField(
 
 @Composable
 private fun NotificationPermissionStep(onNext: () -> Unit) {
-    // Android 13+ (Tiramisu) 需要运行时权限
-    val needsPermission = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
-    
-    if (!needsPermission) {
-        // 旧版本不需要请求，直接跳过
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isChineseOem = com.smartsales.prism.data.notification.OemCompat.isChineseOem
+
+    // Android 13+ 需要运行时权限；旧版本直接进入通知设置引导或跳过
+    val needsPostNotification = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
+
+    // 两阶段: Phase 1 = POST_NOTIFICATIONS, Phase 2 = 通知设置页（中国 OEM 需要手动开启锁屏通知等）
+    var phase by remember { mutableIntStateOf(if (needsPostNotification) 1 else if (isChineseOem) 2 else 0) }
+
+    if (phase == 0) {
+        // 不需要任何权限引导，跳过
         LaunchedEffect(Unit) { onNext() }
         return
     }
 
     val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        // 无论同意还是拒绝，都进入下一步
-        // Future: 如果拒绝，可以显示 Banner 提示 "未开启通知可能错过重要任务"
-        onNext()
+    ) { _ ->
+        // POST_NOTIFICATIONS 完成，进入 Phase 2 (中国 OEM) 或结束
+        if (isChineseOem) phase = 2 else onNext()
     }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -479,30 +486,66 @@ private fun NotificationPermissionStep(onNext: () -> Unit) {
             modifier = Modifier.size(80.dp)
         )
         Spacer(Modifier.height(32.dp))
-        Text("开启通知提醒", fontSize = 24.sp, color = TextPrimary, fontWeight = FontWeight.Bold)
+
+        when (phase) {
+            // Phase 1: POST_NOTIFICATIONS (Android 13+)
+            1 -> {
+                Text("开启通知提醒", fontSize = 24.sp, color = TextPrimary, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    "在任务开始前收到精准提醒\n不错过任何重要安排",
+                    fontSize = 16.sp,
+                    color = TextSecondary,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                Spacer(Modifier.height(48.dp))
+                PrismButton(
+                    text = "开启通知",
+                    onClick = {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                            launcher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                        } else if (isChineseOem) {
+                            phase = 2
+                        } else {
+                            onNext()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // Phase 2: 通知设置页 — 一站式开启锁屏通知、悬浮通知、振动等
+            2 -> {
+                Text("检查通知设置", fontSize = 24.sp, color = TextPrimary, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    "请确认以下选项已开启：\n锁屏通知 · 悬浮通知 · 振动",
+                    fontSize = 16.sp,
+                    color = TextSecondary,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                Spacer(Modifier.height(48.dp))
+                PrismButton(
+                    text = "打开通知设置",
+                    onClick = {
+                        val intent = Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                            putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(12.dp))
+                PrismButton(
+                    text = "已设置完成",
+                    onClick = onNext,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+
         Spacer(Modifier.height(16.dp))
-        Text(
-            "在任务开始前收到精准提醒\n不错过任何重要安排", 
-            fontSize = 16.sp, 
-            color = TextSecondary,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-        )
-        Spacer(Modifier.height(48.dp))
-        
-        PrismButton(
-            text = "开启通知", 
-            onClick = { 
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                    launcher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                } else {
-                    onNext()
-                }
-            }, 
-            modifier = Modifier.fillMaxWidth()
-        )
-        
-        Spacer(Modifier.height(16.dp))
-        
         TextButton(onClick = onNext) {
             Text("稍后再说", color = TextMuted)
         }

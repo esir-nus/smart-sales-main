@@ -82,6 +82,36 @@ object OemCompat {
         }
     }
 
+    // ---- Defense Layer 4: MIUI 锁屏显示权限 ----
+
+    /**
+     * MIUI 有独立的"锁屏显示"权限 — 无法通过 API 检测状态
+     * 只能引导用户到 MIUI 权限编辑页手动开启
+     *
+     * 路径: 设置 > 应用管理 > [App] > 其他权限 > 锁屏显示
+     *
+     * @return true 如果成功打开了设置页
+     */
+    fun openLockScreenPermission(context: Context): Boolean {
+        if (!isXiaomi) return false
+        return try {
+            val intent = Intent("miui.intent.action.APP_PERM_EDITOR").apply {
+                setClassName(
+                    "com.miui.securitycenter",
+                    "com.miui.permcenter.permissions.PermissionsEditorActivity"
+                )
+                putExtra("extra_pkgname", context.packageName)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            Log.d(TAG, "已打开 MIUI 锁屏权限设置")
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "MIUI 权限编辑页不可用: ${e.message}")
+            openAppInfo(context)
+        }
+    }
+
     // ---- Defense Layer 2: 自启动引导 ----
 
     /**

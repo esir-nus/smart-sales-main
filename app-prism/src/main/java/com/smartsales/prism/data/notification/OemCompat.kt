@@ -249,8 +249,9 @@ object OemCompat {
      * @return true 如果成功打开了某个页面
      */
     fun openAutoStartSettings(context: Context): Boolean {
-        val targets = autoStartTargets[manufacturer] ?: return openAppInfo(context)
-
+        // 优先尝试厂商特定的 Intent
+        val targets = autoStartTargets[manufacturer] ?: autoStartTargets.values.flatten()
+        
         for (target in targets) {
             try {
                 val intent = Intent().apply {

@@ -518,8 +518,14 @@ private fun NotificationPermissionStep(onNext: () -> Unit) {
             2 -> {
                 Text("检查通知设置", fontSize = 24.sp, color = TextPrimary, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(16.dp))
+                val instructionText = when {
+                    com.smartsales.prism.data.notification.OemCompat.isXiaomi -> "请确认以下选项已开启：\n锁屏通知 · 悬浮通知 · 振动 · 后台发送本地通知"
+                    com.smartsales.prism.data.notification.OemCompat.isHuawei -> "⚠️ 系统可能拦截闹钟\n请务必将【应用启动管理】改为手动管理"
+                    else -> "请确认已开启不再优化电池使用"
+                }
+
                 Text(
-                    "请确认以下选项已开启：\n锁屏通知 · 悬浮通知 · 振动 · 后台发送本地通知",
+                    instructionText,
                     fontSize = 16.sp,
                     color = TextSecondary,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center

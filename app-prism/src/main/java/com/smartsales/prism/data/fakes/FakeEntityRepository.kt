@@ -51,6 +51,9 @@ class FakeEntityRepository @Inject constructor() : EntityRepository {
     override suspend fun delete(entityId: String) {
         entries.remove(entityId)
     }
+    
+    override suspend fun getAll(limit: Int): List<EntityEntry> =
+        entries.values.toList().take(limit)
 }
 
 // Backwards compatibility alias (deprecated, will be removed)

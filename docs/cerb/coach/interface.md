@@ -40,7 +40,7 @@ sealed class CoachResponse {
     data class Chat(
         val content: String,
         val suggestAnalyst: Boolean = false,
-        val memoryHits: List<MemoryEntry> = emptyList()
+        val memoryHits: List<MemoryHit> = emptyList()
     ) : CoachResponse()
 }
 ```
@@ -50,8 +50,7 @@ sealed class CoachResponse {
 ```kotlin
 data class ChatTurn(
     val role: String,  // "user" | "assistant"
-    val content: String,
-    val timestamp: Long? = null
+    val content: String
 )
 ```
 
@@ -96,8 +95,8 @@ These are consumed **by the implementation**, not by you:
 |-----------|------------|---------|---------------|
 | `ContextBuilder` | — | Build enhanced context | **Kernel** — loads RAM |
 | `Executor` | — | Execute LLM calls | Direct call |
-| `MemoryRepository` | memory-center | Memory search | SSD query (search, not session data) |
-| `ReinforcementLearner` | rl-module | Habit context | **Reads from RAM** Sections 2 & 3 |
+| `MemoryRepository` | memory-center | Memory search | SSD query (first turn only) |
+| `ReinforcementLearner` | rl-module | Habit context | Kernel calls `loadUserHabits()` (S2) + `loadClientHabits()` (S3) |
 | `AgentActivityController` | — | Visibility trace | Direct call |
 
 ---

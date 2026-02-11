@@ -2,6 +2,7 @@
 
 > **Cerb-compliant spec** — Reinforcement learning from structured LLM output.  
 > **OS Layer**: RAM Application
+> **State**: PARTIAL
 
 ---
 

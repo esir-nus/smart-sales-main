@@ -43,9 +43,11 @@ interface MemoryDao {
     
     /**
      * 搜索记忆 (LIKE 模糊匹配)
+     * 
+     * 排除 USER_MESSAGE: 用户提问本身不是知识，只有助手回复和任务记录才有检索价值
      * Tech Debt: 中文搜索质量低于分词，考虑 FTS4
      */
-    @Query("SELECT * FROM memory_entries WHERE content LIKE '%' || :query || '%' ORDER BY createdAt DESC LIMIT :limit")
+    @Query("SELECT * FROM memory_entries WHERE content LIKE '%' || :query || '%' AND entryType != 'USER_MESSAGE' ORDER BY createdAt DESC LIMIT :limit")
     suspend fun search(query: String, limit: Int): List<MemoryEntryEntity>
     
     /**

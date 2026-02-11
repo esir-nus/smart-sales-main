@@ -44,6 +44,21 @@ interface EntityWriter {
     suspend fun registerAlias(entityId: String, alias: String)
 
     /**
+     * 变更感知的 Profile 更新
+     *
+     * 检测字段变更 → 生成 ProfileChange 列表 → 调用 Kernel 记录历史。
+     * 跟踪字段: displayName, jobTitle, accountId
+     * 
+     * @param entityId 实体 ID
+     * @param updates 需更新的字段 map（key=字段名, value=新值, null=不更新）
+     * @return ProfileUpdateResult 包含变更列表
+     */
+    suspend fun updateProfile(
+        entityId: String,
+        updates: Map<String, String?>
+    ): ProfileUpdateResult
+
+    /**
      * 删除实体，不存在时静默忽略
      */
     suspend fun delete(entityId: String)
@@ -56,4 +71,21 @@ data class UpsertResult(
     val entityId: String,
     val isNew: Boolean,
     val displayName: String  // 规范名称（用于回写调用方）
+)
+
+/**
+ * Profile 更新结果 — 包含实际变更列表
+ */
+data class ProfileUpdateResult(
+    val entityId: String,
+    val changes: List<ProfileChange>
+)
+
+/**
+ * 单个字段变更记录
+ */
+data class ProfileChange(
+    val field: String,
+    val oldValue: String?,
+    val newValue: String?
 )

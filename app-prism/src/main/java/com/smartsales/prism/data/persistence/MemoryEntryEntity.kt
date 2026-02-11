@@ -32,7 +32,15 @@ data class MemoryEntryEntity(
     val updatedAt: Long,
     val isArchived: Boolean,
     val scheduledAt: Long?,
-    val structuredJson: String?
+    val structuredJson: String?,
+    val workflow: String? = null,
+    val title: String? = null,
+    val completedAt: Long? = null,
+    val outcomeStatus: String? = null,
+    val outcomeJson: String? = null,
+    val payloadJson: String? = null,
+    val displayContent: String? = null,
+    val artifactsJson: String? = null
 )
 
 /**
@@ -47,7 +55,15 @@ fun MemoryEntry.toEntity(): MemoryEntryEntity = MemoryEntryEntity(
     updatedAt = updatedAt,
     isArchived = isArchived,
     scheduledAt = scheduledAt,
-    structuredJson = structuredJson
+    structuredJson = structuredJson,
+    workflow = workflow,
+    title = title,
+    completedAt = completedAt,
+    outcomeStatus = outcomeStatus,
+    outcomeJson = outcomeJson,
+    payloadJson = payloadJson,
+    displayContent = displayContent,
+    artifactsJson = artifactsJson
 )
 
 fun MemoryEntryEntity.toDomain(): MemoryEntry = MemoryEntry(
@@ -59,5 +75,13 @@ fun MemoryEntryEntity.toDomain(): MemoryEntry = MemoryEntry(
     updatedAt = updatedAt,
     isArchived = isArchived,
     scheduledAt = scheduledAt,
-    structuredJson = structuredJson
+    structuredJson = structuredJson,
+    workflow = workflow,
+    title = title,
+    completedAt = completedAt,
+    outcomeStatus = outcomeStatus,
+    outcomeJson = outcomeJson,
+    payloadJson = payloadJson,
+    displayContent = displayContent,
+    artifactsJson = artifactsJson
 )

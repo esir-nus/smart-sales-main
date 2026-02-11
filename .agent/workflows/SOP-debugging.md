@@ -105,4 +105,4 @@ Before proceeding, confirm user has provided:
 |----------|-------------|
 | `/06-audit` | Evidence-based code trace |
 | `/01-senior-reviewr` | Sanity check hypothesis |
-| `/prism-check` | If fix touches UI contract |
+| `/cerb-check` | If fix touches UI contract |

@@ -2,6 +2,7 @@
 
 > **Cerb-compliant spec** — Core storage layer for Prism.  
 > **OS Layer**: SSD Storage
+> **State**: SHIPPED
 
 ---
 
@@ -39,34 +40,27 @@ Memory Center manages persistent storage and retrieval of user interactions, ent
 
 ### MemoryEntry
 
-> [!NOTE]
-> **Current Implementation (Wave 2)**: Code uses simplified 8-field schema: `entryId`, `sessionId`, `content`, `entryType`, `createdAt`, `updatedAt`, `isArchived`, `scheduledAt`, `structuredJson`. See [`MemoryModels.kt`](../../app-prism/src/main/java/com/smartsales/prism/domain/memory/MemoryModels.kt).
-> 
-> **Design Target (Wave 4)**: Rich metadata schema below for future Analyst/Coach enhancements.
-
+Production schema — [`MemoryModels.kt`](../../app-prism/src/main/java/com/smartsales/prism/domain/memory/MemoryModels.kt).
 
 ```kotlin
 data class MemoryEntry(
-    val id: String,
-    val workflow: String,        // COACH, ANALYST, SCHEDULER
-    val title: String,
-    val isArchived: Boolean,
+    val entryId: String,
+    val sessionId: String,
+    val content: String,
+    val entryType: MemoryEntryType,  // USER_MESSAGE, ASSISTANT_RESPONSE, TASK_RECORD, SCHEDULE_ITEM, INSPIRATION
     val createdAt: Long,
     val updatedAt: Long,
-    val completedAt: Long?,
-    val sessionId: String,
-    val outcomeStatus: String?,  // ONGOING, SUCCESS, PARTIAL, FAILED
-    
-    // Content & Structure
-    val contentWithMarkup: String,   // Raw LLM output with tags
-    val displayContent: String,      // Clean UI text
-    val entitiesJson: String,        // Parsed entity IDs
-    val structuredJson: String?,     // Extracted entities (JSON)
-    
-    // JSON blobs
-    val artifactsJson: String?,      // ArtifactMeta (file refs)
-    val outcomeJson: String?,        // Outcome with deliverables
-    val payloadJson: String          // WorkflowPayload (mode-specific)
+    val isArchived: Boolean = false,
+    val scheduledAt: Long? = null,
+    val structuredJson: String? = null,  // {"relatedEntityIds":["p-001","a-002"]}
+    val workflow: String? = null,        // COACH, ANALYST, SCHEDULER
+    val title: String? = null,           // 记忆标题
+    val completedAt: Long? = null,       // 完成时间戳
+    val outcomeStatus: String? = null,   // ONGOING, SUCCESS, PARTIAL, FAILED
+    val outcomeJson: String? = null,     // 结果详情 JSON
+    val payloadJson: String? = null,     // WorkflowPayload（模式相关数据）
+    val displayContent: String? = null,  // UI 展示用文本
+    val artifactsJson: String? = null    // 生成物引用
 )
 ```
 
@@ -173,7 +167,8 @@ data class DecisionRecord(
 |------|-------|--------|
 | **1** | ScheduleBoard + Two-Phase Pipeline | ✅ SHIPPED |
 | **2** | Query-Time Filtering (Lazy Compaction) | ✅ SHIPPED |
-| **3** | [Client Profile Hub](../client-profile-hub/interface.md) integration | 🔲 PLANNING |
+| **3** | Entity Knowledge Context (Kotlin loads, LLM searches) | ✅ SHIPPED |
+| **4** | Rich MemoryEntry Schema (workflow, outcome, payload) | ✅ SHIPPED |
 
 ### Wave 1 Ship Criteria (✅ SHIPPED)
 
@@ -186,6 +181,12 @@ data class DecisionRecord(
 - **Goal**: Active/Archived zones via query-time filtering
 - **Exit Criteria**: `getActiveEntries()` filters by `isArchived` + subscription window
 - **Test Cases**: ✅ Tier-based window logic, ✅ Archive query excludes active entries
+
+### Wave 3 Ship Criteria (✅ SHIPPED)
+
+- **Goal**: Entity Knowledge Context — "Kotlin loads, LLM searches"
+- **Exit Criteria**: `buildEntityKnowledge()` returns structured JSON on first turn; injected into LLM prompt
+- **Test Cases**: ✅ First turn loads entity knowledge, ✅ Empty entities → null, ✅ Cached on subsequent turns, ✅ Reset clears and re-enables, ✅ Groups by entity type (people/accounts/deals)
 
 ---
 
@@ -265,12 +266,41 @@ suspend fun completeTask(taskId: String) {
 
 **No automatic archiving.** The `isArchived` flag is user-driven.
 
-### Retrieval Strategy
+### Retrieval Strategy: Entity Knowledge Context
 
-| Scenario | Query Target | Model | Cost |
-|----------|-------------|-------|------|
-| Default (recent context) | Active Zone only | qwen-plus | Low |
-| Entity last seen >14 days | Archived Zone (targeted) | qwen-long | High (justified) |
-| Explicit history request | Archived Zone (filtered) | qwen-long | High (user-initiated) |
+> **Principle**: "Kotlin loads, LLM searches." The Kernel loads structured entity data from `EntityRepository` into the LLM prompt. The LLM handles disambiguation, alias matching, and relevance naturally.
+
+**Why entity data, not raw memories?**
+- `EntityEntry` already contains distilled intelligence: `aliasesJson`, `attributesJson`, `metricsHistoryJson`, `relatedEntitiesJson`, `decisionLogJson`
+- Raw `memory_entries` are conversation logs (rote memorization) — recalling "Feb 8 CEO had meeting" is trivia
+- Entity data IS the knowledge graph: who → what company → what role → what deal stage → what buying decisions
+- This enables **smart suggestions and reminders**, not just recall
+
+**Why not LIKE search?** `MemoryDao.search()` uses `LIKE '%query%'` which fails for:
+- Alias mismatches: `孙英浩` ≠ `孙扬浩`
+- Cross-language: `阿米尔` ≠ `ameer`
+- Type filtering: `AND entryType != 'USER_MESSAGE'` excludes seed data
+
+**Entity Knowledge Context** = structured JSON of entity graph, injected into the system prompt:
+```json
+{
+  "people": [
+    {"name": "孙扬浩", "aliases": ["孙工"], "company": "承时利和", "role": "工程师",
+     "metrics": {"visits": 2}, "decisions": ["2026-02-08: 调试桌面机械臂"]}
+  ],
+  "accounts": [
+    {"name": "摩升泰", "contacts": ["ameer", "蔡瑞江"]}
+  ]
+}
+```
+
+| Read Path | Method | Scope | When |
+|-----------|--------|-------|------|
+| **Entity Knowledge (default)** | `EntityRepository.getAll(limit)` | Session-unscoped | Every session start |
+| **LIKE search (escape hatch)** | `MemoryDao.search(query)` | Session-unscoped | Future optimization |
+| **Archived Zone** | `getArchivedEntries(sessionId, tier)` | Session-scoped | Explicit history request |
+
+**Token budget**: ~2500 tokens (~10K chars). Entity payload size logged for monitoring.
 
 **Cost guardrail**: Max 50 Archived entries per LLM request.
+

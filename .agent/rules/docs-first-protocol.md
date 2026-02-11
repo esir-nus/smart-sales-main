@@ -24,7 +24,7 @@ NO CODE CHANGE WITHOUT DOC SYNC.
 Starting work on feature/bug/change...
 │
 ├─ Does docs/cerb/[feature]/spec.md exist?
-│   ├─ NO → CREATE spec.md + interface.md first (/feature-cerb-pattern)
+│   ├─ NO → CREATE spec.md + interface.md first (/cerb-spec-template)
 │   └─ YES → Read it COMPLETELY
 │       │
 │       ├─ Does spec cover this change?
@@ -46,7 +46,7 @@ Starting work on feature/bug/change...
 
 | Check | Action if FAIL |
 |-------|----------------|
-| Cerb doc exists? | CREATE via `/feature-cerb-pattern` |
+| Cerb doc exists? | CREATE via `/cerb-spec-template` |
 | Spec covers this behavior? | UPDATE spec, then implement |
 | Tracker reflects current wave? | UPDATE tracker, then implement |
 

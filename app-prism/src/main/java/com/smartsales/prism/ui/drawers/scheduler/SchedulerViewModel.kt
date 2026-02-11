@@ -1,5 +1,7 @@
 package com.smartsales.prism.ui.drawers.scheduler
 
+import android.content.Context
+
 import com.smartsales.prism.domain.asr.AsrResult
 import com.smartsales.prism.domain.asr.AsrService
 import com.smartsales.prism.domain.audio.BadgeAudioPipeline
@@ -20,7 +22,9 @@ import com.smartsales.prism.domain.memory.MemoryEntryType
 import com.smartsales.prism.domain.memory.MemoryRepository
 import com.smartsales.prism.domain.memory.EntityWriter
 import com.smartsales.prism.domain.memory.EntityType
+import com.smartsales.prism.data.notification.OemCompat
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -33,10 +37,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 @HiltViewModel
 class SchedulerViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val taskRepository: ScheduledTaskRepository,
     private val orchestrator: Orchestrator,
     private val scheduleBoard: ScheduleBoard,
@@ -104,6 +110,11 @@ class SchedulerViewModel @Inject constructor(
     // 冲突卡片展开状态
     private val _expandedConflictIds = MutableStateFlow<Set<String>>(emptySet())
     val expandedConflictIds: StateFlow<Set<String>> = _expandedConflictIds.asStateFlow()
+
+    // 精确闹钟权限请求 — 一次性事件
+    private val _exactAlarmPermissionNeeded = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val exactAlarmPermissionNeeded = _exactAlarmPermissionNeeded.asSharedFlow()
+    private val exactAlarmPrompted = AtomicBoolean(false)
 
     fun toggleConflictExpansion(id: String) {
         val current = _expandedConflictIds.value
@@ -418,6 +429,7 @@ $taskContext
                     result.scheduledAtMillis, result.durationMinutes
                 )
                 if (isReschedule) _rescheduledDates.value += result.dayOffset
+                checkExactAlarmPermission()
             }
             is UiState.SchedulerMultiTaskCreated -> {
                 onMultiTaskCreated(result.tasks)
@@ -425,12 +437,26 @@ $taskContext
                 if (isReschedule) {
                     result.tasks.forEach { _rescheduledDates.value += it.dayOffset }
                 }
+                checkExactAlarmPermission()
             }
             is UiState.Error -> {
                 _pipelineStatus.value = "❌ ${result.message}"
             }
             else -> {
                 _pipelineStatus.value = "⚠️ 未知响应类型"
+            }
+        }
+    }
+
+    /**
+     * 精确闹钟权限检查 — 首次创建有效任务后触发一次
+     * 未授予时 AlarmManager 可延迟最多 1 小时
+     */
+    private fun checkExactAlarmPermission() {
+        if (exactAlarmPrompted.compareAndSet(false, true)) {
+            if (OemCompat.needsExactAlarmPermission(appContext)) {
+                _exactAlarmPermissionNeeded.tryEmit(Unit)
+                android.util.Log.w("SchedulerVM", "精确闹钟权限未授予，已发出提示事件")
             }
         }
     }

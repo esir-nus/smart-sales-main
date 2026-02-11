@@ -15,6 +15,7 @@ interface MemoryRepository {
     fun observeActiveEntries(sessionId: String): Flow<List<MemoryEntry>>
     suspend fun save(entry: MemoryEntry)
     suspend fun markAsArchived(entryId: String)
+    suspend fun getByEntityId(entityId: String, limit: Int = 50): List<MemoryEntry>
 }
 ```
 
@@ -49,7 +50,7 @@ interface ScheduleBoard {
 }
 
 sealed class ConflictResult {
-    object Clear : ConflictResult()
+    data object Clear : ConflictResult()
     data class Conflict(val overlaps: List<ScheduleItem>) : ConflictResult()
 }
 ```
@@ -61,15 +62,23 @@ sealed class ConflictResult {
 ### MemoryEntry
 ```kotlin
 data class MemoryEntry(
-    val id: String,
-    val workflow: String,
-    val title: String,
-    val isArchived: Boolean,
+    val entryId: String,
+    val sessionId: String,
+    val content: String,
+    val entryType: MemoryEntryType,
     val createdAt: Long,
     val updatedAt: Long,
-    val sessionId: String,
-    val contentWithMarkup: String,
-    val structuredJson: String?
+    val isArchived: Boolean = false,
+    val scheduledAt: Long? = null,
+    val structuredJson: String? = null,
+    val workflow: String? = null,
+    val title: String? = null,
+    val completedAt: Long? = null,
+    val outcomeStatus: String? = null,
+    val outcomeJson: String? = null,
+    val payloadJson: String? = null,
+    val displayContent: String? = null,
+    val artifactsJson: String? = null
 )
 ```
 

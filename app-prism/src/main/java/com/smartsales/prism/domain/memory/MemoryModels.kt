@@ -13,7 +13,15 @@ data class MemoryEntry(
     val updatedAt: Long,
     val isArchived: Boolean = false,
     val scheduledAt: Long? = null,
-    val structuredJson: String? = null
+    val structuredJson: String? = null,
+    val workflow: String? = null,        // COACH, ANALYST, SCHEDULER
+    val title: String? = null,           // 记忆标题
+    val completedAt: Long? = null,       // 完成时间戳
+    val outcomeStatus: String? = null,   // ONGOING, SUCCESS, PARTIAL, FAILED
+    val outcomeJson: String? = null,     // 结果详情 JSON
+    val payloadJson: String? = null,     // WorkflowPayload（模式相关数据）
+    val displayContent: String? = null,  // UI 展示用文本（格式化后）
+    val artifactsJson: String? = null    // 生成物引用 (file refs, reports)
 )
 
 /**

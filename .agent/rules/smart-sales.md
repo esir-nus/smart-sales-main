@@ -24,7 +24,7 @@ trigger: always_on
 **Prism-V1.md Policy**: Do NOT auto-read. Only consult when Frank explicitly asks.
 **Legacy Lookup**: When encountering M1/M2/M3, MetaHub, or Lattice terms → consult dictionary
 **⚠️ Dictionary is micro-functional reference only** — NOT architecture guidance. Rewrite from Cerb spec, don't copy legacy.
-**Alignment Audit**: `/prism-check` workflow, `/cerb-check` workflow
+**Alignment Audit**: `/cerb-check` workflow
 
 ---
 
@@ -77,7 +77,7 @@ For AI-assisted development:
 When code diverges from spec:
 - **Favor CODE** if it's battle-tested and intentional
 - **Favor SPEC** if code is a quick hack that shipped
-- Use `/prism-check` workflow to audit
+- Use `/cerb-check` workflow to audit
 
 ---
 

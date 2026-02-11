@@ -12,9 +12,17 @@
     <!-- 闹钟权限：任务提醒需要 -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     
     <!-- 通知权限：Android 13+ 需要 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- 开机恢复：重启后重新注册闹钟 -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- 电池优化豁免：中国 OEM 闹钟可靠性 -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- 录音权限：手机端 ASR 录音 (L2 测试工具) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -53,12 +61,42 @@
             </intent-filter>
         </activity>
 
+        <!-- 闹钟全屏 Activity — 半透明覆盖层 -->
+        <activity
+            android:name=".ui.alarm.AlarmActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Prism.Alarm"
+            android:launchMode="singleTop"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:exported="false" />
+
         <!-- 任务提醒广播接收器 -->
         <receiver
             android:name=".data.scheduler.TaskReminderReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.smartsales.prism.TASK_REMINDER" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 闹钟关闭广播接收器 — 处理滑动/按钮/点击关闭 -->
+        <receiver
+            android:name=".data.notification.AlarmDismissReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.smartsales.prism.ALARM_DISMISS" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 开机恢复广播接收器 — 重启后重新注册 AlarmManager 闹钟 -->
+        <receiver
+            android:name=".data.scheduler.BootCompletedReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
 

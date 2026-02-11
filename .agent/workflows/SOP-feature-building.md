@@ -69,7 +69,7 @@ Run these checks in order. **ALL must pass.**
 
 ### Gate 1-3: Prism Verification
 ```
-/prism-check
+/cerb-check
 ```
 - Gate 1 (Registry): Visual physics ✅
 - Gate 2 (Contract): Spec alignment ✅
@@ -104,7 +104,7 @@ Update `docs/plans/tracker.md` with feature status.
 ## Ship Checklist
 
 ```markdown
-- [ ] /prism-check passes all 3 gates
+- [ ] /cerb-check passes all 3 gates
 - [ ] Build passes
 - [ ] Tests pass
 - [ ] E2E works
@@ -119,7 +119,7 @@ Update `docs/plans/tracker.md` with feature status.
 
 | Workflow | When to Use |
 |----------|-------------|
-| `/prism-check` | Pre-ship verification (all 3 gates) |
+| `/cerb-check` | Pre-ship verification (all 3 gates) |
 | `/agent-visibility` | If feature touches agent activity |
 | `/01-senior-reviewr` | Sanity check design decisions |
 | `/06-audit` | Evidence-based code analysis |

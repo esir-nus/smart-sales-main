@@ -117,7 +117,7 @@ Compare what `prism-ui-ux-contract.md` says vs what user actually sees.
 
 | Condition | Action |
 |-----------|--------|
-| Score < 60 | Run `/prism-check` to sync spec and code |
+| Score < 60 | Run `/cerb-check` to sync spec and code |
 | Spec gaps found | Update `prism-ui-ux-contract.md` |
 | Code doesn't match spec | Run `/06-audit` for code fix |
 

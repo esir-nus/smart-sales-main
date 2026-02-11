@@ -1,6 +1,7 @@
 # OSS Service
 
 > **Cerb-compliant spec** — Aliyun Object Storage Service file upload.
+> **State**: SHIPPED
 
 ---
 

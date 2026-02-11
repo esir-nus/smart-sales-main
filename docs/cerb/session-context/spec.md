@@ -2,6 +2,7 @@
 
 > **Cerb-compliant spec** — In-memory workspace and caching for `ContextBuilder`.  
 > **OS Layer**: Kernel
+> **State**: PARTIAL
 
 ---
 
@@ -109,7 +110,8 @@ Drives auto-population of Section 3.
 |-------|------|--------|-----------|
 | `entityStates` | `Map<String, EntityTrace>` | Entity resolution | ✅ Wave 3 |
 | `pathIndex` | `Map<String, String>` | Alias caching | ✅ Wave 2 |
-| `memoryHits` | `List<MemoryHit>` | `MemoryRepository.search()` | ✅ In `build()` |
+| `entityKnowledge` | `String?` | `ContextBuilder.buildEntityKnowledge()` | 🔧 Wave 3 |
+| `memoryHits` | `List<MemoryHit>` | ~~`MemoryRepository.search()`~~ Soft-deprecated — replaced by `entityKnowledge` | ✅ (deprecated) |
 | `entityContext` | `Map<String, EntityRef>` | `buildWithClues()` | ✅ In `buildWithClues()` |
 
 ### Section 2: User Habits (Global)

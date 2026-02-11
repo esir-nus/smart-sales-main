@@ -1,6 +1,7 @@
 # Badge Audio Pipeline
 
 > **Cerb-compliant spec** — End-to-end orchestration from badge recording to scheduler.
+> **State**: SHIPPED
 
 ---
 

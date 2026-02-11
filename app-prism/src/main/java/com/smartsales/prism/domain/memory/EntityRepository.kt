@@ -39,6 +39,13 @@ interface EntityRepository {
      * 删除实体
      */
     suspend fun delete(entityId: String)
+    
+    /**
+     * Entity Knowledge Context — 加载所有实体（session-unscoped）
+     * Kernel 在会话首轮调用，构建实体知识图谱注入 LLM prompt
+     * @see entity-registry/spec.md § Kernel Read Pattern
+     */
+    suspend fun getAll(limit: Int = 100): List<EntityEntry>
 }
 
 // Backwards compatibility alias (deprecated, will be removed)

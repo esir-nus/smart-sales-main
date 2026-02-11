@@ -42,7 +42,7 @@ class SchedulerLinterTest {
         assertEquals("赶飞机", success.task.title)
         assertEquals(UrgencyLevel.L1_CRITICAL, success.urgencyLevel)
         assertTrue(success.task.isSmartAlarm)
-        assertEquals(6, success.task.alarmCascade.size) // L1 = 6 alarms
+        assertEquals(7, success.task.alarmCascade.size) // L1 = 7 alarms (including 0m)
     }
     
     @Test
@@ -59,11 +59,11 @@ class SchedulerLinterTest {
         assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
         val success = result as LintResult.Success
         assertEquals(UrgencyLevel.L3_NORMAL, success.urgencyLevel)
-        assertEquals(2, success.task.alarmCascade.size) // L3 = 2 alarms (-15m, -1m)
+        assertEquals(3, success.task.alarmCascade.size) // L3 = 3 alarms (-15m, -1m, 0m)
     }
     
     @Test
-    fun `FIRE_OFF urgency sets COEXISTING policy and empty alarms`() {
+    fun `FIRE_OFF urgency sets COEXISTING policy and single 0m alarm`() {
         val fireOffJson = """
             {
                 "title": "喝水",
@@ -78,8 +78,8 @@ class SchedulerLinterTest {
         val success = result as LintResult.Success
         assertEquals(UrgencyLevel.FIRE_OFF, success.urgencyLevel)
         assertEquals(ConflictPolicy.COEXISTING, success.task.conflictPolicy)
-        assertTrue(success.task.alarmCascade.isEmpty())
-        assertEquals(false, success.task.hasAlarm)
+        assertEquals(listOf("0m"), success.task.alarmCascade)
+        assertEquals(true, success.task.hasAlarm)
     }
     
     @Test

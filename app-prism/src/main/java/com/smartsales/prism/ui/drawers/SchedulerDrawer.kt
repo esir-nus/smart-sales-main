@@ -73,12 +73,31 @@ fun SchedulerDrawer(
     LaunchedEffect(pipelineStatus) {
         if (!pipelineStatus.isNullOrEmpty()) {
             Toast.makeText(context, pipelineStatus, Toast.LENGTH_SHORT).show()
-            // Optional: Clear status after showing to require fresh update for next toast?
-            // ViewModel doesn't clear it automatically unless we added a clearPipelineStatus() call.
-            // But for simple feedback, this is enough. 
-            // Better pattern: ViewModel clears it after delay, or we just observe edges.
-            // Here we just toast whatever comes in.
         }
+    }
+
+    // 精确闹钟权限提示 — 一次性对话框
+    var showExactAlarmDialog by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        viewModel.exactAlarmPermissionNeeded.collect {
+            showExactAlarmDialog = true
+        }
+    }
+    if (showExactAlarmDialog) {
+        AlertDialog(
+            onDismissRequest = { showExactAlarmDialog = false },
+            title = { Text("精确闹钟权限") },
+            text = { Text("未授予精确闹钟权限，提醒可能延迟最多1小时。\n\n建议在设置中开启「闹钟和提醒」权限以确保准时提醒。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showExactAlarmDialog = false
+                    com.smartsales.prism.data.notification.OemCompat.openExactAlarmSettings(context)
+                }) { Text("去设置") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExactAlarmDialog = false }) { Text("稍后") }
+            }
+        )
     }
     
     // Derived UI State for Timeline
@@ -233,6 +252,7 @@ fun SchedulerDrawer(
                             onItemClick = { id -> viewModel.onItemClick(id) },
                             onDelete = { id -> viewModel.onDeleteItem(id) },
                             onReschedule = { id, text -> viewModel.onReschedule(id, text) },
+                            onMicRecord = { wavFile -> viewModel.simulateFromMic(wavFile) },
                             onMultiSelectToggle = { id -> viewModel.onToggleSelection(id) },
                             onEnterMultiSelect = { viewModel.onEnterSelectionMode() },
                             onConflictResolve = { action -> viewModel.handleConflictResolution(action) },

@@ -2,6 +2,7 @@
 
 > **Cerb-compliant spec** — CRM hierarchy + client intelligence.  
 > **OS Layer**: File Explorer
+> **State**: SPEC_ONLY
 
 ---
 

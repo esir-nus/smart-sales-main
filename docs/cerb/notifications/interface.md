@@ -19,13 +19,15 @@ interface NotificationService {
      * @param body 通知正文
      * @param channel 通知渠道
      * @param priority 优先级
+     * @param contentIntent 点击通知时的跳转 (可选)
      */
     fun show(
         id: String,
         title: String,
         body: String,
-        channel: NotificationChannel = NotificationChannel.TASK_REMINDER,
-        priority: NotificationPriority = NotificationPriority.HIGH
+        channel: PrismNotificationChannel = PrismNotificationChannel.TASK_REMINDER,
+        priority: NotificationPriority = NotificationPriority.HIGH,
+        contentIntent: PendingIntent? = null
     )
 
     /**
@@ -37,6 +39,17 @@ interface NotificationService {
      * 检查通知权限是否已授予
      */
     fun hasPermission(): Boolean
+
+    /**
+     * 启动持续振动 (URGENT 通知专用)
+     * 使用独立 Vibrator，不依赖通知自带振动
+     */
+    fun startPersistentVibration()
+
+    /**
+     * 停止持续振动
+     */
+    fun stopVibration()
 }
 ```
 
@@ -47,8 +60,8 @@ interface NotificationService {
 ### NotificationChannel
 
 ```kotlin
-enum class NotificationChannel(val id: String, val displayName: String) {
-    TASK_REMINDER("prism_task_reminders", "任务提醒"),
+enum class PrismNotificationChannel(val channelId: String, val displayName: String) {
+    TASK_REMINDER("prism_task_reminders_v2", "任务提醒"),
     COACH_NUDGE("prism_coach_nudge", "教练提示"),
     BADGE_STATUS("prism_badge_status", "设备状态"),
     MEMORY_UPDATE("prism_memory_update", "记忆更新")
@@ -61,7 +74,8 @@ enum class NotificationChannel(val id: String, val displayName: String) {
 enum class NotificationPriority {
     LOW,      // 静默
     DEFAULT,  // 正常
-    HIGH      // 横幅 + 振动
+    HIGH,     // 横幅 + 振动
+    URGENT    // 持续振动 + 锁屏 + 全屏 Intent + 绕过勿扰
 }
 ```
 
@@ -74,8 +88,11 @@ enum class NotificationPriority {
 | `show` | Thread-safe — concurrent calls OK |
 | `show` | No-op if `POST_NOTIFICATIONS` permission denied (logs warning silently) |
 | `show` | Channels created lazily on first use |
+| `show` | All channels use `VISIBILITY_PUBLIC` (visible on lock screen) |
 | `cancel` | Idempotent — safe to call with non-existent id |
 | `hasPermission` | Always returns `true` on API < 33 |
+| `startPersistentVibration` | Uses `VibrationEffect.createWaveform` with loop, independent of notification channel |
+| `stopVibration` | Idempotent — safe to call when not vibrating |
 
 ---
 

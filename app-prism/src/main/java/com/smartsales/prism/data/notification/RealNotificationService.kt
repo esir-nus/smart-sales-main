@@ -6,7 +6,12 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
+import android.media.RingtoneManager
 import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -39,6 +44,15 @@ class RealNotificationService @Inject constructor(
     // 渠道是否已初始化（幂等操作，但避免重复调用）
     private var channelsCreated = false
 
+    // 持续振动器 — URGENT 通知专用
+    private val vibrator: Vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val manager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+        manager.defaultVibrator
+    } else {
+        @Suppress("DEPRECATION")
+        context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+    }
+
     init {
         ensureChannels()
     }
@@ -62,13 +76,21 @@ class RealNotificationService @Inject constructor(
             NotificationPriority.LOW -> NotificationCompat.PRIORITY_LOW
             NotificationPriority.DEFAULT -> NotificationCompat.PRIORITY_DEFAULT
             NotificationPriority.HIGH -> NotificationCompat.PRIORITY_HIGH
+            NotificationPriority.URGENT -> NotificationCompat.PRIORITY_MAX
         }
 
-        val vibrationPattern = when (channel) {
-            PrismNotificationChannel.TASK_REMINDER -> longArrayOf(0, 250, 250, 250)
-            PrismNotificationChannel.COACH_NUDGE -> longArrayOf(0, 150)
-            PrismNotificationChannel.BADGE_STATUS -> null
-            PrismNotificationChannel.MEMORY_UPDATE -> null
+        val isUrgent = priority == NotificationPriority.URGENT
+
+        // URGENT 使用独立 Vibrator（持续振动），非 URGENT 使用通知自带振动
+        val vibrationPattern = if (isUrgent) {
+            null // 不用通知振动，用 Vibrator
+        } else {
+            when (channel) {
+                PrismNotificationChannel.TASK_REMINDER -> longArrayOf(0, 250, 250, 250)
+                PrismNotificationChannel.COACH_NUDGE -> longArrayOf(0, 150)
+                PrismNotificationChannel.BADGE_STATUS -> null
+                PrismNotificationChannel.MEMORY_UPDATE -> null
+            }
         }
 
         val notification = NotificationCompat.Builder(context, channel.channelId)
@@ -77,9 +99,15 @@ class RealNotificationService @Inject constructor(
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setPriority(androidPriority)
-            .setCategory(NotificationCompat.CATEGORY_REMINDER)
-            .setAutoCancel(true)
+            .setCategory(if (isUrgent) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_REMINDER)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .apply {
+                if (isUrgent) {
+                    // URGENT: 不自动取消，由 AlarmDismissReceiver 统一处理
+                    setAutoCancel(false)
+                } else {
+                    setAutoCancel(true)
+                }
                 vibrationPattern?.let { setVibrate(it) }
                 contentIntent?.let { setContentIntent(it) }
             }
@@ -89,7 +117,7 @@ class RealNotificationService @Inject constructor(
 
         try {
             notificationManager.notify(notificationId, notification)
-            Log.d(TAG, "通知已显示: id=$id (${notificationId}), channel=${channel.channelId}, title=$title")
+            Log.d(TAG, "通知已显示: id=$id ($notificationId), channel=${channel.channelId}, priority=$priority")
         } catch (e: SecurityException) {
             Log.w(TAG, "通知发送失败 (权限): ${e.message}")
         }
@@ -110,6 +138,17 @@ class RealNotificationService @Inject constructor(
             context,
             Manifest.permission.POST_NOTIFICATIONS
         ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    override fun stopVibration() {
+        vibrator.cancel()
+        Log.d(TAG, "持续振动已停止")
+    }
+
+    override fun startPersistentVibration() {
+        val pattern = longArrayOf(0, 500, 300, 500) // 振-停-振
+        vibrator.vibrate(VibrationEffect.createWaveform(pattern, 0)) // 0=循环
+        Log.d(TAG, "持续振动已启动")
     }
 
     /**
@@ -137,9 +176,28 @@ class RealNotificationService @Inject constructor(
                 prismChannel.channelId,
                 prismChannel.displayName,
                 importance
-            )
+            ).apply {
+                // 任务提醒渠道：振动 + 锁屏可见 + 绕过勿扰 + 闹钟铃声
+                if (prismChannel == PrismNotificationChannel.TASK_REMINDER) {
+                    enableVibration(true)
+                    vibrationPattern = longArrayOf(0, 500, 300, 500)
+                    lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+                    setBypassDnd(true)
+                    setSound(
+                        RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ALARM)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .build()
+                    )
+                }
+            }
             manager.createNotificationChannel(androidChannel)
         }
+
+        // 删除旧版渠道（v1 无振动，v2 无闹钟铃声）
+        manager.deleteNotificationChannel("prism_task_reminders")
+        manager.deleteNotificationChannel("prism_task_reminders_v2")
 
         channelsCreated = true
         Log.d(TAG, "通知渠道已创建: ${PrismNotificationChannel.entries.size} 个")

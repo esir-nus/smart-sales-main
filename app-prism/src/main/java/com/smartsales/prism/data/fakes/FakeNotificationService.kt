@@ -47,6 +47,10 @@ class FakeNotificationService : NotificationService {
 
     override fun hasPermission(): Boolean = permissionGranted
 
+    override fun stopVibration() { /* no-op */ }
+
+    override fun startPersistentVibration() { /* no-op */ }
+
     /** 清空测试状态 */
     fun reset() {
         _shown.clear()

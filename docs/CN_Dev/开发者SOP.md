@@ -105,7 +105,7 @@ view_file docs/plans/tracker.md
 
 | 审计 | 工作流 | 时机 |
 |------|--------|------|
-| **Prism 验证** | `/prism-check` | 实现后 — 全部3个门（注册表 → 合约 → 架构）|
+| **Prism 验证** | `/cerb-check` | 实现后 — 全部3个门（注册表 → 合约 → 架构）|
 | **Agent 可见性** | `/agent-visibility` | 如功能涉及 agent 活动 |
 
 ### 构建验证
@@ -135,7 +135,7 @@ view_file docs/plans/tracker.md
 
 ```markdown
 - [x] 功能端到端可用
-- [x] /prism-check 通过全部3个门
+- [x] /cerb-check 通过全部3个门
 - [x] 构建 + 测试绿色
 - [x] Tracker 已更新
 ```
@@ -148,9 +148,9 @@ view_file docs/plans/tracker.md
 
 | 支柱 | 检查点 |
 |------|--------|
-| **规范对齐** | `/prism-check` 门2通过 |
+| **规范对齐** | `/cerb-check` 门2通过 |
 | **流程完整** | 端到端旅程可用 |
-| **架构整洁** | `/prism-check` 门3通过 |
+| **架构整洁** | `/cerb-check` 门3通过 |
 | **可见性** | Agent 表现智能 |
 | **已测试** | 构建 + 单测绿色 |
 | **已记录** | tracker 已更新 |

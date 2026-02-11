@@ -2,6 +2,7 @@
 
 > **Cerb-compliant spec** — Self-contained, all content inline.  
 > **OS Model**: Consumer of RAM (reads entity context from SessionWorkingSet Section 1)
+> **State**: SHIPPED
 
 ---
 
@@ -104,16 +105,16 @@ enum class UrgencyLevel {
     L1_CRITICAL,   // 赶飞机、签约、面试 — 错过=不可逆损失
     L2_IMPORTANT,  // 会议、电话、汇报 — 错过=影响他人
     L3_NORMAL,     // 回邮件、买东西、日常 — 错过=无大碍
-    FIRE_OFF       // 喝水、站起来走走 — 即时提醒，无闹钟
+    FIRE_OFF       // 喝水、站起来走走 — 即时单次提醒（0m）
 }
 ```
 
 | Level | Cascade | Conflict Policy | Duration Default |
 |-------|---------|-----------------|------------------|
-| `L1_CRITICAL` | `-2h, -1h, -30m, -15m, -5m, -1m` | EXCLUSIVE | LLM-decided |
-| `L2_IMPORTANT` | `-1h, -15m, -5m, -1m` | EXCLUSIVE | LLM-decided |
-| `L3_NORMAL` | `-15m, -1m` | EXCLUSIVE | LLM-decided |
-| `FIRE_OFF` | _(none)_ | COEXISTING | 0 |
+| `L1_CRITICAL` | `-2h, -1h, -30m, -15m, -5m, -1m, 0m` | EXCLUSIVE | LLM-decided |
+| `L2_IMPORTANT` | `-1h, -15m, -5m, -1m, 0m` | EXCLUSIVE | LLM-decided |
+| `L3_NORMAL` | `-15m, -1m, 0m` | EXCLUSIVE | LLM-decided |
+| `FIRE_OFF` | `0m` | COEXISTING | 0 |
 
 ---
 
@@ -201,10 +202,10 @@ AlarmScheduler.scheduleAll()
 
 ```kotlin
 fun buildCascade(level: UrgencyLevel): List<String> = when (level) {
-    L1_CRITICAL  -> listOf("-2h", "-1h", "-30m", "-15m", "-5m", "-1m")
-    L2_IMPORTANT -> listOf("-1h", "-15m", "-5m", "-1m")
-    L3_NORMAL    -> listOf("-15m", "-1m")
-    FIRE_OFF     -> emptyList()
+    L1_CRITICAL  -> listOf("-2h", "-1h", "-30m", "-15m", "-5m", "-1m", "0m")
+    L2_IMPORTANT -> listOf("-1h", "-15m", "-5m", "-1m", "0m")
+    L3_NORMAL    -> listOf("-15m", "-1m", "0m")
+    FIRE_OFF     -> listOf("0m")
 }
 ```
 
@@ -215,7 +216,7 @@ fun buildCascade(level: UrgencyLevel): List<String> = when (level) {
 - L1: 赶飞机、签约、面试（错过=不可逆损失）
 - L2: 会议、电话、汇报（错过=影响他人）
 - L3: 回邮件、买东西、日常任务（错过=无大碍）
-- FIRE_OFF: 喝水、站起来走走、看新闻（即时提醒，无闹钟）
+- FIRE_OFF: 喝水、站起来走走、看新闻（即时单次提醒 0m）
 ```
 
 ### Linter Validation

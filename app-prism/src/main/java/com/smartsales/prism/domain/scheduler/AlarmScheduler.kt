@@ -16,7 +16,7 @@ interface AlarmScheduler {
      * @param taskTitle 任务标题 (用于通知显示)
      * @param eventTime 事件开始时间
      * @param cascade 级联偏移量列表 (e.g. ["-2h", "-1h", "-15m", "-1m"])
-     *                空列表 = 不设置提醒 (FIRE_OFF)
+     *                空列表 = 不设置提醒
      */
     suspend fun scheduleCascade(
         taskId: String,

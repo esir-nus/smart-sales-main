@@ -13,5 +13,8 @@ enum class NotificationPriority {
     DEFAULT,
 
     /** 高优先级 — 横幅 + 振动 */
-    HIGH
+    HIGH,
+
+    /** 紧急 — 到点提醒，持续振动直到用户关闭 */
+    URGENT
 }

@@ -1,6 +1,7 @@
 # Connectivity Bridge
 
 > **Cerb-compliant spec** — Prism-safe wrapper for legacy BLE + HTTP connectivity.
+> **State**: SHIPPED
 
 ---
 

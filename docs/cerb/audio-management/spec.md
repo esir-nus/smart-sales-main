@@ -1,6 +1,7 @@
 # Audio Management
 
 > **Cerb-compliant spec** — Audio file management: sync, transcription, UI interaction.
+> **State**: SPEC_ONLY
 
 ---
 

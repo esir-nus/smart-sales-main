@@ -1,5 +1,8 @@
 # Device Pairing Spec (Internal)
 
+> **Cerb-compliant spec** — BLE device pairing flow wrapping legacy connectivity stack.
+> **State**: PARTIAL
+
 ## Architecture Overview
 
 `RealPairingService` acts as a facade over the complex legacy connectivity stack. It simplifies the 9-stage legacy state machine into a linear 6-stage consumer flow.

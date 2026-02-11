@@ -292,6 +292,50 @@ These flows are **logically independent**. The only shared resource is the BLE w
 
 ---
 
+### Conceptual Name → Wrong Implementation (Label ≠ Schema) — 2026-02-11
+
+**Symptom**: Spec updates told agents to dump raw `memory_entries` into the LLM prompt as "CRM Snapshot"  
+**Root Cause**: **Built from the NAME ("CRM Snapshot") instead of verifying against the data MODEL (`EntityEntry`)**  
+- Frank said "CRM Snapshot — Kotlin loads, LLM searches"
+- I interpreted: "Load everything from CRM tables (entities + memories) into a flat JSON"
+- I never checked what `EntityEntry` actually contains: `attributesJson`, `metricsHistoryJson`, `relatedEntitiesJson`, `decisionLogJson` — already structured intelligence
+- Raw `memory_entries` are conversation logs (rote memorization), NOT intelligence  
+**Wrong Approach**: Taking a conceptual name literally and building the implementation from it  
+**Correct Fix**: When Frank gives a conceptual name or description:
+1. **Read the data model** — what fields exist? What structured data is already there?
+2. **Ask: "Is this structured intelligence or raw data?"** — structured wins, raw is noise
+3. **Verify the payload against the schema**, not the label
+4. **"Rote memorization ≠ intelligence"** — recalling "Feb 8 CEO had meeting" is trivia. Knowing "CEO → company X → deal stage Y → buying role Z" is intelligence  
+**Pattern**: **Frank's conceptual descriptions are human shorthand. Always verify against `data class` definitions before building.** The schema is the spec, the name is just a hint.  
+**Corollary (from Frank)**: "I sometimes describe my thought conceptually or simply use cool names — that could be misleading to agents."  
+**Agent-Friendly Check**: Before implementing any named concept, ask: `grep "data class [ConceptName]" app-prism/` — does the actual model match what you're about to build?  
+**Status**: ⏳ PENDING — 2026-02-11
+
+---
+
+### Multi-Spec Drift (Cerb Scope Violation) — 2026-02-11
+
+**Symptom**: Entity Knowledge Context implementation dumped all entities as JSON into LLM prompt — didn't match Frank's pointer-based incremental cache design  
+**Root Cause**: **Agent sourced business logic from 4 specs instead of 1.**  
+- Tracker said "Wave 3: Entity Knowledge Context"
+- Agent read memory-center, session-context, entity-registry, and coach specs
+- Cherry-picked from all 4 to assemble a "reasonable" plan
+- Never identified which ONE spec owns the behavior
+- `session-context/spec.md` already defined the pointer cache (pathIndex, EntityState machine) — agent ignored it  
+**Wrong Approach**: Reading tracker wave title → pulling from multiple specs → inventing behavior to fill gaps  
+**Correct Fix**:  
+1. Tracker wave → identify ONE owning Cerb shard
+2. Read that ONE spec completely
+3. Implement ONLY what that spec says
+4. If spec is incomplete → ask USER, don't invent
+5. Other specs are READ-ONLY context for communication patterns  
+**File(s)**: `.agent/workflows/feature-dev-planner-[tool].md` (added Single Spec Scope Rule + Cerb Scope Declaration)  
+**Relation**: Third instance of "Spec Invention from Wave Titles" (2026-02-03). Pattern now has workflow enforcement.  
+**Pattern**: **ONE task = ONE spec.md + ONE interface.md. Period.**  
+**Status**: ✅ CONFIRMED 2026-02-11
+
+---
+
 <!-- Add new lessons above this line -->
 
 ### SwipeToDismiss Background Visibility — 2026-02-02

@@ -41,6 +41,7 @@ fun SchedulerTimeline(
     onItemClick: (String) -> Unit,
     onDelete: (String) -> Unit,
     onReschedule: (String, String) -> Unit, // id, userText
+    onMicRecord: (java.io.File) -> Unit = {},
     onMultiSelectToggle: (String) -> Unit,
     onEnterMultiSelect: () -> Unit,
     onConflictResolve: (com.smartsales.prism.domain.scheduler.ConflictResolution) -> Unit,
@@ -59,6 +60,7 @@ fun SchedulerTimeline(
                 onItemClick = onItemClick,
                 onDelete = onDelete,
                 onReschedule = onReschedule,
+                onMicRecord = onMicRecord,
                 onMultiSelectToggle = onMultiSelectToggle,
                 onEnterMultiSelect = onEnterMultiSelect,
                 onConflictResolve = onConflictResolve,
@@ -79,6 +81,7 @@ private fun TimelineRow(
     onItemClick: (String) -> Unit,
     onDelete: (String) -> Unit,
     onReschedule: (String, String) -> Unit,
+    onMicRecord: (java.io.File) -> Unit,
     onMultiSelectToggle: (String) -> Unit,
     onEnterMultiSelect: () -> Unit,
     onConflictResolve: (com.smartsales.prism.domain.scheduler.ConflictResolution) -> Unit,
@@ -134,11 +137,12 @@ private fun TimelineRow(
                             enabled = !isExpanded
                         ) {
                             TaskCard(
-                                state = taskWithVisual,  // 传递带视觉状态的任务
+                                state = taskWithVisual,
                                 isExpanded = isExpanded,
                                 onExpandToggle = { isExpanded = !isExpanded },
                                 onClick = { onItemClick(item.id) },
-                                onReschedule = { text -> onReschedule(item.id, text) }
+                                onReschedule = { text -> onReschedule(item.id, text) },
+                                onMicRecord = onMicRecord
                             )
                         }
                     }

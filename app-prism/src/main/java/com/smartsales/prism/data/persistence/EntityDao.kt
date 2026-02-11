@@ -59,6 +59,12 @@ interface EntityDao {
     suspend fun delete(entityId: String)
     
     /**
+     * Entity Knowledge Context — 加载所有实体（按最近更新排序）
+     */
+    @Query("SELECT * FROM entity_entries ORDER BY lastUpdatedAt DESC LIMIT :limit")
+    suspend fun getAll(limit: Int): List<EntityEntryEntity>
+    
+    /**
      * Test helper: 清空所有数据
      */
     @Query("DELETE FROM entity_entries")

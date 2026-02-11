@@ -22,7 +22,7 @@
 
 | Cerb Shard | State | Next Wave |
 |------------|-------|-----------|
-| [session-context](../cerb/session-context/spec.md) | SHIPPED | W4: OS Model (3-section RAM) ✅ |
+| [session-context](../cerb/session-context/spec.md) | PARTIAL | W3: Entity Knowledge (pointer cache) |
 | [memory-center](../cerb/memory-center/spec.md) | SHIPPED | — |
 | [entity-registry](../cerb/entity-registry/spec.md) | SHIPPED | — |
 | [entity-writer](../cerb/entity-writer/spec.md) | SHIPPED | — |

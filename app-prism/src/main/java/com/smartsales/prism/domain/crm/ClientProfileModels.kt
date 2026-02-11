@@ -56,5 +56,10 @@ enum class ActivityType {
     NOTE,
     ARTIFACT_GENERATED,
     DEAL_STAGE_CHANGE,
-    TASK_COMPLETED
+    TASK_COMPLETED,
+    // Wave 2: 变更感知 Profile 跟踪
+    NAME_CHANGE,
+    TITLE_CHANGE,
+    COMPANY_CHANGE,
+    ROLE_CHANGE
 }

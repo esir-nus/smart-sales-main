@@ -11,7 +11,7 @@ enum class PrismNotificationChannel(
     val displayName: String
 ) {
     /** 任务到期提醒 — 高优先级，振动+横幅 */
-    TASK_REMINDER("prism_task_reminders", "任务提醒"),
+    TASK_REMINDER("prism_task_reminders_v3", "任务提醒"),
 
     /** 教练模式提示 — 习惯养成、会话总结 */
     COACH_NUDGE("prism_coach_nudge", "教练提示"),

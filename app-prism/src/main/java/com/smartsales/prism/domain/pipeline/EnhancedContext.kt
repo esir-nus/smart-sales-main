@@ -12,6 +12,7 @@ data class EnhancedContext(
     val audioTranscripts: List<TranscriptBlock> = emptyList(),
     val imageAnalysis: List<VisionResult> = emptyList(),
     val memoryHits: List<MemoryHit> = emptyList(),
+    val entityKnowledge: String? = null,
     val entityContext: Map<String, EntityRef> = emptyMap(),
     val modeMetadata: ModeMetadata = ModeMetadata(),
     // Phase 4: Session history for context-aware refinement
@@ -20,6 +21,8 @@ data class EnhancedContext(
     val executedTools: Set<String> = emptySet(),
     // 日期上下文 — LLM 需要知道今天才能正确解析 "明天"、"下周" 等
     val currentDate: String? = null,
+    // 当前时刻 (epoch millis) — 用于 RelativeTimeResolver 计算绝对时间
+    val currentInstant: Long = 0,
     // Wave 3: 习惯上下文 — 用户和客户偏好（RL Module）
     val habitContext: HabitContext? = null
 )

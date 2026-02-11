@@ -5,6 +5,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
@@ -25,11 +26,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import com.smartsales.prism.data.audio.PhoneAudioRecorder
 import com.smartsales.prism.ui.components.PrismCard
 import com.smartsales.prism.ui.components.PrismButton
 import com.smartsales.prism.ui.components.PrismButtonStyle
@@ -46,6 +50,7 @@ fun TaskCard(
     onExpandToggle: () -> Unit,
     onClick: () -> Unit,
     onReschedule: (String) -> Unit = {},
+    onMicRecord: (java.io.File) -> Unit = {},
     onToggleDone: () -> Unit = {}
 ) {
     // 冲突视觉效果 — 琥珀色边框 + 呼吸发光
@@ -306,10 +311,27 @@ fun TaskCard(
                         // Chat Input (Real UI)
                         if (!state.isDone) {
                             var inputText by remember { mutableStateOf("") }
+                            var isRecordingMic by remember { mutableStateOf(false) }
+                            val cardContext = LocalContext.current
+                            val cardRecorder = remember { PhoneAudioRecorder(cardContext) }
+                            
+                            // 权限请求
+                            val cardPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                                contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+                            ) { granted ->
+                                if (!granted) {
+                                    android.widget.Toast.makeText(cardContext, "❌ 需要录音权限", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(BackgroundSurface.copy(alpha = 0.5f), CircleShape) // Glass Capsule
+                                    .background(
+                                        if (isRecordingMic) AccentDanger.copy(alpha = 0.15f)
+                                        else BackgroundSurface.copy(alpha = 0.5f),
+                                        CircleShape
+                                    )
                                     .padding(horizontal = 12.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -321,27 +343,74 @@ fun TaskCard(
                                     textStyle = LocalTextStyle.current.copy(color = TextPrimary),
                                     decorationBox = { innerTextField ->
                                         if (inputText.isEmpty()) {
-                                            Text("调整时间...", color = TextMuted, fontSize = 14.sp)
+                                            Text(
+                                                if (isRecordingMic) "🔴 松开发送..." else "调整时间...",
+                                                color = if (isRecordingMic) AccentDanger else TextMuted,
+                                                fontSize = 14.sp
+                                            )
                                         }
                                         innerTextField()
                                     }
                                 )
                                 
                                 Spacer(modifier = Modifier.width(8.dp))
-        
-                                Icon(
-                                    imageVector = if (inputText.isEmpty()) Icons.Default.Mic else Icons.Default.Send,
-                                    contentDescription = "Send",
-                                    tint = AccentBlue,
-                                    modifier = Modifier
-                                        .size(20.dp)
-                                        .clickable {
-                                            if (inputText.isNotEmpty()) {
+                                
+                                if (inputText.isNotEmpty()) {
+                                    // 文本模式 → 发送按钮
+                                    Icon(
+                                        imageVector = Icons.Default.Send,
+                                        contentDescription = "Send",
+                                        tint = AccentBlue,
+                                        modifier = Modifier
+                                            .size(20.dp)
+                                            .clickable {
                                                 onReschedule(inputText)
                                                 inputText = ""
                                             }
-                                        }
-                                )
+                                    )
+                                } else {
+                                    // 录音模式 → 按住录音
+                                    Icon(
+                                        imageVector = Icons.Default.Mic,
+                                        contentDescription = "Record",
+                                        tint = if (isRecordingMic) AccentDanger else AccentBlue,
+                                        modifier = Modifier
+                                            .size(20.dp)
+                                            .pointerInput(Unit) {
+                                                detectTapGestures(
+                                                    onPress = {
+                                                        // 检查权限
+                                                        val hasPermission = androidx.core.content.ContextCompat
+                                                            .checkSelfPermission(
+                                                                cardContext,
+                                                                android.Manifest.permission.RECORD_AUDIO
+                                                            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                                        
+                                                        if (!hasPermission) {
+                                                            cardPermissionLauncher.launch(
+                                                                android.Manifest.permission.RECORD_AUDIO
+                                                            )
+                                                            return@detectTapGestures
+                                                        }
+                                                        
+                                                        // 开始录音
+                                                        cardRecorder.startRecording()
+                                                        isRecordingMic = true
+                                                        
+                                                        val released = tryAwaitRelease()
+                                                        
+                                                        isRecordingMic = false
+                                                        if (released) {
+                                                            val wavFile = cardRecorder.stopRecording()
+                                                            onMicRecord(wavFile)
+                                                        } else {
+                                                            cardRecorder.cancel()
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                    )
+                                }
                             }
                         }
                     }

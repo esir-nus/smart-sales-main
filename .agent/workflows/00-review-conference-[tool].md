@@ -54,7 +54,7 @@ Based on triage, select the **minimum effective panel**:
 | Review Type | Required | Optional |
 |-------------|----------|----------|
 | **Code Quality** | `/01-senior-reviewr` | `/06-audit` |
-| **Architecture** | `/01-senior-reviewr`, `/17-lattice-review` | `/prism-check` |
+| **Architecture** | `/01-senior-reviewr`, `/17-lattice-review` | `/cerb-check` |
 | **UI/UX** | `/01-senior-reviewr`, `/08-ux-specialist` | `/12-ui-director`, `/16-ui-designer` |
 | **Business/Product** | `/01-senior-reviewr`, `/20-sales-expert` | — |
 | **Cross-cutting** | `/01-senior-reviewr` + 2-3 from above | As needed |

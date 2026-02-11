@@ -103,7 +103,7 @@ view_file docs/plans/tracker.md
 
 | Audit | Workflow | When |
 |-------|----------|------|
-| **Prism Verification** | `/prism-check` | After impl — all 3 gates (Registry → Contract → Architecture) |
+| **Prism Verification** | `/cerb-check` | After impl — all 3 gates (Registry → Contract → Architecture) |
 | **Agent Visibility** | `/agent-visibility` | If feature touches agent activity |
 
 ### Build Verification
@@ -133,7 +133,7 @@ view_file docs/plans/tracker.md
 
 ```markdown
 - [x] Feature works E2E
-- [x] /prism-check passes all 3 gates
+- [x] /cerb-check passes all 3 gates
 - [x] Build + tests green
 - [x] Tracker updated
 ```
@@ -146,9 +146,9 @@ view_file docs/plans/tracker.md
 
 | Pillar | Checkpoint |
 |--------|------------|
-| **Spec Aligned** | `/prism-check` Gate 2 passes |
+| **Spec Aligned** | `/cerb-check` Gate 2 passes |
 | **Flow Complete** | E2E journey works |
-| **Arch Clean** | `/prism-check` Gate 3 passes |
+| **Arch Clean** | `/cerb-check` Gate 3 passes |
 | **Visible** | Agent feels smart |
 | **Tested** | Build + unit tests green |
 | **Documented** | tracker updated |

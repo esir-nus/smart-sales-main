@@ -44,8 +44,11 @@ class SessionContext(
      */
     val pathIndex: MutableMap<String, String> = mutableMapOf()
 
-    /** 记忆搜索结果（首轮由 Kernel 填充） */
+    /** 记忆搜索结果（首轮由 Kernel 填充）— soft-deprecated, 见 entityKnowledge */
     var memoryHits: List<MemoryHit> = emptyList()
+    
+    /** Entity Knowledge Context JSON（首轮由 Kernel 填充，结构化实体图谱） */
+    var entityKnowledge: String? = null
 
     /** 实体引用（由 EntityWriter write-through 填充） */
     val entityContext: MutableMap<String, EntityRef> = mutableMapOf()

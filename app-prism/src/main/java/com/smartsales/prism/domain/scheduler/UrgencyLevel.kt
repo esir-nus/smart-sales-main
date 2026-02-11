@@ -16,7 +16,7 @@ enum class UrgencyLevel {
     /** 回邮件、买东西、日常 — 错过=无大碍 */
     L3_NORMAL,
 
-    /** 喝水、站起来走走 — 即时提醒，无闹钟 */
+    /** 喝水、站起来走走 — 即时单次提醒（0m） */
     FIRE_OFF;
 
     companion object {
@@ -25,10 +25,10 @@ enum class UrgencyLevel {
          * LLM 分类 → Kotlin 决定偏移量（纯函数，无 LLM 参与）
          */
         fun buildCascade(level: UrgencyLevel): List<String> = when (level) {
-            L1_CRITICAL  -> listOf("-2h", "-1h", "-30m", "-15m", "-5m", "-1m")
-            L2_IMPORTANT -> listOf("-1h", "-15m", "-5m", "-1m")
-            L3_NORMAL    -> listOf("-15m", "-1m")
-            FIRE_OFF     -> emptyList()
+            L1_CRITICAL  -> listOf("-2h", "-1h", "-30m", "-15m", "-5m", "-1m", "0m")
+            L2_IMPORTANT -> listOf("-1h", "-15m", "-5m", "-1m", "0m")
+            L3_NORMAL    -> listOf("-15m", "-1m", "0m")
+            FIRE_OFF     -> listOf("0m")
         }
 
         /**
@@ -36,6 +36,8 @@ enum class UrgencyLevel {
          * e.g. "-2h" → 7200000, "-15m" → 900000
          */
         fun parseCascadeOffset(offset: String): Long {
+            // "0m" = 到点提醒，偏移量为0
+            if (offset == "0m") return 0
             val regex = Regex("-(\\d+)([hm])")
             val match = regex.matchEntire(offset) ?: return 0
             val value = match.groupValues[1].toLong()

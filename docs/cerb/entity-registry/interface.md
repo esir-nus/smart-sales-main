@@ -39,6 +39,13 @@ interface EntityRepository {
      * Save or update an entity.
      */
     suspend fun save(entry: EntityEntry)
+    
+    /**
+     * Entity Knowledge Context read path (session-unscoped).
+     * Loads all entities for Kernel knowledge context building.
+     * @see entity-registry/spec.md § Kernel Read Pattern
+     */
+    suspend fun getAll(limit: Int = 100): List<EntityEntry>
 }
 ```
 
@@ -53,6 +60,7 @@ interface EntityRepository {
 | `search` | `query: String` | `List<EntityEntry>` |
 | `getByType` | `EntityType` | `List<EntityEntry>` |
 | `save` | `EntityEntry` | Unit |
+| `getAll` | `limit: Int` | `List<EntityEntry>` |
 
 ---
 

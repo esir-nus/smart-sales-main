@@ -1,6 +1,7 @@
 # Conflict Resolver
 
 > **Cerb-compliant spec** — Self-contained, all content inline.
+> **State**: SHIPPED
 
 ---
 

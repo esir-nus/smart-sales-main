@@ -159,11 +159,21 @@ class DashscopeExecutor @Inject constructor(
             appendLine()
         }
         
-        // 📅 添加日期上下文（关键：LLM 需要知道 "今天" 才能解析 "明天"、"下周"）
+        // 📅 添加日期时间上下文（关键：LLM 需要知道 "今天" + 当前时间 才能解析 "明天"、"5分钟后"）
         context.currentDate?.let { date ->
-            appendLine("## 当前日期")
+            appendLine("## 当前日期时间")
             appendLine("今天是: $date")
             appendLine()
+        }
+        
+        // 🕐 相对时间预解析（Kotlin 确定性 > LLM 数学）
+        if (context.modeMetadata.currentMode == Mode.SCHEDULER && context.currentInstant > 0) {
+            com.smartsales.prism.domain.scheduler.RelativeTimeResolver
+                .buildHint(context.userText, context.currentInstant, java.time.ZoneId.systemDefault())
+                ?.let { hint ->
+                    appendLine(hint)
+                    appendLine()
+                }
         }
         
         // 基础用户输入
@@ -179,20 +189,18 @@ class DashscopeExecutor @Inject constructor(
             }
         }
         
-        // 添加记忆命中（如果有）
-        if (context.memoryHits.isNotEmpty()) {
-            android.util.Log.d("CoachMemory", "📝 Executor: injecting ${context.memoryHits.size} memory hits into prompt")
+        // Wave 3: Entity Knowledge Context（替代原始 memoryHits）
+        if (!context.entityKnowledge.isNullOrEmpty()) {
+            android.util.Log.d("CoachMemory", "📝 Executor: injecting entityKnowledge (${context.entityKnowledge!!.length} chars)")
             appendLine()
-            appendLine("## 历史记忆")
-            context.memoryHits.take(3).forEach { entry ->
-                appendLine("- ${entry.content}")
-                android.util.Log.d("CoachMemory", "📝 Executor: → '${entry.content.take(50)}...'")
-            }
+            appendLine("## 实体知识")
+            appendLine("以下是你已知的客户实体信息（含别名、属性、关系），在回答时参考：")
+            appendLine(context.entityKnowledge)
         } else {
-            android.util.Log.d("CoachMemory", "📝 Executor: no memory hits in context")
+            android.util.Log.d("CoachMemory", "📝 Executor: no entityKnowledge in context")
             appendLine()
-            appendLine("## 历史记忆")
-            appendLine("注意: 当前没有任何历史对话记录。你不知道用户之前说过什么。不要编造、引用或暗示任何以前的对话内容或案例。如果用户问起之前的对话，请明确告知你没有相关记录。")
+            appendLine("## 实体知识")
+            appendLine("注意: 当前没有任何客户实体数据。不要编造客户信息、引用或暗示任何你不知道的客户细节。如果用户问起客户信息，请明确告知你没有相关记录。")
         }
         
         // Wave 3: 习惯上下文注入（用户和客户偏好）
@@ -382,7 +390,7 @@ class DashscopeExecutor @Inject constructor(
 | 赶飞机、签约、面试 | "L1" | 错过=不可逆重大损失（-2h, -1h, -30m...）|
 | 会议、电话、汇报 | "L2" | 错过=影响他人/工作（-1h, -15m...）|
 | 回邮件、买东西、日常任务 | "L3" | 错过=无大碍（-15m）|
-| 喝水、站起来走走、看新闻 | "FIRE_OFF" | 即时提醒，**不设闹钟**（仅由应用内逻辑处理）|
+| 喝水、站起来走走、看新闻 | "FIRE_OFF" | 即时单次提醒（0m）|
 
 如果用户明确说"不要提醒"或"关闭提醒"，请使用 "FIRE_OFF"。
 
@@ -440,7 +448,7 @@ class DashscopeExecutor @Inject constructor(
 }
 
 用户：2分钟以后提醒我看手机
-当前日期：2026-02-10
+当前日期时间：2026年2月10日（周一）17:40
 
 输出：
 {
@@ -448,7 +456,7 @@ class DashscopeExecutor @Inject constructor(
   "startTime": "2026-02-10 17:42",
   "endTime": null,
   "duration": "5m",
-  "reminder": "single"
+  "urgency": "FIRE_OFF"
 }
 
 只输出 JSON，不要有任何其他文字。

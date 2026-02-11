@@ -1,6 +1,7 @@
 # ASR Service
 
 > **Cerb-compliant spec** — Audio transcription via Aliyun FunASR (Batch API).
+> **State**: SHIPPED
 
 ---
 
@@ -108,7 +109,7 @@ sealed class AsrResult {
 
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
-| **1** | Implementation | 🔲 | `data:oss` module, `FunAsrService` refactor to Batch API |
+| **1** | Implementation | ✅ SHIPPED | `data:oss` module, `FunAsrService` Batch API (OSS → Transcription → Parse) |
 | **2** | Optimization | 🔲 | Resumeable uploads, result caching |
 
 ---

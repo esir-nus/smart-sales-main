@@ -2,6 +2,7 @@
 
 > **Cerb-compliant spec** — Lightweight conversational AI for sales coaching.  
 > **OS Model**: Consumer of RAM (reads habits + entity context from SessionWorkingSet)
+> **State**: SHIPPED
 
 ---
 
@@ -15,13 +16,14 @@ Coach Mode is the **default conversational mode** in Prism. It provides fast, li
 
 ## Dependencies (via Cerb Interfaces)
 
-| Interface | Cerb Shard | Purpose |
-|-----------|------------|---------|
-| `MemoryRepository.search()` | [memory-center](../memory-center/interface.md) | Search for relevant context |
-| `ReinforcementLearner.getHabitContext()` | [rl-module](../rl-module/interface.md) | User/client habit enrichment |
-| `ClientProfileHub.getQuickContext()` | [client-profile-hub](../client-profile-hub/interface.md) | Entity snapshot for context |
-| `ScheduleBoard.checkConflict()` | [memory-center](../memory-center/interface.md) | Inline conflict detection |
-| `ConflictResolver.resolve()` | [conflict-resolver](../conflict-resolver/interface.md) | LLM conflict resolution |
+| Interface | Cerb Shard | Purpose | OS Model Note |
+|-----------|------------|---------|---------------|
+| `Entity Knowledge (RAM Section 1)` | [entity-registry](../entity-registry/interface.md) | Structured entity graph ("Kotlin loads, LLM searches") | Kernel loads entities at session start |
+| `ReinforcementLearner.loadUserHabits()` | [rl-module](../rl-module/interface.md) | Global user habits | Kernel → RAM Section 2 |
+| `ReinforcementLearner.loadClientHabits()` | [rl-module](../rl-module/interface.md) | Entity-specific habits | Kernel → RAM Section 3 |
+| `ClientProfileHub.getQuickContext()` | [client-profile-hub](../client-profile-hub/interface.md) | Entity snapshot for context | — |
+| `ScheduleBoard.checkConflict()` | [memory-center](../memory-center/interface.md) | Inline conflict detection | — |
+| `ConflictResolver.resolve()` | [conflict-resolver](../conflict-resolver/interface.md) | LLM conflict resolution | — |
 
 ---
 
@@ -35,7 +37,7 @@ User Input
     ├─▶ RAM Section 1 ─▶ Entity context (who is being discussed)
     ├─▶ RAM Section 2 ─▶ User habits (global preferences)
     ├─▶ RAM Section 3 ─▶ Client habits (auto-populated by Kernel)
-    └─▶ MemoryRepository.search() ─▶ Relevant memory (First turn / High ambiguity)
+    └─▶ Entity Knowledge (RAM Section 1) ─▶ Structured entity graph as JSON
     │
     ▼
 [Qwen-Plus] ──stream──▶ [ChatPublisher] ──▶ UI
@@ -66,7 +68,7 @@ sealed class CoachResponse {
     data class Chat(
         val content: String,
         val suggestAnalyst: Boolean = false,
-        val memoryHits: List<MemoryEntry> = emptyList()
+        val memoryHits: List<MemoryHit> = emptyList()
     ) : CoachResponse()
 }
 ```
@@ -76,8 +78,7 @@ sealed class CoachResponse {
 ```kotlin
 data class ChatTurn(
     val role: String,  // "user" | "assistant"
-    val content: String,
-    val timestamp: Long? = null
+    val content: String
 )
 ```
 
@@ -90,10 +91,10 @@ User chats about sales techniques. Direct response, no special cards.
 
 ### 3.8 Memory-Enriched Response
 User asks question at start of session ("What about that price issue?").
-1. Context Builder detects **First Turn** (or explicit entity mention)
-2. Calls `MemoryRepository.search("price issue")`
-3. LLM receives enriched context → coherent response
-4. UI shows: response only (memory search is transparent)
+1. Kernel loads entity knowledge at session start (`EntityRepository.getAll()`)
+2. Structured entity graph injected into LLM prompt (aliases, attributes, metrics, relationships)
+3. LLM reads graph, matches aliases and cross-language references naturally
+4. UI shows: response only (entity loading is transparent)
 
 ### 3.9 Suggest Analyst Switch
 User asks complex data question.
@@ -141,14 +142,9 @@ Coach detects schedule conflict during conversation.
 |------|-------|--------|--------------|
 | **1** | Interface + Fake | ✅ SHIPPED | `CoachPipeline` interface, `FakeCoachPipeline` |
 | **2** | Real LLM + Context | ✅ SHIPPED | `RealCoachPipeline`, system prompt, session history |
-| **3** | Memory + Habit | ✅ SHIPPED | `MemoryRepository.search()`, `getHabitContext()` integration |
+| **3** | Memory + Habit | ✅ SHIPPED | `MemoryRepository.search()`, `loadUserHabits()` / `loadClientHabits()` via RAM |
 | **4** | Analyst Suggestion | ✅ SHIPPED | `suggestAnalyst` flag parsing, UI block |
-| **5** | **OS Model Upgrade** | 🔲 PLANNED | Delete `entityIds` wiring, read habits from RAM |
-
-### Wave 5 Scope (OS Model)
-- Remove `entityIds` parameter passing in `RealContextBuilder.build()` and `buildWithClues()`
-- Read `HabitContext` from `SessionWorkingSet` Sections 2 & 3 instead of calling `getHabitContext(entityIds)`
-- Verify client habits auto-populate when entities become ACTIVE in Section 1
+| **5** | OS Model Upgrade | ✅ SHIPPED | Habits read from RAM Sections 2 & 3, no manual `entityIds` wiring |
 
 > [!NOTE]
 > Wave 4 MVP uses keyword heuristic (`分析`, `数据`). LLM-based detection planned for Wave 4.5.
@@ -191,9 +187,9 @@ Coach detects schedule conflict during conversation.
 **Goal**: Memory + Habit integration via Cerb interfaces.
 
 - **Exit Criteria**:
-  - [ ] Context Builder calls `MemoryRepository.search()` on **First Turn**
-  - [ ] Context Builder calls `ReinforcementLearner.getHabitContext()`
-  - [ ] Habit context included in LLM prompt
+  - [x] Context Builder calls `MemoryRepository.search()` on **First Turn**
+  - [x] Kernel calls `loadUserHabits()` (S2) + `loadClientHabits()` (S3) via RAM
+  - [x] Habit context included in LLM prompt via `## 用户偏好` section
 
 - **Test Cases**:
   - [ ] L2: Vague query → memory-enriched response
@@ -220,9 +216,10 @@ Coach detects schedule conflict during conversation.
 
 | Layer | Files |
 |-------|-------|
-| **Domain** | `CoachPipeline.kt`, `CoachResponse.kt`, `ChatTurn.kt` |
+| **Domain** | `CoachPipeline.kt`, `CoachResponse.kt` |
+| **Domain (shared)** | `EnhancedContext.kt` (contains `ChatTurn`, `MemoryHit`) |
 | **Data** | `RealCoachPipeline.kt`, `FakeCoachPipeline.kt` |
-| **DI** | `CoachModule.kt` |
+| **DI** | `PrismModule.kt` (shared bindings) |
 
 ---
 

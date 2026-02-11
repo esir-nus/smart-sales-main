@@ -2,6 +2,7 @@
 
 > **Cerb-compliant spec** — Entity lookup and disambiguation.  
 > **OS Layer**: SSD Storage
+> **State**: SHIPPED
 
 ---
 
@@ -148,3 +149,9 @@ Stores in `metricsHistoryJson` for visualization:
 | **3** | CRM Hierarchy → [Client Profile Hub](../client-profile-hub/spec.md) | ✅ SHIPPED |
 
 > **Shipped 2026-02-08**: Client Profile Hub Wave 1 (Interface + Domain Models + Fake)
+
+### Kernel Read Pattern
+
+> The Kernel (ContextBuilder) calls `EntityRepository.getAll(limit)` at session start to build the Entity Knowledge Context. Entity data — with its structured `aliasesJson`, `attributesJson`, `metricsHistoryJson`, `relatedEntitiesJson`, `decisionLogJson` — IS the distilled intelligence. The LLM handles relevance filtering and disambiguation.
+>
+> See [memory-center/spec.md § Retrieval Strategy: Entity Knowledge Context](../memory-center/spec.md) for details.

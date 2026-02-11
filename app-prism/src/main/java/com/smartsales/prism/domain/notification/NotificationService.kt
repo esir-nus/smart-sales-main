@@ -35,4 +35,14 @@ interface NotificationService {
      * 检查通知权限是否已授予
      */
     fun hasPermission(): Boolean
+
+    /**
+     * 停止持续振动（URGENT 通知关闭时调用）
+     */
+    fun stopVibration()
+
+    /**
+     * 启动持续振动（URGENT 通知显示时调用）
+     */
+    fun startPersistentVibration()
 }

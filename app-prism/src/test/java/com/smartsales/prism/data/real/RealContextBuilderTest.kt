@@ -1,5 +1,6 @@
 package com.smartsales.prism.data.real
 
+import com.smartsales.prism.data.fakes.FakeEntityRepository
 import com.smartsales.prism.data.fakes.FakeReinforcementLearner
 import com.smartsales.prism.data.fakes.FakeTimeProvider
 import com.smartsales.prism.data.fakes.FakeUserHabitRepository
@@ -38,7 +39,8 @@ class RealContextBuilderTest {
         contextBuilder = RealContextBuilder(
             timeProvider = timeProvider,
             reinforcementLearner = reinforcementLearner,
-            memoryRepository = memoryRepository
+            memoryRepository = memoryRepository,
+            entityRepository = FakeEntityRepository()
         )
     }
     

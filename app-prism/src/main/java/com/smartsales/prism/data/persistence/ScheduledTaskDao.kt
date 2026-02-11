@@ -26,4 +26,7 @@ interface ScheduledTaskDao {
 
     @Query("DELETE FROM scheduled_tasks WHERE taskId = :id")
     suspend fun deleteById(id: String)
+
+    @Query("SELECT * FROM scheduled_tasks WHERE hasAlarm = 1 AND startTimeMillis > :nowMs")
+    suspend fun getFutureTasksWithAlarm(nowMs: Long): List<ScheduledTaskEntity>
 }

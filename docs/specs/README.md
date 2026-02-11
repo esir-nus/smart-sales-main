@@ -76,6 +76,6 @@ docs/specs/
 
 ## 🔗 Related
 
-- **Workflows**: See `.agent/workflows/` for `/prism-check`, `/06-audit`
+- **Workflows**: See `.agent/workflows/` for `/cerb-check`, `/06-audit`
 - **Design Tokens**: See `docs/design/design-tokens.json`
 - **Tracker**: See `docs/plans/tracker.md` for implementation status

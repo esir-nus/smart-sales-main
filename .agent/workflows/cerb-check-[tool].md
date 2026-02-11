@@ -10,7 +10,7 @@ Verify that a Cerb doc follows context boundary principles and OS Model architec
 
 ## When to Use
 
-- **Mandatory**: After completing Wave 1 of `/feature-cerb-pattern`
+- **Mandatory**: After completing Wave 1 of `/cerb-spec-template`
 - **Optional**: When updating existing Cerb docs (run on modified files only)
 - **Migration**: Auditing legacy docs for Cerb compliance
 
@@ -18,7 +18,7 @@ Verify that a Cerb doc follows context boundary principles and OS Model architec
 
 ## Prerequisites
 
-This workflow validates docs created via `/feature-cerb-pattern`.
+This workflow validates docs created via `/cerb-spec-template`.
 
 Expected structure:
 ```

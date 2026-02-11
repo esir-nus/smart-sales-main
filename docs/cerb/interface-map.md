@@ -5,6 +5,8 @@
 > **Purpose**: Module ownership + data flow. Read this BEFORE any cross-module change.
 > **Rule**: If data belongs to Module B, query B's interface at runtime. Don't store B's data on A's model.
 > **Last Updated**: 2026-02-10 (OS Model Upgrade sync)
+>
+> **Status Legend**: ✅ = Shipped (Real impl) · 📐 = Interface only (Fake impl) · 🔲 = Not yet coded
 
 ---
 
@@ -12,12 +14,12 @@
 
 Leaf services with no upstream dependencies. They don't call other modules.
 
-| Module | Owns (Writes) | Reads From | Key Interface | OS Layer |
-|--------|--------------|------------|---------------|----------|
-| **ConnectivityBridge** | BLE + HTTP device state | — | `ConnectivityService` | — |
-| **NotificationService** | System notification display | — | `NotificationService.show()` | — |
-| **OSS** | File upload/download | — | `OssUploader.upload()` | — |
-| **ASR** | Transcription results | OSS (downloads audio files to transcribe) | `TingwuRunner.transcribe()` | — |
+| Module | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
+|--------|--------------|------------|---------------|----------|--------|
+| **ConnectivityBridge** | BLE + HTTP device state | — | `ConnectivityService` | — | ✅ |
+| **NotificationService** | System notification display | — | `NotificationService.show()` | — | ✅ |
+| **OSS** | File upload/download | — | `OssUploader.upload()` | — | 📐 |
+| **ASR** | Transcription results | OSS (downloads audio files to transcribe) | `TingwuRunner.transcribe()` | — | 📐 |
 
 ---
 
@@ -25,13 +27,13 @@ Leaf services with no upstream dependencies. They don't call other modules.
 
 Store and query domain data. Other modules use their interfaces but never each other's storage.
 
-| Module | Owns (Writes) | Reads From | Key Interface | OS Layer |
-|--------|--------------|------------|---------------|----------|
-| **EntityWriter** | Entity mutations (create/update/merge aliases) | SessionContext (write-through to RAM S1) | `EntityWriter.upsertFromClue()` | RAM Application |
-| **EntityRegistry** | Entity queries (read-only view of entities) | — | `EntityRepository.findByAlias()` | SSD |
-| **MemoryCenter** | Conversation memory entries | — | `MemoryRepository.search()` | SSD |
-| **UserHabit** | Behavioral pattern observations | — | `UserHabitRepository.observe()` | SSD |
-| **SessionContext** | Per-session workspace (3 sections) | EntityWriter (S1 via write-through), RLModule (S2/S3) | `SessionContext.entityContext` | Kernel (RAM) |
+| Module | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
+|--------|--------------|------------|---------------|----------|--------|
+| **EntityWriter** | Entity mutations (create/update/merge aliases) | SessionContext (write-through to RAM S1) | `EntityWriter.upsertFromClue()` | RAM Application | ✅ |
+| **EntityRegistry** | Entity queries (read-only view of entities) | — | `EntityRepository.findByAlias()` | SSD | ✅ |
+| **MemoryCenter** | Conversation memory entries | — | `MemoryRepository.search()` | SSD | ✅ |
+| **UserHabit** | Behavioral pattern observations | — | `UserHabitRepository.observe()` | SSD | ✅ |
+| **SessionContext** | Per-session workspace (3 sections) | EntityWriter (S1 via write-through), RLModule (S2/S3) | `SessionContext.entityContext` | Kernel (RAM) | ✅ |
 
 > **EntityWriter vs EntityRegistry**: Writer handles mutations (dedup, merge, alias registration) AND write-through to RAM S1. Registry handles queries. Callers MUST use Writer for writes, Registry for reads. Never call `EntityRepository.save()` directly.
 >
@@ -43,15 +45,15 @@ Store and query domain data. Other modules use their interfaces but never each o
 
 Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 
-| Module | Owns (Writes) | Reads From | Key Interface | OS Layer |
-|--------|--------------|------------|---------------|----------|
-| **ContextBuilder** | `EnhancedContext` (assembled prompt context) | MemoryCenter, SessionContext | `ContextBuilder.build()` | Kernel |
-| **Executor** | Raw LLM output (stateless — no storage) | — | `Executor.execute()` | — |
-| **Orchestrator** | Mode routing + pipeline coordination | ContextBuilder, Executor, all Linters, EntityWriter, EntityRegistry | `Orchestrator.process()` | — |
+| Module | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
+|--------|--------------|------------|---------------|----------|--------|
+| **ContextBuilder** | `EnhancedContext` (assembled prompt context) | EntityRegistry, MemoryCenter, SessionContext | `ContextBuilder.build()` | Kernel | ✅ |
+| **Executor** | Raw LLM output (stateless — no storage) | — | `Executor.execute()` | — | ✅ |
+| **Orchestrator** | Mode routing + pipeline coordination | ContextBuilder, Executor, all Linters, EntityWriter, EntityRegistry | `Orchestrator.process()` | — | ✅ |
 
 > **Orchestrator is the only module that calls EntityWriter during task creation.** Feature modules (Scheduler, Coach) receive results from Orchestrator; they don't call EntityWriter themselves. (Exception: debug seed code in SchedulerViewModel, guarded by `DEBUG` build type.)
 >
-> **ContextBuilder no longer reads EntityRegistry.** Entity resolution moved from `buildWithClues()` (deleted) to Orchestrator calling `EntityRepository.findByAlias()` directly.
+> **ContextBuilder reads EntityRegistry for Entity Knowledge Context.** `ContextBuilder.buildEntityKnowledge()` calls `EntityRepository.getAll()` at session start to load the structured entity graph into the LLM prompt (RAM Section 1). This is a Kernel → SSD read.
 
 ---
 
@@ -59,13 +61,13 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 
 User-facing features. Each receives processed results from Orchestrator (Layer 3) and reads from Data Services (Layer 2).
 
-| Module | Owns (Writes) | Reads From (directly) | Receives From (via Orchestrator) | OS Layer |
-|--------|--------------|----------------------|----------------------------------|----------|
-| **Scheduler** | ScheduledTask, InspirationEntry | EntityRegistry (alias lookup), ScheduleBoard (conflicts) | `UiState.SchedulerTaskCreated` | Consumer of RAM |
-| **ScheduleBoard** | Conflict index (in-memory cache) | ScheduledTaskRepository (populates index) | — | SSD |
-| **Coach** | Chat message responses | MemoryCenter, UserHabit, EntityRegistry | `UiState.Response` | Consumer of RAM |
-| **Analyst** | Analysis reports | MemoryCenter, EntityRegistry | `UiState.Response` | Consumer of RAM |
-| **BadgeAudioPipeline** | Audio recording lifecycle | ASR, OSS, ConnectivityBridge | Triggers Orchestrator on transcription complete | — |
+| Module | Owns (Writes) | Reads From (directly) | Receives From (via Orchestrator) | OS Layer | Status |
+|--------|--------------|----------------------|----------------------------------|----------|--------|
+| **Scheduler** | ScheduledTask, InspirationEntry | EntityRegistry (alias lookup), ScheduleBoard (conflicts) | `UiState.SchedulerTaskCreated` | Consumer of RAM | ✅ |
+| **ScheduleBoard** | Conflict index (in-memory cache) | ScheduledTaskRepository (populates index) | — | SSD | ✅ |
+| **Coach** | Chat message responses | MemoryCenter, UserHabit, EntityRegistry | `UiState.Response` | Consumer of RAM | ✅ |
+| **Analyst** | Analysis reports | MemoryCenter, EntityRegistry | `UiState.Response` | Consumer of RAM | 📐 |
+| **BadgeAudioPipeline** | Audio recording lifecycle | ASR, OSS, ConnectivityBridge | Triggers Orchestrator on transcription complete | — | ✅ |
 
 > **"Reads From" vs "Receives From"**: "Reads From" = the feature calls the interface directly. "Receives From" = Orchestrator pushes results into the feature's ViewModel. This distinction prevents confusion about who initiates the call.
 
@@ -75,10 +77,10 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 
 Cross-cutting services that aggregate data from multiple Layer 2 sources.
 
-| Module | Owns (Writes) | Reads From | Key Interface | OS Layer |
-|--------|--------------|------------|---------------|----------|
-| **ClientProfileHub** | Aggregated client context for tips | EntityRegistry, MemoryCenter, UserHabit | `ClientProfileHub.getFocusedContext()` | File Explorer |
-| **RLModule** | Habit context for prompts (S2/S3 population) | UserHabit | `ReinforcementLearner.loadUserHabits()`, `loadClientHabits()` | RAM Application |
+| Module | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
+|--------|--------------|------------|---------------|----------|--------|
+| **ClientProfileHub** | Aggregated client context for tips | EntityRegistry, MemoryCenter, UserHabit | `ClientProfileHub.getFocusedContext()` | File Explorer | 📐 |
+| **RLModule** | Habit context for prompts (S2/S3 population) | UserHabit | `ReinforcementLearner.loadUserHabits()`, `loadClientHabits()` | RAM Application | ✅ |
 
 ---
 

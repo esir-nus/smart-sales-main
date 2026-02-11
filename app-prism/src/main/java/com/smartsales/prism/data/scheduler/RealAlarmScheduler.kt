@@ -37,7 +37,7 @@ class RealAlarmScheduler @Inject constructor(
         const val EXTRA_OFFSET_MINUTES = "offset_minutes"
         
         // 用于取消时枚举所有可能的偏移量（分钟）
-        private val ALL_POSSIBLE_OFFSETS = listOf(120, 60, 30, 15, 5, 1)
+        private val ALL_POSSIBLE_OFFSETS = listOf(120, 60, 30, 15, 5, 1, 0)
     }
 
     override suspend fun scheduleCascade(
@@ -47,7 +47,7 @@ class RealAlarmScheduler @Inject constructor(
         cascade: List<String>
     ) {
         if (cascade.isEmpty()) {
-            Log.d(TAG, "无级联提醒 (FIRE_OFF): taskId=$taskId")
+            Log.d(TAG, "无级联提醒: taskId=$taskId")
             return
         }
 

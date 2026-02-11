@@ -2,6 +2,7 @@
 
 > **Cerb-compliant spec** — Internal implementation of centralized entity writes.  
 > **OS Layer**: RAM Application
+> **State**: SHIPPED (all waves complete)
 
 ---
 
@@ -235,14 +236,23 @@ Convention: Keys prefixed with `_` are metadata, not business attributes.
 | **0** | Prerequisites (delete infra) | ✅ SHIPPED | `EntityRepository.delete()` + DAO + impls |
 | **1** | Core Writer | ✅ SHIPPED | `EntityWriter` interface + `RealEntityWriter` + tests |
 | **1.5** | Wiring | ✅ SHIPPED | Wire into `PrismOrchestrator` Scheduler path |
-| **2** | Change-Aware Profile Management | 🔲 PLANNED | `updateProfile()`, change tracking, history emission |
-| **3** | Conflict Merge | 🔲 PLANNED | UI flow for merging duplicates |
-| **4** | **OS Model Upgrade** (RAM Application) | 🔲 PLANNED | Wire write-through to SessionWorkingSet Section 1 |
+| **2** | Change-Aware Profile Management | ✅ SHIPPED | `updateProfile()`, `ProfileUpdateResult`, `ProfileChange`, history emission via `recordActivity()` |
+| ~~3~~ | ~~Conflict Merge~~ | ❌ KILLED | See architectural decision below |
+| **4** | **OS Model Upgrade** (RAM Application) | ✅ SHIPPED | Write-through to RAM Section 1 on all 4 mutation methods + `recordActivity()` App→Kernel callback |
 
-### Wave 4 Scope (OS Model)
-- Wire `upsertFromClue` / `registerAlias` / `updateAttribute` / `delete` to update RAM Section 1 after SSD write
-- Wire `updateProfile()` to use `ContextBuilder.recordActivity()` (App → Kernel)
-- Remove any direct SSD reads that could use RAM instead (where entity is known-active)
+### ~~Wave 3~~ Architectural Decision: No Merge UI Needed
+
+**Killed 2026-02-11.** Deterministic latest-write-wins is sufficient. Rationale:
+
+1. **Every write is grounded** — User input → LLM → RelevancyLib (entity resolution) → EntityWriter. The agent never presumes; `resolvedId` comes from RelevancyLib.
+2. **User corrections are self-resolving** — If user said something wrong and it was recorded, they make an explicit correction statement. This is another deterministic override through the same pipeline.
+3. **History is preserved** — `recordActivity()` tracks every change (`承时利和 → 华为 → 承时利和`), so corrections are auditable.
+4. **True duplicates are a dedup problem** — If two `entityId`s exist for the same person because alias matching failed, the fix is better RelevancyLib matching, not a merge UI.
+
+### Wave 4 Scope (OS Model) — ✅ SHIPPED
+- ✅ `upsertFromClue` / `registerAlias` / `updateAttribute` / `delete` write-through to RAM Section 1
+- ✅ `updateProfile()` calls `ContextBuilder.recordActivity()` (App → Kernel)
+- SSD reads for dedup remain (full catalog search requires SSD, per os-model-architecture.md)
 
 ---
 
@@ -265,21 +275,21 @@ Centralized entity creation and updates with read-modify-write.
     - Zero regressions in existing read paths
 
 - **Test Cases**:
-    - [ ] **New Entity**: `upsert("张总", null)` → `UpsertResult(isNew=true, displayName="张总")`
-    - [ ] **Existing (Resolved)**: `upsert("张总", "z-001")` → Updates z-001 alias, `isNew=false`
-    - [ ] **Existing (Alias Match)**: `upsert("张总", null)` → Finds via alias, updates, `isNew=false`
-    - [ ] **Field Preservation**: Upsert preserves existing `demeanorJson`, `metricsHistoryJson`
-    - [ ] **Alias Cap**: Add 9th alias → Oldest alias dropped (FIFO tail), cap at 8
-    - [ ] **Missing Entity**: `upsert("X", "nonexistent-id")` → Falls back to alias dedup
-    - [ ] **Blank Clue**: `upsert("", null)` → Throws `IllegalArgumentException`
-    - [ ] **Delete**: `delete("z-001")` → Entity removed, `getById` returns null
-    - [ ] **Delete Missing**: `delete("nonexistent")` → No-op
+    - [x] **New Entity**: `upsert("张总", null)` → `UpsertResult(isNew=true, displayName="张总")`
+    - [x] **Existing (Resolved)**: `upsert("张总", "z-001")` → Updates z-001 alias, `isNew=false`
+    - [x] **Existing (Alias Match)**: `upsert("张总", null)` → Finds via alias, updates, `isNew=false`
+    - [x] **Field Preservation**: Upsert preserves existing `demeanorJson`, `metricsHistoryJson`
+    - [x] **Alias Cap**: Add 9th alias → Oldest alias dropped (FIFO tail), cap at 8
+    - [x] **Missing Entity**: `upsert("X", "nonexistent-id")` → Falls back to alias dedup
+    - [x] **Blank Clue**: `upsert("", null)` → Throws `IllegalArgumentException`
+    - [x] **Delete**: `delete("z-001")` → Entity removed, `getById` returns null
+    - [x] **Delete Missing**: `delete("nonexistent")` → No-op
 
 - **Deliverables**:
-    - `EntityWriter.kt` (Interface, domain layer)
-    - `RealEntityWriter.kt` (Implementation)
+    - `EntityWriter.kt` (Interface + `ProfileUpdateResult`, `ProfileChange`)
+    - `RealEntityWriter.kt` (Implementation — rewritten from spec)
     - `FakeEntityWriter.kt` (Test double)
-    - `RealEntityWriterTest.kt`
+    - `RealEntityWriterTest.kt` (18 tests — Wave 1 + Wave 2)
 
 ---
 

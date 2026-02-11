@@ -1,26 +1,31 @@
 package com.smartsales.prism.data.real
 
+import com.smartsales.prism.data.fakes.FakeEntityRepository
 import com.smartsales.prism.data.fakes.FakeMemoryRepository
 import com.smartsales.prism.data.fakes.FakeReinforcementLearner
 import com.smartsales.prism.data.fakes.FakeTimeProvider
 import com.smartsales.prism.data.fakes.FakeUserHabitRepository
+import com.smartsales.prism.domain.memory.EntityEntry
+import com.smartsales.prism.domain.memory.EntityType
 import com.smartsales.prism.domain.model.Mode
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
 /**
- * Tests for RealContextBuilder's memory search logic (Wave 3+).
- * Verifies the "First Turn Context" strategy.
+ * Tests for RealContextBuilder's Entity Knowledge Context (Wave 3).
+ * Verifies the "First Turn Context" strategy with entity data.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class RealContextBuilderMemoryTest {
 
     private lateinit var contextBuilder: RealContextBuilder
-    private lateinit var memoryRepository: FakeMemoryRepository
+    private lateinit var entityRepository: FakeEntityRepository
     private lateinit var timeProvider: FakeTimeProvider
     private lateinit var habitRepository: FakeUserHabitRepository
     private lateinit var reinforcementLearner: FakeReinforcementLearner
@@ -30,54 +35,127 @@ class RealContextBuilderMemoryTest {
         timeProvider = FakeTimeProvider()
         habitRepository = FakeUserHabitRepository()
         reinforcementLearner = FakeReinforcementLearner(habitRepository)
-        memoryRepository = FakeMemoryRepository() // Initialized with seed data including "价格"
+        entityRepository = FakeEntityRepository()
 
         contextBuilder = RealContextBuilder(
             timeProvider = timeProvider,
             reinforcementLearner = reinforcementLearner,
-            memoryRepository = memoryRepository
+            memoryRepository = FakeMemoryRepository(),
+            entityRepository = entityRepository
         )
     }
 
     @Test
-    fun `first turn triggers memory search`() = runTest {
-        // Act: First message — query matches seed data about 华为拜访
-        val context = contextBuilder.build("华为拜访", Mode.COACH)
+    fun `first turn loads entity knowledge`() = runTest {
+        // Arrange: 添加测试实体
+        entityRepository.save(EntityEntry(
+            entityId = "p-001",
+            entityType = EntityType.PERSON,
+            displayName = "孙扬浩",
+            aliasesJson = """["孙工"]""",
+            jobTitle = "工程师",
+            lastUpdatedAt = System.currentTimeMillis(),
+            createdAt = System.currentTimeMillis()
+        ))
 
-        // Assert: Should have hits because it's first turn
-        assertTrue("Should have memory hits on first turn", context.memoryHits.isNotEmpty())
-        
-        // Match content from FakeMemoryRepository seed (seed-huawei-visit)
-        val hasHuaweiHit = context.memoryHits.any { it.content.contains("华为") }
-        assertTrue("Should contain '华为' related memory", hasHuaweiHit)
+        // Act: 首轮消息
+        val context = contextBuilder.build("聊聊孙扬浩", Mode.COACH)
+
+        // Assert: entityKnowledge 应该被填充
+        assertNotNull("entityKnowledge should be populated on first turn", context.entityKnowledge)
+        assertTrue("Should contain entity name", context.entityKnowledge!!.contains("孙扬浩"))
+        assertTrue("Should contain alias", context.entityKnowledge!!.contains("孙工"))
     }
 
     @Test
-    fun `subsequent turns skip memory search`() = runTest {
-        // Arrange: Establish history
-        contextBuilder.recordUserMessage("Hi")
-        contextBuilder.recordAssistantMessage("Hello")
-        
-        // Act: Second turn with same query
-        val context = contextBuilder.build("华为拜访", Mode.COACH)
+    fun `first turn with no entities returns null entityKnowledge`() = runTest {
+        // Act: 首轮消息，无实体
+        val context = contextBuilder.build("hello", Mode.COACH)
 
-        // Assert: Should NOT search (relying on session context)
-        assertEquals("Should skip memory search on subsequent turns", 0, context.memoryHits.size)
+        // Assert: entityKnowledge 应为 null
+        assertNull("entityKnowledge should be null with no entities", context.entityKnowledge)
+    }
+
+    @Test
+    fun `subsequent turns use cached entity knowledge`() = runTest {
+        // Arrange: 添加实体
+        entityRepository.save(EntityEntry(
+            entityId = "p-002",
+            entityType = EntityType.PERSON,
+            displayName = "张总",
+            aliasesJson = "[]",
+            lastUpdatedAt = System.currentTimeMillis(),
+            createdAt = System.currentTimeMillis()
+        ))
+        
+        // 首轮加载
+        val firstContext = contextBuilder.build("你好", Mode.COACH)
+        assertNotNull(firstContext.entityKnowledge)
+        
+        // Arrange: 建立对话历史（触发 subsequent turn 条件）
+        contextBuilder.recordUserMessage("你好")
+        contextBuilder.recordAssistantMessage("你好！")
+
+        // Act: 第二轮（不应重新加载）
+        val secondContext = contextBuilder.build("张总怎么样", Mode.COACH)
+
+        // Assert: entityKnowledge 应该仍然存在（从 RAM 读取，非重新加载）
+        assertNotNull("entityKnowledge should persist from session cache", secondContext.entityKnowledge)
+        assertEquals("Should be same cached value", firstContext.entityKnowledge, secondContext.entityKnowledge)
     }
     
     @Test
-    fun `resetSession clears history and re-enables search`() = runTest {
-        // Arrange: Establish history
-        contextBuilder.recordUserMessage("Hi")
-        contextBuilder.recordAssistantMessage("Hello")
+    fun `resetSession clears entity knowledge and re-enables loading`() = runTest {
+        // Arrange: 添加实体并首轮加载
+        entityRepository.save(EntityEntry(
+            entityId = "a-001",
+            entityType = EntityType.ACCOUNT,
+            displayName = "摩升泰",
+            aliasesJson = "[]",
+            lastUpdatedAt = System.currentTimeMillis(),
+            createdAt = System.currentTimeMillis()
+        ))
+        contextBuilder.build("test", Mode.COACH)
         
-        // Reset
+        // Reset 会话
         contextBuilder.resetSession()
         
-        // Act: New session, same query
-        val context = contextBuilder.build("华为拜访", Mode.COACH)
+        // Act: 新会话首轮
+        val context = contextBuilder.build("test again", Mode.COACH)
         
-        // Assert: Should search again
-        assertTrue("Should search memory after session reset", context.memoryHits.isNotEmpty())
+        // Assert: 应重新加载
+        assertNotNull("entityKnowledge should reload after session reset", context.entityKnowledge)
+        assertTrue("Should contain account", context.entityKnowledge!!.contains("摩升泰"))
+    }
+
+    @Test
+    fun `entity knowledge groups by type`() = runTest {
+        // Arrange: 添加不同类型实体
+        entityRepository.save(EntityEntry(
+            entityId = "p-100",
+            entityType = EntityType.PERSON,
+            displayName = "李明",
+            aliasesJson = "[]",
+            lastUpdatedAt = System.currentTimeMillis(),
+            createdAt = System.currentTimeMillis()
+        ))
+        entityRepository.save(EntityEntry(
+            entityId = "a-100",
+            entityType = EntityType.ACCOUNT,
+            displayName = "华为",
+            aliasesJson = "[]",
+            lastUpdatedAt = System.currentTimeMillis(),
+            createdAt = System.currentTimeMillis()
+        ))
+
+        // Act
+        val context = contextBuilder.build("test", Mode.COACH)
+
+        // Assert: JSON 应包含分组
+        assertNotNull(context.entityKnowledge)
+        assertTrue("Should have people group", context.entityKnowledge!!.contains("people"))
+        assertTrue("Should have accounts group", context.entityKnowledge!!.contains("accounts"))
+        assertTrue("Should contain person name", context.entityKnowledge!!.contains("李明"))
+        assertTrue("Should contain account name", context.entityKnowledge!!.contains("华为"))
     }
 }

@@ -41,6 +41,9 @@ class TaskReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != RealAlarmScheduler.ACTION_TASK_REMINDER) return
 
+        // 确保通知渠道存在 — Receiver 可能在 RealNotificationService 初始化前触发
+        ensureChannel(context)
+
         val taskId = intent.getStringExtra(RealAlarmScheduler.EXTRA_TASK_ID) ?: return
         val taskTitle = intent.getStringExtra(RealAlarmScheduler.EXTRA_TASK_TITLE) ?: "任务提醒"
         val offsetMinutes = intent.getIntExtra(RealAlarmScheduler.EXTRA_OFFSET_MINUTES, 15)
@@ -185,5 +188,39 @@ class TaskReminderReceiver : BroadcastReceiver() {
         60 -> "1小时后开始"
         120 -> "2小时后开始"
         else -> "${offsetMinutes}分钟后开始"
+    }
+
+    /**
+     * 确保任务提醒通知渠道存在
+     *
+     * BroadcastReceiver 可能在 RealNotificationService 初始化前触发
+     * （典型：App 被杀后 AlarmManager 唤醒），此时渠道可能不存在。
+     * createNotificationChannel() 幂等 — 已有渠道不会被覆盖。
+     */
+    private fun ensureChannel(context: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (nm.getNotificationChannel(PrismNotificationChannel.TASK_REMINDER.channelId) != null) return
+
+        val channel = android.app.NotificationChannel(
+            PrismNotificationChannel.TASK_REMINDER.channelId,
+            PrismNotificationChannel.TASK_REMINDER.displayName,
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            enableVibration(true)
+            vibrationPattern = longArrayOf(0, 500, 300, 500)
+            lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+            setBypassDnd(true)
+            setSound(
+                android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM),
+                android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+            )
+        }
+        nm.createNotificationChannel(channel)
+        Log.d(TAG, "Receiver 内补建渠道: ${PrismNotificationChannel.TASK_REMINDER.channelId}")
     }
 }

@@ -112,6 +112,90 @@ object OemCompat {
         }
     }
 
+    /**
+     * 检测 MIUI 锁屏显示权限 (op 10020)
+     *
+     * MIUI 把锁屏显示藏在 AppOps 里，标准 API 读不到。
+     * 反射 checkOpNoThrow(10020, uid, pkg)。
+     * 非小米设备直接返回 true（无此限制）。
+     * 反射失败时降级检查 NotificationChannel.lockscreenVisibility。
+     */
+    fun canShowOnLockScreen(context: Context): Boolean {
+        if (!isXiaomi) return true
+        return checkMiuiOp(context, MIUI_OP_SHOW_ON_LOCK_SCREEN)
+            ?: fallbackCheckLockscreenVisibility(context)
+    }
+
+    /**
+     * 检测 MIUI 悬浮通知权限 (op 10016)
+     *
+     * 即使设置了 fullScreenIntent，用户关闭"悬浮通知"后横幅不弹。
+     * 反射 checkOpNoThrow(10016, uid, pkg)。
+     */
+    fun canShowFloatingNotification(context: Context): Boolean {
+        if (!isXiaomi) return true
+        return checkMiuiOp(context, MIUI_OP_FLOATING_NOTIFICATION) ?: true
+    }
+
+    /**
+     * 检测 HyperOS 后台发送本地通知权限 (op 10021)
+     *
+     * HyperOS 默认拒绝后台发送本地通知。
+     * 反射 checkOpNoThrow(10021, uid, pkg)。
+     * 非小米设备直接返回 true。
+     */
+    fun canSendBackgroundNotification(context: Context): Boolean {
+        if (!isXiaomi) return true
+        return checkMiuiOp(context, MIUI_OP_BACKGROUND_NOTIFICATION) ?: true
+    }
+
+    // MIUI/HyperOS AppOps 操作码
+    private const val MIUI_OP_FLOATING_NOTIFICATION = 10016
+    private const val MIUI_OP_SHOW_ON_LOCK_SCREEN = 10020
+    private const val MIUI_OP_BACKGROUND_NOTIFICATION = 10021
+
+    /**
+     * 通用 MIUI AppOps 反射检测
+     * @return true=已授权, false=未授权, null=反射失败
+     */
+    private fun checkMiuiOp(context: Context, opCode: Int): Boolean? {
+        return try {
+            val appOps = context.getSystemService(Context.APP_OPS_SERVICE)
+                as android.app.AppOpsManager
+            val method = android.app.AppOpsManager::class.java.getMethod(
+                "checkOpNoThrow",
+                Int::class.java, Int::class.java, String::class.java
+            )
+            val uid = android.os.Process.myUid()
+            val result = method.invoke(appOps, opCode, uid, context.packageName) as Int
+            (result == android.app.AppOpsManager.MODE_ALLOWED).also {
+                Log.d(TAG, "MIUI op $opCode 检测: ${if (it) "已授权" else "未授权"}")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "MIUI op $opCode 反射失败: ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * 反射降级: 通过 NotificationChannel.lockscreenVisibility 判断
+     * 不完全准确但可用
+     */
+    private fun fallbackCheckLockscreenVisibility(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true
+        return try {
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE)
+                as android.app.NotificationManager
+            // 检查任务提醒渠道
+            val channel = nm.getNotificationChannel(
+                com.smartsales.prism.domain.notification.PrismNotificationChannel.TASK_REMINDER.channelId
+            )
+            channel?.lockscreenVisibility != android.app.Notification.VISIBILITY_SECRET
+        } catch (e: Exception) {
+            true // 无法判断时假设可用
+        }
+    }
+
     // ---- Defense Layer 2: 自启动引导 ----
 
     /**

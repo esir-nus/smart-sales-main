@@ -146,7 +146,9 @@ class RealNotificationService @Inject constructor(
     }
 
     override fun startPersistentVibration() {
-        val pattern = longArrayOf(0, 500, 300, 500) // 振-停-振
+        // 闹钟节奏: 3连振 + 停顿 → 循环
+        // [等0ms, 振400ms, 停200ms, 振400ms, 停200ms, 振400ms, 停1000ms] → 从头循环
+        val pattern = longArrayOf(0, 400, 200, 400, 200, 400, 1000)
         vibrator.vibrate(VibrationEffect.createWaveform(pattern, 0)) // 0=循环
         Log.d(TAG, "持续振动已启动")
     }

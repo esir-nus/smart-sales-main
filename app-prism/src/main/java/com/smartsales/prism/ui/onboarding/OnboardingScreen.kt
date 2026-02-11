@@ -519,7 +519,7 @@ private fun NotificationPermissionStep(onNext: () -> Unit) {
                 Text("检查通知设置", fontSize = 24.sp, color = TextPrimary, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "请确认以下选项已开启：\n锁屏通知 · 悬浮通知 · 振动",
+                    "请确认以下选项已开启：\n锁屏通知 · 悬浮通知 · 振动 · 后台发送本地通知",
                     fontSize = 16.sp,
                     color = TextSecondary,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center

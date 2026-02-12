@@ -71,7 +71,7 @@ Example: `smartsales/audio/2026-02-09/20260209_143022.wav`
 
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
-| **1** | Core Upload | 🔲 | `OssUploader` interface, `RealOssUploader`, Hilt module |
+| **1** | Core Upload | ✅ SHIPPED | `OssUploader` interface, `RealOssUploader`, Hilt module |
 | **2** | Resilience | 🔲 | Retry policy, multipart upload for large files |
 
 ---
@@ -81,11 +81,11 @@ Example: `smartsales/audio/2026-02-09/20260209_143022.wav`
 **Goal**: Upload a WAV file to OSS and return its public URL.
 
 - **Exit Criteria**:
-  - [ ] `OssUploader` interface in module
-  - [ ] `RealOssUploader` using `OSSClient` from Aliyun SDK
-  - [ ] Hilt `@Provides` for `OSSClient` singleton
-  - [ ] Credentials read from `BuildConfig`
-  - [ ] Returns `OssUploadResult.Success(publicUrl)`
+  - [x] `OssUploader` interface in module
+  - [x] `RealOssUploader` using `OSSClient` from Aliyun SDK
+  - [x] Hilt `@Provides` for `OSSClient` singleton
+  - [x] Credentials read from `BuildConfig`
+  - [x] Returns `OssUploadResult.Success(publicUrl)`
 
 - **Test Cases**:
   - [ ] L2: Upload sample WAV → verify URL accessible in browser

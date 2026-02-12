@@ -117,6 +117,14 @@ class AlarmActivity : ComponentActivity() {
         // 从 Intent 读取数据并加入栈
         addAlarmFromIntent(intent)
 
+        // 启动持续振动 — 仅当 Activity 成功启动后（Ghost Alarm 修复：振动不在 Receiver 启动）
+        val entryPoint = EntryPointAccessors.fromApplication(
+            applicationContext,
+            NotificationEntryPoint::class.java
+        )
+        entryPoint.notificationService().startPersistentVibration()
+        Log.d(TAG, "持续振动已启动 (onCreate)")
+
         setContent {
             AlarmStackScreen(
                 alarms = alarmStack,
@@ -228,9 +236,9 @@ class AlarmActivity : ComponentActivity() {
             )
             entryPoint.notificationService().show(
                 id = "${item.taskId}-missed",
-                title = "\uD83D\uDD14 未接提醒: ${item.title}",
+                title = "🔔 未接提醒: ${item.title}",
                 body = item.timeText,
-                channel = PrismNotificationChannel.TASK_REMINDER,
+                channel = PrismNotificationChannel.TASK_REMINDER_EARLY,  // 静默通知用 EARLY 渠道
                 priority = NotificationPriority.LOW
             )
         } catch (e: Exception) {

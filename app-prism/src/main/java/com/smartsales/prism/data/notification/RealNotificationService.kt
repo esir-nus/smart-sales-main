@@ -86,7 +86,8 @@ class RealNotificationService @Inject constructor(
             null // 不用通知振动，用 Vibrator
         } else {
             when (channel) {
-                PrismNotificationChannel.TASK_REMINDER -> longArrayOf(0, 250, 250, 250)
+                PrismNotificationChannel.TASK_REMINDER_EARLY -> longArrayOf(0, 250, 250, 250)
+                PrismNotificationChannel.TASK_REMINDER_DEADLINE -> longArrayOf(0, 500, 300, 500)
                 PrismNotificationChannel.COACH_NUDGE -> longArrayOf(0, 150)
                 PrismNotificationChannel.BADGE_STATUS -> null
                 PrismNotificationChannel.MEMORY_UPDATE -> null
@@ -168,7 +169,8 @@ class RealNotificationService @Inject constructor(
 
         PrismNotificationChannel.entries.forEach { prismChannel ->
             val importance = when (prismChannel) {
-                PrismNotificationChannel.TASK_REMINDER -> NotificationManager.IMPORTANCE_HIGH
+                PrismNotificationChannel.TASK_REMINDER_EARLY -> NotificationManager.IMPORTANCE_HIGH
+                PrismNotificationChannel.TASK_REMINDER_DEADLINE -> NotificationManager.IMPORTANCE_HIGH
                 PrismNotificationChannel.COACH_NUDGE -> NotificationManager.IMPORTANCE_DEFAULT
                 PrismNotificationChannel.BADGE_STATUS -> NotificationManager.IMPORTANCE_LOW
                 PrismNotificationChannel.MEMORY_UPDATE -> NotificationManager.IMPORTANCE_DEFAULT
@@ -179,27 +181,38 @@ class RealNotificationService @Inject constructor(
                 prismChannel.displayName,
                 importance
             ).apply {
-                // 任务提醒渠道：振动 + 锁屏可见 + 绕过勿扰 + 闹钟铃声
-                if (prismChannel == PrismNotificationChannel.TASK_REMINDER) {
-                    enableVibration(true)
-                    vibrationPattern = longArrayOf(0, 500, 300, 500)
-                    lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
-                    setBypassDnd(true)
-                    setSound(
-                        RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
-                        AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_ALARM)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                            .build()
-                    )
+                when (prismChannel) {
+                    // EARLY: 尊重 DND，短振动
+                    PrismNotificationChannel.TASK_REMINDER_EARLY -> {
+                        enableVibration(true)
+                        vibrationPattern = longArrayOf(0, 250)
+                        lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+                        // 不设 setBypassDnd — 尊重勿扰模式
+                    }
+                    // DEADLINE: 绕过 DND，闹钟铃声 + 强振动
+                    PrismNotificationChannel.TASK_REMINDER_DEADLINE -> {
+                        enableVibration(true)
+                        vibrationPattern = longArrayOf(0, 500, 300, 500)
+                        lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+                        setBypassDnd(true)  // 绕过勿扰模式
+                        setSound(
+                            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM),
+                            AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_ALARM)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .build()
+                        )
+                    }
+                    else -> { /* 其他渠道默认配置 */ }
                 }
             }
             manager.createNotificationChannel(androidChannel)
         }
 
-        // 删除旧版渠道（v1 无振动，v2 无闹钟铃声）
+        // 删除旧版渠道（v1 无振动，v2 无闹钟铃声，v3 未分Early/Deadline）
         manager.deleteNotificationChannel("prism_task_reminders")
         manager.deleteNotificationChannel("prism_task_reminders_v2")
+        manager.deleteNotificationChannel("prism_task_reminders_v3")
 
         channelsCreated = true
         Log.d(TAG, "通知渠道已创建: ${PrismNotificationChannel.entries.size} 个")

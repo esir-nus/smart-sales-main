@@ -188,7 +188,7 @@ object OemCompat {
                 as android.app.NotificationManager
             // 检查任务提醒渠道
             val channel = nm.getNotificationChannel(
-                com.smartsales.prism.domain.notification.PrismNotificationChannel.TASK_REMINDER.channelId
+                com.smartsales.prism.domain.notification.PrismNotificationChannel.TASK_REMINDER_DEADLINE.channelId
             )
             channel?.lockscreenVisibility != android.app.Notification.VISIBILITY_SECRET
         } catch (e: Exception) {

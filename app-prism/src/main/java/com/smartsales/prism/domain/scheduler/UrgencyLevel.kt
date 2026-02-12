@@ -25,9 +25,9 @@ enum class UrgencyLevel {
          * LLM 分类 → Kotlin 决定偏移量（纯函数，无 LLM 参与）
          */
         fun buildCascade(level: UrgencyLevel): List<String> = when (level) {
-            L1_CRITICAL  -> listOf("-2h", "-1h", "-30m", "-15m", "-5m", "-1m", "0m")
-            L2_IMPORTANT -> listOf("-1h", "-15m", "-5m", "-1m", "0m")
-            L3_NORMAL    -> listOf("-15m", "-1m", "0m")
+            L1_CRITICAL  -> listOf("-2h", "-1h", "-30m", "-15m", "-5m", "0m")
+            L2_IMPORTANT -> listOf("-1h", "-15m", "-5m", "0m")
+            L3_NORMAL    -> listOf("-15m", "-5m", "0m")
             FIRE_OFF     -> listOf("0m")
         }
 

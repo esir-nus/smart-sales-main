@@ -25,7 +25,7 @@ class NotificationServiceTest {
             id = "task-123",
             title = "⏰ 开会提醒",
             body = "将在15分钟后开始",
-            channel = PrismNotificationChannel.TASK_REMINDER,
+            channel = PrismNotificationChannel.TASK_REMINDER_EARLY,
             priority = NotificationPriority.HIGH
         )
 
@@ -35,7 +35,7 @@ class NotificationServiceTest {
         assertEquals("task-123", notification.id)
         assertEquals("⏰ 开会提醒", notification.title)
         assertEquals("将在15分钟后开始", notification.body)
-        assertEquals(PrismNotificationChannel.TASK_REMINDER, notification.channel)
+        assertEquals(PrismNotificationChannel.TASK_REMINDER_EARLY, notification.channel)
         assertEquals(NotificationPriority.HIGH, notification.priority)
     }
 
@@ -44,7 +44,7 @@ class NotificationServiceTest {
         service.show(id = "test-1", title = "Test", body = "Body")
 
         val notification = service.shownNotifications[0]
-        assertEquals(PrismNotificationChannel.TASK_REMINDER, notification.channel)
+        assertEquals(PrismNotificationChannel.TASK_REMINDER_EARLY, notification.channel)
         assertEquals(NotificationPriority.HIGH, notification.priority)
     }
 

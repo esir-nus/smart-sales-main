@@ -1,9 +1,12 @@
 package com.smartsales.prism.data.fakes
 
+import com.smartsales.prism.domain.habit.UserHabit
 import com.smartsales.prism.domain.habit.UserHabitRepository
+import com.smartsales.prism.domain.rl.DELETION_THRESHOLD
 import com.smartsales.prism.domain.rl.HabitContext
 import com.smartsales.prism.domain.rl.ReinforcementLearner
 import com.smartsales.prism.domain.rl.RlObservation
+import com.smartsales.prism.domain.rl.calculateConfidence
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -15,8 +18,8 @@ import javax.inject.Singleton
  * 
  * ## 职责
  * - processObservations: 委托给 habitRepository.observe() (SSD 写入)
- * - loadUserHabits: 加载全局用户习惯 → Section 2
- * - loadClientHabits: 加载实体客户习惯 → Section 3
+ * - loadUserHabits: 加载全局用户习惯 → Section 2 (含 W4 垃圾回收)
+ * - loadClientHabits: 加载实体客户习惯 → Section 3 (含 W4 垃圾回收)
  */
 @Singleton
 class FakeReinforcementLearner @Inject constructor(
@@ -30,27 +33,37 @@ class FakeReinforcementLearner @Inject constructor(
                 key = obs.key,
                 value = obs.value,
                 entityId = obs.entityId,
-                source = obs.source  // NEW: Pass source for routing
+                source = obs.source
             )
         }
     }
     
     override suspend fun loadUserHabits(): HabitContext {
-        // 全局用户习惯 → RAM Section 2
+        val now = System.currentTimeMillis()
+        val allGlobal = habitRepository.getGlobalHabits()
+        
+        // Wave 4: 垃圾回收 — 删除置信度低于阈值的习惯
+        val (alive, dead) = allGlobal.partition { calculateConfidence(it, now) >= DELETION_THRESHOLD }
+        dead.forEach { habitRepository.delete(it.habitKey, it.entityId) }
+        
         return HabitContext(
-            userHabits = habitRepository.getGlobalHabits(),
+            userHabits = alive,
             clientHabits = emptyList(),
             suggestedDefaults = emptyMap()
         )
     }
     
     override suspend fun loadClientHabits(entityIds: List<String>): HabitContext {
-        // 指定实体的客户习惯 → RAM Section 3
-        // 空列表 → 空习惯（不 fallback 到全局）
-        val clientHabits = entityIds.flatMap { habitRepository.getByEntity(it) }
+        val now = System.currentTimeMillis()
+        val allClient = entityIds.flatMap { habitRepository.getByEntity(it) }
+        
+        // Wave 4: 垃圾回收
+        val (alive, dead) = allClient.partition { calculateConfidence(it, now) >= DELETION_THRESHOLD }
+        dead.forEach { habitRepository.delete(it.habitKey, it.entityId) }
+        
         return HabitContext(
             userHabits = emptyList(),
-            clientHabits = clientHabits,
+            clientHabits = alive,
             suggestedDefaults = emptyMap()
         )
     }

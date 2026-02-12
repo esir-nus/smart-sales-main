@@ -104,7 +104,8 @@ Centralizes all Android notification logic behind a single interface. Features c
 
 | Channel | Importance | Vibration | Lock Screen | Sound | DND Bypass | Banner |
 |---------|-----------|-----------|-------------|-------|-----------|--------|
-| TASK_REMINDER (v2) | HIGH | `[0, 500, 300, 500]` | VISIBILITY_PUBLIC | System default | ✅ | ✅ |
+| TASK_REMINDER_EARLY (v3) | HIGH | `[0, 250]` | VISIBILITY_PUBLIC | System default | ❌ | ✅ |
+| TASK_REMINDER_DEADLINE (v3) | HIGH | `[0, 500, 300, 500]` | VISIBILITY_PUBLIC | Alarm ringtone | ✅ | ✅ |
 | COACH_NUDGE | DEFAULT | `[0, 150]` | VISIBILITY_PUBLIC | None | ❌ | ❌ |
 | BADGE_STATUS | LOW | None | VISIBILITY_PUBLIC | None | ❌ | ❌ |
 | MEMORY_UPDATE | DEFAULT | None | VISIBILITY_PUBLIC | None | ❌ | ❌ |
@@ -171,11 +172,12 @@ App Launch
 **Problem**: Vibration only — not audible in noisy environments.
 
 **Solution**:
-- Set `TASK_REMINDER` channel sound to system default alarm ringtone: `RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)`
-- Channel already has `IMPORTANCE_HIGH` — sound plays automatically when set on channel
-- **Note**: Current shipped channel is `_v2`. Adding sound requires channel ID bump to `_v3` (Android channels are immutable after creation)
+- Split `TASK_REMINDER` into two channels: `TASK_REMINDER_EARLY` (no DND bypass) and `TASK_REMINDER_DEADLINE` (DND bypass + alarm ringtone)
+- `TASK_REMINDER_DEADLINE` channel uses `RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)` with `USAGE_ALARM` AudioAttributes
+- Channel IDs bumped to `_v3_early` / `_v3_deadline` (Android channels immutable after creation)
+- Old channels (`_v2`, `_v3`) deleted in `ensureChannels()`
 
-**Ship Criteria**: Alarm plays system default sound + vibration.
+**Ship Criteria**: ✅ DEADLINE alarm plays system alarm sound + vibration + bypasses DND. EARLY respects DND.
 
 ### 1.7.5: Concurrent Alarm Notifications
 
@@ -279,31 +281,54 @@ object OemCompat {
 
 ### 1.7.9: Cascade Visual Tiers
 
-**Problem**: All cascade alarms (from `-2h` early warning to `0m` deadline) currently look and feel identical. The final `0m` alarm loses its urgency — user can't distinguish "heads up, you have 15 minutes" from "THIS IS NOW, YOU'RE LATE."
+**Problem**: All cascade alarms currently look and feel identical. The `0m` deadline alarm loses its urgency — user can’t distinguish “heads up, you have 15 minutes” from “THIS IS NOW.”
 
-**Solution**: Three visual tiers based on cascade offset:
+**Solution**: Two visual tiers based on cascade offset:
 
-| Tier | Offsets | Priority | Notification Style | Sound | Vibration | Full-screen |
-|------|---------|----------|--------------------|-------|-----------|-------------|
-| **Early Warning** | `-2h` to `-5m` | `HIGH` | Standard banner | Channel default | One-shot `[0, 250]` | ❌ |
-| **Final Warning** | `-1m` | `HIGH` | Banner + ⚠️ icon | Channel default | Pattern `[0, 500, 300, 500]` | ❌ |
-| **Deadline Alarm** | `0m` | `URGENT` | Full-screen overlay | System alarm ringtone | **Persistent loop** | ✅ `AlarmActivity` |
+| Tier | Offsets | Priority | Notification Style | Sound | Vibration | Full-screen | DND |
+|------|---------|----------|--------------------|-------|-----------|-------------|-----|
+| **Early Warning** | All non-`0m` | `HIGH` | Standard banner | Channel default | One-shot `[0, 250]` | ❌ | Respects DND — suppressed in DND mode |
+| **Deadline Alarm** | `0m` | `URGENT` | Full-screen overlay | System alarm ringtone | **Persistent loop** | ✅ `AlarmActivity` | **Bypasses DND** — always fires |
 
 **Tier determination logic**:
 ```kotlin
 fun cascadeTier(offsetMinutes: Int): CascadeTier = when (offsetMinutes) {
-    0    -> CascadeTier.DEADLINE     // 0m = URGENT, full-screen
-    1    -> CascadeTier.FINAL        // -1m = elevated warning  
-    else -> CascadeTier.EARLY        // everything else = standard
+    0    -> CascadeTier.DEADLINE     // 0m = URGENT, full-screen, bypasses DND
+    else -> CascadeTier.EARLY        // everything else = standard, respects DND
 }
 ```
 
 **Visual differences**:
-- **Early**: Title = "⏰ {title} — {offset}分钟后开始". No action buttons.
-- **Final**: Title = "⚠️ {title} — 1分钟后!". Action: "知道了" (dismiss).
-- **Deadline**: Full-screen `AlarmActivity` with persistent vibration. Action: "知道了" (dismiss). Title = "🚨 {title} — 现在!"
+- **Early**: Title = "⏰ {title} — {offset}分钟后开始". No action buttons. Respects DND.
+- **Deadline**: Full-screen `AlarmActivity` with persistent vibration. Action: "知道了" (dismiss). Title = "🚨 {title} — 现在!". **Bypasses DND** to close the task.
 
-**Ship Criteria**: Side-by-side, user can instantly tell "early warning" from "deadline alarm".
+**Ship Criteria**: Side-by-side, user can instantly tell “early warning” from “deadline alarm”.
+
+---
+
+### 1.7.10: DND (Do Not Disturb) Policy
+
+**Policy**: Cascade alarms respect the user’s DND setting, with one exception: the final `0m` alarm.
+
+| DND State | Early Offsets (`-2h` to `-5m`) | Deadline (`0m`) |
+|-----------|-------------------------------|----------------|
+| DND OFF | ✅ Fire normally | ✅ Fire normally |
+| DND ON | ❌ Suppressed silently | ✅ **Bypasses DND** |
+
+**Rationale**: Early warnings are informational — if the user is in DND, they don’t want interruption. But the deadline alarm is the *closure* signal: the task is happening NOW. Missing it defeats the purpose of scheduling.
+
+**Implementation**: `URGENT` priority already bypasses DND on AOSP via `IMPORTANCE_HIGH` + `fullScreenIntent`. No additional code needed — Android handles this natively when `fullScreenIntent` is set.
+
+---
+
+### 1.7.11: UX Invariants
+
+| Rule | How to Verify |
+|------|---------------|
+| **No Ghost Alarms**: If `AlarmActivity` can’t display (e.g., overdrawn), vibration must NOT start. | Code review: vibration starts inside `AlarmActivity.onCreate`, not in receiver |
+| **One-Tap Cessation**: Dismissal requires exactly 1 gross motor gesture (swipe or large button) | UI inspection: button is full-width, swipe enabled |
+| **Notification Grouping**: >3 concurrent alarms → summary notification ("🔔 N 个任务提醒") | Automated: count active notifications before posting |
+| **Feedback within 200ms**: Tap "知道了" → vibration stops + activity finishes immediately | Stopwatch test |
 
 ---
 
@@ -311,7 +336,6 @@ fun cascadeTier(offsetMinutes: Int): CascadeTier = when (offsetMinutes) {
 
 **AOSP**:
 - [ ] Reboot device → future alarms still fire
-- [ ] Tap snooze → alarm re-fires in 5 min as `0m` URGENT alarm
 - [ ] Leave alarm untouched → auto-dismisses after 1 min, summary notification remains
 - [ ] Alarm plays system default sound + vibration
 - [ ] 2 alarms at same time → both visible as stacked cards
@@ -319,9 +343,11 @@ fun cascadeTier(offsetMinutes: Int): CascadeTier = when (offsetMinutes) {
 
 **Cascade Visual Tiers**:
 - [ ] `-15m` alarm → standard banner, no full-screen, short vibration
-- [ ] `-1m` alarm → elevated banner with ⚠️, pattern vibration
 - [ ] `0m` alarm → full-screen AlarmActivity, persistent vibration, alarm sound
-- [ ] Snooze from `-1m` → re-fires as `0m` URGENT tier (not as another `-1m`)
+- [ ] Early alarm during DND → suppressed silently
+- [ ] `0m` alarm during DND → **still fires** (bypasses DND)
+- [ ] >3 concurrent alarms → summary notification grouping
+- [ ] Tap "知道了" → vibration stops within 200ms
 
 **Chinese OEM (MIUI/EMUI)**:
 - [ ] Lock screen + Xiaomi MIUI → screen wakes and alarm shows

@@ -25,7 +25,7 @@ interface NotificationService {
         id: String,
         title: String,
         body: String,
-        channel: PrismNotificationChannel = PrismNotificationChannel.TASK_REMINDER,
+        channel: PrismNotificationChannel = PrismNotificationChannel.TASK_REMINDER_EARLY,
         priority: NotificationPriority = NotificationPriority.HIGH,
         contentIntent: PendingIntent? = null
     )
@@ -61,7 +61,8 @@ interface NotificationService {
 
 ```kotlin
 enum class PrismNotificationChannel(val channelId: String, val displayName: String) {
-    TASK_REMINDER("prism_task_reminders_v2", "任务提醒"),
+    TASK_REMINDER_EARLY("prism_task_reminders_v3_early", "任务提醒（提前预警）"),
+    TASK_REMINDER_DEADLINE("prism_task_reminders_v3_deadline", "任务闹钟（到点提醒）"),
     COACH_NUDGE("prism_coach_nudge", "教练提示"),
     BADGE_STATUS("prism_badge_status", "设备状态"),
     MEMORY_UPDATE("prism_memory_update", "记忆更新")

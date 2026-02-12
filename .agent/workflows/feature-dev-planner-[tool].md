@@ -140,9 +140,27 @@ find app-prism/src/main/java -name "*[Feature]*" -type f | grep -i "ui/"
 - [ ] LLM vs Kotlin justified
 - [ ] Fakes clean (no skeleton data)
 - [ ] L2 scenario planned (if UI feature)
+- [ ] Tagged `Log.d` calls added to trace data flow (`adb logcat -s Tag:D`)
 ```
 
 **STOP if any box unchecked.**
+
+---
+
+## Phase 3.5: Observable Code (Logger Verbosity)
+
+**Every new/modified function in the data pipeline MUST include tagged `Log.d` calls.**
+
+| Where | What to Log |
+|-------|-------------|
+| ViewModel | State transitions, user actions, received results |
+| Repository / UseCase | Input params, query results, error branches |
+| LLM Pipeline | Prompt sent, raw response, parsed output |
+| Mapper (`toDomain`, `toEntity`) | Input → output field values for computed fields |
+
+**Tag convention**: `Log.d("ClassName", "methodName: key=$value")`
+
+**Why**: `adb logcat -s Tag:D` is the fastest way to trace data flow end-to-end. Without logs, debugging requires guesswork. See lessons: *UI Element Not Appearing*, *LLM Prompt-Linter Data Gap*, *Entity-Domain Mapping Gap*.
 
 ---
 

@@ -2,7 +2,7 @@
 
 > **Purpose**: Cerb spec index + changelog. Faithfully tracks spec states and key history.
 > **Rule**: Rows are derived FROM specs. History entries are commit-style — key info only.
-> **Last Updated**: 2026-02-11
+> **Last Updated**: 2026-02-12
 
 ---
 
@@ -13,7 +13,7 @@
 | Cerb Shard | State | Next Wave |
 |------------|-------|-----------|
 | [coach](../cerb/coach/spec.md) | SHIPPED | — |
-| [scheduler](../cerb/scheduler/spec.md) | SHIPPED | W9: Smart Tips |
+| [scheduler](../cerb/scheduler/spec.md) | PARTIAL | W9: Smart Tips |
 | [conflict-resolver](../cerb/conflict-resolver/spec.md) | SHIPPED | — |
 | [badge-audio-pipeline](../cerb/badge-audio-pipeline/spec.md) | SHIPPED | W4: Error Recovery |
 | [notifications](../cerb/notifications/spec.md) | SHIPPED | — |
@@ -27,8 +27,8 @@
 | [entity-registry](../cerb/entity-registry/spec.md) | SHIPPED | — |
 | [entity-writer](../cerb/entity-writer/spec.md) | SHIPPED | — |
 | [user-habit](../cerb/user-habit/spec.md) | SHIPPED | — |
-| [rl-module](../cerb/rl-module/spec.md) | PARTIAL | W4: Time Decay |
-| [client-profile-hub](../cerb/client-profile-hub/spec.md) | SPEC_ONLY | W1: Interface + Models |
+| [rl-module](../cerb/rl-module/spec.md) | SHIPPED | — |
+| [client-profile-hub](../cerb/client-profile-hub/spec.md) | PARTIAL | W3: CRM Export |
 
 ### Connectivity & Hardware
 
@@ -45,6 +45,14 @@
 ## Changelog
 
 > Key spec/impl changes, newest first. Like `git log --oneline`.
+
+### 2026-02-12
+
+- **scheduler**: Cerb sync — `interface.md` rewritten from code, `spec.md` state → PARTIAL, domain model drift fixed
+- **scheduler**: Cascade `-1m` offset removed (UX review: cognitively indistinct from `0m`)
+- **notifications**: Cascade visual tiers collapsed from 3 to 2 (EARLY + DEADLINE), added DND policy (1.7.10), UX invariants (1.7.11)
+- **rl-module**: W4 SHIPPED — `calculateConfidence()` with 4-rule weighting + time decay, garbage collection on load
+- **client-profile-hub**: Tracker corrected → PARTIAL (W1+W2+W4 shipped, W3 CRM Export remaining)
 
 ### 2026-02-11
 

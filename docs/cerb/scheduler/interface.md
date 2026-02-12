@@ -14,6 +14,7 @@ interface ScheduledTaskRepository {
     fun getTimelineItems(dayOffset: Int): Flow<List<TimelineItemModel>>
     fun queryByDateRange(start: LocalDate, end: LocalDate): Flow<List<TimelineItemModel>>
     suspend fun insertTask(task: TimelineItemModel.Task): String
+    suspend fun getTask(id: String): TimelineItemModel.Task?
     suspend fun updateTask(task: TimelineItemModel.Task)
     suspend fun deleteItem(id: String)
 }
@@ -22,40 +23,39 @@ interface ScheduledTaskRepository {
 ### SchedulerLinter
 
 ```kotlin
-class SchedulerLinter {
+class SchedulerLinter @Inject constructor(
+    private val timeProvider: TimeProvider
+) {
     fun lint(llmOutput: String): LintResult
 }
 
 sealed class LintResult {
     data class Success(
         val task: TimelineItemModel.Task,
-        val reminderType: ReminderType?,
-        val taskTypeHint: TaskTypeHint,
+        val urgencyLevel: UrgencyLevel,
         val parsedClues: ParsedClues = ParsedClues()  // Phase 1 → Phase 2 bridge
     ) : LintResult()
-    
+
+    data class MultiTask(
+        val tasks: List<TimelineItemModel.Task>
+    ) : LintResult()
+
     data class Incomplete(
         val missingField: String,  // "startTime" | "duration"
         val question: String,      // User-facing question
         val partialClues: ParsedClues
     ) : LintResult()
-    
+
     data class Error(val message: String) : LintResult()
-    
+
     // Wave 4.0: Input Classification
     data class NonIntent(val reason: String) : LintResult()
     data class Inspiration(val content: String) : LintResult()
-    
-    // Wave 4.1: Multi-Task Splitting
-    data class MultiTask(val tasks: List<TimelineItemModel.Task>) : LintResult()
-    
+
     // Wave 7: NL Deletion
     data class Deletion(val targetTitle: String) : LintResult()
 }
 
-/**
- * Phase 1 frozen clues — passed to Phase 2 for LLM entity resolution
- */
 data class ParsedClues(
     val person: String? = null,
     val location: String? = null,
@@ -68,9 +68,13 @@ data class ParsedClues(
 
 ```kotlin
 interface AlarmScheduler {
-    suspend fun scheduleAlarm(taskId: String, triggerAt: Long)
-    suspend fun cancelAlarm(taskId: String)
-    suspend fun reschedule(taskId: String, newTriggerAt: Long)
+    suspend fun scheduleCascade(
+        taskId: String,
+        taskTitle: String,
+        eventTime: Instant,
+        cascade: List<String>  // e.g. ["-2h", "-1h", "-15m", "-1m", "0m"]
+    )
+    suspend fun cancelReminder(taskId: String)
 }
 ```
 
@@ -78,7 +82,7 @@ interface AlarmScheduler {
 
 ```kotlin
 interface InspirationRepository {
-    suspend fun insert(content: String): String
+    suspend fun insert(text: String): String
     fun getAll(): Flow<List<TimelineItemModel.Inspiration>>
     suspend fun delete(id: String)
 }
@@ -88,23 +92,40 @@ interface InspirationRepository {
 
 ## Input/Output Types
 
+### UrgencyLevel
+
+```kotlin
+enum class UrgencyLevel {
+    L1_CRITICAL,   // 赶飞机、签约、面试 — 错过=不可逆损失
+    L2_IMPORTANT,  // 会议、电话、汇报 — 错过=影响他人
+    L3_NORMAL,     // 回邮件、买东西、日常 — 错过=无大碍
+    FIRE_OFF;      // 喝水、站起来走走 — 即时单次提醒（0m）
+
+    companion object {
+        fun buildCascade(level: UrgencyLevel): List<String>
+        fun parseCascadeOffset(offset: String): Long
+    }
+}
+```
+
 ### TimelineItemModel
 
 ```kotlin
 sealed class TimelineItemModel {
     abstract val id: String
     abstract val timeDisplay: String
-    
+
     data class Task(
         override val id: String,
         override val timeDisplay: String,
         val title: String,
+        val urgencyLevel: UrgencyLevel = UrgencyLevel.L3_NORMAL,
         val isDone: Boolean = false,
         val hasAlarm: Boolean = false,
         val isSmartAlarm: Boolean = false,
         val startTime: Instant,
         val endTime: Instant? = null,
-        val durationMinutes: Int = 30,
+        val durationMinutes: Int = 0,
         val durationSource: DurationSource = DurationSource.DEFAULT,
         val conflictPolicy: ConflictPolicy = ConflictPolicy.EXCLUSIVE,
         val dateRange: String = "",
@@ -113,30 +134,23 @@ sealed class TimelineItemModel {
         val keyPerson: String? = null,
         val keyPersonEntityId: String? = null,  // Wave 9: Entity ID for tip generation
         val highlights: String? = null,
-        val tips: List<String> = emptyList(),  // Wave 9: LLM-generated context tips
-        val tipsLoading: Boolean = false,       // Wave 9: Generation animation state
-        val alarmCascade: List<String>? = null
+        val alarmCascade: List<String> = emptyList()
     ) : TimelineItemModel()
-    
+
     data class Inspiration(
         override val id: String,
         override val timeDisplay: String,
         val title: String
     ) : TimelineItemModel()
-    
+
     data class Conflict(
         override val id: String,
         override val timeDisplay: String,
-        val conflictText: String
+        val conflictText: String,
+        val taskA: ScheduleItem,
+        val taskB: ScheduleItem
     ) : TimelineItemModel()
 }
-```
-
-### Supporting Types
-
-```kotlin
-enum class TaskTypeHint { MEETING, CALL, URGENT, PERSONAL }
-enum class ReminderType { SINGLE, SMART_CASCADE }
 ```
 
 ---
@@ -147,8 +161,9 @@ enum class ReminderType { SINGLE, SMART_CASCADE }
 |-----------|-----------|
 | `insertTask` | Returns generated ID, triggers Flow emission |
 | `getTimelineItems(0)` | Today's tasks, sorted by startTime |
+| `getTask(id)` | Returns task or null if not found |
 | `lint()` | Validates JSON, returns parsed Task or Error |
-| `scheduleAlarm` | Alarm fires at triggerAt ± 1 min |
+| `scheduleCascade` | Alarms fire at `eventTime - offset` ± 1 min |
 
 ---
 

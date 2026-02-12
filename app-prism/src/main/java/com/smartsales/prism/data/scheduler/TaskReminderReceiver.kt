@@ -21,10 +21,9 @@ import dagger.hilt.android.EntryPointAccessors
  * 任务提醒广播接收器
  *
  * 接收 AlarmManager 发送的提醒广播。
- * 根据 CascadeTier（EARLY / FINAL / DEADLINE）区分行为：
- * - EARLY: ⏰ 标准横幅通知，无全屏，无持续振动
- * - FINAL: ⚠️ 横幅通知 + 贪睡按钮，无全屏，无持续振动
- * - DEADLINE: 🚨 全屏 AlarmActivity + 持续振动 + 知道了/贪睡按钮
+ * 根据 CascadeTier（EARLY / DEADLINE）区分行为：
+ * - EARLY: ⏰ 标准横幅通知，无全屏，无持续振动，尊重 DND
+ * - DEADLINE: 🚨 全屏 AlarmActivity + 持续振动（Activity 内启动）+ 绕过 DND
  */
 class TaskReminderReceiver : BroadcastReceiver() {
 
@@ -86,7 +85,6 @@ class TaskReminderReceiver : BroadcastReceiver() {
         val notificationId = "$taskId-$offsetMinutes"
         val titlePrefix = when (tier) {
             CascadeTier.EARLY    -> "⏰"
-            CascadeTier.FINAL    -> "⚠️"
             CascadeTier.DEADLINE -> "🚨"
         }
 
@@ -111,7 +109,13 @@ class TaskReminderReceiver : BroadcastReceiver() {
             NotificationCompat.PRIORITY_HIGH
         }
 
-        val builder = NotificationCompat.Builder(context, PrismNotificationChannel.TASK_REMINDER.channelId)
+        val selectedChannel = if (tier == CascadeTier.DEADLINE) {
+            PrismNotificationChannel.TASK_REMINDER_DEADLINE
+        } else {
+            PrismNotificationChannel.TASK_REMINDER_EARLY
+        }
+
+        val builder = NotificationCompat.Builder(context, selectedChannel.channelId)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("$titlePrefix $taskTitle")
             .setContentText(timeText)
@@ -123,8 +127,8 @@ class TaskReminderReceiver : BroadcastReceiver() {
             .setContentIntent(contentDismiss)
             .setDeleteIntent(deleteDismiss)
 
-        // FINAL / DEADLINE: "知道了" 按钮
-        if (tier != CascadeTier.EARLY) {
+        // DEADLINE: "知道了" 按钮
+        if (tier == CascadeTier.DEADLINE) {
             val actionDismiss = AlarmDismissReceiver.createIntent(
                 context, notificationId, taskId,
                 openApp = false, requestCode = "$taskId-$offsetMinutes-action".hashCode()
@@ -163,20 +167,12 @@ class TaskReminderReceiver : BroadcastReceiver() {
         try {
             NotificationManagerCompat.from(context)
                 .notify(notificationId.hashCode(), notification)
-            Log.d(TAG, "通知已显示: id=$notificationId, tier=$tier")
+            Log.d(TAG, "通知已显示: id=$notificationId, tier=$tier, channel=${selectedChannel.channelId}")
         } catch (e: SecurityException) {
             Log.w(TAG, "通知发送失败: ${e.message}")
         }
 
-        // DEADLINE: 持续振动
-        if (tier == CascadeTier.DEADLINE) {
-            val entryPoint = EntryPointAccessors.fromApplication(
-                context.applicationContext,
-                NotificationServiceEntryPoint::class.java
-            )
-            entryPoint.notificationService().startPersistentVibration()
-            Log.d(TAG, "持续振动已启动 (DEADLINE)")
-        }
+        // DEADLINE: 持续振动在 AlarmActivity.onCreate 内启动，不在 Receiver 启动（避免 Ghost Alarm）
     }
 
     private fun buildTimeText(offsetMinutes: Int): String = when (offsetMinutes) {
@@ -201,26 +197,45 @@ class TaskReminderReceiver : BroadcastReceiver() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
 
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (nm.getNotificationChannel(PrismNotificationChannel.TASK_REMINDER.channelId) != null) return
 
-        val channel = android.app.NotificationChannel(
-            PrismNotificationChannel.TASK_REMINDER.channelId,
-            PrismNotificationChannel.TASK_REMINDER.displayName,
-            NotificationManager.IMPORTANCE_HIGH
-        ).apply {
-            enableVibration(true)
-            vibrationPattern = longArrayOf(0, 500, 300, 500)
-            lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
-            setBypassDnd(true)
-            setSound(
-                android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM),
-                android.media.AudioAttributes.Builder()
-                    .setUsage(android.media.AudioAttributes.USAGE_ALARM)
-                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-            )
+        // 确保两个任务提醒渠道都已创建
+        listOf(
+            PrismNotificationChannel.TASK_REMINDER_EARLY,
+            PrismNotificationChannel.TASK_REMINDER_DEADLINE
+        ).forEach { prismChannel ->
+            if (nm.getNotificationChannel(prismChannel.channelId) != null) return@forEach
+
+            val importance = NotificationManager.IMPORTANCE_HIGH
+            val channel = android.app.NotificationChannel(
+                prismChannel.channelId,
+                prismChannel.displayName,
+                importance
+            ).apply {
+                when (prismChannel) {
+                    PrismNotificationChannel.TASK_REMINDER_EARLY -> {
+                        enableVibration(true)
+                        vibrationPattern = longArrayOf(0, 250)
+                        lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+                        // 不设 setBypassDnd — 尊重勿扰
+                    }
+                    PrismNotificationChannel.TASK_REMINDER_DEADLINE -> {
+                        enableVibration(true)
+                        vibrationPattern = longArrayOf(0, 500, 300, 500)
+                        lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+                        setBypassDnd(true)  // 绕过勿扰
+                        setSound(
+                            android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM),
+                            android.media.AudioAttributes.Builder()
+                                .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .build()
+                        )
+                    }
+                    else -> { /* NOP */ }
+                }
+            }
+            nm.createNotificationChannel(channel)
+            Log.d(TAG, "Receiver 内补建渠道: ${prismChannel.channelId}")
         }
-        nm.createNotificationChannel(channel)
-        Log.d(TAG, "Receiver 内补建渠道: ${PrismNotificationChannel.TASK_REMINDER.channelId}")
     }
 }

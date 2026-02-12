@@ -21,7 +21,7 @@ interface NotificationService {
         id: String,
         title: String,
         body: String,
-        channel: PrismNotificationChannel = PrismNotificationChannel.TASK_REMINDER,
+        channel: PrismNotificationChannel = PrismNotificationChannel.TASK_REMINDER_EARLY,
         priority: NotificationPriority = NotificationPriority.HIGH,
         contentIntent: PendingIntent? = null
     )

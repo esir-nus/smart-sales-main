@@ -119,10 +119,10 @@ sealed class AsrResult {
 **Goal**: Reliable transcription via OSS + Batch API.
 
 - **Exit Criteria**:
-  - [ ] `data:oss` module created and receiving credentials
-  - [ ] `OssUploader` implementing `upload(File, objectKey)`
-  - [ ] `FunAsrService` switches to `Transcription` API
-  - [ ] End-to-end flow: Local WAV -> OSS -> Text
+  - [x] `data:oss` module created and receiving credentials
+  - [x] `OssUploader` implementing `upload(File, objectKey)`
+  - [x] `FunAsrService` switches to `Transcription` API
+  - [x] End-to-end flow: Local WAV -> OSS -> Text
 
 - **Test Cases**:
   - [ ] L2: Real WAV file uploaded to OSS (check console)

@@ -2,7 +2,7 @@
 
 > **Cerb-compliant spec** — Self-contained, all content inline.  
 > **OS Model**: Consumer of RAM (reads entity context from SessionWorkingSet Section 1)
-> **State**: SHIPPED
+> **State**: PARTIAL
 
 ---
 
@@ -50,12 +50,13 @@ sealed class TimelineItemModel {
         override val id: String,
         override val timeDisplay: String,
         val title: String,
+        val urgencyLevel: UrgencyLevel = UrgencyLevel.L3_NORMAL,
         val isDone: Boolean = false,
         val hasAlarm: Boolean = false,
         val isSmartAlarm: Boolean = false,
         val startTime: Instant,
         val endTime: Instant? = null,
-        val durationMinutes: Int = 30,
+        val durationMinutes: Int = 0,
         val durationSource: DurationSource = DurationSource.DEFAULT,
         val conflictPolicy: ConflictPolicy = ConflictPolicy.EXCLUSIVE,
         val dateRange: String = "",
@@ -66,7 +67,7 @@ sealed class TimelineItemModel {
         val highlights: String? = null,
         val tips: List<String> = emptyList(),  // Wave 9: LLM-generated context tips
         val tipsLoading: Boolean = false,       // Wave 9: Generation animation state
-        val alarmCascade: List<String>? = null // e.g. ["-1h", "-15m", "-5m"]
+        val alarmCascade: List<String> = emptyList() // e.g. ["-1h", "-15m", "-5m"]
     ) : TimelineItemModel()
     
     data class Inspiration(
@@ -78,7 +79,9 @@ sealed class TimelineItemModel {
     data class Conflict(
         override val id: String,
         override val timeDisplay: String,
-        val conflictText: String
+        val conflictText: String,
+        val taskA: ScheduleItem,
+        val taskB: ScheduleItem
     ) : TimelineItemModel()
 }
 ```
@@ -111,9 +114,9 @@ enum class UrgencyLevel {
 
 | Level | Cascade | Conflict Policy | Duration Default |
 |-------|---------|-----------------|------------------|
-| `L1_CRITICAL` | `-2h, -1h, -30m, -15m, -5m, -1m, 0m` | EXCLUSIVE | LLM-decided |
-| `L2_IMPORTANT` | `-1h, -15m, -5m, -1m, 0m` | EXCLUSIVE | LLM-decided |
-| `L3_NORMAL` | `-15m, -1m, 0m` | EXCLUSIVE | LLM-decided |
+| `L1_CRITICAL` | `-2h, -1h, -30m, -15m, -5m, 0m` | EXCLUSIVE | LLM-decided |
+| `L2_IMPORTANT` | `-1h, -15m, -5m, 0m` | EXCLUSIVE | LLM-decided |
+| `L3_NORMAL` | `-15m, -5m, 0m` | EXCLUSIVE | LLM-decided |
 | `FIRE_OFF` | `0m` | COEXISTING | 0 |
 
 ---
@@ -193,7 +196,7 @@ LLM: { "urgency": "L1" }     ← LLM classifies
 Linter: validates urgency ∈ {L1, L2, L3, FIRE_OFF}
     ↓
 buildCascade(L1_CRITICAL)      ← Kotlin determines offsets
-    → [-2h, -1h, -30m, -15m, -5m, -1m]
+    → [-2h, -1h, -30m, -15m, -5m, 0m]
     ↓
 AlarmScheduler.scheduleAll()
 ```
@@ -202,9 +205,9 @@ AlarmScheduler.scheduleAll()
 
 ```kotlin
 fun buildCascade(level: UrgencyLevel): List<String> = when (level) {
-    L1_CRITICAL  -> listOf("-2h", "-1h", "-30m", "-15m", "-5m", "-1m", "0m")
-    L2_IMPORTANT -> listOf("-1h", "-15m", "-5m", "-1m", "0m")
-    L3_NORMAL    -> listOf("-15m", "-1m", "0m")
+    L1_CRITICAL  -> listOf("-2h", "-1h", "-30m", "-15m", "-5m", "0m")
+    L2_IMPORTANT -> listOf("-1h", "-15m", "-5m", "0m")
+    L3_NORMAL    -> listOf("-15m", "-5m", "0m")
     FIRE_OFF     -> listOf("0m")
 }
 ```

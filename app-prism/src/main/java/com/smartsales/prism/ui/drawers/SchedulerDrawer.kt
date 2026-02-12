@@ -262,7 +262,8 @@ fun SchedulerDrawer(
                             onEnterMultiSelect = { viewModel.onEnterSelectionMode() },
                             onConflictResolve = { action -> viewModel.handleConflictResolution(action) },
                             onConflictToggle = { id -> viewModel.toggleConflictExpansion(id) },
-                            onCardExpanded = { id, entityId -> viewModel.onCardExpanded(id, entityId) }  // Wave 9
+                            onCardExpanded = { id, entityId -> viewModel.onCardExpanded(id, entityId) },  // Wave 9
+                            onToggleDone = { id -> viewModel.toggleDone(id) }  // Wave 12
                         )
                         
                         // Swipe to exit multi-select

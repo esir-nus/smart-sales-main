@@ -22,6 +22,7 @@ import com.smartsales.prism.domain.memory.MemoryEntryType
 import com.smartsales.prism.domain.memory.MemoryRepository
 import com.smartsales.prism.domain.memory.EntityWriter
 import com.smartsales.prism.domain.memory.EntityType
+import com.smartsales.prism.domain.scheduler.AlarmScheduler
 import com.smartsales.prism.domain.scheduler.TipGenerator
 import com.smartsales.prism.data.notification.OemCompat
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -53,7 +54,8 @@ class SchedulerViewModel @Inject constructor(
     private val entityWriter: EntityWriter,
     private val badgeAudioPipeline: BadgeAudioPipeline,
     private val asrService: AsrService,
-    private val tipGenerator: TipGenerator  // Wave 9: Smart Tips
+    private val tipGenerator: TipGenerator,  // Wave 9: Smart Tips
+    private val alarmScheduler: AlarmScheduler  // Wave 12: Task Completion
 ) : ViewModel() {
 
     init {
@@ -332,6 +334,45 @@ $taskContext
             // Wave 9: 清理提示缓存
             _tipsCache.remove(id)
             _tipsLoading.value -= id
+            triggerRefresh()
+        }
+    }
+
+    /**
+     * Wave 12: 切换任务完成状态
+     *
+     * isDone=true  → 取消所有闹钟
+     * isDone=false → 如果任务在未来，重新注册闹钟
+     */
+    fun toggleDone(taskId: String) {
+        viewModelScope.launch {
+            val task = taskRepository.getTask(taskId) ?: run {
+                android.util.Log.w("SchedulerVM", "toggleDone: task not found: $taskId")
+                return@launch
+            }
+            val newDone = !task.isDone
+            taskRepository.updateTask(task.copy(isDone = newDone))
+
+            if (newDone) {
+                // 完成 → 取消闹钟
+                alarmScheduler.cancelReminder(taskId)
+                android.util.Log.d("SchedulerVM", "toggleDone: id=$taskId, isDone=true → alarms cancelled")
+            } else {
+                // 恢复 → 只对未来任务重新注册闹钟
+                if (task.hasAlarm && task.alarmCascade.isNotEmpty() &&
+                    task.startTime.isAfter(java.time.Instant.now())) {
+                    alarmScheduler.scheduleCascade(
+                        taskId = taskId,
+                        taskTitle = task.title,
+                        eventTime = task.startTime,
+                        cascade = task.alarmCascade
+                    )
+                    android.util.Log.d("SchedulerVM", "toggleDone: id=$taskId, isDone=false → alarms restored")
+                } else {
+                    android.util.Log.d("SchedulerVM", "toggleDone: id=$taskId, isDone=false → skip alarm (past or no cascade)")
+                }
+            }
+
             triggerRefresh()
         }
     }

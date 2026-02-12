@@ -115,11 +115,11 @@ fun UserCenterScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                              IconButton(onClick = onClose) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = TextPrimary)
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回", tint = TextPrimary)
                             }
                             // Edit Button (Small)
                             PrismButton(
-                                text = "Edit",
+                                text = "编辑",
                                 onClick = { isEditing = true },
                                 style = PrismButtonStyle.GHOST,
                                 modifier = Modifier.height(32.dp)
@@ -193,9 +193,9 @@ fun UserCenterScreen(
                 ) {
                     // 1. Preferences
                     item {
-                        SettingsSection("PREFERENCES") {
-                            SettingsRowSelect("Theme", "System") {}
-                            SettingsRowToggle("AI Laboratory", true) {}
+                        SettingsSection("偏好设置") {
+                            SettingsRowSelect("主题", "跟随系统") {}
+                            SettingsRowToggle("AI 实验室", true) {}
                             // 通知开关 — 读取真实系统状态，点击打开系统通知设置
                             val context = androidx.compose.ui.platform.LocalContext.current
                             val lifecycleOwner = LocalLifecycleOwner.current
@@ -214,7 +214,7 @@ fun UserCenterScreen(
                                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                             }
                             
-                            SettingsRowToggle("Notifications", notificationsEnabled) {
+                            SettingsRowToggle("通知", notificationsEnabled) {
                                 // 打开系统通知设置页
                                 val intent = android.content.Intent().apply {
                                     action = android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS
@@ -227,24 +227,24 @@ fun UserCenterScreen(
 
                     // 2. Storage
                     item {
-                        SettingsSection("STORAGE") {
-                            SettingsRowAction("Local Cache", "Clear (128MB)") {}
+                        SettingsSection("存储") {
+                            SettingsRowAction("本地缓存", "清除 (128MB)") {}
                         }
                     }
                     
                     // 3. Security
                     item {
-                        SettingsSection("SECURITY") {
-                            SettingsRowNav("Change Password") {}
-                            SettingsRowNav("Face ID") {}
+                        SettingsSection("安全") {
+                            SettingsRowNav("修改密码") {}
+                            SettingsRowNav("面容 ID") {}
                         }
                     }
 
                     // 4. About
                     item {
-                        SettingsSection("ABOUT") {
-                            SettingsRowInfo("Version", "Prism v1.2 (Pro Max)")
-                            SettingsRowNav("Help Center") {}
+                        SettingsSection("关于") {
+                            SettingsRowInfo("版本", "Prism v1.2 (Pro Max)")
+                            SettingsRowNav("帮助中心") {}
                         }
                     }
 
@@ -262,7 +262,7 @@ fun UserCenterScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.AutoMirrored.Filled.Logout, null, tint = AccentDanger, modifier = Modifier.size(20.dp))
                                 Spacer(Modifier.width(8.dp))
-                                Text("Log Out", color = AccentDanger, fontWeight = FontWeight.SemiBold)
+                                Text("退出登录", color = AccentDanger, fontWeight = FontWeight.SemiBold)
                             }
                         }
                         Spacer(Modifier.height(48.dp))

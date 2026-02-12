@@ -78,6 +78,8 @@ sealed class TimelineItemModel {
         val keyPerson: String? = null,
         val keyPersonEntityId: String? = null,  // Wave 9: Entity ID for tip generation
         val highlights: String? = null,
+        val tips: List<String> = emptyList(),   // Wave 9: LLM-generated context tips
+        val tipsLoading: Boolean = false,       // Wave 9: Generation animation state
         val alarmCascade: List<String> = emptyList() // e.g. ["-1h", "-15m", "-5m"]
     ) : TimelineItemModel()
 

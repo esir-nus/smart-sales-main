@@ -22,6 +22,7 @@ import com.smartsales.prism.domain.memory.MemoryEntryType
 import com.smartsales.prism.domain.memory.MemoryRepository
 import com.smartsales.prism.domain.memory.EntityWriter
 import com.smartsales.prism.domain.memory.EntityType
+import com.smartsales.prism.domain.scheduler.TipGenerator
 import com.smartsales.prism.data.notification.OemCompat
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -36,6 +37,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -50,7 +52,8 @@ class SchedulerViewModel @Inject constructor(
     private val memoryRepository: MemoryRepository,
     private val entityWriter: EntityWriter,
     private val badgeAudioPipeline: BadgeAudioPipeline,
-    private val asrService: AsrService
+    private val asrService: AsrService,
+    private val tipGenerator: TipGenerator  // Wave 9: Smart Tips
 ) : ViewModel() {
 
     init {
@@ -78,6 +81,12 @@ class SchedulerViewModel @Inject constructor(
     // Selection Set
     private val _selectedInspirationIds = MutableStateFlow(setOf<String>())
     val selectedInspirationIds: StateFlow<Set<String>> = _selectedInspirationIds.asStateFlow()
+    
+    // Wave 9: Smart Tips — 提示缓存（taskId → List<String>）
+    private val _tipsCache = mutableMapOf<String, List<String>>()
+    
+    // Wave 9: Tips 加载状态（taskId → Boolean）
+    private val _tipsLoading = MutableStateFlow<Set<String>>(emptySet())
     
     // Pipeline 状态反馈
     private val _pipelineStatus = MutableStateFlow<String?>(null)
@@ -233,6 +242,44 @@ $taskContext
         acknowledgeDate(dayOffset)
         android.util.Log.d("SchedulerVM", "Day offset changed to: $dayOffset")
     }
+    
+    /**
+     * Wave 9: Smart Tips — 卡片展开时触发提示加载
+     * 
+     * @param taskId 任务 ID
+     * @param keyPersonEntityId 关键人物实体 ID（如果没有则跳过）
+     */
+    fun onCardExpanded(taskId: String, keyPersonEntityId: String?) {
+        if (keyPersonEntityId == null) {
+            android.util.Log.d("SchedulerVM", "🔕 No keyPersonEntityId for task=$taskId, skipping tips")
+            return
+        }
+        if (_tipsCache.containsKey(taskId)) {
+            android.util.Log.d("SchedulerVM", "✅ Tips already cached for task=$taskId")
+            return
+        }
+        
+        viewModelScope.launch {
+            _tipsLoading.value += taskId
+            android.util.Log.d("SchedulerVM", "💡 Tips loading for task=$taskId, entity=$keyPersonEntityId")
+            
+            val task = taskRepository.getTask(taskId)
+            if (task == null) {
+                android.util.Log.e("SchedulerVM", "❌ Task not found: $taskId")
+                _tipsLoading.value -= taskId
+                return@launch
+            }
+            
+            val tips = withTimeoutOrNull(5000L) {
+                tipGenerator.generate(task)
+            } ?: emptyList()
+            
+            _tipsCache[taskId] = tips
+            _tipsLoading.value -= taskId
+            android.util.Log.d("SchedulerVM", "💡 Tips loaded: ${tips.size} tips for $taskId")
+            triggerRefresh()
+        }
+    }
 
     /**
      * 确认日期 — 从未确认集合中移除 (停止发光)
@@ -272,6 +319,9 @@ $taskContext
         viewModelScope.launch {
             taskRepository.deleteItem(id)
             _pipelineStatus.value = "🗑️ 已删除"
+            // Wave 9: 清理提示缓存
+            _tipsCache.remove(id)
+            _tipsLoading.value -= id
             triggerRefresh()
         }
     }

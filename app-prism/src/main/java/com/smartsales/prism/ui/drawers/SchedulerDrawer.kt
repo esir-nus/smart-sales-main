@@ -317,17 +317,30 @@ fun SchedulerDrawer(
                         var isRecordingMic by remember { mutableStateOf(false) }
                         val recorder = remember { com.smartsales.prism.data.audio.PhoneAudioRecorder(devContext) }
                         
+                        // 安全网：Activity 暂停时自动取消录音
+                        // 权限对话框、来电、Home键等都会触发 ON_PAUSE
+                        val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+                        DisposableEffect(lifecycleOwner) {
+                            val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                                if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE && isRecordingMic) {
+                                    recorder.cancel()
+                                    isRecordingMic = false
+                                }
+                            }
+                            lifecycleOwner.lifecycle.addObserver(observer)
+                            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+                        }
+                        
                         // 权限请求
                         val permissionLauncher = rememberLauncherForActivityResult(
                             androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
                         ) { granted ->
-                            if (granted) {
-                                // 权限获得后立即开始录音
-                                recorder.startRecording()
-                                isRecordingMic = true
-                            } else {
+                            if (!granted) {
                                 Toast.makeText(devContext, "❌ 需要录音权限", Toast.LENGTH_SHORT).show()
                             }
+                            // 权限获得后不自动录音 — 原始 press 手势已被权限对话框中断，
+                            // 不存在对应的 tryAwaitRelease() 来停止录音。
+                            // 用户下次按住即可正常录音。
                         }
                         
                         Surface(

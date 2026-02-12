@@ -332,6 +332,19 @@ fun TaskCard(
                             val cardContext = LocalContext.current
                             val cardRecorder = remember { PhoneAudioRecorder(cardContext) }
                             
+                            // 安全网：Activity 暂停时自动取消录音
+                            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+                            androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+                                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                                    if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE && isRecordingMic) {
+                                        cardRecorder.cancel()
+                                        isRecordingMic = false
+                                    }
+                                }
+                                lifecycleOwner.lifecycle.addObserver(observer)
+                                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+                            }
+                            
                             // 权限请求
                             val cardPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
                                 contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()

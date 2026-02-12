@@ -22,7 +22,7 @@ Coach Mode is the **default conversational mode** in Prism. It provides fast, li
 | `ReinforcementLearner.loadUserHabits()` | [rl-module](../rl-module/interface.md) | Global user habits | Kernel → RAM Section 2 |
 | `ReinforcementLearner.loadClientHabits()` | [rl-module](../rl-module/interface.md) | Entity-specific habits | Kernel → RAM Section 3 |
 | `ClientProfileHub.getQuickContext()` | [client-profile-hub](../client-profile-hub/interface.md) | Entity snapshot for context | — |
-| `ScheduleBoard.checkConflict()` | [memory-center](../memory-center/interface.md) | Inline conflict detection | — |
+| `ScheduleBoard.checkConflict()` | [memory-center](../memory-center/interface.md) | Inline conflict detection + schedule guidance | — |
 | `ConflictResolver.resolve()` | [conflict-resolver](../conflict-resolver/interface.md) | LLM conflict resolution | — |
 
 ---
@@ -107,6 +107,17 @@ Coach detects schedule conflict during conversation.
 1. Context includes upcoming schedule from `ScheduleBoard.upcomingItems`
 2. LLM mentions conflict in response
 3. UI renders `ConflictCard` inline via `ConflictResolver` integration
+
+### 3.11 Schedule Guidance (User Education)
+When Coach surfaces schedule data and user expresses modification intent ("我想改时间", "能推迟吗"):
+1. Coach recognizes modification intent but does NOT mutate schedule
+2. Coach responds naturally and guides: "好的！你可以按录音键，直接说出修改需求，比如'推迟两小时'或'取消这个会议'"
+3. User switches to scheduler mode → speaks change → handled by scheduler pipeline
+
+> [!NOTE]
+> **No cross-mode delegation.** Coach never calls `createScheduledTask()` or any scheduler mutation. Schedule modifications happen exclusively in scheduler mode. This is intentional — it keeps mutation ownership clean and educates users on the voice-first workflow.
+>
+> **System prompt addition**: 当用户在对话中表达修改日程的意图时，引导用户使用录音按钮："你可以按录音键，说出你的修改需求，比如'推迟两小时'或'取消会议'"。不要尝试代替用户修改日程。
 
 ---
 

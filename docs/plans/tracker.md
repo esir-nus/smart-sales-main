@@ -13,7 +13,7 @@
 | Cerb Shard | State | Next Wave |
 |------------|-------|-----------|
 | [coach](../cerb/coach/spec.md) | SHIPPED | — |
-| [scheduler](../cerb/scheduler/spec.md) | PARTIAL | W9: Smart Tips |
+| [scheduler](../cerb/scheduler/spec.md) | PARTIAL | W10: Sticky Notes Boundary |
 | [conflict-resolver](../cerb/conflict-resolver/spec.md) | SHIPPED | — |
 | [badge-audio-pipeline](../cerb/badge-audio-pipeline/spec.md) | SHIPPED | W4: Error Recovery |
 | [notifications](../cerb/notifications/spec.md) | SHIPPED | — |
@@ -25,7 +25,7 @@
 | [session-context](../cerb/session-context/spec.md) | SHIPPED | W5: Context Compression |
 | [memory-center](../cerb/memory-center/spec.md) | SHIPPED | — |
 | [entity-registry](../cerb/entity-registry/spec.md) | SHIPPED | — |
-| [entity-writer](../cerb/entity-writer/spec.md) | SHIPPED | — |
+| [entity-writer](../cerb/entity-writer/spec.md) | PARTIAL | W1.5 UNWINDING (Sticky Notes) |
 | [user-habit](../cerb/user-habit/spec.md) | SHIPPED | — |
 | [rl-module](../cerb/rl-module/spec.md) | SHIPPED | — |
 | [client-profile-hub](../cerb/client-profile-hub/spec.md) | PARTIAL | W3: CRM Export |
@@ -48,6 +48,13 @@
 
 ### 2026-02-12
 
+- **scheduler**: Task Completion Lifecycle section — isDone toggle, grey/strikethrough, voice scope exclusion, alarm lifecycle, reactivation safety
+- **scheduler**: Wave 12 planned — ViewModel toggleDone wiring + alarm cancel/restore on completion
+- **scheduler**: Voice Command Scope section — 5 classifications, scheduler-mode + active-session only, card-context-free
+- **scheduler**: Wave 11 planned — Global Reschedule (fuzzy match + create-and-delete, no card required)
+- **coach**: §3.11 Schedule Guidance — educates user to use badge/record for schedule changes, no cross-mode mutation
+- **scheduler**: Sticky Notes Principle spec'd — scheduler does NOT create entities, defers to Coach/Analyst clarity loop
+- **entity-writer**: Caller updated `Scheduler/Coach` → `Coach/Analyst`, Wave 1.5 marked UNWINDING
 - **scheduler**: Cerb sync — `interface.md` rewritten from code, `spec.md` state → PARTIAL, domain model drift fixed
 - **scheduler**: Cascade `-1m` offset removed (UX review: cognitively indistinct from `0m`)
 - **notifications**: Cascade visual tiers collapsed from 3 to 2 (EARLY + DEADLINE), added DND policy (1.7.10), UX invariants (1.7.11)
@@ -150,6 +157,7 @@
 | Dead `httpChecker` | `DefaultDeviceConnectionManager.kt` | Low |
 
 | `structuredJson` schema inconsistency | `RealContextBuilder.recordActivity()` — uses `{"entityId":"..."}` instead of `{"relatedEntityIds":["..."]}` convention. Works today (LIKE query catches both), but any code parsing `relatedEntityIds` from activity records gets `emptyList()`. One-line fix: add `relatedEntityIds` field to `recordActivity()` output. | Low |
+| **Sticky Notes Boundary** | `PrismOrchestrator.createScheduledTask()` calls `entityWriter.upsertFromClue()` — creates phantom entities from unconfirmed intentions. **NOT an isolated code removal.** Requires: (1) Remove `upsertFromClue` from scheduler pipeline, (2) Coach/Analyst ContextBuilder reads scheduler tasks, (3) Coach clarity loop asks user for entity confirmation ("你说要见王老板，见了吗？"). Must be tested **end-to-end with Coach mode**, not in isolation. See [scheduler spec §Sticky Notes](../cerb/scheduler/spec.md), [entity-writer spec §Note](../cerb/entity-writer/spec.md). | **High** |
 
 
 ---

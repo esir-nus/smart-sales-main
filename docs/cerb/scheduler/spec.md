@@ -12,9 +12,64 @@ Scheduler manages task creation, timeline display, alarm cascading, and LLM-powe
 
 **OS Model Note**: Scheduler reads entity context (key persons, locations) from RAM Section 1 instead of doing its own entity extraction via `buildWithClues`. The Kernel populates entity context; Scheduler just consumes what's on the RAM.
 
+> [!IMPORTANT]
+> **Sticky Notes Principle**: Scheduler is a *reflection* of the user's intentions, NOT a source of truth for entity data. Scheduled tasks store raw person names (`keyPerson`) but do **NOT** create or update entities via `EntityWriter`. Entity creation is deferred to interactive modes (Coach/Analyst) where the agent can ask the user for clarity ("你昨天说要见王老板，见了吗？他是哪位？").
+>
+> **Rationale**:
+> 1. Scheduled ≠ executed — users procrastinate, cancel, reschedule
+> 2. Scheduler has no conversational loop — can't ask "is this a new person?"
+> 3. Phantom entities from unconfirmed intentions pollute the CRM
+> 4. Coach/Analyst can read scheduler data via ContextBuilder and confirm before entity creation
+
 **Key Distinction:**
 - `ScheduleBoard` = Memory Center index (conflict check infrastructure)
 - `ScheduledTaskRepository` = Scheduler feature (task CRUD, **SSD Storage**)
+
+---
+
+## Voice Command Scope
+
+All scheduler voice commands work **globally within scheduler mode** — no card context required. User speaks freely; LLM classifies intent and routes accordingly.
+
+> [!IMPORTANT]
+> **Scheduler-mode only.** Voice commands modify schedules exclusively when the scheduler drawer is active. Other modes (Coach/Analyst) may READ schedule data but do NOT mutate it — they guide the user to switch to scheduler mode instead.
+> **Active session only.** Commands operate on the current session's schedule. Past/finished sessions are not in scope.
+
+| Classification | Input Examples | Action | Card Context? |
+|----------------|---------------|--------|---------------|
+| `schedulable`  | "明天下午2点开会" | Create task | Not needed |
+| `deletion`     | "取消会议", "不去开会了" | Fuzzy match → delete | Not needed (Wave 7) |
+| `reschedule`   | "把会推迟两小时", "会改到后天" | Fuzzy match → create-and-delete | Not needed (Wave 11) |
+| `inspiration`  | "以后想学吉他" | Save to inspiration | Not needed |
+| `non_intent`   | "你好" | Reject (no action) | N/A |
+
+**Card-level mic** (with `replaceItemId`) remains as a power-user shortcut for unambiguous single-task edits.
+
+---
+
+## Task Completion Lifecycle
+
+Tasks have a checkbox that toggles `isDone` state. Completed tasks remain in storage but are visually deactivated and excluded from voice command scope.
+
+```
+[ ] Active Task          →  tap checkbox  →  [✓] Completed Task
+(normal colors)                               (grey, strikethrough)
+(in voice command scope)                      (excluded from voice scope)
+(alarms active)                               (alarms cancelled)
+
+[✓] Completed Task      →  tap checkbox  →  [ ] Reactivated Task
+(grey, strikethrough)                         (normal colors restored)
+(excluded)                                    (back in voice scope)
+(no alarms)                                   (alarms re-scheduled if future)
+```
+
+| State | Visual | Voice Scope | Alarms |
+|-------|--------|-------------|--------|
+| `isDone = false` | Normal colors | ✅ Included in `upcomingItems` | Active |
+| `isDone = true` | Grey text, strikethrough, filled checkmark | ❌ Excluded from `upcomingItems` | Cancelled |
+
+> [!NOTE]
+> **Reactivation Safety (Safe Fallback)**: Unchecking a completed task restores it to active state. All data is preserved in Room — no re-scheduling required. Alarms are re-scheduled only if the task's start time is still in the future. This ensures users can undo completion without losing any information.
 
 **Inspiration**:
 - Standalone notes, **not time-bound**
@@ -62,8 +117,8 @@ sealed class TimelineItemModel {
         val dateRange: String = "",
         val location: String? = null,
         val notes: String? = null,
-        val keyPerson: String? = null,
-        val keyPersonEntityId: String? = null,  // Wave 9: Entity ID for tip generation
+        val keyPerson: String? = null,         // Raw name from LLM — NOT resolved to entity
+        val keyPersonEntityId: String? = null,  // Populated by Coach/Analyst clarity, NOT scheduler
         val highlights: String? = null,
         val tips: List<String> = emptyList(),  // Wave 9: LLM-generated context tips
         val tipsLoading: Boolean = false,       // Wave 9: Generation animation state
@@ -125,23 +180,23 @@ enum class UrgencyLevel {
 
 Task creation follows a **gated pipeline** with conflict resolution.
 
+> [!NOTE]
+> **No entity writes in this pipeline.** The scheduler stores `keyPerson` as a raw string. Entity resolution and creation happen in Coach/Analyst mode via the clarity loop.
+
 ```
 User Voice Input
     ↓
 Orchestrator (MODE_SCHEDULER)
     ↓
-LLM Parse → JSON { title, startTime, endTime?, location?, ... }
+LLM Parse → JSON { title, startTime, endTime?, location?, keyPerson?, ... }
     ↓
 SchedulerLinter.lint() → LintResult.Success | Error
-    ↓
-    ├─▶ RAM Section 1 → Entity context (keyPerson, location candidates)
-    │   (Kernel auto-populated — no buildWithClues needed)
     ↓
 ScheduleBoard.checkConflict() → Clear | Conflict
     ↓
 [If Conflict] → UI shows resolution options → User picks
     ↓
-Repository.insertTask() → ID returned
+Repository.insertTask(keyPerson=raw) → ID returned  ← NO entityWriter call
     ↓
 ScheduleBoard.refresh() → Index updated
     ↓
@@ -318,14 +373,10 @@ Expanded Wave 4 covers the full input processing pipeline.
 
 #### 4.0: Input Classification
 
-First gate: classify user input before parsing.
+First gate: classify user input before parsing. See **[Voice Command Scope](#voice-command-scope)** for the canonical classification table.
 
-| Classification | Route |
-|----------------|-------|
-| `schedulable` | Continue to task parsing |
-| `deletion` | Match against ScheduleBoard, delete if 1 match |
-| `inspiration` | Return for future Wave 5 storage |
-| `non_intent` | Return `AwaitingClarification` |
+> [!NOTE]
+> `reschedule` classification added in Wave 11. All other classifications shipped in Wave 4.0.
 
 - **Ship Criteria**: Non-scheduling input (e.g., "你好") does NOT create bogus task
 - **Ship Criteria (Wave 4.3)**: Input without explicit clock time routes to inspiration, not schedulable
@@ -507,19 +558,60 @@ val tipsLoading: Boolean = false      // 生成动画状态
     - [ ] LLM timeout → tipsLoading = false, tips = [] (no error shown)
 - **Deliverables**: `TipGenerator.kt`, prompt in `DashscopeExecutor`, ViewModel lazy-load wiring, UI shimmer + tip list
 
-### Wave 10: OS Model Upgrade 🔲 PLANNED
+### Wave 10: Sticky Notes Boundary 🔲 PLANNED
 
-Simplify entity context access by reading from RAM instead of `buildWithClues`.
+Remove `entityWriter.upsertFromClue()` from the scheduler pipeline. Scheduler becomes a pure "sticky notes" layer that stores intentions without creating core entities.
 
 - **Scope**:
-  - Remove `buildWithClues()` entity extraction from Scheduler pipeline
-  - Read entity context (keyPerson, location) from SessionWorkingSet Section 1
-  - Wave 9 tip generation reads `entityId` from RAM instead of EntityRegistry lookup
-- **Ship Criteria**: Entity context available in pipeline without explicit extraction
+  - Remove `entityWriter.upsertFromClue()` calls from `PrismOrchestrator.createScheduledTask()` (single + multi-task)
+  - Store raw `keyPerson` string on task without resolving to entity
+  - Remove `keyPersonEntityId` population from scheduler pipeline (field stays on model for Coach/Analyst to populate later)
+  - Keep `findByAlias()` for disambiguation UI (read-only, no writes)
+- **Ship Criteria**: Scheduled task creation does NOT call EntityWriter
 - **Test Cases**:
-    - [ ] Task with keyPerson → entity context auto-available from RAM
-    - [ ] No entity mentioned → graceful fallback (no crash)
+    - [ ] "明天三点见王老板" → task created with `keyPerson="王老板"`, `keyPersonEntityId=null`
+    - [ ] No new entity created in EntityRepository
+    - [ ] Multi-task batch → no entity writes
     - [ ] Wave 7 deletion → no regression
+    - [ ] Wave 9 tips → graceful degradation when `keyPersonEntityId=null`
+
+---
+
+### Wave 11: Global Reschedule 🔲 PLANNED
+
+Add `reschedule` classification to the scheduler LLM prompt. Reuses Wave 7's fuzzy match + Wave 4.2's create-and-delete atomicity. No card context required.
+
+- **LLM returns**: `{ classification: "reschedule", targetTitle: "会", newInstruction: "推迟两小时" }`
+- **Matching**: Same `contains`-based fuzzy against `ScheduleBoard.upcomingItems` (active session only)
+- **Results**:
+  - 0 matches → toast "未找到匹配的任务"
+  - 1 match → `createScheduledTask(newInstruction, replaceItemId=matchedId)`
+  - 2+ matches → toast "找到多个匹配，请更具体"
+- **Ship Criteria**: "把会推迟两小时" modifies the matching task without opening card
+- **Test Cases**:
+    - [ ] "把会推迟两小时" → matched task rescheduled, amber glow
+    - [ ] "改到后天" with 1 upcoming task → rescheduled
+    - [ ] "改会" with 3 tasks → toast asks for specificity
+    - [ ] "改不存在的" → toast "未找到匹配"
+    - [ ] Badge input in scheduler mode → global reschedule works
+
+---
+
+### Wave 12: Task Completion Wiring 🔲 PLANNED
+
+Wire `isDone` toggle through ViewModel + alarm lifecycle.
+
+- **ViewModel**: `toggleDone(taskId)` → `repository.updateDone(id, !current)` → `scheduleBoard.refresh()`
+- **Alarm Cancel**: When `isDone = true`, cancel all pending alarms for that task
+- **Alarm Restore**: When `isDone = false` (reactivation), re-schedule alarms only if `startTime > now`
+- **Ship Criteria**: Checkbox toggles completion, grey/strikethrough applied, alarms managed
+- **Test Cases**:
+    - [ ] Tap checkbox → task turns grey, strikethrough title
+    - [ ] Completed task excluded from voice fuzzy match
+    - [ ] Unchecking restores normal visual + re-enters voice scope
+    - [ ] Alarm cancelled on completion
+    - [ ] Alarm re-scheduled on reactivation (if future time)
+    - [ ] Alarm NOT re-scheduled on reactivation (if past time)
 
 ---
 

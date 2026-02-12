@@ -16,6 +16,11 @@ interface EntityRepository {
     suspend fun findByAlias(alias: String): List<EntityEntry>
     
     /**
+     * 按 displayName 精确查询（用于同音字消歧）
+     */
+    suspend fun findByDisplayName(name: String): List<EntityEntry>
+    
+    /**
      * 按类型获取所有实体
      */
     suspend fun getByType(entityType: EntityType): List<EntityEntry>

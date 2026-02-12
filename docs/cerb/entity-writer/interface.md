@@ -145,9 +145,9 @@ data class ProfileChange(
 |-----------|-----------|
 | `upsertFromClue` | Idempotent — same clue+resolvedId returns same entityId |
 | `upsertFromClue` | Preserves all existing fields (read-modify-write internally) |
-| `upsertFromClue` | `displayName` uses **latest-write-wins** policy (old name → aliases) |
-| `updateProfile` | Emits `UnifiedActivity` for each tracked field that changed |
-| `updateProfile` | Old `displayName` auto-appended to `aliasesJson` before overwrite |
+| `upsertFromClue` | `displayName` is **immutable** — upsert never overwrites canonical name |
+| `upsertFromClue` | `aliasesJson` is **curated** — upsert never auto-adds aliases |
+| `updateProfile` | Old `displayName` appended to `aliasesJson` before explicit name change |
 | `registerAlias` | Bounded to 8 aliases max, deduplicates |
 | `updateAttribute` | Upsert-per-key on `attributesJson` |
 | `delete` | No-op if entity doesn't exist |

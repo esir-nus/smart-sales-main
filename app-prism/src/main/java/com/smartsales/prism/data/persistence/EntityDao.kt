@@ -23,6 +23,12 @@ interface EntityDao {
     suspend fun findByAlias(alias: String): List<EntityEntryEntity>
     
     /**
+     * 按 displayName 精确查询（用于同音字消歧）
+     */
+    @Query("SELECT * FROM entity_entries WHERE displayName = :name ORDER BY lastUpdatedAt DESC")
+    suspend fun findByDisplayName(name: String): List<EntityEntryEntity>
+    
+    /**
      * 按类型获取所有实体
      */
     @Query("SELECT * FROM entity_entries WHERE entityType = :entityType ORDER BY displayName")

@@ -44,9 +44,22 @@ class LlmTipGenerator @Inject constructor(
             return emptyList()
         }
         
+        // DEBUG: dump context to diagnose 0-tips issue
+        Log.d(TAG, "🔍 FocusedContext for entity=$entityId: " +
+            "displayName=${context.entity.displayName}, " +
+            "attrsLen=${context.entity.attributesJson.length}, " +
+            "demeanor=${context.entity.demeanorJson.take(50)}, " +
+            "relatedContacts=${context.relatedContacts.size}, " +
+            "timeline=${context.timeline.size}, " +
+            "habits=${context.habitContext.clientHabits.size}")
+        context.timeline.forEachIndexed { i, a ->
+            Log.d(TAG, "🔍 timeline[$i]: ${a.summary.take(80)}")
+        }
+        
         // Build prompt from spec L477-491
         val prompt = buildTipPrompt(task, context)
         Log.d(TAG, "📝 Prompt built (${prompt.length} chars) for task=${task.id}")
+        Log.d(TAG, "📝 Full prompt:\n$prompt")
         
         // LLM call → parse JSON array
         val request = AiChatRequest(
@@ -58,6 +71,7 @@ class LlmTipGenerator @Inject constructor(
         
         return when (result) {
             is com.smartsales.core.util.Result.Success -> {
+                Log.d(TAG, "🔍 Raw LLM response: ${result.data.displayText}")
                 val tips = parseTipsJson(result.data.displayText)
                 Log.d(TAG, "✅ LLM returned ${tips.size} tips for task=${task.id}")
                 tips

@@ -179,14 +179,14 @@ class RealEntityWriterTest {
     }
 
     // ========================================
-    // Wave 2: displayName latest-write-wins
+    // Wave 2 → Wave 5: displayName Immutable (Canonical)
     // ========================================
 
     @Test
-    fun `displayName uses latest-write-wins on upsert`() = runTest {
+    fun `displayName is immutable during upsert`() = runTest {
         val created = writer.upsertFromClue("张总", null, EntityType.PERSON, "scheduler")
 
-        // 用新 clue 更新
+        // 用新 clue 更新 — displayName 应保持不变
         val updated = writer.upsertFromClue(
             clue = "张总监",
             resolvedId = created.entityId,
@@ -194,32 +194,31 @@ class RealEntityWriterTest {
             source = "coach"
         )
 
-        // Latest-write-wins: displayName 更新为新 clue
-        assertEquals("张总监", updated.displayName)
+        // displayName 保持 canonical name 不变
+        assertEquals("张总", updated.displayName)
 
         // 验证 SSD
         val saved = repo.getById(created.entityId)!!
-        assertEquals("张总监", saved.displayName)
-
-        // 旧名称 "张总" 应在 aliases 中
-        val aliases = JSONArray(saved.aliasesJson)
-        val aliasList = (0 until aliases.length()).map { aliases.getString(it) }
-        assertTrue("旧名称应在aliases中", aliasList.contains("张总"))
+        assertEquals("张总", saved.displayName)
     }
 
     @Test
-    fun `displayName latest-write-wins preserves old name in aliases`() = runTest {
+    fun `aliasesJson unchanged by upsert - curated only`() = runTest {
         val created = writer.upsertFromClue("A", null, EntityType.PERSON, "s")
         writer.upsertFromClue("B", created.entityId, EntityType.PERSON, "s")
         writer.upsertFromClue("C", created.entityId, EntityType.PERSON, "s")
 
         val final_ = repo.getById(created.entityId)!!
-        assertEquals("C", final_.displayName)
+        // displayName 保持原始值
+        assertEquals("A", final_.displayName)
 
+        // aliases 仅包含初始创建时的 ["A"]，不自动积累
         val aliases = JSONArray(final_.aliasesJson)
         val aliasList = (0 until aliases.length()).map { aliases.getString(it) }
-        assertTrue("A 应在 aliases 中", aliasList.contains("A"))
-        assertTrue("B 应在 aliases 中", aliasList.contains("B"))
+        assertEquals("aliases 应仅含初始值", 1, aliasList.size)
+        assertTrue("初始 clue 应在 aliases 中", aliasList.contains("A"))
+        assertFalse("B 不应自动加入 aliases", aliasList.contains("B"))
+        assertFalse("C 不应自动加入 aliases", aliasList.contains("C"))
     }
 
     // ========================================

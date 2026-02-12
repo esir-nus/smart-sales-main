@@ -2,7 +2,7 @@
 
 > **Cerb-compliant spec** — Internal implementation of centralized entity writes.  
 > **OS Layer**: RAM Application
-> **State**: SHIPPED (all waves complete)
+> **State**: Wave 5 IN PROGRESS
 
 ---
 
@@ -84,16 +84,17 @@ Caller (Scheduler/Coach)
 [EntityWriter.upsertFromClue()]
        │
        ├─ 1. Resolve ID (if null)
-       │   └─ Query findByAlias()
+       │   └─ Resolution Cascade: resolvedId → findByAlias → findByDisplayName
        │
        ├─ 2. Load Existing (read-modify-write)
        │   └─ getById() → merge fields → save()
        │
        ├─ 3. Apply Field Policies
-       │   ├─ displayName: Latest-write-wins (old → aliases)
-       │   ├─ aliasesJson: Append unique
+       │   ├─ displayName: Immutable (Canonical)
+       │   ├─ aliasesJson: Immutable (Curated only)
        │   ├─ attributesJson: Upsert key
-       │   └─ _sourceJson: Track provenance
+       │   ├─ _sourceJson: Track provenance
+       │   └─ _last_seen: Update timestamp
        │
        └─ 4. Persist
            └─ EntityRepository.save()
@@ -121,21 +122,29 @@ Before implementing EntityWriter, add to existing infrastructure:
 
 ## Implementation Details
 
-### 1. Dedup Logic (`upsertFromClue`)
+### 1. Resolution & Dedup Logic (`upsertFromClue`)
 
-When `resolvedId` is NULL (caller didn't resolve):
+**The Resolution Cascade** (Strict Order):
 
-1. **Check Alias**: `EntityRepository.findByAlias(clue)`.
-2. **Hit**: Use existing ID.
-   - **Load existing**: `getById(existingId)` → merge fields → `save()`.
-3. **Miss**: Create NEW entity with `clue` as `displayName`.
-   - `aliasesJson` = `["clue"]`, fresh entry, direct `save()`.
+1. **Resolved ID** (High Confidence): If caller provides `resolvedId`, use it.
+   - If ID not found (stale), fall back to step 2.
+2. **Alias Match** (Curated): `EntityRepository.findByAlias(clue)`.
+   - Exact match against pre-installed aliases (e.g., "孙工").
+3. **Canonical Name Match** (Homophone Resolution): `EntityRepository.findByDisplayName(clue)`.
+   - Exact match against `displayName` (e.g., "孙扬浩").
+   - **Purpose**: Resolves ASR homophones (e.g., "孙阳浩") at runtime without polluting data.
+4. **Miss**: Create NEW entity with `clue` as `displayName`.
+
+**Action on Hit**:
+- Load existing entity.
+- Update source tracking (`_last_seen`).
+- **DO NOT** overwrite `displayName` or auto-add `clue` to `aliasesJson`.
 
 When `resolvedId` is PROVIDED:
 
 1. **Load**: `getById(resolvedId)`.
-2. **If found**: Merge `clue` into `aliasesJson`, apply policies → `save()`.
-3. **If NOT found (stale ID)**: Fall back to alias dedup (treat as null resolvedId).
+2. **If found**: Update source tracking → `save()`.
+3. **If NOT found (stale ID)**: Fall back to resolution cascade (treat as null resolvedId).
 
 ### 2. Read-Modify-Write Pattern (Critical)
 
@@ -149,9 +158,9 @@ suspend fun upsertFromClue(...): UpsertResult {
             ?: return createNew(clue, type, source)  // Stale ID fallback
         
         val merged = existing.copy(
-            aliasesJson = mergeAliases(existing.aliasesJson, clue),
+            aliasesJson = existing.aliasesJson, // Immutable: Do NOT auto-add clue to aliases
             lastUpdatedAt = now()
-            // displayName: Latest-write-wins (old name → aliasesJson)
+            // displayName: Immutable (keep existing)
             // demeanorJson: KEEP existing (not touched by upsert)
             // metricsHistoryJson: KEEP existing (not touched by upsert)
         )
@@ -168,8 +177,8 @@ suspend fun upsertFromClue(...): UpsertResult {
 
 | Field | Policy | Implementation | Via |
 |-------|--------|----------------|-----|
-| `displayName` | **Latest-write-wins** | Old name → `aliasesJson`, new name replaces | `updateProfile` |
-| `aliasesJson` | Append (Cap 8) | `(old + new).distinct().takeLast(8)` — FIFO tail, oldest dropped | `upsertFromClue`, `registerAlias` |
+| `displayName` | **Immutable / Canonical** | `upsertFromClue` NEVER overwrites. Only explicit `updateProfile` changes it. | `upsertFromClue` |
+| `aliasesJson` | **Curated Only** | `upsertFromClue` NEVER adds aliases. Only `registerAlias` adds them. | `registerAlias` |
 | `demeanorJson` | Upsert per key | `oldMap + newMap` | `updateAttribute` |
 | `attributesJson` | Upsert per key | `oldMap + newMap` | `updateAttribute` |
 | `metricsHistoryJson` | Append per key | `oldTimeSeries + newEntry` | `updateAttribute` |
@@ -239,6 +248,7 @@ Convention: Keys prefixed with `_` are metadata, not business attributes.
 | **2** | Change-Aware Profile Management | ✅ SHIPPED | `updateProfile()`, `ProfileUpdateResult`, `ProfileChange`, history emission via `recordActivity()` |
 | ~~3~~ | ~~Conflict Merge~~ | ❌ KILLED | See architectural decision below |
 | **4** | **OS Model Upgrade** (RAM Application) | ✅ SHIPPED | Write-through to RAM Section 1 on all 4 mutation methods + `recordActivity()` App→Kernel callback |
+| **5** | **Alignment & Disambiguation** | 🚧 IN PROGRESS | Curated Alias Model, Resolution Cascade, Entity Confirmation Flow |
 
 ### ~~Wave 3~~ Architectural Decision: No Merge UI Needed
 
@@ -270,7 +280,7 @@ Centralized entity creation and updates with read-modify-write.
 - **Ship Criteria**:
     - `upsertFromClue` correctly handles both "new" and "existing" cases
     - Existing entity fields preserved during update (read-modify-write verified)
-    - `aliasesJson` grows but doesn't duplicate
+    - `aliasesJson` unchanged by upsert (curated only via `registerAlias`)
     - `EntityRepository.save()` called exactly once per write
     - Zero regressions in existing read paths
 

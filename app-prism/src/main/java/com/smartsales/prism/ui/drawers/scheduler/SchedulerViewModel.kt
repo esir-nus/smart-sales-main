@@ -63,6 +63,10 @@ class SchedulerViewModel @Inject constructor(
                 handlePipelineEvent(event)
             }
         }
+        // DEBUG: 自动注入 seed data，确保记忆存在（调试后删除）
+        if (com.smartsales.prism.BuildConfig.DEBUG) {
+            viewModelScope.launch { debugSeedMemories() }
+        }
     }
 
     // --- State ---
@@ -684,6 +688,9 @@ $taskContext
         val m1Content = "台州大学的ameer教授和他弟弟2月8日来摩升泰公司调试最新的桌面机械臂代码，蔡瑞江，孙扬浩对接，协助相关调试工作。 有以下主要以下待办事项：1. yolo模型需要优化训练，将书籍封面剔除在外，只识别打开的书籍。  2. 新的音响麦克风套件表现稳定。3.阿里多模态目前迭代迅速，不太稳定，会时常出现网络问题导致任务失败。 4.阿里作业模式的相关服务不够完善，例如模型单次调用智能识别文字，或者图形。有图形就会优先识别图形而忽略文字。蔡瑞江提议先将作业用户群体限制在小学4年级或以下，加强亲子互动，家庭关系构建可能更加实用。 5.阿里的多模态调试页面还不够完善，等待更新。"
         val e1a = entityWriter.upsertFromClue("Ameer教授", null, EntityType.PERSON, "debug_seed")
         val e1b = entityWriter.upsertFromClue("孙扬浩", null, EntityType.PERSON, "debug_seed")
+        // 预装别名 — curated aliases
+        entityWriter.registerAlias(e1b.entityId, "孙工")
+        entityWriter.registerAlias(e1b.entityId, "孙总")
         val e1c = entityWriter.upsertFromClue("蔡瑞江", null, EntityType.PERSON, "debug_seed")
         
         memoryRepository.save(MemoryEntry(

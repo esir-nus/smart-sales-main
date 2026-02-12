@@ -27,6 +27,12 @@ class FakeEntityRepository @Inject constructor() : EntityRepository {
         }
     }
     
+    override suspend fun findByDisplayName(name: String): List<EntityEntry> {
+        return entries.values
+            .filter { it.displayName == name }
+            .sortedByDescending { it.lastUpdatedAt }
+    }
+    
     override suspend fun getByType(entityType: EntityType): List<EntityEntry> {
         return entries.values.filter { it.entityType == entityType }
     }

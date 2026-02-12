@@ -25,6 +25,10 @@ class RoomEntityRepository @Inject constructor(
         return dao.findByAlias(alias).map { it.toDomain() }
     }
     
+    override suspend fun findByDisplayName(name: String): List<EntityEntry> {
+        return dao.findByDisplayName(name).map { it.toDomain() }
+    }
+    
     override suspend fun getByType(entityType: EntityType): List<EntityEntry> {
         return dao.getByType(entityType.name).map { it.toDomain() }
     }

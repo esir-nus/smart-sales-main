@@ -255,59 +255,50 @@ class RealEntityWriter @Inject constructor(
     }
 
     /**
-     * 解析实体: resolvedId 优先 → 别名搜索 → null (新建)
+     * 解析实体: resolvedId → 别名匹配 → displayName 匹配 → null (新建)
+     * Resolution Cascade — see entity-writer/spec.md §1
      */
     private suspend fun resolveEntity(clue: String, resolvedId: String?): EntityEntry? {
-        // 优先使用 resolvedId
+        // Step 1: resolvedId 优先
         if (resolvedId != null) {
             val entry = entityRepository.getById(resolvedId)
             if (entry != null) return entry
-            // 过期 ID → 回退到别名去重
+            // 过期 ID → 回退到别名搜索
             Log.w(TAG, "⚠️ 过期 resolvedId=$resolvedId, 回退别名搜索")
         }
 
-        // 别名去重: 取第一个匹配
-        val matches = entityRepository.findByAlias(clue)
-        return matches.firstOrNull()
+        // Step 2: 别名精确匹配 (curated aliases)
+        val aliasMatches = entityRepository.findByAlias(clue)
+        if (aliasMatches.isNotEmpty()) return aliasMatches.first()
+
+        // Step 3: displayName 精确匹配 (同音字消歧)
+        val nameMatches = entityRepository.findByDisplayName(clue)
+        if (nameMatches.isNotEmpty()) {
+            if (nameMatches.size > 1) {
+                Log.w(TAG, "⚠️ 多重 displayName 匹配: clue=$clue, count=${nameMatches.size}")
+            }
+            Log.d(TAG, "🔗 displayName 消歧: clue=$clue → id=${nameMatches.first().entityId}")
+            return nameMatches.first()  // sorted by lastUpdatedAt DESC
+        }
+
+        return null
     }
 
     /**
-     * 合并字段 — 执行所有字段更新策略
+     * 合并字段 — 仅更新来源追踪元数据
      *
-     * displayName: Latest-write-wins（新 clue 替换，旧名称 → aliases）
-     * aliasesJson: Append unique, cap 8
-     * attributesJson: Upsert source tracking keys
+     * displayName: Immutable (canonical) — upsertFromClue 不覆盖
+     * aliasesJson: Immutable (curated) — 仅 registerAlias 可修改
+     * attributesJson: Upsert source tracking keys only
      */
+    @Suppress("UNUSED_PARAMETER") // clue 保留参数签名一致性，不再用于修改 displayName/aliasesJson
     private fun mergeFields(
         existing: EntityEntry,
         clue: String,
         source: String,
         now: Long
     ): EntityEntry {
-        // displayName: latest-write-wins
-        // 旧 displayName 移入 aliases（如未重复），新 clue 成为 displayName
-        val aliases = parseAliases(existing.aliasesJson)
-        val withOldName = if (existing.displayName != clue &&
-            !aliases.any { it.equals(existing.displayName, ignoreCase = true) }
-        ) {
-            aliases + existing.displayName
-        } else {
-            aliases
-        }
-        // 确保新 clue 也在 aliases 中（如不重复）
-        val withClue = if (!withOldName.any { it.equals(clue, ignoreCase = true) }) {
-            withOldName + clue
-        } else {
-            withOldName
-        }
-        // FIFO 淘汰: 超过上限时移除最旧的
-        val newAliases = if (withClue.size > MAX_ALIASES) {
-            withClue.drop(withClue.size - MAX_ALIASES)
-        } else {
-            withClue
-        }
-
-        // attributesJson: upsert source tracking keys
+        // 仅更新来源追踪元数据，不修改 displayName 和 aliasesJson
         val attrs = tryParseJson(existing.attributesJson)
         attrs.put("_source", source)
         attrs.put("_last_seen", now)
@@ -316,10 +307,10 @@ class RealEntityWriter @Inject constructor(
         }
 
         return existing.copy(
-            displayName = clue,  // Latest-write-wins
-            aliasesJson = JSONArray(newAliases).toString(),
             attributesJson = attrs.toString(),
             lastUpdatedAt = now
+            // displayName: 保持 canonical name 不变
+            // aliasesJson: 保持 curated aliases 不变
         )
     }
 

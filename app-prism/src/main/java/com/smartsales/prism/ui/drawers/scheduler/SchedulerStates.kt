@@ -35,7 +35,11 @@ sealed class TimelineItem {
         val processingStatus: String? = null, // For Fake I/O Overlay
         val isExiting: Boolean = false, // For Reschedule Animation
         val exitDirection: ExitDirection = ExitDirection.RIGHT, // Default: slide right (to future)
-        val conflictVisual: ConflictVisual = ConflictVisual.NONE // 冲突视觉指示器
+        val conflictVisual: ConflictVisual = ConflictVisual.NONE, // 冲突视觉指示器
+        // Wave 9: Smart Tips
+        val keyPersonEntityId: String? = null,  // Entity ID for tip generation
+        val tips: List<String> = emptyList(),   // LLM-generated context tips
+        val tipsLoading: Boolean = false        // Shimmer animation state
     ) : TimelineItem()
     
     /**

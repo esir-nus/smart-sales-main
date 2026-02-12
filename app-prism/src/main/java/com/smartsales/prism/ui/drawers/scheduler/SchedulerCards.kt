@@ -26,6 +26,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -306,6 +308,21 @@ fun TaskCard(
                             }
                         }
                         
+                        // Wave 9: Smart Tips (Shimmer → Tips)
+                        if (state.tipsLoading) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            HorizontalDivider(color = BorderSubtle, modifier = Modifier.padding(vertical = 4.dp))
+                            repeat(3) {
+                                ShimmerLine(modifier = Modifier.padding(vertical = 3.dp))
+                            }
+                        } else if (state.tips.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            HorizontalDivider(color = BorderSubtle, modifier = Modifier.padding(vertical = 4.dp))
+                            state.tips.forEach { tip ->
+                                TipBubble(text = tip, modifier = Modifier.padding(vertical = 3.dp))
+                            }
+                        }
+                        
                         Spacer(modifier = Modifier.height(12.dp))
                         
                         // Chat Input (Real UI)
@@ -536,5 +553,70 @@ fun InspirationCard(
                 )
             }
         }
+    }
+}
+
+// ============================================================================
+// Wave 9: Smart Tips UI Components
+// ============================================================================
+
+/**
+ * 闪烁占位线 — 加载提示时的渐变动画
+ */
+@Composable
+private fun ShimmerLine(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
+    val offsetX by infiniteTransition.animateFloat(
+        initialValue = -1f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmerOffset"
+    )
+    
+    Box(
+        modifier = modifier
+            .fillMaxWidth(0.85f)
+            .height(12.dp)
+            .background(
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        BorderSubtle.copy(alpha = 0.3f),
+                        BorderSubtle.copy(alpha = 0.6f),
+                        BorderSubtle.copy(alpha = 0.3f)
+                    ),
+                    start = Offset(offsetX * 500f, 0f),
+                    end = Offset(offsetX * 500f + 200f, 0f)
+                ),
+                shape = RoundedCornerShape(4.dp)
+            )
+    )
+}
+
+/**
+ * 提示气泡 — 紧凑药丸形状 + 💡图标
+ */
+@Composable
+private fun TipBubble(text: String, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(AccentBlue.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "💡",
+            fontSize = 12.sp,
+            modifier = Modifier.padding(end = 6.dp)
+        )
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            color = TextSecondary,
+            lineHeight = 16.sp
+        )
     }
 }

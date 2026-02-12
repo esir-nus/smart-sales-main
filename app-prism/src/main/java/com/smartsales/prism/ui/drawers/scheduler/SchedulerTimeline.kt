@@ -45,7 +45,8 @@ fun SchedulerTimeline(
     onMultiSelectToggle: (String) -> Unit,
     onEnterMultiSelect: () -> Unit,
     onConflictResolve: (com.smartsales.prism.domain.scheduler.ConflictResolution) -> Unit,
-    onConflictToggle: (String) -> Unit
+    onConflictToggle: (String) -> Unit,
+    onCardExpanded: (String, String?) -> Unit  // Wave 9: (taskId, keyPersonEntityId)
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
@@ -64,7 +65,8 @@ fun SchedulerTimeline(
                 onMultiSelectToggle = onMultiSelectToggle,
                 onEnterMultiSelect = onEnterMultiSelect,
                 onConflictResolve = onConflictResolve,
-                onConflictToggle = onConflictToggle
+                onConflictToggle = onConflictToggle,
+                onCardExpanded = onCardExpanded  // Wave 9
             )
         }
         
@@ -85,7 +87,8 @@ private fun TimelineRow(
     onMultiSelectToggle: (String) -> Unit,
     onEnterMultiSelect: () -> Unit,
     onConflictResolve: (com.smartsales.prism.domain.scheduler.ConflictResolution) -> Unit,
-    onConflictToggle: (String) -> Unit
+    onConflictToggle: (String) -> Unit,
+    onCardExpanded: (String, String?) -> Unit  // Wave 9
 ) {
     // Local expansion state for this row item
     var isExpanded by remember { mutableStateOf(false) }
@@ -139,7 +142,14 @@ private fun TimelineRow(
                             TaskCard(
                                 state = taskWithVisual,
                                 isExpanded = isExpanded,
-                                onExpandToggle = { isExpanded = !isExpanded },
+                                onExpandToggle = {
+                                    val wasExpanded = isExpanded
+                                    isExpanded = !isExpanded
+                                    // Wave 9: Trigger tips loading on first expand
+                                    if (!wasExpanded) {
+                                        onCardExpanded(item.id, item.keyPersonEntityId)
+                                    }
+                                },
                                 onClick = { onItemClick(item.id) },
                                 onReschedule = { text -> onReschedule(item.id, text) },
                                 onMicRecord = onMicRecord

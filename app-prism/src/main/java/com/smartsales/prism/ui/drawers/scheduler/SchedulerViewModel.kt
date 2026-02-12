@@ -87,6 +87,12 @@ class SchedulerViewModel @Inject constructor(
     
     // Wave 9: Tips 加载状态（taskId → Boolean）
     private val _tipsLoading = MutableStateFlow<Set<String>>(emptySet())
+    val tipsLoading: StateFlow<Set<String>> = _tipsLoading.asStateFlow()
+    
+    /**
+     * Wave 9: 获取已缓存的提示
+     */
+    fun getCachedTips(taskId: String): List<String> = _tipsCache[taskId] ?: emptyList()
     
     // Pipeline 状态反馈
     private val _pipelineStatus = MutableStateFlow<String?>(null)

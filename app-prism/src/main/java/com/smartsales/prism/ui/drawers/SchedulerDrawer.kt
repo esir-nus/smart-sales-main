@@ -66,6 +66,7 @@ fun SchedulerDrawer(
     val timelineItems by viewModel.timelineItems.collectAsState()
     val pipelineStatus by viewModel.pipelineStatus.collectAsState()
     val isInspirationsExpanded by viewModel.isInspirationsExpanded.collectAsState()
+    val tipsLoadingSet by viewModel.tipsLoading.collectAsState()  // Wave 9: Tips loading state
     
     val context = LocalContext.current
     
@@ -111,7 +112,7 @@ fun SchedulerDrawer(
     
     val expandedConflictIds by viewModel.expandedConflictIds.collectAsState()
     
-    val uiItems = remember(timelineItems, isSelectionMode, selectedInspirationIds, expandedConflictIds) {
+    val uiItems = remember(timelineItems, isSelectionMode, selectedInspirationIds, expandedConflictIds, tipsLoadingSet) {
         timelineItems.map { model ->
             when (model) {
                 is TimelineItemModel.Task -> TimelineItem.Task(
@@ -130,7 +131,11 @@ fun SchedulerDrawer(
                     // UI-only animation state (not from Domain)
                     processingStatus = null,
                     isExiting = false,
-                    exitDirection = ExitDirection.RIGHT
+                    exitDirection = ExitDirection.RIGHT,
+                    // Wave 9: Smart Tips
+                    keyPersonEntityId = model.keyPersonEntityId,
+                    tips = viewModel.getCachedTips(model.id),
+                    tipsLoading = model.id in tipsLoadingSet
                 )
                 is TimelineItemModel.Inspiration -> TimelineItem.Inspiration(
                     id = model.id,
@@ -256,7 +261,8 @@ fun SchedulerDrawer(
                             onMultiSelectToggle = { id -> viewModel.onToggleSelection(id) },
                             onEnterMultiSelect = { viewModel.onEnterSelectionMode() },
                             onConflictResolve = { action -> viewModel.handleConflictResolution(action) },
-                            onConflictToggle = { id -> viewModel.toggleConflictExpansion(id) }
+                            onConflictToggle = { id -> viewModel.toggleConflictExpansion(id) },
+                            onCardExpanded = { id, entityId -> viewModel.onCardExpanded(id, entityId) }  // Wave 9
                         )
                         
                         // Swipe to exit multi-select

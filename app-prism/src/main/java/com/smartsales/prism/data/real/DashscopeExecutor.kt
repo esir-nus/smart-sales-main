@@ -4,7 +4,6 @@ import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.AiChatRequest
 import com.smartsales.data.aicore.AiChatResponse
 import com.smartsales.data.aicore.AiChatService
-import com.smartsales.data.aicore.AiChatStreamEvent
 import com.smartsales.prism.domain.config.ModelRegistry
 import com.smartsales.prism.domain.config.ModelRouter
 import com.smartsales.prism.domain.model.Mode
@@ -36,42 +35,24 @@ class DashscopeExecutor @Inject constructor(
         // 记录 API 请求
         activityController.appendTrace("🔌 API: ${request.model}")
         
-        // 使用流式调用（官方推荐用于 enable_thinking）
-        val contentBuilder = StringBuilder()
-        var lastResponse: AiChatResponse? = null
-        var errorResult: ExecutorResult.Failure? = null
+        // 使用非流式调用 — 输出格式更稳定（列表换行、markdown 结构）
+        val result = aiChatService.sendMessage(request)
         
-        aiChatService.streamMessage(request).collect { event ->
-            when (event) {
-                is AiChatStreamEvent.Chunk -> {
-                    // DEBUG: 验证 reasoningContent 是否到达 Executor
-                    android.util.Log.d(
-                        "DashscopeExecutor",
-                        "Chunk: reasoning=${event.reasoningContent}, content=${event.content.take(30)}"
-                    )
-                    // 实时显示思考痕迹
-                    event.reasoningContent?.let { reasoning ->
-                        if (reasoning.isNotBlank()) {
-                            activityController.appendTrace(reasoning)
-                        }
-                    }
-                    // 累积内容
-                    contentBuilder.append(event.content)
+        return when (result) {
+            is com.smartsales.core.util.Result.Success -> {
+                val response = result.data
+                // 记录思考痕迹（如有）
+                response.thinkingTrace?.let { trace ->
+                    if (trace.isNotBlank()) activityController.appendTrace(trace)
                 }
-                is AiChatStreamEvent.Completed -> {
-                    lastResponse = event.response
-                    activityController.appendTrace("✅ 分析完成")
-                }
-                is AiChatStreamEvent.Error -> {
-                    activityController.appendTrace("❌ API Error: ${event.throwable.message}")
-                    errorResult = mapError(event.throwable)
-                }
+                activityController.appendTrace("✅ 分析完成")
+                mapSuccess(response)
+            }
+            is com.smartsales.core.util.Result.Error -> {
+                activityController.appendTrace("❌ API Error: ${result.throwable.message}")
+                mapError(result.throwable)
             }
         }
-        
-        // 返回结果
-        return errorResult ?: lastResponse?.let { mapSuccess(it) } 
-            ?: ExecutorResult.Failure("流式调用未返回结果", retryable = true)
     }
     
     /**
@@ -193,14 +174,15 @@ class DashscopeExecutor @Inject constructor(
         if (!context.entityKnowledge.isNullOrEmpty()) {
             android.util.Log.d("CoachMemory", "📝 Executor: injecting entityKnowledge (${context.entityKnowledge!!.length} chars)")
             appendLine()
-            appendLine("## 实体知识")
-            appendLine("以下是你已知的客户实体信息（含别名、属性、关系），在回答时参考：")
+            appendLine("<KNOWN_FACTS>")
             appendLine(context.entityKnowledge)
+            appendLine("</KNOWN_FACTS>")
+            appendLine("回复中涉及客户的每句话，必须能在 KNOWN_FACTS 中找到原文。标签外的客户信息你一概不知。")
         } else {
             android.util.Log.d("CoachMemory", "📝 Executor: no entityKnowledge in context")
             appendLine()
-            appendLine("## 实体知识")
-            appendLine("注意: 当前没有任何客户实体数据。不要编造客户信息、引用或暗示任何你不知道的客户细节。如果用户问起客户信息，请明确告知你没有相关记录。")
+            appendLine("<KNOWN_FACTS>无</KNOWN_FACTS>")
+            appendLine("你没有任何客户信息。涉及客户话题时，只说\"我目前没有这位客户的资料\"。")
         }
         
         // Wave 3: 习惯上下文注入（用户和客户偏好）
@@ -224,12 +206,12 @@ class DashscopeExecutor @Inject constructor(
             if (schedule.isNotBlank()) {
                 appendLine()
                 if (context.modeMetadata.turnIndex <= 1) {
-                    // 首轮：要求 LLM 主动提及
-                    appendLine("## 近期日程（首轮必须提及）")
-                    appendLine("用户有以下近期重要安排。请在友好的问候之后，自然地提醒用户这些事项（不要生硬列表，要像助理一样贴心提醒）：")
+                    // 首轮：列表形式提醒
+                    appendLine("[近期日程（首轮必须提及）]")
+                    appendLine("用户有以下近期安排，请在问候后用编号列表列出（1. 2. 3.），让用户一眼看清今天的节奏：")
                 } else {
                     // 后续轮次：仅供参考
-                    appendLine("## 近期日程（仅在相关话题时引用）")
+                    appendLine("[近期日程（仅在相关话题时引用）]")
                     appendLine("以下是用户的近期安排，仅在对话涉及相关话题时才引用，平时不要主动提及：")
                 }
                 appendLine(schedule)
@@ -244,36 +226,38 @@ class DashscopeExecutor @Inject constructor(
     private fun buildCoachSystemPrompt(): String = """
 你是一位资深销售教练，拥有10年以上B2B销售经验。你的风格是实战导向、简洁高效。
 
-## 你的角色
+[你的角色]
 
-- 专注于 **可执行的销售建议**，而非理论知识
+- 专注于 可执行的销售建议，而非理论知识
 - 用对话式语气回应，像一个经验丰富的同事在给建议
 - 保持简洁，2-3段话即可，避免长篇大论
 - 中文回复，偶尔穿插销售术语（如成交信号、价值主张、异议处理）
 
-## 回复原则
+[回复原则]
 
-1. **自然对话** — 如果用户只是打招呼（"你好"、"嗨"），友好回应即可。如果有"近期日程"提醒，请自然地带出。不要一上来就抛出不相关的客户数据或建议
-2. **举例说明** — 提供具体话术示例（用引号标注）
-3. **预期反馈** — 提醒用户客户可能的反应
-4. **可选下一步** — 简单提示后续动作（如有必要）
-5. **绝不编造历史** — 不要引用或捏造任何以前的对话内容、日期或案例。如果没有历史记忆提供给你，就说"我没有之前的对话记录"
+1. 自然对话 — 如果用户只是打招呼（"你好"、"嗨"），友好回应即可。如果有"近期日程"提醒，请用列表形式带出
+2. 事实提醒 — 提供用户可能忽略的关键事实（如客户偏好、上次沟通要点、时间卡点），而不是话术或开场白
+3. 克制建议 — 不要主动提供具体话术、台词或开场白。除非用户明确要求指导，否则只陈述事实，让用户自己判断如何应用
+4. 可选下一步 — 简单提示后续动作（如有必要）
+5. 绝不编造历史 — 如果没有历史记忆提供给你，就说"我没有之前的对话记录"
+6. 严禁推测实体信息 — 你的全部客户记忆 = KNOWN_FACTS 标签内的内容。回复中每一句涉及客户的话，都必须能在 KNOWN_FACTS 里找到原文出处。
 
-## 示例风格
+[示例风格]
 
-用户："客户说太贵了，怎么办？"
+用户："你好"
 
-你的回复示例：
+你的回复示例（有日程时）：
 
-价格异议背后通常是价值感知不足。先别急着降价，问一句："跟谁比贵了？" 或者 "您觉得哪部分功能不值这个价？"
+你好！今天安排如下：
+1. 13:42 跟孙扬浩开会（关键人）
+2. 14:42 取快递
+3. 15:42 出发去机场
 
-这招能揭示真实顾虑。如果是跟竞品比，就拆解差异点；如果是预算问题，就谈分期或者缩小范围先做MVP。
+时间卡得比较紧，注意会后留出衔接时间。有什么需要帮忙的随时说。
 
-记住：客户说贵，不一定是真贵，可能只是在试探你的底线。
+[回复格式]
 
----
-
-现在，用户有个销售问题需要你的建议。请直接给出建议，不要使用markdown代码块格式。
+使用 markdown 格式。列表用数字编号（1. 2. 3.），每项独占一行。重要信息可用 **加粗** 强调。
     """.trimIndent()
     
     /**
@@ -511,7 +495,7 @@ class DashscopeExecutor @Inject constructor(
      */
     private fun mapSuccess(response: AiChatResponse): ExecutorResult.Success {
         return ExecutorResult.Success(
-            content = response.displayText,
+            content = com.smartsales.prism.domain.utils.MarkdownSanitizer.strip(response.displayText),
             tokenUsage = TokenUsage(
                 // 注：ai-core 目前不返回 token 用量，使用默认值
                 promptTokens = 0,

@@ -166,7 +166,7 @@ private fun CompleteBubble(content: String, modifier: Modifier = Modifier) {
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A40))
     ) {
-        Text(
+        MarkdownText(
             text = content,
             color = Color.White,
             fontSize = 14.sp,

@@ -227,7 +227,7 @@ fun ConflictCard(
                     
                     if (isResolving) {
                          Text(
-                            text = "Processing...",
+                            text = "处理中...",
                             fontSize = 12.sp,
                             color = AccentDanger.copy(alpha = 0.6f),
                             modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
@@ -253,7 +253,7 @@ fun ConflictCard(
                             textStyle = LocalTextStyle.current.copy(color = TextPrimary),
                             decorationBox = { innerTextField ->
                                 if (inputText.isEmpty()) {
-                                    Text("Reply...", color = TextMuted, fontSize = 14.sp)
+                                    Text("回复...", color = TextMuted, fontSize = 14.sp)
                                 }
                                 innerTextField()
                             }

@@ -77,6 +77,13 @@ fun SchedulerDrawer(
         }
     }
 
+    // 每次抽屉打开时清理过期任务
+    LaunchedEffect(isOpen) {
+        if (isOpen) {
+            viewModel.onDrawerOpened()
+        }
+    }
+
     // 精确闹钟权限提示 — 一次性对话框
     var showExactAlarmDialog by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {

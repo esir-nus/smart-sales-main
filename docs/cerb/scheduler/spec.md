@@ -68,6 +68,8 @@ Tasks have a checkbox that toggles `isDone` state. Completed tasks remain in sto
 | `isDone = false` | Normal colors | ✅ Included in `upcomingItems` | Active |
 | `isDone = true` | Grey text, strikethrough, filled checkmark | ❌ Excluded from `upcomingItems` | Cancelled |
 
+**Auto-Expiry**: Tasks whose `endTime` (or `startTime + durationMinutes`) is in the past are automatically marked `isDone = true`. Sweep triggers: (1) scheduler drawer opens, (2) day switch, (3) ViewModel init, (4) real-time alarm fire via `SchedulerRefreshBus` (DEADLINE tier emits → ViewModel sweeps). Uses `endTime`, NOT alarm fire time — cascade alarms `[-1h, -15m, 0m]` firing early do NOT trigger auto-expiry. Today-only sweep; multi-day sweep deferred as tech debt.
+
 > [!NOTE]
 > **Reactivation Safety (Safe Fallback)**: Unchecking a completed task restores it to active state. All data is preserved in Room — no re-scheduling required. Alarms are re-scheduled only if the task's start time is still in the future. This ensures users can undo completion without losing any information.
 
@@ -89,6 +91,12 @@ Tasks have a checkbox that toggles `isDone` state. Completed tasks remain in sto
 | **3** | Smart Reminder Inference | 🚢 SHIPPED | LLM-based reminder timing suggestions |
 | **4** | Input Classification + Multi-Task + Reschedule | 🚢 SHIPPED | Input gate, batch create, reschedule parsing |
 | **5** | Inspiration Storage | 🚢 SHIPPED | `InspirationRepository`, `CollapsibleInspirationShelf` |
+| **7** | NL Deletion | ✅ SHIPPED | Fuzzy match + voice delete, no card context |
+| **8** | Pipeline Unification | 🔧 IN PROGRESS | Eliminated `processSchedulerAction`, unified to `createScheduledTask` |
+| **9** | Smart Tips | 🔲 PLANNED | LLM-generated contextual tips per task card |
+| **10** | Sticky Notes Boundary | 🔲 PLANNED | Scheduler does NOT create entities |
+| **11** | Global Reschedule | ✅ SHIPPED | Voice reschedule via fuzzy match + create-and-delete |
+| **12** | Task Completion Wiring | ✅ SHIPPED | `toggleDone`, alarm lifecycle, UI strikethrough |
 
 ---
 
@@ -477,13 +485,16 @@ Eliminate `processSchedulerAction` and unify all scheduler operations into `crea
 - `createScheduledTask(input, replaceItemId?)` — optional replace semantics
 - When `replaceItemId` set: inject old task context into prompt, create new, delete old
 - Atomicity: create first, delete after success
+- **Auto-Expiry**: `autoCompleteExpiredTasks()` on ViewModel init — sweeps today's expired tasks
 
-**Ship Criteria**: Reschedule from card produces same behavior via create+delete
+**Ship Criteria**: Reschedule from card produces same behavior via create+delete + auto-expiry works
 - **Test Cases**:
     - [ ] "推迟两个小时" from card → new task at +2h, old deleted
     - [ ] "取消吃饭" from card → task deleted (Wave 7 preserved)
     - [ ] Conflict RESCHEDULE → task replaced correctly
     - [ ] "明天开会" → no regression
+    - [x] Past-due task auto-marked isDone on drawer open
+    - [x] Task with cascade alarm: early alarm fire does NOT auto-expire
 - **Deliverables**: Updated `Orchestrator` interface, rewritten `PrismOrchestrator`, cleaned `SchedulerViewModel`
 - **Code Removed**: `processSchedulerAction`, `buildReschedulePrompt`, `SchedulerActionResult`, date regex hack (~173 lines)
 
@@ -577,19 +588,30 @@ Remove `entityWriter.upsertFromClue()` from the scheduler pipeline. Scheduler be
 
 ---
 
-### Wave 11: Global Reschedule 🔲 PLANNED
+### Wave 11: Global Reschedule ✅ SHIPPED
 
 Add `reschedule` classification to the scheduler LLM prompt. Reuses Wave 7's fuzzy match + Wave 4.2's create-and-delete atomicity. No card context required.
 
 - **LLM returns**: `{ classification: "reschedule", targetTitle: "会", newInstruction: "推迟两小时" }`
-- **Matching**: Same `contains`-based fuzzy against `ScheduleBoard.upcomingItems` (active session only)
+- **Matching**: Same `contains`-based fuzzy against `ScheduleBoard.upcomingItems` (active tasks only, `isDone` filtered)
 - **Results**:
   - 0 matches → toast "未找到匹配的任务"
   - 1 match → `createScheduledTask(newInstruction, replaceItemId=matchedId)`
   - 2+ matches → toast "找到多个匹配，请更具体"
-- **Ship Criteria**: "把会推迟两小时" modifies the matching task without opening card
+- **Design Decision**: Single-task only. No batch reschedule — aligns with voice UX mental model (user has one specific task in mind)
+- **Amber Glow**: `UiState.SchedulerTaskCreated.isReschedule` field signals ViewModel to add date to `rescheduledDates`
+- **Ship Criteria**: ✅ "把会推迟两小时" modifies the matching task without opening card
+
+#### Implementation Notes
+
+**Prompt Distinction (deletion vs reschedule)**:
+- `deletion`: 取消、不去 → task disappears
+- `reschedule`: 推迟、延迟、提前、改到、推后 → task time changes
+
+**Recursive Call Guard**: When `replaceItemId != null`, context injection explicitly tells LLM `【正在修改现有任务，请返回 schedulable 分类】` to prevent infinite reschedule loop.
+
 - **Test Cases**:
-    - [ ] "把会推迟两小时" → matched task rescheduled, amber glow
+    - [x] "起床时间推迟一个小时" → matched task rescheduled (21:49 → 22:49), amber glow
     - [ ] "改到后天" with 1 upcoming task → rescheduled
     - [ ] "改会" with 3 tasks → toast asks for specificity
     - [ ] "改不存在的" → toast "未找到匹配"
@@ -597,21 +619,23 @@ Add `reschedule` classification to the scheduler LLM prompt. Reuses Wave 7's fuz
 
 ---
 
-### Wave 12: Task Completion Wiring 🔲 PLANNED
+### Wave 12: Task Completion Wiring ✅ SHIPPED
 
 Wire `isDone` toggle through ViewModel + alarm lifecycle.
 
-- **ViewModel**: `toggleDone(taskId)` → `repository.updateDone(id, !current)` → `scheduleBoard.refresh()`
-- **Alarm Cancel**: When `isDone = true`, cancel all pending alarms for that task
+- **ViewModel**: `toggleDone(taskId)` → `repository.updateTask(task.copy(isDone = !current))` → `triggerRefresh()`
+- **Alarm Cancel**: When `isDone = true`, `alarmScheduler.cancelReminder(taskId)`
 - **Alarm Restore**: When `isDone = false` (reactivation), re-schedule alarms only if `startTime > now`
-- **Ship Criteria**: Checkbox toggles completion, grey/strikethrough applied, alarms managed
+- **UI Feedback**: Grey background, strikethrough title, muted alarm icon (SchedulerCards L128-189)
+- **Voice Scope**: `RealScheduleBoard.upcomingItems` filters `!it.isDone` — completed tasks excluded from fuzzy match
+- **Ship Criteria**: ✅ Checkbox toggles completion, grey/strikethrough applied, alarms managed
 - **Test Cases**:
-    - [ ] Tap checkbox → task turns grey, strikethrough title
-    - [ ] Completed task excluded from voice fuzzy match
-    - [ ] Unchecking restores normal visual + re-enters voice scope
-    - [ ] Alarm cancelled on completion
-    - [ ] Alarm re-scheduled on reactivation (if future time)
-    - [ ] Alarm NOT re-scheduled on reactivation (if past time)
+    - [x] Tap checkbox → task turns grey, strikethrough title
+    - [x] Completed task excluded from voice fuzzy match (`RealScheduleBoard.kt:44`)
+    - [x] Unchecking restores normal visual + re-enters voice scope
+    - [x] Alarm cancelled on completion (`SchedulerViewModel.kt:358`)
+    - [x] Alarm re-scheduled on reactivation if future time (`SchedulerViewModel.kt:362-370`)
+    - [x] Alarm NOT re-scheduled on reactivation if past time (`SchedulerViewModel.kt:371-372`)
 
 ---
 

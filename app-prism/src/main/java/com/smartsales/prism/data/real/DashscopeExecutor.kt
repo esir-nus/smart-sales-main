@@ -311,7 +311,7 @@ class DashscopeExecutor @Inject constructor(
 ## 响应格式（必须是严格的 JSON，不允许 markdown）
 
 {
-  "classification": "schedulable|inspiration|non_intent",
+  "classification": "schedulable|deletion|reschedule|inspiration|non_intent",
   "tasks": [
     {
       "title": "任务标题（简洁明了）",
@@ -335,12 +335,17 @@ class DashscopeExecutor @Inject constructor(
 |----------------|------|------|
 | "schedulable" | 包含**具体时间点**（几点几分）的日程安排 | "明天下午2点开会"、"后天3点会议"、"8点吃面" |
 | "deletion" | 明确要取消/删除某个已有任务 | "取消会议"、"把会议删了"、"不去开会了" |
+| "reschedule" | 明确要改期/推迟/提前某个已有任务 | "把会推迟两小时"、"把开会时间延迟一个小时"、"会改到后天"、"开会提前到3点"、"推后一天" |
 | "inspiration" | 想法、计划，或有日期但**无具体时间点** | "以后想学吉他"、"明天找Jake"、"明天早上吃饭"、"提醒我明天去银行" |
 | "non_intent" | 普通对话，无日程或想法意图 | "你好"、"今天天气怎么样" |
 
 **⚠️ 关键区分：时间段 vs 具体时间点**
 - **不是**具体时间点：早上、上午、中午、下午、傍晚、晚上 → 这些是时间段，不是具体几点
 - **是**具体时间点：8点、下午2点、15:30、凌晨3点 → 包含"几点"的数字
+
+**⚠️ 关键区分：deletion vs reschedule**
+- **deletion (删除)**: 不想做了、取消、不去 → 任务完全消失
+- **reschedule (改期)**: 推迟、延迟、提前、改到、推后 → 任务仍然存在，只是时间变了
 
 | 用户输入 | classification | 原因 |
 |----------|---------------|------|
@@ -353,6 +358,7 @@ class DashscopeExecutor @Inject constructor(
 - 如果是 "inspiration"，必须返回 classification 和 inspirationText 字段（包含用户的灵感内容）
 - 如果是 "non_intent"，只需返回 classification 字段
 - 如果是 "deletion"，必须返回 classification 和 targetTitle 字段（用户想删除的任务关键词）
+- 如果是 "reschedule"，必须返回 classification、targetTitle（任务关键词）和 newInstruction（改期指令）
 - 如果是 "schedulable"，tasks 数组必须包含至少 1 个任务对象
 - **Wave 4.1**: 如果用户描述包含多个任务（如 "8点吃面 9点开会"），将所有任务都放入 tasks 数组
 
@@ -381,6 +387,24 @@ class DashscopeExecutor @Inject constructor(
   "inspirationText": "以后想学吉他"
 }
 
+## Reschedule 示例
+
+用户：把会推迟两小时
+输出：
+{
+  "classification": "reschedule",
+  "targetTitle": "会",
+  "newInstruction": "推迟两小时"
+}
+
+用户：开会改到后天下午3点
+输出：
+{
+  "classification": "reschedule",
+  "targetTitle": "开会",
+  "newInstruction": "改到后天下午3点"
+}
+
 ## 紧急程度推断规则（Wave 4.2）
 
 根据任务性质自动选择（默认 L3）：
@@ -400,15 +424,18 @@ class DashscopeExecutor @Inject constructor(
 
 | 任务类型 | duration | 说明 |
 |----------|----------|------|
+| urgency 为 FIRE_OFF 的提醒 | null | 即时提醒，无时间块 |
 | 打电话、回消息 | "15m" | 简短沟通 |
-| 看手机、喝水、休息 | "5m" | 极短任务 |
 | 会议、面试 | "1h" | 正式会议 |
 | 吃饭、午餐 | "30m" | 用餐 |
 | 运动、跑步 | "30m" | 运动 |
 | 赶飞机、高铁 | "2h" | 交通出行 |
 | 其他未知 | "30m" | 默认中等时长 |
 
-**重要**: 如果用户给了 endTime，则不需要 duration 字段（系统自动计算）。如果两者都没给，你必须根据任务类型推断 duration。
+**重要**:
+- 如果 urgency 是 FIRE_OFF，duration 必须为 null（这是即时提醒，不占时间块）
+- 如果用户给了 endTime，则不需要 duration 字段（系统自动计算）
+- 如果两者都没给且不是 FIRE_OFF，则根据任务类型推断 duration
 
 ## 其他规则
 
@@ -455,7 +482,7 @@ class DashscopeExecutor @Inject constructor(
   "title": "看手机",
   "startTime": "2026-02-10 17:42",
   "endTime": null,
-  "duration": "5m",
+  "duration": null,
   "urgency": "FIRE_OFF"
 }
 

@@ -16,6 +16,7 @@ import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.pipeline.Orchestrator
 import com.smartsales.prism.domain.scheduler.InspirationRepository
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
+import com.smartsales.prism.domain.scheduler.SchedulerRefreshBus
 import com.smartsales.prism.domain.scheduler.TimelineItemModel
 import com.smartsales.prism.domain.memory.MemoryEntry
 import com.smartsales.prism.domain.memory.MemoryEntryType
@@ -39,6 +40,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -65,9 +68,49 @@ class SchedulerViewModel @Inject constructor(
                 handlePipelineEvent(event)
             }
         }
+        // 自动完成已过期任务 — 打开 Scheduler 时扫一遍今天的任务
+        viewModelScope.launch { autoCompleteExpiredTasks() }
+        // 实时闹钟反馈 — DEADLINE 闹钟触发时刷新 UI
+        viewModelScope.launch {
+            SchedulerRefreshBus.events.collect {
+                android.util.Log.d("SchedulerVM", "alarmFired: sweeping expired tasks")
+                autoCompleteExpiredTasks()
+                triggerRefresh()
+            }
+        }
         // DEBUG: 自动注入 seed data，确保记忆存在（调试后删除）
         if (com.smartsales.prism.BuildConfig.DEBUG) {
             viewModelScope.launch { debugSeedMemories() }
+        }
+    }
+
+    /**
+     * 自动完成已过期的任务
+     *
+     * 过期条件: endTime < now && !isDone
+     * ⚠️ 使用 endTime（startTime + duration），不是闹钟触发时间
+     *    级联闹钟 [-1h, -15m, 0m] 的早期触发不代表任务过期
+     */
+    private suspend fun autoCompleteExpiredTasks() {
+        val now = Instant.now()
+        val today = LocalDate.now()
+        val allItems = taskRepository.queryByDateRange(today, today).first()
+        val expiredTasks = allItems
+            .filterIsInstance<TimelineItemModel.Task>()
+            .filter { !it.isDone }
+            .filter { task ->
+                val endTime = task.endTime
+                    ?: task.startTime.plusSeconds(task.durationMinutes * 60L)
+                endTime.isBefore(now)
+            }
+
+        expiredTasks.forEach { task ->
+            taskRepository.updateTask(task.copy(isDone = true))
+            alarmScheduler.cancelReminder(task.id)
+        }
+
+        if (expiredTasks.isNotEmpty()) {
+            android.util.Log.d("SchedulerVM", "autoComplete: ${expiredTasks.size} tasks expired")
         }
     }
 
@@ -252,6 +295,8 @@ $taskContext
         _activeDayOffset.value = dayOffset
         // 确认日期 (停止发光)
         acknowledgeDate(dayOffset)
+        // 切换日期时清理该日过期任务
+        viewModelScope.launch { autoCompleteExpiredTasks() }
         android.util.Log.d("SchedulerVM", "Day offset changed to: $dayOffset")
     }
     
@@ -529,7 +574,7 @@ $taskContext
                     result.taskId, result.title, result.dayOffset,
                     result.scheduledAtMillis, result.durationMinutes
                 )
-                if (isReschedule) _rescheduledDates.value += result.dayOffset
+                if (isReschedule || result.isReschedule) _rescheduledDates.value += result.dayOffset
                 checkExactAlarmPermission()
             }
             is UiState.SchedulerMultiTaskCreated -> {
@@ -615,6 +660,14 @@ $taskContext
      */
     fun triggerRefresh() {
         _refreshTrigger.tryEmit(Unit)
+    }
+
+    /**
+     * Drawer 打开时调用 — 刷新 + 清理过期任务
+     */
+    fun onDrawerOpened() {
+        viewModelScope.launch { autoCompleteExpiredTasks() }
+        triggerRefresh()
     }
     
     /**

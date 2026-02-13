@@ -309,7 +309,7 @@ private fun ProMaxHeader(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = sessionTitle.ifEmpty { "New Session" },
+                text = sessionTitle.ifEmpty { "新对话" },
                 style = MaterialTheme.typography.labelLarge,
                 color = TextPrimary
             )
@@ -401,7 +401,7 @@ private fun GlassModeSwitcher(currentMode: Mode, onModeSwitch: (Mode) -> Unit) {
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (mode == Mode.COACH) "Coach" else "Analyst",
+                            text = if (mode == Mode.COACH) "教练" else "分析师",
                             color = color,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                             fontSize = 13.sp

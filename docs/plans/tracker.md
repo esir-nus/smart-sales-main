@@ -13,7 +13,7 @@
 | Cerb Shard | State | Next Wave |
 |------------|-------|-----------|
 | [coach](../cerb/coach/spec.md) | SHIPPED | — |
-| [scheduler](../cerb/scheduler/spec.md) | PARTIAL | W10: Sticky Notes Boundary |
+| [scheduler](../cerb/scheduler/spec.md) | PARTIAL | W9: Smart Tips |
 | [conflict-resolver](../cerb/conflict-resolver/spec.md) | SHIPPED | — |
 | [badge-audio-pipeline](../cerb/badge-audio-pipeline/spec.md) | SHIPPED | W4: Error Recovery |
 | [notifications](../cerb/notifications/spec.md) | SHIPPED | — |
@@ -46,12 +46,20 @@
 
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 
+### 2026-02-13
+
+- **scheduler**: Wave 8 amendment — Real-time alarm-fire reflection via `SchedulerRefreshBus` (DEADLINE alarm → ViewModel sweep → instant UI update)
+- **scheduler**: Auto-expiry refined — 4 trigger points (init, drawer open, day switch, alarm fire), removed redundant sweeps from `triggerRefresh()`
+- **scheduler**: FIRE_OFF duration fix — LLM prompt now requires `duration: null` for instant reminders (was incorrectly assigning 5m)
+
 ### 2026-02-12
 
 - **scheduler**: Task Completion Lifecycle section — isDone toggle, grey/strikethrough, voice scope exclusion, alarm lifecycle, reactivation safety
 - **scheduler**: Wave 12 planned — ViewModel toggleDone wiring + alarm cancel/restore on completion
 - **scheduler**: Voice Command Scope section — 5 classifications, scheduler-mode + active-session only, card-context-free
-- **scheduler**: Wave 11 planned — Global Reschedule (fuzzy match + create-and-delete, no card required)
+- **scheduler**: Wave 8 — Auto-expiry: `autoCompleteExpiredTasks()` on ViewModel init, sweeps today's expired tasks. Debt: multi-day sweep, visual distinction manual vs auto
+- **scheduler**: Wave 12 SHIPPED — Task Completion Wiring (already implemented: toggleDone, alarm lifecycle, UI strikethrough, voice scope exclusion)
+- **scheduler**: Wave 11 SHIPPED — Global Reschedule via voice (fuzzy match + create-and-delete). Fixed: LLM misclassifying 延迟 as deletion, infinite reschedule loop via explicit schedulable guard
 - **coach**: §3.11 Schedule Guidance — educates user to use badge/record for schedule changes, no cross-mode mutation
 - **scheduler**: Sticky Notes Principle spec'd — scheduler does NOT create entities, defers to Coach/Analyst clarity loop
 - **entity-writer**: Caller updated `Scheduler/Coach` → `Coach/Analyst`, Wave 1.5 marked UNWINDING

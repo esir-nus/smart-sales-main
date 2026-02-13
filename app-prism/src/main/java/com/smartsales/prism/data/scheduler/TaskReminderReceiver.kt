@@ -14,6 +14,7 @@ import com.smartsales.prism.data.notification.AlarmDismissReceiver
 import com.smartsales.prism.domain.notification.NotificationService
 import com.smartsales.prism.domain.notification.PrismNotificationChannel
 import com.smartsales.prism.domain.scheduler.CascadeTier
+import com.smartsales.prism.domain.scheduler.SchedulerRefreshBus
 import com.smartsales.prism.ui.alarm.AlarmActivity
 import dagger.hilt.android.EntryPointAccessors
 
@@ -173,6 +174,12 @@ class TaskReminderReceiver : BroadcastReceiver() {
         }
 
         // DEADLINE: 持续振动在 AlarmActivity.onCreate 内启动，不在 Receiver 启动（避免 Ghost Alarm）
+
+        // DEADLINE 到期 → 通知 ViewModel 刷新（实时标记过期任务）
+        if (tier == CascadeTier.DEADLINE) {
+            SchedulerRefreshBus.emit()
+            Log.d(TAG, "SchedulerRefreshBus emitted for taskId=$taskId")
+        }
     }
 
     private fun buildTimeText(offsetMinutes: Int): String = when (offsetMinutes) {

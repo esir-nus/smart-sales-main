@@ -125,8 +125,11 @@ class PrismOrchestrator @Inject constructor(
                 val oldTask = scheduledTaskRepository.getTask(replaceItemId)
                 if (oldTask != null) {
                     llmInput = """
-                        当前任务: ${oldTask.title} 在 ${oldTask.dateRange}
-                        用户请求: $input
+                        【正在修改现有任务，请返回 schedulable 分类】
+                        原任务: ${oldTask.title} 在 ${oldTask.dateRange}
+                        修改指令: $input
+                        
+                        请计算新的具体时间并返回 schedulable 格式的任务。
                     """.trimIndent()
                 }
             }
@@ -212,7 +215,8 @@ class PrismOrchestrator @Inject constructor(
                                 title = lintResult.task.title,
                                 dayOffset = dayOffset,
                                 scheduledAtMillis = lintResult.task.startTime.toEpochMilli(),
-                                durationMinutes = lintResult.task.durationMinutes
+                                durationMinutes = lintResult.task.durationMinutes,
+                                isReschedule = replaceItemId != null  // Wave 11: amber glow 信号
                             )
                         }
                         
@@ -339,6 +343,30 @@ class PrismOrchestrator @Inject constructor(
                                         activityController.complete()
                                         UiState.Toast("找到 ${matches.size} 个匹配，请更具体地描述要取消的任务")
                                     }
+                                }
+                            }
+                        }
+                        
+                        // Wave 11: Global Reschedule
+                        is LintResult.Reschedule -> {
+                            val items = scheduleBoard.upcomingItems.value
+                            val matches = items.filter {
+                                it.title.contains(lintResult.targetTitle, ignoreCase = true)
+                            }
+
+                            when (matches.size) {
+                                0 -> {
+                                    activityController.complete()
+                                    UiState.Toast("未找到匹配'${lintResult.targetTitle}'的任务")
+                                }
+                                1 -> {
+                                    val match = matches.first()
+                                    Log.d("PrismOrchestrator", "🔄 Global reschedule: '${match.title}' → '${lintResult.newInstruction}'")
+                                    createScheduledTask(lintResult.newInstruction, replaceItemId = match.entryId)
+                                }
+                                else -> {
+                                    activityController.complete()
+                                    UiState.Toast("找到 ${matches.size} 个匹配，请更具体地描述要改的任务")
                                 }
                             }
                         }

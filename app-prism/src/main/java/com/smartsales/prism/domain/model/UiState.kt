@@ -17,7 +17,8 @@ sealed class UiState {
         val title: String,
         val dayOffset: Int,
         val scheduledAtMillis: Long,  // 用于冲突检测
-        val durationMinutes: Int      // 用于冲突检测
+        val durationMinutes: Int,     // 用于冲突检测
+        val isReschedule: Boolean = false  // Wave 11: 改期标记（amber glow 信号）
     ) : UiState()
 
     /**

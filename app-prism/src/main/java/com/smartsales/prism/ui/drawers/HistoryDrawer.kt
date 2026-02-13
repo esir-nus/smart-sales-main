@@ -180,7 +180,7 @@ private fun FloatingGlassDock(
                 
                 Column {
                     Text("Frank Chen", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    Text("Premium Plan", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                    Text("高级会员", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
                 }
             }
             

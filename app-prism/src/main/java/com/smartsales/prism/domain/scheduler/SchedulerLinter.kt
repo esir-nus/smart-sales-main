@@ -49,6 +49,15 @@ class SchedulerLinter @Inject constructor(
                     }
                     return LintResult.Deletion(targetTitle = targetTitle)
                 }
+                // Wave 11: Global Reschedule
+                "reschedule" -> {
+                    val targetTitle = json.optString("targetTitle", "")
+                    val newInstruction = json.optString("newInstruction", "")
+                    if (targetTitle.isBlank() || newInstruction.isBlank()) {
+                        return LintResult.Error("改期请求缺少目标任务或新指令")
+                    }
+                    return LintResult.Reschedule(targetTitle = targetTitle, newInstruction = newInstruction)
+                }
                 // "schedulable" → continue to full parsing below
             }
             
@@ -304,4 +313,7 @@ sealed class LintResult {
     
     // Wave 7: NL Deletion
     data class Deletion(val targetTitle: String) : LintResult()
+    
+    // Wave 11: Global Reschedule
+    data class Reschedule(val targetTitle: String, val newInstruction: String) : LintResult()
 }

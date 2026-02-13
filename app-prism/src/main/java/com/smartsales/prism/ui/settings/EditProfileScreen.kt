@@ -32,10 +32,10 @@ fun EditProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Edit Profile", color = Color.White) },
+                title = { Text("编辑资料", color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, "Back", tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, "返回", tint = Color.White)
                     }
                 },
                 actions = {
@@ -43,7 +43,7 @@ fun EditProfileScreen(
                         onSave(displayName, role, industry, experience, platform)
                         onBack()
                     }) {
-                        Text("Save", color = Color(0xFF4CAF50))
+                        Text("保存", color = Color(0xFF4CAF50))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -61,37 +61,37 @@ fun EditProfileScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Text("Professional Info", color = Color.Gray, style = MaterialTheme.typography.labelLarge)
+                Text("职业信息", color = Color.Gray, style = MaterialTheme.typography.labelLarge)
             }
             item {
-                PrismTextField(label = "Display Name", value = displayName, onValueChange = { displayName = it })
+                PrismTextField(label = "显示名称", value = displayName, onValueChange = { displayName = it })
             }
             item {
-                PrismTextField(label = "Role / Position", value = role, onValueChange = { role = it })
+                PrismTextField(label = "职位 / 角色", value = role, onValueChange = { role = it })
             }
             item {
-                PrismTextField(label = "Industry", value = industry, onValueChange = { industry = it })
+                PrismTextField(label = "行业", value = industry, onValueChange = { industry = it })
             }
             item {
                 PrismTextField(
-                    label = "Working Experience",
+                    label = "工作经验",
                     value = experience,
                     onValueChange = { experience = it },
-                    placeholder = "e.g., 5-10 years"
+                    placeholder = "例如：5-10年"
                 )
             }
 
             item {
                 Spacer(Modifier.height(8.dp))
-                Text("Preferences", color = Color.Gray, style = MaterialTheme.typography.labelLarge)
+                Text("偏好设置", color = Color.Gray, style = MaterialTheme.typography.labelLarge)
             }
             
             item {
                 PrismTextField(
-                    label = "Communication Platform",
+                    label = "沟通平台",
                     value = platform,
                     onValueChange = { platform = it },
-                    helperText = "Used for contact suggestions (e.g., WeChat)"
+                    helperText = "用于联系建议（例如：微信）"
                 )
             }
         }

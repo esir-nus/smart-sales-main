@@ -190,13 +190,13 @@ fun PrismShell(
         // 6. Right Stubs
         RightDrawerStub(
             isOpen = activeDrawer == DrawerType.TINGWU,
-            title = "Tingwu Assistant",
+            title = "听悟助手",
             onDismiss = { activeDrawer = null }
         )
 
         RightDrawerStub(
             isOpen = activeDrawer == DrawerType.ARTIFACTS,
-            title = "Artifacts Box",
+            title = "工件箱",
             onDismiss = { activeDrawer = null }
         )
 
@@ -279,10 +279,10 @@ private fun RightDrawerStub(
                 Column(Modifier.padding(16.dp)) {
                     Text(title, color = com.smartsales.prism.ui.theme.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(20.dp))
-                    Text("🚧 Feature In Progress", color = com.smartsales.prism.ui.theme.TextSecondary)
+                    Text("🚧 功能开发中", color = com.smartsales.prism.ui.theme.TextSecondary)
                     Spacer(modifier = Modifier.weight(1f))
                     Button(onClick = onDismiss) {
-                        Text("Close")
+                        Text("关闭")
                     }
                 }
             }

@@ -184,7 +184,7 @@ private fun DisconnectedView(
 
     Spacer(modifier = Modifier.height(16.dp))
 
-    Text("🔴 离线 (Offline)", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+    Text("🔴 离线", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
     Text("请确保设备在附近并已开机", fontSize = 14.sp, color = Color(0xFFAAAAAA))
 
     Spacer(modifier = Modifier.height(32.dp))
@@ -194,7 +194,7 @@ private fun DisconnectedView(
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
         modifier = Modifier.fillMaxWidth(0.8f)
     ) {
-        Text("连接设备 (Reconnect)")
+        Text("连接设备")
     }
 }
 
@@ -255,7 +255,7 @@ private fun UpdateFoundView(
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
         modifier = Modifier.fillMaxWidth(0.8f)
     ) {
-        Text("立即同步 (Sync Now)")
+        Text("立即同步")
     }
     
     Spacer(modifier = Modifier.height(8.dp))
@@ -354,7 +354,7 @@ private fun WifiMismatchView(
     ) {
         // SSID 输入
         Column {
-            Text("WiFi Name (SSID)", fontSize = 12.sp, color = Color.Gray)
+            Text("WiFi 名称 (SSID)", fontSize = 12.sp, color = Color.Gray)
             Spacer(Modifier.height(4.dp))
             OutlinedTextField(
                 value = ssid,
@@ -372,7 +372,7 @@ private fun WifiMismatchView(
         
         // 密码输入
         Column {
-            Text("Password", fontSize = 12.sp, color = Color.Gray)
+            Text("密码", fontSize = 12.sp, color = Color.Gray)
             Spacer(Modifier.height(4.dp))
             OutlinedTextField(
                 value = password,
@@ -380,7 +380,7 @@ private fun WifiMismatchView(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                placeholder = { Text("Enter Password", color = Color.Gray) },
+                placeholder = { Text("请输入密码", color = Color.Gray) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White,
@@ -406,7 +406,7 @@ private fun WifiMismatchView(
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
             modifier = Modifier.weight(1f)
         ) {
-            Text("更新配置 (Update)")
+            Text("更新配置")
         }
     }
 }

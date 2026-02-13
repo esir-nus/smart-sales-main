@@ -54,6 +54,12 @@ sealed class LintResult {
 
     // Wave 7: NL Deletion
     data class Deletion(val targetTitle: String) : LintResult()
+
+    // Wave 11: Global Reschedule
+    data class Reschedule(
+        val targetTitle: String,
+        val newInstruction: String
+    ) : LintResult()
 }
 
 data class ParsedClues(

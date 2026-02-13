@@ -183,7 +183,7 @@ parsedClues.person?.let { personClue ->
     // result.displayName = canonical name for write-back
     // result.isNew = true if entity was just created
 
-    // CRM Hierarchy: create ACCOUNT + link if company present
+    // CRM Hierarchy: if company present, create ACCOUNT and link
     parsedClues.company?.let { companyClue ->
         val accountResult = entityWriter.upsertFromClue(
             clue = companyClue,

@@ -25,7 +25,7 @@
 | [session-context](../cerb/session-context/spec.md) | SHIPPED | W5: Context Compression |
 | [memory-center](../cerb/memory-center/spec.md) | SHIPPED | — |
 | [entity-registry](../cerb/entity-registry/spec.md) | SHIPPED | — |
-| [entity-writer](../cerb/entity-writer/spec.md) | SHIPPED | — |
+| [entity-writer](../cerb/entity-writer/spec.md) | SHIPPED | W5: Alignment & Disambiguation |
 | [user-habit](../cerb/user-habit/spec.md) | SHIPPED | — |
 | [rl-module](../cerb/rl-module/spec.md) | SHIPPED | — |
 | [client-profile-hub](../cerb/client-profile-hub/spec.md) | PARTIAL | W3: CRM Export |
@@ -48,6 +48,8 @@
 
 ### 2026-02-13
 
+- **scheduler**: Wave 10 SHIPPED — CRM Hierarchy Wiring (business gate + `keyCompany` extraction + ACCOUNT creation + `accountId` linking)
+- **entity-writer**: Wave 1.5 UNWINDING resolved — Sticky Notes abandoned, Scheduler is permanent caller
 - **scheduler**: Wave 9 SHIPPED — Smart Tips (TipGenerator, LlmTipGenerator, ViewModel lazy-load, shimmer/bubble UI)
 - **coach**: Sticky Notes integration — `ScheduledTaskRepository` injected into ContextBuilder, top 3 tasks as greeting context
 - **coach**: Two-phase greeting (§3.6) — Turn 1 reminds tasks naturally, Turn N passive reference only
@@ -57,8 +59,6 @@
 - **scheduler**: Auto-expiry refined — 4 trigger points (init, drawer open, day switch, alarm fire), removed redundant sweeps from `triggerRefresh()`
 - **scheduler**: FIRE_OFF duration fix — LLM prompt now requires `duration: null` for instant reminders (was incorrectly assigning 5m)
 - **coach**: Output Quality hardened (4-Layer Fix) — Plain text system prompt (no `##`), `<KNOWN_FACTS>` data envelope, Positive-only hallucination guard, `MarkdownSanitizer` safety net. Fixed "delivery cycle sensitivity" hallucination.
-- **scheduler**: Wave 10 SHIPPED — CRM Hierarchy Wiring. Sticky Notes Principle abandoned. Business gate (personal contacts filtered at LLM prompt), `keyCompany` extraction, ACCOUNT creation + `accountId` linking
-- **entity-writer**: Wave 1.5 UNWINDING removed — Scheduler is now permanent caller. Callers: Scheduler/Coach/Analyst
 
 ### 2026-02-12
 
@@ -173,7 +173,7 @@
 | Dead `httpChecker` | `DefaultDeviceConnectionManager.kt` | Low |
 
 | `structuredJson` schema inconsistency | `RealContextBuilder.recordActivity()` — uses `{"entityId":"..."}` instead of `{"relatedEntityIds":["..."]}` convention. Works today (LIKE query catches both), but any code parsing `relatedEntityIds` from activity records gets `emptyList()`. One-line fix: add `relatedEntityIds` field to `recordActivity()` output. | Low |
-| ~~**Sticky Notes Boundary**~~ | ~~`PrismOrchestrator.createScheduledTask()` calls `entityWriter.upsertFromClue()`~~ | ~~**High**~~ | **RESOLVED** — Sticky Notes Principle abandoned. Scheduler Wave 10 SHIPPED: CRM hierarchy wiring with business gate |
+| ~~Sticky Notes Boundary~~ | ~~`PrismOrchestrator.createScheduledTask()` calls `entityWriter.upsertFromClue()`~~ | ~~**High**~~ | ✅ **Resolved** — Sticky Notes abandoned. Scheduler creates PERSON + ACCOUNT entities for business-relevant contacts (Wave 10 SHIPPED). |
 | **Confidence-Based Reminder Interceptor** | Replace deterministic round-1 wrap-up with LLM confidence-based interception. Agent decides when to surface schedule context: (1) User greets/noise → inject, (2) User discusses agenda → inject, (3) User wraps up work → suggest completion. Requires classifier or LLM self-assessment of conversation intent. Current workaround: smarter prompting that lets LLM decide naturally. | Medium |
 
 

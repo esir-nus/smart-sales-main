@@ -70,7 +70,7 @@ graph TD
 ```
 
 > [!NOTE]
-> **Scheduler calls EntityWriter for CRM entity creation.** When `keyPerson` is present (business-relevant contacts only), Scheduler upserts PERSON + ACCOUNT entities and links them via `updateProfile(accountId)`. See [Scheduler spec §CRM Entity Creation Policy](../scheduler/spec.md).
+> **Scheduler creates PERSON + ACCOUNT entities** for business-relevant contacts. Personal contacts (family, friends) are filtered at the LLM prompt level. See [Scheduler spec §CRM Entity Creation Policy](../scheduler/spec.md).
 
 ### 3. App → Kernel Callback
 
@@ -249,7 +249,7 @@ Convention: Keys prefixed with `_` are metadata, not business attributes.
 |------|-------|--------|--------------|
 | **0** | Prerequisites (delete infra) | ✅ SHIPPED | `EntityRepository.delete()` + DAO + impls |
 | **1** | Core Writer | ✅ SHIPPED | `EntityWriter` interface + `RealEntityWriter` + tests |
-| **1.5** | Wiring | ✅ SHIPPED | Wire into `PrismOrchestrator` Scheduler path (PERSON + ACCOUNT creation + CRM linking) |
+| **1.5** | Wiring | ✅ SHIPPED | Wire into `PrismOrchestrator` Scheduler path — creates PERSON + ACCOUNT entities for business-relevant contacts |
 | **2** | Change-Aware Profile Management | ✅ SHIPPED | `updateProfile()`, `ProfileUpdateResult`, `ProfileChange`, history emission via `recordActivity()` |
 | ~~3~~ | ~~Conflict Merge~~ | ❌ KILLED | See architectural decision below |
 | **4** | **OS Model Upgrade** (RAM Application) | ✅ SHIPPED | Write-through to RAM Section 1 on all 4 mutation methods + `recordActivity()` App→Kernel callback |

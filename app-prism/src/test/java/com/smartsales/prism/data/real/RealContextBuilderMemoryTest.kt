@@ -29,6 +29,7 @@ class RealContextBuilderMemoryTest {
     private lateinit var timeProvider: FakeTimeProvider
     private lateinit var habitRepository: FakeUserHabitRepository
     private lateinit var reinforcementLearner: FakeReinforcementLearner
+    private lateinit var scheduledTaskRepository: TestScheduledTaskRepository
 
     @Before
     fun setup() {
@@ -37,11 +38,13 @@ class RealContextBuilderMemoryTest {
         reinforcementLearner = FakeReinforcementLearner(habitRepository)
         entityRepository = FakeEntityRepository()
 
+        scheduledTaskRepository = TestScheduledTaskRepository()
         contextBuilder = RealContextBuilder(
             timeProvider = timeProvider,
             reinforcementLearner = reinforcementLearner,
             memoryRepository = FakeMemoryRepository(),
-            entityRepository = entityRepository
+            entityRepository = entityRepository,
+            scheduledTaskRepository = scheduledTaskRepository
         )
     }
 

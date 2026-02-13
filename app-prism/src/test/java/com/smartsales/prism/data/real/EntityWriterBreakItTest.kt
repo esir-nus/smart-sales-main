@@ -22,17 +22,21 @@ class EntityWriterBreakItTest {
     private lateinit var repo: FakeEntityRepository
     private lateinit var writer: RealEntityWriter
     private lateinit var contextBuilder: RealContextBuilder
+    private lateinit var scheduledTaskRepository: TestScheduledTaskRepository
 
     @Before
     fun setup() {
         repo = FakeEntityRepository()
         val timeProvider = FakeTimeProvider()
         val habitRepository = FakeUserHabitRepository()
+
+        scheduledTaskRepository = TestScheduledTaskRepository()
         contextBuilder = RealContextBuilder(
             timeProvider = timeProvider,
             reinforcementLearner = FakeReinforcementLearner(habitRepository),
             memoryRepository = FakeMemoryRepository(),
-            entityRepository = FakeEntityRepository()
+            entityRepository = FakeEntityRepository(),
+            scheduledTaskRepository = scheduledTaskRepository
         )
         writer = RealEntityWriter(repo, timeProvider, contextBuilder)
     }
@@ -170,7 +174,7 @@ class EntityWriterBreakItTest {
 
         // 快速连续更新 displayName
         for (i in 2..6) {
-            writer.upsertFromClue("V$i", id, EntityType.PERSON, "test")
+            writer.updateProfile(id, mapOf("displayName" to "V$i"))
         }
 
         val saved = repo.getById(id)!!

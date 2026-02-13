@@ -61,6 +61,7 @@ class SessionWorkingSet(
     val entityStates: MutableMap<String, EntityTrace>
     val pathIndex: MutableMap<String, String>        // Alias cache
     var entityKnowledge: String?                     // Knowledge Graph JSON
+    var scheduleContext: String?                     // Sticky Notes: top 3 upcoming tasks
     val entityContext: MutableMap<String, EntityRef> // Entity Pointers
     
     // Section 2: User Habits

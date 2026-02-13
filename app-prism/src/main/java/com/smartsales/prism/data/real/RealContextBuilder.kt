@@ -1,5 +1,8 @@
 package com.smartsales.prism.data.real
 
+import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
+import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import kotlinx.coroutines.flow.first
 import android.util.Log
 import com.smartsales.prism.domain.crm.ActivityType
 import com.smartsales.prism.domain.memory.EntityEntry
@@ -43,7 +46,8 @@ class RealContextBuilder @Inject constructor(
     private val timeProvider: TimeProvider,
     private val reinforcementLearner: ReinforcementLearner,
     private val memoryRepository: MemoryRepository,
-    private val entityRepository: EntityRepository
+    private val entityRepository: EntityRepository,
+    private val scheduledTaskRepository: ScheduledTaskRepository
 ) : ContextBuilder, KernelWriteBack {
 
     // === Kernel State (RAM) ===
@@ -82,6 +86,11 @@ class RealContextBuilder @Inject constructor(
             _workingSet.entityKnowledge = knowledge
             Log.d("Kernel", "📸 Section 1: entityKnowledge=${knowledge?.length ?: 0} chars")
 
+            // Sticky Notes: 加载近期日程
+            val schedule = buildScheduleContext()
+            _workingSet.scheduleContext = schedule
+            Log.d("Kernel", "📅 Sticky Notes: ${schedule?.length ?: 0} chars")
+
             // Soft-deprecated: memoryHits (legacy support)
             // TODO: Migrate consumers to entityKnowledge and remove this
             val hits = memoryRepository.search(userText, limit = 5).map { entry ->
@@ -106,8 +115,41 @@ class RealContextBuilder @Inject constructor(
             executedTools = emptySet(),
             currentDate = timeProvider.formatForLlm(),
             currentInstant = timeProvider.now.toEpochMilli(),
-            habitContext = _workingSet.getCombinedHabitContext()
+            habitContext = _workingSet.getCombinedHabitContext(),
+            scheduleContext = _workingSet.scheduleContext
         )
+    }
+
+    // Sticky Notes: 构建近期日程上下文 (Priority: Urgency > Time)
+    private suspend fun buildScheduleContext(): String? {
+        val today = timeProvider.today
+        val endDate = today.plusDays(3)
+
+        return try {
+            val tasks = scheduledTaskRepository.queryByDateRange(today, endDate)
+                .first()
+                .filterIsInstance<TimelineItemModel.Task>()
+                .filter { !it.isDone }
+                .sortedWith(
+                    compareBy<TimelineItemModel.Task> { it.urgencyLevel.ordinal } // L1 critical first
+                        .thenBy { it.startTime } // Closer time first
+                )
+                .take(3) // Top 3 only
+
+            if (tasks.isEmpty()) return null
+
+            buildString {
+                tasks.forEach { task ->
+                    append("- ${task.dateRange} ${task.title}")
+                    task.keyPerson?.let { append("（关键人: $it）") }
+                    task.location?.let { append("（地点: $it）") }
+                    appendLine()
+                }
+            }.trimEnd()
+        } catch (e: Exception) {
+            Log.e("Kernel", "Failed to load sticky notes: ${e.message}")
+            null
+        }
     }
 
     override fun getSessionHistory(): List<ChatTurn> = _sessionHistory.toList()

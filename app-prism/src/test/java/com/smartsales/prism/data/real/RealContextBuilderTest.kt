@@ -27,6 +27,7 @@ class RealContextBuilderTest {
     private lateinit var habitRepository: FakeUserHabitRepository
     private lateinit var reinforcementLearner: FakeReinforcementLearner
     private lateinit var memoryRepository: FakeMemoryRepository
+    private lateinit var scheduledTaskRepository: TestScheduledTaskRepository
     
     @Before
     fun setup() {
@@ -35,12 +36,14 @@ class RealContextBuilderTest {
         habitRepository.clear()  // Reset seed data for test isolation
         reinforcementLearner = FakeReinforcementLearner(habitRepository)
         memoryRepository = FakeMemoryRepository()
+        scheduledTaskRepository = TestScheduledTaskRepository()
         
         contextBuilder = RealContextBuilder(
             timeProvider = timeProvider,
             reinforcementLearner = reinforcementLearner,
             memoryRepository = memoryRepository,
-            entityRepository = FakeEntityRepository()
+            entityRepository = FakeEntityRepository(),
+            scheduledTaskRepository = scheduledTaskRepository
         )
     }
     
@@ -110,5 +113,33 @@ class RealContextBuilderTest {
         assertNotNull(context.habitContext)
         assertEquals(2, context.habitContext!!.userHabits.size)
     }
+
+    @Test
+    fun `build() injects schedule context`() = runTest {
+        // Arrange: Seed a task
+        val task = com.smartsales.prism.domain.scheduler.TimelineItemModel.Task(
+            id = "t1",
+            timeDisplay = "10:00",
+            title = "Important Meeting",
+            urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L1_CRITICAL,
+            dateRange = "10:00 - 11:00",
+            startTime = java.time.Instant.now(),
+            keyPerson = "Boss",
+            location = "Room 101"
+        )
+        scheduledTaskRepository.items.emit(listOf(task))
+
+        // Act
+        val context = contextBuilder.build("hello", Mode.COACH)
+
+        // Assert
+        assertNotNull(context.scheduleContext)
+        val schedule = context.scheduleContext!!
+        assert(schedule.contains("Important Meeting"))
+        assert(schedule.contains("关键人: Boss"))
+        assert(schedule.contains("地点: Room 101"))
+    }
 }
+
+
 

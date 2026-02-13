@@ -24,7 +24,9 @@ data class EnhancedContext(
     // 当前时刻 (epoch millis) — 用于 RelativeTimeResolver 计算绝对时间
     val currentInstant: Long = 0,
     // Wave 3: 习惯上下文 — 用户和客户偏好（RL Module）
-    val habitContext: HabitContext? = null
+    val habitContext: HabitContext? = null,
+    // Sticky Notes: 近期日程摘要（由ContextBuilder从ScheduledTaskRepository读取）
+    val scheduleContext: String? = null
 )
 
 /**

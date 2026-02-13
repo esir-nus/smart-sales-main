@@ -218,6 +218,23 @@ class DashscopeExecutor @Inject constructor(
                 android.util.Log.d("CoachMemory", "📝 Executor: no habit context")
             }
         } ?: android.util.Log.d("CoachMemory", "📝 Executor: habitContext is null")
+
+        // Sticky Notes: 近期日程
+        context.scheduleContext?.let { schedule ->
+            if (schedule.isNotBlank()) {
+                appendLine()
+                if (context.modeMetadata.turnIndex <= 1) {
+                    // 首轮：要求 LLM 主动提及
+                    appendLine("## 近期日程（首轮必须提及）")
+                    appendLine("用户有以下近期重要安排。请在友好的问候之后，自然地提醒用户这些事项（不要生硬列表，要像助理一样贴心提醒）：")
+                } else {
+                    // 后续轮次：仅供参考
+                    appendLine("## 近期日程（仅在相关话题时引用）")
+                    appendLine("以下是用户的近期安排，仅在对话涉及相关话题时才引用，平时不要主动提及：")
+                }
+                appendLine(schedule)
+            }
+        }
     }
     
     /**
@@ -236,7 +253,7 @@ class DashscopeExecutor @Inject constructor(
 
 ## 回复原则
 
-1. **快速切入重点** — 不要客套，直接给出建议
+1. **自然对话** — 如果用户只是打招呼（"你好"、"嗨"），友好回应即可。如果有"近期日程"提醒，请自然地带出。不要一上来就抛出不相关的客户数据或建议
 2. **举例说明** — 提供具体话术示例（用引号标注）
 3. **预期反馈** — 提醒用户客户可能的反应
 4. **可选下一步** — 简单提示后续动作（如有必要）

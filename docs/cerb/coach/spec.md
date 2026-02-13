@@ -21,6 +21,7 @@ Coach Mode is the **default conversational mode** in Prism. It provides fast, li
 | `Entity Knowledge (RAM Section 1)` | [entity-registry](../entity-registry/interface.md) | Structured entity graph ("Kotlin loads, LLM searches") | Kernel loads entities at session start |
 | `ReinforcementLearner.loadUserHabits()` | [rl-module](../rl-module/interface.md) | Global user habits | Kernel → RAM Section 2 |
 | `ReinforcementLearner.loadClientHabits()` | [rl-module](../rl-module/interface.md) | Entity-specific habits | Kernel → RAM Section 3 |
+| `ScheduledTaskRepository.queryByDateRange()` | [scheduler](../scheduler/interface.md) | Sticky Notes — top 3 upcoming tasks as greeting context | Kernel loads at session start |
 | `ClientProfileHub.getQuickContext()` | [client-profile-hub](../client-profile-hub/interface.md) | Entity snapshot for context | — |
 | `ScheduleBoard.checkConflict()` | [memory-center](../memory-center/interface.md) | Inline conflict detection + schedule guidance | — |
 | `ConflictResolver.resolve()` | [conflict-resolver](../conflict-resolver/interface.md) | LLM conflict resolution | — |
@@ -37,7 +38,8 @@ User Input
     ├─▶ RAM Section 1 ─▶ Entity context (who is being discussed)
     ├─▶ RAM Section 2 ─▶ User habits (global preferences)
     ├─▶ RAM Section 3 ─▶ Client habits (auto-populated by Kernel)
-    └─▶ Entity Knowledge (RAM Section 1) ─▶ Structured entity graph as JSON
+    ├─▶ Entity Knowledge (RAM Section 1) ─▶ Structured entity graph as JSON
+    └─▶ Sticky Notes ─▶ Top 3 upcoming tasks (scheduleContext)
     │
     ▼
 [Qwen-Plus] ──stream──▶ [ChatPublisher] ──▶ UI
@@ -85,6 +87,19 @@ data class ChatTurn(
 ---
 
 ## User Flows
+
+### 3.6 Two-Phase Greeting (Sticky Notes)
+
+Coach uses a two-phase context injection strategy based on `turnIndex`:
+
+| Phase | Condition | Schedule Context Behavior |
+|-------|-----------|---------------------------|
+| **Greeting** | `turnIndex <= 1` | "近期日程（首轮必须提及）" — Coach naturally reminds user of top 3 upcoming tasks after greeting |
+| **Conversation** | `turnIndex > 1` | "近期日程（仅在相关话题时引用）" — Schedule context is passive reference only |
+
+**Data source**: `ScheduledTaskRepository.queryByDateRange(today, today+3)` → filter non-done → sort by urgency (L1→L3) then time → take 3.
+
+**When schedule is empty**: No reminder section injected. Coach greets normally.
 
 ### 3.7 Simple Chat
 User chats about sales techniques. Direct response, no special cards.

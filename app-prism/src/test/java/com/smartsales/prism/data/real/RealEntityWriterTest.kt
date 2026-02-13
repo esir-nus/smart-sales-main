@@ -26,6 +26,7 @@ class RealEntityWriterTest {
     private lateinit var memoryRepo: FakeMemoryRepository
     private lateinit var writer: RealEntityWriter
     private lateinit var contextBuilder: RealContextBuilder
+    private lateinit var scheduledTaskRepository: TestScheduledTaskRepository
 
     @Before
     fun setup() {
@@ -33,11 +34,13 @@ class RealEntityWriterTest {
         memoryRepo = FakeMemoryRepository()
         val timeProvider = FakeTimeProvider()
         val habitRepository = FakeUserHabitRepository()
+        scheduledTaskRepository = TestScheduledTaskRepository()
         contextBuilder = RealContextBuilder(
             timeProvider = timeProvider,
             reinforcementLearner = FakeReinforcementLearner(habitRepository),
             memoryRepository = memoryRepo,
-            entityRepository = FakeEntityRepository()
+            entityRepository = FakeEntityRepository(),
+            scheduledTaskRepository = scheduledTaskRepository
         )
         writer = RealEntityWriter(repo, timeProvider, contextBuilder)
     }

@@ -48,6 +48,10 @@
 
 ### 2026-02-13
 
+- **coach**: Sticky Notes integration — `ScheduledTaskRepository` injected into ContextBuilder, top 3 tasks as greeting context
+- **coach**: Two-phase greeting (§3.6) — Turn 1 reminds tasks naturally, Turn N passive reference only
+- **coach**: Spec updated — dependency table + pipeline flow + §3.6 documented
+- **session-context**: `scheduleContext` field added to `SessionWorkingSet` spec model
 - **scheduler**: Wave 8 amendment — Real-time alarm-fire reflection via `SchedulerRefreshBus` (DEADLINE alarm → ViewModel sweep → instant UI update)
 - **scheduler**: Auto-expiry refined — 4 trigger points (init, drawer open, day switch, alarm fire), removed redundant sweeps from `triggerRefresh()`
 - **scheduler**: FIRE_OFF duration fix — LLM prompt now requires `duration: null` for instant reminders (was incorrectly assigning 5m)
@@ -165,7 +169,7 @@
 | Dead `httpChecker` | `DefaultDeviceConnectionManager.kt` | Low |
 
 | `structuredJson` schema inconsistency | `RealContextBuilder.recordActivity()` — uses `{"entityId":"..."}` instead of `{"relatedEntityIds":["..."]}` convention. Works today (LIKE query catches both), but any code parsing `relatedEntityIds` from activity records gets `emptyList()`. One-line fix: add `relatedEntityIds` field to `recordActivity()` output. | Low |
-| **Sticky Notes Boundary** | `PrismOrchestrator.createScheduledTask()` calls `entityWriter.upsertFromClue()` — creates phantom entities from unconfirmed intentions. **NOT an isolated code removal.** Requires: (1) Remove `upsertFromClue` from scheduler pipeline, (2) Coach/Analyst ContextBuilder reads scheduler tasks, (3) Coach clarity loop asks user for entity confirmation ("你说要见王老板，见了吗？"). Must be tested **end-to-end with Coach mode**, not in isolation. See [scheduler spec §Sticky Notes](../cerb/scheduler/spec.md), [entity-writer spec §Note](../cerb/entity-writer/spec.md). | **High** |
+| **Sticky Notes Boundary** | `PrismOrchestrator.createScheduledTask()` calls `entityWriter.upsertFromClue()` — creates phantom entities. **Progress**: (1) Coach/Analyst ContextBuilder reads scheduler tasks (✅ DONE), (2) Remove `upsertFromClue` from scheduler pipeline (Wave 10 Todo), (3) Coach clarity loop (Wave 10 Todo). | **High** |
 
 
 ---

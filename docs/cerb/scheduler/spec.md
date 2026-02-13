@@ -20,8 +20,6 @@ Scheduler manages task creation, timeline display, alarm cascading, and LLM-powe
 > 2. `entityWriter.upsertFromClue(keyPerson, PERSON)` — creates/finds PERSON entity
 > 3. If `keyCompany` present: `entityWriter.upsertFromClue(keyCompany, ACCOUNT)` — creates/finds ACCOUNT entity
 > 4. Links PERSON → ACCOUNT via `entityWriter.updateProfile(personId, accountId)`
->
-> **L1/L2 `next_action` Cache**: Only L1/L2 urgency ONGOING tasks sync to `EntityEntry.next_action` — a computed cache field for fast context reads. Entity *creation* happens for all business-relevant mentions regardless of urgency.
 
 **Key Distinction:**
 - `ScheduleBoard` = Memory Center index (conflict check infrastructure)

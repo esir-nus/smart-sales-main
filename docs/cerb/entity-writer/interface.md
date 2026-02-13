@@ -1,6 +1,6 @@
 # Entity Writer Interface
 
-> **Blackbox contract** — For consumers (Scheduler, Coach, Audio Pipeline). Don't read implementation.  
+> **Blackbox contract** — For consumers (Scheduler, Coach, Analyst, Audio Pipeline). Don't read implementation.  
 > **OS Layer**: RAM Application
 
 ---
@@ -182,6 +182,20 @@ parsedClues.person?.let { personClue ->
     )
     // result.displayName = canonical name for write-back
     // result.isNew = true if entity was just created
+
+    // CRM Hierarchy: create ACCOUNT + link if company present
+    parsedClues.company?.let { companyClue ->
+        val accountResult = entityWriter.upsertFromClue(
+            clue = companyClue,
+            resolvedId = null,
+            type = EntityType.ACCOUNT,
+            source = "scheduler"
+        )
+        entityWriter.updateProfile(
+            result.entityId,
+            mapOf("accountId" to accountResult.entityId)
+        )
+    }
 }
 ```
 

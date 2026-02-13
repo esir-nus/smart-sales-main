@@ -57,7 +57,8 @@ sealed class LintResult {
 }
 
 data class ParsedClues(
-    val person: String? = null,
+    val person: String? = null,        // 商务人物（个人关系已过滤）
+    val company: String? = null,       // 关联公司/组织
     val location: String? = null,
     val briefSummary: String? = null,
     val durationMinutes: Int? = null

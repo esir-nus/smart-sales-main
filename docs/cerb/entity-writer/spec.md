@@ -62,7 +62,7 @@ Ensures consistent:
 
 ```mermaid
 graph TD
-    Caller[Coach / Analyst] -->|clue, resolvedId| EW[EntityWriter Application]
+    Caller[Scheduler / Coach / Analyst] -->|clue, resolvedId| EW[EntityWriter Application]
     EW -->|findByAlias| SSD[EntityRepository SSD]
     EW -->|1. Persist| SSD
     EW -->|2. Update RAM| RAM[SessionWorkingSet Section 1]
@@ -70,7 +70,7 @@ graph TD
 ```
 
 > [!NOTE]
-> **Scheduler does NOT call EntityWriter.** Scheduler stores raw person names (`keyPerson`) as sticky-note intentions. Entity creation is deferred to Coach/Analyst modes where the agent can seek user clarity ("你说要见王老板，见了吗？他是哪位？"). See [Scheduler spec §Sticky Notes Principle](../scheduler/spec.md).
+> **Scheduler calls EntityWriter for CRM entity creation.** When `keyPerson` is present (business-relevant contacts only), Scheduler upserts PERSON + ACCOUNT entities and links them via `updateProfile(accountId)`. See [Scheduler spec §CRM Entity Creation Policy](../scheduler/spec.md).
 
 ### 3. App → Kernel Callback
 
@@ -81,7 +81,7 @@ graph TD
 ## Architecture
 
 ```
-Caller (Coach/Analyst)
+Caller (Scheduler/Coach/Analyst)
        │
        ▼
 [EntityWriter.upsertFromClue()]
@@ -249,7 +249,7 @@ Convention: Keys prefixed with `_` are metadata, not business attributes.
 |------|-------|--------|--------------|
 | **0** | Prerequisites (delete infra) | ✅ SHIPPED | `EntityRepository.delete()` + DAO + impls |
 | **1** | Core Writer | ✅ SHIPPED | `EntityWriter` interface + `RealEntityWriter` + tests |
-| **1.5** | Wiring | ✅ SHIPPED → ⚠️ UNWINDING | Wire into `PrismOrchestrator` Scheduler path (to be removed in Scheduler Wave 10: Sticky Notes Boundary) |
+| **1.5** | Wiring | ✅ SHIPPED | Wire into `PrismOrchestrator` Scheduler path (PERSON + ACCOUNT creation + CRM linking) |
 | **2** | Change-Aware Profile Management | ✅ SHIPPED | `updateProfile()`, `ProfileUpdateResult`, `ProfileChange`, history emission via `recordActivity()` |
 | ~~3~~ | ~~Conflict Merge~~ | ❌ KILLED | See architectural decision below |
 | **4** | **OS Model Upgrade** (RAM Application) | ✅ SHIPPED | Write-through to RAM Section 1 on all 4 mutation methods + `recordActivity()` App→Kernel callback |

@@ -41,6 +41,11 @@ interface ScheduledTaskRepository {
      * 删除时间线项目
      */
     suspend fun deleteItem(id: String)
+
+    /**
+     * 最近已完成的任务（hero dashboard 用）
+     */
+    suspend fun getRecentCompleted(limit: Int): List<TimelineItemModel.Task>
 }
 
 

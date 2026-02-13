@@ -182,7 +182,7 @@ class DashscopeExecutor @Inject constructor(
             android.util.Log.d("CoachMemory", "📝 Executor: no entityKnowledge in context")
             appendLine()
             appendLine("<KNOWN_FACTS>无</KNOWN_FACTS>")
-            appendLine("你没有任何客户信息。涉及客户话题时，只说\"我目前没有这位客户的资料\"。")
+            appendLine("你没有客户信息。回复中不要提及客户，也不要说\"暂无信息\"。直接跳过客户相关话题。")
         }
         
         // Wave 3: 习惯上下文注入（用户和客户偏好）
@@ -201,19 +201,15 @@ class DashscopeExecutor @Inject constructor(
             }
         } ?: android.util.Log.d("CoachMemory", "📝 Executor: habitContext is null")
 
-        // Sticky Notes: 近期日程
+        // Sticky Notes: 近期日程（上下文驱动，非强制汇报）
         context.scheduleContext?.let { schedule ->
             if (schedule.isNotBlank()) {
                 appendLine()
-                if (context.modeMetadata.turnIndex <= 1) {
-                    // 首轮：列表形式提醒
-                    appendLine("[近期日程（首轮必须提及）]")
-                    appendLine("用户有以下近期安排，请在问候后用编号列表列出（1. 2. 3.），让用户一眼看清今天的节奏：")
-                } else {
-                    // 后续轮次：仅供参考
-                    appendLine("[近期日程（仅在相关话题时引用）]")
-                    appendLine("以下是用户的近期安排，仅在对话涉及相关话题时才引用，平时不要主动提及：")
-                }
+                appendLine("[近期日程]")
+                appendLine("以下是用户的近期安排（已按紧急度排序）。")
+                appendLine("- 如果用户简短问候（你好、嗨、早上好），在回复中自然带出今天的安排和一条建议。")
+                appendLine("- 如果用户在谈具体事情，先回应用户内容，日程仅在相关时引用。")
+                appendLine("- 不要每次都列表汇报。用对话式语气自然穿插。")
                 appendLine(schedule)
             }
         }
@@ -235,29 +231,40 @@ class DashscopeExecutor @Inject constructor(
 
 [回复原则]
 
-1. 自然对话 — 如果用户只是打招呼（"你好"、"嗨"），友好回应即可。如果有"近期日程"提醒，请用列表形式带出
-2. 事实提醒 — 提供用户可能忽略的关键事实（如客户偏好、上次沟通要点、时间卡点），而不是话术或开场白
-3. 克制建议 — 不要主动提供具体话术、台词或开场白。除非用户明确要求指导，否则只陈述事实，让用户自己判断如何应用
-4. 可选下一步 — 简单提示后续动作（如有必要）
-5. 绝不编造历史 — 如果没有历史记忆提供给你，就说"我没有之前的对话记录"
-6. 严禁推测实体信息 — 你的全部客户记忆 = KNOWN_FACTS 标签内的内容。回复中每一句涉及客户的话，都必须能在 KNOWN_FACTS 里找到原文出处。
+1. 日程感知 — 如果近期日程中有今天的安排，根据用户的输入决定如何提及：简短问候时自然带出，谈具体事情时先回应内容。不要强制列表汇报。
+2. 事实为本 — 你的全部客户信息 = KNOWN_FACTS 标签内容。每一句涉及客户的话，必须在 KNOWN_FACTS 里有出处。
+3. 只说你知道的 — 如果没有某项信息，**直接跳过**，不要提及。绝不说"我没有记录"、"暂无信息"之类的话。
+4. 克制建议 — 不要主动提供话术或台词，除非用户明确要求。
+5. 绝不编造 — 禁止捏造任何客户信息、历史对话或事实。
+6. nextAction — 如果 KNOWN_FACTS 中有 nextAction 字段，可在合适的上下文中自然建议，不要强制提及。
 
-[示例风格]
+[自检规则]
+回复前，逐句检查：
+1. 我提到的每个客户事实，能否在 KNOWN_FACTS 中找到原文？找不到 → 删除该句。
+2. 我提到的"下一步"，是否来自 KNOWN_FACTS 中的 nextAction？没有 → 不建议。
+3. 宁可少说，不可编造。
 
-用户："你好"
+[回复示例]
 
-你的回复示例（有日程时）：
+⚠️ 以下示例仅展示回复结构。方括号内容是占位符，不是真实数据。回复时只使用 KNOWN_FACTS 中的真实数据。
 
-你好！今天安排如下：
-1. 13:42 跟孙扬浩开会（关键人）
-2. 14:42 取快递
-3. 15:42 出发去机场
+场景A — 用户简短问候（"你好"、"嗨"、"早上好"）且有日程时：
 
-时间卡得比较紧，注意会后留出衔接时间。有什么需要帮忙的随时说。
+你好！对了，今天 [时间] 有 [任务]，[时间] 还有 [任务]。
+
+**[根据日程或 nextAction 给一条具体建议]**
+
+有需要随时说。
+
+场景B — 用户在谈具体事情（分享见闻、汇报工作、提问）时：
+
+[先回应用户说的内容，给出相关的销售建议或回应]
+
+有需要随时说。
 
 [回复格式]
 
-使用 markdown 格式。列表用数字编号（1. 2. 3.），每项独占一行。重要信息可用 **加粗** 强调。
+使用 markdown 格式。关键建议用 **加粗** 强调。结尾简短，不超过6个字。
     """.trimIndent()
     
     /**
@@ -321,7 +328,8 @@ class DashscopeExecutor @Inject constructor(
       "duration": "预估时长（如 30m、1h、15m）— 见下方推断规则",
       "location": "地点（可选，没有则省略此字段）",
       "notes": "备注（可选，没有则省略此字段）",
-      "keyPerson": "关键人物（可选，提取主要联系人或干系人）",
+      "keyPerson": "关键人物（仅商务相关，见下方过滤规则）",
+      "keyCompany": "关联公司/组织（可选，从输入或对话历史中提取）",
       "highlights": "高亮信息（可选，提取必须注意的细节，如带身份证、正装等）",
       "urgency": "L1|L2|L3|FIRE_OFF（见下方推断规则）"
     }
@@ -438,6 +446,26 @@ class DashscopeExecutor @Inject constructor(
 - 如果用户给了 endTime，则不需要 duration 字段（系统自动计算）
 - 如果两者都没给且不是 FIRE_OFF，则根据任务类型推断 duration
 
+## keyPerson 商务过滤规则
+
+**只提取商务相关人物**（客户、合作伙伴、同事、上下级）。
+**跳过非商务人物**：家人（爸爸、妈妈、爷爷、奶奶、老婆、老公）、朋友、宠物。
+
+| 用户输入 | keyPerson | 原因 |
+|----------|-----------|------|
+| "明天跟张总开会" | "张总" | 商务人物 |
+| "去拜访蔡总" | "蔡总" | 客户 |
+| "打电话给爷爷奶奶" | null | 家人，非商务 |
+| "给老婆买花" | null | 家人，非商务 |
+| "跟Jake聊聊" | "Jake" | 默认当作商务人物（英文名通常是同事/客户） |
+
+## keyCompany 提取规则
+
+从用户当前输入或近期对话历史中提取关联的公司/组织名。
+- 如果用户提到 "去墨生态拜访蔡总" → keyCompany: "墨生态"
+- 如果对话历史中提到 "刚跟墨生态的蔡总聊完"，用户说 "安排跟他开会" → keyCompany: "墨生态"
+- 如果没有公司信息 → keyCompany: null
+
 ## 其他规则
 
 1. 时间格式必须是 YYYY-MM-DD HH:mm（如 2026-02-03 03:00）
@@ -458,6 +486,7 @@ class DashscopeExecutor @Inject constructor(
   "duration": "2h",
   "location": "T2航站楼",
   "keyPerson": null,
+  "keyCompany": null,
   "highlights": "必须带好护照",
   "urgency": "L1"
 }
@@ -472,6 +501,7 @@ class DashscopeExecutor @Inject constructor(
   "endTime": null,
   "duration": "15m",
   "keyPerson": "张总",
+  "keyCompany": null,
   "urgency": "L2"
 }
 

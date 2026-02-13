@@ -35,7 +35,7 @@ object PersistenceModule {
             "prism_database"
         )
             .fallbackToDestructiveMigrationFrom(1)  // v1→v2: CalendarProvider → Room
-            .addMigrations(PrismDatabase.MIGRATION_2_3)  // v2→v3: workflow 列
+            .addMigrations(PrismDatabase.MIGRATION_2_3, PrismDatabase.MIGRATION_3_4)
             .addCallback(SeedMemoryCallback)
             .build()
     }

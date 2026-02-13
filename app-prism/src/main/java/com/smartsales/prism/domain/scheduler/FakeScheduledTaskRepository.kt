@@ -98,4 +98,11 @@ class FakeScheduledTaskRepository @Inject constructor() : ScheduledTaskRepositor
         current.removeAll { it.id == id }
         _items.value = current
     }
+
+    override suspend fun getRecentCompleted(limit: Int): List<TimelineItemModel.Task> {
+        return _items.value
+            .filterIsInstance<TimelineItemModel.Task>()
+            .filter { it.isDone }
+            .take(limit)
+    }
 }

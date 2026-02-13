@@ -53,4 +53,10 @@ class RoomScheduledTaskRepository @Inject constructor(
     override suspend fun deleteItem(id: String) {
         dao.deleteById(id)
     }
+
+    override suspend fun getRecentCompleted(limit: Int): List<TimelineItemModel.Task> {
+        val sevenDaysAgo = timeProvider.today.minusDays(7)
+            .atStartOfDay(timeProvider.zoneId).toInstant().toEpochMilli()
+        return dao.getRecentCompleted(sevenDaysAgo, limit).map { it.toDomain() }
+    }
 }

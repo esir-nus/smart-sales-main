@@ -291,6 +291,32 @@ class RealEntityWriterTest {
         )
     }
 
+    @Test
+    fun `updateProfile detects nextAction change`() = runTest {
+        val created = writer.upsertFromClue("张总", null, EntityType.PERSON, "test")
+
+        val result = writer.updateProfile(
+            entityId = created.entityId,
+            updates = mapOf("nextAction" to "安排下周回访")
+        )
+
+        assertEquals(1, result.changes.size)
+        assertEquals("nextAction", result.changes[0].field)
+        assertNull(result.changes[0].oldValue) // 初始为空
+        assertEquals("安排下周回访", result.changes[0].newValue)
+
+        // 验证 SSD 持久化
+        val saved = repo.getById(created.entityId)!!
+        assertEquals("安排下周回访", saved.nextAction)
+
+        // 验证历史记录
+        val memories = memoryRepo.getByEntityId(created.entityId)
+        val activityMemories = memories.filter {
+            it.structuredJson?.contains("NEXT_ACTION_SET") == true
+        }
+        assertEquals("应记录1条 NEXT_ACTION_SET 历史", 1, activityMemories.size)
+    }
+
     // ========================================
     // Wave 2: write-through (registerAlias, updateAttribute)
     // ========================================

@@ -29,4 +29,7 @@ interface ScheduledTaskDao {
 
     @Query("SELECT * FROM scheduled_tasks WHERE hasAlarm = 1 AND isDone = 0 AND startTimeMillis > :nowMs")
     suspend fun getFutureTasksWithAlarm(nowMs: Long): List<ScheduledTaskEntity>
+
+    @Query("SELECT * FROM scheduled_tasks WHERE isDone = 1 AND startTimeMillis >= :startMs ORDER BY startTimeMillis DESC LIMIT :limit")
+    suspend fun getRecentCompleted(startMs: Long, limit: Int): List<ScheduledTaskEntity>
 }

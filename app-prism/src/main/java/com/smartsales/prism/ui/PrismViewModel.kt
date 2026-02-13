@@ -14,7 +14,11 @@ import com.smartsales.prism.domain.model.ChatMessage
 import com.smartsales.prism.domain.pipeline.ExecutionPlan
 import com.smartsales.prism.domain.pipeline.RetrievalScope
 import com.smartsales.prism.domain.pipeline.DeliverableType
+import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
+import com.smartsales.prism.domain.scheduler.TimelineItemModel
 import javax.inject.Inject
+import java.time.LocalDate
+import kotlinx.coroutines.flow.first
 
 /**
  * Prism ViewModel
@@ -26,7 +30,8 @@ import javax.inject.Inject
 class PrismViewModel @Inject constructor(
     private val orchestrator: Orchestrator,
     private val analystController: com.smartsales.prism.data.real.AnalystFlowControllerV2,
-    private val activityController: com.smartsales.prism.domain.activity.AgentActivityController
+    private val activityController: com.smartsales.prism.domain.activity.AgentActivityController,
+    private val scheduledTaskRepository: ScheduledTaskRepository
 ) : ViewModel() {
     
     val currentMode: StateFlow<Mode> = orchestrator.currentMode
@@ -60,6 +65,24 @@ class PrismViewModel @Inject constructor(
     // v2.6 Spec: Editable Session Title ("Executive Desk")
     private val _sessionTitle = MutableStateFlow("新对话") // Default: "New Session" (Localized)
     val sessionTitle: StateFlow<String> = _sessionTitle.asStateFlow()
+
+    // Hero Dashboard 状态
+    private val _heroUpcoming = MutableStateFlow<List<TimelineItemModel.Task>>(emptyList())
+    val heroUpcoming: StateFlow<List<TimelineItemModel.Task>> = _heroUpcoming.asStateFlow()
+
+    private val _heroAccomplished = MutableStateFlow<List<TimelineItemModel.Task>>(emptyList())
+    val heroAccomplished: StateFlow<List<TimelineItemModel.Task>> = _heroAccomplished.asStateFlow()
+
+    val heroGreeting: String
+        get() {
+            val hour = java.time.LocalTime.now().hour
+            return when {
+                hour < 5 -> "🌙 夜深了"
+                hour < 12 -> "☀️ 早上好"
+                hour < 18 -> "✨ 下午好"
+                else -> "🌙 晚上好"
+            } + ", Frank"
+        }
 
     fun updateSessionTitle(newTitle: String) {
         if (newTitle.isNotBlank()) {
@@ -105,6 +128,26 @@ class PrismViewModel @Inject constructor(
                 }
             }
         }
+
+        // Hero Dashboard: 加载待办和已完成任务
+        viewModelScope.launch {
+            loadHeroDashboard()
+        }
+    }
+
+    private suspend fun loadHeroDashboard() {
+        // 待办: 今天起3天内, 未完成, 按时间排序, 取前3
+        val today = LocalDate.now()
+        val allUpcoming = scheduledTaskRepository
+            .queryByDateRange(today, today.plusDays(3))
+            .first()
+        _heroUpcoming.value = allUpcoming
+            .filterIsInstance<TimelineItemModel.Task>()
+            .filter { !it.isDone }
+            .take(3)
+
+        // 已完成: 最近7天, 取前2
+        _heroAccomplished.value = scheduledTaskRepository.getRecentCompleted(2)
     }
 
     /**

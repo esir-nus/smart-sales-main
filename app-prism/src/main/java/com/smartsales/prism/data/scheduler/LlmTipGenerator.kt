@@ -8,6 +8,7 @@ import com.smartsales.prism.domain.crm.ClientProfileHub
 import com.smartsales.prism.domain.crm.FocusedContext
 import com.smartsales.prism.domain.scheduler.TimelineItemModel
 import com.smartsales.prism.domain.scheduler.TipGenerator
+import com.smartsales.prism.domain.utils.MarkdownSanitizer
 import org.json.JSONArray
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -98,12 +99,14 @@ class LlmTipGenerator @Inject constructor(
 以下是关于该关键人物的上下文信息：
 $contextStr
 
-请生成 2-5 条简短、有用的提示，帮助用户更好地准备此次会面。
+请生成 2-5 条简短的事实提醒，帮助用户回忆可能忽略的关键信息。
 每条提示一行，JSON 数组格式：["提示1", "提示2", ...]
 
 规则：
 - 只返回有实际价值的信息，不要说废话
 - 基于已知数据，绝不编造
+- 只陈述事实，不给建议或话术
+- 语气像备忘录，不像教练
 - 如果没有足够上下文，返回空数组 []
         """.trimIndent()
     }
@@ -124,9 +127,17 @@ $contextStr
                 return emptyList()
             }
             
-            val jsonArray = JSONArray(jsonStr)
-            List(jsonArray.length()) { i -> jsonArray.getString(i) }
-                .filter { it.isNotBlank() }
+            val tipsArray = JSONArray(jsonStr)
+            val result = mutableListOf<String>()
+            for (i in 0 until tipsArray.length()) {
+                val rawTip = tipsArray.getString(i)
+                // Sanitize tip content
+                val cleanTip = MarkdownSanitizer.strip(rawTip)
+                if (cleanTip.isNotBlank()) {
+                    result.add(cleanTip)
+                }
+            }
+            return result
         } catch (e: Exception) {
             Log.e(TAG, "❌ JSON parsing failed: ${e.message}, raw=$raw")
             emptyList()

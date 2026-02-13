@@ -48,6 +48,7 @@
 
 ### 2026-02-13
 
+- **scheduler**: Wave 9 SHIPPED — Smart Tips (TipGenerator, LlmTipGenerator, ViewModel lazy-load, shimmer/bubble UI)
 - **coach**: Sticky Notes integration — `ScheduledTaskRepository` injected into ContextBuilder, top 3 tasks as greeting context
 - **coach**: Two-phase greeting (§3.6) — Turn 1 reminds tasks naturally, Turn N passive reference only
 - **coach**: Spec updated — dependency table + pipeline flow + §3.6 documented
@@ -55,6 +56,7 @@
 - **scheduler**: Wave 8 amendment — Real-time alarm-fire reflection via `SchedulerRefreshBus` (DEADLINE alarm → ViewModel sweep → instant UI update)
 - **scheduler**: Auto-expiry refined — 4 trigger points (init, drawer open, day switch, alarm fire), removed redundant sweeps from `triggerRefresh()`
 - **scheduler**: FIRE_OFF duration fix — LLM prompt now requires `duration: null` for instant reminders (was incorrectly assigning 5m)
+- **coach**: Output Quality hardened (4-Layer Fix) — Plain text system prompt (no `##`), `<KNOWN_FACTS>` data envelope, Positive-only hallucination guard, `MarkdownSanitizer` safety net. Fixed "delivery cycle sensitivity" hallucination.
 
 ### 2026-02-12
 
@@ -170,6 +172,7 @@
 
 | `structuredJson` schema inconsistency | `RealContextBuilder.recordActivity()` — uses `{"entityId":"..."}` instead of `{"relatedEntityIds":["..."]}` convention. Works today (LIKE query catches both), but any code parsing `relatedEntityIds` from activity records gets `emptyList()`. One-line fix: add `relatedEntityIds` field to `recordActivity()` output. | Low |
 | **Sticky Notes Boundary** | `PrismOrchestrator.createScheduledTask()` calls `entityWriter.upsertFromClue()` — creates phantom entities. **Progress**: (1) Coach/Analyst ContextBuilder reads scheduler tasks (✅ DONE), (2) Remove `upsertFromClue` from scheduler pipeline (Wave 10 Todo), (3) Coach clarity loop (Wave 10 Todo). | **High** |
+| **Confidence-Based Reminder Interceptor** | Replace deterministic round-1 wrap-up with LLM confidence-based interception. Agent decides when to surface schedule context: (1) User greets/noise → inject, (2) User discusses agenda → inject, (3) User wraps up work → suggest completion. Requires classifier or LLM self-assessment of conversation intent. Current workaround: smarter prompting that lets LLM decide naturally. | Medium |
 
 
 ---

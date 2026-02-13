@@ -61,5 +61,6 @@ enum class ActivityType {
     NAME_CHANGE,
     TITLE_CHANGE,
     COMPANY_CHANGE,
-    ROLE_CHANGE
+    ROLE_CHANGE,
+    NEXT_ACTION_SET
 }

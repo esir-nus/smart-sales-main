@@ -11,6 +11,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * Version 1: 初始 schema (MemoryEntry, EntityEntry, UserHabit)
  * Version 2: 添加 ScheduledTask (Room 替代 CalendarProvider)
  * Version 3: MemoryEntry 添加 workflow 列 (Wave 4)
+ * Version 4: EntityEntry 添加 nextAction 列
  * exportSchema = false: 不导出 schema JSON (简化 MVP)
  */
 @Database(
@@ -20,7 +21,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         UserHabitEntity::class,
         ScheduledTaskEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class PrismDatabase : RoomDatabase() {
@@ -41,6 +42,13 @@ abstract class PrismDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE memory_entries ADD COLUMN payloadJson TEXT DEFAULT NULL")
                 db.execSQL("ALTER TABLE memory_entries ADD COLUMN displayContent TEXT DEFAULT NULL")
                 db.execSQL("ALTER TABLE memory_entries ADD COLUMN artifactsJson TEXT DEFAULT NULL")
+            }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // EntityEntry 添加 nextAction 列
+                db.execSQL("ALTER TABLE entity_entries ADD COLUMN nextAction TEXT DEFAULT NULL")
             }
         }
     }

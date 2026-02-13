@@ -181,6 +181,21 @@ class PrismOrchestrator @Inject constructor(
                                     type = EntityType.PERSON,
                                     source = "scheduler"
                                 )
+                                
+                                // CRM 层级: 如果有公司信息，创建 ACCOUNT 并关联
+                                lintResult.parsedClues.company?.let { companyClue ->
+                                    val accountResult = entityWriter.upsertFromClue(
+                                        clue = companyClue,
+                                        resolvedId = null,
+                                        type = EntityType.ACCOUNT,
+                                        source = "scheduler"
+                                    )
+                                    entityWriter.updateProfile(
+                                        result.entityId,
+                                        mapOf("accountId" to accountResult.entityId)
+                                    )
+                                }
+                                
                                 lintResult.task.copy(
                                     keyPerson = result.displayName,
                                     keyPersonEntityId = result.entityId

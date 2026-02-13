@@ -110,8 +110,10 @@ class SchedulerLinter @Inject constructor(
         val location = if (json.isNull("location")) null else json.optString("location", null)
         val notes = if (json.isNull("notes")) null else json.optString("notes", null)
         val keyPerson = if (json.isNull("keyPerson")) null else json.optString("keyPerson", null)
+        val keyCompany = if (json.isNull("keyCompany")) null else json.optString("keyCompany", null)
         val partialClues = ParsedClues(
             person = keyPerson,
+            company = keyCompany,
             location = location,
             briefSummary = if (notes.isNullOrBlank()) title else notes
         )
@@ -272,7 +274,8 @@ class SchedulerLinter @Inject constructor(
  * @see docs/cerb/memory-center/spec.md §Two-Phase Scheduler Pipeline
  */
 data class ParsedClues(
-    val person: String? = null,        // 人物（原始提取，未解析）
+    val person: String? = null,        // 人物（原始提取，仅商务相关）
+    val company: String? = null,       // 公司/组织（从输入或对话历史提取）
     val location: String? = null,      // 地点（原始提取，未解析）
     val briefSummary: String? = null,   // 简要摘要
     val durationMinutes: Int? = null    // 持续时间（用于冲突检测）

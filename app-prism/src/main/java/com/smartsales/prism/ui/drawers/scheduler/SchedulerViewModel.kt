@@ -825,7 +825,14 @@ $taskContext
             updatedAt = now,
             structuredJson = """{"relatedEntityIds": ["${e3a.entityId}"]}"""
         ))
+
+        // 4. Seed nextActions — 让 Coach 在 KNOWN_FACTS 中引用
+        entityWriter.updateProfile(e1a.entityId, mapOf("nextAction" to "等待台州大学安排下次调试时间"))
+        entityWriter.updateProfile(e1b.entityId, mapOf("nextAction" to "跟进智能助理产品打磨进度"))
+        entityWriter.updateProfile(e1c.entityId, mapOf("nextAction" to "推进小学4年级以下作业模式用户限制方案"))
+        entityWriter.updateProfile(e3a.entityId, mapOf("nextAction" to "安排发送模型训练用照片"))
+        entityWriter.updateProfile(e2a.entityId, mapOf("nextAction" to "完善长期记忆系统和智能行程管理功能"))
         
-        android.util.Log.d("SchedulerVM", "✅ Seeded 3 memories and associated entities")
+        android.util.Log.d("SchedulerVM", "✅ Seeded 3 memories and associated entities + nextActions")
     }
 }

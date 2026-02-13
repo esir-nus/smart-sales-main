@@ -59,7 +59,8 @@ data class EntityEntry(
     val buyingRole: String? = null,          // economic_buyer, champion, etc.
     val dealStage: String? = null,           // Pipeline stage
     val dealValue: Long? = null,             // Amount (minor units)
-    val closeDate: String? = null            // ISO 8601
+    val closeDate: String? = null,           // ISO 8601
+    val nextAction: String? = null           // 下一步行动
 )
 
 /**

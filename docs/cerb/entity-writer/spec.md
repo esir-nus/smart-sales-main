@@ -187,6 +187,7 @@ suspend fun upsertFromClue(...): UpsertResult {
 | `metricsHistoryJson` | Append per key | `oldTimeSeries + newEntry` | `updateAttribute` |
 | `relatedEntitiesJson` | Append (dedupe) | `(oldList + newId).distinct()` | Future wave |
 | `decisionLogJson` | ~~Append-only~~ **Deprecated** | Superseded by `UnifiedActivity` timeline | — |
+| `nextAction` | **Replace** | Latest action overwrites. `null` clears. | `updateProfile` |
 
 #### Tracked Profile Fields (Change-Aware)
 
@@ -199,6 +200,7 @@ These fields trigger a `UnifiedActivity` history event when changed:
 | `accountId` | `COMPANY_CHANGE` | 承时利和 → 华为 |
 | `buyingRole` | `ROLE_CHANGE` | champion → economic_buyer |
 | `dealStage` | `DEAL_STAGE_CHANGE` | proposal → negotiation |
+| `nextAction` | `NEXT_ACTION_SET` | 下周安排回访 |
 
 **Change-Tracking Pattern:**
 

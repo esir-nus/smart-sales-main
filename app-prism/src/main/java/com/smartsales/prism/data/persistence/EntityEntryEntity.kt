@@ -43,7 +43,8 @@ data class EntityEntryEntity(
     val buyingRole: String?,
     val dealStage: String?,
     val dealValue: Long?,
-    val closeDate: String?
+    val closeDate: String?,
+    val nextAction: String?
 )
 
 /**
@@ -67,7 +68,8 @@ fun EntityEntry.toEntity(): EntityEntryEntity = EntityEntryEntity(
     buyingRole = buyingRole,
     dealStage = dealStage,
     dealValue = dealValue,
-    closeDate = closeDate
+    closeDate = closeDate,
+    nextAction = nextAction
 )
 
 fun EntityEntryEntity.toDomain(): EntityEntry = EntityEntry(
@@ -88,5 +90,6 @@ fun EntityEntryEntity.toDomain(): EntityEntry = EntityEntry(
     buyingRole = buyingRole,
     dealStage = dealStage,
     dealValue = dealValue,
-    closeDate = closeDate
+    closeDate = closeDate,
+    nextAction = nextAction
 )

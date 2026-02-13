@@ -79,10 +79,16 @@ class FakeEntityWriter @Inject constructor() : EntityWriter {
         }
         recordedChanges.addAll(changes)
 
+        var updated = existing
         if (changes.any { it.field == "displayName" }) {
             val newName = changes.first { it.field == "displayName" }.newValue!!
-            entities[entityId] = existing.copy(displayName = newName)
+            updated = updated.copy(displayName = newName)
         }
+        if (changes.any { it.field == "nextAction" }) {
+            val newAction = changes.first { it.field == "nextAction" }.newValue!!
+            updated = updated.copy(nextAction = newAction)
+        }
+        entities[entityId] = updated
 
         return ProfileUpdateResult(entityId = entityId, changes = changes)
     }

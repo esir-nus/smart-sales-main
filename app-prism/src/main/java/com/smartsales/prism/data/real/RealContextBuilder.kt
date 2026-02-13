@@ -126,7 +126,7 @@ class RealContextBuilder @Inject constructor(
         val endDate = today.plusDays(3)
 
         return try {
-            val tasks = scheduledTaskRepository.queryByDateRange(today, endDate)
+            val undoneTasks = scheduledTaskRepository.queryByDateRange(today, endDate)
                 .first()
                 .filterIsInstance<TimelineItemModel.Task>()
                 .filter { !it.isDone }
@@ -134,12 +134,18 @@ class RealContextBuilder @Inject constructor(
                     compareBy<TimelineItemModel.Task> { it.urgencyLevel.ordinal } // L1 critical first
                         .thenBy { it.startTime } // Closer time first
                 )
-                .take(3) // Top 3 only
 
-            if (tasks.isEmpty()) return null
+            if (undoneTasks.isEmpty()) return null
+
+            val totalCount = undoneTasks.size
+            val top3 = undoneTasks.take(3)
 
             buildString {
-                tasks.forEach { task ->
+                // 总数提示（让 LLM 知道还有更多未显示的任务）
+                if (totalCount > 3) {
+                    appendLine("共 ${totalCount} 个待办（显示前3）：")
+                }
+                top3.forEach { task ->
                     append("- ${task.dateRange} ${task.title}")
                     task.keyPerson?.let { append("（关键人: $it）") }
                     task.location?.let { append("（地点: $it）") }
@@ -294,9 +300,7 @@ class RealContextBuilder @Inject constructor(
         return JSONObject().apply {
             put("name", entry.displayName)
             
-            // Aliases
-            val aliases = try { JSONArray(entry.aliasesJson) } catch (_: Exception) { JSONArray() }
-            if (aliases.length() > 0) put("aliases", aliases)
+            // Aliases: 内部消歧用，不暴露给 LLM（可能包含冒犯性别名）
             
             // CRM Fields
             entry.jobTitle?.let { put("role", it) }
@@ -305,6 +309,7 @@ class RealContextBuilder @Inject constructor(
             entry.dealStage?.let { put("dealStage", it) }
             entry.dealValue?.let { put("dealValue", it) }
             entry.closeDate?.let { put("closeDate", it) }
+            entry.nextAction?.let { put("nextAction", it) }
             
             // Structured Intelligence
             listOf(

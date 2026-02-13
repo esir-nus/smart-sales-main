@@ -13,13 +13,15 @@ Scheduler manages task creation, timeline display, alarm cascading, and LLM-powe
 **OS Model Note**: Scheduler reads entity context (key persons, locations) from RAM Section 1 instead of doing its own entity extraction via `buildWithClues`. The Kernel populates entity context; Scheduler just consumes what's on the RAM.
 
 > [!IMPORTANT]
-> **Sticky Notes Principle**: Scheduler is a *reflection* of the user's intentions, NOT a source of truth for entity data. Scheduled tasks store raw person names (`keyPerson`) but do **NOT** create or update entities via `EntityWriter`. Entity creation is deferred to interactive modes (Coach/Analyst) where the agent can ask the user for clarity ("你昨天说要见王老板，见了吗？他是哪位？").
+> **CRM Entity Creation Policy**: Scheduler creates PERSON and ACCOUNT entities for **business-relevant** contacts via `EntityWriter`. Personal contacts (family, friends) are filtered at the LLM prompt level (business relevance gate).
 >
-> **Rationale**:
-> 1. Scheduled ≠ executed — users procrastinate, cancel, reschedule
-> 2. Scheduler has no conversational loop — can't ask "is this a new person?"
-> 3. Phantom entities from unconfirmed intentions pollute the CRM
-> 4. Coach/Analyst can read scheduler data via ContextBuilder and confirm before entity creation
+> **Pipeline**:
+> 1. LLM extracts `keyPerson` (business contacts only) and `keyCompany` (from input or conversation history)
+> 2. `entityWriter.upsertFromClue(keyPerson, PERSON)` — creates/finds PERSON entity
+> 3. If `keyCompany` present: `entityWriter.upsertFromClue(keyCompany, ACCOUNT)` — creates/finds ACCOUNT entity
+> 4. Links PERSON → ACCOUNT via `entityWriter.updateProfile(personId, accountId)`
+>
+> **L1/L2 `next_action` Cache**: Only L1/L2 urgency ONGOING tasks sync to `EntityEntry.next_action` — a computed cache field for fast context reads. Entity *creation* happens for all business-relevant mentions regardless of urgency.
 
 **Key Distinction:**
 - `ScheduleBoard` = Memory Center index (conflict check infrastructure)
@@ -93,8 +95,8 @@ Tasks have a checkbox that toggles `isDone` state. Completed tasks remain in sto
 | **5** | Inspiration Storage | 🚢 SHIPPED | `InspirationRepository`, `CollapsibleInspirationShelf` |
 | **7** | NL Deletion | ✅ SHIPPED | Fuzzy match + voice delete, no card context |
 | **8** | Pipeline Unification | 🔧 IN PROGRESS | Eliminated `processSchedulerAction`, unified to `createScheduledTask` |
-| **9** | Smart Tips | 🔲 PLANNED | LLM-generated contextual tips per task card |
-| **10** | Sticky Notes Boundary | 🔲 PLANNED | Scheduler does NOT create entities |
+| **9** | Smart Tips | 🚢 SHIPPED | LLM-generated contextual tips per task card |
+| **10** | CRM Hierarchy Wiring | ✅ SHIPPED | Business gate + ACCOUNT creation + `accountId` linking |
 | **11** | Global Reschedule | ✅ SHIPPED | Voice reschedule via fuzzy match + create-and-delete |
 | **12** | Task Completion Wiring | ✅ SHIPPED | `toggleDone`, alarm lifecycle, UI strikethrough |
 
@@ -125,8 +127,8 @@ sealed class TimelineItemModel {
         val dateRange: String = "",
         val location: String? = null,
         val notes: String? = null,
-        val keyPerson: String? = null,         // Raw name from LLM — NOT resolved to entity
-        val keyPersonEntityId: String? = null,  // Populated by Coach/Analyst clarity, NOT scheduler
+        val keyPerson: String? = null,         // Business contact name from LLM (personal contacts filtered)
+        val keyPersonEntityId: String? = null,  // Populated by entity resolution in pipeline
         val highlights: String? = null,
         val tips: List<String> = emptyList(),  // Wave 9: LLM-generated context tips
         val tipsLoading: Boolean = false,       // Wave 9: Generation animation state
@@ -155,11 +157,20 @@ sealed class TimelineItemModel {
 sealed class LintResult {
     data class Success(
         val task: TimelineItemModel.Task,
-        val urgencyLevel: UrgencyLevel
+        val urgencyLevel: UrgencyLevel,
+        val parsedClues: ParsedClues = ParsedClues()
     ) : LintResult()
     
     data class Error(val message: String) : LintResult()
 }
+
+data class ParsedClues(
+    val person: String? = null,        // 商务人物（个人关系已过滤）
+    val company: String? = null,       // 关联公司/组织
+    val location: String? = null,
+    val briefSummary: String? = null,
+    val durationMinutes: Int? = null
+)
 ```
 
 ### UrgencyLevel
@@ -189,22 +200,28 @@ enum class UrgencyLevel {
 Task creation follows a **gated pipeline** with conflict resolution.
 
 > [!NOTE]
-> **No entity writes in this pipeline.** The scheduler stores `keyPerson` as a raw string. Entity resolution and creation happen in Coach/Analyst mode via the clarity loop.
+> **CRM entity writes in this pipeline.** When `keyPerson` is present, Scheduler calls `entityWriter.upsertFromClue()` for PERSON (and ACCOUNT if `keyCompany` present). Business relevance gate at LLM prompt level filters personal contacts.
 
 ```
 User Voice Input
     ↓
 Orchestrator (MODE_SCHEDULER)
     ↓
-LLM Parse → JSON { title, startTime, endTime?, location?, keyPerson?, ... }
+LLM Parse → JSON { title, startTime, endTime?, location?, keyPerson?, keyCompany?, ... }
     ↓
-SchedulerLinter.lint() → LintResult.Success | Error
+SchedulerLinter.lint() → LintResult.Success(parsedClues) | Error
     ↓
 ScheduleBoard.checkConflict() → Clear | Conflict
     ↓
 [If Conflict] → UI shows resolution options → User picks
     ↓
-Repository.insertTask(keyPerson=raw) → ID returned  ← NO entityWriter call
+Repository.insertTask() → ID returned
+    ↓
+EntityWriter.upsertFromClue(keyPerson, PERSON) → PERSON entity
+    ↓
+[If keyCompany] EntityWriter.upsertFromClue(keyCompany, ACCOUNT) → ACCOUNT entity
+    ↓
+[If ACCOUNT] EntityWriter.updateProfile(personId, {accountId}) → linked
     ↓
 ScheduleBoard.refresh() → Index updated
     ↓
@@ -498,7 +515,7 @@ Eliminate `processSchedulerAction` and unify all scheduler operations into `crea
 - **Deliverables**: Updated `Orchestrator` interface, rewritten `PrismOrchestrator`, cleaned `SchedulerViewModel`
 - **Code Removed**: `processSchedulerAction`, `buildReschedulePrompt`, `SchedulerActionResult`, date regex hack (~173 lines)
 
-### Wave 9: Smart Tips 🔲 PLANNED
+### Wave 9: Smart Tips ✅ SHIPPED
 
 LLM-generated contextual tips (2-5) per task card, sourced from memory layer.
 
@@ -568,23 +585,27 @@ val tipsLoading: Boolean = false      // 生成动画状态
     - [ ] Empty EntityLib → tips = [] (graceful degradation)
     - [ ] LLM timeout → tipsLoading = false, tips = [] (no error shown)
 - **Deliverables**: `TipGenerator.kt`, prompt in `DashscopeExecutor`, ViewModel lazy-load wiring, UI shimmer + tip list
+- **4-Layer Fix (Coach Output Quality)**:
+  1. **Plain Text Prompt**: System prompt rewritten to avoid `##`/`**` syntax mirroring.
+  2. **Data Envelope**: Entity data wrapped in `<KNOWN_FACTS>` tags.
+  3. **Positive Framing**: "Your memory is limited to KNOWN_FACTS" (no negative priming).
+  4. **Sanitizer**: `MarkdownSanitizer` strips leaked formatting before UI render.
 
-### Wave 10: Sticky Notes Boundary 🔲 PLANNED
+### Wave 10: CRM Hierarchy Wiring ✅ SHIPPED
 
-Remove `entityWriter.upsertFromClue()` from the scheduler pipeline. Scheduler becomes a pure "sticky notes" layer that stores intentions without creating core entities.
+Scheduler creates PERSON + ACCOUNT entities for business-relevant contacts. Personal contacts filtered at LLM prompt level.
 
 - **Scope**:
-  - Remove `entityWriter.upsertFromClue()` calls from `PrismOrchestrator.createScheduledTask()` (single + multi-task)
-  - Store raw `keyPerson` string on task without resolving to entity
-  - Remove `keyPersonEntityId` population from scheduler pipeline (field stays on model for Coach/Analyst to populate later)
-  - Keep `findByAlias()` for disambiguation UI (read-only, no writes)
-- **Ship Criteria**: Scheduled task creation does NOT call EntityWriter
+  - LLM prompt extracts `keyCompany` from input or conversation history (last 6 turns)
+  - Business relevance gate: `keyPerson` only for business contacts (skip 爷爷/奶奶/老婆/朋友)
+  - `ParsedClues.company` carries extracted company through pipeline
+  - `PrismOrchestrator`: upsert PERSON → upsert ACCOUNT (if company present) → link via `updateProfile(accountId)`
+- **Ship Criteria**: ✅ Business-relevant scheduled tasks create PERSON + ACCOUNT entities with CRM linking
 - **Test Cases**:
-    - [ ] "明天三点见王老板" → task created with `keyPerson="王老板"`, `keyPersonEntityId=null`
-    - [ ] No new entity created in EntityRepository
-    - [ ] Multi-task batch → no entity writes
-    - [ ] Wave 7 deletion → no regression
-    - [ ] Wave 9 tips → graceful degradation when `keyPersonEntityId=null`
+    - [x] "去墨生态拜访蔡总" → PERSON(蔡总) + ACCOUNT(墨生态) + linked
+    - [x] "打电话给爷爷" → no entity created (`keyPerson: null`)
+    - [x] Build passes with all CRM wiring
+    - [ ] L2: Multi-turn context — history: "跟墨生态的蔡总" → "安排跟他开会"
 
 ---
 

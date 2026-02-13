@@ -47,7 +47,7 @@ interface EntityWriter {
      * 变更感知的 Profile 更新
      *
      * 检测字段变更 → 生成 ProfileChange 列表 → 调用 Kernel 记录历史。
-     * 跟踪字段: displayName, jobTitle, accountId
+     * 跟踪字段: displayName, jobTitle, accountId, nextAction
      * 
      * @param entityId 实体 ID
      * @param updates 需更新的字段 map（key=字段名, value=新值, null=不更新）

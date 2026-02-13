@@ -38,7 +38,8 @@ class RealEntityWriter @Inject constructor(
         private val TRACKED_FIELDS = mapOf(
             "displayName" to ActivityType.NAME_CHANGE,
             "jobTitle" to ActivityType.TITLE_CHANGE,
-            "accountId" to ActivityType.COMPANY_CHANGE
+            "accountId" to ActivityType.COMPANY_CHANGE,
+            "nextAction" to ActivityType.NEXT_ACTION_SET
         )
     }
 
@@ -176,6 +177,7 @@ class RealEntityWriter @Inject constructor(
                     val attrs = tryParseJson(existing.attributesJson)
                     attrs.optString("accountId", "")
                 }
+                "nextAction" -> existing.nextAction ?: ""
                 else -> {
                     Log.w(TAG, "⚠️ updateProfile: 未知跟踪字段 $field")
                     continue
@@ -210,6 +212,7 @@ class RealEntityWriter @Inject constructor(
                     attrs.put(field, newValue)
                     merged.copy(attributesJson = attrs.toString())
                 }
+                "nextAction" -> merged.copy(nextAction = newValue)
                 else -> merged
             }
         }

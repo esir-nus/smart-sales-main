@@ -85,6 +85,8 @@ fun PrismChatScreen(
     val agentActivity by viewModel.agentActivity.collectAsState()
     val toastMessage by viewModel.toastMessage.collectAsState()
     val taskBoardItems by viewModel.taskBoardItems.collectAsState()
+    val heroUpcoming by viewModel.heroUpcoming.collectAsState()
+    val heroAccomplished by viewModel.heroAccomplished.collectAsState()
 
     val context = LocalContext.current
     
@@ -133,7 +135,11 @@ fun PrismChatScreen(
                         .fillMaxWidth(),
                     contentAlignment = Alignment.TopCenter // Fixed: Top alignment
                 ) {
-                    HomeHero()
+                    HomeHeroDashboard(
+                        greeting = viewModel.heroGreeting,
+                        upcoming = heroUpcoming,
+                        accomplished = heroAccomplished
+                    )
                 }
             } else {
                 // V2: Task Board for Analyst Mode — STICKY
@@ -324,20 +330,98 @@ private fun ProMaxHeader(
 }
 
 @Composable
-private fun HomeHero() {
-    // Target Design: Just greeting text near TOP, NO center icon box
+private fun HomeHeroDashboard(
+    greeting: String,
+    upcoming: List<com.smartsales.prism.domain.scheduler.TimelineItemModel.Task>,
+    accomplished: List<com.smartsales.prism.domain.scheduler.TimelineItemModel.Task>
+) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 24.dp) // Near top
+            .padding(top = 24.dp, start = 20.dp, end = 20.dp)
     ) {
-        // Greeting only - no icon box
+        // 动态问候
         Text(
-            text = "✨ 上午好, Frank",
+            text = greeting,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = TextPrimary
+        )
+
+        // 待办 section
+        if (upcoming.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "📋 待办 (${upcoming.size})",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = TextSecondary
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                upcoming.forEach { task ->
+                    HeroTaskRow(task = task, isDone = false)
+                }
+            }
+        }
+
+        // 已完成 section
+        if (accomplished.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(20.dp))
+            Text(
+                text = "✅ 已完成",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = TextSecondary
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                accomplished.forEach { task ->
+                    HeroTaskRow(task = task, isDone = true)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HeroTaskRow(
+    task: com.smartsales.prism.domain.scheduler.TimelineItemModel.Task,
+    isDone: Boolean
+) {
+    val urgencyDot = when (task.urgencyLevel) {
+        com.smartsales.prism.domain.scheduler.UrgencyLevel.L1_CRITICAL -> "🔴"
+        com.smartsales.prism.domain.scheduler.UrgencyLevel.L2_IMPORTANT -> "🟡"
+        else -> "⚪"
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = if (isDone) Color(0xFFF0F0F0) else BackgroundSurface.copy(alpha = 0.7f),
+                shape = RoundedCornerShape(10.dp)
+            )
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (isDone) {
+            Text("✓", color = AccentGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        } else {
+            Text(urgencyDot, fontSize = 12.sp)
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = task.timeDisplay.split(" - ").firstOrNull() ?: "",
+            style = MaterialTheme.typography.labelMedium,
+            color = TextMuted,
+            fontSize = 12.sp
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = task.title,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (isDone) TextMuted else TextPrimary,
+            fontWeight = if (isDone) FontWeight.Normal else FontWeight.Medium
         )
     }
 }

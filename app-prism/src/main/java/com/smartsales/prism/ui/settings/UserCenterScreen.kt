@@ -205,13 +205,16 @@ fun UserCenterScreen(
                             DisposableEffect(lifecycleOwner) {
                                 val observer = LifecycleEventObserver { _, event ->
                                     if (event == Lifecycle.Event.ON_RESUME) {
-                                        val manager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE)
-                                            as android.app.NotificationManager
-                                        notificationsEnabled = manager.areNotificationsEnabled()
+                                        notificationsEnabled = viewModel.hasNotificationPermission()
                                     }
                                 }
                                 lifecycleOwner.lifecycle.addObserver(observer)
                                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+                            }
+
+                            // Initial check
+                            LaunchedEffect(Unit) {
+                                notificationsEnabled = viewModel.hasNotificationPermission()
                             }
                             
                             SettingsRowToggle("通知", notificationsEnabled) {

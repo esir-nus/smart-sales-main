@@ -13,7 +13,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class UserCenterViewModel @Inject constructor(
-    private val repository: UserProfileRepository
+    private val repository: UserProfileRepository,
+    private val notificationService: com.smartsales.prism.domain.notification.NotificationService
 ) : ViewModel() {
 
     val profile: StateFlow<UserProfile?> = repository.profile
@@ -22,6 +23,10 @@ class UserCenterViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = null
         )
+
+    fun hasNotificationPermission(): Boolean {
+        return notificationService.hasPermission()
+    }
 
     fun updateProfile(
         displayName: String,

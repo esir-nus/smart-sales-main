@@ -16,7 +16,7 @@ class RealConflictResolver @Inject constructor(
         userMessage: String,
         taskA: ScheduleItem,
         taskB: ScheduleItem
-    ): ConflictAction
+    ): ConflictResolution
 }
 ```
 
@@ -24,13 +24,21 @@ class RealConflictResolver @Inject constructor(
 
 ## Input/Output Types
 
+### ConflictResolution
+
+```kotlin
+data class ConflictResolution(
+    val actions: List<ConflictAction>,
+    val reply: String
+)
+```
+
 ### ConflictAction
 
 ```kotlin
 data class ConflictAction(
     val action: ActionType,
     val taskToRemove: String?,       // ID for KEEP_A/KEEP_B
-    val reply: String,               // LLM response to display
     val taskToReschedule: String?,   // ID for RESCHEDULE
     val rescheduleText: String?      // Natural language time ("明天下午3点")
 )
@@ -48,7 +56,7 @@ enum class ActionType {
 
 ```kotlin
 data class ScheduleItem(
-    val id: String,
+    val entryId: String,
     val title: String,
     val scheduledAt: Long,       // Epoch millis
     val durationMinutes: Int,

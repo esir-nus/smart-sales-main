@@ -17,6 +17,8 @@ interface ScheduledTaskRepository {
     suspend fun getTask(id: String): TimelineItemModel.Task?
     suspend fun updateTask(task: TimelineItemModel.Task)
     suspend fun deleteItem(id: String)
+    suspend fun getRecentCompleted(limit: Int): List<TimelineItemModel.Task>
+    suspend fun getTopUrgentActiveForEntity(entityId: String): TimelineItemModel.Task?
 }
 ```
 

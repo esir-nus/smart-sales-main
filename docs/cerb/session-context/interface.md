@@ -17,8 +17,8 @@ The Session Working Set is the **per-session RAM** managed by `ContextBuilder` (
 interface ContextBuilder {
     suspend fun build(userText: String, mode: Mode): EnhancedContext
     fun getSessionHistory(): List<ChatTurn>
-    fun recordUserMessage(content: String)
-    fun recordAssistantMessage(content: String)
+    suspend fun recordUserMessage(content: String)
+    suspend fun recordAssistantMessage(content: String)
 }
 ```
 
@@ -32,10 +32,15 @@ interface ContextBuilder {
 ```kotlin
 // EnhancedContext is built FROM the SessionWorkingSet (RAM)
 data class EnhancedContext(
+    val userText: String,
     val memoryHits: List<MemoryHit>,          // From RAM Section 1 (Distilled Memory)
     val entityContext: Map<String, EntityRef>, // From RAM Section 1 (Distilled Memory)
     val habitContext: HabitContext? = null,     // From RAM Sections 2 + 3 (auto-populated)
-    // ... other fields unchanged
+    val sessionHistory: List<ChatTurn> = emptyList(),
+    val currentDate: String? = null,
+    val currentInstant: Long = 0,
+    val scheduleContext: String? = null,        // Sticky Notes
+    val lastToolResult: ToolArtifact? = null
 )
 ```
 

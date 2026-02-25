@@ -20,6 +20,7 @@ Leaf services with no upstream dependencies. They don't call other modules.
 | **NotificationService** | System notification display | — | `NotificationService.show()` | — | ✅ |
 | **OSS** | File upload/download | — | `OssUploader.upload()` | — | 📐 |
 | **ASR** | Transcription results | OSS (downloads audio files to transcribe) | `TingwuRunner.transcribe()` | — | 📐 |
+| **TingwuPipeline** | Transcription & Audio Intelligence | OSS (reads `fileUrl`) | `TingwuPipeline.submit()` | SSD | 🔲 |
 
 ---
 
@@ -33,6 +34,7 @@ Store and query domain data. Other modules use their interfaces but never each o
 | **EntityRegistry** | Entity queries (read-only view of entities) | — | `EntityRepository.findByAlias()` | SSD | ✅ |
 | **MemoryCenter** | Conversation memory entries | — | `MemoryRepository.search()` | SSD | ✅ |
 | **UserHabit** | Behavioral pattern observations | — | `UserHabitRepository.observe()` | SSD | ✅ |
+| **SessionHistory** | Session metadata (list, pin, rename, delete) | — | `HistoryRepository.getGroupedSessions()` | SSD | 🚧 |
 | **SessionContext** | Per-session workspace (3 sections) | EntityWriter (S1 via write-through), RLModule (S2/S3) | `SessionContext.entityContext` | Kernel (RAM) | ✅ |
 
 > **EntityWriter vs EntityRegistry**: Writer handles mutations (dedup, merge, alias registration) AND write-through to RAM S1. Registry handles queries. Callers MUST use Writer for writes, Registry for reads. Never call `EntityRepository.save()` directly.
@@ -66,7 +68,7 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 | **Scheduler** | ScheduledTask, InspirationEntry | EntityRegistry (alias lookup), ScheduleBoard (conflicts) | `UiState.SchedulerTaskCreated` | Consumer of RAM | ✅ |
 | **ScheduleBoard** | Conflict index (in-memory cache) | ScheduledTaskRepository (populates index) | — | SSD | ✅ |
 | **Coach** | Chat message responses | MemoryCenter, UserHabit, EntityRegistry | `UiState.Response` | Consumer of RAM | ✅ |
-| **Analyst** | Analysis reports | MemoryCenter, EntityRegistry | `UiState.Response` | Consumer of RAM | 📐 |
+| **Analyst** | Analysis reports | ContextBuilder, ClientProfileHub | `AnalystPipeline.state` | RAM Application | 📐 |
 | **BadgeAudioPipeline** | Audio recording lifecycle | ASR, OSS, ConnectivityBridge | Triggers Orchestrator on transcription complete | — | ✅ |
 
 > **"Reads From" vs "Receives From"**: "Reads From" = the feature calls the interface directly. "Receives From" = Orchestrator pushes results into the feature's ViewModel. This distinction prevents confusion about who initiates the call.

@@ -42,6 +42,7 @@
 | [asr-service](../cerb/asr-service/spec.md) | SHIPPED | W3: Retry |
 | [oss-service](../cerb/oss-service/spec.md) | SHIPPED | W2: Resilience |
 | [audio-management](../cerb/audio-management/spec.md) | ACTIVE | W2: Real Repository Wiring |
+| [tingwu-pipeline](../cerb/tingwu-pipeline/spec.md) | SPEC_ONLY | W1: Interface & Fakes |
 
 ---
 

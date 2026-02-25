@@ -30,9 +30,9 @@
 | Task | Read These |
 |------|-----------|
 | **Home Screen** | `modules/HomeScreen.md` |
-| **Audio Drawer** | `modules/AudioDrawer.md` |
-| **User Center** | `modules/UserCenter.md` |
-| **Connectivity Modal** | `modules/ConnectivityModal.md` |
+| **Audio Drawer** | `prism-ui-ux-contract.md` |
+| **User Center** | `prism-ui-ux-contract.md` |
+| **Connectivity Modal** | `prism-ui-ux-contract.md` |
 | **Analyst Mode** | `Prism-V1.md §4.6` → `flows/AnalystFlows.md` |
 | **Coach Mode** | `flows/CoachFlows.md` |
 | **Scheduler** | `flows/SchedulerFlows.md` |

@@ -2,7 +2,7 @@
 
 > **Purpose**: Cerb spec index + changelog. Faithfully tracks spec states and key history.
 > **Rule**: Rows are derived FROM specs. History entries are commit-style — key info only.
-> **Last Updated**: 2026-02-12
+> **Last Updated**: 2026-02-14
 
 ---
 
@@ -16,13 +16,16 @@
 | [scheduler](../cerb/scheduler/spec.md) | PARTIAL | W8: Pipeline Unification |
 | [conflict-resolver](../cerb/conflict-resolver/spec.md) | SHIPPED | — |
 | [badge-audio-pipeline](../cerb/badge-audio-pipeline/spec.md) | SHIPPED | W4: Error Recovery |
-| [notifications](../cerb/notifications/spec.md) | SHIPPED | — |
+| [analyst-orchestrator](../cerb/analyst-orchestrator/spec.md) | PARTIAL | W2: Phase 1 (Consultant) |
+| [analyst-consultant](../cerb/analyst-consultant/spec.md) | SPEC_ONLY | W1: Interface & Fakes |
+| [analyst-architect](../cerb/analyst-architect/spec.md) | SPEC_ONLY | W1: Interface & Fakes |
 
 ### Data & Memory
 
 | Cerb Shard | State | Next Wave |
 |------------|-------|-----------|
 | [session-context](../cerb/session-context/spec.md) | SHIPPED | W5: Context Compression |
+| [session-history](../cerb/session-history/spec.md) | SHIPPED | — |
 | [memory-center](../cerb/memory-center/spec.md) | SHIPPED | — |
 | [entity-registry](../cerb/entity-registry/spec.md) | SHIPPED | — |
 | [entity-writer](../cerb/entity-writer/spec.md) | SHIPPED | W5: Alignment & Disambiguation |
@@ -38,13 +41,22 @@
 | [device-pairing](../cerb/device-pairing/spec.md) | PARTIAL | W2: Robustness |
 | [asr-service](../cerb/asr-service/spec.md) | SHIPPED | W3: Retry |
 | [oss-service](../cerb/oss-service/spec.md) | SHIPPED | W2: Resilience |
-| [audio-management](../cerb/audio-management/spec.md) | SPEC_ONLY | W2: Room Persistence |
+| [audio-management](../cerb/audio-management/spec.md) | ACTIVE | W2: Real Repository Wiring |
 
 ---
 
 ## Changelog
 
 > Key spec/impl changes, newest first. Like `git log --oneline`.
+
+### 2026-02-25
+
+- **analyst-orchestrator**: Wave 1 SHIPPED — Domain models, FakeAnalystPipeline L2 simulator, wiring with PrismViewModel, and verification tests passing.
+
+### 2026-02-14
+
+- **session-history**: Wave 4 SHIPPED — Auto-Renaming (`SessionTitleGenerator`, `LlmSessionTitleGenerator`, PrismVM trigger on first response, horizontal HistoryDrawer layout)
+- **infra**: Added `mockito-core` + `mockito-kotlin` to `libs.versions.toml` and `app-prism/build.gradle.kts`
 
 ### 2026-02-13
 

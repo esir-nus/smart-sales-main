@@ -54,6 +54,8 @@ fun HistoryDrawer(
     onSessionClick: (String) -> Unit,
     onDeviceClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    onProfileClick: () -> Unit = {},
+    displayName: String = "",
     onPinSession: (String) -> Unit = {},
     onRenameSession: (String, String, String) -> Unit = { _, _, _ -> },
     onDeleteSession: (String) -> Unit = {},
@@ -88,7 +90,9 @@ fun HistoryDrawer(
 
         // 3. Footer (Floating Dock)
         FloatingGlassDock(
+            displayName = displayName,
             onSettingsClick = onSettingsClick,
+            onProfileClick = onProfileClick,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 32.dp, start = 16.dp, end = 16.dp)
@@ -151,7 +155,9 @@ private fun FloatingCapsuleHeader(
 
 @Composable
 private fun FloatingGlassDock(
+    displayName: String,
     onSettingsClick: () -> Unit,
+    onProfileClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -166,8 +172,13 @@ private fun FloatingGlassDock(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Avatar (Mock Gradient)
+            // 点击头像/名字区域 → 打开个人中心
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.clickable { onProfileClick() }
+            ) {
+                // Avatar
                 Box(
                     modifier = Modifier
                         .size(40.dp)
@@ -179,7 +190,7 @@ private fun FloatingGlassDock(
                 }
                 
                 Column {
-                    Text("Frank Chen", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text(displayName.ifBlank { "用户" }, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
                     Text("高级会员", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
                 }
             }
@@ -318,9 +329,26 @@ private fun HistoryCardItem(
                     .alpha(0f) // Only visible on hover in desktop, mobile logic separate
             )
             
-            Column {
-                Text(session.clientName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                Text(session.summary, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+// Wave 4 UI Update: Horizontal Layout
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp), // Spacer between Name and Summary
+                modifier = Modifier.weight(1f, fill = false) // Allow name to take space but not push summary off if short
+            ) {
+                Text(
+                    text = session.clientName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary
+                )
+                
+                Text(
+                    text = session.summary, 
+                    style = MaterialTheme.typography.bodySmall, 
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
             }
         }
     }

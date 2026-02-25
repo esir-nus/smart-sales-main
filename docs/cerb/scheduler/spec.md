@@ -21,7 +21,7 @@ Scheduler manages task creation, timeline display, alarm cascading, and LLM-powe
 > 3. If `keyCompany` present: `entityWriter.upsertFromClue(keyCompany, ACCOUNT)` — creates/finds ACCOUNT entity
 > 4. Links PERSON → ACCOUNT via `entityWriter.updateProfile(personId, accountId)`
 >
-> **L1/L2 `next_action` Cache**: Only L1/L2 urgency ONGOING tasks sync to `EntityEntry.next_action` — a computed cache field for fast context reads. Entity *creation* happens for all business-relevant mentions regardless of urgency.
+> **L1/L2 `next_action` Cache (Phase B — not yet implemented)**: Only L1/L2 urgency ONGOING tasks will sync to `EntityEntry.next_action` — a computed cache field for fast context reads. Entity *creation* happens for all business-relevant mentions regardless of urgency. Infrastructure exists (`nextAction` field, EntityWriter tracking, ContextBuilder surfacing) but automated sync is Phase B work.
 
 **Key Distinction:**
 - `ScheduleBoard` = Memory Center index (conflict check infrastructure)
@@ -215,13 +215,13 @@ ScheduleBoard.checkConflict() → Clear | Conflict
     ↓
 [If Conflict] → UI shows resolution options → User picks
     ↓
-Repository.insertTask() → ID returned
-    ↓
 EntityWriter.upsertFromClue(keyPerson, PERSON) → PERSON entity
     ↓
 [If keyCompany] EntityWriter.upsertFromClue(keyCompany, ACCOUNT) → ACCOUNT entity
     ↓
 [If ACCOUNT] EntityWriter.updateProfile(personId, {accountId}) → linked
+    ↓
+Repository.insertTask(enrichedTask) → ID returned
     ↓
 ScheduleBoard.refresh() → Index updated
     ↓

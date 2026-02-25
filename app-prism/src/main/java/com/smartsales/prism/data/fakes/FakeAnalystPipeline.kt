@@ -1,0 +1,109 @@
+package com.smartsales.prism.data.fakes
+
+import android.util.Log
+import com.smartsales.prism.domain.analyst.AnalysisStep
+import com.smartsales.prism.domain.analyst.AnalystPipeline
+import com.smartsales.prism.domain.analyst.AnalystResponse
+import com.smartsales.prism.domain.analyst.AnalystState
+import com.smartsales.prism.domain.analyst.StepStatus
+import com.smartsales.prism.domain.analyst.WorkflowSuggestion
+import com.smartsales.prism.domain.pipeline.ChatTurn
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+import javax.inject.Inject
+
+/**
+ * Wave 1 L2 Simulator for Analyst Mode Open-Loop State Machine.
+ * This class allows UI teams to build the PlannerTable and TaskBoard states
+ * without relying on a real LLM implementation.
+ */
+class FakeAnalystPipeline @Inject constructor() : AnalystPipeline {
+    
+    private val TAG = "FakeAnalystPipeline"
+
+    private val _state = MutableStateFlow(AnalystState.IDLE)
+    override val state = _state.asStateFlow()
+
+    override suspend fun handleInput(
+        input: String,
+        sessionHistory: List<ChatTurn>
+    ): AnalystResponse {
+        Log.d(TAG, "handleInput: state=${_state.value}, input=$input")
+        
+        return when (_state.value) {
+            AnalystState.IDLE -> {
+                if (input.lowercase().contains("plan") || input.contains("分析") || input.lowercase().contains("analyze")) {
+                    // Simulate CONSULTING -> PROPOSAL 
+                    _state.value = AnalystState.CONSULTING
+                    delay(500) // fake processing
+                    _state.value = AnalystState.PROPOSAL
+                    
+                    AnalystResponse.Plan(
+                        title = "📋 模拟分析计划",
+                        summary = "根据上下文，我们生成了以下分析步骤。",
+                        steps = listOf(
+                            AnalysisStep("1", "概况总结", StepStatus.PENDING),
+                            AnalysisStep("2", "周期计算", StepStatus.PENDING)
+                        )
+                    )
+                } else {
+                    // Chat fallback
+                    AnalystResponse.Chat(
+                        content = "我需要更多信息。您想分析哪部分？(提示: 输入'plan'或者'分析'触发计划)"
+                    )
+                }
+            }
+            
+            AnalystState.PROPOSAL -> {
+                if (input.lowercase().contains("ok") || input.lowercase().contains("yes") || input.contains("继续")) {
+                    Log.d(TAG, "User confirmed. Transitioning to INVESTIGATING.")
+                    _state.value = AnalystState.INVESTIGATING
+                    delay(1500) // fake investigation time
+                    
+                    Log.d(TAG, "Investigation complete. Transitioning to RESULT.")
+                    _state.value = AnalystState.RESULT
+                    
+                    val result = AnalystResponse.Analysis(
+                        content = "分析已完成。根据历史记录，客户的购买周期约为3个月。",
+                        suggestedWorkflows = listOf(
+                            WorkflowSuggestion("DRAFT_EMAIL", "撰写跟进邮件"),
+                            WorkflowSuggestion("EXPORT_CSV", "导出历史数据")
+                        )
+                    )
+                    
+                    // Reset to idle ready for the next request as per spec
+                    _state.value = AnalystState.IDLE
+                    
+                    result
+                } else if (input.lowercase().contains("cancel") || input.contains("取消")) {
+                    Log.d(TAG, "User cancelled. Transitioning to IDLE.")
+                    _state.value = AnalystState.IDLE
+                    AnalystResponse.Chat("分析已取消。准备好后可以随时重新开始。")
+                } else {
+                    // User amended the plan
+                    Log.d(TAG, "User amended. Simulating recalculation to PROPOSAL.")
+                    _state.value = AnalystState.CONSULTING
+                    delay(500)
+                    _state.value = AnalystState.PROPOSAL
+                    AnalystResponse.Plan(
+                        title = "📋 更新后的模拟分析计划",
+                        summary = "根据您的补充，计划已更新。",
+                        steps = listOf(
+                            AnalysisStep("1", "概况总结", StepStatus.PENDING),
+                            AnalysisStep("2", "周期计算", StepStatus.PENDING),
+                            AnalysisStep("3", "决策图谱", StepStatus.PENDING)
+                        )
+                    )
+                }
+            }
+            
+            else -> {
+                Log.w(TAG, "Unreachable state logic triggered. Resetting.")
+                _state.value = AnalystState.IDLE
+                AnalystResponse.Chat("状态机发生错误，已重置。")
+            }
+        }
+    }
+}

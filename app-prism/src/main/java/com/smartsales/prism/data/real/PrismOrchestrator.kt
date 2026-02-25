@@ -205,6 +205,15 @@ class PrismOrchestrator @Inject constructor(
                             // 插入任务到日历
                             val taskId = scheduledTaskRepository.insertTask(enrichedTask)
                             
+                            // Eager nextAction — L1/L2 任务创建时没入库前就写入缓存
+                            if (enrichedTask.keyPersonEntityId != null &&
+                                enrichedTask.urgencyLevel in listOf(UrgencyLevel.L1_CRITICAL, UrgencyLevel.L2_IMPORTANT)) {
+                                entityWriter.updateProfile(
+                                    enrichedTask.keyPersonEntityId!!,
+                                    mapOf("nextAction" to enrichedTask.title)
+                                )
+                            }
+                            
                             // 设置提醒 — 使用 UrgencyLevel 决定的级联
                             alarmScheduler.scheduleCascade(
                                 taskId, enrichedTask.title, enrichedTask.startTime, enrichedTask.alarmCascade
@@ -298,6 +307,15 @@ class PrismOrchestrator @Inject constructor(
                                     }
                                 }
                                 val taskId = scheduledTaskRepository.insertTask(enrichedTask)
+                                
+                                // Eager nextAction — L1/L2 任务批量创建时追加
+                                if (enrichedTask.keyPersonEntityId != null &&
+                                    enrichedTask.urgencyLevel in listOf(UrgencyLevel.L1_CRITICAL, UrgencyLevel.L2_IMPORTANT)) {
+                                    entityWriter.updateProfile(
+                                        enrichedTask.keyPersonEntityId!!,
+                                        mapOf("nextAction" to enrichedTask.title)
+                                    )
+                                }
                                 
                                 // 设置提醒 — 批量任务也使用自身的 alarmCascade (-15m, -1m default)
                                 alarmScheduler.scheduleCascade(

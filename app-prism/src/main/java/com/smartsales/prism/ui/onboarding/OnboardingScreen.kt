@@ -120,6 +120,7 @@ fun OnboardingScreen(
                         onLogin = { currentStep = OnboardingStep.PROFILE }
                     )
                     OnboardingStep.PROFILE -> ProfileStep(
+                        viewModel = viewModel,
                         onFinish = { currentStep = OnboardingStep.NOTIFICATION_PERMISSION }
                     )
                     OnboardingStep.NOTIFICATION_PERMISSION -> NotificationPermissionStep(
@@ -406,15 +407,28 @@ private fun AccountGateStep(onLogin: () -> Unit) {
 }
 
 @Composable
-private fun ProfileStep(onFinish: () -> Unit) {
+private fun ProfileStep(
+    viewModel: OnboardingViewModel,
+    onFinish: () -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var role by remember { mutableStateOf("") }
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text("让我更好地帮助你", fontSize = 24.sp, color = TextPrimary)
         Spacer(Modifier.height(32.dp))
-        GlassTextField(value = "", onValueChange = {}, label = "姓名")
+        GlassTextField(value = name, onValueChange = { name = it }, label = "姓名")
         Spacer(Modifier.height(16.dp))
-        GlassTextField(value = "", onValueChange = {}, label = "行业/角色")
+        GlassTextField(value = role, onValueChange = { role = it }, label = "行业/角色")
         Spacer(Modifier.height(32.dp))
-        PrismButton(text = "完成", onClick = onFinish, modifier = Modifier.fillMaxWidth())
+        PrismButton(
+            text = "完成",
+            onClick = {
+                viewModel.saveProfile(displayName = name, role = role)
+                onFinish()
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 

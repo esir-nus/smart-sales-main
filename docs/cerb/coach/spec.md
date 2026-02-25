@@ -162,7 +162,7 @@ When no conversation history exists (`history.isEmpty()`), the hero screen shows
 ```
 
 **Data sources**:
-- **Upcoming (top 3)**: `ScheduledTaskRepository.queryByDateRange(today, today+3)` → `isDone = false` → sort by urgency then time → take 3
+- **Upcoming (top 3)**: `ScheduledTaskRepository.queryByDateRange(today, today+3)` → `isDone = false` → exclude `FIRE_OFF` → sort by urgency then time → take 3
 - **Accomplished (top 2)**: `ScheduledTaskRepository.queryByDateRange(today-7, today)` → `isDone = true` → sort by urgency then completedAt desc → take 2
 - **Greeting**: Dynamic based on hour — 早上好 (5-11) / 下午好 (12-17) / 晚上好 (18+)
 

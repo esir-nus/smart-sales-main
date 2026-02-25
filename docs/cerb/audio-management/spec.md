@@ -5,6 +5,8 @@
 
 ---
 
+> **OS Layer**: SSD Storage
+
 ## Overview
 
 Audio Management provides interactive file management for badge recordings and phone audio. Users manually trigger sync, transcription, and organization through the Audio Drawer UI.
@@ -18,7 +20,7 @@ Audio Management provides interactive file management for badge recordings and p
 | Spec | Responsibility |
 |------|----------------|
 | [Connectivity Bridge](../connectivity-bridge/interface.md) | Downloads WAV files from badge |
-| [ASR Service](../asr-service/interface.md) | Audio transcription via FunASR |
+| [Tingwu Pipeline](../tingwu-pipeline/interface.md) | Long-form audio processing via Aliyun |
 | [Badge Audio Pipeline](../badge-audio-pipeline/interface.md) | Auto-pipeline (independent use case) |
 
 ---
@@ -40,9 +42,9 @@ graph TB
     end
     
     Repo -->|Manual sync| ConnBridge[ConnectivityBridge]
-    Repo -->|Manual transcribe| ASR[AsrService]
+    Repo -->|OSS + Submit| Tingwu[TingwuPipeline]
     Pipeline -->|Auto flow| ConnBridge
-    Pipeline -->|Auto flow| ASR
+    Pipeline -->|OSS + Submit| Tingwu
     
     Pipeline -.->|Future: Auto-ingest| Repo
     
@@ -101,13 +103,14 @@ See [interface.md](./interface.md) for:
 
 > [!IMPORTANT]
 > **Storage Decision**: Room is NOT currently in `app-prism/build.gradle.kts`. Wave 2 implementation must either add Room dependency or use simpler file-based/SharedPreferences storage.
+> **Wave 2 Actual**: Use file-backed JSON storage (`StateFlow` + atomic active write) to satisfy persistence without introducing Room dependencies.
 
 **Implementation**:
-- [ ] `RealAudioRepository` with chosen storage
+- [ ] `RealAudioRepository` in `app-prism/src/main/java/com/smartsales/prism/data/audio/` with JSON file storage
 - [ ] Calls `ConnectivityBridge.downloadRecording()` for SMARTBADGE files
-- [ ] Calls `AsrService.transcribe()` for manual transcription
-- [ ] Progress tracking via StateFlow
-- [ ] DI binding for real implementation
+- [ ] Calls `TingwuPipeline.submit()` and `observeJob()` for transcription and intelligence extraction
+- [ ] Progress tracking via StateFlow mapped from `TingwuJobState`, `AudioViewModel` intercepts Tingwu failures and surfaces via one-shot Toast (leaving domain state as PENDING)
+- [ ] Update `AudioModule.kt` DI binding for real implementation
 
 **Testing**:
 - [ ] Add file → syncs from badge

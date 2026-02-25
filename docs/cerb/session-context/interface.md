@@ -19,6 +19,7 @@ interface ContextBuilder {
     fun getSessionHistory(): List<ChatTurn>
     suspend fun recordUserMessage(content: String)
     suspend fun recordAssistantMessage(content: String)
+    fun resetSession()  // Wave 3: 清空 RAM，创建新 WorkingSet
 }
 ```
 
@@ -33,14 +34,19 @@ interface ContextBuilder {
 // EnhancedContext is built FROM the SessionWorkingSet (RAM)
 data class EnhancedContext(
     val userText: String,
-    val memoryHits: List<MemoryHit>,          // From RAM Section 1 (Distilled Memory)
-    val entityContext: Map<String, EntityRef>, // From RAM Section 1 (Distilled Memory)
-    val habitContext: HabitContext? = null,     // From RAM Sections 2 + 3 (auto-populated)
-    val sessionHistory: List<ChatTurn> = emptyList(),
-    val currentDate: String? = null,
-    val currentInstant: Long = 0,
-    val scheduleContext: String? = null,        // Sticky Notes
-    val lastToolResult: ToolArtifact? = null
+    val audioTranscripts: List<TranscriptBlock> = emptyList(),  // 音频转录
+    val imageAnalysis: List<VisionResult> = emptyList(),        // 图像分析
+    val memoryHits: List<MemoryHit> = emptyList(),              // Section 1 (Distilled Memory)
+    val entityKnowledge: String? = null,                        // Section 1 (Entity Knowledge Graph JSON)
+    val entityContext: Map<String, EntityRef> = emptyMap(),     // Section 1 (Entity Pointers)
+    val modeMetadata: ModeMetadata = ModeMetadata(),            // 模式元数据 (mode, sessionId, turnIndex)
+    val sessionHistory: List<ChatTurn> = emptyList(),           // 会话历史
+    val lastToolResult: ToolArtifact? = null,                   // 上次工具结果
+    val executedTools: Set<String> = emptySet(),                // 已执行工具集
+    val currentDate: String? = null,                            // LLM 日期上下文
+    val currentInstant: Long = 0,                               // epoch millis
+    val habitContext: HabitContext? = null,                      // Sections 2+3 (auto-populated)
+    val scheduleContext: String? = null                          // Sticky Notes
 )
 ```
 
@@ -55,7 +61,7 @@ data class EnhancedContext(
 | Access `SessionContext` / Working Set directly | Use `ContextBuilder.build()` — it reads from RAM internally |
 | Manage entity state from ViewModel | Let `ContextBuilder` (Kernel) manage entity lifecycle |
 | Call `MemoryRepository.search()` yourself | Trust `ContextBuilder` to search on first turn |
-| Reset session context manually | Call `RealContextBuilder.resetSession()` on mode switch |
+| Reset session context manually | Call `contextBuilder.resetSession()` via interface |
 | Pass `entityIds` to `getHabitContext()` | Habits are auto-populated in RAM Section 3 |
 | Read repos directly from Application code | Route through the Working Set (RAM) |
 
@@ -69,6 +75,7 @@ This interface is consumed by:
 |----------|-----|
 | `RealCoachPipeline` | Calls `contextBuilder.build()` |
 | `PrismOrchestrator` | Calls `contextBuilder.build()` / `buildWithClues()` |
+| `PrismViewModel` | Calls `contextBuilder.resetSession()` on new session |
 | `ChatViewModel` | Calls `contextBuilder.recordUserMessage()` / `recordAssistantMessage()` |
 
 ---

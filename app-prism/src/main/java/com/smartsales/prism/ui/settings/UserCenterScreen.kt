@@ -121,8 +121,7 @@ fun UserCenterScreen(
                             PrismButton(
                                 text = "编辑",
                                 onClick = { isEditing = true },
-                                style = PrismButtonStyle.GHOST,
-                                modifier = Modifier.height(32.dp)
+                                style = PrismButtonStyle.GHOST
                             )
                         }
                         
@@ -141,7 +140,7 @@ fun UserCenterScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = "FC", // Frank Chen
+                                        text = user.displayName.take(2).uppercase(),
                                         style = MaterialTheme.typography.titleLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = TextPrimary

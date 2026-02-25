@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.kapt)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
 }
 
@@ -111,6 +112,7 @@ dependencies {
     implementation(libs.coroutines.android)
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
+    implementation(libs.kotlinx.serialization.json)
 
     // Room Persistence
     implementation(libs.room.runtime)
@@ -120,6 +122,8 @@ dependencies {
     // Test
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.mockito.kotlin)
     testImplementation("org.json:json:20231013")  // Real JSON lib for unit tests
     testImplementation("androidx.room:room-testing:2.6.1")  // Room DAO tests
     

@@ -1,6 +1,7 @@
 package com.smartsales.prism.domain.audio
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.Serializable
 
 /**
  * 音频仓库 — 获取和管理录音文件
@@ -16,6 +17,11 @@ interface AudioRepository {
      * 触发同步
      */
     suspend fun syncFromDevice()
+    
+    /**
+     * 上传本地音频 (测试用)
+     */
+    suspend fun addLocalAudio(uriString: String)
     
     /**
      * 开始转写
@@ -51,6 +57,7 @@ interface AudioRepository {
 /**
  * 音频文件数据模型
  */
+@Serializable
 data class AudioFile(
     val id: String,
     val filename: String,
@@ -63,10 +70,12 @@ data class AudioFile(
     val boundSessionId: String? = null // Links to Analysis chat session
 )
 
+@Serializable
 enum class AudioSource {
     SMARTBADGE, PHONE
 }
 
+@Serializable
 enum class TranscriptionStatus {
     PENDING, TRANSCRIBING, TRANSCRIBED
 }

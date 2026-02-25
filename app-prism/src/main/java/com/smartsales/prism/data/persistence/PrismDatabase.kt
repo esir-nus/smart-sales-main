@@ -12,6 +12,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * Version 2: 添加 ScheduledTask (Room 替代 CalendarProvider)
  * Version 3: MemoryEntry 添加 workflow 列 (Wave 4)
  * Version 4: EntityEntry 添加 nextAction 列
+ * Version 5: ScheduledTask 添加 urgencyLevel 列
+ * Version 6: 添加 sessions 表
+ * Version 7: 添加 session_messages 表 (会话消息持久化)
  * exportSchema = false: 不导出 schema JSON (简化 MVP)
  */
 @Database(
@@ -19,9 +22,11 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         MemoryEntryEntity::class,
         EntityEntryEntity::class,
         UserHabitEntity::class,
-        ScheduledTaskEntity::class
+        ScheduledTaskEntity::class,
+        SessionEntity::class,
+        MessageEntity::class
     ],
-    version = 4,
+    version = 7,
     exportSchema = false
 )
 abstract class PrismDatabase : RoomDatabase() {
@@ -29,6 +34,8 @@ abstract class PrismDatabase : RoomDatabase() {
     abstract fun entityDao(): EntityDao
     abstract fun userHabitDao(): UserHabitDao
     abstract fun scheduledTaskDao(): ScheduledTaskDao
+    abstract fun sessionDao(): SessionDao
+    abstract fun messageDao(): MessageDao
 
     companion object {
         val MIGRATION_2_3 = object : Migration(2, 3) {
@@ -49,6 +56,47 @@ abstract class PrismDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // EntityEntry 添加 nextAction 列
                 db.execSQL("ALTER TABLE entity_entries ADD COLUMN nextAction TEXT DEFAULT NULL")
+            }
+        }
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // ScheduledTask 添加 urgencyLevel 列
+                db.execSQL("ALTER TABLE scheduled_tasks ADD COLUMN urgencyLevel TEXT NOT NULL DEFAULT 'L3_NORMAL'")
+            }
+        }
+
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // 会话元数据表
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS sessions (
+                        sessionId TEXT NOT NULL PRIMARY KEY,
+                        clientName TEXT NOT NULL,
+                        summary TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL,
+                        isPinned INTEGER NOT NULL DEFAULT 0,
+                        linkedAudioId TEXT DEFAULT NULL
+                    )
+                """.trimIndent())
+            }
+        }
+
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // 会话消息表 — 外键关联 sessions, 级联删除
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS session_messages (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        sessionId TEXT NOT NULL,
+                        isUser INTEGER NOT NULL DEFAULT 0,
+                        content TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL,
+                        orderIndex INTEGER NOT NULL,
+                        FOREIGN KEY (sessionId) REFERENCES sessions(sessionId) ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_session_messages_sessionId ON session_messages(sessionId)")
             }
         }
     }

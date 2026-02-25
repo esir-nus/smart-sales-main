@@ -15,8 +15,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import android.net.Uri
 
 /**
  * 音频抽屉 ViewModel — 将领域模型映射为 UI 状态
@@ -26,6 +30,9 @@ class AudioViewModel @Inject constructor(
     private val audioRepository: AudioRepository,
     private val historyRepository: HistoryRepository
 ) : ViewModel() {
+    
+    private val _uiEvents = MutableSharedFlow<String>()
+    val uiEvents: SharedFlow<String> = _uiEvents.asSharedFlow()
     
     val audioItems: StateFlow<List<AudioItemState>> = audioRepository.getAudioFiles()
         .map { files -> files.map { it.toUiState() } }
@@ -37,13 +44,31 @@ class AudioViewModel @Inject constructor(
     
     fun syncFromDevice() {
         viewModelScope.launch {
-            audioRepository.syncFromDevice()
+            try {
+                audioRepository.syncFromDevice()
+            } catch (e: Exception) {
+                _uiEvents.emit("同步失败: ${e.message}")
+            }
         }
     }
     
     fun startTranscription(audioId: String) {
         viewModelScope.launch {
-            audioRepository.startTranscription(audioId)
+            try {
+                audioRepository.startTranscription(audioId)
+            } catch (e: Exception) {
+                _uiEvents.emit("转写失败: ${e.message ?: "未知错误"}")
+            }
+        }
+    }
+
+    fun uploadLocalAudio(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                audioRepository.addLocalAudio(uri.toString())
+            } catch (e: Exception) {
+                _uiEvents.emit("上传失败: ${e.message}")
+            }
         }
     }
     

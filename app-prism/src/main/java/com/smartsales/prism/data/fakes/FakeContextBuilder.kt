@@ -44,4 +44,15 @@ class FakeContextBuilder @Inject constructor() : ContextBuilder {
     override suspend fun recordAssistantMessage(content: String) {
         _sessionHistory.add(ChatTurn(role = "assistant", content = content))
     }
+
+    override fun resetSession() {
+        _sessionHistory.clear()
+    }
+
+    override fun getActiveSessionId(): String = "fake-session-001"
+
+    override fun loadSession(sessionId: String, history: List<ChatTurn>) {
+        _sessionHistory.clear()
+        _sessionHistory.addAll(history)
+    }
 }

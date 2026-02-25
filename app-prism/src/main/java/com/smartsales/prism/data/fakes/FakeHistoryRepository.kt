@@ -2,6 +2,8 @@ package com.smartsales.prism.data.fakes
 
 import com.smartsales.prism.domain.model.SessionPreview
 import com.smartsales.prism.domain.repository.HistoryRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -130,5 +132,39 @@ class FakeHistoryRepository @Inject constructor() : HistoryRepository {
             if (recent30Days.isNotEmpty()) put("🗓️ 最近30天", recent30Days)
             if (archived.isNotEmpty()) put("🗂️ 2025-12", archived)
         }
+    }
+
+    override fun getGroupedSessionsFlow(): Flow<Map<String, List<SessionPreview>>> {
+        return flowOf(getGroupedSessions())
+    }
+
+    // === 消息持久化 (Fake: in-memory) ===
+
+    private val messages = mutableMapOf<String, MutableList<com.smartsales.prism.domain.model.ChatMessage>>()
+
+    override fun saveMessage(sessionId: String, isUser: Boolean, content: String, orderIndex: Int) {
+        val list = messages.getOrPut(sessionId) { mutableListOf() }
+        val msg = if (isUser) {
+            com.smartsales.prism.domain.model.ChatMessage.User(
+                id = java.util.UUID.randomUUID().toString(),
+                timestamp = System.currentTimeMillis(),
+                content = content
+            )
+        } else {
+            com.smartsales.prism.domain.model.ChatMessage.Ai(
+                id = java.util.UUID.randomUUID().toString(),
+                timestamp = System.currentTimeMillis(),
+                uiState = com.smartsales.prism.domain.model.UiState.Response(content)
+            )
+        }
+        list.add(msg)
+    }
+
+    override fun getMessages(sessionId: String): List<com.smartsales.prism.domain.model.ChatMessage> {
+        return messages[sessionId] ?: emptyList()
+    }
+
+    override fun clearMessages(sessionId: String) {
+        messages.remove(sessionId)
     }
 }

@@ -32,7 +32,7 @@ Chat-Centric "Executive Desk" layout. The base layer revealed after dismissing S
 │                                                            │
 │                [  Breathing Aura  ]                        │
 │                     (✨)                                   │
-│            "下午好, Frank"                                 │
+│            "下午好, Frank"      ← Tap name → User Center    │
 │                                                            │
 │             [ Toggle: Coach | Analyst ]                    │
 │ ────────────────────────────────────────────────────────── │

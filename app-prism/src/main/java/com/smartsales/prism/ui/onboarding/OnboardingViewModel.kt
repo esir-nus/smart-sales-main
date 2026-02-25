@@ -3,19 +3,21 @@ package com.smartsales.prism.ui.onboarding
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.prism.domain.pairing.*
+import com.smartsales.prism.domain.repository.UserProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * Onboarding ViewModel — 注入 PairingService
+ * Onboarding ViewModel — 注入 PairingService + UserProfileRepository
  * 
- * 负责协调设备配对流程，将 PairingService 的状态暴露给 UI
+ * 负责协调设备配对流程 + 保存用户资料
  */
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
-    private val pairingService: PairingService
+    private val pairingService: PairingService,
+    private val userProfileRepository: UserProfileRepository
 ) : ViewModel() {
     
     /**
@@ -50,5 +52,21 @@ class OnboardingViewModel @Inject constructor(
      */
     fun cancelPairing() {
         pairingService.cancelPairing()
+    }
+
+    /**
+     * 保存用户资料（Onboarding ProfileStep）
+     */
+    fun saveProfile(displayName: String, role: String) {
+        viewModelScope.launch {
+            val current = userProfileRepository.getProfile()
+            userProfileRepository.updateProfile(
+                current.copy(
+                    displayName = displayName.ifBlank { current.displayName },
+                    role = role.ifBlank { current.role },
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
+        }
     }
 }

@@ -7,18 +7,27 @@ import com.smartsales.prism.domain.pipeline.Orchestrator
 import com.smartsales.prism.domain.model.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import com.smartsales.prism.domain.model.ChatMessage
+import com.smartsales.prism.domain.pipeline.ChatTurn
 import com.smartsales.prism.domain.pipeline.ExecutionPlan
 import com.smartsales.prism.domain.pipeline.RetrievalScope
 import com.smartsales.prism.domain.pipeline.DeliverableType
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import android.util.Log
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.domain.repository.UserProfileRepository
 import javax.inject.Inject
 import java.time.LocalDate
 import kotlinx.coroutines.flow.first
+import com.smartsales.prism.domain.scheduler.UrgencyLevel
 
 /**
  * Prism ViewModel
@@ -29,10 +38,18 @@ import kotlinx.coroutines.flow.first
 @HiltViewModel
 class PrismViewModel @Inject constructor(
     private val orchestrator: Orchestrator,
-    private val analystController: com.smartsales.prism.data.real.AnalystFlowControllerV2,
+    private val analystPipeline: com.smartsales.prism.domain.analyst.AnalystPipeline,
     private val activityController: com.smartsales.prism.domain.activity.AgentActivityController,
-    private val scheduledTaskRepository: ScheduledTaskRepository
+    private val scheduledTaskRepository: ScheduledTaskRepository,
+    private val contextBuilder: com.smartsales.prism.domain.pipeline.ContextBuilder,
+    private val historyRepository: com.smartsales.prism.domain.repository.HistoryRepository,
+    private val userProfileRepository: UserProfileRepository,
+    private val sessionTitleGenerator: com.smartsales.prism.domain.session.SessionTitleGenerator // Wave 4: Auto-Renaming
 ) : ViewModel() {
+    
+    // ------------------------------------------------------------------------
+    // State Properties (Restored)
+    // ------------------------------------------------------------------------
     
     val currentMode: StateFlow<Mode> = orchestrator.currentMode
     
@@ -42,7 +59,6 @@ class PrismViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
     
-    // ... (rest of val props) ...
     private val _inputText = MutableStateFlow("")
     val inputText: StateFlow<String> = _inputText.asStateFlow()
     
@@ -59,8 +75,12 @@ class PrismViewModel @Inject constructor(
     private val _history = MutableStateFlow<List<ChatMessage>>(emptyList())
     val history: StateFlow<List<ChatMessage>> = _history.asStateFlow()
 
+    // Wave 4: 当前活跃会话 ID
+    private var currentSessionId: String? = null
+
     // V2: Task Board items
-    val taskBoardItems: StateFlow<List<com.smartsales.prism.domain.analyst.TaskBoardItem>> = analystController.taskBoardItems
+    private val _taskBoardItems = MutableStateFlow<List<com.smartsales.prism.domain.analyst.TaskBoardItem>>(emptyList())
+    val taskBoardItems: StateFlow<List<com.smartsales.prism.domain.analyst.TaskBoardItem>> = _taskBoardItems.asStateFlow()
 
     // v2.6 Spec: Editable Session Title ("Executive Desk")
     private val _sessionTitle = MutableStateFlow("新对话") // Default: "New Session" (Localized)
@@ -73,58 +93,56 @@ class PrismViewModel @Inject constructor(
     private val _heroAccomplished = MutableStateFlow<List<TimelineItemModel.Task>>(emptyList())
     val heroAccomplished: StateFlow<List<TimelineItemModel.Task>> = _heroAccomplished.asStateFlow()
 
-    val heroGreeting: String
-        get() {
+    // 当前用户名 — 供 Shell 传递给 HistoryDrawer
+    val currentDisplayName: String
+        get() = userProfileRepository.profile.value.displayName
+
+    // 动态问候：从 UserProfileRepository 读取 displayName
+    val heroGreeting: StateFlow<String> = userProfileRepository.profile
+        .map { profile ->
             val hour = java.time.LocalTime.now().hour
-            return when {
+            val timeGreeting = when {
                 hour < 5 -> "🌙 夜深了"
                 hour < 12 -> "☀️ 早上好"
                 hour < 18 -> "✨ 下午好"
                 else -> "🌙 晚上好"
-            } + ", Frank"
+            }
+            "$timeGreeting, ${profile.displayName}"
         }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
     fun updateSessionTitle(newTitle: String) {
-        if (newTitle.isNotBlank()) {
-            _sessionTitle.value = newTitle.trim()
+        val title = newTitle.trim()
+        if (title.isBlank()) return
+        _sessionTitle.value = title
+        
+        val sid = currentSessionId ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            val session = historyRepository.getSession(sid) ?: return@launch
+            historyRepository.renameSession(sid, title, session.summary)
         }
     }
 
     init {
-        // V2: Observe Analyst FSM and map to UiState
+        // Init: Start a fresh session so messages are persisted from the start
+        startNewSession()
+
+        // V1/V2 Analyst FSM replacement: observe pipeline state for thinking indicators
         viewModelScope.launch {
-            analystController.state.collect { fsmState ->
+            analystPipeline.state.collect { fsmState ->
                 when (fsmState) {
-                    is com.smartsales.prism.domain.pipeline.AnalystState.Conversing -> {
-                        // Thinking trace shown via Activity Banner
-                        _uiState.value = UiState.Thinking(fsmState.trace.lastOrNull() ?: "分析中...")
+                    com.smartsales.prism.domain.analyst.AnalystState.CONSULTING -> {
+                        _uiState.value = UiState.Thinking("分析意图中...")
                     }
-                    is com.smartsales.prism.domain.pipeline.AnalystState.Structured -> {
-                        val tableState = UiState.PlannerTableState(fsmState.table)
-                        _uiState.value = tableState
-                        // Add to history
-                        val aiMsg = ChatMessage.Ai(
-                            id = java.util.UUID.randomUUID().toString(),
-                            timestamp = System.currentTimeMillis(),
-                            uiState = tableState
-                        )
-                        _history.value += aiMsg
+                    com.smartsales.prism.domain.analyst.AnalystState.INVESTIGATING -> {
+                        _uiState.value = UiState.Thinking("深度分析中...")
                     }
-                    is com.smartsales.prism.domain.pipeline.AnalystState.Executing -> {
-                        _uiState.value = UiState.Thinking("执行计划中...")
+                    com.smartsales.prism.domain.analyst.AnalystState.IDLE -> {
+                        if (_uiState.value is UiState.Thinking) {
+                            _uiState.value = UiState.Idle
+                        }
                     }
-                    is com.smartsales.prism.domain.pipeline.AnalystState.Responded -> {
-                        // Phase 1 完成: 纯文本响应 → 渲染到聊天历史
-                        val responseState = UiState.Response(fsmState.text)
-                        _uiState.value = responseState
-                        val aiMsg = ChatMessage.Ai(
-                            id = java.util.UUID.randomUUID().toString(),
-                            timestamp = System.currentTimeMillis(),
-                            uiState = responseState
-                        )
-                        _history.value += aiMsg
-                    }
-                    else -> {} // Idle handled by standard flow
+                    else -> {}
                 }
             }
         }
@@ -144,10 +162,16 @@ class PrismViewModel @Inject constructor(
         _heroUpcoming.value = allUpcoming
             .filterIsInstance<TimelineItemModel.Task>()
             .filter { !it.isDone }
+            .filter { it.urgencyLevel != UrgencyLevel.FIRE_OFF }
             .take(3)
 
         // 已完成: 最近7天, 取前2
         _heroAccomplished.value = scheduledTaskRepository.getRecentCompleted(2)
+    }
+
+    /** 外部触发刷新 Hero Dashboard（如关闭日程抽屉时） */
+    fun refreshHeroDashboard() {
+        viewModelScope.launch { loadHeroDashboard() }
     }
 
     /**
@@ -155,11 +179,77 @@ class PrismViewModel @Inject constructor(
      * Clears history, resets title, sets state to Idle.
      */
     fun startNewSession() {
+        // Wave 4: 先保存当前会话消息
+        persistCurrentMessages()
+        
         _history.value = emptyList()
         _sessionTitle.value = "新对话"
         _inputText.value = ""
         _uiState.value = UiState.Idle
         activityController.reset() // 清除持久化的 ThinkingBox
+        
+        // Wave 3: 真实会话重置
+        contextBuilder.resetSession() // 重置内核 RAM
+        
+        // 创建新会话记录 (SSD)
+        viewModelScope.launch(Dispatchers.IO) {
+            currentSessionId = historyRepository.createSession("新对话", "新会话")
+            Log.d("PrismVM", "New session: $currentSessionId")
+        }
+    }
+
+    /**
+     * 切换到历史会话 (Wave 4)
+     * 从 SSD 加载消息，恢复 UI 和内核上下文
+     */
+    fun switchSession(sessionId: String) {
+        // 先保存当前会话
+        persistCurrentMessages()
+        viewModelScope.launch(Dispatchers.IO) {
+            val messages = historyRepository.getMessages(sessionId)
+            val session = historyRepository.getSession(sessionId)
+            // 恢复内核 RAM
+            val chatTurns = messages.map { msg ->
+                when (msg) {
+                    is ChatMessage.User -> ChatTurn("user", msg.content)
+                    is ChatMessage.Ai -> ChatTurn("assistant",
+                        (msg.uiState as? UiState.Response)?.content ?: "")
+                }
+            }
+            contextBuilder.loadSession(sessionId, chatTurns)
+            withContext(Dispatchers.Main) {
+                currentSessionId = sessionId
+                _history.value = messages
+                _sessionTitle.value = session?.clientName ?: "对话"
+                _uiState.value = UiState.Idle
+                _inputText.value = ""
+                activityController.reset()
+            }
+            Log.d("PrismVM", "Switched to session: $sessionId, ${messages.size} messages")
+        }
+    }
+
+    /**
+     * 持久化当前会话消息到 SSD (Wave 4)
+     * 清除旧消息再重新写入（简单但有效的 v1 方案）
+     */
+    private fun persistCurrentMessages() {
+        val sid = currentSessionId ?: return
+        val msgs = _history.value
+        if (msgs.isEmpty()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            historyRepository.clearMessages(sid)
+            msgs.forEachIndexed { idx, msg ->
+                when (msg) {
+                    is ChatMessage.User ->
+                        historyRepository.saveMessage(sid, true, msg.content, idx)
+                    is ChatMessage.Ai ->
+                        historyRepository.saveMessage(sid, false,
+                            (msg.uiState as? UiState.Response)?.content ?: "", idx)
+                }
+            }
+            Log.d("PrismVM", "Persisted ${msgs.size} messages for session: $sid")
+        }
     }
     
     fun switchMode(mode: Mode) {
@@ -183,55 +273,7 @@ class PrismViewModel @Inject constructor(
     fun updateInput(text: String) {
         _inputText.value = text
     }
-    
-    fun send() {
-        val input = _inputText.value.trim()
-        if (input.isBlank()) return
-        
-        // 1. 添加用户消息到历史
-        val userMsg = ChatMessage.User(
-            id = java.util.UUID.randomUUID().toString(),
-            timestamp = System.currentTimeMillis(),
-            content = input
-        )
-        _history.value += userMsg
-        _inputText.value = ""
 
-        // V2: Analyst Mode uses V2 Controller
-        if (currentMode.value == Mode.ANALYST) {
-            _isSending.value = true
-            viewModelScope.launch {
-                analystController.handleInput(input)
-                _isSending.value = false
-            }
-            return
-        }
-        
-        _isSending.value = true
-        _uiState.value = UiState.Loading 
-        
-        viewModelScope.launch {
-            try {
-                val result = orchestrator.processInput(input)
-                _uiState.value = UiState.Idle 
-                
-                // 2. 添加 AI 响应到历史
-                val aiMsg = ChatMessage.Ai(
-                    id = java.util.UUID.randomUUID().toString(),
-                    timestamp = System.currentTimeMillis(),
-                    uiState = result
-                )
-                _history.value += aiMsg
-                
-            } catch (e: Exception) {
-                _errorMessage.value = e.message ?: "未知错误"
-                _uiState.value = UiState.Error(e.message ?: "未知错误")
-            } finally {
-                _isSending.value = false
-            }
-        }
-    }
-    
     fun clearError() {
         _errorMessage.value = null
     }
@@ -252,8 +294,136 @@ class PrismViewModel @Inject constructor(
      * Handle Task Board item selection
      */
     fun selectTaskBoardItem(itemId: String) {
+        // Implement when TaskBoard wiring is done
+    }
+
+    fun send() {
+        val input = _inputText.value.trim()
+        if (input.isBlank()) return
+        
+        // 1. 添加用户消息到历史
+        val userMsg = ChatMessage.User(
+            id = java.util.UUID.randomUUID().toString(),
+            timestamp = System.currentTimeMillis(),
+            content = input
+        )
+        _history.value += userMsg
+        _inputText.value = ""
+
+        // Cerb Analyst Mode Open-Loop Pipeline
+        if (currentMode.value == Mode.ANALYST) {
+            _isSending.value = true
+            viewModelScope.launch {
+                // Map history properly (simplified for L2)
+                val chatTurns = _history.value.mapNotNull { msg ->
+                    when (msg) {
+                        is ChatMessage.User -> ChatTurn("user", msg.content)
+                        is ChatMessage.Ai -> if (msg.uiState is UiState.Response) ChatTurn("assistant", msg.uiState.content) else null
+                    }
+                }
+                
+                try {
+                    val response = analystPipeline.handleInput(input, chatTurns)
+                    
+                    val finalUiState = when (response) {
+                        is com.smartsales.prism.domain.analyst.AnalystResponse.Chat -> {
+                            UiState.Response(response.content)
+                        }
+                        is com.smartsales.prism.domain.analyst.AnalystResponse.Plan -> {
+                            // Map AnalystStep to PlannerTable
+                            val plannerSteps = response.steps.mapIndexed { index, step ->
+                                com.smartsales.prism.domain.analyst.PlannerStep(
+                                    index = index + 1,
+                                    task = step.description,
+                                    status = step.status
+                                )
+                            }
+                            UiState.PlannerTableState(
+                                table = com.smartsales.prism.domain.analyst.PlannerTable(
+                                    title = response.title,
+                                    steps = plannerSteps,
+                                    insight = response.summary,
+                                    readyMessage = "确认执行此计划吗？"
+                                )
+                            )
+                        }
+                        is com.smartsales.prism.domain.analyst.AnalystResponse.Analysis -> {
+                            // For now, render as text response 
+                            UiState.Response(response.content + "\n[TaskBoard: ${response.suggestedWorkflows.size} tools]")
+                        }
+                    }
+                    
+                    _uiState.value = UiState.Idle
+                    val aiMsg = ChatMessage.Ai(
+                        id = java.util.UUID.randomUUID().toString(),
+                        timestamp = System.currentTimeMillis(),
+                        uiState = finalUiState
+                    )
+                    _history.value += aiMsg
+                } catch (e: Exception) {
+                    _errorMessage.value = e.message ?: "Analyst error"
+                } finally {
+                    _isSending.value = false
+                }
+            }
+            return
+        }
+        
+        _isSending.value = true
+        _uiState.value = UiState.Loading 
+        
         viewModelScope.launch {
-            analystController.selectTaskBoardItem(itemId)
+            try {
+                val result = orchestrator.processInput(input)
+                _uiState.value = UiState.Idle 
+                
+                // 2. 添加 AI 响应到历史
+                val aiMsg = ChatMessage.Ai(
+                    id = java.util.UUID.randomUUID().toString(),
+                    timestamp = System.currentTimeMillis(),
+                    uiState = result
+                )
+                _history.value += aiMsg
+                
+                // Wave 4: Auto-Renaming Trigger
+                // If title is default ("新对话") AND we have a successful response, trigger renaming
+                if (_sessionTitle.value == "新对话" && result is UiState.Response) {
+                    triggerAutoRename()
+                }
+                
+            } catch (e: Exception) {
+                _errorMessage.value = e.message ?: "未知错误"
+                _uiState.value = UiState.Error(e.message ?: "未知错误")
+            } finally {
+                _isSending.value = false
+            }
         }
     }
+
+    private fun triggerAutoRename() {
+        val sid = currentSessionId ?: return
+        val currentHistory = contextBuilder.getSessionHistory()
+        
+        // Don't rename on zero history (shouldn't happen here but safe guard)
+        if (currentHistory.isEmpty()) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val titleResult = sessionTitleGenerator.generateTitle(currentHistory)
+                
+                // Persist new title
+                historyRepository.renameSession(sid, titleResult.clientName, titleResult.summary)
+                
+                // Update UI immediately
+                withContext(Dispatchers.Main) {
+                    _sessionTitle.value = titleResult.clientName
+                }
+                Log.d("PrismVM", "Auto-renamed session $sid to '${titleResult.clientName}'")
+            } catch (e: Exception) {
+                Log.w("PrismVM", "Auto-rename failed", e)
+            }
+        }
+    }
+    
+    // ... (rest of methods)
 }

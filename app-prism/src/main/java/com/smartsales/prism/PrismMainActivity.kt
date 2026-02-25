@@ -13,9 +13,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
-
-import com.smartsales.prism.domain.repository.HistoryRepository
 import androidx.compose.runtime.*
+
 import com.smartsales.prism.data.onboarding.OnboardingGate
 import com.smartsales.prism.ui.PrismShell
 import com.smartsales.prism.ui.onboarding.OnboardingScreen
@@ -30,9 +29,6 @@ import javax.inject.Inject
  */
 @AndroidEntryPoint
 class PrismMainActivity : ComponentActivity() {
-    
-    @Inject
-    lateinit var historyRepository: HistoryRepository
     
     @Inject
     lateinit var onboardingGate: OnboardingGate
@@ -68,7 +64,6 @@ class PrismMainActivity : ComponentActivity() {
                         })
                     } else {
                         PrismShell(
-                            historyRepository = historyRepository,
                             onNavigateToSetup = { onboardingGate.reset() }
                         )
                     }

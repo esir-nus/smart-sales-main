@@ -35,7 +35,7 @@ object PersistenceModule {
             "prism_database"
         )
             .fallbackToDestructiveMigrationFrom(1)  // v1→v2: CalendarProvider → Room
-            .addMigrations(PrismDatabase.MIGRATION_2_3, PrismDatabase.MIGRATION_3_4)
+            .addMigrations(PrismDatabase.MIGRATION_2_3, PrismDatabase.MIGRATION_3_4, PrismDatabase.MIGRATION_4_5, PrismDatabase.MIGRATION_5_6, PrismDatabase.MIGRATION_6_7)
             .addCallback(SeedMemoryCallback)
             .build()
     }
@@ -43,6 +43,14 @@ object PersistenceModule {
     @Provides
     @Singleton
     fun provideScheduledTaskDao(database: PrismDatabase) = database.scheduledTaskDao()
+
+    @Provides
+    @Singleton
+    fun provideSessionDao(database: PrismDatabase) = database.sessionDao()
+
+    @Provides
+    @Singleton
+    fun provideMessageDao(database: PrismDatabase) = database.messageDao()
     
     /**
      * 首次建库时插入真实业务记忆 — 非测试数据
@@ -106,6 +114,44 @@ object PersistenceModule {
             }
             
             Log.d("PrismDB", "🌱 种入 ${seeds.size} 条真实记忆完成")
+
+            // 种入已完成任务 — L2 紧急度排序测试
+            val feb12_9am = 1739322000000L   // 2026-02-12 09:00 UTC+8
+            val feb12_12pm = 1739332800000L  // 2026-02-12 12:00 UTC+8
+            val feb11_14pm = 1739253600000L  // 2026-02-11 14:00 UTC+8
+            val feb11_15pm = 1739257200000L  // 2026-02-11 15:00 UTC+8
+
+            // L1_URGENT 已完成任务
+            db.execSQL(
+                """INSERT OR IGNORE INTO scheduled_tasks 
+                   (taskId, title, startTimeMillis, endTimeMillis, durationMinutes, durationSource, conflictPolicy, location, notes, keyPerson, keyPersonEntityId, highlights, isDone, hasAlarm, isSmartAlarm, alarmCascadeJson, urgencyLevel) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                arrayOf(
+                    "seed-task-001",
+                    "完成SmartSales应用架构搭建",
+                    feb12_9am, feb12_12pm, 180,
+                    "ESTIMATED", "FLEXIBLE",
+                    null, null, null, null, null,
+                    1, 0, 0, null, "L1_URGENT"
+                )
+            )
+
+            // L2_IMPORTANT 已完成任务
+            db.execSQL(
+                """INSERT OR IGNORE INTO scheduled_tasks 
+                   (taskId, title, startTimeMillis, endTimeMillis, durationMinutes, durationSource, conflictPolicy, location, notes, keyPerson, keyPersonEntityId, highlights, isDone, hasAlarm, isSmartAlarm, alarmCascadeJson, urgencyLevel) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                arrayOf(
+                    "seed-task-002",
+                    "完成公司年度会议",
+                    feb11_14pm, feb11_15pm, 60,
+                    "ESTIMATED", "FLEXIBLE",
+                    null, null, null, null, null,
+                    1, 0, 0, null, "L2_IMPORTANT"
+                )
+            )
+
+            Log.d("PrismDB", "🌱 种入 2 条已完成任务 (L1 + L2)")
         }
     }
 }

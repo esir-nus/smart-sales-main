@@ -142,7 +142,8 @@ fun SchedulerDrawer(
                     // Wave 9: Smart Tips
                     keyPersonEntityId = model.keyPersonEntityId,
                     tips = viewModel.getCachedTips(model.id),
-                    tipsLoading = model.id in tipsLoadingSet
+                    tipsLoading = model.id in tipsLoadingSet,
+                    urgencyLevel = model.urgencyLevel
                 )
                 is TimelineItemModel.Inspiration -> TimelineItem.Inspiration(
                     id = model.id,

@@ -73,7 +73,8 @@ fun PrismChatScreen(
     onAudioBadgeClick: () -> Unit = {},
     onTingwuClick: () -> Unit = {},
     onArtifactsClick: () -> Unit = {},
-    onDebugClick: () -> Unit = {}
+    onDebugClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {}
 ) {
     val currentMode by viewModel.currentMode.collectAsState()
     val history by viewModel.history.collectAsState()
@@ -87,6 +88,7 @@ fun PrismChatScreen(
     val taskBoardItems by viewModel.taskBoardItems.collectAsState()
     val heroUpcoming by viewModel.heroUpcoming.collectAsState()
     val heroAccomplished by viewModel.heroAccomplished.collectAsState()
+    val heroGreeting by viewModel.heroGreeting.collectAsState()
 
     val context = LocalContext.current
     
@@ -136,9 +138,10 @@ fun PrismChatScreen(
                     contentAlignment = Alignment.TopCenter // Fixed: Top alignment
                 ) {
                     HomeHeroDashboard(
-                        greeting = viewModel.heroGreeting,
+                        greeting = heroGreeting,
                         upcoming = heroUpcoming,
-                        accomplished = heroAccomplished
+                        accomplished = heroAccomplished,
+                        onProfileClick = onProfileClick
                     )
                 }
             } else {
@@ -333,19 +336,21 @@ private fun ProMaxHeader(
 private fun HomeHeroDashboard(
     greeting: String,
     upcoming: List<com.smartsales.prism.domain.scheduler.TimelineItemModel.Task>,
-    accomplished: List<com.smartsales.prism.domain.scheduler.TimelineItemModel.Task>
+    accomplished: List<com.smartsales.prism.domain.scheduler.TimelineItemModel.Task>,
+    onProfileClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 24.dp, start = 20.dp, end = 20.dp)
     ) {
-        // 动态问候
+        // 动态问候 — 点击名字进入个人中心
         Text(
             text = greeting,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            color = TextPrimary
+            color = TextPrimary,
+            modifier = Modifier.clickable { onProfileClick() }
         )
 
         // 待办 section
@@ -397,31 +402,27 @@ private fun HeroTaskRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                color = if (isDone) Color(0xFFF0F0F0) else BackgroundSurface.copy(alpha = 0.7f),
-                shape = RoundedCornerShape(10.dp)
-            )
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(vertical = 4.dp, horizontal = 4.dp), // No card background
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (isDone) {
-            Text("✓", color = AccentGreen, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text("✓", color = AccentGreen, fontWeight = FontWeight.Bold, fontSize = 12.sp)
         } else {
-            Text(urgencyDot, fontSize = 12.sp)
+            Text(urgencyDot, fontSize = 10.sp)
         }
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(6.dp))
         Text(
             text = task.timeDisplay.split(" - ").firstOrNull() ?: "",
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall,
             color = TextMuted,
             fontSize = 12.sp
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = task.title,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (isDone) TextMuted else TextPrimary,
-            fontWeight = if (isDone) FontWeight.Normal else FontWeight.Medium
+            style = MaterialTheme.typography.bodySmall,
+            color = if (isDone) TextMuted else TextSecondary,
+            fontWeight = FontWeight.Normal
         )
     }
 }
@@ -457,6 +458,7 @@ private fun GlassModeSwitcher(currentMode: Mode, onModeSwitch: (Mode) -> Unit) {
             )
 
             // Text/Icon Layer
+            val context = LocalContext.current
             Row(modifier = Modifier.fillMaxSize()) {
                 modes.forEach { mode ->
                     val isSelected = mode == currentMode
@@ -473,7 +475,9 @@ private fun GlassModeSwitcher(currentMode: Mode, onModeSwitch: (Mode) -> Unit) {
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null // Disable ripple as pill is the feedback
-                            ) { onModeSwitch(mode) },
+                            ) { 
+                                onModeSwitch(mode)
+                            },
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
@@ -582,6 +586,7 @@ private fun GlassFab(icon: ImageVector, onClick: () -> Unit) {
  */
 @Composable
 private fun AnalystSuggestionBlock(onSwitch: () -> Unit) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -602,7 +607,9 @@ private fun AnalystSuggestionBlock(onSwitch: () -> Unit) {
                 fontSize = 13.sp,
                 modifier = Modifier.weight(1f)
             )
-            TextButton(onClick = onSwitch) {
+            TextButton(onClick = {
+                onSwitch() 
+            }) {
                 Text("切换到分析师", color = Color(0xFF4FC3F7), fontSize = 13.sp)
             }
         }

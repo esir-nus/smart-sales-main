@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.Flow
  */
 @Dao
 interface ScheduledTaskDao {
-    @Query("SELECT * FROM scheduled_tasks WHERE startTimeMillis >= :startMs AND startTimeMillis < :endMs ORDER BY startTimeMillis ASC")
+    @Query("SELECT * FROM scheduled_tasks WHERE startTimeMillis >= :startMs AND startTimeMillis < :endMs ORDER BY urgencyLevel ASC, startTimeMillis ASC")
     fun getByDateRange(startMs: Long, endMs: Long): Flow<List<ScheduledTaskEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -30,6 +30,21 @@ interface ScheduledTaskDao {
     @Query("SELECT * FROM scheduled_tasks WHERE hasAlarm = 1 AND isDone = 0 AND startTimeMillis > :nowMs")
     suspend fun getFutureTasksWithAlarm(nowMs: Long): List<ScheduledTaskEntity>
 
-    @Query("SELECT * FROM scheduled_tasks WHERE isDone = 1 AND startTimeMillis >= :startMs ORDER BY startTimeMillis DESC LIMIT :limit")
+    @Query("SELECT * FROM scheduled_tasks WHERE isDone = 1 AND startTimeMillis >= :startMs ORDER BY urgencyLevel ASC, startTimeMillis DESC LIMIT :limit")
     suspend fun getRecentCompleted(startMs: Long, limit: Int): List<ScheduledTaskEntity>
+
+    @Query("""
+        SELECT * FROM scheduled_tasks 
+        WHERE keyPersonEntityId = :entityId 
+          AND isDone = 0 
+          AND urgencyLevel IN ('L1_CRITICAL', 'L2_IMPORTANT')
+        ORDER BY 
+          CASE urgencyLevel 
+            WHEN 'L1_CRITICAL' THEN 0 
+            WHEN 'L2_IMPORTANT' THEN 1 
+          END,
+          startTimeMillis ASC
+        LIMIT 1
+    """)
+    suspend fun getTopUrgentActiveTask(entityId: String): ScheduledTaskEntity?
 }

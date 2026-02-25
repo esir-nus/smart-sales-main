@@ -5,6 +5,8 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -16,6 +18,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,6 +48,13 @@ fun AudioDrawer(
     viewModel: AudioViewModel = hiltViewModel()
 ) {
     val audioItems by viewModel.audioItems.collectAsState()
+    val context = LocalContext.current
+
+    LaunchedEffect(viewModel) {
+        viewModel.uiEvents.collect { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     AnimatedVisibility(
         visible = isOpen,
@@ -150,6 +161,15 @@ fun AudioDrawer(
                     var expandedCardId by remember { mutableStateOf<String?>(null) }
                     var showRenameDialog by remember { mutableStateOf<Pair<String, String>?>(null) }
 
+                    val launcher = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.GetContent()
+                    ) { uri ->
+                        if (uri != null) {
+                            // We need a ViewModel method to handle the URI. Let's assume it exists or we will create it.
+                            viewModel.uploadLocalAudio(uri)
+                        }
+                    }
+
                     LazyColumn(
                         modifier = Modifier
                             .weight(1f)
@@ -175,7 +195,11 @@ fun AudioDrawer(
                             )
                         }
                         
-                        item { UploadButton() }
+                        if (com.smartsales.prism.BuildConfig.DEBUG) {
+                            item { 
+                                UploadButton(onClick = { launcher.launch("audio/*") }) 
+                            }
+                        }
                         item { Spacer(modifier = Modifier.height(30.dp)) }
                     }
                     
@@ -213,7 +237,7 @@ fun AudioDrawer(
 }
 
 @Composable
-private fun UploadButton() {
+private fun UploadButton(onClick: () -> Unit) {
     val stroke = Stroke(
         width = 2f,
         pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
@@ -231,21 +255,21 @@ private fun UploadButton() {
                 )
             }
             .background(Color.Transparent)
-            .clickable { /* TODO */ },
+            .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = "+",
                 fontSize = 18.sp,
-                color = TextMuted,
+                color = TextPrimary,
                 modifier = Modifier.padding(bottom = 2.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "上传本地音频",
+                text = "上传本地音频 (测试专用)",
                 fontSize = 14.sp,
-                color = TextMuted,
+                color = TextPrimary,
                 fontWeight = FontWeight.Medium
             )
         }

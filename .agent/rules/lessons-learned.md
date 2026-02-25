@@ -336,6 +336,22 @@ These flows are **logically independent**. The only shared resource is the BLE w
 
 ---
 
+### Markdown Tag Injection & Ignoring Line Numbers — 2026-02-25
+
+**Symptom**: Compilation fails with `Expecting a top level declaration` and `imports are only allowed in the beginning of file` at an exact start line (e.g., `2:29`). Agent attempts to fix `}` brackets at the end of the file. 
+**Root Cause**: **Markdown code blocks (` ```kotlin `) were pasted into the actual source file.** 
+This happens when an agent uses a tool to write or replace file content and mistakenly includes the markdown formatting wrapper.  
+**Wrong Approach**: Ignoring the compiler's line numbers and trying to guess the syntax error (e.g., deleting/adding `}` braces at the bottom of the file).  
+**Correct Fix**: 
+1. **Read the compiler error carefully.** It gives the exact line number (e.g., `AudioDrawer.kt:2:29`).
+2. **View the file at that specific line number** instead of guessing.
+3. Remove the extraneous ` ```kotlin ` or other markdown tags from the source file.  
+**File(s)**: [AudioDrawer.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/drawers/AudioDrawer.kt)  
+**Pattern**: **Never ignore the compiler's line numbers.** If the error is on line 2, the bug is on line 2, not line 279.  
+**Status**: ✅ CONFIRMED 2026-02-25
+
+---
+
 <!-- Add new lessons above this line -->
 
 ### SwipeToDismiss Background Visibility — 2026-02-02

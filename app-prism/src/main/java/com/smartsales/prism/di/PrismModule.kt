@@ -1,17 +1,19 @@
 package com.smartsales.prism.di
 
-import com.smartsales.prism.data.fakes.FakeAudioRepository
+import com.smartsales.prism.data.audio.RealAudioRepository
 
 
 import com.smartsales.prism.data.real.RealContextBuilder
 import com.smartsales.prism.data.fakes.FakeExecutor
-import com.smartsales.prism.data.fakes.FakeHistoryRepository
+import com.smartsales.prism.data.persistence.RoomHistoryRepository
 import com.smartsales.prism.data.fakes.FakePublisher
 import com.smartsales.prism.data.persistence.RoomMemoryRepository
 import com.smartsales.prism.data.persistence.RoomEntityRepository
 import com.smartsales.prism.data.persistence.RoomUserHabitRepository
 import com.smartsales.prism.data.fakes.FakeUserProfileRepository 
 import com.smartsales.prism.data.real.DashscopeExecutor
+import com.smartsales.prism.data.real.session.LlmSessionTitleGenerator
+import com.smartsales.prism.domain.session.SessionTitleGenerator
 import com.smartsales.prism.data.real.PrismOrchestrator
 import com.smartsales.prism.domain.audio.AudioRepository
 
@@ -24,7 +26,12 @@ import com.smartsales.prism.domain.pipeline.Publisher
 import com.smartsales.prism.domain.repository.HistoryRepository
 import com.smartsales.prism.domain.repository.UserProfileRepository
 
+import com.smartsales.core.metahub.MetaHub
+import com.smartsales.core.metahub.InMemoryMetaHub
+import com.smartsales.data.aicore.AiCoreConfig
+
 import dagger.Binds
+import dagger.Provides
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
@@ -60,7 +67,7 @@ abstract class PrismModule {
     // === Repositories ===
     
     @Binds @Singleton
-    abstract fun bindHistoryRepository(fake: FakeHistoryRepository): HistoryRepository
+    abstract fun bindHistoryRepository(impl: RoomHistoryRepository): HistoryRepository
     
     @Binds @Singleton
     abstract fun bindMemoryRepository(impl: RoomMemoryRepository): MemoryRepository
@@ -75,7 +82,7 @@ abstract class PrismModule {
     // === Audio ===
     
     @Binds @Singleton
-    abstract fun bindAudioRepository(fake: FakeAudioRepository): AudioRepository
+    abstract fun bindAudioRepository(real: RealAudioRepository): AudioRepository
 
     // === User Profile ===
 
@@ -86,6 +93,9 @@ abstract class PrismModule {
 
     @Binds @Singleton
     abstract fun bindToolRegistry(fake: com.smartsales.prism.data.fakes.FakeToolRegistry): com.smartsales.prism.domain.analyst.ToolRegistry
+
+    @Binds @Singleton
+    abstract fun bindAnalystPipeline(impl: com.smartsales.prism.data.real.RealAnalystPipeline): com.smartsales.prism.domain.analyst.AnalystPipeline
 
     // === User Habit ===
 
@@ -121,4 +131,32 @@ abstract class PrismModule {
 
     @Binds @Singleton
     abstract fun bindEntityWriter(impl: com.smartsales.prism.data.real.RealEntityWriter): com.smartsales.prism.domain.memory.EntityWriter
+
+    @Binds @Singleton
+    abstract fun bindSessionTitleGenerator(impl: LlmSessionTitleGenerator): SessionTitleGenerator
+
+    companion object {
+        @Provides
+        @Singleton
+        fun provideAiCoreConfig(): AiCoreConfig {
+            return AiCoreConfig()
+        }
+
+        @Provides
+        @Singleton
+        fun provideMetaHub(): MetaHub {
+            return InMemoryMetaHub()
+        }
+
+        @Provides
+        @Singleton
+        fun provideTingwuPipeline(
+            optionalConfig: java.util.Optional<AiCoreConfig>,
+            fake: com.smartsales.prism.data.fakes.FakeTingwuPipeline,
+            real: com.smartsales.prism.data.tingwu.RealTingwuPipeline
+        ): com.smartsales.prism.domain.tingwu.TingwuPipeline {
+            val preferFake = optionalConfig.orElse(AiCoreConfig()).preferFakeTingwu
+            return if (preferFake) fake else real
+        }
+    }
 }

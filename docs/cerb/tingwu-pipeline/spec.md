@@ -26,10 +26,10 @@ It leverages Aliyun Tingwu's native capabilities to perform:
 
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
-| **1** | **Interface & Fakes** | 🔲 PENDING | `TingwuPipeline` interface, Models, and `FakeTingwuPipeline` for UI testing. |
-| **2** | **OSS Integration** | 🔲 PENDING | Wire the pipeline to rely firmly on the new `oss` feature for upstream URLs. |
-| **3** | **Legacy Porting** | 🔲 PENDING | Port the `TingwuRunner`, `TingwuSubmissionService`, and `TingwuApi` from `data/ai-core` into the new Prism structure. |
-| **4** | **Artifact Wiring** | 🔲 PENDING | Ensure `TingwuArtifactBundle` is correctly written to `SessionContext` / `MemoryCenter` for downstream Analyst consumption. |
+| **1** | **Interface & Fakes** | ✅ SHIPPED | `TingwuPipeline` interface, Models, and `FakeTingwuPipeline` for UI testing. |
+| **2** | **OSS Integration** | ✅ SHIPPED | Wire the pipeline to rely firmly on the new `oss` feature for upstream URLs. |
+| **3** | **Legacy Porting** | ✅ SHIPPED | Port the `TingwuRunner`, `TingwuSubmissionService`, and `TingwuApi` from `data/ai-core` into the new Prism structure. |
+| **4** | **Artifact Wiring** | ✅ SHIPPED | Ensure `TingwuArtifactBundle` is correctly written to `SessionContext` / `MemoryCenter` for downstream Analyst consumption. |
 
 ## Open Loop Considerations
 

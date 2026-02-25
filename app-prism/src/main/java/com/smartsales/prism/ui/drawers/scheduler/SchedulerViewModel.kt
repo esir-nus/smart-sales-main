@@ -374,11 +374,14 @@ $taskContext
 
     fun deleteItem(id: String) {
         viewModelScope.launch {
+            val task = taskRepository.getTask(id)  // 删除前获取实体关联
             taskRepository.deleteItem(id)
             _pipelineStatus.value = "🗑️ 已删除"
             // Wave 9: 清理提示缓存
             _tipsCache.remove(id)
             _tipsLoading.value -= id
+            // nextAction 缓存同步 — 删除可能移除了当前 nextAction
+            task?.keyPersonEntityId?.let { recomputeNextAction(it) }
             triggerRefresh()
         }
     }
@@ -418,8 +421,22 @@ $taskContext
                 }
             }
 
+            // nextAction 缓存同步 — 完成/恢复任务后重算
+            task.keyPersonEntityId?.let { recomputeNextAction(it) }
+
             triggerRefresh()
         }
+    }
+
+    /**
+     * nextAction 缓存重算 — 查找实体最紧急的活跃 L1/L2 任务
+     * 结果直接写入 EntityEntry.nextAction 字段
+     */
+    private suspend fun recomputeNextAction(entityId: String) {
+        val topTask = taskRepository.getTopUrgentActiveForEntity(entityId)
+        val nextActionValue = if (topTask != null) topTask.title else null
+        entityWriter.updateProfile(entityId, mapOf("nextAction" to nextActionValue))
+        android.util.Log.d("SchedulerVM", "nextAction: entity=$entityId → ${nextActionValue ?: "<cleared>"}")
     }
 
     // --- Inspiration Actions ---

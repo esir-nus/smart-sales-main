@@ -25,6 +25,7 @@ sealed class TimelineItem {
         val isDone: Boolean = false,
         val hasAlarm: Boolean = false,
         val isSmartAlarm: Boolean = false, // "智能提醒" badge
+        val urgencyLevel: com.smartsales.prism.domain.scheduler.UrgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L3_NORMAL,
         // Expanded Fields
         val dateRange: String = "08:00 - 09:00",
         val location: String? = null,

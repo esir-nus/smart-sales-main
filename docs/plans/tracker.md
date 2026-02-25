@@ -42,7 +42,7 @@
 | [asr-service](../cerb/asr-service/spec.md) | SHIPPED | W3: Retry |
 | [oss-service](../cerb/oss-service/spec.md) | SHIPPED | W2: Resilience |
 | [audio-management](../cerb/audio-management/spec.md) | ACTIVE | W2: Real Repository Wiring |
-| [tingwu-pipeline](../cerb/tingwu-pipeline/spec.md) | SPEC_ONLY | W1: Interface & Fakes |
+| [tingwu-pipeline](../cerb/tingwu-pipeline/spec.md) | SHIPPED | — |
 
 ---
 
@@ -52,6 +52,7 @@
 
 ### 2026-02-25
 
+- **tingwu-pipeline**: Wave 1-4 SHIPPED — Decoupled Tingwu API from legacy ai-core into a clean Prism Feature. Wired Real/Fake pipelines to AudioRepository.
 - **analyst-orchestrator**: Wave 1 SHIPPED — Domain models, FakeAnalystPipeline L2 simulator, wiring with PrismViewModel, and verification tests passing.
 
 ### 2026-02-14

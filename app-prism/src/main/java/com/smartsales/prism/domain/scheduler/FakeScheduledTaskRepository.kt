@@ -105,4 +105,15 @@ class FakeScheduledTaskRepository @Inject constructor() : ScheduledTaskRepositor
             .filter { it.isDone }
             .take(limit)
     }
+
+    override suspend fun getTopUrgentActiveForEntity(entityId: String): TimelineItemModel.Task? {
+        return _items.value
+            .filterIsInstance<TimelineItemModel.Task>()
+            .filter { 
+                it.keyPersonEntityId == entityId && !it.isDone &&
+                (it.urgencyLevel == UrgencyLevel.L1_CRITICAL || it.urgencyLevel == UrgencyLevel.L2_IMPORTANT)
+            }
+            .sortedWith(compareBy<TimelineItemModel.Task> { it.urgencyLevel.ordinal }.thenBy { it.startTime })
+            .firstOrNull()
+    }
 }

@@ -39,7 +39,8 @@ data class ScheduledTaskEntity(
     val isDone: Boolean,
     val hasAlarm: Boolean,
     val isSmartAlarm: Boolean,
-    val alarmCascadeJson: String?  // JSON serialized List<String>
+    val alarmCascadeJson: String?,  // JSON serialized List<String>
+    val urgencyLevel: String = "L3_NORMAL"  // UrgencyLevel enum stored as String
 )
 
 /**
@@ -61,7 +62,8 @@ fun TimelineItemModel.Task.toEntity(): ScheduledTaskEntity = ScheduledTaskEntity
     isDone = isDone,
     hasAlarm = hasAlarm,
     isSmartAlarm = isSmartAlarm,
-    alarmCascadeJson = if (alarmCascade.isEmpty()) null else JSONArray(alarmCascade).toString()
+    alarmCascadeJson = if (alarmCascade.isEmpty()) null else JSONArray(alarmCascade).toString(),
+    urgencyLevel = urgencyLevel.name
 )
 
 fun ScheduledTaskEntity.toDomain(): TimelineItemModel.Task {
@@ -111,7 +113,7 @@ fun ScheduledTaskEntity.toDomain(): TimelineItemModel.Task {
         hasAlarm = hasAlarm,
         isSmartAlarm = isSmartAlarm,
         alarmCascade = cascade,
-        urgencyLevel = UrgencyLevel.L3_NORMAL, // Not persisted yet, default to L3 (Safe as cascade/conflict are persisted separately)
+        urgencyLevel = runCatching { UrgencyLevel.valueOf(urgencyLevel) }.getOrDefault(UrgencyLevel.L3_NORMAL),
         dateRange = dateRange
     )
 }

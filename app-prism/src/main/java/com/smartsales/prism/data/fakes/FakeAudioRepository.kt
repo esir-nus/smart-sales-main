@@ -1,14 +1,21 @@
 package com.smartsales.prism.data.fakes
 
+import android.content.Context
 import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioRepository
 import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
+import com.smartsales.data.aicore.TingwuJobArtifacts
+import com.smartsales.data.aicore.TingwuSmartSummary
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -16,8 +23,11 @@ import javax.inject.Singleton
  * 假音频仓库 — 模拟设备同步和转写延迟
  */
 @Singleton
-class FakeAudioRepository @Inject constructor() : AudioRepository {
+class FakeAudioRepository @Inject constructor(
+    @ApplicationContext private val context: Context
+) : AudioRepository {
     
+    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val _audioFiles = MutableStateFlow(generateSampleData())
     
     override fun getAudioFiles(): Flow<List<AudioFile>> = _audioFiles.asStateFlow()
@@ -26,6 +36,19 @@ class FakeAudioRepository @Inject constructor() : AudioRepository {
         // 模拟 BLE 同步延迟
         delay(1500)
         // 在实际实现中会从设备拉取新文件
+    }
+
+    override suspend fun addLocalAudio(uriString: String) {
+        val newId = "local-${System.currentTimeMillis()}"
+        _audioFiles.update { list ->
+            list + AudioFile(
+                id = newId,
+                filename = "Test_Upload.wav",
+                timeDisplay = "Just now",
+                source = AudioSource.PHONE,
+                status = TranscriptionStatus.PENDING
+            )
+        }
     }
     
     override suspend fun startTranscription(audioId: String) {
@@ -39,8 +62,16 @@ class FakeAudioRepository @Inject constructor() : AudioRepository {
         }
         
         // 完成转写
+        val summaryText = "AI生成的会议摘要: 客户对下季度的采购计划表示了浓厚兴趣..."
+        
+        val fakeArtifacts = TingwuJobArtifacts(
+            smartSummary = TingwuSmartSummary(summary = summaryText)
+        )
+        val artifactFile = File(context.filesDir, "${audioId}_artifacts.json")
+        artifactFile.writeText(json.encodeToString(fakeArtifacts))
+        
         updateFileStatus(audioId, TranscriptionStatus.TRANSCRIBED)
-        updateFileSummary(audioId, "AI生成的会议摘要...")
+        updateFileSummary(audioId, summaryText)
     }
     
     override fun deleteAudio(audioId: String) {

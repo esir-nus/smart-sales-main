@@ -17,4 +17,5 @@ class TestScheduledTaskRepository : ScheduledTaskRepository {
     override suspend fun updateTask(task: TimelineItemModel.Task) {}
     override suspend fun deleteItem(id: String) {}
     override suspend fun getRecentCompleted(limit: Int): List<TimelineItemModel.Task> = emptyList()
+    override suspend fun getTopUrgentActiveForEntity(entityId: String): TimelineItemModel.Task? = null
 }

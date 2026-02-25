@@ -36,6 +36,8 @@ class FakeOrchestratorTest {
             override suspend fun updateTask(task: TimelineItemModel.Task) {}
             override suspend fun deleteItem(id: String) {}
             override suspend fun getTask(id: String): TimelineItemModel.Task? = null
+            override suspend fun getRecentCompleted(limit: Int): List<TimelineItemModel.Task> = emptyList()
+            override suspend fun getTopUrgentActiveForEntity(entityId: String): TimelineItemModel.Task? = null
         }
         orchestrator = FakeOrchestrator(controller, taskRepository, timeProvider)
     }

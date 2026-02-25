@@ -11,10 +11,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.hilt.navigation.compose.hiltViewModel
 
-import com.smartsales.prism.domain.repository.HistoryRepository
 import com.smartsales.prism.ui.drawers.AudioDrawer
 import com.smartsales.prism.ui.drawers.HistoryDrawer
+import com.smartsales.prism.ui.drawers.HistoryViewModel
 import com.smartsales.prism.ui.drawers.SchedulerDrawer
 import com.smartsales.prism.ui.settings.UserCenterScreen
 import androidx.compose.material3.Button
@@ -45,7 +46,6 @@ enum class DrawerType {
  */
 @Composable
 fun PrismShell(
-    historyRepository: HistoryRepository,
     onNavigateToSetup: () -> Unit = {}
 ) {
     // Atomic Drawer State (Mutex)
@@ -53,6 +53,8 @@ fun PrismShell(
     var activeDrawer by remember { mutableStateOf<DrawerType?>(DrawerType.SCHEDULER) }
     var showUserCenter by remember { mutableStateOf(false) }
     var showDebugHud by remember { mutableStateOf(false) }
+    val prismViewModel: PrismViewModel = hiltViewModel()
+    val historyViewModel: HistoryViewModel = hiltViewModel()
     
     // 每次app回到前台时自动展示日程抽屉
     // drop-down动画暗示用户可以 dismiss 查看更多
@@ -67,9 +69,10 @@ fun PrismShell(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     
-    // Refresh Trigger
-    var sessionRefreshKey by remember { mutableIntStateOf(0) }
-    val groupedSessions = remember(sessionRefreshKey) { historyRepository.getGroupedSessions() }
+    // HistoryViewModel 提供分组数据
+    val groupedSessions by historyViewModel.groupedSessions.collectAsState()
+    // 用户显示名 — 从 PrismViewModel 的 heroGreeting 间接获取
+    val heroGreeting by prismViewModel.heroGreeting.collectAsState()
 
     Box(
         modifier = Modifier
@@ -81,11 +84,12 @@ fun PrismShell(
         Column(modifier = Modifier.fillMaxSize()) {
             PrismChatScreen(
                 onMenuClick = { activeDrawer = DrawerType.HISTORY },
-                onNewSessionClick = { /* TODO: New Session */ },
+                onNewSessionClick = { prismViewModel.startNewSession() },
                 onAudioBadgeClick = { activeDrawer = DrawerType.CONNECTIVITY },
                 onTingwuClick = { activeDrawer = DrawerType.TINGWU },
                 onArtifactsClick = { activeDrawer = DrawerType.ARTIFACTS },
-                onDebugClick = { showDebugHud = !showDebugHud }
+                onDebugClick = { showDebugHud = !showDebugHud },
+                onProfileClick = { showUserCenter = true }
             )
         }
 
@@ -108,9 +112,10 @@ fun PrismShell(
             Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
                 HistoryDrawer(
                     groupedSessions = groupedSessions,
+                    displayName = prismViewModel.currentDisplayName,
                     onSessionClick = { sessionId ->
                         activeDrawer = null
-                        // TODO: Switch Session
+                        prismViewModel.switchSession(sessionId)
                     },
                     onDeviceClick = {
                         activeDrawer = DrawerType.CONNECTIVITY
@@ -119,17 +124,18 @@ fun PrismShell(
                         activeDrawer = null
                         showUserCenter = true
                     },
+                    onProfileClick = {
+                        activeDrawer = null
+                        showUserCenter = true
+                    },
                     onPinSession = { sessionId ->
-                        historyRepository.togglePin(sessionId)
-                        sessionRefreshKey++
+                        historyViewModel.togglePin(sessionId)
                     },
                     onRenameSession = { sessionId, clientName, summary ->
-                        historyRepository.renameSession(sessionId, clientName, summary)
-                        sessionRefreshKey++
+                        historyViewModel.renameSession(sessionId, clientName, summary)
                     },
                     onDeleteSession = { sessionId ->
-                        historyRepository.deleteSession(sessionId)
-                        sessionRefreshKey++
+                        historyViewModel.deleteSession(sessionId)
                     }
                 )
             }
@@ -139,7 +145,10 @@ fun PrismShell(
         Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
             SchedulerDrawer(
                 isOpen = activeDrawer == DrawerType.SCHEDULER,
-                onDismiss = { activeDrawer = null }
+                onDismiss = {
+                    activeDrawer = null
+                    prismViewModel.refreshHeroDashboard()
+                }
             )
         }
 

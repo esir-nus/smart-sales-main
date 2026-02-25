@@ -59,4 +59,8 @@ class RoomScheduledTaskRepository @Inject constructor(
             .atStartOfDay(timeProvider.zoneId).toInstant().toEpochMilli()
         return dao.getRecentCompleted(sevenDaysAgo, limit).map { it.toDomain() }
     }
+
+    override suspend fun getTopUrgentActiveForEntity(entityId: String): TimelineItemModel.Task? {
+        return dao.getTopUrgentActiveTask(entityId)?.toDomain()
+    }
 }

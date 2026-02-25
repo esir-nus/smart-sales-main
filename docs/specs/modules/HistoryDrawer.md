@@ -80,8 +80,10 @@ Left-side drawer for session history navigation.
     - Archives: `Archive` (Gray) (No Emojis!)
 
 **Item Format:**
-- **Title**: Bold, Primary Color (e.g., "张总").
-- **Summary**: Regular, Secondary Color below title.
+- **Layout**: Horizontal Row.
+- **Title**: Bold, Primary Color (Left aligned).
+- **Spacer**: 8.dp (or weight).
+- **Summary**: Regular, Grey/Secondary Color (Right aligned).
 - **Hover**: Gradient highlight on left edge.
 - **Decoration**: No right arrows `>` (Clean). Data-sourced emojis must be stripped.
 
@@ -92,8 +94,10 @@ Left-side drawer for session history navigation.
 |---------|---------|-------|
 | **Container** | Floating Dock | `bottom-6`, `mx-4`, `rounded-[20px]`, `shadow-glass` |
 | **Avatar** | User Icon | Gradient Background |
-| **Info** | Name + Plan | "Frank Chen", "Premium Plan" |
+| **Info** | Name + Plan | Dynamic from UserProfile, e.g. "老库", "高级会员" |
 | **Settings** | `Settings` Icon | Right aligned |
+
+**Interaction**: Tap avatar or name area → Opens **User Center**.
 
 ---
 
@@ -106,3 +110,4 @@ Left-side drawer for session history navigation.
 | **Tap Header** | Toggle Collapse/Expand for that group |
 | **Tap Session** | Load session, close drawer |
 | **Long Press** | Context menu (Pin, Rename, Delete) |
+| **Tap Footer Profile** | Opens User Center |

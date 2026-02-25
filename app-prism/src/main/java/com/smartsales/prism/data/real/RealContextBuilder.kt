@@ -217,12 +217,26 @@ class RealContextBuilder @Inject constructor(
     }
 
     // === Lifecycle ===
-
-    fun resetSession() {
+    
+    override fun resetSession() {
         _sessionHistory.clear()
         _turnCount = 0
         _workingSet = createNewWorkingSet()
         Log.d("Kernel", "🔄 Session reset: ${_workingSet.sessionId}")
+    }
+
+    override fun getActiveSessionId(): String = _workingSet.sessionId
+
+    override fun loadSession(sessionId: String, history: List<ChatTurn>) {
+        _sessionHistory.clear()
+        _sessionHistory.addAll(history)
+        _turnCount = history.size / 2
+        // 使用指定的 sessionId 创建 WorkingSet，而非随机生成
+        _workingSet = SessionWorkingSet(
+            sessionId = sessionId,
+            createdAt = timeProvider.now.toEpochMilli()
+        )
+        Log.d("Kernel", "📂 Session loaded: $sessionId, ${history.size} turns")
     }
 
     // === Private Helpers ===

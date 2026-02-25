@@ -29,4 +29,21 @@ interface ContextBuilder {
      * 记录助手消息到历史
      */
     suspend fun recordAssistantMessage(content: String)
+    
+    /**
+     * 重置会话 (Wave 3)
+     * 清空当前 SessionWorkingSet，重置轮次计数，并不自动持久化旧会话
+     */
+    fun resetSession()
+
+    /**
+     * 获取当前活跃会话 ID (Wave 4)
+     */
+    fun getActiveSessionId(): String
+
+    /**
+     * 加载历史会话到 RAM (Wave 4)
+     * 恢复会话历史和轮次计数
+     */
+    fun loadSession(sessionId: String, history: List<ChatTurn>)
 }

@@ -29,13 +29,17 @@ description: Gateway workflow for feature development - enforces single-spec sco
 
 ---
 
-## Phase -2: Tracker → Cerb Shard
+## Phase -2: Tracker & Interface Map → Cerb Shard
 
 ```bash
 cat docs/plans/tracker.md
+cat docs/cerb/interface-map.md
 ```
 
-**Tracker is an INDEX, not a spec.** It faithfully reflects spec implementation status — it never invents tasks. Find the owning Cerb shard:
+**Tracker is an INDEX, not a spec.** It faithfully reflects spec implementation status — it never invents tasks. 
+**Interface Map is the TOPOLOGY**. It defines module ownership and data flow. You MUST check it to know which modules to read from and write to.
+
+Find the owning Cerb shard and its connections:
 
 ```
 Tracker entry → "session-context: PARTIAL"
@@ -43,6 +47,8 @@ Tracker entry → "session-context: PARTIAL"
               Owning shard: docs/cerb/session-context/
                      ↓
               spec.md (state: PARTIAL) → read spec waves → find 🔲 wave
+                     ↓
+              Interface Map → Check who owns the data you need
 ```
 
 | Tracker Pattern | Action |
@@ -54,12 +60,14 @@ Tracker entry → "session-context: PARTIAL"
 > [!WARNING]
 > **Tracker = index of spec states. Spec = truth of what to build.**
 > Tracker entries are derived FROM specs, never the other way around.
+> **Interface Map = Truth of how modules connect.**
+> NEVER invent a connection between modules if it is not in the Interface Map.
 
 ---
 
 ## Phase 0: 🔒 Single Spec Scope (CRITICAL)
 
-Read `docs/cerb/[feature]/spec.md` **COMPLETELY**. If no spec exists, run `/cerb-spec-template` first to create one. Then fill:
+Read `docs/cerb/[feature]/spec.md` AND `docs/cerb/[feature]/interface.md` **COMPLETELY**. If no spec exists, run `/cerb-spec-template` first to create one. Then fill:
 
 ```markdown
 ### Cerb Scope Declaration

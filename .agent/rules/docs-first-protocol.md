@@ -35,7 +35,8 @@ Starting work on feature/bug/change...
 │           ├─ Did domain models change? → UPDATE spec model section
 │           ├─ Did UI states change? → UPDATE spec states table
 │           ├─ Did wave status change? → UPDATE spec wave table
-│           └─ Did tech debt emerge? → UPDATE tracker.md
+│           ├─ Did tech debt emerge? → UPDATE tracker.md
+│           └─ Did module edges/ownership change? → UPDATE interface-map.md
 ```
 
 ---
@@ -66,6 +67,7 @@ Starting work on feature/bug/change...
 | New tech debt identified? | Append to tracker.md Tech Debt section |
 | Implementation status changed? | Update spec implementation table |
 | Ship criteria met? | Check boxes in spec |
+| Cross-module edges changed? | Update interface-map.md |
 
 ---
 
@@ -81,6 +83,7 @@ Starting work on feature/bug/change...
 - [ ] UI states in spec match code
 - [ ] Wave status updated after shipping
 - [ ] Tracker debt updated if applicable
+- [ ] Interface map updated if module edges changed
 ```
 
 **After `/04-doc-sync`, verify with `/cerb-check`.**

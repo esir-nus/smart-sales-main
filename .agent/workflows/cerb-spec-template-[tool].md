@@ -80,13 +80,17 @@ Define how the feature will be built incrementally.
 
 ---
 
-## Step 3: Register in Tracker
+## Step 3: Register in Tracker and Interface Map
 
 Update `docs/plans/tracker.md`:
 
 1.  Add new row to **Cerb Spec Index**.
 2.  Set State to `SPEC_ONLY`.
 3.  Set Next Wave to "Wave 1: [Title]".
+
+Update `docs/cerb/interface-map.md`:
+1. Decide which layer the module belongs to
+2. Add a new row documenting its ownership and any known reads
 
 ---
 
@@ -97,5 +101,6 @@ Update `docs/plans/tracker.md`:
 - [ ] OS Layer declared in `spec.md` header
 - [ ] Wave Plan defined in `spec.md`
 - [ ] Registered in `tracker.md` as `SPEC_ONLY`
+- [ ] Registered in `interface-map.md` (if applicable/new module)
 
 **Done. Now verify with `/cerb-check` and then start building with `/feature-dev-planner`.**

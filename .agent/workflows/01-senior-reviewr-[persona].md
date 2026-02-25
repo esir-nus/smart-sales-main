@@ -126,7 +126,7 @@ The senior engineer persona specifically watches for:
 ```
 ┌─────────────────────────────────────────┐
 │ Is code ALIGNED with target arch?       │
-│ (Check tracker.md / specs)              │
+│ (Check tracker.md / specs / interface-map.md)│
 └───────────────┬─────────────────────────┘
                 │
         ┌───────┴───────┐

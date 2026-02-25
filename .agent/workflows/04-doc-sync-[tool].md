@@ -33,9 +33,10 @@ grep -r "<component_name>" docs/
 ```
 
 **Common doc patterns to look for:**
+- `docs/plans/tracker.md` (MUST be updated if feature implementation status changed and is NOT an index)
+- `docs/cerb/interface-map.md` (MUST be updated if module ownership, new modules, or new interface methods were added)
 - Architecture guides (track file structure, milestones)
 - Changelogs (track waves, releases)
-- Task trackers (track TODO items)
 - Spec docs (track implementation status)
 
 Read each potentially relevant doc to understand its purpose and current state.
@@ -89,6 +90,8 @@ Based on context, create a sync proposal:
 - [ ] No `RealizeTheArchi` refs (now `tracker.md`)
 - [ ] No `ux-tracker.md` refs (now `ux-experience.md`)
 - [ ] All file links point to existing files
+- [ ] `docs/plans/tracker.md` reflects current spec wave status accurately
+- [ ] `docs/cerb/interface-map.md` includes any newly added interfaces or cross-module edges
 
 ### Docs to Update
 

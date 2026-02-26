@@ -73,6 +73,13 @@ class RealConnectivityBridge @Inject constructor(
         }
     }
     
+    override suspend fun listRecordings(): Result<List<String>> {
+        val baseUrl = resolveBaseUrl() ?: return Result.Error(
+            Exception("无法获取设备IP — 请确认 Badge 已连接 WiFi")
+        )
+        return httpClient.listWavFiles(baseUrl)
+    }
+    
     
     override fun recordingNotifications(): Flow<RecordingNotification> =
         deviceManager.recordingReadyEvents.map { filename ->

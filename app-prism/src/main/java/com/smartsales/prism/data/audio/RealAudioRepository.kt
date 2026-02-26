@@ -6,9 +6,11 @@ import com.smartsales.prism.domain.audio.AudioRepository
 import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
+import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import com.smartsales.data.oss.OssUploader
 import com.smartsales.data.oss.OssErrorCode
 import com.smartsales.data.oss.OssUploadResult
+import kotlinx.coroutines.sync.withLock
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
 import com.smartsales.prism.domain.tingwu.TingwuRequest
 import com.smartsales.prism.domain.tingwu.TingwuJobState
@@ -58,26 +60,60 @@ class RealAudioRepository @Inject constructor(
         loadFromDisk()
     }
 
+    private val syncMutex = kotlinx.coroutines.sync.Mutex()
+
     override fun getAudioFiles(): Flow<List<AudioFile>> = _audioFiles.asStateFlow()
 
     override suspend fun syncFromDevice() = withContext(ioDispatcher) {
-        // Here we simulate the sync logic from Bridge.
-        // E.g., ConnectivityBridge.downloadRecording()
-        // If successful, we add it to our file.
-        // This is a placeholder for actual device sync logic.
+        syncMutex.withLock {
+            android.util.Log.d("RealAudioRepository", "syncFromDevice: Starting badge sync")
+            val listResult = connectivityBridge.listRecordings()
+            val badgeFiles = when (listResult) {
+                is Result.Success -> listResult.data
+                is Result.Error -> throw Exception("无法获取徽章文件列表: ${listResult.throwable.message}")
+            }
         
-        // Simulating finding a new file on the badge
-        val newFakeId = UUID.randomUUID().toString()
-        val newFile = AudioFile(
-            id = newFakeId,
-            filename = "Sync_\${System.currentTimeMillis()}.wav",
-            timeDisplay = "Just now",
-            source = AudioSource.SMARTBADGE,
-            status = TranscriptionStatus.PENDING,
-            isStarred = false
-        )
-        mutateAndSave { currentList ->
-            currentList + newFile
+        val existingBadgeFilenames = _audioFiles.value
+            .filter { it.source == AudioSource.SMARTBADGE }
+            .map { it.filename }
+            .toSet()
+            
+        val newFilesToDownload = badgeFiles.filter { it !in existingBadgeFilenames }
+        
+        android.util.Log.d("RealAudioRepository", "syncFromDevice: Found ${newFilesToDownload.size} new files to download")
+        
+        var downloadedCount = 0
+        for (filename in newFilesToDownload) {
+            android.util.Log.d("RealAudioRepository", "syncFromDevice: Downloading $filename")
+            when (val downloadResult = connectivityBridge.downloadRecording(filename)) {
+                is WavDownloadResult.Success -> {
+                    val newId = UUID.randomUUID().toString()
+                    val destFile = java.io.File(context.filesDir, "$newId.wav")
+                    downloadResult.localFile.copyTo(destFile, overwrite = true)
+                    downloadResult.localFile.delete() // cleanup temp
+
+                    val newFile = AudioFile(
+                        id = newId,
+                        filename = filename,
+                        timeDisplay = "Just now",
+                        source = AudioSource.SMARTBADGE,
+                        status = TranscriptionStatus.PENDING,
+                        isStarred = false
+                    )
+                    mutateAndSave { currentList ->
+                        currentList + newFile
+                    }
+                    downloadedCount++
+                }
+                is WavDownloadResult.Error -> {
+                    android.util.Log.e("RealAudioRepository", "syncFromDevice: Failed to download $filename: ${downloadResult.message}")
+                }
+            }
+        }
+        
+        if (newFilesToDownload.isNotEmpty() && downloadedCount == 0) {
+            throw Exception("发现新录音，但全部下载失败")
+        }
         }
     }
 
@@ -122,7 +158,7 @@ class RealAudioRepository @Inject constructor(
             android.util.Log.d("RealAudioRepository", "startTranscription: audioId=$audioId -> starting OSS upload")
             val fileToTranscribe = File(context.filesDir, "$audioId.wav")
             if (!fileToTranscribe.exists()) {
-                fileToTranscribe.createNewFile() // Mock behavior if recording not yet downloaded
+                throw Exception("找不到本地音频文件实体")
             }
 
             // 2. Upload to OSS
@@ -186,15 +222,45 @@ class RealAudioRepository @Inject constructor(
                         }
                     }
                     is TingwuJobState.Failed -> {
-                        throw Exception("Tingwu failed: ${state.reason}")
+                        android.util.Log.e("RealAudioRepository", "startTranscription: Tingwu job failed state: ${state.reason}")
+                        // Rollback state cleanly without blowing up the Flow
+                        _audioFiles.update { currentList ->
+                            currentList.map { 
+                                if (it.id == audioId) it.copy(status = TranscriptionStatus.PENDING, progress = 0f) else it 
+                            }
+                        }
+                        saveToDiskAsync()
+                        return@collect 
                     }
                     else -> { /* Safe fallback for exhaustive when */ }
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.e("RealAudioRepository", "startTranscription: FAILED audioId=$audioId", e)
-            // Rollback to PENDING so user can retry
-            mutateAndSave { currentList ->
+            val unwrappedData = generateSequence<Throwable>(e) { it.cause }
+                .firstOrNull { it.javaClass.name == "retrofit2.HttpException" }
+            
+            var detailedMsg: String? = null
+            if (unwrappedData != null) {
+                try {
+                    val responseMethod = unwrappedData.javaClass.getMethod("response")
+                    val responseObj = responseMethod.invoke(unwrappedData)
+                    if (responseObj != null) {
+                        val errorBodyMethod = responseObj.javaClass.getMethod("errorBody")
+                        val errorBodyObj = errorBodyMethod.invoke(responseObj)
+                        if (errorBodyObj != null) {
+                            val stringMethod = errorBodyObj.javaClass.getMethod("string")
+                            detailedMsg = stringMethod.invoke(errorBodyObj) as? String
+                        }
+                    }
+                } catch (ignored: Exception) { }
+            }
+            
+            val errorDetails = detailedMsg ?: unwrappedData?.message ?: e.message ?: "Unknown error"
+            
+            android.util.Log.e("RealAudioRepository", "startTranscription: FAILED audioId=$audioId. Details: $errorDetails", e)
+            
+            // Rollback memory immediately, save disk async
+            _audioFiles.update { currentList ->
                 currentList.map { 
                     if (it.id == audioId) it.copy(
                         status = TranscriptionStatus.PENDING, 
@@ -202,17 +268,41 @@ class RealAudioRepository @Inject constructor(
                     ) else it 
                 }
             }
-            throw e // Let ViewModel catch this and show a Toast
+            saveToDiskAsync()
+            
+            throw Exception("转写失败: $errorDetails", e) // Pass refined message to ViewModel
         }
     }
 
     override fun deleteAudio(audioId: String) {
-        // Fire and forget mutate (using try-lock or launching it into a scope since it's a normal func)
-        // Note: interfaces defines this as non-suspend, so we must block or launch
-        // For simplicity and to not change interface, we runBlocking or use a scope.
-        // Here we just update memory immediately and write asynchronously to disk.
+        val fileToDelete = _audioFiles.value.find { it.id == audioId } ?: return
+        
         _audioFiles.update { files -> files.filter { it.id != audioId } }
         saveToDiskAsync()
+        
+        val localFile = File(context.filesDir, "$audioId.wav")
+        if (localFile.exists()) {
+            localFile.delete()
+        }
+        val artifactFile = File(context.filesDir, "${audioId}_artifacts.json")
+        if (artifactFile.exists()) {
+            artifactFile.delete()
+        }
+        
+        if (fileToDelete.source == AudioSource.SMARTBADGE) {
+            kotlinx.coroutines.GlobalScope.launch(ioDispatcher) {
+                try {
+                    val success = connectivityBridge.deleteRecording(fileToDelete.filename)
+                    if (success) {
+                        android.util.Log.d("RealAudioRepository", "deleteAudio: Deleted ${fileToDelete.filename} from badge")
+                    } else {
+                        android.util.Log.e("RealAudioRepository", "deleteAudio: Failed to delete ${fileToDelete.filename} from badge")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("RealAudioRepository", "deleteAudio: Exception deleting ${fileToDelete.filename} from badge", e)
+                }
+            }
+        }
     }
 
     override fun toggleStar(audioId: String) {

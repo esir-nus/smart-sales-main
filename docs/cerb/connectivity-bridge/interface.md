@@ -26,6 +26,13 @@ interface ConnectivityBridge {
     suspend fun downloadRecording(filename: String): WavDownloadResult
     
     /**
+     * List all WAV files currently stored on the badge.
+     * 
+     * @return List of filenames (e.g., ["rec1.wav", "rec2.wav"]) or error
+     */
+    suspend fun listRecordings(): Result<List<String>>
+
+    /**
      * Stream of recording notifications from badge.
      * 
      * **Current**: HTTP polling on `/list` detects new WAV files.  

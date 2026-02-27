@@ -30,7 +30,8 @@ interface ConsultantService {
 ```kotlin
 data class ConsultantResult(
     val infoSufficient: Boolean,
-    val clarificationMessage: String?
+    val response: String,
+    val missingEntities: List<String>
 )
 ```
 

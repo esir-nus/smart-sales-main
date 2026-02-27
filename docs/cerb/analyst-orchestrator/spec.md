@@ -116,12 +116,12 @@ Controls the strict phasing of the open loop.
 ```
 
 - `IDLE`: Base state. Awaiting new intent.
-- `CONSULTING`: Calling Phase 1 LLM. Deciding if `info_sufficient`. 
-  - *Small Loop: If false, stay here, ask user context.*
+- `CONSULTING`: Calling Phase 1 (`ConsultantService`). Evaluates intent, returns `info_sufficient` and `missing_entities`.
+  - *Small Loop: If missing entities found, trigger `EntityResolverService` to find exact matches. If ambiguous, stay here, ask user context.*
 - `PROPOSAL`: Plan is rendered. Agent waits. **Execution blocked.**
   - *Small Loop: If user amends plan, back to Consulting.*
   - *Break Loop: If user confirms, to Investigating.*
-- `INVESTIGATING`: Phase 3 processing. The investigator LLM is reading the RAM.
+- `INVESTIGATING`: Phase 3 processing. The investigator (`ArchitectService`) is reading the RAM.
 - `RESULT`: UI prints analysis. Evaluates and mounts the TaskBoard. Resets to `IDLE` after mounting.
 
 ---
@@ -160,7 +160,7 @@ Following the Anti-Drift Protocol, the Orchestrator will be built using a **Fake
 | **2** | **Phase 1 (Consultant)** | ✅ SHIPPED | Wire `RealAnalystPipeline` for conversational routing. Implement simple boolean parsing for `info_sufficient`. |
 | **3** | **Phase 2 (Architect)** | ✅ SHIPPED | Markdown prompts and `PlanResult` to map output to the UI state. |
 | **4** | **Phase 3 (Investigation)** | ✅ SHIPPED | Wire the LLM to read the `EnhancedContext` and update the UI states. |
-| **5** | **Entity Disambiguation** | 🔲 PENDING | Implement `AwaitingClarification` loop and lightweight LLM entity resolution. |
+| **5** | **Entity Disambiguation** | ✅ SHIPPED | Implement `AwaitingClarification` loop and lightweight `EntityResolverService` validation. |
 | **6** | **Phase 4 (TaskBoard)** | 🔲 PENDING | Parse final suggestions and mount actionable UI buttons. |
 
 ---
@@ -176,5 +176,5 @@ Following the Anti-Drift Protocol, the Orchestrator will be built using a **Fake
 
 - **Test Cases (L2 Simulated On-Device)**:
   - [x] L2: User types → Fake returns `info_sufficient = false` → UI renders normal chat.
-  - [x] L2: User types → Fake returns `info_sufficient = true` → UI renders `PlannerTable` and stops.
-  - [x] L2: User taps "Proceed" → UI marks completed lines periodically.
+  - [x] L2: User types → Fake returns `info_sufficient = true` → UI renders `Markdown Strategy Bubble` and stops.
+  - [x] L2: User taps "Proceed" → UI fires `INVESTIGATING` state.

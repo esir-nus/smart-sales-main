@@ -137,6 +137,10 @@ These are consumed **by the implementation**, not by you:
 | Interface | Cerb Shard | Purpose | OS Model Note |
 |-----------|------------|---------|---------------|
 | `ContextBuilder` | session-context | Build EnhancedContext | **Kernel** -- loads RAM |
+| `ConsultantService` | analyst-consultant | Intent verification and Missing Entity extraction | RAM App logic |
+| `ArchitectService` | analyst-architect | Generate analytic plans and perform reasoning | RAM App logic |
+| `EntityResolverService` | analyst-orchestrator | Disambiguate entities flagged by Consultant | Lightweight Router LLM |
+| `EntityRepository` | entity-registry | Raw candidate fetching for resolver | SSD Read (via Interface) |
 | `Executor` | -- | Execute LLM calls (qwen3-max) | Direct call |
 | `AgentActivityController` | -- | Thinking Trace visibility | Direct call |
 | `ClientProfileHub` | client-profile-hub | Deep entity context (if RAM insufficient) | **File Explorer** -- reads SSD |

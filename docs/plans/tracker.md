@@ -16,9 +16,9 @@
 | [scheduler](../cerb/scheduler/spec.md) | PARTIAL | W8: Pipeline Unification |
 | [conflict-resolver](../cerb/conflict-resolver/spec.md) | SHIPPED | — |
 | [badge-audio-pipeline](../cerb/badge-audio-pipeline/spec.md) | SHIPPED | W4: Error Recovery |
-| [analyst-orchestrator](../cerb/analyst-orchestrator/spec.md) | PARTIAL | W5: Entity Disambiguation |
-| [analyst-consultant](../cerb/analyst-consultant/spec.md) | PARTIAL | W3: Entity Intent Extraction |
-| [analyst-architect](../cerb/analyst-architect/spec.md) | SHIPPED | — |
+| [analyst-orchestrator](../cerb/analyst-orchestrator/spec.md) | SHIPPED | 🎯 |
+| [analyst-consultant](../cerb/analyst-consultant/spec.md) | SHIPPED | 🎯 |
+| [analyst-architect](../cerb/analyst-architect/spec.md) | SHIPPED | 🎯 |
 
 ### Data & Memory
 
@@ -57,8 +57,9 @@
 
 ### 2026-02-25
 
-- **analyst-orchestrator**: Wave 3 SHIPPED — Wired `RealAnalystPipeline` to `FakeArchitectService` for Phase 2 (PlannerTable generation), handling state transition to PROPOSAL.
-- **tingwu-pipeline**: Wave 1-4 SHIPPED — Decoupled Tingwu API from legacy ai-core into a clean Prism Feature. Wired Real/Fake pipelines to AudioRepository.
+- **analyst-orchestrator**: Wave 3 & 5 SHIPPED 🎯 Extracted consultant logic, transitioned state to PROPOSAL without `PlannerTable`, and wired `EntityResolverService` disambiguation loops natively into `handleInput`.
+- **analyst-consultant**: Wave 3 SHIPPED 🎯 Formalized `ConsultantResult` to correctly extract `missingEntities` and provide raw clarifying text.
+- **tingwu-pipeline**: Wave 1-4 SHIPPED 🎯 Decoupled Tingwu API from legacy ai-core into a clean Prism Feature. Wired Real/Fake pipelines to AudioRepository.
 - **analyst-orchestrator**: Wave 1 SHIPPED — Domain models, FakeAnalystPipeline L2 simulator, wiring with PrismViewModel, and verification tests passing.
 
 ### 2026-02-14

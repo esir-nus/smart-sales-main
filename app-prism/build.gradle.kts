@@ -113,6 +113,7 @@ dependencies {
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.coil.compose)
 
     // Room Persistence
     implementation(libs.room.runtime)

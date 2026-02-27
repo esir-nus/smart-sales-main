@@ -56,51 +56,70 @@ fun AudioDrawer(
         }
     }
 
-    AnimatedVisibility(
-        visible = isOpen,
-        enter = slideInVertically(
-            initialOffsetY = { it },
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessMedium
-            )
-        ),
-        exit = slideOutVertically(
-            targetOffsetY = { it },
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessMedium
-            )
-        )
-    ) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-            // Scrim
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+        // Scrim
+        androidx.compose.animation.AnimatedVisibility(
+            visible = isOpen,
+            enter = androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.fadeOut()
+        ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(BackdropScrim)
                     .clickable { onDismiss() }
             )
+        }
 
-            // Drawer Content (Glass Sheet)
+        // Drawer Content (Glass Sheet)
+        androidx.compose.animation.AnimatedVisibility(
+            visible = isOpen,
+            enter = slideInVertically(
+                initialOffsetY = { it },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            ),
+            exit = slideOutVertically(
+                targetOffsetY = { it },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            )
+        ) {
             PrismSurface(
                 modifier = modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.95f), // 95% height
+                    .fillMaxHeight(0.95f) // 95% height
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope { while (true) { awaitPointerEvent() } }
+                    },
                 shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
                 backgroundColor = BackgroundSurface.copy(alpha = 0.95f), // Slightly more opaque for sheet
                 elevation = 16.dp
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     // 1. Drag Handle Pill
+                    var accumulatedDrag by remember { mutableStateOf(0f) }
+                    
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 12.dp, bottom = 8.dp)
                             .pointerInput(Unit) {
-                                detectVerticalDragGestures { change, dragAmount ->
+                                detectVerticalDragGestures(
+                                    onDragEnd = { accumulatedDrag = 0f },
+                                    onDragCancel = { accumulatedDrag = 0f }
+                                ) { change, dragAmount ->
                                     change.consume()
-                                    if (dragAmount > 20) onDismiss()
+                                    accumulatedDrag += dragAmount
+                                    // Drag DOWN to close (since Drawer is at the bottom, dragging down means positive Y)
+                                    if (accumulatedDrag > 50) {
+                                        onDismiss()
+                                        accumulatedDrag = 0f
+                                    }
                                 }
                             },
                         contentAlignment = Alignment.Center
@@ -183,6 +202,7 @@ fun AudioDrawer(
                             AudioCard(
                                 item = item,
                                 isExpanded = isExpanded,
+                                viewModel = viewModel,
                                 onClick = { expandedCardId = if (isExpanded) null else item.id },
                                 onStarClick = { viewModel.toggleStar(item.id) },
                                 onAskAi = { id -> 
@@ -205,7 +225,7 @@ fun AudioDrawer(
                     
                     // Dialog
                     if (showRenameDialog != null) {
-                        val (id, currentName) = showRenameDialog!!
+                        val (_, currentName) = showRenameDialog!!
                         var newName by remember { mutableStateOf(currentName) }
                         
                         AlertDialog(

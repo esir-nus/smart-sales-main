@@ -91,24 +91,31 @@ class DashscopeExecutor @Inject constructor(
         val mode = context.modeMetadata.currentMode
         
         // Wave 2: 各模式使用专用系统提示词
-        when (mode) {
-            Mode.COACH -> {
-                appendLine(buildCoachSystemPrompt())
-                appendLine()
-                appendLine("---")
-                appendLine()
-            }
-            Mode.ANALYST -> {
-                appendLine(buildAnalystSystemPrompt())
-                appendLine()
-                appendLine("---")
-                appendLine()
-            }
-            Mode.SCHEDULER -> {
-                appendLine(buildSchedulerSystemPrompt())
-                appendLine()
-                appendLine("---")
-                appendLine()
+        if (context.systemPromptOverride != null) {
+            appendLine(context.systemPromptOverride)
+            appendLine()
+            appendLine("---")
+            appendLine()
+        } else {
+            when (mode) {
+                Mode.COACH -> {
+                    appendLine(buildCoachSystemPrompt())
+                    appendLine()
+                    appendLine("---")
+                    appendLine()
+                }
+                Mode.ANALYST -> {
+                    appendLine(buildAnalystSystemPrompt())
+                    appendLine()
+                    appendLine("---")
+                    appendLine()
+                }
+                Mode.SCHEDULER -> {
+                    appendLine(buildSchedulerSystemPrompt())
+                    appendLine()
+                    appendLine("---")
+                    appendLine()
+                }
             }
         }
         
@@ -289,10 +296,12 @@ class DashscopeExecutor @Inject constructor(
     "customer_state": "ready_to_buy_but_price_sensitive",
     "recommended_tactics": ["value_stack", "tco_comparison", "urgency"]
   },
+  "missing_entities": ["如果用户提到了 <KNOWN_FACTS> 中不存在的客户/公司名，提取到这里。若都存在或没提，则为空数组 []"],
   "thought": "你的分析思路（中文）",
   "response": "给用户的专业建议（中文，2-3段）"
 }
 
+注意：如果用户提及了某个具体的人或公司，但你发现 <KNOWN_FACTS> 中没有这个人的清晰记录（比如名字可能是错别字，或者确实没记录），请将这些名字放入 `missing_entities` 数组中，并将 `info_sufficient` 设为 false。
 注意：如果 info_sufficient 为 true，系统将自动触发后续的详细规划流程。你不需要在此处生成具体的交付物列表。
 """.trimIndent()
     

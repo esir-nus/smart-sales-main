@@ -221,12 +221,13 @@ fun PrismShell(
                 onTrigger = { activeDrawer = DrawerType.SCHEDULER }
             )
 
-            // Audio (Bottom Pull)
+            // Audio (Bottom Pull) - 增加有效触摸区域，对齐 Scheduler
             GhostHandle(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .height(48.dp),
-                threshold = -150f,
+                    .padding(bottom = 20.dp) // Avoid OS gesture navigation bar
+                    .height(120.dp), // Match Scheduler touch area height
+                threshold = -100f, // Match Scheduler threshold
                 onTrigger = { activeDrawer = DrawerType.AUDIO }
             )
         }

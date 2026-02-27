@@ -52,6 +52,11 @@ interface AudioRepository {
      * 绑定会话
      */
     fun bindSession(audioId: String, sessionId: String)
+    
+    /**
+     * 获取完整转写智能结果（用于展开态）
+     */
+    suspend fun getArtifacts(audioId: String): com.smartsales.prism.domain.tingwu.TingwuJobArtifacts?
 }
 
 /**

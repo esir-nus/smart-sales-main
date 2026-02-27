@@ -1,11 +1,9 @@
 package com.smartsales.prism.data.fakes
 
 import android.util.Log
-import com.smartsales.prism.domain.analyst.AnalysisStep
 import com.smartsales.prism.domain.analyst.AnalystPipeline
 import com.smartsales.prism.domain.analyst.AnalystResponse
 import com.smartsales.prism.domain.analyst.AnalystState
-import com.smartsales.prism.domain.analyst.StepStatus
 import com.smartsales.prism.domain.analyst.WorkflowSuggestion
 import com.smartsales.prism.domain.pipeline.ChatTurn
 import kotlinx.coroutines.delay
@@ -43,10 +41,7 @@ class FakeAnalystPipeline @Inject constructor() : AnalystPipeline {
                     AnalystResponse.Plan(
                         title = "📋 模拟分析计划",
                         summary = "根据上下文，我们生成了以下分析步骤。",
-                        steps = listOf(
-                            AnalysisStep("1", "概况总结", StepStatus.PENDING),
-                            AnalysisStep("2", "周期计算", StepStatus.PENDING)
-                        )
+                        markdownContent = "### 模拟分析计划\n* 概况总结\n* 周期计算"
                     )
                 } else {
                     // Chat fallback
@@ -90,11 +85,7 @@ class FakeAnalystPipeline @Inject constructor() : AnalystPipeline {
                     AnalystResponse.Plan(
                         title = "📋 更新后的模拟分析计划",
                         summary = "根据您的补充，计划已更新。",
-                        steps = listOf(
-                            AnalysisStep("1", "概况总结", StepStatus.PENDING),
-                            AnalysisStep("2", "周期计算", StepStatus.PENDING),
-                            AnalysisStep("3", "决策图谱", StepStatus.PENDING)
-                        )
+                        markdownContent = "### 模拟分析计划\n* 概况总结\n* 周期计算\n* 决策图谱"
                     )
                 }
             }

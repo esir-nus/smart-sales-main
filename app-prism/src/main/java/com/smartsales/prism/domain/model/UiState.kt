@@ -51,7 +51,7 @@ sealed class UiState {
     ) : UiState()
 
     // Analyst Mode V2 State
-    data class PlannerTableState(val table: com.smartsales.prism.domain.analyst.PlannerTable) : UiState()
+    data class MarkdownStrategyState(val markdownContent: String) : UiState()
 }
 
 /**

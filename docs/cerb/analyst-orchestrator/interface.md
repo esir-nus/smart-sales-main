@@ -24,7 +24,7 @@ interface AnalystPipeline {
 
     /**
      * Observe the current orchestrator state.
-     * UI uses this to decide what to render (chat, planner table, task board).
+     * UI uses this to decide what to render (chat, Markdown strategy, task board).
      */
     val state: StateFlow<AnalystState>
 }
@@ -60,14 +60,14 @@ sealed class AnalystResponse {
     ) : AnalystResponse()
 
     /**
-     * Phase 2: Structured plan for user confirmation.
-     * Consumer renders as PlannerTable bubble.
+     * Phase 2: Structured strategy for user confirmation.
+     * Consumer renders as a Markdown Strategy bubble.
      * User must confirm before investigation begins.
      */
     data class Plan(
         val title: String,
         val summary: String,
-        val steps: List<AnalysisStep>
+        val markdownContent: String
     ) : AnalystResponse()
 
     /**
@@ -78,19 +78,6 @@ sealed class AnalystResponse {
         val content: String,
         val suggestedWorkflows: List<WorkflowSuggestion> = emptyList()
     ) : AnalystResponse()
-}
-
-data class AnalysisStep(
-    val stepId: String,
-    val description: String,
-    val status: StepStatus
-)
-
-enum class StepStatus {
-    PENDING,
-    IN_PROGRESS,
-    COMPLETED,
-    FAILED
 }
 
 data class WorkflowSuggestion(
@@ -113,8 +100,8 @@ when (response) {
         displayMessage(response.content)
     }
     is AnalystResponse.Plan -> {
-        // Render PlannerTable bubble with confirmation gate
-        displayPlannerTable(response)
+        // Render Markdown Strategy bubble with confirmation gate
+        displayMarkdownStrategy(response)
         showConfirmationButton()  // "OK to proceed?"
     }
     is AnalystResponse.Analysis -> {

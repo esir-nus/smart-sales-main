@@ -33,11 +33,11 @@ class AlarmSchedulerTest {
         
         // Then
         val alarms = alarmScheduler.getAlarmsForTask(taskId)
-        assertEquals(7, alarms.size)
+        assertEquals(6, alarms.size)
         
-        // 验证偏移量: -2h, -1h, -30m, -15m, -5m, -1m, 0m
+        // 验证偏移量: -2h, -1h, -30m, -15m, -5m, 0m
         val offsets = alarms.mapNotNull { it.offsetMinutes }.sortedDescending()
-        assertEquals(listOf(120, 60, 30, 15, 5, 1, 0), offsets)
+        assertEquals(listOf(120, 60, 30, 15, 5, 0), offsets)
     }
     
     @Test
@@ -52,8 +52,8 @@ class AlarmSchedulerTest {
         
         // Then
         val alarms = alarmScheduler.getAlarmsForTask(taskId)
-        assertEquals(3, alarms.size) // -15m, -1m, 0m
-        assertEquals(listOf(15, 1, 0), alarms.map { it.offsetMinutes }.sortedDescending())
+        assertEquals(3, alarms.size) // -15m, -5m, 0m
+        assertEquals(listOf(15, 5, 0), alarms.map { it.offsetMinutes }.sortedDescending())
     }
     
     @Test
@@ -79,7 +79,7 @@ class AlarmSchedulerTest {
         val eventTime = Instant.parse("2026-02-03T15:00:00Z")
         val cascade = UrgencyLevel.buildCascade(UrgencyLevel.L1_CRITICAL)
         alarmScheduler.scheduleCascade(taskId, "Sprint Review", eventTime, cascade)
-        assertEquals(7, alarmScheduler.getAlarmsForTask(taskId).size)
+        assertEquals(6, alarmScheduler.getAlarmsForTask(taskId).size)
         
         // When
         alarmScheduler.cancelReminder(taskId)

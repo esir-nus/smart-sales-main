@@ -1,5 +1,6 @@
 package com.smartsales.prism.domain.connectivity
 
+import com.smartsales.core.util.Result
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -28,6 +29,13 @@ interface ConnectivityBridge {
      * @return 下载结果（本地文件或错误）
      */
     suspend fun downloadRecording(filename: String): WavDownloadResult
+    
+    /**
+     * 获取 Badge 上目前存储的所有 WAV 文件名列表
+     * 
+     * @return 文件名列表或错误
+     */
+    suspend fun listRecordings(): Result<List<String>>
     
     /**
      * 录音通知流

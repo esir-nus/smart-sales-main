@@ -9,11 +9,8 @@ import com.smartsales.feature.connectivity.WifiProvisioner
 import com.smartsales.feature.connectivity.BadgeHttpClient
 import com.smartsales.feature.connectivity.gateway.BleGateway
 import com.smartsales.feature.connectivity.gateway.BleGatewayResult
-import com.smartsales.feature.connectivity.gateway.GifCommand
-import com.smartsales.feature.connectivity.gateway.GifCommandResult
 import com.smartsales.feature.connectivity.gateway.HotspotResult
 import com.smartsales.feature.connectivity.gateway.NetworkQueryResult
-import com.smartsales.feature.connectivity.gateway.TimeSyncEvent
 import com.smartsales.feature.connectivity.gateway.WavCommand
 import com.smartsales.feature.connectivity.gateway.WavCommandResult
 import com.smartsales.feature.connectivity.WifiCredentials
@@ -165,8 +162,6 @@ class FakeBleGatewayForWav : BleGateway {
     override suspend fun provision(session: BleSession, credentials: WifiCredentials) = BleGatewayResult.Timeout
     override suspend fun requestHotspot(session: BleSession) = HotspotResult.Timeout(0)
     override suspend fun queryNetwork(session: BleSession) = NetworkQueryResult.Timeout(0)
-    override suspend fun sendGifCommand(session: BleSession, command: GifCommand) = GifCommandResult.Ready
-    override fun listenForTimeSync(session: BleSession): Flow<TimeSyncEvent> = flowOf()
     override fun forget(peripheral: BlePeripheral) {}
 }
 
@@ -191,7 +186,6 @@ class FakeBadgeHttpClientForWav : BadgeHttpClient {
     }
 
     // Unused
-    override suspend fun uploadJpg(baseUrl: String, file: File) = Result.Success(Unit)
     override suspend fun deleteWav(baseUrl: String, filename: String) = Result.Success(Unit)
     override suspend fun isReachable(baseUrl: String) = true
 }

@@ -5,8 +5,8 @@ import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioRepository
 import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
-import com.smartsales.data.aicore.TingwuJobArtifacts
-import com.smartsales.data.aicore.TingwuSmartSummary
+import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
+import com.smartsales.prism.domain.tingwu.TingwuSmartSummary
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -114,6 +114,16 @@ class FakeAudioRepository @Inject constructor(
     
     override fun getAudio(audioId: String): AudioFile? {
         return _audioFiles.value.find { it.id == audioId }
+    }
+
+    override suspend fun getArtifacts(audioId: String): TingwuJobArtifacts? {
+        val artifactFile = File(context.filesDir, "${audioId}_artifacts.json")
+        if (!artifactFile.exists()) return null
+        return try {
+            json.decodeFromString<TingwuJobArtifacts>(artifactFile.readText())
+        } catch (e: Exception) {
+            null
+        }
     }
     
     override fun bindSession(audioId: String, sessionId: String) {

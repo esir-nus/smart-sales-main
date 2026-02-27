@@ -16,9 +16,9 @@
 | [scheduler](../cerb/scheduler/spec.md) | PARTIAL | W8: Pipeline Unification |
 | [conflict-resolver](../cerb/conflict-resolver/spec.md) | SHIPPED | — |
 | [badge-audio-pipeline](../cerb/badge-audio-pipeline/spec.md) | SHIPPED | W4: Error Recovery |
-| [analyst-orchestrator](../cerb/analyst-orchestrator/spec.md) | PARTIAL | W4: Phase 3 (Investigation) |
-| [analyst-consultant](../cerb/analyst-consultant/spec.md) | SPEC_ONLY | W1: Interface & Fakes |
-| [analyst-architect](../cerb/analyst-architect/spec.md) | PARTIAL | W3: Phase 3 Investigation |
+| [analyst-orchestrator](../cerb/analyst-orchestrator/spec.md) | PARTIAL | W5: Entity Disambiguation |
+| [analyst-consultant](../cerb/analyst-consultant/spec.md) | PARTIAL | W3: Entity Intent Extraction |
+| [analyst-architect](../cerb/analyst-architect/spec.md) | SHIPPED | — |
 
 ### Data & Memory
 

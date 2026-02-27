@@ -1,5 +1,6 @@
 package com.smartsales.prism.data.fakes
 
+import com.smartsales.core.util.Result
 import com.smartsales.prism.domain.connectivity.BadgeConnectionState
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.RecordingNotification
@@ -55,6 +56,11 @@ class FakeConnectivityBridge @Inject constructor() : ConnectivityBridge {
             originalFilename = filename,
             sizeBytes = tempFile.length()
         )
+    }
+    
+    override suspend fun listRecordings(): Result<List<String>> {
+        delay(300)
+        return Result.Success(listOf("fake_rec_1.wav", "fake_rec_2.wav"))
     }
     
     override fun recordingNotifications(): Flow<RecordingNotification> = 

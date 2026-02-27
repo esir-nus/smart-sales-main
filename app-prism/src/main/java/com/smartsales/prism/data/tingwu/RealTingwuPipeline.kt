@@ -23,6 +23,7 @@ import com.smartsales.prism.domain.tingwu.TingwuSmartSummary
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -67,7 +68,8 @@ class RealTingwuPipeline @Inject constructor(
                     ),
                     autoChaptersEnabled = true, // We always want chapters for Analyst
                     summarizationEnabled = true, // We always want summaries for Analyst
-                    summarization = TingwuSummarizationParameters(types = listOf("Paragraph", "Conversational")),
+                    meetingAssistanceEnabled = true, // Extracts MeetingAssistance links
+                    summarization = TingwuSummarizationParameters(types = listOf("Paragraph", "Conversational", "QuestionsAndAnswers", "ActionItem")),
                     transcoding = TingwuTranscodingParameters(targetAudioFormat = "mp3")
                 )
             )
@@ -160,47 +162,180 @@ class RealTingwuPipeline @Inject constructor(
         flow: MutableStateFlow<TingwuJobState>
     ) {
         try {
-            val resultResponse = api.getTaskResult(taskId = jobId)
+            val transcriptionUrl = statusResponse.data?.resultLinks?.get("Transcription")
             
-            if (resultResponse.code != null && resultResponse.code != "0") {
-                flow.value = TingwuJobState.Failed(jobId, "Failed to fetch result: ${resultResponse.message}", resultResponse.code)
+            if (transcriptionUrl.isNullOrBlank()) {
+                flow.value = TingwuJobState.Failed(jobId, "Tingwu API did not return a Transcription URL in ResultLinks.")
                 return
             }
 
-            val transcription = resultResponse.data?.transcription
-            val markdown = transcription?.text ?: "转写结果为空。"
+            val client = okhttp3.OkHttpClient()
             
-            // Map the segments
-            val diarizedSegments = transcription?.segments?.mapIndexed { index, seg ->
-                DiarizedSegment(
-                    speakerId = seg.speaker,
-                    speakerIndex = index,
-                    startMs = (seg.start?.times(1000))?.toLong() ?: 0L,
-                    endMs = (seg.end?.times(1000))?.toLong() ?: 0L,
-                    text = seg.text ?: ""
-                )
+            suspend fun fetchJson(url: String?): String? = withContext(dispatchers.io) {
+                if (url.isNullOrBlank()) return@withContext null
+                try {
+                    val req = okhttp3.Request.Builder().url(url).get().build()
+                    val res = client.newCall(req).execute()
+                    if (res.isSuccessful) res.body?.string() else null
+                } catch (e: Exception) {
+                    android.util.Log.e("RealTingwuPipeline", "Job $jobId failed to download from $url: ${e.message}")
+                    null
+                }
             }
 
-            // In a real scenario, we'd fetch the ExtraResults (AutoChapters, Summarization URL JSONs) here.
-            // But to keep this decoupled Prism layer lean, we directly serialize the resultLinks. The Analyst layer will parse them.
-            val resultLinks = resultResponse.data?.resultLinks?.map { TingwuResultLink(it.key, it.value) } ?: emptyList()
+            val summarizationUrl = statusResponse.data?.resultLinks?.get("Summarization")
+            val autoChaptersUrl = statusResponse.data?.resultLinks?.get("AutoChapters")
+            val meetingAssistanceUrl = statusResponse.data?.resultLinks?.get("MeetingAssistance")
+
+            // Concurrently download artifacts
+            val bodies = kotlinx.coroutines.coroutineScope {
+                val deferredTranscription = async(dispatchers.io) { fetchJson(transcriptionUrl) }
+                val deferredSummary = async(dispatchers.io) { fetchJson(summarizationUrl) }
+                val deferredChapters = async(dispatchers.io) { fetchJson(autoChaptersUrl) }
+                val deferredMeetingAssistance = async(dispatchers.io) { fetchJson(meetingAssistanceUrl) }
+                
+                listOf(
+                    deferredTranscription.await(),
+                    deferredSummary.await(),
+                    deferredChapters.await(),
+                    deferredMeetingAssistance.await()
+                )
+            }
+            val responseBody = bodies[0]
+            val summaryBody = bodies[1]
+            val chaptersBody = bodies[2]
+            val meetingAssistanceBody = bodies[3]
+
+            if (responseBody == null) throw Exception("Empty body when downloading transcription result.")
+
+            // Parse Transcription resiliently
+            val rootObj = kotlinx.serialization.json.Json.parseToJsonElement(responseBody)
+            val rootJson = if (rootObj is kotlinx.serialization.json.JsonObject) rootObj else kotlinx.serialization.json.JsonObject(emptyMap())
             
-            val autoChaptersUrl = resultResponse.data?.resultLinks?.get("AutoChapters")
-            val summarizationUrl = resultResponse.data?.resultLinks?.get("Summarization")
+            // Lookahead pattern to find Text, Segments, and Paragraphs
+            val innerTranscription = rootJson["Transcription"] as? kotlinx.serialization.json.JsonObject
+            val innerDataTranscription = (rootJson["Data"] as? kotlinx.serialization.json.JsonObject)?.get("Transcription") as? kotlinx.serialization.json.JsonObject
+
+            val activeRoot = innerTranscription ?: innerDataTranscription ?: rootJson
+
+            var textStr = activeRoot["Text"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
+            val segsArr = activeRoot["Segments"] as? kotlinx.serialization.json.JsonArray
+            val paragraphsArr = activeRoot["Paragraphs"] as? kotlinx.serialization.json.JsonArray
+            
+            // Fallback for paragraph style if Text is missing
+            if (textStr.isNullOrBlank() && paragraphsArr != null) {
+                val sb = StringBuilder()
+                for (i in 0 until paragraphsArr.size) {
+                    val para = paragraphsArr[i] as? kotlinx.serialization.json.JsonObject ?: continue
+                    val words = para["Words"] as? kotlinx.serialization.json.JsonArray ?: continue
+                    for (w in 0 until words.size) {
+                        val wordObj = words[w] as? kotlinx.serialization.json.JsonObject ?: continue
+                        val wordText = wordObj["Text"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else "" }
+                        sb.append(wordText)
+                    }
+                    sb.append("\n\n")
+                }
+                textStr = sb.toString().trim()
+            }
+            
+            val markdown = textStr?.ifBlank { null } ?: "转写结果为空。"
+            
+            val diarizedSegments = mutableListOf<DiarizedSegment>()
+            if (segsArr != null) {
+                for (i in 0 until segsArr.size) {
+                    val seg = segsArr[i] as? kotlinx.serialization.json.JsonObject ?: continue
+                    
+                    val text = seg["Text"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null } ?: ""
+                    val speaker = seg["SpeakerId"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
+                        ?: seg["Speaker"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
+                    val startSec = seg["Start"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content.toDoubleOrNull() else null } ?: 0.0
+                    val endSec = seg["End"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content.toDoubleOrNull() else null } ?: 0.0
+                    
+                    diarizedSegments.add(
+                        DiarizedSegment(
+                            speakerId = speaker,
+                            speakerIndex = i,
+                            startMs = (startSec * 1000).toLong(),
+                            endMs = (endSec * 1000).toLong(),
+                            text = text
+                        )
+                    )
+                }
+            }
+
+            // Parse Summarization
+            val finalSmartSummary = if (summaryBody != null) {
+                val sumRoot = kotlinx.serialization.json.Json.parseToJsonElement(summaryBody)
+                val sumWrapper = if (sumRoot is kotlinx.serialization.json.JsonObject) sumRoot else kotlinx.serialization.json.JsonObject(emptyMap())
+                
+                val sumJson = sumWrapper["Summarization"] as? kotlinx.serialization.json.JsonObject ?: sumWrapper
+                
+                val paragraphTitle = sumJson["ParagraphTitle"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
+                val paragraphSummary = sumJson["ParagraphSummary"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
+                
+                val text = buildString {
+                    if (!paragraphTitle.isNullOrBlank()) appendLine("**$paragraphTitle**")
+                    if (!paragraphSummary.isNullOrBlank()) appendLine(paragraphSummary)
+                }.trim().ifBlank { 
+                    sumJson["Summary"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null } ?: "无摘要内容" 
+                }
+                
+                val keyPointsArray = sumJson["KeyPoints"] as? kotlinx.serialization.json.JsonArray
+                    ?: sumJson["Highlights"] as? kotlinx.serialization.json.JsonArray
+                    ?: sumJson["Keypoints"] as? kotlinx.serialization.json.JsonArray
+                
+                val keyPointsList = mutableListOf<String>()
+                if (keyPointsArray != null) {
+                    for (i in 0 until keyPointsArray.size) {
+                        (keyPointsArray[i] as? kotlinx.serialization.json.JsonPrimitive)?.content?.let { keyPointsList.add(it) }
+                    }
+                }
+                TingwuSmartSummary(summary = text, keyPoints = keyPointsList)
+            } else {
+                TingwuSmartSummary("智能摘要已生成，可通过结果链接下载。")
+            }
+
+            // Parse Chapters (by injecting a small parse function locally, or using TingwuPayloadParser through reflection/making it public if we had to)
+            // But doing a quick local parse for safety:
+            val finalChapters = if (chaptersBody != null) {
+                val chRoot = kotlinx.serialization.json.Json.parseToJsonElement(chaptersBody)
+                val chArray = if (chRoot is kotlinx.serialization.json.JsonArray) chRoot else {
+                    (chRoot as? kotlinx.serialization.json.JsonObject)?.get("AutoChapters") as? kotlinx.serialization.json.JsonArray    
+                }
+                
+                chArray?.mapNotNull { element ->
+                    val obj = element as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+                    val title = obj["Headline"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
+                        ?: obj["Title"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null } ?: "Unknown"
+                    val startRaw = obj["Start"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content.toLongOrNull() else null } ?: 0L
+                    val endRaw = obj["End"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content.toLongOrNull() else null } ?: 0L
+                    
+                    val startMs = if (startRaw < 100000) startRaw * 1000 else startRaw
+                    val endMs = if (endRaw < 100000) endRaw * 1000 else endRaw
+                    val chapSummary = obj["Summary"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
+                    
+                    TingwuChapter(title = title, startMs = startMs, endMs = endMs, summary = chapSummary)
+                }
+            } else {
+                null
+            }
+
+            val resultLinks = statusResponse.data?.resultLinks?.map { TingwuResultLink(it.key, it.value) } ?: emptyList()
 
             val artifacts = TingwuJobArtifacts(
                 outputMp3Path = statusResponse.data?.outputMp3Path,
                 outputMp4Path = statusResponse.data?.outputMp4Path,
                 outputSpectrumPath = statusResponse.data?.outputSpectrumPath,
                 outputThumbnailPath = statusResponse.data?.outputThumbnailPath,
-                transcriptionUrl = transcription?.url,
+                transcriptionUrl = transcriptionUrl,
                 autoChaptersUrl = autoChaptersUrl,
                 resultLinks = resultLinks,
+                chapters = finalChapters, 
                 diarizedSegments = diarizedSegments,
                 recordingOriginDiarizedSegments = diarizedSegments,
-                // We'll leave `smartSummary` and `chapters` to be parsed from the URLs locally if needed,
-                // or the user can just use the provided summary for now.
-                smartSummary = TingwuSmartSummary("智能摘要已生成，可通过结果链接下载。")
+                smartSummary = finalSmartSummary,
+                meetingAssistanceRaw = meetingAssistanceBody,
+                transcriptMarkdown = markdown // Important!
             )
 
             flow.value = TingwuJobState.Completed(

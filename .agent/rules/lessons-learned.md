@@ -352,6 +352,33 @@ This happens when an agent uses a tool to write or replace file content and mist
 
 ---
 
+### OSS Credentials vs Unified Aliyun Key — 2026-02-26
+
+**Symptom**: `[OSS_NETWORK_ERROR] Compute signature failed!` crashing the Audio Upload flow.
+**Root Cause**: User deleted `OSS_ACCESS_KEY` specific fields from `local.properties` to rely entirely on the unified `ALIBABA_CLOUD_ACCESS_KEY_ID`. However, `data/oss/build.gradle.kts` strictly required the OSS variants, silently falling back to empty strings when compiling `BuildConfig`. empty strings = automatic signature crash.
+**Wrong Approach**: Telling the user to put the redundant keys back (rejected by user as they wanted a unified key).
+**Correct Fix**: Refactor `data/oss/build.gradle.kts` to check for `OSS_ACCESS_KEY_ID`, and if blank, `.ifBlank { localProperties.getProperty("ALIBABA_CLOUD_ACCESS_KEY_ID", "") }`. This safely supports both dedicated and unified key schemas.
+**File(s)**: [build.gradle.kts](file:///home/cslh-frank/main_app/data/oss/build.gradle.kts)
+**Pattern**: When migrating modules to unified credentials, explicitly wire the fallback in the build script so `BuildConfig` generation does not fail silently.
+**Status**: ✅ CONFIRMED 2026-02-26
+
+---
+
+### Hallucinated REST Endpoint (/tasks/{taskId}/transcription) — 2026-02-26
+
+**Symptom**: Tingwu transcription successfully polling `GetTaskInfo` to `COMPLETED`, but immediately crashing with `HTTP 404 Not Found`.
+**Root Cause**: Code attempted to fetch the transcription artifact via a REST call to `api.getTaskResult(taskId = jobId)` (which mapped to `/tasks/{taskId}/transcription`). **This endpoint does not exist in Aliyun's V2 OpenAPI.**
+**Wrong Approach**: Trying to find the "missing parameter" for the 404 endpoint.
+**Correct Fix**: 
+1. Check Aliyun's V2 OpenAPI documentation for `GetTaskInfo`.
+2. Observe that results are NOT returned via an API endpoint, but as a **Pre-Signed OSS URL** embedded inside the `Result` payload of the `GetTaskInfo` response itself (e.g., `statusResponse.data?.resultLinks?.get("Transcription")`).
+3. Refactor the pipeline to grab that dynamic URL and download the JSON blob directly using a vanilla `OkHttpClient`.
+**File(s)**: [RealTingwuPipeline.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/tingwu/RealTingwuPipeline.kt)
+**Pattern**: When dealing with Aliyun V2 APIs, large artifacts (transcripts, summaries, chapters) are returned as Pre-Signed OSS URLs `ResultLinks`, never as direct REST endpoints.
+**Status**: ✅ CONFIRMED 2026-02-26
+
+---
+
 <!-- Add new lessons above this line -->
 
 ### SwipeToDismiss Background Visibility — 2026-02-02

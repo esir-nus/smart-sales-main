@@ -81,6 +81,8 @@ data class TingwuTaskParameters(
     @SerializedName("CustomPrompt") val customPrompt: TingwuCustomPrompt? = null,
     // 是否启用自动章节生成
     @SerializedName("AutoChaptersEnabled") val autoChaptersEnabled: Boolean? = null,
+    // 是否启用提取会议摘要、待办事项和问答
+    @SerializedName("MeetingAssistanceEnabled") val meetingAssistanceEnabled: Boolean? = null,
     // 是否启用 PPT 提取
     @SerializedName("PptExtractionEnabled") val pptExtractionEnabled: Boolean? = null,
     // 转码参数（我们使用 "mp3" 格式）

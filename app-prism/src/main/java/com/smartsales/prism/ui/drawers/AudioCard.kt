@@ -39,10 +39,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
+import com.smartsales.prism.ui.components.MarkdownText
 import com.smartsales.prism.ui.components.PrismSurface
 import com.smartsales.prism.ui.components.PrismButton
 import com.smartsales.prism.ui.components.PrismButtonStyle
 import com.smartsales.prism.ui.components.PrismSurfaceSubtle
+import com.smartsales.prism.ui.drawers.audio.AudioViewModel
 import com.smartsales.prism.ui.theme.*
 
 /**
@@ -54,6 +59,7 @@ import com.smartsales.prism.ui.theme.*
 fun AudioCard(
     item: AudioItemState,
     isExpanded: Boolean,
+    viewModel: AudioViewModel,
     onClick: () -> Unit,
     onStarClick: (String) -> Unit,
     onAskAi: (String) -> Unit,
@@ -178,7 +184,7 @@ fun AudioCard(
                     )
             ) {
                 if (isExpanded) {
-                    ExpandedAudioHub(item, onAskAi, onClick)
+                    ExpandedAudioHub(item, viewModel, onAskAi, onClick)
                 } else {
                     CompactAudioCard(item, onStarClick)
                 }
@@ -229,9 +235,10 @@ private fun CompactAudioCard(
             AudioStatus.TRANSCRIBED -> {
                 Text(
                     text = item.summary ?: "无摘要內容...",
-                    color = TextMuted,
+                    color = TextSecondary,
                     fontSize = 13.sp,
-                    maxLines = 1,
+                    lineHeight = 18.sp,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(start = 52.dp)
                 )
@@ -309,9 +316,21 @@ private fun TranscribingProgressBar(progress: Float) {
 @Composable
 private fun ExpandedAudioHub(
     item: AudioItemState,
+    viewModel: AudioViewModel,
     onAskAi: (String) -> Unit,
     onCollapse: () -> Unit
 ) {
+    var artifacts by remember { mutableStateOf<TingwuJobArtifacts?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
+
+    LaunchedEffect(item.status) {
+        if (item.status == AudioStatus.TRANSCRIBED) {
+            isLoading = true
+            artifacts = viewModel.getArtifacts(item.id)
+            isLoading = false
+        }
+    }
+
     Column(modifier = Modifier.fillMaxWidth()) {
         
         // 1. Collapse Handle (Visual Cue)
@@ -337,36 +356,58 @@ private fun ExpandedAudioHub(
             shape = RoundedCornerShape(16.dp),
             backgroundColor = BackgroundSurfaceMuted
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(12.dp)
+            Box(
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                 Icon(
-                     imageVector = Icons.Default.PlayArrow,
-                     contentDescription = "Play",
-                     tint = AccentBlue
-                 )
-                 Spacer(modifier = Modifier.width(8.dp))
-                 Text(
-                     text = "00:12 / ${item.timeDisplay}",
-                     fontSize = 12.sp,
-                     color = TextSecondary,
-                     modifier = Modifier.weight(1f)
-                 )
-                 // Fake Waveform
-                 Text(
-                     text = "|||||·|||||||·||||",
-                     fontSize = 10.sp,
-                     color = TextTertiary,
-                     letterSpacing = 2.sp
-                 )
-                 Spacer(modifier = Modifier.width(8.dp))
-                 Icon(
-                     imageVector = Icons.Filled.VolumeUp,
-                     contentDescription = null,
-                     tint = TextSecondary,
-                     modifier = Modifier.size(16.dp)
-                 )
+                val spectrumUrl = artifacts?.outputSpectrumPath
+                if (spectrumUrl != null) {
+                    AsyncImage(
+                        model = spectrumUrl,
+                        contentDescription = "Audio Spectrum",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color.Black.copy(alpha = 0.5f)) // Dim background for tinting
+                    )
+                }
+                
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(12.dp).fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = "Play",
+                        tint = AccentBlue
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "00:12 / ${item.timeDisplay}",
+                        fontSize = 12.sp,
+                        color = if (spectrumUrl != null) Color.White else TextSecondary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    
+                    if (spectrumUrl == null) {
+                        // Fake Waveform if no real wave available
+                        Text(
+                            text = "|||||·|||||||·||||",
+                            fontSize = 10.sp,
+                            color = TextTertiary,
+                            letterSpacing = 2.sp
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = Icons.Filled.VolumeUp,
+                        contentDescription = null,
+                        tint = if (spectrumUrl != null) Color.White else TextSecondary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
         }
 
@@ -398,32 +439,91 @@ private fun ExpandedAudioHub(
 
         // 4. Accordions
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-            AudioCardAccordion(
-                title = "摘要 (Summary)",
-                icon = "📝",
-                content = item.summary ?: "暂无摘要",
-                initiallyExpanded = true
-            )
-            Divider(color = BorderSubtle)
+            val transcriptContent = artifacts?.let { "transcript" } // Signal content is ready
             AudioCardAccordion(
                 title = "转写 (Transcription)",
                 icon = "🗣️",
-                content = "这里是详细的转写内容占位符...\n(Lazy Loaded Content)",
+                markdownContent = artifacts?.transcriptMarkdown,
+                status = item.status,
+                initiallyExpanded = true
+            )
+            Divider(color = BorderSubtle)
+            
+            AudioCardAccordion(
+                title = "摘要 (Summary)",
+                icon = "📝",
+                textContent = artifacts?.smartSummary?.summary,
+                status = item.status,
                 initiallyExpanded = false
             )
             Divider(color = BorderSubtle)
+            
+            val chaptersOutput = artifacts?.chapters?.takeIf { it.isNotEmpty() }?.joinToString("\n") { 
+                
+                val totalSeconds = (it.startMs / 1000).toInt()
+                val hours = totalSeconds / 3600
+                val minutes = (totalSeconds % 3600) / 60
+                val seconds = totalSeconds % 60
+                val timeStr = if (hours > 0) {
+                    "%02d:%02d:%02d".format(hours, minutes, seconds)
+                } else {
+                    "%02d:%02d".format(minutes, seconds)
+                }
+                
+                "- ${it.title} ($timeStr)" 
+            }
             AudioCardAccordion(
                 title = "章节 (Chapters)",
                 icon = "📑",
-                content = "1. 开场 (00:00)\n2. 讨论预算 (05:20)\n3. 总结 (12:00)",
-                initiallyExpanded = false
+                textContent = chaptersOutput ?: "无章节内容",
+                status = item.status,
+                initiallyExpanded = false,
+                disableStreaming = true
             )
             Divider(color = BorderSubtle)
+            
+            val maRaw = artifacts?.meetingAssistanceRaw
+            var aiInsightsMarkdown: String? = null
+            if (maRaw != null) {
+                try {
+                    val root = kotlinx.serialization.json.Json.parseToJsonElement(maRaw) as kotlinx.serialization.json.JsonObject
+                    val ma = root["MeetingAssistance"] as? kotlinx.serialization.json.JsonObject
+                    val keywords = (ma?.get("Keywords") as? kotlinx.serialization.json.JsonArray)?.mapNotNull { 
+                        (it as? kotlinx.serialization.json.JsonPrimitive)?.content 
+                    }
+                    val classesObj = ma?.get("Classifications") as? kotlinx.serialization.json.JsonObject
+                    val classes = classesObj?.entries?.mapNotNull { (k, vElement) ->
+                        val v = (vElement as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull()
+                        if (v != null) k to v else null
+                    }
+                    
+                    val sb = StringBuilder()
+                    if (!keywords.isNullOrEmpty()) {
+                        sb.append("**核心关键词 (Keywords)**\n")
+                        sb.append(keywords.joinToString(" • "))
+                        sb.append("\n\n")
+                    }
+                    if (!classes.isNullOrEmpty()) {
+                        sb.append("**场景分类 (Classifications)**\n")
+                        classes.sortedByDescending { it.second }.forEach { (k, v) ->
+                            sb.append("- $k: ${(v * 100).toInt()}%\n")
+                        }
+                    }
+                    aiInsightsMarkdown = sb.toString().trim()
+                } catch(e: Exception) {}
+            }
+            val oldHighlights = artifacts?.smartSummary?.keyPoints?.takeIf { it.isNotEmpty() }?.joinToString("\n") { "• $it" }
+            if (oldHighlights != null) {
+                aiInsightsMarkdown = (aiInsightsMarkdown?.plus("\n\n") ?: "") + "**摘要重点 (Key Points)**\n" + oldHighlights
+            }
+
             AudioCardAccordion(
-                title = "重点 (Highlights)",
-                icon = "🖍️",
-                content = "• 确认Q4预算\n• 李总提到SaaS成本",
-                initiallyExpanded = false
+                title = "AI 洞察 (AI Insights)",
+                icon = "💡",
+                markdownContent = aiInsightsMarkdown?.ifBlank { null } ?: "正在分析或无洞察内容...",
+                status = item.status,
+                initiallyExpanded = false,
+                disableStreaming = true
             )
         }
         
@@ -435,10 +535,22 @@ private fun ExpandedAudioHub(
 private fun AudioCardAccordion(
     title: String,
     icon: String,
-    content: String,
-    initiallyExpanded: Boolean = false
+    textContent: String? = null,
+    markdownContent: String? = null,
+    status: AudioStatus,
+    initiallyExpanded: Boolean = false,
+    disableStreaming: Boolean = false
 ) {
     var expanded by remember { mutableStateOf(initiallyExpanded) }
+
+    // Auto-folding logic: When transcribing finishes, transcription auto-expands
+    LaunchedEffect(status) {
+        if (status == AudioStatus.TRANSCRIBED && title == "转写 (Transcription)") {
+            expanded = true
+        } else if (status == AudioStatus.TRANSCRIBED) {
+            expanded = false // Keep others closed initially
+        }
+    }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -465,15 +577,73 @@ private fun AudioCardAccordion(
         }
         
         AnimatedVisibility(visible = expanded) {
-            Text(
-                text = content,
-                fontSize = 14.sp,
-                color = TextSecondary,
-                lineHeight = 22.sp,
-                modifier = Modifier.padding(bottom = 12.dp, start = 24.dp)
-            )
+            val hasMeaningfulContent = !textContent.isNullOrBlank() || !markdownContent.isNullOrBlank()
+            if (status == AudioStatus.TRANSCRIBING || (!hasMeaningfulContent && status == AudioStatus.TRANSCRIBED)) {
+                // Shimmer Buffer animation
+                Box(modifier = Modifier.padding(bottom = 12.dp, start = 24.dp)) {
+                    ShimmeringBuffer()
+                }
+            } else {
+                // Final Text
+                val streamContent = textContent ?: markdownContent ?: ""
+                var displayedText by remember(streamContent) { mutableStateOf("") }
+                
+                LaunchedEffect(streamContent) {
+                    if (disableStreaming) {
+                        displayedText = streamContent
+                    } else if (displayedText.length < streamContent.length) {
+                        while (displayedText.length < streamContent.length) {
+                            val chunkSize = 3
+                            val remaining = streamContent.length - displayedText.length
+                            val take = minOf(chunkSize, remaining)
+                            displayedText += streamContent.substring(displayedText.length, displayedText.length + take)
+                            kotlinx.coroutines.delay(10) // Chunked streaming to reduce recomposition pressure
+                        }
+                    } else {
+                        displayedText = streamContent
+                    }
+                }
+
+                val renderContent = if (displayedText.length < streamContent.length) "$displayedText ▋" else displayedText
+
+                Box(modifier = Modifier.padding(bottom = 12.dp, start = 24.dp)) {
+                    if (markdownContent != null) {
+                        MarkdownText(
+                            text = renderContent,
+                            color = TextSecondary,
+                            lineHeight = 22.sp
+                        )
+                    } else {
+                        Text(
+                            text = renderContent.ifBlank { "无对应内容" },
+                            fontSize = 14.sp,
+                            color = TextSecondary,
+                            lineHeight = 22.sp
+                        )
+                    }
+                }
+            }
         }
     }
+}
+
+@Composable
+fun ShimmeringBuffer(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition()
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 0.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+    Box(
+        modifier = modifier
+            .fillMaxWidth(0.9f)
+            .height(16.dp)
+            .background(BorderSubtle.copy(alpha = alpha), RoundedCornerShape(4.dp))
+    )
 }
 
 @Composable

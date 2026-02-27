@@ -61,6 +61,8 @@ data class TingwuJobArtifacts(
     val autoChaptersUrl: String? = null,
     val customPromptUrl: String? = null,
     val extraResultUrls: Map<String, String> = emptyMap(),
+    val meetingAssistanceRaw: String? = null,
+    val transcriptMarkdown: String? = null,
     val chapters: List<TingwuChapter>? = null,
     val smartSummary: TingwuSmartSummary? = null,
     val diarizedSegments: List<DiarizedSegment>? = null,
@@ -84,6 +86,17 @@ data class DiarizedSegment(
 )
 
 @Serializable
+data class TingwuArtifactBundle(
+    val speakerLabels: Map<String, String>,
+    val diarizedSegments: List<DiarizedSegment>,
+    val chapters: List<TingwuChapter>?,
+    val smartSummary: TingwuSmartSummary?,
+    val meetingAssistanceRaw: String? = null,
+    val resultLinks: Map<String, String>,
+    val outputSpectrumPath: String? = null // URL to the generated audio wave image
+)
+
+@Serializable
 data class TingwuChapter(
     val title: String,
     val startMs: Long,
@@ -93,5 +106,6 @@ data class TingwuChapter(
 
 @Serializable
 data class TingwuSmartSummary(
-    val summary: String? = null
+    val summary: String,
+    val keyPoints: List<String> = emptyList()
 )

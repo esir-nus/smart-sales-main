@@ -20,6 +20,8 @@ import kotlinx.coroutines.delay
 @Composable
 fun ResponseBubble(
     uiState: UiState,
+    onConfirmPlan: () -> Unit = {},
+    onAmendPlan: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     when (uiState) {
@@ -42,10 +44,12 @@ fun ResponseBubble(
             // PlanCard 由专门的 PlanCard 组件处理
         }
         
-        // V2: Planner Table 展示
-        is UiState.PlannerTableState -> {
-            com.smartsales.prism.ui.analyst.PlannerTableBubble(
-                table = uiState.table,
+        // V2: Markdown Strategy 展示
+        is UiState.MarkdownStrategyState -> {
+            com.smartsales.prism.ui.analyst.MarkdownStrategyBubble(
+                content = uiState.markdownContent,
+                onConfirm = onConfirmPlan,
+                onAmend = onAmendPlan,
                 modifier = modifier
             )
         }

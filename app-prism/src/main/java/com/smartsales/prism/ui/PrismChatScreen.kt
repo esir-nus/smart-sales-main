@@ -176,8 +176,16 @@ fun PrismChatScreen(
                     if (agentActivity == null && currentUiState !is UiState.Idle && currentUiState !is UiState.Error) {
                         item {
                             when (currentUiState) {
-                                is UiState.Response -> ResponseBubble(uiState = currentUiState)
-                                is UiState.PlannerTableState -> com.smartsales.prism.ui.analyst.PlannerTableBubble(table = currentUiState.table)
+                                is UiState.Response -> ResponseBubble(
+                                    uiState = currentUiState,
+                                    onConfirmPlan = viewModel::confirmAnalystPlan,
+                                    onAmendPlan = viewModel::amendAnalystPlan
+                                )
+                                is UiState.MarkdownStrategyState -> com.smartsales.prism.ui.analyst.MarkdownStrategyBubble(
+                                    content = currentUiState.markdownContent,
+                                    onConfirm = viewModel::confirmAnalystPlan,
+                                    onAmend = viewModel::amendAnalystPlan
+                                )
                                 else -> {}
                             }
                         }
@@ -190,12 +198,20 @@ fun PrismChatScreen(
                             is ChatMessage.Ai -> {
                                 when (val state = message.uiState) {
                                     is UiState.Response -> {
-                                        ResponseBubble(uiState = state)
+                                        ResponseBubble(
+                                            uiState = state,
+                                            onConfirmPlan = viewModel::confirmAnalystPlan,
+                                            onAmendPlan = viewModel::amendAnalystPlan
+                                        )
                                         if (state.suggestAnalyst) {
                                             AnalystSuggestionBlock(onSwitch = { viewModel.switchMode(Mode.ANALYST) })
                                         }
                                     }
-                                    is UiState.PlannerTableState -> com.smartsales.prism.ui.analyst.PlannerTableBubble(table = state.table)
+                                    is UiState.MarkdownStrategyState -> com.smartsales.prism.ui.analyst.MarkdownStrategyBubble(
+                                        content = state.markdownContent,
+                                        onConfirm = viewModel::confirmAnalystPlan,
+                                        onAmend = viewModel::amendAnalystPlan
+                                    )
                                     is UiState.Thinking -> {
                                          Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(8.dp)) {
                                             Text("🧠", fontSize = 12.sp) 

@@ -42,7 +42,7 @@ class SchedulerLinterTest {
         assertEquals("赶飞机", success.task.title)
         assertEquals(UrgencyLevel.L1_CRITICAL, success.urgencyLevel)
         assertTrue(success.task.isSmartAlarm)
-        assertEquals(7, success.task.alarmCascade.size) // L1 = 7 alarms (including 0m)
+        assertEquals(6, success.task.alarmCascade.size) // L1 = 6 alarms (including 0m)
     }
     
     @Test

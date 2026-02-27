@@ -20,7 +20,9 @@ fun String.escapeForBuildConfig(): String = this.replace("\\", "\\\\").replace("
 
 val localProperties = loadLocalProperties()
 val ossAccessKeyId = localProperties.getProperty("OSS_ACCESS_KEY_ID", "")
+    .ifBlank { localProperties.getProperty("ALIBABA_CLOUD_ACCESS_KEY_ID", "") }
 val ossAccessKeySecret = localProperties.getProperty("OSS_ACCESS_KEY_SECRET", "")
+    .ifBlank { localProperties.getProperty("ALIBABA_CLOUD_ACCESS_KEY_SECRET", "") }
 val ossBucketName = localProperties.getProperty("OSS_BUCKET_NAME", "")
 val ossEndpoint = localProperties.getProperty("OSS_ENDPOINT", "https://oss-cn-beijing.aliyuncs.com")
 

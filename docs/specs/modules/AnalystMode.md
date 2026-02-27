@@ -11,7 +11,7 @@
 A three-layer system designed for complex B2B sales analysis.
 
 1. **Thinking Trace (Cognition)**: Inline raw reasoning (ThinkingBox) for transparency.
-2. **Planner Table (Deliverables)**: A self-updating chat bubble that structures the output (not sticky).
+2. **Markdown Strategy (Deliverables)**: A self-updating chat bubble that structures the output (not sticky).
 3. **Task Board (Shortcuts)**: Sticky top tool shortcuts, replacing the header.
 
 **Flow:** Conversation (Phase 1) → Threshold Met → Plan Generated (Phase 2) → Execution
@@ -40,9 +40,9 @@ Replaces the standard header when in Analyst scenarios. Vertical numbered list o
 
 ---
 
-## 2. PlannerTable (Rich Chat Bubble)
+## 2. Markdown Strategy (Rich Chat Bubble)
 
-A specialized Markdown table rendered within a chat bubble. **Purely analytical** — displays structure and status, no action buttons. Scrolls naturally with chat history.
+A specialized Markdown text block rendered within a chat bubble. **Purely analytical** — displays structure and reasoning approach, no action buttons. Scrolls naturally with chat history.
 
 **Structure:**
 ```
@@ -51,23 +51,21 @@ A specialized Markdown table rendered within a chat bubble. **Purely analytical*
 │ ────────────────────────────────────────────────────────   │
 │ **周度客户分析报告**                                       │
 │                                                            │
-│ | 步骤 | 任务               | 状态 |                       │
-│ |------|-------------------|------|                       │
-│ | 1    | 数据汇总           | ✅   |                       │
-│ | 2    | 趋势分析           | ⏳   |                       │
-│ | 3    | 报告生成           | ⏳   |                       │
+│ * 数据汇总：提取本周所有拜访记录。                         │
+│ * 趋势分析：对比上周转化率指标。                           │
+│ * 报告生成：输出分析结论。                                 │
 │                                                            │
 │ **当前洞察**: 拜访量上升20%，但转化率下降...                 │
 │                                                            │
-│ ✅ 分析已完成，请选择后续操作                               │ ← Notify readiness
+│ ✅ 计划已生成，请确认执行                                   │ ← Notify readiness
 └────────────────────────────────────────────────────────────┘
 ```
 
 **Behavior:**
-- **Self-Updating**: The *same* bubble updates its content as the agent works (streaming edits).
+- **Self-Updating**: The *same* bubble updates its content as the agent formulates its strategy.
 - **Templates**: Agent auto-selects based on intent (Weekly Report, Competitor Analysis, etc.).
 - **Display-Only**: No action buttons in table. Shows status and readiness.
-- **Separation of Concerns**: Tool execution triggered via TaskBoard or explicit user request, NOT in-table buttons.
+- **Separation of Concerns**: Tool execution triggered via TaskBoard or explicit user request, NOT in-bubble buttons.
 
 ---
 
@@ -83,13 +81,13 @@ A specialized Markdown table rendered within a chat bubble. **Purely analytical*
 ### Phase 2: Plan Formalization (The "Architect")
 - **Trigger**: `info_sufficient: true` from Phase 1 OR User explicit request ("生成计划")
 - **Model**: `qwen3-max-2026-01-23` (Structured Prompt)
-- **Output**: JSON / Structured Markdown for PlannerTable
-- **UI**: Renders the **PlannerTable** bubble
+- **Output**: Pure Markdown Strategy text
+- **UI**: Renders the **Markdown Strategy** bubble
 
 ### Phase 3: Execution (The "Worker")
 - **Trigger**: User selects from TaskBoard OR explicitly requests action
 - **Process**: Agent executes the selected workflow
-- **UI**: PlannerTable updates status column (⏳ → ✅). New response bubble with results.
+- **UI**: New response bubble with final analysis results.
 
 ---
 
@@ -97,7 +95,7 @@ A specialized Markdown table rendered within a chat bubble. **Purely analytical*
 
 | Component | Role | Interaction |
 |-----------|------|-------------|
-| **PlannerTable** | Shows analysis structure and status | **Read-only** |
+| **Markdown Strategy** | Shows analysis structure and approach | **Read-only** |
 | **TaskBoard** | Provides action options | **Write triggers** |
 
 This preserves the "chat is truth" mental model while keeping concerns clean.

@@ -1,8 +1,9 @@
 # Analyst Consultant
 
 > **Cerb-compliant spec** — Phase 1: Chat & Intent Evaluation for Analyst Mode.
+> **Cerb-compliant spec** — Phase 1: Chat & Intent Evaluation for Analyst Mode.
 > **OS Layer**: RAM Application (operates on input EnhancedContext)
-> **State**: SPEC_ONLY
+> **State**: PARTIAL
 
 ---
 
@@ -33,5 +34,6 @@ It does not build the plan or perform the analysis.
 
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
-| **1** | **Interface & Fakes** | 🔲 PLANNED | `ConsultantService`, `ConsultantResult`, `FakeConsultantService`. |
-| **2** | **LLM Integration** | 🔲 PLANNED | `RealConsultantService` using `qwen3-max`. System prompt and simple JSON parser. |
+| **1** | **Interface & Fakes** | ✅ SHIPPED | `ConsultantService`, `ConsultantResult`, `FakeConsultantService`. |
+| **2** | **LLM Integration** | ✅ SHIPPED | `RealConsultantService` using `qwen3-max`. System prompt and simple JSON parser. |
+| **3** | **Entity Intent Extraction** | 🔲 PENDING | JSON schema update to extract `missing_entities` for disambiguation loop. |

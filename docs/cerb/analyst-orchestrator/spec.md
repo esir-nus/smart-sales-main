@@ -22,7 +22,7 @@ The `analyst-orchestrator` is the central traffic cop for Analyst Mode. It does 
 ```text
 ┌────────────────────────────────────────────────────────────┐
 │ USER INTERFACE                                              │
-│ 💬 Chat Stream + PlannerTable Bubble + Dynamic Task Board   │
+│ 💬 Chat Stream + Markdown Strategy Bubble + Task Board      │
 └──────────────────────────┬─────────────────────────────────┘
                            │
                            ▼
@@ -89,10 +89,10 @@ Controls the strict phasing of the open loop.
 │    (Loop back ↑)         │                                 │
 │                          ▼                                 │
 │              ┌── THE SMALL LOOP ──┐                        │
-│              │                    │                        │
-│              │  Show PlannerTable │                        │
-│              │  "OK to proceed?"  │                        │
-│              │         │          │                        │
+              │                    │                        │
+              │  Show Strategy     │                        │
+              │  "OK to proceed?"  │                        │
+              │         │          │                        │
 │              │    ┌────┴────┐     │                        │
 │              │  Amend    Confirm  │                        │
 │              │    │         │     │                        │
@@ -156,11 +156,12 @@ Following the Anti-Drift Protocol, the Orchestrator will be built using a **Fake
 
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
-| **1** | **Domain & Fakes** | ✅ SHIPPED | `AnalystPipeline`, `AnalystResponse` models, `FakeAnalystPipeline`. L2 UI wiring (TaskBoard + PlannerTable rendering). |
-| **2** | **Phase 1 (Consultant)** | 🔲 PENDING | Wire `RealAnalystPipeline` for conversational routing. Implement simple boolean parsing for `info_sufficient`. |
-| **3** | **Phase 2 (Architect)** | 🔲 PENDING | Structured JSON prompts and `PlanLinter` to map output to the PlannerTable UI state. |
-| **4** | **Phase 3 (Investigation)** | 🔲 PENDING | Wire the LLM to read the `EnhancedContext` and update the PlannerTable ✅ states. |
-| **5** | **Phase 4 (TaskBoard)** | 🔲 PENDING | Parse final suggestions and mount actionable UI buttons. |
+| **1** | **Domain & Fakes** | ✅ SHIPPED | `AnalystPipeline`, `AnalystResponse` models, `FakeAnalystPipeline`. L2 UI wiring (TaskBoard + Strategy rendering). |
+| **2** | **Phase 1 (Consultant)** | ✅ SHIPPED | Wire `RealAnalystPipeline` for conversational routing. Implement simple boolean parsing for `info_sufficient`. |
+| **3** | **Phase 2 (Architect)** | ✅ SHIPPED | Markdown prompts and `PlanResult` to map output to the UI state. |
+| **4** | **Phase 3 (Investigation)** | ✅ SHIPPED | Wire the LLM to read the `EnhancedContext` and update the UI states. |
+| **5** | **Entity Disambiguation** | 🔲 PENDING | Implement `AwaitingClarification` loop and lightweight LLM entity resolution. |
+| **6** | **Phase 4 (TaskBoard)** | 🔲 PENDING | Parse final suggestions and mount actionable UI buttons. |
 
 ---
 

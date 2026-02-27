@@ -39,6 +39,7 @@ import com.smartsales.prism.domain.scheduler.UrgencyLevel
 class PrismViewModel @Inject constructor(
     private val orchestrator: Orchestrator,
     private val analystPipeline: com.smartsales.prism.domain.analyst.AnalystPipeline,
+    private val toolRegistry: com.smartsales.prism.domain.analyst.ToolRegistry,
     private val activityController: com.smartsales.prism.domain.activity.AgentActivityController,
     private val scheduledTaskRepository: ScheduledTaskRepository,
     private val contextBuilder: com.smartsales.prism.domain.pipeline.ContextBuilder,
@@ -286,6 +287,68 @@ class PrismViewModel @Inject constructor(
          // Deprecated by FSM
     }
 
+    fun confirmAnalystPlan() {
+        if (currentMode.value != Mode.ANALYST) return
+        if (_isSending.value) return
+        
+        _isSending.value = true
+        // Trigger execution phase with a simulated user confirmation
+        val input = "确认执行" 
+        
+        // Don't add to visible history to keep chat clean
+        
+        viewModelScope.launch {
+            try {
+                // Pass history from ContextBuilder (which includes the AI's proposal)
+                val response = analystPipeline.handleInput(input, _history.value.mapNotNull { msg ->
+                    when (msg) {
+                        is ChatMessage.User -> ChatTurn("user", msg.content)
+                        is ChatMessage.Ai -> if (msg.uiState is UiState.Response) ChatTurn("assistant", msg.uiState.content) 
+                                             else if (msg.uiState is UiState.MarkdownStrategyState) ChatTurn("assistant", msg.uiState.markdownContent)
+                                             else null
+                    }
+                })
+                
+                // Usually results in Result state (Analysis)
+                if (response is com.smartsales.prism.domain.analyst.AnalystResponse.Analysis) {
+                    val tools = toolRegistry.getAllTools()
+                    val items = response.suggestedWorkflows.mapNotNull { suggestion ->
+                        val tool = tools.find { it.id == suggestion.workflowId }
+                        if (tool != null) {
+                            com.smartsales.prism.domain.analyst.TaskBoardItem(
+                                id = tool.id,
+                                icon = tool.icon,
+                                title = suggestion.label,
+                                description = tool.description
+                            )
+                        } else null
+                    }
+                    _taskBoardItems.value = items
+                    
+                    val aiMsg = ChatMessage.Ai(
+                        id = java.util.UUID.randomUUID().toString(),
+                        timestamp = System.currentTimeMillis(),
+                        uiState = UiState.Response(response.content)
+                    )
+                    _history.value += aiMsg
+                }
+                _uiState.value = UiState.Idle
+            } catch (e: Exception) {
+                _errorMessage.value = e.message ?: "Failed to execute plan"
+            } finally {
+                _isSending.value = false
+            }
+        }
+    }
+
+    fun amendAnalystPlan() {
+        // Just reset the pipeline state to start over
+        _uiState.value = UiState.Idle
+        // Wait, the state machine in RealAnalystPipeline doesn't expose a "reset" or "back" action directly yet.
+        // For now, we just tell the user to type their amendments.
+        _toastMessage.value = "请在底部输入框输入您要修改的计划内容"
+    }
+
     // ========================================================================
     // V2: Task Board Interaction
     // ========================================================================
@@ -298,6 +361,7 @@ class PrismViewModel @Inject constructor(
     }
 
     fun send() {
+        if (_isSending.value) return
         val input = _inputText.value.trim()
         if (input.isBlank()) return
         
@@ -330,26 +394,28 @@ class PrismViewModel @Inject constructor(
                             UiState.Response(response.content)
                         }
                         is com.smartsales.prism.domain.analyst.AnalystResponse.Plan -> {
-                            // Map AnalystStep to PlannerTable
-                            val plannerSteps = response.steps.mapIndexed { index, step ->
-                                com.smartsales.prism.domain.analyst.PlannerStep(
-                                    index = index + 1,
-                                    task = step.description,
-                                    status = step.status
-                                )
-                            }
-                            UiState.PlannerTableState(
-                                table = com.smartsales.prism.domain.analyst.PlannerTable(
-                                    title = response.title,
-                                    steps = plannerSteps,
-                                    insight = response.summary,
-                                    readyMessage = "确认执行此计划吗？"
-                                )
+                            UiState.MarkdownStrategyState(
+                                markdownContent = response.markdownContent
                             )
                         }
                         is com.smartsales.prism.domain.analyst.AnalystResponse.Analysis -> {
-                            // For now, render as text response 
-                            UiState.Response(response.content + "\n[TaskBoard: ${response.suggestedWorkflows.size} tools]")
+                            // Map WorkflowSuggestion to TaskBoardItem using ToolRegistry
+                            val tools = toolRegistry.getAllTools()
+                            val items = response.suggestedWorkflows.mapNotNull { suggestion ->
+                                val tool = tools.find { it.id == suggestion.workflowId }
+                                if (tool != null) {
+                                    com.smartsales.prism.domain.analyst.TaskBoardItem(
+                                        id = tool.id,
+                                        icon = tool.icon,
+                                        title = suggestion.label, // Use LLM's suggested label
+                                        description = tool.description
+                                    )
+                                } else null
+                            }
+                            _taskBoardItems.value = items
+                            
+                            // Render analysis content into chat
+                            UiState.Response(response.content)
                         }
                     }
                     

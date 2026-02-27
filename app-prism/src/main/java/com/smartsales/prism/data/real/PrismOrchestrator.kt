@@ -12,7 +12,7 @@ import com.smartsales.prism.domain.memory.EntityRepository
 import com.smartsales.prism.domain.memory.EntityWriter
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.memory.ConflictResult
-import com.smartsales.prism.domain.pipeline.AnalystState
+// Removed AnalystState import
 import com.smartsales.prism.domain.pipeline.ContextBuilder
 import com.smartsales.prism.domain.pipeline.Executor
 import com.smartsales.prism.domain.pipeline.ExecutorResult
@@ -47,7 +47,7 @@ class PrismOrchestrator @Inject constructor(
     private val contextBuilder: ContextBuilder,
     private val executor: Executor,
     private val activityController: AgentActivityController,
-    private val analystController: AnalystFlowControllerV2,
+// Removed analystController
     private val scheduledTaskRepository: ScheduledTaskRepository,
     private val alarmScheduler: AlarmScheduler,
     private val schedulerLinter: SchedulerLinter,
@@ -67,9 +67,7 @@ class PrismOrchestrator @Inject constructor(
     private val _currentMode = MutableStateFlow(Mode.COACH)
     override val currentMode: StateFlow<Mode> = _currentMode.asStateFlow()
     
-    /** Analyst 状态流 — UI 可观察 */
-    val analystState: StateFlow<AnalystState> = analystController.state
-    
+    // removed analystState as it is handled in UI layer directly with AnalystPipeline now
     override suspend fun processInput(input: String): UiState {
         return when (_currentMode.value) {
             Mode.COACH -> processCoachInput(input)
@@ -108,9 +106,8 @@ class PrismOrchestrator @Inject constructor(
     }
     
     private suspend fun processAnalystInput(input: String): UiState {
-        analystController.handleInput(input)
-        val structuredState = analystController.state.first { it is AnalystState.Structured }
-        return UiState.PlannerTableState((structuredState as AnalystState.Structured).table)
+        // V2: Analyst pipeline is handled directly by PrismViewModel
+        return UiState.Response("请在 Analyst 模式下使用专用管道。")
     }
     
 
@@ -420,7 +417,7 @@ class PrismOrchestrator @Inject constructor(
     override suspend fun switchMode(newMode: Mode) {
         _currentMode.value = newMode
         if (newMode != Mode.ANALYST) {
-            analystController.reset()
+            // analystController.reset() - controlled by new pipeline now
         }
     }
     

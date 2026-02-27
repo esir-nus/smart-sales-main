@@ -26,14 +26,15 @@ import androidx.compose.ui.unit.sp
 fun MarkdownText(
     text: String,
     modifier: Modifier = Modifier,
-    color: Color = Color.White,
+    color: Color = Color.Unspecified,
     fontSize: TextUnit = 14.sp,
     lineHeight: TextUnit = 20.sp
 ) {
-    val annotated = remember(text) { parseMarkdown(text, color) }
+    val annotated = remember(text, color) { parseMarkdown(text, color) }
     Text(
         text = annotated,
         modifier = modifier,
+        color = color,
         fontSize = fontSize,
         lineHeight = lineHeight
     )

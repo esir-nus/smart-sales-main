@@ -139,6 +139,26 @@ class TingwuRunnerTest {
         )
         val publisher = TranscriptPublisher(config, tracer, artifactFetcher)
         val formatter = TranscriptFormatter()
+        
+        // Add default custom prompt to the fake provider so the model can be picked up
+        if (settingsProvider is FakeAiParaSettingsProvider) {
+            val currentSettings = settingsProvider.snapshot()
+            val modifiedSettings = currentSettings.copy(
+                tingwu = currentSettings.tingwu.copy(
+                    customPrompt = currentSettings.tingwu.customPrompt.copy(
+                        enabled = true,
+                        contents = listOf(
+                            com.smartsales.data.aicore.params.TingwuCustomPromptContentSettings(
+                                name = "test",
+                                prompt = "test rules",
+                                model = "qwen-turbo"
+                            )
+                        )
+                    )
+                )
+            )
+            settingsProvider.override(modifiedSettings)
+        }
 
         val processor = TingwuTranscriptProcessor(
             dispatchers = dispatchers,
@@ -292,9 +312,9 @@ class TingwuRunnerTest {
             TingwuRequest(
                 audioAssetName = "demo.wav",
                 fileUrl = "https://oss.example.com/demo.wav",
-                customPromptEnabled = false,
-                customPromptName = "",
-                customPromptText = ""
+                customPromptEnabled = true,
+                customPromptName = "test",
+                customPromptText = "test rules"
             )
         )
 

@@ -18,9 +18,9 @@ It leverages Aliyun Tingwu's native capabilities to perform:
 2. **OSS Upload (External)**: Audio is uploaded to OSS via the dedicated `oss` cerb feature. An `ossFileUrl` is obtained.
 3. **Submission**: `TingwuPipeline.submit()` is called with the `ossFileUrl`. A task is created on Aliyun.
 4. **Polling**: `TingwuPipeline.observeJob()` polls the API until completion.
-5. **Artifact Fetching**: Upon completion, the pipeline downloads the rich JSON results (chapters, summaries, diarization).
+5. **Artifact Fetching (Synchronous Batch)**: Upon completion, the pipeline downloads all 4 artifact JSONs/assets (Summarization, AutoChapters, TextRewrite, Spectrum) **concurrently but waits for all to finish** (`awaitAll`). This takes <1 second and prevents complex partial states.
 6. **SSD Write**: The pipeline writes these intelligence artifacts directly into the database (MetaHub/SessionMetadata) so they are available for downstream tools (like Analyst Orchestrator).
-7. **Emit Result**: The `TingwuJobState.Completed` is emitted to the UI via Flow.
+7. **Emit Result**: A single, complete `TingwuJobState.Completed` is emitted to the UI via Flow. **(Dumb Data, Smart UI: The UI will handle "fake streaming" cosmetics, the pipeline provides the complete data instantly).**
 
 ## Wave Plan
 
@@ -35,3 +35,4 @@ It leverages Aliyun Tingwu's native capabilities to perform:
 
 - The pipeline must handle network interruptions gracefully during the long polling phase.
 - Custom Prompts must be strictly defined to ensure we don't ask Tingwu to do something the Analyst LLM should be doing later. Tingwu should extract *structure*, while Analyst should perform *reasoning*.
+- **Graceful Degradation**: If one of the 4 artifact JSON downloads fails (e.g., Aliyun networking blip), it must be caught and logged, allowing the rest of the artifacts (and the main transcript) to still be emitted instead of crashing the flow.

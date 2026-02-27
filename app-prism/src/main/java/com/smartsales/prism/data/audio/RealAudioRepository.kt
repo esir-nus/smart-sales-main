@@ -14,6 +14,7 @@ import kotlinx.coroutines.sync.withLock
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
 import com.smartsales.prism.domain.tingwu.TingwuRequest
 import com.smartsales.prism.domain.tingwu.TingwuJobState
+import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.core.util.Result
 import com.smartsales.prism.domain.repository.HistoryRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -314,6 +315,17 @@ class RealAudioRepository @Inject constructor(
 
     override fun getAudio(audioId: String): AudioFile? {
         return _audioFiles.value.find { it.id == audioId }
+    }
+
+    override suspend fun getArtifacts(audioId: String): TingwuJobArtifacts? = withContext(ioDispatcher) {
+        val artifactFile = File(context.filesDir, "${audioId}_artifacts.json")
+        if (!artifactFile.exists()) return@withContext null
+        try {
+            json.decodeFromString<TingwuJobArtifacts>(artifactFile.readText())
+        } catch (e: Exception) {
+            android.util.Log.e("RealAudioRepository", "Failed to load artifacts for $audioId", e)
+            null
+        }
     }
 
     override fun bindSession(audioId: String, sessionId: String) {

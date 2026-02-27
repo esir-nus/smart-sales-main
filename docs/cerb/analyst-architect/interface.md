@@ -13,7 +13,7 @@ interface ArchitectService {
      * @param input User's proven analytical intent
      * @param context RAM snapshot (EnhancedContext) loaded by Kernel
      * @param sessionHistory Previous conversation turns
-     * @return Structured plan mapping to the UI PlannerTable
+     * @return Markdown-formatted strategy/plan
      */
     suspend fun generatePlan(
         input: String,
@@ -43,7 +43,7 @@ interface ArchitectService {
 data class PlanResult(
     val title: String,
     val summary: String,
-    val steps: List<AnalysisStep> // Used by PlannerTable
+    val markdownContent: String // Used by Markdown Bubble UI
 )
 
 data class InvestigationResult(
@@ -51,18 +51,10 @@ data class InvestigationResult(
     val suggestedWorkflows: List<WorkflowSuggestion> // Mounts to TaskBoard
 )
 
-data class AnalysisStep(
-    val stepId: String,
-    val description: String,
-    val status: StepStatus
+data class WorkflowSuggestion(
+    val workflowId: String,
+    val label: String
 )
-
-enum class StepStatus {
-    PENDING,
-    IN_PROGRESS,
-    COMPLETED,
-    FAILED
-}
 
 data class WorkflowSuggestion(
     val workflowId: String,

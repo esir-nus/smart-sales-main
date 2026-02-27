@@ -55,7 +55,13 @@ data class TingwuArtifactBundle(
     val diarizedSegments: List<DiarizedSegment>,
     val chapters: List<TingwuChapter>?,
     val smartSummary: TingwuSmartSummary?,
-    val resultLinks: Map<String, String> // Links to raw JSONs on OSS
+    val resultLinks: Map<String, String>, // Links to raw JSONs on OSS
+    val outputSpectrumPath: String? // URL to the generated audio wave image
+)
+
+data class TingwuSmartSummary(
+    val summary: String,
+    val keyPoints: List<String> = emptyList()
 )
 ```
 
@@ -64,3 +70,4 @@ data class TingwuArtifactBundle(
 - ❌ Assume this is a fast, synchronous call. Tingwu processing takes time.
 - ❌ Call this with a local `File`. Audio MUST be uploaded to OSS first.
 - ❌ Ignore the `TingwuArtifactBundle`. The value of Tingwu is the structured data, not just the raw text.
+- ❌ Build complex async UI loading states waiting for partial Tingwu artifacts. This pipeline fetches all artifacts concurrently (`awaitAll`) and emits them synchronously in one `Completed` state. The UI should use "fake streaming" (Typewriter effect) animations to simulate organic generation over the pre-loaded data.

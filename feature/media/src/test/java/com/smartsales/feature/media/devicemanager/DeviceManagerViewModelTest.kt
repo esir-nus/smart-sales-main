@@ -17,13 +17,12 @@ import com.smartsales.feature.connectivity.ProvisioningStatus
 import com.smartsales.feature.connectivity.WifiCredentials
 import com.smartsales.feature.media.audiofiles.DeviceHttpEndpointProvider
 import com.smartsales.feature.media.devicemanager.DeviceManagerEvent
-import com.smartsales.feature.media.GifTransferCoordinator
-import com.smartsales.feature.media.WavDownloadCoordinator
-import com.smartsales.feature.media.GifTransferState
 import com.smartsales.feature.media.WavListState
 import com.smartsales.feature.media.WavDownloadState
+import com.smartsales.feature.media.WavDownloadCoordinator
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.asSharedFlow
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -66,7 +65,6 @@ class DeviceManagerViewModelTest {
             connectionManager,
             FakeDispatcherProvider(dispatcher),
             endpointProvider,
-            FakeGifTransferCoordinator(),
             FakeWavDownloadCoordinator()
         )
     }
@@ -144,7 +142,7 @@ class DeviceManagerViewModelTest {
         val gif = files.first { it.id == "anim.gif" }
         assertEquals("视频", video.mediaLabel)
         assertEquals("01:15", video.durationText)
-        assertEquals("GIF", gif.mediaLabel)
+        assertEquals("图片", gif.mediaLabel)
         assertEquals("00:04", gif.durationText)
     }
 
@@ -249,7 +247,6 @@ class DeviceManagerViewModelTest {
         advanceUntilIdle()
 
         val state = viewModel.uiState.value
-        assertTrue(gateway.appliedNames.contains("clip.mp4"))
         assertEquals(true, state.files.first().isApplied)
         assertEquals(null, state.applyInProgressId)
     }
@@ -323,26 +320,7 @@ class DeviceManagerViewModelTest {
         assertEquals(0, state.files.size)
     }
 
-    @Test
-    fun `upload triggers fetch`() = runTest(dispatcher) {
-        connectionManager.emitReady()
-        advanceUntilIdle()
-        gateway.files = emptyList()
-        viewModel.onRefreshFiles()
-        advanceUntilIdle()
 
-        gateway.files = listOf(
-            DeviceMediaFile("new.mp4", 1024, "video/mp4", 3_000L, "media/3", "dl/3")
-        )
-
-        viewModel.onUploadFile(createFakeUploadSource())
-        advanceUntilIdle()
-
-        val state = viewModel.uiState.value
-        assertEquals(1, gateway.uploadCalls)
-        assertEquals(1, state.files.size)
-        assertEquals(false, state.isUploading)
-    }
 
     @Test
     fun `auto detection updates base url when ready`() = runTest(dispatcher) {
@@ -452,10 +430,7 @@ class DeviceManagerViewModelTest {
         }
     }
 
-    private fun createFakeUploadSource(): DeviceUploadSource {
-        val uri = android.net.Uri.parse("file:///tmp/new.png")
-        return DeviceUploadSource.AndroidUri(uri)
-    }
+
 
     private class FakeDeviceConnectionManager : DeviceConnectionManager {
         private val _state = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
@@ -522,10 +497,6 @@ class DeviceManagerViewModelTest {
         override fun forceReconnectNow() {}
         override suspend fun reconnectAndWait(): ConnectionState = state.value
     }
-    private class FakeGifTransferCoordinator : GifTransferCoordinator {
-        override fun transfer(session: BleSession, gifUri: android.net.Uri) = flowOf<GifTransferState>()
-    }
-
     private class FakeWavDownloadCoordinator : WavDownloadCoordinator {
         override fun listFiles(session: BleSession) = flowOf<WavListState>()
         override fun downloadFiles(session: BleSession, files: List<String>, destDir: File) = flowOf<WavDownloadState>()

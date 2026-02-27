@@ -53,8 +53,8 @@ App
 |------|------------|---------|
 | **Layer** | A horizontal slice of the architecture (UI, Domain, Data, Platform). | Lattice architecture |
 | **Coordinator** | A class that orchestrates a Flow by calling multiple use cases. | `AnalystFlowControllerV2` |
-| **Executor** | A class that executes a single operation (usually LLM call). | `DashscopeExecutor` |
-| **Parser** | A class that transforms raw output into structured data. | `PlannerTableParser` |
+| **Task** | A scheduled unit of work. | `ScheduledTaskEntity` |
+| **Parser** | A class that transforms raw output into structured data. | `InvestigationLinter` |
 
 ---
 
@@ -92,10 +92,11 @@ App
 | Term | Definition |
 |------|------------|
 | **Thinking Trace** | The visible CoT reasoning from the LLM (`reasoning_content`). Displayed in ThinkingBox. |
-| **PlannerTable** | A structured representation of analysis steps. Read-only display. |
-| **TaskBoard** | A list of actionable items the user can select. Triggers tool execution. |
-| **Phase 1 (Consultant)** | Conversational analysis. Determines if info is sufficient. |
-| **Phase 2 (Architect)** | Structured plan generation. Produces PlannerTable. |
+| **Markdown Strategy** | A standard markdown text block displaying the analysis strategy. Read-only display. |
+| **TaskBoard** | Sticky top layer in Analyst mode providing actionable workflow shortcuts. |
+| **ThinkingBox** | UI component displaying the agent's raw reasoning stream (Thought Trace). |
+| **Phase 1 (Consultant)** | Conversational planning phase to clarify intent. |
+| **Phase 2 (Architect)** | Markdown strategy generation. Produces Markdown Strategy bubble. |
 | **info_sufficient** | Boolean flag from Phase 1. When `true`, triggers Phase 2. |
 
 ---

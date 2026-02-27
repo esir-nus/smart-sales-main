@@ -26,7 +26,9 @@ data class EnhancedContext(
     // Wave 3: 习惯上下文 — 用户和客户偏好（RL Module）
     val habitContext: HabitContext? = null,
     // Sticky Notes: 近期日程摘要（由ContextBuilder从ScheduledTaskRepository读取）
-    val scheduleContext: String? = null
+    val scheduleContext: String? = null,
+    // Architect override
+    val systemPromptOverride: String? = null
 )
 
 /**

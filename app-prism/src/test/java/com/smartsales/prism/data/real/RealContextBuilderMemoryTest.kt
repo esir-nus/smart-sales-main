@@ -67,7 +67,7 @@ class RealContextBuilderMemoryTest {
         // Assert: entityKnowledge 应该被填充
         assertNotNull("entityKnowledge should be populated on first turn", context.entityKnowledge)
         assertTrue("Should contain entity name", context.entityKnowledge!!.contains("孙扬浩"))
-        assertTrue("Should contain alias", context.entityKnowledge!!.contains("孙工"))
+        // Aliases were removed from entityKnowledge to avoid leaking offensive names to LLM
     }
 
     @Test

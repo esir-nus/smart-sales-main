@@ -106,6 +106,17 @@ class AudioViewModel @Inject constructor(
         return sessionId
     }
     
+    /**
+     * Lazy load artifacts from JSON when the Audio Card is expanded
+     */
+    suspend fun getArtifacts(audioId: String): com.smartsales.prism.domain.tingwu.TingwuJobArtifacts? {
+        return try {
+            audioRepository.getArtifacts(audioId)
+        } catch (e: Exception) {
+            null
+        }
+    }
+    
     private fun AudioFile.toUiState() = AudioItemState(
         id = id,
         filename = filename,

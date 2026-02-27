@@ -1,16 +1,17 @@
 # Analyst Architect
 
 > **Cerb-compliant spec** — Phase 2 & 3: Planning and Investigation for Analyst Mode.
+> **Cerb-compliant spec** — Phase 2 & 3: Planning and Investigation for Analyst Mode.
 > **OS Layer**: RAM Application (operates on input EnhancedContext)
-> **State**: SPEC_ONLY
+> **State**: SHIPPED
 
 ---
 
 ## Overview
 
 The `analyst-architect` is the workhorse of Analyst Mode. It handles two distinct structural phases assigned by the `analyst-orchestrator`:
-1. **Phase 2 (Structured Planning)**: Generates a multi-step investigation plan formatted for the UI's `PlannerTable`.
-2. **Phase 3 (Investigation)**: Once the user confirms the plan, this phase performs deep reasoning over the `EnhancedContext` and produces the final analysis and Task Board suggestions.
+1. **Phase 2 (Strategy Planning)**: Generates a clear investigation strategy formatted as natural Markdown.
+2. **Phase 3 (Investigation)**: Once the user confirms the strategy, this phase performs deep reasoning over the `EnhancedContext` and produces the final analysis and Task Board suggestions.
 
 **Key Principles**:
 1. **Strict Plan-to-Execution Separation**: Phase 2 only plans. Phase 3 only executes. They are completely separate contextual passes.
@@ -23,7 +24,7 @@ The `analyst-architect` is the workhorse of Analyst Mode. It handles two distinc
 
 | Rule | Enforcer | Explanation |
 |------|----------|-------------|
-| **Structured Output** | PlanLinter | Phase 2 output must be strictly parsed into `AnalysisStep` objects for the UI. |
+| **Markdown Output** | Orchestrator | Phase 2 output must be pure Markdown text for direct display via standard Bubble UI. |
 | **Deferred Action** | Prompts | LLM must not claim to actually "send emails" or "export files"; it only suggests workflows. |
 
 ---
@@ -32,6 +33,6 @@ The `analyst-architect` is the workhorse of Analyst Mode. It handles two distinc
 
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
-| **1** | **Interface & Fakes** | 🔲 PLANNED | `ArchitectService`, data models, `FakeArchitectService`. |
-| **2** | **Phase 2 Planning** | 🔲 PLANNED | `PlanLinter`, structured JSON prompt for plan generation. |
-| **3** | **Phase 3 Investigation** | 🔲 PLANNED | `InvestigationLinter`, deep reasoning prompt, Task Board suggestion parsing. |
+| **1** | **Interface & Fakes** | ✅ SHIPPED | `ArchitectService`, data models, `FakeArchitectService`. |
+| **2** | **Phase 2 Planning** | ✅ SHIPPED | Pure Markdown prompt for plan generation (replaces JSON/PlannerTable). |
+| **3** | **Phase 3 Investigation** | ✅ SHIPPED | `InvestigationLinter`, deep reasoning prompt, Task Board suggestion parsing. |

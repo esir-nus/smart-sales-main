@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.asSharedFlow
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -123,6 +124,7 @@ class WavDownloadViewModelTest {
         override fun forgetDevice() {}
         override suspend fun requestHotspotCredentials() = CoreResult.Error(IllegalStateException())
         override suspend fun queryNetworkStatus() = CoreResult.Error(IllegalStateException())
+        override fun disconnectBle() {}
         override fun scheduleAutoReconnectIfNeeded() {}
         override fun forceReconnectNow() {}
         override suspend fun reconnectAndWait(): ConnectionState = _state.value

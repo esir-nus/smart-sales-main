@@ -55,7 +55,7 @@ sealed class AnalystResponse {
     data class Plan(
         val title: String,
         val summary: String,
-        val steps: List<AnalysisStep>
+        val markdownContent: String
     ) : AnalystResponse()
 
     /**
@@ -68,11 +68,7 @@ sealed class AnalystResponse {
     ) : AnalystResponse()
 }
 
-data class AnalysisStep(
-    val stepId: String,
-    val description: String,
-    val status: StepStatus
-)
+
 
 data class WorkflowSuggestion(
     val workflowId: String,

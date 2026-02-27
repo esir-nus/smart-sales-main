@@ -95,7 +95,16 @@ abstract class PrismModule {
     abstract fun bindToolRegistry(fake: com.smartsales.prism.data.fakes.FakeToolRegistry): com.smartsales.prism.domain.analyst.ToolRegistry
 
     @Binds @Singleton
+    abstract fun bindConsultantService(impl: com.smartsales.prism.data.real.RealConsultantService): com.smartsales.prism.domain.analyst.ConsultantService
+
+    @Binds @Singleton
+    abstract fun bindEntityResolverService(impl: com.smartsales.prism.data.real.RealEntityResolverService): com.smartsales.prism.domain.analyst.EntityResolverService
+
+    @Binds @Singleton
     abstract fun bindAnalystPipeline(impl: com.smartsales.prism.data.real.RealAnalystPipeline): com.smartsales.prism.domain.analyst.AnalystPipeline
+
+    @Binds @Singleton
+    abstract fun bindArchitectService(impl: com.smartsales.prism.data.real.RealArchitectService): com.smartsales.prism.domain.analyst.ArchitectService
 
     // === User Habit ===
 

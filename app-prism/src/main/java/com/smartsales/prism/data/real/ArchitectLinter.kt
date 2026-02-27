@@ -1,6 +1,5 @@
 package com.smartsales.prism.domain.analyst
 
-import android.util.Log
 import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -51,17 +50,17 @@ class ArchitectLinter @Inject constructor() {
                     }
                 }
             } else {
-                Log.d(TAG, "lintInvestigation: No suggested workflows found in JSON")
+                println("$TAG: lintInvestigation: No suggested workflows found in JSON")
             }
             
             val result = InvestigationResult(
                 analysisContent = analysisContent,
                 suggestedWorkflows = workflows
             )
-            Log.d(TAG, "lintInvestigation: Successfully parsed InvestigationResult with ${workflows.size} workflows")
+            println("$TAG: lintInvestigation: Successfully parsed InvestigationResult with ${workflows.size} workflows")
             ArchitectInvestigationLinterResult.Success(result)
         } catch (e: Exception) {
-            Log.e(TAG, "lintInvestigation: Failed to parse JSON", e)
+            println("$TAG: lintInvestigation: Failed to parse JSON - ${e.message}")
             ArchitectInvestigationLinterResult.Error("调查报告解析失败: ${e.message}")
         }
     }

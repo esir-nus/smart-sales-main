@@ -10,6 +10,9 @@ import com.smartsales.prism.domain.pipeline.Executor
 import com.smartsales.prism.domain.pipeline.TokenUsage
 import com.smartsales.prism.domain.analyst.ConsultantService
 import com.smartsales.prism.domain.analyst.ConsultantResult
+import com.smartsales.prism.domain.analyst.EntityResolverService
+import com.smartsales.prism.domain.memory.EntityRepository
+import com.smartsales.prism.domain.pipeline.KernelWriteBack
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -28,6 +31,9 @@ class RealAnalystPipelineTest {
     private lateinit var executor: Executor
     private lateinit var architectService: ArchitectService
     private lateinit var consultantService: ConsultantService
+    private lateinit var entityRepository: EntityRepository
+    private lateinit var entityResolverService: EntityResolverService
+    private lateinit var kernelWriteBack: KernelWriteBack
 
     @Before
     fun setup() {
@@ -35,7 +41,18 @@ class RealAnalystPipelineTest {
         executor = mock()
         architectService = mock()
         consultantService = mock()
-        pipeline = RealAnalystPipeline(contextBuilder, executor, architectService, consultantService)
+        entityRepository = mock()
+        entityResolverService = mock()
+        kernelWriteBack = mock()
+        pipeline = RealAnalystPipeline(
+            contextBuilder, 
+            executor, 
+            architectService, 
+            consultantService,
+            entityRepository,
+            entityResolverService,
+            kernelWriteBack
+        )
     }
 
     @Test

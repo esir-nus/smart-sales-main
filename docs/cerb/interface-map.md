@@ -20,7 +20,7 @@ Leaf services with no upstream dependencies. They don't call other modules.
 | **NotificationService** | System notification display | — | `NotificationService.show()` | — | ✅ |
 | **OSS** | File upload/download | — | `OssUploader.upload()` | — | 📐 |
 | **ASR** | Transcription results | OSS (downloads audio files to transcribe) | `TingwuRunner.transcribe()` | — | 📐 |
-| **TingwuPipeline** | Transcription & Audio Intelligence | OSS (reads `fileUrl`) | `TingwuPipeline.submit()` | SSD | 🔲 |
+| **TingwuPipeline** | Transcription & Audio Intelligence | OSS (reads `fileUrl`) | `TingwuPipeline.submit()` | SSD | ✅ |
 
 ---
 

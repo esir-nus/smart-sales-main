@@ -16,9 +16,9 @@
 | [scheduler](../cerb/scheduler/spec.md) | PARTIAL | W8: Pipeline Unification |
 | [conflict-resolver](../cerb/conflict-resolver/spec.md) | SHIPPED | — |
 | [badge-audio-pipeline](../cerb/badge-audio-pipeline/spec.md) | SHIPPED | W4: Error Recovery |
-| [analyst-orchestrator](../cerb/analyst-orchestrator/spec.md) | PARTIAL | W2: Phase 1 (Consultant) |
+| [analyst-orchestrator](../cerb/analyst-orchestrator/spec.md) | PARTIAL | W4: Phase 3 (Investigation) |
 | [analyst-consultant](../cerb/analyst-consultant/spec.md) | SPEC_ONLY | W1: Interface & Fakes |
-| [analyst-architect](../cerb/analyst-architect/spec.md) | SPEC_ONLY | W1: Interface & Fakes |
+| [analyst-architect](../cerb/analyst-architect/spec.md) | PARTIAL | W3: Phase 3 Investigation |
 
 ### Data & Memory
 
@@ -50,8 +50,14 @@
 
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 
+### 2026-02-27
+
+- **audio-management**: Wave 2 partial — Implemented `RealAudioRepository` with file storage, wired `TingwuPipeline`, and added Fake Streaming (Typewriter effect / Shimmer loading) to Audio UI.
+- **tingwu-pipeline**: Decoupled legacy Tingwu API into Prism domain feature.
+
 ### 2026-02-25
 
+- **analyst-orchestrator**: Wave 3 SHIPPED — Wired `RealAnalystPipeline` to `FakeArchitectService` for Phase 2 (PlannerTable generation), handling state transition to PROPOSAL.
 - **tingwu-pipeline**: Wave 1-4 SHIPPED — Decoupled Tingwu API from legacy ai-core into a clean Prism Feature. Wired Real/Fake pipelines to AudioRepository.
 - **analyst-orchestrator**: Wave 1 SHIPPED — Domain models, FakeAnalystPipeline L2 simulator, wiring with PrismViewModel, and verification tests passing.
 

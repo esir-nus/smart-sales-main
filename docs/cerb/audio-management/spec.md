@@ -106,11 +106,11 @@ See [interface.md](./interface.md) for:
 > **Wave 2 Actual**: Use file-backed JSON storage (`StateFlow` + atomic active write) to satisfy persistence without introducing Room dependencies.
 
 **Implementation**:
-- [ ] `RealAudioRepository` in `app-prism/src/main/java/com/smartsales/prism/data/audio/` with JSON file storage
-- [ ] Calls `ConnectivityBridge.downloadRecording()` for SMARTBADGE files
-- [ ] Calls `TingwuPipeline.submit()` and `observeJob()` for transcription and intelligence extraction
-- [ ] Progress tracking via StateFlow mapped from `TingwuJobState`, `AudioViewModel` intercepts Tingwu failures and surfaces via one-shot Toast (leaving domain state as PENDING)
-- [ ] Update `AudioModule.kt` DI binding for real implementation
+- [x] `RealAudioRepository` in `app-prism/src/main/java/com/smartsales/prism/data/audio/` with JSON file storage
+- [x] Calls `ConnectivityBridge.downloadRecording()` for SMARTBADGE files
+- [x] Calls `TingwuPipeline.submit()` and `observeJob()` for transcription and intelligence extraction
+- [x] Progress tracking via StateFlow mapped from `TingwuJobState`, `AudioViewModel` intercepts Tingwu failures and surfaces via one-shot Toast (leaving domain state as PENDING)
+- [x] Update `AudioModule.kt` DI binding for real implementation
 
 **Testing**:
 - [ ] Add file → syncs from badge
@@ -169,3 +169,10 @@ See [interface.md](./interface.md) for:
 ## UX Reference
 
 > **Spec**: See [AudioDrawer.md](../../specs/modules/AudioDrawer.md) for layouts, interactions, gestures, card states.
+
+**Audio Drawer UI Strategy ("Dumb Data, Smart UI")**
+- [x] **Arrangement**: Transcription section MUST be at the top as the primary raw source of truth.
+- [x] **Async Illusion (Fake Streaming)**: Data is fetched entirely and synchronously from `RealTingwuPipeline`. To guarantee Markdown stability while maintaining a premium "AI is thinking" experience, the UI will use **Fake Streaming** (Typewriter effect looping characters with `delay(10)`) to visually render the pre-loaded text.
+- [x] **Buffer Animation**: When waiting for the network/Tingwu job (`TRANSCRIBING` state), the UI will show a `ShimmerLine` component to indicate buffering.
+- [x] **Auto-Folding**: Accordions (Chapters, Highlights) should auto-collapse based on state to keep the UI clean, hide visual clutter, and improve usability.
+- [ ] **Header Spectrum**: Replace static placeholder waves with the real `outputSpectrumPath` image given by the Tingwu response.

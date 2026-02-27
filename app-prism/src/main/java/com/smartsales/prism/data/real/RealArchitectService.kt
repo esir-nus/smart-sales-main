@@ -4,8 +4,7 @@ import android.util.Log
 import com.smartsales.prism.domain.analyst.ArchitectService
 import com.smartsales.prism.domain.analyst.InvestigationResult
 import com.smartsales.prism.domain.analyst.PlanResult
-import com.smartsales.prism.domain.analyst.ArchitectLinter
-import com.smartsales.prism.domain.analyst.ArchitectInvestigationLinterResult
+
 import com.smartsales.prism.domain.pipeline.ChatTurn
 import com.smartsales.prism.domain.pipeline.EnhancedContext
 import com.smartsales.prism.domain.pipeline.Executor

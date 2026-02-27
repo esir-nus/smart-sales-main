@@ -1,4 +1,7 @@
-package com.smartsales.prism.domain.analyst
+package com.smartsales.prism.data.real
+
+import com.smartsales.prism.domain.analyst.InvestigationResult
+import com.smartsales.prism.domain.analyst.WorkflowSuggestion
 
 import org.json.JSONObject
 import javax.inject.Inject

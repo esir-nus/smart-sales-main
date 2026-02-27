@@ -1,6 +1,6 @@
 package com.smartsales.prism.data.real
 
-import com.smartsales.prism.domain.analyst.ArchitectLinter
+import com.smartsales.prism.domain.pipeline.ContextBuilder
 import com.smartsales.prism.domain.pipeline.EnhancedContext
 import com.smartsales.prism.domain.pipeline.Executor
 import com.smartsales.prism.domain.pipeline.ExecutorResult

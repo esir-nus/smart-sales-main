@@ -12,6 +12,7 @@
 
 | Cerb Shard | State | Next Wave |
 |------------|-------|-----------|
+| [input-parser](../cerb/input-parser/spec.md) | PARTIAL | W3: Orchestrator Wiring |
 | [coach](../cerb/coach/spec.md) | SHIPPED | — |
 | [scheduler](../cerb/scheduler/spec.md) | PARTIAL | W8: Pipeline Unification |
 | [conflict-resolver](../cerb/conflict-resolver/spec.md) | SHIPPED | — |

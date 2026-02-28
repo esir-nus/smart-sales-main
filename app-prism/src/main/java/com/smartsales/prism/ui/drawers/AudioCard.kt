@@ -497,7 +497,25 @@ private fun ExpandedAudioHub(
                         if (v != null) k to v else null
                     }
                     
+                    val actionsArray = ma?.get("Actions") as? kotlinx.serialization.json.JsonArray
+                    val actions = actionsArray?.mapNotNull { element ->
+                         if (element is kotlinx.serialization.json.JsonPrimitive) {
+                             element.content
+                         } else if (element is kotlinx.serialization.json.JsonObject) {
+                             element["Text"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
+                         } else {
+                             null
+                         }
+                    }
+                    
                     val sb = StringBuilder()
+                    if (!actions.isNullOrEmpty()) {
+                        sb.append("**待办事项 (Actions)**\n")
+                        actions.forEach { actionText ->
+                            sb.append("- ✅ $actionText\n")
+                        }
+                        sb.append("\n")
+                    }
                     if (!keywords.isNullOrEmpty()) {
                         sb.append("**核心关键词 (Keywords)**\n")
                         sb.append(keywords.joinToString(" • "))

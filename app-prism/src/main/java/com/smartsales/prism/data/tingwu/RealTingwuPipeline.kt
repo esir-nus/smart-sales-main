@@ -11,6 +11,7 @@ import com.smartsales.data.aicore.tingwu.api.TingwuTaskParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuTranscriptionParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuDiarizationParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuSummarizationParameters
+import com.smartsales.data.aicore.tingwu.api.TingwuMeetingAssistanceParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuTranscodingParameters
 import com.smartsales.prism.domain.tingwu.DiarizedSegment
 import com.smartsales.prism.domain.tingwu.TingwuChapter
@@ -69,7 +70,8 @@ class RealTingwuPipeline @Inject constructor(
                     autoChaptersEnabled = true, // We always want chapters for Analyst
                     summarizationEnabled = true, // We always want summaries for Analyst
                     meetingAssistanceEnabled = true, // Extracts MeetingAssistance links
-                    summarization = TingwuSummarizationParameters(types = listOf("Paragraph", "Conversational", "QuestionsAndAnswers", "ActionItem")),
+                    summarization = TingwuSummarizationParameters(types = listOf("Paragraph", "Conversational", "QuestionsAnswering")),
+                    meetingAssistance = TingwuMeetingAssistanceParameters(types = listOf("Actions", "KeyInformation")),
                     transcoding = TingwuTranscodingParameters(targetAudioFormat = "mp3")
                 )
             )
@@ -272,10 +274,20 @@ class RealTingwuPipeline @Inject constructor(
                 
                 val paragraphTitle = sumJson["ParagraphTitle"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
                 val paragraphSummary = sumJson["ParagraphSummary"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
+                val conversational = sumJson["Conversational"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
+                val qa = sumJson["QuestionsAnswering"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
                 
                 val text = buildString {
                     if (!paragraphTitle.isNullOrBlank()) appendLine("**$paragraphTitle**")
                     if (!paragraphSummary.isNullOrBlank()) appendLine(paragraphSummary)
+                    if (!conversational.isNullOrBlank()) {
+                        appendLine("\n**发言人总结**")
+                        appendLine(conversational)
+                    }
+                    if (!qa.isNullOrBlank()) {
+                        appendLine("\n**问答回顾**")
+                        appendLine(qa)
+                    }
                 }.trim().ifBlank { 
                     sumJson["Summary"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null } ?: "无摘要内容" 
                 }

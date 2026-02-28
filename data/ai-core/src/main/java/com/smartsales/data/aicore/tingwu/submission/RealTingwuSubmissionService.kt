@@ -21,6 +21,7 @@ import com.smartsales.data.aicore.tingwu.api.TingwuCustomPrompt
 import com.smartsales.data.aicore.tingwu.api.TingwuCustomPromptContent
 import com.smartsales.data.aicore.tingwu.api.TingwuDiarizationParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuSummarizationParameters
+import com.smartsales.data.aicore.tingwu.api.TingwuMeetingAssistanceParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuTaskInput
 import com.smartsales.data.aicore.tingwu.api.TingwuTaskParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuTranscodingParameters
@@ -105,6 +106,10 @@ class RealTingwuSubmissionService @Inject constructor(
                         summarizationEnabled = tingwuSettings.summarization.enabled,
                         summarization = TingwuSummarizationParameters(
                             types = tingwuSettings.summarization.types
+                        ),
+                        meetingAssistanceEnabled = tingwuSettings.meetingAssistance.enabled,
+                        meetingAssistance = TingwuMeetingAssistanceParameters(
+                            types = tingwuSettings.meetingAssistance.types
                         ),
                         autoChaptersEnabled = tingwuSettings.autoChaptersEnabled,
                         textPolishEnabled = tingwuSettings.textPolishEnabled,

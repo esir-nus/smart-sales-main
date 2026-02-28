@@ -83,6 +83,7 @@ data class TingwuTaskParameters(
     @SerializedName("AutoChaptersEnabled") val autoChaptersEnabled: Boolean? = null,
     // 是否启用提取会议摘要、待办事项和问答
     @SerializedName("MeetingAssistanceEnabled") val meetingAssistanceEnabled: Boolean? = null,
+    @SerializedName("MeetingAssistance") val meetingAssistance: TingwuMeetingAssistanceParameters? = null,
     // 是否启用 PPT 提取
     @SerializedName("PptExtractionEnabled") val pptExtractionEnabled: Boolean? = null,
     // 转码参数（我们使用 "mp3" 格式）
@@ -145,6 +146,10 @@ data class TingwuDiarizationParameters(
 )
 
 data class TingwuSummarizationParameters(
+    @SerializedName("Types") val types: List<String>
+)
+
+data class TingwuMeetingAssistanceParameters(
     @SerializedName("Types") val types: List<String>
 )
 

@@ -12,16 +12,12 @@ interface ConsultantService {
      * Determines whether there is enough information to build an investigation plan,
      * or if clarification from the user is needed.
      *
-     * @param input User's chat message intent
-     * @param context RAM snapshot (EnhancedContext) loaded by Kernel
-     * @param sessionHistory Previous conversation turns
-     * @return Result indicating if information is sufficient, plus optional clarification message
+     * @param context RAM snapshot (EnhancedContext) loaded by Kernel (contains input and history)
+     * @return Result indicating if information is sufficient. Returns `null` if the intent is completely unclear and requires immediate user clarification before any evaluation can proceed.
      */
     suspend fun evaluateIntent(
-        input: String,
-        context: EnhancedContext,
-        sessionHistory: List<ChatTurn> = emptyList()
-    ): ConsultantResult
+        context: EnhancedContext
+    ): ConsultantResult?
 }
 ```
 
@@ -31,7 +27,7 @@ interface ConsultantService {
 data class ConsultantResult(
     val infoSufficient: Boolean,
     val response: String,
-    val missingEntities: List<String>
+    val missingEntities: List<String> = emptyList()
 )
 ```
 
@@ -42,4 +38,4 @@ data class ConsultantResult(
 | Parse complex JSON arrays | Use simple `.optBoolean("info_sufficient", false)` |
 | Execute investigation logic | Defer to Phase 3 via orchestrator |
 | Call ContextBuilder directly | Orchestrator passes `EnhancedContext` as input |
-| Persist state | Remain stateless, return `ConsultantResult` |
+| Persist state | Remain stateless, return `ConsultantResult?` |

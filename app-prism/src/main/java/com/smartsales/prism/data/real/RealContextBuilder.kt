@@ -332,11 +332,17 @@ class RealContextBuilder @Inject constructor(
                 "decisions" to entry.decisionLogJson,
                 "related" to entry.relatedEntitiesJson
             ).forEach { (key, jsonStr) ->
-                try {
-                    val json = if (jsonStr.trim().startsWith("[")) JSONArray(jsonStr) else JSONObject(jsonStr)
-                    val length = if (json is JSONArray) json.length() else (json as JSONObject).length()
-                    if (length > 0) put(key, json)
-                } catch (_: Exception) { /* Ignore invalid JSON */ }
+                if (!jsonStr.isNullOrBlank()) {
+                    try {
+                        val trimmed = jsonStr.trim()
+                        val json = if (trimmed.startsWith("[")) JSONArray(trimmed) else JSONObject(trimmed)
+                        val length = if (json is JSONArray) json.length() else (json as JSONObject).length()
+                        if (length > 0) put(key, json)
+                    } catch (_: Exception) { 
+                        // Fallback: If not valid JSON, inject as raw text so LLM still sees it
+                        put(key, jsonStr) 
+                    }
+                }
             }
         }
     }

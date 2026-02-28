@@ -144,6 +144,11 @@ abstract class PrismModule {
     @Binds @Singleton
     abstract fun bindSessionTitleGenerator(impl: LlmSessionTitleGenerator): SessionTitleGenerator
 
+    // === Input Parser (Turbo Router) ===
+
+    @Binds @Singleton
+    abstract fun bindInputParserService(impl: com.smartsales.prism.data.parser.RealInputParserService): com.smartsales.prism.domain.parser.InputParserService
+
     companion object {
         @Provides
         @Singleton

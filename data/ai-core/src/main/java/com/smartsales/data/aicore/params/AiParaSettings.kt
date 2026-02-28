@@ -64,6 +64,7 @@ data class TingwuSettings(
     // 听悟语音分离与转码等参数
     val transcription: TingwuTranscriptionSettings = TingwuTranscriptionSettings(),
     val summarization: TingwuSummarizationSettings = TingwuSummarizationSettings(),
+    val meetingAssistance: TingwuMeetingAssistanceSettings = TingwuMeetingAssistanceSettings(),
     val autoChaptersEnabled: Boolean = true,
     val pptExtractionEnabled: Boolean = true,
     val textPolishEnabled: Boolean = true,
@@ -82,6 +83,11 @@ data class TingwuTranscriptionSettings(
 data class TingwuSummarizationSettings(
     val enabled: Boolean = true,
     val types: List<String> = listOf("Paragraph", "Conversational", "QuestionsAnswering")
+)
+
+data class TingwuMeetingAssistanceSettings(
+    val enabled: Boolean = true,
+    val types: List<String> = listOf("Actions", "KeyInformation")
 )
 
 data class TingwuCustomPromptSettings(

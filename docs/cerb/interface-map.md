@@ -50,11 +50,12 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 | Module | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
 |--------|--------------|------------|---------------|----------|--------|
 | **ContextBuilder** | `EnhancedContext` (assembled prompt context) | EntityRegistry, MemoryCenter, SessionContext | `ContextBuilder.build()` | Kernel | ✅ |
+| **InputParser** | Semantic intent and EntityID resolution | AliasIndex (internal) | `InputParserService.parseIntent()` | RAM Application | 🔲 |
 | **Consultant** | Intent evaluation and missing entities | ContextBuilder | `ConsultantService.evaluateIntent()` | RAM Application | ✅ |
 | **Architect** | Markdown analytics plans and investigations | ContextBuilder | `ArchitectService.generatePlan()` | RAM Application | ✅ |
 | **EntityResolver** | Entity disambiguation matching | EntityRegistry | `EntityResolverService.resolve()` | RAM Application | ✅ |
 | **Executor** | Raw LLM output (stateless — no storage) | — | `Executor.execute()` | — | ✅ |
-| **Orchestrator** | Mode routing + pipeline coordination | ContextBuilder, Executor, Consultant, Architect, EntityResolver | `Orchestrator.process()` | — | ✅ |
+| **Orchestrator** | Mode routing + pipeline coordination | InputParser, ContextBuilder, Executor, Consultant, Architect, EntityResolver | `Orchestrator.process()` | — | ✅ |
 
 > **Orchestrator is the only module that calls EntityWriter during task creation.** Feature modules (Scheduler, Coach) receive results from Orchestrator; they don't call EntityWriter themselves. (Exception: debug seed code in SchedulerViewModel, guarded by `DEBUG` build type.)
 >

@@ -379,6 +379,18 @@ This happens when an agent uses a tool to write or replace file content and mist
 
 ---
 
+### LLM Semantic Mapping vs Hardcoded Math — 2026-02-28
+
+**Symptom**: Building complex O(N) string-matching engines (Levenshtein distance, substring math) to handle CRM entity disambiguation (e.g., aliases, nicknames, homophones).
+**Root Cause**: **Treating the LLM solely as a syntax text extractor rather than a semantic reasoning engine.** This leads to over-engineered, rigid Kotlin logic trying to natively solve things the LLM already understands natively.
+**Wrong Approach**: Using Kotlin math to find the connection between "CEO" and "Tim Cook" (which fails 100%), or trying to maintain custom dictionary lookup logic.
+**Correct Fix**: Dump a lightweight "Contact Sheet" (ID mapped to Name/Aliases) directly into the LLM System Prompt. Instruct the LLM to route the parsed intent directly to the known ID.
+**File(s)**: [RealInputParserService.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/parser/RealInputParserService.kt) (Deleted `AliasIndex.kt`)
+**Pattern**: **For semantic issues (nicknames, homophones, conceptual mapping), do not seek hardcoded math solutions.** Pass the targeted context boundaries to the LLM and let it solve the mapping natively.
+**Status**: ✅ CONFIRMED 2026-02-28
+
+---
+
 <!-- Add new lessons above this line -->
 
 ### SwipeToDismiss Background Visibility — 2026-02-02

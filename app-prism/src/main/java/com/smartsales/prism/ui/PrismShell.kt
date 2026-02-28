@@ -86,6 +86,7 @@ fun PrismShell(
                 onMenuClick = { activeDrawer = DrawerType.HISTORY },
                 onNewSessionClick = { prismViewModel.startNewSession() },
                 onAudioBadgeClick = { activeDrawer = DrawerType.CONNECTIVITY },
+                onAudioDrawerClick = { activeDrawer = DrawerType.AUDIO },
                 onTingwuClick = { activeDrawer = DrawerType.TINGWU },
                 onArtifactsClick = { activeDrawer = DrawerType.ARTIFACTS },
                 onDebugClick = { showDebugHud = !showDebugHud },
@@ -211,24 +212,15 @@ fun PrismShell(
 
         // --- GHOST HANDLES ---
         if (activeDrawer == null && !showUserCenter) {
-            // Scheduler (Top Pull) - 更大触摸区域
+            // Scheduler (Top Pull) - 保持较大区域但控制在合理范围
             GhostHandle(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
+                    .fillMaxWidth()
                     .padding(top = 60.dp) // Clear the header zone
-                    .height(120.dp), // 更大的触摸区域
-                threshold = 100f, // 降低阈值，更容易触发
+                    .height(80.dp),
+                threshold = 80f,
                 onTrigger = { activeDrawer = DrawerType.SCHEDULER }
-            )
-
-            // Audio (Bottom Pull) - 增加有效触摸区域，对齐 Scheduler
-            GhostHandle(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 20.dp) // Avoid OS gesture navigation bar
-                    .height(120.dp), // Match Scheduler touch area height
-                threshold = -100f, // Match Scheduler threshold
-                onTrigger = { activeDrawer = DrawerType.AUDIO }
             )
         }
         
@@ -249,7 +241,6 @@ private fun GhostHandle(
 ) {
     Box(
         modifier = modifier
-            .fillMaxWidth()
             .zIndex(PrismElevation.Handles)
             .pointerInput(Unit) {
                 var totalDrag = 0f

@@ -55,6 +55,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalDensity
 import com.smartsales.prism.ui.theme.*
 
 /**
@@ -71,6 +75,7 @@ fun PrismChatScreen(
     onMenuClick: () -> Unit = {},
     onNewSessionClick: () -> Unit = {},
     onAudioBadgeClick: () -> Unit = {},
+    onAudioDrawerClick: () -> Unit = {},
     onTingwuClick: () -> Unit = {},
     onArtifactsClick: () -> Unit = {},
     onDebugClick: () -> Unit = {},
@@ -99,6 +104,40 @@ fun PrismChatScreen(
         }
     }
 
+    val density = LocalDensity.current
+    val thresholdPx = remember(density) { with(density) { 60.dp.toPx() } }
+
+    val nestedScrollConnection = remember {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            var unconsumedDrag = 0f
+
+            override fun onPostScroll(
+                consumed: androidx.compose.ui.geometry.Offset,
+                available: androidx.compose.ui.geometry.Offset,
+                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
+            ): androidx.compose.ui.geometry.Offset {
+                if (available.y < 0) {
+                    unconsumedDrag -= available.y
+                    if (unconsumedDrag > thresholdPx) {
+                        onAudioDrawerClick()
+                        unconsumedDrag = 0f
+                    }
+                } else if (available.y > 0) {
+                    unconsumedDrag = 0f
+                }
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+
+            override suspend fun onPostFling(
+                consumed: androidx.compose.ui.unit.Velocity,
+                available: androidx.compose.ui.unit.Velocity
+            ): androidx.compose.ui.unit.Velocity {
+                unconsumedDrag = 0f
+                return androidx.compose.ui.unit.Velocity.Zero
+            }
+        }
+    }
+
     /* 
      * Pro Max Layout Strategy:
      * - Everything floats in a Box (The "Void")
@@ -119,6 +158,7 @@ fun PrismChatScreen(
                     )
                 )
             )
+            .nestedScroll(nestedScrollConnection)
     ) {
         // --- Layer 1: Main Scrollable Content ---
         Column(
@@ -134,7 +174,8 @@ fun PrismChatScreen(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxWidth(),
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
                     contentAlignment = Alignment.TopCenter // Fixed: Top alignment
                 ) {
                     HomeHeroDashboard(
@@ -284,7 +325,8 @@ fun PrismChatScreen(
                 GlassInputCapsule(
                     text = inputText,
                     onTextChanged = viewModel::updateInput,
-                    onSend = viewModel::send
+                    onSend = viewModel::send,
+                    onAttachClick = onAudioDrawerClick
                 )
             }
         }
@@ -518,7 +560,7 @@ private fun GlassModeSwitcher(currentMode: Mode, onModeSwitch: (Mode) -> Unit) {
 }
 
 @Composable
-private fun GlassInputCapsule(text: String, onTextChanged: (String) -> Unit, onSend: () -> Unit) {
+private fun GlassInputCapsule(text: String, onTextChanged: (String) -> Unit, onSend: () -> Unit, onAttachClick: () -> Unit) {
     PrismSurface(
         shape = CircleShape, // Fully rounded capsule
         modifier = Modifier.fillMaxWidth().height(56.dp)
@@ -528,7 +570,7 @@ private fun GlassInputCapsule(text: String, onTextChanged: (String) -> Unit, onS
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Plus Button
-            IconButton(onClick = { /* Check specs */ }) {
+            IconButton(onClick = onAttachClick) {
                 Icon(Icons.Filled.AttachFile, "Attach", tint = TextPrimary) // Web: Paperclip
             }
             

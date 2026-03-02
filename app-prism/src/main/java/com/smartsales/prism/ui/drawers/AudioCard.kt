@@ -62,7 +62,7 @@ fun AudioCard(
     viewModel: AudioViewModel,
     onClick: () -> Unit,
     onStarClick: (String) -> Unit,
-    onAskAi: (String) -> Unit,
+    onAskAi: (String, String?) -> Unit,
     onTranscribe: (String) -> Unit,
     onDelete: (String) -> Unit,
     onRename: (String) -> Unit
@@ -317,11 +317,79 @@ private fun TranscribingProgressBar(progress: Float) {
 private fun ExpandedAudioHub(
     item: AudioItemState,
     viewModel: AudioViewModel,
-    onAskAi: (String) -> Unit,
+    onAskAi: (String, String?) -> Unit,
     onCollapse: () -> Unit
 ) {
     var artifacts by remember { mutableStateOf<TingwuJobArtifacts?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+
+    val aiInsightsMarkdown = remember(artifacts) {
+        val maRaw = artifacts?.meetingAssistanceRaw
+        var insights: String? = null
+        if (maRaw != null) {
+            try {
+                val root = kotlinx.serialization.json.Json.parseToJsonElement(maRaw) as kotlinx.serialization.json.JsonObject
+                val ma = root["MeetingAssistance"] as? kotlinx.serialization.json.JsonObject ?: root
+                val keywords = (ma["Keywords"] as? kotlinx.serialization.json.JsonArray)?.mapNotNull { 
+                    (it as? kotlinx.serialization.json.JsonPrimitive)?.content 
+                }
+                val classesObj = ma["Classifications"] as? kotlinx.serialization.json.JsonObject
+                val classes = classesObj?.entries?.mapNotNull { (k, vElement) ->
+                    val v = (vElement as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull()
+                    if (v != null) k to v else null
+                }
+                
+                val actionsArray = ma["Actions"] as? kotlinx.serialization.json.JsonArray
+                val actions = actionsArray?.mapNotNull { element ->
+                     if (element is kotlinx.serialization.json.JsonPrimitive) {
+                         element.content
+                     } else if (element is kotlinx.serialization.json.JsonObject) {
+                         element["Text"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
+                     } else {
+                         null
+                     }
+                }
+
+                val keySentencesArray = ma["KeySentences"] as? kotlinx.serialization.json.JsonArray
+                val keySentences = keySentencesArray?.mapNotNull { element ->
+                     (element as? kotlinx.serialization.json.JsonObject)?.get("Text")?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
+                }
+                
+                val sb = java.lang.StringBuilder()
+                if (!actions.isNullOrEmpty()) {
+                    sb.append("**待办事项 (Actions)**\n")
+                    actions.forEach { actionText ->
+                        sb.append("- ✅ $actionText\n")
+                    }
+                    sb.append("\n")
+                }
+                if (!keywords.isNullOrEmpty()) {
+                    sb.append("**核心关键词 (Keywords)**\n")
+                    sb.append(keywords.joinToString(" • "))
+                    sb.append("\n\n")
+                }
+                if (!keySentences.isNullOrEmpty()) {
+                    sb.append("**重点内容 (Key Sentences)**\n")
+                    keySentences.forEach { sentence ->
+                        sb.append("- $sentence\n")
+                    }
+                    sb.append("\n")
+                }
+                if (!classes.isNullOrEmpty()) {
+                    sb.append("**场景分类 (Classifications)**\n")
+                    classes.sortedByDescending { it.second }.forEach { (k, v) ->
+                        sb.append("- $k: ${(v * 100).toInt()}%\n")
+                    }
+                }
+                insights = sb.toString().trim()
+            } catch(e: Exception) {}
+        }
+        val oldHighlights = artifacts?.smartSummary?.keyPoints?.takeIf { it.isNotEmpty() }?.joinToString("\n") { "• $it" }
+        if (oldHighlights != null) {
+            insights = (insights?.plus("\n\n") ?: "") + "**摘要重点 (Key Points)**\n" + oldHighlights
+        }
+        insights
+    }
 
     LaunchedEffect(item.status) {
         if (item.status == AudioStatus.TRANSCRIBED) {
@@ -421,7 +489,20 @@ private fun ExpandedAudioHub(
         ) {
             PrismButton(
                 text = "问AI (Ask AI)",
-                onClick = { onAskAi(item.id) },
+                onClick = {
+                    val initialContext = buildString {
+                        artifacts?.smartSummary?.summary?.takeIf { it.isNotBlank() }?.let {
+                            append("**摘要 (Summary)**\n")
+                            append(it)
+                            append("\n\n")
+                        }
+                        aiInsightsMarkdown?.takeIf { it.isNotBlank() }?.let {
+                            append(it)
+                        }
+                    }.trim().ifBlank { null }
+                    
+                    onAskAi(item.id, initialContext)
+                },
                 modifier = Modifier.fillMaxWidth(),
                 style = PrismButtonStyle.SOLID,
                 leadingIcon = {
@@ -481,71 +562,6 @@ private fun ExpandedAudioHub(
                 disableStreaming = true
             )
             Divider(color = BorderSubtle)
-            
-            val maRaw = artifacts?.meetingAssistanceRaw
-            var aiInsightsMarkdown: String? = null
-            if (maRaw != null) {
-                try {
-                    val root = kotlinx.serialization.json.Json.parseToJsonElement(maRaw) as kotlinx.serialization.json.JsonObject
-                    val ma = root["MeetingAssistance"] as? kotlinx.serialization.json.JsonObject ?: root
-                    val keywords = (ma["Keywords"] as? kotlinx.serialization.json.JsonArray)?.mapNotNull { 
-                        (it as? kotlinx.serialization.json.JsonPrimitive)?.content 
-                    }
-                    val classesObj = ma["Classifications"] as? kotlinx.serialization.json.JsonObject
-                    val classes = classesObj?.entries?.mapNotNull { (k, vElement) ->
-                        val v = (vElement as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull()
-                        if (v != null) k to v else null
-                    }
-                    
-                    val actionsArray = ma["Actions"] as? kotlinx.serialization.json.JsonArray
-                    val actions = actionsArray?.mapNotNull { element ->
-                         if (element is kotlinx.serialization.json.JsonPrimitive) {
-                             element.content
-                         } else if (element is kotlinx.serialization.json.JsonObject) {
-                             element["Text"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
-                         } else {
-                             null
-                         }
-                    }
-
-                    val keySentencesArray = ma["KeySentences"] as? kotlinx.serialization.json.JsonArray
-                    val keySentences = keySentencesArray?.mapNotNull { element ->
-                         (element as? kotlinx.serialization.json.JsonObject)?.get("Text")?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
-                    }
-                    
-                    val sb = StringBuilder()
-                    if (!actions.isNullOrEmpty()) {
-                        sb.append("**待办事项 (Actions)**\n")
-                        actions.forEach { actionText ->
-                            sb.append("- ✅ $actionText\n")
-                        }
-                        sb.append("\n")
-                    }
-                    if (!keywords.isNullOrEmpty()) {
-                        sb.append("**核心关键词 (Keywords)**\n")
-                        sb.append(keywords.joinToString(" • "))
-                        sb.append("\n\n")
-                    }
-                    if (!keySentences.isNullOrEmpty()) {
-                        sb.append("**重点内容 (Key Sentences)**\n")
-                        keySentences.forEach { sentence ->
-                            sb.append("- $sentence\n")
-                        }
-                        sb.append("\n")
-                    }
-                    if (!classes.isNullOrEmpty()) {
-                        sb.append("**场景分类 (Classifications)**\n")
-                        classes.sortedByDescending { it.second }.forEach { (k, v) ->
-                            sb.append("- $k: ${(v * 100).toInt()}%\n")
-                        }
-                    }
-                    aiInsightsMarkdown = sb.toString().trim()
-                } catch(e: Exception) {}
-            }
-            val oldHighlights = artifacts?.smartSummary?.keyPoints?.takeIf { it.isNotEmpty() }?.joinToString("\n") { "• $it" }
-            if (oldHighlights != null) {
-                aiInsightsMarkdown = (aiInsightsMarkdown?.plus("\n\n") ?: "") + "**摘要重点 (Key Points)**\n" + oldHighlights
-            }
 
             AudioCardAccordion(
                 title = "AI 洞察 (AI Insights)",

@@ -34,6 +34,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.smartsales.prism.ui.components.PrismSurface
 import com.smartsales.prism.ui.drawers.audio.AudioViewModel
 import com.smartsales.prism.ui.theme.*
+import kotlinx.coroutines.launch
 
 /**
  * Audio Drawer — Bottom-Up Sheet (Sleek Glass Version)
@@ -43,7 +44,7 @@ import com.smartsales.prism.ui.theme.*
 fun AudioDrawer(
     isOpen: Boolean,
     onDismiss: () -> Unit,
-    onNavigateToChat: (sessionId: String) -> Unit,
+    onNavigateToChat: (sessionId: String, initialContext: String?) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AudioViewModel = hiltViewModel()
 ) {
@@ -179,6 +180,7 @@ fun AudioDrawer(
                     // 3. List
                     var expandedCardId by remember { mutableStateOf<String?>(null) }
                     var showRenameDialog by remember { mutableStateOf<Pair<String, String>?>(null) }
+                    val scope = rememberCoroutineScope()
 
                     val launcher = rememberLauncherForActivityResult(
                         contract = ActivityResultContracts.GetContent()
@@ -205,9 +207,15 @@ fun AudioDrawer(
                                 viewModel = viewModel,
                                 onClick = { expandedCardId = if (isExpanded) null else item.id },
                                 onStarClick = { viewModel.toggleStar(item.id) },
-                                onAskAi = { id -> 
-                                    val sessionId = viewModel.onAskAi(id)
-                                    onNavigateToChat(sessionId)
+                                onAskAi = { id, initialContext -> 
+                                    scope.launch {
+                                        val (sessionId, isNew) = viewModel.onAskAi(id)
+                                        if (isNew) {
+                                            onNavigateToChat(sessionId, initialContext)
+                                        } else {
+                                            onNavigateToChat(sessionId, null)
+                                        }
+                                    }
                                 },
                                 onTranscribe = { id -> viewModel.startTranscription(id) },
                                 onDelete = { id -> viewModel.deleteAudio(id) },

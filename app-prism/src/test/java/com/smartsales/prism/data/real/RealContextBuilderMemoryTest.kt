@@ -100,6 +100,9 @@ class RealContextBuilderMemoryTest {
         val firstContext = contextBuilder.build("你好", Mode.COACH, listOf("p-002"))
         assertNotNull(firstContext.entityKnowledge)
         
+        // 模拟 LLM/EntityWriter 将实体加入到上下文中 (Active Set)
+        contextBuilder.updateEntityInSession("p-002", com.smartsales.prism.domain.pipeline.EntityRef("p-002", "张总", EntityType.PERSON.name))
+        
         // Arrange: 建立对话历史（触发 subsequent turn 条件）
         contextBuilder.recordUserMessage("你好")
         contextBuilder.recordAssistantMessage("你好！")

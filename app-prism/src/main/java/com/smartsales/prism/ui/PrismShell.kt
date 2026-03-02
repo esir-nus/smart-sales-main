@@ -158,9 +158,14 @@ fun PrismShell(
             AudioDrawer(
                 isOpen = activeDrawer == DrawerType.AUDIO,
                 onDismiss = { activeDrawer = null },
-                onNavigateToChat = { sessionId ->
+                onNavigateToChat = { sessionId, initialContext ->
                     activeDrawer = null
                     println("PrismShell: Navigate to chat session: $sessionId")
+                    if (initialContext != null) {
+                        prismViewModel.switchSessionAndSend(sessionId, initialContext)
+                    } else {
+                        prismViewModel.switchSession(sessionId)
+                    }
                 }
             )
         }

@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import android.net.Uri
 
@@ -82,13 +84,13 @@ class AudioViewModel @Inject constructor(
     
     /**
      * 问AI — 创建或返回绑定的分析会话
-     * @return 会话 ID，用于导航
+     * @return Pair<会话 ID, 是否为新创建>, 用于导航判断是否需要注入初始上下文
      */
-    fun onAskAi(audioId: String): String {
+    suspend fun onAskAi(audioId: String): Pair<String, Boolean> = withContext(Dispatchers.IO) {
         // 检查是否已有绑定会话
         val existingSession = audioRepository.getBoundSessionId(audioId)
         if (existingSession != null) {
-            return existingSession
+            return@withContext Pair(existingSession, false)
         }
         
         // 获取音频文件信息
@@ -103,7 +105,7 @@ class AudioViewModel @Inject constructor(
         
         // 绑定会话到音频
         audioRepository.bindSession(audioId, sessionId)
-        return sessionId
+        Pair(sessionId, true)
     }
     
     /**

@@ -228,6 +228,39 @@ class PrismViewModel @Inject constructor(
     }
 
     /**
+     * 切换到历史会话并立即发送初始上下文 (用于 Ask AI 首次绑定时触发分析)
+     */
+    fun switchSessionAndSend(sessionId: String, initialInput: String) {
+        // 先保存当前会话
+        persistCurrentMessages()
+        viewModelScope.launch(Dispatchers.IO) {
+            val messages = historyRepository.getMessages(sessionId)
+            val session = historyRepository.getSession(sessionId)
+            // 恢复内核 RAM
+            val chatTurns = messages.map { msg ->
+                when (msg) {
+                    is ChatMessage.User -> ChatTurn("user", msg.content)
+                    is ChatMessage.Ai -> ChatTurn("assistant",
+                        (msg.uiState as? UiState.Response)?.content ?: "")
+                }
+            }
+            contextBuilder.loadSession(sessionId, chatTurns)
+            withContext(Dispatchers.Main) {
+                currentSessionId = sessionId
+                _history.value = messages
+                _sessionTitle.value = session?.clientName ?: "对话"
+                _uiState.value = UiState.Idle
+                _inputText.value = initialInput
+                activityController.reset()
+                
+                // Immediately trigger send to simulate user sending initial context
+                send()
+            }
+            Log.d("PrismVM", "Switched and sent initial context to session: $sessionId")
+        }
+    }
+
+    /**
      * 持久化当前会话消息到 SSD (Wave 4)
      * 清除旧消息再重新写入（简单但有效的 v1 方案）
      */

@@ -143,6 +143,7 @@ class RealTingwuPipeline @Inject constructor(
                         }
                         else -> {
                             val progress = statusResponse.data?.taskProgress ?: 5
+                            android.util.Log.d("RealTingwuPipeline", "Job $jobId status: $taskStatus, progress: $progress")
                             flow.value = TingwuJobState.InProgress(jobId, progress, taskStatus)
                         }
                     }
@@ -362,6 +363,8 @@ class RealTingwuPipeline @Inject constructor(
                 meetingAssistanceRaw = meetingAssistanceBody,
                 transcriptMarkdown = markdown // Important!
             )
+
+            android.util.Log.d("RealTingwuPipeline", "Successfully parsed Tingwu artifacts for $jobId. Markdown length: ${markdown.length}, Summary length: ${finalSmartSummary.summary.length}")
 
             flow.value = TingwuJobState.Completed(
                 jobId = jobId,

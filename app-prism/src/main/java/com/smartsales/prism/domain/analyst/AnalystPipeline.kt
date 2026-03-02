@@ -1,7 +1,5 @@
 package com.smartsales.prism.domain.analyst
 
-import com.smartsales.prism.domain.pipeline.ChatTurn
-import com.smartsales.prism.domain.pipeline.MemoryHit
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -43,8 +41,7 @@ sealed class AnalystResponse {
      * Consumer renders as normal chat bubble.
      */
     data class Chat(
-        val content: String,
-        val memoryHits: List<MemoryHit> = emptyList()
+        val content: String
     ) : AnalystResponse()
 
     /**

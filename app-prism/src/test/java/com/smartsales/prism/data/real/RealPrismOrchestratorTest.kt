@@ -119,7 +119,7 @@ class RealPrismOrchestratorTest {
         )
         whenever(mockInputParserService.parseIntent("给张三打个电话")).doReturn(successResult)
         whenever(mockContextBuilder.getSessionHistory()).doReturn(emptyList())
-        val mockResponse = CoachResponse.Chat(content = "好的", suggestAnalyst = false, memoryHits = emptyList())
+        val mockResponse = CoachResponse.Chat(content = "好的", suggestAnalyst = false)
         whenever(mockCoachPipeline.process("给张三打个电话", emptyList(), listOf("person-1"))).doReturn(mockResponse)
         
         orchestrator.switchMode(com.smartsales.prism.domain.model.Mode.COACH)

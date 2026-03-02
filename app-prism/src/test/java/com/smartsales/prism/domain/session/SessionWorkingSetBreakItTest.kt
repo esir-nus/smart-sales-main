@@ -166,18 +166,4 @@ class SessionWorkingSetBreakItTest {
         assertEquals("e-2", ws.entityContext["key"]?.entityId)
     }
 
-    // === memoryHits reassignment ===
-
-    @Test
-    fun `memoryHits can be reassigned multiple times`() {
-        ws.memoryHits = listOf(MemoryHit("m1", "content1", 1.0f))
-        assertEquals(1, ws.memoryHits.size)
-        ws.memoryHits = emptyList()
-        assertTrue(ws.memoryHits.isEmpty())
-        ws.memoryHits = listOf(
-            MemoryHit("m2", "content2", 0.5f),
-            MemoryHit("m3", "content3", 0.3f)
-        )
-        assertEquals(2, ws.memoryHits.size)
-    }
 }

@@ -11,7 +11,7 @@ data class EnhancedContext(
     val userText: String,
     val audioTranscripts: List<TranscriptBlock> = emptyList(),
     val imageAnalysis: List<VisionResult> = emptyList(),
-    val memoryHits: List<MemoryHit> = emptyList(),
+    val imageAnalysis: List<VisionResult> = emptyList(),
     val entityKnowledge: String? = null,
     val entityContext: Map<String, EntityRef> = emptyMap(),
     val modeMetadata: ModeMetadata = ModeMetadata(),
@@ -64,15 +64,6 @@ data class TranscriptBlock(
 data class VisionResult(
     val description: String,
     val ocrText: String? = null
-)
-
-/**
- * 记忆命中项（来自 Hot Zone）
- */
-data class MemoryHit(
-    val entryId: String,
-    val content: String,
-    val relevanceScore: Float = 1.0f
 )
 
 /**

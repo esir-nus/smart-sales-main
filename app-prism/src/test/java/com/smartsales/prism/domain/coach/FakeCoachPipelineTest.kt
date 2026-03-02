@@ -75,12 +75,4 @@ class FakeCoachPipelineTest {
         assertTrue(chat.content.contains("2 条历史记录"))
     }
     
-    @Test
-    fun `process with memory keyword returns mock memoryHits`() = runTest {
-        val response = pipeline.process("查看历史记录")
-        
-        assertTrue(response is CoachResponse.Chat)
-        val chat = response as CoachResponse.Chat
-        assertTrue(chat.memoryHits.isNotEmpty())
-    }
 }

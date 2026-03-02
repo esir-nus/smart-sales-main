@@ -127,17 +127,6 @@ class SessionWorkingSetTest {
     }
 
     @Test
-    fun `memoryHits stored on working set`() {
-        val hits = listOf(
-            MemoryHit(entryId = "m-001", content = "test memory", relevanceScore = 0.9f)
-        )
-        workingSet.memoryHits = hits
-
-        assertEquals(1, workingSet.memoryHits.size)
-        assertEquals("m-001", workingSet.memoryHits[0].entryId)
-    }
-
-    @Test
     fun `entityContext stored on working set`() {
         workingSet.entityContext["person_0"] = EntityRef(
             entityId = "p-001",

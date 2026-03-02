@@ -16,6 +16,7 @@ trigger: always_on
 - **Missing JSON fields** → Prompt is likely missing strict requirements. (Ref: *Prompt-Linter Data Gap*)
 - **Complex string matching** → Don't use Kotlin math. Let LLM route IDs. (Ref: *LLM Semantic Mapping vs Hardcoded Math*)
 - **Implementing "Concepts"** → Verify against `data class` schema, not the name. (Ref: *Conceptual Name → Wrong Implementation*)
+- **Forcing JSON for everything** → JSON is for routing (use native API), Markdown/Text is for context. (Ref: *JSON Schema Fragility vs Raw Markdown*)
 
 ## 🏗️ Architecture & Specs
 - **Reading multiple specs** → STOP. One task = ONE spec.md. (Ref: *Multi-Spec Drift*)
@@ -24,6 +25,7 @@ trigger: always_on
 - **Inventing UI for Data Hubs** → Agentic apps have invisible data layers. The LLM is the "user" of the hub. (Ref: *Metaphor → Hallucinated UI*)
 - **Independent flows sharing a resource** → Serialize at the lowest transport level. (Ref: *Application-Level Coupling*)
 - **Fake → Real DB swap** → Fakes hide "empty state" bugs. Audit empty returns. (Ref: *Fake→Real Swap*)
+- **Soft-deprecated fields in core pipelines** → Rip them out. They confuse future agents/devs. (Ref: *Soft-Deprecation Rot ("memoryHits")*)
 
 ## 🐛 Core Data & Kotlin
 - **Stale UI after update** → 90% chance it's a missing Flow trigger, not persistence. (Ref: *Ghost UI After Update*)

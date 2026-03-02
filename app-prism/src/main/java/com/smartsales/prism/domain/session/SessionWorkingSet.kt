@@ -1,7 +1,6 @@
 package com.smartsales.prism.domain.session
 
 import com.smartsales.prism.domain.pipeline.EntityRef
-import com.smartsales.prism.domain.pipeline.MemoryHit
 import com.smartsales.prism.domain.rl.HabitContext
 
 /**
@@ -35,9 +34,6 @@ class SessionWorkingSet(
 
     /** 别名 → entityId 快速查找缓存（插入顺序，非严格 LRU） */
     val pathIndex: MutableMap<String, String> = mutableMapOf()
-
-    /** 记忆搜索结果 — soft-deprecated, 保留兼容下游 (RealCoachPipeline) */
-    var memoryHits: List<MemoryHit> = emptyList()
 
     /** 实体知识图谱 JSON — 首轮由 Kernel 构建 */
     var entityKnowledge: String? = null

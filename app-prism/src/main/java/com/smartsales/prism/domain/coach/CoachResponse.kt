@@ -1,6 +1,5 @@
 package com.smartsales.prism.domain.coach
 
-import com.smartsales.prism.domain.pipeline.MemoryHit
 
 /**
  * Coach 响应密封类 — 简化的单一变体
@@ -10,16 +9,8 @@ import com.smartsales.prism.domain.pipeline.MemoryHit
  * @see docs/cerb/coach/interface.md
  */
 sealed class CoachResponse {
-    /**
-     * 标准聊天响应
-     * 
-     * @param content Coach 回复文本
-     * @param suggestAnalyst 是否建议切换到 Analyst 模式
-     * @param memoryHits 上下文中使用的记忆条目（可选，用于透明度）
-     */
     data class Chat(
         val content: String,
-        val suggestAnalyst: Boolean = false,
-        val memoryHits: List<MemoryHit> = emptyList()
+        val suggestAnalyst: Boolean = false
     ) : CoachResponse()
 }

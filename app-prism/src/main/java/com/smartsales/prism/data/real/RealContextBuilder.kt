@@ -96,20 +96,14 @@ class RealContextBuilder @Inject constructor(
             _workingSet.scheduleContext = schedule
             Log.d("Kernel", "📅 Sticky Notes: ${schedule?.length ?: 0} chars")
 
-            // Soft-deprecated: memoryHits (legacy support)
-            // TODO: Migrate consumers to entityKnowledge and remove this
-            val hits = memoryRepository.search(userText, limit = 5).map { entry ->
-                MemoryHit(entry.entryId, entry.content, 1.0f)
-            }
-            _workingSet.memoryHits = hits
-            Log.d("Kernel", "🔍 Section 1: memorySearch -> ${hits.size} hits (legacy)")
+
         }
 
         telemetry.recordEvent(PipelinePhase.CONTEXT_BUILDER, "Kernel RAM assembly complete (Turn $_turnCount)")
 
         return EnhancedContext(
             userText = userText,
-            memoryHits = _workingSet.memoryHits,
+
             entityKnowledge = _workingSet.entityKnowledge,
             modeMetadata = ModeMetadata(
                 currentMode = mode,

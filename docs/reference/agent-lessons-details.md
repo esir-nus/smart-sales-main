@@ -402,7 +402,27 @@ This happens when an agent uses a tool to write or replace file content and mist
 
 <!-- Add new lessons above this line -->
 
-### SwipeToDismiss Background Visibility — 2026-02-02
+### JSON Schema Fragility vs Raw Markdown — 2026-03-02
+
+**Symptom**: Agent over-corrected by forcing LLM to output rigid ````json ... ```` formatting for every extraction task, including simple text context generation like Session Titles.
+**Root Cause**: **Treating human-facing text generation (summaries) as machine-routing data (IDs).** Forcing JSON extraction requires regex stripping and try-catch blocks that are fragile in production edge cases.
+**Wrong Approach**: Forcing `{"clientName": "张总", "summary": "报价讨论"}` for generic context, then parsing it out.
+**Correct Fix**: 
+1. **JSON is for Machines**: Reserve strict JSON Schema mapping for routing/IDs where the next node is a rigid Kotlin linter or DB insert. Use the provider's native Structured Outputs API for this.
+2. **Markdown/Text is for Context**: If the output is just going to be read by humans or injected into another LLM prompt as context, let the LLM output raw text. "Title: 张总 - 报价讨论" is cheaper to generate and impossible to crash on parsing.
+**Status**: ✅ CONFIRMED 2026-03-02
+
+---
+
+### Soft-Deprecation Rot ("memoryHits") — 2026-03-02
+
+**Symptom**: `ContextBuilder` continued wasting DB calls to populate `memoryHits` even though the architecture had already moved to the new `entityKnowledge` graph.
+**Root Cause**: **"Soft-deprecation" is a lie we tell ourselves.** Fields were left in `EnhancedContext` and `SessionWorkingSet` to "satisfy" `RealCoachPipeline` without actually taking the time to migrate it.
+**Wrong Approach**: Leaving dead fields in core domain pipelines, which misleads future agents/developers into thinking those fields are actively maintained or architecturally relevant.
+**Correct Fix**: When replacing a core data structure (like memory search → knowledge graphs), rip the old one fully out. If downstream consumers break, migrate them immediately. Never leave a "soft-deprecated" field in a core pipeline context—it pollutes the clean OS boundaries.
+**Status**: ✅ CONFIRMED 2026-03-02
+
+---### SwipeToDismiss Background Visibility — 2026-02-02
 
 **Symptom**: Red delete background persists after swipe, requires navigating away to clear  
 **Root Cause**: Used `dismissDirection != null` which is always true inside `backgroundContent` lambda  

@@ -487,17 +487,17 @@ private fun ExpandedAudioHub(
             if (maRaw != null) {
                 try {
                     val root = kotlinx.serialization.json.Json.parseToJsonElement(maRaw) as kotlinx.serialization.json.JsonObject
-                    val ma = root["MeetingAssistance"] as? kotlinx.serialization.json.JsonObject
-                    val keywords = (ma?.get("Keywords") as? kotlinx.serialization.json.JsonArray)?.mapNotNull { 
+                    val ma = root["MeetingAssistance"] as? kotlinx.serialization.json.JsonObject ?: root
+                    val keywords = (ma["Keywords"] as? kotlinx.serialization.json.JsonArray)?.mapNotNull { 
                         (it as? kotlinx.serialization.json.JsonPrimitive)?.content 
                     }
-                    val classesObj = ma?.get("Classifications") as? kotlinx.serialization.json.JsonObject
+                    val classesObj = ma["Classifications"] as? kotlinx.serialization.json.JsonObject
                     val classes = classesObj?.entries?.mapNotNull { (k, vElement) ->
                         val v = (vElement as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull()
                         if (v != null) k to v else null
                     }
                     
-                    val actionsArray = ma?.get("Actions") as? kotlinx.serialization.json.JsonArray
+                    val actionsArray = ma["Actions"] as? kotlinx.serialization.json.JsonArray
                     val actions = actionsArray?.mapNotNull { element ->
                          if (element is kotlinx.serialization.json.JsonPrimitive) {
                              element.content
@@ -506,6 +506,11 @@ private fun ExpandedAudioHub(
                          } else {
                              null
                          }
+                    }
+
+                    val keySentencesArray = ma["KeySentences"] as? kotlinx.serialization.json.JsonArray
+                    val keySentences = keySentencesArray?.mapNotNull { element ->
+                         (element as? kotlinx.serialization.json.JsonObject)?.get("Text")?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
                     }
                     
                     val sb = StringBuilder()
@@ -520,6 +525,13 @@ private fun ExpandedAudioHub(
                         sb.append("**核心关键词 (Keywords)**\n")
                         sb.append(keywords.joinToString(" • "))
                         sb.append("\n\n")
+                    }
+                    if (!keySentences.isNullOrEmpty()) {
+                        sb.append("**重点内容 (Key Sentences)**\n")
+                        keySentences.forEach { sentence ->
+                            sb.append("- $sentence\n")
+                        }
+                        sb.append("\n")
                     }
                     if (!classes.isNullOrEmpty()) {
                         sb.append("**场景分类 (Classifications)**\n")

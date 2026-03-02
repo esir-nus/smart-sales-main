@@ -274,9 +274,22 @@ class RealTingwuPipeline @Inject constructor(
                 
                 val paragraphTitle = sumJson["ParagraphTitle"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
                 val paragraphSummary = sumJson["ParagraphSummary"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
-                val conversational = sumJson["Conversational"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
-                val qa = sumJson["QuestionsAnswering"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
+                val conversationalArr = sumJson["ConversationalSummary"] as? kotlinx.serialization.json.JsonArray
+                val conversational = conversationalArr?.mapNotNull { item -> 
+                    val obj = item as? kotlinx.serialization.json.JsonObject
+                    val name = obj?.get("SpeakerName")?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else "发言人" }
+                    val summary = obj?.get("Summary")?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
+                    if (summary != null) "**$name**: $summary" else null
+                }?.joinToString("\n")
                 
+                val qaArr = sumJson["QuestionsAnsweringSummary"] as? kotlinx.serialization.json.JsonArray
+                val qa = qaArr?.mapNotNull { item ->
+                    val obj = item as? kotlinx.serialization.json.JsonObject
+                    val q = obj?.get("Question")?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
+                    val a = obj?.get("Answer")?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
+                    if (q != null && a != null) "Q: $q\nA: $a" else null
+                }?.joinToString("\n\n")
+
                 val text = buildString {
                     if (!paragraphTitle.isNullOrBlank()) appendLine("**$paragraphTitle**")
                     if (!paragraphSummary.isNullOrBlank()) appendLine(paragraphSummary)

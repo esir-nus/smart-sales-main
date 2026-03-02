@@ -23,6 +23,8 @@ import com.smartsales.prism.domain.pipeline.ContextBuilder
 import com.smartsales.prism.domain.pipeline.Executor
 import com.smartsales.prism.domain.pipeline.Orchestrator
 import com.smartsales.prism.domain.pipeline.Publisher
+import com.smartsales.prism.data.real.telemetry.RealPipelineTelemetry
+import com.smartsales.prism.domain.telemetry.PipelineTelemetry
 import com.smartsales.prism.domain.repository.HistoryRepository
 import com.smartsales.prism.domain.repository.UserProfileRepository
 
@@ -57,6 +59,9 @@ abstract class PrismModule {
 
     @Binds @Singleton
     abstract fun bindKernelWriteBack(impl: RealContextBuilder): com.smartsales.prism.domain.pipeline.KernelWriteBack
+    
+    @Binds @Singleton
+    abstract fun bindPipelineTelemetry(impl: RealPipelineTelemetry): PipelineTelemetry
     
     @Binds @Singleton
     abstract fun bindExecutor(impl: DashscopeExecutor): Executor

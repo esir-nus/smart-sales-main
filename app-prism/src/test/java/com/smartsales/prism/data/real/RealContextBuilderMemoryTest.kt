@@ -14,8 +14,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import com.smartsales.prism.data.fakes.FakePipelineTelemetry
 
 /**
  * Tests for RealContextBuilder's Entity Knowledge Context (Wave 3).
@@ -30,6 +32,7 @@ class RealContextBuilderMemoryTest {
     private lateinit var habitRepository: FakeUserHabitRepository
     private lateinit var reinforcementLearner: FakeReinforcementLearner
     private lateinit var scheduledTaskRepository: TestScheduledTaskRepository
+    private lateinit var memoryRepository: FakeMemoryRepository
 
     @Before
     fun setup() {
@@ -37,14 +40,16 @@ class RealContextBuilderMemoryTest {
         habitRepository = FakeUserHabitRepository()
         reinforcementLearner = FakeReinforcementLearner(habitRepository)
         entityRepository = FakeEntityRepository()
+        memoryRepository = FakeMemoryRepository()
 
         scheduledTaskRepository = TestScheduledTaskRepository()
         contextBuilder = RealContextBuilder(
             timeProvider = timeProvider,
             reinforcementLearner = reinforcementLearner,
-            memoryRepository = FakeMemoryRepository(),
+            memoryRepository = memoryRepository,
             entityRepository = entityRepository,
-            scheduledTaskRepository = scheduledTaskRepository
+            scheduledTaskRepository = scheduledTaskRepository,
+            telemetry = FakePipelineTelemetry()
         )
     }
 
@@ -62,7 +67,7 @@ class RealContextBuilderMemoryTest {
         ))
 
         // Act: 首轮消息
-        val context = contextBuilder.build("聊聊孙扬浩", Mode.COACH)
+        val context = contextBuilder.build("聊聊孙扬浩", Mode.COACH, listOf("p-001"))
 
         // Assert: entityKnowledge 应该被填充
         assertNotNull("entityKnowledge should be populated on first turn", context.entityKnowledge)
@@ -92,7 +97,7 @@ class RealContextBuilderMemoryTest {
         ))
         
         // 首轮加载
-        val firstContext = contextBuilder.build("你好", Mode.COACH)
+        val firstContext = contextBuilder.build("你好", Mode.COACH, listOf("p-002"))
         assertNotNull(firstContext.entityKnowledge)
         
         // Arrange: 建立对话历史（触发 subsequent turn 条件）
@@ -118,13 +123,13 @@ class RealContextBuilderMemoryTest {
             lastUpdatedAt = System.currentTimeMillis(),
             createdAt = System.currentTimeMillis()
         ))
-        contextBuilder.build("test", Mode.COACH)
+        contextBuilder.build("test", Mode.COACH, listOf("a-001"))
         
         // Reset 会话
         contextBuilder.resetSession()
         
         // Act: 新会话首轮
-        val context = contextBuilder.build("test again", Mode.COACH)
+        val context = contextBuilder.build("test again", Mode.COACH, listOf("a-001"))
         
         // Assert: 应重新加载
         assertNotNull("entityKnowledge should reload after session reset", context.entityKnowledge)
@@ -152,7 +157,7 @@ class RealContextBuilderMemoryTest {
         ))
 
         // Act
-        val context = contextBuilder.build("test", Mode.COACH)
+        val context = contextBuilder.build("test", Mode.COACH, listOf("p-100", "a-100"))
 
         // Assert: JSON 应包含分组
         assertNotNull(context.entityKnowledge)

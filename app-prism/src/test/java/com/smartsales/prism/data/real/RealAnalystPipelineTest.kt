@@ -57,7 +57,7 @@ class RealAnalystPipelineTest {
 
     @Test
     fun `L2 Scenario 1 - Consultant returns null - returns Chat and stays IDLE`() = runTest {
-        whenever(contextBuilder.build(any(), any())).thenReturn(mock())
+        whenever(contextBuilder.build(any(), any(), any())).thenReturn(mock())
         whenever(consultantService.evaluateIntent(any())).thenReturn(null)
 
         val response = pipeline.handleInput("分析", emptyList())
@@ -69,7 +69,7 @@ class RealAnalystPipelineTest {
 
     @Test
     fun `L2 Scenario 2 - info_sufficient is false - returns Chat and stays IDLE`() = runTest {
-        whenever(contextBuilder.build(any(), any())).thenReturn(mock())
+        whenever(contextBuilder.build(any(), any(), any())).thenReturn(mock())
         val result = ConsultantResult(infoSufficient = false, response = "请问您想分析哪个客户？", missingEntities = emptyList())
         whenever(consultantService.evaluateIntent(any())).thenReturn(result)
 
@@ -82,7 +82,7 @@ class RealAnalystPipelineTest {
 
     @Test
     fun `L2 Scenario 3 - info_sufficient is true - returns Plan and transitions to PROPOSAL`() = runTest {
-        whenever(contextBuilder.build(any(), any())).thenReturn(mock())
+        whenever(contextBuilder.build(any(), any(), any())).thenReturn(mock())
         val result = ConsultantResult(infoSufficient = true, response = "准备分析", missingEntities = emptyList())
         whenever(consultantService.evaluateIntent(any())).thenReturn(result)
         
@@ -100,7 +100,7 @@ class RealAnalystPipelineTest {
     @Test
     fun `L2 Scenario 5 - In PROPOSAL state - returns Analysis and transitions to RESULT`() = runTest {
         // Setup to reach PROPOSAL state
-        whenever(contextBuilder.build(any(), any())).thenReturn(mock())
+        whenever(contextBuilder.build(any(), any(), any())).thenReturn(mock())
         val result = ConsultantResult(infoSufficient = true, response = "准备分析", missingEntities = emptyList())
         whenever(consultantService.evaluateIntent(any())).thenReturn(result)
         

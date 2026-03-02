@@ -253,7 +253,7 @@ Convention: Keys prefixed with `_` are metadata, not business attributes.
 | **2** | Change-Aware Profile Management | ✅ SHIPPED | `updateProfile()`, `ProfileUpdateResult`, `ProfileChange`, history emission via `recordActivity()` |
 | ~~3~~ | ~~Conflict Merge~~ | ❌ KILLED | See architectural decision below |
 | **4** | **OS Model Upgrade** (RAM Application) | ✅ SHIPPED | Write-through to RAM Section 1 on all 4 mutation methods + `recordActivity()` App→Kernel callback |
-| **5** | **Alignment & Disambiguation** | 🚧 IN PROGRESS | Curated Alias Model, Resolution Cascade, Entity Confirmation Flow |
+| **5** | **Alignment & Disambiguation** | ✅ SHIPPED | Curated Alias Model, Resolution Cascade, Entity Confirmation Flow |
 
 ### ~~Wave 3~~ Architectural Decision: No Merge UI Needed
 

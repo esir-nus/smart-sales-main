@@ -386,6 +386,20 @@ This happens when an agent uses a tool to write or replace file content and mist
 
 ---
 
+### Metaphor → Hallucinated UI (Agentic Architecture) — 2026-03-02
+
+**Symptom**: Explaining a backend data aggregation service ("Client Profile Hub") by inventing non-existent UI screens ("When you tap on a client's name").
+**Root Cause**: **Taking an architectural metaphor ("File Explorer") literally and assuming a traditional click-and-scroll CRM UI.** Smart Sales is voice/chat-first. The "user" of the hub is the LLM, not the human.
+**Wrong Approach**: Explaining data pipelines using GUI interactions. Inventing screens to explain data aggregation.
+**Correct Fix**: 
+1. Remember the Agentic OS Model: Humans talk to Agents. Agents read from Hubs.
+2. If explaining a data layer, explicitly state it is **invisible** to the human.
+**File(s)**: N/A (Documentation/Explanation issue)
+**Pattern**: In an agent-first architecture, never assume traditional CRUD screens exist unless explicitly specified in the UI/UX contract.
+**Status**: ✅ CONFIRMED 2026-03-02
+
+---
+
 <!-- Add new lessons above this line -->
 
 ### SwipeToDismiss Background Visibility — 2026-02-02

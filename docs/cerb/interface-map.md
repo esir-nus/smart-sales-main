@@ -21,6 +21,7 @@ Leaf services with no upstream dependencies. They don't call other modules.
 | **OSS** | File upload/download | — | `OssUploader.upload()` | — | 📐 |
 | **ASR** | Transcription results | OSS (downloads audio files to transcribe) | `TingwuRunner.transcribe()` | — | 📐 |
 | **TingwuPipeline** | Transcription & Audio Intelligence | OSS (reads `fileUrl`) | `TingwuPipeline.submit()` | SSD | ✅ |
+| **PipelineTelemetry** | Pipeline logs (to Logcat) | — | `PipelineTelemetry.recordEvent()` | RAM | 🔲 |
 
 ---
 

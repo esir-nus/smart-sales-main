@@ -18,7 +18,7 @@ class FakeContextBuilder @Inject constructor() : ContextBuilder {
     
     private val _sessionHistory = mutableListOf<ChatTurn>()
     
-    override suspend fun build(userText: String, mode: Mode): EnhancedContext {
+    override suspend fun build(userText: String, mode: Mode, resolvedEntityIds: List<String>): EnhancedContext {
         return EnhancedContext(
             userText = userText,
             modeMetadata = ModeMetadata(

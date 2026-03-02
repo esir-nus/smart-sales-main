@@ -21,6 +21,7 @@ trigger: always_on
 - **Reading multiple specs** → STOP. One task = ONE spec.md. (Ref: *Multi-Spec Drift*)
 - **Tracker wave titles** → These are NOT specs. Do not invent behavior from them. (Ref: *Spec Invention from Wave Titles*)
 - **Missing UI details** → Flag as spec gap. Do not invent gestures. (Ref: *Spec Drift: Inventing UI Features*)
+- **Inventing UI for Data Hubs** → Agentic apps have invisible data layers. The LLM is the "user" of the hub. (Ref: *Metaphor → Hallucinated UI*)
 - **Independent flows sharing a resource** → Serialize at the lowest transport level. (Ref: *Application-Level Coupling*)
 - **Fake → Real DB swap** → Fakes hide "empty state" bugs. Audit empty returns. (Ref: *Fake→Real Swap*)
 

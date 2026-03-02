@@ -11,9 +11,10 @@ interface ContextBuilder {
      * 构建增强上下文
      * @param userText 用户输入文本
      * @param mode 当前模式
+     * @param resolvedEntityIds 通过 InputParser 获取的实体ID列表
      * @return 归一化的 EnhancedContext
      */
-    suspend fun build(userText: String, mode: Mode): EnhancedContext
+    suspend fun build(userText: String, mode: Mode, resolvedEntityIds: List<String> = emptyList()): EnhancedContext
     
     /**
      * 获取当前会话历史

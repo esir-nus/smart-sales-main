@@ -22,6 +22,8 @@ import com.smartsales.prism.domain.pipeline.ModeMetadata
 import com.smartsales.prism.domain.rl.ReinforcementLearner
 import com.smartsales.prism.domain.session.EntityState
 import com.smartsales.prism.domain.session.SessionWorkingSet
+import com.smartsales.prism.domain.telemetry.PipelinePhase
+import com.smartsales.prism.domain.telemetry.PipelineTelemetry
 import com.smartsales.prism.domain.time.TimeProvider
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -47,7 +49,8 @@ class RealContextBuilder @Inject constructor(
     private val reinforcementLearner: ReinforcementLearner,
     private val memoryRepository: MemoryRepository,
     private val entityRepository: EntityRepository,
-    private val scheduledTaskRepository: ScheduledTaskRepository
+    private val scheduledTaskRepository: ScheduledTaskRepository,
+    private val telemetry: PipelineTelemetry
 ) : ContextBuilder, KernelWriteBack {
 
     // === Kernel State (RAM) ===
@@ -69,20 +72,22 @@ class RealContextBuilder @Inject constructor(
 
     // === ContextBuilder Implementation (Read-Only) ===
 
-    override suspend fun build(userText: String, mode: Mode): EnhancedContext {
+    override suspend fun build(userText: String, mode: Mode, resolvedEntityIds: List<String>): EnhancedContext {
         _turnCount++
         _currentMode = mode
 
         // Section 2: 全局用户习惯（首轮加载）
         if (_workingSet.userHabitContext == null) {
+            telemetry.recordEvent(PipelinePhase.RL_MODULE, "Loading user habits (Section 2)")
             _workingSet.userHabitContext = reinforcementLearner.loadUserHabits()
             Log.d("Kernel", "📦 Section 2 loaded: userHabits")
         }
 
         // Section 1: Entity Knowledge Context（首轮触发）
         if (shouldSearchMemory(_sessionHistory)) {
+            telemetry.recordEvent(PipelinePhase.MEMORY_LOOKUP, "Loading entity knowledge for ${resolvedEntityIds.size} entities (Section 1)")
             // 构建实体知识图谱
-            val knowledge = buildEntityKnowledge()
+            val knowledge = buildEntityKnowledge(resolvedEntityIds)
             _workingSet.entityKnowledge = knowledge
             Log.d("Kernel", "📸 Section 1: entityKnowledge=${knowledge?.length ?: 0} chars")
 
@@ -99,6 +104,8 @@ class RealContextBuilder @Inject constructor(
             _workingSet.memoryHits = hits
             Log.d("Kernel", "🔍 Section 1: memorySearch -> ${hits.size} hits (legacy)")
         }
+
+        telemetry.recordEvent(PipelinePhase.CONTEXT_BUILDER, "Kernel RAM assembly complete (Turn $_turnCount)")
 
         return EnhancedContext(
             userText = userText,
@@ -287,8 +294,12 @@ class RealContextBuilder @Inject constructor(
      * Build Entity Knowledge Graph JSON
      * Used for disambiguation and alias matching in LLM prompt.
      */
-    private suspend fun buildEntityKnowledge(): String? {
-        val entities = entityRepository.getAll(limit = 100)
+    private suspend fun buildEntityKnowledge(resolvedEntityIds: List<String>): String? {
+        val entities = if (resolvedEntityIds.isEmpty()) {
+            emptyList()
+        } else {
+            resolvedEntityIds.mapNotNull { entityRepository.getById(it) }
+        }
         if (entities.isEmpty()) return null
 
         val root = JSONObject()

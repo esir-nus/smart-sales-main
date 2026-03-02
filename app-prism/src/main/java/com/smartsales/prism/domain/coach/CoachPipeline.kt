@@ -19,6 +19,7 @@ interface CoachPipeline {
      */
     suspend fun process(
         input: String,
-        sessionHistory: List<ChatTurn> = emptyList()
+        sessionHistory: List<ChatTurn> = emptyList(),
+        resolvedEntityIds: List<String> = emptyList()
     ): CoachResponse
 }

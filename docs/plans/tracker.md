@@ -12,7 +12,8 @@
 
 | Cerb Shard | State | Next Wave |
 |------------|-------|-----------|
-| [input-parser](../cerb/input-parser/spec.md) | PARTIAL | W3: Orchestrator Wiring |
+| [input-parser](../cerb/input-parser/spec.md) | PARTIAL | W4: Auto-Renaming |
+| [pipeline-telemetry](../cerb/pipeline-telemetry/spec.md) | SHIPPED | — |
 | [coach](../cerb/coach/spec.md) | SHIPPED | — |
 | [scheduler](../cerb/scheduler/spec.md) | PARTIAL | W8: Pipeline Unification |
 | [conflict-resolver](../cerb/conflict-resolver/spec.md) | SHIPPED | — |
@@ -29,7 +30,7 @@
 | [session-history](../cerb/session-history/spec.md) | SHIPPED | — |
 | [memory-center](../cerb/memory-center/spec.md) | SHIPPED | — |
 | [entity-registry](../cerb/entity-registry/spec.md) | SHIPPED | — |
-| [entity-writer](../cerb/entity-writer/spec.md) | SHIPPED | W5: Alignment & Disambiguation |
+| [entity-writer](../cerb/entity-writer/spec.md) | SHIPPED | — |
 | [user-habit](../cerb/user-habit/spec.md) | SHIPPED | — |
 | [rl-module](../cerb/rl-module/spec.md) | SHIPPED | — |
 | [client-profile-hub](../cerb/client-profile-hub/spec.md) | PARTIAL | W3: CRM Export |
@@ -50,6 +51,12 @@
 ## Changelog
 
 > Key spec/impl changes, newest first. Like `git log --oneline`.
+
+### 2026-03-02
+
+- **entity-writer**: W5 SHIPPED — Audited `upsertFromClue` Resolution Cascade (`resolvedId` → `findByAlias` → `findByDisplayName`), which is organically functioning correctly and conforms to the `InputParser`'s upstream LLM entity resolution payload contract. All existing 18 unit tests verified and passed.
+
+- **pipeline-telemetry**: W1-W2 SHIPPED — `PipelineTelemetry` abstracted and injected into `PrismOrchestrator`, `RealContextBuilder`, `RealInputParserService`, and `RealCoachPipeline`. Granular Tagging implemented to perfectly map the Layer 2 & Layer 3 architecture diagram into ADB logcat output.
 
 ### 2026-02-27
 

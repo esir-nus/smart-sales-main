@@ -19,7 +19,8 @@ class FakeCoachPipeline @Inject constructor() : CoachPipeline {
     
     override suspend fun process(
         input: String,
-        sessionHistory: List<ChatTurn>
+        sessionHistory: List<ChatTurn>,
+        resolvedEntityIds: List<String>
     ): CoachResponse {
         // 模拟网络延迟
         delay(300)

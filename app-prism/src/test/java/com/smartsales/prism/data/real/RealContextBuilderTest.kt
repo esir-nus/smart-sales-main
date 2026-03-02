@@ -28,6 +28,8 @@ class RealContextBuilderTest {
     private lateinit var reinforcementLearner: FakeReinforcementLearner
     private lateinit var memoryRepository: FakeMemoryRepository
     private lateinit var scheduledTaskRepository: TestScheduledTaskRepository
+    private lateinit var mockMemoryRepo: FakeMemoryRepository
+    private lateinit var mockEntityRepo: FakeEntityRepository
     
     @Before
     fun setup() {
@@ -37,13 +39,17 @@ class RealContextBuilderTest {
         reinforcementLearner = FakeReinforcementLearner(habitRepository)
         memoryRepository = FakeMemoryRepository()
         scheduledTaskRepository = TestScheduledTaskRepository()
+        // Initialize mock repos for the new constructor call
+        mockMemoryRepo = FakeMemoryRepository()
+        mockEntityRepo = FakeEntityRepository()
         
         contextBuilder = RealContextBuilder(
             timeProvider = timeProvider,
             reinforcementLearner = reinforcementLearner,
-            memoryRepository = memoryRepository,
-            entityRepository = FakeEntityRepository(),
-            scheduledTaskRepository = scheduledTaskRepository
+            memoryRepository = mockMemoryRepo,
+            entityRepository = mockEntityRepo,
+            scheduledTaskRepository = scheduledTaskRepository,
+            telemetry = com.smartsales.prism.data.fakes.FakePipelineTelemetry()
         )
     }
     

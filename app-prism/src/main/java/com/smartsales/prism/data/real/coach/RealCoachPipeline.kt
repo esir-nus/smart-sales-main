@@ -7,6 +7,8 @@ import com.smartsales.prism.domain.pipeline.ChatTurn
 import com.smartsales.prism.domain.pipeline.ContextBuilder
 import com.smartsales.prism.domain.pipeline.Executor
 import com.smartsales.prism.domain.pipeline.ExecutorResult
+import com.smartsales.prism.domain.telemetry.PipelinePhase
+import com.smartsales.prism.domain.telemetry.PipelineTelemetry
 import android.util.Log
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,18 +23,22 @@ import javax.inject.Singleton
 @Singleton
 class RealCoachPipeline @Inject constructor(
     private val contextBuilder: ContextBuilder,
-    private val executor: Executor
+    private val executor: Executor,
+    private val telemetry: PipelineTelemetry
 ) : CoachPipeline {
     
     override suspend fun process(
         input: String,
-        sessionHistory: List<ChatTurn>
+        sessionHistory: List<ChatTurn>,
+        resolvedEntityIds: List<String>
     ): CoachResponse {
         // 构建上下文（session history 已经在 ContextBuilder 内部管理）
-        val context = contextBuilder.build(input, Mode.COACH)
+        val context = contextBuilder.build(input, Mode.COACH, resolvedEntityIds)
+        telemetry.recordEvent(PipelinePhase.ROUTER, "Coach context built with ${context.memoryHits.size} memory hits")
         Log.d("CoachMemory", "🎯 CoachPipeline: context built, memoryHits=${context.memoryHits.size}, sessionHistory=${context.sessionHistory.size}")
         
         // 调用 LLM
+        telemetry.recordEvent(PipelinePhase.EXECUTOR, "Executing Coach LLM Prompt")
         return when (val result = executor.execute(context)) {
             is ExecutorResult.Success -> {
                 // Wave 4: 检测是否建议切换到 Analyst 模式
@@ -50,6 +56,7 @@ class RealCoachPipeline @Inject constructor(
                 )
             }
             is ExecutorResult.Failure -> {
+                telemetry.recordError(PipelinePhase.EXECUTOR, "LLM Failure in CoachPipeline: ${result.error}")
                 CoachResponse.Chat(
                     content = "抱歉，我遇到了一些问题：${result.error}",
                     suggestAnalyst = false,

@@ -12,6 +12,7 @@ import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import org.mockito.Mockito.mock
 
 /**
  * RealEntityWriter 单元测试 — 覆盖 spec 全部 test cases
@@ -35,12 +36,15 @@ class RealEntityWriterTest {
         val timeProvider = FakeTimeProvider()
         val habitRepository = FakeUserHabitRepository()
         scheduledTaskRepository = TestScheduledTaskRepository()
+        // Define mockEntityRepo for the contextBuilder
+        val mockEntityRepo = mock(FakeEntityRepository::class.java)
         contextBuilder = RealContextBuilder(
             timeProvider = timeProvider,
             reinforcementLearner = FakeReinforcementLearner(habitRepository),
             memoryRepository = memoryRepo,
-            entityRepository = FakeEntityRepository(),
-            scheduledTaskRepository = scheduledTaskRepository
+            entityRepository = mockEntityRepo,
+            scheduledTaskRepository = scheduledTaskRepository,
+            telemetry = com.smartsales.prism.data.fakes.FakePipelineTelemetry()
         )
         writer = RealEntityWriter(repo, timeProvider, contextBuilder)
     }

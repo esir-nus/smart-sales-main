@@ -36,7 +36,8 @@ class EntityWriterBreakItTest {
             reinforcementLearner = FakeReinforcementLearner(habitRepository),
             memoryRepository = FakeMemoryRepository(),
             entityRepository = FakeEntityRepository(),
-            scheduledTaskRepository = scheduledTaskRepository
+            scheduledTaskRepository = TestScheduledTaskRepository(),
+            telemetry = com.smartsales.prism.data.fakes.FakePipelineTelemetry()
         )
         writer = RealEntityWriter(repo, timeProvider, contextBuilder)
     }

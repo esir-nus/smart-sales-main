@@ -56,7 +56,9 @@ class PrismOrchestrator @Inject constructor(
     private val reinforcementLearner: com.smartsales.prism.domain.rl.ReinforcementLearner,
     private val coachPipeline: com.smartsales.prism.domain.coach.CoachPipeline,
     private val entityWriter: EntityWriter,
-    private val entityRepository: EntityRepository
+    private val entityRepository: EntityRepository,
+    private val inputParserService: com.smartsales.prism.domain.parser.InputParserService,
+    private val telemetry: com.smartsales.prism.domain.telemetry.PipelineTelemetry
 ) : Orchestrator {
     
     // Fire-and-forget scope for RL learning
@@ -80,6 +82,32 @@ class PrismOrchestrator @Inject constructor(
         activityController.startPhase(ActivityPhase.PLANNING, ActivityAction.THINKING)
         
         return try {
+            // Wave 3: InputParser Gateway
+            telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.INPUT_PARSER, "Starting parsing intent for input")
+            val parseResult = inputParserService.parseIntent(input)
+            telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.INPUT_PARSER, "Result: $parseResult")
+            
+            if (parseResult is com.smartsales.prism.domain.parser.ParseResult.NeedsClarification) {
+                activityController.complete()
+                return UiState.AwaitingClarification(
+                    question = parseResult.clarificationPrompt,
+                    clarificationType = ClarificationType.AMBIGUOUS_PERSON,
+                    candidates = parseResult.suggestedMatches.map {
+                        CandidateOption(
+                            entityId = it.entityId,
+                            displayName = it.displayName,
+                            description = it.entityType
+                        )
+                    }
+                )
+            }
+            
+            val resolvedEntityIds = if (parseResult is com.smartsales.prism.domain.parser.ParseResult.Success) {
+                parseResult.resolvedEntityIds
+            } else {
+                emptyList()
+            }
+
             // 获取会话历史
             val sessionHistory = contextBuilder.getSessionHistory()
             
@@ -87,7 +115,8 @@ class PrismOrchestrator @Inject constructor(
             activityController.startPhase(ActivityPhase.EXECUTING, ActivityAction.STREAMING)
             
             // 委托给 CoachPipeline 处理
-            val response = coachPipeline.process(input, sessionHistory)
+            telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Routing to CoachPipeline with ${resolvedEntityIds.size} resolved entities")
+            val response = coachPipeline.process(input, sessionHistory, resolvedEntityIds)
             
             when (response) {
                 is com.smartsales.prism.domain.coach.CoachResponse.Chat -> {
@@ -100,6 +129,7 @@ class PrismOrchestrator @Inject constructor(
             }
         } catch (e: Exception) {
             val errorMessage = e.message ?: "未知错误"
+            telemetry.recordError(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Error in processCoachInput: $errorMessage", e)
             activityController.error(errorMessage)
             UiState.Error(errorMessage, retryable = true)
         }
@@ -116,6 +146,32 @@ class PrismOrchestrator @Inject constructor(
         activityController.startPhase(ActivityPhase.PLANNING, ActivityAction.THINKING)
         
         return try {
+            // Wave 3: InputParser Gateway
+            telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.INPUT_PARSER, "Starting parsing intent for scheduler input")
+            val parseResult = inputParserService.parseIntent(input)
+            telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.INPUT_PARSER, "Result: $parseResult")
+            
+            if (parseResult is com.smartsales.prism.domain.parser.ParseResult.NeedsClarification) {
+                activityController.complete()
+                return UiState.AwaitingClarification(
+                    question = parseResult.clarificationPrompt,
+                    clarificationType = ClarificationType.AMBIGUOUS_PERSON,
+                    candidates = parseResult.suggestedMatches.map {
+                        CandidateOption(
+                            entityId = it.entityId,
+                            displayName = it.displayName,
+                            description = it.entityType
+                        )
+                    }
+                )
+            }
+            
+            val resolvedEntityIds = if (parseResult is com.smartsales.prism.domain.parser.ParseResult.Success) {
+                parseResult.resolvedEntityIds
+            } else {
+                emptyList()
+            }
+
             // Wave 8: 注入旧任务上下文 (如果存在)
             var llmInput = input
             if (replaceItemId != null) {
@@ -131,11 +187,13 @@ class PrismOrchestrator @Inject constructor(
                 }
             }
 
-            // 构建 Scheduler 上下文
-            val context = contextBuilder.build(llmInput, Mode.SCHEDULER)
+            // 1. 构建 Enhanced Context
+            telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.CONTEXT_BUILDER, "Building context for SCHEDULER mode")
+            val context = contextBuilder.build(llmInput, Mode.SCHEDULER, resolvedEntityIds)
             activityController.startPhase(ActivityPhase.EXECUTING, ActivityAction.THINKING)
             
-            // 调用 LLM 解析
+            // 2. LLM 解析
+            telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.EXECUTOR, "Sending prompt to executor")
             when (val result = executor.execute(context)) {
                 is ExecutorResult.Success -> {
                     // === Wave 2: Fire-and-forget RL learning ===
@@ -408,7 +466,8 @@ class PrismOrchestrator @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-            val errorMessage = e.message ?: "未知错误"
+            val errorMessage = e.message ?: "解析失败"
+            telemetry.recordError(com.smartsales.prism.domain.telemetry.PipelinePhase.SCHEDULER, "Error in createScheduledTask: $errorMessage", e)
             activityController.error(errorMessage)
             UiState.Error(errorMessage, retryable = true)
         }

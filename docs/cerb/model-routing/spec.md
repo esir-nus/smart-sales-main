@@ -27,6 +27,6 @@ The registry provides static `LlmProfile` objects (not strings) acting as a "Kot
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
 | **1** | Architecture Schema | ✅ SHIPPED | `interface.md` + `spec.md` definition |
-| **2** | Kotlin Registry Refactor | 🔲 PLANNED | Introduce `LlmProfile.kt` and rewrite `ModelRegistry.kt`, delete `ModelRouter.kt` |
-| **3** | Service Migration | 🔲 PLANNED | Migrate `RealInputParserService`, `RealEntityResolverService`, `DashscopeExecutor` to manually select profiles |
+| **2** | Kotlin Registry Refactor | ✅ SHIPPED | Introduce `LlmProfile.kt` and rewrite `ModelRegistry.kt`, delete `ModelRouter.kt` |
+| **3** | Direct Provider Wiring | ✅ SHIPPED | Route `ModelRegistry` constants directly into Dashscope builder, bypassing smart logic. |
 | **4** | Two-Stage Analyst Pipeline | 🔲 PLANNED | Split Analyst logic: `PLANNER` (plus) -> `EXECUTOR` (max) |

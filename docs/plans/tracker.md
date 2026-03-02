@@ -12,7 +12,7 @@
 
 | Cerb Shard | State | Next Wave |
 |------------|-------|-----------|
-| [model-routing](../cerb/model-routing/spec.md) | SPEC_ONLY | W2: Kotlin Registry Refactor |
+| [model-routing](../cerb/model-routing/spec.md) | SHIPPED | — |
 | [input-parser](../cerb/input-parser/spec.md) | PARTIAL | W4: Auto-Renaming |
 | [pipeline-telemetry](../cerb/pipeline-telemetry/spec.md) | SHIPPED | — |
 | [coach](../cerb/coach/spec.md) | SHIPPED | — |

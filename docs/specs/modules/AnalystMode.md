@@ -35,7 +35,7 @@ Replaces the standard header when in Analyst scenarios. Vertical numbered list o
 - **Sticky**: Pinned to top of chat view (below main header).
 - **Vertical List**: Numbered items with full descriptions (not chips).
 - **Context-Aware**: Options change based on conversation Phase.
-- **Tap Action**: Starts the workflow immediately (sends as user message).
+- **Tap Action**: Re-routes entirely to OS Execution (`ToolRegistry.executeTool()`). **DOES NOT SEND AS USER MESSAGE**. Bypassing the LLM prevents the FSM from trapping the user in a new consulting loop.
 - **Custom Option**: Always last item. Prompts user to voice/type a unique demand.
 
 ---

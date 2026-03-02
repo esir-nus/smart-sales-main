@@ -24,6 +24,7 @@ import com.smartsales.prism.ui.components.MarkdownText
  */
 @Composable
 fun MarkdownStrategyBubble(
+    title: String,
     content: String,
     onConfirm: () -> Unit = {},
     onAmend: () -> Unit = {},
@@ -36,9 +37,20 @@ fun MarkdownStrategyBubble(
             .background(BackgroundSurface.copy(alpha = 0.9f))
             .padding(16.dp)
     ) {
+        if (title.isNotBlank()) {
+            Text(
+                text = title,
+                color = com.smartsales.prism.ui.theme.TextPrimary,
+                fontSize = 16.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+        
         MarkdownText(
             text = content,
-            color = Color.White,
+            color = com.smartsales.prism.ui.theme.TextPrimary,
             fontSize = 14.sp,
             lineHeight = 20.sp,
             modifier = Modifier.fillMaxWidth()
@@ -66,6 +78,7 @@ fun MarkdownStrategyBubble(
 @Composable
 private fun MarkdownStrategyBubblePreview() {
     MarkdownStrategyBubble(
+        title = "周度客户分析报告",
         content = """
             ### 周度客户分析报告
             

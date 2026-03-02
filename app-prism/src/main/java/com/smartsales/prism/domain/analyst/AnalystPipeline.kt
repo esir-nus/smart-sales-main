@@ -1,6 +1,7 @@
 package com.smartsales.prism.domain.analyst
 
 import kotlinx.coroutines.flow.StateFlow
+import com.smartsales.prism.domain.pipeline.ChatTurn
 
 /**
  * The Orchestrator Contract for Analyst Mode.

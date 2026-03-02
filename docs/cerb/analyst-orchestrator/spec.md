@@ -13,7 +13,7 @@ The `analyst-orchestrator` is the central traffic cop for Analyst Mode. It does 
 **Key Principles**:
 1. **The Human-in-the-Loop Gate**: The orchestrator absolutely MUST pause at `PROPOSAL` state and wait for explicit user confirmation before executing any investigation plan.
 2. **Context, Not Raw SSD Queries**: The orchestrator does not parse LLM output into Kotlin SQL queries. It relies on the Kernel (`ContextBuilder`) to furnish the `EnhancedContext` (RAM), which is then fed back to the LLM for reasoning.
-3. **No Dumb Tools**: "Tool execution" in Analyst Mode is actually an LLM Reasoning pass over the RAM context, not a hardcoded Kotlin data fetch. Actionable tools (Export PDF, Email) are strictly deferred to the `TaskBoard` mounted at the end.
+3. **Phase 4 OS Execution Bypass**: "Tool execution" (e.g., Export PDF, Email) shown on the TaskBoard does NOT route back through the LLM FSM. The UI layer directly invokes the `ToolRegistry` OS-level functions to prevent infinite `CONSULTING` recursion.
 
 ---
 
@@ -110,8 +110,15 @@ Controls the strict phasing of the open loop.
 │         Deliver: Analysis + Dynamic Task Board             │
 │                          │                                 │
 │                          ▼                                 │
-│                       [Idle] ◀── Ready for next request    │
-│                                                            │
+│                       [Idle] ─┐                            │
+│                               │                            │
+│         ┌─────────────────────┘                            │
+│         │ (User taps TaskBoard item)                       │
+│         ▼                                                  │
+│ Phase 4: OS Execution Bypass (ToolRegistry)                │
+│ → Bypasses handleInput() entirely                          │
+│ → Directly executes Kotlin backend workflow                │
+│ → Returns UI Result Bubble (e.g. File Link)                │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -146,7 +153,7 @@ Current recognized Vault IDs:
 - `EXPORT_CSV`
 - `DRAFT_EMAIL`
 
-The UI maps these IDs to clickable action buttons, separating reasoning (LLM) from physical execution (Kotlin + Android Intents).
+The UI maps these IDs to clickable action buttons. **CRITICAL**: Tapping these buttons must call `ToolRegistry.executeTool()` directly. It must NEVER call `AnalystPipeline.handleInput()`.
 
 ---
 
@@ -161,7 +168,7 @@ Following the Anti-Drift Protocol, the Orchestrator will be built using a **Fake
 | **3** | **Phase 2 (Architect)** | ✅ SHIPPED | Markdown prompts and `PlanResult` to map output to the UI state. |
 | **4** | **Phase 3 (Investigation)** | ✅ SHIPPED | Wire the LLM to read the `EnhancedContext` and update the UI states. |
 | **5** | **Entity Disambiguation** | ✅ SHIPPED | Implement `AwaitingClarification` loop and lightweight `EntityResolverService` validation. |
-| **6** | **Phase 4 (TaskBoard)** | 🔲 PENDING | Parse final suggestions and mount actionable UI buttons. |
+| **6** | **Phase 4 (TaskBoard Bypass)** | 🔲 PENDING | Wire `ToolRegistry.executeTool()` to bypass the LLM FSM and execute native Kotlin workflows. Add `UiState.ExecutingTool` for loading states. |
 
 ---
 

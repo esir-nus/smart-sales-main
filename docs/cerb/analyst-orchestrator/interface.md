@@ -126,6 +126,7 @@ when (response) {
 | Access `ClientProfileHub` directly | Pipeline implementation reads File Explorer (`ClientProfileHub`) when RAM is insufficient |
 | Auto-execute investigation without user OK | Always wait for confirmation at `PROPOSAL` state |
 | Parse LLM JSON output manually | Pipeline returns typed `AnalystResponse` |
+| Route TaskBoard taps back into `handleInput` | Fast-path directly to `ToolRegistry.executeTool()` (OS Bypass) |
 | Render Task Board before analysis completes | Task Board appears only after `RESULT` state |
 
 ---

@@ -1,40 +1,64 @@
 package com.smartsales.prism.domain.config
 
 /**
- * 模型注册表 — 中央配置
+ * LLM 策略模版 — 配置单个任务的执行参数
+ */
+data class LlmProfile(
+    val modelId: String,
+    val temperature: Float = 0.5f,
+    val skillTags: Set<String> = emptySet()
+)
+
+/**
+ * 模型注册中心 (Static Hub) — 中央配置
  * 
- * 所有 LLM 模型选择都从这里引用，确保与 Prism-V1.md Model Registry 对齐。
- * @see implementation_plan.md §Model Registry
+ * 所有服务根据自己的任务边界，**直接、手动**选择对应的 Profile 即可。严禁在这里写 if/else "Smart Routing" 逻辑。
+ * @see Prism-V1.md §Model Registry
  */
 object ModelRegistry {
     
-    // === Mode Models (Executor Strategy) ===
+    // === Deterministic Pipelines ===
     
-    /** Coach 模式 — 快速对话，1M tokens */
-    const val COACH = "qwen-plus"
+    /** 提取器 (Extractor) — 快速解析，实体识别。禁止发散推理。 */
+    val EXTRACTOR = LlmProfile(
+        modelId = "qwen-turbo",
+        temperature = 0.0f
+    )
     
-    /** Analyst 模式 — 推理、工具调用，32k tokens (混合思考模型) */
-    const val ANALYST = "qwen3-max-2026-01-23"
+    /** 执行器 (Executor) — 严格执行工具调用，输出稳定的结构化 JSON。 */
+    val EXECUTOR = LlmProfile(
+        modelId = "qwen3-max-2026-01-23",
+        temperature = 0.0f,
+        skillTags = setOf("structured_output")
+    )
     
-    /** Scheduler 模式 — 结构化输出 (使用与 Analyst 相同的模型) */
-    const val SCHEDULER = "qwen3-max-2026-01-23"
+    // === Generative & Reasoning Pipelines ===
     
-    /** Vision 模式 — 图像 OCR/描述 */
-    const val VISION = "qwen3-vl-plus"
+    /** 策划者 (Planner) — 大文本理解、策略制定。 */
+    val PLANNER = LlmProfile(
+        modelId = "qwen-plus",
+        temperature = 0.5f,
+        skillTags = setOf("reasoning")
+    )
     
-    // === Memory Layer Models ===
+    /** 教练 (Coach) — 直接对话，生成最终的自然语言话术给用户听。 */
+    val COACH = LlmProfile(
+        modelId = "qwen-plus",
+        temperature = 0.5f,
+        skillTags = setOf("sales_coach", "conversational")
+    )
     
-    /** Relevancy Library — 工具调用查询结构化实体，32k tokens */
-    const val RELEVANCY = "qwen3-max-2026-01-23"
+    /** 视觉 (Vision) — 图像 OCR。 */
+    val VISION = LlmProfile(
+        modelId = "qwen-vl-plus",
+        temperature = 0.5f
+    )
     
-    /** Hot Zone — 快速读取近期上下文，1M tokens */
-    const val HOT_ZONE = "qwen-plus"
+    // === Batch Processing Pipelines ===
     
-    /** Cement Zone — 深层历史检索，10M tokens */
-    const val CEMENT = "qwen-long"
-    
-    // === Batch Processing Models ===
-    
-    /** Memory Writer (Hot/Cold/Cement 整合) — 10M tokens 长上下文 */
-    const val MEMORY_CONSOLIDATION = "qwen-long"
+    /** 记忆压缩核 (Memory Consolidation) — 深夜/离线 归档冷数据的超长上下文。 */
+    val MEMORY_CONSOLIDATION = LlmProfile(
+        modelId = "qwen-long",
+        temperature = 0.2f
+    )
 }

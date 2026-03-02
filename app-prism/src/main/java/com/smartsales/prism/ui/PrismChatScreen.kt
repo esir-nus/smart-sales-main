@@ -29,6 +29,7 @@ import androidx.compose.material.icons.outlined.ChatBubble
 import androidx.compose.material.icons.outlined.CenterFocusStrong
 import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material3.*
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.animation.core.*
 import androidx.compose.ui.graphics.Brush
@@ -223,6 +224,7 @@ fun PrismChatScreen(
                                     onAmendPlan = viewModel::amendAnalystPlan
                                 )
                                 is UiState.MarkdownStrategyState -> com.smartsales.prism.ui.analyst.MarkdownStrategyBubble(
+                                    title = currentUiState.title,
                                     content = currentUiState.markdownContent,
                                     onConfirm = viewModel::confirmAnalystPlan,
                                     onAmend = viewModel::amendAnalystPlan
@@ -249,15 +251,27 @@ fun PrismChatScreen(
                                         }
                                     }
                                     is UiState.MarkdownStrategyState -> com.smartsales.prism.ui.analyst.MarkdownStrategyBubble(
+                                        title = state.title,
                                         content = state.markdownContent,
                                         onConfirm = viewModel::confirmAnalystPlan,
                                         onAmend = viewModel::amendAnalystPlan
                                     )
                                     is UiState.Thinking -> {
-                                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(8.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(8.dp)) {
                                             Text("🧠", fontSize = 12.sp) 
                                             Spacer(Modifier.width(8.dp))
                                             Text(state.hint ?: "Thinking...", color = TextMuted, fontSize = 12.sp)
+                                        }
+                                    }
+                                    is UiState.ExecutingTool -> {
+                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(8.dp)) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(16.dp),
+                                                color = AccentBlue,
+                                                strokeWidth = 2.dp
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text("正在执行: ${state.toolName}", color = TextSecondary, fontSize = 13.sp)
                                         }
                                     }
                                     else -> {}

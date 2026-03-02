@@ -40,6 +40,7 @@ class FakeCoachPipeline @Inject constructor() : CoachPipeline {
             append("\n\n")
             append("这是一个模拟响应。在 Wave 2 实现真实 LLM 调用后，")
             append("您将收到来自 Qwen-Plus 的专业销售教练建议。")
+        }
             
         return CoachResponse.Chat(
             content = responseContent,

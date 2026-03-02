@@ -5,10 +5,7 @@ import com.smartsales.prism.domain.activity.ActivityPhase
 import com.smartsales.prism.domain.activity.AgentActivityController
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.model.UiState
-import com.smartsales.prism.domain.pipeline.DeliverableType
-import com.smartsales.prism.domain.pipeline.ExecutionPlan
 import com.smartsales.prism.domain.pipeline.Orchestrator
-import com.smartsales.prism.domain.pipeline.RetrievalScope
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.TimelineItemModel
 import com.smartsales.prism.domain.time.TimeProvider
@@ -48,16 +45,9 @@ class FakeOrchestrator @Inject constructor(
 
         val result = when {
             input.startsWith("/plan") -> {
-                // Scenario: Analyst Plan Card
-                UiState.PlanCard(
-                    ExecutionPlan(
-                        retrievalScope = RetrievalScope.HOT_AND_CEMENT,
-                        deliverables = listOf(
-                            DeliverableType.KEY_INSIGHT,
-                            DeliverableType.CHART,
-                            DeliverableType.CHAT_RESPONSE
-                        )
-                    )
+                // Scenario: Analyst Plan Card (Deprecated execution flow, now just returns Mock V2 Response)
+                UiState.Response(
+                    content = "执行计划生成中...",
                 )
             }
             input.startsWith("/think") -> {

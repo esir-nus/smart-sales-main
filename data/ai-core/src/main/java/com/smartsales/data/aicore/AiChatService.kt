@@ -26,7 +26,9 @@ data class AiChatRequest(
     val model: String? = null,
     val skillTags: Set<String> = emptySet(),
     val transcriptMarkdown: String? = null,
-    val attachments: List<AiAttachment> = emptyList()
+    val attachments: List<AiAttachment> = emptyList(),
+    // 说明：可选的温度覆盖；如果为 null，默认使用全局配置。
+    val temperature: Float? = null
 )
 
 data class AiChatResponse(

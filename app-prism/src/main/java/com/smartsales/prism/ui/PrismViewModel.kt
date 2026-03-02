@@ -15,9 +15,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import com.smartsales.prism.domain.model.ChatMessage
 import com.smartsales.prism.domain.pipeline.ChatTurn
-import com.smartsales.prism.domain.pipeline.ExecutionPlan
-import com.smartsales.prism.domain.pipeline.RetrievalScope
-import com.smartsales.prism.domain.pipeline.DeliverableType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import android.util.Log
@@ -304,7 +301,7 @@ class PrismViewModel @Inject constructor(
                     when (msg) {
                         is ChatMessage.User -> ChatTurn("user", msg.content)
                         is ChatMessage.Ai -> if (msg.uiState is UiState.Response) ChatTurn("assistant", msg.uiState.content) 
-                                             else if (msg.uiState is UiState.MarkdownStrategyState) ChatTurn("assistant", msg.uiState.markdownContent)
+                                             else if (msg.uiState is UiState.MarkdownStrategyState) ChatTurn("assistant", "### \${msg.uiState.title}\\n\${msg.uiState.markdownContent}")
                                              else null
                     }
                 })
@@ -354,10 +351,45 @@ class PrismViewModel @Inject constructor(
     // ========================================================================
     
     /**
-     * Handle Task Board item selection
+     * Handle Task Board item selection (Phase 4: OS Execution Bypass)
      */
     fun selectTaskBoardItem(itemId: String) {
-        // Implement when TaskBoard wiring is done
+        if (_isSending.value) return
+        
+        val items = _taskBoardItems.value
+        val item = items.find { it.id == itemId } ?: return
+        
+        _isSending.value = true
+        _uiState.value = UiState.ExecutingTool(item.title)
+        android.util.Log.d("TaskBoardTool", "🚀 PrismViewModel: Mounting ExecutingTool for \${item.title}")
+        
+        viewModelScope.launch {
+            try {
+                // Pass the current input text or empty string as context if needed (mostly mock for now)
+                val context = _inputText.value
+                val result = toolRegistry.executeTool(itemId, context)
+                
+                android.util.Log.d("TaskBoardTool", "✅ PrismViewModel: execution finished for \${item.title}")
+                
+                if (result.success) {
+                    // Create a response message with the tool result payload
+                    val content = "✅ **${item.title} 执行完毕**\n\n${result.previewText}"
+                    val resultMessage = ChatMessage.Ai(
+                        id = java.util.UUID.randomUUID().toString(),
+                        timestamp = System.currentTimeMillis(),
+                        uiState = UiState.Response(content)
+                    )
+                    _history.value += resultMessage
+                } else {
+                    _errorMessage.value = "工具执行失败: ${result.previewText}"
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "工具执行异常: ${e.message}"
+            } finally {
+                _uiState.value = UiState.Idle
+                _isSending.value = false
+            }
+        }
     }
 
     fun send() {
@@ -395,6 +427,7 @@ class PrismViewModel @Inject constructor(
                         }
                         is com.smartsales.prism.domain.analyst.AnalystResponse.Plan -> {
                             UiState.MarkdownStrategyState(
+                                title = response.title,
                                 markdownContent = response.markdownContent
                             )
                         }

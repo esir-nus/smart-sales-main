@@ -11,7 +11,6 @@ data class EnhancedContext(
     val userText: String,
     val audioTranscripts: List<TranscriptBlock> = emptyList(),
     val imageAnalysis: List<VisionResult> = emptyList(),
-    val imageAnalysis: List<VisionResult> = emptyList(),
     val entityKnowledge: String? = null,
     val entityContext: Map<String, EntityRef> = emptyMap(),
     val modeMetadata: ModeMetadata = ModeMetadata(),

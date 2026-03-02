@@ -4,8 +4,8 @@ import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.AiChatRequest
 import com.smartsales.data.aicore.AiChatResponse
 import com.smartsales.data.aicore.AiChatService
+import com.smartsales.prism.domain.config.LlmProfile
 import com.smartsales.prism.domain.config.ModelRegistry
-import com.smartsales.prism.domain.config.ModelRouter
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.pipeline.EnhancedContext
 import com.smartsales.prism.domain.pipeline.Executor
@@ -28,9 +28,9 @@ class DashscopeExecutor @Inject constructor(
     private val activityController: com.smartsales.prism.domain.activity.AgentActivityController
 ) : Executor {
     
-    override suspend fun execute(context: EnhancedContext): ExecutorResult {
+    override suspend fun execute(profile: LlmProfile, context: EnhancedContext): ExecutorResult {
         // 构建 AiChatRequest
-        val request = buildRequest(context)
+        val request = buildRequest(profile, context)
         
         // 记录 API 请求
         activityController.appendTrace("🔌 API: ${request.model}")
@@ -57,28 +57,17 @@ class DashscopeExecutor @Inject constructor(
     
     /**
      * 构建 AiChatRequest
-     * 根据任务类型选择模型（通过 ModelRouter）
+     * 直接使用传入的 LlmProfile 参数
      */
-    private fun buildRequest(context: EnhancedContext): AiChatRequest {
-        val mode = context.modeMetadata.currentMode
-        
-        // 根据任务类型选择模型 (via ModelRouter)
-        val model = ModelRouter.forContext(context)
-        
-        // 根据模式选择技能标签
-        val skillTags = when (mode) {
-            Mode.COACH -> setOf("sales_coach", "conversational")
-            Mode.ANALYST -> setOf("data_analysis", "reasoning", "tool_calling")
-            Mode.SCHEDULER -> setOf("scheduling", "structured_output")
-        }
-        
+    private fun buildRequest(profile: LlmProfile, context: EnhancedContext): AiChatRequest {
         // 构建提示词（包含上下文）
         val prompt = buildPrompt(context)
         
         return AiChatRequest(
             prompt = prompt,
-            model = model,
-            skillTags = skillTags,
+            model = profile.modelId,
+            temperature = profile.temperature,
+            skillTags = profile.skillTags,
             transcriptMarkdown = context.audioTranscripts.firstOrNull()?.text
         )
     }

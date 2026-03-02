@@ -40,13 +40,11 @@ fun ResponseBubble(
         is UiState.Response -> {
             CompleteBubble(content = uiState.content, modifier = modifier)
         }
-        is UiState.PlanCard -> {
-            // PlanCard 由专门的 PlanCard 组件处理
-        }
         
         // V2: Markdown Strategy 展示
         is UiState.MarkdownStrategyState -> {
             com.smartsales.prism.ui.analyst.MarkdownStrategyBubble(
+                title = uiState.title,
                 content = uiState.markdownContent,
                 onConfirm = onConfirmPlan,
                 onAmend = onAmendPlan,
@@ -77,6 +75,9 @@ fun ResponseBubble(
             // Toast 通过 Toast 机制显示，不进入聊天气泡
         }
         
+        is UiState.ExecutingTool -> {
+            // ExecutingTool (TaskBoard bypass loading) is rendered as an AgentActivity or skipped here since it's handled in PrismChatScreen history rendering directly
+        }
 
     }
 }

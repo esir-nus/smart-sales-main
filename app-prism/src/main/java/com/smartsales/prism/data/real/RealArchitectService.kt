@@ -49,14 +49,21 @@ class RealArchitectService @Inject constructor(
             ?: throw IllegalStateException("Executor returned non-success result.")
 
         val markdownContent = successResult.content.trim()
-        val titleMatch = Regex("^###\\s+(.+)").find(markdownContent)
-        val title = titleMatch?.groupValues?.get(1)?.trim() ?: "分析策略"
         
+        // MarkdownSanitizer strips '###', so the first non-empty line is the title.
+        val lines = markdownContent.lines().filter { it.isNotBlank() }
+        val title = lines.firstOrNull()?.trim() ?: "分析策略"
+        
+        // Remove the title line from the rest of the content if it matches.
+        val contentWithoutTitle = if (lines.isNotEmpty()) {
+            markdownContent.replaceFirst(lines.first(), "").trim()
+        } else markdownContent
+
         Log.d(TAG, "generatePlan: Generated Markdown strategy with title: $title")
         return PlanResult(
             title = title,
             summary = "基于上下文生成的分析策略",
-            markdownContent = markdownContent
+            markdownContent = contentWithoutTitle
         )
     }
 

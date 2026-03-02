@@ -70,6 +70,8 @@ class FakeToolRegistry @Inject constructor() : ToolRegistry {
                 success = false
             )
 
+        android.util.Log.d("TaskBoardTool", "🔨 FakeToolRegistry: executing tool \$toolId")
+
         // 模拟执行延迟
         delay(800)
 

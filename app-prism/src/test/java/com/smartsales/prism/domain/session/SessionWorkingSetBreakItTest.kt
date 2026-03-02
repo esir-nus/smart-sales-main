@@ -1,7 +1,6 @@
 package com.smartsales.prism.domain.session
 
 import com.smartsales.prism.domain.pipeline.EntityRef
-import com.smartsales.prism.domain.pipeline.MemoryHit
 import com.smartsales.prism.domain.rl.HabitContext
 import org.junit.Assert.*
 import org.junit.Before

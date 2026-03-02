@@ -57,13 +57,13 @@ class FakeOrchestratorTest {
     }
 
     @Test
-    fun `processInput returns PlanCard for Analyst mode`() = runTest {
+    fun `processInput returns Response for Analyst mode with plan command`() = runTest {
         orchestrator.switchMode(Mode.ANALYST)
         
-        // /plan command triggers PlanCard response
+        // /plan command triggers Response (PlanCard is deprecated)
         val result = orchestrator.processInput("/plan analyze this")
         
-        assertTrue("Expected UiState.PlanCard", result is UiState.PlanCard)
+        assertTrue("Expected UiState.Response", result is UiState.Response)
     }
     
     @Test

@@ -12,6 +12,7 @@
 
 | Cerb Shard | State | Next Wave |
 |------------|-------|-----------|
+| [model-routing](../cerb/model-routing/spec.md) | SPEC_ONLY | W2: Kotlin Registry Refactor |
 | [input-parser](../cerb/input-parser/spec.md) | PARTIAL | W4: Auto-Renaming |
 | [pipeline-telemetry](../cerb/pipeline-telemetry/spec.md) | SHIPPED | — |
 | [coach](../cerb/coach/spec.md) | SHIPPED | — |
@@ -204,6 +205,7 @@
 | ~~`structuredJson` schema inconsistency~~ | ~~`RealContextBuilder.recordActivity()`~~ | ~~Low~~ | ✅ **Resolved** — Updated schema to include both `relatedEntityIds` array and scalar `entityId`. |
 | ~~Sticky Notes Boundary~~ | ~~`PrismOrchestrator.createScheduledTask()` calls `entityWriter.upsertFromClue()`~~ | ~~**High**~~ | ✅ **Resolved** — Sticky Notes abandoned. Scheduler creates PERSON + ACCOUNT entities for business-relevant contacts (Wave 10 SHIPPED). |
 | **Confidence-Based Reminder Interceptor** | Replace deterministic round-1 wrap-up with LLM confidence-based interception. Agent decides when to surface schedule context: (1) User greets/noise → inject, (2) User discusses agenda → inject, (3) User wraps up work → suggest completion. Requires classifier or LLM self-assessment of conversation intent. Current workaround: smarter prompting that lets LLM decide naturally. | Medium |
+| **L2 UI Verification** | `MarkdownStrategyBubble.kt` — Verify the title extraction and rendering styling (T2 test from `l2_test_plan.md`) after major component refactoring is complete. | High |
 ---
 
 ## Quick Links

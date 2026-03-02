@@ -1,6 +1,5 @@
 package com.smartsales.prism.domain.model
 
-import com.smartsales.prism.domain.pipeline.ExecutionPlan
 
 /**
  * Pipeline UI 状态密封类
@@ -29,8 +28,6 @@ sealed class UiState {
         val hasConflict: Boolean = false
     ) : UiState()
     
-    data class PlanCard(val plan: ExecutionPlan, val completedSteps: Set<Int> = emptySet()) : UiState()
-    
     /**
      * 轻量级反馈 — Toast 消息，不进入聊天历史
      */
@@ -51,7 +48,10 @@ sealed class UiState {
     ) : UiState()
 
     // Analyst Mode V2 State
-    data class MarkdownStrategyState(val markdownContent: String) : UiState()
+    data class MarkdownStrategyState(val title: String, val markdownContent: String) : UiState()
+    
+    // Wave 6 Phase 4: OS Execution Bypass Loading State
+    data class ExecutingTool(val toolName: String) : UiState()
 }
 
 /**

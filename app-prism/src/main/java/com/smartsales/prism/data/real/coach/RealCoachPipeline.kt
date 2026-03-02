@@ -34,8 +34,8 @@ class RealCoachPipeline @Inject constructor(
     ): CoachResponse {
         // 构建上下文（session history 已经在 ContextBuilder 内部管理）
         val context = contextBuilder.build(input, Mode.COACH, resolvedEntityIds)
-        telemetry.recordEvent(PipelinePhase.ROUTER, "Coach context built with ${context.memoryHits.size} memory hits")
-        Log.d("CoachMemory", "🎯 CoachPipeline: context built, memoryHits=${context.memoryHits.size}, sessionHistory=${context.sessionHistory.size}")
+        telemetry.recordEvent(PipelinePhase.ROUTER, "Coach context built")
+        Log.d("CoachMemory", "🎯 CoachPipeline: context built, sessionHistory=${context.sessionHistory.size}")
         
         // 调用 LLM
         telemetry.recordEvent(PipelinePhase.EXECUTOR, "Executing Coach LLM Prompt")
@@ -48,19 +48,17 @@ class RealCoachPipeline @Inject constructor(
                                      input.contains("对比")
                 
                 // Wave 3: 传递记忆命中项（由 ContextBuilder 搜索并注入）
-                Log.d("CoachMemory", "✅ CoachPipeline: LLM success, propagating ${context.memoryHits.size} memoryHits to response")
+                Log.d("CoachMemory", "✅ CoachPipeline: LLM success")
                 CoachResponse.Chat(
                     content = result.content,
-                    suggestAnalyst = suggestAnalyst,
-                    memoryHits = context.memoryHits
+                    suggestAnalyst = suggestAnalyst
                 )
             }
             is ExecutorResult.Failure -> {
                 telemetry.recordError(PipelinePhase.EXECUTOR, "LLM Failure in CoachPipeline: ${result.error}")
                 CoachResponse.Chat(
                     content = "抱歉，我遇到了一些问题：${result.error}",
-                    suggestAnalyst = false,
-                    memoryHits = emptyList()
+                    suggestAnalyst = false
                 )
             }
         }

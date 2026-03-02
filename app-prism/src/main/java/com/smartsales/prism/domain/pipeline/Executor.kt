@@ -1,5 +1,7 @@
 package com.smartsales.prism.domain.pipeline
 
+import com.smartsales.prism.domain.config.LlmProfile
+
 /**
  * 执行器 — LLM 调用策略
  * @see Prism-V1.md §2.2 #3
@@ -7,10 +9,11 @@ package com.smartsales.prism.domain.pipeline
 interface Executor {
     /**
      * 执行 LLM 推理
+     * @param profile 使用的 LLM 策略模版配置
      * @param context 增强上下文
      * @return 执行结果
      */
-    suspend fun execute(context: EnhancedContext): ExecutorResult
+    suspend fun execute(profile: LlmProfile, context: EnhancedContext): ExecutorResult
 }
 
 /**

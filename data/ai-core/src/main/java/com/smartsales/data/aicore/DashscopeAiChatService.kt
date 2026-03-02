@@ -164,7 +164,7 @@ class DashscopeAiChatService @Inject constructor(
             apiKey = credentials.apiKey,
             model = modelOverride ?: credentials.model,
             messages = buildMessages(request),
-            temperature = dashScopeSettings.temperature.toFloat(),
+            temperature = request.temperature ?: dashScopeSettings.temperature.toFloat(),
             incrementalOutput = dashScopeSettings.incrementalOutput,
             enableThinking = shouldEnableThinking
         )

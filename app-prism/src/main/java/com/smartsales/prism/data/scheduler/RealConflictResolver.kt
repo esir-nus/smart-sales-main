@@ -48,7 +48,7 @@ class RealConflictResolver @Inject constructor(
         
         Log.d("ConflictResolver", "Calling LLM with prompt: $prompt")
         
-        val result = dashscopeExecutor.execute(context)
+        val result = dashscopeExecutor.execute(com.smartsales.prism.domain.config.ModelRegistry.EXECUTOR, context)
         
         return when (result) {
             is ExecutorResult.Success -> parseConflictResolution(result.content, taskA, taskB)

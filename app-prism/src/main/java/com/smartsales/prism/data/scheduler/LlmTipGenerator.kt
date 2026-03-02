@@ -65,7 +65,8 @@ class LlmTipGenerator @Inject constructor(
         // LLM call → parse JSON array
         val request = AiChatRequest(
             prompt = prompt,
-            model = ModelRegistry.COACH  // qwen-plus (fast/competent for tips)
+            model = ModelRegistry.COACH.modelId,  // qwen-plus (fast/competent for tips)
+            temperature = ModelRegistry.COACH.temperature
         )
         
         val result = aiChatService.sendMessage(request)

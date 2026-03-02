@@ -29,7 +29,7 @@ class RealArchitectServiceBreakItTest {
     }
 
     private suspend fun assertItDoesNotCrashButGeneratesFallbackPlan(brokenInput: String) {
-        whenever(executor.execute(any())).thenReturn(
+        whenever(executor.execute(any(), any())).thenReturn(
             ExecutorResult.Success(brokenInput, TokenUsage(100, 50))
         )
         try {
@@ -57,7 +57,7 @@ class RealArchitectServiceBreakItTest {
         // org.json handles trailing commas sometimes, but let's see what happens.
         // It shouldn't crash the JVM.
         val plan = try {
-            whenever(executor.execute(any())).thenReturn(
+            whenever(executor.execute(any(), any())).thenReturn(
                 ExecutorResult.Success(brokenJson, TokenUsage(100, 50))
             )
             architectService.generatePlan("test", dummyContext, emptyList())

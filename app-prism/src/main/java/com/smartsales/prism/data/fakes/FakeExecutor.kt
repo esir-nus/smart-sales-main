@@ -16,7 +16,7 @@ import javax.inject.Singleton
 @Singleton
 class FakeExecutor @Inject constructor() : Executor {
     
-    override suspend fun execute(context: EnhancedContext): ExecutorResult {
+    override suspend fun execute(profile: com.smartsales.prism.domain.config.LlmProfile, context: EnhancedContext): ExecutorResult {
         // 模拟网络延迟
         delay(300)
         

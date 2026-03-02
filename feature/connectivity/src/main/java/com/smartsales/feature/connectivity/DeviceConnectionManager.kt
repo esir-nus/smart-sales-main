@@ -63,7 +63,6 @@ class DefaultDeviceConnectionManager @Inject constructor(
     private val provisioner: WifiProvisioner,
     private val bleGateway: com.smartsales.feature.connectivity.gateway.GattSessionLifecycle,
     private val dispatchers: DispatcherProvider,
-    private val httpChecker: HttpEndpointChecker,
     private val badgeStateMonitor: BadgeStateMonitor,
     private val sessionStore: SessionStore,
     @ConnectivityScope private val scope: CoroutineScope

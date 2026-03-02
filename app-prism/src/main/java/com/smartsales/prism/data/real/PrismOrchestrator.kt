@@ -73,7 +73,7 @@ class PrismOrchestrator @Inject constructor(
     override suspend fun processInput(input: String): UiState {
         return when (_currentMode.value) {
             Mode.COACH -> processCoachInput(input)
-            Mode.ANALYST -> processAnalystInput(input)
+            Mode.ANALYST -> throw IllegalArgumentException("Analyst mode uses AnalystPipeline directly")
             Mode.SCHEDULER -> createScheduledTask(input, null)
         }
     }
@@ -135,10 +135,7 @@ class PrismOrchestrator @Inject constructor(
         }
     }
     
-    private suspend fun processAnalystInput(input: String): UiState {
-        // V2: Analyst pipeline is handled directly by PrismViewModel
-        return UiState.Response("请在 Analyst 模式下使用专用管道。")
-    }
+
     
 
     

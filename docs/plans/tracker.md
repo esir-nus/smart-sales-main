@@ -58,6 +58,7 @@
 
 - **pipeline-telemetry**: W1-W2 SHIPPED — `PipelineTelemetry` abstracted and injected into `PrismOrchestrator`, `RealContextBuilder`, `RealInputParserService`, and `RealCoachPipeline`. Granular Tagging implemented to perfectly map the Layer 2 & Layer 3 architecture diagram into ADB logcat output.
 
+- **infra**: Holistic Cleanup SHIPPED — Purged dead Analyst routing from Orchestrator, fixed ContextBuilder `structuredJson` schema drift (Activity records), and removed dead `httpChecker` from Connectivity. Fixed tech debt ticking time-bombs.
 ### 2026-02-27
 
 - **audio-management**: Wave 2 partial — Implemented `RealAudioRepository` with file storage, wired `TingwuPipeline`, and added Fake Streaming (Typewriter effect / Shimmer loading) to Audio UI.
@@ -199,13 +200,10 @@
 | Remaining Fakes | `FakeHistoryRepository`, `FakeAudioRepository` — not Room-backed | Low |
 | TOCTOU in observe() | `RoomUserHabitRepository.kt` | Low |
 | Room error handling | `Room*Repository` — no try-catch on writes | Low |
-| Dead `httpChecker` | `DefaultDeviceConnectionManager.kt` | Low |
-
-| `structuredJson` schema inconsistency | `RealContextBuilder.recordActivity()` — uses `{"entityId":"..."}` instead of `{"relatedEntityIds":["..."]}` convention. Works today (LIKE query catches both), but any code parsing `relatedEntityIds` from activity records gets `emptyList()`. One-line fix: add `relatedEntityIds` field to `recordActivity()` output. | Low |
+| ~~Dead `httpChecker`~~ | ~~`DefaultDeviceConnectionManager.kt`~~ | ~~Low~~ | ✅ **Resolved** — Deleted interface and removed Dagger bindings. |
+| ~~`structuredJson` schema inconsistency~~ | ~~`RealContextBuilder.recordActivity()`~~ | ~~Low~~ | ✅ **Resolved** — Updated schema to include both `relatedEntityIds` array and scalar `entityId`. |
 | ~~Sticky Notes Boundary~~ | ~~`PrismOrchestrator.createScheduledTask()` calls `entityWriter.upsertFromClue()`~~ | ~~**High**~~ | ✅ **Resolved** — Sticky Notes abandoned. Scheduler creates PERSON + ACCOUNT entities for business-relevant contacts (Wave 10 SHIPPED). |
 | **Confidence-Based Reminder Interceptor** | Replace deterministic round-1 wrap-up with LLM confidence-based interception. Agent decides when to surface schedule context: (1) User greets/noise → inject, (2) User discusses agenda → inject, (3) User wraps up work → suggest completion. Requires classifier or LLM self-assessment of conversation intent. Current workaround: smarter prompting that lets LLM decide naturally. | Medium |
-
-
 ---
 
 ## Quick Links

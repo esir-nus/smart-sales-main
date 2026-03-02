@@ -295,10 +295,7 @@ class DefaultDeviceConnectionManagerTest {
 
     private fun TestScope.createManager(
         provisioner: WifiProvisioner,
-        dispatcher: TestDispatcher = StandardTestDispatcher(testScheduler),
-        httpChecker: HttpEndpointChecker = object : HttpEndpointChecker {
-            override suspend fun isReachable(baseUrl: String): Boolean = true
-        }
+        dispatcher: TestDispatcher = StandardTestDispatcher(testScheduler)
     ): DefaultDeviceConnectionManager {
         val dispatcherProvider = FakeDispatcherProvider(dispatcher)
         val fakeBadgeMonitor = FakeBadgeStateMonitor()
@@ -306,7 +303,6 @@ class DefaultDeviceConnectionManagerTest {
             provisioner = provisioner,
             bleGateway = FakeGattSessionLifecycle(),
             dispatchers = dispatcherProvider,
-            httpChecker = httpChecker,
             badgeStateMonitor = fakeBadgeMonitor,
             sessionStore = InMemorySessionStore(),
             scope = backgroundScope

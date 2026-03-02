@@ -58,9 +58,6 @@ object ConnectivityProvidesModule {
         realGateway: GattBleGateway
     ): BleGateway = com.smartsales.feature.connectivity.gateway.RateLimitedBleGateway(realGateway)
 
-    @Provides
-    @Singleton
-    fun provideHttpEndpointChecker(): HttpEndpointChecker = DefaultHttpEndpointChecker()
 
     @Provides
     @Singleton

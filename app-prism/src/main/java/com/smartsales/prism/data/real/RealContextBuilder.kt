@@ -17,7 +17,6 @@ import com.smartsales.prism.domain.pipeline.ContextBuilder
 import com.smartsales.prism.domain.pipeline.EnhancedContext
 import com.smartsales.prism.domain.pipeline.EntityRef
 import com.smartsales.prism.domain.pipeline.KernelWriteBack
-import com.smartsales.prism.domain.pipeline.MemoryHit
 import com.smartsales.prism.domain.pipeline.ModeMetadata
 import com.smartsales.prism.domain.rl.ReinforcementLearner
 import com.smartsales.prism.domain.session.EntityState
@@ -202,7 +201,7 @@ class RealContextBuilder @Inject constructor(
 
     override suspend fun recordActivity(entityId: String, type: ActivityType, summary: String) {
         val entryId = UUID.randomUUID().toString()
-        val structuredJson = """{"activityType":"${type.name}","entityId":"$entityId","summary":"$summary"}"""
+        val structuredJson = """{"activityType":"${type.name}","relatedEntityIds":["$entityId"],"entityId":"$entityId","summary":"$summary"}"""
 
         memoryRepository.save(MemoryEntry(
             entryId = entryId,

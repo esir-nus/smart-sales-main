@@ -275,16 +275,17 @@ class DashscopeExecutor @Inject constructor(
 ## 响应策略
 
 1. 先判断信息是否充足：
-   - 如果用户场景模糊或缺少关键细节 → info_sufficient = false
-   - 如果场景清晰 → info_sufficient = true
+   - 如果用户明确提及了某个具体的人或公司，但你不知道（需要消歧或补充档案），则 info_sufficient = false
+   - 如果用户的问题完全无法根据现有上下文推断，则 info_sufficient = false
+   - 否则（包括普通的闲聊、询问文档内容、讨论已知客户等），即使场景不在下方列表中，也**必须**将 info_sufficient 设为 true，并给出恰当的回复。
 
-2. 场景类型：
+2. 场景类型（这些是典型的教练场景，如果用户的提问不在其中，可以使用 "other" 或自由填写）：
    - price_objection: 价格异议
    - value_gap: 价值感知差距
    - comparison: 产品对比
    - closing: 成交促成
    - discovery: 需求挖掘
-   - unclear: 信息不足
+   - unclear: 信息不足 (仅在 info_sufficient=false 时使用)
 
 ## 响应格式（必须是严格的 JSON）
 

@@ -49,7 +49,7 @@ class RealAnalystPipeline @Inject constructor(
         when (val dResult = entityDisambiguationService.process(input)) {
             is DisambiguationResult.Intercepted -> {
                 Log.d(TAG, "Analyst input intercepted by Disambiguator")
-                return AnalystResponse.Chat("请先在此对话框回复上文关于档案的问题。") // The UI actually renders the Disambiguator card, but Analyst just yields via chat.
+                return AnalystResponse.Chat("发现陌生的联系人信息，请先根据卡片提示补充档案。") // The UI actually renders the Disambiguator card, but Analyst just yields via chat.
             }
             is DisambiguationResult.Resumed -> {
                 Log.d(TAG, "Disambiguator completed for Analyst, resuming original intent")

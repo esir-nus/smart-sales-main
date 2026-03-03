@@ -164,6 +164,23 @@ class AudioViewModel @Inject constructor(
         
         appendLine()
         appendLine("我已经加载了完整的音频原文和细节分析。请问你想了解什么？")
+        
+        appendLine()
+        appendLine("---EXPAND---")
+        appendLine("**完整系统摘要**")
+        if (!summaryText.isNullOrBlank()) {
+            appendLine(summaryText)
+        } else {
+            appendLine("无")
+        }
+        appendLine()
+        appendLine("**详细讲演转写**")
+        val transcript = artifacts.transcriptMarkdown
+        if (!transcript.isNullOrBlank()) {
+            appendLine(transcript)
+        } else {
+            appendLine("无")
+        }
     }
     
     private fun AudioFile.toUiState() = AudioItemState(

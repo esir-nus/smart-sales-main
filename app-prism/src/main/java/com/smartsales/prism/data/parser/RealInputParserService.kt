@@ -130,6 +130,30 @@ Rule: Return ONLY valid JSON without Markdown blocks or backticks.
             }
         }
 
+        // Step 5: Entity Declaration Detection (Must run BEFORE unknown check)
+        val declarationObj = jsonObject.optJSONObject("declaration")
+        if (declarationObj != null) {
+            val decName = declarationObj.optString("name")
+            if (decName.isNotBlank() && decName != "null") {
+                telemetry.recordEvent(PipelinePhase.ENTITY_RESOLUTION, "Detected Entity Declaration for: $decName")
+                val aliasesArray = declarationObj.optJSONArray("aliases")
+                val aliasesList = mutableListOf<String>()
+                if (aliasesArray != null) {
+                    for (i in 0 until aliasesArray.length()) {
+                        val alias = aliasesArray.optString(i)
+                        if (alias.isNotBlank()) aliasesList.add(alias)
+                    }
+                }
+                return ParseResult.EntityDeclaration(
+                    name = decName,
+                    company = declarationObj.optString("company").takeIf { it != "null" && it.isNotBlank() },
+                    jobTitle = declarationObj.optString("job_title").takeIf { it != "null" && it.isNotBlank() },
+                    aliases = aliasesList,
+                    notes = declarationObj.optString("notes").takeIf { it != "null" && it.isNotBlank() }
+                )
+            }
+        }
+
         if (unknownNames.isNotEmpty()) {
             val namesStr = unknownNames.joinToString("、")
             return ParseResult.NeedsClarification(
@@ -153,29 +177,6 @@ Rule: Return ONLY valid JSON without Markdown blocks or backticks.
         val distinctResolved = resolvedIds.distinct()
         telemetry.recordEvent(PipelinePhase.ENTITY_RESOLUTION, "Successfully resolved ${distinctResolved.size} entities")
 
-        // Step 5: Entity Declaration Detection
-        val declarationObj = jsonObject.optJSONObject("declaration")
-        if (declarationObj != null) {
-            val decName = declarationObj.optString("name")
-            if (decName.isNotBlank() && decName != "null") {
-                telemetry.recordEvent(PipelinePhase.ENTITY_RESOLUTION, "Detected Entity Declaration for: $decName")
-                val aliasesArray = declarationObj.optJSONArray("aliases")
-                val aliasesList = mutableListOf<String>()
-                if (aliasesArray != null) {
-                    for (i in 0 until aliasesArray.length()) {
-                        val alias = aliasesArray.optString(i)
-                        if (alias.isNotBlank()) aliasesList.add(alias)
-                    }
-                }
-                return ParseResult.EntityDeclaration(
-                    name = decName,
-                    company = declarationObj.optString("company").takeIf { it != "null" && it.isNotBlank() },
-                    jobTitle = declarationObj.optString("job_title").takeIf { it != "null" && it.isNotBlank() },
-                    aliases = aliasesList,
-                    notes = declarationObj.optString("notes").takeIf { it != "null" && it.isNotBlank() }
-                )
-            }
-        }
 
         return ParseResult.Success(
             resolvedEntityIds = distinctResolved,

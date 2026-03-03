@@ -171,13 +171,55 @@ private fun CompleteBubble(content: String, modifier: Modifier = Modifier) {
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A40))
     ) {
-        MarkdownText(
-            text = content,
-            color = Color.White,
-            fontSize = 14.sp,
-            lineHeight = 20.sp,
-            modifier = Modifier.padding(16.dp)
-        )
+        val parts = content.split("---EXPAND---")
+        if (parts.size > 1) {
+            var expanded by remember { mutableStateOf(false) }
+            Column(modifier = Modifier.padding(16.dp)) {
+                MarkdownText(
+                    text = parts[0].trim(),
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
+                )
+                
+                if (expanded) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Divider(color = Color(0xFF444455), thickness = 1.dp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    MarkdownText(
+                        text = parts.drop(1).joinToString("\n").trim(),
+                        color = Color(0xFFCCCCCC), // Slightly dimmed for expanded content
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { expanded = false },
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text("收起原文", color = Color(0xFF4FC3F7), fontSize = 12.sp)
+                    }
+                } else {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { expanded = true },
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text("展开完整解析与原文...", color = Color(0xFF4FC3F7), fontSize = 12.sp)
+                    }
+                }
+            }
+        } else {
+            MarkdownText(
+                text = content,
+                color = Color.White,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
     }
 }
 

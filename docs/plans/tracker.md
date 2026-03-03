@@ -14,7 +14,7 @@
 |------------|-------|-----------|
 | [model-routing](../cerb/model-routing/spec.md) | SHIPPED | — |
 | [input-parser](../cerb/input-parser/spec.md) | PARTIAL | W4: Auto-Renaming |
-| [entity-disambiguation](../cerb/entity-disambiguation/spec.md) | SPEC_ONLY | W1: Core State Machine |
+| [entity-disambiguation](../cerb/entity-disambiguation/spec.md) | SHIPPED | — |
 | [pipeline-telemetry](../cerb/pipeline-telemetry/spec.md) | SHIPPED | — |
 | [coach](../cerb/coach/spec.md) | SHIPPED | — |
 | [scheduler](../cerb/scheduler/spec.md) | PARTIAL | W8: Pipeline Unification |
@@ -56,6 +56,7 @@
 
 ### 2026-03-03
 
+- **entity-disambiguation**: W1-3 SHIPPED — `EntityDisambiguator` Global Gateway implemented. Intercept & Resume loop successfully wired into `PrismOrchestrator` and `AnalystPipeline`. LLM semantic disambiguation and explicit entity declarations gracefully route to `EntityWriter`.
 - **session-context**: W4 OS Model Refinement — Implemented Delta Loading Entity Cache (`entityCache` Map) in `SessionWorkingSet` and `RealContextBuilder`. Fixed infinite pipeline loops and redundant SSD queries.
 - **audio-management**: Ask AI Dataflow Verification — Reworked "Ask AI" entrance. Implemented zero-latency ASCII overview card generation, standard `Mode.ANALYST` routing, and invisible `documentContext` binding in `SessionWorkingSet` to offload heavy payload rendering from the UI.
 

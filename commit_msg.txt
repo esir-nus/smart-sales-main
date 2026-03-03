@@ -1,0 +1,8 @@
+feat(prism): implement EntityDisambiguator gateway and orchestrator wiring
+
+- Introduce EntityDisambiguationService for interrupt & resume flow.
+- Update InputParserService to handle EntityDeclaration extraction.
+- Wire disambiguation gateway into PrismOrchestrator to handle NeedsClarification gracefully.
+- Wire disambiguation gateway into RealAnalystPipeline to intercept on missing entity context.
+- Inject service into Dagger PrismModule.
+- Update corresponding unit test suites.

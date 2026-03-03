@@ -13,7 +13,7 @@
 | Cerb Shard | State | Next Wave |
 |------------|-------|-----------|
 | [model-routing](../cerb/model-routing/spec.md) | SHIPPED | — |
-| [input-parser](../cerb/input-parser/spec.md) | PARTIAL | W4: Auto-Renaming |
+| [input-parser](../cerb/input-parser/spec.md) | PARTIAL | W5: Global Interception & Entity Declarations |
 | [pipeline-telemetry](../cerb/pipeline-telemetry/spec.md) | SHIPPED | — |
 | [coach](../cerb/coach/spec.md) | SHIPPED | — |
 | [scheduler](../cerb/scheduler/spec.md) | PARTIAL | W8: Pipeline Unification |

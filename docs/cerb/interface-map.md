@@ -57,10 +57,10 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 | **EntityResolver** | Entity disambiguation matching | EntityRegistry | `EntityResolverService.resolve()` | RAM Application | ✅ |
 | **ModelRegistry** | Static LLM Profiles (models, temps, skills) | — | `ModelRegistry` | Config Hub | ✅ |
 | **Executor** | Raw LLM output (stateless — no storage) | ModelRouter | `Executor.execute()` | — | ✅ |
-| **Orchestrator** | Mode routing + pipeline coordination | InputParser, ContextBuilder, Executor, Consultant, Architect, EntityResolver | `Orchestrator.process()` | — | ✅ |
+| **Orchestrator** | Mode routing + pipeline coordination + `PendingIntent` state | InputParser, ContextBuilder, Executor, Consultant, Architect, EntityResolver | `Orchestrator.process()` | — | ✅ |
 
 
-> **Orchestrator is the only module that calls EntityWriter during task creation.** Feature modules (Scheduler, Coach) receive results from Orchestrator; they don't call EntityWriter themselves. (Exception: debug seed code in SchedulerViewModel, guarded by `DEBUG` build type.)
+> **Orchestrator is the only module that calls EntityWriter during task creation and disambiguation.** Feature modules (Scheduler, Coach) receive results from Orchestrator; they don't call EntityWriter themselves. Orchestrator leverages `PendingIntent` to interrupt flow during ambiguity, capture `EntityDeclaration`, invoke `EntityWriter`, and resume magically.
 >
 > **ContextBuilder reads EntityRegistry for Entity Knowledge Context.** `ContextBuilder.buildEntityKnowledge()` calls `EntityRepository.getAll()` at session start to load the structured entity graph into the LLM prompt (RAM Section 1). This is a Kernel → SSD read.
 

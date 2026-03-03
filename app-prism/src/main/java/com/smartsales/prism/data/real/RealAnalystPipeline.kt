@@ -81,6 +81,14 @@ class RealAnalystPipeline @Inject constructor(
                         return AnalystResponse.Chat("我没完全明白，能再详细说说你想分析的内容吗？")
                     }
 
+                    // 3-Tier Intent Gateway: Short-circuit on NOISE or VAGUE
+                    if (consultantResult.queryQuality == com.smartsales.prism.domain.analyst.QueryQuality.NOISE || 
+                        consultantResult.queryQuality == com.smartsales.prism.domain.analyst.QueryQuality.VAGUE) {
+                        Log.d(TAG, "Gateway intercepted query as \${consultantResult.queryQuality}, short-circuiting pipeline.")
+                        _state.value = AnalystState.IDLE
+                        return AnalystResponse.Chat(consultantResult.response)
+                    }
+
                     if (consultantResult.missingEntities.isNotEmpty()) {
                         val candidates = entityRepository.getAll(limit = 100)
                         var anyResolved = false
@@ -101,8 +109,10 @@ class RealAnalystPipeline @Inject constructor(
                         }
                         
                         if (unresolvedEntity != null) {
-                            Log.d(TAG, "Entity totally missing: $unresolvedEntity. Freezing Analyst state and starting Disambiguation.")
-                            // Do NOT reset the analyst state. Leave it exactly where it is so it can resume.
+                            Log.d(TAG, "Entity totally missing: $unresolvedEntity. Resetting Analyst state to IDLE and starting Disambiguation.")
+                            // Reset state to IDLE so the resumed intent can start fresh and inject the newly learned entities into context.
+                            _state.value = AnalystState.IDLE
+                            
                             entityDisambiguationService.startDisambiguation(
                                 originalInput = input,
                                 originalMode = Mode.ANALYST,
@@ -172,7 +182,7 @@ class RealAnalystPipeline @Inject constructor(
             }
             AnalystState.RESULT -> {
                 _state.value = AnalystState.IDLE
-                return AnalystResponse.Chat("我知道了。")
+                return handleInput(input, sessionHistory)
             }
             else -> {
                 Log.w(TAG, "Invalid statemachine state. Resetting.")

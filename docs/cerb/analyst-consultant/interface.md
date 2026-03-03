@@ -24,7 +24,12 @@ interface ConsultantService {
 ## Data Models
 
 ```kotlin
+enum class QueryQuality {
+    NOISE, VAGUE, ACTIONABLE
+}
+
 data class ConsultantResult(
+    val queryQuality: QueryQuality,
     val infoSufficient: Boolean,
     val response: String,
     val missingEntities: List<String> = emptyList()

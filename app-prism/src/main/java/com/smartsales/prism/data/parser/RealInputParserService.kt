@@ -32,8 +32,11 @@ KNOWN CONTACT SHEET:
 %s
 
 INSTRUCTIONS:
-1. Identify if the user is declaring or defining a new CRM entity (e.g., "他是XX的CEO", "名字写错了，是王总", "那是上次开会的李总").
-2. If it IS an entity declaration, extract the profile info into the `declaration` object (name is required, others can be null).
+1. Identify if the user is declaring or defining a new CRM entity (Person or Company). e.g., "他是XX的CEO", "名字写错了，是王总", "那是新客户比克大魔王公司".
+2. If it IS an entity declaration, you MUST extract the info into the `declaration` object.
+   - If declaring a Person, `name` is the person's name.
+   - If declaring a Company, `name` is the company's name. 
+   - The `name` field inside `declaration` is ALWAYS REQUIRED for a declaration.
 3. If it is NOT a declaration, extract temporal intent.
 4. Match ANY mentioned names against the "name" or "aliases" in the Contact Sheet.
 5. If a name matches perfectly or semantically, output its "idx" in `resolved_indices`.

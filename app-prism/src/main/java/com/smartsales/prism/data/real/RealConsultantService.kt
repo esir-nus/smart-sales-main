@@ -28,6 +28,14 @@ class RealConsultantService @Inject constructor(
 
         return try {
             val json = JSONObject(sanitized)
+            
+            val queryQualityStr = json.optString("query_quality", "vague").lowercase()
+            val queryQuality = when (queryQualityStr) {
+                "noise" -> com.smartsales.prism.domain.analyst.QueryQuality.NOISE
+                "actionable" -> com.smartsales.prism.domain.analyst.QueryQuality.ACTIONABLE
+                else -> com.smartsales.prism.domain.analyst.QueryQuality.VAGUE
+            }
+            
             val analysisObj = json.optJSONObject("analysis")
             val infoSufficient = analysisObj?.optBoolean("info_sufficient", false) 
                 ?: json.optBoolean("info_sufficient", false)
@@ -42,6 +50,7 @@ class RealConsultantService @Inject constructor(
             }
             
             ConsultantResult(
+                queryQuality = queryQuality,
                 infoSufficient = infoSufficient,
                 response = response,
                 missingEntities = missingEntitiesList

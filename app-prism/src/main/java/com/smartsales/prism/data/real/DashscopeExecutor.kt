@@ -272,24 +272,23 @@ class DashscopeExecutor @Inject constructor(
 
 重要规则：绝不编造历史。不要引用或捏造任何以前的对话内容。如果没有历史记忆提供给你，就说"我没有相关记录"。
 
-## 响应策略
+## 响应策略 (3-Tier Intent Gateway)
 
-1. 先判断信息是否充足：
-   - 如果用户明确提及了某个具体的人或公司，但你不知道（需要消歧或补充档案），则 info_sufficient = false
-   - 如果用户的问题完全无法根据现有上下文推断，则 info_sufficient = false
-   - 否则（包括普通的闲聊、询问文档内容、讨论已知客户等），即使场景不在下方列表中，也**必须**将 info_sufficient 设为 true，并给出恰当的回复。
+第一步，强制评估用户输入的意图质量（query_quality）。由于每次调用大模型都很昂贵，你需要过滤掉无意义的噪音：
+1. `noise`：问候语、确认语、语气词（如："好的"、"收到"、"我知道了"、"恩"、"谢谢"）。如果你识别为 `noise`，请在 `response` 中给出简短友好的回应（如"好的哥"、"不客气"），**不要**再去评估 `info_sufficient` 或 `missing_entities`。
+2. `vague`：指代不清，无法回答（如："他刚才说了什么？" - "他"是谁？）。如果你识别为 `vague`，请在 `response` 中请求用户澄清，**不要**再去评估其他字段。
+3. `actionable`：明确的业务问题或指令（如："乔布斯怎么看这个价格？"、"帮我总结一下"）。只有当质量为 `actionable` 时，才执行下一步的分析。
 
-2. 场景类型（这些是典型的教练场景，如果用户的提问不在其中，可以使用 "other" 或自由填写）：
-   - price_objection: 价格异议
-   - value_gap: 价值感知差距
-   - comparison: 产品对比
-   - closing: 成交促成
-   - discovery: 需求挖掘
-   - unclear: 信息不足 (仅在 info_sufficient=false 时使用)
+第二步，如果 `query_quality` 为 `actionable`，再判断信息是否充足：
+   - 如果用户要求执行非分析类任务（安排日程等），这属于【跨模式意图】。`info_sufficient` = false，在 response 中提示用户切换模式。
+   - 评估上下文：如果你发现用户提及了某个具体的、具有商业价值的人或公司（而非流行文化人物或随意提及），但在 <KNOWN_FACTS> 中找不到其档案，这可能是一个需要补充的新客户。此时 `info_sufficient` = false，并将名字放入 `missing_entities`。
+   - 如果用户只是询问某个人是否在文档/录音中被提到（纯内容查询，没有明显的建档意图），且文档中没有提及，请直接将 `info_sufficient` 设为 true，告诉用户没提到，**不要**放进 `missing_entities` 强迫用户建档。
+   - 否则（条件充足），`info_sufficient` = true。
 
 ## 响应格式（必须是严格的 JSON）
 
 {
+  "query_quality": "noise|vague|actionable",
   "analysis": {
     "scenario_type": "price_objection",
     "info_sufficient": true,
@@ -297,13 +296,12 @@ class DashscopeExecutor @Inject constructor(
     "customer_state": "ready_to_buy_but_price_sensitive",
     "recommended_tactics": ["value_stack", "tco_comparison", "urgency"]
   },
-  "missing_entities": ["如果用户提到了 <KNOWN_FACTS> 中不存在的客户/公司名，提取到这里。若都存在或没提，则为空数组 []"],
+  "missing_entities": ["如果用户提到了需要建档的重要客户但 <KNOWN_FACTS> 中没有，提取到这里"],
   "thought": "你的分析思路（中文）",
-  "response": "给用户的专业建议（中文，2-3段）"
+  "response": "给用户的专业建议或简短回应（中文）"
 }
 
-注意：如果用户提及了某个具体的人或公司，但你发现 <KNOWN_FACTS> 中没有这个人的清晰记录（比如名字可能是错别字，或者确实没记录），请将这些名字放入 `missing_entities` 数组中，并将 `info_sufficient` 设为 false。
-注意：如果 info_sufficient 为 true，系统将自动触发后续的详细规划流程。你不需要在此处生成具体的交付物列表。
+注意：如果 query_quality 不是 actionable，你仍必须输出结构完整的 JSON，只是 analysis 内的字段无实际意义。
 """.trimIndent()
     
     /**

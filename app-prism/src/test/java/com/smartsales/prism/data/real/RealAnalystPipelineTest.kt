@@ -81,7 +81,7 @@ class RealAnalystPipelineTest {
     @Test
     fun `L2 Scenario 2 - info_sufficient is false - returns Chat and stays IDLE`() = runTest {
         whenever(contextBuilder.build(any(), any(), any())).thenReturn(mock())
-        val result = ConsultantResult(infoSufficient = false, response = "请问您想分析哪个客户？", missingEntities = emptyList())
+        val result = ConsultantResult(queryQuality = com.smartsales.prism.domain.analyst.QueryQuality.ACTIONABLE, infoSufficient = false, response = "请问您想分析哪个客户？", missingEntities = emptyList())
         whenever(consultantService.evaluateIntent(any())).thenReturn(result)
 
         val response = pipeline.handleInput("分析", emptyList())
@@ -92,9 +92,35 @@ class RealAnalystPipelineTest {
     }
 
     @Test
+    fun `L2 Scenario 2_1 - queryQuality is NOISE - returns Chat and stays IDLE`() = runTest {
+        whenever(contextBuilder.build(any(), any(), any())).thenReturn(mock())
+        val result = ConsultantResult(queryQuality = com.smartsales.prism.domain.analyst.QueryQuality.NOISE, infoSufficient = false, response = "好的", missingEntities = emptyList())
+        whenever(consultantService.evaluateIntent(any())).thenReturn(result)
+
+        val response = pipeline.handleInput("我知道了", emptyList())
+
+        assertTrue(response is AnalystResponse.Chat)
+        assertEquals("好的", (response as AnalystResponse.Chat).content)
+        assertEquals(AnalystState.IDLE, pipeline.state.value)
+    }
+
+    @Test
+    fun `L2 Scenario 2_2 - queryQuality is VAGUE - returns Chat and stays IDLE`() = runTest {
+        whenever(contextBuilder.build(any(), any(), any())).thenReturn(mock())
+        val result = ConsultantResult(queryQuality = com.smartsales.prism.domain.analyst.QueryQuality.VAGUE, infoSufficient = false, response = "您是指什么？", missingEntities = emptyList())
+        whenever(consultantService.evaluateIntent(any())).thenReturn(result)
+
+        val response = pipeline.handleInput("那个事", emptyList())
+
+        assertTrue(response is AnalystResponse.Chat)
+        assertEquals("您是指什么？", (response as AnalystResponse.Chat).content)
+        assertEquals(AnalystState.IDLE, pipeline.state.value)
+    }
+
+    @Test
     fun `L2 Scenario 3 - info_sufficient is true - returns Plan and transitions to PROPOSAL`() = runTest {
         whenever(contextBuilder.build(any(), any(), any())).thenReturn(mock())
-        val result = ConsultantResult(infoSufficient = true, response = "准备分析", missingEntities = emptyList())
+        val result = ConsultantResult(queryQuality = com.smartsales.prism.domain.analyst.QueryQuality.ACTIONABLE, infoSufficient = true, response = "准备分析", missingEntities = emptyList())
         whenever(consultantService.evaluateIntent(any())).thenReturn(result)
         
         val dummyPlan = PlanResult("Test Plan", "Test Summary", "")
@@ -112,7 +138,7 @@ class RealAnalystPipelineTest {
     fun `L2 Scenario 5 - In PROPOSAL state - returns Analysis and transitions to RESULT`() = runTest {
         // Setup to reach PROPOSAL state
         whenever(contextBuilder.build(any(), any(), any())).thenReturn(mock())
-        val result = ConsultantResult(infoSufficient = true, response = "准备分析", missingEntities = emptyList())
+        val result = ConsultantResult(queryQuality = com.smartsales.prism.domain.analyst.QueryQuality.ACTIONABLE, infoSufficient = true, response = "准备分析", missingEntities = emptyList())
         whenever(consultantService.evaluateIntent(any())).thenReturn(result)
         
         val dummyPlan = PlanResult("Test Plan", "Test Summary", "")

@@ -51,7 +51,7 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 | Module | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
 |--------|--------------|------------|---------------|----------|--------|
 | **ContextBuilder** | `EnhancedContext` (assembled prompt context) | EntityRegistry, MemoryCenter, SessionContext | `ContextBuilder.build()` | Kernel | ✅ |
-| **InputParser** | Semantic intent and EntityID resolution | AliasIndex (internal) | `InputParserService.parseIntent()` | RAM Application | 🔲 |
+| **InputParser** | Semantic intent and EntityID resolution | AliasIndex (internal) | `InputParserService.parseIntent()` | RAM Application | ✅ |
 | **EntityDisambiguator** | `PendingIntent` interruption state | EntityWriter (to write cures) | `EntityDisambiguationService.process()` | RAM Application | ✅ |
 | **Consultant** | Intent evaluation and missing entities | ContextBuilder | `ConsultantService.evaluateIntent()` | RAM Application | ✅ |
 | **Architect** | Markdown analytics plans and investigations | ContextBuilder | `ArchitectService.generatePlan()` | RAM Application | ✅ |

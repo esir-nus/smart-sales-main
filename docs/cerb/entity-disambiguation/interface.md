@@ -19,7 +19,7 @@ interface EntityDisambiguationService {
     /**
      * Halts the current pipeline, saves the original intent, and enters the disambiguation state.
      */
-    fun startDisambiguation(originalInput: String, originalMode: Mode, prompt: String, candidates: List<CandidateOption>): UiState
+    fun startDisambiguation(originalInput: String, originalMode: Mode, ambiguousName: String, candidates: List<EntityRef>): UiState
     
     /**
      * Clears any pending state.

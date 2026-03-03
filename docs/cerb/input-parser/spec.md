@@ -49,6 +49,15 @@ sealed class ParseResult {
         val suggestedMatches: List<EntityRef>,
         val clarificationPrompt: String
     ) : ParseResult()
+    
+    /** User explicitly provided a declarative cure (e.g. "He is the CTO"). */
+    data class EntityDeclaration(
+        val name: String,
+        val company: String?,
+        val jobTitle: String?,
+        val aliases: List<String>,
+        val notes: String?
+    ) : ParseResult()
 }
 ```
 
@@ -59,6 +68,7 @@ sealed class ParseResult {
 | Rule | Enforcer | Explanation |
 |------|----------|-------------|
 | **Gateway Enforcement** | `PrismOrchestrator` | `InputParserService` must run *before* `ContextBuilder.build()`. |
+| **Declarative Cure Precedence** | `InputParserService` | If an explicit `EntityDeclaration` is parsed, it MUST return that result immediately, bypassing any `unknown_names` identification arrays to allow the `EntityWriter` to proceed. |
 | **Fail-Safe** | `ParseResult` | If `NeedsClarification` is returned, the Orchestrator must NOT call the main LLM. It must echo the `clarificationPrompt` to the user. |
 | **No DB Flooding** | `ContextBuilder` | The Kernel only loads data for the exact `resolvedEntityIds` returned by this parser. |
 

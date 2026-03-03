@@ -63,6 +63,7 @@ class RealContextBuilder @Inject constructor(
     /** 当前工作集 */
     private var _workingSet: SessionWorkingSet = createNewWorkingSet()
     
+
     /** 会话轮次计数（Kernel 管理元数据） */
     private var _turnCount: Int = 0
     
@@ -72,7 +73,6 @@ class RealContextBuilder @Inject constructor(
     // === ContextBuilder Implementation (Read-Only) ===
 
     override suspend fun build(userText: String, mode: Mode, resolvedEntityIds: List<String>): EnhancedContext {
-        _turnCount++
         _currentMode = mode
 
         // Section 2: 全局用户习惯（首轮加载）
@@ -82,20 +82,31 @@ class RealContextBuilder @Inject constructor(
             Log.d("Kernel", "📦 Section 2 loaded: userHabits")
         }
 
-        // Section 1: Entity Knowledge Context（首轮触发）
-        if (shouldSearchMemory(_sessionHistory)) {
-            telemetry.recordEvent(PipelinePhase.MEMORY_LOOKUP, "Loading entity knowledge for ${resolvedEntityIds.size} entities (Section 1)")
-            // 构建实体知识图谱
-            val knowledge = buildEntityKnowledge(resolvedEntityIds)
+        // Section 1: Entity Knowledge Context
+        val allEntityIds = (resolvedEntityIds + _workingSet.entityContext.values.map { it.entityId }).distinct()
+        val missingIds = allEntityIds - _workingSet.entityCache.keys
+        
+        if (shouldSearchMemory(_sessionHistory) || missingIds.isNotEmpty()) {
+            telemetry.recordEvent(PipelinePhase.MEMORY_LOOKUP, "Loading entity knowledge: ${missingIds.size} missing, ${allEntityIds.size} total (Section 1)")
+            
+            // Delta Loading: Only fetch missing entities from DB
+            if (missingIds.isNotEmpty()) {
+                val fetched = missingIds.mapNotNull { entityRepository.getById(it) }
+                fetched.forEach { _workingSet.entityCache[it.entityId] = it }
+            }
+            
+            // Build final JSON from RAM Cache
+            val activeEntities = allEntityIds.mapNotNull { _workingSet.entityCache[it] }
+            val knowledge = buildEntityKnowledgeFromEntries(activeEntities)
             _workingSet.entityKnowledge = knowledge
             Log.d("Kernel", "📸 Section 1: entityKnowledge=${knowledge?.length ?: 0} chars")
+        }
 
+        if (shouldSearchMemory(_sessionHistory)) {
             // Sticky Notes: 加载近期日程
             val schedule = buildScheduleContext()
             _workingSet.scheduleContext = schedule
             Log.d("Kernel", "📅 Sticky Notes: ${schedule?.length ?: 0} chars")
-
-
         }
 
         telemetry.recordEvent(PipelinePhase.CONTEXT_BUILDER, "Kernel RAM assembly complete (Turn $_turnCount)")
@@ -104,6 +115,7 @@ class RealContextBuilder @Inject constructor(
             userText = userText,
 
             entityKnowledge = _workingSet.entityKnowledge,
+            entityContext = _workingSet.entityContext,
             modeMetadata = ModeMetadata(
                 currentMode = mode,
                 sessionId = _workingSet.sessionId,
@@ -161,12 +173,14 @@ class RealContextBuilder @Inject constructor(
     override fun getSessionHistory(): List<ChatTurn> = _sessionHistory.toList()
 
     override suspend fun recordUserMessage(content: String) {
+        _turnCount++
         _sessionHistory.add(ChatTurn(role = "user", content = content))
         pruneHistory()
         saveToMemory(content, MemoryEntryType.USER_MESSAGE)
     }
 
     override suspend fun recordAssistantMessage(content: String) {
+        _turnCount++
         _sessionHistory.add(ChatTurn(role = "assistant", content = content))
         pruneHistory()
         saveToMemory(content, MemoryEntryType.ASSISTANT_RESPONSE)
@@ -179,6 +193,7 @@ class RealContextBuilder @Inject constructor(
             // Section 1: Write-through update
             _workingSet.entityContext["entity_$entityId"] = ref
             _workingSet.markActive(entityId)
+            _workingSet.entityCache.remove(entityId) // Force refresh on next context build
             Log.d("Kernel", "📝 Write-through S1: $entityId → ${ref.displayName}")
 
             // Section 3: Auto-refresh client habits
@@ -195,6 +210,7 @@ class RealContextBuilder @Inject constructor(
         _writeLock.withLock {
             _workingSet.entityContext.entries.removeAll { it.value.entityId == entityId }
             _workingSet.entityStates.remove(entityId)
+            _workingSet.entityCache.remove(entityId)
             Log.d("Kernel", "🗑️ Write-through S1 removed: $entityId")
         }
     }
@@ -287,12 +303,7 @@ class RealContextBuilder @Inject constructor(
      * Build Entity Knowledge Graph JSON
      * Used for disambiguation and alias matching in LLM prompt.
      */
-    private suspend fun buildEntityKnowledge(resolvedEntityIds: List<String>): String? {
-        val entities = if (resolvedEntityIds.isEmpty()) {
-            emptyList()
-        } else {
-            resolvedEntityIds.mapNotNull { entityRepository.getById(it) }
-        }
+    private fun buildEntityKnowledgeFromEntries(entities: List<EntityEntry>): String? {
         if (entities.isEmpty()) return null
 
         val root = JSONObject()

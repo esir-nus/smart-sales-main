@@ -35,8 +35,11 @@ class SessionWorkingSet(
     /** 别名 → entityId 快速查找缓存（插入顺序，非严格 LRU） */
     val pathIndex: MutableMap<String, String> = mutableMapOf()
 
-    /** 实体知识图谱 JSON — 首轮由 Kernel 构建 */
+    /** 实体知识图谱 JSON — 每次有新实体时由 Kernel 构建并更新 */
     var entityKnowledge: String? = null
+
+    /** 实体数据缓存 (RAM) — 用于 Delta Loading，避免重复查表 */
+    val entityCache: MutableMap<String, com.smartsales.prism.domain.memory.EntityEntry> = mutableMapOf()
 
     /** Sticky Notes: 近期日程摘要 — 首轮由 Kernel 构建 */
     var scheduleContext: String? = null

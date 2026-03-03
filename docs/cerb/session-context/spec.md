@@ -63,6 +63,7 @@ class SessionWorkingSet(
     var entityKnowledge: String?                     // Knowledge Graph JSON (Rendered)
     val entityCache: MutableMap<String, EntityEntry> // RAM Cache: Delta Loading Source
     var scheduleContext: String?                     // Sticky Notes: top 3 upcoming tasks
+    var documentContext: String?                     // Transient Document Artifact Payload
     val entityContext: MutableMap<String, EntityRef> // Entity Pointers
     
     // Section 2: User Habits

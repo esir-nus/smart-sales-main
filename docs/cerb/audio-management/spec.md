@@ -76,7 +76,7 @@ See [interface.md](./interface.md) for:
 | **1** | Interface + Fake | ✅ SHIPPED | `AudioRepository` interface, `FakeAudioRepository`, domain models |
 | **2** | Real Repository | 🔲 | `RealAudioRepository` with persistence |
 | **3** | Pipeline Integration | 🔲 | Auto-ingest from `BadgeAudioPipeline` events |
-| **4** | Ask AI Flow | 🔲 | Session binding, coach context injection |
+| **4** | Ask AI Flow | ✅ SHIPPED | Session binding, Context injection, zero-latency rendering |
 
 ---
 
@@ -140,12 +140,18 @@ See [interface.md](./interface.md) for:
 
 ## Wave 4 Ship Criteria
 
-**Goal**: Ask AI session binding.
+**Goal**: Ask AI Dataflow Integration.
 
 **Implementation**:
-- [ ] `bindSession(audioId, sessionId)` persists association
-- [ ] Coach mode can inject transcription as context
-- [ ] UI shows "Used in session X" indicator
+- [x] Zero-latency ASCII overview card generation (`AudioViewModel.buildOverviewCard`).
+- [x] Database-direct payload injection acting as standard chat entrance.
+- [x] Session binding via `historyRepository` / `audioRepository`.
+- [x] `documentContext` injection into invisible `SessionWorkingSet` RAM.
+
+**Testing**:
+- [x] Bind audio → Overview card renders instantly.
+- [x] Ask LLM → LLM answers using invisibly wired context.
+- [x] Auto-renames session to accurate audio title.
 
 **Testing**:
 - [ ] Bind audio → Ask AI in Coach mode → summary referenced

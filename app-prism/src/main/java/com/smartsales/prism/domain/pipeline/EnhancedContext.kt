@@ -22,6 +22,8 @@ data class EnhancedContext(
     val currentDate: String? = null,
     // 当前时刻 (epoch millis) — 用于 RelativeTimeResolver 计算绝对时间
     val currentInstant: Long = 0,
+    // 临时文档上下文 (Transient Payload) — 比如从音频加载的摘要等
+    val documentContext: String? = null,
     // Wave 3: 习惯上下文 — 用户和客户偏好（RL Module）
     val habitContext: HabitContext? = null,
     // Sticky Notes: 近期日程摘要（由ContextBuilder从ScheduledTaskRepository读取）

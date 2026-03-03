@@ -42,6 +42,7 @@ class RealArchitectService @Inject constructor(
 
         // 发送给执行引擎
         val result = executor.execute(
+            profile = com.smartsales.prism.domain.config.ModelRegistry.PLANNER,
             context = context.copy(systemPromptOverride = systemPrompt) // 覆盖或注入系统 Prompt
         )
 
@@ -110,6 +111,7 @@ class RealArchitectService @Inject constructor(
 
         // 发送给执行引擎
         val result = executor.execute(
+            profile = com.smartsales.prism.domain.config.ModelRegistry.EXECUTOR,
             context = context.copy(systemPromptOverride = systemPrompt)
         )
 

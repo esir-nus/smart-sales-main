@@ -44,6 +44,9 @@ class SessionWorkingSet(
     /** Sticky Notes: 近期日程摘要 — 首轮由 Kernel 构建 */
     var scheduleContext: String? = null
 
+    /** 临时文档上下文 (Transient Payload) — 比如从音频加载的摘要等 */
+    var documentContext: String? = null
+
     /** 实体引用 — EntityWriter write-through 填充 */
     val entityContext: MutableMap<String, EntityRef> = mutableMapOf()
 

@@ -16,7 +16,7 @@ class RealConsultantService @Inject constructor(
     private val TAG = "RealConsultantService"
 
     override suspend fun evaluateIntent(context: EnhancedContext): ConsultantResult? {
-        val result = executor.execute(context)
+        val result = executor.execute(com.smartsales.prism.domain.config.ModelRegistry.PLANNER, context)
 
         if (result !is ExecutorResult.Success) {
             Log.e(TAG, "Executor failed during Phase 1")

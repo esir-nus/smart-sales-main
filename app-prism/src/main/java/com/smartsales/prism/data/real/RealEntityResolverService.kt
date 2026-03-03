@@ -48,7 +48,8 @@ class RealEntityResolverService @Inject constructor(
 
         val request = AiChatRequest(
             prompt = prompt,
-            model = "qwen-turbo", // Use a fast model
+            model = com.smartsales.prism.domain.config.ModelRegistry.EXTRACTOR.modelId, // Use a fast model
+            temperature = com.smartsales.prism.domain.config.ModelRegistry.EXTRACTOR.temperature,
             skillTags = setOf("entity_resolution")
         )
 

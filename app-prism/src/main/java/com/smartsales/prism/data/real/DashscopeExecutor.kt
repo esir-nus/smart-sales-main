@@ -180,6 +180,17 @@ class DashscopeExecutor @Inject constructor(
             appendLine("<KNOWN_FACTS>无</KNOWN_FACTS>")
             appendLine("你没有客户信息。回复中不要提及客户，也不要说\"暂无信息\"。直接跳过客户相关话题。")
         }
+        // Wave 4: 临时文档上下文 (Transient Payload)
+        context.documentContext?.let { doc ->
+            if (doc.isNotBlank()) {
+                android.util.Log.d("CoachMemory", "📝 Executor: injecting documentContext (${doc.length} chars)")
+                appendLine()
+                appendLine("<DOCUMENT_CONTEXT>")
+                appendLine("以下是你需要分析或参考的底层文档内容：")
+                appendLine(doc)
+                appendLine("</DOCUMENT_CONTEXT>")
+            }
+        }
         
         // Wave 3: 习惯上下文注入（用户和客户偏好）
         context.habitContext?.let { habits ->

@@ -62,7 +62,7 @@ fun AudioCard(
     viewModel: AudioViewModel,
     onClick: () -> Unit,
     onStarClick: (String) -> Unit,
-    onAskAi: (String, String?) -> Unit,
+    onAskAi: (String) -> Unit,
     onTranscribe: (String) -> Unit,
     onDelete: (String) -> Unit,
     onRename: (String) -> Unit
@@ -317,7 +317,7 @@ private fun TranscribingProgressBar(progress: Float) {
 private fun ExpandedAudioHub(
     item: AudioItemState,
     viewModel: AudioViewModel,
-    onAskAi: (String, String?) -> Unit,
+    onAskAi: (String) -> Unit,
     onCollapse: () -> Unit
 ) {
     var artifacts by remember { mutableStateOf<TingwuJobArtifacts?>(null) }
@@ -490,18 +490,7 @@ private fun ExpandedAudioHub(
             PrismButton(
                 text = "问AI (Ask AI)",
                 onClick = {
-                    val initialContext = buildString {
-                        artifacts?.smartSummary?.summary?.takeIf { it.isNotBlank() }?.let {
-                            append("**摘要 (Summary)**\n")
-                            append(it)
-                            append("\n\n")
-                        }
-                        aiInsightsMarkdown?.takeIf { it.isNotBlank() }?.let {
-                            append(it)
-                        }
-                    }.trim().ifBlank { null }
-                    
-                    onAskAi(item.id, initialContext)
+                    onAskAi(item.id)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 style = PrismButtonStyle.SOLID,

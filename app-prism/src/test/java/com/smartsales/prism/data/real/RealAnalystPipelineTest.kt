@@ -26,7 +26,6 @@ import org.mockito.kotlin.whenever
 @OptIn(ExperimentalCoroutinesApi::class)
 class RealAnalystPipelineTest {
 
-    private lateinit var pipeline: RealAnalystPipeline
     private lateinit var contextBuilder: ContextBuilder
     private lateinit var executor: Executor
     private lateinit var architectService: ArchitectService
@@ -34,6 +33,8 @@ class RealAnalystPipelineTest {
     private lateinit var entityRepository: EntityRepository
     private lateinit var entityResolverService: EntityResolverService
     private lateinit var kernelWriteBack: KernelWriteBack
+    private lateinit var entityDisambiguationService: com.smartsales.prism.domain.disambiguation.EntityDisambiguationService
+    private lateinit var pipeline: RealAnalystPipeline
 
     @Before
     fun setup() {
@@ -44,14 +45,24 @@ class RealAnalystPipelineTest {
         entityRepository = mock()
         entityResolverService = mock()
         kernelWriteBack = mock()
+        entityDisambiguationService = mock()
+
+        // Default to pass-through so standard pipeline tests work
+        kotlinx.coroutines.runBlocking {
+            whenever(entityDisambiguationService.process(any())).thenReturn(
+                com.smartsales.prism.domain.disambiguation.DisambiguationResult.PassThrough
+            )
+        }
+        
         pipeline = RealAnalystPipeline(
-            contextBuilder, 
-            executor, 
-            architectService, 
-            consultantService,
-            entityRepository,
-            entityResolverService,
-            kernelWriteBack
+            contextBuilder = contextBuilder,
+            executor = executor,
+            architectService = architectService,
+            consultantService = consultantService,
+            entityRepository = entityRepository,
+            entityResolverService = entityResolverService,
+            kernelWriteBack = kernelWriteBack,
+            entityDisambiguationService = entityDisambiguationService
         )
     }
 

@@ -154,6 +154,9 @@ abstract class PrismModule {
     @Binds @Singleton
     abstract fun bindInputParserService(impl: com.smartsales.prism.data.parser.RealInputParserService): com.smartsales.prism.domain.parser.InputParserService
 
+    @Binds @Singleton
+    abstract fun bindEntityDisambiguationService(impl: com.smartsales.prism.data.disambiguation.RealEntityDisambiguationService): com.smartsales.prism.domain.disambiguation.EntityDisambiguationService
+
     companion object {
         @Provides
         @Singleton

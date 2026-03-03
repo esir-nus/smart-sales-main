@@ -42,6 +42,7 @@ class PrismViewModel @Inject constructor(
     private val contextBuilder: com.smartsales.prism.domain.pipeline.ContextBuilder,
     private val historyRepository: com.smartsales.prism.domain.repository.HistoryRepository,
     private val userProfileRepository: UserProfileRepository,
+    private val audioRepository: com.smartsales.prism.domain.audio.AudioRepository,
     private val sessionTitleGenerator: com.smartsales.prism.domain.session.SessionTitleGenerator // Wave 4: Auto-Renaming
 ) : ViewModel() {
     
@@ -200,7 +201,7 @@ class PrismViewModel @Inject constructor(
      * 切换到历史会话 (Wave 4)
      * 从 SSD 加载消息，恢复 UI 和内核上下文
      */
-    fun switchSession(sessionId: String) {
+    fun switchSession(sessionId: String, targetMode: Mode? = null, triggerAutoRename: Boolean = false) {
         // 先保存当前会话
         persistCurrentMessages()
         viewModelScope.launch(Dispatchers.IO) {
@@ -215,6 +216,33 @@ class PrismViewModel @Inject constructor(
                 }
             }
             contextBuilder.loadSession(sessionId, chatTurns)
+            
+            // Wave 4: 注入临时文档上下文
+            val audioId = session?.linkedAudioId
+            if (audioId != null) {
+                try {
+                    val artifacts = audioRepository.getArtifacts(audioId)
+                    if (artifacts != null) {
+                        val payload = buildString {
+                            artifacts.smartSummary?.summary?.takeIf { it.isNotBlank() }?.let {
+                                append("**系统摘要总结**\n")
+                                append(it)
+                                append("\n\n")
+                            }
+                            val transcript = artifacts.transcriptMarkdown ?: ""
+                            if (transcript.isNotBlank()) {
+                                append("**详细转写原文**\n")
+                                append(transcript)
+                            }
+                        }
+                        contextBuilder.loadDocumentContext(payload)
+                        Log.d("PrismVM", "📄 Injected documentContext for session: $sessionId from audio: $audioId")
+                    }
+                } catch (e: Exception) {
+                    Log.e("PrismVM", "Failed to load documentContext", e)
+                }
+            }
+
             withContext(Dispatchers.Main) {
                 currentSessionId = sessionId
                 _history.value = messages
@@ -222,41 +250,16 @@ class PrismViewModel @Inject constructor(
                 _uiState.value = UiState.Idle
                 _inputText.value = ""
                 activityController.reset()
-            }
-            Log.d("PrismVM", "Switched to session: $sessionId, ${messages.size} messages")
-        }
-    }
-
-    /**
-     * 切换到历史会话并立即发送初始上下文 (用于 Ask AI 首次绑定时触发分析)
-     */
-    fun switchSessionAndSend(sessionId: String, initialInput: String) {
-        // 先保存当前会话
-        persistCurrentMessages()
-        viewModelScope.launch(Dispatchers.IO) {
-            val messages = historyRepository.getMessages(sessionId)
-            val session = historyRepository.getSession(sessionId)
-            // 恢复内核 RAM
-            val chatTurns = messages.map { msg ->
-                when (msg) {
-                    is ChatMessage.User -> ChatTurn("user", msg.content)
-                    is ChatMessage.Ai -> ChatTurn("assistant",
-                        (msg.uiState as? UiState.Response)?.content ?: "")
+                
+                if (targetMode != null && targetMode != currentMode.value) {
+                    switchMode(targetMode)
+                }
+                
+                if (triggerAutoRename) {
+                    triggerAutoRename()
                 }
             }
-            contextBuilder.loadSession(sessionId, chatTurns)
-            withContext(Dispatchers.Main) {
-                currentSessionId = sessionId
-                _history.value = messages
-                _sessionTitle.value = session?.clientName ?: "对话"
-                _uiState.value = UiState.Idle
-                _inputText.value = initialInput
-                activityController.reset()
-                
-                // Immediately trigger send to simulate user sending initial context
-                send()
-            }
-            Log.d("PrismVM", "Switched and sent initial context to session: $sessionId")
+            Log.d("PrismVM", "Switched to session: $sessionId, ${messages.size} messages")
         }
     }
 

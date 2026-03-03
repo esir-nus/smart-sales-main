@@ -29,6 +29,18 @@ sealed class ParseResult {
         val suggestedMatches: List<EntityRef>,
         val clarificationPrompt: String
     ) : ParseResult()
+
+    /**
+     * User is explicitly declaring or updating an entity's CRM profile
+     * (e.g., answering a clarification prompt: "He is the CEO of MoShengTai")
+     */
+    data class EntityDeclaration(
+        val name: String,
+        val company: String?,
+        val jobTitle: String?,
+        val aliases: List<String>,
+        val notes: String?
+    ) : ParseResult()
 }
 
 /**

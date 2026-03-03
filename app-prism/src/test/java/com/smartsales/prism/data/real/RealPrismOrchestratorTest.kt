@@ -48,6 +48,7 @@ class RealPrismOrchestratorTest {
     private lateinit var mockEntityWriter: EntityWriter
     private lateinit var mockEntityRepo: EntityRepository
     private lateinit var mockInputParserService: InputParserService
+    private lateinit var mockEntityDisambiguationService: com.smartsales.prism.domain.disambiguation.EntityDisambiguationService
     private lateinit var telemetry: com.smartsales.prism.data.fakes.FakePipelineTelemetry
 
     @Before
@@ -65,7 +66,12 @@ class RealPrismOrchestratorTest {
         mockEntityWriter = mock()
         mockEntityRepo = mock()
         mockInputParserService = mock()
+        mockEntityDisambiguationService = mock()
         telemetry = com.smartsales.prism.data.fakes.FakePipelineTelemetry()
+
+        kotlinx.coroutines.runBlocking {
+            whenever(mockEntityDisambiguationService.process(any())).doReturn(com.smartsales.prism.domain.disambiguation.DisambiguationResult.PassThrough)
+        }
 
         orchestrator = PrismOrchestrator(
             contextBuilder = mockContextBuilder,
@@ -81,6 +87,7 @@ class RealPrismOrchestratorTest {
             entityWriter = mockEntityWriter,
             entityRepository = mockEntityRepo,
             inputParserService = mockInputParserService,
+            entityDisambiguationService = mockEntityDisambiguationService,
             telemetry = telemetry
         )
     }
@@ -94,6 +101,20 @@ class RealPrismOrchestratorTest {
             clarificationPrompt = "系统发现 '新客户' 似乎不在通讯录中，您是想提及新客户还是拼写有误？"
         )
         whenever(mockInputParserService.parseIntent("查一下新客户")).doReturn(ambiguousResult)
+        
+        val expectedClarification = UiState.AwaitingClarification(
+            question = "系统发现 '新客户' 似乎不在通讯录中，您是想提及新客户还是拼写有误？",
+            clarificationType = ClarificationType.AMBIGUOUS_PERSON,
+            candidates = emptyList()
+        )
+        whenever(
+            mockEntityDisambiguationService.startDisambiguation(
+                originalInput = any(),
+                originalMode = any(),
+                ambiguousName = any(),
+                candidates = any()
+            )
+        ).doReturn(expectedClarification)
         
         // Ensure Mode is set to COACH (default) or whatever processInput delegates to
         orchestrator.switchMode(com.smartsales.prism.domain.model.Mode.COACH)

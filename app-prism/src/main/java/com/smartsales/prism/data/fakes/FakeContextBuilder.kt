@@ -55,4 +55,8 @@ class FakeContextBuilder @Inject constructor() : ContextBuilder {
         _sessionHistory.clear()
         _sessionHistory.addAll(history)
     }
+
+    override fun loadDocumentContext(payload: String) {
+        // No-op for fake
+    }
 }

@@ -58,6 +58,7 @@ class PrismOrchestrator @Inject constructor(
     private val entityWriter: EntityWriter,
     private val entityRepository: EntityRepository,
     private val inputParserService: com.smartsales.prism.domain.parser.InputParserService,
+    private val entityDisambiguationService: com.smartsales.prism.domain.disambiguation.EntityDisambiguationService,
     private val telemetry: com.smartsales.prism.domain.telemetry.PipelineTelemetry
 ) : Orchestrator {
     
@@ -71,6 +72,27 @@ class PrismOrchestrator @Inject constructor(
     
     // removed analystState as it is handled in UI layer directly with AnalystPipeline now
     override suspend fun processInput(input: String): UiState {
+        // Wave 1 Entity Disambiguation: Global Gateway (Interrupt & Resume)
+        telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Checking Disambiguator State for input")
+        when (val dResult = entityDisambiguationService.process(input)) {
+            is com.smartsales.prism.domain.disambiguation.DisambiguationResult.Intercepted -> {
+                telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Input intercepted by Disambiguator")
+                return dResult.uiState
+            }
+            is com.smartsales.prism.domain.disambiguation.DisambiguationResult.Resumed -> {
+                telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Disambiguator completed, resuming original intent")
+                // Replay the original intent under its original mode
+                return when (dResult.mode) {
+                    Mode.COACH -> processCoachInput(dResult.originalInput)
+                    Mode.SCHEDULER -> createScheduledTask(dResult.originalInput, null)
+                    Mode.ANALYST -> throw IllegalArgumentException("Analyst mode uses AnalystPipeline directly")
+                }
+            }
+            is com.smartsales.prism.domain.disambiguation.DisambiguationResult.PassThrough -> {
+                telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Disambiguator pass-through. Proceeding normally.")
+            }
+        }
+
         return when (_currentMode.value) {
             Mode.COACH -> processCoachInput(input)
             Mode.ANALYST -> throw IllegalArgumentException("Analyst mode uses AnalystPipeline directly")
@@ -89,16 +111,11 @@ class PrismOrchestrator @Inject constructor(
             
             if (parseResult is com.smartsales.prism.domain.parser.ParseResult.NeedsClarification) {
                 activityController.complete()
-                return UiState.AwaitingClarification(
-                    question = parseResult.clarificationPrompt,
-                    clarificationType = ClarificationType.AMBIGUOUS_PERSON,
-                    candidates = parseResult.suggestedMatches.map {
-                        CandidateOption(
-                            entityId = it.entityId,
-                            displayName = it.displayName,
-                            description = it.entityType
-                        )
-                    }
+                return entityDisambiguationService.startDisambiguation(
+                    originalInput = input,
+                    originalMode = Mode.COACH,
+                    ambiguousName = parseResult.ambiguousName,
+                    candidates = parseResult.suggestedMatches
                 )
             }
             
@@ -150,16 +167,11 @@ class PrismOrchestrator @Inject constructor(
             
             if (parseResult is com.smartsales.prism.domain.parser.ParseResult.NeedsClarification) {
                 activityController.complete()
-                return UiState.AwaitingClarification(
-                    question = parseResult.clarificationPrompt,
-                    clarificationType = ClarificationType.AMBIGUOUS_PERSON,
-                    candidates = parseResult.suggestedMatches.map {
-                        CandidateOption(
-                            entityId = it.entityId,
-                            displayName = it.displayName,
-                            description = it.entityType
-                        )
-                    }
+                return entityDisambiguationService.startDisambiguation(
+                    originalInput = input,
+                    originalMode = Mode.SCHEDULER,
+                    ambiguousName = parseResult.ambiguousName,
+                    candidates = parseResult.suggestedMatches
                 )
             }
             
@@ -191,7 +203,7 @@ class PrismOrchestrator @Inject constructor(
             
             // 2. LLM 解析
             telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.EXECUTOR, "Sending prompt to executor")
-            when (val result = executor.execute(context)) {
+            when (val result = executor.execute(com.smartsales.prism.domain.config.ModelRegistry.EXECUTOR, context)) {
                 is ExecutorResult.Success -> {
                     // === Wave 2: Fire-and-forget RL learning ===
                     val observations = parseRlObservations(result.content)
@@ -217,10 +229,20 @@ class PrismOrchestrator @Inject constructor(
                             
                             if (personCandidates.size > 1) {
                                 activityController.complete()
-                                return UiState.AwaitingClarification(
-                                    question = "请问是哪位${lintResult.parsedClues.person}？",
-                                    clarificationType = ClarificationType.AMBIGUOUS_PERSON,
-                                    candidates = personCandidates
+                                // Edge Case inside the Linter: Also trigger the Disambiguator state
+                                return entityDisambiguationService.startDisambiguation(
+                                    originalInput = input,
+                                    originalMode = Mode.SCHEDULER,
+                                    ambiguousName = lintResult.parsedClues.person!!,
+                                    candidates = lintResult.parsedClues.person.let { clue -> 
+                                        entityRepository.findByAlias(clue).map { entry ->
+                                            com.smartsales.prism.domain.pipeline.EntityRef(
+                                                entityId = entry.entityId,
+                                                displayName = entry.displayName,
+                                                entityType = entry.entityType.name
+                                            )
+                                        }
+                                    }
                                 )
                             }
                             

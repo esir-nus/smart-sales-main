@@ -47,4 +47,10 @@ interface ContextBuilder {
      * 恢复会话历史和轮次计数
      */
     fun loadSession(sessionId: String, history: List<ChatTurn>)
+    
+    /**
+     * 加载临时文档上下文到 RAM
+     * 用于跨流传递大文本（例如音频分析时的转写结果）
+     */
+    fun loadDocumentContext(payload: String)
 }

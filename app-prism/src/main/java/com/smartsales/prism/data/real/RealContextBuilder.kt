@@ -122,6 +122,8 @@ class RealContextBuilder @Inject constructor(
                 turnIndex = _turnCount
             ),
             sessionHistory = _sessionHistory.toList(),
+            // 传入 Document Context
+            documentContext = _workingSet.documentContext,
             // Legacy/Dead fields (kept for binary compatibility until consumers updated)
             lastToolResult = null,
             executedTools = emptySet(),
@@ -253,6 +255,11 @@ class RealContextBuilder @Inject constructor(
             createdAt = timeProvider.now.toEpochMilli()
         )
         Log.d("Kernel", "📂 Session loaded: $sessionId, ${history.size} turns")
+    }
+
+    override fun loadDocumentContext(payload: String) {
+        _workingSet.documentContext = payload
+        Log.d("Kernel", "📄 Document context loaded: ${payload.length} chars")
     }
 
     // === Private Helpers ===

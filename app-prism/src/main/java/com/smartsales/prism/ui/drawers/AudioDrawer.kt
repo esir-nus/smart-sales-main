@@ -40,11 +40,13 @@ import kotlinx.coroutines.launch
  * Audio Drawer — Bottom-Up Sheet (Sleek Glass Version)
  * @see prism-ui-ux-contract.md §1.8
  */
+import com.smartsales.prism.domain.model.Mode
+
 @Composable
 fun AudioDrawer(
     isOpen: Boolean,
     onDismiss: () -> Unit,
-    onNavigateToChat: (sessionId: String, initialContext: String?) -> Unit,
+    onNavigateToChat: (sessionId: String, targetMode: Mode?) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AudioViewModel = hiltViewModel()
 ) {
@@ -207,11 +209,11 @@ fun AudioDrawer(
                                 viewModel = viewModel,
                                 onClick = { expandedCardId = if (isExpanded) null else item.id },
                                 onStarClick = { viewModel.toggleStar(item.id) },
-                                onAskAi = { id, initialContext -> 
+                                onAskAi = { id -> 
                                     scope.launch {
                                         val (sessionId, isNew) = viewModel.onAskAi(id)
                                         if (isNew) {
-                                            onNavigateToChat(sessionId, initialContext)
+                                            onNavigateToChat(sessionId, Mode.ANALYST)
                                         } else {
                                             onNavigateToChat(sessionId, null)
                                         }

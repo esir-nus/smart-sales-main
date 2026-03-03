@@ -18,6 +18,8 @@ import com.smartsales.prism.domain.analyst.EntityResolverService
 import com.smartsales.prism.domain.memory.EntityRepository
 import com.smartsales.prism.domain.pipeline.KernelWriteBack
 import com.smartsales.prism.domain.pipeline.EntityRef
+import com.smartsales.prism.domain.disambiguation.EntityDisambiguationService
+import com.smartsales.prism.domain.disambiguation.DisambiguationResult
 
 
 class RealAnalystPipeline @Inject constructor(
@@ -27,7 +29,8 @@ class RealAnalystPipeline @Inject constructor(
     private val consultantService: ConsultantService,
     private val entityRepository: EntityRepository,
     private val entityResolverService: EntityResolverService,
-    private val kernelWriteBack: KernelWriteBack
+    private val kernelWriteBack: KernelWriteBack,
+    private val entityDisambiguationService: EntityDisambiguationService
 ) : AnalystPipeline {
 
     private val TAG = "RealAnalystPipeline"
@@ -41,14 +44,37 @@ class RealAnalystPipeline @Inject constructor(
     ): AnalystResponse {
         Log.d(TAG, "handleInput: state=${_state.value} input=$input")
 
+        // Wave 1 Entity Disambiguation: Global Gateway (Interrupt & Resume)
+        Log.d(TAG, "Checking Disambiguator State for Analyst input")
+        when (val dResult = entityDisambiguationService.process(input)) {
+            is DisambiguationResult.Intercepted -> {
+                Log.d(TAG, "Analyst input intercepted by Disambiguator")
+                return AnalystResponse.Chat("请先在此对话框回复上文关于档案的问题。") // The UI actually renders the Disambiguator card, but Analyst just yields via chat.
+            }
+            is DisambiguationResult.Resumed -> {
+                Log.d(TAG, "Disambiguator completed for Analyst, resuming original intent")
+                // Replay the intent!
+                return handleInput(dResult.originalInput, sessionHistory)
+            }
+            is DisambiguationResult.PassThrough -> {
+                Log.d(TAG, "Disambiguator pass-through. Proceeding with Analyst normally.")
+            }
+        }
+
         return when (_state.value) {
             AnalystState.IDLE -> {
                 _state.value = AnalystState.CONSULTING
                 var loopCount = 0
+                var promptOverride: String? = null
                 while (loopCount < 3) {
                     loopCount++
                     
-                    val context = contextBuilder.build(input, Mode.ANALYST)
+                    val baseContext = contextBuilder.build(input, Mode.ANALYST)
+                    val context = if (promptOverride != null) {
+                        baseContext.copy(systemPromptOverride = promptOverride)
+                    } else {
+                        baseContext
+                    }
                     val consultantResult = consultantService.evaluateIntent(context)
                     if (consultantResult == null) {
                         _state.value = AnalystState.IDLE
@@ -75,11 +101,19 @@ class RealAnalystPipeline @Inject constructor(
                         }
                         
                         if (unresolvedEntity != null) {
-                            _state.value = AnalystState.IDLE
-                            return AnalystResponse.Chat("我是不是没有【$unresolvedEntity】的记录？")
+                            Log.d(TAG, "Entity totally missing: $unresolvedEntity. Freezing Analyst state and starting Disambiguation.")
+                            // Do NOT reset the analyst state. Leave it exactly where it is so it can resume.
+                            entityDisambiguationService.startDisambiguation(
+                                originalInput = input,
+                                originalMode = Mode.ANALYST,
+                                ambiguousName = unresolvedEntity,
+                                candidates = emptyList() // No candidates, just a pure creation prompt
+                            )
+                            return AnalystResponse.Chat("系统发现 '$unresolvedEntity' 似乎不在通讯录中，您是想提及新客户还是拼写有误？")
                         }
                         
                         if (anyResolved) {
+                            promptOverride = "[系统提示]: 我已找到你需要的实体资料，请结合 <KNOWN_FACTS> 进行分析，无需再次请求该实体。"
                             continue
                         }
                     }

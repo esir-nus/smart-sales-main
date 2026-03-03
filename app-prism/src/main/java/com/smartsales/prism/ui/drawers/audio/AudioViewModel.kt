@@ -103,6 +103,23 @@ class AudioViewModel @Inject constructor(
             linkedAudioId = audioId
         )
         
+        // Wave 4: 构建 UI 预览卡片并直接写入 DB，实现 0-latency 展示
+        try {
+            val artifacts = audioRepository.getArtifacts(audioId)
+            if (artifacts != null) {
+                val overviewCard = buildOverviewCard(audio?.filename, audio?.timeDisplay, artifacts)
+                // 写入虚拟的 Assistant 消息，这样一进入会话就会触发 UI 显示，以及后续的自动重命名
+                historyRepository.saveMessage(
+                    sessionId = sessionId,
+                    isUser = false,
+                    content = overviewCard,
+                    orderIndex = 0
+                )
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("AudioViewModel", "Failed to build or inject overview card", e)
+        }
+        
         // 绑定会话到音频
         audioRepository.bindSession(audioId, sessionId)
         Pair(sessionId, true)
@@ -117,6 +134,36 @@ class AudioViewModel @Inject constructor(
         } catch (e: Exception) {
             null
         }
+    }
+    
+    private fun buildOverviewCard(
+        title: String?, 
+        timeDisplay: String?, 
+        artifacts: com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
+    ): String = buildString {
+        appendLine("### 🎙️ 已加载音频：${title ?: "未命名"}")
+        if (timeDisplay != null) {
+            appendLine("**时长**: $timeDisplay")
+        }
+        appendLine()
+        
+        val keyPoints = artifacts.smartSummary?.keyPoints
+        if (!keyPoints.isNullOrEmpty()) {
+            val keywordsStr = keyPoints.take(5).joinToString("，")
+            appendLine("**核心要点**: $keywordsStr")
+        }
+        
+        val summaryText = artifacts.smartSummary?.summary
+        if (!summaryText.isNullOrBlank()) {
+            val firstParagraph = summaryText.split("\n\n").firstOrNull()?.trim()
+            if (!firstParagraph.isNullOrBlank()) {
+                appendLine()
+                appendLine("> ${firstParagraph.replace("\n", "\n> ")}")
+            }
+        }
+        
+        appendLine()
+        appendLine("我已经加载了完整的音频原文和细节分析。请问你想了解什么？")
     }
     
     private fun AudioFile.toUiState() = AudioItemState(

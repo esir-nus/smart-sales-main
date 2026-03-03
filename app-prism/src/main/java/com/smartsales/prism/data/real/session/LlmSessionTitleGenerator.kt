@@ -48,7 +48,8 @@ class LlmSessionTitleGenerator @Inject constructor(
 
         val request = AiChatRequest(
             prompt = prompt,
-            model = "qwen-turbo", // 使用快速模型
+            model = com.smartsales.prism.domain.config.ModelRegistry.EXTRACTOR.modelId, // 使用快速模型
+            temperature = com.smartsales.prism.domain.config.ModelRegistry.EXTRACTOR.temperature,
             skillTags = setOf("summarization")
         )
 

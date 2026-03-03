@@ -49,18 +49,6 @@ sealed class ParseResult {
         val suggestedMatches: List<EntityRef>,
         val clarificationPrompt: String
     ) : ParseResult()
-
-    /**
-     * User is explicitly declaring or updating an entity's CRM profile
-     * (e.g., answering a clarification prompt: "He is the CEO of MoShengTai")
-     */
-    data class EntityDeclaration(
-        val name: String,
-        val company: String?,
-        val jobTitle: String?,
-        val aliases: List<String>,
-        val notes: String?
-    ) : ParseResult()
 }
 ```
 
@@ -70,9 +58,8 @@ sealed class ParseResult {
 
 | Rule | Enforcer | Explanation |
 |------|----------|-------------|
-| **Global Enforcement** | `PrismOrchestrator` | `InputParserService` must run for ALL inputs (including Analyst) to enable global interception of CRM Entity Declarations. |
-| **Interrupt Pattern** | `PrismOrchestrator` | If `NeedsClarification` is returned, Orchestrator stores `PendingIntent`, halts pipeline, and echoes `clarificationPrompt`. |
-| **Resume Pattern** | `PrismOrchestrator` | If `EntityDeclaration` is returned, Orchestrator writes to DB/RAM and instantly replays the `PendingIntent`. |
+| **Gateway Enforcement** | `PrismOrchestrator` | `InputParserService` must run *before* `ContextBuilder.build()`. |
+| **Fail-Safe** | `ParseResult` | If `NeedsClarification` is returned, the Orchestrator must NOT call the main LLM. It must echo the `clarificationPrompt` to the user. |
 | **No DB Flooding** | `ContextBuilder` | The Kernel only loads data for the exact `resolvedEntityIds` returned by this parser. |
 
 ---
@@ -81,11 +68,10 @@ sealed class ParseResult {
 
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
-| **1** | **Contracts & Payload Generation** | ✅ SHIPPED | `InputParserService`, `ParseResult`, Semantic Mapping JSON generation. |
-| **2** | **Turbo LLM Disambiguation** | ✅ SHIPPED | `RealInputParserService` injecting Payload into `qwen-turbo`. |
-| **3** | **Orchestrator Wiring** | ✅ SHIPPED | Mounted at the front of `PrismOrchestrator` for Coach/Scheduler. |
-| **4** | **Auto-Renaming Hook** | ✅ SHIPPED | Fire `LlmSessionTitleGenerator` using the parsed JSON. |
-| **5** | **Global Interception & Entity Declarations** | 🔲 PLANNED | `ParseResult.EntityDeclaration`, Orchestrator `PendingIntent` interrupt & resume loop. Applies to ALL modes. |
+| **1** | **Contracts & Payload Generation** | 🔲 PLANNED | `InputParserService`, `ParseResult`, Semantic Mapping JSON generation. |
+| **2** | **Turbo LLM Disambiguation** | 🔲 PLANNED | `RealInputParserService` injecting Payload into `qwen-turbo`. |
+| **3** | **Orchestrator Wiring** | 🔲 PLANNED | Mount at the front of `PrismOrchestrator`. Handle Clarification loop UI state. |
+| **4** | **Auto-Renaming Hook** | 🔲 PLANNED | Fire `LlmSessionTitleGenerator` using the parsed JSON. |
 
 ---
 

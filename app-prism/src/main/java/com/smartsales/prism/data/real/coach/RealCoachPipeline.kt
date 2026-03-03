@@ -39,7 +39,7 @@ class RealCoachPipeline @Inject constructor(
         
         // 调用 LLM
         telemetry.recordEvent(PipelinePhase.EXECUTOR, "Executing Coach LLM Prompt")
-        return when (val result = executor.execute(context)) {
+        return when (val result = executor.execute(com.smartsales.prism.domain.config.ModelRegistry.COACH, context)) {
             is ExecutorResult.Success -> {
                 // Wave 4: 检测是否建议切换到 Analyst 模式
                 val suggestAnalyst = input.contains("分析") ||

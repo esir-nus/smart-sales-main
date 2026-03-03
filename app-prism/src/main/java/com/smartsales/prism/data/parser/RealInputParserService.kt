@@ -32,17 +32,25 @@ KNOWN CONTACT SHEET:
 %s
 
 INSTRUCTIONS:
-1. Extract any temporal intent (e.g., '明天', '下周一').
-2. Match ANY mentioned names against the "name" or "aliases" in the Contact Sheet.
-3. If a name matches the sheet perfectly or semantically (nicknames, typos), output its "idx" in the `resolved_indices` array.
-4. If a name is completely unknown and cannot be mapped to any idx, output the name as a string in the `unknown_names` array.
-5. If a name is ambiguous and could map to multiple indices, DO NOT guess. Put the name in `unknown_names`.
+1. Identify if the user is declaring or defining a new CRM entity (e.g., "他是XX的CEO", "名字写错了，是王总", "那是上次开会的李总").
+2. If it IS an entity declaration, extract the profile info into the `declaration` object (name is required, others can be null).
+3. If it is NOT a declaration, extract temporal intent.
+4. Match ANY mentioned names against the "name" or "aliases" in the Contact Sheet.
+5. If a name matches perfectly or semantically, output its "idx" in `resolved_indices`.
+6. If a name is completely unknown, output it in `unknown_names` (DO NOT guess ambiguous matches).
 
 REQUIRED JSON SCHEMA:
 {
   "temporal_intent": "String or null",
   "resolved_indices": [1, 2],
-  "unknown_names": ["新客户名"]
+  "unknown_names": ["新客户名"],
+  "declaration": {
+    "name": "String",
+    "company": "String or null",
+    "job_title": "String or null",
+    "aliases": ["String"],
+    "notes": "String or null"
+  } // Can be null if the user is not defining an entity
 }
 
 Rule: Return ONLY valid JSON without Markdown blocks or backticks.
@@ -86,7 +94,8 @@ Rule: Return ONLY valid JSON without Markdown blocks or backticks.
         // Step 3: Execution
         val request = AiChatRequest(
             prompt = "${prompt}\n\nUSER INPUT: $rawInput",
-            model = "qwen-turbo",
+            model = com.smartsales.prism.domain.config.ModelRegistry.EXTRACTOR.modelId,
+            temperature = com.smartsales.prism.domain.config.ModelRegistry.EXTRACTOR.temperature,
             skillTags = setOf("extraction", "json")
         )
 
@@ -143,6 +152,30 @@ Rule: Return ONLY valid JSON without Markdown blocks or backticks.
         
         val distinctResolved = resolvedIds.distinct()
         telemetry.recordEvent(PipelinePhase.ENTITY_RESOLUTION, "Successfully resolved ${distinctResolved.size} entities")
+
+        // Step 5: Entity Declaration Detection
+        val declarationObj = jsonObject.optJSONObject("declaration")
+        if (declarationObj != null) {
+            val decName = declarationObj.optString("name")
+            if (decName.isNotBlank() && decName != "null") {
+                telemetry.recordEvent(PipelinePhase.ENTITY_RESOLUTION, "Detected Entity Declaration for: $decName")
+                val aliasesArray = declarationObj.optJSONArray("aliases")
+                val aliasesList = mutableListOf<String>()
+                if (aliasesArray != null) {
+                    for (i in 0 until aliasesArray.length()) {
+                        val alias = aliasesArray.optString(i)
+                        if (alias.isNotBlank()) aliasesList.add(alias)
+                    }
+                }
+                return ParseResult.EntityDeclaration(
+                    name = decName,
+                    company = declarationObj.optString("company").takeIf { it != "null" && it.isNotBlank() },
+                    jobTitle = declarationObj.optString("job_title").takeIf { it != "null" && it.isNotBlank() },
+                    aliases = aliasesList,
+                    notes = declarationObj.optString("notes").takeIf { it != "null" && it.isNotBlank() }
+                )
+            }
+        }
 
         return ParseResult.Success(
             resolvedEntityIds = distinctResolved,

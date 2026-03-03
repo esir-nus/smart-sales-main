@@ -60,7 +60,8 @@ class SessionWorkingSet(
     // Section 1: Distilled Memory
     val entityStates: MutableMap<String, EntityTrace>
     val pathIndex: MutableMap<String, String>        // Alias cache
-    var entityKnowledge: String?                     // Knowledge Graph JSON
+    var entityKnowledge: String?                     // Knowledge Graph JSON (Rendered)
+    val entityCache: MutableMap<String, EntityEntry> // RAM Cache: Delta Loading Source
     var scheduleContext: String?                     // Sticky Notes: top 3 upcoming tasks
     val entityContext: MutableMap<String, EntityRef> // Entity Pointers
     

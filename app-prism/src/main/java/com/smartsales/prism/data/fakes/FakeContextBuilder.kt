@@ -3,6 +3,7 @@ package com.smartsales.prism.data.fakes
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.pipeline.ChatTurn
 import com.smartsales.prism.domain.pipeline.ContextBuilder
+import com.smartsales.prism.domain.pipeline.ContextDepth
 import com.smartsales.prism.domain.pipeline.EnhancedContext
 import com.smartsales.prism.domain.pipeline.ModeMetadata
 import com.smartsales.prism.domain.rl.HabitContext
@@ -18,7 +19,12 @@ class FakeContextBuilder @Inject constructor() : ContextBuilder {
     
     private val _sessionHistory = mutableListOf<ChatTurn>()
     
-    override suspend fun build(userText: String, mode: Mode, resolvedEntityIds: List<String>): EnhancedContext {
+    override suspend fun build(
+        userText: String, 
+        mode: Mode, 
+        resolvedEntityIds: List<String>,
+        depth: ContextDepth
+    ): EnhancedContext {
         return EnhancedContext(
             userText = userText,
             modeMetadata = ModeMetadata(

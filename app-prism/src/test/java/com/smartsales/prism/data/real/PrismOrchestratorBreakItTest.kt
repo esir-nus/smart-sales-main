@@ -33,7 +33,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
-class RealPrismOrchestratorTest {
+class PrismOrchestratorBreakItTest {
 
     private lateinit var orchestrator: PrismOrchestrator
     private lateinit var mockContextBuilder: ContextBuilder
@@ -100,60 +100,51 @@ class RealPrismOrchestratorTest {
     }
 
     @Test
-    fun `when InputParser returns NeedsClarification, Orchestrator halts and returns AwaitingClarification`() = runTest {
-        // Arrange
-        val ambiguousResult = ParseResult.NeedsClarification(
-            ambiguousName = "新客户",
-            suggestedMatches = emptyList(),
-            clarificationPrompt = "系统发现 '新客户' 似乎不在通讯录中，您是想提及新客户还是拼写有误？"
-        )
-        whenever(mockInputParserService.parseIntent("查一下新客户")).doReturn(ambiguousResult)
+    fun testEmptyStringInAnalystMode() = runTest {
+        orchestrator.switchMode(com.smartsales.prism.domain.model.Mode.ANALYST)
         
-        val expectedClarification = UiState.AwaitingClarification(
-            question = "系统发现 '新客户' 似乎不在通讯录中，您是想提及新客户还是拼写有误？",
-            clarificationType = ClarificationType.AMBIGUOUS_PERSON,
-            candidates = emptyList()
-        )
-        whenever(
-            mockEntityDisambiguationService.startDisambiguation(
-                originalInput = any(),
-                originalMode = any(),
-                ambiguousName = any(),
-                candidates = any()
-            )
-        ).doReturn(expectedClarification)
+        // Mock the Analyst pipeline state
+        val fakeStateFlow = MutableStateFlow(com.smartsales.prism.domain.analyst.AnalystState.IDLE)
+        whenever(mockAnalystPipeline.state).doReturn(fakeStateFlow)
         
-        // Ensure Mode is set to COACH (default) or whatever processInput delegates to
-        orchestrator.switchMode(com.smartsales.prism.domain.model.Mode.COACH)
+        // Setup context
+        whenever(mockContextBuilder.build(any(), any(), any(), any())).doReturn(
+            EnhancedContext(userText = "   ", modeMetadata = ModeMetadata(currentMode = com.smartsales.prism.domain.model.Mode.ANALYST))
+        )
+        
+        // Router returns null for gibberish
+        whenever(mockLightningRouter.evaluateIntent(any())).doReturn(null)
 
-        // Act
-        val result = orchestrator.processInput("查一下新客户")
-
-        // Assert
-        assertTrue(result is UiState.AwaitingClarification)
-        val clarification = result as UiState.AwaitingClarification
-        assertEquals("系统发现 '新客户' 似乎不在通讯录中，您是想提及新客户还是拼写有误？", clarification.question)
-        assertEquals(ClarificationType.AMBIGUOUS_PERSON, clarification.clarificationType)
-        assertTrue(clarification.candidates.isEmpty())
+        val result = orchestrator.processInput("   ")
+        assertTrue(result is UiState.Response)
+        val response = result as UiState.Response
+        assertEquals("抱歉，我无法理解您的意图。", response.content)
     }
 
     @Test
-    fun `when InputParser returns Success, Orchestrator delegates correctly and returns Idle for Mascot`() = runTest {
-        // Arrange
-        val successResult = ParseResult.Success(
-            resolvedEntityIds = listOf("person-1"),
-            temporalIntent = null,
-            rawParsedJson = "{}"
-        )
-        whenever(mockInputParserService.parseIntent("给张三打个电话")).doReturn(successResult)
-        whenever(mockContextBuilder.getSessionHistory()).doReturn(emptyList())
+    fun testExtremeLengthInputInAnalystMode() = runTest {
+        orchestrator.switchMode(com.smartsales.prism.domain.model.Mode.ANALYST)
         
-        orchestrator.switchMode(com.smartsales.prism.domain.model.Mode.COACH)
+        val fakeStateFlow = MutableStateFlow(com.smartsales.prism.domain.analyst.AnalystState.IDLE)
+        whenever(mockAnalystPipeline.state).doReturn(fakeStateFlow)
+        
+        val longInput = "A".repeat(10000)
+        
+        whenever(mockContextBuilder.build(any(), any(), any(), any())).doReturn(
+            EnhancedContext(userText = longInput, modeMetadata = ModeMetadata(currentMode = com.smartsales.prism.domain.model.Mode.ANALYST))
+        )
+        // Router says NOISE
+        whenever(mockLightningRouter.evaluateIntent(any())).doReturn(
+            com.smartsales.prism.domain.analyst.RouterResult(
+                queryQuality = com.smartsales.prism.domain.analyst.QueryQuality.NOISE,
+                infoSufficient = false,
+                response = ""
+            )
+        )
 
-        // Act
-        val result = orchestrator.processInput("给张三打个电话")
-
-        // Assert
+        val result = orchestrator.processInput(longInput)
+        
+        // NOISE maps to System I, so returns Idle for the chat window
         assertTrue(result is UiState.Idle)
     }
 }

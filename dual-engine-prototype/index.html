@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dual-Engine Assistant Prototype</title>
+    <link rel="stylesheet" href="./style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <!-- Demostration Controls -->
+    <div class="demo-controls">
+      <h2>Scenarios</h2>
+      <button id="btn-demo-1">Greeting</button>
+      <button id="btn-demo-2">Noise/Typo</button>
+      <button id="btn-demo-3">Simple QA</button>
+      <button id="btn-demo-4">Deep Analysis</button>
+      <button id="btn-reset" class="reset-btn">Reset Chat</button>
+    </div>
+
+    <!-- Mobile Emulator Frame -->
+    <div class="emulator">
+      <div class="emulator-screen">
+        
+        <!-- Header -->
+        <header class="app-header">
+          <div class="time">10:00</div>
+          <div class="status-bar">
+            <span>&#x30FB;</span><span>&#x30FB;</span><span>&#x30FB;</span>
+          </div>
+        </header>
+        
+        <!-- The Mascot (System I) - Dynamic Island -->
+        <div id="mascot-island" class="mascot-island hidden">
+          <div class="mascot-icon">✨</div>
+          <div class="mascot-text" id="mascot-text"></div>
+        </div>
+
+        <!-- Main Chat Feed (System II) -->
+        <div class="chat-feed" id="chat-feed">
+          <div class="chat-greeting formal-mode">
+            <h3>Prism Orchestrator</h3>
+            <p>How can I help you today?</p>
+          </div>
+        </div>
+
+        <!-- Task Board Tray (System II) -->
+        <div id="task-board" class="task-board hidden">
+          <div class="task-board-header">Actions</div>
+          <div class="task-board-content" id="task-board-content"></div>
+        </div>
+
+        <!-- Unified Input Area -->
+        <div class="input-area">
+          <input type="text" id="unified-input" placeholder="Ask CRM Analyst or Chat...">
+          <button id="send-btn" class="send-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+
+      </div>
+    </div>
+    
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>

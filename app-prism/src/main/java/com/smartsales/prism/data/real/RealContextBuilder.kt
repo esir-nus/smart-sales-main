@@ -14,6 +14,7 @@ import com.smartsales.prism.domain.memory.MemoryRepository
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.pipeline.ChatTurn
 import com.smartsales.prism.domain.pipeline.ContextBuilder
+import com.smartsales.prism.domain.pipeline.ContextDepth
 import com.smartsales.prism.domain.pipeline.EnhancedContext
 import com.smartsales.prism.domain.pipeline.EntityRef
 import com.smartsales.prism.domain.pipeline.KernelWriteBack
@@ -72,11 +73,17 @@ class RealContextBuilder @Inject constructor(
 
     // === ContextBuilder Implementation (Read-Only) ===
 
-    override suspend fun build(userText: String, mode: Mode, resolvedEntityIds: List<String>): EnhancedContext {
+    override suspend fun build(
+        userText: String, 
+        mode: Mode, 
+        resolvedEntityIds: List<String>,
+        depth: ContextDepth
+    ): EnhancedContext {
+        Log.d("Kernel", "🚀 Building EnhancedContext with depth=$depth for mode=${mode.name}")
         _currentMode = mode
 
         // Section 2: 全局用户习惯（首轮加载）
-        if (_workingSet.userHabitContext == null) {
+        if (depth == ContextDepth.FULL && _workingSet.userHabitContext == null) {
             telemetry.recordEvent(PipelinePhase.RL_MODULE, "Loading user habits (Section 2)")
             _workingSet.userHabitContext = reinforcementLearner.loadUserHabits()
             Log.d("Kernel", "📦 Section 2 loaded: userHabits")
@@ -86,27 +93,29 @@ class RealContextBuilder @Inject constructor(
         val allEntityIds = (resolvedEntityIds + _workingSet.entityContext.values.map { it.entityId }).distinct()
         val missingIds = allEntityIds - _workingSet.entityCache.keys
         
-        if (shouldSearchMemory(_sessionHistory) || missingIds.isNotEmpty()) {
-            telemetry.recordEvent(PipelinePhase.MEMORY_LOOKUP, "Loading entity knowledge: ${missingIds.size} missing, ${allEntityIds.size} total (Section 1)")
-            
-            // Delta Loading: Only fetch missing entities from DB
-            if (missingIds.isNotEmpty()) {
-                val fetched = missingIds.mapNotNull { entityRepository.getById(it) }
-                fetched.forEach { _workingSet.entityCache[it.entityId] = it }
+        if (depth == ContextDepth.FULL) {
+            if (shouldSearchMemory(_sessionHistory) || missingIds.isNotEmpty()) {
+                telemetry.recordEvent(PipelinePhase.MEMORY_LOOKUP, "Loading entity knowledge: ${missingIds.size} missing, ${allEntityIds.size} total (Section 1)")
+                
+                // Delta Loading: Only fetch missing entities from DB
+                if (missingIds.isNotEmpty()) {
+                    val fetched = missingIds.mapNotNull { entityRepository.getById(it) }
+                    fetched.forEach { _workingSet.entityCache[it.entityId] = it }
+                }
+                
+                // Build final JSON from RAM Cache
+                val activeEntities = allEntityIds.mapNotNull { _workingSet.entityCache[it] }
+                val knowledge = buildEntityKnowledgeFromEntries(activeEntities)
+                _workingSet.entityKnowledge = knowledge
+                Log.d("Kernel", "📸 Section 1: entityKnowledge=${knowledge?.length ?: 0} chars")
             }
-            
-            // Build final JSON from RAM Cache
-            val activeEntities = allEntityIds.mapNotNull { _workingSet.entityCache[it] }
-            val knowledge = buildEntityKnowledgeFromEntries(activeEntities)
-            _workingSet.entityKnowledge = knowledge
-            Log.d("Kernel", "📸 Section 1: entityKnowledge=${knowledge?.length ?: 0} chars")
-        }
 
-        if (shouldSearchMemory(_sessionHistory)) {
-            // Sticky Notes: 加载近期日程
-            val schedule = buildScheduleContext()
-            _workingSet.scheduleContext = schedule
-            Log.d("Kernel", "📅 Sticky Notes: ${schedule?.length ?: 0} chars")
+            if (shouldSearchMemory(_sessionHistory)) {
+                // Sticky Notes: 加载近期日程
+                val schedule = buildScheduleContext()
+                _workingSet.scheduleContext = schedule
+                Log.d("Kernel", "📅 Sticky Notes: ${schedule?.length ?: 0} chars")
+            }
         }
 
         telemetry.recordEvent(PipelinePhase.CONTEXT_BUILDER, "Kernel RAM assembly complete (Turn $_turnCount)")
@@ -114,8 +123,8 @@ class RealContextBuilder @Inject constructor(
         return EnhancedContext(
             userText = userText,
 
-            entityKnowledge = _workingSet.entityKnowledge,
-            entityContext = _workingSet.entityContext,
+            entityKnowledge = if (depth == ContextDepth.FULL) _workingSet.entityKnowledge else null,
+            entityContext = if (depth == ContextDepth.FULL) _workingSet.entityContext else emptyMap(),
             modeMetadata = ModeMetadata(
                 currentMode = mode,
                 sessionId = _workingSet.sessionId,
@@ -123,14 +132,14 @@ class RealContextBuilder @Inject constructor(
             ),
             sessionHistory = _sessionHistory.toList(),
             // 传入 Document Context
-            documentContext = _workingSet.documentContext,
+            documentContext = if (depth == ContextDepth.MINIMAL) null else _workingSet.documentContext,
             // Legacy/Dead fields (kept for binary compatibility until consumers updated)
             lastToolResult = null,
             executedTools = emptySet(),
             currentDate = timeProvider.formatForLlm(),
             currentInstant = timeProvider.now.toEpochMilli(),
-            habitContext = _workingSet.getCombinedHabitContext(),
-            scheduleContext = _workingSet.scheduleContext
+            habitContext = if (depth == ContextDepth.FULL) _workingSet.getCombinedHabitContext() else null,
+            scheduleContext = if (depth == ContextDepth.FULL) _workingSet.scheduleContext else null
         )
     }
 

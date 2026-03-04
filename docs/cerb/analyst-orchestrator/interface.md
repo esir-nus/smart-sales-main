@@ -39,7 +39,6 @@ interface AnalystPipeline {
 ```kotlin
 enum class AnalystState {
     IDLE,           // Waiting for user input
-    CONSULTING,     // Phase 1: Evaluating intent
     PROPOSAL,       // Plan generated, waiting for user confirmation
     INVESTIGATING,  // Phase 3: LLM reading EnhancedContext, reasoning
     RESULT          // Analysis delivered, Task Board mounted

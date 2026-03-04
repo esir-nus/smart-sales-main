@@ -61,7 +61,7 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 | **Orchestrator** | Top-level routing + pipeline coordination | LightningRouter, ContextBuilder, Executor, Architect, EntityResolver | `PrismOrchestrator.processInput()` | — | 🚧 REFACTOR |
 
 
-> **Orchestrator is the only module that calls EntityWriter during task creation.** Feature modules (Scheduler, Coach) receive results from Orchestrator; they don't call EntityWriter themselves. (Exception: debug seed code in SchedulerViewModel, guarded by `DEBUG` build type.)
+> **Orchestrator is the only module that calls EntityWriter during task creation.** Feature modules (Scheduler, Mascot) receive results from Orchestrator; they don't call EntityWriter themselves. (Exception: debug seed code in SchedulerViewModel, guarded by `DEBUG` build type.)
 >
 > **ContextBuilder reads EntityRegistry for Entity Knowledge Context.** `ContextBuilder.buildEntityKnowledge()` calls `EntityRepository.getAll()` at session start to load the structured entity graph into the LLM prompt (RAM Section 1). This is a Kernel → SSD read.
 

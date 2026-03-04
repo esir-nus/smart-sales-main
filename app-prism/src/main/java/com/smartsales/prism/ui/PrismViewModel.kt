@@ -130,9 +130,6 @@ class PrismViewModel @Inject constructor(
         viewModelScope.launch {
             analystPipeline.state.collect { fsmState ->
                 when (fsmState) {
-                    com.smartsales.prism.domain.analyst.AnalystState.CONSULTING -> {
-                        _uiState.value = UiState.Thinking("分析意图中...")
-                    }
                     com.smartsales.prism.domain.analyst.AnalystState.INVESTIGATING -> {
                         _uiState.value = UiState.Thinking("深度分析中...")
                     }
@@ -332,20 +329,22 @@ class PrismViewModel @Inject constructor(
         
         viewModelScope.launch {
             try {
-                // Pass history from ContextBuilder (which includes the AI's proposal)
-                val response = analystPipeline.handleInput(input, _history.value.mapNotNull { msg ->
-                    when (msg) {
-                        is ChatMessage.User -> ChatTurn("user", msg.content)
-                        is ChatMessage.Ai -> if (msg.uiState is UiState.Response) ChatTurn("assistant", msg.uiState.content) 
-                                             else if (msg.uiState is UiState.MarkdownStrategyState) ChatTurn("assistant", "### \${msg.uiState.title}\\n\${msg.uiState.markdownContent}")
-                                             else null
-                    }
-                })
+                val result = orchestrator.processInput(input)
+                _uiState.value = UiState.Idle
                 
-                // Usually results in Result state (Analysis)
-                if (response is com.smartsales.prism.domain.analyst.AnalystResponse.Analysis) {
+                if (result !is UiState.Idle) {
+                    val aiMsg = ChatMessage.Ai(
+                        id = java.util.UUID.randomUUID().toString(),
+                        timestamp = System.currentTimeMillis(),
+                        uiState = result
+                    )
+                    _history.value += aiMsg
+                }
+                
+                // Load TaskBoard items if workflows are provided in the response
+                if (result is UiState.Response && result.workflows.isNotEmpty()) {
                     val tools = toolRegistry.getAllTools()
-                    val items = response.suggestedWorkflows.mapNotNull { suggestion ->
+                    val items = result.workflows.mapNotNull { suggestion ->
                         val tool = tools.find { it.id == suggestion.workflowId }
                         if (tool != null) {
                             com.smartsales.prism.domain.analyst.TaskBoardItem(
@@ -357,15 +356,8 @@ class PrismViewModel @Inject constructor(
                         } else null
                     }
                     _taskBoardItems.value = items
-                    
-                    val aiMsg = ChatMessage.Ai(
-                        id = java.util.UUID.randomUUID().toString(),
-                        timestamp = System.currentTimeMillis(),
-                        uiState = UiState.Response(response.content)
-                    )
-                    _history.value += aiMsg
                 }
-                _uiState.value = UiState.Idle
+                
             } catch (e: Exception) {
                 _errorMessage.value = e.message ?: "Failed to execute plan"
             } finally {
@@ -442,68 +434,6 @@ class PrismViewModel @Inject constructor(
         _history.value += userMsg
         _inputText.value = ""
 
-        // Cerb Analyst Mode Open-Loop Pipeline
-        if (currentMode.value == Mode.ANALYST) {
-            _isSending.value = true
-            viewModelScope.launch {
-                // Map history properly (simplified for L2)
-                val chatTurns = _history.value.mapNotNull { msg ->
-                    when (msg) {
-                        is ChatMessage.User -> ChatTurn("user", msg.content)
-                        is ChatMessage.Ai -> if (msg.uiState is UiState.Response) ChatTurn("assistant", msg.uiState.content) else null
-                    }
-                }
-                
-                try {
-                    val response = analystPipeline.handleInput(input, chatTurns)
-                    
-                    val finalUiState = when (response) {
-                        is com.smartsales.prism.domain.analyst.AnalystResponse.Chat -> {
-                            UiState.Response(response.content)
-                        }
-                        is com.smartsales.prism.domain.analyst.AnalystResponse.Plan -> {
-                            UiState.MarkdownStrategyState(
-                                title = response.title,
-                                markdownContent = response.markdownContent
-                            )
-                        }
-                        is com.smartsales.prism.domain.analyst.AnalystResponse.Analysis -> {
-                            // Map WorkflowSuggestion to TaskBoardItem using ToolRegistry
-                            val tools = toolRegistry.getAllTools()
-                            val items = response.suggestedWorkflows.mapNotNull { suggestion ->
-                                val tool = tools.find { it.id == suggestion.workflowId }
-                                if (tool != null) {
-                                    com.smartsales.prism.domain.analyst.TaskBoardItem(
-                                        id = tool.id,
-                                        icon = tool.icon,
-                                        title = suggestion.label, // Use LLM's suggested label
-                                        description = tool.description
-                                    )
-                                } else null
-                            }
-                            _taskBoardItems.value = items
-                            
-                            // Render analysis content into chat
-                            UiState.Response(response.content)
-                        }
-                    }
-                    
-                    _uiState.value = UiState.Idle
-                    val aiMsg = ChatMessage.Ai(
-                        id = java.util.UUID.randomUUID().toString(),
-                        timestamp = System.currentTimeMillis(),
-                        uiState = finalUiState
-                    )
-                    _history.value += aiMsg
-                } catch (e: Exception) {
-                    _errorMessage.value = e.message ?: "Analyst error"
-                } finally {
-                    _isSending.value = false
-                }
-            }
-            return
-        }
-        
         _isSending.value = true
         _uiState.value = UiState.Loading 
         
@@ -513,12 +443,31 @@ class PrismViewModel @Inject constructor(
                 _uiState.value = UiState.Idle 
                 
                 // 2. 添加 AI 响应到历史
-                val aiMsg = ChatMessage.Ai(
-                    id = java.util.UUID.randomUUID().toString(),
-                    timestamp = System.currentTimeMillis(),
-                    uiState = result
-                )
-                _history.value += aiMsg
+                if (result !is UiState.Idle) {
+                    val aiMsg = ChatMessage.Ai(
+                        id = java.util.UUID.randomUUID().toString(),
+                        timestamp = System.currentTimeMillis(),
+                        uiState = result
+                    )
+                    _history.value += aiMsg
+                }
+                
+                // Load TaskBoard items if workflows are provided in the response
+                if (result is UiState.Response && result.workflows.isNotEmpty()) {
+                    val tools = toolRegistry.getAllTools()
+                    val items = result.workflows.mapNotNull { suggestion ->
+                        val tool = tools.find { it.id == suggestion.workflowId }
+                        if (tool != null) {
+                            com.smartsales.prism.domain.analyst.TaskBoardItem(
+                                id = tool.id,
+                                icon = tool.icon,
+                                title = suggestion.label,
+                                description = tool.description
+                            )
+                        } else null
+                    }
+                    _taskBoardItems.value = items
+                }
                 
                 // Wave 4: Auto-Renaming Trigger
                 // If title is default ("新对话") AND we have a successful response, trigger renaming

@@ -33,8 +33,7 @@ class FakeAnalystPipeline @Inject constructor() : AnalystPipeline {
         return when (_state.value) {
             AnalystState.IDLE -> {
                 if (input.lowercase().contains("plan") || input.contains("分析") || input.lowercase().contains("analyze")) {
-                    // Simulate CONSULTING -> PROPOSAL 
-                    _state.value = AnalystState.CONSULTING
+                    // Simulate Phase 2 Planning directly
                     delay(500) // fake processing
                     _state.value = AnalystState.PROPOSAL
                     
@@ -43,10 +42,20 @@ class FakeAnalystPipeline @Inject constructor() : AnalystPipeline {
                         summary = "根据上下文，我们生成了以下分析步骤。",
                         markdownContent = "### 模拟分析计划\n* 概况总结\n* 周期计算"
                     )
+                } else if (input.lowercase().contains("qa") || input.contains("简单问题")) {
+                    // Simulate Fast Track (NOISE / SIMPLE_QA)
+                    delay(200) // fake fast processing
+                    
+                    Log.d(TAG, "Fast track triggered for simple QA")
+                    _state.value = AnalystState.IDLE
+                    
+                    AnalystResponse.Chat(
+                        content = "这是一个简单问题的快速回答：客户确实提到过价格偏高，期望在5000以内。 (Fast Track Simulated)"
+                    )
                 } else {
                     // Chat fallback
                     AnalystResponse.Chat(
-                        content = "我需要更多信息。您想分析哪部分？(提示: 输入'plan'或者'分析'触发计划)"
+                        content = "我需要更多信息。您想分析哪部分？(提示: 输入'plan'触发深度分析，输入'qa'触发简单问答)"
                     )
                 }
             }
@@ -79,7 +88,6 @@ class FakeAnalystPipeline @Inject constructor() : AnalystPipeline {
                 } else {
                     // User amended the plan
                     Log.d(TAG, "User amended. Simulating recalculation to PROPOSAL.")
-                    _state.value = AnalystState.CONSULTING
                     delay(500)
                     _state.value = AnalystState.PROPOSAL
                     AnalystResponse.Plan(

@@ -100,7 +100,7 @@ abstract class PrismModule {
     abstract fun bindToolRegistry(fake: com.smartsales.prism.data.fakes.FakeToolRegistry): com.smartsales.prism.domain.analyst.ToolRegistry
 
     @Binds @Singleton
-    abstract fun bindConsultantService(impl: com.smartsales.prism.data.real.RealConsultantService): com.smartsales.prism.domain.analyst.ConsultantService
+    abstract fun bindLightningRouter(impl: com.smartsales.prism.data.real.RealLightningRouter): com.smartsales.prism.domain.analyst.LightningRouter
 
     @Binds @Singleton
     abstract fun bindEntityResolverService(impl: com.smartsales.prism.data.real.RealEntityResolverService): com.smartsales.prism.domain.analyst.EntityResolverService
@@ -136,10 +136,12 @@ abstract class PrismModule {
     @Binds @Singleton
     abstract fun bindBadgeAudioPipeline(impl: com.smartsales.prism.data.audio.RealBadgeAudioPipeline): com.smartsales.prism.domain.audio.BadgeAudioPipeline
 
-    // === Coach Pipeline ===
-
+    // === Mascot System I ===
+    
     @Binds @Singleton
-    abstract fun bindCoachPipeline(impl: com.smartsales.prism.data.real.coach.RealCoachPipeline): com.smartsales.prism.domain.coach.CoachPipeline
+    abstract fun bindMascotService(fake: com.smartsales.prism.data.fakes.FakeMascotService): com.smartsales.prism.domain.mascot.MascotService
+
+
 
     // === Entity Writer ===
 

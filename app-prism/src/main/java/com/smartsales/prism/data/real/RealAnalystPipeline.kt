@@ -13,11 +13,6 @@ import com.smartsales.prism.domain.model.Mode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
-import com.smartsales.prism.domain.analyst.ConsultantService
-import com.smartsales.prism.domain.analyst.EntityResolverService
-import com.smartsales.prism.domain.memory.EntityRepository
-import com.smartsales.prism.domain.pipeline.KernelWriteBack
-import com.smartsales.prism.domain.pipeline.EntityRef
 import com.smartsales.prism.domain.disambiguation.EntityDisambiguationService
 import com.smartsales.prism.domain.disambiguation.DisambiguationResult
 
@@ -26,10 +21,6 @@ class RealAnalystPipeline @Inject constructor(
     private val contextBuilder: ContextBuilder,
     private val executor: Executor,
     private val architectService: ArchitectService,
-    private val consultantService: ConsultantService,
-    private val entityRepository: EntityRepository,
-    private val entityResolverService: EntityResolverService,
-    private val kernelWriteBack: KernelWriteBack,
     private val entityDisambiguationService: EntityDisambiguationService
 ) : AnalystPipeline {
 
@@ -37,6 +28,9 @@ class RealAnalystPipeline @Inject constructor(
 
     private val _state = MutableStateFlow(AnalystState.IDLE)
     override val state = _state.asStateFlow()
+    
+    // Tracks which entity we yielded to the Disambiguator for, so we can override the prompt on resume
+    private var _awaitingDisambiguationFor: String? = null
 
     override suspend fun handleInput(
         input: String,
@@ -63,89 +57,48 @@ class RealAnalystPipeline @Inject constructor(
 
         return when (_state.value) {
             AnalystState.IDLE -> {
-                _state.value = AnalystState.CONSULTING
+                // Phase 2 (Wave 3): Architect generates the plan
+                // The pipeline assumes Phase 0 (Lightning Router) has already vetted this as a valid TASK/ANALYSIS priority.
+                
                 var loopCount = 0
                 var promptOverride: String? = null
+                
+                if (_awaitingDisambiguationFor != null) {
+                    promptOverride = "[系统提示]: 已知前文提到的 '$_awaitingDisambiguationFor' 的档案已由用户在前文中作为提示补充或提及，请基于当前对话上下文直接进行分析，绝对不要再返回 missing_entities 抱提示缺失此实体。"
+                    Log.d(TAG, "Consuming disambiguation hint for $_awaitingDisambiguationFor")
+                    _awaitingDisambiguationFor = null
+                }
+                
                 while (loopCount < 3) {
                     loopCount++
-                    
-                    val baseContext = contextBuilder.build(input, Mode.ANALYST)
+                    val baseContext = contextBuilder.build(
+                        userText = input, 
+                        mode = Mode.ANALYST,
+                        depth = com.smartsales.prism.domain.pipeline.ContextDepth.FULL
+                    )
                     val context = if (promptOverride != null) {
                         baseContext.copy(systemPromptOverride = promptOverride)
                     } else {
                         baseContext
                     }
-                    val consultantResult = consultantService.evaluateIntent(context)
-                    if (consultantResult == null) {
-                        _state.value = AnalystState.IDLE
-                        return AnalystResponse.Chat("我没完全明白，能再详细说说你想分析的内容吗？")
-                    }
-
-                    // 3-Tier Intent Gateway: Short-circuit on NOISE or VAGUE
-                    if (consultantResult.queryQuality == com.smartsales.prism.domain.analyst.QueryQuality.NOISE || 
-                        consultantResult.queryQuality == com.smartsales.prism.domain.analyst.QueryQuality.VAGUE) {
-                        Log.d(TAG, "Gateway intercepted query as \${consultantResult.queryQuality}, short-circuiting pipeline.")
-                        _state.value = AnalystState.IDLE
-                        return AnalystResponse.Chat(consultantResult.response)
-                    }
-
-                    if (consultantResult.missingEntities.isNotEmpty()) {
-                        val candidates = entityRepository.getAll(limit = 100)
-                        var anyResolved = false
-                        var unresolvedEntity: String? = null
+                    
+                    try {
+                        val planResult = architectService.generatePlan(input, context, sessionHistory)
                         
-                        for (missingEntity in consultantResult.missingEntities) {
-                            val resolved = entityResolverService.resolve(missingEntity, candidates)
-                            if (resolved != null) {
-                                kernelWriteBack.updateEntityInSession(
-                                    resolved.entityId, 
-                                    EntityRef(resolved.entityId, resolved.displayName, resolved.entityType.name)
-                                )
-                                anyResolved = true
-                            } else {
-                                unresolvedEntity = missingEntity
-                                break
-                            }
-                        }
+                        // Handle implicit entity missing dynamically during planning (if Architect exposes it)
+                        // Or rely on EntityDisambiguationService Gateway at the top.
+                        // For now, if the plan succeeds, we move to PROPOSAL.
                         
-                        if (unresolvedEntity != null) {
-                            Log.d(TAG, "Entity totally missing: $unresolvedEntity. Resetting Analyst state to IDLE and starting Disambiguation.")
-                            // Reset state to IDLE so the resumed intent can start fresh and inject the newly learned entities into context.
-                            _state.value = AnalystState.IDLE
-                            
-                            entityDisambiguationService.startDisambiguation(
-                                originalInput = input,
-                                originalMode = Mode.ANALYST,
-                                ambiguousName = unresolvedEntity,
-                                candidates = emptyList() // No candidates, just a pure creation prompt
-                            )
-                            return AnalystResponse.Chat("系统发现 '$unresolvedEntity' 似乎不在通讯录中，您是想提及新客户还是拼写有误？")
-                        }
-                        
-                        if (anyResolved) {
-                            promptOverride = "[系统提示]: 我已找到你需要的实体资料，请结合 <KNOWN_FACTS> 进行分析，无需再次请求该实体。"
-                            continue
-                        }
-                    }
-
-                    if (!consultantResult.infoSufficient) {
+                        _state.value = AnalystState.PROPOSAL
+                        return AnalystResponse.Plan(
+                            title = planResult.title,
+                            summary = planResult.summary,
+                            markdownContent = planResult.markdownContent
+                        )
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to generate plan from ArchitectService", e)
                         _state.value = AnalystState.IDLE
-                        return AnalystResponse.Chat(consultantResult.response)
-                    } else {
-                        // Phase 2 (Wave 3): Architect generates the plan
-                        try {
-                            val planResult = architectService.generatePlan(input, context, sessionHistory)
-                            _state.value = AnalystState.PROPOSAL
-                            return AnalystResponse.Plan(
-                                title = planResult.title,
-                                summary = planResult.summary,
-                                markdownContent = planResult.markdownContent
-                            )
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to generate plan from ArchitectService", e)
-                            _state.value = AnalystState.IDLE
-                            return AnalystResponse.Chat("生成计划失败，请重试。")
-                        }
+                        return AnalystResponse.Chat("生成计划失败，请重试。")
                     }
                 }
                 

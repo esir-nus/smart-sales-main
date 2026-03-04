@@ -1,22 +1,22 @@
 package com.smartsales.prism.data.real
 
 import android.util.Log
-import com.smartsales.prism.domain.analyst.ConsultantResult
-import com.smartsales.prism.domain.analyst.ConsultantService
+import com.smartsales.prism.domain.analyst.RouterResult
+import com.smartsales.prism.domain.analyst.LightningRouter
 import com.smartsales.prism.domain.pipeline.EnhancedContext
 import com.smartsales.prism.domain.pipeline.Executor
 import com.smartsales.prism.domain.pipeline.ExecutorResult
 import org.json.JSONObject
 import javax.inject.Inject
 
-class RealConsultantService @Inject constructor(
+class RealLightningRouter @Inject constructor(
     private val executor: Executor
-) : ConsultantService {
+) : LightningRouter {
 
-    private val TAG = "RealConsultantService"
+    private val TAG = "RealLightningRouter"
 
-    override suspend fun evaluateIntent(context: EnhancedContext): ConsultantResult? {
-        val result = executor.execute(com.smartsales.prism.domain.config.ModelRegistry.PLANNER, context)
+    override suspend fun evaluateIntent(context: EnhancedContext): RouterResult? {
+        val result = executor.execute(com.smartsales.prism.domain.config.ModelRegistry.EXTRACTOR, context)
 
         if (result !is ExecutorResult.Success) {
             Log.e(TAG, "Executor failed during Phase 1")
@@ -32,9 +32,13 @@ class RealConsultantService @Inject constructor(
             val queryQualityStr = json.optString("query_quality", "vague").lowercase()
             val queryQuality = when (queryQualityStr) {
                 "noise" -> com.smartsales.prism.domain.analyst.QueryQuality.NOISE
-                "actionable" -> com.smartsales.prism.domain.analyst.QueryQuality.ACTIONABLE
+                "simple_qa" -> com.smartsales.prism.domain.analyst.QueryQuality.SIMPLE_QA
+                "deep_analysis" -> com.smartsales.prism.domain.analyst.QueryQuality.DEEP_ANALYSIS
+                "crm_task" -> com.smartsales.prism.domain.analyst.QueryQuality.CRM_TASK
                 else -> com.smartsales.prism.domain.analyst.QueryQuality.VAGUE
             }
+            
+            Log.d(TAG, "⚡ Lightning Router Intent: [\$queryQualityStr] -> \$queryQuality")
             
             val analysisObj = json.optJSONObject("analysis")
             val infoSufficient = analysisObj?.optBoolean("info_sufficient", false) 
@@ -49,14 +53,18 @@ class RealConsultantService @Inject constructor(
                 }
             }
             
-            ConsultantResult(
+            if (queryQuality == com.smartsales.prism.domain.analyst.QueryQuality.NOISE || queryQuality == com.smartsales.prism.domain.analyst.QueryQuality.VAGUE) {
+                missingEntitiesList.clear() // Prevent disambiguation loop for rejected/cross-domain intents
+            }
+            
+            RouterResult(
                 queryQuality = queryQuality,
                 infoSufficient = infoSufficient,
                 response = response,
                 missingEntities = missingEntitiesList
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse Consultant JSON: \$sanitized", e)
+            Log.e(TAG, "Failed to parse Router JSON: \$sanitized", e)
             null
         }
     }

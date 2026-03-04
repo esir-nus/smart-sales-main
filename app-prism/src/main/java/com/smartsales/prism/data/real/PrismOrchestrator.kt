@@ -54,12 +54,14 @@ class PrismOrchestrator @Inject constructor(
     private val scheduleBoard: com.smartsales.prism.domain.memory.ScheduleBoard,
     private val inspirationRepository: InspirationRepository,
     private val reinforcementLearner: com.smartsales.prism.domain.rl.ReinforcementLearner,
-    private val coachPipeline: com.smartsales.prism.domain.coach.CoachPipeline,
     private val entityWriter: EntityWriter,
     private val entityRepository: EntityRepository,
     private val inputParserService: com.smartsales.prism.domain.parser.InputParserService,
     private val entityDisambiguationService: com.smartsales.prism.domain.disambiguation.EntityDisambiguationService,
-    private val telemetry: com.smartsales.prism.domain.telemetry.PipelineTelemetry
+    private val telemetry: com.smartsales.prism.domain.telemetry.PipelineTelemetry,
+    private val lightningRouter: com.smartsales.prism.domain.analyst.LightningRouter,
+    private val mascotService: com.smartsales.prism.domain.mascot.MascotService,
+    private val analystPipeline: com.smartsales.prism.domain.analyst.AnalystPipeline
 ) : Orchestrator {
     
     // Fire-and-forget scope for RL learning
@@ -95,8 +97,68 @@ class PrismOrchestrator @Inject constructor(
 
         return when (_currentMode.value) {
             Mode.COACH -> processCoachInput(input)
-            Mode.ANALYST -> throw IllegalArgumentException("Analyst mode uses AnalystPipeline directly")
+            Mode.ANALYST -> processAnalystInput(input)
             Mode.SCHEDULER -> createScheduledTask(input, null)
+        }
+    }
+    
+    private suspend fun processAnalystInput(input: String): UiState {
+        // If the Analyst state machine is already running (e.g., waiting for confirmation), bypass Phase 0.
+        if (analystPipeline.state.value != com.smartsales.prism.domain.analyst.AnalystState.IDLE) {
+            telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Bypassing Phase 0: Analyst state is \${analystPipeline.state.value}")
+            return executeAnalystPipeline(input)
+        }
+
+        telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Executing Phase 0 Lightning Router")
+        
+        val context = contextBuilder.build(input, Mode.ANALYST, depth = com.smartsales.prism.domain.pipeline.ContextDepth.MINIMAL)
+        val result = lightningRouter.evaluateIntent(context)
+        
+        if (result == null) {
+            return UiState.Response("抱歉，我无法理解您的意图。")
+        }
+        
+        return when (result.queryQuality) {
+            com.smartsales.prism.domain.analyst.QueryQuality.NOISE,
+            com.smartsales.prism.domain.analyst.QueryQuality.VAGUE -> {
+                telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Routed to System I (Mascot)")
+                mascotService.interact(com.smartsales.prism.domain.mascot.MascotInteraction.Text(input))
+                UiState.Idle // Do not record in main chat history
+            }
+            com.smartsales.prism.domain.analyst.QueryQuality.SIMPLE_QA -> {
+                telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Fast tracked SIMPLE_QA")
+                UiState.Response(result.response)
+            }
+            com.smartsales.prism.domain.analyst.QueryQuality.DEEP_ANALYSIS,
+            com.smartsales.prism.domain.analyst.QueryQuality.CRM_TASK -> {
+                telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Routed to System II (Analyst Pipeline)")
+                executeAnalystPipeline(input)
+            }
+        }
+    }
+
+    private suspend fun executeAnalystPipeline(input: String): UiState {
+        val history = contextBuilder.getSessionHistory()
+        val response = analystPipeline.handleInput(input, history)
+        
+        // Map AnalystResponse to UiState
+        return when (response) {
+            is com.smartsales.prism.domain.analyst.AnalystResponse.Chat -> {
+                UiState.Response(response.content)
+            }
+            is com.smartsales.prism.domain.analyst.AnalystResponse.Plan -> {
+                UiState.MarkdownStrategyState(
+                    title = response.title,
+                    markdownContent = response.markdownContent
+                )
+            }
+            is com.smartsales.prism.domain.analyst.AnalystResponse.Analysis -> {
+                UiState.Response(
+                    content = response.content, 
+                    suggestAnalyst = true, 
+                    workflows = response.suggestedWorkflows
+                )
+            }
         }
     }
     
@@ -125,25 +187,9 @@ class PrismOrchestrator @Inject constructor(
                 emptyList()
             }
 
-            // 获取会话历史
-            val sessionHistory = contextBuilder.getSessionHistory()
-            
-            activityController.updateAction(ActivityAction.ASSEMBLING)
-            activityController.startPhase(ActivityPhase.EXECUTING, ActivityAction.STREAMING)
-            
-            // 委托给 CoachPipeline 处理
-            telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Routing to CoachPipeline with ${resolvedEntityIds.size} resolved entities")
-            val response = coachPipeline.process(input, sessionHistory, resolvedEntityIds)
-            
-            when (response) {
-                is com.smartsales.prism.domain.coach.CoachResponse.Chat -> {
-                    activityController.complete()
-                    // 记录会话历史
-                    contextBuilder.recordUserMessage(input)
-                    contextBuilder.recordAssistantMessage(response.content)
-                    UiState.Response(response.content, suggestAnalyst = response.suggestAnalyst)
-                }
-            }
+            activityController.complete()
+            // Mascot 服务现在会在带外处理此类 Intent，所以这里无需调用大模型，直接返回 UI 即可。
+            UiState.Idle
         } catch (e: Exception) {
             val errorMessage = e.message ?: "未知错误"
             telemetry.recordError(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Error in processCoachInput: $errorMessage", e)

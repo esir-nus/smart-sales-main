@@ -77,35 +77,24 @@ Controls the strict phasing of the open loop.
 ┌────────────────────────────────────────────────────────────┐
 │                  THE OPEN-LOOP LIFECYCLE                    │
 │                                                            │
-│  [Idle] ──▶ (User Input)                                   │
+│  [Idle] ──▶ (Received Intent from PrismOrchestrator)       │
 │                  │                                         │
 │                  ▼                                         │
-│         ContextBuilder.build(MINIMAL)                      │
+│         ContextBuilder.build(FULL)                         │
 │                  │                                         │
 │                  ▼                                         │
-│         Phase 1: Lightning Router (qwen-turbo)             │
+│           Phase 2: Architect Generates Plan                │
 │                  │                                         │
-│       ┌──────────┼────────────┐                            │
-│       │          │            │                            │
-│     NOISE    SIMPLE_QA  DEEP_ANALYSIS/CRM_TASK             │
-│       │          │            │                            │
-│       ▼          │            ▼                            │
-│    (Chat        │     ContextBuilder.build(FULL)           │
-│    Bubble)       │            │                            │
-│     [Idle]       ▼            ▼                            │
-│           ContextBuilder Phase 2: Architect                │
-│             .build(DOC)   Generates Plan                   │
-│                  │            │                            │
-│                  ▼            ▼                            │
-│            Fast Track:    ┌── THE SMALL LOOP ──┐           │
-│            qwen-plus      │  Show Strategy     │           │
-│            answers       │  "OK to proceed?"  │           │
-│            directly       │         │          │           │
-│                  │        │    ┌────┴────┐     │           │
-│                  ▼        │  Amend    Confirm  │           │
-│                [Idle]     │    │         │     │           │
-│                           │    └─(back)──┘     │           │
-│                           └────────────────────┘           │
+│                  ▼                                         │
+│            ┌── THE SMALL LOOP ──┐                          │
+│            │  Show Strategy     │                          │
+│            │  "OK to proceed?"  │                          │
+│            │         │          │                          │
+│            │    ┌────┴────┐     │                          │
+│            │  Amend    Confirm  │                          │
+│            │    │         │     │                          │
+│            │    └─(back)──┘     │                          │
+│            └────────────────────┘                          │
 │                          │                                 │
 │                     (User: OK)                             │
 │                          │                                 │
@@ -130,12 +119,9 @@ Controls the strict phasing of the open loop.
 └────────────────────────────────────────────────────────────┘
 ```
 
-- `IDLE`: Base state. Awaiting new intent.
-- `CONSULTING`: Calling Phase 1 (`ConsultantService` Lightning Router). 
-  - *Fast Track: If SIMPLE_QA, answers directly and immediately returns to IDLE. (Note: NOISE and GREETINGS are intercepted by Mascot/System I out-of-band).*
-  - *Slow Track: If CRM_TASK or DEEP_ANALYSIS, evaluates intent and `missing_entities`. If missing, trigger `EntityResolverService`. If ambiguous, stay here, ask user context.*
+- `IDLE`: Base state. Awaiting new intent from `PrismOrchestrator` (following Phase 0 routing).
 - `PROPOSAL`: Plan is rendered. Agent waits. **Execution blocked.**
-  - *Small Loop: If user amends plan, back to Consulting.*
+  - *Small Loop: If user amends plan, back to generating a new plan.*
   - *Break Loop: If user confirms, to Investigating.*
 - `INVESTIGATING`: Phase 3 processing. The investigator (`ArchitectService`) is reading the FULL RAM.
 - `RESULT`: UI prints analysis. Evaluates and mounts the TaskBoard. Resets to `IDLE` after mounting.
@@ -147,9 +133,8 @@ Controls the strict phasing of the open loop.
 | Rule | Enforcer | Explanation |
 |------|----------|-------------|
 | **No Auto-Execute** | `handleInput` | If state == `PROPOSAL`, input MUST be evaluated as a confirmation before moving to `INVESTIGATING`. |
-| **RAM First** | Phase 1 & 3 Calls | Always prompt the LLMs using `ContextBuilder.build()`'s `EnhancedContext`. Assume the Kernel has loaded relevant entities. |
+| **RAM First** | Phase 2 & 3 Calls | Always prompt the LLMs using `ContextBuilder.build()`'s `EnhancedContext`. Assume the Kernel has loaded relevant entities. |
 | **Post-Facto TaskBoard** | Output Mapper | Only mount TaskBoard workflows in `RESULT` state, based on LLM suggestions. |
-| **Simple Boolean Parsing** | Consultant Parser | Phase 1's `info_sufficient` is parsed with `.optBoolean(.., false)`. Do not build complex Linters for Phase 1. |
 
 ---
 
@@ -173,11 +158,10 @@ Following the Anti-Drift Protocol, the Orchestrator will be built using a **Fake
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
 | **1** | **Domain & Fakes** | ✅ SHIPPED | `AnalystPipeline`, `AnalystResponse` models, `FakeAnalystPipeline`. L2 UI wiring (TaskBoard + Strategy rendering). |
-| **2** | **Phase 1 (Consultant)** | ✅ SHIPPED | Wire `RealAnalystPipeline` for conversational routing. Implement simple boolean parsing for `info_sufficient`. |
-| **3** | **Phase 2 (Architect)** | ✅ SHIPPED | Markdown prompts and `PlanResult` to map output to the UI state. |
-| **4** | **Phase 3 (Investigation)** | ✅ SHIPPED | Wire the LLM to read the `EnhancedContext` and update the UI states. |
-| **5** | **Entity Disambiguation** | ✅ SHIPPED | Implement `AwaitingClarification` loop and lightweight `EntityResolverService` validation. |
-| **6** | **Phase 4 (TaskBoard Bypass)** | 🔲 PENDING | Wire `ToolRegistry.executeTool()` to bypass the LLM FSM and execute native Kotlin workflows. Add `UiState.ExecutingTool` for loading states. |
+| **2** | **Phase 2 (Architect)** | ✅ SHIPPED | Markdown prompts and `PlanResult` to map output to the UI state. |
+| **3** | **Phase 3 (Investigation)** | ✅ SHIPPED | Wire the LLM to read the `EnhancedContext` and update the UI states. |
+| **4** | **Entity Disambiguation** | ✅ SHIPPED | Implement `AwaitingClarification` loop and lightweight `EntityResolverService` validation. |
+| **5** | **Phase 4 (TaskBoard Bypass)** | 🔲 PENDING | Wire `ToolRegistry.executeTool()` to bypass the LLM FSM and execute native Kotlin workflows. Add `UiState.ExecutingTool` for loading states. |
 
 ---
 
@@ -191,6 +175,6 @@ Following the Anti-Drift Protocol, the Orchestrator will be built using a **Fake
   - [x] Tapping "OK" artificially races through `INVESTIGATING` and prints mock `RESULT` with a TaskBoard.
 
 - **Test Cases (L2 Simulated On-Device)**:
-  - [x] L2: User types → Fake returns `info_sufficient = false` → UI renders normal chat.
-  - [x] L2: User types → Fake returns `info_sufficient = true` → UI renders `Markdown Strategy Bubble` and stops.
+  - [x] L2: User types → Fake (simulating Phase 0 routing) returns Chat Bubble → UI renders normal chat.
+  - [x] L2: User types → Fake (simulating Phase 0 routing) returns Plan → UI renders `Markdown Strategy Bubble` and stops.
   - [x] L2: User taps "Proceed" → UI fires `INVESTIGATING` state.

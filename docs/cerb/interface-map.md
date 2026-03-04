@@ -53,12 +53,12 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 | **ContextBuilder** | `EnhancedContext` (assembled prompt context) | EntityRegistry, MemoryCenter, SessionContext | `ContextBuilder.build()` | Kernel | ✅ |
 | **InputParser** | Semantic intent and EntityID resolution | AliasIndex (internal) | `InputParserService.parseIntent()` | RAM Application | ✅ |
 | **EntityDisambiguator** | `PendingIntent` interruption state | EntityWriter (to write cures) | `EntityDisambiguationService.process()` | RAM Application | ✅ |
-| **Consultant** | Intent evaluation and missing entities | ContextBuilder | `ConsultantService.evaluateIntent()` | RAM Application | ✅ |
+| **LightningRouter** | Intent evaluation (Phase 0) | ContextBuilder | `LightningRouter.evaluateIntent()` | RAM Application | 🚧 REFACTOR |
 | **Architect** | Markdown analytics plans and investigations | ContextBuilder | `ArchitectService.generatePlan()` | RAM Application | ✅ |
 | **EntityResolver** | Entity disambiguation matching | EntityRegistry | `EntityResolverService.resolve()` | RAM Application | ✅ |
 | **ModelRegistry** | Static LLM Profiles (models, temps, skills) | — | `ModelRegistry` | Config Hub | ✅ |
 | **Executor** | Raw LLM output (stateless — no storage) | ModelRouter | `Executor.execute()` | — | ✅ |
-| **Orchestrator** | Mode routing + pipeline coordination | InputParser, ContextBuilder, Executor, Consultant, Architect, EntityResolver | `Orchestrator.process()` | — | ✅ |
+| **Orchestrator** | Top-level routing + pipeline coordination | LightningRouter, ContextBuilder, Executor, Architect, EntityResolver | `PrismOrchestrator.processInput()` | — | 🚧 REFACTOR |
 
 
 > **Orchestrator is the only module that calls EntityWriter during task creation.** Feature modules (Scheduler, Coach) receive results from Orchestrator; they don't call EntityWriter themselves. (Exception: debug seed code in SchedulerViewModel, guarded by `DEBUG` build type.)

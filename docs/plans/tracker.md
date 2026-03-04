@@ -16,7 +16,7 @@
 | [input-parser](../cerb/input-parser/spec.md) | PARTIAL | W4: Auto-Renaming |
 | [entity-disambiguation](../cerb/entity-disambiguation/spec.md) | SHIPPED | — |
 | [pipeline-telemetry](../cerb/pipeline-telemetry/spec.md) | SHIPPED | — |
-| [coach](../cerb/coach/spec.md) | SHIPPED | — |
+| [coach](../cerb/coach/spec.md) | DEPRECATED | — |
 | [scheduler](../cerb/scheduler/spec.md) | PARTIAL | W8: Pipeline Unification |
 | [conflict-resolver](../cerb/conflict-resolver/spec.md) | SHIPPED | — |
 | [badge-audio-pipeline](../cerb/badge-audio-pipeline/spec.md) | SHIPPED | W4: Error Recovery |
@@ -224,6 +224,7 @@
 | ~~Sticky Notes Boundary~~ | ~~`PrismOrchestrator.createScheduledTask()` calls `entityWriter.upsertFromClue()`~~ | ~~**High**~~ | ✅ **Resolved** — Sticky Notes abandoned. Scheduler creates PERSON + ACCOUNT entities for business-relevant contacts (Wave 10 SHIPPED). |
 | **Confidence-Based Reminder Interceptor** | Replace deterministic round-1 wrap-up with LLM confidence-based interception. Agent decides when to surface schedule context: (1) User greets/noise → inject, (2) User discusses agenda → inject, (3) User wraps up work → suggest completion. Requires classifier or LLM self-assessment of conversation intent. Current workaround: smarter prompting that lets LLM decide naturally. | Medium |
 | **L2 UI Verification** | `MarkdownStrategyBubble.kt` — Verify the title extraction and rendering styling (T2 test from `l2_test_plan.md`) after major component refactoring is complete. | High |
+| **Plugin Pipeline Docking** | Undecided details on how plugins dock to the two pipelines (Analyst vs Lightning Router) and parse JSON payloads into strongly-typed `[Plugin]Request`s. | Medium |
 ---
 
 ## Quick Links

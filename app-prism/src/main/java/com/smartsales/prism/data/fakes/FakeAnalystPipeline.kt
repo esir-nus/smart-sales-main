@@ -57,7 +57,7 @@ class FakeAnalystPipeline @Inject constructor() : AnalystPipeline {
                     delay(300)
                     Log.d(TAG, "Expert bypass triggered.")
                     _state.value = AnalystState.IDLE
-                    AnalystResponse.ToolExecution("EXPORT_PDF")
+                    AnalystResponse.ToolExecution("EXPORT_PDF", emptyMap())
                 } else {
                     // Chat fallback
                     AnalystResponse.Chat(

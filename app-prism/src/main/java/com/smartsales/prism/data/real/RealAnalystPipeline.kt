@@ -94,7 +94,7 @@ class RealAnalystPipeline @Inject constructor(
                                 Log.d(TAG, "Expert Bypass triggered for tool: ${planResult.workflowId}")
                                 // We reset to IDLE because the OS Execution Bypass handles mounting the ExecutingTool UI
                                 _state.value = AnalystState.IDLE
-                                return AnalystResponse.ToolExecution(planResult.workflowId)
+                                return AnalystResponse.ToolExecution(planResult.workflowId, planResult.parameters)
                             }
                             is com.smartsales.prism.domain.analyst.PlanResult.Strategy -> {
                                 // Handle implicit entity missing dynamically during planning (if Architect exposes it)

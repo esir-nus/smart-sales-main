@@ -97,7 +97,11 @@ abstract class PrismModule {
     // === Analyst Tools ===
 
     @Binds @Singleton
-    abstract fun bindToolRegistry(fake: com.smartsales.prism.data.fakes.FakeToolRegistry): com.smartsales.prism.domain.analyst.ToolRegistry
+    abstract fun bindToolRegistry(impl: com.smartsales.prism.data.real.RealToolRegistry): com.smartsales.prism.domain.analyst.ToolRegistry
+
+    @Binds
+    @dagger.multibindings.IntoSet
+    abstract fun bindExportCsvPlugin(plugin: com.smartsales.prism.data.real.plugins.ExportCsvPlugin): com.smartsales.prism.domain.analyst.PrismPlugin
 
     @Binds @Singleton
     abstract fun bindLightningRouter(impl: com.smartsales.prism.data.real.RealLightningRouter): com.smartsales.prism.domain.analyst.LightningRouter

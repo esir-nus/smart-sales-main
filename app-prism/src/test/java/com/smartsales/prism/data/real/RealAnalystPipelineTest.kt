@@ -56,6 +56,9 @@ class RealAnalystPipelineTest {
         }
         
         val toolRegistry: com.smartsales.prism.domain.analyst.ToolRegistry = mock()
+        kotlinx.coroutines.runBlocking {
+            whenever(toolRegistry.getAllTools()).thenReturn(emptyList())
+        }
         pipeline = RealAnalystPipeline(
             contextBuilder = contextBuilder,
             executor = executor,

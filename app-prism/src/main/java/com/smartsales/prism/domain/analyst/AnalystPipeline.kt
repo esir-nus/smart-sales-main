@@ -70,7 +70,8 @@ sealed class AnalystResponse {
      * Consumer mounts the execution state and runs ToolRegistry directly.
      */
     data class ToolExecution(
-        val workflowId: String
+        val workflowId: String,
+        val parameters: Map<String, Any>
     ) : AnalystResponse()
 }
 

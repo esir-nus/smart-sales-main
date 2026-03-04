@@ -30,7 +30,10 @@ class RealArchitectService @Inject constructor(
 
         // 动态将可用工具列表注入到上下文中
         val toolsContextList = availableTools.joinToString("\n") { tool ->
-            "- ID: [${tool.id}] | 名称: ${tool.label} | 功能: ${tool.description}"
+            val paramsStr = if (tool.requiredParams.isNotEmpty()) {
+                " | 需要提取的参数: " + tool.requiredParams.entries.joinToString(", ") { "${it.key} (${it.value})" }
+            } else ""
+            "- ID: [${tool.id}] | 名称: ${tool.label} | 功能: ${tool.description}$paramsStr"
         }
 
         // 构建规划阶段 (Phase 2) 的 System Prompt
@@ -49,7 +52,10 @@ class RealArchitectService @Inject constructor(
             情况 A (用户明确要求执行且在清单中存在完全匹配的工具)：
             {
                 "type": "expert_bypass",
-                "bypassWorkflowId": "必须精确匹配清单中的某个工具 ID"
+                "bypassWorkflowId": "必须精确匹配清单中的某个工具 ID",
+                "parameters": {
+                    "需提取的参数名": "从用户对话或上下文中提取的参数值"
+                }
             }
             
             情况 B (用户需要深度分析、或者要求的操作找不到匹配的工具)：

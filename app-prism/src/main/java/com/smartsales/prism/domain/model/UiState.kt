@@ -56,7 +56,10 @@ sealed class UiState {
     data class MarkdownStrategyState(val title: String, val markdownContent: String) : UiState()
     
     // Wave 6 Phase 4: OS Execution Bypass Loading State
-    data class ExecutingTool(val toolName: String) : UiState()
+    data class ExecutingTool(
+        val toolName: String, 
+        val parameters: Map<String, Any> = emptyMap()
+    ) : UiState()
 }
 
 /**

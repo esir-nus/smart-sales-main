@@ -1,7 +1,7 @@
 # Mascot Service (System I)
 
 > **OS Layer**: RAM Application (Operates out-of-band on EventBus streams)
-> **State**: PARTIAL
+> **State**: SHIPPED
 
 ## Overview
 
@@ -50,4 +50,4 @@ Mascot Service handles **System I** interactions in the Dual-Engine Architecture
 | **1** | Interface & Fakes | ✅ SHIPPED | `MascotService` interface, `FakeMascotService` |
 | **2** | Basic Routing | ✅ SHIPPED | Wire Lightning Router constraints to send NOISE/GREETING intents to Mascot |
 | **3** | EventBus Integration | ✅ SHIPPED | Mascot observes App Idle state to trigger proactive prompts |
-| **4** | UI Integration | 🔲 PLANNED | Overlay Compose UI binding |
+| **4** | UI Integration | ✅ SHIPPED | Overlay Compose UI binding |

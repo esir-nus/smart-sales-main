@@ -45,7 +45,16 @@ class ArchitectLinter @Inject constructor() {
                     if (workflowId.isBlank()) {
                         return ArchitectPlanLinterResult.Error("Expert Bypass 缺少 bypassWorkflowId")
                     }
-                    ArchitectPlanLinterResult.Success(com.smartsales.prism.domain.analyst.PlanResult.ExpertBypass(workflowId))
+                    val paramsJson = json.optJSONObject("parameters")
+                    val parameters = mutableMapOf<String, Any>()
+                    if (paramsJson != null) {
+                        val iterator = paramsJson.keys()
+                        while (iterator.hasNext()) {
+                            val key = iterator.next()
+                            parameters[key] = paramsJson.get(key)
+                        }
+                    }
+                    ArchitectPlanLinterResult.Success(com.smartsales.prism.domain.analyst.PlanResult.ExpertBypass(workflowId, parameters))
                 }
                 "strategy" -> {
                     val title = json.optString("title", "分析策略")

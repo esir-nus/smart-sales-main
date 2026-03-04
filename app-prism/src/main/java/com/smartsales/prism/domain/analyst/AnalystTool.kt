@@ -11,7 +11,8 @@ data class AnalystTool(
     val icon: String,
     val label: String,
     val description: String,
-    val targetRoles: Set<String> = emptySet()  // 空 = 所有角色可见
+    val targetRoles: Set<String> = emptySet(), // 空 = 所有角色可见
+    val requiredParams: Map<String, String> = emptyMap()
 )
 
 /**

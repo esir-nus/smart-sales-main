@@ -13,7 +13,8 @@ sealed class PlanResult {
     ) : PlanResult()
     
     data class ExpertBypass(
-        val workflowId: String
+        val workflowId: String,
+        val parameters: Map<String, Any> = emptyMap()
     ) : PlanResult()
 }
 

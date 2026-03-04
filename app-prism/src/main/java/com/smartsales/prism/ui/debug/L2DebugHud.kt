@@ -46,6 +46,7 @@ private const val TAG = "L2DebugHud"
 interface L2DebugHudEntryPoint {
     fun schedulerLinter(): SchedulerLinter
     fun orchestrator(): Orchestrator
+    fun systemEventBus(): com.smartsales.prism.domain.system.SystemEventBus
 }
 
 /**
@@ -75,6 +76,7 @@ fun L2DebugHud(
     }
     val schedulerLinter = remember { entryPoint.schedulerLinter() }
     val orchestrator = remember { entryPoint.orchestrator() }
+    val eventBus = remember { entryPoint.systemEventBus() }
     val scope = rememberCoroutineScope()
     
     var lastResult by remember { mutableStateOf<String?>(null) }
@@ -222,6 +224,30 @@ fun L2DebugHud(
                     color = Color(0xFF374151),
                     modifier = Modifier.padding(vertical = 12.dp)
                 )
+
+                // ═══════════════════════════════════════════════════
+                // Section 1.5: System Events (Out Of Band)
+                // ═══════════════════════════════════════════════════
+                Text(
+                    "🤖 System Events (Mascot Triggers)",
+                    color = Color(0xFF9CA3AF),
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                Button(
+                    onClick = {
+                        scope.launch {
+                            eventBus.publish(com.smartsales.prism.domain.system.SystemEvent.AppIdle)
+                            lastResult = "📡 Emitted AppIdle event"
+                            showToast = true
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5))
+                ) {
+                    Text("Emit AppIdle (Trigger Mascot)", color = Color.White)
+                }
                 
                 // ═══════════════════════════════════════════════════
                 // Section 2: Direct Linter Tests (JSON Input)

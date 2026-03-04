@@ -114,8 +114,8 @@ Controls the strict phasing of the open loop.
 │         ▼                                                  │
 │ Phase 4: OS Execution Bypass (ToolRegistry)                │
 │ → Bypasses handleInput() entirely                          │
-│ → Directly executes Kotlin backend workflow                │
-│ → Returns UI Result Bubble (e.g. File Link)                │
+│ → Collects Flow<UiState> from ToolRegistry.executeTool()   │
+│ → Emits progressive states to UI (e.g. Loading, Result)    │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -161,8 +161,8 @@ Following the Anti-Drift Protocol, the Orchestrator will be built using a **Fake
 | **2** | **Phase 2 (Architect)** | ✅ SHIPPED | Markdown prompts and `PlanResult` to map output to the UI state. |
 | **3** | **Phase 3 (Investigation)** | ✅ SHIPPED | Wire the LLM to read the `EnhancedContext` and update the UI states. |
 | **4** | **Entity Disambiguation** | ✅ SHIPPED | Implement `AwaitingClarification` loop and lightweight `EntityResolverService` validation. |
-| **5** | **Phase 4 (TaskBoard Bypass)** | 🔲 PENDING | Wire `ToolRegistry.executeTool()` to bypass the LLM FSM and execute native Kotlin workflows. Add `UiState.ExecutingTool` for loading states. |
-| **6** | **Analyze Gateway & Plugin Routing** | 🔲 PENDING | Implement generic handoff, tool recommendation surface, and delegation to tool-specific plugins. |
+| **5** | **Phase 4 (TaskBoard Bypass)** | ✅ SHIPPED | Wire `ToolRegistry.executeTool()` to bypass the LLM FSM and execute native Kotlin workflows. Add `UiState.ExecutingTool` for loading states. |
+| **6** | **Analyze Gateway & Plugin Routing** | ✅ SHIPPED | Implement generic handoff, tool recommendation surface, and delegation to tool-specific plugins. |
 
 ---
 

@@ -23,7 +23,8 @@
 | [analyst-orchestrator](../cerb/analyst-orchestrator/spec.md) | SHIPPED | 🎯 |
 | [lightning-router](../cerb/lightning-router/spec.md) | SHIPPED | — |
 | [analyst-architect](../cerb/analyst-architect/spec.md) | SHIPPED | 🎯 |
-| [mascot-service](../cerb/mascot-service/spec.md) | PARTIAL | W4: Engine UI & Toast |
+| [mascot-service](../cerb/mascot-service/spec.md) | SHIPPED | Wave 4: UI Integration | System I Overlay |
+| [plugin-registry](../cerb/plugin-registry/spec.md) | SPEC_ONLY | W1: Interface Contract |
 
 ### Data & Memory
 
@@ -59,6 +60,8 @@
 
 - **analyst-orchestrator**: Wave 6 SHIPPED — Analyze Gateway & Plugin Routing (Expert Bypass) implemented. `RealArchitectService` now dynamically injects `ToolRegistry` into the Planning phase to strictly enforce tool execution boundaries via `PlanResult.ExpertBypass`.
 - **mascot-service**: Wave 3 SHIPPED (EventBus Integration and AppIdle Latch).
+- **mascot-service**: Wave 4 SHIPPED — Integrated Compose UI `MascotOverlay` out-of-band in `PrismShell`.
+- **mascot-service**: Wave 3 SHIPPED — Wired Mascot EventBus to `PrismViewModel` AppIdle trigger.
 - **mascot-service**: Wave 2 SHIPPED (Basic Routing and Intent disambiguation). `LightningRouter` now distinguishes between `NOISE` and `GREETING` and routes both to Mascot, while correctly routing `VAGUE` to the persistent Analyst flow.
 - **mascot-service**: Wave 1 SHIPPED — `MascotService` interface and `FakeMascotService` prototype formally integrated and wired into dependency injection. Spec upgraded to PARTIAL state.
 - **architecture**: Wave 5 Dual-Engine Architecture SHIPPED. Established "Mascot (System I)" vs "Prism Orchestrator (System II)" boundary.

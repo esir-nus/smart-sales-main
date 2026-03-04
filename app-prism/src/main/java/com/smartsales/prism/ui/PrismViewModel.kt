@@ -45,7 +45,8 @@ class PrismViewModel @Inject constructor(
     private val userProfileRepository: UserProfileRepository,
     private val audioRepository: com.smartsales.prism.domain.audio.AudioRepository,
     private val sessionTitleGenerator: com.smartsales.prism.domain.session.SessionTitleGenerator, // Wave 4: Auto-Renaming
-    private val eventBus: com.smartsales.prism.domain.system.SystemEventBus
+    private val eventBus: com.smartsales.prism.domain.system.SystemEventBus,
+    private val mascotService: com.smartsales.prism.domain.mascot.MascotService
 ) : ViewModel() {
     
     // ------------------------------------------------------------------------
@@ -112,6 +113,17 @@ class PrismViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
+    // ========================================================================
+    // Wave 4: Mascot System I Integration
+    // ========================================================================
+    val mascotState: StateFlow<com.smartsales.prism.domain.mascot.MascotState> = mascotService.state
+
+    fun interactWithMascot(interaction: com.smartsales.prism.domain.mascot.MascotInteraction) {
+        viewModelScope.launch {
+            mascotService.interact(interaction)
+        }
+    }
+
     fun updateSessionTitle(newTitle: String) {
         val title = newTitle.trim()
         if (title.isBlank()) return
@@ -152,9 +164,9 @@ class PrismViewModel @Inject constructor(
 
         // AppIdle Debounce Timer (Wave 3)
         viewModelScope.launch {
-            kotlinx.coroutines.flow.combine(uiState, inputText) { state, text ->
-                Pair(state, text)
-            }.collectLatest { (state, text) ->
+            kotlinx.coroutines.flow.combine(uiState, inputText) { state, _ ->
+                Pair(state, null)
+            }.collectLatest { (state, _) ->
                 if (state is com.smartsales.prism.domain.model.UiState.Idle) {
                     kotlinx.coroutines.delay(15000) // 15 seconds
                     Log.d("PrismVM", "System idle for 15s, emitting AppIdle event")
@@ -376,11 +388,10 @@ class PrismViewModel @Inject constructor(
                 // If the pipeline returned an Execution state (Expert Bypass), trigger it now
                 if (result is UiState.ExecutingTool) {
                     // Extract the toolId (we stored it temporarily in the UI state message field when mapping from AnalystResponse)
-                    // Wait, we need to handle this. PrismViewModel's `orchestrator.processInput` maps `AnalystResponse` to `UiState`.
-                    // We need to trigger the actual tool execution. We do that by finding the tool ID from the result.
                     val toolId = (result as? UiState.ExecutingTool)?.toolName ?: ""
+                    val parameters = (result as? UiState.ExecutingTool)?.parameters ?: emptyMap()
                     if (toolId.isNotBlank()) {
-                         executeToolDirectly(toolId)
+                         executeToolDirectly(toolId, parameters)
                     }
                 }
                 
@@ -421,25 +432,31 @@ class PrismViewModel @Inject constructor(
             try {
                 // Pass the current input text or empty string as context if needed (mostly mock for now)
                 val context = _inputText.value
-                val result = toolRegistry.executeTool(itemId, context)
+                val request = com.smartsales.prism.domain.analyst.PluginRequest(context, emptyMap())
                 
-                android.util.Log.d("TaskBoardTool", "✅ PrismViewModel: execution finished for \${item.title}")
-                
-                if (result.success) {
-                    // Create a response message with the tool result payload
-                    val content = "✅ **${item.title} 执行完毕**\n\n${result.previewText}"
-                    val resultMessage = ChatMessage.Ai(
-                        id = java.util.UUID.randomUUID().toString(),
-                        timestamp = System.currentTimeMillis(),
-                        uiState = UiState.Response(content)
-                    )
-                    _history.value += resultMessage
-                } else {
-                    _errorMessage.value = "工具执行失败: ${result.previewText}"
+                toolRegistry.executeTool(itemId, request).collect { state ->
+                    withContext(Dispatchers.Main) {
+                        if (state is UiState.Response || state is UiState.Error) {
+                            if (state is UiState.Response) {
+                                val resultMessage = ChatMessage.Ai(
+                                    id = java.util.UUID.randomUUID().toString(),
+                                    timestamp = System.currentTimeMillis(),
+                                    uiState = state
+                                )
+                                _history.value += resultMessage
+                            } else if (state is UiState.Error) {
+                                _errorMessage.value = "工具执行失败: ${state.message}"
+                            }
+                            _uiState.value = UiState.Idle
+                            _isSending.value = false
+                        } else {
+                            // Forward partial states
+                            _uiState.value = state
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 _errorMessage.value = "工具执行异常: ${e.message}"
-            } finally {
                 _uiState.value = UiState.Idle
                 _isSending.value = false
             }
@@ -449,7 +466,7 @@ class PrismViewModel @Inject constructor(
     /**
      * Reusable fast-path tool execution (used by TaskBoard clicks AND Expert Bypass)
      */
-    private suspend fun executeToolDirectly(toolId: String) {
+    private suspend fun executeToolDirectly(toolId: String, parameters: Map<String, Any> = emptyMap()) {
         val tools = toolRegistry.getAllTools()
         val tool = tools.find { it.id == toolId }
         val title = tool?.label ?: "未知工具"
@@ -460,27 +477,31 @@ class PrismViewModel @Inject constructor(
         
         try {
             val context = _inputText.value
-            val result = toolRegistry.executeTool(toolId, context)
+            val request = com.smartsales.prism.domain.analyst.PluginRequest(context, parameters)
             
-            withContext(Dispatchers.Main) {
-                if (result.success) {
-                    val content = "✅ **$title 执行完毕**\n\n${result.previewText}"
-                    val resultMessage = ChatMessage.Ai(
-                        id = java.util.UUID.randomUUID().toString(),
-                        timestamp = System.currentTimeMillis(),
-                        uiState = UiState.Response(content)
-                    )
-                    _history.value += resultMessage
-                } else {
-                    _errorMessage.value = "工具执行失败: ${result.previewText}"
+            toolRegistry.executeTool(toolId, request).collect { state ->
+                withContext(Dispatchers.Main) {
+                    if (state is UiState.Response || state is UiState.Error) {
+                        if (state is UiState.Response) {
+                            val resultMessage = ChatMessage.Ai(
+                                id = java.util.UUID.randomUUID().toString(),
+                                timestamp = System.currentTimeMillis(),
+                                uiState = state
+                            )
+                            _history.value += resultMessage
+                        } else if (state is UiState.Error) {
+                            _errorMessage.value = state.message
+                        }
+                        _uiState.value = UiState.Idle
+                    } else {
+                        // Reflect intermediate plugin states (e.g. ExecutingTool with specific progress text)
+                        _uiState.value = state
+                    }
                 }
             }
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
                 _errorMessage.value = "工具执行异常: ${e.message}"
-            }
-        } finally {
-            withContext(Dispatchers.Main) {
                 _uiState.value = UiState.Idle
             }
         }
@@ -540,8 +561,9 @@ class PrismViewModel @Inject constructor(
                     // Start execution flow concurrently since we are passing off to a suspend function 
                     // that runs its own loading overlay before resetting to Idle.
                     val toolId = (result as? UiState.ExecutingTool)?.toolName ?: ""
+                    val parameters = (result as? UiState.ExecutingTool)?.parameters ?: emptyMap()
                     if (toolId.isNotBlank()) {
-                         executeToolDirectly(toolId)
+                         executeToolDirectly(toolId, parameters)
                     }
                 }
                 

@@ -161,7 +161,7 @@ class PrismOrchestrator @Inject constructor(
                 )
             }
             is com.smartsales.prism.domain.analyst.AnalystResponse.ToolExecution -> {
-                UiState.ExecutingTool(response.workflowId)
+                UiState.ExecutingTool(response.workflowId, response.parameters)
             }
         }
     }

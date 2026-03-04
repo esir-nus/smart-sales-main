@@ -73,6 +73,9 @@ fun PrismShell(
     val groupedSessions by historyViewModel.groupedSessions.collectAsState()
     // 用户显示名 — 从 PrismViewModel 的 heroGreeting 间接获取
     val heroGreeting by prismViewModel.heroGreeting.collectAsState()
+    
+    // Wave 4: Mascot UI State
+    val mascotState by prismViewModel.mascotState.collectAsState()
 
     Box(
         modifier = Modifier
@@ -234,6 +237,17 @@ fun PrismShell(
             isVisible = showDebugHud,
             onDismiss = { showDebugHud = false },
             modifier = Modifier.zIndex(PrismElevation.Drawer + 10f)
+        )
+        
+        // --- MASCOT OVERLAY (Wave 4) ---
+        // Floating slightly down from the top (120dp) to cleanly avoid the Scheduler GhostHandle
+        com.smartsales.prism.ui.components.MascotOverlay(
+            state = mascotState,
+            onInteract = { interaction -> prismViewModel.interactWithMascot(interaction) },
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 120.dp)
+                .zIndex(PrismElevation.Drawer + 5f) // Above content, below high-priority modals
         )
     }
 }

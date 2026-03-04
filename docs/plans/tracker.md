@@ -21,9 +21,9 @@
 | [conflict-resolver](../cerb/conflict-resolver/spec.md) | SHIPPED | — |
 | [badge-audio-pipeline](../cerb/badge-audio-pipeline/spec.md) | SHIPPED | W4: Error Recovery |
 | [analyst-orchestrator](../cerb/analyst-orchestrator/spec.md) | SHIPPED | 🎯 |
-| [analyst-consultant](../cerb/analyst-consultant/spec.md) | SHIPPED | 🎯 |
+| [lightning-router](../cerb/lightning-router/spec.md) | SHIPPED | — |
 | [analyst-architect](../cerb/analyst-architect/spec.md) | SHIPPED | 🎯 |
-| [mascot-service](../cerb/mascot-service/spec.md) | SPEC_ONLY | W1: Interface + Fakes |
+| [mascot-service](../cerb/mascot-service/spec.md) | PARTIAL | W2: Real Implementation |
 
 ### Data & Memory
 
@@ -57,10 +57,11 @@
 
 ### 2026-03-04
 
-- **architecture**: Wave 5 Dual-Engine Architecture SHIPPED (Spec level). Established "Mascot (System I)" vs "Prism Orchestrator (System II)" boundary.
+- **architecture**: Wave 5 Dual-Engine Architecture SHIPPED. Established "Mascot (System I)" vs "Prism Orchestrator (System II)" boundary.
   - Mascot handles ephemeral notifications/greetings out-of-band. OS Toasts remain the source of truth for reliable system state.
   - Orchestrator uses the Analyze Gateway to launch Plugins (e.g., Talk Simulator).
-- **mascot-service**: Spec created (SPEC_ONLY) to track System I out-of-band EventBus capabilities.
+- **mascot-service**: Interface + Fakes SHIPPED to track System I out-of-band EventBus capabilities.
+- **lightning-router**: Phase 0 Nuke and Pave SHIPPED. Extracted from Analyst Pipeline and elevated to PrismOrchestrator. Intercepts intents and routes NOISE/GREETING to System I, DEEP_ANALYSIS to System II.
 - **analyst-orchestrator**: Wave 2/4 SHIPPED (Fast Track Refinement) — Implemented exact spec "Open-Loop Lifecycle", routing `SIMPLE_QA` Consultant intents directly to `IDLE` with immediate answers, bypassing the `PROPOSAL` and `INVESTIGATING` states. Validated with `FakeAnalystPipeline` simulation.
 
 ### 2026-03-03

@@ -53,12 +53,12 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 | **ContextBuilder** | `EnhancedContext` (assembled prompt context) | EntityRegistry, MemoryCenter, SessionContext | `ContextBuilder.build()` | Kernel | ✅ |
 | **InputParser** | Semantic intent and EntityID resolution | AliasIndex (internal) | `InputParserService.parseIntent()` | RAM Application | ✅ |
 | **EntityDisambiguator** | `PendingIntent` interruption state | EntityWriter (to write cures) | `EntityDisambiguationService.process()` | RAM Application | ✅ |
-| **LightningRouter** | Intent evaluation (Phase 0) | ContextBuilder | `LightningRouter.evaluateIntent()` | RAM Application | 🚧 REFACTOR |
+| **LightningRouter** | Intent evaluation (Phase 0) | ContextBuilder | `LightningRouter.evaluateIntent()` | RAM Application | ✅ |
 | **Architect** | Markdown analytics plans and investigations | ContextBuilder | `ArchitectService.generatePlan()` | RAM Application | ✅ |
 | **EntityResolver** | Entity disambiguation matching | EntityRegistry | `EntityResolverService.resolve()` | RAM Application | ✅ |
 | **ModelRegistry** | Static LLM Profiles (models, temps, skills) | — | `ModelRegistry` | Config Hub | ✅ |
 | **Executor** | Raw LLM output (stateless — no storage) | ModelRouter | `Executor.execute()` | — | ✅ |
-| **Orchestrator** | Top-level routing + pipeline coordination | LightningRouter, ContextBuilder, Executor, Architect, EntityResolver | `PrismOrchestrator.processInput()` | — | 🚧 REFACTOR |
+| **Orchestrator** | Top-level routing + pipeline coordination | LightningRouter, MascotService, ContextBuilder, Executor, Architect, EntityResolver | `PrismOrchestrator.processInput()` | — | ✅ |
 
 
 > **Orchestrator is the only module that calls EntityWriter during task creation.** Feature modules (Scheduler, Mascot) receive results from Orchestrator; they don't call EntityWriter themselves. (Exception: debug seed code in SchedulerViewModel, guarded by `DEBUG` build type.)
@@ -73,7 +73,7 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 
 | Module | Owns (Writes) | Reads From (directly) | Receives From (via Orchestrator) | OS Layer | Status |
 |--------|--------------|----------------------|----------------------------------|----------|--------|
-| **Mascot (System I)** | Ephemeral interactions | EventBus (Idle, Error) | `MascotState` | RAM App (Out-of-band) | 🔲 |
+| **Mascot (System I)** | Ephemeral interactions, greetings | EventBus (Idle, Error) | `MascotState` | RAM App (Out-of-band) | 📐 |
 | **Scheduler** | ScheduledTask, InspirationEntry | EntityRegistry (alias lookup), ScheduleBoard (conflicts) | `UiState.SchedulerTaskCreated` | Consumer of RAM | ✅ |
 | **ScheduleBoard** | Conflict index (in-memory cache) | ScheduledTaskRepository (populates index) | — | SSD | ✅ |
 | **Analyst Orchestrator** | Task/Analysis State Machine | ContextBuilder, ClientProfileHub | `AnalystPipeline.state` | RAM Application | ✅ |

@@ -23,7 +23,7 @@
 | [analyst-orchestrator](../cerb/analyst-orchestrator/spec.md) | SHIPPED | 🎯 |
 | [lightning-router](../cerb/lightning-router/spec.md) | SHIPPED | — |
 | [analyst-architect](../cerb/analyst-architect/spec.md) | SHIPPED | 🎯 |
-| [mascot-service](../cerb/mascot-service/spec.md) | PARTIAL | W2: Real Implementation |
+| [mascot-service](../cerb/mascot-service/spec.md) | PARTIAL | W2: Basic Routing |
 
 ### Data & Memory
 
@@ -57,6 +57,7 @@
 
 ### 2026-03-04
 
+- **mascot-service**: Wave 1 SHIPPED — `MascotService` interface and `FakeMascotService` prototype formally integrated and wired into dependency injection. Spec upgraded to PARTIAL state.
 - **architecture**: Wave 5 Dual-Engine Architecture SHIPPED. Established "Mascot (System I)" vs "Prism Orchestrator (System II)" boundary.
   - Mascot handles ephemeral notifications/greetings out-of-band. OS Toasts remain the source of truth for reliable system state.
   - Orchestrator uses the Analyze Gateway to launch Plugins (e.g., Talk Simulator).

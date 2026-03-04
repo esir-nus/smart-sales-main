@@ -33,6 +33,7 @@ The only component allowed to instantiate and write to `SessionWorkingSet`.
 
 **Key Responsibilities**:
 - **Session Lifecycle**: Create/Reset working set.
+- **Lazy Loading (ContextDepth)**: Support `MINIMAL`, `DOCUMENT_QA`, and `FULL` build depths to save tokens and SSD reads.
 - **Read**: Expose `EnhancedContext` to Applications (read-only snapshot).
 - **Write**: Implement `KernelWriteBack` for persistence synchronization.
 - **Turn Counting**: Manage session turn metadata.
@@ -94,7 +95,8 @@ enum class EntityState {
 |------|-------------|
 | **Write-Through** | EntityWriter MUST call `KernelWriteBack` after every SSD write. RAM Section 1 & 3 are updated immediately. |
 | **Kernel Owns RAM** | Only `ContextBuilder` (Kernel) holds reference to `SessionWorkingSet`. Apps see only `EnhancedContext`. |
-| **3-Section Loading** | S2 loads once (Turn 1). S1 Knowledge loads once (Turn 1). S3 loads dynamically on `markActive()`. |
+| **Context Depth (Lazy Loading)** | `MINIMAL`: History only. `DOCUMENT_QA`: +Audio Transcript. `FULL`: 3-Section Architecture (Habits, Sticky Notes, CRM DB). |
+| **3-Section Loading (FULL)** | S2 loads once (Turn 1). S1 Knowledge loads once (Turn 1). S3 loads dynamically on `markActive()`. |
 | **Concurrency** | Kernel uses `Mutex` to serialize writes to the Working Set. |
 
 ---
@@ -107,6 +109,7 @@ enum class EntityState {
 | **2** | **Path Indexing** | ✅ SHIPPED | `pathIndex`, `resolveAlias()` |
 | **3** | **Smart Triggers** | ✅ SHIPPED | `shouldLoadData()`, `markActive()` |
 | **4** | **OS Model Upgrade** | ✅ SHIPPED | `KernelWriteBack`, 3-Section Architecture, `RealContextBuilder` rewrite |
+| **5** | **Context Compression** | ✅ SHIPPED | `ContextDepth` enum, Lazy Loading for NOISE/QA routing |
 
 ---
 

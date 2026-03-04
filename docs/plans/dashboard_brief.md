@@ -37,7 +37,7 @@ Implement a **Developer Dashboard Overlay** (DevTools) that sits *above* the app
 - **Content**:
     - "🔵 Home" (Reset)
     - "🚀 Onboarding" (New)
-    - "📊 Analyst Mode" (Force Trigger)
+    - "📊 System II (Orchestrator Focus)" (Force Trigger)
     - "📅 Scheduler Drawer" (Force Open)
 
 ## Acceptance Criteria

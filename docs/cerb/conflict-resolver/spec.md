@@ -188,17 +188,17 @@ All resolution actions (`KEEP_A`, `KEEP_B`, `RESCHEDULE`, `COEXIST`) clear both 
 
 ---
 
-### 🔬 Wave 3: Cross-Mode Conflict Reminder (⏸️ BLOCKED)
+### 🔬 Wave 3: Cross-Engine Conflict Reminder (⏸️ BLOCKED)
 
-> **Goal**: Coach and Analyst modes naturally remind users about unresolved conflicts by reading ScheduleBoard state.
+> **Goal**: Mascot and Orchestrator naturally remind users about unresolved conflicts by reading ScheduleBoard state.
 >
-> **⚠️ BLOCKED**: Requires Coach/Analyst modes to be implemented first.
+> **⚠️ BLOCKED**: Requires Dual-Engine integration to be implemented first.
 
 #### Overview
 
-Unresolved conflicts persist in ScheduleBoard with metadata. When Coach/Analyst builds context, they see pending conflicts and can inject natural reminders into their responses.
+Unresolved conflicts persist in ScheduleBoard with metadata. When the Orchestrator/Mascot builds context, they see pending conflicts and can inject natural reminders into their responses.
 
-**Key Principle**: Coach/Analyst **do not resolve** conflicts. They only **remind** users to open Scheduler drawer.
+**Key Principle**: Engines **do not resolve** conflicts. They only **remind** users to open Scheduler drawer.
 
 #### Data Flow
 
@@ -208,7 +208,7 @@ ScheduleBoard
     ↓
 ConflictState: { conflictId, taskA, taskB, detectedAt, resolvedAt? }
     ↓
-    ↓ (2) Coach/Analyst ContextBuilder reads pending conflicts
+    ↓ (2) ContextBuilder reads pending conflicts
     ↓
 pendingConflicts: List<ConflictState> where resolvedAt == null
     ↓
@@ -218,7 +218,7 @@ pendingConflicts: List<ConflictState> where resolvedAt == null
     ↓
     ↓ (4) LLM naturally mentions in response
     ↓
-Coach: "对了，你还有个日程冲突没处理，记得下拉查看哦。"
+Mascot: "对了，你还有个日程冲突没处理，记得下拉查看哦。"
 ```
 
 #### New Model: ConflictState

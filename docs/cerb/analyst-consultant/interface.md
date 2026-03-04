@@ -25,7 +25,7 @@ interface ConsultantService {
 
 ```kotlin
 enum class QueryQuality {
-    NOISE, VAGUE, ACTIONABLE
+    NOISE, SIMPLE_QA, DEEP_ANALYSIS, CRM_TASK
 }
 
 data class ConsultantResult(

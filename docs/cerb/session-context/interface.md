@@ -14,8 +14,20 @@ The Session Working Set is the **per-session RAM** managed by `ContextBuilder` (
 ### Exposed via `ContextBuilder` (existing interface)
 
 ```kotlin
+enum class ContextDepth {
+    MINIMAL,      // Only UserText + History
+    DOCUMENT_QA,  // MINIMAL + Audio Transcript
+    FULL          // The complete RAM snapshot (Habits, Pointers, Knowledge)
+}
+
 interface ContextBuilder {
-    suspend fun build(userText: String, mode: Mode): EnhancedContext
+    suspend fun build(
+        userText: String, 
+        mode: Mode, 
+        resolvedEntityIds: List<String> = emptyList(), 
+        depth: ContextDepth = ContextDepth.FULL
+    ): EnhancedContext
+    
     fun getSessionHistory(): List<ChatTurn>
     suspend fun recordUserMessage(content: String)
     suspend fun recordAssistantMessage(content: String)

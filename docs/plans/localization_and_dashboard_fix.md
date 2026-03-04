@@ -9,7 +9,7 @@
 ### `src/components/PrototypeDashboard.tsx`
 -   `Reset Home` -> `重置首页`
 -   `Onboarding` -> `引导页`
--   `Analyst Mode` -> `分析模式`
+-   `System II (Orchestrator)` -> `分析模式`
 -   `Scheduler` -> `日程安排`
 -   `Prototype` -> `原型控制台`
 -   `Navigation & State` -> `导航与状态`

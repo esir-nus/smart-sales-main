@@ -1,7 +1,6 @@
 # Analyst Architect
 
-> **Cerb-compliant spec** — Phase 2 & 3: Planning and Investigation for Analyst Mode.
-> **Cerb-compliant spec** — Phase 2 & 3: Planning and Investigation for Analyst Mode.
+> **Cerb-compliant spec** — Phase 2 & 3: Planning and Investigation for System II.
 > **OS Layer**: RAM Application (operates on input EnhancedContext)
 > **State**: SHIPPED
 
@@ -9,7 +8,7 @@
 
 ## Overview
 
-The `analyst-architect` is the workhorse of Analyst Mode. It handles two distinct structural phases assigned by the `analyst-orchestrator`:
+The `analyst-architect` is the workhorse of System II. It handles two distinct structural phases assigned by the `analyst-orchestrator`:
 1. **Phase 2 (Strategy Planning)**: Generates a clear investigation strategy formatted as natural Markdown.
 2. **Phase 3 (Investigation)**: Once the user confirms the strategy, this phase performs deep reasoning over the `EnhancedContext` and produces the final analysis and Task Board suggestions.
 

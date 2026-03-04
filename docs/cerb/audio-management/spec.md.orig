@@ -141,11 +141,11 @@ See [interface.md](./interface.md) for:
 
 **Implementation**:
 - [ ] `bindSession(audioId, sessionId)` persists association
-- [ ] Coach mode can inject transcription as context
+- [ ] Mascot can inject transcription as context
 - [ ] UI shows "Used in session X" indicator
 
 **Testing**:
-- [ ] Bind audio → Ask AI in Coach mode → summary referenced
+- [ ] Bind audio → Ask AI in chat → summary referenced
 - [ ] Unbind → no longer referenced
 
 ---

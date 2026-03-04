@@ -39,15 +39,15 @@
 *   **Navigation**:
     *   Top: Header (Home/Chat Dynamic).
     *   Bottom Right: **Knot FAB** (Breathing).
-    *   Bottom Center: **Floating Capsule** Input (Coach Mode).
+    *   Bottom Center: **Floating Capsule** Input.
 
-### 2. Chat Interface (Dual-Mode)
-*   **Coach Mode**:
-    *   Standard chat bubbles.
+### 2. Chat Interface (Dual-Engine)
+*   **System I (Mascot)**:
+    *   Ephemeral chat bubbles (out-of-band overlay).
     *   Simulated streaming (20ms/char).
-*   **Analyst Mode** (Toggle Switch):
+*   **System II (Orchestrator)**:
     *   **Thinking Box**: Accordion-style, auto-folding after 3s.
-    *   **Plan Card**: Persistent card at top of chat stream.
+    *   **Task Board**: Persistent card at top of chat stream.
     *   **Tasks**: Checkbox items with "Running" states.
 
 ### 3. Scheduler Interface (Top Drawer)

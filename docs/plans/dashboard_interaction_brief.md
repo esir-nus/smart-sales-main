@@ -37,7 +37,7 @@ Implement **Mutually Exclusive States** for the Dashboard navigation. Activating
     - `showPlan` -> `false`
     - `mode` -> `'coach'`
 
-### 2. Analyst Mode
+### 2. System II (Orchestrator Focus)
 - **Action**: Click Analyst icon.
 - **State**:
     - `isDrawerOpen` -> `false` (CRITICAL FIX)
@@ -58,7 +58,7 @@ Implement **Mutually Exclusive States** for the Dashboard navigation. Activating
     - `isOnboarding` -> `false`
 
 ## Acceptance Criteria
-1. [ ] Clicking "Analyst Mode" while Scheduler is open **automatically closes** the Scheduler.
+1. [ ] Clicking "Analyst" while Scheduler is open **automatically closes** the Scheduler.
 2. [ ] Clicking "Home" while Scheduler is open **automatically closes** the Scheduler.
 3. [ ] User sees immediate visual confirmation of the new state without extra clicks.
 

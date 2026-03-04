@@ -154,7 +154,7 @@ See [interface.md](./interface.md) for:
 - [x] Auto-renames session to accurate audio title.
 
 **Testing**:
-- [ ] Bind audio → Ask AI in Coach mode → summary referenced
+- [ ] Bind audio → Ask AI in chat → summary referenced
 - [ ] Unbind → no longer referenced
 
 ---

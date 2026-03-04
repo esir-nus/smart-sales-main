@@ -1,14 +1,20 @@
-# Analyst Orchestrator
+# Analyst Orchestrator (System II)
 
 > **Cerb-compliant spec** — State machine and execution router for deep analysis.
 > **OS Layer**: RAM Application (operates on SessionWorkingSet via ContextBuilder)
-> **State**: 🚧 IN PROGRESS
+> **State**: SHIPPED
 
 ---
 
 ## Overview
 
-The `analyst-orchestrator` is the central traffic cop for Analyst Mode. It does not perform the LLM analysis itself; instead, it manages the **Open-Loop Lifecycle**, ensuring the user is always in control before expensive investigations begin.
+The `analyst-orchestrator` is the central traffic cop for Analyst Mode. It operates as **System II (The Worker)** in the Dual-Engine Architecture. It is stateful, formal, and operates in the persistent chat feed. It does not perform the LLM analysis itself; instead, it manages the **Open-Loop Lifecycle**, ensuring the user is always in control before expensive investigations begin.
+
+### The Analyze Gateway & Plugin Routing
+The Orchestrator acts as a Launchpad for complex tasks:
+1. **Generic Handoff**: If a user uploads heavy context (e.g., an audio transcript) and says "Analyze", the Orchestrator runs a baseline read and surfaces recommended plugins/tools (e.g., Talk Simulator, Summarizer).
+2. **Expert Bypass**: Specific commands ("Give me the PDF report") skip the recommendation phase and execute the tool directly.
+3. **Plugin Workflows**: Once a tool is selected, the Orchestrator delegates execution entirely to that plugin's workflow, keeping the core Open-Loop State Machine clean.
 
 **Key Principles**:
 1. **The Human-in-the-Loop Gate**: The orchestrator absolutely MUST pause at `PROPOSAL` state and wait for explicit user confirmation before executing any investigation plan.
@@ -74,30 +80,32 @@ Controls the strict phasing of the open loop.
 │  [Idle] ──▶ (User Input)                                   │
 │                  │                                         │
 │                  ▼                                         │
-│         ContextBuilder.build() ── Assembles RAM Snapshot   │
+│         ContextBuilder.build(MINIMAL)                      │
 │                  │                                         │
 │                  ▼                                         │
-│         Phase 1: LLM Evaluates Intent                      │
+│         Phase 1: Lightning Router (qwen-turbo)             │
 │                  │                                         │
-│          ┌───────┴───────┐                                 │
-│          │               │                                 │
-│    info_sufficient    info_sufficient                       │
-│       = false            = true                            │
-│          │               │                                 │
-│          ▼               ▼                                 │
-│    Ask Clarification   Phase 2: LLM Generates Plan         │
-│    (Loop back ↑)         │                                 │
-│                          ▼                                 │
-│              ┌── THE SMALL LOOP ──┐                        │
-              │                    │                        │
-              │  Show Strategy     │                        │
-              │  "OK to proceed?"  │                        │
-              │         │          │                        │
-│              │    ┌────┴────┐     │                        │
-│              │  Amend    Confirm  │                        │
-│              │    │         │     │                        │
-│              │    └─(back)──┘     │                        │
-│              └────────────────────┘                        │
+│       ┌──────────┼────────────┐                            │
+│       │          │            │                            │
+│     NOISE    SIMPLE_QA  DEEP_ANALYSIS/CRM_TASK             │
+│       │          │            │                            │
+│       ▼          │            ▼                            │
+│    (Chat        │     ContextBuilder.build(FULL)           │
+│    Bubble)       │            │                            │
+│     [Idle]       ▼            ▼                            │
+│           ContextBuilder Phase 2: Architect                │
+│             .build(DOC)   Generates Plan                   │
+│                  │            │                            │
+│                  ▼            ▼                            │
+│            Fast Track:    ┌── THE SMALL LOOP ──┐           │
+│            qwen-plus      │  Show Strategy     │           │
+│            answers       │  "OK to proceed?"  │           │
+│            directly       │         │          │           │
+│                  │        │    ┌────┴────┐     │           │
+│                  ▼        │  Amend    Confirm  │           │
+│                [Idle]     │    │         │     │           │
+│                           │    └─(back)──┘     │           │
+│                           └────────────────────┘           │
 │                          │                                 │
 │                     (User: OK)                             │
 │                          │                                 │
@@ -123,12 +131,13 @@ Controls the strict phasing of the open loop.
 ```
 
 - `IDLE`: Base state. Awaiting new intent.
-- `CONSULTING`: Calling Phase 1 (`ConsultantService`). Evaluates intent, returns `info_sufficient` and `missing_entities`.
-  - *Small Loop: If missing entities found, trigger `EntityResolverService` to find exact matches. If ambiguous, stay here, ask user context.*
+- `CONSULTING`: Calling Phase 1 (`ConsultantService` Lightning Router). 
+  - *Fast Track: If NOISE or SIMPLE_QA, answers directly and immediately returns to IDLE.*
+  - *Slow Track: If CRM_TASK or DEEP_ANALYSIS, evaluates intent and `missing_entities`. If missing, trigger `EntityResolverService`. If ambiguous, stay here, ask user context.*
 - `PROPOSAL`: Plan is rendered. Agent waits. **Execution blocked.**
   - *Small Loop: If user amends plan, back to Consulting.*
   - *Break Loop: If user confirms, to Investigating.*
-- `INVESTIGATING`: Phase 3 processing. The investigator (`ArchitectService`) is reading the RAM.
+- `INVESTIGATING`: Phase 3 processing. The investigator (`ArchitectService`) is reading the FULL RAM.
 - `RESULT`: UI prints analysis. Evaluates and mounts the TaskBoard. Resets to `IDLE` after mounting.
 
 ---

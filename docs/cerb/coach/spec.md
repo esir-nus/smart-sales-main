@@ -1,16 +1,23 @@
-# Coach Mode
+# Mascot (System I) - Formerly Coach
 
-> **Cerb-compliant spec** — Lightweight conversational AI for sales coaching.  
-> **OS Model**: Consumer of RAM (reads habits + entity context from SessionWorkingSet)
-> **State**: SHIPPED
+> **Cerb-compliant spec** — Lightweight, stateless, empathetic conversational UX.
+> **OS Model**: RAM Application (Operates out-of-band via EventBus)
+> **State**: SHIPPED (as "Coach"), Transitioning to "Mascot"
 
 ---
 
 ## Overview
 
-Coach Mode is the **default conversational mode** in Prism. It provides fast, lightweight responses for sales technique discussions, quick questions, and general coaching interactions.
+The Mascot (formerly Coach Mode) handles **System I** interactions in the Dual-Engine Architecture. It is stateless, ephemeral, and acts as the proactive engagement layer.
 
-**Key Principle**: Coach is conversational and responsive. It should NOT show heavy "thinking" UI — users expect quick answers.
+**Key Principle**: The Mascot is conversational and responsive but **distinct** from formal analysis. It should NOT save its chatter to the main `SessionHistory`.
+
+**Core Responsibilities**:
+1. **Casual Greetings & Small Talk**: Responds to "Hello", "Thanks", etc.
+2. **Noise Handling**: Gracefully ignores or deflects invalid ASR noise out-of-band.
+3. **Proactive Dashboard UI**: Surfaces the Daily Briefing or Tips on app idle.
+
+> **CRITICAL CONSTRAINT**: The Mascot does NOT handle critical system notifications (e.g., "Audio Transcription Complete", "Task Saved"). Those MUST route to native OS Toasts (`NotificationService`) for zero-latency, deterministic user feedback.
 
 ---
 

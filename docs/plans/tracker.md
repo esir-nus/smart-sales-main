@@ -23,6 +23,7 @@
 | [analyst-orchestrator](../cerb/analyst-orchestrator/spec.md) | SHIPPED | 🎯 |
 | [analyst-consultant](../cerb/analyst-consultant/spec.md) | SHIPPED | 🎯 |
 | [analyst-architect](../cerb/analyst-architect/spec.md) | SHIPPED | 🎯 |
+| [mascot-service](../cerb/mascot-service/spec.md) | SPEC_ONLY | W1: Interface + Fakes |
 
 ### Data & Memory
 
@@ -54,10 +55,20 @@
 
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 
+### 2026-03-04
+
+- **architecture**: Wave 5 Dual-Engine Architecture SHIPPED (Spec level). Established "Mascot (System I)" vs "Prism Orchestrator (System II)" boundary.
+  - Mascot handles ephemeral notifications/greetings out-of-band. OS Toasts remain the source of truth for reliable system state.
+  - Orchestrator uses the Analyze Gateway to launch Plugins (e.g., Talk Simulator).
+- **mascot-service**: Spec created (SPEC_ONLY) to track System I out-of-band EventBus capabilities.
+- **analyst-orchestrator**: Wave 2/4 SHIPPED (Fast Track Refinement) — Implemented exact spec "Open-Loop Lifecycle", routing `SIMPLE_QA` Consultant intents directly to `IDLE` with immediate answers, bypassing the `PROPOSAL` and `INVESTIGATING` states. Validated with `FakeAnalystPipeline` simulation.
+
 ### 2026-03-03
 
 - **entity-disambiguation**: W1-3 SHIPPED — `EntityDisambiguator` Global Gateway implemented. Intercept & Resume loop successfully wired into `PrismOrchestrator` and `AnalystPipeline`. LLM semantic disambiguation and explicit entity declarations gracefully route to `EntityWriter`.
 - **session-context**: W4 OS Model Refinement — Implemented Delta Loading Entity Cache (`entityCache` Map) in `SessionWorkingSet` and `RealContextBuilder`. Fixed infinite pipeline loops and redundant SSD queries.
+- **session-context**: W5 SHIPPED — Context Compression / Lazy Loading implemented via `ContextDepth` enum in `ContextBuilder`. Eliminates full DB and Habitat loads for NOISE/QA intents.
+- **analyst-consultant**: W4 SHIPPED — Lightning Router utilizes `ContextDepth.MINIMAL` in `RealAnalystPipeline`, passing through the fast Extractor model and avoiding heavy token footprints.
 - **audio-management**: Ask AI Dataflow Verification — Reworked "Ask AI" entrance. Implemented zero-latency ASCII overview card generation, standard `Mode.ANALYST` routing, and invisible `documentContext` binding in `SessionWorkingSet` to offload heavy payload rendering from the UI.
 
 ### 2026-03-02

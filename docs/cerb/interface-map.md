@@ -73,13 +73,25 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 
 | Module | Owns (Writes) | Reads From (directly) | Receives From (via Orchestrator) | OS Layer | Status |
 |--------|--------------|----------------------|----------------------------------|----------|--------|
+| **Mascot (System I)** | Ephemeral interactions | EventBus (Idle, Error) | `MascotState` | RAM App (Out-of-band) | 🔲 |
 | **Scheduler** | ScheduledTask, InspirationEntry | EntityRegistry (alias lookup), ScheduleBoard (conflicts) | `UiState.SchedulerTaskCreated` | Consumer of RAM | ✅ |
 | **ScheduleBoard** | Conflict index (in-memory cache) | ScheduledTaskRepository (populates index) | — | SSD | ✅ |
-| **Coach** | Chat message responses | MemoryCenter, UserHabit, EntityRegistry | `UiState.Response` | Consumer of RAM | ✅ |
-| **Analyst** | Analysis reports | ContextBuilder, ClientProfileHub | `AnalystPipeline.state` | RAM Application | 📐 |
+| **Analyst Orchestrator** | Task/Analysis State Machine | ContextBuilder, ClientProfileHub | `AnalystPipeline.state` | RAM Application | ✅ |
 | **BadgeAudioPipeline** | Audio recording lifecycle | ASR, OSS, ConnectivityBridge | Triggers Orchestrator on transcription complete | — | ✅ |
 
 > **"Reads From" vs "Receives From"**: "Reads From" = the feature calls the interface directly. "Receives From" = Orchestrator pushes results into the feature's ViewModel. This distinction prevents confusion about who initiates the call.
+
+---
+
+## Delivery Workflow Registry (The TaskBoard Vault)
+
+The backend maintains a list of pure-Kotlin actionable workflows (The "Hands"). The LLM never executes these—it only recommends them by returning their `workflowId`.
+
+Current recognized Vault IDs:
+- `GENERATE_PDF`
+- `EXPORT_CSV`
+- `DRAFT_EMAIL`
+- `TALK_SIMULATOR` (Plugin Workflow)
 
 ---
 

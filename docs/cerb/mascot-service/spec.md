@@ -48,6 +48,6 @@ Mascot Service handles **System I** interactions in the Dual-Engine Architecture
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
 | **1** | Interface & Fakes | ✅ SHIPPED | `MascotService` interface, `FakeMascotService` |
-| **2** | Basic Routing | 🔲 PLANNED | Wire Lightning Router constraints to send NOISE/GREETING intents to Mascot |
+| **2** | Basic Routing | ✅ SHIPPED | Wire Lightning Router constraints to send NOISE/GREETING intents to Mascot |
 | **3** | EventBus Integration | 🔲 PLANNED | Mascot observes App Idle state to trigger proactive prompts |
 | **4** | UI Integration | 🔲 PLANNED | Overlay Compose UI binding |

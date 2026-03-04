@@ -58,6 +58,8 @@
 
 ### 2026-03-04
 
+- **analyst-orchestrator**: Dual-Engine UI Alignment SHIPPED. Completely removed legacy `Mode.COACH` enum, UI toggles, and Switchers.
+- **analyst-orchestrator**: Analyst Pipeline State Machine Ghost State FIX. Wired session switches to automatically call `AnalystPipeline.reset()`.
 - **plugin-registry**: Wave 1-4 COMPLETED — RealToolRegistry, flow execution, structure plugins.
 - **analyst-orchestrator**: Wave 6 SHIPPED — Analyze Gateway & Plugin Routing (Expert Bypass) implemented. `RealArchitectService` now dynamically injects `ToolRegistry` into the Planning phase to strictly enforce tool execution boundaries via `PlanResult.ExpertBypass`.
 - **mascot-service**: Wave 3 SHIPPED (EventBus Integration and AppIdle Latch).

@@ -1,23 +1,22 @@
-# Analyst Consultant Interface
+# Lightning Router Interface
 
-> **Owner**: analyst-consultant
+> **Owner**: lightning-router
 > **Consumers**: analyst-orchestrator
 
 ## Public Interface
 
 ```kotlin
-interface ConsultantService {
+interface LightningRouter {
     /**
-     * Phase 1 of Analyst Mode: Evaluates user intent against RAM context.
-     * Determines whether there is enough information to build an investigation plan,
-     * or if clarification from the user is needed.
+     * Phase 0 of PrismOrchestrator: Evaluates user intent against MINIMAL RAM context.
+     * Determines whether the input is NOISE, GREETING, SIMPLE_QA, or a TASK/ANALYSIS.
      *
-     * @param context RAM snapshot (EnhancedContext) loaded by Kernel (contains input and history)
-     * @return Result indicating if information is sufficient. Returns `null` if the intent is completely unclear and requires immediate user clarification before any evaluation can proceed.
+     * @param context MINIMAL RAM snapshot loaded by Kernel
+     * @return Result indicating the intent classification and sufficiency for Phase 2.
      */
     suspend fun evaluateIntent(
         context: EnhancedContext
-    ): ConsultantResult?
+    ): RouterResult?
 }
 ```
 

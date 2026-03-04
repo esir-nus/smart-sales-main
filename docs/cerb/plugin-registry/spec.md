@@ -1,7 +1,7 @@
 # Plugin Registry
 
 > **OS Layer**: App Infrastructure / Hardware Abstraction
-> **State**: SPEC_ONLY
+> **State**: PARTIAL
 
 ---
 
@@ -22,7 +22,7 @@ Currently, tools are hardcoded in a `FakeToolRegistry` with a synchronous interf
 
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
-| **1** | **Interface Contract** | 🔲 PLANNED | Define `PluginRegistry` spec and interface. Document current fake debt. |
-| **2** | **Plugin SDK Definition** | 🔲 PLANNED | Create `PrismPlugin` interface and standard `PluginRequest` / `PluginResponse` DTOs. |
-| **3** | **Dynamic Registry** | 🔲 PLANNED | Implement `RealToolRegistry`. Use Dagger/Hilt Multibinding (`@IntoSet`) to inject all registered `PrismPlugin` implementations dynamically. |
-| **4** | **Async Execution Wiring** | 🔲 PLANNED | Refactor `executeTool` to return or emit asynchronous UI states to prevent thread blocking during long-running tasks. |
+| **1** | **Interface Contract** | ✅ SHIPPED | Define `PluginRegistry` spec and interface. Document current fake debt. |
+| **2** | **Plugin SDK Definition** | ✅ SHIPPED | Create `PrismPlugin` interface and standard `PluginRequest` / `PluginResponse` DTOs. |
+| **3** | **Dynamic Registry** | ✅ SHIPPED | Implement `RealToolRegistry`. Use Dagger/Hilt Multibinding (`@IntoSet`) to inject all registered `PrismPlugin` implementations dynamically. |
+| **4** | **Async Execution Wiring** | ✅ SHIPPED | Refactor `executeTool` to return or emit asynchronous UI states to prevent thread blocking during long-running tasks. |

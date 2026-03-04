@@ -24,7 +24,7 @@
 | [lightning-router](../cerb/lightning-router/spec.md) | SHIPPED | — |
 | [analyst-architect](../cerb/analyst-architect/spec.md) | SHIPPED | 🎯 |
 | [mascot-service](../cerb/mascot-service/spec.md) | SHIPPED | Wave 4: UI Integration | System I Overlay |
-| [plugin-registry](../cerb/plugin-registry/spec.md) | SPEC_ONLY | W1: Interface Contract |
+| [plugin-registry](../cerb/plugin-registry/spec.md) | PARTIAL | W4: Async Execution Wiring |
 
 ### Data & Memory
 
@@ -58,6 +58,7 @@
 
 ### 2026-03-04
 
+- **plugin-registry**: Wave 1-4 COMPLETED — RealToolRegistry, flow execution, structure plugins.
 - **analyst-orchestrator**: Wave 6 SHIPPED — Analyze Gateway & Plugin Routing (Expert Bypass) implemented. `RealArchitectService` now dynamically injects `ToolRegistry` into the Planning phase to strictly enforce tool execution boundaries via `PlanResult.ExpertBypass`.
 - **mascot-service**: Wave 3 SHIPPED (EventBus Integration and AppIdle Latch).
 - **mascot-service**: Wave 4 SHIPPED — Integrated Compose UI `MascotOverlay` out-of-band in `PrismShell`.
@@ -232,8 +233,6 @@
 | ~~Sticky Notes Boundary~~ | ~~`PrismOrchestrator.createScheduledTask()` calls `entityWriter.upsertFromClue()`~~ | ~~**High**~~ | ✅ **Resolved** — Sticky Notes abandoned. Scheduler creates PERSON + ACCOUNT entities for business-relevant contacts (Wave 10 SHIPPED). |
 | **Confidence-Based Reminder Interceptor** | Replace deterministic round-1 wrap-up with LLM confidence-based interception. Agent decides when to surface schedule context: (1) User greets/noise → inject, (2) User discusses agenda → inject, (3) User wraps up work → suggest completion. Requires classifier or LLM self-assessment of conversation intent. Current workaround: smarter prompting that lets LLM decide naturally. | Medium |
 | **L2 UI Verification** | `MarkdownStrategyBubble.kt` — Verify the title extraction and rendering styling (T2 test from `l2_test_plan.md`) after major component refactoring is complete. | High |
-| **Plugin Pipeline Docking** | Undecided details on how plugins dock to the two pipelines (Analyst vs Lightning Router) and parse JSON payloads into strongly-typed `[Plugin]Request`s. | Medium |
-| **Real Tool Registry Implementation** | `FakeToolRegistry` is currently wired in production to provide the tool list. Needs to be replaced with a real implementation that loads plugins dynamically and handles execution states correctly via Plugin APIs. | High |
 ---
 
 ## Quick Links

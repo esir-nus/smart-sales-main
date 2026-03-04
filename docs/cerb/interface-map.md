@@ -58,7 +58,7 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 | **EntityResolver** | Entity disambiguation matching | EntityRegistry | `EntityResolverService.resolve()` | RAM Application | ✅ |
 | **ModelRegistry** | Static LLM Profiles (models, temps, skills) | — | `ModelRegistry` | Config Hub | ✅ |
 | **Executor** | Raw LLM output (stateless — no storage) | ModelRouter | `Executor.execute()` | — | ✅ |
-| **PluginRegistry** | Executable pure-Kotlin workflows (Tools) | — | `ToolRegistry.executeTool()` | App Infra | 📐 |
+| **PluginRegistry** | Executable pure-Kotlin workflows (Tools) | — | `ToolRegistry.executeTool()` | App Infra | ✅ |
 | **Orchestrator** | Top-level routing + pipeline coordination | LightningRouter, MascotService, ContextBuilder, Executor, Architect, EntityResolver, PluginRegistry | `PrismOrchestrator.processInput()` | — | ✅ |
 
 

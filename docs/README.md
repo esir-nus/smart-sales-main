@@ -57,7 +57,7 @@ docs/
 | [prism-ui-ux-contract.md](./specs/prism-ui-ux-contract.md) | UX | **INDEX** — Modules, Flows, Components |
 | [GLOSSARY.md](./specs/GLOSSARY.md) | Terminology | Terms, no-synonyms rule |
 | [style-guide.md](./specs/style-guide.md) | UI | Visual design system, typography, components |
-| [connectivity-spec.md](./specs/connectivity-spec.md) | Connectivity | BLE/WiFi/HTTP contracts |
+| [connectivity-spec.md](./cerb/connectivity-bridge/spec.md) | Connectivity | BLE/WiFi/HTTP contracts |
 | [esp32-protocol.md](./specs/esp32-protocol.md) | Connectivity | Hardware protocol |
 
 ---
@@ -67,7 +67,7 @@ docs/
 | File | Purpose |
 |------|---------|
 | [tracker.md](./plans/tracker.md) | **Main tracker** — architecture, modules, milestones |
-| [ux-experience.md](./plans/ux-experience.md) | UX state inventories, microcopy, component status |
+| [prism-ui-ux-contract.md](./specs/prism-ui-ux-contract.md) | UX state inventories, microcopy, component status |
 
 ---
 
@@ -99,7 +99,7 @@ When documents conflict, follow this precedence:
 3. Use `/10-feature-build-mode` workflow
 
 ### I'm working on connectivity
-1. Read [connectivity-spec.md](./specs/connectivity-spec.md) for contracts
+1. Read [connectivity-spec.md](./cerb/connectivity-bridge/spec.md) for contracts
 2. Check [esp32-protocol.md](./specs/esp32-protocol.md) for hardware
 
 ### I'm designing UI/UX

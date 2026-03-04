@@ -27,11 +27,13 @@ import kotlinx.coroutines.launch
 import com.smartsales.prism.ui.components.PrismCard
 import com.smartsales.prism.ui.theme.*
 import com.smartsales.prism.domain.memory.ScheduleItem
-import com.smartsales.prism.domain.scheduler.ConflictResolution
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
 import com.smartsales.prism.data.scheduler.RealConflictResolver
+import com.smartsales.prism.domain.scheduler.ConflictResolution
 import androidx.compose.ui.platform.LocalContext
 import dagger.hilt.android.EntryPointAccessors
-import com.smartsales.prism.di.HiltComponentProvider
 
 // ==========================================
 // State Models
@@ -42,9 +44,11 @@ data class ChatMessage(
     val isSystem: Boolean // true=AI, false=User
 )
 
-// ==========================================
-// UI Components
-// ==========================================
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface SchedulerEntryPoint {
+    fun conflictResolver(): RealConflictResolver
+}
 
 /**
  * Conflict Card Component (Rewrite with Real Context)
@@ -63,7 +67,7 @@ fun ConflictCard(
     val resolver = remember {
         EntryPointAccessors.fromApplication(
             context.applicationContext,
-            HiltComponentProvider::class.java
+            SchedulerEntryPoint::class.java
         ).conflictResolver()
     }
     

@@ -83,35 +83,27 @@ class PrismOrchestrator @Inject constructor(
             }
             is com.smartsales.prism.domain.disambiguation.DisambiguationResult.Resumed -> {
                 telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Disambiguator completed, resuming original intent")
-                // Replay the original intent under its original mode
-                return when (dResult.mode) {
-                    Mode.COACH -> processCoachInput(dResult.originalInput)
-                    Mode.SCHEDULER -> createScheduledTask(dResult.originalInput, null)
-                    Mode.ANALYST -> throw IllegalArgumentException("Analyst mode uses AnalystPipeline directly")
-                }
+                // Replay the original intent into the unified flow
+                return processUnifiedInput(dResult.originalInput)
             }
             is com.smartsales.prism.domain.disambiguation.DisambiguationResult.PassThrough -> {
                 telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Disambiguator pass-through. Proceeding normally.")
             }
         }
 
-        return when (_currentMode.value) {
-            Mode.COACH -> processCoachInput(input)
-            Mode.ANALYST -> processAnalystInput(input)
-            Mode.SCHEDULER -> createScheduledTask(input, null)
-        }
+        return processUnifiedInput(input)
     }
-    
-    private suspend fun processAnalystInput(input: String): UiState {
+
+    private suspend fun processUnifiedInput(input: String): UiState {
         // If the Analyst state machine is already running (e.g., waiting for confirmation), bypass Phase 0.
         if (analystPipeline.state.value != com.smartsales.prism.domain.analyst.AnalystState.IDLE) {
-            telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Bypassing Phase 0: Analyst state is \${analystPipeline.state.value}")
+            telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Bypassing Phase 0: Analyst state is ${analystPipeline.state.value}")
             return executeAnalystPipeline(input)
         }
 
         telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Executing Phase 0 Lightning Router")
         
-        val context = contextBuilder.build(input, Mode.ANALYST, depth = com.smartsales.prism.domain.pipeline.ContextDepth.MINIMAL)
+        val context = contextBuilder.build(input, _currentMode.value, depth = com.smartsales.prism.domain.pipeline.ContextDepth.MINIMAL)
         val result = lightningRouter.evaluateIntent(context)
         
         if (result == null) {
@@ -122,18 +114,33 @@ class PrismOrchestrator @Inject constructor(
             com.smartsales.prism.domain.analyst.QueryQuality.NOISE,
             com.smartsales.prism.domain.analyst.QueryQuality.GREETING -> {
                 telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Routed to System I (Mascot)")
-                mascotService.interact(com.smartsales.prism.domain.mascot.MascotInteraction.Text(input))
+                mascotService.interact(com.smartsales.prism.domain.mascot.MascotInteraction.Text(result.response ?: input))
                 UiState.Idle // Do not record in main chat history
             }
             com.smartsales.prism.domain.analyst.QueryQuality.VAGUE,
             com.smartsales.prism.domain.analyst.QueryQuality.SIMPLE_QA -> {
-                telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Fast tracked \${result.queryQuality}")
-                UiState.Response(result.response)
+                telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Fast tracked ${result.queryQuality}")
+                UiState.Response(result.response ?: "这是一条简单的查询")
             }
-            com.smartsales.prism.domain.analyst.QueryQuality.DEEP_ANALYSIS,
+            com.smartsales.prism.domain.analyst.QueryQuality.DEEP_ANALYSIS -> {
+                if (!result.infoSufficient) {
+                    telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Info insufficient for analysis. Routed to Mascot.")
+                    mascotService.interact(com.smartsales.prism.domain.mascot.MascotInteraction.Text(result.response ?: "请提供更多上下文"))
+                    UiState.Idle
+                } else {
+                    telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Routed to System II (Analyst Pipeline)")
+                    executeAnalystPipeline(input)
+                }
+            }
             com.smartsales.prism.domain.analyst.QueryQuality.CRM_TASK -> {
-                telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Routed to System II (Analyst Pipeline)")
-                executeAnalystPipeline(input)
+                if (!result.infoSufficient) {
+                    telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Info insufficient for CRM task. Routed to Mascot.")
+                    mascotService.interact(com.smartsales.prism.domain.mascot.MascotInteraction.Text(result.response ?: "请提供更多关于这个任务的信息。"))
+                    UiState.Idle
+                } else {
+                    telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Routed to Scheduler Task Pipeline")
+                    createScheduledTask(input, null)
+                }
             }
         }
     }
@@ -163,42 +170,6 @@ class PrismOrchestrator @Inject constructor(
             is com.smartsales.prism.domain.analyst.AnalystResponse.ToolExecution -> {
                 UiState.ExecutingTool(response.workflowId, response.parameters)
             }
-        }
-    }
-    
-    private suspend fun processCoachInput(input: String): UiState {
-        activityController.startPhase(ActivityPhase.PLANNING, ActivityAction.THINKING)
-        
-        return try {
-            // Wave 3: InputParser Gateway
-            telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.INPUT_PARSER, "Starting parsing intent for input")
-            val parseResult = inputParserService.parseIntent(input)
-            telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.INPUT_PARSER, "Result: $parseResult")
-            
-            if (parseResult is com.smartsales.prism.domain.parser.ParseResult.NeedsClarification) {
-                activityController.complete()
-                return entityDisambiguationService.startDisambiguation(
-                    originalInput = input,
-                    originalMode = Mode.COACH,
-                    ambiguousName = parseResult.ambiguousName,
-                    candidates = parseResult.suggestedMatches
-                )
-            }
-            
-            val resolvedEntityIds = if (parseResult is com.smartsales.prism.domain.parser.ParseResult.Success) {
-                parseResult.resolvedEntityIds
-            } else {
-                emptyList()
-            }
-
-            activityController.complete()
-            // Mascot 服务现在会在带外处理此类 Intent，所以这里无需调用大模型，直接返回 UI 即可。
-            UiState.Idle
-        } catch (e: Exception) {
-            val errorMessage = e.message ?: "未知错误"
-            telemetry.recordError(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Error in processCoachInput: $errorMessage", e)
-            activityController.error(errorMessage)
-            UiState.Error(errorMessage, retryable = true)
         }
     }
     

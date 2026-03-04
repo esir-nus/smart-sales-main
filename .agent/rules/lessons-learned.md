@@ -48,3 +48,4 @@ trigger: always_on
 
 ## 🛠️ Tooling & Editor
 - **Compiler line number errors** → Do not ignore exact line numbers. Often caused by injecting markdown tags. (Ref: *Markdown Tag Injection & Ignoring Line Numbers*)
+- **NoClassDefFoundError on standalone interfaces** → D8 may drop them. Move declaration into consumer file. (Ref: *D8/R8 Silent Interface Dropping*)

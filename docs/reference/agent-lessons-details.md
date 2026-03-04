@@ -400,6 +400,18 @@ This happens when an agent uses a tool to write or replace file content and mist
 
 ---
 
+### D8/R8 Silent Interface Dropping (NoClassDefFoundError) — 2026-03-04
+
+**Symptom**: `NoClassDefFoundError: Failed resolution of: Lcom/.../HiltComponentProvider;` crashes app on launch, but interface is clearly in the codebase.  
+**Root Cause**: **D8/Kapt silently dropping standalone interfaces during DEX merging.** When an `@EntryPoint` interface is declared in its own file and only referenced via reflection/Hilt generated code, Dalvik AOT compilation (`dex2oat`) fails to find it, causing the entire `SingletonC` or `Application` component to fail verification and crash on boot.  
+**Wrong Approach**: Searching for missing dependencies, clearing caches, or assuming compilation failed.  
+**Correct Fix**: Move the interface definition directly into the Kotlin file that consumes it (e.g., the UI file doing the EntryPointAccessors call). This forces the compiler to package the interface with strongly referenced code, preventing it from being silently dropped during DEX merging.  
+**File(s)**: [ConflictCard.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/drawers/scheduler/ConflictCard.kt)  
+**Pattern**: If a standalone interface class throws `NoClassDefFoundError` at runtime despite successful compilation, move its declaration into the file of its primary consumer to bypass D8 exclusion bugs.  
+**Status**: ✅ CONFIRMED 2026-03-04
+
+---
+
 <!-- Add new lessons above this line -->
 
 ### JSON Schema Fragility vs Raw Markdown — 2026-03-02

@@ -27,7 +27,7 @@ enum class QueryQuality {
     NOISE, SIMPLE_QA, DEEP_ANALYSIS, CRM_TASK
 }
 
-data class ConsultantResult(
+data class RouterResult(
     val queryQuality: QueryQuality,
     val infoSufficient: Boolean,
     val response: String,
@@ -42,4 +42,4 @@ data class ConsultantResult(
 | Parse complex JSON arrays | Use simple `.optBoolean("info_sufficient", false)` |
 | Execute investigation logic | Defer to Phase 3 via orchestrator |
 | Call ContextBuilder directly | Orchestrator passes `EnhancedContext` as input |
-| Persist state | Remain stateless, return `ConsultantResult?` |
+| Persist state | Remain stateless, return `RouterResult?` |

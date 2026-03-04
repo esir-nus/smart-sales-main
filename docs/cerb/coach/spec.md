@@ -122,19 +122,13 @@ User asks question at start of session ("What about that price issue?").
 3. LLM reads graph, matches aliases and cross-language references naturally
 4. UI shows: response only (entity loading is transparent)
 
-### 3.9 Suggest Analyst Switch
-User asks complex data question.
-1. LLM response includes `suggestAnalyst = true`
-2. UI appends suggestion block: `[ 💡 Switch to Analyst ]`
-3. User taps → Mode toggles
-
-### 3.10 Conflict Detection (Inline)
+### 3.9 Conflict Detection (Inline)
 Coach detects schedule conflict during conversation.
 1. Context includes upcoming schedule from `ScheduleBoard.upcomingItems`
 2. LLM mentions conflict in response
 3. UI renders `ConflictCard` inline via `ConflictResolver` integration
 
-### 3.11 Schedule Guidance (User Education)
+### 3.10 Schedule Guidance (User Education)
 When Coach surfaces schedule data and user expresses modification intent ("我想改时间", "能推迟吗"):
 1. Coach recognizes modification intent but does NOT mutate schedule
 2. Coach responds naturally and guides: "好的！你可以按录音键，直接说出修改需求，比如'推迟两小时'或'取消这个会议'"
@@ -192,21 +186,11 @@ When no conversation history exists (`history.isEmpty()`), the hero screen shows
 | **Thinking Trace** | Truncated to 3 lines | `ThinkingPolicy` controls trace output |
 | **Memory Search** | ⏳ Deferred | Will be shown via `AgentActivityController` trace |
 | **Mode Indicator** | Purple theme | "Coach" label |
-| **Analyst Suggestion** | Optional block | Appended to response content |
 
 ### ThinkingBox Behavior
 
 - **Coach Mode**: `autoCollapse = true`. Shows "Thinking..." then collapses after 3 lines. User *feels* speed.
 - **Analyst Mode**: `autoCollapse = false`. Fully expanded. Transparency matters.
-
-### Analyst Suggestion Block
-
-```
-┌─────────────────────────────────────────────────┐
-│ 💡 这看起来需要深度分析，建议切换到分析师模式     │
-│          [ 切换到分析师 ]                        │
-└─────────────────────────────────────────────────┘
-```
 
 ---
 

@@ -132,7 +132,7 @@ Controls the strict phasing of the open loop.
 
 - `IDLE`: Base state. Awaiting new intent.
 - `CONSULTING`: Calling Phase 1 (`ConsultantService` Lightning Router). 
-  - *Fast Track: If NOISE or SIMPLE_QA, answers directly and immediately returns to IDLE.*
+  - *Fast Track: If SIMPLE_QA, answers directly and immediately returns to IDLE. (Note: NOISE and GREETINGS are intercepted by Mascot/System I out-of-band).*
   - *Slow Track: If CRM_TASK or DEEP_ANALYSIS, evaluates intent and `missing_entities`. If missing, trigger `EntityResolverService`. If ambiguous, stay here, ask user context.*
 - `PROPOSAL`: Plan is rendered. Agent waits. **Execution blocked.**
   - *Small Loop: If user amends plan, back to Consulting.*

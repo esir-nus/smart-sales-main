@@ -120,13 +120,14 @@ class PrismOrchestrator @Inject constructor(
         
         return when (result.queryQuality) {
             com.smartsales.prism.domain.analyst.QueryQuality.NOISE,
-            com.smartsales.prism.domain.analyst.QueryQuality.VAGUE -> {
+            com.smartsales.prism.domain.analyst.QueryQuality.GREETING -> {
                 telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Routed to System I (Mascot)")
                 mascotService.interact(com.smartsales.prism.domain.mascot.MascotInteraction.Text(input))
                 UiState.Idle // Do not record in main chat history
             }
+            com.smartsales.prism.domain.analyst.QueryQuality.VAGUE,
             com.smartsales.prism.domain.analyst.QueryQuality.SIMPLE_QA -> {
-                telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Fast tracked SIMPLE_QA")
+                telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Fast tracked \${result.queryQuality}")
                 UiState.Response(result.response)
             }
             com.smartsales.prism.domain.analyst.QueryQuality.DEEP_ANALYSIS,

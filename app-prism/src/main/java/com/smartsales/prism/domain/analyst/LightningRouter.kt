@@ -3,7 +3,7 @@ package com.smartsales.prism.domain.analyst
 import com.smartsales.prism.domain.pipeline.EnhancedContext
 
 enum class QueryQuality {
-    NOISE, SIMPLE_QA, DEEP_ANALYSIS, CRM_TASK, VAGUE
+    NOISE, GREETING, SIMPLE_QA, DEEP_ANALYSIS, CRM_TASK, VAGUE
 }
 
 /**

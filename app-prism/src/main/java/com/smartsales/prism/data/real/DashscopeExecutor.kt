@@ -275,11 +275,12 @@ class DashscopeExecutor @Inject constructor(
 ## 响应策略 (4-Tier Intent Gateway)
 
 第一步，强制评估用户输入的意图质量（query_quality）。由于每次调用大模型都很昂贵，你需要过滤掉无意义的噪音并将任务路由：
-1. `noise`：问候语、确认语、语气词（如："好的"、"收到"、"我知道了"、"恩"、"谢谢"）。如果你识别为 `noise`，请在 `response` 中给出简短友好的回应（如"好的哥"、"不客气"），**不要**再去评估 `info_sufficient` 或 `missing_entities`。
-2. `vague`：指代不清，无法回答（如："他刚才说了什么？" - "他"是谁？）。如果你识别为 `vague`，请在 `response` 中请求用户澄清，**不要**再去评估其他字段。
-3. `simple_qa`：简单的事实问答，纯内容查询（如："会议讲了啥？"、"价格报了多少？"）。这类问题可以直接从历史或简短截图中找到答案，不需要深度策略分析。
-4. `deep_analysis`：复杂的业务分析、策略制定、对比（如："怎么应对他的价格异议？"、"帮我制定下步策略"）。这需要深度思考和规划。
-5. `crm_task`：明确的建档或信息录入指令（如："帮我建个叫雷军的客户"、"把刚刚的情况记录下来"）。
+1. `noise`：无意义的输入、测试字符或纯杂音（如："asdf"、"喂喂喂"）。如果你识别为 `noise`，请在 `response` 中随意应答，**不要**再去评估 `info_sufficient` 或 `missing_entities`。
+2. `greeting`：简短问候语（如："你好"、"早安"、"辛苦了"）。如果你识别为 `greeting`，请在 `response` 中给出简短友好的回应（带有相关性但不分析业务），**不要**评估其他字段。
+3. `vague`：指代不清，无法回答（如："他刚才说了什么？" - "他"是谁？）。如果你识别为 `vague`，请在 `response` 中请求用户澄清，**不要**再去评估其他字段。
+4. `simple_qa`：简单的事实问答，纯内容查询（如："会议讲了啥？"、"价格报了多少？"）。这类问题可以直接从历史或简短截图中找到答案，不需要深度策略分析。
+5. `deep_analysis`：复杂的业务分析、策略制定、对比（如："怎么应对他的价格异议？"、"帮我制定下步策略"）。这需要深度思考和规划。
+6. `crm_task`：明确的建档或信息录入指令（如："帮我建个叫雷军的客户"、"把刚刚的情况记录下来"）。
 
 第二步，如果 `query_quality` 为 `crm_task` 或 `deep_analysis`，再判断信息是否充足：
    - 如果用户要求执行非分析类任务（安排日程等），这属于【跨模式意图】。`info_sufficient` = false，在 response 中提示用户切换模式。
@@ -290,7 +291,7 @@ class DashscopeExecutor @Inject constructor(
 ## 响应格式（必须是严格的 JSON）
 
 {
-  "query_quality": "noise|vague|simple_qa|deep_analysis|crm_task",
+  "query_quality": "noise|greeting|vague|simple_qa|deep_analysis|crm_task",
   "analysis": {
     "scenario_type": "price_objection",
     "info_sufficient": true,

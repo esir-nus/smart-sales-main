@@ -32,6 +32,7 @@ class RealLightningRouter @Inject constructor(
             val queryQualityStr = json.optString("query_quality", "vague").lowercase()
             val queryQuality = when (queryQualityStr) {
                 "noise" -> com.smartsales.prism.domain.analyst.QueryQuality.NOISE
+                "greeting" -> com.smartsales.prism.domain.analyst.QueryQuality.GREETING
                 "simple_qa" -> com.smartsales.prism.domain.analyst.QueryQuality.SIMPLE_QA
                 "deep_analysis" -> com.smartsales.prism.domain.analyst.QueryQuality.DEEP_ANALYSIS
                 "crm_task" -> com.smartsales.prism.domain.analyst.QueryQuality.CRM_TASK
@@ -53,7 +54,7 @@ class RealLightningRouter @Inject constructor(
                 }
             }
             
-            if (queryQuality == com.smartsales.prism.domain.analyst.QueryQuality.NOISE || queryQuality == com.smartsales.prism.domain.analyst.QueryQuality.VAGUE) {
+            if (queryQuality == com.smartsales.prism.domain.analyst.QueryQuality.NOISE || queryQuality == com.smartsales.prism.domain.analyst.QueryQuality.GREETING || queryQuality == com.smartsales.prism.domain.analyst.QueryQuality.VAGUE) {
                 missingEntitiesList.clear() // Prevent disambiguation loop for rejected/cross-domain intents
             }
             

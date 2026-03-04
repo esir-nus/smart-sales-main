@@ -28,14 +28,17 @@ class RealArchitectServiceBreakItTest {
         dummyContext = EnhancedContext(userText = "break it")
     }
 
-    private suspend fun assertItDoesNotCrashButGeneratesFallbackPlan(brokenInput: String) {
+    private suspend fun assertItHandlesBrokenInputSafely(brokenInput: String) {
         whenever(executor.execute(any(), any())).thenReturn(
             ExecutorResult.Success(brokenInput, TokenUsage(100, 50))
         )
         try {
             val plan = architectService.generatePlan("test", dummyContext, emptyList())
             // It parses whatever string it's given as a markdown strategy.
-            // We just ensure it doesn't crash. As long as it returns a PlanResult, we are good.
+            // If it succeeds, that's fine too (e.g. for pure text).
+            assertTrue(true)
+        } catch (e: IllegalStateException) {
+            // This is the expected behavior now when the Linter fails to parse broken JSON
             assertTrue(true)
         } catch (e: Exception) {
             // Failed! It threw some unexpected exception like NullPointerException
@@ -60,7 +63,7 @@ class RealArchitectServiceBreakItTest {
             whenever(executor.execute(any(), any())).thenReturn(
                 ExecutorResult.Success(brokenJson, TokenUsage(100, 50))
             )
-            architectService.generatePlan("test", dummyContext, emptyList())
+            architectService.generatePlan("test", dummyContext, emptyList(), emptyList())
         } catch (e: Exception) { null }
         
         // It's perfectly fine if it parses it or throws gracefully. 
@@ -70,17 +73,17 @@ class RealArchitectServiceBreakItTest {
 
     @Test
     fun `break-it completely empty string`() = runTest {
-        assertItDoesNotCrashButGeneratesFallbackPlan("")
+        assertItHandlesBrokenInputSafely("")
     }
 
     @Test
     fun `break-it valid JSON but completely wrong schema`() = runTest {
-        assertItDoesNotCrashButGeneratesFallbackPlan("""{"name": "frank", "age": 30}""")
+        assertItHandlesBrokenInputSafely("""{"name": "frank", "age": 30}""")
     }
 
     @Test
     fun `break-it half markdown half json`() = runTest {
-        assertItDoesNotCrashButGeneratesFallbackPlan("""
+        assertItHandlesBrokenInputSafely("""
             Here is your plan:
             ```json
             { "title": "my plan" 
@@ -92,6 +95,6 @@ class RealArchitectServiceBreakItTest {
     @Test
     fun `break-it huge string`() = runTest {
         val hugeString = "A".repeat(100_000)
-        assertItDoesNotCrashButGeneratesFallbackPlan(hugeString)
+        assertItHandlesBrokenInputSafely(hugeString)
     }
 }

@@ -139,7 +139,10 @@ abstract class PrismModule {
     // === Mascot System I ===
     
     @Binds @Singleton
-    abstract fun bindMascotService(fake: com.smartsales.prism.data.fakes.FakeMascotService): com.smartsales.prism.domain.mascot.MascotService
+    abstract fun bindMascotService(impl: com.smartsales.prism.data.real.RealMascotService): com.smartsales.prism.domain.mascot.MascotService
+
+    @Binds @Singleton
+    abstract fun bindSystemEventBus(impl: com.smartsales.prism.data.real.RealSystemEventBus): com.smartsales.prism.domain.system.SystemEventBus
 
 
 

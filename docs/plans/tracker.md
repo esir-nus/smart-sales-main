@@ -23,7 +23,7 @@
 | [analyst-orchestrator](../cerb/analyst-orchestrator/spec.md) | SHIPPED | 🎯 |
 | [lightning-router](../cerb/lightning-router/spec.md) | SHIPPED | — |
 | [analyst-architect](../cerb/analyst-architect/spec.md) | SHIPPED | 🎯 |
-| [mascot-service](../cerb/mascot-service/spec.md) | PARTIAL | W3: EventBus Integration |
+| [mascot-service](../cerb/mascot-service/spec.md) | PARTIAL | W4: Engine UI & Toast |
 
 ### Data & Memory
 
@@ -57,7 +57,9 @@
 
 ### 2026-03-04
 
-- **mascot-service**: Wave 2 SHIPPED — Basic routing implemented. `LightningRouter` now distinguishes between `NOISE` and `GREETING` and routes both to Mascot, while correctly routing `VAGUE` to the persistent Analyst flow.
+- **analyst-orchestrator**: Wave 6 SHIPPED — Analyze Gateway & Plugin Routing (Expert Bypass) implemented. `RealArchitectService` now dynamically injects `ToolRegistry` into the Planning phase to strictly enforce tool execution boundaries via `PlanResult.ExpertBypass`.
+- **mascot-service**: Wave 3 SHIPPED (EventBus Integration and AppIdle Latch).
+- **mascot-service**: Wave 2 SHIPPED (Basic Routing and Intent disambiguation). `LightningRouter` now distinguishes between `NOISE` and `GREETING` and routes both to Mascot, while correctly routing `VAGUE` to the persistent Analyst flow.
 - **mascot-service**: Wave 1 SHIPPED — `MascotService` interface and `FakeMascotService` prototype formally integrated and wired into dependency injection. Spec upgraded to PARTIAL state.
 - **architecture**: Wave 5 Dual-Engine Architecture SHIPPED. Established "Mascot (System I)" vs "Prism Orchestrator (System II)" boundary.
   - Mascot handles ephemeral notifications/greetings out-of-band. OS Toasts remain the source of truth for reliable system state.
@@ -228,6 +230,7 @@
 | **Confidence-Based Reminder Interceptor** | Replace deterministic round-1 wrap-up with LLM confidence-based interception. Agent decides when to surface schedule context: (1) User greets/noise → inject, (2) User discusses agenda → inject, (3) User wraps up work → suggest completion. Requires classifier or LLM self-assessment of conversation intent. Current workaround: smarter prompting that lets LLM decide naturally. | Medium |
 | **L2 UI Verification** | `MarkdownStrategyBubble.kt` — Verify the title extraction and rendering styling (T2 test from `l2_test_plan.md`) after major component refactoring is complete. | High |
 | **Plugin Pipeline Docking** | Undecided details on how plugins dock to the two pipelines (Analyst vs Lightning Router) and parse JSON payloads into strongly-typed `[Plugin]Request`s. | Medium |
+| **Real Tool Registry Implementation** | `FakeToolRegistry` is currently wired in production to provide the tool list. Needs to be replaced with a real implementation that loads plugins dynamically and handles execution states correctly via Plugin APIs. | High |
 ---
 
 ## Quick Links

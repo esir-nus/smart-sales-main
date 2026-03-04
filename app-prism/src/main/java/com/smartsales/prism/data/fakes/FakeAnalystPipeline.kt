@@ -52,6 +52,12 @@ class FakeAnalystPipeline @Inject constructor() : AnalystPipeline {
                     AnalystResponse.Chat(
                         content = "这是一个简单问题的快速回答：客户确实提到过价格偏高，期望在5000以内。 (Fast Track Simulated)"
                     )
+                } else if (input.contains("导出PDF") || input.contains("执行工具")) {
+                    // Simulate Expert Bypass
+                    delay(300)
+                    Log.d(TAG, "Expert bypass triggered.")
+                    _state.value = AnalystState.IDLE
+                    AnalystResponse.ToolExecution("EXPORT_PDF")
                 } else {
                     // Chat fallback
                     AnalystResponse.Chat(

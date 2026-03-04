@@ -10,7 +10,10 @@ import javax.inject.Singleton
 /**
  * Architect 校验器 — 验证 LLM 输出的 JSON 结构是否符合分析计划 (PlanResult)
  */
-// Deleted ArchitectLinterResult
+sealed class ArchitectPlanLinterResult {
+    data class Success(val result: com.smartsales.prism.domain.analyst.PlanResult) : ArchitectPlanLinterResult()
+    data class Error(val message: String) : ArchitectPlanLinterResult()
+}
 
 /**
  * Architect 校验器 — 验证 LLM 输出的 JSON 结构是否符合最终调查结果 (InvestigationResult)
@@ -25,9 +28,48 @@ class ArchitectLinter @Inject constructor() {
     
     private val TAG = "ArchitectLinter"
 
-
-
     /**
+     * 验证并解析 Phase 2 的 LLM 输出
+     * @return ArchitectPlanLinterResult.Success 或 Error
+     */
+    fun lintPlan(llmOutput: String): ArchitectPlanLinterResult {
+        return try {
+            val sanitized = llmOutput.replace("```json", "").replace("```", "").trim()
+            val json = JSONObject(sanitized)
+            
+            val type = json.optString("type", "")
+            
+            when (type) {
+                "expert_bypass" -> {
+                    val workflowId = json.optString("bypassWorkflowId", "")
+                    if (workflowId.isBlank()) {
+                        return ArchitectPlanLinterResult.Error("Expert Bypass 缺少 bypassWorkflowId")
+                    }
+                    ArchitectPlanLinterResult.Success(com.smartsales.prism.domain.analyst.PlanResult.ExpertBypass(workflowId))
+                }
+                "strategy" -> {
+                    val title = json.optString("title", "分析策略")
+                    val content = json.optString("content", "")
+                    if (content.isBlank()) {
+                        return ArchitectPlanLinterResult.Error("Strategy 缺少 content")
+                    }
+                    ArchitectPlanLinterResult.Success(
+                        com.smartsales.prism.domain.analyst.PlanResult.Strategy(
+                            title = title,
+                            summary = "基于上下文生成的分析策略",
+                            markdownContent = content.replace("\\n", "\n")
+                        )
+                    )
+                }
+                else -> {
+                    ArchitectPlanLinterResult.Error("未知的计划类型: $type")
+                }
+            }
+        } catch (e: Exception) {
+            println("$TAG: lintPlan: Failed to parse JSON - ${e.message}")
+            ArchitectPlanLinterResult.Error("计划解析失败，非合法 JSON: ${e.message}")
+        }
+    }    /**
      * 验证并解析 Phase 3 的 LLM 输出
      * @return ArchitectInvestigationLinterResult.Success 包含解析后的结果，或 ArchitectInvestigationLinterResult.Error 包含错误信息
      */

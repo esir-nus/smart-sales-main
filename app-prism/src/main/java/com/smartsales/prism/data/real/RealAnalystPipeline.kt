@@ -17,11 +17,14 @@ import com.smartsales.prism.domain.disambiguation.EntityDisambiguationService
 import com.smartsales.prism.domain.disambiguation.DisambiguationResult
 
 
+import com.smartsales.prism.domain.analyst.ToolRegistry
+
 class RealAnalystPipeline @Inject constructor(
     private val contextBuilder: ContextBuilder,
     private val executor: Executor,
     private val architectService: ArchitectService,
-    private val entityDisambiguationService: EntityDisambiguationService
+    private val entityDisambiguationService: EntityDisambiguationService,
+    private val toolRegistry: ToolRegistry
 ) : AnalystPipeline {
 
     private val TAG = "RealAnalystPipeline"
@@ -83,18 +86,28 @@ class RealAnalystPipeline @Inject constructor(
                     }
                     
                     try {
-                        val planResult = architectService.generatePlan(input, context, sessionHistory)
+                        val availableTools = toolRegistry.getAllTools()
+                        val planResult = architectService.generatePlan(input, context, availableTools, sessionHistory)
                         
-                        // Handle implicit entity missing dynamically during planning (if Architect exposes it)
-                        // Or rely on EntityDisambiguationService Gateway at the top.
-                        // For now, if the plan succeeds, we move to PROPOSAL.
-                        
-                        _state.value = AnalystState.PROPOSAL
-                        return AnalystResponse.Plan(
-                            title = planResult.title,
-                            summary = planResult.summary,
-                            markdownContent = planResult.markdownContent
-                        )
+                        when (planResult) {
+                            is com.smartsales.prism.domain.analyst.PlanResult.ExpertBypass -> {
+                                Log.d(TAG, "Expert Bypass triggered for tool: ${planResult.workflowId}")
+                                // We reset to IDLE because the OS Execution Bypass handles mounting the ExecutingTool UI
+                                _state.value = AnalystState.IDLE
+                                return AnalystResponse.ToolExecution(planResult.workflowId)
+                            }
+                            is com.smartsales.prism.domain.analyst.PlanResult.Strategy -> {
+                                // Handle implicit entity missing dynamically during planning (if Architect exposes it)
+                                // Or rely on EntityDisambiguationService Gateway at the top.
+                                // For now, if the plan succeeds, we move to PROPOSAL.
+                                _state.value = AnalystState.PROPOSAL
+                                return AnalystResponse.Plan(
+                                    title = planResult.title,
+                                    summary = planResult.summary,
+                                    markdownContent = planResult.markdownContent
+                                )
+                            }
+                        }
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed to generate plan from ArchitectService", e)
                         _state.value = AnalystState.IDLE
@@ -113,7 +126,7 @@ class RealAnalystPipeline @Inject constructor(
                     val lastAssistantTurn = sessionHistory.lastOrNull { it.role == "assistant" }
                     val strategyMarkdown = lastAssistantTurn?.content ?: "未提供策略"
 
-                    val planPayload = com.smartsales.prism.domain.analyst.PlanResult(
+                    val planPayload = com.smartsales.prism.domain.analyst.PlanResult.Strategy(
                         title = "待执行的分析策略",
                         summary = "根据确认的策略进行提取和分析",
                         markdownContent = strategyMarkdown

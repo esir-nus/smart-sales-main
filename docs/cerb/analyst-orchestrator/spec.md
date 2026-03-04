@@ -2,7 +2,7 @@
 
 > **Cerb-compliant spec** — State machine and execution router for deep analysis.
 > **OS Layer**: RAM Application (operates on SessionWorkingSet via ContextBuilder)
-> **State**: SHIPPED
+> **State**: PARTIAL
 
 ---
 
@@ -162,6 +162,7 @@ Following the Anti-Drift Protocol, the Orchestrator will be built using a **Fake
 | **3** | **Phase 3 (Investigation)** | ✅ SHIPPED | Wire the LLM to read the `EnhancedContext` and update the UI states. |
 | **4** | **Entity Disambiguation** | ✅ SHIPPED | Implement `AwaitingClarification` loop and lightweight `EntityResolverService` validation. |
 | **5** | **Phase 4 (TaskBoard Bypass)** | 🔲 PENDING | Wire `ToolRegistry.executeTool()` to bypass the LLM FSM and execute native Kotlin workflows. Add `UiState.ExecutingTool` for loading states. |
+| **6** | **Analyze Gateway & Plugin Routing** | 🔲 PENDING | Implement generic handoff, tool recommendation surface, and delegation to tool-specific plugins. |
 
 ---
 

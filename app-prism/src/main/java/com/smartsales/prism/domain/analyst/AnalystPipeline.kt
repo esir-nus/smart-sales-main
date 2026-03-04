@@ -32,7 +32,8 @@ enum class AnalystState {
     IDLE,           // Waiting for user input
     PROPOSAL,       // Plan generated, waiting for user confirmation
     INVESTIGATING,  // Phase 3: LLM reading EnhancedContext, reasoning
-    RESULT          // Analysis delivered, Task Board mounted
+    RESULT,         // Analysis delivered, Task Board mounted
+    EXECUTING_TOOL  // Phase 4: OS Execution Bypass
 }
 
 sealed class AnalystResponse {
@@ -62,6 +63,14 @@ sealed class AnalystResponse {
     data class Analysis(
         val content: String,
         val suggestedWorkflows: List<WorkflowSuggestion> = emptyList()
+    ) : AnalystResponse()
+
+    /**
+     * Phase 4: Expert Bypass Tool Execution.
+     * Consumer mounts the execution state and runs ToolRegistry directly.
+     */
+    data class ToolExecution(
+        val workflowId: String
     ) : AnalystResponse()
 }
 

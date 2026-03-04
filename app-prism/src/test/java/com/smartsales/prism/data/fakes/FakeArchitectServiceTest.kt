@@ -26,7 +26,7 @@ class FakeArchitectServiceTest {
         val context = createEmptyContext()
         val history = emptyList<ChatTurn>()
 
-        val result = service.generatePlan(input, context, history)
+        val result = service.generatePlan(input, context, emptyList(), history)
 
         assertEquals("📊 客户流失风险分析计划", result.title)
         assertTrue(result.summary.contains("三个维度"))

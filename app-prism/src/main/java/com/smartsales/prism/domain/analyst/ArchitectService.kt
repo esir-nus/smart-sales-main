@@ -19,6 +19,7 @@ interface ArchitectService {
     suspend fun generatePlan(
         input: String,
         context: EnhancedContext,
+        availableTools: List<AnalystTool>,
         sessionHistory: List<ChatTurn> = emptyList()
     ): PlanResult
 

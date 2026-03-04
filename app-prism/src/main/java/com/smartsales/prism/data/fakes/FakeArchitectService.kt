@@ -18,12 +18,13 @@ class FakeArchitectService @Inject constructor() : ArchitectService {
     override suspend fun generatePlan(
         input: String,
         context: EnhancedContext,
+        availableTools: List<AnalystTool>,
         sessionHistory: List<ChatTurn>
-    ): PlanResult {
+    ): PlanResult.Strategy {
         Log.d(TAG, "generatePlan: Generating fake plan for input='$input'")
         delay(1500) // Simulate LLM latency
 
-        return PlanResult(
+        return PlanResult.Strategy(
             title = "📊 客户流失风险分析计划",
             summary = "我将基于已知实情和会议记录，从三个维度为您拆解分析。",
             markdownContent = """
@@ -43,10 +44,11 @@ class FakeArchitectService @Inject constructor() : ArchitectService {
         Log.d(TAG, "investigate: Executing fake investigation")
         delay(3000) // Simulate deep reasoning latency
 
+        val title = (plan as? PlanResult.Strategy)?.title ?: "执行工具操作"
         val analysisText = """
             ### 深度分析结果
             
-            基于 RAM 上下文，我已完成对`${plan.title}`的调查。
+            基于 RAM 上下文，我已完成对`${title}`的调查。
             
             **1. 价格抗性极其强烈**
             在最近几次讨论中，客户多次提及预算紧张。根据会话记录，决策人对 ROI 的不确定是迟疑的主要原因。

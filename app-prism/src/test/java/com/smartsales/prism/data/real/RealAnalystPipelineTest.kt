@@ -55,11 +55,13 @@ class RealAnalystPipelineTest {
             )
         }
         
+        val toolRegistry: com.smartsales.prism.domain.analyst.ToolRegistry = mock()
         pipeline = RealAnalystPipeline(
             contextBuilder = contextBuilder,
             executor = executor,
             architectService = architectService,
-            entityDisambiguationService = entityDisambiguationService
+            entityDisambiguationService = entityDisambiguationService,
+            toolRegistry = toolRegistry
         )
     }
     @Ignore("Pending LightningRouter integration")
@@ -134,8 +136,8 @@ class RealAnalystPipelineTest {
         val result = RouterResult(queryQuality = com.smartsales.prism.domain.analyst.QueryQuality.DEEP_ANALYSIS, infoSufficient = true, response = "准备分析", missingEntities = emptyList())
         whenever(consultantService.evaluateIntent(any())).thenReturn(result)
         
-        val dummyPlan = PlanResult("Test Plan", "Test Summary", "")
-        whenever(architectService.generatePlan(any(), any(), any())).thenReturn(dummyPlan)
+        val dummyPlan = PlanResult.Strategy("Test Plan", "Test Summary", "")
+        whenever(architectService.generatePlan(any(), any(), any(), any())).thenReturn(dummyPlan)
 
         val response = pipeline.handleInput("分析大客户数据", emptyList())
 
@@ -152,8 +154,8 @@ class RealAnalystPipelineTest {
         val result = RouterResult(queryQuality = com.smartsales.prism.domain.analyst.QueryQuality.DEEP_ANALYSIS, infoSufficient = true, response = "准备分析", missingEntities = emptyList())
         whenever(consultantService.evaluateIntent(any())).thenReturn(result)
         
-        val dummyPlan = PlanResult("Test Plan", "Test Summary", "")
-        whenever(architectService.generatePlan(any(), any(), any())).thenReturn(dummyPlan)
+        val dummyPlan = PlanResult.Strategy("Test Plan", "Test Summary", "")
+        whenever(architectService.generatePlan(any(), any(), any(), any())).thenReturn(dummyPlan)
         
         pipeline.handleInput("分析大客户数据", emptyList())
         assertEquals(AnalystState.PROPOSAL, pipeline.state.value)

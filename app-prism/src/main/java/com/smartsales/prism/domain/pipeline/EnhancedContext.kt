@@ -80,7 +80,7 @@ data class EntityRef(
  * 模式元数据
  */
 data class ModeMetadata(
-    val currentMode: Mode = Mode.COACH,
+    val currentMode: Mode = Mode.ANALYST,
     val sessionId: String = "",
     val turnIndex: Int = 0
 )

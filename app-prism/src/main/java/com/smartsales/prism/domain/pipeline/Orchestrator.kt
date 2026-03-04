@@ -14,16 +14,7 @@ interface Orchestrator {
      */
     suspend fun processInput(input: String): UiState
     
-    /**
-     * 切换运行模式
-     */
-    suspend fun switchMode(newMode: Mode)
-    
-    /**
-     * 当前运行模式
-     */
-    val currentMode: StateFlow<Mode>
-    
+
     /**
      * 创建日程任务 — 直接路由到 Scheduler Pipeline
      * 用于 Scheduler Drawer 内的操作，无需切换全局 Mode

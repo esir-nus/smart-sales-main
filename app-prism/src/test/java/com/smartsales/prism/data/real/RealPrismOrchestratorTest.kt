@@ -76,6 +76,9 @@ class RealPrismOrchestratorTest {
 
         kotlinx.coroutines.runBlocking {
             whenever(mockEntityDisambiguationService.process(any())).doReturn(com.smartsales.prism.domain.disambiguation.DisambiguationResult.PassThrough)
+            
+            val fakeStateFlow = MutableStateFlow(com.smartsales.prism.domain.analyst.AnalystState.IDLE)
+            whenever(mockAnalystPipeline.state).doReturn(fakeStateFlow)
         }
 
         orchestrator = PrismOrchestrator(
@@ -123,14 +126,22 @@ class RealPrismOrchestratorTest {
             )
         ).doReturn(expectedClarification)
         
-        // Ensure Mode is set to COACH (default) or whatever processInput delegates to
-        orchestrator.switchMode(com.smartsales.prism.domain.model.Mode.COACH)
-
+        whenever(mockContextBuilder.build(any(), any(), any(), any())).doReturn(
+            EnhancedContext(userText = "查一下新客户", modeMetadata = ModeMetadata(currentMode = com.smartsales.prism.domain.model.Mode.ANALYST))
+        )
+        // Router mock since processInput now checks lightningRouter
+        whenever(mockLightningRouter.evaluateIntent(any())).doReturn(
+            com.smartsales.prism.domain.analyst.RouterResult(
+                queryQuality = com.smartsales.prism.domain.analyst.QueryQuality.CRM_TASK,
+                infoSufficient = true,
+                response = ""
+            )
+        )
         // Act
         val result = orchestrator.processInput("查一下新客户")
 
         // Assert
-        assertTrue(result is UiState.AwaitingClarification)
+        assertTrue("Expected AwaitingClarification but got $result", result is UiState.AwaitingClarification)
         val clarification = result as UiState.AwaitingClarification
         assertEquals("系统发现 '新客户' 似乎不在通讯录中，您是想提及新客户还是拼写有误？", clarification.question)
         assertEquals(ClarificationType.AMBIGUOUS_PERSON, clarification.clarificationType)
@@ -148,8 +159,18 @@ class RealPrismOrchestratorTest {
         whenever(mockInputParserService.parseIntent("给张三打个电话")).doReturn(successResult)
         whenever(mockContextBuilder.getSessionHistory()).doReturn(emptyList())
         
-        orchestrator.switchMode(com.smartsales.prism.domain.model.Mode.COACH)
 
+
+        whenever(mockContextBuilder.build(any(), any(), any(), any())).doReturn(
+            EnhancedContext(userText = "给张三打个电话", modeMetadata = ModeMetadata(currentMode = com.smartsales.prism.domain.model.Mode.ANALYST))
+        )
+        whenever(mockLightningRouter.evaluateIntent(any())).doReturn(
+            com.smartsales.prism.domain.analyst.RouterResult(
+                queryQuality = com.smartsales.prism.domain.analyst.QueryQuality.NOISE,
+                infoSufficient = false,
+                response = ""
+            )
+        )
         // Act
         val result = orchestrator.processInput("给张三打个电话")
 

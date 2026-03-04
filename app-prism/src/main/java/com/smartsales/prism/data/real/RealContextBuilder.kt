@@ -69,7 +69,7 @@ class RealContextBuilder @Inject constructor(
     private var _turnCount: Int = 0
     
     /** 当前模式缓存（用于 saveToMemory） */
-    private var _currentMode: Mode = Mode.COACH
+    private var _currentMode: Mode = Mode.ANALYST
 
     // === ContextBuilder Implementation (Read-Only) ===
 

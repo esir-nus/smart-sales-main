@@ -31,6 +31,11 @@ class RealAnalystPipeline @Inject constructor(
 
     private val _state = MutableStateFlow(AnalystState.IDLE)
     override val state = _state.asStateFlow()
+
+    override fun reset() {
+        _state.value = AnalystState.IDLE
+        _awaitingDisambiguationFor = null
+    }
     
     // Tracks which entity we yielded to the Disambiguator for, so we can override the prompt on resume
     private var _awaitingDisambiguationFor: String? = null

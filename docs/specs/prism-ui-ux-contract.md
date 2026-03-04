@@ -38,7 +38,6 @@
 |------|--------|-----------|
 | Onboarding | ✅ Shipped | [OnboardingFlow.md](./flows/OnboardingFlow.md) |
 | Scheduler | ✅ Shipped | [SchedulerFlows.md](./flows/SchedulerFlows.md) |
-| Coach | ✅ Shipped | [CoachFlows.md](./flows/CoachFlows.md) |
 | Analyst | ✅ Shipped | [AnalystFlows.md](./flows/AnalystFlows.md) |
 | Audio & Entity | ✅ Shipped | [AudioEntityFlows.md](./flows/AudioEntityFlows.md) |
 
@@ -113,9 +112,6 @@
 
 > 📎 **Modularized**: Authoritative spec → [SchedulerFlows.md](./flows/SchedulerFlows.md)
 
-### Coach Flows
-
-> 📎 **Modularized**: Authoritative spec → [CoachFlows.md](./flows/CoachFlows.md)
 
 ### Analyst Flows
 

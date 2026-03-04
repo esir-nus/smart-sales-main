@@ -82,7 +82,7 @@ fun PrismChatScreen(
     onDebugClick: () -> Unit = {},
     onProfileClick: () -> Unit = {}
 ) {
-    val currentMode by viewModel.currentMode.collectAsState()
+
     val history by viewModel.history.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val inputText by viewModel.inputText.collectAsState()
@@ -188,7 +188,7 @@ fun PrismChatScreen(
                 }
             } else {
                 // V2: Task Board for Analyst Mode — STICKY
-                if (currentMode == Mode.ANALYST && taskBoardItems.isNotEmpty()) {
+                if (taskBoardItems.isNotEmpty()) {
                     com.smartsales.prism.ui.analyst.TaskBoard(
                         items = taskBoardItems,
                         onItemClick = viewModel::selectTaskBoardItem
@@ -207,8 +207,8 @@ fun PrismChatScreen(
                     // 1. Agent Activity
                     agentActivity?.let { activity ->
                         item {
-                            val maxLines = ThinkingPolicy.maxTraceLines(currentMode)
-                            val autoCollapse = ThinkingPolicy.shouldAutoCollapse(currentMode)
+                            val maxLines = ThinkingPolicy.maxTraceLines(Mode.ANALYST)
+                            val autoCollapse = ThinkingPolicy.shouldAutoCollapse(Mode.ANALYST)
                             AgentActivityBanner(activity, maxLines, autoCollapse)
                         }
                     }
@@ -246,9 +246,7 @@ fun PrismChatScreen(
                                             onConfirmPlan = viewModel::confirmAnalystPlan,
                                             onAmendPlan = viewModel::amendAnalystPlan
                                         )
-                                        if (state.suggestAnalyst) {
-                                            AnalystSuggestionBlock(onSwitch = { viewModel.switchMode(Mode.ANALYST) })
-                                        }
+
                                     }
                                     is UiState.MarkdownStrategyState -> com.smartsales.prism.ui.analyst.MarkdownStrategyBubble(
                                         title = state.title,
@@ -329,12 +327,7 @@ fun PrismChatScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Mode Switcher (Floating above Input)
-                GlassModeSwitcher(
-                    currentMode = currentMode,
-                    onModeSwitch = viewModel::switchMode
-                )
-                
+
                 // Input Bar (Glass Capsule)
                 GlassInputCapsule(
                     text = inputText,
@@ -499,79 +492,7 @@ private fun HeroTaskRow(
     }
 }
 
-@Composable
-private fun GlassModeSwitcher(currentMode: Mode, onModeSwitch: (Mode) -> Unit) {
-    PrismSurface(
-        shape = CircleShape,
-        backgroundColor = BackgroundSurface.copy(alpha = 0.9f),
-        modifier = Modifier.height(36.dp) // Reduced from 44.dp to match target
-    ) {
-        val modes = listOf(Mode.COACH, Mode.ANALYST)
-        
-        BoxWithConstraints(modifier = Modifier.padding(4.dp)) {
-            val width = maxWidth
-            val segmentWidth = width / modes.size
-            
-            // Animated Indicator (White Pill)
-            val indicatorOffset by animateDpAsState(
-                targetValue = if (currentMode == Mode.COACH) 0.dp else segmentWidth,
-                animationSpec = spring(stiffness = Spring.StiffnessLow),
-                label = "indicator"
-            )
 
-            Box(
-                modifier = Modifier
-                    .offset(x = indicatorOffset)
-                    .width(segmentWidth)
-                    .fillMaxHeight()
-                    .padding(vertical = 2.dp) // Slight inset
-                    .shadow(2.dp, CircleShape)
-                    .background(Color.White, CircleShape)
-            )
-
-            // Text/Icon Layer
-            val context = LocalContext.current
-            Row(modifier = Modifier.fillMaxSize()) {
-                modes.forEach { mode ->
-                    val isSelected = mode == currentMode
-                    // Web Spec: Coach=Purple, Analyst=Blue
-                    val color = if (isSelected) {
-                        if (mode == Mode.COACH) AccentTertiary else AccentBlue
-                    } else TextSecondary
-                    
-                    Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clip(CircleShape)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null // Disable ripple as pill is the feedback
-                            ) { 
-                                onModeSwitch(mode)
-                            },
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = if (mode == Mode.COACH) Icons.Outlined.ChatBubble else Icons.Outlined.Science, // Or Icons.Outlined.CenterFocusStrong for Analyst
-                            contentDescription = null,
-                            tint = color,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (mode == Mode.COACH) "教练" else "分析师",
-                            color = color,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            fontSize = 13.sp
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun GlassInputCapsule(text: String, onTextChanged: (String) -> Unit, onSend: () -> Unit, onAttachClick: () -> Unit) {
@@ -652,38 +573,4 @@ private fun GlassFab(icon: ImageVector, onClick: () -> Unit) {
     }
 }
 
-/**
- * Wave 4: Analyst Suggestion Block
- * Shown when Coach detects a question better suited for Analyst mode
- */
-@Composable
-private fun AnalystSuggestionBlock(onSwitch: () -> Unit) {
-    val context = LocalContext.current
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 8.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E3A5F))
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "这看起来需要深度分析，建议切换到分析师模式",
-                color = Color(0xFF88CCFF),
-                fontSize = 13.sp,
-                modifier = Modifier.weight(1f)
-            )
-            TextButton(onClick = {
-                onSwitch() 
-            }) {
-                Text("切换到分析师", color = Color(0xFF4FC3F7), fontSize = 13.sp)
-            }
-        }
-    }
-}
+

@@ -21,7 +21,6 @@ class FakeExecutor @Inject constructor() : Executor {
         delay(300)
         
         val response = when (context.modeMetadata.currentMode) {
-            Mode.COACH -> "🎯 [Coach] 收到: \"${context.userText}\"\n\n这是模拟的销售教练响应。"
             Mode.ANALYST -> "📊 [Analyst] 收到: \"${context.userText}\"\n\n这是模拟的数据分析响应。"
             Mode.SCHEDULER -> "📅 [Scheduler] 收到: \"${context.userText}\"\n\n这是模拟的日程规划响应。"
         }

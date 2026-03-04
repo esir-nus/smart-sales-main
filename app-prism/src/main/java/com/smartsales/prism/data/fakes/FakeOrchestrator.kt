@@ -29,9 +29,7 @@ class FakeOrchestrator @Inject constructor(
     private val timeProvider: TimeProvider
 ) : Orchestrator {
     
-    private val _currentMode = MutableStateFlow(Mode.COACH)
-    override val currentMode: StateFlow<Mode> = _currentMode.asStateFlow()
-    
+
     override suspend fun processInput(input: String): UiState {
         // 开始活动追踪
         activityController.startPhase(ActivityPhase.PLANNING, ActivityAction.THINKING)
@@ -76,12 +74,7 @@ class FakeOrchestrator @Inject constructor(
                 throw RuntimeException("模拟的网络连接错误 (Error 500)")
             }
             else -> {
-                // Default: Echo based on mode
-                when (_currentMode.value) {
-                    Mode.COACH -> UiState.Response("🎯 [Coach] 收到: $input")
-                    Mode.ANALYST -> UiState.Response("🔬 [Analyst] 收到: $input")
-                    else -> UiState.Response("🤖 [System] 收到: $input")
-                }
+                UiState.Response("🔬 [Analyst] 收到: $input")
             }
         }
         
@@ -90,10 +83,7 @@ class FakeOrchestrator @Inject constructor(
         return result
     }
     
-    override suspend fun switchMode(newMode: Mode) {
-        _currentMode.value = newMode
-    }
-    
+
     override suspend fun createScheduledTask(input: String, replaceItemId: String?): UiState {
         // Fake: 模拟任务创建
         delay(500)

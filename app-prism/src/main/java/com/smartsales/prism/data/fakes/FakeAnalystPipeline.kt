@@ -24,6 +24,10 @@ class FakeAnalystPipeline @Inject constructor() : AnalystPipeline {
     private val _state = MutableStateFlow(AnalystState.IDLE)
     override val state = _state.asStateFlow()
 
+    override fun reset() {
+        _state.value = AnalystState.IDLE
+    }
+
     override suspend fun handleInput(
         input: String,
         sessionHistory: List<ChatTurn>

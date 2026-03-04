@@ -64,7 +64,7 @@ class RealContextBuilderTest {
         )
         
         // Act
-        val context = contextBuilder.build("test input", Mode.COACH)
+        val context = contextBuilder.build("hello", Mode.ANALYST)
         
         // Assert
         assertNotNull(context.habitContext)
@@ -88,7 +88,7 @@ class RealContextBuilderTest {
     @Test
     fun `habitContext is populated even with no habits`() = runTest {
         // Act: No habits seeded
-        val context = contextBuilder.build("test input", Mode.COACH)
+        val context = contextBuilder.build("test input", Mode.ANALYST)
         
         // Assert: habitContext should exist but be empty
         assertNotNull(context.habitContext)
@@ -113,7 +113,7 @@ class RealContextBuilderTest {
         )
         
         // Act
-        val context = contextBuilder.build("test input", Mode.COACH)
+        val context = contextBuilder.build("hello", Mode.ANALYST)
         
         // Assert
         assertNotNull(context.habitContext)
@@ -136,7 +136,7 @@ class RealContextBuilderTest {
         scheduledTaskRepository.items.emit(listOf(task))
 
         // Act
-        val context = contextBuilder.build("hello", Mode.COACH)
+        val context = contextBuilder.build("hello", Mode.ANALYST)
 
         // Assert
         assertNotNull(context.scheduleContext)

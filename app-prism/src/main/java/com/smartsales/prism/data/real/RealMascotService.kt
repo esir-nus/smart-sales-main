@@ -104,7 +104,7 @@ class RealMascotService @Inject constructor(
 
         val dummyContext = EnhancedContext(
             userText = "生成一句闲置状态下的关怀语。",
-            modeMetadata = ModeMetadata(Mode.COACH, "mascot-ephemeral-session", 0),
+            modeMetadata = ModeMetadata(Mode.ANALYST, "mascot-ephemeral-session", 0),
             sessionHistory = emptyList(),
             systemPromptOverride = systemPrompt
         )

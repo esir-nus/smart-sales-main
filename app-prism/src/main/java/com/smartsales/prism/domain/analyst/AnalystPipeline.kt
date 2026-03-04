@@ -26,6 +26,12 @@ interface AnalystPipeline {
         input: String,
         sessionHistory: List<ChatTurn> = emptyList()
     ): AnalystResponse
+
+    /**
+     * Resets the analyst state machine back to IDLE.
+     * Use this when starting a new session or clearing context.
+     */
+    fun reset()
 }
 
 enum class AnalystState {

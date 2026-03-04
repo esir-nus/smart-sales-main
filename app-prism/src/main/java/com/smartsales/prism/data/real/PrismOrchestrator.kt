@@ -69,9 +69,7 @@ class PrismOrchestrator @Inject constructor(
         kotlinx.coroutines.SupervisorJob() + Dispatchers.IO
     )
     
-    private val _currentMode = MutableStateFlow(Mode.COACH)
-    override val currentMode: StateFlow<Mode> = _currentMode.asStateFlow()
-    
+
     // removed analystState as it is handled in UI layer directly with AnalystPipeline now
     override suspend fun processInput(input: String): UiState {
         // Wave 1 Entity Disambiguation: Global Gateway (Interrupt & Resume)
@@ -103,7 +101,7 @@ class PrismOrchestrator @Inject constructor(
 
         telemetry.recordEvent(com.smartsales.prism.domain.telemetry.PipelinePhase.ROUTER, "Executing Phase 0 Lightning Router")
         
-        val context = contextBuilder.build(input, _currentMode.value, depth = com.smartsales.prism.domain.pipeline.ContextDepth.MINIMAL)
+        val context = contextBuilder.build(input, Mode.ANALYST, depth = com.smartsales.prism.domain.pipeline.ContextDepth.MINIMAL)
         val result = lightningRouter.evaluateIntent(context)
         
         if (result == null) {
@@ -513,13 +511,7 @@ class PrismOrchestrator @Inject constructor(
         }
     }
     
-    override suspend fun switchMode(newMode: Mode) {
-        _currentMode.value = newMode
-        if (newMode != Mode.ANALYST) {
-            // analystController.reset() - controlled by new pipeline now
-        }
-    }
-    
+
 
 
     

@@ -15,7 +15,6 @@ object ThinkingPolicy {
      * 获取指定模式下的最大显示行数
      */
     fun maxTraceLines(mode: Mode): Int = when (mode) {
-        Mode.COACH -> 3       // 快速截断 — "感觉被理解"
         Mode.ANALYST -> 20    // 完整痕迹 — 透明度优先
         Mode.SCHEDULER -> 5   // 适度显示
     }
@@ -26,7 +25,6 @@ object ThinkingPolicy {
      * Analyst 模式保持展开直到完成，让用户看到完整的思考过程。
      */
     fun shouldAutoCollapse(mode: Mode): Boolean = when (mode) {
-        Mode.COACH -> true       // 快速折叠 — 不打扰用户
         Mode.ANALYST -> false    // 保持展开 — 透明度优先
         Mode.SCHEDULER -> true   // 适度折叠
     }

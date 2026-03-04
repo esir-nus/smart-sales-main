@@ -53,8 +53,6 @@ class PrismViewModel @Inject constructor(
     // State Properties (Restored)
     // ------------------------------------------------------------------------
     
-    val currentMode: StateFlow<Mode> = orchestrator.currentMode
-    
     // 代理活动状态（思考痕迹）
     val agentActivity: StateFlow<com.smartsales.prism.domain.activity.AgentActivity?> = activityController.activity
     
@@ -213,6 +211,7 @@ class PrismViewModel @Inject constructor(
         
         // Wave 3: 真实会话重置
         contextBuilder.resetSession() // 重置内核 RAM
+        analystPipeline.reset() // 重置 Analyst 状态机
         
         // 创建新会话记录 (SSD)
         viewModelScope.launch(Dispatchers.IO) {
@@ -225,7 +224,7 @@ class PrismViewModel @Inject constructor(
      * 切换到历史会话 (Wave 4)
      * 从 SSD 加载消息，恢复 UI 和内核上下文
      */
-    fun switchSession(sessionId: String, targetMode: Mode? = null, triggerAutoRename: Boolean = false) {
+    fun switchSession(sessionId: String, triggerAutoRename: Boolean = false) {
         // 先保存当前会话
         persistCurrentMessages()
         viewModelScope.launch(Dispatchers.IO) {
@@ -275,10 +274,6 @@ class PrismViewModel @Inject constructor(
                 _inputText.value = ""
                 activityController.reset()
                 
-                if (targetMode != null && targetMode != currentMode.value) {
-                    switchMode(targetMode)
-                }
-                
                 if (triggerAutoRename) {
                     triggerAutoRename()
                 }
@@ -310,20 +305,7 @@ class PrismViewModel @Inject constructor(
         }
     }
     
-    fun switchMode(mode: Mode) {
-        viewModelScope.launch {
-            orchestrator.switchMode(mode)
-            _uiState.value = UiState.Idle
-            // 显示模式切换提示
-            val modeName = when (mode) {
-                Mode.COACH -> "教练模式"
-                Mode.ANALYST -> "分析师模式"
-                Mode.SCHEDULER -> "日程模式"
-            }
-            _toastMessage.value = "已切换至$modeName"
-        }
-    }
-    
+
     fun clearToast() {
         _toastMessage.value = null
     }
@@ -345,7 +327,6 @@ class PrismViewModel @Inject constructor(
     }
 
     fun confirmAnalystPlan() {
-        if (currentMode.value != Mode.ANALYST) return
         if (_isSending.value) return
         
         _isSending.value = true

@@ -129,3 +129,7 @@
   2. **The "Analyze" Meta-Intent**: When a user uploads a heavy context (like an audio transcript) and says "Analyze", the Orchestrator runs a baseline contextual analysis and then acts as a *Launchpad*, surfacing a menu of recommended Tools (Plugins).
   3. **Tool Workflows**: Once a recommended tool is selected (or directly invoked by an expert user), the Orchestrator hands off execution to that specific Tool's internal workflow (which may have its own planning/execution phases). This keeps the core State Machine clean by delegating complex, specialized logic to independent plugins.
 *Conclusion*: The Mascot assumes all System I (Notification/Greeting/Empathy) duties, allowing the Prism Agent (System II) to evolve into a pristine, plugin-driven workflow execution engine.
+
+## Observation 2026-03-04: The Ghost State Machine
+Frank observed "even 'hi' triggers analysis" after the Dual-Engine refactor. The root cause is `RealAnalystPipeline` holding an active `INVESTIGATING` or `PROPOSAL` state that isn't cleared when switching modes or tabs, causing incoming inputs like "hi" to bypass `LightningRouter` (Phase 0) entirely.
+This perfectly justifies the Nuke-and-Pave strategy for Coach mode: stateful UI toggles married to a unified backend create impossible edge cases.

@@ -50,17 +50,8 @@ class FakeOrchestratorTest {
     }
 
     @Test
-    fun `switchMode updates currentMode`() = runTest {
-        orchestrator.switchMode(Mode.ANALYST)
-        
-        assertEquals(Mode.ANALYST, orchestrator.currentMode.value)
-    }
-
-    @Test
-    fun `processInput returns Response for Analyst mode with plan command`() = runTest {
-        orchestrator.switchMode(Mode.ANALYST)
-        
-        // /plan command triggers Response (PlanCard is deprecated)
+    fun `test analyst mode response`() = runTest {
+        // Mode setting removed. Test default mapping
         val result = orchestrator.processInput("/plan analyze this")
         
         assertTrue("Expected UiState.Response", result is UiState.Response)

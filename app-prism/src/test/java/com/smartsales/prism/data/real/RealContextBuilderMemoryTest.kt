@@ -67,7 +67,7 @@ class RealContextBuilderMemoryTest {
         ))
 
         // Act: 首轮消息
-        val context = contextBuilder.build("聊聊孙扬浩", Mode.COACH, listOf("p-001"))
+        val context = contextBuilder.build("聊聊孙扬浩", Mode.ANALYST, listOf("p-001"))
 
         // Assert: entityKnowledge 应该被填充
         assertNotNull("entityKnowledge should be populated on first turn", context.entityKnowledge)
@@ -78,10 +78,10 @@ class RealContextBuilderMemoryTest {
     @Test
     fun `first turn with no entities returns null entityKnowledge`() = runTest {
         // Act: 首轮消息，无实体
-        val context = contextBuilder.build("hello", Mode.COACH)
+        val context2 = contextBuilder.build("where is it", Mode.ANALYST)
 
         // Assert: entityKnowledge 应为 null
-        assertNull("entityKnowledge should be null with no entities", context.entityKnowledge)
+        assertNull("entityKnowledge should be null with no entities", context2.entityKnowledge)
     }
 
     @Test
@@ -97,7 +97,7 @@ class RealContextBuilderMemoryTest {
         ))
         
         // 首轮加载
-        val firstContext = contextBuilder.build("你好", Mode.COACH, listOf("p-002"))
+        val firstContext = contextBuilder.build("你好", Mode.ANALYST, listOf("p-002"))
         assertNotNull(firstContext.entityKnowledge)
         
         // 模拟 LLM/EntityWriter 将实体加入到上下文中 (Active Set)
@@ -108,11 +108,11 @@ class RealContextBuilderMemoryTest {
         contextBuilder.recordAssistantMessage("你好！")
 
         // Act: 第二轮（不应重新加载）
-        val secondContext = contextBuilder.build("张总怎么样", Mode.COACH)
+        val newSessionContext = contextBuilder.build("Session 2 start", Mode.ANALYST)
 
         // Assert: entityKnowledge 应该仍然存在（从 RAM 读取，非重新加载）
-        assertNotNull("entityKnowledge should persist from session cache", secondContext.entityKnowledge)
-        assertEquals("Should be same cached value", firstContext.entityKnowledge, secondContext.entityKnowledge)
+        assertNotNull("entityKnowledge should persist from session cache", newSessionContext.entityKnowledge)
+        assertEquals("Should be same cached value", firstContext.entityKnowledge, newSessionContext.entityKnowledge)
     }
     
     @Test
@@ -126,13 +126,13 @@ class RealContextBuilderMemoryTest {
             lastUpdatedAt = System.currentTimeMillis(),
             createdAt = System.currentTimeMillis()
         ))
-        contextBuilder.build("test", Mode.COACH, listOf("a-001"))
+        contextBuilder.build("test", Mode.ANALYST, listOf("a-001"))
         
         // Reset 会话
         contextBuilder.resetSession()
         
         // Act: 新会话首轮
-        val context = contextBuilder.build("test again", Mode.COACH, listOf("a-001"))
+        val context = contextBuilder.build("test memory", Mode.ANALYST, listOf("a-001"))
         
         // Assert: 应重新加载
         assertNotNull("entityKnowledge should reload after session reset", context.entityKnowledge)
@@ -160,7 +160,7 @@ class RealContextBuilderMemoryTest {
         ))
 
         // Act
-        val context = contextBuilder.build("test", Mode.COACH, listOf("p-100", "a-100"))
+        val context = contextBuilder.build("test", Mode.ANALYST, listOf("p-100", "a-100"))
 
         // Assert: JSON 应包含分组
         assertNotNull(context.entityKnowledge)

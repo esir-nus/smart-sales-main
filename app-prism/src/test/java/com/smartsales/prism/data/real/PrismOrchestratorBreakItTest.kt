@@ -101,7 +101,6 @@ class PrismOrchestratorBreakItTest {
 
     @Test
     fun testEmptyStringInAnalystMode() = runTest {
-        orchestrator.switchMode(com.smartsales.prism.domain.model.Mode.ANALYST)
         
         // Mock the Analyst pipeline state
         val fakeStateFlow = MutableStateFlow(com.smartsales.prism.domain.analyst.AnalystState.IDLE)
@@ -123,7 +122,6 @@ class PrismOrchestratorBreakItTest {
 
     @Test
     fun testExtremeLengthInputInAnalystMode() = runTest {
-        orchestrator.switchMode(com.smartsales.prism.domain.model.Mode.ANALYST)
         
         val fakeStateFlow = MutableStateFlow(com.smartsales.prism.domain.analyst.AnalystState.IDLE)
         whenever(mockAnalystPipeline.state).doReturn(fakeStateFlow)

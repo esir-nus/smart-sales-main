@@ -20,9 +20,10 @@
 | [scheduler](../cerb/scheduler/spec.md) | PARTIAL | W8: Pipeline Unification |
 | [conflict-resolver](../cerb/conflict-resolver/spec.md) | SHIPPED | — |
 | [badge-audio-pipeline](../cerb/badge-audio-pipeline/spec.md) | SHIPPED | W4: Error Recovery |
-| [analyst-orchestrator](../cerb/analyst-orchestrator/spec.md) | SHIPPED | 🎯 |
+| [analyst-orchestrator](../cerb/analyst-orchestrator/spec.md) | DEPRECATED | — |
 | [lightning-router](../cerb/lightning-router/spec.md) | SHIPPED | — |
-| [analyst-architect](../cerb/analyst-architect/spec.md) | SHIPPED | 🎯 |
+| [analyst-architect](../cerb/analyst-architect/spec.md) | DEPRECATED | — |
+| [prism-orchestrator](../cerb/prism-orchestrator/spec.md) | SPEC_ONLY | W1: Lightning Routing |
 | [mascot-service](../cerb/mascot-service/spec.md) | SHIPPED | Wave 4: UI Integration | System I Overlay |
 | [plugin-registry](../cerb/plugin-registry/spec.md) | PARTIAL | W4: Async Execution Wiring |
 
@@ -49,6 +50,12 @@
 | [oss-service](../cerb/oss-service/spec.md) | SHIPPED | W2: Resilience |
 | [audio-management](../cerb/audio-management/spec.md) | ACTIVE | W2: Real Repository Wiring |
 | [tingwu-pipeline](../cerb/tingwu-pipeline/spec.md) | SHIPPED | — |
+
+### Plugins & Tools
+
+| Cerb Shard | State | Next Wave |
+|------------|-------|-----------|
+| [analyzer](../cerb/analyzer/spec.md) | SPEC_ONLY | W1: Core Impl |
 
 ---
 

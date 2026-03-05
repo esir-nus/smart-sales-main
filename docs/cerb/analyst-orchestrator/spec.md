@@ -2,7 +2,7 @@
 
 > **Cerb-compliant spec** — State machine and execution router for deep analysis.
 > **OS Layer**: RAM Application (operates on SessionWorkingSet via ContextBuilder)
-> **State**: PARTIAL
+> **State**: DEPRECATED (Superseded by `prism-orchestrator` and `Analyzer` plugin)
 
 ---
 

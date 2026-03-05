@@ -2,7 +2,7 @@
 
 > **Cerb-compliant spec** — Phase 2 & 3: Planning and Investigation for System II.
 > **OS Layer**: RAM Application (operates on input EnhancedContext)
-> **State**: SHIPPED
+> **State**: DEPRECATED (Superseded by `prism-orchestrator` and `Analyzer` plugin)
 
 ---
 

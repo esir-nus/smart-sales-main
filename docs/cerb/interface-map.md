@@ -16,12 +16,12 @@ Leaf services with no upstream dependencies. They don't call other modules.
 
 | Module | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
 |--------|--------------|------------|---------------|----------|--------|
-| **ConnectivityBridge** | BLE + HTTP device state | — | `ConnectivityService` | — | ✅ |
-| **NotificationService** | System notification display | — | `NotificationService.show()` | — | ✅ |
-| **OSS** | File upload/download | — | `OssUploader.upload()` | — | 📐 |
-| **ASR** | Transcription results | OSS (downloads audio files to transcribe) | `TingwuRunner.transcribe()` | — | 📐 |
-| **TingwuPipeline** | Transcription & Audio Intelligence | OSS (reads `fileUrl`) | `TingwuPipeline.submit()` | SSD | ✅ |
-| **PipelineTelemetry** | Pipeline logs (to Logcat) | — | `PipelineTelemetry.recordEvent()` | RAM | 🔲 |
+| **[ConnectivityBridge](./connectivity-bridge/spec.md)** | BLE + HTTP device state | — | `ConnectivityService` | — | ✅ |
+| **[NotificationService](./notifications/spec.md)** | System notification display | — | `NotificationService.show()` | — | ✅ |
+| **[OSS](./oss-service/spec.md)** | File upload/download | — | `OssUploader.upload()` | — | 📐 |
+| **[ASR](./asr-service/spec.md)** | Transcription results | OSS (downloads audio files to transcribe) | `TingwuRunner.transcribe()` | — | 📐 |
+| **[TingwuPipeline](./tingwu-pipeline/spec.md)** | Transcription & Audio Intelligence | OSS (reads `fileUrl`) | `TingwuPipeline.submit()` | SSD | ✅ |
+| **[PipelineTelemetry](./pipeline-telemetry/spec.md)** | Pipeline logs (to Logcat) | — | `PipelineTelemetry.recordEvent()` | RAM | 🔲 |
 
 ---
 
@@ -31,12 +31,12 @@ Store and query domain data. Other modules use their interfaces but never each o
 
 | Module | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
 |--------|--------------|------------|---------------|----------|--------|
-| **EntityWriter** | Entity mutations (create/update/merge aliases) | SessionContext (write-through to RAM S1) | `EntityWriter.upsertFromClue()` | RAM Application | ✅ |
-| **EntityRegistry** | Entity queries (read-only view of entities) | — | `EntityRepository.findByAlias()` | SSD | ✅ |
-| **MemoryCenter** | Conversation memory entries | — | `MemoryRepository.search()` | SSD | ✅ |
-| **UserHabit** | Behavioral pattern observations | — | `UserHabitRepository.observe()` | SSD | ✅ |
-| **SessionHistory** | Session metadata (list, pin, rename, delete) | — | `HistoryRepository.getGroupedSessions()` | SSD | 🚧 |
-| **SessionContext** | Per-session workspace (3 sections) | EntityWriter (S1 via write-through), RLModule (S2/S3) | `SessionContext.entityContext` | Kernel (RAM) | ✅ |
+| **[EntityWriter](./entity-writer/spec.md)** | Entity mutations (create/update/merge aliases) | SessionContext (write-through to RAM S1) | `EntityWriter.upsertFromClue()` | RAM Application | ✅ |
+| **[EntityRegistry](./entity-registry/spec.md)** | Entity queries (read-only view of entities) | — | `EntityRepository.findByAlias()` | SSD | ✅ |
+| **[MemoryCenter](./memory-center/spec.md)** | Conversation memory entries | — | `MemoryRepository.search()` | SSD | ✅ |
+| **[UserHabit](./user-habit/spec.md)** | Behavioral pattern observations | — | `UserHabitRepository.observe()` | SSD | ✅ |
+| **[SessionHistory](./session-history/spec.md)** | Session metadata (list, pin, rename, delete) | — | `HistoryRepository.getGroupedSessions()` | SSD | 🚧 |
+| **[SessionContext](./session-context/spec.md)** | Per-session workspace (3 sections) | EntityWriter (S1 via write-through), RLModule (S2/S3) | `SessionContext.entityContext` | Kernel (RAM) | ✅ |
 
 > **EntityWriter vs EntityRegistry**: Writer handles mutations (dedup, merge, alias registration) AND write-through to RAM S1. Registry handles queries. Callers MUST use Writer for writes, Registry for reads. Never call `EntityRepository.save()` directly.
 >
@@ -51,18 +51,16 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 | Module | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
 |--------|--------------|------------|---------------|----------|--------|
 | **ContextBuilder** | `EnhancedContext` (assembled prompt context) | EntityRegistry, MemoryCenter, SessionContext | `ContextBuilder.build()` | Kernel | ✅ |
-| **InputParser** | Semantic intent and EntityID resolution | AliasIndex (internal) | `InputParserService.parseIntent()` | RAM Application | ✅ |
-| **EntityDisambiguator** | `PendingIntent` interruption state | EntityWriter (to write cures) | `EntityDisambiguationService.process()` | RAM Application | ✅ |
-| **LightningRouter** | Intent evaluation (Phase 0) | ContextBuilder | `LightningRouter.evaluateIntent()` | RAM Application | ✅ |
-| **Architect** | Markdown analytics plans and investigations | ContextBuilder | `ArchitectService.generatePlan()` | RAM Application | ✅ |
+| **[InputParser](./input-parser/spec.md)** | Semantic intent and EntityID resolution | AliasIndex (internal) | `InputParserService.parseIntent()` | RAM Application | ✅ |
+| **[EntityDisambiguator](./entity-disambiguation/spec.md)** | `PendingIntent` interruption state | EntityWriter (to write cures) | `EntityDisambiguationService.process()` | RAM Application | ✅ |
+| **[LightningRouter](./lightning-router/spec.md)** | Intent evaluation (Phase 0) | ContextBuilder | `LightningRouter.evaluateIntent()` | RAM Application | ✅ |
 | **EntityResolver** | Entity disambiguation matching | EntityRegistry | `EntityResolverService.resolve()` | RAM Application | ✅ |
 | **ModelRegistry** | Static LLM Profiles (models, temps, skills) | — | `ModelRegistry` | Config Hub | ✅ |
-| **Executor** | Raw LLM output (stateless — no storage) | ModelRouter | `Executor.execute()` | — | ✅ |
-| **PluginRegistry** | Executable pure-Kotlin workflows (Tools) | — | `ToolRegistry.executeTool()` | App Infra | ✅ |
-| **Orchestrator** | Top-level routing + pipeline coordination | LightningRouter, MascotService, ContextBuilder, Executor, Architect, EntityResolver, PluginRegistry | `PrismOrchestrator.processInput()` | — | ✅ |
+| **[Executor](./model-routing/spec.md)** | Raw LLM output (stateless — no storage) | ModelRouter | `Executor.execute()` | — | ✅ |
+| **[PluginRegistry](./plugin-registry/spec.md)** | Executable pure-Kotlin workflows (Tools) | — | `ToolRegistry.executeTool()` | App Infra | ✅ |
+| **[PrismOrchestrator](./prism-orchestrator/spec.md)** | Top-level routing + pipeline coordination | LightningRouter, MascotService, ContextBuilder, Executor, EntityResolver, PluginRegistry | `PrismOrchestrator.processInput()` | RAM Application | ✅ |
 
-
-> **Orchestrator is the only module that calls EntityWriter during task creation.** Feature modules (Scheduler, Mascot) receive results from Orchestrator; they don't call EntityWriter themselves. (Exception: debug seed code in SchedulerViewModel, guarded by `DEBUG` build type.)
+> **PrismOrchestrator is the only module that calls EntityWriter during task creation.** Feature modules (Scheduler, Mascot) receive results from Orchestrator; they don't call EntityWriter themselves. (Exception: debug seed code in SchedulerViewModel, guarded by `DEBUG` build type.)
 >
 > **ContextBuilder reads EntityRegistry for Entity Knowledge Context.** `ContextBuilder.buildEntityKnowledge()` calls `EntityRepository.getAll()` at session start to load the structured entity graph into the LLM prompt (RAM Section 1). This is a Kernel → SSD read.
 
@@ -74,11 +72,14 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 
 | Module | Owns (Writes) | Reads From (directly) | Receives From (via Orchestrator) | OS Layer | Status |
 |--------|--------------|----------------------|----------------------------------|----------|--------|
-| **Mascot (System I)** | Ephemeral interactions, greetings | EventBus (Idle, Error) | `MascotState` | RAM App (Out-of-band) | ✅ |
-| **Scheduler** | ScheduledTask, InspirationEntry | EntityRegistry (alias lookup), ScheduleBoard (conflicts) | `UiState.SchedulerTaskCreated` | Consumer of RAM | ✅ |
-| **ScheduleBoard** | Conflict index (in-memory cache) | ScheduledTaskRepository (populates index) | — | SSD | ✅ |
-| **Analyst Orchestrator** | Task/Analysis State Machine | ContextBuilder, ClientProfileHub | `AnalystPipeline.state` | RAM Application | ✅ |
-| **BadgeAudioPipeline** | Audio recording lifecycle | ASR, OSS, ConnectivityBridge | Triggers Orchestrator on transcription complete | — | ✅ |
+| **[Mascot (System I)](./mascot-service/spec.md)** | Ephemeral interactions, greetings | EventBus (Idle, Error) | `MascotState` | RAM App (Out-of-band) | ✅ |
+| **[Scheduler](./scheduler/spec.md)** | ScheduledTask, InspirationEntry | EntityRegistry (alias lookup), ScheduleBoard (conflicts) | `UiState.SchedulerTaskCreated` | Consumer of RAM | ✅ |
+| **[ScheduleBoard](./scheduler/spec.md)** | Conflict index (in-memory cache) | ScheduledTaskRepository (populates index) | — | SSD | ✅ |
+| **[Prism Orchestrator](./prism-orchestrator/spec.md)** | Chat State Machine (System II delegator) | ContextBuilder, ClientProfileHub | `PrismState` | RAM Application | ✅ |
+| **[BadgeAudioPipeline](./badge-audio-pipeline/spec.md)** | Audio recording lifecycle | ASR, OSS, ConnectivityBridge | Triggers Orchestrator on transcription complete | — | ✅ |
+| **[AudioManagement](./audio-management/spec.md)** | Manual sync/transcribe states | ConnectivityBridge, TingwuPipeline | `AudioRepository` | App | 🚧 |
+| **[ConflictResolver](./conflict-resolver/spec.md)** | Conflict resolution actions | ScheduleBoard | `ConflictResolver` | RAM App | ✅ |
+| **[DevicePairing](./device-pairing/spec.md)** | BLE pairing session states | Legacy BLE stack | `PairingService` | App | ✅ |
 
 > **"Reads From" vs "Receives From"**: "Reads From" = the feature calls the interface directly. "Receives From" = Orchestrator pushes results into the feature's ViewModel. This distinction prevents confusion about who initiates the call.
 
@@ -93,6 +94,7 @@ Current recognized Vault IDs:
 - `EXPORT_CSV`
 - `DRAFT_EMAIL`
 - `TALK_SIMULATOR` (Plugin Workflow)
+- `ANALYZER_META` (Ambient Meta-Analysis Tool)
 
 ---
 
@@ -102,8 +104,8 @@ Cross-cutting services that aggregate data from multiple Layer 2 sources.
 
 | Module | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
 |--------|--------------|------------|---------------|----------|--------|
-| **ClientProfileHub** | Aggregated client context for tips | EntityRegistry, MemoryCenter, UserHabit | `ClientProfileHub.getFocusedContext()` | File Explorer | 📐 |
-| **RLModule** | Habit context for prompts (S2/S3 population) | UserHabit | `ReinforcementLearner.loadUserHabits()`, `loadClientHabits()` | RAM Application | ✅ |
+| **[ClientProfileHub](./client-profile-hub/spec.md)** | Aggregated client context for tips | EntityRegistry, MemoryCenter, UserHabit | `ClientProfileHub.getFocusedContext()` | File Explorer | 📐 |
+| **[RLModule](./rl-module/spec.md)** | Habit context for prompts (S2/S3 population) | UserHabit | `ReinforcementLearner.loadUserHabits()`, `loadClientHabits()` | RAM Application | ✅ |
 
 ---
 
@@ -149,3 +151,5 @@ graph TD
 | Cache MemoryEntry on ViewModel | Query MemoryRepository per request | Memory entries are mutable hot storage |
 | Feature module calls EntityWriter (production) | Orchestrator calls EntityWriter | Only Layer 3 writes entities; Layer 4 receives results |
 | Bypass ContextBuilder for RAM writes | EntityWriter calls `RealContextBuilder.updateEntityInSession()` | Write-through keeps SSD and RAM in sync automatically |
+
+

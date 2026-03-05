@@ -1,6 +1,6 @@
 # Entity Writer Interface
 
-> **Blackbox contract** — For consumers (Scheduler, Coach, Analyst, Audio Pipeline). Don't read implementation.  
+> **Blackbox contract** — For consumers (Scheduler, Unified Pipeline, Audio Pipeline). Don't read implementation.  
 > **OS Layer**: RAM Application
 
 ---
@@ -44,7 +44,7 @@ interface EntityWriter {
      * @param clue Raw mention text (e.g., "张总"), must be non-blank
      * @param resolvedId Entity ID from disambiguation (null → auto-resolve)
      * @param type Entity type
-     * @param source Caller identifier ("scheduler", "coach", "audio")
+     * @param source Caller identifier ("scheduler", "pipeline", "audio")
      * @return UpsertResult with entityId, isNew flag, and canonical displayName
      * @throws IllegalArgumentException if clue is blank
      */

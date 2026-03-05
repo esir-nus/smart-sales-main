@@ -1,7 +1,7 @@
 # Input Parser Interface
 
 > **Owner**: input-parser
-> **Consumers**: analyst-orchestrator, coach, scheduler
+> **Consumers**: prism-orchestrator, unified-pipeline, scheduler
 
 ## Public Interface
 

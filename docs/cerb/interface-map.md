@@ -1,6 +1,6 @@
 # Interface Map
 
-> **System**: Smart Sales is an AI-powered sales assistant. A BLE badge records conversations, the app transcribes them, creates scheduled tasks, and provides sales coaching — all coordinated through an LLM pipeline.
+> **System**: Smart Sales is an AI-powered sales assistant. A BLE badge records conversations, the app transcribes them, creates scheduled tasks, and provides proactive insights — all coordinated through an LLM pipeline.
 >
 > **Purpose**: Module ownership + data flow. Read this BEFORE any cross-module change.
 > **Rule**: If data belongs to Module B, query B's interface at runtime. Don't store B's data on A's model.
@@ -16,12 +16,12 @@ Leaf services with no upstream dependencies. They don't call other modules.
 
 | Module | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
 |--------|--------------|------------|---------------|----------|--------|
-| **[ConnectivityBridge](./connectivity-bridge/spec.md)** | BLE + HTTP device state | — | `ConnectivityService` | — | ✅ |
-| **[NotificationService](./notifications/spec.md)** | System notification display | — | `NotificationService.show()` | — | ✅ |
-| **[OSS](./oss-service/spec.md)** | File upload/download | — | `OssUploader.upload()` | — | 📐 |
-| **[ASR](./asr-service/spec.md)** | Transcription results | OSS (downloads audio files to transcribe) | `TingwuRunner.transcribe()` | — | 📐 |
-| **[TingwuPipeline](./tingwu-pipeline/spec.md)** | Transcription & Audio Intelligence | OSS (reads `fileUrl`) | `TingwuPipeline.submit()` | SSD | ✅ |
-| **[PipelineTelemetry](./pipeline-telemetry/spec.md)** | Pipeline logs (to Logcat) | — | `PipelineTelemetry.recordEvent()` | RAM | 🔲 |
+| **[ConnectivityBridge](./connectivity-bridge/spec.md)** | BLE + HTTP device state | — | `connectUsingSession(Config) -> Flow<DeviceState>` | — | ✅ |
+| **[NotificationService](./notifications/spec.md)** | System notification display | — | `show(NotificationPayload) -> Unit` | — | ✅ |
+| **[OSS](./oss-service/spec.md)** | File upload/download | — | `upload(ByteArray) -> String (Url)` | — | 📐 |
+| **[ASR](./asr-service/spec.md)** | Transcription results | OSS (downloads audio files to transcribe) | `transcribe(AudioFile) -> Flow<Transcription>` | — | 📐 |
+| **[TingwuPipeline](./tingwu-pipeline/spec.md)** | Transcription & Audio Intelligence | OSS (reads `fileUrl`) | `submit(AudioUrl) -> PipelineResult` | SSD | ✅ |
+| **[PipelineTelemetry](./pipeline-telemetry/spec.md)** | Pipeline logs (to Logcat) | — | `recordEvent(TelemetryEvent) -> Unit` | RAM | 🔲 |
 
 ---
 
@@ -31,12 +31,12 @@ Store and query domain data. Other modules use their interfaces but never each o
 
 | Module | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
 |--------|--------------|------------|---------------|----------|--------|
-| **[EntityWriter](./entity-writer/spec.md)** | Entity mutations (create/update/merge aliases) | SessionContext (write-through to RAM S1) | `EntityWriter.upsertFromClue()` | RAM Application | ✅ |
-| **[EntityRegistry](./entity-registry/spec.md)** | Entity queries (read-only view of entities) | — | `EntityRepository.findByAlias()` | SSD | ✅ |
-| **[MemoryCenter](./memory-center/spec.md)** | Conversation memory entries | — | `MemoryRepository.search()` | SSD | ✅ |
-| **[UserHabit](./user-habit/spec.md)** | Behavioral pattern observations | — | `UserHabitRepository.observe()` | SSD | ✅ |
-| **[SessionHistory](./session-history/spec.md)** | Session metadata (list, pin, rename, delete) | — | `HistoryRepository.getGroupedSessions()` | SSD | 🚧 |
-| **[SessionContext](./session-context/spec.md)** | Per-session workspace (3 sections) | EntityWriter (S1 via write-through), RLModule (S2/S3) | `SessionContext.entityContext` | Kernel (RAM) | ✅ |
+| **[EntityWriter](./entity-writer/spec.md)** | Entity mutations (create/update/merge aliases) | SessionContext (write-through to RAM S1) | `upsertFromClue(ParsedClue) -> EntityId` | RAM Application | ✅ |
+| **[EntityRegistry](./entity-registry/spec.md)** | Entity queries (read-only view of entities) | — | `findByAlias(String) -> List<EntityInfo>` | SSD | ✅ |
+| **[MemoryCenter](./memory-center/spec.md)** | Conversation memory entries | — | `search(MemoryQuery) -> List<MemoryEntry>` | SSD | ✅ |
+| **[UserHabit](./user-habit/spec.md)** | Behavioral pattern observations | — | `observe() -> Flow<List<Habit>>` | SSD | ✅ |
+| **[SessionHistory](./session-history/spec.md)** | Session metadata (list, pin, rename, delete) | — | `getGroupedSessions() -> Flow<SessionGroups>` | SSD | 🚧 |
+| **[SessionContext](./session-context/spec.md)** | Per-session workspace (3 sections) | EntityWriter (S1 via write-through), RLModule (S2/S3) | `entityContext: Flow<EntityGraph>` | Kernel (RAM) | ✅ |
 
 > **EntityWriter vs EntityRegistry**: Writer handles mutations (dedup, merge, alias registration) AND write-through to RAM S1. Registry handles queries. Callers MUST use Writer for writes, Registry for reads. Never call `EntityRepository.save()` directly.
 >
@@ -50,15 +50,16 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 
 | Module | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
 |--------|--------------|------------|---------------|----------|--------|
-| **ContextBuilder** | `EnhancedContext` (assembled prompt context) | EntityRegistry, MemoryCenter, SessionContext | `ContextBuilder.build()` | Kernel | ✅ |
-| **[InputParser](./input-parser/spec.md)** | Semantic intent and EntityID resolution | AliasIndex (internal) | `InputParserService.parseIntent()` | RAM Application | ✅ |
-| **[EntityDisambiguator](./entity-disambiguation/spec.md)** | `PendingIntent` interruption state | EntityWriter (to write cures) | `EntityDisambiguationService.process()` | RAM Application | ✅ |
-| **[LightningRouter](./lightning-router/spec.md)** | Intent evaluation (Phase 0) | ContextBuilder | `LightningRouter.evaluateIntent()` | RAM Application | ✅ |
-| **EntityResolver** | Entity disambiguation matching | EntityRegistry | `EntityResolverService.resolve()` | RAM Application | ✅ |
+| **ContextBuilder** | `EnhancedContext` (assembled prompt context) | EntityRegistry, MemoryCenter, SessionContext | `build(ContextRequest) -> EnhancedContext` | Kernel | ✅ |
+| **[InputParser](./input-parser/spec.md)** | Semantic intent and EntityID resolution | AliasIndex (internal) | `parseIntent(String) -> ParsedIntent` | RAM Application | ✅ |
+| **[EntityDisambiguator](./entity-disambiguation/spec.md)** | `PendingIntent` interruption state | EntityWriter (to write cures) | `process(PendingIntent) -> DisambiguationResult` | RAM Application | ✅ |
+| **[LightningRouter](./lightning-router/spec.md)** | Intent evaluation (Phase 0) | ContextBuilder | `evaluateIntent(String) -> IntentTier` | RAM Application | ✅ |
+| **EntityResolver** | Entity disambiguation matching | EntityRegistry | `resolve(Clues, Candidates) -> ResolvedEntities` | RAM Application | ✅ |
 | **ModelRegistry** | Static LLM Profiles (models, temps, skills) | — | `ModelRegistry` | Config Hub | ✅ |
-| **[Executor](./model-routing/spec.md)** | Raw LLM output (stateless — no storage) | ModelRouter | `Executor.execute()` | — | ✅ |
-| **[PluginRegistry](./plugin-registry/spec.md)** | Executable pure-Kotlin workflows (Tools) | — | `ToolRegistry.executeTool()` | App Infra | ✅ |
-| **[PrismOrchestrator](./prism-orchestrator/spec.md)** | Top-level routing + pipeline coordination | LightningRouter, MascotService, ContextBuilder, Executor, EntityResolver, PluginRegistry | `PrismOrchestrator.processInput()` | RAM Application | ✅ |
+| **[Executor](./model-routing/spec.md)** | Raw LLM output (stateless — no storage) | ModelRouter | `execute(Prompt, ModelProfile) -> String` | — | ✅ |
+| **[PluginRegistry](./plugin-registry/spec.md)** | Executable pure-Kotlin workflows (Tools) | — | `executeTool(ToolId, Params) -> Flow<UiState>` | App Infra | ✅ |
+| **[PrismOrchestrator](./prism-orchestrator/spec.md)** | Top-level routing + pipeline coordination | LightningRouter, MascotService, ContextBuilder, Executor, EntityResolver, PluginRegistry | `processInput(Intent) -> Flow<PrismState>` | RAM Application | ✅ |
+| **[UnifiedPipeline](./unified-pipeline/spec.md)** | System II context ETL & execution | EntityRegistry, UserHabit, MemoryCenter, ContextBuilder | `processInput(PipelineInput) -> Flow<PipelineResult>` | RAM Application | 🔲 |
 
 > **PrismOrchestrator is the only module that calls EntityWriter during task creation.** Feature modules (Scheduler, Mascot) receive results from Orchestrator; they don't call EntityWriter themselves. (Exception: debug seed code in SchedulerViewModel, guarded by `DEBUG` build type.)
 >
@@ -72,14 +73,14 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 
 | Module | Owns (Writes) | Reads From (directly) | Receives From (via Orchestrator) | OS Layer | Status |
 |--------|--------------|----------------------|----------------------------------|----------|--------|
-| **[Mascot (System I)](./mascot-service/spec.md)** | Ephemeral interactions, greetings | EventBus (Idle, Error) | `MascotState` | RAM App (Out-of-band) | ✅ |
-| **[Scheduler](./scheduler/spec.md)** | ScheduledTask, InspirationEntry | EntityRegistry (alias lookup), ScheduleBoard (conflicts) | `UiState.SchedulerTaskCreated` | Consumer of RAM | ✅ |
+| **[Mascot (System I)](./mascot-service/spec.md)** | Ephemeral interactions, greetings | EventBus (Idle, Error) | `Flow<MascotState>` | RAM App (Out-of-band) | ✅ |
+| **[Scheduler](./scheduler/spec.md)** | ScheduledTask, InspirationEntry | EntityRegistry (alias lookup), ScheduleBoard (conflicts) | `Flow<UiState.SchedulerTaskCreated>` | Consumer of RAM | ✅ |
 | **[ScheduleBoard](./scheduler/spec.md)** | Conflict index (in-memory cache) | ScheduledTaskRepository (populates index) | — | SSD | ✅ |
-| **[Prism Orchestrator](./prism-orchestrator/spec.md)** | Chat State Machine (System II delegator) | ContextBuilder, ClientProfileHub | `PrismState` | RAM Application | ✅ |
+| **[Prism Orchestrator](./prism-orchestrator/spec.md)** | Chat State Machine (System II delegator) | ContextBuilder, ClientProfileHub | `Flow<PrismState>` | RAM Application | ✅ |
 | **[BadgeAudioPipeline](./badge-audio-pipeline/spec.md)** | Audio recording lifecycle | ASR, OSS, ConnectivityBridge | Triggers Orchestrator on transcription complete | — | ✅ |
-| **[AudioManagement](./audio-management/spec.md)** | Manual sync/transcribe states | ConnectivityBridge, TingwuPipeline | `AudioRepository` | App | 🚧 |
-| **[ConflictResolver](./conflict-resolver/spec.md)** | Conflict resolution actions | ScheduleBoard | `ConflictResolver` | RAM App | ✅ |
-| **[DevicePairing](./device-pairing/spec.md)** | BLE pairing session states | Legacy BLE stack | `PairingService` | App | ✅ |
+| **[AudioManagement](./audio-management/spec.md)** | Manual sync/transcribe states | ConnectivityBridge, TingwuPipeline | `Flow<AudioState>` | App | 🚧 |
+| **[ConflictResolver](./conflict-resolver/spec.md)** | Conflict resolution actions | ScheduleBoard | `Flow<ConflictState>` | RAM App | ✅ |
+| **[DevicePairing](./device-pairing/spec.md)** | BLE pairing session states | Legacy BLE stack | `Flow<PairingState>` | App | ✅ |
 
 > **"Reads From" vs "Receives From"**: "Reads From" = the feature calls the interface directly. "Receives From" = Orchestrator pushes results into the feature's ViewModel. This distinction prevents confusion about who initiates the call.
 
@@ -94,7 +95,6 @@ Current recognized Vault IDs:
 - `EXPORT_CSV`
 - `DRAFT_EMAIL`
 - `TALK_SIMULATOR` (Plugin Workflow)
-- `ANALYZER_META` (Ambient Meta-Analysis Tool)
 
 ---
 
@@ -104,8 +104,8 @@ Cross-cutting services that aggregate data from multiple Layer 2 sources.
 
 | Module | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
 |--------|--------------|------------|---------------|----------|--------|
-| **[ClientProfileHub](./client-profile-hub/spec.md)** | Aggregated client context for tips | EntityRegistry, MemoryCenter, UserHabit | `ClientProfileHub.getFocusedContext()` | File Explorer | 📐 |
-| **[RLModule](./rl-module/spec.md)** | Habit context for prompts (S2/S3 population) | UserHabit | `ReinforcementLearner.loadUserHabits()`, `loadClientHabits()` | RAM Application | ✅ |
+| **[ClientProfileHub](./client-profile-hub/spec.md)** | Aggregated client context for tips | EntityRegistry, MemoryCenter, UserHabit | `getFocusedContext(ClientId) -> ClientProfile` | File Explorer | 📐 |
+| **[RLModule](./rl-module/spec.md)** | Habit context for prompts (S2/S3 population) | UserHabit | `loadUserHabits() -> List<Habit>`, `loadClientHabits(Id) -> List<Habit>` | RAM Application | ✅ |
 
 ---
 

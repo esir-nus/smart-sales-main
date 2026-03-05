@@ -8,7 +8,7 @@ import androidx.compose.ui.unit.sp
 /**
  * Semantic Typography Roles for SmartSales "Living Intelligence" Design.
  * 
- * See docs/guides/style-guide.md for usage rules.
+ * See docs/specs/prism-ui-ux-contract.md for usage rules.
  */
 object AppTypography {
     // We use SansSerif (System default) as a proxy for Inter until font resources are added.

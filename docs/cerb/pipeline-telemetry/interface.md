@@ -1,7 +1,7 @@
 # Pipeline Telemetry Interface
 
 > **Owner**: pipeline-telemetry
-> **Consumers**: PrismOrchestrator, ContextBuilder, CoachPipeline, AnalystPipeline, SchedulerPipeline, InputParserService
+> **Consumers**: PrismOrchestrator, ContextBuilder, UnifiedPipeline, SchedulerPipeline, InputParserService
 
 ## Public Interface
 

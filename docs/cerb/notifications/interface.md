@@ -1,6 +1,6 @@
 # Notification Service Interface
 
-> **Blackbox contract** — For consumers (Scheduler, Coach, Badge Pipeline, Memory Center). Don't read implementation.
+> **Blackbox contract** — For consumers (Scheduler, Mascot, Badge Pipeline, Memory Center). Don't read implementation.
 > **OS Layer**: Infrastructure (Layer 1)
 > **Rule**: All Android `NotificationManager` access goes through this interface. Never build notifications directly.
 

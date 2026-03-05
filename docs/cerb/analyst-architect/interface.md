@@ -1,7 +1,8 @@
 # Analyst Architect Interface
 
 > **Owner**: analyst-architect
-> **Consumers**: analyst-orchestrator
+> **Consumers**: None
+> **State**: DEPRECATED (Superseded by `unified-pipeline` and `plugin-registry`)
 
 ## Public Interface
 

@@ -1,7 +1,7 @@
 # Lightning Router Interface
 
 > **Owner**: lightning-router
-> **Consumers**: analyst-orchestrator
+> **Consumers**: prism-orchestrator
 
 ## Public Interface
 

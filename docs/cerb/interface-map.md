@@ -35,7 +35,7 @@ Store and query domain data. Other modules use their interfaces but never each o
 | **[EntityRegistry](./entity-registry/spec.md)** | Entity Resolution | Entity queries (read-only view of entities) | — | `findByAlias(String) -> List<EntityInfo>` | SSD | ✅ |
 | **[MemoryCenter](./memory-center/spec.md)** | Memory & OS | Conversation memory entries | — | `search(MemoryQuery) -> List<MemoryEntry>` | SSD | ✅ |
 | **[UserHabit](./user-habit/spec.md)** | Memory & OS | Behavioral pattern observations | — | `observe() -> Flow<List<Habit>>` | SSD | ✅ |
-| **[SessionHistory](./session-history/spec.md)** | Memory & OS | Session metadata (list, pin, rename, delete) | — | `getGroupedSessions() -> Flow<SessionGroups>` | SSD | 🚧 |
+| **[SessionHistory](./session-history/spec.md)** | Memory & OS | Session metadata (list, pin, rename, delete) | — | `getGroupedSessions() -> Flow<SessionGroups>` | SSD | ✅ |
 | **[SessionContext](./session-context/spec.md)** | Memory & OS | Per-session workspace (3 sections) | EntityWriter (S1 via write-through), RLModule (S2/S3) | `entityContext: Flow<EntityGraph>` | Kernel (RAM) | ✅ |
 
 > **EntityWriter vs EntityRegistry**: Writer handles mutations (dedup, merge, alias registration) AND write-through to RAM S1. Registry handles queries. Callers MUST use Writer for writes, Registry for reads. Never call `EntityRepository.save()` directly.

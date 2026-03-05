@@ -6,6 +6,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Cerb Interface Map - 2D Dashboard</title>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code&display=swap" rel="stylesheet">
+        <!-- SVG drawing library for architecture maps -->
+        <script src="https://cdn.jsdelivr.net/npm/leader-line-new@1.1.9/leader-line.min.js"></script>
         <style>
     :root {
         --bg: #0f172a;
@@ -108,44 +110,6 @@
         z-index: 5;
     }
 
-    /* Outgoing Data Pipe (Upwards visually) */
-    .module-card::before {
-        content: '';
-        position: absolute;
-        bottom: 100%;
-        left: 30px;
-        width: 4px;
-        height: 60px;
-        background: linear-gradient(to top, var(--accent), transparent);
-        opacity: 0.6;
-        box-shadow: 0 0 10px var(--accent);
-        z-index: -1;
-        pointer-events: none;
-        animation: pulseflow 2s infinite ease-out;
-    }
-
-    /* Incoming Data Pipe (Downwards visually) */
-    .module-card::after {
-        content: '';
-        position: absolute;
-        top: 100%;
-        left: 40px;
-        width: 4px;
-        height: 100px;
-        background: linear-gradient(to bottom, var(--glow), transparent);
-        opacity: 0.5;
-        box-shadow: 0 0 10px var(--glow);
-        z-index: -1;
-        pointer-events: none;
-        animation: pulseflow 3s infinite ease-in reverse;
-    }
-
-    @keyframes pulseflow {
-        0% { opacity: 0.2; transform: translateY(0); }
-        50% { opacity: 0.8; }
-        100% { opacity: 0.2; transform: translateY(-5px); }
-    }
-
     .module-card:hover {
         transform: translateY(-2px);
         box-shadow: 0 8px 30px rgba(0,0,0,0.4);
@@ -153,28 +117,20 @@
         border-color: var(--accent);
     }
 
-    /* Add dot to card to show where pipes connect */
-    .module-name::before {
-        content: '';
+    /* Connection anchoring points */
+    .anchor-top, .anchor-bottom {
         position: absolute;
-        top: 0; left: 31px;
-        width: 10px; height: 10px;
+        width: 8px;
+        height: 8px;
         background: var(--accent);
         border-radius: 50%;
-        transform: translate(-50%, -50%);
-        box-shadow: 0 0 10px var(--accent);
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0; /* Hidden by default, useful for debugging */
     }
     
-    .module-name::after {
-        content: '';
-        position: absolute;
-        bottom: 0; left: 41px;
-        width: 10px; height: 10px;
-        background: var(--glow);
-        border-radius: 50%;
-        transform: translate(-50%, 50%);
-        box-shadow: 0 0 10px var(--glow);
-    }
+    .anchor-top { top: -4px; }
+    .anchor-bottom { bottom: -4px; background: var(--glow); }
 
     .module-header {
         display: flex;
@@ -311,7 +267,9 @@
             <div class="layer-title">Layer 5: Infrastructure</div>
             <div class="modules-grid">
         
-                <div class="module-card">
+                <div class="module-card" id="mod-connectivitybridge" data-reads-from='["\u2014"]'>
+                    <div class="anchor-top" id="anchor-top-connectivitybridge"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-connectivitybridge"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./connectivity-bridge/spec.md">ConnectivityBridge</a></div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -330,7 +288,9 @@
                     <div class="os-layer">—</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-notificationservice" data-reads-from='["\u2014"]'>
+                    <div class="anchor-top" id="anchor-top-notificationservice"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-notificationservice"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./notifications/spec.md">NotificationService</a></div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -349,7 +309,9 @@
                     <div class="os-layer">—</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-oss" data-reads-from='["\u2014"]'>
+                    <div class="anchor-top" id="anchor-top-oss"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-oss"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./oss-service/spec.md">OSS</a></div>
                         <div class="module-status status-interface">Interface</div>
@@ -368,7 +330,9 @@
                     <div class="os-layer">—</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-asr" data-reads-from='["oss-downloads-audio-files-to-transcribe"]'>
+                    <div class="anchor-top" id="anchor-top-asr"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-asr"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./asr-service/spec.md">ASR</a></div>
                         <div class="module-status status-interface">Interface</div>
@@ -387,7 +351,9 @@
                     <div class="os-layer">—</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-tingwupipeline" data-reads-from='["oss-reads-fileurl"]'>
+                    <div class="anchor-top" id="anchor-top-tingwupipeline"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-tingwupipeline"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./tingwu-pipeline/spec.md">TingwuPipeline</a></div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -406,7 +372,9 @@
                     <div class="os-layer">SSD</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-pipelinetelemetry" data-reads-from='["\u2014"]'>
+                    <div class="anchor-top" id="anchor-top-pipelinetelemetry"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-pipelinetelemetry"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./pipeline-telemetry/spec.md">PipelineTelemetry</a></div>
                         <div class="module-status status-planned">Planned</div>
@@ -432,7 +400,9 @@
             <div class="layer-title">Layer 4: Data Services</div>
             <div class="modules-grid">
         
-                <div class="module-card">
+                <div class="module-card" id="mod-entitywriter" data-reads-from='["sessioncontext-write-through-to-ram-s1"]'>
+                    <div class="anchor-top" id="anchor-top-entitywriter"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-entitywriter"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./entity-writer/spec.md">EntityWriter</a></div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -451,7 +421,9 @@
                     <div class="os-layer">RAM Application</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-entityregistry" data-reads-from='["\u2014"]'>
+                    <div class="anchor-top" id="anchor-top-entityregistry"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-entityregistry"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./entity-registry/spec.md">EntityRegistry</a></div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -470,7 +442,9 @@
                     <div class="os-layer">SSD</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-memorycenter" data-reads-from='["\u2014"]'>
+                    <div class="anchor-top" id="anchor-top-memorycenter"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-memorycenter"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./memory-center/spec.md">MemoryCenter</a></div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -489,7 +463,9 @@
                     <div class="os-layer">SSD</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-userhabit" data-reads-from='["\u2014"]'>
+                    <div class="anchor-top" id="anchor-top-userhabit"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-userhabit"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./user-habit/spec.md">UserHabit</a></div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -508,7 +484,9 @@
                     <div class="os-layer">SSD</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-sessionhistory" data-reads-from='["\u2014"]'>
+                    <div class="anchor-top" id="anchor-top-sessionhistory"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-sessionhistory"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./session-history/spec.md">SessionHistory</a></div>
                         <div class="module-status status-wip">WIP</div>
@@ -527,7 +505,9 @@
                     <div class="os-layer">SSD</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-sessioncontext" data-reads-from='["entitywriter-s1-via-write-through", "rlmodule-s2/s3"]'>
+                    <div class="anchor-top" id="anchor-top-sessioncontext"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-sessioncontext"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./session-context/spec.md">SessionContext</a></div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -553,7 +533,9 @@
             <div class="layer-title">Layer 3: Core Pipeline</div>
             <div class="modules-grid">
         
-                <div class="module-card">
+                <div class="module-card" id="mod-contextbuilder" data-reads-from='["entityregistry", "memorycenter", "sessioncontext"]'>
+                    <div class="anchor-top" id="anchor-top-contextbuilder"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-contextbuilder"></div>
                     <div class="module-header">
                         <div class="module-name">ContextBuilder</div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -572,7 +554,9 @@
                     <div class="os-layer">Kernel</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-inputparser" data-reads-from='["aliasindex-internal"]'>
+                    <div class="anchor-top" id="anchor-top-inputparser"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-inputparser"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./input-parser/spec.md">InputParser</a></div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -591,7 +575,9 @@
                     <div class="os-layer">RAM Application</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-entitydisambiguator" data-reads-from='["entitywriter-to-write-cures"]'>
+                    <div class="anchor-top" id="anchor-top-entitydisambiguator"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-entitydisambiguator"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./entity-disambiguation/spec.md">EntityDisambiguator</a></div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -610,7 +596,9 @@
                     <div class="os-layer">RAM Application</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-lightningrouter" data-reads-from='["contextbuilder"]'>
+                    <div class="anchor-top" id="anchor-top-lightningrouter"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-lightningrouter"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./lightning-router/spec.md">LightningRouter</a></div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -629,7 +617,9 @@
                     <div class="os-layer">RAM Application</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-entityresolver" data-reads-from='["entityregistry"]'>
+                    <div class="anchor-top" id="anchor-top-entityresolver"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-entityresolver"></div>
                     <div class="module-header">
                         <div class="module-name">EntityResolver</div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -648,7 +638,9 @@
                     <div class="os-layer">RAM Application</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-modelregistry" data-reads-from='["\u2014"]'>
+                    <div class="anchor-top" id="anchor-top-modelregistry"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-modelregistry"></div>
                     <div class="module-header">
                         <div class="module-name">ModelRegistry</div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -667,7 +659,9 @@
                     <div class="os-layer">Config Hub</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-executor" data-reads-from='["modelrouter"]'>
+                    <div class="anchor-top" id="anchor-top-executor"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-executor"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./model-routing/spec.md">Executor</a></div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -686,7 +680,9 @@
                     <div class="os-layer">—</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-pluginregistry" data-reads-from='["\u2014"]'>
+                    <div class="anchor-top" id="anchor-top-pluginregistry"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-pluginregistry"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./plugin-registry/spec.md">PluginRegistry</a></div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -705,7 +701,9 @@
                     <div class="os-layer">App Infra</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-prismorchestrator" data-reads-from='["lightningrouter", "mascotservice", "contextbuilder", "executor", "entityresolver", "pluginregistry"]'>
+                    <div class="anchor-top" id="anchor-top-prismorchestrator"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-prismorchestrator"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./prism-orchestrator/spec.md">PrismOrchestrator</a></div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -724,7 +722,9 @@
                     <div class="os-layer">RAM Application</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-unifiedpipeline" data-reads-from='["entityregistry", "userhabit", "memorycenter", "contextbuilder"]'>
+                    <div class="anchor-top" id="anchor-top-unifiedpipeline"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-unifiedpipeline"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./unified-pipeline/spec.md">UnifiedPipeline</a></div>
                         <div class="module-status status-planned">Planned</div>
@@ -750,7 +750,9 @@
             <div class="layer-title">Layer 2: Features</div>
             <div class="modules-grid">
         
-                <div class="module-card">
+                <div class="module-card" id="mod-mascot-system-i" data-reads-from='["eventbus-idle", "error"]'>
+                    <div class="anchor-top" id="anchor-top-mascot-system-i"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-mascot-system-i"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./mascot-service/spec.md">Mascot (System I)</a></div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -769,7 +771,9 @@
                     <div class="os-layer">RAM App (Out-of-band)</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-scheduler" data-reads-from='["entityregistry-alias-lookup", "scheduleboard-conflicts"]'>
+                    <div class="anchor-top" id="anchor-top-scheduler"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-scheduler"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./scheduler/spec.md">Scheduler</a></div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -788,7 +792,9 @@
                     <div class="os-layer">Consumer of RAM</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-scheduleboard" data-reads-from='["scheduledtaskrepository-populates-index"]'>
+                    <div class="anchor-top" id="anchor-top-scheduleboard"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-scheduleboard"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./scheduler/spec.md">ScheduleBoard</a></div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -807,14 +813,16 @@
                     <div class="os-layer">SSD</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-prism-orchestrator" data-reads-from='["contextbuilder", "clientprofilehub"]'>
+                    <div class="anchor-top" id="anchor-top-prism-orchestrator"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-prism-orchestrator"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./prism-orchestrator/spec.md">Prism Orchestrator</a></div>
                         <div class="module-status status-shipped">Shipped</div>
                     </div>
                     
                     <div class="module-explanation">
-                        Backend Component / 后端组件
+                        后端组件
                     </div>
                     
                     <div class="module-detail">
@@ -826,7 +834,9 @@
                     <div class="os-layer">RAM Application</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-badgeaudiopipeline" data-reads-from='["asr", "oss", "connectivitybridge"]'>
+                    <div class="anchor-top" id="anchor-top-badgeaudiopipeline"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-badgeaudiopipeline"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./badge-audio-pipeline/spec.md">BadgeAudioPipeline</a></div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -845,7 +855,9 @@
                     <div class="os-layer">—</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-audiomanagement" data-reads-from='["connectivitybridge", "tingwupipeline"]'>
+                    <div class="anchor-top" id="anchor-top-audiomanagement"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-audiomanagement"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./audio-management/spec.md">AudioManagement</a></div>
                         <div class="module-status status-wip">WIP</div>
@@ -864,7 +876,9 @@
                     <div class="os-layer">App</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-conflictresolver" data-reads-from='["scheduleboard"]'>
+                    <div class="anchor-top" id="anchor-top-conflictresolver"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-conflictresolver"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./conflict-resolver/spec.md">ConflictResolver</a></div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -883,7 +897,9 @@
                     <div class="os-layer">RAM App</div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-devicepairing" data-reads-from='["legacy-ble-stack"]'>
+                    <div class="anchor-top" id="anchor-top-devicepairing"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-devicepairing"></div>
                     <div class="module-header">
                         <div class="module-name"><a href="./device-pairing/spec.md">DevicePairing</a></div>
                         <div class="module-status status-shipped">Shipped</div>
@@ -909,114 +925,126 @@
             <div class="layer-title">Layer 1: Intelligence</div>
             <div class="modules-grid">
         
-                <div class="module-card">
+                <div class="module-card" id="mod-unknown" data-reads-from='[]'>
+                    <div class="anchor-top" id="anchor-top-unknown"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-unknown"></div>
                     <div class="module-header">
                         <div class="module-name">Unknown</div>
                         <div class="module-status status-planned">Unknown</div>
                     </div>
                     
                     <div class="module-explanation">
-                        Backend Component / 后端组件
+                        后端组件
                     </div>
                     
                     <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> None / 无</div>
-                        <div><span class="label">Reads From / 读取自:</span> None / 无</div>
+                        <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
+                        <div><span class="label">Reads From / 读取自:</span> 无</div>
                     </div>
                     
                     <div class="card-signature"></div>
                     <div class="os-layer"></div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-unknown" data-reads-from='[]'>
+                    <div class="anchor-top" id="anchor-top-unknown"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-unknown"></div>
                     <div class="module-header">
                         <div class="module-name">Unknown</div>
                         <div class="module-status status-planned">Unknown</div>
                     </div>
                     
                     <div class="module-explanation">
-                        Backend Component / 后端组件
+                        后端组件
                     </div>
                     
                     <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> None / 无</div>
-                        <div><span class="label">Reads From / 读取自:</span> None / 无</div>
+                        <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
+                        <div><span class="label">Reads From / 读取自:</span> 无</div>
                     </div>
                     
                     <div class="card-signature"></div>
                     <div class="os-layer"></div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-unknown" data-reads-from='[]'>
+                    <div class="anchor-top" id="anchor-top-unknown"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-unknown"></div>
                     <div class="module-header">
                         <div class="module-name">Unknown</div>
                         <div class="module-status status-planned">Unknown</div>
                     </div>
                     
                     <div class="module-explanation">
-                        Backend Component / 后端组件
+                        后端组件
                     </div>
                     
                     <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> None / 无</div>
-                        <div><span class="label">Reads From / 读取自:</span> None / 无</div>
+                        <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
+                        <div><span class="label">Reads From / 读取自:</span> 无</div>
                     </div>
                     
                     <div class="card-signature"></div>
                     <div class="os-layer"></div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-unknown" data-reads-from='[]'>
+                    <div class="anchor-top" id="anchor-top-unknown"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-unknown"></div>
                     <div class="module-header">
                         <div class="module-name">Unknown</div>
                         <div class="module-status status-planned">Unknown</div>
                     </div>
                     
                     <div class="module-explanation">
-                        Backend Component / 后端组件
+                        后端组件
                     </div>
                     
                     <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> None / 无</div>
-                        <div><span class="label">Reads From / 读取自:</span> None / 无</div>
+                        <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
+                        <div><span class="label">Reads From / 读取自:</span> 无</div>
                     </div>
                     
                     <div class="card-signature"></div>
                     <div class="os-layer"></div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-unknown" data-reads-from='[]'>
+                    <div class="anchor-top" id="anchor-top-unknown"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-unknown"></div>
                     <div class="module-header">
                         <div class="module-name">Unknown</div>
                         <div class="module-status status-planned">Unknown</div>
                     </div>
                     
                     <div class="module-explanation">
-                        Backend Component / 后端组件
+                        后端组件
                     </div>
                     
                     <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> None / 无</div>
-                        <div><span class="label">Reads From / 读取自:</span> None / 无</div>
+                        <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
+                        <div><span class="label">Reads From / 读取自:</span> 无</div>
                     </div>
                     
                     <div class="card-signature"></div>
                     <div class="os-layer"></div>
                 </div>
             
-                <div class="module-card">
+                <div class="module-card" id="mod-unknown" data-reads-from='[]'>
+                    <div class="anchor-top" id="anchor-top-unknown"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-unknown"></div>
                     <div class="module-header">
                         <div class="module-name">Unknown</div>
                         <div class="module-status status-planned">Unknown</div>
                     </div>
                     
                     <div class="module-explanation">
-                        Backend Component / 后端组件
+                        后端组件
                     </div>
                     
                     <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> None / 无</div>
-                        <div><span class="label">Reads From / 读取自:</span> None / 无</div>
+                        <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
+                        <div><span class="label">Reads From / 读取自:</span> 无</div>
                     </div>
                     
                     <div class="card-signature"></div>
@@ -1027,6 +1055,56 @@
         </div>
         
         </div>
+        
+        <script>
+            // Draw dependency lines after DOM loads
+            window.addEventListener('load', function() {
+                const cards = document.querySelectorAll('.module-card');
+                const lines = [];
+
+                cards.forEach(card => {
+                    const sourceId = card.id;
+                    const depsStr = card.getAttribute('data-reads-from');
+                    if (!depsStr) return;
+                    
+                    try {
+                        const deps = JSON.parse(depsStr);
+                        deps.forEach(dep => {
+                            const targetId = 'mod-' + dep;
+                            const targetEl = document.getElementById(targetId);
+                            
+                            if (targetEl && targetEl !== card) {
+                                // Draw line from target (provider) bottom to source (consumer) top
+                                // We reverse it visually because data flows FROM dependency TO consumer (upwards in our flex-direction column-reverse)
+                                const line = new LeaderLine(
+                                    targetEl,
+                                    card,
+                                    {
+                                        color: '#3b82f6',
+                                        startSocket: 'top',
+                                        endSocket: 'bottom',
+                                        path: 'fluid',
+                                        startPlug: 'disc',
+                                        endPlug: 'arrow3',
+                                        size: 2,
+                                        opacity: 0.4,
+                                        dash: {animation: true}
+                                    }
+                                );
+                                lines.push(line);
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Failed to parse deps for', sourceId, e);
+                    }
+                });
+
+                // Redraw on scroll or resize
+                window.addEventListener('scroll', AnimEvent.add(function() {
+                    lines.forEach(l => l.position());
+                }), false);
+            });
+        </script>
     </body>
     </html>
     

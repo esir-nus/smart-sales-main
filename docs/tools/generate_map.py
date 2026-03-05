@@ -220,44 +220,6 @@ def generate_html(layers):
         z-index: 5;
     }
 
-    /* Outgoing Data Pipe (Upwards visually) */
-    .module-card::before {
-        content: '';
-        position: absolute;
-        bottom: 100%;
-        left: 30px;
-        width: 4px;
-        height: 60px;
-        background: linear-gradient(to top, var(--accent), transparent);
-        opacity: 0.6;
-        box-shadow: 0 0 10px var(--accent);
-        z-index: -1;
-        pointer-events: none;
-        animation: pulseflow 2s infinite ease-out;
-    }
-
-    /* Incoming Data Pipe (Downwards visually) */
-    .module-card::after {
-        content: '';
-        position: absolute;
-        top: 100%;
-        left: 40px;
-        width: 4px;
-        height: 100px;
-        background: linear-gradient(to bottom, var(--glow), transparent);
-        opacity: 0.5;
-        box-shadow: 0 0 10px var(--glow);
-        z-index: -1;
-        pointer-events: none;
-        animation: pulseflow 3s infinite ease-in reverse;
-    }
-
-    @keyframes pulseflow {
-        0% { opacity: 0.2; transform: translateY(0); }
-        50% { opacity: 0.8; }
-        100% { opacity: 0.2; transform: translateY(-5px); }
-    }
-
     .module-card:hover {
         transform: translateY(-2px);
         box-shadow: 0 8px 30px rgba(0,0,0,0.4);
@@ -265,28 +227,20 @@ def generate_html(layers):
         border-color: var(--accent);
     }
 
-    /* Add dot to card to show where pipes connect */
-    .module-name::before {
-        content: '';
+    /* Connection anchoring points */
+    .anchor-top, .anchor-bottom {
         position: absolute;
-        top: 0; left: 31px;
-        width: 10px; height: 10px;
+        width: 8px;
+        height: 8px;
         background: var(--accent);
         border-radius: 50%;
-        transform: translate(-50%, -50%);
-        box-shadow: 0 0 10px var(--accent);
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0; /* Hidden by default, useful for debugging */
     }
     
-    .module-name::after {
-        content: '';
-        position: absolute;
-        bottom: 0; left: 41px;
-        width: 10px; height: 10px;
-        background: var(--glow);
-        border-radius: 50%;
-        transform: translate(-50%, 50%);
-        box-shadow: 0 0 10px var(--glow);
-    }
+    .anchor-top { top: -4px; }
+    .anchor-bottom { bottom: -4px; background: var(--glow); }
 
     .module-header {
         display: flex;
@@ -429,6 +383,8 @@ def generate_html(layers):
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Cerb Interface Map - 2D Dashboard</title>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code&display=swap" rel="stylesheet">
+        <!-- SVG drawing library for architecture maps -->
+        <script src="https://cdn.jsdelivr.net/npm/leader-line-new@1.1.9/leader-line.min.js"></script>
         <style>{css}</style>
     </head>
     <body>
@@ -465,15 +421,27 @@ def generate_html(layers):
             # Lookup explanation
             # Clean the name to match dict keys (strip markdown links)
             clean_name_key = re.sub(r"\[(.*?)\]\(.*?\)", r"\1", raw_module).replace("**", "").strip()
-            explanation = MODULE_EXPLANATIONS.get(clean_name_key, "Backend Component / 后端组件")
+            explanation = MODULE_EXPLANATIONS.get(clean_name_key, "后端组件")
+            
+            # Create a valid safe DOM ID for the module
+            dom_id = clean_name_key.lower().replace(" ", "-").replace("(", "").replace(")", "").strip()
             
             signature = mod.get("Key Interface", "").replace("`", "")
             
+            # Extract dependencies to pass to javascript
+            raw_reads_from = mod.get("Reads From", "").replace("`", "")
+            raw_reads_direct = mod.get("Reads From (directly)", "").replace("`", "") if "Reads From (directly)" in mod else ""
+            
+            # Combine all comma separated dependencies into a list of target DOM IDs
+            all_deps = raw_reads_from + "," + raw_reads_direct
+            deps_list = [d.strip().lower().replace(" ", "-").replace("(", "").replace(")", "") for d in all_deps.split(",") if d.strip() and d.strip().lower() != "eventbus" and d.strip().lower() != "none" and d.strip().lower() != "app"]
+            deps_json_attr = json.dumps(deps_list)
+
             # Extract and format the 'Reads From' handling with translations
-            reads_from = mod.get("Reads From", "").replace("`", "")
+            reads_from = raw_reads_from
             if "Receives From (via Orchestrator)" in mod:
                 # Handle Layer 4 specific columns
-                reads_from = f"Direct / 直接读取: {mod.get('Reads From (directly)', '')} <br> Via Orch / 经编排器接收: {mod.get('Receives From (via Orchestrator)', '')}".replace("`", "")
+                reads_from = f"Direct / 直接读取: {raw_reads_direct} <br> Via Orch / 经编排器接收: {mod.get('Receives From (via Orchestrator)', '')}".replace("`", "")
             else:
                 reads_from = clean_markdown(reads_from)
                 
@@ -482,11 +450,13 @@ def generate_html(layers):
             os_layer = mod.get("OS Layer", "")
 
             # If these columns are missing, fallback gracefully
-            if not owns: owns_html = "None / 无"
-            if not reads_from: reads_from = "None / 无"
+            if not owns: owns_html = "无"
+            if not reads_from: reads_from = "无"
 
             html_content += f"""
-                <div class="module-card">
+                <div class="module-card" id="mod-{dom_id}" data-reads-from='{deps_json_attr}'>
+                    <div class="anchor-top" id="anchor-top-{dom_id}"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-{dom_id}"></div>
                     <div class="module-header">
                         <div class="module-name">{name_html}</div>
                         <div class="module-status {status_class}">{status_label}</div>
@@ -513,6 +483,56 @@ def generate_html(layers):
 
     html_content += """
         </div>
+        
+        <script>
+            // Draw dependency lines after DOM loads
+            window.addEventListener('load', function() {
+                const cards = document.querySelectorAll('.module-card');
+                const lines = [];
+
+                cards.forEach(card => {
+                    const sourceId = card.id;
+                    const depsStr = card.getAttribute('data-reads-from');
+                    if (!depsStr) return;
+                    
+                    try {
+                        const deps = JSON.parse(depsStr);
+                        deps.forEach(dep => {
+                            const targetId = 'mod-' + dep;
+                            const targetEl = document.getElementById(targetId);
+                            
+                            if (targetEl && targetEl !== card) {
+                                // Draw line from target (provider) bottom to source (consumer) top
+                                // We reverse it visually because data flows FROM dependency TO consumer (upwards in our flex-direction column-reverse)
+                                const line = new LeaderLine(
+                                    targetEl,
+                                    card,
+                                    {
+                                        color: '#3b82f6',
+                                        startSocket: 'top',
+                                        endSocket: 'bottom',
+                                        path: 'fluid',
+                                        startPlug: 'disc',
+                                        endPlug: 'arrow3',
+                                        size: 2,
+                                        opacity: 0.4,
+                                        dash: {animation: true}
+                                    }
+                                );
+                                lines.push(line);
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Failed to parse deps for', sourceId, e);
+                    }
+                });
+
+                // Redraw on scroll or resize
+                window.addEventListener('scroll', AnimEvent.add(function() {
+                    lines.forEach(l => l.position());
+                }), false);
+            });
+        </script>
     </body>
     </html>
     """

@@ -152,6 +152,13 @@ class PrismOrchestrator @Inject constructor(
             is com.smartsales.prism.domain.analyst.AnalystResponse.Chat -> {
                 UiState.Response(response.content)
             }
+            is com.smartsales.prism.domain.analyst.AnalystResponse.RecommendTools -> {
+                UiState.Response(
+                    content = response.briefAnalysis,
+                    suggestAnalyst = true,
+                    workflows = response.suggestedWorkflows
+                )
+            }
             is com.smartsales.prism.domain.analyst.AnalystResponse.Plan -> {
                 UiState.MarkdownStrategyState(
                     title = response.title,

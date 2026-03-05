@@ -44,6 +44,7 @@ class RealLightningRouter @Inject constructor(
             val analysisObj = json.optJSONObject("analysis")
             val infoSufficient = analysisObj?.optBoolean("info_sufficient", false) 
                 ?: json.optBoolean("info_sufficient", false)
+            
             val response = json.optString("response", "我没完全明白，能再详细说说你想分析的内容吗？")
             
             val missingEntitiesList = mutableListOf<String>()

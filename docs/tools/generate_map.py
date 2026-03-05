@@ -145,12 +145,16 @@ def generate_html(layers):
     }
 
     .modules-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 20px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 30px;
+        position: relative;
     }
 
     .module-card {
+        width: 320px; /* Fixed width to enforce symmetric alignment */
+        flex-shrink: 0;
         border-radius: 8px;
         padding: 16px;
         background: var(--bg);
@@ -158,6 +162,28 @@ def generate_html(layers):
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
+    }
+
+    /* Virtual connection ports for the bloodlines */
+    .module-card::before, .module-card::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 24px;
+        height: 4px;
+        background: var(--surface-hover);
+        z-index: 10;
+        border-radius: 4px;
+        transition: background 0.3s ease;
+    }
+    
+    .module-card::before { top: 0; }
+    .module-card::after { bottom: 0; }
+    
+    .module-card:hover::before, .module-card:hover::after {
+        background: var(--accent);
+        box-shadow: 0 0 8px var(--accent);
     }
 
     .module-card:hover {
@@ -273,27 +299,27 @@ def generate_html(layers):
         fill: none;
         stroke: var(--border);
         stroke-width: 2px;
-        opacity: 0.4;
+        opacity: 0.3;
         transition: stroke 0.3s;
     }
 
     .data-pulse {
         fill: none;
-        stroke: var(--accent);
+        stroke: #ef4444; /* Crimson Bloodline */
         stroke-width: 3px;
         stroke-linecap: round;
         opacity: 0;
-        filter: drop-shadow(0 0 5px var(--accent));
-        animation: flowPulse 3s infinite linear;
+        filter: drop-shadow(0 0 8px #ef4444) drop-shadow(0 0 12px #dc2626);
+        animation: flowPulse 2.5s infinite ease-in-out;
     }
 
     /* Gamified Pulse Animation */
     @keyframes flowPulse {
         0% { stroke-dasharray: 0, 1000; stroke-dashoffset: 0; opacity: 0; }
-        10% { opacity: 1; }
-        50% { stroke-dasharray: 50, 1000; stroke-dashoffset: -100; }
-        90% { opacity: 1; }
-        100% { stroke-dasharray: 50, 1000; stroke-dashoffset: -300; opacity: 0; }
+        10% { opacity: 0.8; stroke-width: 4px; }
+        50% { stroke-dasharray: 100, 1000; stroke-dashoffset: -100; opacity: 1; }
+        90% { opacity: 0.8; }
+        100% { stroke-dasharray: 60, 1000; stroke-dashoffset: -400; opacity: 0; }
     }
     """
 
@@ -404,11 +430,11 @@ def generate_html(layers):
                 cardMap.set(name, card);
             });
 
-            function getCenter(element) {
+            function getPorts(element) {
                 const rect = element.getBoundingClientRect();
                 return {
-                    x: rect.left + rect.width / 2 + window.scrollX,
-                    y: rect.top + rect.height / 2 + window.scrollY
+                    top: { x: rect.left + rect.width / 2 + window.scrollX, y: rect.top + window.scrollY },
+                    bottom: { x: rect.left + rect.width / 2 + window.scrollX, y: rect.bottom + window.scrollY }
                 };
             }
 
@@ -454,31 +480,42 @@ def generate_html(layers):
             }
 
             function drawLine(fromEl, toEl) {
-                const start = getCenter(fromEl);
-                const end = getCenter(toEl);
+                const fromPorts = getPorts(fromEl);
+                const toPorts = getPorts(toEl);
 
-                // Curved path (cubic bezier)
-                const distance = Math.abs(end.y - start.y);
-                const cpOffset = Math.max(distance * 0.5, 50); 
+                // Data flows UP from dependency (fromEl.top) to consumer (toEl.bottom)
+                // However, "Reads From" is defined on the consumer.
+                // fromEl = Target (Dependency), toEl = Source (Consumer defining "Reads From")
+                const start = fromPorts.top;
+                const end = toPorts.bottom;
+
+                // Curved path (cubic bezier) for organic fluid flow
+                const distanceX = Math.abs(end.x - start.x);
+                const distanceY = Math.abs(end.y - start.y);
+                const cpOffsetY = Math.max(distanceY * 0.5, 60); 
+                
+                // Add some organic sway to the x coordinates of control points based on distance
+                const tension = 0.2;
+                const cpOffsetX = (end.x - start.x) * tension;
                 
                 const pathString = `M ${start.x} ${start.y} 
-                                    C ${start.x} ${start.y - cpOffset},
-                                      ${end.x} ${end.y + cpOffset},
+                                    C ${start.x + cpOffsetX} ${start.y - cpOffsetY},
+                                      ${end.x - cpOffsetX} ${end.y + cpOffsetY},
                                       ${end.x} ${end.y}`;
 
-                // Create the visible line
+                // Create the visible tube
                 const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 path.setAttribute('d', pathString);
                 path.setAttribute('class', 'data-line');
                 svgLayer.appendChild(path);
 
-                // Create the animated "bloodline" pulse
+                // Create the animated bloodline tracking the tube
                 const pulse = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 pulse.setAttribute('d', pathString);
                 pulse.setAttribute('class', 'data-pulse');
                 
-                // Randomize animation delay so they don't all pulse at once
-                const delay = Math.random() * 2;
+                // Randomize animation delay to create a heartbeat-like continuous flow
+                const delay = Math.random() * 2.5;
                 pulse.style.animationDelay = `${delay}s`;
                 
                 svgLayer.appendChild(pulse);

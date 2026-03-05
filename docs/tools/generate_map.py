@@ -508,17 +508,31 @@ def generate_html(layers):
                                     targetEl,
                                     card,
                                     {
-                                        color: '#3b82f6',
+                                        color: 'rgba(59, 130, 246, 0.5)',
                                         startSocket: 'top',
                                         endSocket: 'bottom',
                                         path: 'fluid',
                                         startPlug: 'disc',
                                         endPlug: 'arrow3',
-                                        size: 2,
-                                        opacity: 0.4,
-                                        dash: {animation: true}
+                                        size: 3,
+                                        dash: {
+                                            animation: true,
+                                            len: 8,
+                                            gap: 8
+                                        },
+                                        dropShadow: {
+                                            dx: 0,
+                                            dy: 0,
+                                            blur: 8,
+                                            color: 'rgba(192, 132, 252, 0.8)'
+                                        }
                                     }
                                 );
+                                // Send SVG to background so it doesn't block cards
+                                const svgElement = document.body.lastElementChild;
+                                if (svgElement && svgElement.tagName.toLowerCase() === 'svg') {
+                                    svgElement.style.zIndex = '-1';
+                                }
                                 lines.push(line);
                             }
                         });

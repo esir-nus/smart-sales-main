@@ -206,6 +206,7 @@ def generate_html(layers):
         grid-template-columns: repeat(3, 1fr);
         gap: 40px 30px;
         position: relative;
+        z-index: 10; /* Ensure grid is above the lines */
     }
 
     .module-card {
@@ -217,7 +218,7 @@ def generate_html(layers):
         transition: all 0.3s ease;
         position: relative;
         overflow: visible;
-        z-index: 5;
+        z-index: 15; /* Ensure cards are above everything else in grid */
     }
 
     .module-card:hover {
@@ -508,31 +509,28 @@ def generate_html(layers):
                                     targetEl,
                                     card,
                                     {
-                                        color: 'rgba(59, 130, 246, 0.5)',
-                                        startSocket: 'top',
-                                        endSocket: 'bottom',
-                                        path: 'fluid',
-                                        startPlug: 'disc',
+                                        color: 'rgba(59, 130, 246, 0.35)',
+                                        startSocket: 'bottom',
+                                        endSocket: 'top',
+                                        path: 'grid',
+                                        startSocketGravity: [0, 50],
+                                        endSocketGravity: [0, -50],
+                                        startPlug: 'square',
                                         endPlug: 'arrow3',
-                                        size: 3,
+                                        size: 2,
                                         dash: {
                                             animation: true,
-                                            len: 8,
-                                            gap: 8
+                                            len: 6,
+                                            gap: 6
                                         },
                                         dropShadow: {
                                             dx: 0,
                                             dy: 0,
-                                            blur: 8,
-                                            color: 'rgba(192, 132, 252, 0.8)'
+                                            blur: 4,
+                                            color: 'rgba(192, 132, 252, 0.4)'
                                         }
                                     }
                                 );
-                                // Send SVG to background so it doesn't block cards
-                                const svgElement = document.body.lastElementChild;
-                                if (svgElement && svgElement.tagName.toLowerCase() === 'svg') {
-                                    svgElement.style.zIndex = '-1';
-                                }
                                 lines.push(line);
                             }
                         });
@@ -540,6 +538,13 @@ def generate_html(layers):
                         console.error('Failed to parse deps for', sourceId, e);
                     }
                 });
+                
+                // Force all SVG lines to the absolute background so they don't block cards
+                setTimeout(() => {
+                    document.querySelectorAll('.leader-line').forEach(svg => {
+                        svg.style.zIndex = '-1';
+                    });
+                }, 100);
 
                 // Redraw on scroll or resize
                 window.addEventListener('scroll', AnimEvent.add(function() {

@@ -486,6 +486,232 @@ def generate_html(layers):
         </div>
         
         <script>
+            let topoLines = [];
+            let featLines = [];
+            let topoLinesInitialized = false;
+            let featLinesInitialized = false;
+
+            function initLines(viewMode) {
+                let initialized = viewMode === 'topology' ? topoLinesInitialized : featLinesInitialized;
+                if (initialized) return;
+                
+                if (viewMode === 'topology') topoLinesInitialized = true;
+                else featLinesInitialized = true;
+
+                const cards = document.querySelectorAll(`#${viewMode} .module-card`);
+                const lineArray = viewMode === 'topology' ? topoLines : featLines;
+
+                // Adjust color and path for semantic difference
+                const lineColor = viewMode === 'topology' ? 'rgba(156, 163, 175, 0.4)' : 'rgba(59, 130, 246, 0.4)';
+                const linePath = viewMode === 'topology' ? 'fluid' : 'grid';
+                const shadowColor = viewMode === 'topology' ? 'rgba(156, 163, 175, 0.2)' : 'rgba(192, 132, 252, 0.4)';
+
+                cards.forEach(card => {
+                    const sourceId = card.id;
+                    const depsStr = card.getAttribute('data-reads-from');
+                    if (!depsStr || depsStr === '{}') return;
+                    
+                    try {
+                        const deps = JSON.parse(depsStr);
+                        deps.forEach(targetId => {
+                            const targetEl = document.getElementById(targetId);
+                            
+                            if (targetEl && targetEl !== card) {
+                                const line = new LeaderLine(
+                                    targetEl,
+                                    card,
+                                    {
+                                        color: lineColor,
+                                        startSocket: 'bottom',
+                                        endSocket: 'top',
+                                        path: linePath,
+                                        startSocketGravity: [0, 50],
+                                        endSocketGravity: [0, -50],
+                                        startPlug: 'square',
+                                        endPlug: 'arrow3',
+                                        size: 2,
+                                        dash: {
+                                            animation: true,
+                                            len: 6,
+                                            gap: 6
+                                        },
+                                        dropShadow: {
+                                            dx: 0,
+                                            dy: 0,
+                                            blur: 4,
+                                            color: shadowColor
+                                        },
+                                        hide: false
+                                    }
+                                );
+                                lineArray.push(line);
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Failed to parse deps for', sourceId, e);
+                    }
+                });
+                
+                // Force all SVG lines to the absolute background so they don't block cards
+                setTimeout(() => {
+                    document.querySelectorAll('.leader-line').forEach(svg => {
+                        svg.style.zIndex = '-1';
+                    });
+                }, 100);
+
+                // Redraw on scroll or resize
+                if (window.AnimEvent) {
+                    window.addEventListener('scroll', AnimEvent.add(function() {
+                        topoLines.forEach(l => l.position());
+                        featLines.forEach(l => l.position());
+                    }), false);
+                }
+            }
+
+            window.switchTab = function(event, tabId) {
+                // Update button active state
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                event.currentTarget.classList.add('active');
+                
+                // Keep track of which display value to use
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.style.display = 'none';
+                    content.classList.remove('active');
+                });
+                
+                // Show target tab
+                const targetContent = document.getElementById(tabId);
+                targetContent.style.display = 'block';
+                targetContent.classList.add('active');
+                
+                setTimeout(() => {
+                    if (tabId === 'topology') {
+                        initLines('topology');
+                        topoLines.forEach(l => {
+                            l.show('draw', {duration: 500, timing: 'ease-out'});
+                            l.position();
+                        });
+                        featLines.forEach(l => l.hide('fade', {duration: 100}));
+                    } else {
+                        initLines('feature');
+                        featLines.forEach(l => {
+                            l.show('draw', {duration: 500, timing: 'ease-out'});
+                            l.position();
+                        });
+                        topoLines.forEach(l => l.hide('fade', {duration: 100}));
+                    }
+                }, 50);
+            };
+
+            window.addEventListener('load', () => {
+                setTimeout(() => {
+                    const activeBtn = document.querySelector('.tab-btn.active');
+                    if (activeBtn) {
+                        window.switchTab({currentTarget: activeBtn}, 'topology');
+                    }
+                }, 100);
+            });
+        </script>
+        <style>{css}</style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>Cerb Architecture Dashboard</h1>
+            <p>Real-time module status and domain I/O contracts</p>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item"><span class="module-status status-shipped">Shipped</span> (Real impl) / <span class="translation-hint">已上线</span></div>
+            <div class="legend-item"><span class="module-status status-interface">Interface</span> (Fake impl) / <span class="translation-hint">仅接口 (假实现)</span></div>
+            <div class="legend-item"><span class="module-status status-planned">Planned</span> (Not coded) / <span class="translation-hint">计划中 (未开发)</span></div>
+            <div class="legend-item"><span class="module-status status-wip">WIP</span> / <span class="translation-hint">开发中</span></div>
+        </div>
+
+        <div class="layer-container" style="position: relative; padding-left: 40px;">
+    """
+
+    # We enumerate backwards or forwards? The CSS flex-direction: column-reverse handles the bottom-to-top rendering.
+    for i, layer in enumerate(layers):
+        if not layer["modules"]: continue
+        
+        html_content += f"""
+        <div class="layer">
+            <div class="layer-title">Layer {len(layers) - i}: {layer['name']}</div>
+            <div class="modules-grid">
+        """
+
+        for mod in layer["modules"]:
+            status_class, status_label = get_status_class_and_label(mod.get("Status", ""))
+            raw_module = mod.get("Module", "Unknown")
+            name_html = clean_markdown(raw_module)
+            
+            # Lookup explanation
+            # Clean the name to match dict keys (strip markdown links)
+            clean_name_key = re.sub(r"\[(.*?)\]\(.*?\)", r"\1", raw_module).replace("**", "").strip()
+            explanation = MODULE_EXPLANATIONS.get(clean_name_key, "后端组件")
+            
+            # Create a valid safe DOM ID for the module
+            dom_id = clean_name_key.lower().replace(" ", "-").replace("(", "").replace(")", "").strip()
+            
+            signature = mod.get("Key Interface", "").replace("`", "")
+            
+            # Extract dependencies to pass to javascript
+            raw_reads_from = mod.get("Reads From", "").replace("`", "")
+            raw_reads_direct = mod.get("Reads From (directly)", "").replace("`", "") if "Reads From (directly)" in mod else ""
+            
+            # Combine all comma separated dependencies into a list of target DOM IDs
+            all_deps = raw_reads_from + "," + raw_reads_direct
+            deps_list = [d.strip().lower().replace(" ", "-").replace("(", "").replace(")", "") for d in all_deps.split(",") if d.strip() and d.strip().lower() != "eventbus" and d.strip().lower() != "none" and d.strip().lower() != "app"]
+            deps_json_attr = json.dumps(deps_list)
+
+            # Extract and format the 'Reads From' handling with translations
+            reads_from = raw_reads_from
+            if "Receives From (via Orchestrator)" in mod:
+                # Handle Layer 4 specific columns
+                reads_from = f"Direct / 直接读取: {raw_reads_direct} <br> Via Orch / 经编排器接收: {mod.get('Receives From (via Orchestrator)', '')}".replace("`", "")
+            else:
+                reads_from = clean_markdown(reads_from)
+                
+            owns = mod.get("Owns (Writes)", "")
+            owns_html = clean_markdown(owns)
+            os_layer = mod.get("OS Layer", "")
+
+            # If these columns are missing, fallback gracefully
+            if not owns: owns_html = "无"
+            if not reads_from: reads_from = "无"
+
+            html_content += f"""
+                <div class="module-card" id="mod-{dom_id}" data-reads-from='{deps_json_attr}'>
+                    <div class="anchor-top" id="anchor-top-{dom_id}"></div>
+                    <div class="anchor-bottom" id="anchor-bottom-{dom_id}"></div>
+                    <div class="module-header">
+                        <div class="module-name">{name_html}</div>
+                        <div class="module-status {status_class}">{status_label}</div>
+                    </div>
+                    
+                    <div class="module-explanation">
+                        {explanation}
+                    </div>
+                    
+                    <div class="module-detail">
+                        <div><span class="label">Owns / 拥有 (写入):</span> {owns_html}</div>
+                        <div><span class="label">Reads From / 读取自:</span> {reads_from}</div>
+                    </div>
+                    
+                    <div class="card-signature">{signature}</div>
+                    <div class="os-layer">{os_layer}</div>
+                </div>
+            """
+
+        html_content += """
+            </div>
+        </div>
+        """
+
+    html_content += """
+        </div>
+        
+        <script>
             // Draw dependency lines after DOM loads
             window.addEventListener('load', function() {
                 const cards = document.querySelectorAll('.module-card');

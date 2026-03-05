@@ -2,6 +2,51 @@ import os
 import re
 import json
 
+# Plain language explanations for stakeholders (English + Chinese)
+MODULE_EXPLANATIONS = {
+    # Layer 1
+    "ConnectivityBridge": "Manages the Bluetooth connection to the physical badge. / 管理与实体蓝牙工牌的连接状态。",
+    "NotificationService": "Shows system alerts and reminders on the phone. / 在手机上显示系统弹窗和任务提醒。",
+    "OSS": "Uploads audio files to the cloud. / 负责将录音文件上传到云端存储。",
+    "ASR": "Transcribes voice to text. / 将语音转换为文字 (备用)。",
+    "TingwuPipeline": "阿里云听悟 - Transcribes audio and extracts meeting summaries. / 阿里云听悟接口，负责语音转文字和提取会议摘要。",
+    "PipelineTelemetry": "Records internal system logs for debugging. / 记录系统内部运行日志，用于排查错误。",
+    
+    # Layer 2
+    "EntityWriter": "Saves and updates people, companies, and locations in the database. / 负责在数据库中新建或更新联系人、公司等实体信息。",
+    "EntityRegistry": "Reads people and companies from the database. / 负责从数据库中查询和读取实体信息。",
+    "MemoryCenter": "Stores the raw chat history and voice transcripts. / 存储所有的聊天记录和语音转写历史。",
+    "UserHabit": "Tracks user behavior patterns for AI personalization. / 记录用户的使用习惯，让AI更懂你。",
+    "SessionHistory": "Manages the list of past conversations (sidebar). / 管理侧边栏的历史会话列表 (重命名、置顶)。",
+    "SessionContext": "The temporary fast-memory for the current chat. / 当前聊天的临时高速缓存，AI思考时的数据源。",
+    
+    # Layer 3
+    "ContextBuilder": "Packages all available background knowledge to feed to the AI. / 负责把历史记录和人物关系打包，送给AI大脑。",
+    "InputParser": "Quickly figures out what the user wants to do (Intent). / 快速分析用户的意图，比如分辨用户是在闲聊还是下达命令。",
+    "EntityDisambiguator": "Asks the user to clarify if two people have the same name. / 当遇到重名或指代不清时，负责向用户发起追问。",
+    "LightningRouter": "The Traffic Cop - instantly routes simple questions away from deep analysis. / 交通警察：瞬间判断问题难易度，把简单问题直接放行，复杂的送去深度思考。",
+    "EntityResolver": "Matches names spoken in audio to exact IDs in the database. / 将录音里提到的人名，精准匹配到数据库里的唯一ID。",
+    "ModelRegistry": "Configuration for different AI models (e.g. fast vs smart). / 管理不同的AI大模型配置 (比如：思考快的模型 vs 思考深的模型)。",
+    "Executor": "The actual bridge sending prompts to Dashscope/Qwen. / 真正负责向云端AI(比如通义千问)发请求并接收结果的桥梁。",
+    "PluginRegistry": "Executes specific actions like exporting PDFs. / 负责执行具体的动作，比如生成PDF文件或发邮件。",
+    "PrismOrchestrator": "The Boss (System II) - coordinates the entire deep-thinking process. / 系统大脑(系统二)：指挥整个深度思考流程，决定先做什么后做什么。",
+    "UnifiedPipeline": "The assembly line that processes complex user requests step-by-step. / 处理流水线：将复杂请求按步骤(提取-组装-路由)流水化处理。",
+    
+    # Layer 4
+    "Mascot (System I)": "The fast, friendly AI that handles greetings and quick chats. / 吉祥物(系统一)：负责打招呼、秒回聊天和显示气泡提示，反应极快。",
+    "Scheduler": "Creates and manages To-Do tasks and reminders. / 负责创建和管理待办事项及日程提醒。",
+    "ScheduleBoard": "Checks for time conflicts in the calendar. / 检查日程表中是否有时间冲突。",
+    "BadgeAudioPipeline": "Controls the start/stop recording flow for the physical badge. / 控制实体工牌开始/停止录音的流程。",
+    "AudioManagement": "UI state for syncing and transcribing audio files. / 处理录音文件同步、转写的界面状态。",
+    "ConflictResolver": "Helps the user resolve calendar double-bookings. / 帮助用户解决时间冲突 (比如：改期或取消)。",
+    "DevicePairing": "The UI flow for connecting a new Bluetooth badge. / 负责配对新蓝牙工牌的界面流程。",
+    
+    # Layer 5
+    "ClientProfileHub": "Builds a complete psychological profile of a customer. / 综合所有历史信息，为客户建立完整的画像和性格分析。",
+    "RLModule": "Learns from past mistakes to improve future Prompts. / 强化学习模块：从过去的错误中学习，优化未来给AI的提示词。"
+}
+import json
+
 MAP_PATH = "docs/cerb/interface-map.md"
 OUTPUT_PATH = "docs/cerb/dashboard.html"
 
@@ -45,6 +90,13 @@ def parse_interface_map():
             }
             layers.append(current_layer)
         
+        elif line.startswith("## Data Flow") or line.startswith("## Ownership") or line.startswith("## Anti-Patterns"):
+            # Stop parsing specific layers when we hit the footer sections
+            if current_layer and table_lines:
+                 current_layer["modules"] = parse_markdown_table(table_lines)
+                 table_lines = []
+                 current_layer = None
+        
         elif current_layer:
             if line.startswith("|"):
                 in_table = True
@@ -54,10 +106,15 @@ def parse_interface_map():
                 current_layer["modules"] = parse_markdown_table(table_lines)
                 table_lines = []
 
-    # Handle the last layer if table ended at EOF
-    if current_layer and table_lines and not current_layer["modules"]:
-         current_layer["modules"] = parse_markdown_table(table_lines)
+    # Handle the very last layer if EOF arrived without a newline
+    if current_layer and table_lines:
+        if not current_layer["modules"]:
+            current_layer["modules"] = parse_markdown_table(table_lines)
+        elif len(table_lines) > 2:
+            current_layer["modules"].extend(parse_markdown_table(table_lines))
 
+    # Reverse the layers so Layer 1 is at the top of the list (since it's at the end of the file)
+    # The flex-direction: column-reverse handles the visual stacking.
     return layers
 
 def generate_html(layers):
@@ -132,29 +189,56 @@ def generate_html(layers):
         display: flex;
         align-items: center;
         gap: 10px;
-    }
-
-    .layer-title::before {
-        content: '';
-        display: block;
-        width: 12px;
-        height: 12px;
-        background: var(--accent);
-        border-radius: 50%;
-        box-shadow: 0 0 10px var(--accent);
-    }
-
-    .modules-grid {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 30px;
         position: relative;
     }
 
+    /* The glowing dataflow pipeline effect */
+    .layer-container::before {
+        content: '';
+        position: absolute;
+        width: 4px;
+        background: linear-gradient(to bottom, var(--accent), #c084fc, var(--accent));
+        top: 250px;
+        bottom: 100px;
+        left: 20px;
+        border-radius: 4px;
+        box-shadow: 0 0 15px var(--accent), 0 0 30px #c084fc;
+        opacity: 0.6;
+        animation: pulseflow 3s infinite ease-in-out;
+    }
+
+    @keyframes pulseflow {
+        0% { opacity: 0.4; box-shadow: 0 0 10px var(--accent); }
+        50% { opacity: 0.8; box-shadow: 0 0 20px var(--accent), 0 0 40px #c084fc; }
+        100% { opacity: 0.4; box-shadow: 0 0 10px var(--accent); }
+    }
+
+    /* Nodes on the pipeline */
+    .layer::before {
+        content: '';
+        position: absolute;
+        left: 14px;
+        margin-top: 30px;
+        width: 16px;
+        height: 16px;
+        background: var(--bg);
+        border: 4px solid var(--accent);
+        border-radius: 50%;
+        box-shadow: 0 0 10px var(--accent);
+        z-index: 2;
+    }
+
+    .layer-title::before {
+        display: none; /* Hide old dots */
+    }
+
+    .modules-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+    }
+
     .module-card {
-        width: 320px; /* Fixed width to enforce symmetric alignment */
-        flex-shrink: 0;
         border-radius: 8px;
         padding: 16px;
         background: var(--bg);
@@ -162,28 +246,6 @@ def generate_html(layers):
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
-    }
-
-    /* Virtual connection ports for the bloodlines */
-    .module-card::before, .module-card::after {
-        content: '';
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 24px;
-        height: 4px;
-        background: var(--surface-hover);
-        z-index: 10;
-        border-radius: 4px;
-        transition: background 0.3s ease;
-    }
-    
-    .module-card::before { top: 0; }
-    .module-card::after { bottom: 0; }
-    
-    .module-card:hover::before, .module-card:hover::after {
-        background: var(--accent);
-        box-shadow: 0 0 8px var(--accent);
     }
 
     .module-card:hover {
@@ -237,6 +299,19 @@ def generate_html(layers):
         display: flex;
         flex-direction: column;
         gap: 4px;
+        padding-bottom: 8px;
+        border-bottom: 1px dotted rgba(255,255,255,0.1);
+    }
+    
+    .module-explanation {
+        font-size: 0.8rem;
+        color: #e2e8f0;
+        margin-bottom: 12px;
+        line-height: 1.4;
+        background: rgba(0,0,0,0.2);
+        padding: 8px;
+        border-radius: 4px;
+        border-left: 2px solid var(--accent);
     }
 
     .module-detail span.label {
@@ -281,45 +356,11 @@ def generate_html(layers):
         font-size: 0.9rem;
     }
     
-    /* Data Flow SVG Styles */
-    #data-flow-layer {
-        position: absolute;
-        top: 0;
-        left: 0;
-        pointer-events: none;
-        z-index: 1; /* Below cards but above background */
-    }
-    
-    .module-card {
-        z-index: 2; /* Ensure cards are clickable above the SVG */
-        position: relative;
-    }
-
-    .data-line {
-        fill: none;
-        stroke: var(--border);
-        stroke-width: 2px;
-        opacity: 0.3;
-        transition: stroke 0.3s;
-    }
-
-    .data-pulse {
-        fill: none;
-        stroke: #ef4444; /* Crimson Bloodline */
-        stroke-width: 3px;
-        stroke-linecap: round;
-        opacity: 0;
-        filter: drop-shadow(0 0 8px #ef4444) drop-shadow(0 0 12px #dc2626);
-        animation: flowPulse 2.5s infinite ease-in-out;
-    }
-
-    /* Gamified Pulse Animation */
-    @keyframes flowPulse {
-        0% { stroke-dasharray: 0, 1000; stroke-dashoffset: 0; opacity: 0; }
-        10% { opacity: 0.8; stroke-width: 4px; }
-        50% { stroke-dasharray: 100, 1000; stroke-dashoffset: -100; opacity: 1; }
-        90% { opacity: 0.8; }
-        100% { stroke-dasharray: 60, 1000; stroke-dashoffset: -400; opacity: 0; }
+    .translation-hint {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-left: 4px;
+        font-weight: normal;
     }
     """
 
@@ -357,13 +398,13 @@ def generate_html(layers):
         </div>
         
         <div class="legend">
-            <div class="legend-item"><span class="module-status status-shipped">Shipped</span> (Real impl)</div>
-            <div class="legend-item"><span class="module-status status-interface">Interface</span> (Fake impl)</div>
-            <div class="legend-item"><span class="module-status status-planned">Planned</span> (Not coded)</div>
-            <div class="legend-item"><span class="module-status status-wip">WIP</span></div>
+            <div class="legend-item"><span class="module-status status-shipped">Shipped</span> (Real impl) / <span class="translation-hint">已上线</span></div>
+            <div class="legend-item"><span class="module-status status-interface">Interface</span> (Fake impl) / <span class="translation-hint">仅接口 (假实现)</span></div>
+            <div class="legend-item"><span class="module-status status-planned">Planned</span> (Not coded) / <span class="translation-hint">计划中 (未开发)</span></div>
+            <div class="legend-item"><span class="module-status status-wip">WIP</span> / <span class="translation-hint">开发中</span></div>
         </div>
 
-        <div class="layer-container">
+        <div class="layer-container" style="position: relative; padding-left: 40px;">
     """
 
     # We enumerate backwards or forwards? The CSS flex-direction: column-reverse handles the bottom-to-top rendering.
@@ -381,14 +422,28 @@ def generate_html(layers):
             raw_module = mod.get("Module", "Unknown")
             name_html = clean_markdown(raw_module)
             
+            # Lookup explanation
+            # Clean the name to match dict keys (strip markdown links)
+            clean_name_key = re.sub(r"\[(.*?)\]\(.*?\)", r"\1", raw_module).replace("**", "").strip()
+            explanation = MODULE_EXPLANATIONS.get(clean_name_key, "Backend Component / 后端组件")
+            
             signature = mod.get("Key Interface", "").replace("`", "")
+            
+            # Extract and format the 'Reads From' handling with translations
             reads_from = mod.get("Reads From", "").replace("`", "")
             if "Receives From (via Orchestrator)" in mod:
                 # Handle Layer 4 specific columns
-                reads_from = f"Direct: {mod.get('Reads From (directly)', '')} <br> Via Orch: {mod.get('Receives From (via Orchestrator)', '')}".replace("`", "")
+                reads_from = f"Direct / 直接读取: {mod.get('Reads From (directly)', '')} <br> Via Orch / 经编排器接收: {mod.get('Receives From (via Orchestrator)', '')}".replace("`", "")
+            else:
+                reads_from = clean_markdown(reads_from)
                 
             owns = mod.get("Owns (Writes)", "")
+            owns_html = clean_markdown(owns)
             os_layer = mod.get("OS Layer", "")
+
+            # If these columns are missing, fallback gracefully
+            if not owns: owns_html = "None / 无"
+            if not reads_from: reads_from = "None / 无"
 
             html_content += f"""
                 <div class="module-card">
@@ -397,9 +452,13 @@ def generate_html(layers):
                         <div class="module-status {status_class}">{status_label}</div>
                     </div>
                     
+                    <div class="module-explanation">
+                        {explanation}
+                    </div>
+                    
                     <div class="module-detail">
-                        <div><span class="label">Owns:</span> {clean_markdown(owns)}</div>
-                        <div><span class="label">Reads From:</span> {clean_markdown(reads_from)}</div>
+                        <div><span class="label">Owns / 拥有 (写入):</span> {owns_html}</div>
+                        <div><span class="label">Reads From / 读取自:</span> {reads_from}</div>
                     </div>
                     
                     <div class="card-signature">{signature}</div>
@@ -414,121 +473,6 @@ def generate_html(layers):
 
     html_content += """
         </div>
-        
-        <!-- SVG Data Flow Layer -->
-        <svg id="data-flow-layer"></svg>
-
-        <script>
-            // Data Flow Visualization Logic
-            const svgLayer = document.getElementById('data-flow-layer');
-            const cards = Array.from(document.querySelectorAll('.module-card'));
-            
-            // Map module names to their DOM elements
-            const cardMap = new Map();
-            cards.forEach(card => {
-                const name = card.querySelector('.module-name').textContent.trim();
-                cardMap.set(name, card);
-            });
-
-            function getPorts(element) {
-                const rect = element.getBoundingClientRect();
-                return {
-                    top: { x: rect.left + rect.width / 2 + window.scrollX, y: rect.top + window.scrollY },
-                    bottom: { x: rect.left + rect.width / 2 + window.scrollX, y: rect.bottom + window.scrollY }
-                };
-            }
-
-            function drawDataFlows() {
-                // Clear existing lines
-                svgLayer.innerHTML = '';
-                
-                // SVG needs to cover the entire document
-                svgLayer.style.width = document.documentElement.scrollWidth + 'px';
-                svgLayer.style.height = document.documentElement.scrollHeight + 'px';
-
-                cards.forEach(card => {
-                    const sourceName = card.querySelector('.module-name').textContent.trim();
-                    const readsFromEl = Array.from(card.querySelectorAll('.label')).find(el => el.textContent === 'Reads From:');
-                    
-                    if (!readsFromEl) return;
-                    
-                    const readsFromText = readsFromEl.nextSibling ? readsFromEl.nextSibling.textContent : readsFromEl.parentElement.textContent.replace('Reads From:', '');
-                    
-                    // Extract module names from the "Reads From" text
-                    // This is a naive extraction; it splits by commas and common words
-                    const targets = readsFromText.split(/[,&]+| Direct: | Via Orch: /)
-                        .map(s => s.trim())
-                        .filter(s => s && s !== '—' && s !== 'None');
-
-                    targets.forEach(targetRaw => {
-                        // Try to find the closest matching module name in our map
-                        let targetName = null;
-                        for (const key of cardMap.keys()) {
-                            if (targetRaw.includes(key) || key.includes(targetRaw.split(' ')[0])) {
-                                targetName = key;
-                                break;
-                            }
-                        }
-
-                        if (targetName && cardMap.has(targetName)) {
-                            const targetCard = cardMap.get(targetName);
-                            // Draw line FROM target TO source (data flows UP/OUT from the dependency)
-                            drawLine(targetCard, card);
-                        }
-                    });
-                });
-            }
-
-            function drawLine(fromEl, toEl) {
-                const fromPorts = getPorts(fromEl);
-                const toPorts = getPorts(toEl);
-
-                // Data flows UP from dependency (fromEl.top) to consumer (toEl.bottom)
-                // However, "Reads From" is defined on the consumer.
-                // fromEl = Target (Dependency), toEl = Source (Consumer defining "Reads From")
-                const start = fromPorts.top;
-                const end = toPorts.bottom;
-
-                // Curved path (cubic bezier) for organic fluid flow
-                const distanceX = Math.abs(end.x - start.x);
-                const distanceY = Math.abs(end.y - start.y);
-                const cpOffsetY = Math.max(distanceY * 0.5, 60); 
-                
-                // Add some organic sway to the x coordinates of control points based on distance
-                const tension = 0.2;
-                const cpOffsetX = (end.x - start.x) * tension;
-                
-                const pathString = `M ${start.x} ${start.y} 
-                                    C ${start.x + cpOffsetX} ${start.y - cpOffsetY},
-                                      ${end.x - cpOffsetX} ${end.y + cpOffsetY},
-                                      ${end.x} ${end.y}`;
-
-                // Create the visible tube
-                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                path.setAttribute('d', pathString);
-                path.setAttribute('class', 'data-line');
-                svgLayer.appendChild(path);
-
-                // Create the animated bloodline tracking the tube
-                const pulse = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                pulse.setAttribute('d', pathString);
-                pulse.setAttribute('class', 'data-pulse');
-                
-                // Randomize animation delay to create a heartbeat-like continuous flow
-                const delay = Math.random() * 2.5;
-                pulse.style.animationDelay = `${delay}s`;
-                
-                svgLayer.appendChild(pulse);
-            }
-
-            // Initial draw
-            setTimeout(drawDataFlows, 100);
-
-            // Redraw on window resize
-            window.addEventListener('resize', () => {
-                requestAnimationFrame(drawDataFlows);
-            });
-        </script>
     </body>
     </html>
     """

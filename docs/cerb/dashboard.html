@@ -247,6 +247,117 @@
         margin-left: 4px;
         font-weight: normal;
     }
+
+    .tabs {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 40px;
+        position: relative;
+        z-index: 20;
+    }
+    
+    .tab-btn {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 1.05rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .tab-btn:hover {
+        background: var(--surface-hover);
+        color: var(--text);
+    }
+    
+    .tab-btn.active {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: var(--accent);
+        color: var(--accent);
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+    }
+    
+    .tab-content {
+        display: none;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Topology specific CSS */
+    .topology-sequence {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        padding: 40px 0;
+    }
+    .layer-block {
+        background: var(--surface);
+        border: 2px solid var(--border);
+        border-radius: 16px;
+        padding: 24px 32px;
+        width: 100%;
+        max-width: 800px;
+        text-align: center;
+        position: relative;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+    }
+    .layer-block:hover {
+        border-color: var(--accent);
+        box-shadow: 0 8px 30px rgba(59, 130, 246, 0.2);
+        transform: translateY(-2px);
+    }
+    .layer-block h2 {
+        color: var(--accent);
+        font-size: 1.5rem;
+        margin-bottom: 12px;
+    }
+    .layer-desc {
+        color: var(--text-muted);
+        font-size: 0.95rem;
+        margin-bottom: 20px;
+        line-height: 1.5;
+    }
+    .layer-modules-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+    }
+    .mini-module {
+        background: rgba(0,0,0,0.4);
+        border: 1px solid var(--border);
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        color: var(--text);
+        font-family: 'Fira Code', monospace;
+    }
+    .seq-arrow {
+        color: var(--accent);
+        font-size: 2rem;
+        line-height: 1;
+        opacity: 0.6;
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% { opacity: 0.3; transform: translateY(0); }
+        50% { opacity: 0.8; transform: translateY(-5px); }
+        100% { opacity: 0.3; transform: translateY(0); }
+    }
     </style>
     </head>
     <body>
@@ -262,822 +373,875 @@
             <div class="legend-item"><span class="module-status status-wip">WIP</span> / <span class="translation-hint">开发中</span></div>
         </div>
 
-        <div class="layer-container" style="position: relative; padding-left: 40px;">
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(event, 'topology')">Topology Sequence (Layers)</button>
+            <button class="tab-btn" onclick="switchTab(event, 'feature')">Feature Dataflow (Tracks)</button>
+        </div>
+
+        <!-- 1. Topology View -->
+        <div id="topology" class="tab-content active">
+            <div class="topology-sequence">
     
-        <div class="layer">
-            <div class="layer-title">Layer 5: Infrastructure</div>
-            <div class="modules-grid">
-        
-                <div class="module-card" id="mod-connectivitybridge" data-reads-from='["\u2014"]'>
-                    <div class="anchor-top" id="anchor-top-connectivitybridge"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-connectivitybridge"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./connectivity-bridge/spec.md">ConnectivityBridge</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        管理与实体蓝牙工牌的连接状态。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> BLE + HTTP device state</div>
-                        <div><span class="label">Reads From / 读取自:</span> —</div>
-                    </div>
-                    
-                    <div class="card-signature">connectUsingSession(Config) -> Flow<DeviceState></div>
-                    <div class="os-layer">—</div>
-                </div>
-            
-                <div class="module-card" id="mod-notificationservice" data-reads-from='["\u2014"]'>
-                    <div class="anchor-top" id="anchor-top-notificationservice"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-notificationservice"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./notifications/spec.md">NotificationService</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        在手机上显示系统弹窗和任务提醒。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> System notification display</div>
-                        <div><span class="label">Reads From / 读取自:</span> —</div>
-                    </div>
-                    
-                    <div class="card-signature">show(NotificationPayload) -> Unit</div>
-                    <div class="os-layer">—</div>
-                </div>
-            
-                <div class="module-card" id="mod-oss" data-reads-from='["\u2014"]'>
-                    <div class="anchor-top" id="anchor-top-oss"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-oss"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./oss-service/spec.md">OSS</a></div>
-                        <div class="module-status status-interface">Interface</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        负责将录音文件上传到云端存储。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> File upload/download</div>
-                        <div><span class="label">Reads From / 读取自:</span> —</div>
-                    </div>
-                    
-                    <div class="card-signature">upload(ByteArray) -> String (Url)</div>
-                    <div class="os-layer">—</div>
-                </div>
-            
-                <div class="module-card" id="mod-asr" data-reads-from='["oss-downloads-audio-files-to-transcribe"]'>
-                    <div class="anchor-top" id="anchor-top-asr"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-asr"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./asr-service/spec.md">ASR</a></div>
-                        <div class="module-status status-interface">Interface</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        将语音转换为文字 (备用)。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Transcription results</div>
-                        <div><span class="label">Reads From / 读取自:</span> OSS (downloads audio files to transcribe)</div>
-                    </div>
-                    
-                    <div class="card-signature">transcribe(AudioFile) -> Flow<Transcription></div>
-                    <div class="os-layer">—</div>
-                </div>
-            
-                <div class="module-card" id="mod-tingwupipeline" data-reads-from='["oss-reads-fileurl"]'>
-                    <div class="anchor-top" id="anchor-top-tingwupipeline"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-tingwupipeline"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./tingwu-pipeline/spec.md">TingwuPipeline</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        阿里云听悟接口，负责语音转文字和提取会议摘要。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Transcription & Audio Intelligence</div>
-                        <div><span class="label">Reads From / 读取自:</span> OSS (reads fileUrl)</div>
-                    </div>
-                    
-                    <div class="card-signature">submit(AudioUrl) -> PipelineResult</div>
-                    <div class="os-layer">SSD</div>
-                </div>
-            
-                <div class="module-card" id="mod-pipelinetelemetry" data-reads-from='["\u2014"]'>
-                    <div class="anchor-top" id="anchor-top-pipelinetelemetry"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-pipelinetelemetry"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./pipeline-telemetry/spec.md">PipelineTelemetry</a></div>
-                        <div class="module-status status-planned">Planned</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        记录系统内部运行日志，用于排查错误。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Pipeline logs (to Logcat)</div>
-                        <div><span class="label">Reads From / 读取自:</span> —</div>
-                    </div>
-                    
-                    <div class="card-signature">recordEvent(TelemetryEvent) -> Unit</div>
-                    <div class="os-layer">RAM</div>
-                </div>
-            
+        <div class="layer-block">
+            <h2>Layer 5: Intelligence</h2>
+            <div class="layer-desc">Cross-cutting services that aggregate data from multiple Layer 2 sources.</div>
+            <div class="layer-modules-list">
+                <div class="mini-module">Unknown</div>
+                <div class="mini-module">Unknown</div>
+                <div class="mini-module">Unknown</div>
+                <div class="mini-module">Unknown</div>
+                <div class="mini-module">Unknown</div>
+                <div class="mini-module">Unknown</div>
             </div>
         </div>
         
-        <div class="layer">
-            <div class="layer-title">Layer 4: Data Services</div>
-            <div class="modules-grid">
-        
-                <div class="module-card" id="mod-entitywriter" data-reads-from='["sessioncontext-write-through-to-ram-s1"]'>
-                    <div class="anchor-top" id="anchor-top-entitywriter"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-entitywriter"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./entity-writer/spec.md">EntityWriter</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        负责在数据库中新建或更新联系人、公司等实体信息。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Entity mutations (create/update/merge aliases)</div>
-                        <div><span class="label">Reads From / 读取自:</span> SessionContext (write-through to RAM S1)</div>
-                    </div>
-                    
-                    <div class="card-signature">upsertFromClue(ParsedClue) -> EntityId</div>
-                    <div class="os-layer">RAM Application</div>
-                </div>
+            <div class="seq-arrow">↑</div>
             
-                <div class="module-card" id="mod-entityregistry" data-reads-from='["\u2014"]'>
-                    <div class="anchor-top" id="anchor-top-entityregistry"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-entityregistry"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./entity-registry/spec.md">EntityRegistry</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        负责从数据库中查询和读取实体信息。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Entity queries (read-only view of entities)</div>
-                        <div><span class="label">Reads From / 读取自:</span> —</div>
-                    </div>
-                    
-                    <div class="card-signature">findByAlias(String) -> List<EntityInfo></div>
-                    <div class="os-layer">SSD</div>
-                </div>
-            
-                <div class="module-card" id="mod-memorycenter" data-reads-from='["\u2014"]'>
-                    <div class="anchor-top" id="anchor-top-memorycenter"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-memorycenter"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./memory-center/spec.md">MemoryCenter</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        存储所有的聊天记录和语音转写历史。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Conversation memory entries</div>
-                        <div><span class="label">Reads From / 读取自:</span> —</div>
-                    </div>
-                    
-                    <div class="card-signature">search(MemoryQuery) -> List<MemoryEntry></div>
-                    <div class="os-layer">SSD</div>
-                </div>
-            
-                <div class="module-card" id="mod-userhabit" data-reads-from='["\u2014"]'>
-                    <div class="anchor-top" id="anchor-top-userhabit"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-userhabit"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./user-habit/spec.md">UserHabit</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        记录用户的使用习惯，让AI更懂你。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Behavioral pattern observations</div>
-                        <div><span class="label">Reads From / 读取自:</span> —</div>
-                    </div>
-                    
-                    <div class="card-signature">observe() -> Flow<List<Habit>></div>
-                    <div class="os-layer">SSD</div>
-                </div>
-            
-                <div class="module-card" id="mod-sessionhistory" data-reads-from='["\u2014"]'>
-                    <div class="anchor-top" id="anchor-top-sessionhistory"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-sessionhistory"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./session-history/spec.md">SessionHistory</a></div>
-                        <div class="module-status status-wip">WIP</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        管理侧边栏的历史会话列表 (重命名、置顶)。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Session metadata (list, pin, rename, delete)</div>
-                        <div><span class="label">Reads From / 读取自:</span> —</div>
-                    </div>
-                    
-                    <div class="card-signature">getGroupedSessions() -> Flow<SessionGroups></div>
-                    <div class="os-layer">SSD</div>
-                </div>
-            
-                <div class="module-card" id="mod-sessioncontext" data-reads-from='["entitywriter-s1-via-write-through", "rlmodule-s2/s3"]'>
-                    <div class="anchor-top" id="anchor-top-sessioncontext"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-sessioncontext"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./session-context/spec.md">SessionContext</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        当前聊天的临时高速缓存，AI思考时的数据源。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Per-session workspace (3 sections)</div>
-                        <div><span class="label">Reads From / 读取自:</span> EntityWriter (S1 via write-through), RLModule (S2/S3)</div>
-                    </div>
-                    
-                    <div class="card-signature">entityContext: Flow<EntityGraph></div>
-                    <div class="os-layer">Kernel (RAM)</div>
-                </div>
-            
+        <div class="layer-block">
+            <h2>Layer 4: Features</h2>
+            <div class="layer-desc">User-facing features. Each receives processed results from Orchestrator (Layer 3) and reads from Data Services (Layer 2).</div>
+            <div class="layer-modules-list">
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./mascot-service/spec.md">Mascot (System I)</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./scheduler/spec.md">Scheduler</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./scheduler/spec.md">ScheduleBoard</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./badge-audio-pipeline/spec.md">BadgeAudioPipeline</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./audio-management/spec.md">AudioManagement</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./conflict-resolver/spec.md">ConflictResolver</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./device-pairing/spec.md">DevicePairing</a></div>
             </div>
         </div>
         
-        <div class="layer">
-            <div class="layer-title">Layer 3: Core Pipeline</div>
-            <div class="modules-grid">
-        
-                <div class="module-card" id="mod-contextbuilder" data-reads-from='["entityregistry", "memorycenter", "sessioncontext"]'>
-                    <div class="anchor-top" id="anchor-top-contextbuilder"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-contextbuilder"></div>
-                    <div class="module-header">
-                        <div class="module-name">ContextBuilder</div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        负责把历史记录和人物关系打包，送给AI大脑。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> `EnhancedContext` (assembled prompt context)</div>
-                        <div><span class="label">Reads From / 读取自:</span> EntityRegistry, MemoryCenter, SessionContext</div>
-                    </div>
-                    
-                    <div class="card-signature">build(ContextRequest) -> EnhancedContext</div>
-                    <div class="os-layer">Kernel</div>
-                </div>
+            <div class="seq-arrow">↑</div>
             
-                <div class="module-card" id="mod-inputparser" data-reads-from='["aliasindex-internal"]'>
-                    <div class="anchor-top" id="anchor-top-inputparser"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-inputparser"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./input-parser/spec.md">InputParser</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        快速分析用户的意图，例如分辨是在闲聊还是下达命令。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Semantic intent and EntityID resolution</div>
-                        <div><span class="label">Reads From / 读取自:</span> AliasIndex (internal)</div>
-                    </div>
-                    
-                    <div class="card-signature">parseIntent(String) -> ParsedIntent</div>
-                    <div class="os-layer">RAM Application</div>
-                </div>
-            
-                <div class="module-card" id="mod-entitydisambiguator" data-reads-from='["entitywriter-to-write-cures"]'>
-                    <div class="anchor-top" id="anchor-top-entitydisambiguator"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-entitydisambiguator"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./entity-disambiguation/spec.md">EntityDisambiguator</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        当遇到重名或指代不清时，负责向用户发起追问。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> `PendingIntent` interruption state</div>
-                        <div><span class="label">Reads From / 读取自:</span> EntityWriter (to write cures)</div>
-                    </div>
-                    
-                    <div class="card-signature">process(PendingIntent) -> DisambiguationResult</div>
-                    <div class="os-layer">RAM Application</div>
-                </div>
-            
-                <div class="module-card" id="mod-lightningrouter" data-reads-from='["contextbuilder"]'>
-                    <div class="anchor-top" id="anchor-top-lightningrouter"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-lightningrouter"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./lightning-router/spec.md">LightningRouter</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        交通警察：快速判断问题难易度，简单问题直接放行，复杂的转交深度思考。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Intent evaluation (Phase 0)</div>
-                        <div><span class="label">Reads From / 读取自:</span> ContextBuilder</div>
-                    </div>
-                    
-                    <div class="card-signature">evaluateIntent(String) -> IntentTier</div>
-                    <div class="os-layer">RAM Application</div>
-                </div>
-            
-                <div class="module-card" id="mod-entityresolver" data-reads-from='["entityregistry"]'>
-                    <div class="anchor-top" id="anchor-top-entityresolver"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-entityresolver"></div>
-                    <div class="module-header">
-                        <div class="module-name">EntityResolver</div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        将录音里提到的人名，精准匹配到数据库里的唯一ID。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Entity disambiguation matching</div>
-                        <div><span class="label">Reads From / 读取自:</span> EntityRegistry</div>
-                    </div>
-                    
-                    <div class="card-signature">resolve(Clues, Candidates) -> ResolvedEntities</div>
-                    <div class="os-layer">RAM Application</div>
-                </div>
-            
-                <div class="module-card" id="mod-modelregistry" data-reads-from='["\u2014"]'>
-                    <div class="anchor-top" id="anchor-top-modelregistry"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-modelregistry"></div>
-                    <div class="module-header">
-                        <div class="module-name">ModelRegistry</div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        管理不同的AI大模型配置 (例如：小模型快速响应 vs 大模型深度思考)。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Static LLM Profiles (models, temps, skills)</div>
-                        <div><span class="label">Reads From / 读取自:</span> —</div>
-                    </div>
-                    
-                    <div class="card-signature">ModelRegistry</div>
-                    <div class="os-layer">Config Hub</div>
-                </div>
-            
-                <div class="module-card" id="mod-executor" data-reads-from='["modelrouter"]'>
-                    <div class="anchor-top" id="anchor-top-executor"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-executor"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./model-routing/spec.md">Executor</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        真正负责向云端AI (如通义千问) 发请求并接收结果的桥梁。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Raw LLM output (stateless — no storage)</div>
-                        <div><span class="label">Reads From / 读取自:</span> ModelRouter</div>
-                    </div>
-                    
-                    <div class="card-signature">execute(Prompt, ModelProfile) -> String</div>
-                    <div class="os-layer">—</div>
-                </div>
-            
-                <div class="module-card" id="mod-pluginregistry" data-reads-from='["\u2014"]'>
-                    <div class="anchor-top" id="anchor-top-pluginregistry"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-pluginregistry"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./plugin-registry/spec.md">PluginRegistry</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        负责执行具体的动作，比如生成PDF文件或发短信。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Executable pure-Kotlin workflows (Tools)</div>
-                        <div><span class="label">Reads From / 读取自:</span> —</div>
-                    </div>
-                    
-                    <div class="card-signature">executeTool(ToolId, Params) -> Flow<UiState></div>
-                    <div class="os-layer">App Infra</div>
-                </div>
-            
-                <div class="module-card" id="mod-prismorchestrator" data-reads-from='["lightningrouter", "mascotservice", "contextbuilder", "executor", "entityresolver", "pluginregistry"]'>
-                    <div class="anchor-top" id="anchor-top-prismorchestrator"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-prismorchestrator"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./prism-orchestrator/spec.md">PrismOrchestrator</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        系统大脑(系统二)：指挥整个深度思考流程，决定先做什么后做什么。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Top-level routing + pipeline coordination</div>
-                        <div><span class="label">Reads From / 读取自:</span> LightningRouter, MascotService, ContextBuilder, Executor, EntityResolver, PluginRegistry</div>
-                    </div>
-                    
-                    <div class="card-signature">processInput(Intent) -> Flow<PrismState></div>
-                    <div class="os-layer">RAM Application</div>
-                </div>
-            
-                <div class="module-card" id="mod-unifiedpipeline" data-reads-from='["entityregistry", "userhabit", "memorycenter", "contextbuilder"]'>
-                    <div class="anchor-top" id="anchor-top-unifiedpipeline"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-unifiedpipeline"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./unified-pipeline/spec.md">UnifiedPipeline</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        处理流水线：将复杂请求按步骤 (提取-组装-路由) 流水化处理。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> System II context ETL & execution</div>
-                        <div><span class="label">Reads From / 读取自:</span> EntityRegistry, UserHabit, MemoryCenter, ContextBuilder</div>
-                    </div>
-                    
-                    <div class="card-signature">processInput(PipelineInput) -> Flow<PipelineResult></div>
-                    <div class="os-layer">RAM Application</div>
-                </div>
-            
+        <div class="layer-block">
+            <h2>Layer 3: Core Pipeline</h2>
+            <div class="layer-desc">Orchestrates LLM-powered processing. Reads from Layer 2 data services.</div>
+            <div class="layer-modules-list">
+                <div class="mini-module">ContextBuilder</div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./input-parser/spec.md">InputParser</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./entity-disambiguation/spec.md">EntityDisambiguator</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./lightning-router/spec.md">LightningRouter</a></div>
+                <div class="mini-module">EntityResolver</div>
+                <div class="mini-module">ModelRegistry</div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./model-routing/spec.md">Executor</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./plugin-registry/spec.md">PluginRegistry</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./unified-pipeline/spec.md">UnifiedPipeline</a></div>
             </div>
         </div>
         
-        <div class="layer">
-            <div class="layer-title">Layer 2: Features</div>
-            <div class="modules-grid">
-        
-                <div class="module-card" id="mod-mascot-system-i" data-reads-from='["eventbus-idle", "error"]'>
-                    <div class="anchor-top" id="anchor-top-mascot-system-i"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-mascot-system-i"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./mascot-service/spec.md">Mascot (System I)</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        吉祥物(系统一)：负责打招呼、秒回聊天和显示气泡提示，反应极快。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Ephemeral interactions, greetings</div>
-                        <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: EventBus (Idle, Error) <br> Via Orch / 经编排器接收: Flow<MascotState></div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer">RAM App (Out-of-band)</div>
-                </div>
+            <div class="seq-arrow">↑</div>
             
-                <div class="module-card" id="mod-scheduler" data-reads-from='["entityregistry-alias-lookup", "scheduleboard-conflicts"]'>
-                    <div class="anchor-top" id="anchor-top-scheduler"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-scheduler"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./scheduler/spec.md">Scheduler</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        负责创建和管理待办事项及日程提醒。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> ScheduledTask, InspirationEntry</div>
-                        <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: EntityRegistry (alias lookup), ScheduleBoard (conflicts) <br> Via Orch / 经编排器接收: Flow<UiState.SchedulerTaskCreated></div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer">Consumer of RAM</div>
-                </div>
-            
-                <div class="module-card" id="mod-scheduleboard" data-reads-from='["scheduledtaskrepository-populates-index"]'>
-                    <div class="anchor-top" id="anchor-top-scheduleboard"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-scheduleboard"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./scheduler/spec.md">ScheduleBoard</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        检查日程表中是否有时间冲突。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Conflict index (in-memory cache)</div>
-                        <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ScheduledTaskRepository (populates index) <br> Via Orch / 经编排器接收: —</div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer">SSD</div>
-                </div>
-            
-                <div class="module-card" id="mod-prism-orchestrator" data-reads-from='["contextbuilder", "clientprofilehub"]'>
-                    <div class="anchor-top" id="anchor-top-prism-orchestrator"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-prism-orchestrator"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./prism-orchestrator/spec.md">Prism Orchestrator</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        后端组件
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Chat State Machine (System II delegator)</div>
-                        <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ContextBuilder, ClientProfileHub <br> Via Orch / 经编排器接收: Flow<PrismState></div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer">RAM Application</div>
-                </div>
-            
-                <div class="module-card" id="mod-badgeaudiopipeline" data-reads-from='["asr", "oss", "connectivitybridge"]'>
-                    <div class="anchor-top" id="anchor-top-badgeaudiopipeline"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-badgeaudiopipeline"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./badge-audio-pipeline/spec.md">BadgeAudioPipeline</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        控制实体工牌开始/停止录音的流程。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Audio recording lifecycle</div>
-                        <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ASR, OSS, ConnectivityBridge <br> Via Orch / 经编排器接收: Triggers Orchestrator on transcription complete</div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer">—</div>
-                </div>
-            
-                <div class="module-card" id="mod-audiomanagement" data-reads-from='["connectivitybridge", "tingwupipeline"]'>
-                    <div class="anchor-top" id="anchor-top-audiomanagement"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-audiomanagement"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./audio-management/spec.md">AudioManagement</a></div>
-                        <div class="module-status status-wip">WIP</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        处理录音文件同步、转写的界面状态。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Manual sync/transcribe states</div>
-                        <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ConnectivityBridge, TingwuPipeline <br> Via Orch / 经编排器接收: Flow<AudioState></div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer">App</div>
-                </div>
-            
-                <div class="module-card" id="mod-conflictresolver" data-reads-from='["scheduleboard"]'>
-                    <div class="anchor-top" id="anchor-top-conflictresolver"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-conflictresolver"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./conflict-resolver/spec.md">ConflictResolver</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        帮助用户解决时间冲突 (比如：改期或取消)。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Conflict resolution actions</div>
-                        <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ScheduleBoard <br> Via Orch / 经编排器接收: Flow<ConflictState></div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer">RAM App</div>
-                </div>
-            
-                <div class="module-card" id="mod-devicepairing" data-reads-from='["legacy-ble-stack"]'>
-                    <div class="anchor-top" id="anchor-top-devicepairing"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-devicepairing"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./device-pairing/spec.md">DevicePairing</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        负责配对新蓝牙工牌的界面流程。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> BLE pairing session states</div>
-                        <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: Legacy BLE stack <br> Via Orch / 经编排器接收: Flow<PairingState></div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer">App</div>
-                </div>
-            
+        <div class="layer-block">
+            <h2>Layer 2: Data Services</h2>
+            <div class="layer-desc">Store and query domain data. Other modules use their interfaces but never each other's storage.</div>
+            <div class="layer-modules-list">
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./entity-writer/spec.md">EntityWriter</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./entity-registry/spec.md">EntityRegistry</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./memory-center/spec.md">MemoryCenter</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./user-habit/spec.md">UserHabit</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./session-history/spec.md">SessionHistory</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./session-context/spec.md">SessionContext</a></div>
             </div>
         </div>
         
-        <div class="layer">
-            <div class="layer-title">Layer 1: Intelligence</div>
-            <div class="modules-grid">
+            <div class="seq-arrow">↑</div>
+            
+        <div class="layer-block">
+            <h2>Layer 1: Infrastructure</h2>
+            <div class="layer-desc">Leaf services with no upstream dependencies. They don't call other modules.</div>
+            <div class="layer-modules-list">
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./connectivity-bridge/spec.md">ConnectivityBridge</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./notifications/spec.md">NotificationService</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./oss-service/spec.md">OSS</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./asr-service/spec.md">ASR</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./tingwu-pipeline/spec.md">TingwuPipeline</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./pipeline-telemetry/spec.md">PipelineTelemetry</a></div>
+            </div>
+        </div>
         
-                <div class="module-card" id="mod-unknown" data-reads-from='[]'>
-                    <div class="anchor-top" id="anchor-top-unknown"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-unknown"></div>
-                    <div class="module-header">
-                        <div class="module-name">Unknown</div>
-                        <div class="module-status status-planned">Unknown</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        后端组件
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
-                        <div><span class="label">Reads From / 读取自:</span> 无</div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer"></div>
+            </div>
+        </div>
+
+        <!-- 2. Feature Dataflow View -->
+        <div id="feature" class="tab-content">
+            <div class="layer-container" style="flex-direction: column; position: relative; padding-left: 40px; gap: 40px;">
+    
+        <div class="layer" style="margin-bottom: 20px;">
+            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">Hardware & Audio</div>
+            <div class="modules-grid" style="grid-template-columns: repeat(3, 1fr);">
+        
+            <div class="module-card" id="feat_connectivitybridge" data-reads-from='["feat_\u2014"]'>
+                <div class="anchor-top" id="anchor-top-feat_connectivitybridge"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_connectivitybridge"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./connectivity-bridge/spec.md">ConnectivityBridge</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
-            
-                <div class="module-card" id="mod-unknown" data-reads-from='[]'>
-                    <div class="anchor-top" id="anchor-top-unknown"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-unknown"></div>
-                    <div class="module-header">
-                        <div class="module-name">Unknown</div>
-                        <div class="module-status status-planned">Unknown</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        后端组件
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
-                        <div><span class="label">Reads From / 读取自:</span> 无</div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer"></div>
+                
+                <div class="module-explanation">
+                    管理与实体蓝牙工牌的连接状态。
                 </div>
-            
-                <div class="module-card" id="mod-unknown" data-reads-from='[]'>
-                    <div class="anchor-top" id="anchor-top-unknown"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-unknown"></div>
-                    <div class="module-header">
-                        <div class="module-name">Unknown</div>
-                        <div class="module-status status-planned">Unknown</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        后端组件
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
-                        <div><span class="label">Reads From / 读取自:</span> 无</div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer"></div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> BLE + HTTP device state</div>
+                    <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
-            
-                <div class="module-card" id="mod-unknown" data-reads-from='[]'>
-                    <div class="anchor-top" id="anchor-top-unknown"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-unknown"></div>
-                    <div class="module-header">
-                        <div class="module-name">Unknown</div>
-                        <div class="module-status status-planned">Unknown</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        后端组件
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
-                        <div><span class="label">Reads From / 读取自:</span> 无</div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer"></div>
+                
+                <div class="card-signature">connectUsingSession(Config) -> Flow<DeviceState></div>
+                <div class="os-layer">—</div>
+            </div>
+        
+            <div class="module-card" id="feat_oss" data-reads-from='["feat_\u2014"]'>
+                <div class="anchor-top" id="anchor-top-feat_oss"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_oss"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./oss-service/spec.md">OSS</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
-            
-                <div class="module-card" id="mod-unknown" data-reads-from='[]'>
-                    <div class="anchor-top" id="anchor-top-unknown"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-unknown"></div>
-                    <div class="module-header">
-                        <div class="module-name">Unknown</div>
-                        <div class="module-status status-planned">Unknown</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        后端组件
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
-                        <div><span class="label">Reads From / 读取自:</span> 无</div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer"></div>
+                
+                <div class="module-explanation">
+                    负责将录音文件上传到云端存储。
                 </div>
-            
-                <div class="module-card" id="mod-unknown" data-reads-from='[]'>
-                    <div class="anchor-top" id="anchor-top-unknown"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-unknown"></div>
-                    <div class="module-header">
-                        <div class="module-name">Unknown</div>
-                        <div class="module-status status-planned">Unknown</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        后端组件
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
-                        <div><span class="label">Reads From / 读取自:</span> 无</div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer"></div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> File upload/download</div>
+                    <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
-            
+                
+                <div class="card-signature">upload(ByteArray) -> String (Url)</div>
+                <div class="os-layer">—</div>
+            </div>
+        
+            <div class="module-card" id="feat_asr" data-reads-from='["feat_oss-downloads-audio-files-to-transcribe"]'>
+                <div class="anchor-top" id="anchor-top-feat_asr"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_asr"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./asr-service/spec.md">ASR</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    将语音转换为文字 (备用)。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Transcription results</div>
+                    <div><span class="label">Reads From / 读取自:</span> OSS (downloads audio files to transcribe)</div>
+                </div>
+                
+                <div class="card-signature">transcribe(AudioFile) -> Flow<Transcription></div>
+                <div class="os-layer">—</div>
+            </div>
+        
+            <div class="module-card" id="feat_tingwupipeline" data-reads-from='["feat_oss-reads-fileurl"]'>
+                <div class="anchor-top" id="anchor-top-feat_tingwupipeline"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_tingwupipeline"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./tingwu-pipeline/spec.md">TingwuPipeline</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    阿里云听悟接口，负责语音转文字和提取会议摘要。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Transcription & Audio Intelligence</div>
+                    <div><span class="label">Reads From / 读取自:</span> OSS (reads fileUrl)</div>
+                </div>
+                
+                <div class="card-signature">submit(AudioUrl) -> PipelineResult</div>
+                <div class="os-layer">SSD</div>
+            </div>
+        
+            <div class="module-card" id="feat_badgeaudiopipeline" data-reads-from='["feat_asr", "feat_oss", "feat_connectivitybridge"]'>
+                <div class="anchor-top" id="anchor-top-feat_badgeaudiopipeline"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_badgeaudiopipeline"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./badge-audio-pipeline/spec.md">BadgeAudioPipeline</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    控制实体工牌开始/停止录音的流程。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Audio recording lifecycle</div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ASR, OSS, ConnectivityBridge <br> Via Orch / 经编排器接收: Triggers UnifiedPipeline on transcription complete</div>
+                </div>
+                
+                <div class="card-signature"></div>
+                <div class="os-layer">—</div>
+            </div>
+        
+            <div class="module-card" id="feat_audiomanagement" data-reads-from='["feat_connectivitybridge", "feat_tingwupipeline"]'>
+                <div class="anchor-top" id="anchor-top-feat_audiomanagement"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_audiomanagement"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./audio-management/spec.md">AudioManagement</a></div>
+                    <div class="module-status status-wip">WIP</div>
+                </div>
+                
+                <div class="module-explanation">
+                    处理录音文件同步、转写的界面状态。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Manual sync/transcribe states</div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ConnectivityBridge, TingwuPipeline <br> Via Orch / 经编排器接收: Flow<AudioState></div>
+                </div>
+                
+                <div class="card-signature"></div>
+                <div class="os-layer">App</div>
+            </div>
+        
+            <div class="module-card" id="feat_devicepairing" data-reads-from='["feat_legacy-ble-stack"]'>
+                <div class="anchor-top" id="anchor-top-feat_devicepairing"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_devicepairing"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./device-pairing/spec.md">DevicePairing</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    负责配对新蓝牙工牌的界面流程。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> BLE pairing session states</div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: Legacy BLE stack <br> Via Orch / 经编排器接收: Flow<PairingState></div>
+                </div>
+                
+                <div class="card-signature"></div>
+                <div class="os-layer">App</div>
+            </div>
+        
+            </div>
+        </div>
+        
+        <div class="layer" style="margin-bottom: 20px;">
+            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">Entity Resolution</div>
+            <div class="modules-grid" style="grid-template-columns: repeat(3, 1fr);">
+        
+            <div class="module-card" id="feat_entitywriter" data-reads-from='["feat_sessioncontext-write-through-to-ram-s1"]'>
+                <div class="anchor-top" id="anchor-top-feat_entitywriter"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_entitywriter"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./entity-writer/spec.md">EntityWriter</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    负责在数据库中新建或更新联系人、公司等实体信息。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Entity mutations (create/update/merge aliases)</div>
+                    <div><span class="label">Reads From / 读取自:</span> SessionContext (write-through to RAM S1)</div>
+                </div>
+                
+                <div class="card-signature">upsertFromClue(ParsedClue) -> EntityId</div>
+                <div class="os-layer">RAM Application</div>
+            </div>
+        
+            <div class="module-card" id="feat_entityregistry" data-reads-from='["feat_\u2014"]'>
+                <div class="anchor-top" id="anchor-top-feat_entityregistry"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_entityregistry"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./entity-registry/spec.md">EntityRegistry</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    负责从数据库中查询和读取实体信息。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Entity queries (read-only view of entities)</div>
+                    <div><span class="label">Reads From / 读取自:</span> —</div>
+                </div>
+                
+                <div class="card-signature">findByAlias(String) -> List<EntityInfo></div>
+                <div class="os-layer">SSD</div>
+            </div>
+        
+            <div class="module-card" id="feat_entitydisambiguator" data-reads-from='["feat_entitywriter-to-write-cures"]'>
+                <div class="anchor-top" id="anchor-top-feat_entitydisambiguator"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_entitydisambiguator"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./entity-disambiguation/spec.md">EntityDisambiguator</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    当遇到重名或指代不清时，负责向用户发起追问。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> `PendingIntent` interruption state</div>
+                    <div><span class="label">Reads From / 读取自:</span> EntityWriter (to write cures)</div>
+                </div>
+                
+                <div class="card-signature">process(PendingIntent) -> DisambiguationResult</div>
+                <div class="os-layer">RAM Application</div>
+            </div>
+        
+            <div class="module-card" id="feat_entityresolver" data-reads-from='["feat_entityregistry"]'>
+                <div class="anchor-top" id="anchor-top-feat_entityresolver"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_entityresolver"></div>
+                <div class="module-header">
+                    <div class="module-name">EntityResolver</div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    将录音里提到的人名，精准匹配到数据库里的唯一ID。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Entity disambiguation matching</div>
+                    <div><span class="label">Reads From / 读取自:</span> EntityRegistry</div>
+                </div>
+                
+                <div class="card-signature">resolve(Clues, Candidates) -> ResolvedEntities</div>
+                <div class="os-layer">RAM Application</div>
+            </div>
+        
+            </div>
+        </div>
+        
+        <div class="layer" style="margin-bottom: 20px;">
+            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">System II & Routing</div>
+            <div class="modules-grid" style="grid-template-columns: repeat(3, 1fr);">
+        
+            <div class="module-card" id="feat_pipelinetelemetry" data-reads-from='["feat_\u2014"]'>
+                <div class="anchor-top" id="anchor-top-feat_pipelinetelemetry"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_pipelinetelemetry"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./pipeline-telemetry/spec.md">PipelineTelemetry</a></div>
+                    <div class="module-status status-planned">Planned</div>
+                </div>
+                
+                <div class="module-explanation">
+                    记录系统内部运行日志，用于排查错误。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Pipeline logs (to Logcat)</div>
+                    <div><span class="label">Reads From / 读取自:</span> —</div>
+                </div>
+                
+                <div class="card-signature">recordEvent(TelemetryEvent) -> Unit</div>
+                <div class="os-layer">RAM</div>
+            </div>
+        
+            <div class="module-card" id="feat_contextbuilder" data-reads-from='["feat_entityregistry", "feat_memorycenter", "feat_sessioncontext"]'>
+                <div class="anchor-top" id="anchor-top-feat_contextbuilder"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_contextbuilder"></div>
+                <div class="module-header">
+                    <div class="module-name">ContextBuilder</div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    负责把历史记录和人物关系打包，送给AI大脑。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> `EnhancedContext` (assembled prompt context)</div>
+                    <div><span class="label">Reads From / 读取自:</span> EntityRegistry, MemoryCenter, SessionContext</div>
+                </div>
+                
+                <div class="card-signature">build(ContextRequest) -> EnhancedContext</div>
+                <div class="os-layer">Kernel</div>
+            </div>
+        
+            <div class="module-card" id="feat_inputparser" data-reads-from='["feat_aliasindex-internal"]'>
+                <div class="anchor-top" id="anchor-top-feat_inputparser"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_inputparser"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./input-parser/spec.md">InputParser</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    快速分析用户的意图，例如分辨是在闲聊还是下达命令。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Semantic intent and EntityID resolution</div>
+                    <div><span class="label">Reads From / 读取自:</span> AliasIndex (internal)</div>
+                </div>
+                
+                <div class="card-signature">parseIntent(String) -> ParsedIntent</div>
+                <div class="os-layer">RAM Application</div>
+            </div>
+        
+            <div class="module-card" id="feat_lightningrouter" data-reads-from='["feat_contextbuilder"]'>
+                <div class="anchor-top" id="anchor-top-feat_lightningrouter"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_lightningrouter"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./lightning-router/spec.md">LightningRouter</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    交通警察：快速判断问题难易度，简单问题直接放行，复杂的转交深度思考。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Intent evaluation (Phase 0)</div>
+                    <div><span class="label">Reads From / 读取自:</span> ContextBuilder</div>
+                </div>
+                
+                <div class="card-signature">evaluateIntent(String) -> IntentTier</div>
+                <div class="os-layer">RAM Application</div>
+            </div>
+        
+            <div class="module-card" id="feat_modelregistry" data-reads-from='["feat_\u2014"]'>
+                <div class="anchor-top" id="anchor-top-feat_modelregistry"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_modelregistry"></div>
+                <div class="module-header">
+                    <div class="module-name">ModelRegistry</div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    管理不同的AI大模型配置 (例如：小模型快速响应 vs 大模型深度思考)。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Static LLM Profiles (models, temps, skills)</div>
+                    <div><span class="label">Reads From / 读取自:</span> —</div>
+                </div>
+                
+                <div class="card-signature">ModelRegistry</div>
+                <div class="os-layer">Config Hub</div>
+            </div>
+        
+            <div class="module-card" id="feat_executor" data-reads-from='["feat_modelrouter"]'>
+                <div class="anchor-top" id="anchor-top-feat_executor"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_executor"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./model-routing/spec.md">Executor</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    真正负责向云端AI (如通义千问) 发请求并接收结果的桥梁。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Raw LLM output (stateless — no storage)</div>
+                    <div><span class="label">Reads From / 读取自:</span> ModelRouter</div>
+                </div>
+                
+                <div class="card-signature">execute(Prompt, ModelProfile) -> String</div>
+                <div class="os-layer">—</div>
+            </div>
+        
+            <div class="module-card" id="feat_pluginregistry" data-reads-from='["feat_\u2014"]'>
+                <div class="anchor-top" id="anchor-top-feat_pluginregistry"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_pluginregistry"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./plugin-registry/spec.md">PluginRegistry</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    负责执行具体的动作，比如生成PDF文件或发短信。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Executable pure-Kotlin workflows (Tools)</div>
+                    <div><span class="label">Reads From / 读取自:</span> —</div>
+                </div>
+                
+                <div class="card-signature">executeTool(ToolId, Params) -> Flow<UiState></div>
+                <div class="os-layer">App Infra</div>
+            </div>
+        
+            <div class="module-card" id="feat_unifiedpipeline" data-reads-from='["feat_entityregistry", "feat_userhabit", "feat_memorycenter", "feat_contextbuilder"]'>
+                <div class="anchor-top" id="anchor-top-feat_unifiedpipeline"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_unifiedpipeline"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./unified-pipeline/spec.md">UnifiedPipeline</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    处理流水线：将复杂请求按步骤 (提取-组装-路由) 流水化处理。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> System II context ETL & execution</div>
+                    <div><span class="label">Reads From / 读取自:</span> EntityRegistry, UserHabit, MemoryCenter, ContextBuilder</div>
+                </div>
+                
+                <div class="card-signature">processInput(PipelineInput) -> Flow<PipelineResult></div>
+                <div class="os-layer">RAM Application</div>
+            </div>
+        
+            </div>
+        </div>
+        
+        <div class="layer" style="margin-bottom: 20px;">
+            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">Intelligent Scheduler</div>
+            <div class="modules-grid" style="grid-template-columns: repeat(3, 1fr);">
+        
+            <div class="module-card" id="feat_scheduler" data-reads-from='["feat_entityregistry-alias-lookup", "feat_scheduleboard-conflicts"]'>
+                <div class="anchor-top" id="anchor-top-feat_scheduler"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_scheduler"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./scheduler/spec.md">Scheduler</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    负责创建和管理待办事项及日程提醒。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> ScheduledTask, InspirationEntry</div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: EntityRegistry (alias lookup), ScheduleBoard (conflicts) <br> Via Orch / 经编排器接收: Flow<UiState.SchedulerTaskCreated></div>
+                </div>
+                
+                <div class="card-signature"></div>
+                <div class="os-layer">Consumer of RAM</div>
+            </div>
+        
+            <div class="module-card" id="feat_scheduleboard" data-reads-from='["feat_scheduledtaskrepository-populates-index"]'>
+                <div class="anchor-top" id="anchor-top-feat_scheduleboard"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_scheduleboard"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./scheduler/spec.md">ScheduleBoard</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    检查日程表中是否有时间冲突。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Conflict index (in-memory cache)</div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ScheduledTaskRepository (populates index) <br> Via Orch / 经编排器接收: —</div>
+                </div>
+                
+                <div class="card-signature"></div>
+                <div class="os-layer">SSD</div>
+            </div>
+        
+            <div class="module-card" id="feat_conflictresolver" data-reads-from='["feat_scheduleboard"]'>
+                <div class="anchor-top" id="anchor-top-feat_conflictresolver"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_conflictresolver"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./conflict-resolver/spec.md">ConflictResolver</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    帮助用户解决时间冲突 (比如：改期或取消)。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Conflict resolution actions</div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ScheduleBoard <br> Via Orch / 经编排器接收: Flow<ConflictState></div>
+                </div>
+                
+                <div class="card-signature"></div>
+                <div class="os-layer">RAM App</div>
+            </div>
+        
+            </div>
+        </div>
+        
+        <div class="layer" style="margin-bottom: 20px;">
+            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">System I & Ambient</div>
+            <div class="modules-grid" style="grid-template-columns: repeat(3, 1fr);">
+        
+            <div class="module-card" id="feat_notificationservice" data-reads-from='["feat_\u2014"]'>
+                <div class="anchor-top" id="anchor-top-feat_notificationservice"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_notificationservice"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./notifications/spec.md">NotificationService</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    在手机上显示系统弹窗和任务提醒。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> System notification display</div>
+                    <div><span class="label">Reads From / 读取自:</span> —</div>
+                </div>
+                
+                <div class="card-signature">show(NotificationPayload) -> Unit</div>
+                <div class="os-layer">—</div>
+            </div>
+        
+            <div class="module-card" id="feat_mascot-system-i" data-reads-from='["feat_eventbus-idle", "feat_error"]'>
+                <div class="anchor-top" id="anchor-top-feat_mascot-system-i"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_mascot-system-i"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./mascot-service/spec.md">Mascot (System I)</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    吉祥物(系统一)：负责打招呼、秒回聊天和显示气泡提示，反应极快。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Ephemeral interactions, greetings</div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: EventBus (Idle, Error) <br> Via Orch / 经编排器接收: Flow<MascotState></div>
+                </div>
+                
+                <div class="card-signature"></div>
+                <div class="os-layer">RAM App (Out-of-band)</div>
+            </div>
+        
+            </div>
+        </div>
+        
+        <div class="layer" style="margin-bottom: 20px;">
+            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">Memory & OS</div>
+            <div class="modules-grid" style="grid-template-columns: repeat(3, 1fr);">
+        
+            <div class="module-card" id="feat_memorycenter" data-reads-from='["feat_\u2014"]'>
+                <div class="anchor-top" id="anchor-top-feat_memorycenter"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_memorycenter"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./memory-center/spec.md">MemoryCenter</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    存储所有的聊天记录和语音转写历史。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Conversation memory entries</div>
+                    <div><span class="label">Reads From / 读取自:</span> —</div>
+                </div>
+                
+                <div class="card-signature">search(MemoryQuery) -> List<MemoryEntry></div>
+                <div class="os-layer">SSD</div>
+            </div>
+        
+            <div class="module-card" id="feat_userhabit" data-reads-from='["feat_\u2014"]'>
+                <div class="anchor-top" id="anchor-top-feat_userhabit"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_userhabit"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./user-habit/spec.md">UserHabit</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    记录用户的使用习惯，让AI更懂你。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Behavioral pattern observations</div>
+                    <div><span class="label">Reads From / 读取自:</span> —</div>
+                </div>
+                
+                <div class="card-signature">observe() -> Flow<List<Habit>></div>
+                <div class="os-layer">SSD</div>
+            </div>
+        
+            <div class="module-card" id="feat_sessionhistory" data-reads-from='["feat_\u2014"]'>
+                <div class="anchor-top" id="anchor-top-feat_sessionhistory"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_sessionhistory"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./session-history/spec.md">SessionHistory</a></div>
+                    <div class="module-status status-wip">WIP</div>
+                </div>
+                
+                <div class="module-explanation">
+                    管理侧边栏的历史会话列表 (重命名、置顶)。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Session metadata (list, pin, rename, delete)</div>
+                    <div><span class="label">Reads From / 读取自:</span> —</div>
+                </div>
+                
+                <div class="card-signature">getGroupedSessions() -> Flow<SessionGroups></div>
+                <div class="os-layer">SSD</div>
+            </div>
+        
+            <div class="module-card" id="feat_sessioncontext" data-reads-from='["feat_entitywriter-s1-via-write-through", "feat_rlmodule-s2/s3"]'>
+                <div class="anchor-top" id="anchor-top-feat_sessioncontext"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_sessioncontext"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="./session-context/spec.md">SessionContext</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
+                </div>
+                
+                <div class="module-explanation">
+                    当前聊天的临时高速缓存，AI思考时的数据源。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Per-session workspace (3 sections)</div>
+                    <div><span class="label">Reads From / 读取自:</span> EntityWriter (S1 via write-through), RLModule (S2/S3)</div>
+                </div>
+                
+                <div class="card-signature">entityContext: Flow<EntityGraph></div>
+                <div class="os-layer">Kernel (RAM)</div>
+            </div>
+        
+            </div>
+        </div>
+        
+        <div class="layer" style="margin-bottom: 20px;">
+            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">Uncategorized</div>
+            <div class="modules-grid" style="grid-template-columns: repeat(3, 1fr);">
+        
+            <div class="module-card" id="feat_unknown" data-reads-from='[]'>
+                <div class="anchor-top" id="anchor-top-feat_unknown"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_unknown"></div>
+                <div class="module-header">
+                    <div class="module-name">Unknown</div>
+                    <div class="module-status status-planned">Unknown</div>
+                </div>
+                
+                <div class="module-explanation">
+                    后端组件
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
+                    <div><span class="label">Reads From / 读取自:</span> 无</div>
+                </div>
+                
+                <div class="card-signature"></div>
+                <div class="os-layer"></div>
+            </div>
+        
+            <div class="module-card" id="feat_unknown" data-reads-from='[]'>
+                <div class="anchor-top" id="anchor-top-feat_unknown"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_unknown"></div>
+                <div class="module-header">
+                    <div class="module-name">Unknown</div>
+                    <div class="module-status status-planned">Unknown</div>
+                </div>
+                
+                <div class="module-explanation">
+                    后端组件
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
+                    <div><span class="label">Reads From / 读取自:</span> 无</div>
+                </div>
+                
+                <div class="card-signature"></div>
+                <div class="os-layer"></div>
+            </div>
+        
+            <div class="module-card" id="feat_unknown" data-reads-from='[]'>
+                <div class="anchor-top" id="anchor-top-feat_unknown"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_unknown"></div>
+                <div class="module-header">
+                    <div class="module-name">Unknown</div>
+                    <div class="module-status status-planned">Unknown</div>
+                </div>
+                
+                <div class="module-explanation">
+                    后端组件
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
+                    <div><span class="label">Reads From / 读取自:</span> 无</div>
+                </div>
+                
+                <div class="card-signature"></div>
+                <div class="os-layer"></div>
+            </div>
+        
+            <div class="module-card" id="feat_unknown" data-reads-from='[]'>
+                <div class="anchor-top" id="anchor-top-feat_unknown"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_unknown"></div>
+                <div class="module-header">
+                    <div class="module-name">Unknown</div>
+                    <div class="module-status status-planned">Unknown</div>
+                </div>
+                
+                <div class="module-explanation">
+                    后端组件
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
+                    <div><span class="label">Reads From / 读取自:</span> 无</div>
+                </div>
+                
+                <div class="card-signature"></div>
+                <div class="os-layer"></div>
+            </div>
+        
+            <div class="module-card" id="feat_unknown" data-reads-from='[]'>
+                <div class="anchor-top" id="anchor-top-feat_unknown"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_unknown"></div>
+                <div class="module-header">
+                    <div class="module-name">Unknown</div>
+                    <div class="module-status status-planned">Unknown</div>
+                </div>
+                
+                <div class="module-explanation">
+                    后端组件
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
+                    <div><span class="label">Reads From / 读取自:</span> 无</div>
+                </div>
+                
+                <div class="card-signature"></div>
+                <div class="os-layer"></div>
+            </div>
+        
+            <div class="module-card" id="feat_unknown" data-reads-from='[]'>
+                <div class="anchor-top" id="anchor-top-feat_unknown"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_unknown"></div>
+                <div class="module-header">
+                    <div class="module-name">Unknown</div>
+                    <div class="module-status status-planned">Unknown</div>
+                </div>
+                
+                <div class="module-explanation">
+                    后端组件
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
+                    <div><span class="label">Reads From / 读取自:</span> 无</div>
+                </div>
+                
+                <div class="card-signature"></div>
+                <div class="os-layer"></div>
+            </div>
+        
             </div>
         </div>
         
         </div>
         
         <script>
-            let topoLines = [];
-            let featLines = [];
-            let topoLinesInitialized = false;
-            let featLinesInitialized = false;
+            let lines = [];
+            let linesInitialized = false;
 
-            function initLines(viewMode) {
-                let initialized = viewMode === 'topology' ? topoLinesInitialized : featLinesInitialized;
-                if (initialized) return;
+            function initLines() {
+                if (linesInitialized) return;
+                linesInitialized = true;
+
+                const cards = document.querySelectorAll('#feature .module-card');
                 
-                if (viewMode === 'topology') topoLinesInitialized = true;
-                else featLinesInitialized = true;
-
-                const cards = document.querySelectorAll(`#${viewMode} .module-card`);
-                const lineArray = viewMode === 'topology' ? topoLines : featLines;
-
-                // Adjust color and path for semantic difference
-                const lineColor = viewMode === 'topology' ? 'rgba(156, 163, 175, 0.4)' : 'rgba(59, 130, 246, 0.4)';
-                const linePath = viewMode === 'topology' ? 'fluid' : 'grid';
-                const shadowColor = viewMode === 'topology' ? 'rgba(156, 163, 175, 0.2)' : 'rgba(192, 132, 252, 0.4)';
-
                 cards.forEach(card => {
                     const sourceId = card.id;
                     const depsStr = card.getAttribute('data-reads-from');
@@ -1089,931 +1253,6 @@
                             const targetEl = document.getElementById(targetId);
                             
                             if (targetEl && targetEl !== card) {
-                                const line = new LeaderLine(
-                                    targetEl,
-                                    card,
-                                    {
-                                        color: lineColor,
-                                        startSocket: 'bottom',
-                                        endSocket: 'top',
-                                        path: linePath,
-                                        startSocketGravity: [0, 50],
-                                        endSocketGravity: [0, -50],
-                                        startPlug: 'square',
-                                        endPlug: 'arrow3',
-                                        size: 2,
-                                        dash: {
-                                            animation: true,
-                                            len: 6,
-                                            gap: 6
-                                        },
-                                        dropShadow: {
-                                            dx: 0,
-                                            dy: 0,
-                                            blur: 4,
-                                            color: shadowColor
-                                        },
-                                        hide: false
-                                    }
-                                );
-                                lineArray.push(line);
-                            }
-                        });
-                    } catch (e) {
-                        console.error('Failed to parse deps for', sourceId, e);
-                    }
-                });
-                
-                // Force all SVG lines to the absolute background so they don't block cards
-                setTimeout(() => {
-                    document.querySelectorAll('.leader-line').forEach(svg => {
-                        svg.style.zIndex = '-1';
-                    });
-                }, 100);
-
-                // Redraw on scroll or resize
-                if (window.AnimEvent) {
-                    window.addEventListener('scroll', AnimEvent.add(function() {
-                        topoLines.forEach(l => l.position());
-                        featLines.forEach(l => l.position());
-                    }), false);
-                }
-            }
-
-            window.switchTab = function(event, tabId) {
-                // Update button active state
-                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-                event.currentTarget.classList.add('active');
-                
-                // Keep track of which display value to use
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.style.display = 'none';
-                    content.classList.remove('active');
-                });
-                
-                // Show target tab
-                const targetContent = document.getElementById(tabId);
-                targetContent.style.display = 'block';
-                targetContent.classList.add('active');
-                
-                setTimeout(() => {
-                    if (tabId === 'topology') {
-                        initLines('topology');
-                        topoLines.forEach(l => {
-                            l.show('draw', {duration: 500, timing: 'ease-out'});
-                            l.position();
-                        });
-                        featLines.forEach(l => l.hide('fade', {duration: 100}));
-                    } else {
-                        initLines('feature');
-                        featLines.forEach(l => {
-                            l.show('draw', {duration: 500, timing: 'ease-out'});
-                            l.position();
-                        });
-                        topoLines.forEach(l => l.hide('fade', {duration: 100}));
-                    }
-                }, 50);
-            };
-
-            window.addEventListener('load', () => {
-                setTimeout(() => {
-                    const activeBtn = document.querySelector('.tab-btn.active');
-                    if (activeBtn) {
-                        window.switchTab({currentTarget: activeBtn}, 'topology');
-                    }
-                }, 100);
-            });
-        </script>
-        <style>{css}</style>
-    </head>
-    <body>
-        <div class="header">
-            <h1>Cerb Architecture Dashboard</h1>
-            <p>Real-time module status and domain I/O contracts</p>
-        </div>
-        
-        <div class="legend">
-            <div class="legend-item"><span class="module-status status-shipped">Shipped</span> (Real impl) / <span class="translation-hint">已上线</span></div>
-            <div class="legend-item"><span class="module-status status-interface">Interface</span> (Fake impl) / <span class="translation-hint">仅接口 (假实现)</span></div>
-            <div class="legend-item"><span class="module-status status-planned">Planned</span> (Not coded) / <span class="translation-hint">计划中 (未开发)</span></div>
-            <div class="legend-item"><span class="module-status status-wip">WIP</span> / <span class="translation-hint">开发中</span></div>
-        </div>
-
-        <div class="layer-container" style="position: relative; padding-left: 40px;">
-    
-        <div class="layer">
-            <div class="layer-title">Layer 5: Infrastructure</div>
-            <div class="modules-grid">
-        
-                <div class="module-card" id="mod-connectivitybridge" data-reads-from='["\u2014"]'>
-                    <div class="anchor-top" id="anchor-top-connectivitybridge"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-connectivitybridge"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./connectivity-bridge/spec.md">ConnectivityBridge</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        管理与实体蓝牙工牌的连接状态。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> BLE + HTTP device state</div>
-                        <div><span class="label">Reads From / 读取自:</span> —</div>
-                    </div>
-                    
-                    <div class="card-signature">connectUsingSession(Config) -> Flow<DeviceState></div>
-                    <div class="os-layer">—</div>
-                </div>
-            
-                <div class="module-card" id="mod-notificationservice" data-reads-from='["\u2014"]'>
-                    <div class="anchor-top" id="anchor-top-notificationservice"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-notificationservice"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./notifications/spec.md">NotificationService</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        在手机上显示系统弹窗和任务提醒。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> System notification display</div>
-                        <div><span class="label">Reads From / 读取自:</span> —</div>
-                    </div>
-                    
-                    <div class="card-signature">show(NotificationPayload) -> Unit</div>
-                    <div class="os-layer">—</div>
-                </div>
-            
-                <div class="module-card" id="mod-oss" data-reads-from='["\u2014"]'>
-                    <div class="anchor-top" id="anchor-top-oss"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-oss"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./oss-service/spec.md">OSS</a></div>
-                        <div class="module-status status-interface">Interface</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        负责将录音文件上传到云端存储。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> File upload/download</div>
-                        <div><span class="label">Reads From / 读取自:</span> —</div>
-                    </div>
-                    
-                    <div class="card-signature">upload(ByteArray) -> String (Url)</div>
-                    <div class="os-layer">—</div>
-                </div>
-            
-                <div class="module-card" id="mod-asr" data-reads-from='["oss-downloads-audio-files-to-transcribe"]'>
-                    <div class="anchor-top" id="anchor-top-asr"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-asr"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./asr-service/spec.md">ASR</a></div>
-                        <div class="module-status status-interface">Interface</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        将语音转换为文字 (备用)。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Transcription results</div>
-                        <div><span class="label">Reads From / 读取自:</span> OSS (downloads audio files to transcribe)</div>
-                    </div>
-                    
-                    <div class="card-signature">transcribe(AudioFile) -> Flow<Transcription></div>
-                    <div class="os-layer">—</div>
-                </div>
-            
-                <div class="module-card" id="mod-tingwupipeline" data-reads-from='["oss-reads-fileurl"]'>
-                    <div class="anchor-top" id="anchor-top-tingwupipeline"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-tingwupipeline"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./tingwu-pipeline/spec.md">TingwuPipeline</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        阿里云听悟接口，负责语音转文字和提取会议摘要。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Transcription & Audio Intelligence</div>
-                        <div><span class="label">Reads From / 读取自:</span> OSS (reads fileUrl)</div>
-                    </div>
-                    
-                    <div class="card-signature">submit(AudioUrl) -> PipelineResult</div>
-                    <div class="os-layer">SSD</div>
-                </div>
-            
-                <div class="module-card" id="mod-pipelinetelemetry" data-reads-from='["\u2014"]'>
-                    <div class="anchor-top" id="anchor-top-pipelinetelemetry"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-pipelinetelemetry"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./pipeline-telemetry/spec.md">PipelineTelemetry</a></div>
-                        <div class="module-status status-planned">Planned</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        记录系统内部运行日志，用于排查错误。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Pipeline logs (to Logcat)</div>
-                        <div><span class="label">Reads From / 读取自:</span> —</div>
-                    </div>
-                    
-                    <div class="card-signature">recordEvent(TelemetryEvent) -> Unit</div>
-                    <div class="os-layer">RAM</div>
-                </div>
-            
-            </div>
-        </div>
-        
-        <div class="layer">
-            <div class="layer-title">Layer 4: Data Services</div>
-            <div class="modules-grid">
-        
-                <div class="module-card" id="mod-entitywriter" data-reads-from='["sessioncontext-write-through-to-ram-s1"]'>
-                    <div class="anchor-top" id="anchor-top-entitywriter"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-entitywriter"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./entity-writer/spec.md">EntityWriter</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        负责在数据库中新建或更新联系人、公司等实体信息。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Entity mutations (create/update/merge aliases)</div>
-                        <div><span class="label">Reads From / 读取自:</span> SessionContext (write-through to RAM S1)</div>
-                    </div>
-                    
-                    <div class="card-signature">upsertFromClue(ParsedClue) -> EntityId</div>
-                    <div class="os-layer">RAM Application</div>
-                </div>
-            
-                <div class="module-card" id="mod-entityregistry" data-reads-from='["\u2014"]'>
-                    <div class="anchor-top" id="anchor-top-entityregistry"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-entityregistry"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./entity-registry/spec.md">EntityRegistry</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        负责从数据库中查询和读取实体信息。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Entity queries (read-only view of entities)</div>
-                        <div><span class="label">Reads From / 读取自:</span> —</div>
-                    </div>
-                    
-                    <div class="card-signature">findByAlias(String) -> List<EntityInfo></div>
-                    <div class="os-layer">SSD</div>
-                </div>
-            
-                <div class="module-card" id="mod-memorycenter" data-reads-from='["\u2014"]'>
-                    <div class="anchor-top" id="anchor-top-memorycenter"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-memorycenter"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./memory-center/spec.md">MemoryCenter</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        存储所有的聊天记录和语音转写历史。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Conversation memory entries</div>
-                        <div><span class="label">Reads From / 读取自:</span> —</div>
-                    </div>
-                    
-                    <div class="card-signature">search(MemoryQuery) -> List<MemoryEntry></div>
-                    <div class="os-layer">SSD</div>
-                </div>
-            
-                <div class="module-card" id="mod-userhabit" data-reads-from='["\u2014"]'>
-                    <div class="anchor-top" id="anchor-top-userhabit"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-userhabit"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./user-habit/spec.md">UserHabit</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        记录用户的使用习惯，让AI更懂你。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Behavioral pattern observations</div>
-                        <div><span class="label">Reads From / 读取自:</span> —</div>
-                    </div>
-                    
-                    <div class="card-signature">observe() -> Flow<List<Habit>></div>
-                    <div class="os-layer">SSD</div>
-                </div>
-            
-                <div class="module-card" id="mod-sessionhistory" data-reads-from='["\u2014"]'>
-                    <div class="anchor-top" id="anchor-top-sessionhistory"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-sessionhistory"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./session-history/spec.md">SessionHistory</a></div>
-                        <div class="module-status status-wip">WIP</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        管理侧边栏的历史会话列表 (重命名、置顶)。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Session metadata (list, pin, rename, delete)</div>
-                        <div><span class="label">Reads From / 读取自:</span> —</div>
-                    </div>
-                    
-                    <div class="card-signature">getGroupedSessions() -> Flow<SessionGroups></div>
-                    <div class="os-layer">SSD</div>
-                </div>
-            
-                <div class="module-card" id="mod-sessioncontext" data-reads-from='["entitywriter-s1-via-write-through", "rlmodule-s2/s3"]'>
-                    <div class="anchor-top" id="anchor-top-sessioncontext"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-sessioncontext"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./session-context/spec.md">SessionContext</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        当前聊天的临时高速缓存，AI思考时的数据源。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Per-session workspace (3 sections)</div>
-                        <div><span class="label">Reads From / 读取自:</span> EntityWriter (S1 via write-through), RLModule (S2/S3)</div>
-                    </div>
-                    
-                    <div class="card-signature">entityContext: Flow<EntityGraph></div>
-                    <div class="os-layer">Kernel (RAM)</div>
-                </div>
-            
-            </div>
-        </div>
-        
-        <div class="layer">
-            <div class="layer-title">Layer 3: Core Pipeline</div>
-            <div class="modules-grid">
-        
-                <div class="module-card" id="mod-contextbuilder" data-reads-from='["entityregistry", "memorycenter", "sessioncontext"]'>
-                    <div class="anchor-top" id="anchor-top-contextbuilder"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-contextbuilder"></div>
-                    <div class="module-header">
-                        <div class="module-name">ContextBuilder</div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        负责把历史记录和人物关系打包，送给AI大脑。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> `EnhancedContext` (assembled prompt context)</div>
-                        <div><span class="label">Reads From / 读取自:</span> EntityRegistry, MemoryCenter, SessionContext</div>
-                    </div>
-                    
-                    <div class="card-signature">build(ContextRequest) -> EnhancedContext</div>
-                    <div class="os-layer">Kernel</div>
-                </div>
-            
-                <div class="module-card" id="mod-inputparser" data-reads-from='["aliasindex-internal"]'>
-                    <div class="anchor-top" id="anchor-top-inputparser"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-inputparser"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./input-parser/spec.md">InputParser</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        快速分析用户的意图，例如分辨是在闲聊还是下达命令。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Semantic intent and EntityID resolution</div>
-                        <div><span class="label">Reads From / 读取自:</span> AliasIndex (internal)</div>
-                    </div>
-                    
-                    <div class="card-signature">parseIntent(String) -> ParsedIntent</div>
-                    <div class="os-layer">RAM Application</div>
-                </div>
-            
-                <div class="module-card" id="mod-entitydisambiguator" data-reads-from='["entitywriter-to-write-cures"]'>
-                    <div class="anchor-top" id="anchor-top-entitydisambiguator"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-entitydisambiguator"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./entity-disambiguation/spec.md">EntityDisambiguator</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        当遇到重名或指代不清时，负责向用户发起追问。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> `PendingIntent` interruption state</div>
-                        <div><span class="label">Reads From / 读取自:</span> EntityWriter (to write cures)</div>
-                    </div>
-                    
-                    <div class="card-signature">process(PendingIntent) -> DisambiguationResult</div>
-                    <div class="os-layer">RAM Application</div>
-                </div>
-            
-                <div class="module-card" id="mod-lightningrouter" data-reads-from='["contextbuilder"]'>
-                    <div class="anchor-top" id="anchor-top-lightningrouter"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-lightningrouter"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./lightning-router/spec.md">LightningRouter</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        交通警察：快速判断问题难易度，简单问题直接放行，复杂的转交深度思考。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Intent evaluation (Phase 0)</div>
-                        <div><span class="label">Reads From / 读取自:</span> ContextBuilder</div>
-                    </div>
-                    
-                    <div class="card-signature">evaluateIntent(String) -> IntentTier</div>
-                    <div class="os-layer">RAM Application</div>
-                </div>
-            
-                <div class="module-card" id="mod-entityresolver" data-reads-from='["entityregistry"]'>
-                    <div class="anchor-top" id="anchor-top-entityresolver"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-entityresolver"></div>
-                    <div class="module-header">
-                        <div class="module-name">EntityResolver</div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        将录音里提到的人名，精准匹配到数据库里的唯一ID。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Entity disambiguation matching</div>
-                        <div><span class="label">Reads From / 读取自:</span> EntityRegistry</div>
-                    </div>
-                    
-                    <div class="card-signature">resolve(Clues, Candidates) -> ResolvedEntities</div>
-                    <div class="os-layer">RAM Application</div>
-                </div>
-            
-                <div class="module-card" id="mod-modelregistry" data-reads-from='["\u2014"]'>
-                    <div class="anchor-top" id="anchor-top-modelregistry"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-modelregistry"></div>
-                    <div class="module-header">
-                        <div class="module-name">ModelRegistry</div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        管理不同的AI大模型配置 (例如：小模型快速响应 vs 大模型深度思考)。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Static LLM Profiles (models, temps, skills)</div>
-                        <div><span class="label">Reads From / 读取自:</span> —</div>
-                    </div>
-                    
-                    <div class="card-signature">ModelRegistry</div>
-                    <div class="os-layer">Config Hub</div>
-                </div>
-            
-                <div class="module-card" id="mod-executor" data-reads-from='["modelrouter"]'>
-                    <div class="anchor-top" id="anchor-top-executor"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-executor"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./model-routing/spec.md">Executor</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        真正负责向云端AI (如通义千问) 发请求并接收结果的桥梁。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Raw LLM output (stateless — no storage)</div>
-                        <div><span class="label">Reads From / 读取自:</span> ModelRouter</div>
-                    </div>
-                    
-                    <div class="card-signature">execute(Prompt, ModelProfile) -> String</div>
-                    <div class="os-layer">—</div>
-                </div>
-            
-                <div class="module-card" id="mod-pluginregistry" data-reads-from='["\u2014"]'>
-                    <div class="anchor-top" id="anchor-top-pluginregistry"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-pluginregistry"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./plugin-registry/spec.md">PluginRegistry</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        负责执行具体的动作，比如生成PDF文件或发短信。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Executable pure-Kotlin workflows (Tools)</div>
-                        <div><span class="label">Reads From / 读取自:</span> —</div>
-                    </div>
-                    
-                    <div class="card-signature">executeTool(ToolId, Params) -> Flow<UiState></div>
-                    <div class="os-layer">App Infra</div>
-                </div>
-            
-                <div class="module-card" id="mod-prismorchestrator" data-reads-from='["lightningrouter", "mascotservice", "contextbuilder", "executor", "entityresolver", "pluginregistry"]'>
-                    <div class="anchor-top" id="anchor-top-prismorchestrator"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-prismorchestrator"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./prism-orchestrator/spec.md">PrismOrchestrator</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        系统大脑(系统二)：指挥整个深度思考流程，决定先做什么后做什么。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Top-level routing + pipeline coordination</div>
-                        <div><span class="label">Reads From / 读取自:</span> LightningRouter, MascotService, ContextBuilder, Executor, EntityResolver, PluginRegistry</div>
-                    </div>
-                    
-                    <div class="card-signature">processInput(Intent) -> Flow<PrismState></div>
-                    <div class="os-layer">RAM Application</div>
-                </div>
-            
-                <div class="module-card" id="mod-unifiedpipeline" data-reads-from='["entityregistry", "userhabit", "memorycenter", "contextbuilder"]'>
-                    <div class="anchor-top" id="anchor-top-unifiedpipeline"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-unifiedpipeline"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./unified-pipeline/spec.md">UnifiedPipeline</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        处理流水线：将复杂请求按步骤 (提取-组装-路由) 流水化处理。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> System II context ETL & execution</div>
-                        <div><span class="label">Reads From / 读取自:</span> EntityRegistry, UserHabit, MemoryCenter, ContextBuilder</div>
-                    </div>
-                    
-                    <div class="card-signature">processInput(PipelineInput) -> Flow<PipelineResult></div>
-                    <div class="os-layer">RAM Application</div>
-                </div>
-            
-            </div>
-        </div>
-        
-        <div class="layer">
-            <div class="layer-title">Layer 2: Features</div>
-            <div class="modules-grid">
-        
-                <div class="module-card" id="mod-mascot-system-i" data-reads-from='["eventbus-idle", "error"]'>
-                    <div class="anchor-top" id="anchor-top-mascot-system-i"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-mascot-system-i"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./mascot-service/spec.md">Mascot (System I)</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        吉祥物(系统一)：负责打招呼、秒回聊天和显示气泡提示，反应极快。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Ephemeral interactions, greetings</div>
-                        <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: EventBus (Idle, Error) <br> Via Orch / 经编排器接收: Flow<MascotState></div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer">RAM App (Out-of-band)</div>
-                </div>
-            
-                <div class="module-card" id="mod-scheduler" data-reads-from='["entityregistry-alias-lookup", "scheduleboard-conflicts"]'>
-                    <div class="anchor-top" id="anchor-top-scheduler"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-scheduler"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./scheduler/spec.md">Scheduler</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        负责创建和管理待办事项及日程提醒。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> ScheduledTask, InspirationEntry</div>
-                        <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: EntityRegistry (alias lookup), ScheduleBoard (conflicts) <br> Via Orch / 经编排器接收: Flow<UiState.SchedulerTaskCreated></div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer">Consumer of RAM</div>
-                </div>
-            
-                <div class="module-card" id="mod-scheduleboard" data-reads-from='["scheduledtaskrepository-populates-index"]'>
-                    <div class="anchor-top" id="anchor-top-scheduleboard"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-scheduleboard"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./scheduler/spec.md">ScheduleBoard</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        检查日程表中是否有时间冲突。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Conflict index (in-memory cache)</div>
-                        <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ScheduledTaskRepository (populates index) <br> Via Orch / 经编排器接收: —</div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer">SSD</div>
-                </div>
-            
-                <div class="module-card" id="mod-prism-orchestrator" data-reads-from='["contextbuilder", "clientprofilehub"]'>
-                    <div class="anchor-top" id="anchor-top-prism-orchestrator"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-prism-orchestrator"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./prism-orchestrator/spec.md">Prism Orchestrator</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        后端组件
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Chat State Machine (System II delegator)</div>
-                        <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ContextBuilder, ClientProfileHub <br> Via Orch / 经编排器接收: Flow<PrismState></div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer">RAM Application</div>
-                </div>
-            
-                <div class="module-card" id="mod-badgeaudiopipeline" data-reads-from='["asr", "oss", "connectivitybridge"]'>
-                    <div class="anchor-top" id="anchor-top-badgeaudiopipeline"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-badgeaudiopipeline"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./badge-audio-pipeline/spec.md">BadgeAudioPipeline</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        控制实体工牌开始/停止录音的流程。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Audio recording lifecycle</div>
-                        <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ASR, OSS, ConnectivityBridge <br> Via Orch / 经编排器接收: Triggers Orchestrator on transcription complete</div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer">—</div>
-                </div>
-            
-                <div class="module-card" id="mod-audiomanagement" data-reads-from='["connectivitybridge", "tingwupipeline"]'>
-                    <div class="anchor-top" id="anchor-top-audiomanagement"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-audiomanagement"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./audio-management/spec.md">AudioManagement</a></div>
-                        <div class="module-status status-wip">WIP</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        处理录音文件同步、转写的界面状态。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Manual sync/transcribe states</div>
-                        <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ConnectivityBridge, TingwuPipeline <br> Via Orch / 经编排器接收: Flow<AudioState></div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer">App</div>
-                </div>
-            
-                <div class="module-card" id="mod-conflictresolver" data-reads-from='["scheduleboard"]'>
-                    <div class="anchor-top" id="anchor-top-conflictresolver"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-conflictresolver"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./conflict-resolver/spec.md">ConflictResolver</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        帮助用户解决时间冲突 (比如：改期或取消)。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> Conflict resolution actions</div>
-                        <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ScheduleBoard <br> Via Orch / 经编排器接收: Flow<ConflictState></div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer">RAM App</div>
-                </div>
-            
-                <div class="module-card" id="mod-devicepairing" data-reads-from='["legacy-ble-stack"]'>
-                    <div class="anchor-top" id="anchor-top-devicepairing"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-devicepairing"></div>
-                    <div class="module-header">
-                        <div class="module-name"><a href="./device-pairing/spec.md">DevicePairing</a></div>
-                        <div class="module-status status-shipped">Shipped</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        负责配对新蓝牙工牌的界面流程。
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> BLE pairing session states</div>
-                        <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: Legacy BLE stack <br> Via Orch / 经编排器接收: Flow<PairingState></div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer">App</div>
-                </div>
-            
-            </div>
-        </div>
-        
-        <div class="layer">
-            <div class="layer-title">Layer 1: Intelligence</div>
-            <div class="modules-grid">
-        
-                <div class="module-card" id="mod-unknown" data-reads-from='[]'>
-                    <div class="anchor-top" id="anchor-top-unknown"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-unknown"></div>
-                    <div class="module-header">
-                        <div class="module-name">Unknown</div>
-                        <div class="module-status status-planned">Unknown</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        后端组件
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
-                        <div><span class="label">Reads From / 读取自:</span> 无</div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer"></div>
-                </div>
-            
-                <div class="module-card" id="mod-unknown" data-reads-from='[]'>
-                    <div class="anchor-top" id="anchor-top-unknown"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-unknown"></div>
-                    <div class="module-header">
-                        <div class="module-name">Unknown</div>
-                        <div class="module-status status-planned">Unknown</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        后端组件
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
-                        <div><span class="label">Reads From / 读取自:</span> 无</div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer"></div>
-                </div>
-            
-                <div class="module-card" id="mod-unknown" data-reads-from='[]'>
-                    <div class="anchor-top" id="anchor-top-unknown"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-unknown"></div>
-                    <div class="module-header">
-                        <div class="module-name">Unknown</div>
-                        <div class="module-status status-planned">Unknown</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        后端组件
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
-                        <div><span class="label">Reads From / 读取自:</span> 无</div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer"></div>
-                </div>
-            
-                <div class="module-card" id="mod-unknown" data-reads-from='[]'>
-                    <div class="anchor-top" id="anchor-top-unknown"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-unknown"></div>
-                    <div class="module-header">
-                        <div class="module-name">Unknown</div>
-                        <div class="module-status status-planned">Unknown</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        后端组件
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
-                        <div><span class="label">Reads From / 读取自:</span> 无</div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer"></div>
-                </div>
-            
-                <div class="module-card" id="mod-unknown" data-reads-from='[]'>
-                    <div class="anchor-top" id="anchor-top-unknown"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-unknown"></div>
-                    <div class="module-header">
-                        <div class="module-name">Unknown</div>
-                        <div class="module-status status-planned">Unknown</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        后端组件
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
-                        <div><span class="label">Reads From / 读取自:</span> 无</div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer"></div>
-                </div>
-            
-                <div class="module-card" id="mod-unknown" data-reads-from='[]'>
-                    <div class="anchor-top" id="anchor-top-unknown"></div>
-                    <div class="anchor-bottom" id="anchor-bottom-unknown"></div>
-                    <div class="module-header">
-                        <div class="module-name">Unknown</div>
-                        <div class="module-status status-planned">Unknown</div>
-                    </div>
-                    
-                    <div class="module-explanation">
-                        后端组件
-                    </div>
-                    
-                    <div class="module-detail">
-                        <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
-                        <div><span class="label">Reads From / 读取自:</span> 无</div>
-                    </div>
-                    
-                    <div class="card-signature"></div>
-                    <div class="os-layer"></div>
-                </div>
-            
-            </div>
-        </div>
-        
-        </div>
-        
-        <script>
-            // Draw dependency lines after DOM loads
-            window.addEventListener('load', function() {
-                const cards = document.querySelectorAll('.module-card');
-                const lines = [];
-
-                cards.forEach(card => {
-                    const sourceId = card.id;
-                    const depsStr = card.getAttribute('data-reads-from');
-                    if (!depsStr) return;
-                    
-                    try {
-                        const deps = JSON.parse(depsStr);
-                        deps.forEach(dep => {
-                            const targetId = 'mod-' + dep;
-                            const targetEl = document.getElementById(targetId);
-                            
-                            if (targetEl && targetEl !== card) {
-                                // Draw line from target (provider) bottom to source (consumer) top
-                                // We reverse it visually because data flows FROM dependency TO consumer (upwards in our flex-direction column-reverse)
                                 const line = new LeaderLine(
                                     targetEl,
                                     card,
@@ -2037,7 +1276,8 @@
                                             dy: 0,
                                             blur: 4,
                                             color: 'rgba(192, 132, 252, 0.4)'
-                                        }
+                                        },
+                                        hide: true
                                     }
                                 );
                                 lines.push(line);
@@ -2048,17 +1288,52 @@
                     }
                 });
                 
-                // Force all SVG lines to the absolute background so they don't block cards
                 setTimeout(() => {
                     document.querySelectorAll('.leader-line').forEach(svg => {
                         svg.style.zIndex = '-1';
                     });
                 }, 100);
 
-                // Redraw on scroll or resize
-                window.addEventListener('scroll', AnimEvent.add(function() {
-                    lines.forEach(l => l.position());
-                }), false);
+                if (window.AnimEvent) {
+                    window.addEventListener('scroll', AnimEvent.add(function() {
+                        lines.forEach(l => l.position());
+                    }), false);
+                }
+            }
+
+            window.switchTab = function(event, tabId) {
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                event.currentTarget.classList.add('active');
+                
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.style.display = 'none';
+                    content.classList.remove('active');
+                });
+                
+                const targetContent = document.getElementById(tabId);
+                targetContent.style.display = 'block';
+                targetContent.classList.add('active');
+                
+                setTimeout(() => {
+                    if (tabId === 'feature') {
+                        initLines();
+                        lines.forEach(l => {
+                            l.show('draw', {duration: 500, timing: 'ease-out'});
+                            l.position();
+                        });
+                    } else {
+                        lines.forEach(l => l.hide('fade', {duration: 100}));
+                    }
+                }, 50);
+            };
+
+            window.addEventListener('load', () => {
+                setTimeout(() => {
+                    const activeBtn = document.querySelector('.tab-btn.active');
+                    if (activeBtn) {
+                        window.switchTab({currentTarget: activeBtn}, 'topology');
+                    }
+                }, 100);
             });
         </script>
     </body>

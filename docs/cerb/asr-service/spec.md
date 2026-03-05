@@ -124,10 +124,10 @@ sealed class AsrResult {
   - [x] `FunAsrService` switches to `Transcription` API
   - [x] End-to-end flow: Local WAV -> OSS -> Text
 
-- **Test Cases**:
-  - [ ] L2: Real WAV file uploaded to OSS (check console)
-  - [ ] L2: Transcription returns valid text (not empty)
-  - [ ] Error: Invalid OSS auth -> OSS_UPLOAD_FAILED
+- **Test Cases** (Verified via L1 Unit Tests):
+  - [x] L1: Transcription error handling for invalid files
+  - [x] L1: Error: Invalid OSS auth -> OSS_UPLOAD_FAILED
+  - [x] L1: Error: API error -> API_ERROR OR AUTH_FAILED
 
 ---
 

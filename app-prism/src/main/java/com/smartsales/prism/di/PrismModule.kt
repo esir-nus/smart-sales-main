@@ -14,14 +14,12 @@ import com.smartsales.prism.data.fakes.FakeUserProfileRepository
 import com.smartsales.prism.data.real.DashscopeExecutor
 import com.smartsales.prism.data.real.session.LlmSessionTitleGenerator
 import com.smartsales.prism.domain.session.SessionTitleGenerator
-import com.smartsales.prism.data.real.PrismOrchestrator
 import com.smartsales.prism.domain.audio.AudioRepository
 
 import com.smartsales.prism.domain.memory.MemoryRepository
 import com.smartsales.prism.domain.memory.EntityRepository
 import com.smartsales.prism.domain.pipeline.ContextBuilder
 import com.smartsales.prism.domain.pipeline.Executor
-import com.smartsales.prism.domain.pipeline.Orchestrator
 import com.smartsales.prism.domain.pipeline.Publisher
 import com.smartsales.prism.data.real.telemetry.RealPipelineTelemetry
 import com.smartsales.prism.domain.telemetry.PipelineTelemetry
@@ -48,11 +46,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class PrismModule {
-    
-    // === Core Pipeline ===
-    
-    @Binds @Singleton
-    abstract fun bindOrchestrator(impl: PrismOrchestrator): Orchestrator
     
     @Binds @Singleton
     abstract fun bindContextBuilder(impl: RealContextBuilder): ContextBuilder
@@ -165,6 +158,9 @@ abstract class PrismModule {
 
     @Binds @Singleton
     abstract fun bindEntityDisambiguationService(impl: com.smartsales.prism.data.disambiguation.RealEntityDisambiguationService): com.smartsales.prism.domain.disambiguation.EntityDisambiguationService
+
+    @Binds @Singleton
+    abstract fun bindUnifiedPipeline(impl: com.smartsales.prism.data.real.RealUnifiedPipeline): com.smartsales.prism.domain.unifiedpipeline.UnifiedPipeline
 
     companion object {
         @Provides

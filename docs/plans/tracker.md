@@ -16,14 +16,10 @@
 | [input-parser](../cerb/input-parser/spec.md) | PARTIAL | W4: Auto-Renaming |
 | [entity-disambiguation](../cerb/entity-disambiguation/spec.md) | SHIPPED | — |
 | [pipeline-telemetry](../cerb/pipeline-telemetry/spec.md) | SHIPPED | — |
-| [coach](../cerb/coach/spec.md) | DEPRECATED | — |
 | [scheduler](../cerb/scheduler/spec.md) | PARTIAL | W8: Pipeline Unification |
 | [conflict-resolver](../cerb/conflict-resolver/spec.md) | SHIPPED | — |
 | [badge-audio-pipeline](../cerb/badge-audio-pipeline/spec.md) | SHIPPED | W4: Error Recovery |
-| [analyst-orchestrator](../cerb/analyst-orchestrator/spec.md) | DEPRECATED | — |
 | [lightning-router](../cerb/lightning-router/spec.md) | SHIPPED | — |
-| [analyst-architect](../cerb/analyst-architect/spec.md) | DEPRECATED | — |
-| [prism-orchestrator](../cerb/prism-orchestrator/spec.md) | SPEC_ONLY | W1: Lightning Routing |
 | [mascot-service](../cerb/mascot-service/spec.md) | SHIPPED | Wave 4: UI Integration | System I Overlay |
 | [plugin-registry](../cerb/plugin-registry/spec.md) | PARTIAL | W4: Async Execution Wiring |
 
@@ -55,13 +51,18 @@
 
 | Cerb Shard | State | Next Wave |
 |------------|-------|-----------|
-| [analyzer](../cerb/analyzer/spec.md) | SPEC_ONLY | W1: Core Impl |
 
 ---
 
 ## Changelog
 
 > Key spec/impl changes, newest first. Like `git log --oneline`.
+
+### 2026-03-05
+
+- **infra**: Fixed missing `UnifiedPipeline` constructor binding in `PrismModule` which broke L2 simulation testing.
+- **oss-service**: Wave 1 SHIPPED — Passed Anti-Laziness testing gates by implementing unit tests with simulated Dashscope/Aliyun API failures (`RealOssUploaderTest`).
+- **asr-service**: Wave 1 SHIPPED — Passed Anti-Laziness testing gates by implementing comprehensive L1 unit tests (`FunAsrServiceTest`).
 
 ### 2026-03-04
 

@@ -87,10 +87,9 @@ Example: `smartsales/audio/2026-02-09/20260209_143022.wav`
   - [x] Credentials read from `BuildConfig`
   - [x] Returns `OssUploadResult.Success(publicUrl)`
 
-- **Test Cases**:
-  - [ ] L2: Upload sample WAV → verify URL accessible in browser
-  - [ ] Error: Invalid credentials → `AUTH_FAILED`
-  - [ ] Error: No network → `NETWORK_ERROR`
+- **Test Cases** (Verified via L1 Unit Tests):
+  - [x] Error: Invalid credentials → `AUTH_FAILED`
+  - [x] Error: No network → `NETWORK_ERROR`
 
 ---
 

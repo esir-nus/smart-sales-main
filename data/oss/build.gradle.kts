@@ -96,4 +96,6 @@ dependencies {
     // Tests
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.mockito.kotlin)
 }

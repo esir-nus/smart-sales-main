@@ -61,6 +61,9 @@ class RealAnalystPipeline @Inject constructor(
             is DisambiguationResult.PassThrough -> {
                 Log.d(TAG, "Disambiguator pass-through. Proceeding with Analyst normally.")
             }
+            is DisambiguationResult.Resolved -> {
+                Log.d(TAG, "Disambiguator resolved. We let Pipeline handle writing, proceed with Analyst.")
+            }
         }
 
         return when (_state.value) {

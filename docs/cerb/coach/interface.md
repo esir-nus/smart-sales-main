@@ -1,1 +1,0 @@
-# Coach Interfaces\n\n> **DEPRECATED**: This module and its implementations (`CoachPipeline`) have been completely removed from the Dual-Engine Architecture.\n> \n> Please refer to the new **[Mascot Service Interface](../mascot-service/interface.md)** for System I out-of-band ephemeral UX handling.

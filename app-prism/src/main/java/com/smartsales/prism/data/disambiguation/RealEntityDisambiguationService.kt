@@ -2,8 +2,6 @@ package com.smartsales.prism.data.disambiguation
 
 import com.smartsales.prism.domain.disambiguation.DisambiguationResult
 import com.smartsales.prism.domain.disambiguation.EntityDisambiguationService
-import com.smartsales.prism.domain.memory.EntityWriter
-import com.smartsales.prism.domain.memory.EntityType
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.parser.InputParserService
@@ -16,8 +14,7 @@ import javax.inject.Singleton
 
 @Singleton
 class RealEntityDisambiguationService @Inject constructor(
-    private val inputParserService: InputParserService,
-    private val entityWriter: EntityWriter
+    private val inputParserService: InputParserService
 ) : EntityDisambiguationService {
 
     data class PendingIntent(
@@ -34,38 +31,8 @@ class RealEntityDisambiguationService @Inject constructor(
         val parseResult = inputParserService.parseIntent(rawInput)
 
         if (parseResult is ParseResult.EntityDeclaration) {
-            // Cure received! Write to the CRM.
-            val upsertResult = entityWriter.upsertFromClue(
-                clue = parseResult.name,
-                resolvedId = null,
-                type = EntityType.PERSON, // Defaults to Person for now when declared via chat
-                source = "disambiguation"
-            )
-            val entityId = upsertResult.entityId
-
-            // Update profile with additional info if provided
-            if (!parseResult.jobTitle.isNullOrBlank() || !parseResult.company.isNullOrBlank() || !parseResult.notes.isNullOrBlank()) {
-                // If company is provided, we might ideally want to upsert the account and link it.
-                // For now, we store company as part of the profile or notes string to keep it simple,
-                // or rely on the EntityWriter implementation to handle nested company linking later.
-                val profileUpdates = mutableListOf<String>()
-                parseResult.jobTitle?.let { profileUpdates.add("职位: $it") }
-                parseResult.company?.let { profileUpdates.add("公司: $it") }
-                parseResult.notes?.let { profileUpdates.add("备注: $it") }
-
-                if (profileUpdates.isNotEmpty()) {
-                    entityWriter.updateProfile(entityId, mapOf("notes" to profileUpdates.joinToString("\n")))
-                }
-            }
-
-            // Register aliases
-            if (parseResult.aliases.isNotEmpty()) {
-                parseResult.aliases.forEach { alias ->
-                    entityWriter.registerAlias(entityId, alias)
-                }
-            }
-            // Clear the state and command resumption
-            val result = DisambiguationResult.Resumed(currentIntent.originalInput, currentIntent.mode)
+            // Cure received! Pipeline should handle the write-back.
+            val result = DisambiguationResult.Resolved(parseResult, currentIntent.originalInput, currentIntent.mode)
             pendingIntent = null
             return result
         } else if (parseResult is ParseResult.NeedsClarification) {

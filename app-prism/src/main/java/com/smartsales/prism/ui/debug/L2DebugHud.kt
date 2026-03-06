@@ -27,7 +27,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smartsales.prism.BuildConfig
-import com.smartsales.prism.domain.pipeline.Orchestrator
+import com.smartsales.prism.domain.unifiedpipeline.UnifiedPipeline
+import com.smartsales.prism.domain.unifiedpipeline.PipelineInput
+import com.smartsales.prism.domain.unifiedpipeline.PipelineResult
+import com.smartsales.prism.domain.analyst.QueryQuality
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.scheduler.LintResult
@@ -45,7 +48,7 @@ private const val TAG = "L2DebugHud"
 @InstallIn(SingletonComponent::class)
 interface L2DebugHudEntryPoint {
     fun schedulerLinter(): SchedulerLinter
-    fun orchestrator(): Orchestrator
+    fun unifiedPipeline(): UnifiedPipeline
     fun systemEventBus(): com.smartsales.prism.domain.system.SystemEventBus
 }
 
@@ -54,7 +57,7 @@ interface L2DebugHudEntryPoint {
  * 
  * 两种测试模式:
  * 1. 直接 Linter 测试 — 输入 JSON，验证 Linter 解析
- * 2. 全 Pipeline 测试 — 输入自然语言，走完整 Orchestrator 流程，结果输出到 logcat
+ * 2. 全 Pipeline 测试 — 输入自然语言，走完整 UnifiedPipeline 流程，结果输出到 logcat
  * 
  * 使用方式:
  * - 打开 Debug HUD → 输入自然语言 → 点发送
@@ -75,7 +78,7 @@ fun L2DebugHud(
         EntryPointAccessors.fromApplication(context.applicationContext, L2DebugHudEntryPoint::class.java)
     }
     val schedulerLinter = remember { entryPoint.schedulerLinter() }
-    val orchestrator = remember { entryPoint.orchestrator() }
+    val unifiedPipeline = remember { entryPoint.unifiedPipeline() }
     val eventBus = remember { entryPoint.systemEventBus() }
     val scope = rememberCoroutineScope()
     
@@ -163,31 +166,45 @@ fun L2DebugHud(
                             scope.launch {
                                 isProcessing = true
                                 try {
-                                    val uiState = orchestrator.createScheduledTask(text)
-                                    when (uiState) {
-                                        is UiState.SchedulerTaskCreated -> {
-                                            Log.d(TAG, "✅ Task Created!")
-                                            Log.d(TAG, "   title: ${uiState.title}")
-                                            Log.d(TAG, "   dayOffset: ${uiState.dayOffset}")
-                                            Log.d(TAG, "   taskId: ${uiState.taskId}")
-                                            lastResult = "✅ Task: ${uiState.title}"
-                                            showToast = true
+                                    val pipelineInput = PipelineInput(text, isVoice = false, intent = QueryQuality.CRM_TASK)
+                                    var hasResult = false
+                                    unifiedPipeline.processInput(pipelineInput).collect { pResult ->
+                                        when (pResult) {
+                                            is PipelineResult.SchedulerTaskCreated -> {
+                                                Log.d(TAG, "✅ Task Created!")
+                                                Log.d(TAG, "   title: ${pResult.title}")
+                                                Log.d(TAG, "   dayOffset: ${pResult.dayOffset}")
+                                                Log.d(TAG, "   taskId: ${pResult.taskId}")
+                                                lastResult = "✅ Task: ${pResult.title}"
+                                                showToast = true
+                                                hasResult = true
+                                            }
+                                            is PipelineResult.ClarificationNeeded -> {
+                                                Log.d(TAG, "⚠️ Clarification needed: ${pResult.question}")
+                                                lastResult = "⚠️ ${pResult.question}"
+                                                showToast = true
+                                                hasResult = true
+                                            }
+                                            is PipelineResult.DisambiguationIntercepted -> {
+                                                Log.d(TAG, "⚠️ Clarification needed: ${pResult.uiState}")
+                                                lastResult = "⚠️ Disambiguation required"
+                                                showToast = true
+                                                hasResult = true
+                                            }
+                                            is PipelineResult.SchedulerMultiTaskCreated -> {
+                                                Log.d(TAG, "✅ Tasks Created! ${pResult.tasks.size}")
+                                                lastResult = "✅ ${pResult.tasks.size} Tasks Created"
+                                                showToast = true
+                                                hasResult = true
+                                            }
+                                            else -> {
+                                                Log.d(TAG, "📦 State: $pResult")
+                                            }
                                         }
-                                        is UiState.AwaitingClarification -> {
-                                            Log.d(TAG, "⚠️ Clarification needed: ${uiState.question}")
-                                            lastResult = "⚠️ ${uiState.question}"
-                                            showToast = true
-                                        }
-                                        is UiState.Error -> {
-                                            Log.e(TAG, "❌ Error: ${uiState.message}")
-                                            lastResult = "❌ ${uiState.message}"
-                                            showToast = true
-                                        }
-                                        else -> {
-                                            Log.d(TAG, "📦 State: $uiState")
-                                            lastResult = "📦 $uiState"
-                                            showToast = true
-                                        }
+                                    }
+                                    if (!hasResult) {
+                                        lastResult = "🚫 Missing concrete result"
+                                        showToast = true
                                     }
                                 } catch (e: Exception) {
                                     Log.e(TAG, "❌ Exception: ${e.message}", e)

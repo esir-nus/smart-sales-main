@@ -3,8 +3,9 @@ package com.smartsales.prism.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.prism.domain.model.Mode
-import com.smartsales.prism.domain.pipeline.Orchestrator
 import com.smartsales.prism.domain.model.UiState
+import com.smartsales.prism.domain.unifiedpipeline.UnifiedPipeline
+import com.smartsales.prism.domain.analyst.LightningRouter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -35,7 +36,8 @@ import com.smartsales.prism.domain.scheduler.UrgencyLevel
  */
 @HiltViewModel
 class PrismViewModel @Inject constructor(
-    private val orchestrator: Orchestrator,
+    private val unifiedPipeline: UnifiedPipeline,
+    private val lightningRouter: LightningRouter,
     private val analystPipeline: com.smartsales.prism.domain.analyst.AnalystPipeline,
     private val toolRegistry: com.smartsales.prism.domain.analyst.ToolRegistry,
     private val activityController: com.smartsales.prism.domain.activity.AgentActivityController,
@@ -337,44 +339,71 @@ class PrismViewModel @Inject constructor(
         
         viewModelScope.launch {
             try {
-                val result = orchestrator.processInput(input)
+                // Phase 0 Intent
+                val context = contextBuilder.build(input, Mode.ANALYST, depth = com.smartsales.prism.domain.pipeline.ContextDepth.MINIMAL)
+                val routerResult = lightningRouter.evaluateIntent(context)
+                
+                val pipelineInput = com.smartsales.prism.domain.unifiedpipeline.PipelineInput(
+                    rawText = input,
+                    isVoice = false,
+                    intent = routerResult?.queryQuality ?: com.smartsales.prism.domain.analyst.QueryQuality.DEEP_ANALYSIS
+                )
+                
+                unifiedPipeline.processInput(pipelineInput).collect { result ->
+                     when (result) {
+                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.ConversationalReply -> {
+                             val ui = UiState.Response(result.text)
+                             _uiState.value = ui
+                             _history.value += ChatMessage.Ai(
+                                 id = java.util.UUID.randomUUID().toString(),
+                                 timestamp = System.currentTimeMillis(),
+                                 uiState = ui
+                             )
+                         }
+                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.DisambiguationIntercepted -> {
+                             _uiState.value = result.uiState
+                             if (result.uiState !is UiState.Idle) {
+                                 _history.value += ChatMessage.Ai(
+                                     id = java.util.UUID.randomUUID().toString(),
+                                     timestamp = System.currentTimeMillis(),
+                                     uiState = result.uiState
+                                 )
+                             }
+                         }
+                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.ClarificationNeeded -> {
+                             val ui = UiState.Response(result.question)
+                             _uiState.value = ui
+                             _history.value += ChatMessage.Ai(
+                                 id = java.util.UUID.randomUUID().toString(),
+                                 timestamp = System.currentTimeMillis(),
+                                 uiState = ui
+                             )
+                         }
+                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.ToolDispatch -> {
+                             executeToolDirectly(result.toolId, result.params)
+                         }
+                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.SchedulerTaskCreated -> {
+                             val ui = UiState.Response("已为您创建日程：${result.title}")
+                             _uiState.value = ui
+                             _history.value += ChatMessage.Ai(
+                                 id = java.util.UUID.randomUUID().toString(),
+                                 timestamp = System.currentTimeMillis(),
+                                 uiState = ui
+                             )
+                         }
+                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.SchedulerMultiTaskCreated -> {
+                             val ui = UiState.Response("已为您创建 ${result.tasks.size} 个日程")
+                             _uiState.value = ui
+                             _history.value += ChatMessage.Ai(
+                                 id = java.util.UUID.randomUUID().toString(),
+                                 timestamp = System.currentTimeMillis(),
+                                 uiState = ui
+                             )
+                         }
+                     }
+                }
+                
                 _uiState.value = UiState.Idle
-                
-                if (result !is UiState.Idle) {
-                    val aiMsg = ChatMessage.Ai(
-                        id = java.util.UUID.randomUUID().toString(),
-                        timestamp = System.currentTimeMillis(),
-                        uiState = result
-                    )
-                    _history.value += aiMsg
-                }
-                
-                // Load TaskBoard items if workflows are provided in the response
-                if (result is UiState.Response && result.workflows.isNotEmpty()) {
-                    val tools = toolRegistry.getAllTools()
-                    val items = result.workflows.mapNotNull { suggestion ->
-                        val tool = tools.find { it.id == suggestion.workflowId }
-                        if (tool != null) {
-                            com.smartsales.prism.domain.analyst.TaskBoardItem(
-                                id = tool.id,
-                                icon = tool.icon,
-                                title = suggestion.label,
-                                description = tool.description
-                            )
-                        } else null
-                    }
-                    _taskBoardItems.value = items
-                }
-
-                // If the pipeline returned an Execution state (Expert Bypass), trigger it now
-                if (result is UiState.ExecutingTool) {
-                    // Extract the toolId (we stored it temporarily in the UI state message field when mapping from AnalystResponse)
-                    val toolId = (result as? UiState.ExecutingTool)?.toolName ?: ""
-                    val parameters = (result as? UiState.ExecutingTool)?.parameters ?: emptyMap()
-                    if (toolId.isNotBlank()) {
-                         executeToolDirectly(toolId, parameters)
-                    }
-                }
                 
             } catch (e: Exception) {
                 _errorMessage.value = e.message ?: "Failed to execute plan"
@@ -507,52 +536,95 @@ class PrismViewModel @Inject constructor(
         
         viewModelScope.launch {
             try {
-                val result = orchestrator.processInput(input)
-                _uiState.value = UiState.Idle 
+                val context = contextBuilder.build(input, Mode.ANALYST, depth = com.smartsales.prism.domain.pipeline.ContextDepth.MINIMAL)
+                val routerResult = lightningRouter.evaluateIntent(context)
                 
-                // 2. 添加 AI 响应到历史
-                if (result !is UiState.Idle) {
-                    val aiMsg = ChatMessage.Ai(
+                if (routerResult?.queryQuality == com.smartsales.prism.domain.analyst.QueryQuality.NOISE) {
+                    mascotService.interact(com.smartsales.prism.domain.mascot.MascotInteraction.Text(input))
+                    _uiState.value = UiState.Idle
+                    _isSending.value = false
+                    return@launch
+                } else if (routerResult?.queryQuality == com.smartsales.prism.domain.analyst.QueryQuality.GREETING) {
+                    mascotService.interact(com.smartsales.prism.domain.mascot.MascotInteraction.Text(input))
+                    _uiState.value = UiState.Idle
+                    _isSending.value = false
+                    return@launch
+                } else if (routerResult?.queryQuality == com.smartsales.prism.domain.analyst.QueryQuality.VAGUE) {
+                    val result = UiState.Response(routerResult.response ?: "Please provide more details.")
+                    _uiState.value = result
+                    _history.value += ChatMessage.Ai(
                         id = java.util.UUID.randomUUID().toString(),
                         timestamp = System.currentTimeMillis(),
                         uiState = result
                     )
-                    _history.value += aiMsg
+                    _uiState.value = UiState.Idle
+                    _isSending.value = false
+                    return@launch
                 }
                 
-                // Load TaskBoard items if workflows are provided in the response
-                if (result is UiState.Response && result.workflows.isNotEmpty()) {
-                    val tools = toolRegistry.getAllTools()
-                    val items = result.workflows.mapNotNull { suggestion ->
-                        val tool = tools.find { it.id == suggestion.workflowId }
-                        if (tool != null) {
-                            com.smartsales.prism.domain.analyst.TaskBoardItem(
-                                id = tool.id,
-                                icon = tool.icon,
-                                title = suggestion.label,
-                                description = tool.description
-                            )
-                        } else null
-                    }
-                    _taskBoardItems.value = items
-                }
-
-                // If the pipeline returned an Execution state (Expert Bypass), trigger it now
-                if (result is UiState.ExecutingTool) {
-                    // Start execution flow concurrently since we are passing off to a suspend function 
-                    // that runs its own loading overlay before resetting to Idle.
-                    val toolId = (result as? UiState.ExecutingTool)?.toolName ?: ""
-                    val parameters = (result as? UiState.ExecutingTool)?.parameters ?: emptyMap()
-                    if (toolId.isNotBlank()) {
-                         executeToolDirectly(toolId, parameters)
-                    }
+                val pipelineInput = com.smartsales.prism.domain.unifiedpipeline.PipelineInput(
+                    rawText = input,
+                    isVoice = false,
+                    intent = routerResult?.queryQuality ?: com.smartsales.prism.domain.analyst.QueryQuality.DEEP_ANALYSIS
+                )
+                
+                unifiedPipeline.processInput(pipelineInput).collect { result ->
+                     when (result) {
+                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.ConversationalReply -> {
+                             val ui = UiState.Response(result.text)
+                             _uiState.value = ui
+                             _history.value += ChatMessage.Ai(
+                                 id = java.util.UUID.randomUUID().toString(),
+                                 timestamp = System.currentTimeMillis(),
+                                 uiState = ui
+                             )
+                             // Wave 4: Auto-Rename
+                             if (_sessionTitle.value == "新对话") triggerAutoRename()
+                         }
+                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.DisambiguationIntercepted -> {
+                             _uiState.value = result.uiState
+                             if (result.uiState !is UiState.Idle) {
+                                 _history.value += ChatMessage.Ai(
+                                     id = java.util.UUID.randomUUID().toString(),
+                                     timestamp = System.currentTimeMillis(),
+                                     uiState = result.uiState
+                                 )
+                             }
+                         }
+                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.ClarificationNeeded -> {
+                             val ui = UiState.Response(result.question)
+                             _uiState.value = ui
+                             _history.value += ChatMessage.Ai(
+                                 id = java.util.UUID.randomUUID().toString(),
+                                 timestamp = System.currentTimeMillis(),
+                                 uiState = ui
+                             )
+                         }
+                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.ToolDispatch -> {
+                             executeToolDirectly(result.toolId, result.params)
+                         }
+                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.SchedulerTaskCreated -> {
+                             val ui = UiState.Response("已为您创建日程：${result.title}")
+                             _uiState.value = ui
+                             _history.value += ChatMessage.Ai(
+                                 id = java.util.UUID.randomUUID().toString(),
+                                 timestamp = System.currentTimeMillis(),
+                                 uiState = ui
+                             )
+                         }
+                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.SchedulerMultiTaskCreated -> {
+                             val ui = UiState.Response("已为您创建 ${result.tasks.size} 个日程")
+                             _uiState.value = ui
+                             _history.value += ChatMessage.Ai(
+                                 id = java.util.UUID.randomUUID().toString(),
+                                 timestamp = System.currentTimeMillis(),
+                                 uiState = ui
+                             )
+                         }
+                     }
                 }
                 
-                // Wave 4: Auto-Renaming Trigger
-                // If title is default ("新对话") AND we have a successful response, trigger renaming
-                if (_sessionTitle.value == "新对话" && result is UiState.Response) {
-                    triggerAutoRename()
-                }
+                _uiState.value = UiState.Idle
                 
             } catch (e: Exception) {
                 _errorMessage.value = e.message ?: "未知错误"

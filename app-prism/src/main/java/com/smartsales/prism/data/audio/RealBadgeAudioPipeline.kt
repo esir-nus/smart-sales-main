@@ -10,7 +10,7 @@ import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.RecordingNotification
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import com.smartsales.prism.domain.model.UiState
-import com.smartsales.prism.domain.pipeline.Orchestrator
+import com.smartsales.prism.domain.unifiedpipeline.UnifiedPipeline
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -34,7 +34,7 @@ import javax.inject.Singleton
 class RealBadgeAudioPipeline @Inject constructor(
     private val connectivityBridge: ConnectivityBridge,
     private val asrService: AsrService,
-    private val orchestrator: Orchestrator
+    private val unifiedPipeline: UnifiedPipeline
 ) : BadgeAudioPipeline {
     
     companion object {
@@ -118,10 +118,43 @@ class RealBadgeAudioPipeline @Inject constructor(
             _events.emit(PipelineEvent.Processing(transcript))
             android.util.Log.d(TAG, "Scheduling task...")
             
-            val uiState = orchestrator.createScheduledTask(transcript)
-            val schedulerResult = try {
-                mapToSchedulerResult(uiState)
-            } catch (e: IllegalStateException) {
+            val pipelineInput = com.smartsales.prism.domain.unifiedpipeline.PipelineInput(
+                rawText = transcript,
+                isVoice = true,
+                intent = com.smartsales.prism.domain.analyst.QueryQuality.CRM_TASK
+            )
+            
+            var schedulerResult: SchedulerResult = SchedulerResult.Ignored
+            
+            try {
+                unifiedPipeline.processInput(pipelineInput).collect { pResult ->
+                    when(pResult) {
+                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.SchedulerTaskCreated -> {
+                             schedulerResult = SchedulerResult.TaskCreated(
+                                 pResult.taskId, pResult.title,
+                                 pResult.dayOffset, pResult.scheduledAtMillis, pResult.durationMinutes
+                             )
+                         }
+                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.SchedulerMultiTaskCreated -> {
+                             schedulerResult = SchedulerResult.MultiTaskCreated(
+                                 tasks = pResult.tasks.map { task ->
+                                     SchedulerResult.TaskCreated(
+                                         task.taskId, task.title,
+                                         task.dayOffset, task.scheduledAtMillis, task.durationMinutes
+                                     )
+                                 }
+                             )
+                         }
+                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.DisambiguationIntercepted -> {
+                             schedulerResult = SchedulerResult.AwaitingClarification("需要进一步确认")
+                         }
+                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.ClarificationNeeded -> {
+                             schedulerResult = SchedulerResult.AwaitingClarification(pResult.question)
+                         }
+                         else -> { /* Ignore intermediate states from RealUnifiedPipeline */ }
+                    }
+                }
+            } catch (e: Exception) {
                 _currentState.value = PipelineState.IDLE
                 _events.emit(PipelineEvent.Error(
                     stage = PipelineEvent.Stage.SCHEDULE,
@@ -130,8 +163,9 @@ class RealBadgeAudioPipeline @Inject constructor(
                 ))
                 android.util.Log.w(TAG, "Scheduling failed: ${e.message}")
                 localFile.delete()
-                return
+                return@processFile
             }
+
             
             android.util.Log.d(TAG, "Scheduled: $schedulerResult")
             
@@ -163,35 +197,5 @@ class RealBadgeAudioPipeline @Inject constructor(
     
     override fun isIdle(): Boolean = currentState.value == PipelineState.IDLE
     
-    /**
-     * Map UiState from Orchestrator to SchedulerResult for pipeline events.
-     * 
-     * Wave 3: 处理所有 UiState 变体
-     * - SchedulerTaskCreated → TaskCreated
-     * - SchedulerMultiTaskCreated → MultiTaskCreated (完整任务数据)
-     * - AwaitingClarification → AwaitingClarification
-     * - Toast (inspiration) → InspirationSaved("") // ID 未传播
-     * - Idle (non-intent) → Ignored
-     * - Error → throw (触发 pipeline error)
-     */
-    private fun mapToSchedulerResult(uiState: UiState): SchedulerResult = when (uiState) {
-        is UiState.SchedulerTaskCreated -> SchedulerResult.TaskCreated(
-            uiState.taskId, uiState.title,
-            uiState.dayOffset, uiState.scheduledAtMillis, uiState.durationMinutes
-        )
-        is UiState.SchedulerMultiTaskCreated -> SchedulerResult.MultiTaskCreated(
-            tasks = uiState.tasks.map { task ->
-                SchedulerResult.TaskCreated(
-                    task.taskId, task.title,
-                    task.dayOffset, task.scheduledAtMillis, task.durationMinutes
-                )
-            }
-        )
-        is UiState.AwaitingClarification -> SchedulerResult.AwaitingClarification(uiState.question)
-        is UiState.Toast -> SchedulerResult.InspirationSaved("")  // ID 未从 Orchestrator 传回
-        is UiState.Response -> SchedulerResult.MultiTaskCreated(emptyList())  // 兜底：不应走到此分支
-        is UiState.Idle -> SchedulerResult.Ignored  // 非调度意图
-        is UiState.Error -> throw IllegalStateException("Scheduler error: ${uiState.message}")
-        else -> throw IllegalStateException("Unexpected UiState from scheduler: $uiState")
-    }
+    // mapToSchedulerResult is deprecated and removed since we directly map PipelineResults now.
 }

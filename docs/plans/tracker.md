@@ -60,6 +60,8 @@
 
 ### 2026-03-05
 
+- **architecture**: Comprehensive Interface Map Audit SHIPPED — Identified extensive signature drift across 17 modules and corrected `interface-map.md` to reflect exact Kotlin boundaries. Downgraded `RLModule` from SHIPPED to PARTIAL (Fake masquerade). Flagged `NotificationService` domain-layer Android import rule violation.
+
 - **infra**: Fixed missing `UnifiedPipeline` constructor binding in `PrismModule` which broke L2 simulation testing.
 - **oss-service**: Wave 1 SHIPPED — Passed Anti-Laziness testing gates by implementing unit tests with simulated Dashscope/Aliyun API failures (`RealOssUploaderTest`).
 - **asr-service**: Wave 1 SHIPPED — Passed Anti-Laziness testing gates by implementing comprehensive L1 unit tests (`FunAsrServiceTest`).
@@ -243,6 +245,8 @@
 | ~~Sticky Notes Boundary~~ | ~~`PrismOrchestrator.createScheduledTask()` calls `entityWriter.upsertFromClue()`~~ | ~~**High**~~ | ✅ **Resolved** — Sticky Notes abandoned. Scheduler creates PERSON + ACCOUNT entities for business-relevant contacts (Wave 10 SHIPPED). |
 | **Confidence-Based Reminder Interceptor** | Replace deterministic round-1 wrap-up with LLM confidence-based interception. Agent decides when to surface schedule context: (1) User greets/noise → inject, (2) User discusses agenda → inject, (3) User wraps up work → suggest completion. Requires classifier or LLM self-assessment of conversation intent. Current workaround: smarter prompting that lets LLM decide naturally. | Medium |
 | **L2 UI Verification** | `MarkdownStrategyBubble.kt` — Verify the title extraction and rendering styling (T2 test from `l2_test_plan.md`) after major component refactoring is complete. | High |
+| **NotificationService Layer Violation** | `NotificationService.kt` in `domain` imports `android.app.PendingIntent` | High |
+| **FakeReinforcementLearner Masquerade** | `RLModule` bound to Fake but was incorrectly mapped as SHIPPED | High |
 ---
 
 ## Quick Links

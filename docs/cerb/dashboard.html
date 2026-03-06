@@ -488,7 +488,7 @@
                     <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
                 
-                <div class="card-signature">connectUsingSession(Config) -> Flow<DeviceState></div>
+                <div class="card-signature">connectionState: StateFlow, isReady()</div>
                 <div class="os-layer">—</div>
             </div>
         
@@ -509,7 +509,7 @@
                     <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
                 
-                <div class="card-signature">upload(ByteArray) -> String (Url)</div>
+                <div class="card-signature">upload(File, objectKey) -> OssUploadResult</div>
                 <div class="os-layer">—</div>
             </div>
         
@@ -530,7 +530,7 @@
                     <div><span class="label">Reads From / 读取自:</span> OSS (downloads audio files to transcribe)</div>
                 </div>
                 
-                <div class="card-signature">transcribe(AudioFile) -> Flow<Transcription></div>
+                <div class="card-signature">transcribe(File) -> AsrResult</div>
                 <div class="os-layer">—</div>
             </div>
         
@@ -551,7 +551,7 @@
                     <div><span class="label">Reads From / 读取自:</span> OSS (reads fileUrl)</div>
                 </div>
                 
-                <div class="card-signature">submit(AudioUrl) -> PipelineResult</div>
+                <div class="card-signature">submit(TingwuRequest) -> Result<String></div>
                 <div class="os-layer">SSD</div>
             </div>
         
@@ -590,7 +590,7 @@
                 
                 <div class="module-detail">
                     <div><span class="label">Owns / 拥有 (写入):</span> Manual sync/transcribe states</div>
-                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ConnectivityBridge, TingwuPipeline <br> Via Orch / 经编排器接收: Flow<AudioState></div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ConnectivityBridge, TingwuPipeline <br> Via Orch / 经编排器接收: *Observes DB State*</div>
                 </div>
                 
                 <div class="card-signature"></div>
@@ -611,7 +611,7 @@
                 
                 <div class="module-detail">
                     <div><span class="label">Owns / 拥有 (写入):</span> BLE pairing session states</div>
-                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: Legacy BLE stack <br> Via Orch / 经编排器接收: Flow<PairingState></div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: Legacy BLE stack <br> Via Orch / 经编排器接收: StateFlow<PairingState></div>
                 </div>
                 
                 <div class="card-signature"></div>
@@ -642,7 +642,7 @@
                     <div><span class="label">Reads From / 读取自:</span> SessionContext (write-through to RAM S1)</div>
                 </div>
                 
-                <div class="card-signature">upsertFromClue(ParsedClue) -> EntityId</div>
+                <div class="card-signature">upsertFromClue(String, ...) -> UpsertResult</div>
                 <div class="os-layer">RAM Application</div>
             </div>
         
@@ -663,7 +663,7 @@
                     <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
                 
-                <div class="card-signature">findByAlias(String) -> List<EntityInfo></div>
+                <div class="card-signature">findByAlias(String) -> List<EntityEntry></div>
                 <div class="os-layer">SSD</div>
             </div>
         
@@ -684,7 +684,7 @@
                     <div><span class="label">Reads From / 读取自:</span> EntityWriter (to write cures)</div>
                 </div>
                 
-                <div class="card-signature">process(PendingIntent) -> DisambiguationResult</div>
+                <div class="card-signature">process(String) -> DisambiguationResult</div>
                 <div class="os-layer">RAM Application</div>
             </div>
         
@@ -705,7 +705,7 @@
                     <div><span class="label">Reads From / 读取自:</span> EntityRegistry</div>
                 </div>
                 
-                <div class="card-signature">resolve(Clues, Candidates) -> ResolvedEntities</div>
+                <div class="card-signature">resolve(String, List<EntityEntry>) -> EntityEntry?</div>
                 <div class="os-layer">RAM Application</div>
             </div>
         
@@ -733,7 +733,7 @@
                     <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
                 
-                <div class="card-signature">recordEvent(TelemetryEvent) -> Unit</div>
+                <div class="card-signature">recordEvent(PipelinePhase, String) -> Unit</div>
                 <div class="os-layer">RAM</div>
             </div>
         
@@ -754,7 +754,7 @@
                     <div><span class="label">Reads From / 读取自:</span> EntityRegistry, MemoryCenter, SessionContext</div>
                 </div>
                 
-                <div class="card-signature">build(ContextRequest) -> EnhancedContext</div>
+                <div class="card-signature">build(String, Mode, ...) -> EnhancedContext</div>
                 <div class="os-layer">Kernel</div>
             </div>
         
@@ -775,7 +775,7 @@
                     <div><span class="label">Reads From / 读取自:</span> AliasIndex (internal)</div>
                 </div>
                 
-                <div class="card-signature">parseIntent(String) -> ParsedIntent</div>
+                <div class="card-signature">parseIntent(String) -> ParseResult</div>
                 <div class="os-layer">RAM Application</div>
             </div>
         
@@ -796,7 +796,7 @@
                     <div><span class="label">Reads From / 读取自:</span> ContextBuilder</div>
                 </div>
                 
-                <div class="card-signature">evaluateIntent(String) -> IntentTier</div>
+                <div class="card-signature">evaluateIntent(EnhancedContext) -> RouterResult?</div>
                 <div class="os-layer">RAM Application</div>
             </div>
         
@@ -838,7 +838,7 @@
                     <div><span class="label">Reads From / 读取自:</span> ModelRouter</div>
                 </div>
                 
-                <div class="card-signature">execute(Prompt, ModelProfile) -> String</div>
+                <div class="card-signature">execute(LlmProfile, EnhancedContext) -> ExecutorResult</div>
                 <div class="os-layer">—</div>
             </div>
         
@@ -859,7 +859,7 @@
                     <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
                 
-                <div class="card-signature">executeTool(ToolId, Params) -> Flow<UiState></div>
+                <div class="card-signature">executeTool(ToolId, PluginRequest) -> Flow<UiState></div>
                 <div class="os-layer">App Infra</div>
             </div>
         
@@ -905,7 +905,7 @@
                 
                 <div class="module-detail">
                     <div><span class="label">Owns / 拥有 (写入):</span> ScheduledTask, InspirationEntry</div>
-                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: EntityRegistry (alias lookup), ScheduleBoard (conflicts) <br> Via Orch / 经编排器接收: Flow<UiState.SchedulerTaskCreated></div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: EntityRegistry (alias lookup), ScheduleBoard (conflicts) <br> Via Orch / 经编排器接收: *VM Internal Pipeline Mapping*</div>
                 </div>
                 
                 <div class="card-signature"></div>
@@ -947,7 +947,7 @@
                 
                 <div class="module-detail">
                     <div><span class="label">Owns / 拥有 (写入):</span> Conflict resolution actions</div>
-                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ScheduleBoard <br> Via Orch / 经编排器接收: Flow<ConflictState></div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ScheduleBoard <br> Via Orch / 经编排器接收: resolve(...) -> ConflictResolution</div>
                 </div>
                 
                 <div class="card-signature"></div>
@@ -978,7 +978,7 @@
                     <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
                 
-                <div class="card-signature">show(NotificationPayload) -> Unit</div>
+                <div class="card-signature">show(id, title, body, channel...) -> Unit</div>
                 <div class="os-layer">—</div>
             </div>
         
@@ -996,7 +996,7 @@
                 
                 <div class="module-detail">
                     <div><span class="label">Owns / 拥有 (写入):</span> Ephemeral interactions, greetings</div>
-                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: EventBus (Idle, Error) <br> Via Orch / 经编排器接收: Flow<MascotState></div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: EventBus (Idle, Error) <br> Via Orch / 经编排器接收: StateFlow<MascotState></div>
                 </div>
                 
                 <div class="card-signature"></div>
@@ -1027,7 +1027,7 @@
                     <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
                 
-                <div class="card-signature">search(MemoryQuery) -> List<MemoryEntry></div>
+                <div class="card-signature">search(String) -> List<MemoryEntry></div>
                 <div class="os-layer">SSD</div>
             </div>
         
@@ -1048,7 +1048,7 @@
                     <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
                 
-                <div class="card-signature">observe() -> Flow<List<Habit>></div>
+                <div class="card-signature">observe(key, value, source...) -> Unit</div>
                 <div class="os-layer">SSD</div>
             </div>
         
@@ -1057,7 +1057,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_sessionhistory"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./session-history/spec.md">SessionHistory</a></div>
-                    <div class="module-status status-shipped">Shipped</div>
+                    <div class="module-status status-wip">WIP</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -1069,7 +1069,7 @@
                     <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
                 
-                <div class="card-signature">getGroupedSessions() -> Flow<SessionGroups></div>
+                <div class="card-signature">getGroupedSessionsFlow() -> Flow<Map></div>
                 <div class="os-layer">SSD</div>
             </div>
         
@@ -1090,7 +1090,7 @@
                     <div><span class="label">Reads From / 读取自:</span> EntityWriter (S1 via write-through), RLModule (S2/S3)</div>
                 </div>
                 
-                <div class="card-signature">entityContext: Flow<EntityGraph></div>
+                <div class="card-signature">*(Merged into ContextBuilder)*</div>
                 <div class="os-layer">Kernel (RAM)</div>
             </div>
         

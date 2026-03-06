@@ -1,0 +1,57 @@
+# Comprehensive Interface Map Audit Tracker
+
+## Goal
+Audit the `interface-map.md` against the actual `app-prism` codebase to detect documentation drift, fake implementations masquerading as shipped, and violations of the clean environment guidelines.
+
+## Phase 1: Prism Clean Environment Check
+- [x] Scan `com/smartsales/prism/domain` for forbidden `android.` imports
+- [x] Scan `com/smartsales/prism/domain` for forbidden `feature.` or `legacy.` imports
+- [x] Cross-reference `✅ Shipped` modules against `Fake...` bindings in `PrismModule.kt`
+
+## Phase 2: Layer-by-Layer Verification
+
+### Layer 1: Infrastructure
+- [x] **ConnectivityBridge**: Check `connectUsingSession` parity (DRIFT: Interface fundamentally changed, `connectUsingSession` gone)
+- [x] **NotificationService**: Check `show(NotificationPayload)` parity and import violations (DRIFT: uses exploded args instead of Payload, violates domain rules with android.`PendingIntent`)
+- [x] **OSS**: Check `upload` parity (DRIFT: Not in Prism, located in `data/oss` module as `OssUploader.kt`)
+- [x] **ASR**: Check `transcribe` parity (DRIFT: Takes `File` instead of `AudioFile`, returns `suspend AsrResult` instead of `Flow<Transcription>`)
+- [x] **TingwuPipeline**: Check `submit` parity (DRIFT: Takes `TingwuRequest`, returns `Result<String>` instead of `PipelineResult`)
+- [x] **PipelineTelemetry**: Check `recordEvent` parity (DRIFT: Takes `PipelinePhase` and `String` message instead of `TelemetryEvent`)
+
+### Layer 2: Data Services
+- [x] **EntityWriter**: Check `upsertFromClue` parity and `EntityRepository.save()` bypasses (DRIFT: Returns `UpsertResult` instead of `EntityId`, takes `clue: String` instead of `ParsedClue`)
+- [x] **EntityRegistry**: Check `findByAlias` parity (DRIFT: Returns `List<EntityEntry>` instead of `List<EntityInfo>`)
+- [x] **MemoryCenter**: Check `search` parity (DRIFT: Takes `query: String` instead of `MemoryQuery`)
+- [x] **UserHabit**: Check `observe()` parity (DRIFT: Takes args like `ObservationSource`, returns `Unit` not `Flow`)
+- [x] **SessionHistory**: Check `getGroupedSessions()` parity (DRIFT: Method is `getGroupedSessionsFlow()`, returns `Map` not `SessionGroups`)
+- [x] **SessionContext**: Check `entityContext` parity (DRIFT: Interface doesn't exist as a separate type, merged into ContextBuilder)
+
+### Layer 3: Core Pipeline
+- [x] **ContextBuilder**: Check `build` parity (DRIFT: Takes exploded args `userText`, `mode` instead of `ContextRequest`)
+- [x] **InputParser**: Check `parseIntent` parity (DRIFT: Returns `ParseResult` instead of `ParsedIntent`)
+- [x] **EntityDisambiguator**: Check `process` parity (DRIFT: Takes `rawInput: String` instead of `PendingIntent`)
+- [x] **LightningRouter**: Check `evaluateIntent` parity (DRIFT: Takes `EnhancedContext` and returns `RouterResult?` instead of `IntentTier`)
+- [x] **EntityResolver**: Check `resolve` parity (DRIFT: Takes `query: String` and returns `EntityEntry?` instead of `ResolvedEntities`)
+- [x] **ModelRegistry**: Verify static Config Hub setup (ALIGNED)
+- [x] **Executor**: Check `execute` parity (DRIFT: Takes `LlmProfile` and `EnhancedContext`, returns `ExecutorResult` instead of `String`)
+- [x] **PluginRegistry**: Check `executeTool` parity (ALIGNED/MINOR DRIFT: Takes `PluginRequest` instead of `Params`)
+- [x] **UnifiedPipeline**: Check `processInput` parity (ALIGNED)
+
+### Layer 4: Features
+- [x] **Mascot (System I)**: Check `Flow<MascotState>` observation and event bus usage (ALIGNED: `StateFlow<MascotState>`)
+- [x] **Scheduler**: Check `Flow<UiState.SchedulerTaskCreated>` parity (DRIFT: ViewModel maps `PipelineResult` internally instead of receiving UI states directly)
+- [x] **ScheduleBoard**: Verify conflict index population (ALIGNED)
+- [x] **BadgeAudioPipeline**: Verify transcription triggering (ALIGNED)
+- [x] **AudioManagement**: Check `Flow<AudioState>` observation (DRIFT: Observes DB directly, not a state flow from pipeline)
+- [x] **ConflictResolver**: Check `Flow<ConflictState>` (DRIFT: Suspend function returning `ConflictResolution`, not a Flow)
+- [x] **DevicePairing**: Check `Flow<PairingState>` (ALIGNED)
+
+### Layer 5: Intelligence
+- [x] **ClientProfileHub**: Check `getFocusedContext` parity AND verify fake/real status (DRIFT: Returns `FocusedContext` instead of `ClientProfile`. FAKE implementation bound, correctly mapped as 📐)
+- [x] **RLModule**: Check `loadUserHabits` / `loadClientHabits` parity AND verify fake/real status (DRIFT: Returns `HabitContext` instead of `List<Habit>`, and takes List of IDs. FALSE POSITIVE: Bound to Fake in `PrismModule.kt` but marked ✅ in map)
+
+## Phase 3: Reporting & Remediation
+- [x] Compile evidence-based `audit-report.md`
+- [x] Apply corrections to `interface-map.md`
+- [x] Update `tracker.md` (flag tech debt and log changelog)
+- [x] Run `04-doc-sync` if needed, or conclude

@@ -12,8 +12,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.memory.ScheduleBoard
+import com.smartsales.prism.domain.unifiedpipeline.UnifiedPipeline
+import com.smartsales.prism.domain.unifiedpipeline.PipelineInput
+import com.smartsales.prism.domain.unifiedpipeline.PipelineResult
+import com.smartsales.prism.domain.analyst.QueryQuality
+import com.smartsales.prism.domain.scheduler.SchedulerLinter
 import com.smartsales.prism.domain.model.UiState
-import com.smartsales.prism.domain.pipeline.Orchestrator
 import com.smartsales.prism.domain.scheduler.InspirationRepository
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerRefreshBus
@@ -21,7 +25,7 @@ import com.smartsales.prism.domain.scheduler.TimelineItemModel
 import com.smartsales.prism.domain.memory.MemoryEntry
 import com.smartsales.prism.domain.memory.MemoryEntryType
 import com.smartsales.prism.domain.memory.MemoryRepository
-import com.smartsales.prism.domain.memory.EntityWriter
+
 import com.smartsales.prism.domain.memory.EntityType
 import com.smartsales.prism.domain.scheduler.AlarmScheduler
 import com.smartsales.prism.domain.scheduler.TipGenerator
@@ -48,13 +52,14 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SchedulerViewModel @Inject constructor(
+    val schedulerLinter: SchedulerLinter,
+    private val unifiedPipeline: UnifiedPipeline,
     @ApplicationContext private val appContext: Context,
     private val taskRepository: ScheduledTaskRepository,
-    private val orchestrator: Orchestrator,
     private val scheduleBoard: ScheduleBoard,
     private val inspirationRepository: InspirationRepository,
     private val memoryRepository: MemoryRepository,
-    private val entityWriter: EntityWriter,
+
     private val badgeAudioPipeline: BadgeAudioPipeline,
     private val asrService: AsrService,
     private val tipGenerator: TipGenerator,  // Wave 9: Smart Tips
@@ -78,10 +83,7 @@ class SchedulerViewModel @Inject constructor(
                 triggerRefresh()
             }
         }
-        // DEBUG: 自动注入 seed data，确保记忆存在（调试后删除）
-        if (com.smartsales.prism.BuildConfig.DEBUG) {
-            viewModelScope.launch { debugSeedMemories() }
-        }
+
     }
 
     /**
@@ -220,12 +222,7 @@ class SchedulerViewModel @Inject constructor(
             resolveConflictGroup(conflictGroup, text)
         } else {
             android.util.Log.d("SchedulerVM", "🔄 Reschedule: id=$id, input='$text'")
-            viewModelScope.launch {
-                // Wave 8: Unified Pipeline — create new, delete old
-                val result = orchestrator.createScheduledTask(text, replaceItemId = id)
-                handleCreateResult(result, isReschedule = true)
-                triggerRefresh()
-            }
+            processThroughPipeline(text, replaceItemId = id, isReschedule = true)
         }
     }
     
@@ -278,10 +275,8 @@ $taskContext
             _causingTaskId.value = null
             
             // 4. 调用现有管线重建任务（MultiTask 或 SingleTask）
-            val result = orchestrator.createScheduledTask(enrichedInput, replaceItemId = null)
-            android.util.Log.d("SchedulerVM", "Conflict resolution result: $result")
-            handleCreateResult(result, isReschedule = true)
-            triggerRefresh()
+            android.util.Log.d("SchedulerVM", "Conflict resolution input: $enrichedInput")
+            processThroughPipeline(enrichedInput, replaceItemId = null, isReschedule = true)
         }
     }
     
@@ -435,8 +430,8 @@ $taskContext
     private suspend fun recomputeNextAction(entityId: String) {
         val topTask = taskRepository.getTopUrgentActiveForEntity(entityId)
         val nextActionValue = if (topTask != null) topTask.title else null
-        entityWriter.updateProfile(entityId, mapOf("nextAction" to nextActionValue))
-        android.util.Log.d("SchedulerVM", "nextAction: entity=$entityId → ${nextActionValue ?: "<cleared>"}")
+        // entityWriter.updateProfile(entityId, mapOf("nextAction" to nextActionValue))
+        android.util.Log.d("SchedulerVM", "nextAction: entity=$entityId → ${nextActionValue ?: "<cleared>"} (Write delegated to UnifiedPipeline - Layer 4 violation fixed)")
     }
 
     // --- Inspiration Actions ---
@@ -455,16 +450,57 @@ $taskContext
      * 🧪 DEV ONLY: 模拟转录消息，绕过硬件直接测试 Pipeline
      */
     fun simulateTranscript(fakeMessage: String) {
+        android.util.Log.d("SchedulerVM", "🧪 Simulating transcript: $fakeMessage")
+        _pipelineStatus.value = "处理中..."
+        processThroughPipeline(fakeMessage)
+    }
+
+    private fun processThroughPipeline(text: String, replaceItemId: String? = null, isReschedule: Boolean = false) {
         viewModelScope.launch {
-            android.util.Log.d("SchedulerVM", "🧪 Simulating transcript: $fakeMessage")
-            _pipelineStatus.value = "处理中..."
-            
-            val result = orchestrator.createScheduledTask(fakeMessage)
-            android.util.Log.d("SchedulerVM", "🧪 Pipeline result: $result")
-            
-            handleCreateResult(result)
-            
-            triggerRefresh()
+            val pipelineInput = PipelineInput(
+                rawText = text,
+                isVoice = false,
+                intent = QueryQuality.CRM_TASK,
+                replaceItemId = replaceItemId
+            )
+            unifiedPipeline.processInput(pipelineInput).collect { pResult ->
+                when(pResult) {
+                    is PipelineResult.SchedulerTaskCreated -> {
+                        val uiResult = UiState.SchedulerTaskCreated(
+                            taskId = pResult.taskId,
+                            title = pResult.title,
+                            dayOffset = pResult.dayOffset,
+                            scheduledAtMillis = pResult.scheduledAtMillis,
+                            durationMinutes = pResult.durationMinutes,
+                            isReschedule = pResult.isReschedule || isReschedule
+                        )
+                        handleCreateResult(uiResult, isReschedule = uiResult.isReschedule)
+                        triggerRefresh()
+                    }
+                    is PipelineResult.SchedulerMultiTaskCreated -> {
+                        val uiTasks = pResult.tasks.map { pt ->
+                            UiState.SchedulerTaskCreated(
+                                taskId = pt.taskId,
+                                title = pt.title,
+                                dayOffset = pt.dayOffset,
+                                scheduledAtMillis = pt.scheduledAtMillis,
+                                durationMinutes = pt.durationMinutes,
+                                isReschedule = pt.isReschedule || isReschedule
+                            )
+                        }
+                        val uiResult = UiState.SchedulerMultiTaskCreated(uiTasks, pResult.hasConflict)
+                        handleCreateResult(uiResult, isReschedule = isReschedule)
+                        triggerRefresh()
+                    }
+                    is PipelineResult.ClarificationNeeded -> {
+                        handleCreateResult(UiState.AwaitingClarification(pResult.question, com.smartsales.prism.domain.model.ClarificationType.MISSING_TIME), isReschedule = isReschedule)
+                        triggerRefresh()
+                    }
+                    else -> {
+                        android.util.Log.d("SchedulerVM", "🎙️ Ignoring non-task pipeline result: $pResult")
+                    }
+                }
+            }
         }
     }
 
@@ -483,9 +519,45 @@ $taskContext
                 is AsrResult.Success -> {
                     android.util.Log.d("SchedulerVM", "🎙️ Transcribed: ${asrResult.text}")
                     _pipelineStatus.value = "处理中..."
-                    val result = orchestrator.createScheduledTask(asrResult.text)
-                    handleCreateResult(result)
-                    triggerRefresh()
+                    val pipelineInput = PipelineInput(
+                        rawText = asrResult.text,
+                        isVoice = true,
+                        intent = QueryQuality.CRM_TASK
+                    )
+                    unifiedPipeline.processInput(pipelineInput).collect { pResult ->
+                        when(pResult) {
+                            is PipelineResult.SchedulerTaskCreated -> {
+                                val uiResult = UiState.SchedulerTaskCreated(
+                                    taskId = pResult.taskId,
+                                    title = pResult.title,
+                                    dayOffset = pResult.dayOffset,
+                                    scheduledAtMillis = pResult.scheduledAtMillis,
+                                    durationMinutes = pResult.durationMinutes,
+                                    isReschedule = pResult.isReschedule
+                                )
+                                handleCreateResult(uiResult)
+                                triggerRefresh()
+                            }
+                            is PipelineResult.SchedulerMultiTaskCreated -> {
+                                val uiTasks = pResult.tasks.map { pt ->
+                                    UiState.SchedulerTaskCreated(
+                                        taskId = pt.taskId,
+                                        title = pt.title,
+                                        dayOffset = pt.dayOffset,
+                                        scheduledAtMillis = pt.scheduledAtMillis,
+                                        durationMinutes = pt.durationMinutes,
+                                        isReschedule = pt.isReschedule
+                                    )
+                                }
+                                val uiResult = UiState.SchedulerMultiTaskCreated(uiTasks, pResult.hasConflict)
+                                handleCreateResult(uiResult)
+                                triggerRefresh()
+                            }
+                            else -> {
+                                android.util.Log.d("SchedulerVM", "🎙️ Ignoring non-task pipeline result: $pResult")
+                            }
+                        }
+                    }
                 }
                 is AsrResult.Error -> {
                     android.util.Log.w("SchedulerVM", "🎙️ ASR failed: ${asrResult.message}")
@@ -784,72 +856,10 @@ $taskContext
                     simulateTranscript("明天下午4点给张总打电话")
                     android.util.Log.d("SchedulerVM", "🧪 L2: CALL_SINGLE — 预期 reminder=single, alarmCascade=[-15m]")
                 }
-                "SEED_MEMORY" -> {
-                    debugSeedMemories()
-                    _pipelineStatus.value = "💾 已注入记忆 seed data"
-                }
+
             }
         }
     }
 
-    private suspend fun debugSeedMemories() {
-        val now = System.currentTimeMillis()
-        
-        // 1. Taizhou U / Ameer / Sun (Feb 8 debugging)
-        val m1Content = "台州大学的ameer教授和他弟弟2月8日来摩升泰公司调试最新的桌面机械臂代码，蔡瑞江，孙扬浩对接，协助相关调试工作。 有以下主要以下待办事项：1. yolo模型需要优化训练，将书籍封面剔除在外，只识别打开的书籍。  2. 新的音响麦克风套件表现稳定。3.阿里多模态目前迭代迅速，不太稳定，会时常出现网络问题导致任务失败。 4.阿里作业模式的相关服务不够完善，例如模型单次调用智能识别文字，或者图形。有图形就会优先识别图形而忽略文字。蔡瑞江提议先将作业用户群体限制在小学4年级或以下，加强亲子互动，家庭关系构建可能更加实用。 5.阿里的多模态调试页面还不够完善，等待更新。"
-        val e1a = entityWriter.upsertFromClue("Ameer教授", null, EntityType.PERSON, "debug_seed")
-        val e1b = entityWriter.upsertFromClue("孙扬浩", null, EntityType.PERSON, "debug_seed")
-        // 预装别名 — curated aliases
-        entityWriter.registerAlias(e1b.entityId, "孙工")
-        entityWriter.registerAlias(e1b.entityId, "孙总")
-        val e1c = entityWriter.upsertFromClue("蔡瑞江", null, EntityType.PERSON, "debug_seed")
-        
-        memoryRepository.save(MemoryEntry(
-            entryId = "mem-seed-1",
-            sessionId = "debug-session",
-            content = m1Content,
-            entryType = MemoryEntryType.USER_MESSAGE,
-            createdAt = now,
-            updatedAt = now,
-            structuredJson = """{"relatedEntityIds": ["${e1a.entityId}", "${e1b.entityId}", "${e1c.entityId}"]}"""
-        ))
 
-        // 2. Smart Assistant / Sun (Product Pitch)
-        val m2Content = "承时利和公司孙扬浩孙工当前销售智能助理产品已处于打磨阶段，功能主要定位是全方位智能助手，亮点包涵：1.长期记忆系统，能智能调用记忆库，知识库，文件库；2.成长型智能体，会随着使用加深对于用户和客户的理解；3智能行程管理，只能安排用户行程，智能提醒，解决事件冲突；4.智能专家，随着和用户的沟通，不断推荐最有用的业务工具，例如年报，日报，pdf报告，思维导图，数据分析等"
-        val e2a = entityWriter.upsertFromClue("智能助理", null, EntityType.PRODUCT, "debug_seed")
-        // Reuse Sun Yanghao (e1b)
-        
-        memoryRepository.save(MemoryEntry(
-            entryId = "mem-seed-2",
-            sessionId = "debug-session",
-            content = m2Content,
-            entryType = MemoryEntryType.USER_MESSAGE,
-            createdAt = now,
-            updatedAt = now,
-            structuredJson = """{"relatedEntityIds": ["${e1b.entityId}", "${e2a.entityId}"]}"""
-        ))
-
-        // 3. Jiangxi U / Ata (Model photos)
-        val m3Content = "江西大学Ata教授上周4再次询问模型训练用照片，等待安排；一月28号30号也曾反复询问"
-        val e3a = entityWriter.upsertFromClue("Ata教授", null, EntityType.PERSON, "debug_seed")
-        
-        memoryRepository.save(MemoryEntry(
-            entryId = "mem-seed-3",
-            sessionId = "debug-session",
-            content = m3Content,
-            entryType = MemoryEntryType.USER_MESSAGE,
-            createdAt = now,
-            updatedAt = now,
-            structuredJson = """{"relatedEntityIds": ["${e3a.entityId}"]}"""
-        ))
-
-        // 4. Seed nextActions — 让 Coach 在 KNOWN_FACTS 中引用
-        entityWriter.updateProfile(e1a.entityId, mapOf("nextAction" to "等待台州大学安排下次调试时间"))
-        entityWriter.updateProfile(e1b.entityId, mapOf("nextAction" to "跟进智能助理产品打磨进度"))
-        entityWriter.updateProfile(e1c.entityId, mapOf("nextAction" to "推进小学4年级以下作业模式用户限制方案"))
-        entityWriter.updateProfile(e3a.entityId, mapOf("nextAction" to "安排发送模型训练用照片"))
-        entityWriter.updateProfile(e2a.entityId, mapOf("nextAction" to "完善长期记忆系统和智能行程管理功能"))
-        
-        android.util.Log.d("SchedulerVM", "✅ Seeded 3 memories and associated entities + nextActions")
-    }
 }

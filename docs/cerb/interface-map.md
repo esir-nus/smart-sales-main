@@ -16,12 +16,12 @@ Leaf services with no upstream dependencies. They don't call other modules.
 
 | Module | Track | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
 |--------|-------|--------------|------------|---------------|----------|--------|
-| **[ConnectivityBridge](./connectivity-bridge/spec.md)** | Hardware & Audio | BLE + HTTP device state | — | `connectUsingSession(Config) -> Flow<DeviceState>` | — | ✅ |
-| **[NotificationService](./notifications/spec.md)** | System I & Ambient | System notification display | — | `show(NotificationPayload) -> Unit` | — | ✅ |
-| **[OSS](./oss-service/spec.md)** | Hardware & Audio | File upload/download | — | `upload(ByteArray) -> String (Url)` | — | ✅ |
-| **[ASR](./asr-service/spec.md)** | Hardware & Audio | Transcription results | OSS (downloads audio files to transcribe) | `transcribe(AudioFile) -> Flow<Transcription>` | — | ✅ |
-| **[TingwuPipeline](./tingwu-pipeline/spec.md)** | Hardware & Audio | Transcription & Audio Intelligence | OSS (reads `fileUrl`) | `submit(AudioUrl) -> PipelineResult` | SSD | ✅ |
-| **[PipelineTelemetry](./pipeline-telemetry/spec.md)** | System II & Routing | Pipeline logs (to Logcat) | — | `recordEvent(TelemetryEvent) -> Unit` | RAM | ✅ |
+| **[ConnectivityBridge](./connectivity-bridge/spec.md)** | Hardware & Audio | BLE + HTTP device state | — | `connectionState: StateFlow`, `isReady()` | — | ✅ |
+| **[NotificationService](./notifications/spec.md)** | System I & Ambient | System notification display | — | `show(id, title, body, channel...) -> Unit` | — | ✅ |
+| **[OSS](./oss-service/spec.md)** | Hardware & Audio | File upload/download | — | `upload(File, objectKey) -> OssUploadResult` | — | ✅ |
+| **[ASR](./asr-service/spec.md)** | Hardware & Audio | Transcription results | OSS (downloads audio files to transcribe) | `transcribe(File) -> AsrResult` | — | ✅ |
+| **[TingwuPipeline](./tingwu-pipeline/spec.md)** | Hardware & Audio | Transcription & Audio Intelligence | OSS (reads `fileUrl`) | `submit(TingwuRequest) -> Result<String>` | SSD | ✅ |
+| **[PipelineTelemetry](./pipeline-telemetry/spec.md)** | System II & Routing | Pipeline logs (to Logcat) | — | `recordEvent(PipelinePhase, String) -> Unit` | RAM | ✅ |
 
 ---
 
@@ -31,12 +31,12 @@ Store and query domain data. Other modules use their interfaces but never each o
 
 | Module | Track | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
 |--------|-------|--------------|------------|---------------|----------|--------|
-| **[EntityWriter](./entity-writer/spec.md)** | Entity Resolution | Entity mutations (create/update/merge aliases) | SessionContext (write-through to RAM S1) | `upsertFromClue(ParsedClue) -> EntityId` | RAM Application | ✅ |
-| **[EntityRegistry](./entity-registry/spec.md)** | Entity Resolution | Entity queries (read-only view of entities) | — | `findByAlias(String) -> List<EntityInfo>` | SSD | ✅ |
-| **[MemoryCenter](./memory-center/spec.md)** | Memory & OS | Conversation memory entries | — | `search(MemoryQuery) -> List<MemoryEntry>` | SSD | ✅ |
-| **[UserHabit](./user-habit/spec.md)** | Memory & OS | Behavioral pattern observations | — | `observe() -> Flow<List<Habit>>` | SSD | ✅ |
-| **[SessionHistory](./session-history/spec.md)** | Memory & OS | Session metadata (list, pin, rename, delete) | — | `getGroupedSessions() -> Flow<SessionGroups>` | SSD | ✅ |
-| **[SessionContext](./session-context/spec.md)** | Memory & OS | Per-session workspace (3 sections) | EntityWriter (S1 via write-through), RLModule (S2/S3) | `entityContext: Flow<EntityGraph>` | Kernel (RAM) | ✅ |
+| **[EntityWriter](./entity-writer/spec.md)** | Entity Resolution | Entity mutations (create/update/merge aliases) | SessionContext (write-through to RAM S1) | `upsertFromClue(String, ...) -> UpsertResult` | RAM Application | ✅ |
+| **[EntityRegistry](./entity-registry/spec.md)** | Entity Resolution | Entity queries (read-only view of entities) | — | `findByAlias(String) -> List<EntityEntry>` | SSD | ✅ |
+| **[MemoryCenter](./memory-center/spec.md)** | Memory & OS | Conversation memory entries | — | `search(String) -> List<MemoryEntry>` | SSD | ✅ |
+| **[UserHabit](./user-habit/spec.md)** | Memory & OS | Behavioral pattern observations | — | `observe(key, value, source...) -> Unit` | SSD | ✅ |
+| **[SessionHistory](./session-history/spec.md)** | Memory & OS | Session metadata (list, pin, rename, delete) | — | `getGroupedSessionsFlow() -> Flow<Map>` | SSD | 🚧 |
+| **[SessionContext](./session-context/spec.md)** | Memory & OS | Per-session workspace (3 sections) | EntityWriter (S1 via write-through), RLModule (S2/S3) | *(Merged into ContextBuilder)* | Kernel (RAM) | ✅ |
 
 > **EntityWriter vs EntityRegistry**: Writer handles mutations (dedup, merge, alias registration) AND write-through to RAM S1. Registry handles queries. Callers MUST use Writer for writes, Registry for reads. Never call `EntityRepository.save()` directly.
 >
@@ -50,14 +50,14 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 
 | Module | Track | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
 |--------|-------|--------------|------------|---------------|----------|--------|
-| **ContextBuilder** | System II & Routing | `EnhancedContext` (assembled prompt context) | EntityRegistry, MemoryCenter, SessionContext | `build(ContextRequest) -> EnhancedContext` | Kernel | ✅ |
-| **[InputParser](./input-parser/spec.md)** | System II & Routing | Semantic intent and EntityID resolution | AliasIndex (internal) | `parseIntent(String) -> ParsedIntent` | RAM Application | ✅ |
-| **[EntityDisambiguator](./entity-disambiguation/spec.md)** | Entity Resolution | `PendingIntent` interruption state | EntityWriter (to write cures) | `process(PendingIntent) -> DisambiguationResult` | RAM Application | ✅ |
-| **[LightningRouter](./lightning-router/spec.md)** | System II & Routing | Intent evaluation (Phase 0) | ContextBuilder | `evaluateIntent(String) -> IntentTier` | RAM Application | ✅ |
-| **EntityResolver** | Entity Resolution | Entity disambiguation matching | EntityRegistry | `resolve(Clues, Candidates) -> ResolvedEntities` | RAM Application | ✅ |
+| **ContextBuilder** | System II & Routing | `EnhancedContext` (assembled prompt context) | EntityRegistry, MemoryCenter, SessionContext | `build(String, Mode, ...) -> EnhancedContext` | Kernel | ✅ |
+| **[InputParser](./input-parser/spec.md)** | System II & Routing | Semantic intent and EntityID resolution | AliasIndex (internal) | `parseIntent(String) -> ParseResult` | RAM Application | ✅ |
+| **[EntityDisambiguator](./entity-disambiguation/spec.md)** | Entity Resolution | `PendingIntent` interruption state | EntityWriter (to write cures) | `process(String) -> DisambiguationResult` | RAM Application | ✅ |
+| **[LightningRouter](./lightning-router/spec.md)** | System II & Routing | Intent evaluation (Phase 0) | ContextBuilder | `evaluateIntent(EnhancedContext) -> RouterResult?` | RAM Application | ✅ |
+| **EntityResolver** | Entity Resolution | Entity disambiguation matching | EntityRegistry | `resolve(String, List<EntityEntry>) -> EntityEntry?` | RAM Application | ✅ |
 | **ModelRegistry** | System II & Routing | Static LLM Profiles (models, temps, skills) | — | `ModelRegistry` | Config Hub | ✅ |
-| **[Executor](./model-routing/spec.md)** | System II & Routing | Raw LLM output (stateless — no storage) | ModelRouter | `execute(Prompt, ModelProfile) -> String` | — | ✅ |
-| **[PluginRegistry](./plugin-registry/spec.md)** | System II & Routing | Executable pure-Kotlin workflows (Tools) | — | `executeTool(ToolId, Params) -> Flow<UiState>` | App Infra | ✅ |
+| **[Executor](./model-routing/spec.md)** | System II & Routing | Raw LLM output (stateless — no storage) | ModelRouter | `execute(LlmProfile, EnhancedContext) -> ExecutorResult` | — | ✅ |
+| **[PluginRegistry](./plugin-registry/spec.md)** | System II & Routing | Executable pure-Kotlin workflows (Tools) | — | `executeTool(ToolId, PluginRequest) -> Flow<UiState>` | App Infra | ✅ |
 | **[UnifiedPipeline](./unified-pipeline/spec.md)** | System II & Routing | System II context ETL & execution | EntityRegistry, UserHabit, MemoryCenter, ContextBuilder | `processInput(PipelineInput) -> Flow<PipelineResult>` | RAM Application | ✅ |
 
 > **UnifiedPipeline is the only module that calls EntityWriter during task creation.** Feature modules (Scheduler, Mascot) receive results from UnifiedPipeline; they don't call EntityWriter themselves. (Exception: debug seed code in SchedulerViewModel, guarded by `DEBUG` build type.)
@@ -72,13 +72,13 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 
 | Module | Track | Owns (Writes) | Reads From (directly) | Receives From (via Orchestrator) | OS Layer | Status |
 |--------|-------|--------------|----------------------|----------------------------------|----------|--------|
-| **[Mascot (System I)](./mascot-service/spec.md)** | System I & Ambient | Ephemeral interactions, greetings | EventBus (Idle, Error) | `Flow<MascotState>` | RAM App (Out-of-band) | ✅ |
-| **[Scheduler](./scheduler/spec.md)** | Intelligent Scheduler | ScheduledTask, InspirationEntry | EntityRegistry (alias lookup), ScheduleBoard (conflicts) | `Flow<UiState.SchedulerTaskCreated>` | Consumer of RAM | ✅ |
+| **[Mascot (System I)](./mascot-service/spec.md)** | System I & Ambient | Ephemeral interactions, greetings | EventBus (Idle, Error) | `StateFlow<MascotState>` | RAM App (Out-of-band) | ✅ |
+| **[Scheduler](./scheduler/spec.md)** | Intelligent Scheduler | ScheduledTask, InspirationEntry | EntityRegistry (alias lookup), ScheduleBoard (conflicts) | *VM Internal Pipeline Mapping* | Consumer of RAM | ✅ |
 | **[ScheduleBoard](./scheduler/spec.md)** | Intelligent Scheduler | Conflict index (in-memory cache) | ScheduledTaskRepository (populates index) | — | SSD | ✅ |
 | **[BadgeAudioPipeline](./badge-audio-pipeline/spec.md)** | Hardware & Audio | Audio recording lifecycle | ASR, OSS, ConnectivityBridge | Triggers UnifiedPipeline on transcription complete | — | ✅ |
-| **[AudioManagement](./audio-management/spec.md)** | Hardware & Audio | Manual sync/transcribe states | ConnectivityBridge, TingwuPipeline | `Flow<AudioState>` | App | 🚧 |
-| **[ConflictResolver](./conflict-resolver/spec.md)** | Intelligent Scheduler | Conflict resolution actions | ScheduleBoard | `Flow<ConflictState>` | RAM App | ✅ |
-| **[DevicePairing](./device-pairing/spec.md)** | Hardware & Audio | BLE pairing session states | Legacy BLE stack | `Flow<PairingState>` | App | ✅ |
+| **[AudioManagement](./audio-management/spec.md)** | Hardware & Audio | Manual sync/transcribe states | ConnectivityBridge, TingwuPipeline | *Observes DB State* | App | 🚧 |
+| **[ConflictResolver](./conflict-resolver/spec.md)** | Intelligent Scheduler | Conflict resolution actions | ScheduleBoard | `resolve(...) -> ConflictResolution` | RAM App | ✅ |
+| **[DevicePairing](./device-pairing/spec.md)** | Hardware & Audio | BLE pairing session states | Legacy BLE stack | `StateFlow<PairingState>` | App | ✅ |
 
 > **"Reads From" vs "Receives From"**: "Reads From" = the feature calls the interface directly. "Receives From" = UnifiedPipeline pushes results into the feature's ViewModel. This distinction prevents confusion about who initiates the call.
 
@@ -102,8 +102,8 @@ Cross-cutting services that aggregate data from multiple Layer 2 sources.
 
 | Module | Track | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
 |--------|-------|--------------|------------|---------------|----------|--------|
-| **[ClientProfileHub](./client-profile-hub/spec.md)** | Memory & OS | Aggregated client context for tips | EntityRegistry, MemoryCenter, UserHabit | `getFocusedContext(ClientId) -> ClientProfile` | File Explorer | 📐 |
-| **[RLModule](./rl-module/spec.md)** | Memory & OS | Habit context for prompts (S2/S3 population) | UserHabit | `loadUserHabits() -> List<Habit>`, `loadClientHabits(Id) -> List<Habit>` | RAM Application | ✅ |
+| **[ClientProfileHub](./client-profile-hub/spec.md)** | Memory & OS | Aggregated client context for tips | EntityRegistry, MemoryCenter, UserHabit | `getFocusedContext(String) -> FocusedContext` | File Explorer | 📐 |
+| **[RLModule](./rl-module/spec.md)** | Memory & OS | Habit context for prompts (S2/S3 population) | UserHabit | `loadUserHabits() -> HabitContext` | RAM Application | 📐 |
 
 ---
 

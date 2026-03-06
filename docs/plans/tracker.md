@@ -66,7 +66,7 @@
 
 ### 2026-03-06
 
-- **architecture**: Layer 2 Domain Modularization (Stage 2) SHIPPED — Extracted monolithic `PrismDatabase` and Room DAOs into a strictly decoupled `:core:database` module. Successfully moved and wired `RoomUserHabitRepository`, `RoomMemoryRepository`, and `RoomEntityRepository` to isolated `:data:habit`, `:data:memory`, and `:data:crm` feature data modules.
+- **architecture**: Layer 2 Domain Modularization (Stage 2) SHIPPED — Extracted monolithic `PrismDatabase` and Room DAOs into a strictly decoupled `:core:database` module. Successfully moved and wired `RoomUserHabitRepository`, `RoomMemoryRepository`, and `RoomEntityRepository` to isolated `:data:habit`, `:data:memory`, and `:data:crm` feature data modules. Additionally, surgically extracted `RoomHistoryRepository` to `:data:session` to complete 100% of the Layer 2 Data Services assembly.
 - **architecture**: The Great Renaming & OS Layer Standardization SHIPPED — Renamed the `app-core` prototype codename to `app-core` consistently across folders, `settings.gradle.kts`, and all documentation. Formally standardized the `docs/cerb/interface-map.md` OS Layer taxonomy to enforce a strict `OS: Kernel`, `OS: RAM`, `OS: SSD`, `OS: App` architecture definition.
 
 - **architecture**: Layer 2 Domain Modularization (Stage 1) SHIPPED — Physically extracted pure Kotlin domain contracts for STM (`session`), LTM (`crm`, `memory`), and RL (`habit`) out of `app-core` into four distinct, isolated Gradle library modules. Passed rigorous Architectural Drift Audit mathematically proving strict one-way dependency isolation between SSD and RAM boundaries.
@@ -292,7 +292,7 @@
 - [x] `EntityRegistry` (extracted to `:data:crm`)
 - [x] `MemoryCenter` (extracted to `:data:memory`)
 - [x] `UserHabit` (extracted to `:data:habit`)
-- [ ] `SessionHistory`
+- [x] `SessionHistory` (extracted to `:data:session`)
 - [x] `SessionContext`
 
 ### Layer 3: Core Pipeline (The Roads & Intersections)

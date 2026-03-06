@@ -36,7 +36,9 @@ class RealUnifiedPipeline @Inject constructor(
     private val scheduledTaskRepository: ScheduledTaskRepository,
     private val scheduleBoard: ScheduleBoard,
     private val inspirationRepository: InspirationRepository,
-    private val alarmScheduler: AlarmScheduler
+    private val alarmScheduler: AlarmScheduler,
+    // Wave 4: Synchronous Auto-Renaming
+    private val sessionTitleGenerator: com.smartsales.prism.domain.session.SessionTitleGenerator
 ) : UnifiedPipeline {
     
     override suspend fun processInput(input: PipelineInput): Flow<PipelineResult> = flow {
@@ -45,6 +47,7 @@ class RealUnifiedPipeline @Inject constructor(
         // Wave 2: Semantic Disambiguation (Interrupt & Resume)
         val resolvedEntities = mutableListOf<String>()
         var resolvedInputText = input.rawText
+        var generatedTitle: com.smartsales.prism.domain.session.TitleResult? = null // Wave 4
 
         when (val dResult = entityDisambiguationService.process(input.rawText)) {
             is com.smartsales.prism.domain.disambiguation.DisambiguationResult.Intercepted -> {
@@ -103,6 +106,16 @@ class RealUnifiedPipeline @Inject constructor(
                 }
                 if (parseResult is com.smartsales.prism.domain.parser.ParseResult.Success) {
                     resolvedEntities.addAll(parseResult.resolvedEntityIds)
+                    
+                    // Wave 4: Generate title synchronously from the raw JSON payload
+                    if (parseResult.rawParsedJson.isNotBlank()) {
+                        generatedTitle = sessionTitleGenerator.generateTitle(
+                            rawParsedJson = parseResult.rawParsedJson,
+                            resolvedNames = parseResult.resolvedEntityIds // In reality we'd want names, but IDs are safer than nothing for debugging
+                        )
+                        Log.d("RealUnifiedPipeline", "Auto-Rename prepared via JSON: $generatedTitle")
+                        emit(PipelineResult.AutoRenameTriggered(generatedTitle!!.clientName))
+                    }
                 }
             }
         }

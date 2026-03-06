@@ -267,6 +267,6 @@ Habits with confidence < 0.1 are **deleted** on next query (garbage collection).
 
 ### Wave 5 Scope (OS Model)
 - Remove `entityIds` param from `getHabitContext()`
-- Wire `FakeReinforcementLearner` to read SessionWorkingSet
+- Wire `RealReinforcementLearner` to read SessionWorkingSet
 - Implement write-through in `processObservations`
 - Remove direct SSD access from Learner (except via Kernel/Repository)

@@ -1,10 +1,10 @@
 package com.smartsales.prism.data.connectivity
 
 import com.smartsales.core.util.Result
-import com.smartsales.feature.connectivity.BadgeHttpClient
-import com.smartsales.feature.connectivity.BadgeHttpException
-import com.smartsales.feature.connectivity.ConnectionState
-import com.smartsales.feature.connectivity.DeviceConnectionManager
+import com.smartsales.prism.data.connectivity.legacy.BadgeHttpClient
+import com.smartsales.prism.data.connectivity.legacy.BadgeHttpException
+import com.smartsales.prism.data.connectivity.legacy.ConnectionState
+import com.smartsales.prism.data.connectivity.legacy.DeviceConnectionManager
 import com.smartsales.prism.domain.connectivity.BadgeConnectionState
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.RecordingNotification

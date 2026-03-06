@@ -146,19 +146,19 @@ cat AGENTS.md
 ```
 
 **关键目录说明**：
-- `app/` - 主应用入口（Compose shell）
-- `feature/` - 功能模块（chat, media, connectivity, usercenter）
+- `app/` - 主应用入口（Legacy Compose shell - 逐步废弃中）
+- `app-prism/` - Prism 架构核心，新版单体主工程
 - `data/ai-core/` - AI 核心服务（DashScope, Tingwu, OSS）
 - `core/` - 共享工具（util, test）
 - `docs/` - **重要！** 项目文档
 - `plans/` - 开发计划
 - `workflows/` - 工作流程
 
-**主要功能模块**：
-- `feature/chat` - 聊天功能（Home 屏幕、ChatHistory、快速技能）
-- `feature/media` - 媒体功能（AudioFiles、DeviceManager、播放控制）
-- `feature/connectivity` - 设备连接（BLE/WiFi 配网、DeviceSetup 步骤化界面）
-- `feature/usercenter` - 用户中心（用户资料、设置）
+**主要功能域 (现已合并于 app-prism)**：
+- `chat` - 聊天与核心对话流水线
+- `media` - 媒体功能（设备音频记录、播放）
+- `connectivity` - 设备连接（BLE/WiFi 配网）
+- `usercenter` - 用户中心
 
 ---
 
@@ -583,10 +583,9 @@ export JAVA_HOME="/c/Program Files/Java/jdk-17"
 
 ### Q5: 如何查看某个功能如何工作？
 1. 查看 `docs/plans/tracker.md` 了解模块状态和架构
-2. 查看相关模块的 README（如 `feature/chat/README.md`）
-3. 阅读代码中的注释和文件头
-4. 查看测试代码了解预期行为
-5. 查看 `docs/specs/Orchestrator-V1.md` 了解核心架构契约
+2. 阅读代码中的注释和文件头
+3. 查看测试代码了解预期行为
+4. 查看 `docs/specs/Orchestrator-V1.md` 了解核心架构契约
 
 ### Q7: macOS 上 adb 命令找不到
 **解决方案**：
@@ -616,7 +615,7 @@ ls -l gradlew
 ### Q6: 新增了哪些主要功能？
 根据最新更新，项目已包含：
 - **ChatHistory 屏幕** - 聊天历史记录查看
-- **AudioFiles 屏幕** - 音频文件管理（已迁移到 `feature/media`）
+- **AudioFiles 屏幕** - 音频文件管理
 - **DeviceSetup 步骤化界面** - 设备连接配网流程
 - **UserCenter 模块** - 用户中心和用户资料
 - **导航 Compose UI 冒烟测试** - 验证主要导航路径

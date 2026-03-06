@@ -192,7 +192,7 @@ combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset 
 **Wrong Approach**: Increasing the delay (fragile), polling in a loop (wasteful)  
 **Correct Fix**: Replace fire-and-poll with `suspend fun reconnectAndWait()` that directly calls `connectUsingSession()` and returns the actual outcome. No delay, no polling.  
 **File(s)**:  
-- [DeviceConnectionManager.kt](file:///home/cslh-frank/main_app/feature/connectivity/src/main/java/com/smartsales/feature/connectivity/DeviceConnectionManager.kt) — new `reconnectAndWait()` 
+- [DeviceConnectionManager.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt) — new `reconnectAndWait()` 
 - [RealConnectivityService.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityService.kt) — calls `reconnectAndWait()`  
 **Pattern**: **Never fire-and-poll async operations with fixed delays.** Use suspend functions that return actual results. If you see `fire() → delay(N) → poll`, it's a race condition waiting to happen.  
 **Status**: ✅ CONFIRMED 2026-02-07
@@ -208,7 +208,7 @@ combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset 
 **Key Insight**: **The spec already had the right separation** — `isReady()` was designed for BLE+HTTP pre-flight. The HTTP check was in the wrong layer.  
 **Diagnostic**: `adb logcat | grep "RX \[NetworkResponse\]"` → `IP#192.168.0.106` proved BLE worked, HTTP was the sole blocker.  
 **File(s)**:  
-- [DeviceConnectionManager.kt L366-384](file:///home/cslh-frank/main_app/feature/connectivity/src/main/java/com/smartsales/feature/connectivity/DeviceConnectionManager.kt#L366-L384)  
+- [DeviceConnectionManager.kt L366-384](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt#L366-L384)  
 **Pattern**: **Don't gate connection state on downstream service availability.** BLE connected ≠ HTTP server running. Separate "can I talk to the device?" from "can I download files?"  
 **Heuristic**: If a function gates on multiple protocols (BLE + HTTP), ask: *"Do ALL callers need ALL these checks?"* If not, the function is conflating concerns.  
 **Status**: ✅ CONFIRMED 2026-02-07
@@ -279,7 +279,7 @@ combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset 
 These flows are **logically independent**. The only shared resource is the BLE write pipe.  
 **Correct Fix**: Add `writeLock = Mutex()` inside `GattContext.writeCharacteristic()` — serialize ALL BLE writes at the transport layer. Then `respondToTimeSync()` becomes a simple, standalone handler with zero awareness of provisioning.  
 **Result**: Removed ~40 lines of flag/defer complexity. Net simpler, net more correct.  
-**File(s)**: [GattBleGateway.kt](file:///home/cslh-frank/main_app/feature/connectivity/src/main/java/com/smartsales/feature/connectivity/gateway/GattBleGateway.kt) — `GattContext.writeLock`  
+**File(s)**: [GattBleGateway.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGateway.kt) — `GattContext.writeLock`  
 **Pattern**: **When two independent flows share a resource, serialize at the resource level, not the flow level.** If you're adding flags like `isDoingX` to block `Y`, ask: "Is the real problem that X and Y share a pipe?" If yes, lock the pipe, not the logic.  
 **Heuristic**: If your fix requires one feature to "know about" another feature → you're coupling at the wrong layer. Push the lock DOWN to the shared resource.  
 **Corollary (from Frank)**: "Why should we respond tim# when badge sends SD#?" — if your mental model requires explaining why Feature A cares about Feature B's state, you've coupled them wrong.  
@@ -433,6 +433,20 @@ This happens when an agent uses a tool to write or replace file content and mist
 **Wrong Approach**: Leaving dead fields in core domain pipelines, which misleads future agents/developers into thinking those fields are actively maintained or architecturally relevant.
 **Correct Fix**: When replacing a core data structure (like memory search → knowledge graphs), rip the old one fully out. If downstream consumers break, migrate them immediately. Never leave a "soft-deprecated" field in a core pipeline context—it pollutes the clean OS boundaries.
 **Status**: ✅ CONFIRMED 2026-03-02
+
+---
+
+### Doc+Code Dual-Check Alignment (Rigorous Verification) — 2026-03-06
+
+**Symptom**: Automated tools blindly passed features because the code matched the local `spec.md`, ignoring the fact that the `spec.md` contradicted the global `interface-map.md` (OS Model boundaries). This created a false sense of security and architectural drift.
+**Root Cause**: **Auditing isolated components without cross-referencing the global architecture contract.** A spec that is perfectly implemented but architecturally illegal is a time-bomb.
+**Wrong Approach**: Running verification (like compiler checks and `spec.md` grep) on local files without validating the local spec against the Source of Truth (`interface-map.md`).
+**Correct Fix**:
+1. **The Trinity Check**: Read `spec.md`, `interface-map.md`, and the `.kt` implementation together.
+2. **Resolution Rules**: If code is a hack → Rewrite code to match OS Model spec. If code evolved correctly but spec is old → Update spec.
+3. Update `tracker.md` with a `✅ [DUAL-CHECKED]` label ONLY when all 3 align perfectly.
+**Pattern**: **Never audit code against a siloed document.** Always verify the local contract against the global architecture map before writing or validating code.
+**Status**: ✅ CONFIRMED 2026-03-06
 
 ---### SwipeToDismiss Background Visibility — 2026-02-02
 

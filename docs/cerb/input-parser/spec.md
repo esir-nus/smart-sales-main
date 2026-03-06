@@ -63,6 +63,16 @@ sealed class ParseResult {
 
 ---
 
+## Architectural Nuance & Seasoned Info ("The Why")
+
+> *Cerb specs capture logic, but these notes capture the human developer experience that an AI must not overwrite or "optimize" away.*
+
+1. **The Mascot Bypass (Why Auto-Renaming is Safe):** `NOISE` and `GREETING` intents are evaluated by the `LightningRouter` upstream and routed entirely to the `Mascot`. They *never* touch the `UnifiedPipeline` or this `InputParser`. Thus, the background Auto-Renaming hook is guaranteed to only fire when the user makes a substantive query that warrants renaming the session. Do not try to handle small talk here.
+2. **Anti-SQL / No String Math:** An agent might be tempted to use Kotlin Levenshtein distance or SQL `LIKE` to match names. **Do not do this.** We pass a lightweight Contact Sheet explicitly so `qwen-turbo` can use its vast semantic knowledge to natively map nicknames, homophones, or titles (e.g., mapping "CEO" to the correct person). The LLM is our fuzzy search engine.
+3. **Organic UX Disambiguation:** If the LLM is unsure, we do not force a guess. We yield a Clarification state and rely on the natural, conversational UI to ask the user. Code should not try to aggressively resolve ambiguity behind the user's back.
+
+---
+
 ## Interaction Rules
 
 | Rule | Enforcer | Explanation |
@@ -81,7 +91,7 @@ sealed class ParseResult {
 | **1** | **Contracts & Payload Generation** | 🔲 PLANNED | `InputParserService`, `ParseResult`, Semantic Mapping JSON generation. |
 | **2** | **Turbo LLM Disambiguation** | 🔲 PLANNED | `RealInputParserService` injecting Payload into `qwen-turbo`. |
 | **3** | **Orchestrator Wiring** | 🔲 PLANNED | Mount at the front of `PrismOrchestrator`. Handle Clarification loop UI state. |
-| **4** | **Auto-Renaming Hook** | 🔲 PLANNED | Fire `LlmSessionTitleGenerator` using the parsed JSON. |
+| **4** | **Auto-Renaming Hook** | ✅ SHIPPED | Fire `SemanticSessionTitleGenerator` using the parsed JSON synchronously. |
 
 ---
 

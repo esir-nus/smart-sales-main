@@ -1,6 +1,6 @@
 package com.smartsales.prism.domain.pairing
 
-import com.smartsales.feature.connectivity.BlePeripheral
+import com.smartsales.prism.data.connectivity.legacy.BlePeripheral
 import kotlinx.coroutines.flow.StateFlow
 
 /**

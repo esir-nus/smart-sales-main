@@ -96,7 +96,7 @@ dependencies {
     implementation(projects.data.aiCore)  // DashScope, Tingwu, credentials
     implementation(projects.data.oss)      // OSS file upload for ASR
     implementation(projects.core.util)     // Result type
-    implementation(projects.feature.connectivity)  // Legacy BLE/HTTP for RealConnectivityBridge
+    // Legacy BLE removed: implementation(projects.feature.connectivity)
     implementation(platform(libs.compose.bom))
     implementation(libs.bundles.compose.ui)
     implementation(libs.compose.material3)

@@ -1,0 +1,158 @@
+package com.smartsales.prism.data.connectivity.legacy
+
+import android.bluetooth.BluetoothManager
+import android.content.Context
+import com.smartsales.core.util.DispatcherProvider
+import com.smartsales.prism.data.connectivity.legacy.BleProfileConfig
+import com.smartsales.prism.BuildConfig
+import com.smartsales.prism.data.connectivity.legacy.badge.BadgeStateMonitor
+import com.smartsales.prism.data.connectivity.legacy.badge.RealBadgeStateMonitor
+import com.smartsales.prism.data.connectivity.legacy.gateway.BleGateway
+import com.smartsales.prism.data.connectivity.legacy.gateway.GattBleGateway
+import com.smartsales.prism.data.connectivity.legacy.scan.AndroidBleScanner
+import com.smartsales.prism.data.connectivity.legacy.scan.BleScanner
+import dagger.Binds
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
+import java.util.UUID
+import javax.inject.Singleton
+import org.json.JSONArray
+
+// 文件路径: feature/connectivity/src/main/java/com/smartsales/feature/connectivity/ConnectivityModule.kt
+// 文件作用: 暴露默认的设备连接管理器实现
+// 最近修改: 2025-11-14
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class LegacyConnectivityModule {
+    @Binds
+    @Singleton
+    abstract fun bindDeviceConnectionManager(impl: DefaultDeviceConnectionManager): DeviceConnectionManager
+
+    @Binds
+    @Singleton
+    abstract fun bindBadgeStateMonitor(impl: RealBadgeStateMonitor): BadgeStateMonitor
+
+    @Binds
+    @Singleton
+    abstract fun bindGattSessionLifecycle(impl: com.smartsales.prism.data.connectivity.legacy.gateway.GattBleGateway): com.smartsales.prism.data.connectivity.legacy.gateway.GattSessionLifecycle
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+object ConnectivityProvidesModule {
+    @Provides
+    @Singleton
+    fun provideWifiProvisioner(
+        real: AndroidBleWifiProvisioner,
+        simulated: SimulatedWifiProvisioner
+    ): WifiProvisioner {
+        return real
+    }
+
+    @Provides
+    @Singleton
+    fun provideBleGateway(
+        realGateway: GattBleGateway
+    ): BleGateway = com.smartsales.prism.data.connectivity.legacy.gateway.RateLimitedBleGateway(realGateway)
+
+
+    @Provides
+    @Singleton
+    fun provideBadgeHttpClient(
+        dispatchers: DispatcherProvider
+    ): BadgeHttpClient = DefaultBadgeHttpClient(dispatchers)
+    
+    @Provides
+    @Singleton
+    fun provideSessionStore(
+        @ApplicationContext context: Context
+    ): SessionStore = SharedPrefsSessionStore(context)
+
+    @Provides
+    @Singleton
+    @ConnectivityScope
+    fun provideConnectivityScope(): kotlinx.coroutines.CoroutineScope =
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob())
+
+
+    @Provides
+    @Singleton
+    fun provideBleProfiles(): List<BleProfileConfig> {
+        val overrides = parseProfileOverrides("")
+        if (!overrides.isNullOrEmpty()) {
+            ConnectivityLogger.i("Loaded ${overrides.size} BLE profiles from overrides")
+            return overrides
+        }
+        val defaultService = UUID.fromString("6E400001-B5A3-F393-E0A9-E50E24DCCA9E")
+        // Nordic UART 常见变体 UUID，部分 BT311 固件使用该值广播
+        val altUartService = UUID.fromString("49535343-FE7D-4AE5-8FA9-9FAFD205E455")
+        val defaultProfile = BleProfileConfig(
+            id = "chle",
+            displayName = "CHLE Intelligent",
+            nameKeywords = listOf("CHLE_Intelligent"),
+            scanServiceUuids = listOf(defaultService, altUartService)
+        )
+        return listOf(defaultProfile)
+    }
+
+    @Provides
+    @Singleton
+    fun provideBleScanner(
+        @ApplicationContext context: Context,
+        bluetoothManager: BluetoothManager,
+        profiles: List<BleProfileConfig>
+    ): BleScanner = AndroidBleScanner(context, bluetoothManager, profiles)
+
+    @Provides
+    fun provideBluetoothManager(
+        @ApplicationContext context: Context
+    ): BluetoothManager = context.getSystemService(BluetoothManager::class.java)
+
+    private fun parseProfileOverrides(raw: String): List<BleProfileConfig>? {
+        if (raw.isBlank()) return null
+        return runCatching {
+            val array = JSONArray(raw)
+            buildList {
+                for (i in 0 until array.length()) {
+                    val obj = array.getJSONObject(i)
+                    val scanServiceUuids = when {
+                        obj.has("scanServiceUuids") ->
+                            obj.getJSONArray("scanServiceUuids").toUuidList()
+                        obj.has("serviceUuid") ->
+                            listOf(UUID.fromString(obj.getString("serviceUuid")))
+                        else -> emptyList()
+                    }
+                    add(
+                        BleProfileConfig(
+                            id = obj.getString("id"),
+                            displayName = obj.optString("displayName", obj.getString("id")),
+                            nameKeywords = obj.optJSONArray("nameKeywords")?.toStringList() ?: emptyList(),
+                            scanServiceUuids = scanServiceUuids
+                        )
+                    )
+                }
+            }
+        }.onFailure { ConnectivityLogger.w("Failed to parse BLE profile overrides", it) }.getOrNull()
+    }
+
+    private fun JSONArray.toStringList(): List<String> {
+        val result = mutableListOf<String>()
+        for (i in 0 until length()) {
+            val value = optString(i).takeIf { it.isNotBlank() } ?: continue
+            result.add(value)
+        }
+        return result
+    }
+
+    private fun JSONArray.toUuidList(): List<UUID> {
+        val result = mutableListOf<UUID>()
+        for (i in 0 until length()) {
+            val value = optString(i).takeIf { it.isNotBlank() } ?: continue
+            result.add(UUID.fromString(value))
+        }
+        return result
+    }
+}

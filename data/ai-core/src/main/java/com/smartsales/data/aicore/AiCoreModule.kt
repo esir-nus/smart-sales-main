@@ -67,12 +67,6 @@ abstract class AiCoreModule {
 
     @Binds
     @Singleton
-    abstract fun bindOssUploadClient(
-        impl: RealOssUploadClient
-    ): OssUploadClient
-
-    @Binds
-    @Singleton
     abstract fun bindOssCredentialsProvider(
         impl: BuildConfigOssCredentialsProvider
     ): OssCredentialsProvider

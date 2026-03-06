@@ -2,7 +2,7 @@ package com.smartsales.prism.data.real
 
 import com.smartsales.prism.data.fakes.FakeEntityRepository
 import com.smartsales.prism.data.fakes.FakeMemoryRepository
-import com.smartsales.prism.data.fakes.FakeReinforcementLearner
+import com.smartsales.prism.data.rl.RealReinforcementLearner
 import com.smartsales.prism.data.fakes.FakeTimeProvider
 import com.smartsales.prism.data.fakes.FakeUserHabitRepository
 import com.smartsales.prism.domain.memory.EntityType
@@ -40,7 +40,7 @@ class RealEntityWriterTest {
         val mockEntityRepo = mock(FakeEntityRepository::class.java)
         contextBuilder = RealContextBuilder(
             timeProvider = timeProvider,
-            reinforcementLearner = FakeReinforcementLearner(habitRepository),
+            reinforcementLearner = RealReinforcementLearner(habitRepository),
             memoryRepository = memoryRepo,
             entityRepository = mockEntityRepo,
             scheduledTaskRepository = scheduledTaskRepository,

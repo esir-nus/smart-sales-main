@@ -71,4 +71,12 @@ sealed class PipelineResult {
         val tasks: List<SchedulerTaskCreated>,
         val hasConflict: Boolean
     ) : PipelineResult()
+
+    /**
+     * Wave 4: Auto-Renaming
+     * Triggered when the pipeline successfully parses an intent and generates a new session title.
+     */
+    data class AutoRenameTriggered(
+        val newTitle: String
+    ) : PipelineResult()
 }

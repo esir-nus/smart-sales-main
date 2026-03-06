@@ -279,7 +279,7 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
   - [x] `ConnectivityService.unpair()` added for hard disconnect
   - [x] `RealConnectivityService.disconnect()` calls `disconnectBle()`
   - [x] UI override workaround removed from `ConnectivityViewModel`
-  - [x] Build passes: `:feature:connectivity:testDebugUnitTest` (23/23) + `:app-prism:compileDebugKotlin`
+  - [x] Build passes: `:app-prism:testDebugUnitTest` (23/23) + `:app-prism:compileDebugKotlin`
 
 - **Test Cases**:
   - [x] Unit: `DefaultDeviceConnectionManagerTest` with `InMemorySessionStore`
@@ -291,19 +291,19 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
 
 **New** (3):
 - `app-prism/src/main/java/com/smartsales/prism/data/onboarding/OnboardingGate.kt`
-- `feature/connectivity/src/main/java/com/smartsales/feature/connectivity/SessionStore.kt`
-- `feature/connectivity/src/main/java/com/smartsales/feature/connectivity/SessionStoreImpl.kt`
+- `app-prism/src/main/java/com/smartsales/prism/data/connectivity/legacy/SessionStore.kt`
+- `app-prism/src/main/java/com/smartsales/prism/data/connectivity/legacy/SessionStoreImpl.kt`
 
 **Modified** (11):
 - `app-prism/src/main/java/com/smartsales/prism/PrismMainActivity.kt`
-- `feature/connectivity/src/main/java/com/smartsales/feature/connectivity/DeviceConnectionManager.kt`
-- `feature/connectivity/src/main/java/com/smartsales/feature/connectivity/ConnectivityModule.kt`
-- `feature/connectivity/src/test/java/com/smartsales/feature/connectivity/DefaultDeviceConnectionManagerTest.kt`
-- `feature/connectivity/src/main/java/com/smartsales/feature/connectivity/FakeDeviceConnectionManager.kt`
+- `app-prism/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt`
+- `app-prism/src/main/java/com/smartsales/prism/data/connectivity/legacy/ConnectivityModule.kt`
+- `app-prism/src/test/java/com/smartsales/prism/data/connectivity/legacy/DefaultDeviceConnectionManagerTest.kt`
+- `app-prism/src/main/java/com/smartsales/prism/data/connectivity/legacy/FakeDeviceConnectionManager.kt`
 - `feature/media/src/test/java/com/smartsales/feature/media/devicemanager/DeviceManagerViewModelTest.kt`
 - `app/src/test/java/com/smartsales/aitest/audio/DeviceHttpEndpointProviderImplTest.kt`
-- `feature/connectivity/src/test/java/com/smartsales/feature/connectivity/setup/DeviceSetupViewModelTest.kt`
-- `feature/connectivity/src/test/java/com/smartsales/feature/connectivity/setup/DeviceSetupViewModelRobustnessTest.kt`
+- `app-prism/src/test/java/com/smartsales/prism/data/connectivity/legacy/setup/DeviceSetupViewModelTest.kt`
+- `app-prism/src/test/java/com/smartsales/prism/data/connectivity/legacy/setup/DeviceSetupViewModelRobustnessTest.kt`
 - `app-prism/src/main/java/com/smartsales/prism/domain/connectivity/ConnectivityService.kt`
 - `app-prism/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityService.kt`
 - `app-prism/src/main/java/com/smartsales/prism/data/fakes/FakeConnectivityService.kt`

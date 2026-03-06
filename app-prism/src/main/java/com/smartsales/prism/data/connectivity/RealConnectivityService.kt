@@ -2,10 +2,10 @@ package com.smartsales.prism.data.connectivity
 
 import android.util.Log
 import com.smartsales.core.util.Result
-import com.smartsales.feature.connectivity.DeviceConnectionManager
-import com.smartsales.feature.connectivity.SessionStore
-import com.smartsales.feature.connectivity.WifiCredentials
-import com.smartsales.feature.connectivity.WifiProvisioner
+import com.smartsales.prism.data.connectivity.legacy.DeviceConnectionManager
+import com.smartsales.prism.data.connectivity.legacy.SessionStore
+import com.smartsales.prism.data.connectivity.legacy.WifiCredentials
+import com.smartsales.prism.data.connectivity.legacy.WifiProvisioner
 import com.smartsales.prism.domain.connectivity.ConnectivityService
 import com.smartsales.prism.domain.connectivity.ReconnectResult
 import com.smartsales.prism.domain.connectivity.UpdateResult
@@ -45,18 +45,18 @@ class RealConnectivityService @Inject constructor(
         val outcome = deviceManager.reconnectAndWait()
         
         val result = when (outcome) {
-            is com.smartsales.feature.connectivity.ConnectionState.Connected,
-            is com.smartsales.feature.connectivity.ConnectionState.WifiProvisioned,
-            is com.smartsales.feature.connectivity.ConnectionState.Syncing -> {
+            is com.smartsales.prism.data.connectivity.legacy.ConnectionState.Connected,
+            is com.smartsales.prism.data.connectivity.legacy.ConnectionState.WifiProvisioned,
+            is com.smartsales.prism.data.connectivity.legacy.ConnectionState.Syncing -> {
                 // BLE 已连接 — 检查 WiFi 是否与配网时一致
                 if (isWifiMismatch()) ReconnectResult.WifiMismatch
                 else ReconnectResult.Connected
             }
-            is com.smartsales.feature.connectivity.ConnectionState.NeedsSetup ->
+            is com.smartsales.prism.data.connectivity.legacy.ConnectionState.NeedsSetup ->
                 ReconnectResult.DeviceNotFound
-            is com.smartsales.feature.connectivity.ConnectionState.Error -> {
+            is com.smartsales.prism.data.connectivity.legacy.ConnectionState.Error -> {
                 val error = outcome.error
-                if (error is com.smartsales.feature.connectivity.ConnectivityError.DeviceNotFound) {
+                if (error is com.smartsales.prism.data.connectivity.legacy.ConnectivityError.DeviceNotFound) {
                     ReconnectResult.DeviceNotFound
                 } else {
                     ReconnectResult.Error(error.toString())
@@ -83,9 +83,9 @@ class RealConnectivityService @Inject constructor(
     
     override suspend fun updateWifiConfig(ssid: String, password: String): WifiConfigResult {
         val session = when (val connectState = deviceManager.state.value) {
-            is com.smartsales.feature.connectivity.ConnectionState.Connected -> connectState.session
-            is com.smartsales.feature.connectivity.ConnectionState.WifiProvisioned -> connectState.session
-            is com.smartsales.feature.connectivity.ConnectionState.Syncing -> connectState.session
+            is com.smartsales.prism.data.connectivity.legacy.ConnectionState.Connected -> connectState.session
+            is com.smartsales.prism.data.connectivity.legacy.ConnectionState.WifiProvisioned -> connectState.session
+            is com.smartsales.prism.data.connectivity.legacy.ConnectionState.Syncing -> connectState.session
             else -> return WifiConfigResult.Error("设备未连接")
         }
         

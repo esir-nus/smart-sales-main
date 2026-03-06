@@ -1,6 +1,6 @@
 package com.smartsales.prism.domain.notification
 
-import android.app.PendingIntent
+// PendingIntent import removed
 
 /**
  * 系统通知服务接口
@@ -23,7 +23,7 @@ interface NotificationService {
         body: String,
         channel: PrismNotificationChannel = PrismNotificationChannel.TASK_REMINDER_EARLY,
         priority: NotificationPriority = NotificationPriority.HIGH,
-        contentIntent: PendingIntent? = null
+        action: NotificationAction = NotificationAction.None
     )
 
     /**

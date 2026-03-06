@@ -4,7 +4,7 @@ import com.smartsales.prism.data.audio.RealAudioRepository
 
 
 import com.smartsales.prism.data.real.RealContextBuilder
-import com.smartsales.prism.data.fakes.FakeExecutor
+
 import com.smartsales.prism.data.persistence.RoomHistoryRepository
 import com.smartsales.prism.data.fakes.FakePublisher
 import com.smartsales.prism.data.persistence.RoomMemoryRepository
@@ -12,7 +12,6 @@ import com.smartsales.prism.data.persistence.RoomEntityRepository
 import com.smartsales.prism.data.persistence.RoomUserHabitRepository
 import com.smartsales.prism.data.fakes.FakeUserProfileRepository 
 import com.smartsales.prism.data.real.DashscopeExecutor
-import com.smartsales.prism.data.real.session.LlmSessionTitleGenerator
 import com.smartsales.prism.domain.session.SessionTitleGenerator
 import com.smartsales.prism.domain.audio.AudioRepository
 
@@ -102,11 +101,7 @@ abstract class PrismModule {
     @Binds @Singleton
     abstract fun bindEntityResolverService(impl: com.smartsales.prism.data.real.RealEntityResolverService): com.smartsales.prism.domain.analyst.EntityResolverService
 
-    @Binds @Singleton
-    abstract fun bindAnalystPipeline(impl: com.smartsales.prism.data.real.RealAnalystPipeline): com.smartsales.prism.domain.analyst.AnalystPipeline
 
-    @Binds @Singleton
-    abstract fun bindArchitectService(impl: com.smartsales.prism.data.real.RealArchitectService): com.smartsales.prism.domain.analyst.ArchitectService
 
     // === User Habit ===
 
@@ -116,7 +111,7 @@ abstract class PrismModule {
     // === RL Module ===
 
     @Binds @Singleton
-    abstract fun bindReinforcementLearner(fake: com.smartsales.prism.data.fakes.FakeReinforcementLearner): com.smartsales.prism.domain.rl.ReinforcementLearner
+    abstract fun bindReinforcementLearner(real: com.smartsales.prism.data.rl.RealReinforcementLearner): com.smartsales.prism.domain.rl.ReinforcementLearner
 
     // === Time ===
 
@@ -149,7 +144,7 @@ abstract class PrismModule {
     abstract fun bindEntityWriter(impl: com.smartsales.prism.data.real.RealEntityWriter): com.smartsales.prism.domain.memory.EntityWriter
 
     @Binds @Singleton
-    abstract fun bindSessionTitleGenerator(impl: LlmSessionTitleGenerator): SessionTitleGenerator
+    abstract fun bindSessionTitleGenerator(impl: com.smartsales.prism.data.real.session.SemanticSessionTitleGenerator): SessionTitleGenerator
 
     // === Input Parser (Turbo Router) ===
 

@@ -131,7 +131,7 @@
 *Conclusion*: The Mascot assumes all System I (Notification/Greeting/Empathy) duties, allowing the Prism Agent (System II) to evolve into a pristine, plugin-driven workflow execution engine.
 
 ## Observation 2026-03-04: The Ghost State Machine
-Frank observed "even 'hi' triggers analysis" after the Dual-Engine refactor. The root cause is `RealAnalystPipeline` holding an active `INVESTIGATING` or `PROPOSAL` state that isn't cleared when switching modes or tabs, causing incoming inputs like "hi" to bypass `LightningRouter` (Phase 0) entirely.
+Frank observed "even 'hi' triggers analysis" after the Dual-Engine refactor. The root cause was a ghost state held by a legacy orchestrator component that wasn't cleared when switching modes or tabs, causing incoming inputs like "hi" to bypass `LightningRouter` (Phase 0) entirely. (Purged 2026-03-06)
 This perfectly justifies the Nuke-and-Pave strategy for Coach mode: stateful UI toggles married to a unified backend create impossible edge cases.
 
 ## 2026-03-06

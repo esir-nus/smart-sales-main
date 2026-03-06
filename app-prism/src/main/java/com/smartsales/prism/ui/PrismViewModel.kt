@@ -38,7 +38,7 @@ import com.smartsales.prism.domain.scheduler.UrgencyLevel
 class PrismViewModel @Inject constructor(
     private val unifiedPipeline: UnifiedPipeline,
     private val lightningRouter: LightningRouter,
-    private val analystPipeline: com.smartsales.prism.domain.analyst.AnalystPipeline,
+
     private val toolRegistry: com.smartsales.prism.domain.analyst.ToolRegistry,
     private val activityController: com.smartsales.prism.domain.activity.AgentActivityController,
     private val scheduledTaskRepository: ScheduledTaskRepository,
@@ -140,22 +140,7 @@ class PrismViewModel @Inject constructor(
         // Init: Start a fresh session so messages are persisted from the start
         startNewSession()
 
-        // V1/V2 Analyst FSM replacement: observe pipeline state for thinking indicators
-        viewModelScope.launch {
-            analystPipeline.state.collect { fsmState ->
-                when (fsmState) {
-                    com.smartsales.prism.domain.analyst.AnalystState.INVESTIGATING -> {
-                        _uiState.value = UiState.Thinking("深度分析中...")
-                    }
-                    com.smartsales.prism.domain.analyst.AnalystState.IDLE -> {
-                        if (_uiState.value is UiState.Thinking) {
-                            _uiState.value = UiState.Idle
-                        }
-                    }
-                    else -> {}
-                }
-            }
-        }
+        // V1/V2 Analyst FSM replacement: observe pipeline state for thinking indicators (handled by unified pipeline now)
 
         // Hero Dashboard: 加载待办和已完成任务
         viewModelScope.launch {
@@ -213,7 +198,7 @@ class PrismViewModel @Inject constructor(
         
         // Wave 3: 真实会话重置
         contextBuilder.resetSession() // 重置内核 RAM
-        analystPipeline.reset() // 重置 Analyst 状态机
+
         
         // 创建新会话记录 (SSD)
         viewModelScope.launch(Dispatchers.IO) {
@@ -275,10 +260,6 @@ class PrismViewModel @Inject constructor(
                 _uiState.value = UiState.Idle
                 _inputText.value = ""
                 activityController.reset()
-                
-                if (triggerAutoRename) {
-                    triggerAutoRename()
-                }
             }
             Log.d("PrismVM", "Switched to session: $sessionId, ${messages.size} messages")
         }
@@ -359,6 +340,12 @@ class PrismViewModel @Inject constructor(
                                  timestamp = System.currentTimeMillis(),
                                  uiState = ui
                              )
+                         }
+                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.AutoRenameTriggered -> {
+                             // Wave 4: Synchronous Auto-Renaming
+                             if (_sessionTitle.value == "新对话") {
+                                 updateSessionTitle(result.newTitle)
+                             }
                          }
                          is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.DisambiguationIntercepted -> {
                              _uiState.value = result.uiState
@@ -578,8 +565,12 @@ class PrismViewModel @Inject constructor(
                                  timestamp = System.currentTimeMillis(),
                                  uiState = ui
                              )
-                             // Wave 4: Auto-Rename
-                             if (_sessionTitle.value == "新对话") triggerAutoRename()
+                         }
+                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.AutoRenameTriggered -> {
+                             // Wave 4: Synchronous Auto-Renaming from upstream Parser
+                             if (_sessionTitle.value == "新对话") {
+                                 updateSessionTitle(result.newTitle)
+                             }
                          }
                          is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.DisambiguationIntercepted -> {
                              _uiState.value = result.uiState
@@ -635,30 +626,7 @@ class PrismViewModel @Inject constructor(
         }
     }
 
-    private fun triggerAutoRename() {
-        val sid = currentSessionId ?: return
-        val currentHistory = contextBuilder.getSessionHistory()
-        
-        // Don't rename on zero history (shouldn't happen here but safe guard)
-        if (currentHistory.isEmpty()) return
 
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val titleResult = sessionTitleGenerator.generateTitle(currentHistory)
-                
-                // Persist new title
-                historyRepository.renameSession(sid, titleResult.clientName, titleResult.summary)
-                
-                // Update UI immediately
-                withContext(Dispatchers.Main) {
-                    _sessionTitle.value = titleResult.clientName
-                }
-                Log.d("PrismVM", "Auto-renamed session $sid to '${titleResult.clientName}'")
-            } catch (e: Exception) {
-                Log.w("PrismVM", "Auto-rename failed", e)
-            }
-        }
-    }
     
     // ... (rest of methods)
 }

@@ -1,0 +1,751 @@
+Initialized native services in: /home/cslh-frank/.gradle/native
+Initialized jansi services in: /home/cslh-frank/.gradle/native
+The client will now receive all logging from the daemon (pid: 12124). The daemon log file: /home/cslh-frank/.gradle/daemon/8.13/daemon-12124.out.log
+Starting 16th build in daemon [uptime: 3 hrs 6 mins 51.05 secs, performance: 99%, GC rate: 0.00/s, heap usage: 2% of 4 GiB]
+Using 12 worker leases.
+Now considering [/home/cslh-frank/main_app] as hierarchies to watch
+Watching the file system is configured to be enabled if available
+File system watching is active
+Starting Build
+Settings evaluated using settings file '/home/cslh-frank/main_app/settings.gradle.kts'.
+Using local directory build cache for the root build (location = /home/cslh-frank/.gradle/caches/build-cache-1, remove unused entries = after 7 days).
+Type-safe project accessors is an incubating feature.
+Projects loaded. Root project using build file '/home/cslh-frank/main_app/build.gradle.kts'.
+Included projects: [root project 'main_app', project ':app', project ':app-prism', project ':core', project ':data', project ':tingwuTestApp', project ':core:test', project ':core:util', project ':data:ai-core', project ':data:oss']
+
+> Configure project :
+Evaluating root project 'main_app' using build file '/home/cslh-frank/main_app/build.gradle.kts'.
+Resolved plugin [id: 'com.android.application', version: '8.13.0', apply: false]
+Resolved plugin [id: 'com.android.library', version: '8.13.0', apply: false]
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '1.9.25', apply: false]
+Resolved plugin [id: 'org.jetbrains.kotlin.jvm', version: '1.9.25', apply: false]
+Resolved plugin [id: 'org.jetbrains.kotlin.kapt', version: '1.9.25', apply: false]
+Resolved plugin [id: 'com.google.dagger.hilt.android', version: '2.52', apply: false]
+Resolved plugin [id: 'org.jlleitschuh.gradle.ktlint', version: '12.1.1', apply: false]
+
+> Configure project :app
+Evaluating project ':app' using build file '/home/cslh-frank/main_app/app/build.gradle.kts'.
+Resolved plugin [id: 'com.android.application', version: '8.13.0']
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '1.9.25']
+Resolved plugin [id: 'org.jetbrains.kotlin.kapt', version: '1.9.25']
+Resolved plugin [id: 'com.google.dagger.hilt.android', version: '2.52']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+
+> Configure project :app-prism
+Evaluating project ':app-prism' using build file '/home/cslh-frank/main_app/app-prism/build.gradle.kts'.
+Resolved plugin [id: 'com.android.application', version: '8.13.0']
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '1.9.25']
+Resolved plugin [id: 'org.jetbrains.kotlin.kapt', version: '1.9.25']
+Resolved plugin [id: 'org.jetbrains.kotlin.plugin.serialization', version: '1.9.25']
+Resolved plugin [id: 'com.google.dagger.hilt.android', version: '2.52']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+
+> Configure project :core
+Evaluating project ':core' using build file '/home/cslh-frank/main_app/core/build.gradle'.
+
+> Configure project :data
+Evaluating project ':data' using build file '/home/cslh-frank/main_app/data/build.gradle'.
+
+> Configure project :tingwuTestApp
+Evaluating project ':tingwuTestApp' using build file '/home/cslh-frank/main_app/tingwuTestApp/build.gradle.kts'.
+Resolved plugin [id: 'com.android.library']
+Resolved plugin [id: 'org.jetbrains.kotlin.android']
+Resolved plugin [id: 'org.jetbrains.kotlin.kapt']
+Resolved plugin [id: 'com.google.dagger.hilt.android']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+
+> Configure project :core:test
+Evaluating project ':core:test' using build file '/home/cslh-frank/main_app/core/test/build.gradle.kts'.
+Resolved plugin [id: 'com.android.library', version: '8.13.0']
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '1.9.25']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+
+> Configure project :core:util
+Evaluating project ':core:util' using build file '/home/cslh-frank/main_app/core/util/build.gradle.kts'.
+Resolved plugin [id: 'com.android.library', version: '8.13.0']
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '1.9.25']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+
+> Configure project :data:ai-core
+Evaluating project ':data:ai-core' using build file '/home/cslh-frank/main_app/data/ai-core/build.gradle.kts'.
+Resolved plugin [id: 'com.android.library', version: '8.13.0']
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '1.9.25']
+Resolved plugin [id: 'org.jetbrains.kotlin.kapt', version: '1.9.25']
+Resolved plugin [id: 'com.google.dagger.hilt.android', version: '2.52']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+
+> Configure project :data:oss
+Evaluating project ':data:oss' using build file '/home/cslh-frank/main_app/data/oss/build.gradle.kts'.
+Resolved plugin [id: 'com.android.library', version: '8.13.0']
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '1.9.25']
+Resolved plugin [id: 'org.jetbrains.kotlin.kapt', version: '1.9.25']
+Resolved plugin [id: 'com.google.dagger.hilt.android', version: '2.52']
+Using default execution profile
+Using Kotlin Gradle Plugin gradle82 variant
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+Add dependencies: ktlint version 1.0.1
+All projects evaluated.
+Task path ':app-prism:kaptGenerateStubsDebugKotlin' matched project ':app-prism'
+Task name matched 'kaptGenerateStubsDebugKotlin'
+Selected primary task 'kaptGenerateStubsDebugKotlin' from project :app-prism
+Tasks to be executed: [task ':app-prism:checkKotlinGradlePluginConfigurationErrors', task ':app-prism:preBuild', task ':app-prism:preDebugBuild', task ':app-prism:generateDebugBuildConfig', task ':core:util:preBuild', task ':core:util:preDebugBuild', task ':core:util:writeDebugAarMetadata', task ':data:ai-core:preBuild', task ':data:ai-core:preDebugBuild', task ':data:ai-core:writeDebugAarMetadata', task ':data:oss:preBuild', task ':data:oss:preDebugBuild', task ':data:oss:writeDebugAarMetadata', task ':app-prism:checkDebugAarMetadata', task ':core:util:processDebugNavigationResources', task ':data:ai-core:processDebugNavigationResources', task ':data:oss:processDebugNavigationResources', task ':app-prism:processDebugNavigationResources', task ':app-prism:compileDebugNavigationResources', task ':app-prism:generateDebugResValues', task ':core:util:generateDebugResValues', task ':core:util:generateDebugResources', task ':core:util:packageDebugResources', task ':data:ai-core:generateDebugResValues', task ':data:ai-core:generateDebugResources', task ':data:ai-core:packageDebugResources', task ':data:oss:generateDebugResValues', task ':data:oss:generateDebugResources', task ':data:oss:packageDebugResources', task ':app-prism:mapDebugSourceSetPaths', task ':app-prism:generateDebugResources', task ':app-prism:mergeDebugResources', task ':app-prism:packageDebugResources', task ':app-prism:parseDebugLocalResources', task ':app-prism:createDebugCompatibleScreenManifests', task ':app-prism:extractDeepLinksDebug', task ':core:util:extractDeepLinksDebug', task ':core:util:processDebugManifest', task ':data:ai-core:extractDeepLinksDebug', task ':data:ai-core:processDebugManifest', task ':data:oss:extractDeepLinksDebug', task ':data:oss:processDebugManifest', task ':app-prism:processDebugMainManifest', task ':app-prism:processDebugManifest', task ':app-prism:processDebugManifestForPackage', task ':core:util:compileDebugLibraryResources', task ':core:util:parseDebugLocalResources', task ':core:util:generateDebugRFile', task ':data:ai-core:compileDebugLibraryResources', task ':data:ai-core:parseDebugLocalResources', task ':data:ai-core:generateDebugRFile', task ':data:oss:compileDebugLibraryResources', task ':data:oss:parseDebugLocalResources', task ':data:oss:generateDebugRFile', task ':app-prism:processDebugResources', task ':core:util:checkKotlinGradlePluginConfigurationErrors', task ':core:util:compileDebugKotlin', task ':core:util:javaPreCompileDebug', task ':core:util:compileDebugJavaWithJavac', task ':core:util:bundleLibCompileToJarDebug', task ':core:util:bundleLibRuntimeToJarDebug', task ':data:ai-core:checkKotlinGradlePluginConfigurationErrors', task ':data:ai-core:generateDebugBuildConfig', task ':data:ai-core:kaptGenerateStubsDebugKotlin', task ':data:ai-core:kaptDebugKotlin', task ':data:ai-core:compileDebugKotlin', task ':data:ai-core:javaPreCompileDebug', task ':data:ai-core:compileDebugJavaWithJavac', task ':data:ai-core:transformDebugClassesWithAsm', task ':data:ai-core:bundleLibCompileToJarDebug', task ':data:oss:checkKotlinGradlePluginConfigurationErrors', task ':data:oss:generateDebugBuildConfig', task ':data:oss:kaptGenerateStubsDebugKotlin', task ':data:oss:kaptDebugKotlin', task ':data:oss:compileDebugKotlin', task ':data:oss:javaPreCompileDebug', task ':data:oss:compileDebugJavaWithJavac', task ':data:oss:transformDebugClassesWithAsm', task ':data:oss:bundleLibCompileToJarDebug', task ':app-prism:kaptGenerateStubsDebugKotlin']
+Tasks that were excluded: []
+Resolve mutations for :app-prism:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker,5,main]) started.
+:app-prism:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker,5,main]) started.
+Resolve mutations for :core:util:preBuild (Thread[Execution worker Thread 2,5,main]) started.
+:core:util:preBuild (Thread[Execution worker Thread 2,5,main]) started.
+Resolve mutations for :data:ai-core:preBuild (Thread[Execution worker Thread 3,5,main]) started.
+:data:ai-core:preBuild (Thread[Execution worker Thread 3,5,main]) started.
+Resolve mutations for :data:oss:preBuild (Thread[Execution worker Thread 4,5,main]) started.
+:data:oss:preBuild (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :data:oss:preBuild UP-TO-DATE
+Skipping task ':data:oss:preBuild' as it has no actions.
+Resolve mutations for :data:oss:preDebugBuild (Thread[Execution worker Thread 5,5,main]) started.
+
+> Task :data:ai-core:preBuild UP-TO-DATE
+Skipping task ':data:ai-core:preBuild' as it has no actions.
+:data:oss:preDebugBuild (Thread[Execution worker Thread 5,5,main]) started.
+Resolve mutations for :data:ai-core:preDebugBuild (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :data:oss:preDebugBuild UP-TO-DATE
+Skipping task ':data:oss:preDebugBuild' as it has no actions.
+:data:ai-core:preDebugBuild (Thread[Execution worker Thread 3,5,main]) started.
+Resolve mutations for :data:oss:writeDebugAarMetadata (Thread[Execution worker Thread 5,5,main]) started.
+
+> Task :data:ai-core:preDebugBuild UP-TO-DATE
+Skipping task ':data:ai-core:preDebugBuild' as it has no actions.
+Resolve mutations for :data:ai-core:writeDebugAarMetadata (Thread[Execution worker Thread 3,5,main]) started.
+:data:oss:writeDebugAarMetadata (Thread[Execution worker Thread 5,5,main]) started.
+:data:ai-core:writeDebugAarMetadata (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :data:oss:writeDebugAarMetadata UP-TO-DATE
+Caching disabled for task ':data:oss:writeDebugAarMetadata' because:
+  Caching has been disabled for the task
+Skipping task ':data:oss:writeDebugAarMetadata' as it is up-to-date.
+work action resolve aar-metadata.properties (project :data:oss) (Thread[Execution worker Thread 5,5,main]) started.
+
+> Task :data:ai-core:writeDebugAarMetadata UP-TO-DATE
+Caching disabled for task ':data:ai-core:writeDebugAarMetadata' because:
+  Caching has been disabled for the task
+Skipping task ':data:ai-core:writeDebugAarMetadata' as it is up-to-date.
+work action resolve aar-metadata.properties (project :data:ai-core) (Thread[Execution worker Thread 3,5,main]) started.
+Resolve mutations for :data:ai-core:processDebugNavigationResources (Thread[Execution worker Thread 3,5,main]) started.
+:data:ai-core:processDebugNavigationResources (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :data:ai-core:processDebugNavigationResources UP-TO-DATE
+Build cache key for task ':data:ai-core:processDebugNavigationResources' is 1871854bd983b445377568930d098c9e
+Skipping task ':data:ai-core:processDebugNavigationResources' as it is up-to-date.
+work action resolve debug (project :data:ai-core) (Thread[Execution worker Thread 3,5,main]) started.
+Resolve mutations for :data:ai-core:generateDebugResValues (Thread[Execution worker Thread 3,5,main]) started.
+:data:ai-core:generateDebugResValues (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :data:ai-core:generateDebugResValues UP-TO-DATE
+Build cache key for task ':data:ai-core:generateDebugResValues' is 21b45d2f3f29fc3893ef7d299d0edd84
+Skipping task ':data:ai-core:generateDebugResValues' as it is up-to-date.
+Resolve mutations for :data:ai-core:generateDebugResources (Thread[Execution worker Thread 3,5,main]) started.
+:data:ai-core:generateDebugResources (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :core:util:preBuild UP-TO-DATE
+Skipping task ':core:util:preBuild' as it has no actions.
+
+> Task :data:ai-core:generateDebugResources UP-TO-DATE
+Build cache key for task ':data:ai-core:generateDebugResources' is 8891bda1b711568d3635a352765b4009
+Skipping task ':data:ai-core:generateDebugResources' as it is up-to-date.
+Resolve mutations for :core:util:preDebugBuild (Thread[Execution worker Thread 2,5,main]) started.
+Resolve mutations for :data:ai-core:packageDebugResources (Thread[Execution worker Thread 3,5,main]) started.
+:core:util:preDebugBuild (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :core:util:preDebugBuild UP-TO-DATE
+Skipping task ':core:util:preDebugBuild' as it has no actions.
+Resolve mutations for :core:util:writeDebugAarMetadata (Thread[Execution worker Thread 2,5,main]) started.
+:core:util:writeDebugAarMetadata (Thread[Execution worker Thread 2,5,main]) started.
+:data:ai-core:packageDebugResources (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :core:util:writeDebugAarMetadata UP-TO-DATE
+Caching disabled for task ':core:util:writeDebugAarMetadata' because:
+  Caching has been disabled for the task
+Skipping task ':core:util:writeDebugAarMetadata' as it is up-to-date.
+work action resolve aar-metadata.properties (project :core:util) (Thread[Execution worker Thread 2,5,main]) started.
+Resolve mutations for :core:util:processDebugNavigationResources (Thread[Execution worker Thread 2,5,main]) started.
+:core:util:processDebugNavigationResources (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :data:ai-core:packageDebugResources UP-TO-DATE
+Build cache key for task ':data:ai-core:packageDebugResources' is 7597b6fbaabf52857556cf36efdaa925
+Skipping task ':data:ai-core:packageDebugResources' as it is up-to-date.
+work action resolve packageDebugResources (project :data:ai-core) (Thread[Execution worker Thread 3,5,main]) started.
+Resolve mutations for :data:ai-core:extractDeepLinksDebug (Thread[Execution worker Thread 3,5,main]) started.
+:data:ai-core:extractDeepLinksDebug (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :data:ai-core:extractDeepLinksDebug UP-TO-DATE
+Build cache key for task ':data:ai-core:extractDeepLinksDebug' is 4d0a559515486efd99115835f2ac2bb9
+Skipping task ':data:ai-core:extractDeepLinksDebug' as it is up-to-date.
+work action resolve navigation.json (project :data:ai-core) (Thread[Execution worker Thread 3,5,main]) started.
+Resolve mutations for :data:ai-core:processDebugManifest (Thread[Execution worker Thread 3,5,main]) started.
+:data:ai-core:processDebugManifest (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :data:ai-core:processDebugManifest UP-TO-DATE
+Build cache key for task ':data:ai-core:processDebugManifest' is d16537e715452919caeaa5e6897b1f23
+Skipping task ':data:ai-core:processDebugManifest' as it is up-to-date.
+work action resolve AndroidManifest.xml (project :data:ai-core) (Thread[Execution worker Thread 3,5,main]) started.
+Resolve mutations for :data:ai-core:compileDebugLibraryResources (Thread[Execution worker Thread 3,5,main]) started.
+Resolve mutations for :data:oss:processDebugNavigationResources (Thread[Execution worker Thread 5,5,main]) started.
+:data:ai-core:compileDebugLibraryResources (Thread[Execution worker Thread 3,5,main]) started.
+:data:oss:processDebugNavigationResources (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :core:util:processDebugNavigationResources UP-TO-DATE
+Build cache key for task ':core:util:processDebugNavigationResources' is 1871854bd983b445377568930d098c9e
+Skipping task ':core:util:processDebugNavigationResources' as it is up-to-date.
+work action resolve debug (project :core:util) (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :data:oss:processDebugNavigationResources UP-TO-DATE
+Build cache key for task ':data:oss:processDebugNavigationResources' is 1871854bd983b445377568930d098c9e
+Skipping task ':data:oss:processDebugNavigationResources' as it is up-to-date.
+work action resolve debug (project :data:oss) (Thread[Execution worker Thread 8,5,main]) started.
+Resolve mutations for :data:oss:generateDebugResValues (Thread[Execution worker Thread 8,5,main]) started.
+:data:oss:generateDebugResValues (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :data:oss:generateDebugResValues UP-TO-DATE
+Build cache key for task ':data:oss:generateDebugResValues' is 21b45d2f3f29fc3893ef7d299d0edd84
+Skipping task ':data:oss:generateDebugResValues' as it is up-to-date.
+Resolve mutations for :data:oss:generateDebugResources (Thread[Execution worker Thread 8,5,main]) started.
+Resolve mutations for :core:util:generateDebugResValues (Thread[Execution worker Thread 2,5,main]) started.
+:data:oss:generateDebugResources (Thread[Execution worker Thread 8,5,main]) started.
+:core:util:generateDebugResValues (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :core:util:generateDebugResValues UP-TO-DATE
+Build cache key for task ':core:util:generateDebugResValues' is 21b45d2f3f29fc3893ef7d299d0edd84
+Skipping task ':core:util:generateDebugResValues' as it is up-to-date.
+
+> Task :data:ai-core:compileDebugLibraryResources UP-TO-DATE
+Build cache key for task ':data:ai-core:compileDebugLibraryResources' is c91a9b7ad52bc1cb38d8c04462474c6f
+Skipping task ':data:ai-core:compileDebugLibraryResources' as it is up-to-date.
+work action resolve out (project :data:ai-core) (Thread[Execution worker Thread 3,5,main]) started.
+Resolve mutations for :core:util:generateDebugResources (Thread[Execution worker Thread 2,5,main]) started.
+Resolve mutations for :data:ai-core:parseDebugLocalResources (Thread[Execution worker Thread 3,5,main]) started.
+:core:util:generateDebugResources (Thread[Execution worker Thread 2,5,main]) started.
+:data:ai-core:parseDebugLocalResources (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :app-prism:checkKotlinGradlePluginConfigurationErrors
+Caching disabled for task ':app-prism:checkKotlinGradlePluginConfigurationErrors' because:
+  This task renders reported diagnostics; caching this task will hide diagnostics and obscure issues in the build
+Task ':app-prism:checkKotlinGradlePluginConfigurationErrors' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Resolve mutations for :app-prism:preBuild (Thread[Execution worker,5,main]) started.
+
+> Task :data:oss:generateDebugResources UP-TO-DATE
+Build cache key for task ':data:oss:generateDebugResources' is 8891bda1b711568d3635a352765b4009
+Skipping task ':data:oss:generateDebugResources' as it is up-to-date.
+:app-prism:preBuild (Thread[Execution worker Thread 9,5,main]) started.
+
+> Task :app-prism:preBuild UP-TO-DATE
+Skipping task ':app-prism:preBuild' as it has no actions.
+Resolve mutations for :app-prism:preDebugBuild (Thread[Execution worker Thread 9,5,main]) started.
+Resolve mutations for :data:oss:packageDebugResources (Thread[Execution worker Thread 8,5,main]) started.
+:app-prism:preDebugBuild (Thread[Execution worker Thread 9,5,main]) started.
+
+> Task :app-prism:preDebugBuild UP-TO-DATE
+Skipping task ':app-prism:preDebugBuild' as it has no actions.
+
+> Task :core:util:generateDebugResources UP-TO-DATE
+Build cache key for task ':core:util:generateDebugResources' is 8891bda1b711568d3635a352765b4009
+Skipping task ':core:util:generateDebugResources' as it is up-to-date.
+Resolve mutations for :app-prism:generateDebugBuildConfig (Thread[Execution worker Thread 9,5,main]) started.
+Resolve mutations for :core:util:packageDebugResources (Thread[Execution worker Thread 2,5,main]) started.
+:data:oss:packageDebugResources (Thread[Execution worker Thread 8,5,main]) started.
+:app-prism:generateDebugBuildConfig (Thread[Execution worker Thread 9,5,main]) started.
+:core:util:packageDebugResources (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :app-prism:generateDebugBuildConfig UP-TO-DATE
+Build cache key for task ':app-prism:generateDebugBuildConfig' is 49aff94833875d1431a5edd9ba7048ca
+Skipping task ':app-prism:generateDebugBuildConfig' as it is up-to-date.
+Resolve mutations for :app-prism:checkDebugAarMetadata (Thread[Execution worker Thread 9,5,main]) started.
+:app-prism:checkDebugAarMetadata (Thread[Execution worker Thread 9,5,main]) started.
+
+> Task :data:oss:packageDebugResources UP-TO-DATE
+Build cache key for task ':data:oss:packageDebugResources' is eca23c5d8bcde116c8bbcb0307881913
+Skipping task ':data:oss:packageDebugResources' as it is up-to-date.
+
+> Task :core:util:packageDebugResources UP-TO-DATE
+Build cache key for task ':core:util:packageDebugResources' is 22e096e494769d35df7c043a295047ba
+Skipping task ':core:util:packageDebugResources' as it is up-to-date.
+work action resolve packageDebugResources (project :data:oss) (Thread[Execution worker Thread 8,5,main]) started.
+Resolve mutations for :data:oss:extractDeepLinksDebug (Thread[Execution worker Thread 8,5,main]) started.
+:data:oss:extractDeepLinksDebug (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :data:oss:extractDeepLinksDebug UP-TO-DATE
+Build cache key for task ':data:oss:extractDeepLinksDebug' is 4d0a559515486efd99115835f2ac2bb9
+Skipping task ':data:oss:extractDeepLinksDebug' as it is up-to-date.
+work action resolve navigation.json (project :data:oss) (Thread[Execution worker Thread 8,5,main]) started.
+Resolve mutations for :data:oss:processDebugManifest (Thread[Execution worker Thread 8,5,main]) started.
+:data:oss:processDebugManifest (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :data:oss:processDebugManifest UP-TO-DATE
+Build cache key for task ':data:oss:processDebugManifest' is 39931e57485a3a200d054578b76e533e
+Skipping task ':data:oss:processDebugManifest' as it is up-to-date.
+work action resolve AndroidManifest.xml (project :data:oss) (Thread[Execution worker Thread 8,5,main]) started.
+Resolve mutations for :data:oss:compileDebugLibraryResources (Thread[Execution worker Thread 8,5,main]) started.
+:data:oss:compileDebugLibraryResources (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :data:oss:compileDebugLibraryResources UP-TO-DATE
+Build cache key for task ':data:oss:compileDebugLibraryResources' is c91a9b7ad52bc1cb38d8c04462474c6f
+Skipping task ':data:oss:compileDebugLibraryResources' as it is up-to-date.
+work action resolve out (project :data:oss) (Thread[Execution worker Thread 8,5,main]) started.
+Resolve mutations for :data:oss:parseDebugLocalResources (Thread[Execution worker Thread 8,5,main]) started.
+:data:oss:parseDebugLocalResources (Thread[Execution worker Thread 8,5,main]) started.
+work action resolve packageDebugResources (project :core:util) (Thread[Execution worker Thread 2,5,main]) started.
+Resolve mutations for :core:util:extractDeepLinksDebug (Thread[Execution worker Thread 2,5,main]) started.
+:core:util:extractDeepLinksDebug (Thread[Execution worker Thread 2,5,main]) started.
+
+> Task :core:util:extractDeepLinksDebug UP-TO-DATE
+Build cache key for task ':core:util:extractDeepLinksDebug' is 4d0a559515486efd99115835f2ac2bb9
+Skipping task ':core:util:extractDeepLinksDebug' as it is up-to-date.
+work action resolve navigation.json (project :core:util) (Thread[Execution worker Thread 2,5,main]) started.
+Resolve mutations for :core:util:processDebugManifest (Thread[Execution worker Thread 2,5,main]) started.
+:core:util:processDebugManifest (Thread[Execution worker Thread 10,5,main]) started.
+
+> Task :data:ai-core:parseDebugLocalResources UP-TO-DATE
+Build cache key for task ':data:ai-core:parseDebugLocalResources' is 8284f816b13a31871ba56caebb5a77b9
+Skipping task ':data:ai-core:parseDebugLocalResources' as it is up-to-date.
+Resolve mutations for :data:ai-core:generateDebugRFile (Thread[Execution worker Thread 3,5,main]) started.
+:data:ai-core:generateDebugRFile (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :data:oss:parseDebugLocalResources UP-TO-DATE
+Build cache key for task ':data:oss:parseDebugLocalResources' is 8284f816b13a31871ba56caebb5a77b9
+Skipping task ':data:oss:parseDebugLocalResources' as it is up-to-date.
+Resolve mutations for :data:oss:generateDebugRFile (Thread[Execution worker Thread 8,5,main]) started.
+
+> Task :core:util:processDebugManifest UP-TO-DATE
+Build cache key for task ':core:util:processDebugManifest' is 36c99645905bb46ef9c84142785aa258
+Skipping task ':core:util:processDebugManifest' as it is up-to-date.
+
+> Task :data:ai-core:generateDebugRFile UP-TO-DATE
+Build cache key for task ':data:ai-core:generateDebugRFile' is b7743335ce874fbaeb37bb53426ea7f3
+Skipping task ':data:ai-core:generateDebugRFile' as it is up-to-date.
+:data:oss:generateDebugRFile (Thread[Execution worker Thread 8,5,main]) started.
+work action resolve AndroidManifest.xml (project :core:util) (Thread[Execution worker Thread 10,5,main]) started.
+Resolve mutations for :core:util:compileDebugLibraryResources (Thread[Execution worker Thread 10,5,main]) started.
+:core:util:compileDebugLibraryResources (Thread[Execution worker Thread 10,5,main]) started.
+work action resolve package-aware-r.txt (project :data:ai-core) (Thread[Execution worker Thread 3,5,main]) started.
+Resolve mutations for :data:ai-core:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 3,5,main]) started.
+:data:ai-core:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :data:ai-core:checkKotlinGradlePluginConfigurationErrors
+Caching disabled for task ':data:ai-core:checkKotlinGradlePluginConfigurationErrors' because:
+  This task renders reported diagnostics; caching this task will hide diagnostics and obscure issues in the build
+Task ':data:ai-core:checkKotlinGradlePluginConfigurationErrors' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Resolve mutations for :data:ai-core:generateDebugBuildConfig (Thread[Execution worker Thread 3,5,main]) started.
+:data:ai-core:generateDebugBuildConfig (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :core:util:compileDebugLibraryResources UP-TO-DATE
+Build cache key for task ':core:util:compileDebugLibraryResources' is c91a9b7ad52bc1cb38d8c04462474c6f
+Skipping task ':core:util:compileDebugLibraryResources' as it is up-to-date.
+work action resolve out (project :core:util) (Thread[Execution worker Thread 10,5,main]) started.
+Resolve mutations for :core:util:parseDebugLocalResources (Thread[Execution worker Thread 10,5,main]) started.
+:core:util:parseDebugLocalResources (Thread[Execution worker Thread 10,5,main]) started.
+
+> Task :data:ai-core:generateDebugBuildConfig UP-TO-DATE
+Build cache key for task ':data:ai-core:generateDebugBuildConfig' is 5a5333f387fdd6bff5c1a5c6be7f281d
+Skipping task ':data:ai-core:generateDebugBuildConfig' as it is up-to-date.
+Resolve mutations for :data:ai-core:javaPreCompileDebug (Thread[Execution worker Thread 3,5,main]) started.
+:data:ai-core:javaPreCompileDebug (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :data:oss:generateDebugRFile UP-TO-DATE
+Build cache key for task ':data:oss:generateDebugRFile' is 1669c68f3f3488c588eb06e2ad975e68
+Skipping task ':data:oss:generateDebugRFile' as it is up-to-date.
+work action resolve package-aware-r.txt (project :data:oss) (Thread[Execution worker Thread 8,5,main]) started.
+Resolve mutations for :data:oss:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 4,5,main]) started.
+:data:oss:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :data:oss:checkKotlinGradlePluginConfigurationErrors
+Caching disabled for task ':data:oss:checkKotlinGradlePluginConfigurationErrors' because:
+  This task renders reported diagnostics; caching this task will hide diagnostics and obscure issues in the build
+Task ':data:oss:checkKotlinGradlePluginConfigurationErrors' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Resolve mutations for :data:oss:generateDebugBuildConfig (Thread[Execution worker Thread 4,5,main]) started.
+:data:oss:generateDebugBuildConfig (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :data:oss:generateDebugBuildConfig UP-TO-DATE
+Build cache key for task ':data:oss:generateDebugBuildConfig' is 36915b199ee045d4ab9a8ae200dd664d
+Skipping task ':data:oss:generateDebugBuildConfig' as it is up-to-date.
+
+> Task :core:util:parseDebugLocalResources UP-TO-DATE
+Build cache key for task ':core:util:parseDebugLocalResources' is 8284f816b13a31871ba56caebb5a77b9
+Skipping task ':core:util:parseDebugLocalResources' as it is up-to-date.
+Resolve mutations for :core:util:generateDebugRFile (Thread[Execution worker Thread 10,5,main]) started.
+Resolve mutations for :data:oss:kaptGenerateStubsDebugKotlin (Thread[Execution worker Thread 11,5,main]) started.
+:core:util:generateDebugRFile (Thread[Execution worker Thread 10,5,main]) started.
+:data:oss:kaptGenerateStubsDebugKotlin (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :core:util:generateDebugRFile UP-TO-DATE
+Build cache key for task ':core:util:generateDebugRFile' is 5a12ff93ca7a5913e9bf653027cdbe2b
+Skipping task ':core:util:generateDebugRFile' as it is up-to-date.
+work action resolve package-aware-r.txt (project :core:util) (Thread[Execution worker Thread 10,5,main]) started.
+Resolve mutations for :core:util:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 10,5,main]) started.
+:core:util:checkKotlinGradlePluginConfigurationErrors (Thread[Execution worker Thread 10,5,main]) started.
+
+> Task :core:util:checkKotlinGradlePluginConfigurationErrors
+Caching disabled for task ':core:util:checkKotlinGradlePluginConfigurationErrors' because:
+  This task renders reported diagnostics; caching this task will hide diagnostics and obscure issues in the build
+Task ':core:util:checkKotlinGradlePluginConfigurationErrors' is not up-to-date because:
+  Task has not declared any outputs despite executing actions.
+Resolve mutations for :core:util:compileDebugKotlin (Thread[Execution worker Thread 10,5,main]) started.
+:core:util:compileDebugKotlin (Thread[Execution worker Thread 10,5,main]) started.
+
+> Task :data:ai-core:javaPreCompileDebug UP-TO-DATE
+Build cache key for task ':data:ai-core:javaPreCompileDebug' is 0d31317294bdcf75e68db4cdaa682d0c
+Skipping task ':data:ai-core:javaPreCompileDebug' as it is up-to-date.
+
+> Task :data:oss:kaptGenerateStubsDebugKotlin UP-TO-DATE
+Build cache key for task ':data:oss:kaptGenerateStubsDebugKotlin' is a4f65ad7033d9d848b8b1d7d8f570289
+Skipping task ':data:oss:kaptGenerateStubsDebugKotlin' as it is up-to-date.
+Resolve mutations for :data:oss:kaptDebugKotlin (Thread[Execution worker Thread 11,5,main]) started.
+:data:oss:kaptDebugKotlin (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :app-prism:checkDebugAarMetadata UP-TO-DATE
+Caching disabled for task ':app-prism:checkDebugAarMetadata' because:
+  Caching has been disabled for the task
+Skipping task ':app-prism:checkDebugAarMetadata' as it is up-to-date.
+Resolve mutations for :app-prism:processDebugNavigationResources (Thread[Execution worker Thread 9,5,main]) started.
+:app-prism:processDebugNavigationResources (Thread[Execution worker Thread 9,5,main]) started.
+
+> Task :core:util:compileDebugKotlin UP-TO-DATE
+Build cache key for task ':core:util:compileDebugKotlin' is 75a76b27f4d86e9d2d512e1d26e66a92
+Skipping task ':core:util:compileDebugKotlin' as it is up-to-date.
+Resolve mutations for :core:util:javaPreCompileDebug (Thread[Execution worker Thread 10,5,main]) started.
+:core:util:javaPreCompileDebug (Thread[Execution worker Thread 7,5,main]) started.
+
+> Task :core:util:javaPreCompileDebug UP-TO-DATE
+Build cache key for task ':core:util:javaPreCompileDebug' is 076733e05db59565d6ca4d2f030c516e
+Skipping task ':core:util:javaPreCompileDebug' as it is up-to-date.
+Resolve mutations for :core:util:compileDebugJavaWithJavac (Thread[Execution worker Thread 7,5,main]) started.
+:core:util:compileDebugJavaWithJavac (Thread[Execution worker Thread 7,5,main]) started.
+
+> Task :core:util:compileDebugJavaWithJavac NO-SOURCE
+Skipping task ':core:util:compileDebugJavaWithJavac' as it has no source files and no previous output files.
+Resolve mutations for :core:util:bundleLibCompileToJarDebug (Thread[Execution worker Thread 7,5,main]) started.
+:core:util:bundleLibCompileToJarDebug (Thread[Execution worker Thread 7,5,main]) started.
+
+> Task :core:util:bundleLibCompileToJarDebug UP-TO-DATE
+Caching disabled for task ':core:util:bundleLibCompileToJarDebug' because:
+  Simple merging task
+Skipping task ':core:util:bundleLibCompileToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :core:util) (Thread[Execution worker Thread 7,5,main]) started.
+Resolve mutations for :core:util:bundleLibRuntimeToJarDebug (Thread[Execution worker Thread 7,5,main]) started.
+:core:util:bundleLibRuntimeToJarDebug (Thread[Execution worker Thread 7,5,main]) started.
+Resolve mutations for :data:ai-core:kaptGenerateStubsDebugKotlin (Thread[Execution worker Thread 5,5,main]) started.
+:data:ai-core:kaptGenerateStubsDebugKotlin (Thread[Execution worker Thread 5,5,main]) started.
+
+> Task :core:util:bundleLibRuntimeToJarDebug UP-TO-DATE
+Caching disabled for task ':core:util:bundleLibRuntimeToJarDebug' because:
+  Simple merging task
+Skipping task ':core:util:bundleLibRuntimeToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :core:util) (Thread[Execution worker Thread 7,5,main]) started.
+
+> Task :app-prism:processDebugNavigationResources UP-TO-DATE
+Build cache key for task ':app-prism:processDebugNavigationResources' is 7c9537be6983350b58fd47d66c0cfaaa
+Skipping task ':app-prism:processDebugNavigationResources' as it is up-to-date.
+Resolve mutations for :app-prism:compileDebugNavigationResources (Thread[Execution worker Thread 9,5,main]) started.
+:app-prism:compileDebugNavigationResources (Thread[Execution worker Thread 9,5,main]) started.
+
+> Task :app-prism:compileDebugNavigationResources UP-TO-DATE
+Build cache key for task ':app-prism:compileDebugNavigationResources' is 5227a876426c7fcdd465aab568eef109
+Skipping task ':app-prism:compileDebugNavigationResources' as it is up-to-date.
+
+> Task :data:oss:kaptDebugKotlin UP-TO-DATE
+file or directory '/home/cslh-frank/main_app/data/oss/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/oss/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/oss/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/data/oss/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/data/oss/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/oss/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/data/oss/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/oss/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/oss/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/oss/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/oss/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/oss/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/oss/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/oss/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/oss/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/data/oss/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/data/oss/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/oss/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/data/oss/src/debug/java', not found
+Build cache key for task ':data:oss:kaptDebugKotlin' is c11fbabe987210214a10736451436940
+Skipping task ':data:oss:kaptDebugKotlin' as it is up-to-date.
+Resolve mutations for :app-prism:generateDebugResValues (Thread[Execution worker Thread 9,5,main]) started.
+Resolve mutations for :data:oss:compileDebugKotlin (Thread[Execution worker Thread 4,5,main]) started.
+:app-prism:generateDebugResValues (Thread[Execution worker Thread 9,5,main]) started.
+:data:oss:compileDebugKotlin (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :app-prism:generateDebugResValues UP-TO-DATE
+Build cache key for task ':app-prism:generateDebugResValues' is 21b45d2f3f29fc3893ef7d299d0edd84
+Skipping task ':app-prism:generateDebugResValues' as it is up-to-date.
+Resolve mutations for :app-prism:mapDebugSourceSetPaths (Thread[Execution worker Thread 9,5,main]) started.
+:app-prism:mapDebugSourceSetPaths (Thread[Execution worker Thread 7,5,main]) started.
+
+> Task :app-prism:mapDebugSourceSetPaths UP-TO-DATE
+Caching disabled for task ':app-prism:mapDebugSourceSetPaths' because:
+  Caching has been disabled for the task
+Skipping task ':app-prism:mapDebugSourceSetPaths' as it is up-to-date.
+Resolve mutations for :app-prism:generateDebugResources (Thread[Execution worker Thread 7,5,main]) started.
+:app-prism:generateDebugResources (Thread[Execution worker Thread 7,5,main]) started.
+
+> Task :data:oss:compileDebugKotlin UP-TO-DATE
+Build cache key for task ':data:oss:compileDebugKotlin' is 0a44135efeec50c0d4517b03b39b0bf7
+Skipping task ':data:oss:compileDebugKotlin' as it is up-to-date.
+Resolve mutations for :data:oss:javaPreCompileDebug (Thread[Execution worker Thread 4,5,main]) started.
+:data:oss:javaPreCompileDebug (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :app-prism:generateDebugResources UP-TO-DATE
+Build cache key for task ':app-prism:generateDebugResources' is 54eee17fcc59023ed72e882849ea8188
+Skipping task ':app-prism:generateDebugResources' as it is up-to-date.
+Resolve mutations for :app-prism:mergeDebugResources (Thread[Execution worker,5,main]) started.
+:app-prism:mergeDebugResources (Thread[Execution worker,5,main]) started.
+
+> Task :data:oss:javaPreCompileDebug UP-TO-DATE
+Build cache key for task ':data:oss:javaPreCompileDebug' is 0d31317294bdcf75e68db4cdaa682d0c
+Skipping task ':data:oss:javaPreCompileDebug' as it is up-to-date.
+Resolve mutations for :data:oss:compileDebugJavaWithJavac (Thread[Execution worker Thread 4,5,main]) started.
+:data:oss:compileDebugJavaWithJavac (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :app-prism:mergeDebugResources UP-TO-DATE
+Build cache key for task ':app-prism:mergeDebugResources' is ff4ebc3cf0747034cc5dfeae115ae995
+Skipping task ':app-prism:mergeDebugResources' as it is up-to-date.
+Resolve mutations for :app-prism:packageDebugResources (Thread[Execution worker,5,main]) started.
+:app-prism:packageDebugResources (Thread[Execution worker,5,main]) started.
+
+> Task :app-prism:packageDebugResources UP-TO-DATE
+Build cache key for task ':app-prism:packageDebugResources' is 49b032e0ca4859fe29387ec13d695028
+Skipping task ':app-prism:packageDebugResources' as it is up-to-date.
+Resolve mutations for :app-prism:parseDebugLocalResources (Thread[Execution worker Thread 7,5,main]) started.
+:app-prism:parseDebugLocalResources (Thread[Execution worker Thread 7,5,main]) started.
+
+> Task :app-prism:parseDebugLocalResources UP-TO-DATE
+Build cache key for task ':app-prism:parseDebugLocalResources' is c02aee1540eac1027f439e797ab3d8a0
+Skipping task ':app-prism:parseDebugLocalResources' as it is up-to-date.
+Resolve mutations for :app-prism:createDebugCompatibleScreenManifests (Thread[Execution worker Thread 7,5,main]) started.
+:app-prism:createDebugCompatibleScreenManifests (Thread[Execution worker Thread 7,5,main]) started.
+
+> Task :app-prism:createDebugCompatibleScreenManifests UP-TO-DATE
+Caching disabled for task ':app-prism:createDebugCompatibleScreenManifests' because:
+  Caching has been disabled for the task
+Skipping task ':app-prism:createDebugCompatibleScreenManifests' as it is up-to-date.
+Resolve mutations for :app-prism:extractDeepLinksDebug (Thread[Execution worker Thread 7,5,main]) started.
+:app-prism:extractDeepLinksDebug (Thread[Execution worker Thread 7,5,main]) started.
+
+> Task :app-prism:extractDeepLinksDebug UP-TO-DATE
+Build cache key for task ':app-prism:extractDeepLinksDebug' is da99d6a881e6d0846a28b2d064a8337d
+Skipping task ':app-prism:extractDeepLinksDebug' as it is up-to-date.
+Resolve mutations for :app-prism:processDebugMainManifest (Thread[Execution worker,5,main]) started.
+:app-prism:processDebugMainManifest (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :data:oss:compileDebugJavaWithJavac UP-TO-DATE
+Custom actions are attached to task ':data:oss:compileDebugJavaWithJavac'.
+Build cache key for task ':data:oss:compileDebugJavaWithJavac' is 6378122a7d91625d4c5bca3ef992b923
+Skipping task ':data:oss:compileDebugJavaWithJavac' as it is up-to-date.
+No compile result for :data:oss:compileDebugJavaWithJavac
+Resolve mutations for :data:oss:transformDebugClassesWithAsm (Thread[Execution worker Thread 4,5,main]) started.
+:data:oss:transformDebugClassesWithAsm (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :data:oss:transformDebugClassesWithAsm UP-TO-DATE
+Build cache key for task ':data:oss:transformDebugClassesWithAsm' is 85ceb1c170422d51eef00e85e453fa7b
+Skipping task ':data:oss:transformDebugClassesWithAsm' as it is up-to-date.
+Resolve mutations for :data:oss:bundleLibCompileToJarDebug (Thread[Execution worker Thread 4,5,main]) started.
+:data:oss:bundleLibCompileToJarDebug (Thread[Execution worker Thread 4,5,main]) started.
+
+> Task :app-prism:processDebugMainManifest UP-TO-DATE
+Build cache key for task ':app-prism:processDebugMainManifest' is 387787b08598a02994ce9b76ab24e6e9
+Skipping task ':app-prism:processDebugMainManifest' as it is up-to-date.
+
+> Task :data:oss:bundleLibCompileToJarDebug UP-TO-DATE
+Caching disabled for task ':data:oss:bundleLibCompileToJarDebug' because:
+  Simple merging task
+Skipping task ':data:oss:bundleLibCompileToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :data:oss) (Thread[Execution worker Thread 4,5,main]) started.
+Resolve mutations for :app-prism:processDebugManifest (Thread[Execution worker Thread 3,5,main]) started.
+:app-prism:processDebugManifest (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :app-prism:processDebugManifest UP-TO-DATE
+Build cache key for task ':app-prism:processDebugManifest' is f353ce2011f6de7ad98957951be3f0c9
+Skipping task ':app-prism:processDebugManifest' as it is up-to-date.
+Resolve mutations for :app-prism:processDebugManifestForPackage (Thread[Execution worker Thread 3,5,main]) started.
+:app-prism:processDebugManifestForPackage (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :app-prism:processDebugManifestForPackage UP-TO-DATE
+Custom actions are attached to task ':app-prism:processDebugManifestForPackage'.
+Build cache key for task ':app-prism:processDebugManifestForPackage' is 6807cba272748251d887d635eab5a711
+Skipping task ':app-prism:processDebugManifestForPackage' as it is up-to-date.
+Resolve mutations for :app-prism:processDebugResources (Thread[Execution worker Thread 3,5,main]) started.
+:app-prism:processDebugResources (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :data:ai-core:kaptGenerateStubsDebugKotlin UP-TO-DATE
+Build cache key for task ':data:ai-core:kaptGenerateStubsDebugKotlin' is 875af6ea2838d063869568be33209d1f
+Skipping task ':data:ai-core:kaptGenerateStubsDebugKotlin' as it is up-to-date.
+Resolve mutations for :data:ai-core:kaptDebugKotlin (Thread[Execution worker,5,main]) started.
+:data:ai-core:kaptDebugKotlin (Thread[Execution worker,5,main]) started.
+
+> Task :app-prism:processDebugResources UP-TO-DATE
+Build cache key for task ':app-prism:processDebugResources' is 2c98828e6c42e71173c436d6a6419ecb
+Skipping task ':app-prism:processDebugResources' as it is up-to-date.
+
+> Task :data:ai-core:kaptDebugKotlin UP-TO-DATE
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/data/ai-core/src/debug/java', not found
+Build cache key for task ':data:ai-core:kaptDebugKotlin' is 37139ae7a83daf8d1d0e89aee045b7ca
+Skipping task ':data:ai-core:kaptDebugKotlin' as it is up-to-date.
+Resolve mutations for :data:ai-core:compileDebugKotlin (Thread[Execution worker,5,main]) started.
+:data:ai-core:compileDebugKotlin (Thread[Execution worker,5,main]) started.
+
+> Task :data:ai-core:compileDebugKotlin UP-TO-DATE
+Build cache key for task ':data:ai-core:compileDebugKotlin' is aff7fb32e963f624ef719a540f8eae8d
+Skipping task ':data:ai-core:compileDebugKotlin' as it is up-to-date.
+Resolve mutations for :data:ai-core:compileDebugJavaWithJavac (Thread[Execution worker,5,main]) started.
+:data:ai-core:compileDebugJavaWithJavac (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :data:ai-core:compileDebugJavaWithJavac UP-TO-DATE
+Custom actions are attached to task ':data:ai-core:compileDebugJavaWithJavac'.
+Build cache key for task ':data:ai-core:compileDebugJavaWithJavac' is 77dd214842a64fc0c2614f747cf2605e
+Skipping task ':data:ai-core:compileDebugJavaWithJavac' as it is up-to-date.
+No compile result for :data:ai-core:compileDebugJavaWithJavac
+Resolve mutations for :data:ai-core:transformDebugClassesWithAsm (Thread[Execution worker Thread 3,5,main]) started.
+:data:ai-core:transformDebugClassesWithAsm (Thread[Execution worker Thread 3,5,main]) started.
+
+> Task :data:ai-core:transformDebugClassesWithAsm UP-TO-DATE
+Build cache key for task ':data:ai-core:transformDebugClassesWithAsm' is f43c3a3f1c9acc6ce01732a1fd1c22ac
+Skipping task ':data:ai-core:transformDebugClassesWithAsm' as it is up-to-date.
+Resolve mutations for :data:ai-core:bundleLibCompileToJarDebug (Thread[Execution worker Thread 3,5,main]) started.
+:data:ai-core:bundleLibCompileToJarDebug (Thread[Execution worker,5,main]) started.
+
+> Task :data:ai-core:bundleLibCompileToJarDebug UP-TO-DATE
+Caching disabled for task ':data:ai-core:bundleLibCompileToJarDebug' because:
+  Simple merging task
+Skipping task ':data:ai-core:bundleLibCompileToJarDebug' as it is up-to-date.
+work action resolve classes.jar (project :data:ai-core) (Thread[Execution worker,5,main]) started.
+Resolve mutations for :app-prism:kaptGenerateStubsDebugKotlin (Thread[Execution worker Thread 11,5,main]) started.
+:app-prism:kaptGenerateStubsDebugKotlin (Thread[Execution worker Thread 11,5,main]) started.
+
+> Task :app-prism:kaptGenerateStubsDebugKotlin
+Build cache key for task ':app-prism:kaptGenerateStubsDebugKotlin' is f12836b7ab50aaebcdace0d42c2b41c3
+Task ':app-prism:kaptGenerateStubsDebugKotlin' is not up-to-date because:
+  Task has failed previously.
+The input changes require a full rebuild for incremental task ':app-prism:kaptGenerateStubsDebugKotlin'.
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/main/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/kotlin', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+file or directory '/home/cslh-frank/main_app/app-prism/src/debug/java', not found
+Using Kotlin/JVM incremental compilation
+[KOTLIN] Kotlin compilation 'jdkHome' argument: null
+i: found daemon on port 17024 (196801 ms old), trying to connect
+i: connected to the daemon
+Options for KOTLIN DAEMON: IncrementalCompilationOptions(super=CompilationOptions(compilerMode=INCREMENTAL_COMPILER, targetPlatform=JVM, reportCategories=[0, 3], reportSeverity=2, requestedCompilationResults=[0], kotlinScriptExtensions=[]), areFileChangesKnown=false, modifiedFiles=null, deletedFiles=null, classpathChanges=NotAvailableForNonIncrementalRun, workingDir=/home/cslh-frank/main_app/app-prism/build/kotlin/kaptGenerateStubsDebugKotlin/cacheable, multiModuleICSettings=MultiModuleICSettings(buildHistoryFile=/home/cslh-frank/main_app/app-prism/build/kotlin/kaptGenerateStubsDebugKotlin/local-state/build-history.bin, useModuleDetection=true), usePreciseJavaTracking=true, outputFiles=[/home/cslh-frank/main_app/app-prism/build/tmp/kapt3/incrementalData/debug, /home/cslh-frank/main_app/app-prism/build/tmp/kapt3/stubs/debug, /home/cslh-frank/main_app/app-prism/build/kotlin/kaptGenerateStubsDebugKotlin/cacheable, /home/cslh-frank/main_app/app-prism/build/kotlin/kaptGenerateStubsDebugKotlin/local-state])
+
+> Task :app-prism:kaptGenerateStubsDebugKotlin FAILED
+
+[Incubating] Problems report is available at: file:///home/cslh-frank/main_app/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.13/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+71 actionable tasks: 5 executed, 66 up-to-date

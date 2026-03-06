@@ -32,6 +32,7 @@ class RealUnifiedPipelineTest {
     private lateinit var scheduleBoard: com.smartsales.prism.domain.memory.ScheduleBoard
     private lateinit var inspirationRepository: com.smartsales.prism.domain.scheduler.InspirationRepository
     private lateinit var alarmScheduler: com.smartsales.prism.domain.scheduler.AlarmScheduler
+    private lateinit var sessionTitleGenerator: com.smartsales.prism.domain.session.SessionTitleGenerator
 
     @Before
     fun setup() {
@@ -43,6 +44,8 @@ class RealUnifiedPipelineTest {
         scheduleBoard = mock()
         inspirationRepository = mock()
         alarmScheduler = mock()
+        sessionTitleGenerator = mock()
+
         // Create an explicit mock for ContextBuilder that simulates delay
         contextBuilder = mock {
             onBlocking { build(any(), any(), any(), any()) } doAnswer {
@@ -68,7 +71,8 @@ class RealUnifiedPipelineTest {
             scheduledTaskRepository = scheduledTaskRepository,
             scheduleBoard = scheduleBoard,
             inspirationRepository = inspirationRepository,
-            alarmScheduler = alarmScheduler
+            alarmScheduler = alarmScheduler,
+            sessionTitleGenerator = sessionTitleGenerator
         )
     }
 

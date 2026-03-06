@@ -100,7 +100,7 @@
 
 - **entity-writer**: W5 SHIPPED — Audited `upsertFromClue` Resolution Cascade (`resolvedId` → `findByAlias` → `findByDisplayName`), which is organically functioning correctly and conforms to the `InputParser`'s upstream LLM entity resolution payload contract. All existing 18 unit tests verified and passed.
 
-- **pipeline-telemetry**: W1-W2 SHIPPED — `PipelineTelemetry` abstracted and injected into `PrismOrchestrator`, `RealContextBuilder`, `RealInputParserService`, and `RealCoachPipeline`. Granular Tagging implemented to perfectly map the Layer 2 & Layer 3 architecture diagram into ADB logcat output.
+- **pipeline-telemetry**: W1-W2 SHIPPED — `PipelineTelemetry` abstracted and injected into `PrismOrchestrator`, `RealContextBuilder`, and `RealInputParserService`. Granular Tagging implemented to perfectly map the Layer 2 & Layer 3 architecture diagram into ADB logcat output.
 
 - **infra**: Holistic Cleanup SHIPPED — Purged dead Analyst routing from Orchestrator, fixed ContextBuilder `structuredJson` schema drift (Activity records), and removed dead `httpChecker` from Connectivity. Fixed tech debt ticking time-bombs.
 ### 2026-02-27
@@ -126,13 +126,13 @@
 - **entity-writer**: Wave 1.5 UNWINDING resolved — Sticky Notes abandoned, Scheduler is permanent caller
 - **scheduler**: Wave 9 SHIPPED — Smart Tips (TipGenerator, LlmTipGenerator, ViewModel lazy-load, shimmer/bubble UI)
 - **coach**: Sticky Notes integration — `ScheduledTaskRepository` injected into ContextBuilder, top 3 tasks as greeting context
-- **coach**: Two-phase greeting (§3.6) — Turn 1 reminds tasks naturally, Turn N passive reference only
-- **coach**: Spec updated — dependency table + pipeline flow + §3.6 documented
+- **mascot-service**: Two-phase greeting (§3.6) — Turn 1 reminds tasks naturally, Turn N passive reference only
+- **mascot-service**: Spec updated — dependency table + pipeline flow + §3.6 documented
 - **session-context**: `scheduleContext` field added to `SessionWorkingSet` spec model
 - **scheduler**: Wave 8 amendment — Real-time alarm-fire reflection via `SchedulerRefreshBus` (DEADLINE alarm → ViewModel sweep → instant UI update)
 - **scheduler**: Auto-expiry refined — 4 trigger points (init, drawer open, day switch, alarm fire), removed redundant sweeps from `triggerRefresh()`
 - **scheduler**: FIRE_OFF duration fix — LLM prompt now requires `duration: null` for instant reminders (was incorrectly assigning 5m)
-- **coach**: Output Quality hardened (4-Layer Fix) — Plain text system prompt (no `##`), `<KNOWN_FACTS>` data envelope, Positive-only hallucination guard, `MarkdownSanitizer` safety net. Fixed "delivery cycle sensitivity" hallucination.
+- **mascot-service**: Output Quality hardened (4-Layer Fix) — Plain text system prompt (no `##`), `<KNOWN_FACTS>` data envelope, Positive-only hallucination guard, `MarkdownSanitizer` safety net. Fixed "delivery cycle sensitivity" hallucination.
 
 ### 2026-02-12
 
@@ -141,10 +141,9 @@
 - **scheduler**: Voice Command Scope section — 5 classifications, scheduler-mode + active-session only, card-context-free
 - **scheduler**: Wave 8 — Auto-expiry: `autoCompleteExpiredTasks()` on ViewModel init, sweeps today's expired tasks. Debt: multi-day sweep, visual distinction manual vs auto
 - **scheduler**: Wave 12 SHIPPED — Task Completion Wiring (already implemented: toggleDone, alarm lifecycle, UI strikethrough, voice scope exclusion)
-- **scheduler**: Wave 11 SHIPPED — Global Reschedule via voice (fuzzy match + create-and-delete). Fixed: LLM misclassifying 延迟 as deletion, infinite reschedule loop via explicit schedulable guard
-- **coach**: §3.11 Schedule Guidance — educates user to use badge/record for schedule changes, no cross-mode mutation
-- **scheduler**: Sticky Notes Principle spec'd — scheduler does NOT create entities, defers to Coach/Analyst clarity loop
-- **entity-writer**: Caller updated `Scheduler/Coach` → `Coach/Analyst`, Wave 1.5 marked UNWINDING
+- **mascot-service**: §3.11 Schedule Guidance — Mascot educates user to use badge/record for schedule changes.
+- **scheduler**: Sticky Notes Principle spec'd — scheduler does NOT create entities, defers to Analyst clarity loop
+- **entity-writer**: Caller updated `Scheduler` → `Analyst`, Wave 1.5 marked UNWINDING
 - **scheduler**: Cerb sync — `interface.md` rewritten from code, `spec.md` state → PARTIAL, domain model drift fixed
 - **scheduler**: Cascade `-1m` offset removed (UX review: cognitively indistinct from `0m`)
 - **notifications**: Cascade visual tiers collapsed from 3 to 2 (EARLY + DEADLINE), added DND policy (1.7.10), UX invariants (1.7.11)
@@ -160,7 +159,6 @@
 - **session-context**: Spec updated — EntityKnowledge section added (pointer cache, pathIndex, EntityState machine)
 - **memory-center**: Spec updated — W3 Entity Knowledge Context, `getAll(limit)` read path
 - **entity-registry**: Spec updated — added `getAll(limit)` to interface, CRM Snapshot responsibilities
-- **coach**: Spec updated — entity knowledge injection from SessionWorkingSet Section 1
 - **tracker**: Rewritten as faithful Cerb index (was 591 lines of free-form content)
 - **feature-dev-planner**: Compressed 490→160 lines, added Single Spec Scope Rule, spec `state` management, Ship Gate
 - **lessons-learned**: Logged Multi-Spec Drift (Cerb Scope Violation)
@@ -169,7 +167,7 @@
 
 - **rl-module**: W5 SHIPPED — OS Model Upgrade. Split `getHabitContext()` → `loadUserHabits()` + `loadClientHabits()`
 - **entity-writer**: OS Model aligned — write-through to RAM S1
-- **coach**: OS Model aligned — consumer of RAM, reads from SessionWorkingSet
+- **mascot-service**: OS Model aligned — consumer of RAM, reads from SessionWorkingSet
 - **scheduler**: OS Model aligned — consumer of RAM Section 1
 - **client-profile-hub**: OS Layer declared: File Explorer
 - **interface-map**: Audited and synced with OS Model changes
@@ -186,7 +184,7 @@
 
 ### 2026-02-08
 
-- **coach**: W3-4 SHIPPED — Memory + habit integration, analyst suggestion mode
+- **mascot-service**: W3-4 SHIPPED — Memory + habit integration, proactive suggestion mode
 - **client-profile-hub**: W1-2 SHIPPED — Interface + models, timeline aggregation
 - **entity-registry**: W3 SHIPPED → spawned Client Profile Hub
 - **memory-center**: Entity-tagged `structuredJson` via `saveToMemory()`
@@ -219,7 +217,7 @@
 ### 2026-02-02
 
 - **scheduler**: W1-1.5 SHIPPED — Repository + linter, ViewModel wiring
-- **coach**: W1-2 SHIPPED — Interface + fake, real LLM + context
+- **mascot-service**: W1-2 SHIPPED — Interface + fake, real LLM + context
 
 ---
 

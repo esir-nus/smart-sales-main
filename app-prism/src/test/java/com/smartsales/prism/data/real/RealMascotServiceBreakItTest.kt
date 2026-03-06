@@ -49,6 +49,7 @@ class RealMascotServiceBreakItTest {
 
     @Test
     fun `break-it multiple rapid AppIdle events only prompt once`() = runBlocking {
+        delay(50) // Allow IO dispatcher to subscribe
         whenever(executor.execute(any(), any())).thenReturn(
             ExecutorResult.Success("Hello from AI", TokenUsage(100, 50))
         )
@@ -70,6 +71,7 @@ class RealMascotServiceBreakItTest {
 
     @Test
     fun `break-it any interaction resets the AppIdle latch`() = runBlocking {
+        delay(50) // Allow IO dispatcher to subscribe
         whenever(executor.execute(any(), any())).thenReturn(
             ExecutorResult.Success("First", TokenUsage())
         )

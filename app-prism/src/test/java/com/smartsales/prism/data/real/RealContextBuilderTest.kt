@@ -1,7 +1,7 @@
 package com.smartsales.prism.data.real
 
 import com.smartsales.prism.data.fakes.FakeEntityRepository
-import com.smartsales.prism.data.fakes.FakeReinforcementLearner
+import com.smartsales.prism.data.rl.RealReinforcementLearner
 import com.smartsales.prism.data.fakes.FakeTimeProvider
 import com.smartsales.prism.data.fakes.FakeUserHabitRepository
 import com.smartsales.prism.domain.model.Mode
@@ -25,7 +25,7 @@ class RealContextBuilderTest {
     private lateinit var contextBuilder: RealContextBuilder
     private lateinit var timeProvider: FakeTimeProvider
     private lateinit var habitRepository: FakeUserHabitRepository
-    private lateinit var reinforcementLearner: FakeReinforcementLearner
+    private lateinit var reinforcementLearner: RealReinforcementLearner
     private lateinit var memoryRepository: FakeMemoryRepository
     private lateinit var scheduledTaskRepository: TestScheduledTaskRepository
     private lateinit var mockMemoryRepo: FakeMemoryRepository
@@ -36,7 +36,7 @@ class RealContextBuilderTest {
         timeProvider = FakeTimeProvider()
         habitRepository = FakeUserHabitRepository()
         habitRepository.clear()  // Reset seed data for test isolation
-        reinforcementLearner = FakeReinforcementLearner(habitRepository)
+        reinforcementLearner = RealReinforcementLearner(habitRepository)
         memoryRepository = FakeMemoryRepository()
         scheduledTaskRepository = TestScheduledTaskRepository()
         // Initialize mock repos for the new constructor call

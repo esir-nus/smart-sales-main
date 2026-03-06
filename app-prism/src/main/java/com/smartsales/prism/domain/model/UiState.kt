@@ -13,8 +13,7 @@ sealed class UiState {
     data class Response(
         val content: String, 
         val structuredJson: String? = null, 
-        val suggestAnalyst: Boolean = false,
-        val workflows: List<com.smartsales.prism.domain.analyst.WorkflowSuggestion> = emptyList()
+        val suggestAnalyst: Boolean = false
     ) : UiState()
     data class SchedulerTaskCreated(
         val taskId: String,           // 用于冲突检测排除自身

@@ -84,10 +84,6 @@ dependencies {
     // REMOVED: projects.appPrism (is application module, not library)
     // REMOVED: projects.domain.prismCore (archived - see archived/ folder)
     implementation(projects.tingwuTestApp)
-    implementation(projects.feature.chat)
-    implementation(projects.feature.media)
-    implementation(projects.feature.connectivity)
-    implementation(projects.feature.usercenter)
     implementation(projects.core.util)
 
     implementation(platform(libs.compose.bom))
@@ -124,5 +120,4 @@ dependencies {
     androidTestImplementation(libs.hilt.android.testing)
     kaptAndroidTest(libs.hilt.compiler)
     debugImplementation(libs.compose.ui.test.manifest)
-    debugImplementation(projects.feature.designLab)
 }

@@ -1,10 +1,10 @@
 package com.smartsales.prism.data.pairing
 
 import com.smartsales.core.util.Result
-import com.smartsales.feature.connectivity.ConnectionState
-import com.smartsales.feature.connectivity.DeviceConnectionManager
-import com.smartsales.feature.connectivity.WifiCredentials as LegacyWifiCredentials
-import com.smartsales.feature.connectivity.scan.BleScanner
+import com.smartsales.prism.data.connectivity.legacy.ConnectionState
+import com.smartsales.prism.data.connectivity.legacy.DeviceConnectionManager
+import com.smartsales.prism.data.connectivity.legacy.WifiCredentials as LegacyWifiCredentials
+import com.smartsales.prism.data.connectivity.legacy.scan.BleScanner
 import com.smartsales.prism.domain.pairing.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*

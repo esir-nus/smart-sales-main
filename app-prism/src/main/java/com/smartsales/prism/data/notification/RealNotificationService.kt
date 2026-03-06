@@ -17,6 +17,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.smartsales.prism.R
+import com.smartsales.prism.domain.notification.NotificationAction
 import com.smartsales.prism.domain.notification.NotificationPriority
 import com.smartsales.prism.domain.notification.NotificationService
 import com.smartsales.prism.domain.notification.PrismNotificationChannel
@@ -63,7 +64,7 @@ class RealNotificationService @Inject constructor(
         body: String,
         channel: PrismNotificationChannel,
         priority: NotificationPriority,
-        contentIntent: PendingIntent?
+        action: NotificationAction
     ) {
         if (!hasPermission()) {
             Log.w(TAG, "通知权限未授予，跳过: id=$id, title=$title")
@@ -77,6 +78,26 @@ class RealNotificationService @Inject constructor(
             NotificationPriority.DEFAULT -> NotificationCompat.PRIORITY_DEFAULT
             NotificationPriority.HIGH -> NotificationCompat.PRIORITY_HIGH
             NotificationPriority.URGENT -> NotificationCompat.PRIORITY_MAX
+        }
+
+        val parsedContentIntent: PendingIntent? = when (action) {
+            is NotificationAction.None -> null
+            is NotificationAction.OpenApp -> {
+                val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
+                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    action.deepLinkParam?.let { param ->
+                        putExtra("deep_link_param", param)
+                    }
+                }
+                intent?.let {
+                    PendingIntent.getActivity(
+                        context,
+                        id.hashCode(),
+                        it,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                }
+            }
         }
 
         val isUrgent = priority == NotificationPriority.URGENT
@@ -110,7 +131,7 @@ class RealNotificationService @Inject constructor(
                     setAutoCancel(true)
                 }
                 vibrationPattern?.let { setVibrate(it) }
-                contentIntent?.let { setContentIntent(it) }
+                parsedContentIntent?.let { setContentIntent(it) }
             }
             .build()
 

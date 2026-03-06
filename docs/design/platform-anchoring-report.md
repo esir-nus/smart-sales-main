@@ -104,9 +104,12 @@
 
 ## Evidence
 
-Preview functions available in:
-- [ThinkingBox.kt](file:///home/cslh-frank/main_app/feature/chat/src/main/java/com/smartsales/feature/chat/prism/components/ThinkingBox.kt#L98)
-- [PlanCard.kt](file:///home/cslh-frank/main_app/feature/chat/src/main/java/com/smartsales/feature/chat/prism/components/PlanCard.kt#L149)
-- [ConflictResolver.kt](file:///home/cslh-frank/main_app/feature/chat/src/main/java/com/smartsales/feature/chat/prism/components/ConflictResolver.kt#L114)
-- [ResponseBubble.kt](file:///home/cslh-frank/main_app/feature/chat/src/main/java/com/smartsales/feature/chat/prism/components/ResponseBubble.kt#L155)
-- [MinimalChatScreen.kt](file:///home/cslh-frank/main_app/feature/chat/src/main/java/com/smartsales/feature/chat/prism/MinimalChatScreen.kt#L188)
+V1 Legacy component references (`ThinkingBox`, `PlanCard`, `ConflictResolver`, `MinimalChatScreen`) have been formally deprecated following the unified pipeline refactor.
+
+New UI architecture and tokens are defined in the Agent Intelligence `cerb-ui` specifications:
+- **UX/Visual Specs**: [Agent Intelligence UI Spec](file:///home/cslh-frank/main_app/docs/cerb-ui/agent-intelligence/spec.md)
+- **RAM Contracts**: [Agent Intelligence UI Interface](file:///home/cslh-frank/main_app/docs/cerb-ui/agent-intelligence/interface.md)
+
+Shipped components available in:
+- [ResponseBubble.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/components/ResponseBubble.kt)
+- [PrismChatScreen.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/PrismChatScreen.kt)

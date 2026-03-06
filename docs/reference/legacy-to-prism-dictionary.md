@@ -50,7 +50,7 @@
 
 ### Domain Layer (Pure Kotlin, Zero Android)
 
-> **Location**: `app-prism/src/main/java/com/smartsales/prism/domain/`
+> **Location**: `app-core/src/main/java/com/smartsales/prism/domain/`
 
 | Interface | File | Status | Use As Reference For |
 |-----------|------|--------|----------------------|

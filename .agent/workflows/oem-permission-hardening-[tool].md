@@ -44,21 +44,21 @@ cat docs/cerb/notifications/interface.md
 
 ```bash
 # OemCompat — all OEM detection + permission utilities
-cat app-prism/src/main/java/com/smartsales/prism/data/notification/OemCompat.kt
+cat app-core/src/main/java/com/smartsales/prism/data/notification/OemCompat.kt
 
 # Onboarding — where OEM-specific permission steps live
-cat app-prism/src/main/java/com/smartsales/prism/ui/onboarding/OnboardingScreen.kt
-cat app-prism/src/main/java/com/smartsales/prism/ui/onboarding/OnboardingStep.kt
-cat app-prism/src/main/java/com/smartsales/prism/data/onboarding/OnboardingGate.kt
+cat app-core/src/main/java/com/smartsales/prism/ui/onboarding/OnboardingScreen.kt
+cat app-core/src/main/java/com/smartsales/prism/ui/onboarding/OnboardingStep.kt
+cat app-core/src/main/java/com/smartsales/prism/data/onboarding/OnboardingGate.kt
 
 # AlarmScheduler — where exact alarm permission is checked
-cat app-prism/src/main/java/com/smartsales/prism/data/scheduler/RealAlarmScheduler.kt
+cat app-core/src/main/java/com/smartsales/prism/data/scheduler/RealAlarmScheduler.kt
 ```
 
 ### 2c. Check AndroidManifest
 
 ```bash
-grep -n "uses-permission\|receiver\|service\|BOOT_COMPLETED\|SCHEDULE_EXACT_ALARM\|POST_NOTIFICATIONS\|FOREGROUND_SERVICE\|WAKE_LOCK" app-prism/src/main/AndroidManifest.xml
+grep -n "uses-permission\|receiver\|service\|BOOT_COMPLETED\|SCHEDULE_EXACT_ALARM\|POST_NOTIFICATIONS\|FOREGROUND_SERVICE\|WAKE_LOCK" app-core/src/main/AndroidManifest.xml
 ```
 
 ---
@@ -144,7 +144,7 @@ After user approval, implement in this order:
 2. **OemCompat.kt** — add detection/intent code for the OEM
 3. **OnboardingStep.kt** — add step enum if new guidance needed
 4. **OnboardingScreen.kt** — add UI for the new step
-5. **Build + verify**: `./gradlew :app-prism:assembleDebug`
+5. **Build + verify**: `./gradlew :app-core:assembleDebug`
 
 ---
 

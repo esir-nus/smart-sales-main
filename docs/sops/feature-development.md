@@ -75,7 +75,7 @@ If spec seems wrong → **FLAG** and propose change.
 Before writing:
 ```bash
 # Check if similar code exists
-grep -rn "FeatureName" app-prism/
+grep -rn "FeatureName" app-core/
 
 # Check patterns to follow
 view_file docs/plans/tracker.md

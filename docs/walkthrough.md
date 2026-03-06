@@ -56,6 +56,6 @@ Transformed the monolithic `AudioCard.kt` into two distinct states/composables:
 *   **Adjusted**: Simplified implementation (Inlined accordions, callback navigation).
 
 ## Verification Results
-*   **Build**: ✅ SUCCESS (`./gradlew :app-prism:assembleDebug`)
+*   **Build**: ✅ SUCCESS (`./gradlew :app-core:assembleDebug`)
 *   **Coupling**: ✅ Low (1 caller in `AudioDrawer`).
 *   **Assets**: ✅ Updated with `VolumeUp`, `AutoAwesome` icons.

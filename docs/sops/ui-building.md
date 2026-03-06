@@ -93,7 +93,7 @@ Android implementation MUST reference `ui_element_registry.md` for:
 - For deep audits, use `/14-ui-transplant`.
 
 ### 3B. Implementation
-- Write Compose code in `app-prism/`.
+- Write Compose code in `app-core/`.
 - Use tokens from `Color.kt`, `Type.kt`, `Theme.kt`.
 - Respect registry Z-Map and invariants.
 - Verify build passes.

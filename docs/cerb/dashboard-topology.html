@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Cerb Interface Map - 2D Dashboard</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code&display=swap" rel="stylesheet">
+        <!-- SVG drawing library for architecture maps -->
+        <script src="https://cdn.jsdelivr.net/npm/leader-line-new@1.1.9/leader-line.min.js"></script>
+        <style>
+    :root {
+        --bg: #0f172a;
+        --surface: rgba(30, 41, 59, 0.8);
+        --surface-hover: rgba(51, 65, 85, 0.9);
+        --border: #334155;
+        --text: #f8fafc;
+        --text-muted: #94a3b8;
+        --glow: #c084fc;
+        --glow: #c084fc;
+        --success: #22c55e;
+        --warning: #f59e0b;
+        --error: #ef4444;
+        
+        --status-shipped: rgba(34, 197, 94, 0.2);
+        --status-shipped-border: #22c55e;
+        --status-planned: rgba(148, 163, 184, 0.1);
+        --status-planned-border: #64748b;
+        --status-interface: rgba(234, 179, 8, 0.2);
+        --status-interface-border: #eab308;
+        --status-wip: rgba(249, 115, 22, 0.2);
+        --status-wip-border: #f97316;
+        --status-blocked: rgba(239, 68, 68, 0.2);
+        --status-blocked-border: #ef4444;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+        font-family: 'Inter', -apple-system, sans-serif;
+        background-color: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+        padding: 40px;
+    }
+
+    .header {
+        margin-bottom: 60px;
+        text-align: center;
+        position: relative;
+        z-index: 10;
+    }
+    
+    .header h1 {
+        font-size: 2.5rem;
+        background: linear-gradient(135deg, #60a5fa, #c084fc);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 10px;
+    }
+    
+    .header p { color: var(--text-muted); }
+
+    .layer-container {
+        display: flex;
+        flex-direction: column-reverse; /* Bottom to top reading like a stack */
+        gap: 60px;
+        max-width: 1200px;
+        margin: 0 auto;
+        position: relative;
+    }
+
+    .layer {
+        position: relative;
+        background: transparent;
+        border: none;
+        padding: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .layer-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 30px;
+        color: var(--accent);
+        display: inline-block;
+        background: var(--bg);
+        padding: 5px 15px;
+        border: 1px solid var(--accent);
+        border-radius: 20px;
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+        position: relative;
+        z-index: 10;
+    }
+
+    .modules-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 40px 30px;
+        position: relative;
+        z-index: 10; /* Ensure grid is above the lines */
+    }
+
+    .module-card {
+        border-radius: 12px;
+        padding: 20px;
+        background: var(--surface);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: visible;
+        z-index: 15; /* Ensure cards are above everything else in grid */
+    }
+
+    .module-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+        z-index: 20;
+        border-color: var(--accent);
+    }
+
+    /* Connection anchoring points */
+    .anchor-top, .anchor-bottom {
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        background: var(--accent);
+        border-radius: 50%;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0; /* Hidden by default, useful for debugging */
+    }
+    
+    .anchor-top { top: -4px; }
+    .anchor-bottom { bottom: -4px; background: var(--glow); }
+
+    .module-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 15px;
+        position: relative;
+    }
+
+    .module-name {
+        font-weight: 700;
+        font-size: 1.15rem;
+    }
+    
+    .module-name a {
+        color: var(--text);
+        text-decoration: none;
+    }
+    
+    .module-name a:hover {
+        color: var(--accent);
+        text-decoration: underline;
+    }
+
+    .module-status {
+        font-size: 0.85rem;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-weight: 600;
+        border: 1px solid;
+    }
+
+    /* Status Styles */
+    .status-shipped { background: var(--status-shipped); border-color: var(--status-shipped-border); color: var(--status-shipped-border); }
+    .status-planned { background: var(--status-planned); border-color: var(--status-planned-border); color: var(--status-planned-border); border-style: dashed; }
+    .status-interface { background: var(--status-interface); border-color: var(--status-interface-border); color: var(--status-interface-border); }
+    .status-wip { background: var(--status-wip); border-color: var(--status-wip-border); color: var(--status-wip-border); }
+    .status-blocked { background: var(--status-blocked); border-color: var(--status-blocked-border); color: var(--status-blocked-border); }
+
+    .module-detail {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding-bottom: 8px;
+        border-bottom: 1px dotted rgba(255,255,255,0.1);
+    }
+    
+    .module-explanation {
+        font-size: 0.85rem;
+        color: #e2e8f0;
+        margin-bottom: 15px;
+        line-height: 1.5;
+        background: rgba(0,0,0,0.3);
+        padding: 10px 12px;
+        border-radius: 6px;
+        border-left: 3px solid var(--accent);
+    }
+
+    .module-detail span.label {
+        font-weight: 600;
+        color: var(--text);
+        opacity: 0.9;
+    }
+
+    .card-signature {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px dashed var(--border);
+        font-family: 'Fira Code', monospace;
+        font-size: 0.8rem;
+        color: #a78bfa;
+        word-break: break-all;
+    }
+    
+    .os-layer {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        font-size: 0.7rem;
+        background: rgba(0,0,0,0.4);
+        padding: 6px 10px;
+        border-top-left-radius: 12px;
+        border-bottom-right-radius: 12px;
+        color: var(--text-muted);
+    }
+    
+    .legend {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin-bottom: 40px;
+        flex-wrap: wrap;
+        background: var(--surface);
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.95rem;
+        font-weight: 500;
+    }
+    
+    .translation-hint {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-left: 4px;
+        font-weight: normal;
+    }
+
+    .tabs {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 40px;
+        position: relative;
+        z-index: 20;
+    }
+    
+    .tab-btn {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 1.05rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .tab-btn:hover {
+        background: var(--surface-hover);
+        color: var(--text);
+    }
+    
+    .tab-btn.active {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: var(--accent);
+        color: var(--accent);
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+    }
+    
+    .tab-content {
+        display: none;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Code Estimate CSS */
+    .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); transition: transform 0.3s ease; }
+    .card:hover { transform: translateY(-5px); border-color: var(--accent); box-shadow: 0 8px 30px rgba(59, 130, 246, 0.2); }
+    .card h2 { font-size: 1.5rem; color: var(--accent); margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px; }
+    .stat-box { background: rgba(0,0,0,0.4); padding: 20px; border-radius: 12px; text-align: center; border: 1px solid var(--border); }
+    .stat-value { font-size: 2rem; font-weight: 700; color: var(--text); font-family: 'Fira Code', monospace; margin-bottom: 5px; }
+    .stat-value.glow { color: var(--glow); text-shadow: 0 0 10px rgba(192, 132, 252, 0.5); }
+    .stat-label { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+    .full-width { grid-column: 1 / -1; }
+    .chart-container { position: relative; height: 300px; width: 100%; margin-top: 20px; }
+    
+    .gap-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; margin-left: 10px; }
+    .gap-success { background: rgba(34, 197, 94, 0.15); color: var(--success); border: 1px solid var(--success); }
+    .gap-warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid var(--warning); }
+    .gap-error { background: rgba(239, 68, 68, 0.15); color: var(--error); border: 1px solid var(--error); }
+    
+    .increment-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .increment-item:last-child { border-bottom: none; }
+    .increment-title { font-weight: 500; color: var(--text); }
+    .increment-lines { font-family: 'Fira Code', monospace; color: var(--accent); }
+    .increment-progress { height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; margin-top: 8px; overflow: hidden; }
+    .increment-bar { height: 100%; border-radius: 3px; }
+
+    /* Topology specific CSS */
+    .topology-sequence {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        padding: 40px 0;
+    }
+    .layer-block {
+        background: var(--surface);
+        border: 2px solid var(--border);
+        border-radius: 16px;
+        padding: 24px 32px;
+        width: 100%;
+        max-width: 800px;
+        text-align: center;
+        position: relative;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+    }
+    .layer-block:hover {
+        border-color: var(--accent);
+        box-shadow: 0 8px 30px rgba(59, 130, 246, 0.2);
+        transform: translateY(-2px);
+    }
+    .layer-block h2 {
+        color: var(--accent);
+        font-size: 1.5rem;
+        margin-bottom: 12px;
+    }
+    .layer-desc {
+        color: var(--text-muted);
+        font-size: 0.95rem;
+        margin-bottom: 20px;
+        line-height: 1.5;
+    }
+    .layer-modules-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+    }
+    .mini-module {
+        background: rgba(0,0,0,0.4);
+        border: 1px solid var(--border);
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        color: var(--text);
+        font-family: 'Fira Code', monospace;
+    }
+    .seq-arrow {
+        color: var(--accent);
+        font-size: 2rem;
+        line-height: 1;
+        opacity: 0.6;
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% { opacity: 0.3; transform: translateY(0); }
+        50% { opacity: 0.8; transform: translateY(-5px); }
+        100% { opacity: 0.3; transform: translateY(0); }
+    }
+    </style>
+    </head>
+    <body>
+        
+        <div class="header">
+            <h1>Cerb Architecture Dashboard <br><span style="font-size: 1.5rem; color: #a78bfa;">(分布式架构与项目规模面板)</span></h1>
+            <p>实时模块状态、领域输入输出契约与代码库规模</p>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item"><span class="module-status status-shipped">已上线</span> <span class="translation-hint">(实体)</span></div>
+            <div class="legend-item"><span class="module-status status-interface">仅接口</span> <span class="translation-hint">(桩代码)</span></div>
+            <div class="legend-item"><span class="module-status status-planned">计划中</span> <span class="translation-hint">(未开发)</span></div>
+            <div class="legend-item"><span class="module-status status-wip">开发中</span></div>
+        </div>
+
+        
+        <div class="tabs">
+            <a href="dashboard-topology.html" class="tab-btn active" style="text-decoration: none; display: inline-block;">拓扑层级</a>
+            <a href="dashboard-dataflow.html" class="tab-btn " style="text-decoration: none; display: inline-block;">跨模块数据流</a>
+            <a href="dashboard-estimate.html" class="tab-btn " style="text-decoration: none; display: inline-block;">代码量估算</a>
+        </div>
+
+        <!-- 1. Topology View -->
+
+        <div id="topology" class="tab-content" style="display: block;">
+            <div class="topology-sequence">
+
+    
+        <div class="layer-block">
+            <h2>层级 5: 智能</h2>
+            <div class="layer-desc">聚合多个数据服务层来源数据的跨领域服务。</div>
+            <div class="layer-modules-list">
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./client-profile-hub/spec.md">ClientProfileHub</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./rl-module/spec.md">RLModule</a></div>
+            </div>
+        </div>
+        
+            <div class="seq-arrow">↑</div>
+            
+        <div class="layer-block">
+            <h2>层级 4: 功能</h2>
+            <div class="layer-desc">面向用户的功能。接收核心管线(层级3)处理的结果，并读写数据服务(层级2)。</div>
+            <div class="layer-modules-list">
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./mascot-service/spec.md">Mascot (System I)</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./scheduler/spec.md">Scheduler</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./scheduler/spec.md">ScheduleBoard</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./badge-audio-pipeline/spec.md">BadgeAudioPipeline</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./audio-management/spec.md">AudioManagement</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./conflict-resolver/spec.md">ConflictResolver</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="../cerb-ui/agent-intelligence/spec.md">AgentIntelligenceUI</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./device-pairing/spec.md">DevicePairing</a></div>
+            </div>
+        </div>
+        
+            <div class="seq-arrow">↑</div>
+            
+        <div class="layer-block">
+            <h2>层级 3: 核心管线</h2>
+            <div class="layer-desc">编排基于大语言模型的处理流程。从数据服务层(层级2)读取数据。</div>
+            <div class="layer-modules-list">
+                <div class="mini-module">ContextBuilder</div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./input-parser/spec.md">InputParser</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./entity-disambiguation/spec.md">EntityDisambiguator</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./lightning-router/spec.md">LightningRouter</a></div>
+                <div class="mini-module">EntityResolver</div>
+                <div class="mini-module">ModelRegistry</div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./model-routing/spec.md">Executor</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./plugin-registry/spec.md">PluginRegistry</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./unified-pipeline/spec.md">UnifiedPipeline</a></div>
+            </div>
+        </div>
+        
+            <div class="seq-arrow">↑</div>
+            
+        <div class="layer-block">
+            <h2>层级 2: 数据服务</h2>
+            <div class="layer-desc">存储与查询领域数据。外层模块仅使用其对外接口，严禁直连存储。</div>
+            <div class="layer-modules-list">
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./entity-writer/spec.md">EntityWriter</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./entity-registry/spec.md">EntityRegistry</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./memory-center/spec.md">MemoryCenter</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./user-habit/spec.md">UserHabit</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./session-history/spec.md">SessionHistory</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./session-context/spec.md">SessionContext</a></div>
+            </div>
+        </div>
+        
+            <div class="seq-arrow">↑</div>
+            
+        <div class="layer-block">
+            <h2>层级 1: 基础设施</h2>
+            <div class="layer-desc">无上游依赖的底座服务。绝不反向调用其他模块。</div>
+            <div class="layer-modules-list">
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./connectivity-bridge/spec.md">ConnectivityBridge</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./notifications/spec.md">NotificationService</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./oss-service/spec.md">OSS</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./asr-service/spec.md">ASR</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./tingwu-pipeline/spec.md">TingwuPipeline</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./pipeline-telemetry/spec.md">PipelineTelemetry</a></div>
+            </div>
+        </div>
+        
+            </div>
+        </div>
+
+        
+
+        <script>
+            // No tab switching needed, just show content
+        </script>
+    </body>
+    </html>
+    

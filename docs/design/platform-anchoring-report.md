@@ -111,5 +111,5 @@ New UI architecture and tokens are defined in the Agent Intelligence `cerb-ui` s
 - **RAM Contracts**: [Agent Intelligence UI Interface](file:///home/cslh-frank/main_app/docs/cerb-ui/agent-intelligence/interface.md)
 
 Shipped components available in:
-- [ResponseBubble.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/components/ResponseBubble.kt)
-- [PrismChatScreen.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/PrismChatScreen.kt)
+- [ResponseBubble.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/components/ResponseBubble.kt)
+- [PrismChatScreen.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/PrismChatScreen.kt)

@@ -102,11 +102,11 @@ See [interface.md](./interface.md) for:
 **Goal**: Real storage-backed repository.
 
 > [!IMPORTANT]
-> **Storage Decision**: Room is NOT currently in `app-prism/build.gradle.kts`. Wave 2 implementation must either add Room dependency or use simpler file-based/SharedPreferences storage.
+> **Storage Decision**: Room is NOT currently in `app-core/build.gradle.kts`. Wave 2 implementation must either add Room dependency or use simpler file-based/SharedPreferences storage.
 > **Wave 2 Actual**: Use file-backed JSON storage (`StateFlow` + atomic active write) to satisfy persistence without introducing Room dependencies.
 
 **Implementation**:
-- [x] `RealAudioRepository` in `app-prism/src/main/java/com/smartsales/prism/data/audio/` with JSON file storage
+- [x] `RealAudioRepository` in `app-core/src/main/java/com/smartsales/prism/data/audio/` with JSON file storage
 - [x] Calls `ConnectivityBridge.downloadRecording()` for SMARTBADGE files
 - [x] Calls `TingwuPipeline.submit()` and `observeJob()` for transcription and intelligence extraction
 - [x] Progress tracking via StateFlow mapped from `TingwuJobState`, `AudioViewModel` intercepts Tingwu failures and surfaces via one-shot Toast (leaving domain state as PENDING)

@@ -1,6 +1,7 @@
 # ASR Service
 
 > **Cerb-compliant spec** — Audio transcription via Aliyun FunASR (Batch API).
+> **OS Layer**: Infrastructure (Layer 1) — Leaf service, no upstream dependencies
 > **State**: SHIPPED
 
 ---
@@ -138,7 +139,7 @@ sealed class AsrResult {
 - `com.alibaba:dashscope-sdk-java` (for Transcription)
 
 ### Credentials
-Requires both DashScope (for ASR) and Aliyun RAM (for OSS):
+Requires both DashScope (for ASR) and Aliyun RAM (Cloud API, not OS Model RAM) for OSS:
 - `DASHSCOPE_API_KEY`
 - `OSS_ACCESS_KEY_ID`
 - `OSS_ACCESS_KEY_SECRET`

@@ -77,7 +77,7 @@
 写代码前：
 ```bash
 # 检查是否有类似代码
-grep -rn "FeatureName" app-prism/
+grep -rn "FeatureName" app-core/
 
 # 检查要遵循的模式
 view_file docs/plans/tracker.md

@@ -66,8 +66,8 @@
 
 ### 2026-03-06
 
-- **architecture**: Layer 2 Domain Modularization (Stage 1) SHIPPED — Physically extracted pure Kotlin domain contracts for STM (`session`), LTM (`crm`, `memory`), and RL (`habit`) out of `app-prism` into four distinct, isolated Gradle library modules. Passed rigorous Architectural Drift Audit mathematically proving strict one-way dependency isolation between SSD and RAM boundaries.
-- **architecture**: The Great Assembly (Phase 1) SHIPPED — Extracted all 5 core Layer 1 Infrastructure modules from `app-prism/domain` into physically isolated Gradle libraries (`:data:connectivity`, `:core:notifications`, `:data:asr`, `:data:tingwu`, `:core:telemetry`). Passed strict Acceptance Team build & contract verification.
+- **architecture**: Layer 2 Domain Modularization (Stage 1) SHIPPED — Physically extracted pure Kotlin domain contracts for STM (`session`), LTM (`crm`, `memory`), and RL (`habit`) out of `app-core` into four distinct, isolated Gradle library modules. Passed rigorous Architectural Drift Audit mathematically proving strict one-way dependency isolation between SSD and RAM boundaries.
+- **architecture**: The Great Assembly (Phase 1) SHIPPED — Extracted all 5 core Layer 1 Infrastructure modules from `app-core/domain` into physically isolated Gradle libraries (`:data:connectivity`, `:core:notifications`, `:data:asr`, `:data:tingwu`, `:core:telemetry`). Passed strict Acceptance Team build & contract verification.
 
 - **architecture**: Finalized "Analyst Mode" sunsetting. Removed ghost "Analyst pending" tech debt from M3 milestone goals in favor of tracking actual Unified Pipeline blockers. Synced `plugin-registry` spec state to **SHIPPED** (Wave 4 Async Execution Wiring was previously implemented natively). Confirmed `audio-management` (Wave 2) is the true remaining blocker for full operational parity.
 - **agent-intelligence-ui**: Spec Created — Added dual-document specs (`spec.md` and `interface.md`) in new `docs/cerb-ui/` hierarchy. Strictly enforced "Dumb UI" and absolute decoupling from ViewModel and Plugins.
@@ -129,7 +129,7 @@
 ### 2026-02-14
 
 - **session-history**: Wave 4 SHIPPED — Auto-Renaming (`SessionTitleGenerator`, `LlmSessionTitleGenerator`, PrismVM trigger on first response, horizontal HistoryDrawer layout)
-- **infra**: Added `mockito-core` + `mockito-kotlin` to `libs.versions.toml` and `app-prism/build.gradle.kts`
+- **infra**: Added `mockito-core` + `mockito-kotlin` to `libs.versions.toml` and `app-core/build.gradle.kts`
 
 ### 2026-02-13
 

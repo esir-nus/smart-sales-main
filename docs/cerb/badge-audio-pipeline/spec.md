@@ -317,8 +317,8 @@ init {
 
 ```bash
 # Build check
-./gradlew :app-prism:compileDebugKotlin
+./gradlew :app-core:compileDebugKotlin
 
 # Check pipeline wiring
-grep -rn "BadgeAudioPipeline" app-prism/src/main/java/
+grep -rn "BadgeAudioPipeline" app-core/src/main/java/
 ```

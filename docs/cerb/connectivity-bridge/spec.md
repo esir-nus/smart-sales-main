@@ -1,6 +1,7 @@
 # Connectivity Bridge
 
 > **Cerb-compliant spec** — Prism-safe wrapper for legacy BLE + HTTP connectivity.
+> **OS Layer**: Infrastructure (Layer 1) — Leaf service, no upstream dependencies
 > **State**: SHIPPED
 
 ---
@@ -126,7 +127,7 @@ sealed class WavDownloadResult {
 
 ### ConnectivityModal
 
-**File**: [`ui/components/ConnectivityModal.kt`](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/components/ConnectivityModal.kt)
+**File**: [`ui/components/ConnectivityModal.kt`](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/components/ConnectivityModal.kt)
 
 **Trigger**: User taps 🔗 Bluetooth icon in top bar.
 
@@ -188,7 +189,7 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
   - [x] `ConnectivityBridge` interface in `domain/connectivity/`
   - [x] `FakeConnectivityBridge` returns mock data
   - [x] Zero imports from `feature:connectivity` in Prism domain
-  - [x] Build passes: `./gradlew :app-prism:compileDebugKotlin`
+  - [x] Build passes: `./gradlew :app-core:compileDebugKotlin`
 
 - **Test Cases**:
   - [x] Fake returns Connected state
@@ -279,7 +280,7 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
   - [x] `ConnectivityService.unpair()` added for hard disconnect
   - [x] `RealConnectivityService.disconnect()` calls `disconnectBle()`
   - [x] UI override workaround removed from `ConnectivityViewModel`
-  - [x] Build passes: `:app-prism:testDebugUnitTest` (23/23) + `:app-prism:compileDebugKotlin`
+  - [x] Build passes: `:app-core:testDebugUnitTest` (23/23) + `:app-core:compileDebugKotlin`
 
 - **Test Cases**:
   - [x] Unit: `DefaultDeviceConnectionManagerTest` with `InMemorySessionStore`
@@ -290,24 +291,24 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
 ### Files Changed
 
 **New** (3):
-- `app-prism/src/main/java/com/smartsales/prism/data/onboarding/OnboardingGate.kt`
-- `app-prism/src/main/java/com/smartsales/prism/data/connectivity/legacy/SessionStore.kt`
-- `app-prism/src/main/java/com/smartsales/prism/data/connectivity/legacy/SessionStoreImpl.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/onboarding/OnboardingGate.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/SessionStore.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/SessionStoreImpl.kt`
 
 **Modified** (11):
-- `app-prism/src/main/java/com/smartsales/prism/PrismMainActivity.kt`
-- `app-prism/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt`
-- `app-prism/src/main/java/com/smartsales/prism/data/connectivity/legacy/ConnectivityModule.kt`
-- `app-prism/src/test/java/com/smartsales/prism/data/connectivity/legacy/DefaultDeviceConnectionManagerTest.kt`
-- `app-prism/src/main/java/com/smartsales/prism/data/connectivity/legacy/FakeDeviceConnectionManager.kt`
+- `app-core/src/main/java/com/smartsales/prism/PrismMainActivity.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/ConnectivityModule.kt`
+- `app-core/src/test/java/com/smartsales/prism/data/connectivity/legacy/DefaultDeviceConnectionManagerTest.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/FakeDeviceConnectionManager.kt`
 - `feature/media/src/test/java/com/smartsales/feature/media/devicemanager/DeviceManagerViewModelTest.kt`
 - `app/src/test/java/com/smartsales/aitest/audio/DeviceHttpEndpointProviderImplTest.kt`
-- `app-prism/src/test/java/com/smartsales/prism/data/connectivity/legacy/setup/DeviceSetupViewModelTest.kt`
-- `app-prism/src/test/java/com/smartsales/prism/data/connectivity/legacy/setup/DeviceSetupViewModelRobustnessTest.kt`
-- `app-prism/src/main/java/com/smartsales/prism/domain/connectivity/ConnectivityService.kt`
-- `app-prism/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityService.kt`
-- `app-prism/src/main/java/com/smartsales/prism/data/fakes/FakeConnectivityService.kt`
-- `app-prism/src/main/java/com/smartsales/prism/ui/components/connectivity/ConnectivityViewModel.kt`
+- `app-core/src/test/java/com/smartsales/prism/data/connectivity/legacy/setup/DeviceSetupViewModelTest.kt`
+- `app-core/src/test/java/com/smartsales/prism/data/connectivity/legacy/setup/DeviceSetupViewModelRobustnessTest.kt`
+- `app-core/src/main/java/com/smartsales/prism/domain/connectivity/ConnectivityService.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityService.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/fakes/FakeConnectivityService.kt`
+- `app-core/src/main/java/com/smartsales/prism/ui/components/connectivity/ConnectivityViewModel.kt`
 
 
 ---
@@ -330,7 +331,7 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
   - [ ] L2: Disconnected state → recording notifications stop
 
 > [!NOTE]
-> Protocol SOT: [esp32-protocol.md §6](file:///home/cslh-frank/main_app/docs/specs/esp32-protocol.md#L111-L129)
+> Protocol SOT: ESP32 Firmware Protocol (handled via BLE GATT notifications)
 
 
 ---
@@ -349,7 +350,7 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
 ## Legacy Wrapping Strategy
 
 ```kotlin
-// app-prism/data/connectivity/RealConnectivityBridge.kt
+// app-core/data/connectivity/RealConnectivityBridge.kt
 class RealConnectivityBridge @Inject constructor(
     private val legacyManager: DeviceConnectionManager,  // from :feature:connectivity
     private val httpClient: BadgeHttpClient,             // from :feature:connectivity
@@ -380,8 +381,8 @@ class RealConnectivityBridge @Inject constructor(
 
 ```bash
 # Check no legacy imports in domain
-grep -rn "feature.connectivity" app-prism/src/main/java/**/domain/ && echo "FAIL"
+grep -rn "feature.connectivity" app-core/src/main/java/**/domain/ && echo "FAIL"
 
 # Build check
-./gradlew :app-prism:compileDebugKotlin
+./gradlew :app-core:compileDebugKotlin
 ```

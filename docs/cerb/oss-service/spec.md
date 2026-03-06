@@ -1,6 +1,7 @@
 # OSS Service
 
 > **Cerb-compliant spec** — Aliyun Object Storage Service file upload.
+> **OS Layer**: Infrastructure (Layer 1) — Leaf service, no upstream dependencies
 > **State**: SHIPPED
 
 ---

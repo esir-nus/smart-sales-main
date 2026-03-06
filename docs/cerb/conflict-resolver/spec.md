@@ -338,7 +338,7 @@ data class ReminderCooldown(
 
 ```bash
 # Build check
-./gradlew :app-prism:assembleDebug
+./gradlew :app-core:assembleDebug
 
 # Unit tests (if added)
 ./gradlew testDebugUnitTest --tests "*ConflictResolver*"

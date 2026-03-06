@@ -129,20 +129,20 @@ Every element definition follows this strict logic:
 
 | Element | State | Animation | Spec | Code | Link |
 |---------|-------|-----------|------|------|------|
-| **Conflict Card** | `Collapsed` → Tap | `spring(LowBouncy)` expand | Required | ✅ Impl | [SchedulerCards.kt:L180](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerCards.kt#L180) |
+| **Conflict Card** | `Collapsed` → Tap | `spring(LowBouncy)` expand | Required | ✅ Impl | [SchedulerCards.kt:L180](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerCards.kt#L180) |
 | **Conflict Card** | `Expanded` | **Breathing Red Tint** | Required | ❌ Missing | — |
 | **Actions** | `Resolved` | **Fade Out** animation | Required | ❌ Missing | — |
-| **All Cards** | `Swipe L→R` | `spring` delete | Required | ✅ Impl | [SchedulerTimeline.kt:L141](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerTimeline.kt#L141) |
-| **Task Card** | `Reschedule` | Slide Out (L/R) + Fade | Required | ✅ Impl | [SchedulerTimeline.kt:L88](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerTimeline.kt#L88) |
+| **All Cards** | `Swipe L→R` | `spring` delete | Required | ✅ Impl | [SchedulerTimeline.kt:L141](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerTimeline.kt#L141) |
+| **Task Card** | `Reschedule` | Slide Out (L/R) + Fade | Required | ✅ Impl | [SchedulerTimeline.kt:L88](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerTimeline.kt#L88) |
 
 ### 4.2 Timeline & Calendar
 
 | Element | State | Animation | Spec | Code | Link |
 |---------|-------|-----------|------|------|------|
-| **Handle** | `Week` → `Month` | Expansion | Required | ✅ Impl | [SchedulerCalendar.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerCalendar.kt) |
-| **Task Checkbox** | `Pending` → `Done` | Cross-fade | Required | ✅ Impl | [SchedulerCards.kt:L62](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerCards.kt#L62) |
-| **Inspiration** | `Idle` → Tap | Multi-Select Mode | Required | ✅ Impl | [SchedulerViewModel.kt:L46](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModel.kt#L46) |
-| **Date Cell (New Task)** | `Glow` | `infiniteTransition` 2s breathing | Required | ✅ Impl | [SchedulerCalendar.kt:L240](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerCalendar.kt#L240) |
+| **Handle** | `Week` → `Month` | Expansion | Required | ✅ Impl | [SchedulerCalendar.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerCalendar.kt) |
+| **Task Checkbox** | `Pending` → `Done` | Cross-fade | Required | ✅ Impl | [SchedulerCards.kt:L62](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerCards.kt#L62) |
+| **Inspiration** | `Idle` → Tap | Multi-Select Mode | Required | ✅ Impl | [SchedulerViewModel.kt:L46](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModel.kt#L46) |
+| **Date Cell (New Task)** | `Glow` | `infiniteTransition` 2s breathing | Required | ✅ Impl | [SchedulerCalendar.kt:L240](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerCalendar.kt#L240) |
 
 ---
 

@@ -1,7 +1,7 @@
 # 🔍 Interface Map Audit Report
 
 **Date:** 2026-03-05
-**Scope:** `interface-map.md` vs `app-prism` Codebase
+**Scope:** `interface-map.md` vs `app-core` Codebase
 **Methodology:** Exhaustive `grep` and file inspection across all 5 layers defined in the interface map.
 
 ## 🚨 Major Architecture Violations & False Positives

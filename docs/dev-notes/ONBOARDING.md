@@ -147,14 +147,14 @@ cat AGENTS.md
 
 **关键目录说明**：
 - `app/` - 主应用入口（Legacy Compose shell - 逐步废弃中）
-- `app-prism/` - Prism 架构核心，新版单体主工程
+- `app-core/` - Prism 架构核心，新版单体主工程
 - `data/ai-core/` - AI 核心服务（DashScope, Tingwu, OSS）
 - `core/` - 共享工具（util, test）
 - `docs/` - **重要！** 项目文档
 - `plans/` - 开发计划
 - `workflows/` - 工作流程
 
-**主要功能域 (现已合并于 app-prism)**：
+**主要功能域 (现已合并于 app-core)**：
 - `chat` - 聊天与核心对话流水线
 - `media` - 媒体功能（设备音频记录、播放）
 - `connectivity` - 设备连接（BLE/WiFi 配网）

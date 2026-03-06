@@ -667,8 +667,8 @@ Wire `isDone` toggle through ViewModel + alarm lifecycle.
 ./gradlew testDebugUnitTest --tests "*SchedulerLinter*"
 
 # Build check
-./gradlew :app-prism:assembleDebug
+./gradlew :app-core:assembleDebug
 
 # All Prism tests
-./gradlew :app-prism:testDebugUnitTest
+./gradlew :app-core:testDebugUnitTest
 ```

@@ -1,7 +1,7 @@
 # Agent Intelligence UI: Specification
 > **Context Boundary**: `docs/cerb-ui/agent-intelligence/`
 > **UX Philosophy**: "Transparent Autonomy" (Android Version of Antigravity)
-> **Status**: 🟡 In Progress
+> **Status**: PARTIAL
 
 ## 1. Core Visual Mechanics
 
@@ -43,3 +43,4 @@ A specialized payload container showing a document or plan being built.
 - **No Mystery Meat Loading**: No spinners without associated text explaining what is happening.
 - **Immediate Cancellation**: The "Cancel" action in the Task Horizon must respond immediately (≤200ms visual feedback even if backend takes longer to halt).
 - **Responsive Layout**: Designed for mobile viewports (360dp - 430dp width). Horizon must not break layout boundaries.
+- **Universal Context Independence**: These components are foundational "Agent UI primitives." They must not assume they are living inside a Chat layout. They must be generic enough to render correctly anywhere in the app (e.g., on a Dashboard or floating over a calendar).

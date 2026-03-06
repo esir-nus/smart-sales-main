@@ -69,3 +69,10 @@ The UI component emits these events back to the RAM layer:
 ## 5. You Should NOT
 - **Do not** bind these UI components directly to the network or the SSD (Database). They strictly read the emitted `UiState`.
 - **Do not** pass raw `qwen-max` response models into this UI. Parse them in the Domain layer into the `*State` data classes defined above.
+- **Do not** pass `ViewModel` instances (e.g., `PrismViewModel`) directly into these UI components. They must be "Dumb UI" components that only accept the defined `*State` data classes and emit simple event callbacks (e.g., `onCancelClicked: () -> Unit`). This ensures they remain decoupled and reusable on any screen.
+
+## 6. Code Reusability & Pipeline Integration (The "Plugin" Rule)
+To prevent the anti-pattern of writing new UI code for every new plugin, we enforce strict **Decoupled State Emission**:
+- **Plugin Ignorance**: Individual plugins (e.g., TranslationTool, WeatherPlugin) MUST NOT directly construct or emit `ActiveTaskHorizonState` or `ThinkingCanvasState`. Plugins should only emit raw domain events or simply execute their logic.
+- **Orchestrator Translation**: A centralized entity (e.g., `UnifiedPipeline` or `ToolRegistry`) automatically wraps plugin execution and translates the backend progress into these standard UI data contracts.
+- **Zero-UI Plugin Addition**: Adding a new "Tool 03" requires **ZERO** new UI code. Because the UI only listens to the generic `*State` emitted by the pipeline, any new tool plugged into the backend automatically gets the full Agent Intelligence visual treatment (Horizon tracking, Canvas logging) for free.

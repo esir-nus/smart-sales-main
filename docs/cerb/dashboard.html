@@ -580,7 +580,7 @@
                 </div>
                 
                 <div class="card-signature">submit(TingwuRequest) -> Result<String></div>
-                <div class="os-layer">SSD</div>
+                <div class="os-layer">OS: SSD</div>
             </div>
         
             <div class="module-card" id="feat_badgeaudiopipeline" data-reads-from='["feat_asr", "feat_oss", "feat_connectivitybridge"]'>
@@ -622,7 +622,7 @@
                 </div>
                 
                 <div class="card-signature"></div>
-                <div class="os-layer">App</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             <div class="module-card" id="feat_devicepairing" data-reads-from='["feat_legacy-ble-stack"]'>
@@ -643,7 +643,7 @@
                 </div>
                 
                 <div class="card-signature"></div>
-                <div class="os-layer">App</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             </div>
@@ -671,7 +671,7 @@
                 </div>
                 
                 <div class="card-signature">upsertFromClue(String, ...) -> UpsertResult</div>
-                <div class="os-layer">RAM Application</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             <div class="module-card" id="feat_entityregistry-ltm" data-reads-from='["feat_\u2014"]'>
@@ -692,7 +692,7 @@
                 </div>
                 
                 <div class="card-signature">findByAlias(String) -> List<EntityEntry></div>
-                <div class="os-layer">SSD</div>
+                <div class="os-layer">OS: SSD</div>
             </div>
         
             <div class="module-card" id="feat_entitydisambiguator" data-reads-from='["feat_entitywriter-to-write-cures"]'>
@@ -713,7 +713,7 @@
                 </div>
                 
                 <div class="card-signature">process(String) -> DisambiguationResult</div>
-                <div class="os-layer">RAM Application</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             <div class="module-card" id="feat_entityresolver" data-reads-from='["feat_entityregistry"]'>
@@ -734,7 +734,7 @@
                 </div>
                 
                 <div class="card-signature">resolve(String, List<EntityEntry>) -> EntityEntry?</div>
-                <div class="os-layer">RAM Application</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             </div>
@@ -762,7 +762,7 @@
                 </div>
                 
                 <div class="card-signature">recordEvent(PipelinePhase, String) -> Unit</div>
-                <div class="os-layer">RAM</div>
+                <div class="os-layer">OS: RAM</div>
             </div>
         
             <div class="module-card" id="feat_contextbuilder" data-reads-from='["feat_entityregistry", "feat_memorycenter", "feat_sessioncontext"]'>
@@ -783,7 +783,7 @@
                 </div>
                 
                 <div class="card-signature">build(String, Mode, ...) -> EnhancedContext</div>
-                <div class="os-layer">Kernel</div>
+                <div class="os-layer">OS: Kernel</div>
             </div>
         
             <div class="module-card" id="feat_inputparser" data-reads-from='["feat_aliasindex-internal"]'>
@@ -804,7 +804,7 @@
                 </div>
                 
                 <div class="card-signature">parseIntent(String) -> ParseResult</div>
-                <div class="os-layer">RAM Application</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             <div class="module-card" id="feat_lightningrouter" data-reads-from='["feat_contextbuilder"]'>
@@ -825,7 +825,7 @@
                 </div>
                 
                 <div class="card-signature">evaluateIntent(EnhancedContext) -> RouterResult?</div>
-                <div class="os-layer">RAM Application</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             <div class="module-card" id="feat_modelregistry" data-reads-from='["feat_\u2014"]'>
@@ -846,7 +846,7 @@
                 </div>
                 
                 <div class="card-signature">ModelRegistry</div>
-                <div class="os-layer">Config Hub</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             <div class="module-card" id="feat_executor" data-reads-from='["feat_modelrouter"]'>
@@ -888,7 +888,7 @@
                 </div>
                 
                 <div class="card-signature">executeTool(ToolId, PluginRequest) -> Flow<UiState></div>
-                <div class="os-layer">App Infra</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             <div class="module-card" id="feat_unifiedpipeline" data-reads-from='["feat_entityregistry", "feat_userhabit", "feat_memorycenter", "feat_contextbuilder"]'>
@@ -909,7 +909,7 @@
                 </div>
                 
                 <div class="card-signature">processInput(PipelineInput) -> Flow<PipelineResult></div>
-                <div class="os-layer">RAM Application</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             <div class="module-card" id="feat_agentintelligenceui" data-reads-from='["feat_\u2014"]'>
@@ -930,7 +930,7 @@
                 </div>
                 
                 <div class="card-signature"></div>
-                <div class="os-layer">RAM App</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             </div>
@@ -958,7 +958,7 @@
                 </div>
                 
                 <div class="card-signature"></div>
-                <div class="os-layer">Consumer of RAM</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             <div class="module-card" id="feat_scheduleboard" data-reads-from='["feat_scheduledtaskrepository-populates-index"]'>
@@ -979,7 +979,7 @@
                 </div>
                 
                 <div class="card-signature"></div>
-                <div class="os-layer">SSD</div>
+                <div class="os-layer">OS: SSD</div>
             </div>
         
             <div class="module-card" id="feat_conflictresolver" data-reads-from='["feat_scheduleboard"]'>
@@ -1000,7 +1000,7 @@
                 </div>
                 
                 <div class="card-signature"></div>
-                <div class="os-layer">RAM App</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             </div>
@@ -1049,7 +1049,7 @@
                 </div>
                 
                 <div class="card-signature"></div>
-                <div class="os-layer">RAM App (Out-of-band)</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             </div>
@@ -1077,7 +1077,7 @@
                 </div>
                 
                 <div class="card-signature">search(String) -> List<MemoryEntry></div>
-                <div class="os-layer">SSD</div>
+                <div class="os-layer">OS: SSD</div>
             </div>
         
             <div class="module-card" id="feat_userhabit-rl" data-reads-from='["feat_\u2014"]'>
@@ -1098,7 +1098,7 @@
                 </div>
                 
                 <div class="card-signature">observe(key, value, source...) -> Unit</div>
-                <div class="os-layer">SSD</div>
+                <div class="os-layer">OS: SSD</div>
             </div>
         
             <div class="module-card" id="feat_sessionhistory-stm" data-reads-from='["feat_\u2014"]'>
@@ -1119,7 +1119,7 @@
                 </div>
                 
                 <div class="card-signature">getGroupedSessionsFlow() -> Flow<Map></div>
-                <div class="os-layer">SSD</div>
+                <div class="os-layer">OS: SSD</div>
             </div>
         
             <div class="module-card" id="feat_sessioncontext-stm" data-reads-from='["feat_entitywriter-s1-via-write-through", "feat_rlmodule-s2/s3"]'>
@@ -1140,7 +1140,7 @@
                 </div>
                 
                 <div class="card-signature">*(Merged into ContextBuilder)*</div>
-                <div class="os-layer">Kernel (RAM)</div>
+                <div class="os-layer">OS: Kernel</div>
             </div>
         
             <div class="module-card" id="feat_clientprofilehub" data-reads-from='["feat_entityregistry", "feat_memorycenter", "feat_userhabit"]'>
@@ -1161,7 +1161,7 @@
                 </div>
                 
                 <div class="card-signature">getFocusedContext(String) -> FocusedContext</div>
-                <div class="os-layer">File Explorer</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             <div class="module-card" id="feat_rlmodule" data-reads-from='["feat_userhabit"]'>
@@ -1182,7 +1182,7 @@
                 </div>
                 
                 <div class="card-signature">loadUserHabits() -> HabitContext</div>
-                <div class="os-layer">RAM Application</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             </div>

@@ -195,11 +195,11 @@ data class TitleResult(
 
 ```bash
 # Build check
-./gradlew :app-prism:compileDebugKotlin
+./gradlew :app-core:compileDebugKotlin
 
 # Run history repository tests
-./gradlew :app-prism:testDebugUnitTest --tests "*RoomHistoryRepository*"
+./gradlew :app-core:testDebugUnitTest --tests "*RoomHistoryRepository*"
 
 # Run history viewmodel tests
-./gradlew :app-prism:testDebugUnitTest --tests "*HistoryViewModel*"
+./gradlew :app-core:testDebugUnitTest --tests "*HistoryViewModel*"
 ```

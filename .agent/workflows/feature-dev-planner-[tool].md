@@ -113,7 +113,7 @@ If OS Layer not in spec → update spec first.
 ## Phase 0.5: UI Discovery
 
 ```bash
-find app-prism/src/main/java -name "*[Feature]*" -type f | grep -i "ui/"
+find app-core/src/main/java -name "*[Feature]*" -type f | grep -i "ui/"
 ```
 
 | Exists? | Action |

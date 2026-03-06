@@ -41,7 +41,7 @@ When adding a new lesson (after USER confirms "problem fixed"):
 **Root Cause**: Pipeline silently returning `UiState.Error` — UI correctly showed nothing because there was no data.  
 **Key Insight**: **When UI doesn't render expected elements, the bug is often upstream in the data pipeline, not the UI itself.**  
 **Correct Fix**: Added `buildSchedulerSystemPrompt()` with explicit JSON schema.  
-**File(s)**: [DashscopeExecutor.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/real/DashscopeExecutor.kt#L227-L268)  
+**File(s)**: [DashscopeExecutor.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/data/real/DashscopeExecutor.kt#L227-L268)  
 **Pattern**: Always instrument ViewModel with tagged logs (`Log.d("SchedulerVM", "Pipeline result: $result")`) to trace data flow.  
 **Status**: ✅ CONFIRMED 2026-02-02
 
@@ -61,9 +61,9 @@ When adding a new lesson (after USER confirms "problem fixed"):
 3. Consumer uses: `result.dayOffset` instead of hardcoded value
 4. Don't forget exhaustive `when` handling in all consumers  
 **File(s)**:  
-- [UiState.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/domain/model/UiState.kt)
-- [PrismOrchestrator.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/real/PrismOrchestrator.kt)
-- [SchedulerViewModel.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModel.kt)  
+- [UiState.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/domain/model/UiState.kt)
+- [PrismOrchestrator.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/data/real/PrismOrchestrator.kt)
+- [SchedulerViewModel.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModel.kt)  
 **Pattern**: When adding fields to sealed class, grep for all `when` expressions that match on it  
 **Status**: ✅ CONFIRMED 2026-02-03
 
@@ -81,10 +81,10 @@ When adding a new lesson (after USER confirms "problem fixed"):
 2. Add `taskId: String` field to `UiState.SchedulerTaskCreated`
 3. Pass `excludeId = result.taskId` in conflict check  
 **File(s)**:  
-- [ScheduleBoard.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/domain/memory/ScheduleBoard.kt)
-- [RealScheduleBoard.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/memory/RealScheduleBoard.kt)
-- [UiState.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/domain/model/UiState.kt)
-- [SchedulerViewModel.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModel.kt)  
+- [ScheduleBoard.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/domain/memory/ScheduleBoard.kt)
+- [RealScheduleBoard.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/data/memory/RealScheduleBoard.kt)
+- [UiState.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/domain/model/UiState.kt)
+- [SchedulerViewModel.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModel.kt)  
 **Pattern**: Any "check for duplicates/conflicts after insert" needs **exclusion logic** for the just-inserted entity  
 **Status**: ✅ CONFIRMED 2026-02-03
 
@@ -141,7 +141,7 @@ flatMapLatest { offset ->
 combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset }
     .flatMapLatest { offset -> taskRepository.getTimelineItems(offset) }
 ```
-**File(s)**: [SchedulerViewModel.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModel.kt)  
+**File(s)**: [SchedulerViewModel.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModel.kt)  
 **Pattern**: In reactive chains, a Flow reference on its own line **does nothing**. Must be combined/collected.  
 **Heuristic**: If you see a Flow/SharedFlow reference that isn't assigned, collected, or combined → **DEAD CODE**.  
 **Status**: ✅ CONFIRMED 2026-02-05
@@ -177,8 +177,8 @@ combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset 
 2. Add example: `{"classification": "inspiration", "inspirationText": "以后想学吉他"}`
 3. Update Linter to read `inspirationText` with fallback chain  
 **File(s)**:  
-- [DashscopeExecutor.kt L262-274](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/real/DashscopeExecutor.kt#L262-L274)
-- [SchedulerLinter.kt L37-40](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerLinter.kt#L37-L40)  
+- [DashscopeExecutor.kt L262-274](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/data/real/DashscopeExecutor.kt#L262-L274)
+- [SchedulerLinter.kt L37-40](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerLinter.kt#L37-L40)  
 **Pattern**: **When LLM classifies + extracts data, ensure prompt REQUIRES all fields that downstream code expects.** Don't rely on optional fields.  
 **Heuristic**: If Linter extracts field X from LLM JSON, grep prompt for requirement of field X.  
 **Status**: ✅ CONFIRMED 2026-02-05
@@ -192,8 +192,8 @@ combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset 
 **Wrong Approach**: Increasing the delay (fragile), polling in a loop (wasteful)  
 **Correct Fix**: Replace fire-and-poll with `suspend fun reconnectAndWait()` that directly calls `connectUsingSession()` and returns the actual outcome. No delay, no polling.  
 **File(s)**:  
-- [DeviceConnectionManager.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt) — new `reconnectAndWait()` 
-- [RealConnectivityService.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityService.kt) — calls `reconnectAndWait()`  
+- [DeviceConnectionManager.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt) — new `reconnectAndWait()` 
+- [RealConnectivityService.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityService.kt) — calls `reconnectAndWait()`  
 **Pattern**: **Never fire-and-poll async operations with fixed delays.** Use suspend functions that return actual results. If you see `fire() → delay(N) → poll`, it's a race condition waiting to happen.  
 **Status**: ✅ CONFIRMED 2026-02-07
 
@@ -208,7 +208,7 @@ combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset 
 **Key Insight**: **The spec already had the right separation** — `isReady()` was designed for BLE+HTTP pre-flight. The HTTP check was in the wrong layer.  
 **Diagnostic**: `adb logcat | grep "RX \[NetworkResponse\]"` → `IP#192.168.0.106` proved BLE worked, HTTP was the sole blocker.  
 **File(s)**:  
-- [DeviceConnectionManager.kt L366-384](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt#L366-L384)  
+- [DeviceConnectionManager.kt L366-384](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt#L366-L384)  
 **Pattern**: **Don't gate connection state on downstream service availability.** BLE connected ≠ HTTP server running. Separate "can I talk to the device?" from "can I download files?"  
 **Heuristic**: If a function gates on multiple protocols (BLE + HTTP), ask: *"Do ALL callers need ALL these checks?"* If not, the function is conflating concerns.  
 **Status**: ✅ CONFIRMED 2026-02-07
@@ -226,7 +226,7 @@ combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset 
 **Correct Fix**: Two-layer defense:
 1. System prompt: Add explicit rule `绝不编造历史 — 不要引用或捏造任何以前的对话内容`
 2. Runtime: When `memoryHits.isEmpty()`, inject `注意: 当前没有任何历史对话记录` into the prompt body  
-**File(s)**: [DashscopeExecutor.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/real/DashscopeExecutor.kt) — L193 (runtime), L232 (Coach), L255 (Analyst)  
+**File(s)**: [DashscopeExecutor.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/data/real/DashscopeExecutor.kt) — L193 (runtime), L232 (Coach), L255 (Analyst)  
 **Pattern**: **Every LLM system prompt must include anti-hallucination rules for empty context.** Don't assume the model will be honest about what it doesn't know.  
 **Heuristic**: When adding a new LLM mode/pipeline, ask: "What happens when context is empty?" If the answer is "LLM freestyles" → add guardrail.  
 **Status**: ⏳ PENDING L3 — 2026-02-08
@@ -259,7 +259,7 @@ combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset 
 - Pipeline layers (LLM, Linter, UI) were correct; only the persistence mapper dropped the data.
 **Wrong Approach**: Assuming UI bug or LLM extraction failure without checking the mapper.
 **Correct Fix**: Reconstruct `dateRange` in `toDomain()` using stored timestamps, duplicating the formatting logic from `SchedulerLinter`.
-**File(s)**: [ScheduledTaskEntity.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/persistence/ScheduledTaskEntity.kt)
+**File(s)**: [ScheduledTaskEntity.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/data/persistence/ScheduledTaskEntity.kt)
 **Pattern**: When a specific field is missing in UI but present in data model, **check the Mapper** (`toDomain`/`toUiState`) first.
 **Status**: ✅ CONFIRMED 2026-02-09
 
@@ -279,7 +279,7 @@ combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset 
 These flows are **logically independent**. The only shared resource is the BLE write pipe.  
 **Correct Fix**: Add `writeLock = Mutex()` inside `GattContext.writeCharacteristic()` — serialize ALL BLE writes at the transport layer. Then `respondToTimeSync()` becomes a simple, standalone handler with zero awareness of provisioning.  
 **Result**: Removed ~40 lines of flag/defer complexity. Net simpler, net more correct.  
-**File(s)**: [GattBleGateway.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGateway.kt) — `GattContext.writeLock`  
+**File(s)**: [GattBleGateway.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGateway.kt) — `GattContext.writeLock`  
 **Pattern**: **When two independent flows share a resource, serialize at the resource level, not the flow level.** If you're adding flags like `isDoingX` to block `Y`, ask: "Is the real problem that X and Y share a pipe?" If yes, lock the pipe, not the logic.  
 **Heuristic**: If your fix requires one feature to "know about" another feature → you're coupling at the wrong layer. Push the lock DOWN to the shared resource.  
 **Corollary (from Frank)**: "Why should we respond tim# when badge sends SD#?" — if your mental model requires explaining why Feature A cares about Feature B's state, you've coupled them wrong.  
@@ -303,7 +303,7 @@ These flows are **logically independent**. The only shared resource is the BLE w
 4. **"Rote memorization ≠ intelligence"** — recalling "Feb 8 CEO had meeting" is trivia. Knowing "CEO → company X → deal stage Y → buying role Z" is intelligence  
 **Pattern**: **Frank's conceptual descriptions are human shorthand. Always verify against `data class` definitions before building.** The schema is the spec, the name is just a hint.  
 **Corollary (from Frank)**: "I sometimes describe my thought conceptually or simply use cool names — that could be misleading to agents."  
-**Agent-Friendly Check**: Before implementing any named concept, ask: `grep "data class [ConceptName]" app-prism/` — does the actual model match what you're about to build?  
+**Agent-Friendly Check**: Before implementing any named concept, ask: `grep "data class [ConceptName]" app-core/` — does the actual model match what you're about to build?  
 **Status**: ⏳ PENDING — 2026-02-11
 
 ---
@@ -341,7 +341,7 @@ This happens when an agent uses a tool to write or replace file content and mist
 1. **Read the compiler error carefully.** It gives the exact line number (e.g., `AudioDrawer.kt:2:29`).
 2. **View the file at that specific line number** instead of guessing.
 3. Remove the extraneous ` ```kotlin ` or other markdown tags from the source file.  
-**File(s)**: [AudioDrawer.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/drawers/AudioDrawer.kt)  
+**File(s)**: [AudioDrawer.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/drawers/AudioDrawer.kt)  
 **Pattern**: **Never ignore the compiler's line numbers.** If the error is on line 2, the bug is on line 2, not line 279.  
 **Status**: ✅ CONFIRMED 2026-02-25
 
@@ -368,7 +368,7 @@ This happens when an agent uses a tool to write or replace file content and mist
 1. Check Aliyun's V2 OpenAPI documentation for `GetTaskInfo`.
 2. Observe that results are NOT returned via an API endpoint, but as a **Pre-Signed OSS URL** embedded inside the `Result` payload of the `GetTaskInfo` response itself (e.g., `statusResponse.data?.resultLinks?.get("Transcription")`).
 3. Refactor the pipeline to grab that dynamic URL and download the JSON blob directly using a vanilla `OkHttpClient`.
-**File(s)**: [RealTingwuPipeline.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/tingwu/RealTingwuPipeline.kt)
+**File(s)**: [RealTingwuPipeline.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/data/tingwu/RealTingwuPipeline.kt)
 **Pattern**: When dealing with Aliyun V2 APIs, large artifacts (transcripts, summaries, chapters) are returned as Pre-Signed OSS URLs `ResultLinks`, never as direct REST endpoints.
 **Status**: ✅ CONFIRMED 2026-02-26
 
@@ -380,7 +380,7 @@ This happens when an agent uses a tool to write or replace file content and mist
 **Root Cause**: **Treating the LLM solely as a syntax text extractor rather than a semantic reasoning engine.** This leads to over-engineered, rigid Kotlin logic trying to natively solve things the LLM already understands natively.
 **Wrong Approach**: Using Kotlin math to find the connection between "CEO" and "Tim Cook" (which fails 100%), or trying to maintain custom dictionary lookup logic.
 **Correct Fix**: Dump a lightweight "Contact Sheet" (ID mapped to Name/Aliases) directly into the LLM System Prompt. Instruct the LLM to route the parsed intent directly to the known ID.
-**File(s)**: [RealInputParserService.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/parser/RealInputParserService.kt) (Deleted `AliasIndex.kt`)
+**File(s)**: [RealInputParserService.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/data/parser/RealInputParserService.kt) (Deleted `AliasIndex.kt`)
 **Pattern**: **For semantic issues (nicknames, homophones, conceptual mapping), do not seek hardcoded math solutions.** Pass the targeted context boundaries to the LLM and let it solve the mapping natively.
 **Status**: ✅ CONFIRMED 2026-02-28
 
@@ -406,7 +406,7 @@ This happens when an agent uses a tool to write or replace file content and mist
 **Root Cause**: **D8/Kapt silently dropping standalone interfaces during DEX merging.** When an `@EntryPoint` interface is declared in its own file and only referenced via reflection/Hilt generated code, Dalvik AOT compilation (`dex2oat`) fails to find it, causing the entire `SingletonC` or `Application` component to fail verification and crash on boot.  
 **Wrong Approach**: Searching for missing dependencies, clearing caches, or assuming compilation failed.  
 **Correct Fix**: Move the interface definition directly into the Kotlin file that consumes it (e.g., the UI file doing the EntryPointAccessors call). This forces the compiler to package the interface with strongly referenced code, preventing it from being silently dropped during DEX merging.  
-**File(s)**: [ConflictCard.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/drawers/scheduler/ConflictCard.kt)  
+**File(s)**: [ConflictCard.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/ConflictCard.kt)  
 **Pattern**: If a standalone interface class throws `NoClassDefFoundError` at runtime despite successful compilation, move its declaration into the file of its primary consumer to bypass D8 exclusion bugs.  
 **Status**: ✅ CONFIRMED 2026-03-04
 
@@ -454,7 +454,7 @@ This happens when an agent uses a tool to write or replace file content and mist
 **Root Cause**: Used `dismissDirection != null` which is always true inside `backgroundContent` lambda  
 **Wrong Approach**: `dismissState.progress > 0f` — also unreliable  
 **Correct Fix**: Use `dismissState.targetValue != SwipeToDismissBoxValue.Settled`  
-**File(s)**: [SchedulerTimeline.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerTimeline.kt)  
+**File(s)**: [SchedulerTimeline.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerTimeline.kt)  
 **Pattern**: Inside SwipeToDismissBox lambdas, check `targetValue` state, not `dismissDirection`  
 **Status**: ✅ CONFIRMED 2026-02-02
 
@@ -465,7 +465,7 @@ This happens when an agent uses a tool to write or replace file content and mist
 **Symptom**: Tasks saved with wrong time (defaulted to "now" instead of scheduled time)  
 **Root Cause**: Linter outputs `"2026-02-03 03:00 - ..."` but `parseDateRange()` expected `~` delimiter with 2 parts  
 **Correct Fix**: Handle 3 formats: `~` (full range), `- ...` (open-ended), ` - ` (same-day)  
-**File(s)**: [RealScheduledTaskRepository.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/data/scheduler/RealScheduledTaskRepository.kt)  
+**File(s)**: [RealScheduledTaskRepository.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/data/scheduler/RealScheduledTaskRepository.kt)  
 **Pattern**: When parsing formats between layers, test with ALL format variants the upstream can produce  
 **Status**: ✅ CONFIRMED 2026-02-02
 
@@ -476,7 +476,7 @@ This happens when an agent uses a tool to write or replace file content and mist
 **Symptom**: Tapping empty area in drawer dismisses it (clicks pass through to scrim)  
 **Root Cause**: Drawer content Column doesn't consume pointer events  
 **Correct Fix**: Add `pointerInput(Unit) { awaitPointerEventScope { while(true) { awaitPointerEvent() } } }`  
-**File(s)**: [SchedulerDrawer.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/drawers/SchedulerDrawer.kt)  
+**File(s)**: [SchedulerDrawer.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/drawers/SchedulerDrawer.kt)  
 **Pattern**: Modal content must explicitly consume events to prevent passthrough  
 **Reference**: [compose-scrim-drawer-pattern.md](file:///home/cslh-frank/main_app/.agent/rules/compose-scrim-drawer-pattern.md)  
 **Status**: ✅ CONFIRMED 2026-02-02
@@ -491,7 +491,7 @@ This happens when an agent uses a tool to write or replace file content and mist
 - Calculate `selectedDayOfMonth = todayDayOfMonth + activeDay`  
 - Pass to CalendarRow, apply border ring for selected (not today)  
 - Visual: Today = filled circle, Selected = border ring  
-**File(s)**: [SchedulerCalendar.kt](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerCalendar.kt)  
+**File(s)**: [SchedulerCalendar.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerCalendar.kt)  
 **Pattern**: Date pickers need 3 visual states: normal, today, selected (and selected+today)  
 **Status**: ✅ CONFIRMED 2026-02-02
 

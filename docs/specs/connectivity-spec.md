@@ -2,7 +2,7 @@
 
 > **Scope:** BLE discovery, Wi-Fi provisioning, HTTP media server reachability, session persistence, and auto-reconnect for BT311 (and future devices).
 
-This doc defines the **contract** for the connectivity layer and the UI flows that sit on top of it. New work on `app-prism/.../connectivity/legacy`, `feature/media/devicemanager`, or DeviceSetup **must** follow this document.
+This doc defines the **contract** for the connectivity layer and the UI flows that sit on top of it. New work on `app-core/.../connectivity/legacy`, `feature/media/devicemanager`, or DeviceSetup **must** follow this document.
 
 ---
 
@@ -25,7 +25,7 @@ This doc defines the **contract** for the connectivity layer and the UI flows th
 
 ### 2.1 Layers
 
-* **Connectivity core (`app-prism/.../connectivity/legacy`)**
+* **Connectivity core (`app-core/.../connectivity/legacy`)**
 
   * `DeviceConnectionManager` / `DefaultDeviceConnectionManager`
   * BLE scan & profile matching (`AndroidBleScanner`, `BleProfileConfig`)
@@ -33,7 +33,7 @@ This doc defines the **contract** for the connectivity layer and the UI flows th
   * HTTP endpoint checker (`HttpEndpointChecker`)
   * Session storage (BT311 identity + HTTP base URL)
 
-* **Setup UI (`app-prism/.../connectivity/legacy/setup`)**
+* **Setup UI (`app-core/.../connectivity/legacy/setup`)**
 
   * `DeviceSetupViewModel`
   * `DeviceSetupScreen`
@@ -369,7 +369,7 @@ The connectivity core and UI must align:
 
 ## 8. Testing guidelines
 
-Every change in `app-prism/.../connectivity/legacy` or `feature/media/devicemanager` must include tests.
+Every change in `app-core/.../connectivity/legacy` or `feature/media/devicemanager` must include tests.
 
 ### 8.1 Unit tests
 

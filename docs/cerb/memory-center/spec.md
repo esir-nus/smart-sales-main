@@ -206,11 +206,11 @@ data class DecisionRecord(
 
 ```bash
 # Build check
-./gradlew :app-prism:compileDebugKotlin
+./gradlew :app-core:compileDebugKotlin
 
 # Run memory-related tests
-./gradlew :app-prism:testDebugUnitTest --tests "*Memory*"
-./gradlew :app-prism:testDebugUnitTest --tests "*ScheduleBoard*"
+./gradlew :app-core:testDebugUnitTest --tests "*Memory*"
+./gradlew :app-core:testDebugUnitTest --tests "*ScheduleBoard*"
 ```
 
 ---

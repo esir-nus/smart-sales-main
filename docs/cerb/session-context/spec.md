@@ -119,11 +119,11 @@ enum class EntityState {
 
 ```bash
 # Build check
-./gradlew :app-prism:compileDebugKotlin
+./gradlew :app-core:compileDebugKotlin
 
 # Run working set unit tests
-./gradlew :app-prism:testDebugUnitTest --tests "*SessionWorkingSetTest*"
+./gradlew :app-core:testDebugUnitTest --tests "*SessionWorkingSetTest*"
 
 # Run kernel integration tests
-./gradlew :app-prism:testDebugUnitTest --tests "*RealContextBuilder*"
+./gradlew :app-core:testDebugUnitTest --tests "*RealContextBuilder*"
 ```

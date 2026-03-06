@@ -25,9 +25,9 @@ All color, spacing, typography, and component values are defined in:
 | File | Purpose |
 |------|---------|
 | [`design-tokens.json`](file:///home/cslh-frank/main_app/docs/design/design-tokens.json) | **Master token file** — primitives, semantics, scales |
-| [`Color.kt`](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/theme/Color.kt) | Compose color definitions |
-| [`Type.kt`](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/theme/Type.kt) | Compose typography definitions |
-| [`Theme.kt`](file:///home/cslh-frank/main_app/app-prism/src/main/java/com/smartsales/prism/ui/theme/Theme.kt) | Compose theme root |
+| [`Color.kt`](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/theme/Color.kt) | Compose color definitions |
+| [`Type.kt`](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/theme/Type.kt) | Compose typography definitions |
+| [`Theme.kt`](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/theme/Theme.kt) | Compose theme root |
 
 > [!IMPORTANT]
 > When updating design values, edit `design-tokens.json` first, then update the Kotlin consumers to match.

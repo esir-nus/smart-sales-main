@@ -31,10 +31,20 @@ fun includeModule(path: String) {
 }
 
 includeModule(":app")
-includeModule(":app-prism")  // Prism Clean Room (isolated from legacy)
+includeModule(":app-core")  // Core Application Shell (Orchestrator, Features, UI)
 includeModule(":tingwuTestApp")
 includeModule(":data:ai-core")
 includeModule(":data:oss")
+includeModule(":data:connectivity")
+includeModule(":data:asr")
+includeModule(":data:tingwu")
 includeModule(":core:util")
+includeModule(":core:telemetry")
+includeModule(":core:notifications")
 includeModule(":core:test")
 // ARCHIVED: domain:prism-core, data:prism-lib, feature:* (see archived/ folder)
+
+includeModule(":domain:crm")
+includeModule(":domain:memory")
+includeModule(":domain:habit")
+includeModule(":domain:session")

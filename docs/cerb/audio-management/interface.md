@@ -110,7 +110,7 @@ enum class TranscriptionStatus {
 
 ## You Should NOT
 
-- ❌ Import from `app-prism/data` implementation layers
+- ❌ Import from `app-core/data` implementation layers
 - ❌ Call `BadgeAudioPipeline` directly (different use case — see spec.md)
 - ❌ Assume files are always local (SMARTBADGE files may need download)
 - ❌ Mutate `AudioFile` directly (use repository methods)

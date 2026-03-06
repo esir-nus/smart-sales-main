@@ -1,487 +1,69 @@
-# Smart Sales Android - 生产级别代码量估算
+# Smart Sales: Production Readiness Dashboard 🎮
 
-## 📋 执行摘要
-
-### 当前状态
-- **总代码量**：**200,058 行**（核心代码 188,821 + 测试 11,150 + 资源 87）
-- **应用规模**：**大型应用**
-- **成熟度**：T1（部分模块稳定，核心流水线 UnifiedPipeline 重构完成）
-- **测试覆盖率**：需要持续提升（受清理影响，当前测试代码量 11,150）
-
-### 生产级目标
-- **保守估计**：**≈210,000 行** 
-- **理想估计**：**≈225,000 行** 
-- **核心代码目标**：**195,000 - 205,000 行**
-- **预计开发时间**：**3-6 个月**达到生产级
-
-### 关键差距
-| 维度 | 状态 | 优先级 |
-|------|------|--------|
-| 测试覆盖率 | ✅ 已达标 | - |
-| 错误处理 | ⚠️ 需要增强 | 高 |
-| 性能监控 | ❌ 缺失 | 高 |
-| 安全性 | ⚠️ 需要提升 | 高 |
-| 文档完整性 | ⚠️ 需要完善 | 中 |
-| 真实集成验证 | ⚠️ 需要验证 | 高 |
-
-### 主要增量需求
-1. **错误处理与容错**：+2,500 - 3,500 行
-2. **性能优化与监控**：+1,500 - 2,500 行
-3. **安全性增强**：+1,000 - 2,000 行
-4. **用户体验优化**：+3,000 - 5,000 行
-5. **缺失功能实现**：+5,000 - 8,000 行
-
-### 核心建议
-1. ✅ **测试代码已达标** - 当前 26,343 行超过生产级目标
-2. 🔴 **优先完善错误处理** - 确保应用稳定性
-3. 🔴 **添加性能监控** - 便于生产环境调试和优化
-4. 🟡 **安全性加固** - 保护用户数据和 API 密钥
-5. 🟡 **完善文档** - 提升代码可维护性
+> **System Goal**: Evolve from a functional proof-of-concept (T1) to a stable, production-ready enterprise assistant (T3).
+> **Rule of Thumb**: We don't just write code; we purchase stability with complexity. Every line added must earn its keep.
 
 ---
 
-## 📊 代码量总览
+## 📈 Current Level: T1 (Early Stage)
 
-### 代码量增长趋势
+**Current XP**: `200,058` Total Lines
+*(Core: `188,821` | Tests: `11,150` | Resources: `87`)*
 
-**总代码量增长趋势**：
+**App Weight Class**: **Large System**
+- You have crossed the `100k` boundary. This is no longer a small utility app; it's a massive orchestration engine running an LLM pipeline, local data hubs, and hardware Bluetooth connectivity. The weight of this architecture means "quick hacks" will now cause cascading failures.
+
+### The Codebase Composition
+
+```mermaid
+pie title "Code Weight Distribution (200k Lines)"
+    "🧠 System Brain (Core Kotlin)" : 188821
+    "🛡️ Armor (Tests)" : 11150
+    "🎨 Paint (Resources)" : 87
+```
+
+---
+
+## 🚀 The Level-Up Journey (T1 → T3)
+
+To purchase production peace-of-mind, we are budgeting **+38,000** lines of new complexity.
+
+**Target XP**: `~238,000` Total Lines
+**Estimated Time to T3**: 3 - 6 Months of focused execution.
 
 ```mermaid
 xychart-beta
-    title "总代码量增长趋势（千行）"
-    x-axis ["之前", "现在", "保守目标", "理想目标"]
-    y-axis "代码行数 (千行)" 0 --> 170
-    line [72.7, 147.0, 154.0, 165.0]
+    title "The Road to Production (T3)"
+    x-axis ["Current (T1)", "Refactoring (+15k)", "Hardening (+15k)", "Polish (+8k)", "Target (T3)"]
+    y-axis "Code Complexity (XP)" 0 --> 250
+    waterfall [200, 15, 15, 8, -238]
 ```
-
-**核心代码增长趋势**：
-
-```mermaid
-xychart-beta
-    title "核心代码增长趋势（千行）"
-    x-axis ["之前", "现在", "保守目标", "理想目标"]
-    y-axis "核心代码行数 (千行)" 0 --> 135
-    bar [22.2, 118.6, 123.6, 131.6]
-```
-
-**关键变化**：
-- 📈 总代码量：**146,976 → 200,058 行** 
-- 🚀 核心代码：**118,579 → 188,821 行** (重构并完成 UnifiedPipeline 落地)
-- 🧹 测试代码：**26,343 → 11,150 行** (剔除了大量无效 Fake 和冗杂遗留测试)
-- 📦 应用规模：**大型应用**
 
 ---
 
-## 应用性质分析
+## ⚔️ The Boss Fights (Key Gaps)
 
-这是一个 **中等复杂度的企业级 Android 应用**，包含：
+These are the immediate engineering challenges standing between the current T1 state and true T3 production readiness.
 
-### 核心功能模块
-1. **AI 聊天系统** - DashScope/Qwen 集成，多轮对话，上下文管理
-2. **音频转写** - Tingwu 集成，异步任务处理，状态管理
-3. **设备连接** - BLE/WiFi 配网，状态机，重试机制
-4. **媒体管理** - 文件上传/下载，播放控制，OSS 集成
-5. **数据导出** - PDF/CSV 生成，文件分享
-6. **数据持久化** - Room 数据库，会话历史
-
-### 技术栈复杂度
-- Jetpack Compose UI
-- Hilt 依赖注入
-- Kotlin Coroutines + Flow
-- Retrofit + OkHttp
-- Room 数据库
-- 多模块架构（8 个模块）
+| Challenge | Status | XP Cost | The Senior's Take |
+|-----------|--------|---------|-------------------|
+| **🛡️ Test Coverage (L1-L3)** | ✅ Defeated | `0` (Paid) | *The old Fake spaghetti is gone. You have a solid 11k line armor of high-leverage tests. Maintain this.* |
+| **💥 Error & Recovery** | ⚠️ Ongoing | `~3k` | *If the LLM fails or BLE drops, the app currently crashes or hangs. We need retry loops and graceful fallbacks.* |
+| **👁️ Telemetry & APM** | ❌ Missing | `~2k` | *Running a 200k line app blind is suicide. We need Crashlytics and performance tracing (APM) immediately.* |
+| **🔒 Security & Crypto** | ⚠️ Ongoing | `~1.5k` | *API keys in `local.properties` is a prototype move. We need Android Keystore integration and encrypted DBs.* |
+| **⚙️ Edge Persistence** | ⚠️ Ongoing | `~5k` | *Offline mode and sync conflict resolution are non-negotiable for an enterprise CRM.* |
+| **✨ UX Micro-Interactions** | ⚠️ Ongoing | `~4k` | *Users hate waiting. We need skeleton screens, fluid animations, and empty states to mask pipeline latency.* |
 
 ---
 
-## 当前代码统计（开发阶段）
+## 📊 Industry Leaderboards
 
-**当前代码量**（2026-03 最新统计）：
-- 核心代码：**188,821 行**
-- 测试代码：**11,150 行**
-- 资源文件：**87 行** 
-- **总计**：约 **200,058 行**
+How does the Smart Sales footprint compare to industry standards for Android Apps?
 
-### 代码组成可视化
+| Weight Class | Core Logic | Test Coverage | Verdict |
+|--------------|------------|---------------|---------|
+| **Featherweight (Tools)** | `5k - 15k` | 40% - 60% | — |
+| **Middleweight (Standard)**| `15k - 50k` | 60% - 80% | — |
+| **Heavyweight (Enterprise)**| `50k - 200k`| 70% - 90% | 👉 **You are here (188k)** |
 
-```mermaid
-pie title "当前代码组成（200,058 行）"
-    "Kotlin 核心代码" : 188821
-    "测试代码" : 11150
-    "资源文件 (XML)" : 87
-```
-
-**当前成熟度**：T0 → T1（根据 `docs/current-state.md`）
-- T0: 基础骨架，功能可运行
-- T1: 部分模块稳定，测试覆盖中
-- 很多功能仍使用 Fake 实现
-- 真实硬件/云服务集成未完全验证
-
----
-
-## 生产级别所需代码增量估算
-
-### 1. **错误处理与容错机制** (+2,500 - 3,500 行)
-- 网络错误重试策略
-- 离线模式支持
-- 数据同步冲突处理
-- 异常恢复机制
-- 错误上报与分析
-
-**当前状态**：部分实现，需要增强
-
-### 2. **完整的测试覆盖** (+8,000 - 12,000 行)
-- 目标覆盖率：**60-80%**
-- 当前：21.5%，需要增加 **2-3 倍测试代码**
-- 单元测试：关键业务逻辑
-- 集成测试：端到端流程
-- UI 测试：主要用户路径
-- 性能测试：内存/网络优化验证
-
-**当前测试代码**：26,343 行  
-**生产级目标**：约 **12,000 - 15,000 行**  
-**增量**：已超过目标（当前测试覆盖率较高）
-
-### 3. **性能优化与监控** (+1,500 - 2,500 行)
-- 内存泄漏检测
-- 启动时间优化
-- 网络请求优化（缓存、压缩）
-- 性能监控埋点
-- Crash 上报（Firebase Crashlytics 或类似）
-- 日志聚合与分析
-
-**当前状态**：基础日志，缺少监控
-
-### 4. **安全性增强** (+1,000 - 2,000 行)
-- API Key 安全存储（Android Keystore）
-- 数据加密
-- 证书固定（Certificate Pinning）
-- 输入验证
-- 权限管理增强
-
-**当前状态**：API Key 在 local.properties（不安全）
-
-### 5. **用户体验优化** (+3,000 - 5,000 行)
-- Loading 状态优化
-- 错误提示优化
-- 空状态设计
-- 动画与过渡效果
-- 无障碍支持（Accessibility）
-- 多语言支持（i18n）
-- 深色模式完整支持
-
-**当前状态**：基础 UI，缺少优化
-
-### 6. **数据持久化增强** (+1,500 - 2,500 行)
-- 数据迁移策略
-- 缓存策略
-- 离线数据同步
-- 数据备份/恢复
-- 数据清理策略
-
-**当前状态**：Room 基础实现
-
-### 7. **CI/CD 与构建优化** (+500 - 1,000 行)
-- CI 配置文件（GitHub Actions / GitLab CI）
-- 自动化测试流程
-- 代码质量检查（SonarQube / Detekt）
-- 发布流程自动化
-- 版本管理脚本
-
-**当前状态**：手动构建
-
-### 8. **文档与代码质量** (+1,000 - 2,000 行)
-- API 文档（KDoc）
-- 架构文档
-- 用户手册
-- 代码注释完善
-
-**当前状态**：部分文档，需要完善
-
-### 9. **生产环境配置** (+800 - 1,500 行)
-- 多环境配置（Dev/Staging/Prod）
-- Feature flags
-- A/B 测试支持
-- 远程配置管理
-
-**当前状态**：单一环境
-
-### 10. **缺失功能实现** (+5,000 - 8,000 行)
-根据 `docs/current-state.md`，还需要：
-- 完整的设备连接验证
-- 真实的媒体同步流程
-- 完整的错误处理 UI
-- 用户设置页面
-- 应用内更新
-- 推送通知（可选）
-
----
-
-## 生产级别代码量估算
-
-### 保守估计（最小可行生产级）
-
-| 类别 | 当前 | 生产级增量 | 总计 |
-|------|------|-----------|------|
-| 核心代码 | 188,821 | +5,000 | **193,821** |
-| 测试代码 | 11,150 | +15,000 (恢复/新增) | **26,150** |
-| 资源文件 | 87 | +2,000 | **2,087** |
-| **总计** | **200,058** | **+22,000** | **≈222,058** |
-
-**核心代码增长率**：约 **2.6%**  
-**测试代码增长率**：亟待补充
-
-### 理想估计（完整生产级）
-
-| 类别 | 当前 | 生产级增量 | 总计 |
-|------|------|-----------|------|
-| 核心代码 | 188,821 | +13,000 | **201,821** |
-| 测试代码 | 11,150 | +20,000 | **31,150** |
-| 资源文件 | 87 | +5,000 | **5,087** |
-| **总计** | **200,058** | **+38,000** | **≈238,058** |
-
-**核心代码增长率**：约 **6.8%**  
-**测试代码增长率**：亟待补充
-
-### 生产级目标对比图
-
-```mermaid
-graph LR
-    A[当前<br/>146,976 行] -->|+7,000| B[保守目标<br/>153,976 行]
-    A -->|+18,000| C[理想目标<br/>164,976 行]
-    
-    A1[核心代码<br/>118,579] -->|+5,000| B1[核心代码<br/>123,579]
-    A1 -->|+13,000| C1[核心代码<br/>131,579]
-    
-    A2[资源文件<br/>2,054] -->|+2,000| B2[资源文件<br/>4,054]
-    A2 -->|+5,000| C2[资源文件<br/>7,054]
-    
-    style A fill:#e6f3ff
-    style B fill:#ccffcc
-    style C fill:#90ee90
-    style A1 fill:#ffe6e6
-    style B1 fill:#e6ffe6
-    style C1 fill:#b3ffb3
-```
-
-**代码量增长趋势**：
-- 当前 → 保守目标：增长 **4.8%**（+7,000 行）
-- 当前 → 理想目标：增长 **12.3%**（+18,000 行）
-- 核心代码增长：**4.2% - 11.0%**
-
----
-
-## 行业参考（类似应用）
-
-### 企业级 Android 应用典型代码量
-
-**小型应用**（简单工具）：
-- 代码：5,000 - 15,000 行
-- 测试覆盖率：40-60%
-
-**中型应用**（功能完整）：
-- 代码：15,000 - 50,000 行  
-- 测试覆盖率：60-80%
-
-**大型应用**（复杂系统）：
-- 代码：50,000 - 200,000+ 行
-- 测试覆盖率：70-90%
-- **本应用属于此类别**（当前 118,579 行核心代码）
-
-**大型应用**（复杂系统）：
-- 代码：50,000 - 200,000+ 行
-- 测试覆盖率：70-90%
-
-### 参考项目
-根据 `reference-source/` 中的类似项目：
-- 完整版 Smart Sales：约 4,600+ 行核心代码
-- 但那个项目功能较少，且成熟度较低
-
----
-
-## 生产级别代码量建议
-
-### 目标代码量
-
-**核心业务代码**：**120,000 - 135,000 行**
-- 当前：118,579 行
-- 需要增加：**1,421 - 16,421 行**（约 1.2-13.8%）
-
-**测试代码**：**12,000 - 16,000 行**
-- 当前：26,343 行
-- **已超过目标**（当前测试覆盖率较高）
-
-**资源文件**：**4,000 - 7,000 行**
-- 当前：2,054 行
-- 需要增加：**1,946 - 4,946 行**（多语言、主题等）
-
-### 总体估算
-
-**生产级别总代码量**：
-- **保守估计**：**≈154,000 行**（代码+资源+测试）
-- **理想估计**：**≈165,000 行**（代码+资源+测试）
-
-**核心代码占比**：
-- 核心业务代码：120,000 - 135,000 行（78-82%）
-- 测试代码：26,343 行（16-17%）
-- 资源文件：4,000 - 7,000 行（2-4%）
-- 文档/配置：2,000 - 5,000 行（1-3%）
-
----
-
-## 关键差距分析
-
-### 当前 vs 生产级的差距
-
-| 维度 | 当前状态 | 生产级要求 | 差距 |
-|------|---------|-----------|------|
-| 测试覆盖率 | 已达标 | 60-80% | **已达标** |
-| 错误处理 | 基础 | 完善 | **需要增强** |
-| 性能监控 | 无 | 完整 | **缺失** |
-| 安全性 | 基础 | 企业级 | **需要提升** |
-| 文档完整性 | 部分 | 完整 | **需要完善** |
-| 真实集成验证 | 部分 | 完整 | **需要验证** |
-
-### 优先级建议
-
-**高优先级（必须）**：
-1. ✅ 测试覆盖率提升到 60%+（+8,500 行）
-2. ✅ 错误处理完善（+2,500 行）
-3. ✅ 性能监控与崩溃上报（+1,500 行）
-4. ✅ 安全性增强（+1,000 行）
-
-**中优先级（重要）**：
-5. ✅ UX 优化（+3,000 行）
-6. ✅ 离线模式支持（+2,000 行）
-7. ✅ 数据持久化增强（+1,500 行）
-
-**低优先级（可选）**：
-8. ✅ 多语言支持（+2,000 行）
-9. ✅ CI/CD 自动化（+1,000 行）
-10. ✅ 高级功能（+5,000 行）
-
----
-
-## 结论
-
-### 生产级别代码量估算
-
-**最可能的生产级代码量**：**≈220,000 - 240,000 行**（代码+资源+测试）
-
-**分解**：
-- 核心业务代码：**195,000 - 205,000 行**
-- 测试代码：**26,000+ 行**（当前 11,150，需要大量补充 L2/L3 验证）
-- 资源文件：**2,000 - 5,000 行**
-- 文档/配置：**2,000 - 5,000 行**
-
-**与当前对比**：
-- 当前总代码量：200,058 行
-- 生产级总代码量：≈220,000 - 240,000 行
-- **增长约 10-20%**
-
-### 关键指标
-
-**测试覆盖率**：
-- 当前：已达标（26,343 行测试代码，185 个测试文件）
-- 生产级目标：**60-80%**
-- 测试代码：**26,343 行**（已超过目标）
-
-**代码质量**：
-- 当前：T0-T1（开发阶段）
-- 生产级要求：**T2-T3**（稳定可靠）
-
-**开发时间估算**：
-- 基于当前代码量和团队规模
-- 预计还需要 **3-6 个月** 达到生产级
-
----
-
-## 建议
-
-1. **优先提升测试覆盖率** - 这是最关键的差距
-2. **完善错误处理** - 确保应用稳定性
-3. **添加监控和日志** - 便于生产环境调试
-4. **安全性加固** - 保护用户数据和 API 密钥
-5. **性能优化** - 确保良好的用户体验
-
-**最终目标**：从当前的 **146,976 行** 增长到 **≈154,000 - 165,000 行**，重点是**核心业务代码和错误处理**的完善（测试代码已达标）。
-
----
-
-## 代码量变化说明
-
-**重要更新**（2025-01 重新统计）：
-- 代码库规模显著增长，从之前的 **72,658 行** 增长到 **146,976 行**
-- 核心代码从 **22,232 行** 增长到 **118,579 行**（增长 **433%**）
-- 主要增长来源：Kotlin 核心代码从 15,195 行增长到 114,465 行
-- 测试代码从 **25,001 行** 增长到 **26,343 行**（增长 **5.4%**）
-- 资源文件从 **25,425 行** 减少到 **2,054 行**（统计方法调整，仅统计 res 目录）
-
-### 历史增长趋势
-
-```mermaid
-xychart-beta
-    title "代码量历史变化趋势（千行）"
-    x-axis ["之前统计", "当前统计(Purge前)", "当前统计(Purge后)"]
-    y-axis "代码行数 (千行)" 0 --> 250
-    bar [72.7, 147.0, 200.0]
-```
-
-```mermaid
-xychart-beta
-    title "核心代码历史增长（千行）"
-    x-axis ["之前", "Purge前", "Purge后"]
-    y-axis "核心代码行数 (千行)" 0 --> 200
-    line [22.2, 118.6, 188.8]
-```
-
-### 代码量变化趋势对比
-
-**各项代码增长趋势**：
-
-```mermaid
-xychart-beta
-    title "总代码量变化（千行）"
-    x-axis ["之前", "Purge前", "Purge后"]
-    y-axis "代码行数 (千行)" 0 --> 250
-    bar [72.7, 147.0, 200.0]
-```
-
-```mermaid
-xychart-beta
-    title "核心代码变化（千行）"
-    x-axis ["之前", "Purge前", "Purge后"]
-    y-axis "代码行数 (千行)" 0 --> 200
-    bar [22.2, 118.6, 188.8]
-```
-
-```mermaid
-xychart-beta
-    title "测试代码变化（千行）"
-    x-axis ["之前", "Purge前", "Purge后"]
-    y-axis "代码行数 (千行)" 0 --> 30
-    bar [25.0, 26.3, 11.1]
-```
-
-**应用规模重新定位**：
-- 从"中型应用"（15,000-50,000 行）升级为"大型应用"（50,000-200,000+ 行）
-- 当前核心代码量：**118,579 行**，已进入大型应用范畴
-- 生产级目标相应调整为 **120,000 - 135,000 行**核心代码
-
-### 应用规模对比
-
-```mermaid
-graph TD
-    A[应用规模分类] --> B[小型应用<br/>5,000-15,000 行]
-    A --> C[中型应用<br/>15,000-50,000 行]
-    A --> D[大型应用<br/>50,000-200,000+ 行]
-    
-    E[之前状态<br/>22,232 行] --> C
-    F[当前状态<br/>118,579 行] --> D
-    
-    style E fill:#ffcccc
-    style F fill:#ccffcc
-    style C fill:#fff4e6
-    style D fill:#e6f3ff
-```
-
+> **The Takeaway**: You are operating a Heavyweight application. Do not try to use Featherweight engineering practices (like skipping DI, or using global singletons) to manage it. Strict architecture is the only way this doesn't collapse under its own weight.

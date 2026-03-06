@@ -378,8 +378,8 @@
     </head>
     <body>
         <div class="header">
-            <h1>Cerb Architecture Dashboard</h1>
-            <p>Real-time module status and domain I/O contracts</p>
+            <h1>Cerb Architecture Dashboard <br><span style="font-size: 1.5rem; color: #a78bfa;">(分布式架构与项目规模面板)</span></h1>
+            <p>Real-time module status, domain I/O contracts, and codebase footprint</p>
         </div>
         
         <div class="legend">
@@ -391,7 +391,7 @@
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab(event, 'topology')">Topology Sequence (Layers)</button>
             <button class="tab-btn" onclick="switchTab(event, 'feature')">Feature Dataflow (Tracks)</button>
-            <button class="tab-btn" onclick="switchTab(event, 'estimate')">Code Estimates</button>
+            <button class="tab-btn" onclick="switchTab(event, 'estimate')">代码量估算 (Code Estimates)</button>
         </div>
 
         <!-- 1. Topology View -->
@@ -1244,46 +1244,48 @@
         
             </div>
         </div>
+        </div>
+        </div>
 
         <!-- 3. Code Estimate View -->
         <div id="estimate" class="tab-content">
             <div class="container">
                 <div class="card full-width">
-                    <h2>Current Post-Purge Snapshot</h2>
+                    <h2>当前状态快照 (代码清理后)</h2>
                     <div class="stat-grid" style="grid-template-columns: repeat(4, 1fr);">
-                        <div class="stat-box"><div class="stat-value glow">200,058</div><div class="stat-label">Total Lines</div></div>
-                        <div class="stat-box"><div class="stat-value">188,821</div><div class="stat-label">Core Kotlin</div></div>
-                        <div class="stat-box"><div class="stat-value">11,150</div><div class="stat-label">Test Kotlin</div></div>
-                        <div class="stat-box"><div class="stat-value">87</div><div class="stat-label">Resource XML</div></div>
+                        <div class="stat-box"><div class="stat-value glow">200,058</div><div class="stat-label">总代码行数</div></div>
+                        <div class="stat-box"><div class="stat-value">188,821</div><div class="stat-label">核心 Kotlin 代码</div></div>
+                        <div class="stat-box"><div class="stat-value">11,150</div><div class="stat-label">测试 Kotlin 代码</div></div>
+                        <div class="stat-box"><div class="stat-value">87</div><div class="stat-label">资源 XML 文件</div></div>
                     </div>
                 </div>
 
                 <div class="card">
-                    <h2>Production Projection Targets</h2>
+                    <h2>生产级别投产预测目标</h2>
                     <div class="stat-grid">
                         <div class="stat-box" style="border-color: var(--warning);">
                             <div class="stat-value" style="color: var(--warning);">222,058</div>
-                            <div class="stat-label">Conservative Goal</div>
-                            <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">+22,000 Lines</div>
+                            <div class="stat-label">保守预测 (最小可行)</div>
+                            <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">约增加 22,000 行</div>
                         </div>
                         <div class="stat-box" style="border-color: var(--success);">
                             <div class="stat-value" style="color: var(--success);">238,058</div>
-                            <div class="stat-label">Ideal Goal</div>
-                            <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">+38,000 Lines</div>
+                            <div class="stat-label">理想预测 (完整指标)</div>
+                            <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">约增加 38,000 行</div>
                         </div>
                     </div>
                     <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 20px;">
-                        The majority of growth must target **Test Coverage** (+15k to +20k lines) and **Error Handling/Performance Metrics** (+5k to +13k lines) to safely transition the application to a robust T2-T3 Production status.
+                        未来的代码增长必须集中在<strong>测试覆盖率</strong>（需增加 1.5万 - 2万行）以及<strong>错误处理和性能监控</strong>（需增加 5千 - 1.3万行），只有稳固这些模块才能将项目成功演进至重度生产阶段 (T2-T3)。
                     </p>
                 </div>
 
                 <div class="card">
-                    <h2>Current Code Composition</h2>
+                    <h2>当前代码组成分布</h2>
                     <div class="chart-container"><canvas id="compositionChart"></canvas></div>
                 </div>
 
                 <div class="card full-width">
-                    <h2>Historical Growth Trend</h2>
+                    <h2>历史代码量增长趋势</h2>
                     <div class="chart-container" style="height: 400px;"><canvas id="trendChart"></canvas></div>
                 </div>
             </div>
@@ -1396,7 +1398,7 @@
                 new Chart(ctxPie, {
                     type: 'doughnut',
                     data: {
-                        labels: ['Core Kotlin', 'Test Kotlin', 'Resource XML'],
+                        labels: ['核心 Kotlin 代码', '测试 Kotlin 代码', '资源 XML 文件'],
                         datasets: [{
                             data: [188821, 11150, 87],
                             backgroundColor: ['rgba(59, 130, 246, 0.8)', 'rgba(192, 132, 252, 0.8)', 'rgba(34, 197, 94, 0.8)'],
@@ -1411,13 +1413,13 @@
                 new Chart(ctxTrend, {
                     type: 'bar',
                     data: {
-                        labels: ['Before (Pre-V2)', 'Pre-Purge (Mar 2026)', 'Post-Purge (Current)', 'Conservative Target', 'Ideal Target'],
+                        labels: ['之前 (旧架构)', '清理前 (2026年3月)', '当前状态快照', '生产：保守目标', '生产：理想目标'],
                         datasets: [
-                            { label: 'Core Code', data: [22232, 118579, 188821, 193821, 201821], backgroundColor: 'rgba(59, 130, 246, 0.6)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1 },
-                            { label: 'Total Code', data: [72658, 146976, 200058, 222058, 238058], backgroundColor: 'rgba(192, 132, 252, 0.6)', borderColor: 'rgba(192, 132, 252, 1)', borderWidth: 1 }
+                            { label: '核心代码量', data: [22232, 118579, 188821, 193821, 201821], backgroundColor: 'rgba(59, 130, 246, 0.6)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1 },
+                            { label: '项目总行数', data: [72658, 146976, 200058, 222058, 238058], backgroundColor: 'rgba(192, 132, 252, 0.6)', borderColor: 'rgba(192, 132, 252, 1)', borderWidth: 1 }
                         ]
                     },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#94a3b8' }, title: { display: true, text: 'Lines of Code', color: '#f8fafc' } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } }, plugins: { legend: { labels: { color: '#f8fafc', font: { family: 'Inter' } } } } }
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#94a3b8' }, title: { display: true, text: '代码行数', color: '#f8fafc' } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } }, plugins: { legend: { labels: { color: '#f8fafc', font: { family: 'Inter' } } } } }
                 });
             }
 

@@ -133,3 +133,17 @@
 ## Observation 2026-03-04: The Ghost State Machine
 Frank observed "even 'hi' triggers analysis" after the Dual-Engine refactor. The root cause is `RealAnalystPipeline` holding an active `INVESTIGATING` or `PROPOSAL` state that isn't cleared when switching modes or tabs, causing incoming inputs like "hi" to bypass `LightningRouter` (Phase 0) entirely.
 This perfectly justifies the Nuke-and-Pave strategy for Coach mode: stateful UI toggles married to a unified backend create impossible edge cases.
+
+## 2026-03-06
+
+### Observed Thinking
+- **AI-Era Vibe Coding**: Identified a fundamental paradigm shift in AI-assisted development. While human engineers rely on "refactoring" and preserving legacy code to retain hidden bug fixes, AI agents are better at iteratively creating clean implementations from a strict spec. The principle is "Rewrite over Extract" when dealing with dog-bitten, compromised code. Clean context is more valuable than legacy code logic.
+- **Mental Model Transition (City Building & Legos)**: Comparing the project lifecycle to building a city with Lego blocks. Phase 1 was parallel building without a rigorous assembly plan (necessary to quickly prove the domains exist). Phase 2 is the rigorous, sequential assembly (Core-to-Periphery) where we review blocks, discard bad ones, and cement good ones.
+- **Human Intricacy vs Sterilized Logic**: Reflected on the "Session Auto-Renaming" implementation. Agents naturally default to sterilized, mathematical logic when writing CERB specs, completely ignoring real-world friction (latency, UX jitter, pipeline congestion). A core vibe-coding principle is that the *Agent provides the structural skeleton*, but the *Human developer MUST inject the battle-tested intricacies and compromises*. Agents should never overwrite these human nuances during DocSync.
+
+### Communication Style
+- **Philosophical & Strategic**: Elevated the conversation from immediate code fixes to fundamental software engineering principles in the AI-generation. Uses metaphors (Lego, City Building) to crystalize architectural phases.
+- **Brutally Honest**: Explicitly asks for the Senior Reviewer persona to be brutally honest and challenge the proposal, demonstrating a desire for robust, stress-tested strategies over appeasement.
+
+### Session Flow
+- **Audit Campaign Planning**: Shifted from a functional L2 device test to a macro-level Architectural Audit. Refused to test the UI (Hospital) before systematically verifying the Infrastructure (Power Plant) works.

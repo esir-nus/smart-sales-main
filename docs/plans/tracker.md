@@ -13,7 +13,7 @@
 | Cerb Shard | State | Next Wave |
 |------------|-------|-----------|
 | [model-routing](../cerb/model-routing/spec.md) | SHIPPED | — |
-| [input-parser](../cerb/input-parser/spec.md) | PARTIAL | W4: Auto-Renaming |
+| [input-parser](../cerb/input-parser/spec.md) | SHIPPED | — |
 | [entity-disambiguation](../cerb/entity-disambiguation/spec.md) | SHIPPED | — |
 | [pipeline-telemetry](../cerb/pipeline-telemetry/spec.md) | SHIPPED | — |
 | [scheduler](../cerb/scheduler/spec.md) | PARTIAL | W8: Pipeline Unification |
@@ -57,6 +57,10 @@
 ## Changelog
 
 > Key spec/impl changes, newest first. Like `git log --oneline`.
+
+### 2026-03-06
+
+- **input-parser**: Wave 4 SHIPPED — Refactored `SessionTitleGenerator` to `SemanticSessionTitleGenerator`, removing redundant LLM calls. Name and temporal intent are now synchronously extracted from `InputParserService` JSON and routed natively via `PipelineResult.AutoRenameTriggered`. Proven bypass logic where Mascot `NOISE`/`GREETING` intents correctly avoid the trigger entirely.
 
 ### 2026-03-05
 
@@ -246,7 +250,6 @@
 | **Confidence-Based Reminder Interceptor** | Replace deterministic round-1 wrap-up with LLM confidence-based interception. Agent decides when to surface schedule context: (1) User greets/noise → inject, (2) User discusses agenda → inject, (3) User wraps up work → suggest completion. Requires classifier or LLM self-assessment of conversation intent. Current workaround: smarter prompting that lets LLM decide naturally. | Medium |
 | **L2 UI Verification** | `MarkdownStrategyBubble.kt` — Verify the title extraction and rendering styling (T2 test from `l2_test_plan.md`) after major component refactoring is complete. | High |
 | **NotificationService Layer Violation** | `NotificationService.kt` in `domain` imports `android.app.PendingIntent` | High |
-| **FakeReinforcementLearner Masquerade** | `RLModule` bound to Fake but was incorrectly mapped as SHIPPED | High |
 ---
 
 ## Quick Links
@@ -255,3 +258,48 @@
 - [prism-ui-ux-contract.md](../specs/prism-ui-ux-contract.md) — UX SOT
 - [interface-map.md](../cerb/interface-map.md) — Module ownership + data flow
 - [legacy-to-prism-dictionary.md](../reference/legacy-to-prism-dictionary.md) — Legacy mapping
+
+---
+
+## The Great Assembly (Core-to-Periphery Architecture Audit)
+
+> **Phase Context**: The era of rapid, parallel "Lego block" development is complete. We are now in the rigorous assembly phase. We evaluate each module strictly from Core (Layer 1) to Periphery (Layer 5). Good code is integrated; rotten/drifted code is subjected to "Rewrite Over Extract" to perfectly match the Spec and `interface-map.md`. No new concepts allowed.
+
+### Layer 1: Infrastructure Services (The Power Plant & Water)
+*Self-contained libraries with no upstream dependencies. Must be perfect.*
+- [ ] `ConnectivityBridge`
+- [ ] `NotificationService`
+- [ ] `OSS`
+- [ ] `ASR`
+- [ ] `TingwuPipeline`
+- [ ] `PipelineTelemetry`
+
+### Layer 2: Data Services (The Foundation)
+*Stores and queries domain data. SSD and RAM storage boundaries.*
+- [ ] `EntityWriter`
+- [ ] `EntityRegistry`
+- [ ] `MemoryCenter`
+- [ ] `UserHabit`
+- [ ] `SessionHistory`
+- [ ] `SessionContext`
+
+### Layer 3: Core Pipeline (The Roads & Intersections)
+*Orchestrates the LLM processing and routes intents.*
+- [ ] `ContextBuilder`
+- [ ] `InputParser`
+- [ ] `EntityDisambiguator`
+- [ ] `LightningRouter`
+- [ ] `ModelRegistry` & `Executor`
+- [ ] `PluginRegistry`
+- [ ] `UnifiedPipeline`
+
+### Layer 4 & 5: Features & Intelligence (The Hospitals & Schools)
+*User-facing integrations that consume Layer 2/3.*
+- [ ] `MascotService`
+- [ ] `Scheduler` & `ScheduleBoard`
+- [ ] `BadgeAudioPipeline`
+- [ ] `ConflictResolver`
+- [ ] `DevicePairing`
+- [ ] `SessionTitleGenerator`
+- [ ] `ClientProfileHub` (Layer 5)
+- [ ] `RLModule` (Layer 5)

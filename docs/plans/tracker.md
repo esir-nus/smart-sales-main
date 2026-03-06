@@ -21,7 +21,7 @@
 | [badge-audio-pipeline](../cerb/badge-audio-pipeline/spec.md) | SHIPPED | W4: Error Recovery |
 | [lightning-router](../cerb/lightning-router/spec.md) | SHIPPED | — |
 | [mascot-service](../cerb/mascot-service/spec.md) | SHIPPED | Wave 4: UI Integration | System I Overlay |
-| [plugin-registry](../cerb/plugin-registry/spec.md) | PARTIAL | W4: Async Execution Wiring |
+| [plugin-registry](../cerb/plugin-registry/spec.md) | SHIPPED | — |
 
 ### Data & Memory
 
@@ -52,6 +52,12 @@
 | Cerb Shard | State | Next Wave |
 |------------|-------|-----------|
 
+### UI & Presentation
+
+| Cerb Shard | State | Next Wave |
+|------------|-------|-----------|
+| [agent-intelligence](../cerb-ui/agent-intelligence/spec.md) | SPEC_ONLY | W1: Basic Components |
+
 ---
 
 ## Changelog
@@ -60,6 +66,10 @@
 
 ### 2026-03-06
 
+- **architecture**: The Great Assembly (Phase 1) SHIPPED — Extracted all 5 core Layer 1 Infrastructure modules from `app-prism/domain` into physically isolated Gradle libraries (`:data:connectivity`, `:core:notifications`, `:data:asr`, `:data:tingwu`, `:core:telemetry`). Passed strict Acceptance Team build & contract verification.
+
+- **architecture**: Finalized "Analyst Mode" sunsetting. Removed ghost "Analyst pending" tech debt from M3 milestone goals in favor of tracking actual Unified Pipeline blockers. Synced `plugin-registry` spec state to **SHIPPED** (Wave 4 Async Execution Wiring was previously implemented natively). Confirmed `audio-management` (Wave 2) is the true remaining blocker for full operational parity.
+- **agent-intelligence-ui**: Spec Created — Added dual-document specs (`spec.md` and `interface.md`) in new `docs/cerb-ui/` hierarchy. Strictly enforced "Dumb UI" and absolute decoupling from ViewModel and Plugins.
 - **input-parser**: Wave 4 SHIPPED — Refactored `SessionTitleGenerator` to `SemanticSessionTitleGenerator`, removing redundant LLM calls. Name and temporal intent are now synchronously extracted from `InputParserService` JSON and routed natively via `PipelineResult.AutoRenameTriggered`. Proven bypass logic where Mascot `NOISE`/`GREETING` intents correctly avoid the trigger entirely.
 
 ### 2026-03-05
@@ -228,7 +238,7 @@
 | **M0: Prism Spec** | ✅ |
 | **M1: Core Pipeline** | ✅ |
 | **M2: Memory Integration** | ✅ |
-| **M3: All Modes** | 🚧 (Analyst pending) |
+| **M3: All Modes** | 🚧 (Blocked by audio-management W2) |
 | **M4: Polish** | 🔲 |
 
 ---
@@ -265,12 +275,12 @@
 
 ### Layer 1: Infrastructure Services (The Power Plant & Water)
 *Self-contained libraries with no upstream dependencies. Must be perfect.*
-- [ ] `ConnectivityBridge`
-- [ ] `NotificationService`
-- [ ] `OSS`
-- [ ] `ASR`
-- [ ] `TingwuPipeline`
-- [ ] `PipelineTelemetry`
+- [x] `ConnectivityBridge` (extracted to `:data:connectivity`)
+- [x] `NotificationService` (extracted to `:core:notifications`)
+- [x] `OSS` (extracted to `:data:oss`)
+- [x] `ASR` (extracted to `:data:asr`)
+- [x] `TingwuPipeline` (extracted to `:data:tingwu`)
+- [x] `PipelineTelemetry` (extracted to `:core:telemetry`)
 
 ### Layer 2: Data Services (The Foundation)
 *Stores and queries domain data. SSD and RAM storage boundaries.*

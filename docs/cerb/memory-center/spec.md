@@ -42,7 +42,7 @@ It acts as the permanent ledger of knowledge events, entirely separate from the 
 
 ### MemoryEntry
 
-Production schema — [`MemoryModels.kt`](../../app-prism/src/main/java/com/smartsales/prism/domain/memory/MemoryModels.kt).
+Production schema — [`MemoryModels.kt`](../../domain/memory/src/main/java/com/smartsales/prism/domain/memory/MemoryModels.kt).
 
 ```kotlin
 data class MemoryEntry(

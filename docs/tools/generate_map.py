@@ -40,6 +40,7 @@ MODULE_EXPLANATIONS = {
     "AudioManagement": "处理录音文件同步、转写的界面状态。",
     "ConflictResolver": "帮助用户解决时间冲突 (比如：改期或取消)。",
     "DevicePairing": "负责配对新蓝牙工牌的界面流程。",
+    "AgentIntelligenceUI": "处理复杂任务时，展示给用户的中间思考状态与等待骨架屏。",
     
     # Layer 5
     "ClientProfileHub": "综合所有历史信息，为客户建立完整的画像和性格分析。",
@@ -90,12 +91,14 @@ def parse_interface_map():
             }
             layers.append(current_layer)
         
-        elif line.startswith("## Data Flow") or line.startswith("## Ownership") or line.startswith("## Anti-Patterns"):
+        elif line.startswith("## Data Flow") or line.startswith("## Ownership") or line.startswith("## Anti-Patterns") or line.startswith("## Delivery"):
             # Stop parsing specific layers when we hit the footer sections
             if current_layer and table_lines:
-                 current_layer["modules"] = parse_markdown_table(table_lines)
-                 table_lines = []
-                 current_layer = None
+                current_layer["modules"] = parse_markdown_table(table_lines)
+                table_lines = []
+            
+            # Reset current_layer unconditionally on footer sections
+            current_layer = None
         
         elif current_layer:
             if line.startswith("|"):
@@ -126,8 +129,11 @@ def generate_html(layers):
         --border: #334155;
         --text: #f8fafc;
         --text-muted: #94a3b8;
-        --accent: #3b82f6;
         --glow: #c084fc;
+        --glow: #c084fc;
+        --success: #22c55e;
+        --warning: #f59e0b;
+        --error: #ef4444;
         
         --status-shipped: rgba(34, 197, 94, 0.2);
         --status-shipped-border: #22c55e;
@@ -162,6 +168,7 @@ def generate_html(layers):
         font-size: 2.5rem;
         background: linear-gradient(135deg, #60a5fa, #c084fc);
         -webkit-background-clip: text;
+        background-clip: text;
         -webkit-text-fill-color: transparent;
         margin-bottom: 10px;
     }
@@ -405,6 +412,31 @@ def generate_html(layers):
         to { opacity: 1; transform: translateY(0); }
     }
     
+    /* Code Estimate CSS */
+    .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); transition: transform 0.3s ease; }
+    .card:hover { transform: translateY(-5px); border-color: var(--accent); box-shadow: 0 8px 30px rgba(59, 130, 246, 0.2); }
+    .card h2 { font-size: 1.5rem; color: var(--accent); margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px; }
+    .stat-box { background: rgba(0,0,0,0.4); padding: 20px; border-radius: 12px; text-align: center; border: 1px solid var(--border); }
+    .stat-value { font-size: 2rem; font-weight: 700; color: var(--text); font-family: 'Fira Code', monospace; margin-bottom: 5px; }
+    .stat-value.glow { color: var(--glow); text-shadow: 0 0 10px rgba(192, 132, 252, 0.5); }
+    .stat-label { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+    .full-width { grid-column: 1 / -1; }
+    .chart-container { position: relative; height: 300px; width: 100%; margin-top: 20px; }
+    
+    .gap-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; margin-left: 10px; }
+    .gap-success { background: rgba(34, 197, 94, 0.15); color: var(--success); border: 1px solid var(--success); }
+    .gap-warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid var(--warning); }
+    .gap-error { background: rgba(239, 68, 68, 0.15); color: var(--error); border: 1px solid var(--error); }
+    
+    .increment-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .increment-item:last-child { border-bottom: none; }
+    .increment-title { font-weight: 500; color: var(--text); }
+    .increment-lines { font-family: 'Fira Code', monospace; color: var(--accent); }
+    .increment-progress { height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; margin-top: 8px; overflow: hidden; }
+    .increment-bar { height: 100%; border-radius: 3px; }
+
     /* Topology specific CSS */
     .topology-sequence {
         display: flex;
@@ -500,9 +532,10 @@ def generate_html(layers):
         <style>{css}</style>
     </head>
     <body>
+        
         <div class="header">
-            <h1>Cerb Architecture Dashboard</h1>
-            <p>Real-time module status and domain I/O contracts</p>
+            <h1>Cerb Architecture Dashboard <br><span style="font-size: 1.5rem; color: #a78bfa;">(分布式架构与项目规模面板)</span></h1>
+            <p>Real-time module status, domain I/O contracts, and codebase footprint</p>
         </div>
         
         <div class="legend">
@@ -512,15 +545,16 @@ def generate_html(layers):
             <div class="legend-item"><span class="module-status status-wip">WIP</span> / <span class="translation-hint">开发中</span></div>
         </div>
 
-        
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab(event, 'topology')">Topology Sequence (Layers)</button>
             <button class="tab-btn" onclick="switchTab(event, 'feature')">Feature Dataflow (Tracks)</button>
+            <button class="tab-btn" onclick="switchTab(event, 'estimate')">代码量估算 (Code Estimates)</button>
         </div>
 
         <!-- 1. Topology View -->
         <div id="topology" class="tab-content active">
             <div class="topology-sequence">
+
     """
     
     layer_descriptions = {
@@ -670,8 +704,125 @@ def generate_html(layers):
         """
 
     html_content += """
+
         </div>
         
+        <!-- 3. Code Estimate View -->
+<div id="estimate" class="tab-content">
+            <div class="container">
+                <div class="card full-width">
+                    <h2>当前状态快照 (代码清理后)</h2>
+                    <div class="stat-grid" style="grid-template-columns: repeat(4, 1fr);">
+                        <div class="stat-box"><div class="stat-value glow">200,058</div><div class="stat-label">总代码行数</div></div>
+                        <div class="stat-box"><div class="stat-value">188,821</div><div class="stat-label">核心 Kotlin 代码</div></div>
+                        <div class="stat-box"><div class="stat-value">11,150</div><div class="stat-label">测试 Kotlin 代码</div></div>
+                        <div class="stat-box"><div class="stat-value">87</div><div class="stat-label">资源 XML 文件</div></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>生产级别投产预测目标</h2>
+                    <div class="stat-grid">
+                        <div class="stat-box" style="border-color: var(--warning);">
+                            <div class="stat-value" style="color: var(--warning);">222,058</div>
+                            <div class="stat-label">保守预测 (最小可行)</div>
+                            <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">约增加 22,000 行</div>
+                        </div>
+                        <div class="stat-box" style="border-color: var(--success);">
+                            <div class="stat-value" style="color: var(--success);">238,058</div>
+                            <div class="stat-label">理想预测 (完整指标)</div>
+                            <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">约增加 38,000 行</div>
+                        </div>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 20px;">
+                        未来的代码增长必须集中在<strong>测试覆盖率</strong>（需增加 1.5万 - 2万行）以及<strong>错误处理和性能监控</strong>（需增加 5千 - 1.3万行），只有稳固这些模块才能将项目成功演进至重度生产阶段 (T2-T3)。
+                    </p>
+                </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Container for Full Width Metrics -->
+            <div class="container" style="margin-top: 40px; display: block;">
+                <!-- Comprehensive Metrics Row -->
+                <div class="card full-width" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; background: rgba(0,0,0,0.2);">
+                    <!-- Key Gaps -->
+                    <div>
+                        <h2>产研关键差距分析 (T2-T3)</h2>
+                        <div style="margin-top: 20px;">
+                            <div class="increment-item">
+                                <span class="increment-title">测试覆盖率 (单元/集成 L1-L3)</span>
+                                <span class="gap-badge gap-success">✅ 已达标</span>
+                            </div>
+                            <div class="increment-item">
+                                <span class="increment-title">错误处理与异常恢复机制</span>
+                                <span class="gap-badge gap-warning">⚠️ 需要增强 (高优)</span>
+                            </div>
+                            <div class="increment-item">
+                                <span class="increment-title">性能监控与埋点 (Crashlytics)</span>
+                                <span class="gap-badge gap-error">❌ 缺失 (高优)</span>
+                            </div>
+                            <div class="increment-item">
+                                <span class="increment-title">安全性 (加密, Keystore, 证书)</span>
+                                <span class="gap-badge gap-warning">⚠️ 需要提升 (高优)</span>
+                            </div>
+                            <div class="increment-item">
+                                <span class="increment-title">真实云端集成验证 (Aliyun/Tingwu)</span>
+                                <span class="gap-badge gap-warning">⚠️ 需要验证 (高优)</span>
+                            </div>
+                            <div class="increment-item">
+                                <span class="increment-title">文档与注释完整性 (KDoc)</span>
+                                <span class="gap-badge gap-warning">⚠️ 需要完善 (中优)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Incremental Needs -->
+                    <div>
+                        <h2>核心增量分布 (+38k)</h2>
+                        <div style="margin-top: 20px;">
+                            <div class="increment-item" style="border: none; padding-bottom: 5px;">
+                                <span class="increment-title">1. 完整测试覆盖补充</span>
+                                <span class="increment-lines">+15,000 ~ 20,000 行</span>
+                            </div>
+                            <div class="increment-progress"><div class="increment-bar" style="width: 50%; background: var(--success);"></div></div>
+                            
+                            <div class="increment-item" style="border: none; padding-bottom: 5px; margin-top: 10px;">
+                                <span class="increment-title">2. 缺失核心功能 (连接/同步/设置)</span>
+                                <span class="increment-lines">+5,000 ~ 8,000 行</span>
+                            </div>
+                            <div class="increment-progress"><div class="increment-bar" style="width: 25%; background: var(--warning);"></div></div>
+
+                            <div class="increment-item" style="border: none; padding-bottom: 5px; margin-top: 10px;">
+                                <span class="increment-title">3. UX/UI 用户体验深度优化</span>
+                                <span class="increment-lines">+3,000 ~ 5,000 行</span>
+                            </div>
+                            <div class="increment-progress"><div class="increment-bar" style="width: 15%; background: var(--glow);"></div></div>
+
+                            <div class="increment-item" style="border: none; padding-bottom: 5px; margin-top: 10px;">
+                                <span class="increment-title">4. 错误容错与数据持久化</span>
+                                <span class="increment-lines">+4,000 ~ 6,000 行</span>
+                            </div>
+                            <div class="increment-progress"><div class="increment-bar" style="width: 20%; background: var(--error);"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+                <div class="card">
+                    <h2>当前代码组成分布</h2>
+                    <div class="chart-container"><canvas id="compositionChart"></canvas></div>
+                </div>
+
+                <div class="card full-width">
+                    <h2>历史代码量增长趋势</h2>
+                    <div class="chart-container" style="height: 400px;"><canvas id="trendChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
         <script>
             let lines = [];
             let linesInitialized = false;
@@ -761,11 +912,48 @@ def generate_html(layers):
                             l.show('draw', {duration: 500, timing: 'ease-out'});
                             l.position();
                         });
+                    } else if (tabId === 'estimate') {
+                        lines.forEach(l => l.hide('fade', {duration: 100}));
+                        initCharts();
                     } else {
                         lines.forEach(l => l.hide('fade', {duration: 100}));
                     }
                 }, 50);
             };
+            
+            let chartsInitialized = false;
+            function initCharts() {
+                if (chartsInitialized) return;
+                chartsInitialized = true;
+                
+                const ctxPie = document.getElementById('compositionChart').getContext('2d');
+                new Chart(ctxPie, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['核心 Kotlin 代码', '测试 Kotlin 代码', '资源 XML 文件'],
+                        datasets: [{
+                            data: [188821, 11150, 87],
+                            backgroundColor: ['rgba(59, 130, 246, 0.8)', 'rgba(192, 132, 252, 0.8)', 'rgba(34, 197, 94, 0.8)'],
+                            borderColor: '#1e293b',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#f8fafc', font: { family: 'Inter' } } } } }
+                });
+
+                const ctxTrend = document.getElementById('trendChart').getContext('2d');
+                new Chart(ctxTrend, {
+                    type: 'bar',
+                    data: {
+                        labels: ['之前 (旧架构)', '清理前 (2026年3月)', '当前状态快照', '生产：保守目标', '生产：理想目标'],
+                        datasets: [
+                            { label: '核心代码量', data: [22232, 118579, 188821, 193821, 201821], backgroundColor: 'rgba(59, 130, 246, 0.6)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1 },
+                            { label: '项目总行数', data: [72658, 146976, 200058, 222058, 238058], backgroundColor: 'rgba(192, 132, 252, 0.6)', borderColor: 'rgba(192, 132, 252, 1)', borderWidth: 1 }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#94a3b8' }, title: { display: true, text: '代码行数', color: '#f8fafc' } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } }, plugins: { legend: { labels: { color: '#f8fafc', font: { family: 'Inter' } } } } }
+                });
+            }
 
             window.addEventListener('load', () => {
                 setTimeout(() => {
@@ -776,8 +964,10 @@ def generate_html(layers):
                 }, 100);
             });
         </script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </body>
     </html>
+
     """
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         f.write(html_content)

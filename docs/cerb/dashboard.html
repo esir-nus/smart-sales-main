@@ -8,7 +8,6 @@
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code&display=swap" rel="stylesheet">
         <!-- SVG drawing library for architecture maps -->
         <script src="https://cdn.jsdelivr.net/npm/leader-line-new@1.1.9/leader-line.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <style>
     :root {
         --bg: #0f172a;
@@ -391,6 +390,7 @@
     </style>
     </head>
     <body>
+        
         <div class="header">
             <h1>Cerb Architecture Dashboard <br><span style="font-size: 1.5rem; color: #a78bfa;">(分布式架构与项目规模面板)</span></h1>
             <p>Real-time module status, domain I/O contracts, and codebase footprint</p>
@@ -400,8 +400,9 @@
             <div class="legend-item"><span class="module-status status-shipped">Shipped</span> (Real impl) / <span class="translation-hint">已上线</span></div>
             <div class="legend-item"><span class="module-status status-interface">Interface</span> (Fake impl) / <span class="translation-hint">仅接口 (假实现)</span></div>
             <div class="legend-item"><span class="module-status status-planned">Planned</span> (Not coded) / <span class="translation-hint">计划中 (未开发)</span></div>
+            <div class="legend-item"><span class="module-status status-wip">WIP</span> / <span class="translation-hint">开发中</span></div>
         </div>
-        
+
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab(event, 'topology')">Topology Sequence (Layers)</button>
             <button class="tab-btn" onclick="switchTab(event, 'feature')">Feature Dataflow (Tracks)</button>
@@ -411,17 +412,14 @@
         <!-- 1. Topology View -->
         <div id="topology" class="tab-content active">
             <div class="topology-sequence">
+
     
         <div class="layer-block">
             <h2>Layer 5: Intelligence</h2>
             <div class="layer-desc">Cross-cutting services that aggregate data from multiple Layer 2 sources.</div>
             <div class="layer-modules-list">
-                <div class="mini-module">Unknown</div>
-                <div class="mini-module">Unknown</div>
-                <div class="mini-module">Unknown</div>
-                <div class="mini-module">Unknown</div>
-                <div class="mini-module">Unknown</div>
-                <div class="mini-module">Unknown</div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./client-profile-hub/spec.md">ClientProfileHub</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./rl-module/spec.md">RLModule</a></div>
             </div>
         </div>
         
@@ -437,6 +435,7 @@
                 <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./badge-audio-pipeline/spec.md">BadgeAudioPipeline</a></div>
                 <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./audio-management/spec.md">AudioManagement</a></div>
                 <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./conflict-resolver/spec.md">ConflictResolver</a></div>
+                <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="../cerb-ui/agent-intelligence/spec.md">AgentIntelligenceUI</a></div>
                 <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./device-pairing/spec.md">DevicePairing</a></div>
             </div>
         </div>
@@ -913,6 +912,27 @@
                 <div class="os-layer">RAM Application</div>
             </div>
         
+            <div class="module-card" id="feat_agentintelligenceui" data-reads-from='["feat_\u2014"]'>
+                <div class="anchor-top" id="anchor-top-feat_agentintelligenceui"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_agentintelligenceui"></div>
+                <div class="module-header">
+                    <div class="module-name"><a href="../cerb-ui/agent-intelligence/spec.md">AgentIntelligenceUI</a></div>
+                    <div class="module-status status-interface">Interface</div>
+                </div>
+                
+                <div class="module-explanation">
+                    处理复杂任务时，展示给用户的中间思考状态与等待骨架屏。
+                </div>
+                
+                <div class="module-detail">
+                    <div><span class="label">Owns / 拥有 (写入):</span> Wait-state UI components</div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: — <br> Via Orch / 经编排器接收: StateFlow<UiState></div>
+                </div>
+                
+                <div class="card-signature"></div>
+                <div class="os-layer">RAM App</div>
+            </div>
+        
             </div>
         </div>
         
@@ -1123,146 +1143,56 @@
                 <div class="os-layer">Kernel (RAM)</div>
             </div>
         
-            </div>
-        </div>
-        
-        <div class="layer" style="margin-bottom: 20px;">
-            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">Uncategorized</div>
-            <div class="modules-grid" style="grid-template-columns: repeat(3, 1fr);">
-        
-            <div class="module-card" id="feat_unknown" data-reads-from='[]'>
-                <div class="anchor-top" id="anchor-top-feat_unknown"></div>
-                <div class="anchor-bottom" id="anchor-bottom-feat_unknown"></div>
+            <div class="module-card" id="feat_clientprofilehub" data-reads-from='["feat_entityregistry", "feat_memorycenter", "feat_userhabit"]'>
+                <div class="anchor-top" id="anchor-top-feat_clientprofilehub"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_clientprofilehub"></div>
                 <div class="module-header">
-                    <div class="module-name">Unknown</div>
-                    <div class="module-status status-planned">Unknown</div>
+                    <div class="module-name"><a href="./client-profile-hub/spec.md">ClientProfileHub</a></div>
+                    <div class="module-status status-interface">Interface</div>
                 </div>
                 
                 <div class="module-explanation">
-                    后端组件
+                    综合所有历史信息，为客户建立完整的画像和性格分析。
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
-                    <div><span class="label">Reads From / 读取自:</span> 无</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Aggregated client context for tips</div>
+                    <div><span class="label">Reads From / 读取自:</span> EntityRegistry, MemoryCenter, UserHabit</div>
                 </div>
                 
-                <div class="card-signature"></div>
-                <div class="os-layer"></div>
+                <div class="card-signature">getFocusedContext(String) -> FocusedContext</div>
+                <div class="os-layer">File Explorer</div>
             </div>
         
-            <div class="module-card" id="feat_unknown" data-reads-from='[]'>
-                <div class="anchor-top" id="anchor-top-feat_unknown"></div>
-                <div class="anchor-bottom" id="anchor-bottom-feat_unknown"></div>
+            <div class="module-card" id="feat_rlmodule" data-reads-from='["feat_userhabit"]'>
+                <div class="anchor-top" id="anchor-top-feat_rlmodule"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_rlmodule"></div>
                 <div class="module-header">
-                    <div class="module-name">Unknown</div>
-                    <div class="module-status status-planned">Unknown</div>
+                    <div class="module-name"><a href="./rl-module/spec.md">RLModule</a></div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
-                    后端组件
+                    强化学习模块：从过去的交互中学习，优化未来给AI的提示词。
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
-                    <div><span class="label">Reads From / 读取自:</span> 无</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Habit context for prompts (S2/S3 population)</div>
+                    <div><span class="label">Reads From / 读取自:</span> UserHabit</div>
                 </div>
                 
-                <div class="card-signature"></div>
-                <div class="os-layer"></div>
-            </div>
-        
-            <div class="module-card" id="feat_unknown" data-reads-from='[]'>
-                <div class="anchor-top" id="anchor-top-feat_unknown"></div>
-                <div class="anchor-bottom" id="anchor-bottom-feat_unknown"></div>
-                <div class="module-header">
-                    <div class="module-name">Unknown</div>
-                    <div class="module-status status-planned">Unknown</div>
-                </div>
-                
-                <div class="module-explanation">
-                    后端组件
-                </div>
-                
-                <div class="module-detail">
-                    <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
-                    <div><span class="label">Reads From / 读取自:</span> 无</div>
-                </div>
-                
-                <div class="card-signature"></div>
-                <div class="os-layer"></div>
-            </div>
-        
-            <div class="module-card" id="feat_unknown" data-reads-from='[]'>
-                <div class="anchor-top" id="anchor-top-feat_unknown"></div>
-                <div class="anchor-bottom" id="anchor-bottom-feat_unknown"></div>
-                <div class="module-header">
-                    <div class="module-name">Unknown</div>
-                    <div class="module-status status-planned">Unknown</div>
-                </div>
-                
-                <div class="module-explanation">
-                    后端组件
-                </div>
-                
-                <div class="module-detail">
-                    <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
-                    <div><span class="label">Reads From / 读取自:</span> 无</div>
-                </div>
-                
-                <div class="card-signature"></div>
-                <div class="os-layer"></div>
-            </div>
-        
-            <div class="module-card" id="feat_unknown" data-reads-from='[]'>
-                <div class="anchor-top" id="anchor-top-feat_unknown"></div>
-                <div class="anchor-bottom" id="anchor-bottom-feat_unknown"></div>
-                <div class="module-header">
-                    <div class="module-name">Unknown</div>
-                    <div class="module-status status-planned">Unknown</div>
-                </div>
-                
-                <div class="module-explanation">
-                    后端组件
-                </div>
-                
-                <div class="module-detail">
-                    <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
-                    <div><span class="label">Reads From / 读取自:</span> 无</div>
-                </div>
-                
-                <div class="card-signature"></div>
-                <div class="os-layer"></div>
-            </div>
-        
-            <div class="module-card" id="feat_unknown" data-reads-from='[]'>
-                <div class="anchor-top" id="anchor-top-feat_unknown"></div>
-                <div class="anchor-bottom" id="anchor-bottom-feat_unknown"></div>
-                <div class="module-header">
-                    <div class="module-name">Unknown</div>
-                    <div class="module-status status-planned">Unknown</div>
-                </div>
-                
-                <div class="module-explanation">
-                    后端组件
-                </div>
-                
-                <div class="module-detail">
-                    <div><span class="label">Owns / 拥有 (写入):</span> 无</div>
-                    <div><span class="label">Reads From / 读取自:</span> 无</div>
-                </div>
-                
-                <div class="card-signature"></div>
-                <div class="os-layer"></div>
+                <div class="card-signature">loadUserHabits() -> HabitContext</div>
+                <div class="os-layer">RAM Application</div>
             </div>
         
             </div>
         </div>
-        </div>
-        </div>
+        
 
+        </div>
+        
         <!-- 3. Code Estimate View -->
-        <div id="estimate" class="tab-content">
+<div id="estimate" class="tab-content">
             <div class="container">
                 <div class="card full-width">
                     <h2>当前状态快照 (代码清理后)</h2>
@@ -1376,7 +1306,7 @@
                 </div>
             </div>
         </div>
-        
+
         <script>
             let lines = [];
             let linesInitialized = false;
@@ -1518,6 +1448,8 @@
                 }, 100);
             });
         </script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </body>
     </html>
+
     

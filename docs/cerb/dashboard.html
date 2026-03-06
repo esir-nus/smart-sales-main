@@ -8,6 +8,7 @@
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code&display=swap" rel="stylesheet">
         <!-- SVG drawing library for architecture maps -->
         <script src="https://cdn.jsdelivr.net/npm/leader-line-new@1.1.9/leader-line.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <style>
     :root {
         --bg: #0f172a;
@@ -16,8 +17,9 @@
         --border: #334155;
         --text: #f8fafc;
         --text-muted: #94a3b8;
-        --accent: #3b82f6;
         --glow: #c084fc;
+        --success: #22c55e;
+        --warning: #f59e0b;
         
         --status-shipped: rgba(34, 197, 94, 0.2);
         --status-shipped-border: #22c55e;
@@ -52,6 +54,7 @@
         font-size: 2.5rem;
         background: linear-gradient(135deg, #60a5fa, #c084fc);
         -webkit-background-clip: text;
+        background-clip: text;
         -webkit-text-fill-color: transparent;
         margin-bottom: 10px;
     }
@@ -295,6 +298,19 @@
         to { opacity: 1; transform: translateY(0); }
     }
     
+    /* Code Estimate CSS */
+    .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); transition: transform 0.3s ease; }
+    .card:hover { transform: translateY(-5px); border-color: var(--accent); box-shadow: 0 8px 30px rgba(59, 130, 246, 0.2); }
+    .card h2 { font-size: 1.5rem; color: var(--accent); margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px; }
+    .stat-box { background: rgba(0,0,0,0.4); padding: 20px; border-radius: 12px; text-align: center; border: 1px solid var(--border); }
+    .stat-value { font-size: 2rem; font-weight: 700; color: var(--text); font-family: 'Fira Code', monospace; margin-bottom: 5px; }
+    .stat-value.glow { color: var(--glow); text-shadow: 0 0 10px rgba(192, 132, 252, 0.5); }
+    .stat-label { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+    .full-width { grid-column: 1 / -1; }
+    .chart-container { position: relative; height: 300px; width: 100%; margin-top: 20px; }
+
     /* Topology specific CSS */
     .topology-sequence {
         display: flex;
@@ -370,17 +386,12 @@
             <div class="legend-item"><span class="module-status status-shipped">Shipped</span> (Real impl) / <span class="translation-hint">已上线</span></div>
             <div class="legend-item"><span class="module-status status-interface">Interface</span> (Fake impl) / <span class="translation-hint">仅接口 (假实现)</span></div>
             <div class="legend-item"><span class="module-status status-planned">Planned</span> (Not coded) / <span class="translation-hint">计划中 (未开发)</span></div>
-            <div class="legend-item"><span class="module-status status-wip">WIP</span> / <span class="translation-hint">开发中</span></div>
-        </div>
-
-        <div style="display: flex; justify-content: flex-start; margin-bottom: 40px; max-width: 1200px; margin: 0 auto 40px auto; padding-left: 40px;">
-            <a href="dashboard.html" class="tab-btn active" style="text-decoration: none; margin-right: 15px;">Architecture Dashboard</a>
-            <a href="code_estimate.html" class="tab-btn" style="text-decoration: none;">Code Estimates</a>
         </div>
         
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab(event, 'topology')">Topology Sequence (Layers)</button>
             <button class="tab-btn" onclick="switchTab(event, 'feature')">Feature Dataflow (Tracks)</button>
+            <button class="tab-btn" onclick="switchTab(event, 'estimate')">Code Estimates</button>
         </div>
 
         <!-- 1. Topology View -->
@@ -1233,7 +1244,49 @@
         
             </div>
         </div>
-        
+
+        <!-- 3. Code Estimate View -->
+        <div id="estimate" class="tab-content">
+            <div class="container">
+                <div class="card full-width">
+                    <h2>Current Post-Purge Snapshot</h2>
+                    <div class="stat-grid" style="grid-template-columns: repeat(4, 1fr);">
+                        <div class="stat-box"><div class="stat-value glow">200,058</div><div class="stat-label">Total Lines</div></div>
+                        <div class="stat-box"><div class="stat-value">188,821</div><div class="stat-label">Core Kotlin</div></div>
+                        <div class="stat-box"><div class="stat-value">11,150</div><div class="stat-label">Test Kotlin</div></div>
+                        <div class="stat-box"><div class="stat-value">87</div><div class="stat-label">Resource XML</div></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Production Projection Targets</h2>
+                    <div class="stat-grid">
+                        <div class="stat-box" style="border-color: var(--warning);">
+                            <div class="stat-value" style="color: var(--warning);">222,058</div>
+                            <div class="stat-label">Conservative Goal</div>
+                            <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">+22,000 Lines</div>
+                        </div>
+                        <div class="stat-box" style="border-color: var(--success);">
+                            <div class="stat-value" style="color: var(--success);">238,058</div>
+                            <div class="stat-label">Ideal Goal</div>
+                            <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">+38,000 Lines</div>
+                        </div>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 20px;">
+                        The majority of growth must target **Test Coverage** (+15k to +20k lines) and **Error Handling/Performance Metrics** (+5k to +13k lines) to safely transition the application to a robust T2-T3 Production status.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <h2>Current Code Composition</h2>
+                    <div class="chart-container"><canvas id="compositionChart"></canvas></div>
+                </div>
+
+                <div class="card full-width">
+                    <h2>Historical Growth Trend</h2>
+                    <div class="chart-container" style="height: 400px;"><canvas id="trendChart"></canvas></div>
+                </div>
+            </div>
         </div>
         
         <script>
@@ -1325,11 +1378,48 @@
                             l.show('draw', {duration: 500, timing: 'ease-out'});
                             l.position();
                         });
+                    } else if (tabId === 'estimate') {
+                        lines.forEach(l => l.hide('fade', {duration: 100}));
+                        initCharts();
                     } else {
                         lines.forEach(l => l.hide('fade', {duration: 100}));
                     }
                 }, 50);
             };
+            
+            let chartsInitialized = false;
+            function initCharts() {
+                if (chartsInitialized) return;
+                chartsInitialized = true;
+                
+                const ctxPie = document.getElementById('compositionChart').getContext('2d');
+                new Chart(ctxPie, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Core Kotlin', 'Test Kotlin', 'Resource XML'],
+                        datasets: [{
+                            data: [188821, 11150, 87],
+                            backgroundColor: ['rgba(59, 130, 246, 0.8)', 'rgba(192, 132, 252, 0.8)', 'rgba(34, 197, 94, 0.8)'],
+                            borderColor: '#1e293b',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#f8fafc', font: { family: 'Inter' } } } } }
+                });
+
+                const ctxTrend = document.getElementById('trendChart').getContext('2d');
+                new Chart(ctxTrend, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Before (Pre-V2)', 'Pre-Purge (Mar 2026)', 'Post-Purge (Current)', 'Conservative Target', 'Ideal Target'],
+                        datasets: [
+                            { label: 'Core Code', data: [22232, 118579, 188821, 193821, 201821], backgroundColor: 'rgba(59, 130, 246, 0.6)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1 },
+                            { label: 'Total Code', data: [72658, 146976, 200058, 222058, 238058], backgroundColor: 'rgba(192, 132, 252, 0.6)', borderColor: 'rgba(192, 132, 252, 1)', borderWidth: 1 }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#94a3b8' }, title: { display: true, text: 'Lines of Code', color: '#f8fafc' } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } }, plugins: { legend: { labels: { color: '#f8fafc', font: { family: 'Inter' } } } } }
+                });
+            }
 
             window.addEventListener('load', () => {
                 setTimeout(() => {

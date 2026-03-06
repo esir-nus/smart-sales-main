@@ -29,7 +29,7 @@ Leaf services with no upstream dependencies. They don't call other modules.
 ## Layer 2: Data Services
 
 Store and query domain data. Other modules use their interfaces but never each other's storage.
-**Architectural Rule**: The domain contracts for these services are physically extracted into isolated Gradle library modules (`:domain:crm`, `:domain:memory`, `:domain:habit`, `:domain:session`). The Gradle graph strictly enforces that LTM/SSD modules (`crm`, `memory`, `habit`) do **NOT** depend on STM/RAM (`session`).
+**Architectural Rule**: The domain contracts for these services are physically extracted into isolated Gradle library modules (`:domain:crm`, `:domain:memory`, `:domain:habit`, `:domain:session`). The Gradle graph strictly enforces that LTM/SSD modules (`crm`, `memory`, `habit`) do **NOT** depend on STM/RAM (`session`). Additionally, their physical Room storage implementations are isolated into `:data:*` feature modules backed by a strictly decoupled `:core:database` persistence engine.
 
 | Module | Track | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
 |--------|-------|--------------|------------|---------------|----------|--------|

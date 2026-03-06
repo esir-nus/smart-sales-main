@@ -66,7 +66,8 @@
 
 ### 2026-03-06
 
-- **architecture**: The Great Renaming & OS Layer Standardization SHIPPED — Renamed the `app-prism` prototype codename to `app-core` consistently across folders, `settings.gradle.kts`, and all documentation. Formally standardized the `docs/cerb/interface-map.md` OS Layer taxonomy to enforce a strict `OS: Kernel`, `OS: RAM`, `OS: SSD`, `OS: App` architecture definition.
+- **architecture**: Layer 2 Domain Modularization (Stage 2) SHIPPED — Extracted monolithic `PrismDatabase` and Room DAOs into a strictly decoupled `:core:database` module. Successfully moved and wired `RoomUserHabitRepository`, `RoomMemoryRepository`, and `RoomEntityRepository` to isolated `:data:habit`, `:data:memory`, and `:data:crm` feature data modules.
+- **architecture**: The Great Renaming & OS Layer Standardization SHIPPED — Renamed the `app-core` prototype codename to `app-core` consistently across folders, `settings.gradle.kts`, and all documentation. Formally standardized the `docs/cerb/interface-map.md` OS Layer taxonomy to enforce a strict `OS: Kernel`, `OS: RAM`, `OS: SSD`, `OS: App` architecture definition.
 
 - **architecture**: Layer 2 Domain Modularization (Stage 1) SHIPPED — Physically extracted pure Kotlin domain contracts for STM (`session`), LTM (`crm`, `memory`), and RL (`habit`) out of `app-core` into four distinct, isolated Gradle library modules. Passed rigorous Architectural Drift Audit mathematically proving strict one-way dependency isolation between SSD and RAM boundaries.
 - **architecture**: The Great Assembly (Phase 1) SHIPPED — Extracted all 5 core Layer 1 Infrastructure modules from `app-core/domain` into physically isolated Gradle libraries (`:data:connectivity`, `:core:notifications`, `:data:asr`, `:data:tingwu`, `:core:telemetry`). Passed strict Acceptance Team build & contract verification.
@@ -287,10 +288,10 @@
 
 ### Layer 2: Data Services (The Foundation)
 *Stores and queries domain data. SSD and RAM storage boundaries.*
-- [x] `EntityWriter`
-- [x] `EntityRegistry`
-- [x] `MemoryCenter`
-- [x] `UserHabit`
+- [x] `EntityWriter` (extracted to `:data:crm`)
+- [x] `EntityRegistry` (extracted to `:data:crm`)
+- [x] `MemoryCenter` (extracted to `:data:memory`)
+- [x] `UserHabit` (extracted to `:data:habit`)
 - [ ] `SessionHistory`
 - [x] `SessionContext`
 

@@ -653,16 +653,16 @@
             <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">Entity Resolution</div>
             <div class="modules-grid" style="grid-template-columns: repeat(3, 1fr);">
         
-            <div class="module-card" id="feat_entitywriter" data-reads-from='["feat_sessioncontext-write-through-to-ram-s1"]'>
-                <div class="anchor-top" id="anchor-top-feat_entitywriter"></div>
-                <div class="anchor-bottom" id="anchor-bottom-feat_entitywriter"></div>
+            <div class="module-card" id="feat_entitywriter-ltm" data-reads-from='["feat_sessioncontext-write-through-to-ram-s1"]'>
+                <div class="anchor-top" id="anchor-top-feat_entitywriter-ltm"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_entitywriter-ltm"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./entity-writer/spec.md">EntityWriter</a></div>
                     <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
-                    负责在数据库中新建或更新联系人、公司等实体信息。
+                    后端组件
                 </div>
                 
                 <div class="module-detail">
@@ -674,16 +674,16 @@
                 <div class="os-layer">RAM Application</div>
             </div>
         
-            <div class="module-card" id="feat_entityregistry" data-reads-from='["feat_\u2014"]'>
-                <div class="anchor-top" id="anchor-top-feat_entityregistry"></div>
-                <div class="anchor-bottom" id="anchor-bottom-feat_entityregistry"></div>
+            <div class="module-card" id="feat_entityregistry-ltm" data-reads-from='["feat_\u2014"]'>
+                <div class="anchor-top" id="anchor-top-feat_entityregistry-ltm"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_entityregistry-ltm"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./entity-registry/spec.md">EntityRegistry</a></div>
                     <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
-                    负责从数据库中查询和读取实体信息。
+                    后端组件
                 </div>
                 
                 <div class="module-detail">
@@ -1059,16 +1059,16 @@
             <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">Memory & OS</div>
             <div class="modules-grid" style="grid-template-columns: repeat(3, 1fr);">
         
-            <div class="module-card" id="feat_memorycenter" data-reads-from='["feat_\u2014"]'>
-                <div class="anchor-top" id="anchor-top-feat_memorycenter"></div>
-                <div class="anchor-bottom" id="anchor-bottom-feat_memorycenter"></div>
+            <div class="module-card" id="feat_memorycenter-ltm" data-reads-from='["feat_\u2014"]'>
+                <div class="anchor-top" id="anchor-top-feat_memorycenter-ltm"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_memorycenter-ltm"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./memory-center/spec.md">MemoryCenter</a></div>
                     <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
-                    存储所有的聊天记录和语音转写历史。
+                    后端组件
                 </div>
                 
                 <div class="module-detail">
@@ -1080,16 +1080,16 @@
                 <div class="os-layer">SSD</div>
             </div>
         
-            <div class="module-card" id="feat_userhabit" data-reads-from='["feat_\u2014"]'>
-                <div class="anchor-top" id="anchor-top-feat_userhabit"></div>
-                <div class="anchor-bottom" id="anchor-bottom-feat_userhabit"></div>
+            <div class="module-card" id="feat_userhabit-rl" data-reads-from='["feat_\u2014"]'>
+                <div class="anchor-top" id="anchor-top-feat_userhabit-rl"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_userhabit-rl"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./user-habit/spec.md">UserHabit</a></div>
                     <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
-                    记录用户的使用习惯，让AI更懂你。
+                    后端组件
                 </div>
                 
                 <div class="module-detail">
@@ -1101,20 +1101,20 @@
                 <div class="os-layer">SSD</div>
             </div>
         
-            <div class="module-card" id="feat_sessionhistory" data-reads-from='["feat_\u2014"]'>
-                <div class="anchor-top" id="anchor-top-feat_sessionhistory"></div>
-                <div class="anchor-bottom" id="anchor-bottom-feat_sessionhistory"></div>
+            <div class="module-card" id="feat_sessionhistory-stm" data-reads-from='["feat_\u2014"]'>
+                <div class="anchor-top" id="anchor-top-feat_sessionhistory-stm"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_sessionhistory-stm"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./session-history/spec.md">SessionHistory</a></div>
                     <div class="module-status status-wip">WIP</div>
                 </div>
                 
                 <div class="module-explanation">
-                    管理侧边栏的历史会话列表 (重命名、置顶)。
+                    后端组件
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">Owns / 拥有 (写入):</span> Session metadata (list, pin, rename, delete)</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Session navigation metadata (list, pin, rename)</div>
                     <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
                 
@@ -1122,16 +1122,16 @@
                 <div class="os-layer">SSD</div>
             </div>
         
-            <div class="module-card" id="feat_sessioncontext" data-reads-from='["feat_entitywriter-s1-via-write-through", "feat_rlmodule-s2/s3"]'>
-                <div class="anchor-top" id="anchor-top-feat_sessioncontext"></div>
-                <div class="anchor-bottom" id="anchor-bottom-feat_sessioncontext"></div>
+            <div class="module-card" id="feat_sessioncontext-stm" data-reads-from='["feat_entitywriter-s1-via-write-through", "feat_rlmodule-s2/s3"]'>
+                <div class="anchor-top" id="anchor-top-feat_sessioncontext-stm"></div>
+                <div class="anchor-bottom" id="anchor-bottom-feat_sessioncontext-stm"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./session-context/spec.md">SessionContext</a></div>
                     <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
-                    当前聊天的临时高速缓存，AI思考时的数据源。
+                    后端组件
                 </div>
                 
                 <div class="module-detail">

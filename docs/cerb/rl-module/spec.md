@@ -8,7 +8,9 @@
 
 ## Overview
 
-RL Module is an **Application** that runs on the SessionWorkingSet (RAM). It learns user and client preferences from structured output in LLM responses.
+The RL Module is the agent's **Reinforcement Learning** subsystem. It is an **Application** that runs on the SessionWorkingSet (RAM), learning user and client preferences from structured output in LLM responses.
+
+Crucially, the RL system is **Event-Driven**. To preserve mobile battery and ensure architectural decoupling, it does NOT continuously monitor the pipeline. Instead, it is a reactive listener that only receives a copy of the payload when the user sends a message, effectively running out-of-band to log habits without blocking the core response loop.
 
 **OS Model Role**:
 - **Reader**: Reads active habits from RAM Sections 2 (User) & 3 (Client).

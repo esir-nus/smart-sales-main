@@ -8,7 +8,9 @@
 
 ## Overview
 
-Memory Center manages persistent storage and retrieval of user interactions, entity information, and scheduled tasks. Uses a **Two-Zone Model** for lifecycle management.
+Memory Center is part of the agent's **Long-Term Memory (LTM)**. It manages persistent storage on SSD for retrieval of user interactions, entity information, and scheduled tasks. 
+
+It acts as the permanent ledger of knowledge events, entirely separate from the ephemeral Short-Term Memory (STM) in `SessionContext`, or the UI navigation history in `SessionHistory`.
 
 ---
 

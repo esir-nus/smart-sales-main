@@ -1,6 +1,6 @@
 # Session Context System
 
-> **Cerb-compliant spec** — In-memory workspace and caching for `ContextBuilder`.  
+> **Cerb-compliant spec** — Short-Term Memory (STM) workspace and caching for `ContextBuilder`.  
 > **OS Layer**: Kernel  
 > **State**: ✅ SHIPPED
 
@@ -8,7 +8,9 @@
 
 ## Overview
 
-The Session Context System (now **Session Working Set**) is the **per-session workspace** (the "RAM") that all pipeline modules operate through. It implements the OS Model Architecture with three distinct sections.
+The Session Context System (now **Session Working Set**) is the **Short-Term Memory (STM)** of the agent. It acts as the ephemeral **per-session workspace** (the "RAM") that all pipeline modules operate through. It implements the OS Model Architecture with three distinct sections.
+
+The STM `SessionWorkingSet` is dynamically populated using a **Lazy Loading** strategy. When the `LightningRouter` signals `info_sufficiency: true`, the ContextBuilder queries the Long-Term Memory (LTM - `EntityRegistry`) to fetch only the relevant entities and loads them into the STM. On a mobile device, we cannot load all 10,000 CRM entities into RAM.
 
 **Lifecycle**: Created and managed by the Kernel (`ContextBuilder`) when a session starts. Destroyed when session ends or resets.
 

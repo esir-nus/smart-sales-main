@@ -8,7 +8,9 @@
 
 ## Overview
 
-Manages B2B sales entity tracking (People, Products, Locations, Events, and CRM entities) with O(1) lookup and LLM-first disambiguation.
+The Entity Registry is the core of the agent's **Long-Term Memory (LTM)** for CRM data. It manages B2B sales entity persistence (People, Products, Locations, Events, and CRM entities) with O(1) lookup and LLM-first disambiguation, safely stored on the device SSD.
+
+The LTM `EntityRegistry` relies on a **Lazy Loading** strategy to serve the `SessionContext` (STM). When the router signals `info_sufficiency: true`, the Registry provides a localized sub-graph of entities to be cached in RAM for the duration of the conversation, preventing the application from crashing the mobile device by loading all entities at once.
 
 ---
 

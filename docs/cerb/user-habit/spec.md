@@ -8,7 +8,9 @@
 
 ## Overview
 
-Stores learned user behavioral patterns for personalization. Learning logic is in [RL Module](../rl-module/spec.md); this spec covers storage only.
+Stores learned user behavioral patterns for personalization. Learning logic is in [RL Module](../rl-module/spec.md); this spec covers the SSD storage mechanism for the Reinforcement Learning (RL) subsystem.
+
+The RL subsystem is completely **Event-Driven**. It does not continuously monitor application state or run expensive loops in the background. Instead, it acts as a passive observer waiting for pipeline events (saving battery life).
 
 ---
 

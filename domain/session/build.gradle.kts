@@ -8,6 +8,7 @@ kotlin {
 }
 
 dependencies {
+    implementation("javax.inject:javax.inject:1")
     implementation(libs.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
     

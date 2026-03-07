@@ -1,7 +1,8 @@
 package com.smartsales.prism.data.fakes.plugins
 
-import com.smartsales.prism.domain.analyst.AnalystTool
-import com.smartsales.prism.domain.analyst.PluginRequest
+import com.smartsales.core.pipeline.AnalystTool
+import com.smartsales.core.pipeline.PluginRequest
+import com.smartsales.core.pipeline.PluginGateway
 import com.smartsales.prism.domain.model.UiState
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
@@ -24,7 +25,12 @@ class FakeConfigurablePluginBreakItTest {
     @Test
     fun `execute with empty parameters returns semantic placeholder`() = runTest {
         val request = PluginRequest(rawInput = "do it", parameters = emptyMap())
-        val states = plugin.execute(request).toList()
+        val gateway = object : PluginGateway {
+            override suspend fun getSessionHistory(turns: Int) = ""
+            override suspend fun appendToHistory(message: String) {}
+            override suspend fun emitProgress(message: String) {}
+        }
+        val states = plugin.execute(request, gateway).toList()
         
         assertEquals(4, states.size)
         // State 0: Starting
@@ -45,7 +51,12 @@ class FakeConfigurablePluginBreakItTest {
                 "nullParam" to "null"
             )
         )
-        val states = plugin.execute(request).toList()
+        val gateway = object : PluginGateway {
+            override suspend fun getSessionHistory(turns: Int) = ""
+            override suspend fun appendToHistory(message: String) {}
+            override suspend fun emitProgress(message: String) {}
+        }
+        val states = plugin.execute(request, gateway).toList()
         
         assertEquals(4, states.size)
         val finalResponse = states.last() as UiState.Response

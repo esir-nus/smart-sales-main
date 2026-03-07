@@ -3,12 +3,12 @@ package com.smartsales.prism.data.scheduler
 import android.util.Log
 import com.smartsales.data.aicore.AiChatRequest
 import com.smartsales.data.aicore.AiChatService
-import com.smartsales.prism.domain.config.ModelRegistry
+import com.smartsales.core.llm.ModelRegistry
 import com.smartsales.prism.domain.crm.ClientProfileHub
 import com.smartsales.prism.domain.crm.FocusedContext
 import com.smartsales.prism.domain.scheduler.TimelineItemModel
 import com.smartsales.prism.domain.scheduler.TipGenerator
-import com.smartsales.prism.domain.utils.MarkdownSanitizer
+import com.smartsales.core.util.MarkdownSanitizer
 import org.json.JSONArray
 import javax.inject.Inject
 import javax.inject.Singleton

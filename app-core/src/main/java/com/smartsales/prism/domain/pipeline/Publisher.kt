@@ -2,6 +2,7 @@ package com.smartsales.prism.domain.pipeline
 
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.model.UiState
+import com.smartsales.core.llm.ExecutorResult
 
 /**
  * 发布器 — 输出格式化策略

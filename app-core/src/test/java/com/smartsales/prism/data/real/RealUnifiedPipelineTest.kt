@@ -1,12 +1,15 @@
 package com.smartsales.prism.data.real
 
+import com.smartsales.core.context.RealContextBuilder
+import com.smartsales.core.pipeline.RealUnifiedPipeline
+
 import com.smartsales.prism.domain.model.Mode
-import com.smartsales.prism.domain.pipeline.ContextBuilder
-import com.smartsales.prism.domain.pipeline.ContextDepth
-import com.smartsales.prism.domain.pipeline.EnhancedContext
-import com.smartsales.prism.domain.pipeline.ModeMetadata
-import com.smartsales.prism.domain.unifiedpipeline.PipelineInput
-import com.smartsales.prism.domain.unifiedpipeline.PipelineResult
+import com.smartsales.core.context.ContextBuilder
+import com.smartsales.core.context.ContextDepth
+import com.smartsales.core.context.EnhancedContext
+import com.smartsales.core.context.ModeMetadata
+import com.smartsales.core.pipeline.PipelineInput
+import com.smartsales.core.pipeline.PipelineResult
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
@@ -24,8 +27,8 @@ class RealUnifiedPipelineTest {
     private lateinit var pipeline: RealUnifiedPipeline
     private lateinit var contextBuilder: ContextBuilder
 
-    private lateinit var entityDisambiguationService: com.smartsales.prism.domain.disambiguation.EntityDisambiguationService
-    private lateinit var inputParserService: com.smartsales.prism.domain.parser.InputParserService
+    private lateinit var entityDisambiguationService: com.smartsales.core.pipeline.EntityDisambiguationService
+    private lateinit var inputParserService: com.smartsales.core.pipeline.InputParserService
     private lateinit var entityWriter: com.smartsales.prism.domain.memory.EntityWriter
     private lateinit var schedulerLinter: com.smartsales.prism.domain.scheduler.SchedulerLinter
     private lateinit var scheduledTaskRepository: com.smartsales.prism.domain.scheduler.ScheduledTaskRepository

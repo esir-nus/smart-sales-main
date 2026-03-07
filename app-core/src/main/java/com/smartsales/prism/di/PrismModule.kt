@@ -3,22 +3,20 @@ package com.smartsales.prism.di
 import com.smartsales.prism.data.audio.RealAudioRepository
 
 
-import com.smartsales.prism.data.real.RealContextBuilder
-
-import com.smartsales.prism.data.persistence.RoomHistoryRepository
+import com.smartsales.core.context.RealContextBuilder
 import com.smartsales.prism.data.fakes.FakePublisher
-import com.smartsales.prism.data.persistence.RoomMemoryRepository
-import com.smartsales.prism.data.persistence.RoomEntityRepository
-import com.smartsales.prism.data.persistence.RoomUserHabitRepository
+
+
+
 import com.smartsales.prism.data.fakes.FakeUserProfileRepository 
-import com.smartsales.prism.data.real.DashscopeExecutor
+import com.smartsales.core.llm.DashscopeExecutor
 import com.smartsales.prism.domain.session.SessionTitleGenerator
 import com.smartsales.prism.domain.audio.AudioRepository
 
 import com.smartsales.prism.domain.memory.MemoryRepository
 import com.smartsales.prism.domain.memory.EntityRepository
-import com.smartsales.prism.domain.pipeline.ContextBuilder
-import com.smartsales.prism.domain.pipeline.Executor
+import com.smartsales.core.context.ContextBuilder
+import com.smartsales.core.llm.Executor
 import com.smartsales.prism.domain.pipeline.Publisher
 import com.smartsales.prism.data.real.telemetry.RealPipelineTelemetry
 import com.smartsales.prism.domain.telemetry.PipelineTelemetry
@@ -50,7 +48,7 @@ abstract class PrismModule {
     abstract fun bindContextBuilder(impl: RealContextBuilder): ContextBuilder
 
     @Binds @Singleton
-    abstract fun bindKernelWriteBack(impl: RealContextBuilder): com.smartsales.prism.domain.pipeline.KernelWriteBack
+    abstract fun bindKernelWriteBack(impl: RealContextBuilder): com.smartsales.core.context.KernelWriteBack
     
     @Binds @Singleton
     abstract fun bindPipelineTelemetry(impl: RealPipelineTelemetry): PipelineTelemetry
@@ -63,14 +61,9 @@ abstract class PrismModule {
     
     // === Repositories ===
     
-    @Binds @Singleton
-    abstract fun bindHistoryRepository(impl: RoomHistoryRepository): HistoryRepository
+
     
-    @Binds @Singleton
-    abstract fun bindMemoryRepository(impl: RoomMemoryRepository): MemoryRepository
     
-    @Binds @Singleton
-    abstract fun bindEntityRepository(impl: RoomEntityRepository): EntityRepository
     
     @Binds @Singleton
     abstract fun bindClientProfileHub(fake: com.smartsales.prism.data.fakes.FakeClientProfileHub): com.smartsales.prism.domain.crm.ClientProfileHub
@@ -89,24 +82,19 @@ abstract class PrismModule {
     // === Analyst Tools ===
 
     @Binds @Singleton
-    abstract fun bindToolRegistry(impl: com.smartsales.prism.data.real.RealToolRegistry): com.smartsales.prism.domain.analyst.ToolRegistry
+    abstract fun bindToolRegistry(impl: com.smartsales.core.pipeline.RealToolRegistry): com.smartsales.core.pipeline.ToolRegistry
 
     @Binds
     @dagger.multibindings.IntoSet
-    abstract fun bindExportCsvPlugin(plugin: com.smartsales.prism.data.real.plugins.ExportCsvPlugin): com.smartsales.prism.domain.analyst.PrismPlugin
+    abstract fun bindExportCsvPlugin(plugin: com.smartsales.prism.data.real.plugins.ExportCsvPlugin): com.smartsales.core.pipeline.PrismPlugin
 
     @Binds @Singleton
-    abstract fun bindLightningRouter(impl: com.smartsales.prism.data.real.RealLightningRouter): com.smartsales.prism.domain.analyst.LightningRouter
+    abstract fun bindLightningRouter(impl: com.smartsales.core.pipeline.RealLightningRouter): com.smartsales.core.pipeline.LightningRouter
 
     @Binds @Singleton
-    abstract fun bindEntityResolverService(impl: com.smartsales.prism.data.real.RealEntityResolverService): com.smartsales.prism.domain.analyst.EntityResolverService
+    abstract fun bindEntityResolverService(impl: com.smartsales.core.pipeline.RealEntityResolverService): com.smartsales.core.pipeline.EntityResolverService
 
 
-
-    // === User Habit ===
-
-    @Binds @Singleton
-    abstract fun bindUserHabitRepository(impl: RoomUserHabitRepository): com.smartsales.prism.domain.habit.UserHabitRepository
 
     // === RL Module ===
 
@@ -131,7 +119,7 @@ abstract class PrismModule {
     // === Mascot System I ===
     
     @Binds @Singleton
-    abstract fun bindMascotService(impl: com.smartsales.prism.data.real.RealMascotService): com.smartsales.prism.domain.mascot.MascotService
+    abstract fun bindMascotService(impl: com.smartsales.core.pipeline.RealMascotService): com.smartsales.core.pipeline.MascotService
 
     @Binds @Singleton
     abstract fun bindSystemEventBus(impl: com.smartsales.prism.data.real.RealSystemEventBus): com.smartsales.prism.domain.system.SystemEventBus
@@ -149,13 +137,13 @@ abstract class PrismModule {
     // === Input Parser (Turbo Router) ===
 
     @Binds @Singleton
-    abstract fun bindInputParserService(impl: com.smartsales.prism.data.parser.RealInputParserService): com.smartsales.prism.domain.parser.InputParserService
+    abstract fun bindInputParserService(impl: com.smartsales.core.pipeline.RealInputParserService): com.smartsales.core.pipeline.InputParserService
 
     @Binds @Singleton
-    abstract fun bindEntityDisambiguationService(impl: com.smartsales.prism.data.disambiguation.RealEntityDisambiguationService): com.smartsales.prism.domain.disambiguation.EntityDisambiguationService
+    abstract fun bindEntityDisambiguationService(impl: com.smartsales.core.pipeline.RealEntityDisambiguationService): com.smartsales.core.pipeline.EntityDisambiguationService
 
     @Binds @Singleton
-    abstract fun bindUnifiedPipeline(impl: com.smartsales.prism.data.real.RealUnifiedPipeline): com.smartsales.prism.domain.unifiedpipeline.UnifiedPipeline
+    abstract fun bindUnifiedPipeline(impl: com.smartsales.core.pipeline.RealUnifiedPipeline): com.smartsales.core.pipeline.UnifiedPipeline
 
     companion object {
         @Provides

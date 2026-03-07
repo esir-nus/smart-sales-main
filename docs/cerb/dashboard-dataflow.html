@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+
+    <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
@@ -392,17 +393,16 @@
         
         <div class="header">
             <h1>Cerb Architecture Dashboard <br><span style="font-size: 1.5rem; color: #a78bfa;">(分布式架构与项目规模面板)</span></h1>
-            <p>实时模块状态、领域输入输出契约与代码库规模</p>
+            <p>Real-time module status, domain I/O contracts, and codebase footprint</p>
         </div>
         
         <div class="legend">
-            <div class="legend-item"><span class="module-status status-shipped">已上线</span> <span class="translation-hint">(实体)</span></div>
-            <div class="legend-item"><span class="module-status status-interface">仅接口</span> <span class="translation-hint">(桩代码)</span></div>
-            <div class="legend-item"><span class="module-status status-planned">计划中</span> <span class="translation-hint">(未开发)</span></div>
-            <div class="legend-item"><span class="module-status status-wip">开发中</span></div>
+            <div class="legend-item"><span class="module-status status-shipped">Shipped</span> (Real impl) / <span class="translation-hint">已上线</span></div>
+            <div class="legend-item"><span class="module-status status-interface">Interface</span> (Fake impl) / <span class="translation-hint">仅接口 (假实现)</span></div>
+            <div class="legend-item"><span class="module-status status-planned">Planned</span> (Not coded) / <span class="translation-hint">计划中 (未开发)</span></div>
+            <div class="legend-item"><span class="module-status status-wip">WIP</span> / <span class="translation-hint">开发中</span></div>
         </div>
 
-        
         <div class="tabs">
             <a href="dashboard-topology.html" class="tab-btn " style="text-decoration: none; display: inline-block;">拓扑层级</a>
             <a href="dashboard-dataflow.html" class="tab-btn active" style="text-decoration: none; display: inline-block;">跨模块数据流</a>
@@ -410,12 +410,11 @@
         </div>
 
         <!-- 2. Feature Dataflow View -->
-
-        <div id="feature" class="tab-content" style="display: block;">
+        <div id="feature" class="tab-content active">
             <div class="layer-container" style="flex-direction: column; position: relative; padding-left: 40px; gap: 40px;">
     
         <div class="layer" style="margin-bottom: 20px;">
-            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">硬件与音频</div>
+            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">Hardware & Audio</div>
             <div class="modules-grid" style="grid-template-columns: repeat(3, 1fr);">
         
             <div class="module-card" id="feat_connectivitybridge" data-reads-from='["feat_\u2014"]'>
@@ -423,7 +422,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_connectivitybridge"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./connectivity-bridge/spec.md">ConnectivityBridge</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -431,8 +430,8 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 蓝牙与HTTP设备状态</div>
-                    <div><span class="label">读取自:</span> —</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> BLE + HTTP device state</div>
+                    <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
                 
                 <div class="card-signature">connectionState: StateFlow, isReady()</div>
@@ -444,7 +443,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_oss"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./oss-service/spec.md">OSS</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -452,8 +451,8 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 文件上传与下载</div>
-                    <div><span class="label">读取自:</span> —</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> File upload/download</div>
+                    <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
                 
                 <div class="card-signature">upload(File, objectKey) -> OssUploadResult</div>
@@ -465,7 +464,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_asr"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./asr-service/spec.md">ASR</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -473,8 +472,8 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 语音转写结果</div>
-                    <div><span class="label">读取自:</span> OSS (下载音频文件进行转写)</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Transcription results</div>
+                    <div><span class="label">Reads From / 读取自:</span> OSS (downloads audio files to transcribe)</div>
                 </div>
                 
                 <div class="card-signature">transcribe(File) -> AsrResult</div>
@@ -486,7 +485,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_tingwupipeline"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./tingwu-pipeline/spec.md">TingwuPipeline</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -494,12 +493,12 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 转写与音频智能提取</div>
-                    <div><span class="label">读取自:</span> OSS (读取文件URL)</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Transcription & Audio Intelligence</div>
+                    <div><span class="label">Reads From / 读取自:</span> OSS (reads fileUrl)</div>
                 </div>
                 
                 <div class="card-signature">submit(TingwuRequest) -> Result<String></div>
-                <div class="os-layer">SSD</div>
+                <div class="os-layer">OS: SSD</div>
             </div>
         
             <div class="module-card" id="feat_badgeaudiopipeline" data-reads-from='["feat_asr", "feat_oss", "feat_connectivitybridge"]'>
@@ -507,7 +506,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_badgeaudiopipeline"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./badge-audio-pipeline/spec.md">BadgeAudioPipeline</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -515,8 +514,8 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 音频录制生命周期</div>
-                    <div><span class="label">读取自:</span> 直接读取: ASR, OSS, ConnectivityBridge <br> 经编排器接收: 转写完成时触发 UnifiedPipeline</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Audio recording lifecycle</div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ASR, OSS, ConnectivityBridge <br> Via Orch / 经编排器接收: Triggers UnifiedPipeline on transcription complete</div>
                 </div>
                 
                 <div class="card-signature"></div>
@@ -528,7 +527,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_audiomanagement"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./audio-management/spec.md">AudioManagement</a></div>
-                    <div class="module-status status-wip">开发中</div>
+                    <div class="module-status status-wip">WIP</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -536,12 +535,12 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 手动同步与转写状态</div>
-                    <div><span class="label">读取自:</span> 直接读取: ConnectivityBridge, TingwuPipeline <br> 经编排器接收: *观察数据库状态*</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Manual sync/transcribe states</div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ConnectivityBridge, TingwuPipeline <br> Via Orch / 经编排器接收: *Observes DB State*</div>
                 </div>
                 
                 <div class="card-signature"></div>
-                <div class="os-layer">应用</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             <div class="module-card" id="feat_devicepairing" data-reads-from='["feat_legacy-ble-stack"]'>
@@ -549,7 +548,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_devicepairing"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./device-pairing/spec.md">DevicePairing</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -557,19 +556,19 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 蓝牙配对会话状态</div>
-                    <div><span class="label">读取自:</span> 直接读取: 旧版蓝牙栈 <br> 经编排器接收: StateFlow<PairingState></div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> BLE pairing session states</div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: Legacy BLE stack <br> Via Orch / 经编排器接收: StateFlow<PairingState></div>
                 </div>
                 
                 <div class="card-signature"></div>
-                <div class="os-layer">应用</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             </div>
         </div>
         
         <div class="layer" style="margin-bottom: 20px;">
-            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">实体解析</div>
+            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">Entity Resolution</div>
             <div class="modules-grid" style="grid-template-columns: repeat(3, 1fr);">
         
             <div class="module-card" id="feat_entitywriter-ltm" data-reads-from='["feat_sessioncontext-write-through-to-ram-s1"]'>
@@ -577,7 +576,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_entitywriter-ltm"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./entity-writer/spec.md">EntityWriter</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -585,12 +584,12 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 实体变更 (创建/更新/合并别名)</div>
-                    <div><span class="label">读取自:</span> SessionContext (直写至 RAM S1)</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Entity mutations (create/update/merge aliases)</div>
+                    <div><span class="label">Reads From / 读取自:</span> SessionContext (write-through to RAM S1)</div>
                 </div>
                 
                 <div class="card-signature">upsertFromClue(String, ...) -> UpsertResult</div>
-                <div class="os-layer">RAM 层应用</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             <div class="module-card" id="feat_entityregistry-ltm" data-reads-from='["feat_\u2014"]'>
@@ -598,7 +597,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_entityregistry-ltm"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./entity-registry/spec.md">EntityRegistry</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -606,12 +605,12 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 实体查询 (数据实体的只读视图)</div>
-                    <div><span class="label">读取自:</span> —</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Entity queries (read-only view of entities)</div>
+                    <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
                 
                 <div class="card-signature">findByAlias(String) -> List<EntityEntry></div>
-                <div class="os-layer">SSD</div>
+                <div class="os-layer">OS: SSD</div>
             </div>
         
             <div class="module-card" id="feat_entitydisambiguator" data-reads-from='["feat_entitywriter-to-write-cures"]'>
@@ -619,7 +618,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_entitydisambiguator"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./entity-disambiguation/spec.md">EntityDisambiguator</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -627,12 +626,12 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> PendingIntent 中断状态</div>
-                    <div><span class="label">读取自:</span> EntityWriter (用于写入修正)</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> `PendingIntent` interruption state</div>
+                    <div><span class="label">Reads From / 读取自:</span> EntityWriter (to write cures)</div>
                 </div>
                 
                 <div class="card-signature">process(String) -> DisambiguationResult</div>
-                <div class="os-layer">RAM 层应用</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             <div class="module-card" id="feat_entityresolver" data-reads-from='["feat_entityregistry"]'>
@@ -640,7 +639,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_entityresolver"></div>
                 <div class="module-header">
                     <div class="module-name">EntityResolver</div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -648,19 +647,19 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 实体消歧匹配</div>
-                    <div><span class="label">读取自:</span> EntityRegistry</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Entity disambiguation matching</div>
+                    <div><span class="label">Reads From / 读取自:</span> EntityRegistry</div>
                 </div>
                 
                 <div class="card-signature">resolve(String, List<EntityEntry>) -> EntityEntry?</div>
-                <div class="os-layer">RAM 层应用</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             </div>
         </div>
         
         <div class="layer" style="margin-bottom: 20px;">
-            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">系统二与路由</div>
+            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">System II & Routing</div>
             <div class="modules-grid" style="grid-template-columns: repeat(3, 1fr);">
         
             <div class="module-card" id="feat_pipelinetelemetry" data-reads-from='["feat_\u2014"]'>
@@ -668,7 +667,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_pipelinetelemetry"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./pipeline-telemetry/spec.md">PipelineTelemetry</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -676,12 +675,12 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 管线日志 (输出至Logcat)</div>
-                    <div><span class="label">读取自:</span> —</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Pipeline logs (to Logcat)</div>
+                    <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
                 
                 <div class="card-signature">recordEvent(PipelinePhase, String) -> Unit</div>
-                <div class="os-layer">RAM</div>
+                <div class="os-layer">OS: RAM</div>
             </div>
         
             <div class="module-card" id="feat_contextbuilder" data-reads-from='["feat_entityregistry", "feat_memorycenter", "feat_sessioncontext"]'>
@@ -689,7 +688,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_contextbuilder"></div>
                 <div class="module-header">
                     <div class="module-name">ContextBuilder</div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -697,12 +696,12 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> EnhancedContext (组装后的提示词组)</div>
-                    <div><span class="label">读取自:</span> EntityRegistry, MemoryCenter, SessionContext</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> `EnhancedContext` (assembled prompt context)</div>
+                    <div><span class="label">Reads From / 读取自:</span> EntityRegistry, MemoryCenter, SessionContext</div>
                 </div>
                 
                 <div class="card-signature">build(String, Mode, ...) -> EnhancedContext</div>
-                <div class="os-layer">系统内核</div>
+                <div class="os-layer">OS: Kernel</div>
             </div>
         
             <div class="module-card" id="feat_inputparser" data-reads-from='["feat_aliasindex-internal"]'>
@@ -710,7 +709,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_inputparser"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./input-parser/spec.md">InputParser</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -718,12 +717,12 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 语义意图与实体ID解析</div>
-                    <div><span class="label">读取自:</span> AliasIndex (内部使用)</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Semantic intent and EntityID resolution</div>
+                    <div><span class="label">Reads From / 读取自:</span> AliasIndex (internal)</div>
                 </div>
                 
                 <div class="card-signature">parseIntent(String) -> ParseResult</div>
-                <div class="os-layer">RAM 层应用</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             <div class="module-card" id="feat_lightningrouter" data-reads-from='["feat_contextbuilder"]'>
@@ -731,7 +730,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_lightningrouter"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./lightning-router/spec.md">LightningRouter</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -739,12 +738,12 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 意图评估 (Phase 0)</div>
-                    <div><span class="label">读取自:</span> ContextBuilder</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Intent evaluation (Phase 0)</div>
+                    <div><span class="label">Reads From / 读取自:</span> ContextBuilder</div>
                 </div>
                 
                 <div class="card-signature">evaluateIntent(EnhancedContext) -> RouterResult?</div>
-                <div class="os-layer">RAM 层应用</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             <div class="module-card" id="feat_modelregistry" data-reads-from='["feat_\u2014"]'>
@@ -752,7 +751,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_modelregistry"></div>
                 <div class="module-header">
                     <div class="module-name">ModelRegistry</div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -760,12 +759,12 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 静态大模型配置 (模型/温度/技能)</div>
-                    <div><span class="label">读取自:</span> —</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Static LLM Profiles (models, temps, skills)</div>
+                    <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
                 
                 <div class="card-signature">ModelRegistry</div>
-                <div class="os-layer">配置中心</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             <div class="module-card" id="feat_executor" data-reads-from='["feat_modelrouter"]'>
@@ -773,7 +772,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_executor"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./model-routing/spec.md">Executor</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -781,8 +780,8 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 大模型原始输出 (无状态 — 不存储)</div>
-                    <div><span class="label">读取自:</span> ModelRouter</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Raw LLM output (stateless — no storage)</div>
+                    <div><span class="label">Reads From / 读取自:</span> ModelRouter</div>
                 </div>
                 
                 <div class="card-signature">execute(LlmProfile, EnhancedContext) -> ExecutorResult</div>
@@ -794,7 +793,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_pluginregistry"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./plugin-registry/spec.md">PluginRegistry</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -802,12 +801,12 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 可执行纯 Kotlin 工作流 (系统工具)</div>
-                    <div><span class="label">读取自:</span> —</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Executable pure-Kotlin workflows (Tools)</div>
+                    <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
                 
                 <div class="card-signature">executeTool(ToolId, PluginRequest) -> Flow<UiState></div>
-                <div class="os-layer">应用底层基建</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             <div class="module-card" id="feat_unifiedpipeline" data-reads-from='["feat_entityregistry", "feat_userhabit", "feat_memorycenter", "feat_contextbuilder"]'>
@@ -815,7 +814,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_unifiedpipeline"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./unified-pipeline/spec.md">UnifiedPipeline</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -823,12 +822,12 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 系统二上下文流转处理 (ETL 与执行)</div>
-                    <div><span class="label">读取自:</span> EntityRegistry, UserHabit, MemoryCenter, ContextBuilder</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> System II context ETL & execution</div>
+                    <div><span class="label">Reads From / 读取自:</span> EntityRegistry, UserHabit, MemoryCenter, ContextBuilder</div>
                 </div>
                 
                 <div class="card-signature">processInput(PipelineInput) -> Flow<PipelineResult></div>
-                <div class="os-layer">RAM 层应用</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             <div class="module-card" id="feat_agentintelligenceui" data-reads-from='["feat_\u2014"]'>
@@ -836,7 +835,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_agentintelligenceui"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="../cerb-ui/agent-intelligence/spec.md">AgentIntelligenceUI</a></div>
-                    <div class="module-status status-interface">仅接口</div>
+                    <div class="module-status status-interface">Interface</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -844,19 +843,19 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 等待状态 UI 组件</div>
-                    <div><span class="label">读取自:</span> 直接读取: — <br> 经编排器接收: StateFlow<UiState></div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Wait-state UI components</div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: — <br> Via Orch / 经编排器接收: StateFlow<UiState></div>
                 </div>
                 
                 <div class="card-signature"></div>
-                <div class="os-layer">RAM 层应用</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             </div>
         </div>
         
         <div class="layer" style="margin-bottom: 20px;">
-            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">智能调度</div>
+            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">Intelligent Scheduler</div>
             <div class="modules-grid" style="grid-template-columns: repeat(3, 1fr);">
         
             <div class="module-card" id="feat_scheduler" data-reads-from='["feat_entityregistry-alias-lookup", "feat_scheduleboard-conflicts"]'>
@@ -864,7 +863,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_scheduler"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./scheduler/spec.md">Scheduler</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -872,12 +871,12 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> ScheduledTask, InspirationEntry</div>
-                    <div><span class="label">读取自:</span> 直接读取: EntityRegistry (别名查询), ScheduleBoard (冲突拦截) <br> 经编排器接收: *视图模型内部管线映射*</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> ScheduledTask, InspirationEntry</div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: EntityRegistry (alias lookup), ScheduleBoard (conflicts) <br> Via Orch / 经编排器接收: *VM Internal Pipeline Mapping*</div>
                 </div>
                 
                 <div class="card-signature"></div>
-                <div class="os-layer">RAM 消费者</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             <div class="module-card" id="feat_scheduleboard" data-reads-from='["feat_scheduledtaskrepository-populates-index"]'>
@@ -885,7 +884,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_scheduleboard"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./scheduler/spec.md">ScheduleBoard</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -893,12 +892,12 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 冲突索引 (内存缓存)</div>
-                    <div><span class="label">读取自:</span> 直接读取: ScheduledTaskRepository (预备索引) <br> 经编排器接收: —</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Conflict index (in-memory cache)</div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ScheduledTaskRepository (populates index) <br> Via Orch / 经编排器接收: —</div>
                 </div>
                 
                 <div class="card-signature"></div>
-                <div class="os-layer">SSD</div>
+                <div class="os-layer">OS: SSD</div>
             </div>
         
             <div class="module-card" id="feat_conflictresolver" data-reads-from='["feat_scheduleboard"]'>
@@ -906,7 +905,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_conflictresolver"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./conflict-resolver/spec.md">ConflictResolver</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -914,19 +913,19 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 冲突解决动作</div>
-                    <div><span class="label">读取自:</span> 直接读取: ScheduleBoard <br> 经编排器接收: resolve(...) -> ConflictResolution</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Conflict resolution actions</div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: ScheduleBoard <br> Via Orch / 经编排器接收: resolve(...) -> ConflictResolution</div>
                 </div>
                 
                 <div class="card-signature"></div>
-                <div class="os-layer">RAM 层应用</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             </div>
         </div>
         
         <div class="layer" style="margin-bottom: 20px;">
-            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">系统一与常驻</div>
+            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">System I & Ambient</div>
             <div class="modules-grid" style="grid-template-columns: repeat(3, 1fr);">
         
             <div class="module-card" id="feat_notificationservice" data-reads-from='["feat_\u2014"]'>
@@ -934,7 +933,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_notificationservice"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./notifications/spec.md">NotificationService</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -942,8 +941,8 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 系统通知显示</div>
-                    <div><span class="label">读取自:</span> —</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> System notification display</div>
+                    <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
                 
                 <div class="card-signature">show(id, title, body, channel...) -> Unit</div>
@@ -955,7 +954,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_mascot-system-i"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./mascot-service/spec.md">Mascot (System I)</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -963,19 +962,19 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 即时交互、日常寒暄</div>
-                    <div><span class="label">读取自:</span> 直接读取: EventBus (空闲, 错误事件) <br> 经编排器接收: StateFlow<MascotState></div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Ephemeral interactions, greetings</div>
+                    <div><span class="label">Reads From / 读取自:</span> Direct / 直接读取: EventBus (Idle, Error) <br> Via Orch / 经编排器接收: StateFlow<MascotState></div>
                 </div>
                 
                 <div class="card-signature"></div>
-                <div class="os-layer">RAM 层应用 (独立带外)</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             </div>
         </div>
         
         <div class="layer" style="margin-bottom: 20px;">
-            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">记忆与系统</div>
+            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">Memory & OS</div>
             <div class="modules-grid" style="grid-template-columns: repeat(3, 1fr);">
         
             <div class="module-card" id="feat_memorycenter-ltm" data-reads-from='["feat_\u2014"]'>
@@ -983,7 +982,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_memorycenter-ltm"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./memory-center/spec.md">MemoryCenter</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -991,12 +990,12 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 对话记忆条目</div>
-                    <div><span class="label">读取自:</span> —</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Conversation memory entries</div>
+                    <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
                 
                 <div class="card-signature">search(String) -> List<MemoryEntry></div>
-                <div class="os-layer">SSD</div>
+                <div class="os-layer">OS: SSD</div>
             </div>
         
             <div class="module-card" id="feat_userhabit-rl" data-reads-from='["feat_\u2014"]'>
@@ -1004,7 +1003,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_userhabit-rl"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./user-habit/spec.md">UserHabit</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -1012,12 +1011,12 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 用户行为模式数据沉淀</div>
-                    <div><span class="label">读取自:</span> —</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Behavioral pattern observations</div>
+                    <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
                 
                 <div class="card-signature">observe(key, value, source...) -> Unit</div>
-                <div class="os-layer">SSD</div>
+                <div class="os-layer">OS: SSD</div>
             </div>
         
             <div class="module-card" id="feat_sessionhistory-stm" data-reads-from='["feat_\u2014"]'>
@@ -1025,7 +1024,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_sessionhistory-stm"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./session-history/spec.md">SessionHistory</a></div>
-                    <div class="module-status status-wip">开发中</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -1033,12 +1032,12 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 会话导航元数据 (列表/置顶/重命名)</div>
-                    <div><span class="label">读取自:</span> —</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Session navigation metadata (list, pin, rename)</div>
+                    <div><span class="label">Reads From / 读取自:</span> —</div>
                 </div>
                 
                 <div class="card-signature">getGroupedSessionsFlow() -> Flow<Map></div>
-                <div class="os-layer">SSD</div>
+                <div class="os-layer">OS: SSD</div>
             </div>
         
             <div class="module-card" id="feat_sessioncontext-stm" data-reads-from='["feat_entitywriter-s1-via-write-through", "feat_rlmodule-s2/s3"]'>
@@ -1046,7 +1045,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_sessioncontext-stm"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./session-context/spec.md">SessionContext</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -1054,12 +1053,12 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 单会话工作区 (3大核心板块)</div>
-                    <div><span class="label">读取自:</span> EntityWriter (直写至S1), RLModule (S2/S3)</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Per-session workspace (3 sections)</div>
+                    <div><span class="label">Reads From / 读取自:</span> EntityWriter (S1 via write-through), RLModule (S2/S3)</div>
                 </div>
                 
-                <div class="card-signature">*(已合并入 ContextBuilder)*</div>
-                <div class="os-layer">内核层 (RAM)</div>
+                <div class="card-signature">*(Merged into ContextBuilder)*</div>
+                <div class="os-layer">OS: Kernel</div>
             </div>
         
             <div class="module-card" id="feat_clientprofilehub" data-reads-from='["feat_entityregistry", "feat_memorycenter", "feat_userhabit"]'>
@@ -1067,7 +1066,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_clientprofilehub"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./client-profile-hub/spec.md">ClientProfileHub</a></div>
-                    <div class="module-status status-interface">仅接口</div>
+                    <div class="module-status status-interface">Interface</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -1075,12 +1074,12 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 聚合的客户全貌信息 (生成业务提示)</div>
-                    <div><span class="label">读取自:</span> EntityRegistry, MemoryCenter, UserHabit</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Aggregated client context for tips</div>
+                    <div><span class="label">Reads From / 读取自:</span> EntityRegistry, MemoryCenter, UserHabit</div>
                 </div>
                 
                 <div class="card-signature">getFocusedContext(String) -> FocusedContext</div>
-                <div class="os-layer">文件浏览器</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             <div class="module-card" id="feat_rlmodule" data-reads-from='["feat_userhabit"]'>
@@ -1088,7 +1087,7 @@
                 <div class="anchor-bottom" id="anchor-bottom-feat_rlmodule"></div>
                 <div class="module-header">
                     <div class="module-name"><a href="./rl-module/spec.md">RLModule</a></div>
-                    <div class="module-status status-shipped">已上线</div>
+                    <div class="module-status status-shipped">Shipped</div>
                 </div>
                 
                 <div class="module-explanation">
@@ -1096,12 +1095,12 @@
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">拥有 / 写入:</span> 用于提示词构建的偏好养成数据 (填充S2/S3)</div>
-                    <div><span class="label">读取自:</span> UserHabit</div>
+                    <div><span class="label">Owns / 拥有 (写入):</span> Habit context for prompts (S2/S3 population)</div>
+                    <div><span class="label">Reads From / 读取自:</span> UserHabit</div>
                 </div>
                 
                 <div class="card-signature">loadUserHabits() -> HabitContext</div>
-                <div class="os-layer">RAM 层应用</div>
+                <div class="os-layer">OS: App</div>
             </div>
         
             </div>
@@ -1110,60 +1109,115 @@
 
         </div>
         
-        
-
-        <script>
+                <script>
             let lines = [];
-            window.addEventListener('load', () => {
-                setTimeout(() => {
-                    const cards = document.querySelectorAll('#feature .module-card');
-                    
-                    cards.forEach(card => {
-                        const sourceId = card.id;
-                        const depsStr = card.getAttribute('data-reads-from');
-                        if (!depsStr || depsStr === '{}') return;
-                        
-                        try {
-                            const deps = JSON.parse(depsStr);
-                            deps.forEach(targetId => {
-                                const targetEl = document.getElementById(targetId);
-                                
-                                if (targetEl && targetEl !== card) {
-                                    const line = new LeaderLine(
-                                        targetEl,
-                                        card,
-                                        {
-                                            color: 'rgba(59, 130, 246, 0.35)',
-                                            startSocket: 'bottom',
-                                            endSocket: 'top',
-                                            path: 'grid',
-                                            startSocketGravity: [0, 50],
-                                            endSocketGravity: [0, -50],
-                                            startPlug: 'square',
-                                            endPlug: 'arrow3',
-                                            size: 2,
-                                            dash: { animation: true, len: 6, gap: 6 },
-                                            dropShadow: { dx: 0, dy: 0, blur: 4, color: 'rgba(192, 132, 252, 0.4)' }
-                                        }
-                                    );
-                                    lines.push(line);
-                                }
-                            });
-                        } catch (e) { console.error('Failed to parse deps', e); }
-                    });
-                    
-                    setTimeout(() => {
-                        document.querySelectorAll('.leader-line').forEach(svg => { svg.style.zIndex = '-1'; });
-                    }, 100);
+            let linesInitialized = false;
 
-                    if (window.AnimEvent) {
-                        window.addEventListener('scroll', AnimEvent.add(function() {
-                            lines.forEach(l => l.position());
-                        }), false);
+            function initLines() {
+                if (linesInitialized) return;
+                linesInitialized = true;
+
+                const cards = document.querySelectorAll('#feature .module-card');
+                
+                cards.forEach(card => {
+                    const sourceId = card.id;
+                    const depsStr = card.getAttribute('data-reads-from');
+                    if (!depsStr || depsStr === '{}') return;
+                    
+                    try {
+                        const deps = JSON.parse(depsStr);
+                        deps.forEach(targetId => {
+                            const targetEl = document.getElementById(targetId);
+                            
+                            if (targetEl && targetEl !== card) {
+                                const line = new LeaderLine(
+                                    targetEl,
+                                    card,
+                                    {
+                                        color: 'rgba(59, 130, 246, 0.35)',
+                                        startSocket: 'bottom',
+                                        endSocket: 'top',
+                                        path: 'grid',
+                                        startSocketGravity: [0, 50],
+                                        endSocketGravity: [0, -50],
+                                        startPlug: 'square',
+                                        endPlug: 'arrow3',
+                                        size: 2,
+                                        dash: {
+                                            animation: true,
+                                            len: 6,
+                                            gap: 6
+                                        },
+                                        dropShadow: {
+                                            dx: 0,
+                                            dy: 0,
+                                            blur: 4,
+                                            color: 'rgba(192, 132, 252, 0.4)'
+                                        },
+                                        hide: true
+                                    }
+                                );
+                                lines.push(line);
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Failed to parse deps for', sourceId, e);
                     }
+                });
+                
+                setTimeout(() => {
+                    document.querySelectorAll('.leader-line').forEach(svg => {
+                        svg.style.zIndex = '-1';
+                    });
                 }, 100);
-            });
+
+                if (window.AnimEvent) {
+                    window.addEventListener('scroll', AnimEvent.add(function() {
+                        lines.forEach(l => l.position());
+                    }), false);
+                }
+            }
+
+            
+            
+            let chartsInitialized = false;
+            function initCharts() {
+                if (chartsInitialized) return;
+                chartsInitialized = true;
+                
+                const ctxPie = document.getElementById('compositionChart').getContext('2d');
+                new Chart(ctxPie, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['核心 Kotlin 代码', '测试 Kotlin 代码', '资源 XML 文件'],
+                        datasets: [{
+                            data: [188821, 11150, 87],
+                            backgroundColor: ['rgba(59, 130, 246, 0.8)', 'rgba(192, 132, 252, 0.8)', 'rgba(34, 197, 94, 0.8)'],
+                            borderColor: '#1e293b',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#f8fafc', font: { family: 'Inter' } } } } }
+                });
+
+                const ctxTrend = document.getElementById('trendChart').getContext('2d');
+                new Chart(ctxTrend, {
+                    type: 'bar',
+                    data: {
+                        labels: ['之前 (旧架构)', '清理前 (2026年3月)', '当前状态快照', '生产：保守目标', '生产：理想目标'],
+                        datasets: [
+                            { label: '核心代码量', data: [22232, 118579, 188821, 203821, 218821], backgroundColor: 'rgba(59, 130, 246, 0.6)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1 },
+                            { label: '项目总行数', data: [72658, 146976, 200058, 222058, 238000], backgroundColor: 'rgba(192, 132, 252, 0.6)', borderColor: 'rgba(192, 132, 252, 1)', borderWidth: 1 }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#94a3b8' }, title: { display: true, text: '代码行数', color: '#f8fafc' } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } }, plugins: { legend: { labels: { color: '#f8fafc', font: { family: 'Inter' } } } } }
+                });
+            }
+
+            window.addEventListener('load', () => { initLines(); setTimeout(() => { lines.forEach(l => { l.show('draw', {duration: 500, timing: 'ease-out'}); l.position(); }); }, 200); });
         </script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </body>
     </html>
+
     

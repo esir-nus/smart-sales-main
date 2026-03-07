@@ -2,402 +2,161 @@ import re
 import os
 
 with open("docs/tools/generate_map.py", "r", encoding="utf-8") as f:
-    text = f.read()
+    content = f.read()
 
-# 1. Provide the CSS block up to .tab-content
-css_addition = """
-    .tabs {
-        display: flex;
-        justify-content: center;
-        gap: 15px;
-        margin-bottom: 40px;
-        position: relative;
-        z-index: 20;
+# 1. Update OUTPUT_PATH definition
+content = content.replace('OUTPUT_PATH = "docs/cerb/dashboard.html"', 'OUTPUT_PATH = "docs/cerb/dashboard.html" # Obsolete')
+
+# 2. Add parse_estimate function
+parse_fn = """
+def parse_estimate():
+    metrics = {
+        "total": 0, "core": 0, "tests": 0, "res": 0,
+        "conservative": 0, "ideal": 0
     }
-    
-    .tab-btn {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        color: var(--text-muted);
-        padding: 12px 24px;
-        border-radius: 8px;
-        font-size: 1.05rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    
-    .tab-btn:hover {
-        background: var(--surface-hover);
-        color: var(--text);
-    }
-    
-    .tab-btn.active {
-        background: rgba(59, 130, 246, 0.15);
-        border-color: var(--accent);
-        color: var(--accent);
-        box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
-    }
-    
-    .tab-content {
-        display: none;
-        animation: fadeIn 0.3s ease-in-out;
-    }
-    
-    .tab-content.active {
-        display: block;
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    
-    /* Topology specific CSS */
-    .topology-sequence {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 20px;
-        padding: 40px 0;
-    }
-    .layer-block {
-        background: var(--surface);
-        border: 2px solid var(--border);
-        border-radius: 16px;
-        padding: 24px 32px;
-        width: 100%;
-        max-width: 800px;
-        text-align: center;
-        position: relative;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-        transition: all 0.3s ease;
-    }
-    .layer-block:hover {
-        border-color: var(--accent);
-        box-shadow: 0 8px 30px rgba(59, 130, 246, 0.2);
-        transform: translateY(-2px);
-    }
-    .layer-block h2 {
-        color: var(--accent);
-        font-size: 1.5rem;
-        margin-bottom: 12px;
-    }
-    .layer-desc {
-        color: var(--text-muted);
-        font-size: 0.95rem;
-        margin-bottom: 20px;
-        line-height: 1.5;
-    }
-    .layer-modules-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        justify-content: center;
-    }
-    .mini-module {
-        background: rgba(0,0,0,0.4);
-        border: 1px solid var(--border);
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        color: var(--text);
-        font-family: 'Fira Code', monospace;
-    }
-    .seq-arrow {
-        color: var(--accent);
-        font-size: 2rem;
-        line-height: 1;
-        opacity: 0.6;
-        animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-        0% { opacity: 0.3; transform: translateY(0); }
-        50% { opacity: 0.8; transform: translateY(-5px); }
-        100% { opacity: 0.3; transform: translateY(0); }
-    }
+    try:
+        with open("PRODUCTION_CODE_ESTIMATE.md", "r", encoding="utf-8") as f:
+            text = f.read()
+            m_total = re.search(r"Current XP\*\*:\s*`([\d,]+)`", text)
+            if m_total: metrics["total"] = int(m_total.group(1).replace(",", ""))
+            
+            m_breakdown = re.search(r"\*\(Core:\s*`([\d,]+)`\s*\|\s*Tests:\s*`([\d,]+)`\s*\|\s*Resources:\s*`([\d,]+)`\)\*", text)
+            if m_breakdown:
+                metrics["core"] = int(m_breakdown.group(1).replace(",", ""))
+                metrics["tests"] = int(m_breakdown.group(2).replace(",", ""))
+                metrics["res"] = int(m_breakdown.group(3).replace(",", ""))
+                
+            m_target = re.search(r"Target XP\*\*:\s*`~([\d,]+)`", text)
+            if m_target:
+                # We know the conservative is +22k from total, ideal is +38k (which matches 238k)
+                ideal = int(m_target.group(1).replace(",", ""))
+                metrics["ideal"] = ideal
+                metrics["conservative"] = metrics["total"] + 22000
+    except Exception as e:
+        print("Error parsing estimate:", e)
+    return metrics
 """
 
-css_insert_idx = text.find('    """\n\n    def clean_markdown')
-text = text[:css_insert_idx] + css_addition + text[css_insert_idx:]
+if "def parse_estimate" not in content:
+    content = content.replace('def parse_interface_map():', parse_fn + '\ndef parse_interface_map():')
 
-# 2. Replace the HTML body setup to inject the tabs navigation container
-html_start = text.find('<div class="layer-container"')
-# Replace from there to the first for loop
-html_end = text.find('    # We enumerate backwards or forwards?')
+# 3. Modify generate_html to take 'page_type' and output the separate files
+# Find the signature of generate_html
+content = content.replace('def generate_html(layers):', 'def generate_html_single(layers, page_type, metrics):')
 
-replacement_nav = """
+# Find the tabs HTML in the template and replace it with static links
+tabs_html_old = """
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab(event, 'topology')">Topology Sequence (Layers)</button>
             <button class="tab-btn" onclick="switchTab(event, 'feature')">Feature Dataflow (Tracks)</button>
+            <button class="tab-btn" onclick="switchTab(event, 'estimate')">代码量估算 (Code Estimates)</button>
         </div>
-
-        <!-- 1. Topology View -->
-        <div id="topology" class="tab-content active">
-            <div class="topology-sequence">
-    \"\"\"
-    
-    layer_descriptions = {
-        "Layer 5": "Cross-cutting services that aggregate data from multiple Layer 2 sources.",
-        "Layer 4": "User-facing features. Each receives processed results from Orchestrator (Layer 3) and reads from Data Services (Layer 2).",
-        "Layer 3": "Orchestrates LLM-powered processing. Reads from Layer 2 data services.",
-        "Layer 2": "Store and query domain data. Other modules use their interfaces but never each other's storage.",
-        "Layer 1": "Leaf services with no upstream dependencies. They don't call other modules."
-    }
-
-    # Sequence diagram: Render layers top to bottom (Layer 5 -> Layer 1)
-    for i, layer in enumerate(reversed(layers)):
-        if not layer["modules"]: continue
-        
-        layer_num = len(layers) - i
-        layer_name = f"Layer {layer_num}: {layer['name']}"
-        desc = layer_descriptions.get(f"Layer {layer_num}", "")
-        
-        module_names = []
-        for mod in layer["modules"]:
-            raw_module = mod.get("Module", "Unknown")
-            name_text = clean_markdown(raw_module).replace('<a href', '<a style="color: inherit; text-decoration: none;" href')
-            module_names.append(f'<div class="mini-module">{name_text}</div>')
-        
-        modules_html = "\\n                ".join(module_names)
-        
-        if i > 0:
-            html_content += \"\"\"
-            <div class="seq-arrow">↑</div>
-            \"\"\"
-            
-        html_content += f\"\"\"
-        <div class="layer-block">
-            <h2>{layer_name}</h2>
-            <div class="layer-desc">{desc}</div>
-            <div class="layer-modules-list">
-                {modules_html}
-            </div>
-        </div>
-        \"\"\"
-
-    html_content += \"\"\"
-            </div>
-        </div>
-
-        <!-- 2. Feature Dataflow View -->
-        <div id="feature" class="tab-content">
-            <div class="layer-container" style="flex-direction: column; position: relative; padding-left: 40px; gap: 40px;">
-    \"\"\"
-
-    # Group by track
-    from collections import defaultdict
-    tracks = {}
-    
-    # We want a deterministic order for tracks, ideally matching PRD
-    track_order = [
-        "Hardware & Audio",
-        "Entity Resolution",
-        "System II & Routing",
-        "Intelligent Scheduler",
-        "System I & Ambient",
-        "Memory & OS"
-    ]
-    
-    for layer in layers:
-        for mod in layer["modules"]:
-            track = mod.get("Track", "Unknown Track").replace("`", "")
-            if track == "Unknown Track" or not track:
-                track = "Uncategorized"
-                
-            if track not in tracks:
-                tracks[track] = []
-            tracks[track].append(mod)
-
-    # Sort the dictionary based on track_order, appending unknown tracks at the end
-    sorted_tracks = {k: tracks[k] for k in track_order if k in tracks}
-    for k in tracks.keys():
-        if k not in sorted_tracks:
-            sorted_tracks[k] = tracks[k]
-
-    # Helper function to render a card
-    def render_card(mod, prefix=""):
-        status_class, status_label = get_status_class_and_label(mod.get("Status", ""))
-        raw_module = mod.get("Module", "Unknown")
-        name_html = clean_markdown(raw_module)
-        clean_name_key = re.sub(r"\\[(.*?)\\]\\(.*?\\)", r"\\1", raw_module).replace("**", "").strip()
-        explanation = MODULE_EXPLANATIONS.get(clean_name_key, "后端组件")
-        dom_id = clean_name_key.lower().replace(" ", "-").replace("(", "").replace(")", "").strip()
-        signature = mod.get("Key Interface", "").replace("`", "")
-        
-        raw_reads_from = mod.get("Reads From", "").replace("`", "")
-        raw_reads_direct = mod.get("Reads From (directly)", "").replace("`", "") if "Reads From (directly)" in mod else ""
-        
-        all_deps = raw_reads_from + "," + raw_reads_direct
-        deps_list = [prefix + d.strip().lower().replace(" ", "-").replace("(", "").replace(")", "") for d in all_deps.split(",") if d.strip() and d.strip().lower() != "eventbus" and d.strip().lower() != "none" and d.strip().lower() != "app"]
-        deps_json_attr = json.dumps(deps_list)
-
-        reads_from = raw_reads_from
-        if "Receives From (via Orchestrator)" in mod:
-            reads_from = f"Direct / 直接读取: {raw_reads_direct} <br> Via Orch / 经编排器接收: {mod.get('Receives From (via Orchestrator)', '')}".replace("`", "")
-        else:
-            reads_from = clean_markdown(reads_from)
-            
-        owns = mod.get("Owns (Writes)", "")
-        owns_html = clean_markdown(owns)
-        os_layer = mod.get("OS Layer", "")
-
-        if not owns: owns_html = "无"
-        if not reads_from: reads_from = "无"
-
-        return f\"\"\"
-            <div class="module-card" id="{prefix}{dom_id}" data-reads-from='{deps_json_attr}'>
-                <div class="anchor-top" id="anchor-top-{prefix}{dom_id}"></div>
-                <div class="anchor-bottom" id="anchor-bottom-{prefix}{dom_id}"></div>
-                <div class="module-header">
-                    <div class="module-name">{name_html}</div>
-                    <div class="module-status {status_class}">{status_label}</div>
-                </div>
-                
-                <div class="module-explanation">
-                    {explanation}
-                </div>
-                
-                <div class="module-detail">
-                    <div><span class="label">Owns / 拥有 (写入):</span> {owns_html}</div>
-                    <div><span class="label">Reads From / 读取自:</span> {reads_from}</div>
-                </div>
-                
-                <div class="card-signature">{signature}</div>
-                <div class="os-layer">{os_layer}</div>
-            </div>
-        \"\"\"
-
-    for track_name, track_modules in sorted_tracks.items():
-        html_content += f\"\"\"
-        <div class="layer" style="margin-bottom: 20px;">
-            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">{track_name}</div>
-            <div class="modules-grid" style="grid-template-columns: repeat(3, 1fr);">
-        \"\"\"
-
-        for mod in track_modules:
-            html_content += render_card(mod, prefix="feat_")
-
-        html_content += \"\"\"
-            </div>
-        </div>
-        \"\"\"
-
-    html_content += \"\"\"
-        </div>
-        
-        <script>
-            let lines = [];
-            let linesInitialized = false;
-
-            function initLines() {
-                if (linesInitialized) return;
-                linesInitialized = true;
-
-                const cards = document.querySelectorAll('#feature .module-card');
-                
-                cards.forEach(card => {
-                    const sourceId = card.id;
-                    const depsStr = card.getAttribute('data-reads-from');
-                    if (!depsStr || depsStr === '{}') return;
-                    
-                    try {
-                        const deps = JSON.parse(depsStr);
-                        deps.forEach(targetId => {
-                            const targetEl = document.getElementById(targetId);
-                            
-                            if (targetEl && targetEl !== card) {
-                                const line = new LeaderLine(
-                                    targetEl,
-                                    card,
-                                    {
-                                        color: 'rgba(59, 130, 246, 0.35)',
-                                        startSocket: 'bottom',
-                                        endSocket: 'top',
-                                        path: 'grid',
-                                        startSocketGravity: [0, 50],
-                                        endSocketGravity: [0, -50],
-                                        startPlug: 'square',
-                                        endPlug: 'arrow3',
-                                        size: 2,
-                                        dash: {
-                                            animation: true,
-                                            len: 6,
-                                            gap: 6
-                                        },
-                                        dropShadow: {
-                                            dx: 0,
-                                            dy: 0,
-                                            blur: 4,
-                                            color: 'rgba(192, 132, 252, 0.4)'
-                                        },
-                                        hide: true
-                                    }
-                                );
-                                lines.push(line);
-                            }
-                        });
-                    } catch (e) {
-                        console.error('Failed to parse deps for', sourceId, e);
-                    }
-                });
-                
-                setTimeout(() => {
-                    document.querySelectorAll('.leader-line').forEach(svg => {
-                        svg.style.zIndex = '-1';
-                    });
-                }, 100);
-
-                if (window.AnimEvent) {
-                    window.addEventListener('scroll', AnimEvent.add(function() {
-                        lines.forEach(l => l.position());
-                    }), false);
-                }
-            }
-
-            window.switchTab = function(event, tabId) {
-                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-                event.currentTarget.classList.add('active');
-                
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.style.display = 'none';
-                    content.classList.remove('active');
-                });
-                
-                const targetContent = document.getElementById(tabId);
-                targetContent.style.display = 'block';
-                targetContent.classList.add('active');
-                
-                setTimeout(() => {
-                    if (tabId === 'feature') {
-                        initLines();
-                        lines.forEach(l => {
-                            l.show('draw', {duration: 500, timing: 'ease-out'});
-                            l.position();
-                        });
-                    } else {
-                        lines.forEach(l => l.hide('fade', {duration: 100}));
-                    }
-                }, 50);
-            };
-
-            window.addEventListener('load', () => {
-                setTimeout(() => {
-                    const activeBtn = document.querySelector('.tab-btn.active');
-                    if (activeBtn) {
-                        window.switchTab({currentTarget: activeBtn}, 'topology');
-                    }
-                }, 100);
-            });
-        </script>
-    </body>
-    </html>
-    \"\"\"
 """
 
-# The chunk we need to slice out from text starts at `<div class="layer-container"`
-end_html_script = text.find('    with open(OUTPUT_PATH')
-text = text[:html_start] + replacement_nav + text[end_html_script:]
+tabs_html_new = """
+        <div class="tabs">
+            <a href="dashboard-topology.html" class="tab-btn {top_active}" style="text-decoration: none; display: inline-block;">拓扑层级</a>
+            <a href="dashboard-dataflow.html" class="tab-btn {feat_active}" style="text-decoration: none; display: inline-block;">跨模块数据流</a>
+            <a href="dashboard-estimate.html" class="tab-btn {est_active}" style="text-decoration: none; display: inline-block;">代码量估算</a>
+        </div>
+"""
+content = content.replace(tabs_html_old.strip(), tabs_html_new.strip())
+
+# Replace the dynamic hardcoded values in the charts and boxes
+content = re.sub(r'<div class="stat-value glow">[\d,]+</div>', '<div class="stat-value glow">{total:,}</div>', content)
+content = re.sub(r'<div class="stat-value">188,821</div>', '<div class="stat-value">{core:,}</div>', content)
+content = re.sub(r'<div class="stat-value">11,150</div>', '<div class="stat-value">{tests:,}</div>', content)
+content = re.sub(r'<div class="stat-value">87</div>', '<div class="stat-value">{res:,}</div>', content)
+
+content = re.sub(r'<div class="stat-value" style="color: var\(--warning\);">222,058</div>', '<div class="stat-value" style="color: var(--warning);">{conservative:,}</div>', content)
+content = re.sub(r'<div class="stat-value" style="color: var\(--success\);">238,058</div>', '<div class="stat-value" style="color: var(--success);">{ideal:,}</div>', content)
+
+# update pie chart JS data
+content = re.sub(r'data: \[188821, 11150, 87\],', 'data: [{core}, {tests}, {res}],', content)
+# update bar chart JS data
+content = re.sub(r'data: \[22232, 118579, 188821, 193821, 201821\],', 'data: [22232, 118579, {core}, {conservative_core}, {ideal_core}],', content)
+content = re.sub(r'data: \[72658, 146976, 200058, 222058, 238058\],', 'data: [72658, 146976, {total}, {conservative}, {ideal}],', content)
+
+
+# 4. Modify the end of the script
+main_block_old = """
+if __name__ == "__main__":
+    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
+    layers = parse_interface_map()
+    generate_html(layers)
+"""
+
+main_block_new = """
+def generate_html(layers):
+    metrics = parse_estimate()
+    
+    # We will generate the 3 files
+    for page_type in ["topology", "feature", "estimate"]:
+        html = generate_html_single(layers, page_type, metrics)
+        
+        # We need to filter the sections based on page_type
+        # To do this safely, we replace the {total} tags first
+        
+        # Setup tags
+        html = html.replace('{top_active}', 'active' if page_type == 'topology' else '')
+        html = html.replace('{feat_active}', 'active' if page_type == 'feature' else '')
+        html = html.replace('{est_active}', 'active' if page_type == 'estimate' else '')
+        
+        html = html.replace('{total:,}', f"{metrics['total']:,}")
+        html = html.replace('{core:,}', f"{metrics['core']:,}")
+        html = html.replace('{tests:,}', f"{metrics['tests']:,}")
+        html = html.replace('{res:,}', f"{metrics['res']:,}")
+        html = html.replace('{conservative:,}', f"{metrics['conservative']:,}")
+        html = html.replace('{ideal:,}', f"{metrics['ideal']:,}")
+        
+        html = html.replace('{total}', str(metrics['total']))
+        html = html.replace('{core}', str(metrics['core']))
+        html = html.replace('{tests}', str(metrics['tests']))
+        html = html.replace('{res}', str(metrics['res']))
+        html = html.replace('{conservative}', str(metrics['conservative']))
+        html = html.replace('{ideal}', str(metrics['ideal']))
+        
+        # Calculate derived core
+        conservative_core = metrics['core'] + 15000
+        ideal_core = metrics['core'] + 30000
+        html = html.replace('{conservative_core}', str(conservative_core))
+        html = html.replace('{ideal_core}', str(ideal_core))
+        
+        # Strip other sections using regex
+        if page_type == 'topology':
+            html = re.sub(r'<!-- 2. Feature Dataflow View -->.*<!-- 3. Code Estimate View -->', '<!-- 2. Feature Dataflow View -->', html, flags=re.DOTALL)
+            html = re.sub(r'<!-- 3. Code Estimate View -->.*</div>\s*</div>\s*</div>', '<!-- 3. Code Estimate View -->', html, flags=re.DOTALL)
+            # Remove JS charting and line drawing
+            html = re.sub(r'<script>\s*let lines = \[\];.*?</script>', '<script>\\n // No tab switching needed \\n</script>', html, flags=re.DOTALL)
+        elif page_type == 'feature':
+            html = re.sub(r'<!-- 1. Topology View -->.*<!-- 2. Feature Dataflow View -->', '<!-- 1. Topology View -->\\n<!-- 2. Feature Dataflow View -->', html, flags=re.DOTALL)
+            html = re.sub(r'<!-- 3. Code Estimate View -->.*</div>\s*</div>\s*</div>', '<!-- 3. Code Estimate View -->', html, flags=re.DOTALL)
+            # update JS
+            html = html.replace("window.addEventListener('load', () => {", "window.addEventListener('load', () => { initLines(); lines.forEach(l => { l.show('draw', {duration: 500, timing: 'ease-out'}); l.position(); });")
+        elif page_type == 'estimate':
+            html = re.sub(r'<!-- 1. Topology View -->.*<!-- 3. Code Estimate View -->', '<!-- 1. Topology View -->\\n<!-- 3. Code Estimate View -->', html, flags=re.DOTALL)
+            html = html.replace("window.addEventListener('load', () => {", "window.addEventListener('load', () => { initCharts(); ")
+
+        out_name = "dashboard-topology.html" if page_type == "topology" else ("dashboard-dataflow.html" if page_type == "feature" else "dashboard-estimate.html")
+        out_path = os.path.join("docs", "cerb", out_name)
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.write(html)
+        print(f"Generated {out_path}")
+
+if __name__ == "__main__":
+    layers = parse_interface_map()
+    generate_html(layers)
+"""
+
+if "def generate_html_single" in content:
+    # Already patched maybe?
+    pass
+else:
+    content = content.replace("    with open(OUTPUT_PATH, \"w\", encoding=\"utf-8\") as f:\n        f.write(html_content)\n    \n    print(f\"Successfully generated {OUTPUT_PATH}\")", "    return html_content")
+    if main_block_old.strip() in content:
+        content = content.replace(main_block_old.strip(), main_block_new.strip())
 
 with open("docs/tools/generate_map.py", "w", encoding="utf-8") as f:
-    f.write(text)
+    f.write(content)
+
+print("Patching complete!")

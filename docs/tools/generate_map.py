@@ -49,7 +49,7 @@ MODULE_EXPLANATIONS = {
 import json
 
 MAP_PATH = "docs/cerb/interface-map.md"
-OUTPUT_PATH = "docs/cerb/dashboard.html"
+OUTPUT_PATH = "docs/cerb/dashboard.html" # Obsolete
 
 def parse_markdown_table(lines):
     rows = []
@@ -65,6 +65,34 @@ def parse_markdown_table(lines):
         else:
             rows.append(dict(zip(headers, col_data)))
     return rows
+
+
+def parse_estimate():
+    metrics = {
+        "total": 0, "core": 0, "tests": 0, "res": 0,
+        "conservative": 0, "ideal": 0
+    }
+    try:
+        with open("PRODUCTION_CODE_ESTIMATE.md", "r", encoding="utf-8") as f:
+            text = f.read()
+            m_total = re.search(r"Current XP\*\*:\s*`([\d,]+)`", text)
+            if m_total: metrics["total"] = int(m_total.group(1).replace(",", ""))
+            
+            m_breakdown = re.search(r"\*\(Core:\s*`([\d,]+)`\s*\|\s*Tests:\s*`([\d,]+)`\s*\|\s*Resources:\s*`([\d,]+)`\)\*", text)
+            if m_breakdown:
+                metrics["core"] = int(m_breakdown.group(1).replace(",", ""))
+                metrics["tests"] = int(m_breakdown.group(2).replace(",", ""))
+                metrics["res"] = int(m_breakdown.group(3).replace(",", ""))
+                
+            m_target = re.search(r"Target XP\*\*:\s*`~([\d,]+)`", text)
+            if m_target:
+                # We know the conservative is +22k from total, ideal is +38k (which matches 238k)
+                ideal = int(m_target.group(1).replace(",", ""))
+                metrics["ideal"] = ideal
+                metrics["conservative"] = metrics["total"] + 22000
+    except Exception as e:
+        print("Error parsing estimate:", e)
+    return metrics
 
 def parse_interface_map():
     with open(MAP_PATH, "r", encoding="utf-8") as f:
@@ -120,7 +148,7 @@ def parse_interface_map():
     # The flex-direction: column-reverse handles the visual stacking.
     return layers
 
-def generate_html(layers):
+def generate_html_single(layers, page_type, metrics):
     css = """
     :root {
         --bg: #0f172a;
@@ -546,13 +574,13 @@ def generate_html(layers):
         </div>
 
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab(event, 'topology')">Topology Sequence (Layers)</button>
-            <button class="tab-btn" onclick="switchTab(event, 'feature')">Feature Dataflow (Tracks)</button>
-            <button class="tab-btn" onclick="switchTab(event, 'estimate')">代码量估算 (Code Estimates)</button>
+            <a href="dashboard-topology.html" class="tab-btn {{top_active}}" style="text-decoration: none; display: inline-block;">拓扑层级</a>
+            <a href="dashboard-dataflow.html" class="tab-btn {{feat_active}}" style="text-decoration: none; display: inline-block;">跨模块数据流</a>
+            <a href="dashboard-estimate.html" class="tab-btn {{est_active}}" style="text-decoration: none; display: inline-block;">代码量估算</a>
         </div>
 
         <!-- 1. Topology View -->
-        <div id="topology" class="tab-content active">
+        <div id="topology" class="tab-content {{top_container_active}}">
             <div class="topology-sequence">
 
     """
@@ -601,7 +629,7 @@ def generate_html(layers):
         </div>
 
         <!-- 2. Feature Dataflow View -->
-        <div id="feature" class="tab-content">
+        <div id="feature" class="tab-content {feat_container_active}">
             <div class="layer-container" style="flex-direction: column; position: relative; padding-left: 40px; gap: 40px;">
     """
 
@@ -708,46 +736,47 @@ def generate_html(layers):
         </div>
         
         <!-- 3. Code Estimate View -->
-<div id="estimate" class="tab-content">
+<div id="estimate" class="tab-content {est_container_active}">
             <div class="container">
                 <div class="card full-width">
                     <h2>当前状态快照 (代码清理后)</h2>
                     <div class="stat-grid" style="grid-template-columns: repeat(4, 1fr);">
-                        <div class="stat-box"><div class="stat-value glow">200,058</div><div class="stat-label">总代码行数</div></div>
-                        <div class="stat-box"><div class="stat-value">188,821</div><div class="stat-label">核心 Kotlin 代码</div></div>
-                        <div class="stat-box"><div class="stat-value">11,150</div><div class="stat-label">测试 Kotlin 代码</div></div>
-                        <div class="stat-box"><div class="stat-value">87</div><div class="stat-label">资源 XML 文件</div></div>
+                        <div class="stat-box"><div class="stat-value glow">{total:,}</div><div class="stat-label">总代码行数</div></div>
+                        <div class="stat-box"><div class="stat-value">{core:,}</div><div class="stat-label">核心 Kotlin 代码</div></div>
+                        <div class="stat-box"><div class="stat-value">{tests:,}</div><div class="stat-label">测试 Kotlin 代码</div></div>
+                        <div class="stat-box"><div class="stat-value">{res:,}</div><div class="stat-label">资源 XML 文件</div></div>
                     </div>
                 </div>
 
-                <div class="card">
-                    <h2>生产级别投产预测目标</h2>
-                    <div class="stat-grid">
-                        <div class="stat-box" style="border-color: var(--warning);">
-                            <div class="stat-value" style="color: var(--warning);">222,058</div>
-                            <div class="stat-label">保守预测 (最小可行)</div>
-                            <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">约增加 22,000 行</div>
+                <div class="card full-width" style="margin-top: 40px;">
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; align-items: center;">
+                        <div>
+                            <h2>生产级别投产预测目标</h2>
+                            <div class="stat-grid">
+                                <div class="stat-box" style="border-color: var(--warning);">
+                                    <div class="stat-value" style="color: var(--warning);">{conservative:,}</div>
+                                    <div class="stat-label">保守预测 (最小可行)</div>
+                                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">约增加 22,000 行</div>
+                                </div>
+                                <div class="stat-box" style="border-color: var(--success);">
+                                    <div class="stat-value" style="color: var(--success);">{ideal:,}</div>
+                                    <div class="stat-label">理想预测 (完整指标)</div>
+                                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">约增加 38,000 行</div>
+                                </div>
+                            </div>
+                            <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 20px;">
+                                未来的代码增长必须集中在<strong>测试覆盖率</strong>（需增加 1.5万 - 2万行）以及<strong>错误处理和性能监控</strong>（需增加 5千 - 1.3万行），只有稳固这些模块才能将项目成功演进至重度生产阶段 (T2-T3)。
+                            </p>
                         </div>
-                        <div class="stat-box" style="border-color: var(--success);">
-                            <div class="stat-value" style="color: var(--success);">238,058</div>
-                            <div class="stat-label">理想预测 (完整指标)</div>
-                            <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">约增加 38,000 行</div>
+                        <div>
+                            <h2>当前代码组成分布</h2>
+                            <div class="chart-container" style="height: 300px;"><canvas id="compositionChart"></canvas></div>
                         </div>
                     </div>
-                    <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 20px;">
-                        未来的代码增长必须集中在<strong>测试覆盖率</strong>（需增加 1.5万 - 2万行）以及<strong>错误处理和性能监控</strong>（需增加 5千 - 1.3万行），只有稳固这些模块才能将项目成功演进至重度生产阶段 (T2-T3)。
-                    </p>
                 </div>
 
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Additional Container for Full Width Metrics -->
-            <div class="container" style="margin-top: 40px; display: block;">
                 <!-- Comprehensive Metrics Row -->
-                <div class="card full-width" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; background: rgba(0,0,0,0.2);">
+                <div class="card full-width" style="margin-top: 40px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; background: rgba(0,0,0,0.2);">
                     <!-- Key Gaps -->
                     <div>
                         <h2>产研关键差距分析 (T2-T3)</h2>
@@ -809,14 +838,8 @@ def generate_html(layers):
                         </div>
                     </div>
                 </div>
-            </div>
 
-                <div class="card">
-                    <h2>当前代码组成分布</h2>
-                    <div class="chart-container"><canvas id="compositionChart"></canvas></div>
-                </div>
-
-                <div class="card full-width">
+                <div class="card full-width" style="margin-top: 40px;">
                     <h2>历史代码量增长趋势</h2>
                     <div class="chart-container" style="height: 400px;"><canvas id="trendChart"></canvas></div>
                 </div>
@@ -892,34 +915,7 @@ def generate_html(layers):
                 }
             }
 
-            window.switchTab = function(event, tabId) {
-                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-                event.currentTarget.classList.add('active');
-                
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.style.display = 'none';
-                    content.classList.remove('active');
-                });
-                
-                const targetContent = document.getElementById(tabId);
-                targetContent.style.display = 'block';
-                targetContent.classList.add('active');
-                
-                setTimeout(() => {
-                    if (tabId === 'feature') {
-                        initLines();
-                        lines.forEach(l => {
-                            l.show('draw', {duration: 500, timing: 'ease-out'});
-                            l.position();
-                        });
-                    } else if (tabId === 'estimate') {
-                        lines.forEach(l => l.hide('fade', {duration: 100}));
-                        initCharts();
-                    } else {
-                        lines.forEach(l => l.hide('fade', {duration: 100}));
-                    }
-                }, 50);
-            };
+            
             
             let chartsInitialized = false;
             function initCharts() {
@@ -932,7 +928,7 @@ def generate_html(layers):
                     data: {
                         labels: ['核心 Kotlin 代码', '测试 Kotlin 代码', '资源 XML 文件'],
                         datasets: [{
-                            data: [188821, 11150, 87],
+                            data: [{core}, {tests}, {res}],
                             backgroundColor: ['rgba(59, 130, 246, 0.8)', 'rgba(192, 132, 252, 0.8)', 'rgba(34, 197, 94, 0.8)'],
                             borderColor: '#1e293b',
                             borderWidth: 2
@@ -947,34 +943,89 @@ def generate_html(layers):
                     data: {
                         labels: ['之前 (旧架构)', '清理前 (2026年3月)', '当前状态快照', '生产：保守目标', '生产：理想目标'],
                         datasets: [
-                            { label: '核心代码量', data: [22232, 118579, 188821, 193821, 201821], backgroundColor: 'rgba(59, 130, 246, 0.6)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1 },
-                            { label: '项目总行数', data: [72658, 146976, 200058, 222058, 238058], backgroundColor: 'rgba(192, 132, 252, 0.6)', borderColor: 'rgba(192, 132, 252, 1)', borderWidth: 1 }
+                            { label: '核心代码量', data: [22232, 118579, {core}, {conservative_core}, {ideal_core}], backgroundColor: 'rgba(59, 130, 246, 0.6)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1 },
+                            { label: '项目总行数', data: [72658, 146976, {total}, {conservative}, {ideal}], backgroundColor: 'rgba(192, 132, 252, 0.6)', borderColor: 'rgba(192, 132, 252, 1)', borderWidth: 1 }
                         ]
                     },
                     options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#94a3b8' }, title: { display: true, text: '代码行数', color: '#f8fafc' } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } }, plugins: { legend: { labels: { color: '#f8fafc', font: { family: 'Inter' } } } } }
                 });
             }
 
-            window.addEventListener('load', () => {
-                setTimeout(() => {
-                    const activeBtn = document.querySelector('.tab-btn.active');
-                    if (activeBtn) {
-                        window.switchTab({currentTarget: activeBtn}, 'topology');
-                    }
-                }, 100);
-            });
+            {init_script}
         </script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </body>
     </html>
 
     """
-    with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
-        f.write(html_content)
+    return html_content
+
+def generate_html(layers):
+    metrics = parse_estimate()
     
-    print(f"Successfully generated {OUTPUT_PATH}")
+    # We will generate the 3 files
+    for page_type in ["topology", "feature", "estimate"]:
+        html = generate_html_single(layers, page_type, metrics)
+        
+        # Setup tags
+        html = html.replace('{top_active}', 'active' if page_type == 'topology' else '')
+        html = html.replace('{feat_active}', 'active' if page_type == 'feature' else '')
+        html = html.replace('{est_active}', 'active' if page_type == 'estimate' else '')
+        
+        html = html.replace('{top_container_active}', 'active' if page_type == 'topology' else '')
+        html = html.replace('{feat_container_active}', 'active' if page_type == 'feature' else '')
+        html = html.replace('{est_container_active}', 'active' if page_type == 'estimate' else '')
+        
+        html = html.replace('{total:,}', f"{metrics['total']:,}")
+        html = html.replace('{core:,}', f"{metrics['core']:,}")
+        html = html.replace('{tests:,}', f"{metrics['tests']:,}")
+        html = html.replace('{res:,}', f"{metrics['res']:,}")
+        html = html.replace('{conservative:,}', f"{metrics['conservative']:,}")
+        html = html.replace('{ideal:,}', f"{metrics['ideal']:,}")
+        
+        html = html.replace('{total}', str(metrics['total']))
+        html = html.replace('{core}', str(metrics['core']))
+        html = html.replace('{tests}', str(metrics['tests']))
+        html = html.replace('{res}', str(metrics['res']))
+        html = html.replace('{conservative}', str(metrics['conservative']))
+        html = html.replace('{ideal}', str(metrics['ideal']))
+        
+        # Calculate derived core
+        conservative_core = metrics['core'] + 15000
+        ideal_core = metrics['core'] + 30000
+        html = html.replace('{conservative_core}', str(conservative_core))
+        html = html.replace('{ideal_core}', str(ideal_core))
+        
+        # Safely slice the HTML based on page type to prevent regex failures
+        top_start = html.find('<!-- 1. Topology View -->')
+        feat_start = html.find('<!-- 2. Feature Dataflow View -->')
+        est_start = html.find('<!-- 3. Code Estimate View -->')
+        script_start = html.find('        <script>')
+        
+        header_html = html[:top_start]
+        top_html = html[top_start:feat_start]
+        feat_html = html[feat_start:est_start]
+        est_html = html[est_start:script_start]
+        footer_html = html[script_start:]
+
+        if page_type == 'topology':
+            html = header_html + top_html + footer_html
+            html = html.replace('{init_script}', '')
+        elif page_type == 'feature':
+            html = header_html + feat_html + footer_html
+            js = "window.addEventListener('load', () => { initLines(); setTimeout(() => { lines.forEach(l => { l.show('draw', {duration: 500, timing: 'ease-out'}); l.position(); }); }, 200); });"
+            html = html.replace('{init_script}', js)
+        elif page_type == 'estimate':
+            html = header_html + est_html + footer_html
+            js = "window.addEventListener('load', () => { initCharts(); });"
+            html = html.replace('{init_script}', js)
+
+        out_name = "dashboard-topology.html" if page_type == "topology" else ("dashboard-dataflow.html" if page_type == "feature" else "dashboard-estimate.html")
+        out_path = os.path.join("docs", "cerb", out_name)
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.write(html)
+        print(f"Generated {out_path}")
 
 if __name__ == "__main__":
-    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     layers = parse_interface_map()
     generate_html(layers)

@@ -1,11 +1,14 @@
-<!DOCTYPE html>
+
+    <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Cerb Interface Map - 2D Dashboard</title>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code&display=swap" rel="stylesheet">
-                <style>
+        <!-- SVG drawing library for architecture maps -->
+        <script src="https://cdn.jsdelivr.net/npm/leader-line-new@1.1.9/leader-line.min.js"></script>
+        <style>
     :root {
         --bg: #0f172a;
         --surface: rgba(30, 41, 59, 0.8);
@@ -390,17 +393,16 @@
         
         <div class="header">
             <h1>Cerb Architecture Dashboard <br><span style="font-size: 1.5rem; color: #a78bfa;">(分布式架构与项目规模面板)</span></h1>
-            <p>实时模块状态、领域输入输出契约与代码库规模</p>
+            <p>Real-time module status, domain I/O contracts, and codebase footprint</p>
         </div>
         
         <div class="legend">
-            <div class="legend-item"><span class="module-status status-shipped">已上线</span> <span class="translation-hint">(实体)</span></div>
-            <div class="legend-item"><span class="module-status status-interface">仅接口</span> <span class="translation-hint">(桩代码)</span></div>
-            <div class="legend-item"><span class="module-status status-planned">计划中</span> <span class="translation-hint">(未开发)</span></div>
-            <div class="legend-item"><span class="module-status status-wip">开发中</span></div>
+            <div class="legend-item"><span class="module-status status-shipped">Shipped</span> (Real impl) / <span class="translation-hint">已上线</span></div>
+            <div class="legend-item"><span class="module-status status-interface">Interface</span> (Fake impl) / <span class="translation-hint">仅接口 (假实现)</span></div>
+            <div class="legend-item"><span class="module-status status-planned">Planned</span> (Not coded) / <span class="translation-hint">计划中 (未开发)</span></div>
+            <div class="legend-item"><span class="module-status status-wip">WIP</span> / <span class="translation-hint">开发中</span></div>
         </div>
 
-        
         <div class="tabs">
             <a href="dashboard-topology.html" class="tab-btn " style="text-decoration: none; display: inline-block;">拓扑层级</a>
             <a href="dashboard-dataflow.html" class="tab-btn " style="text-decoration: none; display: inline-block;">跨模块数据流</a>
@@ -408,129 +410,192 @@
         </div>
 
         <!-- 3. Code Estimate View -->
-<div id="estimate" class="tab-content" style="display: block;">
-    <div class="container">
-        <!-- 1. Current State (Full Width) -->
-        <div class="card full-width">
-            <h2>当前状态快照 (代码清理后)</h2>
-            <div class="stat-grid" style="grid-template-columns: repeat(4, 1fr);">
-                <div class="stat-box"><div class="stat-value glow">200,058</div><div class="stat-label">总代码行数</div></div>
-                <div class="stat-box"><div class="stat-value">188,821</div><div class="stat-label">核心 Kotlin 代码</div></div>
-                <div class="stat-box"><div class="stat-value">11,150</div><div class="stat-label">测试 Kotlin 代码</div></div>
-                <div class="stat-box"><div class="stat-value">87</div><div class="stat-label">资源 XML 文件</div></div>
-            </div>
-        </div>
-
-        <!-- 2. Target (Half Width) -->
-        <div class="card">
-            <h2>生产级别投产预测目标</h2>
-            <div class="stat-grid" style="grid-template-columns: repeat(2, 1fr);">
-                <div class="stat-box" style="border-color: var(--warning);">
-                    <div class="stat-value" style="color: var(--warning);">222,058</div>
-                    <div class="stat-label">保守预测</div>
-                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">+ 22,000 行</div>
+<div id="estimate" class="tab-content active">
+            <div class="container">
+                <div class="card full-width">
+                    <h2>当前状态快照 (代码清理后)</h2>
+                    <div class="stat-grid" style="grid-template-columns: repeat(4, 1fr);">
+                        <div class="stat-box"><div class="stat-value glow">200,058</div><div class="stat-label">总代码行数</div></div>
+                        <div class="stat-box"><div class="stat-value">188,821</div><div class="stat-label">核心 Kotlin 代码</div></div>
+                        <div class="stat-box"><div class="stat-value">11,150</div><div class="stat-label">测试 Kotlin 代码</div></div>
+                        <div class="stat-box"><div class="stat-value">87</div><div class="stat-label">资源 XML 文件</div></div>
+                    </div>
                 </div>
-                <div class="stat-box" style="border-color: var(--success);">
-                    <div class="stat-value" style="color: var(--success);">238,058</div>
-                    <div class="stat-label">理想预测</div>
-                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">+ 38,000 行</div>
-                </div>
-            </div>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 15px;">
-                代码增长必须集中在<strong>测试覆盖率</strong>与<strong>错误处理和监控</strong>。预计需 3-6 个月专注执行 (T2-T3)。
-            </p>
-        </div>
 
-        <!-- 3. Composition Chart (Half Width) -->
-        <div class="card">
-            <h2>当前代码组成分布</h2>
-            <div class="chart-container" style="height: 250px;"><canvas id="compositionChart"></canvas></div>
-        </div>
-
-        <!-- 4. Gap Analysis & Increment Needs (2 Columns in 1 Full-Width Card) -->
-        <div class="card full-width" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; background: rgba(0,0,0,0.2);">
-            <!-- Left: Gaps -->
-            <div>
-                <h2>产研关键差距分析 (T2-T3)</h2>
-                <div style="margin-top: 20px;">
-                    <div class="increment-item">
-                        <span class="increment-title">🛡️ 测试覆盖率 (L1-L3)</span>
-                        <span class="gap-badge gap-success">✅ 已解决 (0 XP)</span>
-                    </div>
-                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">具有11k行高价值测试覆盖的装甲。保持现状。</div>
-                    
-                    <div class="increment-item">
-                        <span class="increment-title">💥 错误处理与异常恢复机制</span>
-                        <span class="gap-badge gap-warning">⚠️ 进行中 (~3k XP)</span>
-                    </div>
-                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">需要重试循环和优雅降级以处理大模型/蓝牙失败。</div>
-                    
-                    <div class="increment-item">
-                        <span class="increment-title">👁️ 性能监控与埋点 (APM)</span>
-                        <span class="gap-badge gap-error">❌ 缺失 (~2k XP)</span>
-                    </div>
-                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">亟需接入 Crashlytics 和性能追踪。</div>
-                    
-                    <div class="increment-item">
-                        <span class="increment-title">🔒 安全性 (KeyStore 与加密)</span>
-                        <span class="gap-badge gap-warning">⚠️ 进行中 (~1.5k XP)</span>
-                    </div>
-                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">集成 Android Keystore 和加密数据库环境。</div>
-                    
-                    <div class="increment-item">
-                        <span class="increment-title">⚙️ 边缘持久化 (脱机与同步)</span>
-                        <span class="gap-badge gap-warning">⚠️ 进行中 (~5k XP)</span>
-                    </div>
-                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">离线可用与同步冲突解决是企业级必备。</div>
-                    
-                    <div class="increment-item">
-                        <span class="increment-title">✨ UX 微交互与骨架屏</span>
-                        <span class="gap-badge gap-warning">⚠️ 进行中 (~4k XP)</span>
-                    </div>
-                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">需使用骨架屏和流畅动画掩盖管线延迟。</div>
-                </div>
-            </div>
-
-            <!-- Right: Increments -->
-            <div>
-                <h2>核心增量分布 (+38k)</h2>
-                <div style="margin-top: 20px;">
-                    <div class="increment-item" style="border: none; padding-bottom: 5px;">
-                        <span class="increment-title">1. 重构与清理 (Refactoring)</span>
-                        <span class="increment-lines">+15,000 行</span>
-                    </div>
-                    <div class="increment-progress"><div class="increment-bar" style="width: 39%; background: var(--success);"></div></div>
-                    
-                    <div class="increment-item" style="border: none; padding-bottom: 5px; margin-top: 10px;">
-                        <span class="increment-title">2. 生产加固机制 (Hardening)</span>
-                        <span class="increment-lines">+15,000 行</span>
-                    </div>
-                    <div class="increment-progress"><div class="increment-bar" style="width: 39%; background: var(--warning);"></div></div>
-
-                    <div class="increment-item" style="border: none; padding-bottom: 5px; margin-top: 10px;">
-                        <span class="increment-title">3. 体验打磨 (Polish)</span>
-                        <span class="increment-lines">+8,000 行</span>
-                    </div>
-                    <div class="increment-progress"><div class="increment-bar" style="width: 22%; background: var(--glow);"></div></div>
-                    
-                    <div style="margin-top: 30px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 8px; border-left: 3px solid var(--accent);">
-                        <div style="font-size: 0.9rem; color: var(--text-muted);">
-                            <strong>重量级企业应用 (188k+)</strong><br><br>
-                            不要试图使用轻量级工具的管理模式。严格的架构是避免该项目受自身规模压垮的唯一方法。
+                <div class="card full-width" style="margin-top: 40px;">
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; align-items: center;">
+                        <div>
+                            <h2>生产级别投产预测目标</h2>
+                            <div class="stat-grid">
+                                <div class="stat-box" style="border-color: var(--warning);">
+                                    <div class="stat-value" style="color: var(--warning);">222,058</div>
+                                    <div class="stat-label">保守预测 (最小可行)</div>
+                                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">约增加 22,000 行</div>
+                                </div>
+                                <div class="stat-box" style="border-color: var(--success);">
+                                    <div class="stat-value" style="color: var(--success);">238,000</div>
+                                    <div class="stat-label">理想预测 (完整指标)</div>
+                                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">约增加 38,000 行</div>
+                                </div>
+                            </div>
+                            <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 20px;">
+                                未来的代码增长必须集中在<strong>测试覆盖率</strong>（需增加 1.5万 - 2万行）以及<strong>错误处理和性能监控</strong>（需增加 5千 - 1.3万行），只有稳固这些模块才能将项目成功演进至重度生产阶段 (T2-T3)。
+                            </p>
+                        </div>
+                        <div>
+                            <h2>当前代码组成分布</h2>
+                            <div class="chart-container" style="height: 300px;"><canvas id="compositionChart"></canvas></div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Comprehensive Metrics Row -->
+                <div class="card full-width" style="margin-top: 40px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; background: rgba(0,0,0,0.2);">
+                    <!-- Key Gaps -->
+                    <div>
+                        <h2>产研关键差距分析 (T2-T3)</h2>
+                        <div style="margin-top: 20px;">
+                            <div class="increment-item">
+                                <span class="increment-title">测试覆盖率 (单元/集成 L1-L3)</span>
+                                <span class="gap-badge gap-success">✅ 已达标</span>
+                            </div>
+                            <div class="increment-item">
+                                <span class="increment-title">错误处理与异常恢复机制</span>
+                                <span class="gap-badge gap-warning">⚠️ 需要增强 (高优)</span>
+                            </div>
+                            <div class="increment-item">
+                                <span class="increment-title">性能监控与埋点 (Crashlytics)</span>
+                                <span class="gap-badge gap-error">❌ 缺失 (高优)</span>
+                            </div>
+                            <div class="increment-item">
+                                <span class="increment-title">安全性 (加密, Keystore, 证书)</span>
+                                <span class="gap-badge gap-warning">⚠️ 需要提升 (高优)</span>
+                            </div>
+                            <div class="increment-item">
+                                <span class="increment-title">真实云端集成验证 (Aliyun/Tingwu)</span>
+                                <span class="gap-badge gap-warning">⚠️ 需要验证 (高优)</span>
+                            </div>
+                            <div class="increment-item">
+                                <span class="increment-title">文档与注释完整性 (KDoc)</span>
+                                <span class="gap-badge gap-warning">⚠️ 需要完善 (中优)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Incremental Needs -->
+                    <div>
+                        <h2>核心增量分布 (+38k)</h2>
+                        <div style="margin-top: 20px;">
+                            <div class="increment-item" style="border: none; padding-bottom: 5px;">
+                                <span class="increment-title">1. 完整测试覆盖补充</span>
+                                <span class="increment-lines">+15,000 ~ 20,000 行</span>
+                            </div>
+                            <div class="increment-progress"><div class="increment-bar" style="width: 50%; background: var(--success);"></div></div>
+                            
+                            <div class="increment-item" style="border: none; padding-bottom: 5px; margin-top: 10px;">
+                                <span class="increment-title">2. 缺失核心功能 (连接/同步/设置)</span>
+                                <span class="increment-lines">+5,000 ~ 8,000 行</span>
+                            </div>
+                            <div class="increment-progress"><div class="increment-bar" style="width: 25%; background: var(--warning);"></div></div>
+
+                            <div class="increment-item" style="border: none; padding-bottom: 5px; margin-top: 10px;">
+                                <span class="increment-title">3. UX/UI 用户体验深度优化</span>
+                                <span class="increment-lines">+3,000 ~ 5,000 行</span>
+                            </div>
+                            <div class="increment-progress"><div class="increment-bar" style="width: 15%; background: var(--glow);"></div></div>
+
+                            <div class="increment-item" style="border: none; padding-bottom: 5px; margin-top: 10px;">
+                                <span class="increment-title">4. 错误容错与数据持久化</span>
+                                <span class="increment-lines">+4,000 ~ 6,000 行</span>
+                            </div>
+                            <div class="increment-progress"><div class="increment-bar" style="width: 20%; background: var(--error);"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card full-width" style="margin-top: 40px;">
+                    <h2>历史代码量增长趋势</h2>
+                    <div class="chart-container" style="height: 400px;"><canvas id="trendChart"></canvas></div>
+                </div>
             </div>
         </div>
 
-        <!-- 5. Trend Chart -->
-        <div class="card full-width">
-            <h2>历史代码量增长趋势</h2>
-            <div class="chart-container" style="height: 400px;"><canvas id="trendChart"></canvas></div>
-        </div>
-    </div>
-</div>\n\n        <script>
-            window.addEventListener('load', () => {
+        <script>
+            let lines = [];
+            let linesInitialized = false;
+
+            function initLines() {
+                if (linesInitialized) return;
+                linesInitialized = true;
+
+                const cards = document.querySelectorAll('#feature .module-card');
+                
+                cards.forEach(card => {
+                    const sourceId = card.id;
+                    const depsStr = card.getAttribute('data-reads-from');
+                    if (!depsStr || depsStr === '{}') return;
+                    
+                    try {
+                        const deps = JSON.parse(depsStr);
+                        deps.forEach(targetId => {
+                            const targetEl = document.getElementById(targetId);
+                            
+                            if (targetEl && targetEl !== card) {
+                                const line = new LeaderLine(
+                                    targetEl,
+                                    card,
+                                    {
+                                        color: 'rgba(59, 130, 246, 0.35)',
+                                        startSocket: 'bottom',
+                                        endSocket: 'top',
+                                        path: 'grid',
+                                        startSocketGravity: [0, 50],
+                                        endSocketGravity: [0, -50],
+                                        startPlug: 'square',
+                                        endPlug: 'arrow3',
+                                        size: 2,
+                                        dash: {
+                                            animation: true,
+                                            len: 6,
+                                            gap: 6
+                                        },
+                                        dropShadow: {
+                                            dx: 0,
+                                            dy: 0,
+                                            blur: 4,
+                                            color: 'rgba(192, 132, 252, 0.4)'
+                                        },
+                                        hide: true
+                                    }
+                                );
+                                lines.push(line);
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Failed to parse deps for', sourceId, e);
+                    }
+                });
+                
+                setTimeout(() => {
+                    document.querySelectorAll('.leader-line').forEach(svg => {
+                        svg.style.zIndex = '-1';
+                    });
+                }, 100);
+
+                if (window.AnimEvent) {
+                    window.addEventListener('scroll', AnimEvent.add(function() {
+                        lines.forEach(l => l.position());
+                    }), false);
+                }
+            }
+
+            
+            
+            let chartsInitialized = false;
+            function initCharts() {
+                if (chartsInitialized) return;
+                chartsInitialized = true;
+                
                 const ctxPie = document.getElementById('compositionChart').getContext('2d');
                 new Chart(ctxPie, {
                     type: 'doughnut',
@@ -552,15 +617,18 @@
                     data: {
                         labels: ['之前 (旧架构)', '清理前 (2026年3月)', '当前状态快照', '生产：保守目标', '生产：理想目标'],
                         datasets: [
-                            { label: '核心代码量', data: [22232, 118579, 188821, 193821, 201821], backgroundColor: 'rgba(59, 130, 246, 0.6)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1 },
-                            { label: '项目总行数', data: [72658, 146976, 200058, 222058, 238058], backgroundColor: 'rgba(192, 132, 252, 0.6)', borderColor: 'rgba(192, 132, 252, 1)', borderWidth: 1 }
+                            { label: '核心代码量', data: [22232, 118579, 188821, 203821, 218821], backgroundColor: 'rgba(59, 130, 246, 0.6)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1 },
+                            { label: '项目总行数', data: [72658, 146976, 200058, 222058, 238000], backgroundColor: 'rgba(192, 132, 252, 0.6)', borderColor: 'rgba(192, 132, 252, 1)', borderWidth: 1 }
                         ]
                     },
                     options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#94a3b8' }, title: { display: true, text: '代码行数', color: '#f8fafc' } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } }, plugins: { legend: { labels: { color: '#f8fafc', font: { family: 'Inter' } } } } }
                 });
-            });
+            }
+
+            window.addEventListener('load', () => { initCharts(); });
         </script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </body>
     </html>
+
     

@@ -19,8 +19,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.smartsales.prism.domain.mascot.MascotInteraction
-import com.smartsales.prism.domain.mascot.MascotState
+import com.smartsales.core.pipeline.MascotInteraction
+import com.smartsales.core.pipeline.MascotState
 import com.smartsales.prism.ui.theme.AccentBlue
 import com.smartsales.prism.ui.theme.TextPrimary
 

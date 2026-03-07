@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+
+    <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
@@ -392,17 +393,16 @@
         
         <div class="header">
             <h1>Cerb Architecture Dashboard <br><span style="font-size: 1.5rem; color: #a78bfa;">(分布式架构与项目规模面板)</span></h1>
-            <p>实时模块状态、领域输入输出契约与代码库规模</p>
+            <p>Real-time module status, domain I/O contracts, and codebase footprint</p>
         </div>
         
         <div class="legend">
-            <div class="legend-item"><span class="module-status status-shipped">已上线</span> <span class="translation-hint">(实体)</span></div>
-            <div class="legend-item"><span class="module-status status-interface">仅接口</span> <span class="translation-hint">(桩代码)</span></div>
-            <div class="legend-item"><span class="module-status status-planned">计划中</span> <span class="translation-hint">(未开发)</span></div>
-            <div class="legend-item"><span class="module-status status-wip">开发中</span></div>
+            <div class="legend-item"><span class="module-status status-shipped">Shipped</span> (Real impl) / <span class="translation-hint">已上线</span></div>
+            <div class="legend-item"><span class="module-status status-interface">Interface</span> (Fake impl) / <span class="translation-hint">仅接口 (假实现)</span></div>
+            <div class="legend-item"><span class="module-status status-planned">Planned</span> (Not coded) / <span class="translation-hint">计划中 (未开发)</span></div>
+            <div class="legend-item"><span class="module-status status-wip">WIP</span> / <span class="translation-hint">开发中</span></div>
         </div>
 
-        
         <div class="tabs">
             <a href="dashboard-topology.html" class="tab-btn active" style="text-decoration: none; display: inline-block;">拓扑层级</a>
             <a href="dashboard-dataflow.html" class="tab-btn " style="text-decoration: none; display: inline-block;">跨模块数据流</a>
@@ -410,14 +410,13 @@
         </div>
 
         <!-- 1. Topology View -->
-
-        <div id="topology" class="tab-content" style="display: block;">
+        <div id="topology" class="tab-content active">
             <div class="topology-sequence">
 
     
         <div class="layer-block">
-            <h2>层级 5: 智能</h2>
-            <div class="layer-desc">聚合多个数据服务层来源数据的跨领域服务。</div>
+            <h2>Layer 5: Intelligence</h2>
+            <div class="layer-desc">Cross-cutting services that aggregate data from multiple Layer 2 sources.</div>
             <div class="layer-modules-list">
                 <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./client-profile-hub/spec.md">ClientProfileHub</a></div>
                 <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./rl-module/spec.md">RLModule</a></div>
@@ -427,8 +426,8 @@
             <div class="seq-arrow">↑</div>
             
         <div class="layer-block">
-            <h2>层级 4: 功能</h2>
-            <div class="layer-desc">面向用户的功能。接收核心管线(层级3)处理的结果，并读写数据服务(层级2)。</div>
+            <h2>Layer 4: Features</h2>
+            <div class="layer-desc">User-facing features. Each receives processed results from Orchestrator (Layer 3) and reads from Data Services (Layer 2).</div>
             <div class="layer-modules-list">
                 <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./mascot-service/spec.md">Mascot (System I)</a></div>
                 <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./scheduler/spec.md">Scheduler</a></div>
@@ -444,8 +443,8 @@
             <div class="seq-arrow">↑</div>
             
         <div class="layer-block">
-            <h2>层级 3: 核心管线</h2>
-            <div class="layer-desc">编排基于大语言模型的处理流程。从数据服务层(层级2)读取数据。</div>
+            <h2>Layer 3: Core Pipeline</h2>
+            <div class="layer-desc">Orchestrates LLM-powered processing. Reads from Layer 2 data services.</div>
             <div class="layer-modules-list">
                 <div class="mini-module">ContextBuilder</div>
                 <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./input-parser/spec.md">InputParser</a></div>
@@ -462,8 +461,8 @@
             <div class="seq-arrow">↑</div>
             
         <div class="layer-block">
-            <h2>层级 2: 数据服务</h2>
-            <div class="layer-desc">存储与查询领域数据。外层模块仅使用其对外接口，严禁直连存储。</div>
+            <h2>Layer 2: Data Services</h2>
+            <div class="layer-desc">Store and query domain data. Other modules use their interfaces but never each other's storage.</div>
             <div class="layer-modules-list">
                 <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./entity-writer/spec.md">EntityWriter</a></div>
                 <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./entity-registry/spec.md">EntityRegistry</a></div>
@@ -477,8 +476,8 @@
             <div class="seq-arrow">↑</div>
             
         <div class="layer-block">
-            <h2>层级 1: 基础设施</h2>
-            <div class="layer-desc">无上游依赖的底座服务。绝不反向调用其他模块。</div>
+            <h2>Layer 1: Infrastructure</h2>
+            <div class="layer-desc">Leaf services with no upstream dependencies. They don't call other modules.</div>
             <div class="layer-modules-list">
                 <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./connectivity-bridge/spec.md">ConnectivityBridge</a></div>
                 <div class="mini-module"><a style="color: inherit; text-decoration: none;" href="./notifications/spec.md">NotificationService</a></div>
@@ -492,11 +491,115 @@
             </div>
         </div>
 
-        
+                <script>
+            let lines = [];
+            let linesInitialized = false;
 
-        <script>
-            // No tab switching needed, just show content
+            function initLines() {
+                if (linesInitialized) return;
+                linesInitialized = true;
+
+                const cards = document.querySelectorAll('#feature .module-card');
+                
+                cards.forEach(card => {
+                    const sourceId = card.id;
+                    const depsStr = card.getAttribute('data-reads-from');
+                    if (!depsStr || depsStr === '{}') return;
+                    
+                    try {
+                        const deps = JSON.parse(depsStr);
+                        deps.forEach(targetId => {
+                            const targetEl = document.getElementById(targetId);
+                            
+                            if (targetEl && targetEl !== card) {
+                                const line = new LeaderLine(
+                                    targetEl,
+                                    card,
+                                    {
+                                        color: 'rgba(59, 130, 246, 0.35)',
+                                        startSocket: 'bottom',
+                                        endSocket: 'top',
+                                        path: 'grid',
+                                        startSocketGravity: [0, 50],
+                                        endSocketGravity: [0, -50],
+                                        startPlug: 'square',
+                                        endPlug: 'arrow3',
+                                        size: 2,
+                                        dash: {
+                                            animation: true,
+                                            len: 6,
+                                            gap: 6
+                                        },
+                                        dropShadow: {
+                                            dx: 0,
+                                            dy: 0,
+                                            blur: 4,
+                                            color: 'rgba(192, 132, 252, 0.4)'
+                                        },
+                                        hide: true
+                                    }
+                                );
+                                lines.push(line);
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Failed to parse deps for', sourceId, e);
+                    }
+                });
+                
+                setTimeout(() => {
+                    document.querySelectorAll('.leader-line').forEach(svg => {
+                        svg.style.zIndex = '-1';
+                    });
+                }, 100);
+
+                if (window.AnimEvent) {
+                    window.addEventListener('scroll', AnimEvent.add(function() {
+                        lines.forEach(l => l.position());
+                    }), false);
+                }
+            }
+
+            
+            
+            let chartsInitialized = false;
+            function initCharts() {
+                if (chartsInitialized) return;
+                chartsInitialized = true;
+                
+                const ctxPie = document.getElementById('compositionChart').getContext('2d');
+                new Chart(ctxPie, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['核心 Kotlin 代码', '测试 Kotlin 代码', '资源 XML 文件'],
+                        datasets: [{
+                            data: [188821, 11150, 87],
+                            backgroundColor: ['rgba(59, 130, 246, 0.8)', 'rgba(192, 132, 252, 0.8)', 'rgba(34, 197, 94, 0.8)'],
+                            borderColor: '#1e293b',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#f8fafc', font: { family: 'Inter' } } } } }
+                });
+
+                const ctxTrend = document.getElementById('trendChart').getContext('2d');
+                new Chart(ctxTrend, {
+                    type: 'bar',
+                    data: {
+                        labels: ['之前 (旧架构)', '清理前 (2026年3月)', '当前状态快照', '生产：保守目标', '生产：理想目标'],
+                        datasets: [
+                            { label: '核心代码量', data: [22232, 118579, 188821, 203821, 218821], backgroundColor: 'rgba(59, 130, 246, 0.6)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1 },
+                            { label: '项目总行数', data: [72658, 146976, 200058, 222058, 238000], backgroundColor: 'rgba(192, 132, 252, 0.6)', borderColor: 'rgba(192, 132, 252, 1)', borderWidth: 1 }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#94a3b8' }, title: { display: true, text: '代码行数', color: '#f8fafc' } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } }, plugins: { legend: { labels: { color: '#f8fafc', font: { family: 'Inter' } } } } }
+                });
+            }
+
+            
         </script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </body>
     </html>
+
     

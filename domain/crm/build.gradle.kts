@@ -8,6 +8,7 @@ kotlin {
 }
 
 dependencies {
+    api(project(":domain:habit"))
     implementation(libs.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
 }

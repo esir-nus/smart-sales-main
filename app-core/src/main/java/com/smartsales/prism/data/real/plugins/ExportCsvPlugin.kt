@@ -1,8 +1,8 @@
 package com.smartsales.prism.data.real.plugins
 
-import com.smartsales.prism.domain.analyst.AnalystTool
-import com.smartsales.prism.domain.analyst.PluginRequest
-import com.smartsales.prism.domain.analyst.PrismPlugin
+import com.smartsales.core.pipeline.AnalystTool
+import com.smartsales.core.pipeline.PluginRequest
+import com.smartsales.core.pipeline.PrismPlugin
 import com.smartsales.prism.domain.model.UiState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -19,7 +19,9 @@ class ExportCsvPlugin @Inject constructor() : PrismPlugin {
         requiredParams = mapOf("reportType" to "string (e.g., 'sales', 'performance')")
     )
 
-    override fun execute(request: PluginRequest): Flow<UiState> = flow {
+    override val requiredPermissions = emptySet<com.smartsales.core.pipeline.CoreModulePermission>()
+
+    override fun execute(request: PluginRequest, gateway: com.smartsales.core.pipeline.PluginGateway): Flow<UiState> = flow {
         emit(UiState.ExecutingTool("准备参数..."))
         delay(1000)
         

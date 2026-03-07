@@ -1,8 +1,10 @@
 package com.smartsales.prism.data.fakes.plugins
 
-import com.smartsales.prism.domain.analyst.AnalystTool
-import com.smartsales.prism.domain.analyst.PluginRequest
-import com.smartsales.prism.domain.analyst.PrismPlugin
+import com.smartsales.core.pipeline.AnalystTool
+import com.smartsales.core.pipeline.PluginRequest
+import com.smartsales.core.pipeline.PrismPlugin
+import com.smartsales.core.pipeline.PluginGateway
+import com.smartsales.core.pipeline.CoreModulePermission
 import com.smartsales.prism.domain.model.UiState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -16,7 +18,9 @@ class FakeConfigurablePlugin(
     override val metadata: AnalystTool
 ) : PrismPlugin {
 
-    override fun execute(request: PluginRequest): Flow<UiState> = flow {
+    override val requiredPermissions: Set<CoreModulePermission> = emptySet()
+
+    override fun execute(request: PluginRequest, gateway: PluginGateway): Flow<UiState> = flow {
         emit(UiState.ExecutingTool("Starting [${metadata.label}]..."))
         delay(800)
         

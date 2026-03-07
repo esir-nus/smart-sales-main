@@ -1,13 +1,14 @@
 package com.smartsales.prism.data.parser
 
 import com.smartsales.core.util.Result
+import com.smartsales.core.pipeline.RealInputParserService
 import com.smartsales.data.aicore.AiChatRequest
 import com.smartsales.data.aicore.AiChatResponse
 import com.smartsales.data.aicore.AiChatService
 import com.smartsales.prism.domain.memory.EntityEntry
 import com.smartsales.prism.domain.memory.EntityRepository
 import com.smartsales.prism.domain.memory.EntityType
-import com.smartsales.prism.domain.parser.ParseResult
+import com.smartsales.core.pipeline.ParseResult
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals

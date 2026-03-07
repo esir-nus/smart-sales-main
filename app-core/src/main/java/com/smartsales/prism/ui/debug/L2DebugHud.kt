@@ -27,10 +27,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smartsales.prism.BuildConfig
-import com.smartsales.prism.domain.unifiedpipeline.UnifiedPipeline
-import com.smartsales.prism.domain.unifiedpipeline.PipelineInput
-import com.smartsales.prism.domain.unifiedpipeline.PipelineResult
-import com.smartsales.prism.domain.analyst.QueryQuality
+import com.smartsales.core.pipeline.*
+import com.smartsales.core.pipeline.*
+import com.smartsales.core.pipeline.*
+import com.smartsales.core.pipeline.QueryQuality
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.scheduler.LintResult

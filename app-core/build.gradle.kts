@@ -107,6 +107,14 @@ dependencies {
     implementation(projects.data.asr)      // FunASR audio transcription
     implementation(projects.data.tingwu)   // Tingwu meeting comprehension
     implementation(projects.core.util)     // Result type
+    implementation(projects.core.llm)      // Core LLM executor framework
+    implementation(projects.core.context)  // Context assembly
+    implementation(projects.core.pipeline) // App Orchestrator Framework
+    implementation(projects.core.database) // Core SQLite Monolith
+    implementation(projects.data.crm)
+    implementation(projects.data.memory)
+    implementation(projects.data.habit)
+    implementation(projects.data.session)
     implementation(projects.core.telemetry) // Pipeline Telemetry Logging
     implementation(projects.core.notifications) // Centralized Android Notifications
     // Legacy BLE removed: implementation(projects.feature.connectivity)
@@ -128,10 +136,9 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.coil.compose)
 
-    // Room Persistence
+    // Room Persistence (runtime only)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
-    kapt(libs.room.compiler)
 
     // Test
     testImplementation(libs.junit)

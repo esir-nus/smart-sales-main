@@ -12,10 +12,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.memory.ScheduleBoard
-import com.smartsales.prism.domain.unifiedpipeline.UnifiedPipeline
-import com.smartsales.prism.domain.unifiedpipeline.PipelineInput
-import com.smartsales.prism.domain.unifiedpipeline.PipelineResult
-import com.smartsales.prism.domain.analyst.QueryQuality
+import com.smartsales.core.pipeline.*
+import com.smartsales.core.pipeline.*
+import com.smartsales.core.pipeline.*
+import com.smartsales.core.pipeline.QueryQuality
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.scheduler.InspirationRepository
@@ -793,9 +793,11 @@ $taskContext
                         android.util.Log.d("SchedulerVM", "Resolved: KEEP_B, deleted ${action.taskToRemove}")
                     }
                     com.smartsales.prism.domain.scheduler.ActionType.RESCHEDULE -> {
-                        if (action.taskToReschedule != null && action.rescheduleText != null) {
-                            onReschedule(action.taskToReschedule, action.rescheduleText)
-                            android.util.Log.d("SchedulerVM", "Resolved: RESCHEDULE ${action.taskToReschedule}")
+                        val task = action.taskToReschedule
+                        val text = action.rescheduleText
+                        if (task != null && text != null) {
+                            onReschedule(task, text)
+                            android.util.Log.d("SchedulerVM", "Resolved: RESCHEDULE $task")
                         } else {
                             android.util.Log.w("SchedulerVM", "RESCHEDULE missing fields, skipping")
                         }

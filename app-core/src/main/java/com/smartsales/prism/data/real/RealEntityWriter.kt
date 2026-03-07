@@ -14,7 +14,7 @@ import com.smartsales.prism.domain.time.TimeProvider
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
-import com.smartsales.prism.domain.pipeline.KernelWriteBack
+import com.smartsales.core.context.KernelWriteBack
 import javax.inject.Inject
 import javax.inject.Singleton
 

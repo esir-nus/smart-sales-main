@@ -10,7 +10,7 @@ import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.RecordingNotification
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import com.smartsales.prism.domain.model.UiState
-import com.smartsales.prism.domain.unifiedpipeline.UnifiedPipeline
+import com.smartsales.core.pipeline.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -118,10 +118,10 @@ class RealBadgeAudioPipeline @Inject constructor(
             _events.emit(PipelineEvent.Processing(transcript))
             android.util.Log.d(TAG, "Scheduling task...")
             
-            val pipelineInput = com.smartsales.prism.domain.unifiedpipeline.PipelineInput(
+            val pipelineInput = com.smartsales.core.pipeline.PipelineInput(
                 rawText = transcript,
                 isVoice = true,
-                intent = com.smartsales.prism.domain.analyst.QueryQuality.CRM_TASK
+                intent = com.smartsales.core.pipeline.QueryQuality.CRM_TASK
             )
             
             var schedulerResult: SchedulerResult = SchedulerResult.Ignored
@@ -129,13 +129,13 @@ class RealBadgeAudioPipeline @Inject constructor(
             try {
                 unifiedPipeline.processInput(pipelineInput).collect { pResult ->
                     when(pResult) {
-                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.SchedulerTaskCreated -> {
+                         is com.smartsales.core.pipeline.PipelineResult.SchedulerTaskCreated -> {
                              schedulerResult = SchedulerResult.TaskCreated(
                                  pResult.taskId, pResult.title,
                                  pResult.dayOffset, pResult.scheduledAtMillis, pResult.durationMinutes
                              )
                          }
-                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.SchedulerMultiTaskCreated -> {
+                         is com.smartsales.core.pipeline.PipelineResult.SchedulerMultiTaskCreated -> {
                              schedulerResult = SchedulerResult.MultiTaskCreated(
                                  tasks = pResult.tasks.map { task ->
                                      SchedulerResult.TaskCreated(
@@ -145,10 +145,10 @@ class RealBadgeAudioPipeline @Inject constructor(
                                  }
                              )
                          }
-                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.DisambiguationIntercepted -> {
+                         is com.smartsales.core.pipeline.PipelineResult.DisambiguationIntercepted -> {
                              schedulerResult = SchedulerResult.AwaitingClarification("需要进一步确认")
                          }
-                         is com.smartsales.prism.domain.unifiedpipeline.PipelineResult.ClarificationNeeded -> {
+                         is com.smartsales.core.pipeline.PipelineResult.ClarificationNeeded -> {
                              schedulerResult = SchedulerResult.AwaitingClarification(pResult.question)
                          }
                          else -> { /* Ignore intermediate states from RealUnifiedPipeline */ }

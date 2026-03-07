@@ -1,11 +1,12 @@
 package com.smartsales.prism.data.scheduler
 
 import android.util.Log
-import com.smartsales.prism.data.real.DashscopeExecutor
+import com.smartsales.core.llm.DashscopeExecutor
+import com.smartsales.core.pipeline.PromptCompiler
 import com.smartsales.prism.domain.memory.ScheduleItem
-import com.smartsales.prism.domain.pipeline.EnhancedContext
-import com.smartsales.prism.domain.pipeline.ExecutorResult
-import com.smartsales.prism.domain.pipeline.ModeMetadata
+import com.smartsales.core.context.EnhancedContext
+import com.smartsales.core.llm.ExecutorResult
+import com.smartsales.core.context.ModeMetadata
 import com.smartsales.prism.domain.scheduler.ActionType
 import com.smartsales.prism.domain.scheduler.ConflictAction
 import com.smartsales.prism.domain.scheduler.ConflictResolution
@@ -21,7 +22,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class RealConflictResolver @Inject constructor(
-    private val dashscopeExecutor: DashscopeExecutor
+    private val dashscopeExecutor: DashscopeExecutor,
+    private val promptCompiler: PromptCompiler
 ) {
     
     /**
@@ -48,7 +50,8 @@ class RealConflictResolver @Inject constructor(
         
         Log.d("ConflictResolver", "Calling LLM with prompt: $prompt")
         
-        val result = dashscopeExecutor.execute(com.smartsales.prism.domain.config.ModelRegistry.EXECUTOR, context)
+        val compiledPrompt = promptCompiler.compile(context)
+        val result = dashscopeExecutor.execute(com.smartsales.core.llm.ModelRegistry.EXECUTOR, compiledPrompt)
         
         return when (result) {
             is ExecutorResult.Success -> parseConflictResolution(result.content, taskA, taskB)

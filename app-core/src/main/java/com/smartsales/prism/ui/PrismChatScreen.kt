@@ -50,7 +50,7 @@ import com.smartsales.prism.domain.model.ChatMessage
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.ui.components.*
-import com.smartsales.prism.domain.activity.AgentActivity
+import com.smartsales.core.pipeline.AgentActivity
 import com.smartsales.prism.domain.activity.ThinkingPolicy
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow

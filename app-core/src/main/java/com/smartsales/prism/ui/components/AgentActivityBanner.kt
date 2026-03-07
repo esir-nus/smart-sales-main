@@ -31,9 +31,9 @@ import com.smartsales.prism.ui.theme.AccentBlue
 import com.smartsales.prism.ui.theme.AccentSecondary
 import com.smartsales.prism.ui.theme.TextMuted
 import com.smartsales.prism.ui.theme.TextPrimary
-import com.smartsales.prism.domain.activity.ActivityAction
-import com.smartsales.prism.domain.activity.ActivityPhase
-import com.smartsales.prism.domain.activity.AgentActivity
+import com.smartsales.core.pipeline.ActivityAction
+import com.smartsales.core.pipeline.ActivityPhase
+import com.smartsales.core.pipeline.AgentActivity
 
 /**
  * 代理活动横幅 — 两层结构展示 AI 思考过程

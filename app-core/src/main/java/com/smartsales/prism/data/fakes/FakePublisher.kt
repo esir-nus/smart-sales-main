@@ -2,7 +2,7 @@ package com.smartsales.prism.data.fakes
 
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.model.UiState
-import com.smartsales.prism.domain.pipeline.ExecutorResult
+import com.smartsales.core.llm.ExecutorResult
 import com.smartsales.prism.domain.pipeline.Publisher
 import javax.inject.Inject
 import javax.inject.Singleton

@@ -1,8 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.kapt)
-    alias(libs.plugins.hilt)
 }
 
 android {
@@ -20,8 +18,6 @@ android {
 dependencies {
     implementation(projects.data.oss)
     implementation(projects.core.util)
-    implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler)
     implementation(libs.coroutines.core)
     implementation(libs.dashscope.sdk)
     implementation(libs.gson)

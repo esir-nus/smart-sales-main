@@ -64,6 +64,10 @@
 
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 
+### 2026-03-07
+
+- **architecture**: Layer 3 Core Pipeline Physical Extraction (Phase 2) SHIPPED — Physically extracted the Orchestrator, Context Builder, and LLM plugins from the `app-core` monolith into strictly isolated Gradle library modules (`:core:llm`, `:core:context`, `:core:pipeline`). Decoupled DashscopeExecutor constraints, repaired global Dagger bindings, and bridged cross-module Kotlin smart-casting limits. Verification passed perfectly.
+
 ### 2026-03-06
 
 - **architecture**: Layer 2 Domain Modularization (Stage 2) SHIPPED — Extracted monolithic `PrismDatabase` and Room DAOs into a strictly decoupled `:core:database` module. Successfully moved and wired `RoomUserHabitRepository`, `RoomMemoryRepository`, and `RoomEntityRepository` to isolated `:data:habit`, `:data:memory`, and `:data:crm` feature data modules. Additionally, surgically extracted `RoomHistoryRepository` to `:data:session` to complete 100% of the Layer 2 Data Services assembly.
@@ -297,13 +301,13 @@
 
 ### Layer 3: Core Pipeline (The Roads & Intersections)
 *Orchestrates the LLM processing and routes intents.*
-- [ ] `ContextBuilder`
-- [ ] `InputParser`
-- [ ] `EntityDisambiguator`
-- [ ] `LightningRouter`
-- [ ] `ModelRegistry` & `Executor`
-- [ ] `PluginRegistry`
-- [ ] `UnifiedPipeline`
+- [x] `ContextBuilder`
+- [x] `InputParser`
+- [x] `EntityDisambiguator`
+- [x] `LightningRouter`
+- [x] `ModelRegistry` & `Executor`
+- [x] `PluginRegistry`
+- [x] `UnifiedPipeline`
 
 ### Layer 4 & 5: Features & Intelligence (The Hospitals & Schools)
 *User-facing integrations that consume Layer 2/3.*

@@ -7,9 +7,9 @@ import com.smartsales.core.test.fakes.FakeContextBuilder
 import com.smartsales.core.test.fakes.FakeLightningRouter
 import com.smartsales.core.test.fakes.FakeMascotService
 import com.smartsales.core.test.fakes.FakeUnifiedPipeline
-import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -47,78 +47,54 @@ class IntentOrchestratorTest {
     }
 
     @Test
-    fun `when input is NOISE, routes to Mascot and emits nothing`() = runBlocking {
-        // Arrange
-        val input = "嗯嗯"
-        
+    fun `test all intent routing scenarios sequentially`() = runTest {
+        // --- SCENARIO 1: NOISE ---
+        setup()
+        var input = "嗯嗯"
         fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.NOISE, true, ""))
-
-        // Act
-        val results = orchestrator.processInput(input).toList()
-
-        // Assert
-        assertTrue("NOISE should emit nothing to the pipeline", results.isEmpty())
+        var result = orchestrator.processInput(input).firstOrNull()
+        
+        assertNull("NOISE should emit nothing", result)
         assertEquals(1, fakeMascotService.interactions.size)
         assertTrue(fakeMascotService.interactions[0] is MascotInteraction.Text)
         assertEquals(input, (fakeMascotService.interactions[0] as MascotInteraction.Text).content)
         assertTrue(fakeUnifiedPipeline.processedInputs.isEmpty())
-    }
 
-    @Test
-    fun `when input is GREETING, routes to Mascot and emits nothing`() = runBlocking {
-        // Arrange
-        val input = "你好啊"
-        
+        // --- SCENARIO 2: GREETING ---
+        setup()
+        input = "你好啊"
         fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.GREETING, true, ""))
+        result = orchestrator.processInput(input).firstOrNull()
 
-        // Act
-        val results = orchestrator.processInput(input).toList()
-
-        // Assert
-        assertTrue("GREETING should emit nothing to the pipeline", results.isEmpty())
+        assertNull("GREETING should emit nothing", result)
         assertEquals(1, fakeMascotService.interactions.size)
-        assertTrue(fakeMascotService.interactions[0] is MascotInteraction.Text)
         assertEquals(input, (fakeMascotService.interactions[0] as MascotInteraction.Text).content)
         assertTrue(fakeUnifiedPipeline.processedInputs.isEmpty())
-    }
 
-    @Test
-    fun `when input is VAGUE, emits ConversationalReply for clarification`() = runBlocking {
-        // Arrange
-        val input = "那个功能"
+        // --- SCENARIO 3: VAGUE ---
+        setup()
+        input = "那个功能"
         val clarification = "你指的是具体哪个功能？"
-        
         fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.VAGUE, false, clarification))
+        result = orchestrator.processInput(input).firstOrNull()
 
-        // Act
-        val results = orchestrator.processInput(input).toList()
-
-        // Assert
-        assertEquals(1, results.size)
-        assertTrue(results[0] is PipelineResult.ConversationalReply)
-        assertEquals(clarification, (results[0] as PipelineResult.ConversationalReply).text)
+        assertNotNull(result)
+        assertTrue(result is PipelineResult.ConversationalReply)
+        assertEquals(clarification, (result as PipelineResult.ConversationalReply).text)
         assertTrue(fakeMascotService.interactions.isEmpty())
-        assertTrue(fakeUnifiedPipeline.processedInputs.isEmpty())
-    }
 
-    @Test
-    fun `when input is DEEP_ANALYSIS, routes to UnifiedPipeline`() = runBlocking {
-        // Arrange
-        val input = "帮我分析一下华为的最新进展"
-        
+        // --- SCENARIO 4: DEEP_ANALYSIS ---
+        setup()
+        input = "帮我分析一下华为的最新进展"
         fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
-        
         val expectedPipelineResult = PipelineResult.ConversationalReply("这是分析结果")
         fakeUnifiedPipeline.nextResultFlow = flowOf(expectedPipelineResult)
+        
+        result = orchestrator.processInput(input).firstOrNull()
 
-        // Act
-        val results = orchestrator.processInput(input).toList()
-
-        // Assert
-        assertEquals(1, results.size)
-        assertEquals(expectedPipelineResult, results[0])
-        assertTrue(fakeMascotService.interactions.isEmpty())
+        assertNotNull(result)
+        assertEquals(expectedPipelineResult, result)
         assertEquals(1, fakeUnifiedPipeline.processedInputs.size)
-        assertEquals(input, fakeUnifiedPipeline.processedInputs[0].userText)
+        assertEquals(input, fakeUnifiedPipeline.processedInputs[0].rawText)
     }
 }

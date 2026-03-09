@@ -33,11 +33,11 @@ class FakeContextBuilder : ContextBuilder {
     override fun getSessionHistory(): List<ChatTurn> = history
 
     override suspend fun recordUserMessage(content: String) {
-        history.add(ChatTurn("user", content, System.currentTimeMillis()))
+        history.add(ChatTurn("user", content))
     }
 
     override suspend fun recordAssistantMessage(content: String) {
-        history.add(ChatTurn("assistant", content, System.currentTimeMillis()))
+        history.add(ChatTurn("assistant", content))
     }
 
     override fun resetSession() {

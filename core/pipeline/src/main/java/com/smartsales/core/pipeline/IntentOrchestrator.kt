@@ -20,7 +20,8 @@ class IntentOrchestrator @Inject constructor(
     private val mascotService: MascotService,
     private val unifiedPipeline: UnifiedPipeline
 ) {
-    suspend fun processInput(input: String): Flow<PipelineResult> = flow {
+    suspend fun processInput(input: String): Flow<PipelineResult> {
+        return flow {
         // Build minimal context for latency-sensitive phase 0 evaluation
         val context = contextBuilder.build(input, Mode.ANALYST, depth = ContextDepth.MINIMAL)
         val routerResult = lightningRouter.evaluateIntent(context)
@@ -50,4 +51,5 @@ class IntentOrchestrator @Inject constructor(
             }
         }
     }
+}
 }

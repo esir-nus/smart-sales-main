@@ -14,6 +14,6 @@ class FakeUnifiedPipeline : UnifiedPipeline {
 
     override suspend fun processInput(input: PipelineInput): Flow<PipelineResult> {
         processedInputs.add(input)
-        return nextResultFlow ?: emptyFlow()
+        return nextResultFlow ?: kotlinx.coroutines.flow.flow { }
     }
 }

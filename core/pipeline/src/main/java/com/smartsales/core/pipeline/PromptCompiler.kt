@@ -12,7 +12,7 @@ open class PromptCompiler @Inject constructor() {
      * 构建完整的提示词
      * 包含用户输入 + 上下文信息
      */
-    fun compile(context: EnhancedContext): String = buildString {
+    open fun compile(context: EnhancedContext): String = buildString {
         val mode = context.modeMetadata.currentMode
         
         // Wave 2: 各模式使用专用系统提示词

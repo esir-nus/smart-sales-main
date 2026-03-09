@@ -1,7 +1,7 @@
 # E2E Test Tasklist & Tracking (spec.md)
 
-> **State**: SPEC_ONLY
-> **Current Target**: Wave 1: The Lightning Fast-Track
+> **State**: GREAT_ASSEMBLY_AUDIT
+> **Current Target**: Anti-Illusion Test Overhaul (Reviewing Assembled Layers)
 
 This document is the **dynamic tracker and implementation spec** for our End-to-End testing domain. It hooks into automatic updates and tracks the execution of tests against the 6 Core Pillars. 
 
@@ -23,6 +23,15 @@ This document is the **dynamic tracker and implementation spec** for our End-to-
 ---
 
 ## Task Blackboard (The Crucibles)
+
+### 🚨 The Great Assembly Audit: Anti-Illusion Overhaul
+> **Context**: The Anti-Illusion protocol is a fair judge of the Great Assembly. We are looking back to rigorously evaluate the layers we have already assembled before adding new features. We cannot test E2E flows on an illusion. The tests must earn their success.
+
+- [ ] **Overhaul W1: Complete Mock Eviction**: Purge `mockito` intercepts from `RealUnifiedPipelineTest.kt`. Inject `FakeEntityRepository` and `FakeMemoryRepository`.
+- [ ] **Overhaul W2: Context Branch Coverage**: Write explicit tests for the 3 Context States (No Context, Partial Context/Trap, Sufficient Context). Prove the pipeline clarifies intents rather than hallucinating success.
+- [ ] **Overhaul W3: The Verification Rule**: Enforce `verify()` payloads on downstream tools (e.g., `ToolRegistry`).
+
+---
 
 ### Wave 1: The Lightning Fast-Track 
 - [x] **L2 Sim**: Inject `GREETING` intent. Verify `LightningRouter` short-circuits to `MascotService` without triggering `Executor`.

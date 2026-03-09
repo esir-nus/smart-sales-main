@@ -3,7 +3,7 @@
 > **State**: GREAT_ASSEMBLY_AUDIT
 > **Current Target**: Anti-Illusion Test Overhaul (Reviewing Assembled Layers)
 
-This document is the **dynamic tracker and implementation spec** for our End-to-End testing domain. It hooks into automatic updates and tracks the execution of tests against the 6 Core Pillars. 
+This document is the **dynamic tracker, implementation spec, and North Star roadmap** for the Great Assembly Audit and our End-to-End testing domain. It hooks into automatic updates and tracks the execution of tests against the 6 Core Pillars, guarded by the 'fair judge': the Anti-Illusion Protocol. 
 
 *For the static, hard-defined rules and mental models, see `testing-protocol.md`.*
 
@@ -24,12 +24,24 @@ This document is the **dynamic tracker and implementation spec** for our End-to-
 
 ## Task Blackboard (The Crucibles)
 
-### 🚨 The Great Assembly Audit: Anti-Illusion Overhaul
-> **Context**: The Anti-Illusion protocol is a fair judge of the Great Assembly. We are looking back to rigorously evaluate the layers we have already assembled before adding new features. We cannot test E2E flows on an illusion. The tests must earn their success.
+### 🚨 The Great Assembly Audit: Anti-Illusion Overhaul Roadmap
+> **Context**: The Anti-Illusion protocol is the fair judge of the Great Assembly. We are looking back to rigorously evaluate the layers we have already assembled before adding new features. We cannot test E2E flows on an illusion. All downstream E2E testing relies on the Pipeline routing intents correctly based on physical information gates, not mocked success.
 
-- [ ] **Overhaul W1: Complete Mock Eviction**: Purge `mockito` intercepts from `RealUnifiedPipelineTest.kt`. Inject `FakeEntityRepository` and `FakeMemoryRepository`.
-- [ ] **Overhaul W2: Context Branch Coverage**: Write explicit tests for the 3 Context States (No Context, Partial Context/Trap, Sufficient Context). Prove the pipeline clarifies intents rather than hallucinating success.
-- [ ] **Overhaul W3: The Verification Rule**: Enforce `verify()` payloads on downstream tools (e.g., `ToolRegistry`).
+#### Phase 1: Layer 3 Core Pipeline Sweeps (The Epicenter)
+- [ ] **Target:** `RealUnifiedPipelineTest.kt`
+  - [ ] **Overhaul W1: Complete Mock Eviction**: Purge `mockito` intercepts for state layers. Inject `:core:test-fakes` (`FakeEntityRepository`, `FakeMemoryRepository`, `FakeContextBuilder` if applicable).
+  - [ ] **Overhaul W2: Context Branch Coverage**: Write explicit tests for the 3 Context States (No Context/Noise, Partial Context/Trap, Sufficient Context/Execution). Prove the pipeline traps and clarifies intents dynamically.
+- [ ] **Target:** `RealInputParserServiceTest.kt` & `EntityDisambiguator`
+  - [ ] **Overhaul W3: Strict Interface Integrity**: Ensure tests do not mock the string parsing or bypass Linter gates.
+
+#### Phase 2: Layer 4 Feature Sweeps (Integration Veracity)
+- [ ] **Target:** Scheduler & Notifications
+  - [ ] **Overhaul W4: Payload Verification**: Enforce `verify(mock).method(argThat { ... })` payloads. Never assert success without proving the structure sent to the `SchedulerLinter` or `ToolRegistry`.
+- [ ] **Target:** `AgentViewModelTest.kt` & `IntentOrchestratorTest.kt`
+  - [ ] **Overhaul W5: Red-First State Triggers**: Prove the UI state machine organically falls back to `STATE_IDLE` or throws `ClarificationNeeded` when fed empty data.
+
+#### Phase 3: E2E Pillar Resumption
+> Only after Phase 1 and 2 pass the Anti-Illusion protocol will we resume the 6 E2E Test Waves below.
 
 ---
 
